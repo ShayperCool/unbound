@@ -2072,42 +2072,129 @@ fn block_layout(modules: &[&Module]) -> BlockLayout {
     binding_layout(blocks)
 }
 
+/// Minimum size of a cbuffer given its own uniform binding when the split fits the binding budget:
+/// large cbuffers (such as Forward+ tile/z-bin tables bound via `SetGlobalConstantBuffer`) then
+/// avoid being merged with per-draw uniforms and can be shared across draws without copying.
+const STANDALONE_CBUFFER_BYTES: u32 = 16384;
+
+/// Maximum uniform bindings created by isolating large standalone cbuffers. Leaves room for the
+/// renderer's per-draw uniform within WebGPU's default 8 dynamic uniform buffers per layout.
+const MAX_SPLIT_BINDINGS: usize = 6;
+
 /// Packs a program's cbuffers (name and size, in declaration order) into uniform bindings, each
 /// at most [`crate::UNIFORM_BINDING_BYTES`] long: Unity binds every cbuffer as a uniform buffer
 /// of its own, which a device limits to that size (URP's Forward+ cbuffers together take more,
 /// its tile buffer alone that much), and to a handful per stage, which a program's cbuffers can
-/// outnumber. A cbuffer starts the next binding when it does not fit the current one's rest; a
+/// outnumber. Large cbuffers ([`STANDALONE_CBUFFER_BYTES`] or more) get their own aligned binding
+/// when isolating them keeps the program within [`MAX_SPLIT_BINDINGS`], so a constant buffer bound
+/// by name can be shared across draws without being copied into every draw's uniform data. A
+/// cbuffer otherwise starts the next binding when it does not fit the current one's rest; every
 /// binding after the first starts [`crate::UNIFORM_BINDING_ALIGN`]-aligned. A program whose
-/// cbuffers fit one binding keeps the layout of a single block: each cbuffer 16-byte aligned
-/// after the one before. A cbuffer over the size is a binding of its own, which the renderer
-/// refuses by name on a device that does not take it.
+/// cbuffers fit one binding without large standalone blocks keeps the layout of a single block:
+/// each cbuffer 16-byte aligned after the one before. A cbuffer over the size is a binding of its
+/// own, which the renderer refuses by name on a device that does not take it.
 fn binding_layout(blocks: Vec<(String, u32)>) -> BlockLayout {
-    let mut bases = Vec::new();
-    let mut spans = Vec::new();
-    let mut binding_of = Vec::new();
-    let mut bindings: Vec<crate::UniformBinding> = Vec::new();
-    let mut size = 0u32;
-    for (name, span) in blocks {
-        let next = size.div_ceil(16) * 16;
-        let base = match bindings.last_mut() {
-            Some(b) if next + span - b.offset <= crate::UNIFORM_BINDING_BYTES => next,
-            _ => {
+    fn pack_sequential(
+        items: &[(String, u32)],
+        bases: &mut Vec<(String, u32)>,
+        spans: &mut Vec<u32>,
+        binding_of: &mut Vec<usize>,
+        bindings: &mut Vec<crate::UniformBinding>,
+        size: &mut u32,
+    ) {
+        let first_binding = bindings.len();
+        for (name, span) in items {
+            let span = *span;
+            let next = size.div_ceil(16) * 16;
+            let has_current = bindings.len() > first_binding;
+            let base = match bindings.last_mut() {
+                Some(b)
+                    if has_current && next + span - b.offset <= crate::UNIFORM_BINDING_BYTES =>
+                {
+                    next
+                }
+                _ => {
+                    let base =
+                        size.div_ceil(crate::UNIFORM_BINDING_ALIGN) * crate::UNIFORM_BINDING_ALIGN;
+                    bindings.push(crate::UniformBinding {
+                        offset: base,
+                        size: 0,
+                    });
+                    base
+                }
+            };
+            let binding = bindings.last_mut().unwrap();
+            binding.size = (base + span - binding.offset).div_ceil(16) * 16;
+            binding_of.push(bindings.len() - 1);
+            bases.push((name.clone(), base));
+            spans.push(span);
+            *size = base + span;
+        }
+    }
+
+    fn sequential_binding_count(items: &[(String, u32)]) -> usize {
+        let mut count = 0usize;
+        let mut binding_start = 0u32;
+        let mut size = 0u32;
+        for (_, span) in items {
+            let next = size.div_ceil(16) * 16;
+            let base = if count > 0 && next + *span - binding_start <= crate::UNIFORM_BINDING_BYTES
+            {
+                next
+            } else {
+                count += 1;
                 let base =
                     size.div_ceil(crate::UNIFORM_BINDING_ALIGN) * crate::UNIFORM_BINDING_ALIGN;
-                bindings.push(crate::UniformBinding {
-                    offset: base,
-                    size: 0,
-                });
+                binding_start = base;
                 base
-            }
-        };
-        let binding = bindings.last_mut().unwrap();
-        binding.size = (base + span - binding.offset).div_ceil(16) * 16;
-        binding_of.push(bindings.len() - 1);
-        bases.push((name, base));
-        spans.push(span);
-        size = base + span;
+            };
+            size = base + *span;
+        }
+        count
     }
+
+    let mut bases = Vec::with_capacity(blocks.len());
+    let mut spans = Vec::with_capacity(blocks.len());
+    let mut binding_of = Vec::with_capacity(blocks.len());
+    let mut bindings: Vec<crate::UniformBinding> = Vec::new();
+    let mut size = 0u32;
+
+    let (small, large): (Vec<_>, Vec<_>) = blocks
+        .iter()
+        .cloned()
+        .partition(|(_, span)| *span < STANDALONE_CBUFFER_BYTES);
+    let small_bins = sequential_binding_count(&small);
+    if blocks.len() >= 2 && !large.is_empty() && small_bins + large.len() <= MAX_SPLIT_BINDINGS {
+        pack_sequential(
+            &small,
+            &mut bases,
+            &mut spans,
+            &mut binding_of,
+            &mut bindings,
+            &mut size,
+        );
+        for (name, span) in large {
+            let base = size.div_ceil(crate::UNIFORM_BINDING_ALIGN) * crate::UNIFORM_BINDING_ALIGN;
+            bindings.push(crate::UniformBinding {
+                offset: base,
+                size: span.div_ceil(16) * 16,
+            });
+            binding_of.push(bindings.len() - 1);
+            bases.push((name, base));
+            spans.push(span);
+            size = base + span;
+        }
+    } else {
+        pack_sequential(
+            &blocks,
+            &mut bases,
+            &mut spans,
+            &mut binding_of,
+            &mut bindings,
+            &mut size,
+        );
+    }
+
     BlockLayout {
         bases,
         spans,
@@ -3598,7 +3685,7 @@ mod tests {
     }
 
     #[test]
-    fn a_cbuffer_past_the_binding_size_starts_an_aligned_binding() {
+    fn large_cbuffers_get_aligned_standalone_bindings_within_budget() {
         let l = layout(&[
             ("UnityPerDraw", 800),
             ("urp_TileBuffer", 65536),
@@ -3608,16 +3695,47 @@ mod tests {
         ]);
         let binding = |name: &str| l.binding(name).unwrap();
         assert_eq!(binding("UnityPerDraw"), 0);
+        assert_eq!(binding("UnityPerMaterial"), 0);
         assert_eq!(binding("urp_TileBuffer"), 1);
-        // The ones after the tiles share a binding: they fit together.
         assert_eq!(binding("urp_ZBinBuffer"), 2);
-        assert_eq!(binding("AdditionalLights"), 2);
-        assert_eq!(binding("UnityPerMaterial"), 2);
+        assert_eq!(binding("AdditionalLights"), 3);
+        assert_eq!(l.bindings.len(), 4);
+        assert_eq!(l.bindings[0].offset, 0);
+        assert_eq!(l.bindings[0].size, 832);
         assert_eq!(l.bindings[1].offset, 1024);
         assert_eq!(l.bindings[1].size, 65536);
         assert_eq!(l.bindings[2].offset, 1024 + 65536);
-        assert_eq!(l.bindings[2].size, 16384 + 24576 + 32);
-        assert_eq!(l.size, l.bindings[2].offset + l.bindings[2].size);
+        assert_eq!(l.bindings[2].size, 16384);
+        assert_eq!(l.bindings[3].offset, 1024 + 65536 + 16384);
+        assert_eq!(l.bindings[3].size, 24576);
+        assert_eq!(l.size, l.bindings[3].offset + l.bindings[3].size);
+
+        // Even when all cbuffers would fit one 64 KB binding (e.g. GL Forward+ with 16 KB
+        // tile/z-bin tables), isolating large cbuffers keeps per-draw data compact.
+        let gl = layout(&[
+            ("UnityPerDraw", 720),
+            ("urp_ZBinBuffer", 16384),
+            ("urp_TileBuffer", 16384),
+            ("UnityPerMaterial", 160),
+        ]);
+        assert_eq!(gl.bindings.len(), 3);
+        assert_eq!(gl.binding("UnityPerDraw"), Some(0));
+        assert_eq!(gl.binding("UnityPerMaterial"), Some(0));
+        assert_eq!(gl.binding("urp_ZBinBuffer"), Some(1));
+        assert_eq!(gl.binding("urp_TileBuffer"), Some(2));
+
+        // Past MAX_SPLIT_BINDINGS, fall back to sequential 64 KB packing so binding counts stay
+        // within device limits.
+        let many = layout(&[
+            ("Small", 128),
+            ("L0", 16384),
+            ("L1", 16384),
+            ("L2", 16384),
+            ("L3", 16384),
+            ("L4", 16384),
+            ("L5", 16384),
+        ]);
+        assert!(many.bindings.len() <= 3, "{:?}", many.bindings);
     }
 
     /// A cbuffer larger than a binding holds is a binding of its own, which the renderer then
@@ -3626,9 +3744,9 @@ mod tests {
     fn an_oversized_cbuffer_is_a_binding_of_its_own() {
         let l = layout(&[("Small", 16), ("$Global", 70000), ("After", 16)]);
         assert_eq!(l.binding("Small"), Some(0));
+        assert_eq!(l.binding("After"), Some(0));
         assert_eq!(l.binding("$Global"), Some(1));
         assert_eq!(l.bindings[1].size, 70000);
-        assert_eq!(l.binding("After"), Some(2));
-        assert_eq!(l.bindings[2].offset, (256 + 70000u32).div_ceil(256) * 256);
+        assert_eq!(l.bindings[1].offset, 256);
     }
 }

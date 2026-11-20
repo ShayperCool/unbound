@@ -235,8 +235,8 @@ struct PlannedDraw {
     stencil_ref: u32,
     viewport: [f32; 4],
     scissor: [u32; 4],
-    /// The compiled program: its id and the offset of the draw's uniform block.
-    program: (u32, u32),
+    /// The compiled program: its id and the frame-buffer offsets of its uniform bindings.
+    program: (u32, compiled::DrawOffsets),
     /// Instances drawn (SV_InstanceID 0..n).
     instances: u32,
     first_instance: u32,
@@ -4938,26 +4938,29 @@ impl UnityRenderer {
             };
             // A buffer bound by a cbuffer's name: the draw's, the material's, else a global one.
             let buffers = &self.buffers;
-            let constant_buffer = |name: &str| -> Option<&[u8]> {
-                let buffer = |(n, v): &(String, owned::PropertyValue)| match v {
-                    owned::PropertyValue::Buffer(h) if n == name => Some(*h),
-                    _ => None,
-                };
-                // The material and the globals are searched only when they have a property of
-                // the name (most cbuffers are bound to none).
-                let handle = draw.properties.iter().find_map(buffer).or_else(|| {
-                    (material_props.get(name).is_some()
-                        || globals_index.find(&globals, name).is_some())
-                    .then(|| {
-                        material_props
-                            .properties
-                            .iter()
-                            .chain(globals.iter())
-                            .find_map(buffer)
+            let constant_buffer = |name: &str| -> Option<compiled::ConstantBufferRef<'_>> {
+                let handle = draw
+                    .properties
+                    .iter()
+                    .rev()
+                    .find_map(|(n, v)| match v {
+                        owned::PropertyValue::Buffer(h) if n == name => Some(*h),
+                        _ => None,
                     })
-                    .flatten()
-                })?;
-                buffers.get(&handle)?.shadow.as_deref()
+                    .or_else(|| match material_props.get(name) {
+                        Some(owned::PropertyValue::Buffer(h)) => Some(*h),
+                        _ => match globals_index.find(&globals, name) {
+                            Some(owned::PropertyValue::Buffer(h)) => Some(*h),
+                            _ => None,
+                        },
+                    })?;
+                let b = buffers.get(&handle)?;
+                let bytes = b.shadow.as_deref()?;
+                Some(compiled::ConstantBufferRef {
+                    handle,
+                    revision: b.revision,
+                    bytes,
+                })
             };
             let (camera_view, camera_proj) = self.state.camera.unwrap_or((view, projection));
             let values = compiled::DrawValues {
@@ -5028,7 +5031,7 @@ impl UnityRenderer {
                     b
                 }
             };
-            let program_offset = self.compiled.push(id, &values, Some(&block));
+            let program_offsets = self.compiled.push(id, &values, Some(&block));
             let mut window = None;
             if let Some(dots) = dots {
                 let data = draw
@@ -5043,7 +5046,7 @@ impl UnityRenderer {
                 let size = data.map_or(0, |b| b.size);
                 window = self
                     .compiled
-                    .write_dots(id, program_offset, dots, &draw.properties, size)
+                    .write_dots(id, &program_offsets, dots, &draw.properties, size)
                     .zip(data)
                     .map(|((offset, source_offset, size), b)| WindowCopy {
                         source: b.buffer.clone(),
@@ -5078,7 +5081,7 @@ impl UnityRenderer {
                 stencil_ref,
                 viewport,
                 scissor,
-                program: (id, program_offset),
+                program: (id, program_offsets),
                 instances: 1,
                 first_instance: 0,
                 first_bound_vertex: 0,
@@ -5839,12 +5842,12 @@ impl UnityRenderer {
                         rp.draw(0..3, 0..1);
                     }
                     PassItem::Draw(d) => {
-                        let (id, offset) = d.program;
+                        let (id, ref program_offsets) = d.program;
                         let Some(uniforms) = programs.get(&id) else {
                             continue;
                         };
                         rp.set_pipeline(&d.pipeline);
-                        let (offsets, count) = uniforms.offsets(offset, d.offset);
+                        let (offsets, count) = uniforms.offsets(program_offsets, d.offset);
                         rp.set_bind_group(0, &uniforms.group, &offsets[..count]);
                         rp.set_bind_group(1, &d.material, &[]);
                         rp.set_bind_group(2, &d.texture, &[]);

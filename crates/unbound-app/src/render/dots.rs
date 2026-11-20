@@ -55,6 +55,13 @@ impl DotsLayout {
         self.visibility.is_some()
     }
 
+    /// Whether a cbuffer is written per draw by the DOTS instancing path (must stay per-draw).
+    pub fn uses_block(name: &str) -> bool {
+        name == VISIBILITY_BLOCK
+            || name == INSTANCE_DATA_BLOCK
+            || name.starts_with("UnityDOTSInstancing_")
+    }
+
     pub fn of(program: &Compiled) -> DotsLayout {
         let metadata = program
             .uniforms
@@ -123,18 +130,26 @@ fn put(out: &mut [u8], at: usize, value: u32) {
 /// that is not a multiple of 4 reads its last partial word as zeros (the shader library reads
 /// whole float4s). None without such a cbuffer or bytes to read.
 pub fn window(layout: &DotsLayout, draw: &DotsDraw, buffer_size: u64) -> Option<(u64, u64, u64)> {
+    window_mapped(layout, draw, buffer_size, |offset| Some(offset as usize))
+}
+
+/// Like [`window`], mapping the cbuffer's logical byte offset to its physical offset in the
+/// frame's uniform buffer.
+pub fn window_mapped(
+    layout: &DotsLayout,
+    draw: &DotsDraw,
+    buffer_size: u64,
+    map: impl Fn(u32) -> Option<usize>,
+) -> Option<(u64, u64, u64)> {
     let (offset, size) = layout.instance_data?;
+    let dest = map(offset)? as u64;
     let start = u64::from(draw.window_offset);
     let mut bytes = u64::from(size).min(buffer_size.saturating_sub(start));
     if draw.window_size > 0 {
         bytes = bytes.min(u64::from(draw.window_size));
     }
     let bytes = bytes / wgpu::COPY_BUFFER_ALIGNMENT * wgpu::COPY_BUFFER_ALIGNMENT;
-    (bytes > 0 && start % wgpu::COPY_BUFFER_ALIGNMENT == 0).then_some((
-        u64::from(offset),
-        start,
-        bytes,
-    ))
+    (bytes > 0 && start % wgpu::COPY_BUFFER_ALIGNMENT == 0).then_some((dest, start, bytes))
 }
 
 /// Writes a draw command's DOTS instancing data into a program's uniform block (`out`, filled
@@ -145,11 +160,26 @@ pub fn write(
     overrides: &[(String, PropertyValue)],
     out: &mut [u8],
 ) {
+    write_mapped(layout, draw, overrides, out, |offset| Some(offset as usize));
+}
+
+/// Like [`write`], mapping each logical byte offset to its physical offset in `out`.
+pub fn write_mapped(
+    layout: &DotsLayout,
+    draw: &DotsDraw,
+    overrides: &[(String, PropertyValue)],
+    out: &mut [u8],
+    map: impl Fn(u32) -> Option<usize>,
+) {
     for (offset, property) in &layout.metadata {
-        put(out, *offset as usize, metadata_value(overrides, property));
+        if let Some(at) = map(*offset) {
+            put(out, at, metadata_value(overrides, property));
+        }
     }
-    if let Some((offset, size)) = layout.visibility {
-        let (offset, size) = (offset as usize, size as usize);
+    if let Some((offset, size)) = layout.visibility
+        && let Some(offset) = map(offset)
+    {
+        let size = size as usize;
         let elements = size / VISIBLE_STRIDE;
         if draw.indirect != 0 && elements > 0 {
             put(out, offset, 0);
@@ -177,7 +207,8 @@ pub fn write(
         }
     }
     if let Some((offset, size)) = layout.instance_data
-        && let Some(region) = out.get_mut(offset as usize..(offset + size) as usize)
+        && let Some(offset) = map(offset)
+        && let Some(region) = out.get_mut(offset..offset + size as usize)
     {
         region.fill(0);
     }
@@ -310,5 +341,39 @@ mod tests {
         let mut out = vec![0xAAu8; 16];
         write(&plain, &DotsDraw::default(), &[], &mut out);
         assert!(out.iter().all(|b| *b == 0xAA));
+    }
+
+    #[test]
+    fn mapped_write_and_window_follow_non_contiguous_binding_offsets() {
+        assert!(DotsLayout::uses_block(VISIBILITY_BLOCK));
+        assert!(DotsLayout::uses_block(INSTANCE_DATA_BLOCK));
+        assert!(DotsLayout::uses_block(
+            "UnityDOTSInstancing_MaterialPropertyMetadata"
+        ));
+        assert!(!DotsLayout::uses_block("urp_TileBuffer"));
+        let draw = DotsDraw {
+            header: [3, 0x11, 10, 11, 12, 13, 14, 15],
+            window_offset: 16,
+            window_size: 24,
+            indirect: 0,
+            visible: vec![5, 9],
+        };
+        // Logical 0..48 mapped to physical 256..304; logical 48..80 mapped to physical 512..544.
+        let map = |logical: u32| {
+            if logical < 48 {
+                Some(256 + logical as usize)
+            } else {
+                Some(512 + (logical - 48) as usize)
+            }
+        };
+        let mut out = vec![0xAAu8; 600];
+        write_mapped(&layout(), &draw, &[], &mut out, map);
+        let word = |at: usize| u32::from_le_bytes(out[at..at + 4].try_into().unwrap());
+        assert_eq!([word(256 + 16), word(256 + 24)], [5, 3]);
+        assert!(out[512..544].iter().all(|&b| b == 0));
+        assert_eq!(
+            window_mapped(&layout(), &draw, 64, map),
+            Some((512, 16, 24))
+        );
     }
 }

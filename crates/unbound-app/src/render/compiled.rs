@@ -9,6 +9,110 @@ use unbound_assets::color::gamma_to_linear;
 use unbound_runtime::render_protocol::owned::{Material, PropertyValue};
 use unbound_shaders::{Compiled, Program, Scalar, Settings, ShaderCompiler, TextureDim};
 
+/// Per-binding metadata precomputed once per compiled program for packing draw uniforms and
+/// sharing standalone bound constant buffers across draws in a frame.
+struct BindingPlan {
+    /// Byte offset of this binding in the program's logical uniform layout.
+    offset: u32,
+    /// Byte size of this binding.
+    size: u32,
+    /// If this binding holds exactly one cbuffer starting at `offset` and is not written per draw
+    /// by DOTS instancing, its name so a constant buffer bound to it can be shared across draws.
+    standalone_block: Option<String>,
+    /// Indices into `Compiled::blocks` lying in this binding.
+    blocks: Vec<u32>,
+    /// Indices into `Compiled::uniforms` that are arrays (`stride > 0`) lying in this binding.
+    arrays: Vec<u32>,
+}
+
+/// How a program's uniforms and cbuffers map onto its uniform bindings.
+struct ProgramBindings {
+    bindings: Vec<BindingPlan>,
+    /// By uniform index: which binding it lies in.
+    uniform_binding: Vec<u8>,
+    /// By uniform index: byte offset relative to its binding's start.
+    uniform_local_offset: Vec<u32>,
+}
+
+impl ProgramBindings {
+    fn of(program: &Compiled) -> ProgramBindings {
+        let mut bindings: Vec<BindingPlan> = if !program.uniform_bindings.is_empty() {
+            program
+                .uniform_bindings
+                .iter()
+                .map(|b| BindingPlan {
+                    offset: b.offset,
+                    size: b.size,
+                    standalone_block: None,
+                    blocks: Vec::new(),
+                    arrays: Vec::new(),
+                })
+                .collect()
+        } else if program.uniform_size > 0 {
+            vec![BindingPlan {
+                offset: 0,
+                size: program.uniform_size,
+                standalone_block: None,
+                blocks: Vec::new(),
+                arrays: Vec::new(),
+            }]
+        } else {
+            Vec::new()
+        };
+
+        let binding_for = |bindings: &[BindingPlan], offset: u32| -> Option<usize> {
+            bindings
+                .iter()
+                .position(|b| offset >= b.offset && offset < b.offset + b.size)
+        };
+
+        for (i, block) in program.blocks.iter().enumerate() {
+            if let Some(k) = binding_for(&bindings, block.offset) {
+                bindings[k].blocks.push(i as u32);
+            }
+        }
+        for b in &mut bindings {
+            if b.blocks.len() == 1 {
+                let block = &program.blocks[b.blocks[0] as usize];
+                if block.offset == b.offset && !super::dots::DotsLayout::uses_block(&block.name) {
+                    b.standalone_block = Some(block.name.clone());
+                }
+            }
+        }
+
+        let mut uniform_binding = Vec::with_capacity(program.uniforms.len());
+        let mut uniform_local_offset = Vec::with_capacity(program.uniforms.len());
+        for (i, u) in program.uniforms.iter().enumerate() {
+            let k = binding_for(&bindings, u.offset).unwrap_or(0);
+            let local = bindings
+                .get(k)
+                .map_or(u.offset, |b| u.offset.saturating_sub(b.offset));
+            uniform_binding.push(k as u8);
+            uniform_local_offset.push(local);
+            if u.stride > 0
+                && let Some(b) = bindings.get_mut(k)
+            {
+                b.arrays.push(i as u32);
+            }
+        }
+
+        ProgramBindings {
+            bindings,
+            uniform_binding,
+            uniform_local_offset,
+        }
+    }
+
+    fn map_offset(&self, offsets: &DrawOffsets, logical: u32) -> Option<usize> {
+        let (k, b) = self
+            .bindings
+            .iter()
+            .enumerate()
+            .find(|(_, b)| logical >= b.offset && logical < b.offset + b.size)?;
+        Some(offsets.offsets[k] as usize + (logical - b.offset) as usize)
+    }
+}
+
 struct ProgramGpu {
     shader: String,
     program: Arc<Compiled>,
@@ -16,6 +120,8 @@ struct ProgramGpu {
     plan: Vec<Source>,
     /// The uniforms by name.
     by_name: rustc_hash::FxHashMap<String, u32>,
+    /// Precomputed per-binding layout for packing and sharing constant buffers.
+    bindings: ProgramBindings,
     vertex: wgpu::ShaderModule,
     fragment: wgpu::ShaderModule,
     /// The fragment program without its depth output ([`Depthless`]), made the first time a
@@ -50,36 +156,48 @@ struct Depthless {
 /// Vulkan, NVIDIA).
 pub const MAX_UNIFORM_BINDINGS: usize = 8;
 
-/// A program's group-0 bind group this frame, and where its uniform bindings start in a draw's
-/// uniform data.
+/// Where each uniform binding of a draw lies in [`CompiledPrograms`]'s frame buffer.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DrawOffsets {
+    pub offsets: [u32; MAX_UNIFORM_BINDINGS],
+    pub count: u8,
+}
+
+/// A constant buffer bound to a cbuffer's name: its handle, mutation revision and CPU shadow bytes.
+#[derive(Clone, Copy)]
+pub struct ConstantBufferRef<'a> {
+    pub handle: u64,
+    pub revision: u64,
+    pub bytes: &'a [u8],
+}
+
+/// A program's group-0 bind group this frame.
 pub struct ProgramUniforms {
     pub group: wgpu::BindGroup,
-    bases: [u32; MAX_UNIFORM_BINDINGS],
-    count: usize,
 }
 
 impl ProgramUniforms {
-    /// The dynamic offsets of a draw whose uniform data is at `data` and per-draw uniform at
-    /// `draw`, in binding order (the first uniform binding, the per-draw uniform, the others),
-    /// and how many there are.
-    pub fn offsets(&self, data: u32, draw: u32) -> ([u32; MAX_UNIFORM_BINDINGS + 1], usize) {
-        dynamic_offsets(&self.bases[..self.count], data, draw)
+    /// The dynamic offsets of a draw whose uniform bindings lie at `bindings` and per-draw
+    /// uniform at `draw`, in binding order (the first uniform binding, the per-draw uniform,
+    /// the others), and how many there are.
+    pub fn offsets(
+        &self,
+        bindings: &DrawOffsets,
+        draw: u32,
+    ) -> ([u32; MAX_UNIFORM_BINDINGS + 1], usize) {
+        dynamic_offsets(&bindings.offsets[..bindings.count as usize], draw)
     }
 }
 
-/// [`ProgramUniforms::offsets`] of uniform bindings starting at `bases` (none: one at 0).
-fn dynamic_offsets(
-    bases: &[u32],
-    data: u32,
-    draw: u32,
-) -> ([u32; MAX_UNIFORM_BINDINGS + 1], usize) {
+/// [`ProgramUniforms::offsets`] of uniform bindings at `bindings` (none: one at 0).
+fn dynamic_offsets(bindings: &[u32], draw: u32) -> ([u32; MAX_UNIFORM_BINDINGS + 1], usize) {
     let mut out = [0; MAX_UNIFORM_BINDINGS + 1];
-    out[0] = data + bases.first().copied().unwrap_or(0);
+    out[0] = bindings.first().copied().unwrap_or(0);
     out[1] = draw;
-    for (k, base) in bases.iter().enumerate().skip(1) {
-        out[k + 1] = data + base;
+    for (k, &base) in bindings.iter().enumerate().skip(1) {
+        out[k + 1] = base;
     }
-    (out, bases.len().max(1) + 1)
+    (out, bindings.len().max(1) + 1)
 }
 
 /// Why a device cannot bind a program's uniform bindings: one is larger than a uniform binding
@@ -171,6 +289,12 @@ pub struct CompiledPrograms {
     buffer: Option<wgpu::Buffer>,
     /// A uniform name being built (an override's `_ST` / `_TexelSize`), reused from draw to draw.
     name: String,
+    /// Standalone constant buffers already copied into `data` this frame:
+    /// `(buffer handle, buffer revision, binding size) -> byte offset in data`.
+    shared_constants: HashMap<(u64, u64, u32), u32>,
+    /// Shared zeroed `DRAW_SLOT` in `data` for programs without uniform bindings, allocated once
+    /// per frame.
+    empty_slot: Option<u32>,
 }
 
 /// What a draw's uniform block is filled from.
@@ -215,8 +339,8 @@ pub struct DrawValues<'a, 'buffers> {
     pub main_alpha_only: bool,
     /// A texture property's texture size (width, height), when one is bound.
     pub texture_size: &'a dyn Fn(&str) -> Option<(u32, u32)>,
-    /// The bytes of the constant buffer bound to a cbuffer's name, when one is.
-    pub constant_buffer: &'buffers dyn Fn(&str) -> Option<&'buffers [u8]>,
+    /// The constant buffer bound to a cbuffer's name, when one is.
+    pub constant_buffer: &'buffers dyn Fn(&str) -> Option<ConstantBufferRef<'buffers>>,
     /// The draw is this instance of a mesh-instancing call (`MeshInstance`): its scalar
     /// uniforms take this element of the draw's arrays of their name.
     pub instance: Option<u32>,
@@ -318,6 +442,8 @@ impl CompiledPrograms {
             used: HashSet::default(),
             buffer: None,
             name: String::new(),
+            shared_constants: HashMap::default(),
+            empty_slot: None,
         }
     }
 
@@ -533,6 +659,7 @@ impl CompiledPrograms {
                 .enumerate()
                 .map(|(i, u)| (u.name.clone(), i as u32))
                 .collect(),
+            bindings: ProgramBindings::of(&program),
             vertex_inputs: program.vertex_inputs,
             sprite_color: program.uniforms.iter().any(|u| u.name == SPRITE_COLOR),
             dots: super::dots::DotsLayout::of(&program),
@@ -673,30 +800,31 @@ impl CompiledPrograms {
     pub fn begin_frame(&mut self) {
         self.data.clear();
         self.used.clear();
+        self.shared_constants.clear();
+        self.empty_slot = None;
     }
 
-    /// A draw's uniform block; returns its offset in this frame's buffer.
-    pub fn push(&mut self, id: u32, values: &DrawValues, block: Option<&MaterialBlock>) -> u32 {
+    /// A draw's uniform bindings; returns each binding's offset in this frame's buffer.
+    pub fn push(
+        &mut self,
+        id: u32,
+        values: &DrawValues,
+        block: Option<&MaterialBlock>,
+    ) -> DrawOffsets {
         self.used.insert(id);
         let gpu = &self.programs[id as usize];
-        let offset = self.data.len();
-        let size = (gpu.program.uniform_size.max(16) as u64).div_ceil(DRAW_SLOT) * DRAW_SLOT;
-        self.data.resize(offset + size as usize, 0);
-        let out = &mut self.data[offset..offset + gpu.program.uniform_size as usize];
-        let (program, plan) = (&gpu.program, gpu.plan.as_slice());
-        match block {
-            Some(block) => fill_over_block(
-                program,
-                plan,
-                &gpu.by_name,
-                block,
-                values,
-                out,
-                &mut self.name,
-            ),
-            None => fill(program, plan, values, out),
-        }
-        offset as u32
+        push_program_uniforms(
+            &gpu.program,
+            &gpu.plan,
+            &gpu.by_name,
+            &gpu.bindings,
+            block,
+            values,
+            &mut self.data,
+            &mut self.shared_constants,
+            &mut self.empty_slot,
+            &mut self.name,
+        )
     }
 
     /// Whether a program reads DOTS instancing data ([`super::dots::DotsLayout::instanced`]).
@@ -704,25 +832,25 @@ impl CompiledPrograms {
         self.programs[id as usize].dots.instanced()
     }
 
-    /// Writes a BatchRendererGroup draw's DOTS instancing data into the uniform block pushed at
-    /// `offset` ([`super::dots::write`]). Returns the batch buffer's window to copy into the
-    /// frame's uniform buffer, in uniform buffer mode ([`super::dots::window`]): the destination
-    /// byte offset, the buffer's byte offset and the bytes.
+    /// Writes a BatchRendererGroup draw's DOTS instancing data into the uniform bindings pushed at
+    /// `offsets` ([`super::dots::write_mapped`]). Returns the batch buffer's window to copy into
+    /// the frame's uniform buffer, in uniform buffer mode ([`super::dots::window_mapped`]): the
+    /// destination byte offset, the buffer's byte offset and the bytes.
     pub fn write_dots(
         &mut self,
         id: u32,
-        offset: u32,
+        offsets: &DrawOffsets,
         draw: &unbound_runtime::render_commands::DotsDraw,
         overrides: &[(String, PropertyValue)],
         buffer_size: u64,
     ) -> Option<(u64, u64, u64)> {
         let gpu = &self.programs[id as usize];
-        let start = offset as usize;
-        let end = start + gpu.program.uniform_size as usize;
-        let out = self.data.get_mut(start..end)?;
-        super::dots::write(&gpu.dots, draw, overrides, out);
-        super::dots::window(&gpu.dots, draw, buffer_size)
-            .map(|(at, source, bytes)| (u64::from(offset) + at, source, bytes))
+        super::dots::write_mapped(&gpu.dots, draw, overrides, &mut self.data, |logical| {
+            gpu.bindings.map_offset(offsets, logical)
+        });
+        super::dots::window_mapped(&gpu.dots, draw, buffer_size, |logical| {
+            gpu.bindings.map_offset(offsets, logical)
+        })
     }
 
     /// The frame's uniform buffer, once [`Self::upload`] has made it.
@@ -740,7 +868,14 @@ impl CompiledPrograms {
         linear: bool,
     ) -> MaterialBlock {
         let gpu = &self.programs[id as usize];
-        material_block(&gpu.program, &gpu.plan, material, lab, linear)
+        material_block(
+            &gpu.program,
+            &gpu.plan,
+            &gpu.bindings,
+            material,
+            lab,
+            linear,
+        )
     }
 
     /// The uniform values a draw gets, by name (`UNBOUND_TRACE_UNIFORMS` tracing).
@@ -778,7 +913,7 @@ impl CompiledPrograms {
         if self.used.is_empty() {
             return groups;
         }
-        let bytes = self.data.len() as u64;
+        let bytes = (self.data.len() as u64).max(DRAW_SLOT);
         if self.buffer.as_ref().is_none_or(|b| b.size() < bytes) {
             self.buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("unbound program uniforms"),
@@ -788,7 +923,9 @@ impl CompiledPrograms {
             }));
         }
         let buffer = self.buffer.as_ref().unwrap();
-        queue.write_buffer(buffer, 0, &self.data);
+        if !self.data.is_empty() {
+            queue.write_buffer(buffer, 0, &self.data);
+        }
         let range = |size: u64| {
             wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                 buffer,
@@ -815,29 +952,18 @@ impl CompiledPrograms {
                     size: wgpu::BufferSize::new(draw_size),
                 }),
             });
-            let mut bases = [0; MAX_UNIFORM_BINDINGS];
-            for (k, b) in bindings.iter().enumerate() {
-                bases[k] = b.offset;
-                if k > 0 {
-                    entries.push(wgpu::BindGroupEntry {
-                        binding: k as u32 + 1,
-                        resource: range(b.size as u64),
-                    });
-                }
+            for (k, b) in bindings.iter().enumerate().skip(1) {
+                entries.push(wgpu::BindGroupEntry {
+                    binding: k as u32 + 1,
+                    resource: range(b.size as u64),
+                });
             }
             let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("unbound program uniforms"),
                 layout: &gpu.uniform_layout,
                 entries: &entries,
             });
-            groups.insert(
-                id,
-                ProgramUniforms {
-                    group,
-                    bases,
-                    count: bindings.len(),
-                },
-            );
+            groups.insert(id, ProgramUniforms { group });
         }
         groups
     }
@@ -1294,7 +1420,10 @@ fn derived_value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Valu
 
 /// A program's uniform block as a material fills it (see [`CompiledPrograms::material_block`]).
 pub struct MaterialBlock {
-    bytes: Vec<u8>,
+    /// Static material/default bytes per uniform binding; empty when that binding has no static
+    /// values (avoids keeping large zeroed copies of Forward+ constant-buffer bindings per
+    /// material).
+    binding_bytes: Vec<Vec<u8>>,
     /// The uniforms the draw fills (built-in variables, global properties, values derived from
     /// bound textures).
     dynamic: Vec<u32>,
@@ -1388,7 +1517,26 @@ fn static_value(
 /// material's value past the array's end; a declared instanced property's single value reaches
 /// instance zero only, the others keep the material's. Outside one, a declared instanced
 /// property's array keeps the material's value.
+#[cfg(test)]
 fn write_uniform(program: &Compiled, plan: &[Source], i: usize, v: &DrawValues, out: &mut [u8]) {
+    write_uniform_at(
+        program,
+        plan,
+        i,
+        program.uniforms[i].offset as usize,
+        v,
+        out,
+    );
+}
+
+fn write_uniform_at(
+    program: &Compiled,
+    plan: &[Source],
+    i: usize,
+    offset: usize,
+    v: &DrawValues,
+    out: &mut [u8],
+) {
     let u = &program.uniforms[i];
     if u.count != 1 || u.stride > 0 {
         return;
@@ -1397,7 +1545,7 @@ fn write_uniform(program: &Compiled, plan: &[Source], i: usize, v: &DrawValues, 
     if v.instance_empty
         && (instanced() || matches!(v.override_of(&u.name), Some(PropertyValue::Array { .. })))
     {
-        write_value(u, &Value::Matrix([0.0; 16]), out);
+        write_value_at(u, offset, &Value::Matrix([0.0; 16]), out);
         return;
     }
     let element;
@@ -1432,19 +1580,19 @@ fn write_uniform(program: &Compiled, plan: &[Source], i: usize, v: &DrawValues, 
         value(&u.name, plan[i], v, &program.textures)
     };
     if let Some(value) = value {
-        write_value(u, &value, out);
+        write_value_at(u, offset, &value, out);
     }
 }
 
-/// A value's components at a uniform's place: a matrix's columns are 8 bytes apart with 2 rows,
-/// 16 otherwise; values are 4x4.
-fn write_value(u: &unbound_shaders::Uniform, value: &Value, out: &mut [u8]) {
+/// A value's components at `offset`: a matrix's columns are 8 bytes apart with 2 rows, 16
+/// otherwise; values are 4x4.
+fn write_value_at(u: &unbound_shaders::Uniform, offset: usize, value: &Value, out: &mut [u8]) {
     let values = value.as_slice();
     let column_stride = if u.rows == 2 { 8 } else { 16 };
     for c in 0..u.columns as usize {
         for r in 0..u.rows as usize {
             let x = values.get(c * 4 + r).copied().unwrap_or(0.0);
-            let at = u.offset as usize + c * column_stride + r * 4;
+            let at = offset + c * column_stride + r * 4;
             if at + 4 > out.len() {
                 continue;
             }
@@ -1462,11 +1610,12 @@ fn write_value(u: &unbound_shaders::Uniform, value: &Value, out: &mut [u8]) {
 fn material_block(
     program: &Compiled,
     plan: &[Source],
+    layout: &ProgramBindings,
     material: &Material,
     lab: &ShaderLab,
     linear: bool,
 ) -> MaterialBlock {
-    let mut bytes = vec![0u8; program.uniform_size as usize];
+    let mut binding_bytes: Vec<Vec<u8>> = vec![Vec::new(); layout.bindings.len()];
     let mut dynamic = Vec::new();
     let mut is_dynamic = vec![false; program.uniforms.len()];
     let mut shared = Vec::new();
@@ -1475,7 +1624,16 @@ fn material_block(
             continue;
         }
         match static_value(&u.name, *source, material, lab, linear) {
-            Some(value) => write_value(u, &value, &mut bytes),
+            Some(value) => {
+                let k = layout.uniform_binding[i] as usize;
+                let local = layout.uniform_local_offset[i] as usize;
+                if let Some(bytes) = binding_bytes.get_mut(k) {
+                    if bytes.is_empty() {
+                        bytes.resize(layout.bindings[k].size as usize, 0);
+                    }
+                    write_value_at(u, local, &value, bytes);
+                }
+            }
             None => {
                 dynamic.push(i as u32);
                 is_dynamic[i] = true;
@@ -1494,7 +1652,7 @@ fn material_block(
     }
     let global_slots = dynamic.iter().map(|_| GlobalSlot::default()).collect();
     MaterialBlock {
-        bytes,
+        binding_bytes,
         dynamic,
         is_dynamic,
         shared,
@@ -1502,84 +1660,259 @@ fn material_block(
     }
 }
 
-/// A draw's uniform block over its material's: the same bytes as [`fill`] gives.
-fn fill_over_block(
+/// Allocates and fills one draw's uniform bindings in `data`. Standalone cbuffer bindings covered
+/// completely by a bound constant buffer (with no draw overrides targeting their uniforms) are
+/// copied once per `(handle, revision, size)` and shared by offset across draws in the frame.
+#[allow(clippy::too_many_arguments)]
+fn push_program_uniforms(
     program: &Compiled,
     plan: &[Source],
     by_name: &rustc_hash::FxHashMap<String, u32>,
-    block: &MaterialBlock,
+    layout: &ProgramBindings,
+    block: Option<&MaterialBlock>,
     values: &DrawValues,
-    out: &mut [u8],
+    data: &mut Vec<u8>,
+    shared_constants: &mut HashMap<(u64, u64, u32), u32>,
+    empty_slot: &mut Option<u32>,
     name: &mut String,
-) {
-    let n = block.bytes.len().min(out.len());
-    out[..n].copy_from_slice(&block.bytes[..n]);
-    fill_arrays(program, values, out);
-    // The uniforms the draw fills, from everything but its own properties: a uniform takes the
-    // draw's properties only by its own name (or, for `_ST` and `_TexelSize`, its texture's),
-    // so the overrides below give each the value it would get from all of them, and the others
-    // need no search through the draw's list.
-    let shared = DrawValues {
-        overrides: &[],
-        ..*values
-    };
-    for (k, &i) in block.dynamic.iter().enumerate() {
-        let u = &program.uniforms[i as usize];
-        // What `write_uniform` gives without the draw's properties, past the material's.
-        let value = match block.shared[k] {
-            Shared::Builtin(which) => builtin_value(which, &u.name, &shared, &program.textures),
-            Shared::Global => global_value(block.global_slots[k].find(
-                values.globals,
-                values.globals_index,
-                &u.name,
-            ))
-            .or_else(|| derived_value(&u.name, &shared, &program.textures)),
-            Shared::Draw => {
-                write_uniform(program, plan, i as usize, &shared, out);
-                continue;
-            }
-        };
-        if let Some(value) = value {
-            write_value(u, &value, out);
-        }
+) -> DrawOffsets {
+    let mut offsets = [0u32; MAX_UNIFORM_BINDINGS];
+    if layout.bindings.is_empty() {
+        let slot = *empty_slot.get_or_insert_with(|| {
+            let at = data.len() as u32;
+            data.resize(data.len() + DRAW_SLOT as usize, 0);
+            at
+        });
+        offsets[0] = slot;
+        return DrawOffsets { offsets, count: 0 };
     }
-    // The draw's own properties over the material's, written when a full fill writes them: the
-    // `_ST` / `_TexelSize` the draw fills of an override that is no texture (they derive from
-    // the texture property's name) before the bound constant buffers; each uniform of an
-    // override's name, and the `_ST` / `_TexelSize` of a texture override, after them.
-    let mut redo = |out: &mut [u8], property: &str, suffix: &str, texture: bool| {
-        name.clear();
-        name.push_str(property);
-        name.push_str(suffix);
-        if let Some(&i) = by_name.get(name.as_str())
-            && (texture || block.is_dynamic[i as usize])
+
+    let mut shared_cb: [Option<ConstantBufferRef<'_>>; MAX_UNIFORM_BINDINGS] =
+        [None; MAX_UNIFORM_BINDINGS];
+    let mut any_shared = false;
+    for (k, bp) in layout.bindings.iter().enumerate() {
+        if let Some(ref block_name) = bp.standalone_block
+            && let Some(cb) = (values.constant_buffer)(block_name)
+            && cb.bytes.len() >= bp.size as usize
         {
-            write_uniform(program, plan, i as usize, values, out);
+            shared_cb[k] = Some(cb);
+            any_shared = true;
         }
-    };
-    for (property, value) in values.taken_overrides() {
-        if !matches!(value, PropertyValue::Texture { .. }) {
-            for suffix in TEXTURE_SUFFIXES {
-                redo(out, property, suffix, false);
+    }
+    // Over a MaterialBlock, draw overrides run after bound constant buffers; keep a binding
+    // per-draw if any override targets a uniform inside it.
+    if any_shared && block.is_some() && !values.overrides.is_empty() {
+        for (property, value) in values.taken_overrides() {
+            if let Some(&i) = by_name.get(property.as_str()) {
+                shared_cb[layout.uniform_binding[i as usize] as usize] = None;
+            }
+            if matches!(value, PropertyValue::Texture { .. }) {
+                for suffix in TEXTURE_SUFFIXES {
+                    name.clear();
+                    name.push_str(property);
+                    name.push_str(suffix);
+                    if let Some(&i) = by_name.get(name.as_str()) {
+                        shared_cb[layout.uniform_binding[i as usize] as usize] = None;
+                    }
+                }
             }
         }
     }
-    fill_constant_buffers(program, values, out);
-    for (property, value) in values.taken_overrides() {
-        redo(out, property, "", true);
-        if matches!(value, PropertyValue::Texture { .. }) {
-            for suffix in TEXTURE_SUFFIXES {
-                redo(out, property, suffix, true);
+
+    let mut shared_mask = 0u8;
+    for (k, bp) in layout.bindings.iter().enumerate() {
+        let alloc = (bp.size.max(16) as u64).div_ceil(DRAW_SLOT) * DRAW_SLOT;
+        if let Some(cb) = shared_cb[k] {
+            shared_mask |= 1 << k;
+            let key = (cb.handle, cb.revision, bp.size);
+            offsets[k] = *shared_constants.entry(key).or_insert_with(|| {
+                let at = data.len();
+                data.resize(at + alloc as usize, 0);
+                let n = (bp.size as usize).min(cb.bytes.len());
+                data[at..at + n].copy_from_slice(&cb.bytes[..n]);
+                at as u32
+            });
+        } else {
+            let at = data.len();
+            data.resize(at + alloc as usize, 0);
+            offsets[k] = at as u32;
+            if let Some(block) = block
+                && let Some(src) = block.binding_bytes.get(k)
+                && !src.is_empty()
+            {
+                let n = src.len().min(bp.size as usize);
+                data[at..at + n].copy_from_slice(&src[..n]);
             }
         }
+    }
+
+    let binding_range = |k: usize| -> std::ops::Range<usize> {
+        let start = offsets[k] as usize;
+        let len = layout.bindings[k].size as usize;
+        start..start + len
+    };
+
+    // Arrays in non-shared bindings.
+    for (k, bp) in layout.bindings.iter().enumerate() {
+        if shared_mask & (1 << k) != 0 || bp.arrays.is_empty() {
+            continue;
+        }
+        let out = &mut data[binding_range(k)];
+        for &i in &bp.arrays {
+            let u = &program.uniforms[i as usize];
+            let value = match values.get(&u.name) {
+                Some(value @ PropertyValue::Array { .. }) => Some(value),
+                _ => values
+                    .globals_index
+                    .find(values.globals, &u.name)
+                    .filter(|value| matches!(value, PropertyValue::Array { .. })),
+            };
+            if let Some(PropertyValue::Array { components, data }) = value {
+                write_array_at(
+                    u,
+                    layout.uniform_local_offset[i as usize] as usize,
+                    *components,
+                    data,
+                    out,
+                );
+            }
+        }
+    }
+
+    match block {
+        Some(block) => {
+            // The uniforms the draw fills, from everything but its own properties: a uniform takes
+            // the draw's properties only by its own name (or, for `_ST` and `_TexelSize`, its
+            // texture's), so the overrides below give each the value it would get from all of
+            // them, and the others need no search through the draw's list.
+            let shared = DrawValues {
+                overrides: &[],
+                ..*values
+            };
+            for (d, &i) in block.dynamic.iter().enumerate() {
+                let k = layout.uniform_binding[i as usize] as usize;
+                if shared_mask & (1 << k) != 0 {
+                    continue;
+                }
+                let u = &program.uniforms[i as usize];
+                let local = layout.uniform_local_offset[i as usize] as usize;
+                let out = &mut data[binding_range(k)];
+                // What `write_uniform` gives without the draw's properties, past the material's.
+                let value = match block.shared[d] {
+                    Shared::Builtin(which) => {
+                        builtin_value(which, &u.name, &shared, &program.textures)
+                    }
+                    Shared::Global => global_value(block.global_slots[d].find(
+                        values.globals,
+                        values.globals_index,
+                        &u.name,
+                    ))
+                    .or_else(|| derived_value(&u.name, &shared, &program.textures)),
+                    Shared::Draw => {
+                        write_uniform_at(program, plan, i as usize, local, &shared, out);
+                        continue;
+                    }
+                };
+                if let Some(value) = value {
+                    write_value_at(u, local, &value, out);
+                }
+            }
+            // The draw's own properties over the material's, written when a full fill writes them:
+            // the `_ST` / `_TexelSize` the draw fills of an override that is no texture (they
+            // derive from the texture property's name) before the bound constant buffers; each
+            // uniform of an override's name, and the `_ST` / `_TexelSize` of a texture override,
+            // after them.
+            let mut redo = |data: &mut [u8], property: &str, suffix: &str, texture: bool| {
+                name.clear();
+                name.push_str(property);
+                name.push_str(suffix);
+                if let Some(&i) = by_name.get(name.as_str())
+                    && (texture || block.is_dynamic[i as usize])
+                {
+                    let k = layout.uniform_binding[i as usize] as usize;
+                    if shared_mask & (1 << k) == 0 {
+                        let local = layout.uniform_local_offset[i as usize] as usize;
+                        let out = &mut data[binding_range(k)];
+                        write_uniform_at(program, plan, i as usize, local, values, out);
+                    }
+                }
+            };
+            for (property, value) in values.taken_overrides() {
+                if !matches!(value, PropertyValue::Texture { .. }) {
+                    for suffix in TEXTURE_SUFFIXES {
+                        redo(data, property, suffix, false);
+                    }
+                }
+            }
+            for (k, bp) in layout.bindings.iter().enumerate() {
+                if shared_mask & (1 << k) != 0 {
+                    continue;
+                }
+                let out = &mut data[binding_range(k)];
+                for &bi in &bp.blocks {
+                    let b = &program.blocks[bi as usize];
+                    let Some(cb) = (values.constant_buffer)(&b.name) else {
+                        continue;
+                    };
+                    let start = b.offset.saturating_sub(bp.offset) as usize;
+                    let end = (start + b.size as usize).min(out.len());
+                    if end > start {
+                        let n = (end - start).min(cb.bytes.len());
+                        out[start..start + n].copy_from_slice(&cb.bytes[..n]);
+                    }
+                }
+            }
+            for (property, value) in values.taken_overrides() {
+                redo(data, property, "", true);
+                if matches!(value, PropertyValue::Texture { .. }) {
+                    for suffix in TEXTURE_SUFFIXES {
+                        redo(data, property, suffix, true);
+                    }
+                }
+            }
+        }
+        None => {
+            for i in 0..program.uniforms.len() {
+                let k = layout.uniform_binding[i] as usize;
+                if shared_mask & (1 << k) != 0 {
+                    continue;
+                }
+                let local = layout.uniform_local_offset[i] as usize;
+                let out = &mut data[binding_range(k)];
+                write_uniform_at(program, plan, i, local, values, out);
+            }
+            for (k, bp) in layout.bindings.iter().enumerate() {
+                if shared_mask & (1 << k) != 0 {
+                    continue;
+                }
+                let out = &mut data[binding_range(k)];
+                for &bi in &bp.blocks {
+                    let b = &program.blocks[bi as usize];
+                    let Some(cb) = (values.constant_buffer)(&b.name) else {
+                        continue;
+                    };
+                    let start = b.offset.saturating_sub(bp.offset) as usize;
+                    let end = (start + b.size as usize).min(out.len());
+                    if end > start {
+                        let n = (end - start).min(cb.bytes.len());
+                        out[start..start + n].copy_from_slice(&cb.bytes[..n]);
+                    }
+                }
+            }
+        }
+    }
+
+    DrawOffsets {
+        offsets,
+        count: layout.bindings.len() as u8,
     }
 }
 
 /// The uniforms a texture property's name gives: its scale and offset, and its size.
 const TEXTURE_SUFFIXES: [&str; 2] = ["_ST", "_TexelSize"];
 
-/// Writes a program's uniform block for a draw. Members nothing provides stay zero: arrays (no
-/// material property or built-in Unbound fills is one) and unknown names.
+/// Writes a program's uniform block for a draw into one contiguous buffer (tests).
+#[cfg(test)]
 fn fill(program: &Compiled, plan: &[Source], v: &DrawValues, out: &mut [u8]) {
     fill_arrays(program, v, out);
     for i in 0..program.uniforms.len() {
@@ -1589,6 +1922,7 @@ fn fill(program: &Compiled, plan: &[Source], v: &DrawValues, out: &mut [u8]) {
 }
 
 /// Arrays: the draw's or material's array property, else the global one.
+#[cfg(test)]
 fn fill_arrays(program: &Compiled, v: &DrawValues, out: &mut [u8]) {
     for u in program.uniforms.iter().filter(|u| u.stride > 0) {
         let value = match v.get(&u.name) {
@@ -1599,29 +1933,36 @@ fn fill_arrays(program: &Compiled, v: &DrawValues, out: &mut [u8]) {
                 .filter(|value| matches!(value, PropertyValue::Array { .. })),
         };
         if let Some(PropertyValue::Array { components, data }) = value {
-            write_array(u, *components, data, out);
+            write_array_at(u, u.offset as usize, *components, data, out);
         }
     }
 }
 
 /// A constant buffer bound to a cbuffer's name fills the cbuffer's range.
+#[cfg(test)]
 fn fill_constant_buffers(program: &Compiled, v: &DrawValues, out: &mut [u8]) {
     for block in &program.blocks {
-        let Some(bytes) = (v.constant_buffer)(&block.name) else {
+        let Some(cb) = (v.constant_buffer)(&block.name) else {
             continue;
         };
         let start = block.offset as usize;
         let end = (start + block.size as usize).min(out.len());
         if end > start {
-            let n = (end - start).min(bytes.len());
-            out[start..start + n].copy_from_slice(&bytes[..n]);
+            let n = (end - start).min(cb.bytes.len());
+            out[start..start + n].copy_from_slice(&cb.bytes[..n]);
         }
     }
 }
 
-/// An array uniform's elements: `components` floats each (0: consecutive values from the
-/// uniform's offset), as many as the array holds.
-fn write_array(u: &unbound_shaders::Uniform, components: u32, data: &[f32], out: &mut [u8]) {
+/// An array uniform's elements: `components` floats each (0: consecutive values from `offset`),
+/// as many as the array holds.
+fn write_array_at(
+    u: &unbound_shaders::Uniform,
+    offset: usize,
+    components: u32,
+    data: &[f32],
+    out: &mut [u8],
+) {
     let mut put = |at: usize, x: f32| {
         if at + 4 > out.len() {
             return;
@@ -1633,7 +1974,6 @@ fn write_array(u: &unbound_shaders::Uniform, components: u32, data: &[f32], out:
         };
         out[at..at + 4].copy_from_slice(&bytes);
     };
-    let offset = u.offset as usize;
     if components == 0 {
         for (i, x) in data.iter().enumerate() {
             put(offset + i * 4, *x);
@@ -1666,10 +2006,10 @@ mod tests {
     #[test]
     fn dynamic_offsets_follow_the_binding_order() {
         assert_eq!(
-            dynamic_offsets(&[], 512, 768),
-            ([512, 768, 0, 0, 0, 0, 0, 0, 0], 2)
+            dynamic_offsets(&[], 768),
+            ([0, 768, 0, 0, 0, 0, 0, 0, 0], 2)
         );
-        let (offsets, count) = dynamic_offsets(&[0, 1024, 66560], 4096, 256);
+        let (offsets, count) = dynamic_offsets(&[4096, 5120, 70656], 256);
         assert_eq!(&offsets[..count], &[4096, 256, 5120, 70656]);
     }
 
@@ -1853,12 +2193,21 @@ mod tests {
         program: &Compiled,
         plan: &[Source],
         by_name: &rustc_hash::FxHashMap<String, u32>,
+        layout: &ProgramBindings,
         block: &MaterialBlock,
         values: &DrawValues,
         out: &mut [u8],
     ) {
-        let n = block.bytes.len().min(out.len());
-        out[..n].copy_from_slice(&block.bytes[..n]);
+        for (k, bp) in layout.bindings.iter().enumerate() {
+            let src = &block.binding_bytes[k];
+            if !src.is_empty() {
+                let start = bp.offset as usize;
+                let end = (start + src.len()).min(out.len());
+                if end > start {
+                    out[start..end].copy_from_slice(&src[..end - start]);
+                }
+            }
+        }
         fill_arrays(program, values, out);
         for &i in &block.dynamic {
             write_uniform(program, plan, i as usize, values, out);
@@ -1965,7 +2314,8 @@ mod tests {
             .enumerate()
             .map(|(i, u)| (u.name.clone(), i as u32))
             .collect();
-        let block = material_block(&program, &plan, &material, &lab, true);
+        let layout = ProgramBindings::of(&program);
+        let block = material_block(&program, &plan, &layout, &material, &lab, true);
         assert!(
             block.is_dynamic[3] && !block.is_dynamic[5],
             "_MainTex_ST per draw, _Detail_ST the material's"
@@ -2063,7 +2413,13 @@ mod tests {
                 globals: &globals,
                 main_alpha_only: false,
                 texture_size: &size,
-                constant_buffer: &|name| (name == "Bound").then_some(&BOUND[..]),
+                constant_buffer: &|name| {
+                    (name == "Bound").then_some(ConstantBufferRef {
+                        handle: 1,
+                        revision: 1,
+                        bytes: &BOUND[..],
+                    })
+                },
                 instance,
                 instance_empty: false,
                 element: None,
@@ -2078,18 +2434,33 @@ mod tests {
             };
             fill(&program, &plan, &unhidden, &mut without);
             assert_eq!(full, without, "hidden {hidden:?}, overrides {overrides:?}");
-            let mut over = vec![0xffu8; offset as usize];
-            fill_over_block(
+            let mut data = Vec::new();
+            let mut shared_constants = HashMap::default();
+            let mut empty_slot = None;
+            let draw_offsets = push_program_uniforms(
                 &program,
                 &plan,
                 &by_name,
-                &block,
+                &layout,
+                Some(&block),
                 &values,
-                &mut over,
+                &mut data,
+                &mut shared_constants,
+                &mut empty_slot,
                 &mut String::new(),
             );
+            let at = draw_offsets.offsets[0] as usize;
+            let over = data[at..at + offset as usize].to_vec();
             let mut reference = vec![0u8; offset as usize];
-            fill_over_block_reference(&program, &plan, &by_name, &block, &values, &mut reference);
+            fill_over_block_reference(
+                &program,
+                &plan,
+                &by_name,
+                &layout,
+                &block,
+                &values,
+                &mut reference,
+            );
             assert_eq!(
                 reference, over,
                 "overrides {overrides:?}, instance {instance:?}, hidden {hidden:?}"
@@ -2214,7 +2585,13 @@ mod tests {
             globals: &[("_Global".to_string(), PropertyValue::Float(3.0))],
             main_alpha_only: false,
             texture_size: &size,
-            constant_buffer: &|name| (name == "Bound").then_some(&BOUND[..]),
+            constant_buffer: &|name| {
+                (name == "Bound").then_some(ConstantBufferRef {
+                    handle: 1,
+                    revision: 1,
+                    bytes: &BOUND[..],
+                })
+            },
             instance: None,
             instance_empty: false,
             element: None,
@@ -2416,6 +2793,303 @@ mod tests {
         assert_eq!(
             sample_type(SampleKind::Depth),
             wgpu::TextureSampleType::Depth
+        );
+    }
+
+    /// A standalone cbuffer bound by name (such as Forward+ tile/z-bin tables) is copied once per
+    /// `(handle, revision, binding_size)` and shared across draws by offset; revision changes,
+    /// short buffers and overrides inside the cbuffer stay isolated and byte-exact.
+    #[test]
+    fn standalone_constant_buffers_are_shared_across_draws() {
+        let lab =
+            ShaderLab::parse(r#"Shader "S" { Properties {} SubShader { Pass { } } }"#).unwrap();
+        let material = Material {
+            shader: "S".into(),
+            ..Default::default()
+        };
+        let program = Compiled {
+            vertex: String::new(),
+            fragment: String::new(),
+            vertex_entry: String::new(),
+            fragment_entry: String::new(),
+            uniforms: vec![
+                uniform("unity_ObjectToWorld", 0, 4, 4),
+                uniform("urp_Tiles", 256, 4, 1),
+            ],
+            instanced_properties: Vec::new(),
+            mesh_instance_stride: Some(0),
+            mesh_instance_uniform_scaling: false,
+            mesh_instance_max_count: None,
+            uniform_size: 256 + 16384,
+            uniform_bindings: vec![
+                unbound_shaders::UniformBinding {
+                    offset: 0,
+                    size: 64,
+                },
+                unbound_shaders::UniformBinding {
+                    offset: 256,
+                    size: 16384,
+                },
+            ],
+            textures: Vec::new(),
+            texture_dims: Vec::new(),
+            main_texture: false,
+            keywords: Vec::new(),
+            texture_slots: Vec::new(),
+            texture_aliases: Vec::new(),
+            blocks: vec![
+                unbound_shaders::BlockRange {
+                    name: "UnityPerDraw".into(),
+                    offset: 0,
+                    size: 64,
+                },
+                unbound_shaders::BlockRange {
+                    name: "urp_TileBuffer".into(),
+                    offset: 256,
+                    size: 16384,
+                },
+            ],
+            buffers: Vec::new(),
+            extra_vertex_inputs: false,
+            vertex_inputs: true,
+            framebuffer_fetch: 0,
+        };
+        let plan: Vec<Source> = program
+            .uniforms
+            .iter()
+            .map(|u| Source::of(&u.name))
+            .collect();
+        let by_name: rustc_hash::FxHashMap<String, u32> = program
+            .uniforms
+            .iter()
+            .enumerate()
+            .map(|(i, u)| (u.name.clone(), i as u32))
+            .collect();
+        let layout = ProgramBindings::of(&program);
+        assert_eq!(
+            layout.bindings[0].standalone_block.as_deref(),
+            Some("UnityPerDraw")
+        );
+        assert_eq!(
+            layout.bindings[1].standalone_block.as_deref(),
+            Some("urp_TileBuffer")
+        );
+        let block = material_block(&program, &plan, &layout, &material, &lab, true);
+        assert!(
+            block.binding_bytes[1].is_empty(),
+            "no static bytes in tile binding"
+        );
+
+        let tiles_v1 = vec![0x3Cu8; 16384];
+        let tiles_v2 = vec![0x5Au8; 16384];
+        let short_tiles = vec![0x77u8; 64];
+        let mut model1 = [0.0f32; 16];
+        model1[12] = 1.0;
+        let mut model2 = [0.0f32; 16];
+        model2[12] = 2.0;
+        let globals_index = Default::default();
+        let size = |_: &str| None;
+        let none_cb = |_: &str| None;
+        let base = DrawValues {
+            gizmo_draw: false,
+            color: [1.0; 4],
+            sprite_color: [1.0; 4],
+            model: model1,
+            view: model1,
+            proj: model1,
+            gpu_proj: model1,
+            flipped: false,
+            reversed_z: false,
+            camera_view: model1,
+            camera_proj: model1,
+            screen: [1280.0, 720.0],
+            time: 0.0,
+            linear: true,
+            material: &material,
+            overrides: &[],
+            hidden: None,
+            lab: &lab,
+            globals: &[],
+            globals_index: &globals_index,
+            main_alpha_only: false,
+            texture_size: &size,
+            constant_buffer: &none_cb,
+            instance: None,
+            instance_empty: false,
+            element: None,
+        };
+
+        let mut data = Vec::new();
+        let mut shared = HashMap::default();
+        let mut empty_slot = None;
+        let mut scratch = String::new();
+
+        let cb1 = |name: &str| {
+            (name == "urp_TileBuffer").then_some(ConstantBufferRef {
+                handle: 42,
+                revision: 1,
+                bytes: &tiles_v1,
+            })
+        };
+        let v1 = DrawValues {
+            model: model1,
+            constant_buffer: &cb1,
+            ..base
+        };
+        let d1 = push_program_uniforms(
+            &program,
+            &plan,
+            &by_name,
+            &layout,
+            Some(&block),
+            &v1,
+            &mut data,
+            &mut shared,
+            &mut empty_slot,
+            &mut scratch,
+        );
+        let len_after_d1 = data.len();
+        let v2 = DrawValues {
+            model: model2,
+            constant_buffer: &cb1,
+            ..base
+        };
+        let d2 = push_program_uniforms(
+            &program,
+            &plan,
+            &by_name,
+            &layout,
+            Some(&block),
+            &v2,
+            &mut data,
+            &mut shared,
+            &mut empty_slot,
+            &mut scratch,
+        );
+        assert_eq!(
+            d1.offsets[1], d2.offsets[1],
+            "second draw reuses shared tile buffer"
+        );
+        assert_ne!(
+            d1.offsets[0], d2.offsets[0],
+            "per-draw binding stays distinct"
+        );
+        assert_eq!(
+            data.len() - len_after_d1,
+            DRAW_SLOT as usize,
+            "second draw only allocates its 256-byte per-draw binding"
+        );
+        assert_eq!(
+            &data[d1.offsets[1] as usize..d1.offsets[1] as usize + 16384],
+            &tiles_v1[..]
+        );
+
+        // Updated revision allocates a new shared copy without mutating d1/d2's bytes.
+        let cb2 = |name: &str| {
+            (name == "urp_TileBuffer").then_some(ConstantBufferRef {
+                handle: 42,
+                revision: 2,
+                bytes: &tiles_v2,
+            })
+        };
+        let v3 = DrawValues {
+            model: model1,
+            constant_buffer: &cb2,
+            ..base
+        };
+        let d3 = push_program_uniforms(
+            &program,
+            &plan,
+            &by_name,
+            &layout,
+            Some(&block),
+            &v3,
+            &mut data,
+            &mut shared,
+            &mut empty_slot,
+            &mut scratch,
+        );
+        assert_ne!(d3.offsets[1], d1.offsets[1]);
+        assert_eq!(
+            &data[d1.offsets[1] as usize..d1.offsets[1] as usize + 16384],
+            &tiles_v1[..]
+        );
+        assert_eq!(
+            &data[d3.offsets[1] as usize..d3.offsets[1] as usize + 16384],
+            &tiles_v2[..]
+        );
+
+        // Draw override targeting a uniform inside the standalone cbuffer falls back to per-draw
+        // so the override applies without mutating the shared copy.
+        let overrides = [(
+            "urp_Tiles".to_string(),
+            PropertyValue::Vector([9.0, 8.0, 7.0, 6.0]),
+        )];
+        let v4 = DrawValues {
+            model: model1,
+            constant_buffer: &cb1,
+            overrides: &overrides,
+            ..base
+        };
+        let d4 = push_program_uniforms(
+            &program,
+            &plan,
+            &by_name,
+            &layout,
+            Some(&block),
+            &v4,
+            &mut data,
+            &mut shared,
+            &mut empty_slot,
+            &mut scratch,
+        );
+        assert_ne!(d4.offsets[1], d1.offsets[1]);
+        assert_eq!(
+            f32::from_le_bytes(
+                data[d4.offsets[1] as usize..d4.offsets[1] as usize + 4]
+                    .try_into()
+                    .unwrap()
+            ),
+            9.0
+        );
+        assert_eq!(
+            &data[d1.offsets[1] as usize..d1.offsets[1] as usize + 16384],
+            &tiles_v1[..]
+        );
+
+        // A buffer shorter than the binding falls back to per-draw so trailing bytes match.
+        let cb_short = |name: &str| {
+            (name == "urp_TileBuffer").then_some(ConstantBufferRef {
+                handle: 99,
+                revision: 1,
+                bytes: &short_tiles,
+            })
+        };
+        let v5 = DrawValues {
+            model: model1,
+            constant_buffer: &cb_short,
+            ..base
+        };
+        let d5 = push_program_uniforms(
+            &program,
+            &plan,
+            &by_name,
+            &layout,
+            Some(&block),
+            &v5,
+            &mut data,
+            &mut shared,
+            &mut empty_slot,
+            &mut scratch,
+        );
+        assert_eq!(
+            &data[d5.offsets[1] as usize..d5.offsets[1] as usize + 64],
+            &short_tiles[..]
+        );
+        assert!(
+            data[d5.offsets[1] as usize + 64..d5.offsets[1] as usize + 16384]
+                .iter()
+                .all(|&b| b == 0)
         );
     }
 
