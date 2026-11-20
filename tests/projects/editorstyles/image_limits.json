@@ -1,0 +1,8 @@
+{
+  "toggle-paint.png": {
+    "mean": 0,
+    "worst": 0,
+    "over8": 0,
+    "reason": "The Gamma, 1x Game view checkbox controls match pixel for pixel in both themes."
+  }
+}

@@ -1,11 +1,12 @@
 using System;
+using System.Collections;
 using System.Globalization;
 using System.IO;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
 
-public sealed class EditorStylesProbe : MonoBehaviour
+public sealed partial class EditorStylesProbe : MonoBehaviour
 {
     readonly StringBuilder m_Values = new StringBuilder();
     GUIStyle m_LayoutStyle;
@@ -34,8 +35,26 @@ public sealed class EditorStylesProbe : MonoBehaviour
         finally { Environment.SetEnvironmentVariable("XDG_CACHE_HOME", oldCache); }
     }
 
+    IEnumerator Start()
+    {
+        var camera = new GameObject("Camera").AddComponent<Camera>();
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = Color.black;
+        camera.allowHDR = false;
+        camera.allowMSAA = false;
+        while (!m_SawRepaint) yield return null;
+        for (int frame = 0; !m_PointerInView && frame < 45; frame++) yield return null;
+        yield return new WaitForEndOfFrame();
+        RecordTogglePaint();
+        Put("complete", "true");
+        File.WriteAllText(Path.Combine(Environment.GetEnvironmentVariable("EDITOR_STYLES_OUT"), "values.jsonl"), m_Values.ToString());
+        EditorApplication.Exit(0);
+    }
+
     void OnGUI()
     {
+        if (Event.current.type == EventType.Repaint)
+            DrawTogglePaint();
         if (m_SawRepaint) return;
         if (Event.current.type == EventType.Layout && !m_SawLayout)
         {
@@ -77,14 +96,11 @@ public sealed class EditorStylesProbe : MonoBehaviour
             }
             finally { style.normal.textColor = original; }
 
-            GUI.Label(new Rect(10, 10, 150, 20), "Inspector bold", style);
+            GUI.Label(new Rect(10, 142, 150, 20), "Inspector bold", style);
         }
         catch (Exception error) { Put("Repaint/exception", Quote(error.GetType().Name)); }
 
         RecordToggle();
-        Put("complete", "true");
-        File.WriteAllText(Path.Combine(Environment.GetEnvironmentVariable("EDITOR_STYLES_OUT"), "values.jsonl"), m_Values.ToString());
-        EditorApplication.Exit(0);
     }
 
     void RecordToggle()
@@ -96,8 +112,8 @@ public sealed class EditorStylesProbe : MonoBehaviour
             Put("toggle/sharedWithLayout", Flag(ReferenceEquals(m_ToggleLayoutStyle, style)));
             Put("toggle/distinctFromGameSkinToggle", Flag(!ReferenceEquals(GUI.skin.toggle, style)));
             DescribeStyle("toggle/", style, textureInfo: true);
-            var off = new Rect(10, 42, 150, 20);
-            var on = new Rect(10, 66, 150, 20);
+            var off = new Rect(160, 142, 150, 16);
+            var on = new Rect(160, 158, 150, 16);
             bool offValue = GUI.Toggle(off, false, "Inspector unchecked", style);
             bool onValue = GUI.Toggle(on, true, "Inspector checked", style);
             Put("toggle/valueOnRepaint", $"[{Flag(offValue)},{Flag(onValue)}]");

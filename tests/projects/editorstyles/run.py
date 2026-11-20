@@ -51,8 +51,8 @@ def main():
                 with patch.object(value_probe.editor_runner, 'EditorJob', PrivatePrefsEditorJob):
                     value_probe.record(PROBE, 'EditorStylesRunner.Record', VARIABLE, label, batch=False, base=BASE)
             else:
-                codes.append(value_probe.gate(PROBE, VARIABLE, label, 1e-6, ['--frames', '60', '--size', '320x180'],
-                                              base=BASE, profile=theme))
+                engine_args = ['--frames', '60', '--size', '320x180', '--move', '4:160,90']
+                codes.append(value_probe.gate(PROBE, VARIABLE, label, 1e-6, engine_args, base=BASE, profile=theme))
     return max(codes, default=0)
 
 
