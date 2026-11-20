@@ -15,7 +15,7 @@ using UnityEngine;
 /// pixels (copied through a RenderTexture: the skin's textures need not be readable).
 /// Writes values.jsonl to $IMGUI_SKIN_OUT.
 /// </summary>
-public sealed class ImguiSkinProbe : MonoBehaviour
+public sealed partial class ImguiSkinProbe : MonoBehaviour
 {
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
     readonly StringBuilder m_Out = new StringBuilder();
@@ -52,12 +52,14 @@ public sealed class ImguiSkinProbe : MonoBehaviour
             m_RecordedLayout = true;
             RecordPropertyHooks("Layout");
             RecordListFocus("Layout");
+            RecordPropertyScopes("Layout");
         }
         else if (Event.current.type == EventType.Repaint && !m_RecordedRepaint)
         {
             m_RecordedRepaint = true;
             RecordPropertyHooks("Repaint");
             RecordListFocus("Repaint");
+            RecordPropertyScopes("Repaint");
         }
     }
 

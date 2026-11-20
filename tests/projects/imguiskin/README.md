@@ -24,6 +24,13 @@ passes. Releasing from a non-owner leaves the current owner in place. In Update,
 throws when the list owns the ID and returns false when another control owns it.
 [Unity 6000.0 `GUIUtility.keyboardControl`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUIUtility-keyboardControl.html)
 
+The property scope controls check default labels, caller text and images, tooltip fallback and
+the shared temporary label returned to nested scopes. They move an array element after reading
+its label to verify the new index. Two serialized targets provide equal and unequal values so the
+mixed value indicator changes during nested scopes. The controls also check read-only properties,
+restoration of enabled state and background color, and repeated disposal.
+[Unity 6000.0 `EditorGUI.PropertyScope`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUI.PropertyScope.html)
+
 ```sh
 python3 tests/projects/imguiskin/run.py record --label native-a
 python3 tests/projects/imguiskin/run.py record --label native-b
