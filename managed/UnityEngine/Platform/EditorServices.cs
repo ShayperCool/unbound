@@ -15,6 +15,7 @@ namespace Unbound.Runtime
         static volatile bool s_Loaded;
         static readonly object s_Lock = new object();
         internal static bool Configured;
+        internal static bool CoreStatsRequested;
         internal static bool CaptureExceptions;
         internal static uint LogBufferSize = 10;
 
@@ -38,6 +39,11 @@ namespace Unbound.Runtime
                 if (doc.ClassId != 310) continue;
                 Configured = doc.Body.Get("UnityAnalyticsSettings")?.Bool("m_Enabled") == true;
                 var crash = doc.Body.Get("CrashReportingSettings");
+                CoreStatsRequested = Configured
+                    || doc.Body.Get("UnityPurchasingSettings")?.Bool("m_Enabled") == true
+                    || doc.Body.Get("UnityAdsSettings")?.Bool("m_Enabled") == true
+                    || doc.Body.Get("PerformanceReportingSettings")?.Bool("m_Enabled") == true
+                    || crash?.Bool("m_EnableCloudDiagnosticsReporting") == true;
                 if (crash == null) continue;
                 CaptureExceptions = crash.Bool("m_EnableCloudDiagnosticsReporting");
                 LogBufferSize = (uint)Math.Clamp(crash.Int("m_LogBufferSize", 10), 0, 50);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Unbound.Runtime;
 using UnityEngine;
 using UnityEngine.Analytics;
 
@@ -103,6 +104,37 @@ namespace UnityEditor
         /// <summary>Imports run in the Editor's own process: there are no import workers.</summary>
         [Unbound.EditorFaithful("measured: tests/projects/editor env.importWorker")]
         public static bool IsAssetImportWorkerProcess() => false;
+    }
+}
+
+namespace UnityEditor.Analytics
+{
+    public static partial class AnalyticsSettings
+    {
+        public static bool enabled
+        {
+            get => ReadSettings(nameof(enabled)) && EditorServiceSettings.Configured;
+            [Unbound.Stub] set => Stubs.NotImplemented("UnityEditor.Analytics.AnalyticsSettings.enabled");
+        }
+
+        internal static bool enabledForPlatform =>
+            ReadSettings(nameof(enabledForPlatform), forBuild: true) && EditorServiceSettings.Configured;
+
+        public static bool deviceStatsEnabledInBuild => hasCoreStatsInBuild;
+
+        internal static bool hasCoreStatsInBuild =>
+            ReadSettings(nameof(hasCoreStatsInBuild), forBuild: true) && EditorServiceSettings.CoreStatsRequested;
+
+        static bool ReadSettings(string member, bool forBuild = false)
+        {
+            if (Compat.EditorAnalyticsSettingsMeasured && (!forBuild || Compat.EditorAnalyticsBuildTargetMeasured(EditorUserBuildSettings.activeBuildTarget)))
+            {
+                EditorServiceSettings.Ensure();
+                return true;
+            }
+            Stubs.NotImplemented("UnityEditor.Analytics.AnalyticsSettings." + member);
+            return false;
+        }
     }
 }
 

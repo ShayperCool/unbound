@@ -288,6 +288,13 @@ namespace Unbound.Runtime
         /// on Unity 6000.0.71f1. Other families retain their unmeasured answers.</summary>
         internal static bool EditorPopupWindowMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Initial Analytics settings from tests/projects/analyticssettings on Unity
+        /// 6000.0.71f1. The build-facing answers are measured for Linux, Android and iOS.</summary>
+        internal static bool EditorAnalyticsSettingsMeasured => Family == ReleaseFamily.Unity6000_0;
+
+        internal static bool EditorAnalyticsBuildTargetMeasured(UnityEditor.BuildTarget target) =>
+            target is UnityEditor.BuildTarget.StandaloneLinux64 or UnityEditor.BuildTarget.Android or UnityEditor.BuildTarget.iOS;
+
         /// <summary>Dynamic Font texture requests and queries share a 500-pixel maximum on
         /// Unity 6000.0.71f1 (tests/projects/textcolor). Other families are unmeasured.</summary>
         internal static int LegacyFontAtlasPixelSize(int pixels)
