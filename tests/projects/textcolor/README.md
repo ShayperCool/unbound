@@ -67,5 +67,18 @@ the earlier OS fallback reload warning also no longer occurs. Measured on the NV
 The exact-strike control uses a separate imported font asset so its atlas starts empty. Two
 independent GPU Editor repeats are byte-identical. It adds one observation while preserving
 all 102 preceding reference rows and the panel image byte for byte; Unbound already matched
-this behavior. COLR vector glyphs, several strikes per face and a full 4096 legacy texture
-retaining glyphs from older frames remain unmeasured.
+this behavior. Several strikes per face and a full 4096 legacy texture retaining glyphs from
+older frames remain unmeasured.
+
+The `colr/` observations use two synthetic COLRv0 fonts built by `make_colr_font.py`. A glyph
+has two overlapping vector layers with opaque and translucent palette entries. The other glyph
+in each face is a monochrome outline. One font includes TrueType instructions.
+The probe records face and glyph metrics, atlas rectangles, and exact texels in four render modes
+at 19 and 37 pixels. `DEFAULT` selects `COLOR`. In `COLOR_HINTED`, the Editor retains hinted
+metrics and renders the COLR layers without FreeType's auto-hinter fallback. In these fonts the
+resulting layer pixels match `COLOR`. Two Editor runs agreed on all 56 added rows and preserved the
+original rows and panel image.
+
+The Unity 6000.0 [GlyphLoadFlags](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextCore.LowLevel.GlyphLoadFlags.html)
+reference describes the requested load behaviour. The fallback choice above is measured on
+6000.0.71f1. COLRv1 paint graphs and other release families remain unmeasured.

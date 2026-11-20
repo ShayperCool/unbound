@@ -49,7 +49,9 @@ public class TextColorProbe : MonoBehaviour
         var spacing0 = Resources.Load<Font>("Fonts/Spacing0");
         var spacing6 = Resources.Load<Font>("Fonts/Spacing6");
         Step("faces", () => Faces(emoji));
-        Step("assets", () => Assets(emoji));
+        Step("assets", () => Assets(emoji, Emoji, 24, "asset", new[] {
+            GlyphRenderMode.COLOR, GlyphRenderMode.COLOR_HINTED, GlyphRenderMode.SMOOTH, GlyphRenderMode.SDFAA,
+        }));
         Step("legacy", () => LegacyEmoji(emoji));
         Step("spacing", () => { Spacing("spacing0", spacing0); Spacing("spacing6", spacing6); });
         Step("canvas", () => ScaledCanvas(spacing0));
@@ -62,6 +64,8 @@ public class TextColorProbe : MonoBehaviour
         Value("logs", sb.Append("]").ToString());
         Step("generator-controls", () => GeneratorControls(spacing0));
         Step("legacy-exact-strike", () => LegacyEmoji(Resources.Load<Font>("Fonts/EmojiStrikeProbe"), 109, 109, "legacy/exact-strike"));
+        Step("colr", () => VectorColor(Resources.Load<Font>("Fonts/LayerProbe"), "colr/plain"));
+        Step("colr-hinted", () => VectorColor(Resources.Load<Font>("Fonts/HintedLayerProbe"), "colr/with-instructions"));
         m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
@@ -156,19 +160,42 @@ public class TextColorProbe : MonoBehaviour
         F(g.metrics.horizontalBearingY) + "," + F(g.metrics.horizontalAdvance) + "],\"rect\":[" + g.glyphRect.x + "," + g.glyphRect.y + "," +
         g.glyphRect.width + "," + g.glyphRect.height + "],\"scale\":" + F(g.scale) + "}";
 
-    // A font asset per render mode (24 points, padding 4, 256 x 256): its atlas format, its face's
-    // point size, and each emoji's glyph and atlas pixels (RGBA for colour atlases, else alpha).
-    void Assets(Font emoji)
+    void VectorColor(Font font, string key)
     {
-        foreach (var mode in new[] { GlyphRenderMode.COLOR, GlyphRenderMode.COLOR_HINTED, GlyphRenderMode.SMOOTH, GlyphRenderMode.SDFAA })
+        foreach (var size in new[] { 19, 37 })
         {
-            var asset = FontAsset.CreateFontAsset(emoji, 24, 4, mode, 256, 256, AtlasPopulationMode.Dynamic, false);
+            var error = FontEngine.LoadFontFace(font, size, 0);
+            Value($"{key}/face/{size}", "{\"error\":" + Str(error.ToString()) + ",\"face\":" + Face(FontEngine.GetFaceInfo()) + "}");
+            foreach (var character in "AB")
+            foreach (var flags in new[] {
+                GlyphLoadFlags.LOAD_DEFAULT, GlyphLoadFlags.LOAD_COLOR, GlyphLoadFlags.LOAD_RENDER,
+                GlyphLoadFlags.LOAD_RENDER | GlyphLoadFlags.LOAD_COLOR,
+            })
+            {
+                bool found = FontEngine.TryGetGlyphWithUnicodeValue(character, flags, out var glyph);
+                Value($"{key}/glyph/{size}/{character}/{flags}", found ? Glyph(glyph) : "null");
+            }
+            Assets(font, "AB", size, $"{key}/asset/{size}", new[] {
+                GlyphRenderMode.DEFAULT, GlyphRenderMode.COLOR, GlyphRenderMode.COLOR_HINTED, GlyphRenderMode.SMOOTH,
+            });
+        }
+    }
+
+    // A font asset per render mode (padding 4, 256 x 256): the atlas format, the face's point
+    // size, and each glyph's atlas pixels (RGBA for colour atlases, else alpha).
+    void Assets(Font font, string characters, int size, string key, GlyphRenderMode[] modes)
+    {
+        foreach (var mode in modes)
+        {
+            var asset = FontAsset.CreateFontAsset(font, size, 4, mode, 256, 256, AtlasPopulationMode.Dynamic, false);
             if (asset == null)
             {
-                Value("asset/" + (int)mode, "null");
+                Value(key + "/" + (int)mode, "null");
                 continue;
             }
-            bool added = asset.TryAddCharacters(Emoji, out string missing);
+            if (mode == GlyphRenderMode.DEFAULT)
+                Value(key + "/resolved-default-mode", Str(asset.atlasRenderMode.ToString()));
+            bool added = asset.TryAddCharacters(characters, out string missing);
             var texture = asset.atlasTextures[0];
             bool rgba = texture.format != TextureFormat.Alpha8;
             var pixels = texture.GetPixels32();
@@ -200,7 +227,7 @@ public class TextColorProbe : MonoBehaviour
                     .Append(w).Append(',').Append(h).Append("],\"pixels\":").Append(Str(Convert.ToBase64String(bytes))).Append('}');
                 first = false;
             }
-            Value("asset/" + (int)mode, sb.Append("]}").ToString());
+            Value(key + "/" + (int)mode, sb.Append("]}").ToString());
         }
     }
 
