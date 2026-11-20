@@ -19,7 +19,8 @@ The 320×180 Gamma Game view capture compares the checkbox pixels under normal, 
 pressed, focused and disabled combinations. It checks hot-control hover suppression, a
 named style and renamed copy, an explicit background override, a short control, clipping,
 tint, and fractional coordinates. The comparison is exact. Recording uses `xdotool` on
-the private display to move the pointer inside the Game view, and the gate replays the move.
+the private display to move the pointer inside the focused Game view. The gate scripts
+both the focus and pointer position so simultaneous probes can use other windows.
 [Unity 6000.0 `GUIStyle.Draw`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUIStyle.Draw.html)
 
 Two independent windowed GPU Editor runs per theme are compared byte for byte before
