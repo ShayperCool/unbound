@@ -1,4 +1,5 @@
 {"k":"Layout/style","v":"BoldLabel"}
+{"k":"toggle/Layout/style","v":"toggle"}
 {"k":"dark","v":true}
 {"k":"Repaint/style","v":"BoldLabel"}
 {"k":"sharedWithLayout","v":true}
@@ -30,4 +31,48 @@
 {"k":"sharedMutation","v":true}
 {"k":"copyUnchanged","v":true}
 {"k":"sharedWhenDisabled","v":true}
+{"k":"toggle/Repaint/style","v":"toggle"}
+{"k":"toggle/sharedWithLayout","v":true}
+{"k":"toggle/distinctFromGameSkinToggle","v":true}
+{"k":"toggle/usesSkinFont","v":true}
+{"k":"toggle/lineHeight","v":13}
+{"k":"toggle/explicitSkinFontLineHeight","v":13}
+{"k":"toggle/fontSize","v":12}
+{"k":"toggle/fontStyle","v":"Normal"}
+{"k":"toggle/alignment","v":"MiddleLeft"}
+{"k":"toggle/clipping","v":"Clip"}
+{"k":"toggle/imagePosition","v":"ImageLeft"}
+{"k":"toggle/contentOffset","v":[0,1]}
+{"k":"toggle/border","v":[16,0,15,0]}
+{"k":"toggle/margin","v":[3,3,2,2]}
+{"k":"toggle/padding","v":[17,0,0,0]}
+{"k":"toggle/overflow","v":[0,0,-3,1]}
+{"k":"toggle/fixedSize","v":[0,0]}
+{"k":"toggle/stretch","v":[true,false]}
+{"k":"toggle/textFlags","v":[false,false]}
+{"k":"toggle/state/normal","v":[false,0.823529,0.823529,0.823529,1]}
+{"k":"toggle/state/normal/background","v":null}
+{"k":"toggle/state/normal/scaledBackground","v":[1,"toggle@2x",32,30]}
+{"k":"toggle/state/hover","v":[false,0.823529,0.823529,0.823529,1]}
+{"k":"toggle/state/hover/background","v":null}
+{"k":"toggle/state/hover/scaledBackground","v":null}
+{"k":"toggle/state/active","v":[false,0.823529,0.823529,0.823529,1]}
+{"k":"toggle/state/active/background","v":null}
+{"k":"toggle/state/active/scaledBackground","v":[1,"toggle act@2x",32,30]}
+{"k":"toggle/state/focused","v":[false,0.823529,0.823529,0.823529,1]}
+{"k":"toggle/state/focused/background","v":null}
+{"k":"toggle/state/focused/scaledBackground","v":[1,"toggle focus@2x",32,30]}
+{"k":"toggle/state/onNormal","v":[false,0.823529,0.823529,0.823529,1]}
+{"k":"toggle/state/onNormal/background","v":null}
+{"k":"toggle/state/onNormal/scaledBackground","v":[1,"toggle on@2x",32,30]}
+{"k":"toggle/state/onHover","v":[false,0.823529,0.823529,0.823529,1]}
+{"k":"toggle/state/onHover/background","v":null}
+{"k":"toggle/state/onHover/scaledBackground","v":null}
+{"k":"toggle/state/onActive","v":[false,0.823529,0.823529,0.823529,1]}
+{"k":"toggle/state/onActive/background","v":null}
+{"k":"toggle/state/onActive/scaledBackground","v":[1,"toggle on act@2x",32,30]}
+{"k":"toggle/state/onFocused","v":[false,0.823529,0.823529,0.823529,1]}
+{"k":"toggle/state/onFocused/background","v":null}
+{"k":"toggle/state/onFocused/scaledBackground","v":[1,"toggle on focus@2x",32,30]}
+{"k":"toggle/valueOnRepaint","v":[false,true]}
 {"k":"complete","v":true}

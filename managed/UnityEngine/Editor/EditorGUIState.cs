@@ -727,6 +727,10 @@ namespace UnityEditor
     {
         static GUIStyle s_LightBoldLabel;
         static GUIStyle s_DarkBoldLabel;
+        static GUIStyle s_LightToggle;
+        static GUIStyle s_DarkToggle;
+
+        static bool HasInspectorStyles => Compat.InspectorGuiStylesMeasured && Event.current != null;
 
         internal static void Require() => throw new NullReferenceException("Object reference not set to an instance of an object");
 
@@ -739,7 +743,7 @@ namespace UnityEditor
         {
             get
             {
-                if (!Compat.InspectorGuiStylesMeasured || Event.current == null) return Style();
+                if (!HasInspectorStyles) return Style();
                 return EditorGUIUtility.isProSkin
                     ? s_DarkBoldLabel ??= CreateBoldLabel(dark: true)
                     : s_LightBoldLabel ??= CreateBoldLabel(dark: false);
@@ -758,7 +762,16 @@ namespace UnityEditor
         public static GUIStyle objectField => Style();
         public static GUIStyle colorField => Style();
         public static GUIStyle layerMaskField => Style();
-        public static GUIStyle toggle => Style();
+        public static GUIStyle toggle
+        {
+            get
+            {
+                if (!HasInspectorStyles) return Style();
+                return EditorGUIUtility.isProSkin
+                    ? s_DarkToggle ??= CreateToggle(dark: true)
+                    : s_LightToggle ??= CreateToggle(dark: false);
+            }
+        }
         public static GUIStyle radioButton => Style();
         public static GUIStyle foldout => Style();
         public static GUIStyle foldoutHeader => Style();
@@ -801,6 +814,45 @@ namespace UnityEditor
             style.onNormal.textColor = checkedText;
             style.onFocused.textColor = Color.white;
             return style;
+        }
+
+        static GUIStyle CreateToggle(bool dark)
+        {
+            // The Inspector override keeps the scaled skin images. Its background property is
+            // null in each state, as captured by tests/projects/editorstyles.
+            Color text = dark ? new Color32(210, 210, 210, 255) : new Color32(2, 2, 2, 255);
+            string skin = dark ? "darkskin" : "lightskin";
+            var style = new GUIStyle
+            {
+                name = "toggle",
+                fontSize = 12,
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip,
+                imagePosition = ImagePosition.ImageLeft,
+                border = dark ? new RectOffset(16, 0, 15, 0) : new RectOffset(15, 0, 13, 0),
+                overflow = dark ? new RectOffset(0, 0, -3, 1) : new RectOffset(0, 0, -2, 2),
+                padding = new RectOffset(17, 0, 0, 0),
+                margin = new RectOffset(3, 3, 2, 2),
+                contentOffset = new Vector2(0, 1),
+                richText = false,
+            };
+            SetToggleState(style.normal, skin, "", text);
+            SetToggleState(style.active, skin, " act", text);
+            SetToggleState(style.focused, skin, " focus", text);
+            SetToggleState(style.onNormal, skin, " on", text);
+            SetToggleState(style.onActive, skin, " on act", dark ? text : Color.black);
+            SetToggleState(style.onFocused, skin, " on focus", text);
+            style.hover.textColor = style.onHover.textColor = text;
+            return style;
+        }
+
+        static void SetToggleState(GUIStyleState state, string skin, string suffix, Color text)
+        {
+            string path = $"builtin skins/{skin}/images/toggle{suffix}@2x.png";
+            var texture = Unbound.UIElements.UiResources.EditorLoad(path) as Texture2D;
+            if (texture == null) throw new InvalidOperationException($"Unbound: Inspector toggle image '{path}' is unavailable.");
+            state.textColor = text;
+            state.scaledBackgrounds = new[] { texture };
         }
     }
 
