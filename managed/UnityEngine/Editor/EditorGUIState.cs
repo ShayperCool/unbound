@@ -208,7 +208,11 @@ namespace UnityEditor
         public static GUIContent BeginProperty(Rect totalPosition, GUIContent label, SerializedProperty property)
         {
             RequireGUI();
+            bool notify = Compat.EditorPropertyBeginCallbackMeasured;
+            if (notify && property == null)
+                throw new NullReferenceException((label == null ? "" : label.text + ": ") + "SerializedProperty is null");
             s_PropertyStack.Push(property);
+            if (notify) EditorGUIUtility.NotifyBeginProperty(totalPosition, property);
             return label;
         }
 
@@ -377,19 +381,24 @@ namespace UnityEditor
 
         internal static bool Property(Rect position, SerializedProperty property, GUIContent label)
         {
-            label ??= new GUIContent(property.displayName);
-            switch (property.propertyType)
+            label = EditorGUI.BeginProperty(position, label, property);
+            try
             {
-                case SerializedPropertyType.Integer: property.intValue = IntField(position, label, property.intValue); break;
-                case SerializedPropertyType.Float: property.floatValue = FloatField(position, label, property.floatValue); break;
-                case SerializedPropertyType.Boolean: property.boolValue = Toggle(position, label, property.boolValue); break;
-                case SerializedPropertyType.String: property.stringValue = TextField(position, label, property.stringValue); break;
-                default:
-                    if (property.hasVisibleChildren) property.isExpanded = Foldout(position, property.isExpanded, label);
-                    else Label(position, label);
-                    break;
+                label ??= new GUIContent(property.displayName);
+                switch (property.propertyType)
+                {
+                    case SerializedPropertyType.Integer: property.intValue = IntField(position, label, property.intValue); break;
+                    case SerializedPropertyType.Float: property.floatValue = FloatField(position, label, property.floatValue); break;
+                    case SerializedPropertyType.Boolean: property.boolValue = Toggle(position, label, property.boolValue); break;
+                    case SerializedPropertyType.String: property.stringValue = TextField(position, label, property.stringValue); break;
+                    default:
+                        if (property.hasVisibleChildren) property.isExpanded = Foldout(position, property.isExpanded, label);
+                        else Label(position, label);
+                        break;
+                }
+                return property.isExpanded;
             }
-            return property.isExpanded;
+            finally { EditorGUI.EndProperty(); }
         }
     }
 
@@ -683,6 +692,10 @@ namespace UnityEditor
 
     public sealed partial class EditorGUIUtility : GUIUtility
     {
+        internal static event Action<Rect, SerializedProperty> beginProperty;
+
+        internal static void NotifyBeginProperty(Rect position, SerializedProperty property) => beginProperty?.Invoke(position, property);
+
         [Unbound.EditorFaithful("measured: tests/projects/editorui EditorGUIUtility.singleLineHeight")]
         public static float singleLineHeight => 18f;
 

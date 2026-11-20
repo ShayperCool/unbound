@@ -8937,7 +8937,6 @@ namespace UnityEditor
         internal static global::UnityEngine.EventType swipeGestureEventType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.swipeGestureEventType"); return default; } }
         internal static global::UnityEngine.EventType rotateGestureEventType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.rotateGestureEventType"); return default; } }
         internal static event global::System.Action<global::UnityEditor.GenericMenu, global::UnityEditor.SerializedProperty> contextualPropertyMenu { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.contextualPropertyMenu"); } [global::Unbound.Stub] remove { } }
-        internal static event global::System.Action<global::UnityEngine.Rect, global::UnityEditor.SerializedProperty> beginProperty { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.beginProperty"); } [global::Unbound.Stub] remove { } }
         internal enum PreviewType
         {
             Color = 0,

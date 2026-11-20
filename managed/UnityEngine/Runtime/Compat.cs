@@ -272,6 +272,10 @@ namespace Unbound.Runtime
         /// Measured in tests/projects/textcolor on Unity 6000.0.71f1.</summary>
         internal static bool LegacyFontReadKeepsGlyph => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Property scopes call subscribers in Layout and Repaint on Unity 6000.0.71f1.
+        /// Measured in tests/projects/imguiskin. Other families are unmeasured.</summary>
+        internal static bool EditorPropertyBeginCallbackMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Dynamic Font texture requests and queries share a 500-pixel maximum on
         /// Unity 6000.0.71f1 (tests/projects/textcolor). Other families are unmeasured.</summary>
         internal static int LegacyFontAtlasPixelSize(int pixels)
