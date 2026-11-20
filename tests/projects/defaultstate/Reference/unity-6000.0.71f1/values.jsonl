@@ -1079,6 +1079,7 @@
 {"key":"UnityEditor.PluginImporter/Property/UnityEngine.Object/hideFlags","status":"getter-threw","value":"System.NullReferenceException"}
 {"key":"UnityEditor.PluginImporter/Property/UnityEngine.Object/name","status":"getter-threw","value":"System.NullReferenceException"}
 {"key":"UnityEditor.PrefabUtility/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.PreferenceItem/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.Progress/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.PropertyDrawer/@factory","status":"excluded","value":"abstract"}
 {"key":"UnityEditor.PropertyEditor/@factory","status":"value","value":"scriptable"}
@@ -1238,6 +1239,12 @@
 {"key":"UnityEditor.SerializedObject/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.SerializedProperty/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.SessionState/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.SettingsProvider/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.SettingsProviderAttribute/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.SettingsProviderAttribute/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEditor.SettingsProviderAttribute"}
+{"key":"UnityEditor.SettingsProviderGroupAttribute/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.SettingsProviderGroupAttribute/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEditor.SettingsProviderGroupAttribute"}
+{"key":"UnityEditor.SettingsService/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.ShaderGUI/@factory","status":"excluded","value":"abstract"}
 {"key":"UnityEditor.ShaderImporter/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.ShaderImporter/Property/UnityEditor.AssetImporter/assetBundleName","status":"getter-threw","value":"System.NullReferenceException"}

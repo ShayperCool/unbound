@@ -2004,6 +2004,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.PreferenceItem"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "static",
       "type": "UnityEditor.Progress"
     },
@@ -2210,6 +2216,30 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.SessionState"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.SettingsProvider"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SettingsProviderAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SettingsProviderGroupAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.SettingsService"
     },
     {
       "category": "class",

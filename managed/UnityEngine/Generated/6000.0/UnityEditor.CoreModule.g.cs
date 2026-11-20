@@ -19413,14 +19413,6 @@ namespace UnityEditor
             [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.EditPrefabContentsScope.Dispose"); }
         }
     }
-    [global::System.Obsolete("[PreferenceItem] is deprecated. Use [SettingsProvider] instead.")]
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)64)]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PreferenceItem : global::System.Attribute
-    {
-        [global::Unbound.Stub] public string name;
-        [global::Unbound.Stub] public PreferenceItem(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PreferenceItem.ctor"); }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class PreferenceSettingsWindow : global::UnityEditor.SettingsWindow
     {
@@ -22391,12 +22383,8 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static bool CanSearchProperty(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SearchUtility.CanSearchProperty"); return default; }
         [global::Unbound.Stub] public SearchUtility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SearchUtility.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class SearchUtils
+    unsafe static partial class SearchUtils
     {
-        [global::Unbound.Stub] internal static bool MatchSearch(string searchContext, string content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SearchUtils.MatchSearch"); return default; }
-        [global::Unbound.Stub] internal static bool MatchSearchGroups(string searchContext, string content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SearchUtils.MatchSearchGroups"); return default; }
-        [global::Unbound.Stub] internal static bool MatchSearchGroups(string searchContext, string content, out int startIndex, out int endIndex) { startIndex = default; endIndex = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SearchUtils.MatchSearchGroups"); return default; }
         [global::Unbound.Stub] internal static bool MatchNonConsecutive(string searchContext, string content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SearchUtils.MatchNonConsecutive"); return default; }
         [global::Unbound.Stub] internal static bool MatchNonConsecutive(string searchContext, string content, out int startIndex, out int endIndex) { startIndex = default; endIndex = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SearchUtils.MatchNonConsecutive"); return default; }
         [global::Unbound.Stub] public static bool EndsWith(string a, string b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SearchUtils.EndsWith"); return default; }
@@ -22890,71 +22878,15 @@ namespace UnityEditor
             [global::Unbound.Stub] public DefaultDelegates() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedPropertyTreeView.DefaultDelegates.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class SettingsProvider
+    unsafe partial class SettingsProvider
     {
-        [global::Unbound.Stub] public SettingsProvider(string path, global::UnityEditor.SettingsScope scopes, global::System.Collections.Generic.IEnumerable<string> keywords = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.ctor"); }
-        [global::Unbound.Stub] public virtual void OnActivate(string searchContext, global::UnityEngine.UIElements.VisualElement rootElement) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.OnActivate"); }
-        [global::Unbound.Stub] public virtual void OnDeactivate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.OnDeactivate"); }
-        [global::Unbound.Stub] public virtual bool HasSearchInterest(string searchContext) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.HasSearchInterest"); return default; }
-        [global::Unbound.Stub] public virtual void OnGUI(string searchContext) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.OnGUI"); }
-        [global::Unbound.Stub] public virtual void OnTitleBarGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.OnTitleBarGUI"); }
-        [global::Unbound.Stub] public virtual void OnFooterBarGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.OnFooterBarGUI"); }
-        [global::Unbound.Stub] public virtual void OnInspectorUpdate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.OnInspectorUpdate"); }
-        [global::Unbound.Stub] public void Repaint() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.Repaint"); }
-        [global::Unbound.Stub] public void PopulateSearchKeywordsFromGUIContentProperties<T>() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.PopulateSearchKeywordsFromGUIContentProperties"); }
-        [global::Unbound.Stub] internal virtual void FocusLost() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.FocusLost"); }
-        [global::Unbound.Stub] internal void Activate(string searchContext, global::UnityEngine.UIElements.VisualElement rootElement) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.Activate"); }
-        [global::Unbound.Stub] internal void Deactivate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.Deactivate"); }
-        [global::Unbound.Stub] public static global::System.Collections.Generic.IEnumerable<string> GetSearchKeywordsFromGUIContentProperties<T>() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.GetSearchKeywordsFromGUIContentProperties"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public static global::System.Collections.Generic.IEnumerable<string> GetSearchKeywordsFromSerializedObject(global::UnityEditor.SerializedObject serializedObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.GetSearchKeywordsFromSerializedObject"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public static global::System.Collections.Generic.IEnumerable<string> GetSearchKeywordsFromPath(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.GetSearchKeywordsFromPath"); return global::System.Array.Empty<string>(); }
         internal global::UnityEditor.SettingsWindow settingsWindow { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.settingsWindow"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.settingsWindow"); } }
-        internal string[] pathTokens { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.pathTokens"); return global::System.Array.Empty<string>(); } }
-        internal global::UnityEngine.Texture2D icon { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.icon"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.icon"); } }
-        public string label { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.label"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.label"); } }
-        public string settingsPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.settingsPath"); return default; } }
-        public global::UnityEditor.SettingsScope scope { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.scope"); return default; } }
-        public global::System.Collections.Generic.IEnumerable<string> keywords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.keywords"); return global::System.Array.Empty<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.keywords"); } }
-        public global::System.Action<string> guiHandler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.guiHandler"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.guiHandler"); } }
-        public global::System.Action titleBarGuiHandler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.titleBarGuiHandler"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.titleBarGuiHandler"); } }
-        public global::System.Action footerBarGuiHandler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.footerBarGuiHandler"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.footerBarGuiHandler"); } }
-        public global::System.Action<string, global::UnityEngine.UIElements.VisualElement> activateHandler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.activateHandler"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.activateHandler"); } }
-        public global::System.Action deactivateHandler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.deactivateHandler"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.deactivateHandler"); } }
-        public global::System.Func<string, bool> hasSearchInterestHandler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.hasSearchInterestHandler"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.hasSearchInterestHandler"); } }
-        public global::System.Action inspectorUpdateHandler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.inspectorUpdateHandler"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProvider.inspectorUpdateHandler"); } }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)64)]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class SettingsProviderAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public SettingsProviderAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProviderAttribute.ctor"); }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)64)]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class SettingsProviderGroupAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public SettingsProviderGroupAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsProviderGroupAttribute.ctor"); }
-    }
-    public enum SettingsScope
-    {
-        User = 0,
-        Project = 1,
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class SettingsService
+    unsafe static partial class SettingsService
     {
         [global::Unbound.Stub] public static global::UnityEditor.EditorWindow OpenProjectSettings(string settingsPath = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsService.OpenProjectSettings"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.EditorWindow OpenUserPreferences(string settingsPath = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsService.OpenUserPreferences"); return default; }
-        [global::Unbound.Stub] public static void NotifySettingsProviderChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsService.NotifySettingsProviderChanged"); }
-        [global::Unbound.Stub] public static void RepaintAllSettingsWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsService.RepaintAllSettingsWindow"); }
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.IEnumerable<global::UnityEditor.SettingsProvider> FilterAndWarnAgainstDuplicates(global::System.Collections.Generic.IEnumerable<global::UnityEditor.SettingsProvider> settingsProviders, global::UnityEditor.SettingsScope scope) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsService.FilterAndWarnAgainstDuplicates"); return global::System.Array.Empty<global::UnityEditor.SettingsProvider>(); }
-        [global::Unbound.Stub] internal static global::UnityEditor.SettingsProvider[] FetchSettingsProviders() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsService.FetchSettingsProviders"); return global::System.Array.Empty<global::UnityEditor.SettingsProvider>(); }
-        [global::Unbound.Stub] internal static global::UnityEditor.SettingsProvider[] FetchSettingsProviders(global::UnityEditor.SettingsScope scope) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsService.FetchSettingsProviders"); return global::System.Array.Empty<global::UnityEditor.SettingsProvider>(); }
-        [global::Unbound.Stub] public static bool Exists(string settingsPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsService.Exists"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.EditorWindow OpenUserPreferenceWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsService.OpenUserPreferenceWindow"); return default; }
-        internal static event global::System.Action repaintAllSettingsWindow { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsService.repaintAllSettingsWindow"); } [global::Unbound.Stub] remove { } }
-        internal static event global::System.Action settingsProviderChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SettingsService.settingsProviderChanged"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class SettingsTreeView : global::UnityEditor.IMGUI.Controls.TreeView

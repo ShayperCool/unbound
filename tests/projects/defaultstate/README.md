@@ -723,3 +723,10 @@ The sprite atlas settings-getter slice adds `UnityEditor.U2D.SpriteAtlasPackingS
 `UnityEditor.U2D.SpriteAtlasTextureSettings` to the handwritten inventory. Two independent
 6000.0.71f1 Linux GPU Editor captures agree on their 13 new struct rows; every earlier committed
 row and inventory entry is unchanged.
+
+The SettingsProvider and SettingsService slice adds `UnityEditor.PreferenceItem`,
+`UnityEditor.SettingsProvider`, `UnityEditor.SettingsProviderAttribute`,
+`UnityEditor.SettingsProviderGroupAttribute` and `UnityEditor.SettingsService` to the handwritten
+inventory (seven added rows: three excluded and four attribute rows). Two independent 6000.0.71f1
+Linux GPU Editor captures agree on them; every earlier committed row and inventory entry is
+unchanged.
