@@ -15,6 +15,11 @@ size up to the configured limit and returns zero above it for multiple targets. 
 control retains its actual size above the same limit.
 [Unity 6000.0 `SerializedProperty.minArraySize`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SerializedProperty-minArraySize.html)
 
+The height controls include the empty row, positive and zero or negative row heights, a hidden
+header, disabled buttons and the serialized multi-edit limit. The callback controls record the
+indices visited during the first measurement, after invalidation, and after the list grows or
+shrinks. A stable height is cached. Assigning a new callback alone leaves the cached rows in use.
+
 ```sh
 UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/reorderablelist/run.py record --label native-a
 UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/reorderablelist/run.py record --label native-b

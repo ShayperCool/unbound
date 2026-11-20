@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using UnityEditor;
 using UnityEditorInternal;
@@ -111,9 +112,69 @@ static class ReorderableListProbe
         }
         finally { Application.logMessageReceived -= receiver; }
 
+        Heights(Put, firstObject, firstProperty, multi);
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
+    }
+
+    static void Heights(Action<string, object[]> put, SerializedObject single, SerializedProperty property, SerializedObject multi)
+    {
+        void Height(string key, ReorderableList list) => put("height/" + key, new object[] { list.GetHeight() });
+        Height("empty", new ReorderableList(new List<int>(), typeof(int)));
+        Height("three", new ReorderableList(new[] { 1, 2, 3 }, typeof(int)));
+        var hidden = new ReorderableList(new[] { 1, 2 }, typeof(int), false, false, false, false);
+        Height("hiddenHeaderButtons", hidden);
+        hidden.headerHeight = 5;
+        hidden.footerHeight = 9;
+        Height("shortHiddenHeader", hidden);
+        var small = new ReorderableList(new[] { 1 }, typeof(int)) { headerHeight = 1, footerHeight = 0, elementHeight = 0 };
+        Height("minimumHeaderZeroRow", small);
+        small = new ReorderableList(new[] { 1 }, typeof(int)) { headerHeight = 6, footerHeight = 4, elementHeight = -1 };
+        Height("tallHeaderNegativeRow", small);
+
+        var elements = new List<int> { 0, 1, 2 };
+        var list = new ReorderableList(elements, typeof(int));
+        var calls = new List<int>();
+        float scale = 1;
+        list.elementHeightCallback = index =>
+        {
+            calls.Add(index);
+            return elements[index] * scale * 6;
+        };
+        void WithCalls(string key)
+        {
+            put("height/" + key, new object[] { list.GetHeight(), calls.ToArray() });
+            calls.Clear();
+        }
+        WithCalls("callbacksFirst");
+        WithCalls("callbacksCached");
+        scale = 2;
+        WithCalls("callbacksChangedWhileCached");
+        var invalidate = typeof(ReorderableList).GetMethod("InvalidateCache", BindingFlags.Instance | BindingFlags.NonPublic);
+        invalidate.Invoke(list, null);
+        WithCalls("callbacksInvalidated");
+        elements.Add(5);
+        WithCalls("callbacksGrown");
+        elements.RemoveAt(3);
+        WithCalls("callbacksShrunk");
+        list.headerHeight = 5;
+        WithCalls("callbacksPaddingChanged");
+        elements.Clear();
+        WithCalls("callbacksEmpty");
+
+        var serialized = new ReorderableList(single, property) { elementHeight = 14 };
+        Height("serialized", serialized);
+        serialized.elementHeightCallback = index => 2 + index;
+        Height("serializedCallbackCached", serialized);
+        invalidate.Invoke(serialized, null);
+        Height("serializedCallbackInvalidated", serialized);
+        var both = new ReorderableList(multi, multi.FindProperty(nameof(ReorderableListProbeData.values)));
+        multi.maxArraySizeForMultiEditing = 2;
+        Height("serializedAtLimit", both);
+        multi.maxArraySizeForMultiEditing = 1;
+        Height("serializedOverLimit", both);
     }
 
     static object ExceptionFrom(Action action)
