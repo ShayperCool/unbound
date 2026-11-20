@@ -804,6 +804,8 @@ namespace UnityEditor
     /// tests/projects/editorui.</summary>
     public sealed partial class EditorStyles
     {
+        static GUIStyle s_LightLabel;
+        static GUIStyle s_DarkLabel;
         static GUIStyle s_LightBoldLabel;
         static GUIStyle s_DarkBoldLabel;
         static GUIStyle s_LightToggle;
@@ -815,7 +817,16 @@ namespace UnityEditor
 
         static GUIStyle Style() { Require(); return null; }
 
-        public static GUIStyle label => Style();
+        public static GUIStyle label
+        {
+            get
+            {
+                if (!HasInspectorStyles) return Style();
+                return EditorGUIUtility.isProSkin
+                    ? s_DarkLabel ??= CreateInspectorLabel(dark: true, bold: false)
+                    : s_LightLabel ??= CreateInspectorLabel(dark: false, bold: false);
+            }
+        }
         public static GUIStyle miniLabel => Style();
         public static GUIStyle largeLabel => Style();
         public static GUIStyle boldLabel
@@ -824,8 +835,8 @@ namespace UnityEditor
             {
                 if (!HasInspectorStyles) return Style();
                 return EditorGUIUtility.isProSkin
-                    ? s_DarkBoldLabel ??= CreateBoldLabel(dark: true)
-                    : s_LightBoldLabel ??= CreateBoldLabel(dark: false);
+                    ? s_DarkBoldLabel ??= CreateInspectorLabel(dark: true, bold: true)
+                    : s_LightBoldLabel ??= CreateInspectorLabel(dark: false, bold: true);
             }
         }
         public static GUIStyle miniBoldLabel => Style();
@@ -868,18 +879,17 @@ namespace UnityEditor
         /// <summary>The Editor's UI font (its fonts load without a window).</summary>
         public static Font standardFont => EditorFonts.Standard;
 
-        static GUIStyle CreateBoldLabel(bool dark)
+        static GUIStyle CreateInspectorLabel(bool dark, bool bold)
         {
             // Resolved Inspector theme values from tests/projects/editorstyles. The style uses
             // the current GUI skin font unless the caller assigns a font explicitly.
             var text = dark ? new Color32(196, 196, 196, 255) : new Color32(9, 9, 9, 255);
             var focus = dark ? new Color32(129, 180, 255, 255) : new Color32(0, 60, 136, 255);
-            var checkedText = dark ? new Color32(210, 210, 210, 255) : new Color32(0, 0, 0, 255);
             var style = new GUIStyle
             {
-                name = "BoldLabel",
+                name = bold ? "BoldLabel" : "ControlLabel",
                 fontSize = 12,
-                fontStyle = FontStyle.Bold,
+                fontStyle = bold ? FontStyle.Bold : FontStyle.Normal,
                 alignment = TextAnchor.MiddleLeft,
                 clipping = TextClipping.Clip,
                 imagePosition = ImagePosition.ImageLeft,
@@ -887,11 +897,20 @@ namespace UnityEditor
                 margin = new RectOffset(3, 3, 2, 2),
                 richText = false,
             };
-            style.normal.textColor = style.hover.textColor = style.active.textColor = text;
-            style.onHover.textColor = style.onActive.textColor = text;
+            style.normal.textColor = style.hover.textColor = style.onHover.textColor = text;
             style.focused.textColor = focus;
-            style.onNormal.textColor = checkedText;
             style.onFocused.textColor = Color.white;
+            if (bold)
+            {
+                style.active.textColor = style.onActive.textColor = text;
+                style.onNormal.textColor = dark ? new Color32(210, 210, 210, 255) : new Color32(0, 0, 0, 255);
+            }
+            else
+            {
+                style.active.textColor = style.onActive.textColor =
+                    dark ? new Color32(76, 126, 255, 255) : new Color32(0, 50, 230, 255);
+                style.onNormal.textColor = text;
+            }
             return style;
         }
 

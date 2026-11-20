@@ -11,6 +11,7 @@ public sealed partial class EditorStylesProbe : MonoBehaviour
     readonly StringBuilder m_Values = new StringBuilder();
     GUIStyle m_LayoutStyle;
     GUIStyle m_ToggleLayoutStyle;
+    GUIStyle m_LabelLayoutStyle;
     bool m_SawLayout;
     bool m_SawRepaint;
 
@@ -73,6 +74,12 @@ public sealed partial class EditorStylesProbe : MonoBehaviour
                 Put("toggle/Layout/style", Quote(m_ToggleLayoutStyle.name));
             }
             catch (Exception error) { Put("toggle/Layout/exception", Quote(error.GetType().Name)); }
+            try
+            {
+                m_LabelLayoutStyle = EditorStyles.label;
+                Put("label/Layout/style", Quote(m_LabelLayoutStyle.name));
+            }
+            catch (Exception error) { Put("label/Layout/exception", Quote(error.GetType().Name)); }
         }
         if (Event.current.type != EventType.Repaint || !m_SawLayout) return;
         m_SawRepaint = true;
@@ -85,24 +92,45 @@ public sealed partial class EditorStylesProbe : MonoBehaviour
             Put("distinctFromGameSkinLabel", Flag(!ReferenceEquals(GUI.skin.label, style)));
             var copy = DescribeStyle("", style, textureInfo: false);
 
-            // Callers can edit the shared style. A copy still has independent state.
-            Color original = style.normal.textColor;
-            try
-            {
-                style.normal.textColor = Color.magenta;
-                Put("sharedMutation", Flag(EditorStyles.boldLabel.normal.textColor == Color.magenta));
-                Put("copyUnchanged", Flag(copy.normal.textColor == original));
-                EditorGUI.BeginDisabledGroup(true);
-                try { Put("sharedWhenDisabled", Flag(ReferenceEquals(EditorStyles.boldLabel, style))); }
-                finally { EditorGUI.EndDisabledGroup(); }
-            }
-            finally { style.normal.textColor = original; }
+            RecordSharedStyle("", style, copy, () => EditorStyles.boldLabel);
 
             GUI.Label(new Rect(290, 142, 150, 20), "Inspector bold", style);
         }
         catch (Exception error) { Put("Repaint/exception", Quote(error.GetType().Name)); }
 
         RecordToggle();
+        RecordLabel();
+    }
+
+    void RecordLabel()
+    {
+        try
+        {
+            GUIStyle style = EditorStyles.label;
+            Put("label/Repaint/style", Quote(style.name));
+            Put("label/sharedWithLayout", Flag(ReferenceEquals(m_LabelLayoutStyle, style)));
+            Put("label/distinctFromGameSkinLabel", Flag(!ReferenceEquals(GUI.skin.label, style)));
+            Put("label/distinctFromBoldLabel", Flag(!ReferenceEquals(EditorStyles.boldLabel, style)));
+            var copy = DescribeStyle("label/", style, textureInfo: true);
+            RecordSharedStyle("label/", style, copy, () => EditorStyles.label);
+        }
+        catch (Exception error) { Put("label/Repaint/exception", Quote(error.GetType().Name)); }
+    }
+
+    void RecordSharedStyle(string prefix, GUIStyle style, GUIStyle copy, Func<GUIStyle> getStyle)
+    {
+        // Mutating the shared style also distinguishes it from a fresh copy.
+        Color original = style.normal.textColor;
+        try
+        {
+            style.normal.textColor = Color.magenta;
+            Put(prefix + "sharedMutation", Flag(getStyle().normal.textColor == Color.magenta));
+            Put(prefix + "copyUnchanged", Flag(copy.normal.textColor == original));
+            EditorGUI.BeginDisabledGroup(true);
+            try { Put(prefix + "sharedWhenDisabled", Flag(ReferenceEquals(getStyle(), style))); }
+            finally { EditorGUI.EndDisabledGroup(); }
+        }
+        finally { style.normal.textColor = original; }
     }
 
     void RecordToggle()

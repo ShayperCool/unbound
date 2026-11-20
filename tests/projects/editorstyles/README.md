@@ -9,6 +9,11 @@ the current game skin font assigned.
 [Unity 6000.0 `EditorStyles.boldLabel`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorStyles-boldLabel.html)
 [Unity 6000.0 GUI Style manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-GUIStyle.html)
 
+The `EditorStyles.label` control records the regular Inspector label's layout, font,
+and eight visual states, including the active and focused colors. Layout and Repaint
+share the same style instance, and mutations are visible through the property.
+[Unity 6000.0 `EditorStyles.label`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorStyles-label.html)
+
 The toggle controls check the same layout and state fields for `EditorStyles.toggle`,
 including the theme-specific border and overflow, the background property in all eight
 states, and the names and sizes of the six scaled background textures. Explicit checked
