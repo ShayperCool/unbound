@@ -1,7 +1,10 @@
 {
   "commands": [
     "python3 tests/projects/editorservices/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION",
-    "python3 tests/projects/editorservices/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION --global-enabled"
+    "python3 tests/projects/editorservices/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION --global-enabled",
+    "python3 tests/projects/editorservices/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION --legacy-enabled",
+    "python3 tests/projects/editorservices/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION --global-enabled --legacy-enabled",
+    "python3 tests/projects/editorservices/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION --legacy-enabled --deferred-startup"
   ],
   "summary": "\\d+/\\d+ exact API rows; \\d+ differences",
   "engine_paths": [

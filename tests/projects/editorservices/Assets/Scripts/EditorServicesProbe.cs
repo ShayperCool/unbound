@@ -159,6 +159,7 @@ public class EditorServicesProbe : MonoBehaviour
     static void AnalyticsControls()
     {
         Value("analytics.enabled.initial", Analytics.enabled);
+        if (UnityEditor.Analytics.AnalyticsSettings.enabled) ActiveAnalyticsControls();
         foreach (bool enabled in new bool[] { false, true, false })
         {
             Check(enabled ? "analytics.enable" : "analytics.disable." + (enabledCount++), () => { Analytics.enabled = enabled; return Analytics.enabled; });
@@ -182,6 +183,27 @@ public class EditorServicesProbe : MonoBehaviour
         Check("analytics.transaction.emptyCurrency", () => Analytics.Transaction("item", 1m, ""));
     }
     static int enabledCount;
+
+    static void ActiveAnalyticsControls()
+    {
+        string settingsPath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "ProjectSettings", "UnityConnectSettings.asset"));
+        string originalSettings = File.ReadAllText(settingsPath);
+        if (!originalSettings.Contains("m_EventUrl: http://127.0.0.1:9") ||
+            !originalSettings.Contains("m_ConfigUrl: http://127.0.0.1:9"))
+            throw new InvalidOperationException("The active Analytics probe requires local service URLs.");
+        Check("analytics.active.event", () => Analytics.CustomEvent("probe"));
+        Check("analytics.active.position", () => Analytics.CustomEvent("probe", new Vector3(1, 2, 3)));
+        Check("analytics.active.payload", () => Analytics.CustomEvent("probe", new Dictionary<string, object> { { "value", 7 } }));
+        Check("analytics.active.transaction", () => Analytics.Transaction("item", 1.25m, "USD"));
+        Check("analytics.active.runtimeToggle", () =>
+        {
+            Analytics.enabled = false;
+            bool disabled = Analytics.enabled;
+            Analytics.enabled = true;
+            return !disabled && Analytics.enabled && UnityEditor.Analytics.AnalyticsSettings.enabled;
+        });
+        Value("analytics.active.authoredSettingsUnchanged", originalSettings == File.ReadAllText(settingsPath));
+    }
 
     static void LogControls()
     {

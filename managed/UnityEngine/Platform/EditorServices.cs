@@ -177,19 +177,36 @@ namespace UnityEngine.Analytics
     [StructLayout(LayoutKind.Sequential)]
     public static partial class Analytics
     {
-        // The service-disabled Editor profile measured by tests/projects/editorservices.
+        static bool s_RuntimeEnabled = true;
+
+        static bool HasOfflineRuntimeState()
+        {
+            EditorServiceSettings.Ensure();
+            if (!EditorServiceSettings.Configured) return false;
+            if (Compat.OfflineLegacyAnalyticsMeasured && !UnityEditor.CloudProjectSettings.projectBound) return true;
+            Stubs.NotImplemented("Analytics with Unity services enabled in project settings");
+            return false;
+        }
+
         static AnalyticsResult Result(string binding)
         {
             MainThreadCheck.Check(binding);
-            EditorServiceSettings.Ensure();
-            if (EditorServiceSettings.Configured)
-                Stubs.NotImplemented("Analytics with Unity services enabled in project settings");
-            return AnalyticsResult.NotInitialized;
+            if (!HasOfflineRuntimeState()) return AnalyticsResult.NotInitialized;
+            return s_RuntimeEnabled ? AnalyticsResult.Ok : AnalyticsResult.AnalyticsDisabled;
         }
+
         public static bool enabled
         {
-            get { Result("get_enabledInternal"); return false; }
-            set { Result("set_enabledInternal"); }
+            get
+            {
+                MainThreadCheck.Check("get_enabledInternal");
+                return HasOfflineRuntimeState() && s_RuntimeEnabled;
+            }
+            set
+            {
+                MainThreadCheck.Check("set_enabledInternal");
+                if (HasOfflineRuntimeState()) s_RuntimeEnabled = value;
+            }
         }
         internal static bool IsInitialized() => true;
         static void EventName(string name)

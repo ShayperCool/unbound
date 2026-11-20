@@ -63,7 +63,7 @@ def stage(probe, destination, release, configure=None):
     return destination
 
 
-def main(probe, output_variable, *, compare_rows=compare, configure=None):
+def main(probe, output_variable, *, compare_rows=compare, configure=None, profile=None):
     probe = Path(probe).resolve()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=('editor', 'publish', 'unbound'))
@@ -77,6 +77,9 @@ def main(probe, output_variable, *, compare_rows=compare, configure=None):
         parser.error('--capture-root applies only to publishing')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = args.capture_root or run_root(probe, args.label)
+    reference = reference_root(probe)
+    if profile:
+        reference /= profile
     if args.mode == 'editor':
         jobs = []
         for name in ('native1', 'native2'):
@@ -95,7 +98,7 @@ def main(probe, output_variable, *, compare_rows=compare, configure=None):
         def write(target, first):
             target.mkdir(parents=True)
             shutil.copyfile(first/'values.jsonl', target/'values.jsonl')
-        return publish(directories, reference_root(probe), lambda directory: ['values.jsonl'], write,
+        return publish(directories, reference, lambda directory: ['values.jsonl'], write,
                        complete=[complete, no_forced_exit], gpu=True)
     work.mkdir(parents=True, exist_ok=False)
     cli = os.environ.get('UNBOUND_CLI', str(REPO/'target/release/unbound'))
@@ -112,5 +115,5 @@ def main(probe, output_variable, *, compare_rows=compare, configure=None):
     problem = complete(out)
     if result.returncode or problem:
         print(f'engine capture failed: exit {result.returncode}; {problem}; log {out / "unbound.log"}')
-    verdict = compare_rows(reference_root(probe)/'values.jsonl', out/'values.jsonl', work/'report.json')
+    verdict = compare_rows(reference/'values.jsonl', out/'values.jsonl', work/'report.json')
     return int(bool(result.returncode or problem or verdict))

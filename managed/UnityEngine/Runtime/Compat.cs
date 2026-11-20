@@ -295,6 +295,10 @@ namespace Unbound.Runtime
         internal static bool EditorAnalyticsBuildTargetMeasured(UnityEditor.BuildTarget target) =>
             target is UnityEditor.BuildTarget.StandaloneLinux64 or UnityEditor.BuildTarget.Android or UnityEditor.BuildTarget.iOS;
 
+        /// <summary>Runtime Analytics results with configured legacy Analytics in an unbound
+        /// project, measured by tests/projects/editorservices on Unity 6000.0.71f1.</summary>
+        internal static bool OfflineLegacyAnalyticsMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Dynamic Font texture requests and queries share a 500-pixel maximum on
         /// Unity 6000.0.71f1 (tests/projects/textcolor). Other families are unmeasured.</summary>
         internal static int LegacyFontAtlasPixelSize(int pixels)

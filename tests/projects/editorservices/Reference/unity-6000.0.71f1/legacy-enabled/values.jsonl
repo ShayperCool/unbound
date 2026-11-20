@@ -1,0 +1,153 @@
+{"key":"application.playing","value":"True"}
+{"key":"application.human","value":"True"}
+{"key":"thread.cold.application.human","value":"UnityException:get_isHumanControllingUs can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.consent.get","value":"UnityException:GetConsentState can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.consent.set","value":"UnityException:SetConsentState can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.installation","value":"UnityException:GetInstallationId can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.crash.get","value":"UnityException:GetUserMetadata can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.crash.set.invalid","value":"UnityException:SetUserMetadata can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.crash.setEnabled","value":"UnityException:set_enableCaptureExceptions can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.crash.buffer.get","value":"UnityException:get_logBufferSize can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.crash.buffer.set","value":"UnityException:set_logBufferSize can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.crash.enabled","value":"UnityException:get_enableCaptureExceptions can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.crash.buffer.invalid","value":"UnityException:set_logBufferSize can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.analytics.enabled","value":"UnityException:get_enabledInternal can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.analytics.setEnabled","value":"UnityException:set_enabledInternal can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.analytics.initialized","value":"True"}
+{"key":"thread.cold.analytics.event","value":"UnityException:SendCustomEventName can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.analytics.event.invalid","value":"ArgumentException:Cannot set custom event name to an empty or null string"}
+{"key":"thread.cold.analytics.position.invalid","value":"UnityException:Internal_Create can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.analytics.data.invalid","value":"UnityException:Internal_Create can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.analytics.transaction","value":"UnityException:Transaction can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cold.analytics.transaction.invalid","value":"ArgumentException:Cannot set productId to an empty or null string"}
+{"key":"thread.cold.consent.stateAfter","value":"AdsIntent: Unspecified, AnalyticsIntent: Unspecified"}
+{"key":"thread.cold.crash.enabledAfter","value":"False"}
+{"key":"thread.cold.crash.bufferAfter","value":"10"}
+{"key":"consent.defaultStruct","value":"AdsIntent: Unspecified, AnalyticsIntent: Unspecified"}
+{"key":"consent.newStruct","value":"AdsIntent: Unspecified, AnalyticsIntent: Unspecified"}
+{"key":"consent.initial.state","value":"AdsIntent: Unspecified, AnalyticsIntent: Unspecified"}
+{"key":"consent.initial.events","value":""}
+{"key":"consent.initial.prefs","value":"{\"AdsIntent\":0,\"AnalyticsIntent\":0}"}
+{"key":"consent.sameDefault.state","value":"AdsIntent: Unspecified, AnalyticsIntent: Unspecified"}
+{"key":"consent.sameDefault.events","value":""}
+{"key":"consent.sameDefault.prefs","value":"{\"AdsIntent\":0,\"AnalyticsIntent\":0}"}
+{"key":"consent.changed.state","value":"AdsIntent: Granted, AnalyticsIntent: Denied"}
+{"key":"consent.changed.events","value":"A:AdsIntent: Granted, AnalyticsIntent: Denied|B:AdsIntent: Granted, AnalyticsIntent: Denied"}
+{"key":"consent.changed.prefs","value":"{\"AdsIntent\":1,\"AnalyticsIntent\":2}"}
+{"key":"consent.repeated.state","value":"AdsIntent: Granted, AnalyticsIntent: Denied"}
+{"key":"consent.repeated.events","value":""}
+{"key":"consent.repeated.prefs","value":"{\"AdsIntent\":1,\"AnalyticsIntent\":2}"}
+{"key":"consent.analyticsOnly.state","value":"AdsIntent: Granted, AnalyticsIntent: Granted"}
+{"key":"consent.analyticsOnly.events","value":"B:AdsIntent: Granted, AnalyticsIntent: Granted"}
+{"key":"consent.analyticsOnly.prefs","value":"{\"AdsIntent\":1,\"AnalyticsIntent\":1}"}
+{"key":"consent.duplicateSubscriber.state","value":"AdsIntent: Denied, AnalyticsIntent: Granted"}
+{"key":"consent.duplicateSubscriber.events","value":"B:AdsIntent: Denied, AnalyticsIntent: Granted|B:AdsIntent: Denied, AnalyticsIntent: Granted"}
+{"key":"consent.duplicateSubscriber.prefs","value":"{\"AdsIntent\":2,\"AnalyticsIntent\":1}"}
+{"key":"consent.unknownValues.state","value":"AdsIntent: 42, AnalyticsIntent: -7"}
+{"key":"consent.unknownValues.events","value":"B:AdsIntent: 42, AnalyticsIntent: -7"}
+{"key":"consent.unknownValues.prefs","value":"{\"AdsIntent\":42,\"AnalyticsIntent\":-7}"}
+{"key":"consent.directPrefsWrite.state","value":"AdsIntent: 42, AnalyticsIntent: -7"}
+{"key":"consent.directPrefsWrite.events","value":""}
+{"key":"consent.directPrefsWrite.prefs","value":"{}"}
+{"key":"consent.deleteAll.state","value":"AdsIntent: 42, AnalyticsIntent: -7"}
+{"key":"consent.deleteAll.events","value":""}
+{"key":"consent.deleteAll.prefs","value":"{}"}
+{"key":"consent.unsubscribed.state","value":"AdsIntent: Unspecified, AnalyticsIntent: Unspecified"}
+{"key":"consent.unsubscribed.events","value":""}
+{"key":"consent.unsubscribed.prefs","value":"{\"AdsIntent\":0,\"AnalyticsIntent\":0}"}
+{"key":"crash.enabled.initial","value":"False"}
+{"key":"crash.enabled.false","value":"False"}
+{"key":"crash.enabled.true","value":"True"}
+{"key":"crash.buffer.initial","value":"10"}
+{"key":"crash.buffer.0","value":"0"}
+{"key":"crash.buffer.1","value":"1"}
+{"key":"crash.buffer.50","value":"50"}
+{"key":"crash.buffer.51","value":"ArgumentException:logBufferSize must be less than or equal to 50"}
+{"key":"crash.buffer.4294967295","value":"ArgumentException:logBufferSize must be less than or equal to 50"}
+{"key":"crash.buffer.10","value":"10"}
+{"key":"crash.utf8key.127","value":"unicode"}
+{"key":"crash.utf8key.128","value":"ArgumentException:Length of 'key' must be less than or equal to 255"}
+{"key":"crash.utf8key.255","value":"ArgumentException:Length of 'key' must be less than or equal to 255"}
+{"key":"crash.missing","value":"<null>"}
+{"key":"crash.metadata.normal.first","value":"first"}
+{"key":"crash.metadata.normal.second","value":"second"}
+{"key":"crash.metadata.normal.empty","value":""}
+{"key":"crash.metadata.normal.null","value":"<null>"}
+{"key":"crash.metadata.normal.long","value":"vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"}
+{"key":"crash.metadata.empty.first","value":"first"}
+{"key":"crash.metadata.empty.second","value":"second"}
+{"key":"crash.metadata.empty.empty","value":""}
+{"key":"crash.metadata.empty.null","value":"<null>"}
+{"key":"crash.metadata.empty.long","value":"vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"}
+{"key":"crash.metadata.null.first","value":"first"}
+{"key":"crash.metadata.null.second","value":"second"}
+{"key":"crash.metadata.null.empty","value":""}
+{"key":"crash.metadata.null.null","value":"<null>"}
+{"key":"crash.metadata.null.long","value":"vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"}
+{"key":"crash.metadata.long.first","value":"ArgumentException:Length of 'key' must be less than or equal to 255"}
+{"key":"crash.metadata.long.second","value":"ArgumentException:Length of 'key' must be less than or equal to 255"}
+{"key":"crash.metadata.long.empty","value":"ArgumentException:Length of 'key' must be less than or equal to 255"}
+{"key":"crash.metadata.long.null","value":"ArgumentException:Length of 'key' must be less than or equal to 255"}
+{"key":"crash.metadata.long.long","value":"ArgumentException:Length of 'key' must be less than or equal to 255"}
+{"key":"identifiers.installation.shape","value":"True"}
+{"key":"identifiers.installation.prefs","value":"True"}
+{"key":"identifiers.repeated","value":"True"}
+{"key":"analytics.enabled.initial","value":"True"}
+{"key":"analytics.active.event","value":"Ok"}
+{"key":"analytics.active.position","value":"Ok"}
+{"key":"analytics.active.payload","value":"Ok"}
+{"key":"analytics.active.transaction","value":"Ok"}
+{"key":"analytics.active.runtimeToggle","value":"True"}
+{"key":"analytics.active.authoredSettingsUnchanged","value":"True"}
+{"key":"analytics.disable.0","value":"False"}
+{"key":"analytics.enable","value":"True"}
+{"key":"analytics.disable.1","value":"False"}
+{"key":"analytics.initialized","value":"True"}
+{"key":"analytics.custom.normal","value":"AnalyticsDisabled"}
+{"key":"analytics.position.normal","value":"OverflowException:Value was either too large or too small for a Decimal."}
+{"key":"analytics.data.normal","value":"ArgumentException:Invalid type: System.Object passed"}
+{"key":"analytics.nullData.normal","value":"AnalyticsDisabled"}
+{"key":"analytics.custom.empty","value":"ArgumentException:Cannot set custom event name to an empty or null string"}
+{"key":"analytics.position.empty","value":"ArgumentException:Cannot set custom event name to an empty or null string"}
+{"key":"analytics.data.empty","value":"ArgumentException:Cannot set custom event name to an empty or null string"}
+{"key":"analytics.nullData.empty","value":"ArgumentException:Cannot set custom event name to an empty or null string"}
+{"key":"analytics.custom.null","value":"ArgumentException:Cannot set custom event name to an empty or null string"}
+{"key":"analytics.position.null","value":"ArgumentException:Cannot set custom event name to an empty or null string"}
+{"key":"analytics.data.null","value":"ArgumentException:Cannot set custom event name to an empty or null string"}
+{"key":"analytics.nullData.null","value":"ArgumentException:Cannot set custom event name to an empty or null string"}
+{"key":"analytics.custom.unicode","value":"AnalyticsDisabled"}
+{"key":"analytics.position.unicode","value":"OverflowException:Value was either too large or too small for a Decimal."}
+{"key":"analytics.data.unicode","value":"ArgumentException:Invalid type: System.Object passed"}
+{"key":"analytics.nullData.unicode","value":"AnalyticsDisabled"}
+{"key":"analytics.transaction","value":"AnalyticsDisabled"}
+{"key":"analytics.transaction.receipt","value":"AnalyticsDisabled"}
+{"key":"analytics.transaction.service","value":"AnalyticsDisabled"}
+{"key":"analytics.transaction.nullProduct","value":"ArgumentException:Cannot set productId to an empty or null string"}
+{"key":"analytics.transaction.emptyProduct","value":"ArgumentException:Cannot set productId to an empty or null string"}
+{"key":"analytics.transaction.nullCurrency","value":"ArgumentException:Cannot set currency to an empty or null string"}
+{"key":"analytics.transaction.emptyCurrency","value":"ArgumentException:Cannot set currency to an empty or null string"}
+{"key":"thread.cached.application.human","value":"UnityException:get_isHumanControllingUs can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.consent.get","value":"UnityException:GetConsentState can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.consent.set","value":"UnityException:SetConsentState can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.installation","value":"UnityException:GetInstallationId can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.crash.get","value":"UnityException:GetUserMetadata can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.crash.set.invalid","value":"UnityException:SetUserMetadata can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.crash.setEnabled","value":"UnityException:set_enableCaptureExceptions can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.crash.buffer.get","value":"UnityException:get_logBufferSize can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.crash.buffer.set","value":"UnityException:set_logBufferSize can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.crash.enabled","value":"UnityException:get_enableCaptureExceptions can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.crash.buffer.invalid","value":"UnityException:set_logBufferSize can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.analytics.enabled","value":"UnityException:get_enabledInternal can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.analytics.setEnabled","value":"UnityException:set_enabledInternal can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.analytics.initialized","value":"True"}
+{"key":"thread.cached.analytics.event","value":"UnityException:SendCustomEventName can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.analytics.event.invalid","value":"ArgumentException:Cannot set custom event name to an empty or null string"}
+{"key":"thread.cached.analytics.position.invalid","value":"UnityException:Internal_Create can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.analytics.data.invalid","value":"UnityException:Internal_Create can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.analytics.transaction","value":"UnityException:Transaction can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"thread.cached.analytics.transaction.invalid","value":"ArgumentException:Cannot set productId to an empty or null string"}
+{"key":"thread.cached.consent.stateAfter","value":"AdsIntent: Unspecified, AnalyticsIntent: Unspecified"}
+{"key":"thread.cached.crash.enabledAfter","value":"True"}
+{"key":"thread.cached.crash.bufferAfter","value":"10"}
+{"key":"application.logCallbacks","value":"O:service-log-first|A:service-log-first|O:service-log-replaced|B:service-log-replaced|O:service-log-threaded|A:service-log-threaded|O:service-log-cleared"}
+{"key":"complete","value":"True"}

@@ -10,8 +10,12 @@ An additional pair with global Unity services enabled and legacy analytics disab
 produces the same 147 rows. Both repeats exited normally on the same NVIDIA GPU. The
 `--global-enabled` runner variant applies those settings to a staged copy, directs service
 URLs to a closed loopback port and also rejects unexpected unsupported-analytics diagnostics.
-The original reference rows are unchanged. Support is scoped to disabled legacy analytics;
-legacy-enabled settings remain explicit unsupported context regardless of the global flag.
+The original reference rows are unchanged. The `--legacy-enabled` variant has 153 exact rows.
+Two independent captures for each global services value agree on the legacy-enabled results.
+Runtime Analytics starts enabled, valid events and transactions return `Ok`, and disabling the
+runtime returns `AnalyticsDisabled` for valid calls. Toggling runtime state preserves the
+authored settings. Two captures with `--deferred-startup` give the same Play mode results.
+All legacy-enabled controls use loopback URLs and an unlinked project.
 
 The controls cover consent assignment, repeated values, one-field changes, duplicate
 subscriptions, removal, unknown enum values, preference writes and `DeleteAll`;
@@ -44,7 +48,7 @@ launcher, verifies Editor completion and repeat equality before publishing, and 
 an immutable runtime snapshot for engine captures. Comparisons retain every missing,
 extra or different value in `report.json` and return nonzero for any difference.
 
-Unmeasured contexts remain open: enabled legacy analytics, fresh-session malformed
+Unmeasured contexts remain open: linked Analytics projects, fresh-session malformed
 consent preferences, consent changes across domain reloads, and crash-report upload or
 snapshot production. `ForceCrash` is outside this probe. Other releases retain the
 previous complete preference deletion until their service-owned keys are measured.
