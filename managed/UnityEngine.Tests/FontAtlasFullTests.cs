@@ -11,12 +11,12 @@ namespace Unbound.Tests
     /// <summary>A dynamic font texture at its largest size (4096 x 4096). Measured in the Unity
     /// 6000.0.71f1 Editor (tests/projects/textcolor legacy/full, every character asked for in one
     /// frame): the texture keeps what it holds, each request that does not fit logs Unity's error, and
-    /// no rebuild is announced. Unbound's choice, unmeasured: glyphs of older frames are still evicted
-    /// by a reset (with its rebuild event) to make room.</summary>
+    /// no rebuild is announced. On the next frame, unused old glyphs are evicted on a rebuild
+    /// (legacy/full/next).</summary>
     [Collection("Frames")]
     public class FontAtlasFullTests
     {
-        /// <summary>Square glyphs as large as the size asked for, for the letters A to Z.</summary>
+        /// <summary>Square glyphs as large as the size asked for, for printable ASCII.</summary>
         sealed class Squares : GlyphSource
         {
             internal Squares()
@@ -29,7 +29,7 @@ namespace Unbound.Tests
                 Family = "Squares";
             }
 
-            internal override bool HasCharacter(int codepoint) => codepoint >= 'A' && codepoint <= 'Z';
+            internal override bool HasCharacter(int codepoint) => codepoint >= '!' && codepoint <= '~';
 
             internal override bool Render(int codepoint, int size, FontStyle style, int renderingMode, out RenderedGlyph glyph)
             {
@@ -65,24 +65,26 @@ namespace Unbound.Tests
             {
                 Time.s_FrameCount = 100;
                 font = new Font(new Squares(), 10, "Squares");
-                // Twenty 1000-pixel squares: more than a 4096 x 4096 texture holds.
-                font.RequestCharactersInTexture("ABCDEFGHIJKLMNOPQRST", 1000);
+                // At 500 pixels a 4096 x 4096 texture fits at most 64 of these squares.
+                const int size = 500;
+                string initial = new string(Enumerable.Range('!', 80).Select(codepoint => (char)codepoint).ToArray());
+                font.RequestCharactersInTexture(initial, size);
                 var texture = font.material.mainTexture;
                 Assert.Equal((4096, 4096), (texture.width, texture.height));
                 Assert.Equal(new[] { Full }, logs.Lines);
-                Assert.True(font.GetCharacterInfo('A', out _, 1000));
-                Assert.False(font.GetCharacterInfo('T', out _, 1000));
+                Assert.True(font.GetCharacterInfo(initial[0], out _, size));
+                Assert.False(font.GetCharacterInfo(initial[^1], out _, size));
                 int full = rebuilt;
                 // Again in the same frame: the error again, nothing rebuilt.
-                font.RequestCharactersInTexture("T", 1000);
+                font.RequestCharactersInTexture(initial[^1].ToString(), size);
                 Assert.Equal(new[] { Full, Full }, logs.Lines);
                 Assert.Equal(full, rebuilt);
-                Assert.True(font.GetCharacterInfo('A', out _, 1000));
+                Assert.True(font.GetCharacterInfo(initial[0], out _, size));
                 // A later frame: the older frame's glyphs make room (a reset and its rebuild event).
                 Time.s_FrameCount = 101;
-                font.RequestCharactersInTexture("UVWXYZ", 1000);
+                font.RequestCharactersInTexture("uvwxyz", size);
                 Assert.True(rebuilt > full);
-                Assert.True(font.GetCharacterInfo('Z', out _, 1000));
+                Assert.True(font.GetCharacterInfo('z', out _, size));
                 Assert.Equal(2, logs.Lines.Count);
             }
             finally
