@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.Loader;
@@ -11,12 +12,11 @@ using Xunit.Sdk;
 namespace UnityEngine.Tests
 {
     /// <summary>Collectible load contexts in the tests. When an unloaded context is collected,
-    /// CoreCLR flushes its process-wide type-cast cache: the next cast that goes through the cache
-    /// allocates a new table (3120 B at its initial size), and later casts grow it back to its
-    /// earlier size (98352 B at its largest), each inside whatever allocation window is open
-    /// (<see cref="CollectibleContextTests"/>). An unload that only calls Unload completes at some
-    /// later collection, in a later test. A test that unloads a context therefore runs in this
-    /// collection, which runs after all others (<see cref="CollectibleContextsLast"/>), and unloads
+    /// CoreCLR flushes its process-wide type-cast cache. The next cast through the cache can
+    /// allocate a new table inside an allocation measurement (<see cref="CollectibleContextTests"/>).
+    /// If a test calls Unload without waiting, collection can finish during a subsequent test.
+    /// A test that unloads a context therefore runs in this collection, after every other
+    /// collection (<see cref="CollectibleContextsLast"/>), and unloads
     /// it with <see cref="Use"/>, which returns only once the context is collected and the cache
     /// flushed.</summary>
     [CollectionDefinition(Name, DisableParallelization = true)]
@@ -32,16 +32,21 @@ namespace UnityEngine.Tests
         internal static void Use(string name, Action<AssemblyLoadContext> use)
         {
             var (context, failure) = Unloaded(name, use);
+            // A context left alive would finish its unload, and flush the cache, in a later test.
+            if (!WaitForCollection(context))
+                throw new InvalidOperationException($"the load context '{name}' is alive after {MaxCollections} collections"
+                    + (failure != null ? " (use threw; see the inner exception)" : ""), failure?.SourceException);
+            failure?.Throw();
+        }
+
+        internal static bool WaitForCollection(WeakReference context)
+        {
             for (int i = 0; context.IsAlive && i < MaxCollections; i++)
             {
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
             }
-            // A context left alive would finish its unload, and flush the cache, in a later test.
-            if (context.IsAlive)
-                throw new InvalidOperationException($"the load context '{name}' is alive after {MaxCollections} collections"
-                    + (failure != null ? " (use threw; see the inner exception)" : ""), failure?.SourceException);
-            failure?.Throw();
+            return !context.IsAlive;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -76,6 +81,15 @@ namespace UnityEngine.Tests
     {
         static readonly object[] s_Subjects = { new List<int>(), new int[3], "x", new Dictionary<int, int>() };
 
+        // Read only the identity of CoreCLR 10's table. Another thread can allocate
+        // its replacement before the test's next cast.
+        static object ReadCastTable()
+        {
+            var field = typeof(object).Assembly.GetType("System.Runtime.CompilerServices.CastHelpers")
+                ?.GetField("s_table", BindingFlags.Static | BindingFlags.NonPublic);
+            return field?.GetValue(null) ?? throw new InvalidOperationException("CoreCLR cast table was not found");
+        }
+
         /// <summary>Casts through the cache; the bytes this thread allocated.</summary>
         [MethodImpl(MethodImplOptions.NoInlining)]
         static long CastWindow()
@@ -102,35 +116,28 @@ namespace UnityEngine.Tests
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        static WeakReference UnloadedOnly()
+        static (WeakReference Context, object Table) UnloadWithWarmCastTable()
         {
             var context = new AssemblyLoadContext("unloaded only", isCollectible: true);
             LoadThisAssembly(context);
+            var weakContext = new WeakReference(context);
+            WarmCasts();
+            var table = ReadCastTable();
             context.Unload();
-            return new WeakReference(context);
+            var afterUnload = ReadCastTable();
+            GC.KeepAlive(context);
+            Assert.Same(table, afterUnload);
+            return (weakContext, table);
         }
 
-        /// <summary>The control: an unload alone leaves the context alive, and once a later
-        /// collection takes it, the next cast allocates (the flushed cache's new table).</summary>
+        /// <summary>The table survives Unload while the context is still referenced.
+        /// Once the context is collected, CoreCLR drops that table.</summary>
         [Fact]
-        public void ACollectedContextMakesTheNextCastAllocate()
+        public void CollectingAnUnloadedContextFlushesTheCastCache()
         {
-            CastWindow();
-            Assert.Equal(0, CastWindow());
-            bool allocated = false;
-            // Another thread may cast first after the flush and allocate the table itself.
-            for (int attempt = 0; attempt < 3 && !allocated; attempt++)
-            {
-                var context = UnloadedOnly();
-                Assert.True(context.IsAlive, "an unload alone does not collect the context");
-                while (context.IsAlive)
-                {
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                }
-                allocated = CastWindow() > 0;
-            }
-            Assert.True(allocated, "no cast allocated after three collected contexts");
+            var (context, table) = UnloadWithWarmCastTable();
+            Assert.True(CollectibleContexts.WaitForCollection(context), "the unloaded context is still alive");
+            Assert.NotSame(table, ReadCastTable());
         }
 
         /// <summary>Casts until two windows in a row allocate nothing (the cache regrown).</summary>
@@ -157,10 +164,12 @@ namespace UnityEngine.Tests
             });
             Assert.False(seen.IsAlive);
             WarmCasts();
+            var table = ReadCastTable();
             for (int i = 0; i < 3; i++)
             {
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
+                Assert.Same(table, ReadCastTable());
                 Assert.Equal(0, CastWindow());
             }
             Assert.Throws<System.IO.FileNotFoundException>(() => CollectibleContexts.Use("missing",
