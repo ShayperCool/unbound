@@ -35,6 +35,8 @@ pub struct RuntimeState {
     new_meta: unbound_assets::new_meta::MetaContext,
     /// The project's release family's new `.meta` files are measured (6000.0).
     new_meta_measured: bool,
+    /// TextCore's COLR layers select native hinting in the measured release family.
+    pub(crate) font_colr_native_hinting: bool,
     backend: RwLock<Arc<dyn RenderBackend>>,
     imports: AssetCache,
     /// Imports textures with the active build target's overrides.
@@ -394,6 +396,8 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             .map(Path::to_path_buf)
             .collect(),
         new_meta_measured: unbound_compat::MeasuredFamily::of(project.version).is_some(),
+        font_colr_native_hinting: project.version.measured_family()
+            == Some(unbound_compat::MeasuredFamily::Unity6000_0),
         new_meta: unbound_assets::new_meta::MetaContext::for_install(
             &unbound_project::install::playback_engines(&project.install.data),
         ),

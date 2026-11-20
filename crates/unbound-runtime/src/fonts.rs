@@ -35,7 +35,12 @@ fn load(key: (PathBuf, u32), data: impl FnOnce() -> Result<Vec<u8>>) -> Result<u
     if let Some((_, handle)) = opened.iter().find(|(k, _)| *k == key) {
         return Ok(*handle);
     }
-    let handle = register(FontFace::from_bytes(data()?, key.1)?);
+    let face = FontFace::from_bytes_with_native_colr_hinting(
+        data()?,
+        key.1,
+        crate::state::state().font_colr_native_hinting,
+    )?;
+    let handle = register(face);
     opened.push((key, handle));
     Ok(handle)
 }

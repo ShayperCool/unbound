@@ -28,6 +28,7 @@ const CONVERT_ALIGNMENT: ft::FT_Int = 4;
 pub(crate) struct FreeTypeFace {
     pub(crate) face: ft::FT_Face,
     pub(crate) library: ft::FT_Library,
+    pub(crate) native_colr_hinting: bool,
     _data: Arc<[u8]>,
 }
 
@@ -44,7 +45,11 @@ impl Drop for FreeTypeFace {
 }
 
 impl FreeTypeFace {
-    pub(crate) fn new(data: Arc<[u8]>, index: u32) -> anyhow::Result<Self> {
+    pub(crate) fn new(
+        data: Arc<[u8]>,
+        index: u32,
+        native_colr_hinting: bool,
+    ) -> anyhow::Result<Self> {
         let data_length = data.len().try_into()?;
         unsafe {
             let mut library = std::ptr::null_mut();
@@ -67,6 +72,7 @@ impl FreeTypeFace {
             Ok(Self {
                 face,
                 library,
+                native_colr_hinting,
                 _data: data,
             })
         }

@@ -80,12 +80,22 @@ pub struct FontFace {
     pub(crate) features: OnceLock<crate::font_features::FontFeatures>,
     legacy_kern_pairs: OnceLock<Vec<(u16, u16)>>,
     freetype: OnceLock<Mutex<Option<crate::font_freetype::FreeTypeFace>>>,
+    native_colr_hinting: bool,
     index: u32,
     metrics: FaceMetrics,
 }
 
 impl FontFace {
     pub fn from_bytes(data: Vec<u8>, index: u32) -> Result<Self> {
+        Self::from_bytes_with_native_colr_hinting(data, index, false)
+    }
+
+    /// Opens a face with the release's hinting policy for TextCore's layered colour glyphs.
+    pub fn from_bytes_with_native_colr_hinting(
+        data: Vec<u8>,
+        index: u32,
+        native_colr_hinting: bool,
+    ) -> Result<Self> {
         let metrics = {
             let face = Face::parse(&data, index).map_err(|e| anyhow::anyhow!("not a font: {e}"))?;
             read_metrics(&face)
@@ -95,6 +105,7 @@ impl FontFace {
             freetype: OnceLock::new(),
             features: OnceLock::new(),
             legacy_kern_pairs: OnceLock::new(),
+            native_colr_hinting,
             index,
             metrics,
         })
@@ -204,9 +215,13 @@ impl FontFace {
         f: impl FnOnce(&mut crate::font_freetype::FreeTypeFace) -> T,
     ) -> Option<T> {
         let backend = self.freetype.get_or_init(|| {
-            let face = crate::font_freetype::FreeTypeFace::new(self.data.clone(), self.index)
-                .map_err(|error| tracing::warn!("{error:#}"))
-                .ok();
+            let face = crate::font_freetype::FreeTypeFace::new(
+                self.data.clone(),
+                self.index,
+                self.native_colr_hinting,
+            )
+            .map_err(|error| tracing::warn!("{error:#}"))
+            .ok();
             Mutex::new(face)
         });
         Some(f(backend.lock().unwrap().as_mut()?))

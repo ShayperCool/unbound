@@ -172,6 +172,7 @@ impl FreeTypeFace {
         if !self.set_pixel_size(pixels.checked_mul(upsampling)?) {
             return None;
         }
+        let flags = self.textcore_load_flags(glyph, flags);
         unsafe {
             if ft::FT_Load_Glyph(self.face, glyph, flags) != 0 {
                 return None;
@@ -188,6 +189,40 @@ impl FreeTypeFace {
                 rect_width: slot.bitmap.width,
                 rect_height: slot.bitmap.rows,
             })
+        }
+    }
+
+    fn textcore_load_flags(&self, glyph: u32, flags: ft::FT_Int32) -> ft::FT_Int32 {
+        const RENDER_COLOR: ft::FT_Int32 = ft::FT_LOAD_COLOR | ft::FT_LOAD_RENDER;
+        const EXPLICIT_HINTING: ft::FT_Int32 =
+            ft::FT_LOAD_NO_HINTING | ft::FT_LOAD_NO_AUTOHINT | ft::FT_LOAD_FORCE_AUTOHINT;
+        if !self.native_colr_hinting
+            || flags & RENDER_COLOR != RENDER_COLOR
+            || flags & EXPLICIT_HINTING != 0
+            || !self.has_color()
+        {
+            return flags;
+        }
+        let mut layers = ft::FT_LayerIterator {
+            num_layers: 0,
+            layer: 0,
+            p: std::ptr::null_mut(),
+        };
+        let (mut layer_glyph, mut palette_entry) = (0, 0);
+        // Load the base glyph and its layers with native hinting. An instructionless
+        // TrueType font must not run the auto-hinter here (tests/projects/textcolor).
+        if unsafe {
+            ft::FT_Get_Color_Glyph_Layer(
+                self.face,
+                glyph,
+                &mut layer_glyph,
+                &mut palette_entry,
+                &mut layers,
+            )
+        } {
+            flags | ft::FT_LOAD_NO_AUTOHINT
+        } else {
+            flags
         }
     }
 
@@ -724,6 +759,40 @@ mod tests {
             .textcore_render(smile, 24, render_mode::SMOOTH, 4)
             .unwrap();
         assert_eq!(smooth.pixels.len(), w * h);
+    }
+
+    #[test]
+    fn layered_colour_glyphs_keep_hinted_metrics_without_autohinting() {
+        let data = include_bytes!(
+            "../../../tests/projects/textcolor/Assets/Resources/Fonts/LayerProbe.ttf"
+        );
+        let measured =
+            FontFace::from_bytes_with_native_colr_hinting(data.to_vec(), 0, true).unwrap();
+        let unmeasured = FontFace::from_bytes(data.to_vec(), 0).unwrap();
+        let glyph = index(&measured, 'A');
+        let hinted = measured
+            .textcore_render(glyph, 19, render_mode::COLOR_HINTED, 4)
+            .unwrap();
+        let unhinted = measured
+            .textcore_render(glyph, 19, render_mode::COLOR, 4)
+            .unwrap();
+        let fallback_hinted = unmeasured
+            .textcore_render(glyph, 19, render_mode::COLOR_HINTED, 4)
+            .unwrap();
+        assert_eq!(hinted.pixels, unhinted.pixels);
+        assert_ne!(hinted.pixels, fallback_hinted.pixels);
+        assert_eq!(hinted.glyph, fallback_hinted.glyph);
+        assert_ne!(hinted.glyph.advance, unhinted.glyph.advance);
+
+        let monochrome = index(&measured, 'B');
+        let render_mono = |face: &FontFace| {
+            face.textcore_render(monochrome, 29, render_mode::COLOR_HINTED, 4)
+                .unwrap()
+        };
+        assert_eq!(
+            render_mono(&measured).pixels,
+            render_mono(&unmeasured).pixels
+        );
     }
 
     /// The definition of [`super::sampled_distance_field`], searching the whole square: each pixel of the `out_width` x `out_height` glyph grown by `padding` takes
