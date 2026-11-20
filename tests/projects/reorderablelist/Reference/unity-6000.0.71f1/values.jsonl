@@ -1,0 +1,28 @@
+{"k":"list/defaults","v":[true,true,true,true,true,false,21,20,20,true]}
+{"k":"list/initial","v":[4,3,[]]}
+{"k":"selection/appendWhileSingle","v":[4,0,[0,2]]}
+{"k":"selection/liveView","v":[[0,2],true,false]}
+{"k":"selection/replaceWithExisting","v":[4,2,[2]]}
+{"k":"selection/rangeWhileSingle","v":["InvalidOperationException: Cannot select range when not in multi select mode."]}
+{"k":"selection/reversedRange","v":[4,1,[1,2,3]]}
+{"k":"selection/deselectWhileSingle","v":[4,1,[1,3]]}
+{"k":"selection/outOfRange","v":[4,-2,[-2,1,3,30]]}
+{"k":"list/mutate","v":[3,-2,[-2,1,3,30]]}
+{"k":"list/replace","v":[0,-2,[-2,1,3,30]]}
+{"k":"selection/clear","v":[0,-1,[]]}
+{"k":"selection/callbacks","v":[0,[]]}
+{"k":"list/noBacking","v":[0,-1,[]]}
+{"k":"list/configured","v":[0,-1,false,false,true]}
+{"k":"list/draggableChanged","v":[true]}
+{"k":"serialized/defaults","v":[true,true,true,true,true,3,2]}
+{"k":"serialized/resize","v":[4,2,[2]]}
+{"k":"serialized/withList","v":[4,true]}
+{"k":"serialized/rebind","v":[1,2,[2]]}
+{"k":"serialized/nullSetter","v":["NullReferenceException: Object reference not set to an instance of an object",true]}
+{"k":"serialized/fallback","v":[3,2,[2]]}
+{"k":"serialized/multiAtLimit","v":[2,1,true,true,false]}
+{"k":"serialized/multiOverLimit","v":[0,-1]}
+{"k":"serialized/singleOverLimit","v":[4]}
+{"k":"serialized/readOnly","v":[false,false,2]}
+{"k":"serialized/scalar","v":[0,-1,["Error: Input elements should be an Array SerializedProperty","Error: Retrieving array size but no array was provided","Error: Retrieving array size but no array was provided"]]}
+{"k":"complete","v":true}
