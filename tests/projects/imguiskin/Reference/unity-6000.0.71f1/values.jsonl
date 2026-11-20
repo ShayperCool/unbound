@@ -1,3 +1,5 @@
+{"k":"propertyHook/Layout","v":[["outer","a","m_First",[4,8,110,18]],["outer","b","m_First",[4,8,110,18]],["inner","a","m_Second",[12,28,100,18]],["inner","b","m_Second",[12,28,100,18]],["field","a","m_First",[12,28,100,18]],["field","b","m_First",[12,28,100,18]],["afterRemove","b","m_Second",[4,8,110,18]],"NullReferenceException: Probe: SerializedProperty is null"]}
+{"k":"propertyHook/Repaint","v":[["outer","a","m_First",[4,8,110,18]],["outer","b","m_First",[4,8,110,18]],["inner","a","m_Second",[12,28,100,18]],["inner","b","m_Second",[12,28,100,18]],["field","a","m_First",[12,28,100,18]],["field","b","m_First",[12,28,100,18]],["afterRemove","b","m_Second",[4,8,110,18]],"NullReferenceException: Probe: SerializedProperty is null"]}
 {"k":"onGUI","v":"called"}
 {"k":"skin/name","v":"GameSkin"}
 {"k":"skin/hideFlags","v":"HideAndDontSave"}

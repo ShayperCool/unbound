@@ -11,6 +11,13 @@ Contract: the Scripting API [GUISkin](https://docs.unity3d.com/6000.0/Documentat
 and [GUI.skin](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUI-skin.html) ("The global
 skin to use"; the default when none is set) document the members; the values are this capture's.
 
+The property hook controls run in both Layout and Repaint. The Scripting API describes
+[`BeginProperty` and `EndProperty`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUI.BeginProperty.html)
+as enclosing a property control and [`PropertyField`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUI.PropertyField.html)
+as drawing a serialized property. The capture measures the internal subscription hook with
+nested scopes and a default integer field. Each listener records the property path and rectangle.
+Removing the first listener leaves the second subscribed. A null property throws before notifying either listener.
+
 ```sh
 python3 tests/projects/imguiskin/run.py record --label native-a
 python3 tests/projects/imguiskin/run.py record --label native-b

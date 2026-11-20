@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
+using UnityEditor;
 using UnityEngine;
 
 /// <summary>
@@ -20,6 +22,10 @@ public sealed class ImguiSkinProbe : MonoBehaviour
     string m_Dir;
     GUISkin m_Skin;
     bool m_Done;
+    bool m_RecordedLayout;
+    bool m_RecordedRepaint;
+    [SerializeField] int m_First = 11;
+    [SerializeField] int m_Second = 22;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
@@ -31,13 +37,22 @@ public sealed class ImguiSkinProbe : MonoBehaviour
 
     void OnGUI()
     {
-        if (m_Skin != null) return;
-        m_Skin = GUI.skin;
+        if (m_Skin == null) m_Skin = GUI.skin;
+        if (Event.current.type == EventType.Layout && !m_RecordedLayout)
+        {
+            m_RecordedLayout = true;
+            RecordPropertyHooks("Layout");
+        }
+        else if (Event.current.type == EventType.Repaint && !m_RecordedRepaint)
+        {
+            m_RecordedRepaint = true;
+            RecordPropertyHooks("Repaint");
+        }
     }
 
     void Update()
     {
-        if (m_Done || (m_Skin == null && Time.frameCount < 600)) return;
+        if (m_Done || ((!m_RecordedLayout || !m_RecordedRepaint) && Time.frameCount < 600)) return;
         m_Done = true;
         Put("onGUI", Json(m_Skin != null ? "called" : "not called"));
         if (m_Skin != null) Record(m_Skin);
@@ -48,6 +63,65 @@ public sealed class ImguiSkinProbe : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    void RecordPropertyHooks(string phase)
+    {
+        using var so = new SerializedObject(this);
+        var first = so.FindProperty("m_First");
+        var second = so.FindProperty("m_Second");
+        var hook = typeof(EditorGUIUtility).GetEvent("beginProperty", BindingFlags.NonPublic | BindingFlags.Static);
+        var add = hook.GetAddMethod(true);
+        var remove = hook.GetRemoveMethod(true);
+        var calls = new List<string>();
+        string entry = "";
+        void Note(string listener, Rect area, SerializedProperty property)
+        {
+            if (property == null || property.serializedObject.targetObject == this)
+                calls.Add("[" + Json(entry) + "," + Json(listener) + "," + Json(property?.propertyPath ?? "") +
+                    $",[{F(area.x)},{F(area.y)},{F(area.width)},{F(area.height)}]]");
+        }
+        Action<Rect, SerializedProperty> a = (area, property) => Note("a", area, property);
+        Action<Rect, SerializedProperty> b = (area, property) => Note("b", area, property);
+        var outer = new Rect(4, 8, 110, 18);
+        var inner = new Rect(12, 28, 100, 18);
+        var label = new GUIContent("Probe");
+        add.Invoke(null, new object[] { a });
+        add.Invoke(null, new object[] { b });
+        try
+        {
+            entry = "outer";
+            EditorGUI.BeginProperty(outer, label, first);
+            try
+            {
+                entry = "inner";
+                EditorGUI.BeginProperty(inner, label, second);
+                EditorGUI.EndProperty();
+            }
+            finally { EditorGUI.EndProperty(); }
+
+            entry = "field";
+            EditorGUI.PropertyField(inner, first, label);
+            remove.Invoke(null, new object[] { a });
+
+            entry = "afterRemove";
+            EditorGUI.BeginProperty(outer, label, second);
+            EditorGUI.EndProperty();
+            entry = "null";
+            try
+            {
+                EditorGUI.BeginProperty(outer, label, null);
+                EditorGUI.EndProperty();
+                calls.Add(Json("null returned"));
+            }
+            catch (Exception error) { calls.Add(Json(error.GetType().Name + ": " + error.Message)); }
+        }
+        finally
+        {
+            remove.Invoke(null, new object[] { a });
+            remove.Invoke(null, new object[] { b });
+        }
+        Put("propertyHook/" + phase, "[" + string.Join(",", calls) + "]");
     }
 
     void Put(string key, string json) => m_Out.Append("{\"k\":").Append(Json(key)).Append(",\"v\":").Append(json).Append("}\n");
