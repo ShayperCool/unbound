@@ -276,9 +276,9 @@ namespace Unbound.Runtime
         /// Measured in tests/projects/imguiskin. Other families are unmeasured.</summary>
         internal static bool EditorPropertyBeginCallbackMeasured => Family == ReleaseFamily.Unity6000_0;
 
-        /// <summary>Initial ReorderableList geometry and background measured in Play mode by
-        /// tests/projects/reorderablelist on Unity 6000.0.71f1. Other families retain zero defaults.</summary>
-        internal static bool EditorReorderableListDefaultsMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>ReorderableList geometry defaults and height calculation measured in Play mode
+        /// by tests/projects/reorderablelist on Unity 6000.0.71f1. Other families are unmeasured.</summary>
+        internal static bool EditorReorderableListLayoutMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Dynamic Font texture requests and queries share a 500-pixel maximum on
         /// Unity 6000.0.71f1 (tests/projects/textcolor). Other families are unmeasured.</summary>

@@ -52192,7 +52192,6 @@ namespace UnityEditorInternal
         [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.ElementCallbackDelegate drawElementCallback;
         [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.ElementCallbackDelegate drawElementBackgroundCallback;
         [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.DrawNoneElementCallback drawNoneElementCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.ElementHeightCallbackDelegate elementHeightCallback;
         [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.ReorderCallbackDelegateWithDetails onReorderCallbackWithDetails;
         [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.ReorderCallbackDelegate onReorderCallback;
         [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.SelectCallbackDelegate onSelectCallback;
@@ -52208,18 +52207,15 @@ namespace UnityEditorInternal
         [global::Unbound.Stub] internal bool m_IsEditable;
         [global::Unbound.Stub] internal bool m_HasPropertyDrawer;
         [global::Unbound.Stub] internal int m_CacheCount;
-        [global::Unbound.Stub] internal bool m_PropertyCacheValid;
         [global::Unbound.Stub] internal static void InvalidateParentCaches(string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.InvalidateParentCaches"); }
         [global::Unbound.Stub] internal void InvalidateForGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.InvalidateForGUI"); }
         [global::Unbound.Stub] internal static void InvalidateExistingListCaches() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.InvalidateExistingListCaches"); }
         [global::Unbound.Stub] public static global::UnityEditorInternal.ReorderableList GetReorderableListFromSerializedProperty(global::UnityEditor.SerializedProperty prop) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.GetReorderableListFromSerializedProperty"); return default; }
         [global::Unbound.Stub] internal void CacheIfNeeded() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.CacheIfNeeded"); }
-        [global::Unbound.Stub] internal void InvalidateCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.InvalidateCache"); }
         [global::Unbound.Stub] internal void InvalidateCacheRecursive() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.InvalidateCacheRecursive"); }
         [global::Unbound.Stub] public void DoLayoutList() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.DoLayoutList"); }
         [global::Unbound.Stub] public void DoList(global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.DoList"); }
         [global::Unbound.Stub] public void DoList(global::UnityEngine.Rect rect, global::UnityEngine.Rect visibleRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.DoList"); }
-        [global::Unbound.Stub] public float GetHeight() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.GetHeight"); return default; }
         [global::Unbound.Stub] public void GrabKeyboardFocus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.GrabKeyboardFocus"); }
         [global::Unbound.Stub] public void ReleaseKeyboardFocus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.ReleaseKeyboardFocus"); }
         [global::Unbound.Stub] public bool HasKeyboardControl() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.HasKeyboardControl"); return default; }
@@ -52227,7 +52223,6 @@ namespace UnityEditorInternal
         public unsafe delegate void HeaderCallbackDelegate(global::UnityEngine.Rect rect);
         public unsafe delegate void FooterCallbackDelegate(global::UnityEngine.Rect rect);
         public unsafe delegate void ElementCallbackDelegate(global::UnityEngine.Rect rect, int index, bool isActive, bool isFocused);
-        public unsafe delegate float ElementHeightCallbackDelegate(int index);
         public unsafe delegate void DrawNoneElementCallback(global::UnityEngine.Rect rect);
         public unsafe delegate void ReorderCallbackDelegateWithDetails(global::UnityEditorInternal.ReorderableList list, int oldIndex, int newIndex);
         public unsafe delegate void ReorderCallbackDelegate(global::UnityEditorInternal.ReorderableList list);
