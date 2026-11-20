@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from playmode_api_probe import compare, main
 
 
-def configure_services(project, global_enabled, legacy_enabled, deferred_startup=False):
+def configure_services(project, global_enabled, legacy_enabled, deferred_startup=False, authored_cloud_id=False):
     path = project/'ProjectSettings/UnityConnectSettings.asset'
     settings = path.read_text()
     if global_enabled:
@@ -24,6 +24,13 @@ def configure_services(project, global_enabled, legacy_enabled, deferred_startup
     settings = re.sub(r'(m_(?:EventOldUrl|EventUrl|ConfigUrl|DashboardUrl):) https?://[^\n]+',
                       r'\1 http://127.0.0.1:9', settings)
     path.write_text(settings)
+    if authored_cloud_id:
+        path = project/'ProjectSettings/ProjectSettings.asset'
+        settings, changed = re.subn(r'(^  cloudProjectId:)[^\n]*$', r'\1 0a1b2c3d-1111-2222-3333-444455556666',
+                                    path.read_text(), flags=re.M)
+        if changed != 1:
+            raise ValueError('cannot set the test cloud project ID in ProjectSettings')
+        path.write_text(settings)
 
 
 def compare_disconnected_analytics(reference, actual, report):
@@ -41,14 +48,15 @@ if __name__ == '__main__':
     global_enabled = '--global-enabled' in sys.argv
     legacy_enabled = '--legacy-enabled' in sys.argv
     deferred_startup = '--deferred-startup' in sys.argv
-    if deferred_startup and not legacy_enabled:
-        sys.exit('--deferred-startup requires --legacy-enabled')
-    for option in ('--global-enabled', '--legacy-enabled', '--deferred-startup'):
+    authored_cloud_id = '--authored-cloud-id' in sys.argv
+    if (deferred_startup or authored_cloud_id) and not legacy_enabled:
+        sys.exit('--deferred-startup and --authored-cloud-id require --legacy-enabled')
+    for option in ('--global-enabled', '--legacy-enabled', '--deferred-startup', '--authored-cloud-id'):
         if option in sys.argv:
             sys.argv.remove(option)
 
     def configure(project):
-        configure_services(project, global_enabled, legacy_enabled, deferred_startup)
+        configure_services(project, global_enabled, legacy_enabled, deferred_startup, authored_cloud_id)
 
     sys.exit(main(Path(__file__).resolve().parent, 'EDITORSERVICES_PROBE_OUT',
                   compare_rows=compare_disconnected_analytics,

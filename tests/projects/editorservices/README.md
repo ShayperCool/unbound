@@ -15,7 +15,9 @@ Two independent captures for each global services value agree on the legacy-enab
 Runtime Analytics starts enabled, valid events and transactions return `Ok`, and disabling the
 runtime returns `AnalyticsDisabled` for valid calls. Toggling runtime state preserves the
 authored settings. Two captures with `--deferred-startup` give the same Play mode results.
-All legacy-enabled controls use loopback URLs and an unlinked project.
+The `--authored-cloud-id` variant uses a synthetic ID. Both Editor repeats with that ID and
+loopback-only networking also report an unbound project and agree with the 153 runtime rows.
+All legacy-enabled controls use loopback service URLs.
 
 The controls cover consent assignment, repeated values, one-field changes, duplicate
 subscriptions, removal, unknown enum values, preference writes and `DeleteAll`;
