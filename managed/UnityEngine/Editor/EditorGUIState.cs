@@ -233,6 +233,20 @@ namespace UnityEditor
         public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label) { RequireGUI(); return EditorGUIControls.Property(position, property, label); }
         public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label, bool includeChildren) { RequireGUI(); return EditorGUIControls.Property(position, property, label); }
         public static Rect PrefixLabel(Rect totalPosition, GUIContent label) { RequireGUI(); return EditorGUIControls.PrefixLabel(totalPosition, label); }
+
+        public static Rect PrefixLabel(Rect totalPosition, int id, GUIContent label) => PrefixLabel(totalPosition, id, label, null);
+
+        public static Rect PrefixLabel(Rect totalPosition, int id, GUIContent label, GUIStyle style)
+        {
+            if (!Compat.InspectorGuiStylesMeasured)
+            {
+                Stubs.NotImplemented("UnityEditor.EditorGUI.PrefixLabel");
+                return default;
+            }
+            RequireGUI();
+            return EditorGUIControls.PrefixLabel(totalPosition, id, label, style ?? EditorStyles.label);
+        }
+
         public static void DrawRect(Rect rect, Color color)
         {
             RequireGUI();
@@ -495,6 +509,8 @@ namespace UnityEditor
     /// own controls with the editor's label column.</summary>
     internal static class EditorGUIControls
     {
+        // Space between a prefix label and its field in tests/projects/editortogglegroup.
+        const float PrefixLabelGap = 2f;
         static GUIStyle s_MixedLeftToggle;
 
         static Rect Field(Rect position, GUIContent label)
@@ -509,6 +525,18 @@ namespace UnityEditor
             float width = EditorGUIUtility.labelWidth - EditorGUI.indent;
             GUI.Label(new Rect(indented.x, indented.y, width, indented.height), label);
             return new Rect(indented.x + width, indented.y, indented.width - width, indented.height);
+        }
+
+        internal static Rect PrefixLabel(Rect position, int id, GUIContent label, GUIStyle style)
+        {
+            var indented = EditorGUI.IndentedRect(position);
+            if (label == null || (string.IsNullOrEmpty(label.text) && label.image == null)) return indented;
+
+            float labelWidth = EditorGUIUtility.labelWidth;
+            var labelPosition = new Rect(indented.x, position.y, labelWidth - EditorGUI.indent, EditorGUIUtility.singleLineHeight);
+            DrawPrefixLabel(labelPosition, label, id, style);
+            float fieldOffset = labelWidth + PrefixLabelGap;
+            return new Rect(position.x + fieldOffset, position.y, position.width - fieldOffset, position.height);
         }
 
         internal static void Label(Rect position, GUIContent label) => GUI.Label(EditorGUI.IndentedRect(position), label);
@@ -540,20 +568,7 @@ namespace UnityEditor
             labelPosition.xMin += toggleStyle.padding.left;
             labelPosition.y -= (toggleStyle.margin.top - toggleStyle.margin.bottom) / 2;
 
-            if (type == EventType.Repaint && label != null)
-            {
-                labelPosition.width = Mathf.Max(1f, labelPosition.width);
-                Color previous = GUI.backgroundColor;
-                GUI.backgroundColor = Color.white;
-                try { labelStyle.DrawPrefixLabel(labelPosition, label, id); }
-                finally { GUI.backgroundColor = previous; }
-            }
-            else if (type == EventType.MouseDown && current.button == 0 && GUI.enabled &&
-                label != null && labelPosition.Contains(current.mousePosition))
-            {
-                GUIUtility.keyboardControl = id;
-                EditorGUIUtility.editingTextField = false;
-            }
+            if (label != null) DrawPrefixLabel(labelPosition, label, id, labelStyle);
 
             if (EditorGUI.showMixedValue)
             {
@@ -564,6 +579,25 @@ namespace UnityEditor
             bool selected = GUI.DoToggle(togglePosition, id, value, GUIContent.none, toggleStyle);
             if (current.type != type) GUIUtility.keyboardControl = id;
             return selected;
+        }
+
+        static void DrawPrefixLabel(Rect position, GUIContent label, int id, GUIStyle style)
+        {
+            var current = Event.current;
+            if (current.type == EventType.Repaint)
+            {
+                position.width = Mathf.Max(1f, position.width);
+                Color previous = GUI.backgroundColor;
+                GUI.backgroundColor = Color.white;
+                try { style.DrawPrefixLabel(position, label, id); }
+                finally { GUI.backgroundColor = previous; }
+            }
+            else if (current.type == EventType.MouseDown && current.button == 0 && GUI.enabled &&
+                position.Contains(current.mousePosition))
+            {
+                if (GUIUtility.CanHaveKeyboardFocus(id)) GUIUtility.keyboardControl = id;
+                EditorGUIUtility.editingTextField = false;
+            }
         }
 
         internal static bool Foldout(Rect position, bool foldout, GUIContent content) => GUI.Toggle(EditorGUI.IndentedRect(position), foldout, content);

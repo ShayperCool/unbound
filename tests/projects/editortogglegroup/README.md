@@ -32,6 +32,13 @@ and the pixels changed by checking the box to its left.
 [Unity 6000.0 `EditorGUI.ToggleLeft`](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityeditor/editorgui/toggleleft)
 [Unity 6000.0 `EditorGUILayout.ToggleLeft`](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityeditor/editorguilayout/toggleleft)
 
+The explicit-ID `PrefixLabel` controls compare the returned field rectangle for an
+indented label, empty content, tooltip-only content, and a narrow field. The pointer
+sequence starts with focus on a different control. It records whether clicking changes
+focus during OnGUI for a keyboard-capable control, a passive control, a disabled control,
+and a click below the label. It also records secondary clicks and text editing state.
+[Unity 6000.0 `EditorGUI.PrefixLabel`](https://docs.unity.cn/6000.0/Documentation/ScriptReference/EditorGUI.PrefixLabel.html)
+
 ```sh
 python3 tests/projects/editortogglegroup/run.py record --label native-a
 python3 tests/projects/editortogglegroup/run.py record --label native-b

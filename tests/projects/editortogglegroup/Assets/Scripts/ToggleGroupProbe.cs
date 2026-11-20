@@ -53,8 +53,10 @@ public sealed partial class ToggleGroupProbe : MonoBehaviour
             Put("input/count", m_InputCount.ToString(CultureInfo.InvariantCulture));
             Put("input/final", $"[{Flag(m_Enabled)},{m_ChildClicks}]");
         }
-        if (m_Frame != 103) return;
-        Put("left/inputCount", m_LeftInputCount.ToString(CultureInfo.InvariantCulture));
+        if (m_Frame == 103)
+            Put("left/inputCount", m_LeftInputCount.ToString(CultureInfo.InvariantCulture));
+        if (m_Frame != 137) return;
+        Put("prefix/inputCount", m_PrefixInputCount.ToString(CultureInfo.InvariantCulture));
         Put("complete", "true");
         File.WriteAllText(Path.Combine(Environment.GetEnvironmentVariable("EDITOR_TOGGLE_GROUP_OUT"), "values.jsonl"), m_Values.ToString());
         EditorApplication.Exit(0);
@@ -62,6 +64,11 @@ public sealed partial class ToggleGroupProbe : MonoBehaviour
 
     void OnGUI()
     {
+        if (m_Frame >= 104)
+        {
+            DrawPrefixLabels();
+            return;
+        }
         if (m_Frame >= 55)
         {
             DrawToggleLeft();

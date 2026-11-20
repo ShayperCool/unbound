@@ -27,6 +27,7 @@ namespace UnityEngine
         static long s_LastPermanentControlId;
         static string s_CopyBuffer = "";
         static readonly Dictionary<int, object> s_StateObjects = new Dictionary<int, object>();
+        static readonly HashSet<int> s_KeyboardFocusableControls = new HashSet<int>();
 
         internal static bool guiIsExiting { get; set; }
 
@@ -169,10 +170,12 @@ namespace UnityEngine
         internal static float pixelsPerPoint { get; set; } = 1f;
 
         /// <summary>The next ID of the current scope: an OnGUI call, or a window inside it.</summary>
-        static int NextId()
+        static int NextId(FocusType focus)
         {
             int id = unchecked((s_Scope * 397) ^ (++s_Count * 7919)) & 0x7FFFFFFF;
-            return id == 0 ? 1 : id;
+            if (id == 0) id = 1;
+            if (focus == FocusType.Keyboard && Event.current != null) s_KeyboardFocusableControls.Add(id);
+            return id;
         }
 
         /// <summary>Runs <paramref name="body"/> with control IDs of their own (a window's
@@ -193,17 +196,19 @@ namespace UnityEngine
             }
         }
 
-        public static int GetControlID(FocusType focus) => NextId();
+        public static int GetControlID(FocusType focus) => NextId(focus);
 
-        public static int GetControlID(GUIContent contents, FocusType focus) => NextId();
+        public static int GetControlID(GUIContent contents, FocusType focus) => NextId(focus);
 
-        public static int GetControlID(FocusType focus, Rect position) => NextId();
+        public static int GetControlID(FocusType focus, Rect position) => NextId(focus);
 
-        public static int GetControlID(GUIContent contents, FocusType focus, Rect position) => NextId();
+        public static int GetControlID(GUIContent contents, FocusType focus, Rect position) => NextId(focus);
 
-        public static int GetControlID(int hint, FocusType focus) => NextId();
+        public static int GetControlID(int hint, FocusType focus) => NextId(focus);
 
-        public static int GetControlID(int hint, FocusType focusType, Rect rect) => NextId();
+        public static int GetControlID(int hint, FocusType focusType, Rect rect) => NextId(focusType);
+
+        internal static bool CanHaveKeyboardFocus(int id) => s_KeyboardFocusableControls.Contains(id);
 
         // Scoped controls use positive IDs. Permanent controls keep a distinct ID across
         // GUI passes and do not advance the current pass's control sequence.
@@ -264,6 +269,7 @@ namespace UnityEngine
             guiIsExiting = false;
             s_Scope = instanceID;
             s_Count = 0;
+            s_KeyboardFocusableControls.Clear();
             GUIClip.Begin(new Rect(0, 0, Screen.width, Screen.height));
             if (useGUILayout != 0) GUILayoutUtility.Begin(instanceID);
         }
