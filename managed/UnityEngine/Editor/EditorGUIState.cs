@@ -213,7 +213,12 @@ namespace UnityEditor
         public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label) { RequireGUI(); return EditorGUIControls.Property(position, property, label); }
         public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label, bool includeChildren) { RequireGUI(); return EditorGUIControls.Property(position, property, label); }
         public static Rect PrefixLabel(Rect totalPosition, GUIContent label) { RequireGUI(); return EditorGUIControls.PrefixLabel(totalPosition, label); }
-        public static void DrawRect(Rect rect, Color color) { RequireGUI(); }
+        public static void DrawRect(Rect rect, Color color)
+        {
+            RequireGUI();
+            if (Event.current.type != EventType.Repaint) return;
+            GuiRender.FillRect(rect, GUI.color * color);
+        }
 
         public static GUIContent BeginProperty(Rect totalPosition, GUIContent label, SerializedProperty property)
         {

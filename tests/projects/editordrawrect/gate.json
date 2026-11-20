@@ -1,0 +1,9 @@
+{
+  "commands": ["python3 tests/projects/editordrawrect/run.py gate"],
+  "summary": "editordrawrect: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/EditorGUIState.cs",
+    "managed/UnityEngine/IMGUI/GUI.cs",
+    "managed/UnityEngine/IMGUI/GuiRender.cs"
+  ]
+}

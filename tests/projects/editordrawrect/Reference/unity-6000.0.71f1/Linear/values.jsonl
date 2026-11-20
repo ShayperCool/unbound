@@ -1,0 +1,16 @@
+{"k":"outsideOnGUI","v":"NullReferenceException"}
+{"k":"size","v":[320,180]}
+{"k":"guiStateRestored","v":true}
+{"k":"layoutOnly","v":[0,0,0]}
+{"k":"opaque","v":[255,128,64]}
+{"k":"tinted","v":[51,51,26]}
+{"k":"disabled","v":[255,255,255]}
+{"k":"outsideClip","v":[0,0,0]}
+{"k":"insideClip","v":[0,255,0]}
+{"k":"afterClip","v":[0,0,0]}
+{"k":"transformed","v":[255,235,4]}
+{"k":"outsideTransform","v":[0,0,0]}
+{"k":"zeroWidth","v":[0,0,0]}
+{"k":"negativeWidth","v":[0,255,255]}
+{"k":"followingControl","v":[255,255,255]}
+{"k":"complete","v":true}
