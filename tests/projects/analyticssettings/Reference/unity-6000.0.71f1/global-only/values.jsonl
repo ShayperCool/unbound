@@ -1,0 +1,7 @@
+{"k":"enabled","v":false}
+{"k":"enabledForPlatform","v":false}
+{"k":"hasCoreStatsInBuild","v":false}
+{"k":"deviceStatsEnabledInBuild","v":false}
+{"k":"deviceStatsAfterLateSubscription","v":false}
+{"k":"lateSubscriberCalled","v":false}
+{"k":"complete","v":true}

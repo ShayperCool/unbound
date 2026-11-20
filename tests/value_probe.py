@@ -72,14 +72,16 @@ COMPLETE = {'k': 'complete', 'v': True}
 METAL = False
 
 
-def reference_dir(probe, space=None, device=None):
+def reference_dir(probe, space=None, device=None, profile=None):
     """The reference the probe records and gates against here (its Metal one on macOS, see METAL),
     that of a color space for a probe recorded in several, of the Vulkan device for a probe
     recorded on several devices (`device` 'vulkan')."""
     root = reference_root(probe)/'metal' if METAL else reference_root(probe)
     if device == 'vulkan':
         root = root/'vulkan'
-    return root/space if space else root
+    if space:
+        root = root/space
+    return root/profile if profile else root
 
 
 def set_color_space(project, space):
@@ -268,11 +270,14 @@ def images(directory):
 RECORD_TIMEOUT = 900
 
 
-def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None, macos_batch=False, space=None, device=None):
+def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None, macos_batch=False, space=None, device=None,
+           *, configure=None):
     if sys.platform == 'darwin' and not (METAL or (macos_batch and batch)):
         raise SystemExit(f'{probe.name} records only with the Linux GPU Editor')
     out = run_root(probe, label)
     project = assemble(probe, out, base)
+    if configure:
+        configure(project)
     if space:
         set_color_space(project, space)
     capture = out/'capture'
@@ -288,7 +293,7 @@ def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=N
     print('captured', capture)
 
 
-def publish(probe, labels, space=None, device=None):
+def publish(probe, labels, space=None, device=None, *, profile=None):
     roots = [run_root(probe, label) for label in labels]
     for root in roots:
         problem = editor_runner.result_problem(root, gpu=True)
@@ -307,11 +312,12 @@ def publish(probe, labels, space=None, device=None):
     # Editor results live one level above the captures; publish() checks the capture files.
     for capture, root in zip(captures, roots):
         shutil.copyfile(root/editor_runner.RESULT, capture/editor_runner.RESULT)
-    return editor_runner.publish(captures, reference_dir(probe, space, device), names, write,
+    return editor_runner.publish(captures, reference_dir(probe, space, device, profile), names, write,
                                  complete=[editor_runner.jsonl_complete()], gpu=True)
 
 
-def gate(probe, variable, label, tolerance, engine_args, authored=None, base=None, space=None, device=None):
+def gate(probe, variable, label, tolerance, engine_args, authored=None, base=None, space=None, device=None,
+         *, configure=None, profile=None):
     # The limits and residuals are read first: a missing Metal counterpart stops before the run.
     residuals(probe), image_limits(probe)
     out = run_root(probe, label)
@@ -320,6 +326,8 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
         authored_project.assemble(probe.name, unity_version(), authored, project)
     else:
         project = assemble(probe, out, base)
+    if configure:
+        configure(project)
     if space:
         set_color_space(project, space)
     capture = out/'engine'
@@ -330,7 +338,7 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
         code = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
                                '--no-watch', *engine_args, *(['--force-vulkan'] if device == 'vulkan' else [])],
                               env=env, stdout=log, stderr=subprocess.STDOUT).returncode
-    reference = reference_dir(probe, space, device)
+    reference = reference_dir(probe, space, device, profile)
     expected = read_values(reference/VALUES)
     try:
         actual = read_values(capture/VALUES)
@@ -364,7 +372,7 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
             if limit and (measured[0] > limit[0] or measured[1] > limit[1] or measured[2] > limit[2]):
                 print(f'{name}: over its recorded limit (mean {limit[0]}, worst {limit[1]}, over 8: {limit[2]}; {limit[3]})')
                 failures.append({'image': name})
-    name = ' '.join([probe.name, *([space] if space else []), *([device] if device else [])])
+    name = ' '.join(part for part in (probe.name, space, device, profile) if part)
     print(f'{name}: {matched}/{len(expected)} values match, {len(failures)} failures, {len(residual)} known residuals; engine exit {code}; logs {out}')
     return 1 if failures or code else 0
 
