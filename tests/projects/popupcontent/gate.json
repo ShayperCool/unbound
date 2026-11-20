@@ -1,0 +1,9 @@
+{
+  "commands": ["python3 tests/projects/popupcontent/run.py gate"],
+  "summary": "popupcontent: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/PopupWindow.cs",
+    "managed/UnityEngine/Editor/EditorWindow.cs",
+    "managed/UnityEngine/Runtime/Compat.cs"
+  ]
+}

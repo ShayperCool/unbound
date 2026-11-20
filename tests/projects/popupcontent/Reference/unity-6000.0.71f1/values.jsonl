@@ -1,0 +1,19 @@
+{"k":"base/defaults","v":[true,200,200,true]}
+{"k":"base/hooks","v":[null,true]}
+{"k":"show/first","v":[null,true,"PopupWindow",["open with window","create","size"]]}
+{"k":"geometry/show/first","v":[130,90]}
+{"k":"show/replacement","v":[null,false,null,[]]}
+{"k":"show/replaced","v":[true,true,["open with window","create","size","close with same window"]]}
+{"k":"show/sameAnchor","v":[null,false,null,[]]}
+{"k":"show/otherAnchor","v":[null,true,"PopupWindow",["open with window","create","size"]]}
+{"k":"geometry/show/otherAnchor","v":[130,90]}
+{"k":"show/previousAfterRepeat","v":[true,[]]}
+{"k":"show/retained","v":[null,true,"PopupWindow",["open with window","create"]]}
+{"k":"geometry/retained","v":[484,50]}
+{"k":"show/retainedAttachment","v":[true]}
+{"k":"show/retainedClosed","v":[true,true,true,["open with window","create","close with same window"]]}
+{"k":"show/null","v":["NullReferenceException: Object reference not set to an instance of an object"]}
+{"k":"show/onGUI","v":["ExitGUIException: Exception of type 'UnityEngine.ExitGUIException' was thrown.",true,"PopupWindow",["open with window","create","size"]]}
+{"k":"show/onGUIClosed","v":[true,["open with window","create","size","close with same window"]]}
+{"k":"show/sameAnchorAfterDelay","v":[null,true,"PopupWindow",["open with window","create","size"]]}
+{"k":"complete","v":true}

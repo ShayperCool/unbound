@@ -1,0 +1,3 @@
+{
+  "Retained popup auto-sizing depends on the editor window UI Toolkit layout": ["geometry/retained"]
+}
