@@ -720,11 +720,14 @@ namespace UnityEditor
         internal FieldInfo UnboundField => SerializedTree.FieldOf(N);
     }
 
-    /// <summary>The Editor's control styles. They exist once an editor window has drawn; Unbound has
-    /// none, and like the batch-mode Editor in Play mode it has no styles to give (measured: each
-    /// throws).</summary>
+    /// <summary>The Editor's control styles. Supported Inspector styles are available during
+    /// Game view OnGUI. The other window styles retain the batch-mode exception measured in
+    /// tests/projects/editorui.</summary>
     public sealed partial class EditorStyles
     {
+        static GUIStyle s_LightBoldLabel;
+        static GUIStyle s_DarkBoldLabel;
+
         internal static void Require() => throw new NullReferenceException("Object reference not set to an instance of an object");
 
         static GUIStyle Style() { Require(); return null; }
@@ -732,7 +735,16 @@ namespace UnityEditor
         public static GUIStyle label => Style();
         public static GUIStyle miniLabel => Style();
         public static GUIStyle largeLabel => Style();
-        public static GUIStyle boldLabel => Style();
+        public static GUIStyle boldLabel
+        {
+            get
+            {
+                if (!Compat.InspectorGuiStylesMeasured || Event.current == null) return Style();
+                return EditorGUIUtility.isProSkin
+                    ? s_DarkBoldLabel ??= CreateBoldLabel(dark: true)
+                    : s_LightBoldLabel ??= CreateBoldLabel(dark: false);
+            }
+        }
         public static GUIStyle miniBoldLabel => Style();
         public static GUIStyle centeredGreyMiniLabel => Style();
         public static GUIStyle wordWrappedMiniLabel => Style();
@@ -763,6 +775,33 @@ namespace UnityEditor
 
         /// <summary>The Editor's UI font (its fonts load without a window).</summary>
         public static Font standardFont => EditorFonts.Standard;
+
+        static GUIStyle CreateBoldLabel(bool dark)
+        {
+            // Resolved Inspector theme values from tests/projects/editorstyles. The style uses
+            // the current GUI skin font unless the caller assigns a font explicitly.
+            var text = dark ? new Color32(196, 196, 196, 255) : new Color32(9, 9, 9, 255);
+            var focus = dark ? new Color32(129, 180, 255, 255) : new Color32(0, 60, 136, 255);
+            var checkedText = dark ? new Color32(210, 210, 210, 255) : new Color32(0, 0, 0, 255);
+            var style = new GUIStyle
+            {
+                name = "BoldLabel",
+                fontSize = 12,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip,
+                imagePosition = ImagePosition.ImageLeft,
+                padding = new RectOffset(1, 1, 0, 0),
+                margin = new RectOffset(3, 3, 2, 2),
+                richText = false,
+            };
+            style.normal.textColor = style.hover.textColor = style.active.textColor = text;
+            style.onHover.textColor = style.onActive.textColor = text;
+            style.focused.textColor = focus;
+            style.onNormal.textColor = checkedText;
+            style.onFocused.textColor = Color.white;
+            return style;
+        }
     }
 
     internal static class EditorFonts
