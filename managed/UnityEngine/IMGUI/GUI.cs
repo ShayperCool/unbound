@@ -81,6 +81,7 @@ namespace UnityEngine
         static string s_MouseTooltip = "";
         static string s_NextControlName;
         static readonly Dictionary<string, int> s_ControlNames = new Dictionary<string, int>();
+        static readonly Dictionary<int, string> s_NamesByControlId = new Dictionary<int, string>();
         static readonly Stack<ScrollViewState> s_ScrollViews = new Stack<ScrollViewState>();
 
         static readonly int s_ButtonHint = "Button".GetHashCode();
@@ -167,18 +168,21 @@ namespace UnityEngine
         {
             if (s_NextControlName != null)
             {
-                s_ControlNames[s_NextControlName] = id;
+                string name = s_NextControlName;
+                if (s_ControlNames.TryGetValue(name, out int oldId) && oldId != id)
+                    s_NamesByControlId.Remove(oldId);
+                if (s_NamesByControlId.TryGetValue(id, out string oldName) && oldName != name)
+                    s_ControlNames.Remove(oldName);
+                s_ControlNames[name] = id;
+                s_NamesByControlId[id] = name;
                 s_NextControlName = null;
             }
             return id;
         }
 
-        public static string GetNameOfFocusedControl()
-        {
-            foreach (var pair in s_ControlNames)
-                if (pair.Value == GUIUtility.keyboardControl && pair.Value != 0) return pair.Key;
-            return "";
-        }
+        public static string GetNameOfFocusedControl() =>
+            GUIUtility.keyboardControl != 0 && s_NamesByControlId.TryGetValue(GUIUtility.keyboardControl, out string name)
+                ? name : "";
 
         public static void FocusControl(string name)
         {

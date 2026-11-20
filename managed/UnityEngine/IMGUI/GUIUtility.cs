@@ -175,6 +175,7 @@ namespace UnityEngine
             int id = unchecked((s_Scope * 397) ^ (++s_Count * 7919)) & 0x7FFFFFFF;
             if (id == 0) id = 1;
             if (focus == FocusType.Keyboard && Event.current != null) s_KeyboardFocusableControls.Add(id);
+            UnityEditor.EditorGUIControls.CompletePendingPrefixLabel(id);
             return id;
         }
 

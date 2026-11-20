@@ -232,7 +232,14 @@ namespace UnityEditor
         public static bool PropertyField(Rect position, SerializedProperty property, bool includeChildren) { RequireGUI(); return EditorGUIControls.Property(position, property, null); }
         public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label) { RequireGUI(); return EditorGUIControls.Property(position, property, label); }
         public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label, bool includeChildren) { RequireGUI(); return EditorGUIControls.Property(position, property, label); }
-        public static Rect PrefixLabel(Rect totalPosition, GUIContent label) { RequireGUI(); return EditorGUIControls.PrefixLabel(totalPosition, label); }
+        public static Rect PrefixLabel(Rect totalPosition, GUIContent label)
+        {
+            if (Compat.InspectorGuiStylesMeasured) return PrefixLabel(totalPosition, 0, label);
+            RequireGUI();
+            return EditorGUIControls.PrefixLabel(totalPosition, label);
+        }
+
+        public static Rect PrefixLabel(Rect totalPosition, GUIContent label, GUIStyle style) => PrefixLabel(totalPosition, 0, label, style);
 
         public static Rect PrefixLabel(Rect totalPosition, int id, GUIContent label) => PrefixLabel(totalPosition, id, label, null);
 
@@ -512,6 +519,10 @@ namespace UnityEditor
         // Space between a prefix label and its field in tests/projects/editortogglegroup.
         const float PrefixLabelGap = 2f;
         static GUIStyle s_MixedLeftToggle;
+        static GUIContent s_PendingPrefixContent;
+        static GUIStyle s_PendingPrefixStyle;
+        static Rect s_PendingPrefixRect;
+        static Color s_PendingPrefixColor;
 
         static Rect Field(Rect position, GUIContent label)
         {
@@ -534,9 +545,46 @@ namespace UnityEditor
 
             float labelWidth = EditorGUIUtility.labelWidth;
             var labelPosition = new Rect(indented.x, position.y, labelWidth - EditorGUI.indent, EditorGUIUtility.singleLineHeight);
-            DrawPrefixLabel(labelPosition, label, id, style);
+            if (id != 0)
+            {
+                DrawPrefixLabel(labelPosition, label, id, style);
+            }
+            else
+            {
+                s_PendingPrefixContent ??= new GUIContent();
+                s_PendingPrefixContent.text = label.text;
+                s_PendingPrefixContent.image = label.image;
+                s_PendingPrefixContent.tooltip = label.tooltip;
+                s_PendingPrefixStyle = style;
+                s_PendingPrefixRect = labelPosition;
+                s_PendingPrefixColor = GUI.color;
+            }
             float fieldOffset = labelWidth + PrefixLabelGap;
             return new Rect(position.x + fieldOffset, position.y, position.width - fieldOffset, position.height);
+        }
+
+        internal static void CompletePendingPrefixLabel(int id)
+        {
+            var style = s_PendingPrefixStyle;
+            if (style == null || Event.current == null) return;
+            s_PendingPrefixStyle = null;
+            var label = s_PendingPrefixContent;
+            var previous = GUI.color;
+            try
+            {
+                if (!string.IsNullOrEmpty(label.text))
+                {
+                    GUI.color = s_PendingPrefixColor;
+                    DrawPrefixLabel(s_PendingPrefixRect, label, id, style);
+                }
+            }
+            finally
+            {
+                GUI.color = previous;
+                label.text = null;
+                label.image = null;
+                label.tooltip = null;
+            }
         }
 
         internal static void Label(Rect position, GUIContent label) => GUI.Label(EditorGUI.IndentedRect(position), label);

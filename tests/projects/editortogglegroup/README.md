@@ -39,6 +39,13 @@ focus during OnGUI for a keyboard-capable control, a passive control, a disabled
 and a click below the label. It also records secondary clicks and text editing state.
 [Unity 6000.0 `EditorGUI.PrefixLabel`](https://docs.unity.cn/6000.0/Documentation/ScriptReference/EditorGUI.PrefixLabel.html)
 
+The overloads without an ID use the next control. The probe exercises a text field,
+a passive button, an image-only prefix, and a reused GUIContent whose text changes
+before the next control. It also records a pending label that reaches the next pass.
+The explicit style transfers focus on the first text field. In the later field's
+focus comparison, Unity retains the previous control and Unbound focuses the field.
+[Unity 6000.0 `GUI.GetNameOfFocusedControl`](https://docs.unity.cn/6000.0/Documentation/ScriptReference/GUI.GetNameOfFocusedControl.html)
+
 ```sh
 python3 tests/projects/editortogglegroup/run.py record --label native-a
 python3 tests/projects/editortogglegroup/run.py record --label native-b

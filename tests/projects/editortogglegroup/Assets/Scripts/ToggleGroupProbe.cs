@@ -55,8 +55,10 @@ public sealed partial class ToggleGroupProbe : MonoBehaviour
         }
         if (m_Frame == 103)
             Put("left/inputCount", m_LeftInputCount.ToString(CultureInfo.InvariantCulture));
-        if (m_Frame != 137) return;
-        Put("prefix/inputCount", m_PrefixInputCount.ToString(CultureInfo.InvariantCulture));
+        if (m_Frame == 137)
+            Put("prefix/inputCount", m_PrefixInputCount.ToString(CultureInfo.InvariantCulture));
+        if (m_Frame != 175) return;
+        Put("nextPrefix/inputCount", m_NextPrefixInputCount.ToString(CultureInfo.InvariantCulture));
         Put("complete", "true");
         File.WriteAllText(Path.Combine(Environment.GetEnvironmentVariable("EDITOR_TOGGLE_GROUP_OUT"), "values.jsonl"), m_Values.ToString());
         EditorApplication.Exit(0);
@@ -64,6 +66,11 @@ public sealed partial class ToggleGroupProbe : MonoBehaviour
 
     void OnGUI()
     {
+        if (m_Frame >= 138)
+        {
+            DrawNextControlPrefixes();
+            return;
+        }
         if (m_Frame >= 104)
         {
             DrawPrefixLabels();
