@@ -22,6 +22,7 @@ namespace UnityEditorInternal
         internal bool m_PropertyCacheValid;
         SerializedProperty m_SerializedProperty;
         readonly bool m_DisplayHeader;
+        readonly int m_KeyboardControlId = GUIUtility.GetPermanentControlID();
         float[] m_ElementEnds = Array.Empty<float>();
         int m_CachedElementCount;
         float m_LastElementAreaHeight = -1f;
@@ -202,6 +203,16 @@ namespace UnityEditorInternal
         }
 
         public bool IsSelected(int index) => m_Selection.BinarySearch(index) >= 0;
+
+        public void GrabKeyboardFocus() => GUIUtility.keyboardControl = m_KeyboardControlId;
+
+        public void ReleaseKeyboardFocus()
+        {
+            if (GUIUtility.keyboardControl == m_KeyboardControlId) GUIUtility.keyboardControl = 0;
+        }
+
+        public bool HasKeyboardControl() =>
+            GUIUtility.keyboardControl == m_KeyboardControlId && EditorGUIUtility.HasCurrentWindowKeyFocus();
 
         public void Deselect(int index)
         {

@@ -696,6 +696,12 @@ namespace UnityEditor
 
         internal static void NotifyBeginProperty(Rect position, SerializedProperty property) => beginProperty?.Invoke(position, property);
 
+        internal static bool HasCurrentWindowKeyFocus()
+        {
+            if (Compat.EditorKeyFocusRequiresGUI) CheckOnGUI(requireCurrentEvent: true);
+            return Event.current != null && Application.isFocused;
+        }
+
         [Unbound.EditorFaithful("measured: tests/projects/editorui EditorGUIUtility.singleLineHeight")]
         public static float singleLineHeight => 18f;
 

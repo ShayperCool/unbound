@@ -280,6 +280,10 @@ namespace Unbound.Runtime
         /// by tests/projects/reorderablelist on Unity 6000.0.71f1. Other families are unmeasured.</summary>
         internal static bool EditorReorderableListLayoutMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Querying the owning editor control's focus outside OnGUI throws on
+        /// Unity 6000.0.71f1 (tests/projects/imguiskin). Other families are unmeasured.</summary>
+        internal static bool EditorKeyFocusRequiresGUI => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Dynamic Font texture requests and queries share a 500-pixel maximum on
         /// Unity 6000.0.71f1 (tests/projects/textcolor). Other families are unmeasured.</summary>
         internal static int LegacyFontAtlasPixelSize(int pixels)

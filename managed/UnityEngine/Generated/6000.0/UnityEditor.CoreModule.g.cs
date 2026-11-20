@@ -8838,7 +8838,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static void SetMainWindowPosition(global::UnityEngine.Rect position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.SetMainWindowPosition"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Rect GetCenteredWindowPosition(global::UnityEngine.Rect parentWindowPosition, global::UnityEngine.Vector2 size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetCenteredWindowPosition"); return default; }
         [global::Unbound.Stub] internal static void RepaintCurrentWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.RepaintCurrentWindow"); }
-        [global::Unbound.Stub] internal static bool HasCurrentWindowKeyFocus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.HasCurrentWindowKeyFocus"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Rect PointsToPixels(global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.PointsToPixels"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Rect PixelsToPoints(global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.PixelsToPoints"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Vector2 PointsToPixels(global::UnityEngine.Vector2 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.PointsToPixels"); return default; }
@@ -52216,9 +52215,6 @@ namespace UnityEditorInternal
         [global::Unbound.Stub] public void DoLayoutList() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.DoLayoutList"); }
         [global::Unbound.Stub] public void DoList(global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.DoList"); }
         [global::Unbound.Stub] public void DoList(global::UnityEngine.Rect rect, global::UnityEngine.Rect visibleRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.DoList"); }
-        [global::Unbound.Stub] public void GrabKeyboardFocus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.GrabKeyboardFocus"); }
-        [global::Unbound.Stub] public void ReleaseKeyboardFocus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.ReleaseKeyboardFocus"); }
-        [global::Unbound.Stub] public bool HasKeyboardControl() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.HasKeyboardControl"); return default; }
         public static global::UnityEditorInternal.ReorderableList.Defaults defaultBehaviours { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.defaultBehaviours"); return default; } }
         public unsafe delegate void HeaderCallbackDelegate(global::UnityEngine.Rect rect);
         public unsafe delegate void FooterCallbackDelegate(global::UnityEngine.Rect rect);

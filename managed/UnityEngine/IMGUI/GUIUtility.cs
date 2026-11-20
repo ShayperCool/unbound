@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Unbound.Runtime;
 
 namespace UnityEngine
@@ -23,6 +24,7 @@ namespace UnityEngine
         static int s_KeyboardControl;
         static int s_Scope;
         static int s_Count;
+        static long s_LastPermanentControlId;
         static string s_CopyBuffer = "";
         static readonly Dictionary<int, object> s_StateObjects = new Dictionary<int, object>();
 
@@ -203,7 +205,14 @@ namespace UnityEngine
 
         public static int GetControlID(int hint, FocusType focusType, Rect rect) => NextId();
 
-        internal static int GetPermanentControlID() => NextId();
+        // Scoped controls use positive IDs. Permanent controls keep a distinct ID across
+        // GUI passes and do not advance the current pass's control sequence.
+        internal static int GetPermanentControlID()
+        {
+            long id = Interlocked.Decrement(ref s_LastPermanentControlId);
+            if (id < int.MinValue) throw new InvalidOperationException("Permanent IMGUI control IDs exhausted.");
+            return (int)id;
+        }
 
         public static object GetStateObject(Type t, int controlID)
         {
@@ -233,9 +242,11 @@ namespace UnityEngine
 
         internal static bool ShouldRethrowException(Exception exception) => IsExitGUIException(exception);
 
-        internal static void CheckOnGUI()
+        internal static void CheckOnGUI() => CheckOnGUI(requireCurrentEvent: false);
+
+        internal static void CheckOnGUI(bool requireCurrentEvent)
         {
-            if (guiDepth <= 0)
+            if (guiDepth <= 0 || (requireCurrentEvent && Event.current == null))
                 throw new ArgumentException("You can only call GUI functions from inside OnGUI.");
         }
 
