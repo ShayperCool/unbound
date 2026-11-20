@@ -339,7 +339,7 @@ namespace Unbound.Runtime
         /// <summary>Stored a quarter turn round in the texture (CharacterInfo.flipped): a glyph wider
         /// than tall, as Unity stores them.</summary>
         internal bool Flipped;
-        /// <summary>The last frame (Time.frameCount) a text asked for it.</summary>
+        /// <summary>The last frame the glyph was used.</summary>
         internal int Frame;
 
         internal bool HasPixels => Width > 0 && Height > 0 && Coverage != null;
@@ -379,6 +379,7 @@ namespace Unbound.Runtime
         const float AreaSlack = 1.1f;
 
         readonly Font m_Font;
+        readonly bool m_ReadKeepsGlyph;
         internal readonly Texture2D Texture;
         readonly Dictionary<GlyphKey, AtlasGlyph> m_Glyphs = new Dictionary<GlyphKey, AtlasGlyph>();
         /// <summary>The glyphs in the texture, in the order they were placed.</summary>
@@ -405,6 +406,7 @@ namespace Unbound.Runtime
         internal FontAtlas(Font font)
         {
             m_Font = font;
+            m_ReadKeepsGlyph = Compat.LegacyFontReadKeepsGlyph;
             // Created in the caller's id scope: an asset font's texture is an asset too.
             Texture = new Texture2D(InitialSize, InitialSize, TextureFormat.Alpha8, false)
             {
@@ -482,8 +484,8 @@ namespace Unbound.Runtime
                 // A texture at its largest size that a reset cannot free (every glyph in it was asked
                 // for in this frame, or it was just reset) stays as it is: what did not fit is left
                 // out, with Unity's error, and no rebuild is announced (matches the Unity 6000.0.71f1
-                // Editor, tests/projects/textcolor legacy/full). Glyphs of older frames are still
-                // evicted by the reset below (unmeasured at the largest size).
+                // Editor, tests/projects/textcolor legacy/full). The reset below evicts unused
+                // older glyphs even at the largest size (legacy/full/next).
                 if (Texture.m_Width >= MaxSize && Texture.m_Height >= MaxSize && (reset || OnlyAskedIn(frame)))
                 {
                     Debug.LogError($"Failed to update dynamic font ({m_Font.m_Name}) texture; all the needed characters do not fit onto a single texture (max size {MaxSize}). Try using less text or a smaller font size.");
@@ -839,11 +841,12 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A character's CharacterInfo while it is in the texture (a character the font lacks
-        /// too, with its cell of padding).</summary>
+        /// too, with its cell of padding). Reading it makes it live for this frame when measured.</summary>
         internal bool TryGetCharacterInfo(int codepoint, int size, int requestedSize, FontStyle style, out CharacterInfo info)
         {
             if (m_Glyphs.TryGetValue(new GlyphKey(codepoint, size, style), out var g) && g.Placed)
             {
+                if (m_ReadKeepsGlyph) g.Frame = Time.frameCount;
                 info = ToCharacterInfo(g, requestedSize);
                 return true;
             }

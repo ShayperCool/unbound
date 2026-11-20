@@ -268,6 +268,9 @@ namespace Unbound.Runtime
 
         /// <summary>Legacy dynamic fonts: per-character OS fallback through the font names and the fallback families, and the built-in font without font data and Font.HasCharacter of dynamic fonts, measured in tests/projects/glyphraster.</summary>
         internal static bool LegacyGlyphRasterMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>Reading an existing dynamic glyph keeps it for this frame's atlas rebuild.
+        /// Measured in tests/projects/textcolor on Unity 6000.0.71f1.</summary>
+        internal static bool LegacyFontReadKeepsGlyph => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Constructor, animation-job API contexts and component initialization defaults measured in tests/projects/threadapis.</summary>
         internal static bool MainThreadContextsMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Invoke deadlines and delayed-call points measured in tests/projects/invokesteps.</summary>
