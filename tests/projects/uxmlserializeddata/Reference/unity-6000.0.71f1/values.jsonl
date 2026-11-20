@@ -1,0 +1,43 @@
+{"k":"flags.ignore","v":"0"}
+{"k":"flags.overridden","v":"1"}
+{"k":"flags.defaultValue","v":"2"}
+{"k":"shouldWrite.default.ignore","v":"False"}
+{"k":"shouldWrite.default.overridden","v":"True"}
+{"k":"shouldWrite.default.defaultValue","v":"False"}
+{"k":"shouldWrite.default.both","v":"True"}
+{"k":"register.base","v":"ok"}
+{"k":"attrNames.default","v":"<null>|<null>|<null>|<null>"}
+{"k":"attrNames.nullObsolete","v":"count|count|<null>|0"}
+{"k":"attrNames.full","v":"title|display-title|String|old-title,legacy-title"}
+{"k":"attr.uxmlIgnore.usage","v":"Field|False|hasOnFlags=True"}
+{"k":"attr.registerCache.usage","v":"Method|True|hasOnRegister=True"}
+{"k":"attr.objectRef.default","v":"<null>|<null>"}
+{"k":"attr.objectRef.named","v":"items|<null>"}
+{"k":"attr.objectRef.namedAndTypes","v":"items|1:CustomBinding"}
+{"k":"attr.objectRef.nullLiteral1","v":"throws ArgumentException: UxmlObjectReferenceAttribute name cannot be \"null\"."}
+{"k":"attr.objectRef.nullLiteral2","v":"null|1"}
+{"k":"cache.customCounter","v":"found=True;count=5;count:count:|title:display-title:old-title|active:active:|numbers:numbers:|payload:payload:"}
+{"k":"custom.createInstance","v":"name=;tooltip=;enabled=True;count=42;title=default-title;active=True;numbers=7,8;payload=init:99"}
+{"k":"custom.absentPreservesDefaults","v":"name=preset;tooltip=preset-tip;enabled=True;count=42;title=default-title;active=True;numbers=7,8;payload=init:99"}
+{"k":"custom.specifiedZeroAndEmptyOverwrite","v":"name=overridden-name;tooltip=;enabled=True;count=0;title=;active=False;numbers=7,8;payload=init:99"}
+{"k":"custom.defaultFlagSelection","v":"normal=(100,default-title,True)|defaultOnly=(42,from-default-flag,True)|both=(100,from-default-flag,True)|afterRestore=True,False"}
+{"k":"custom.exceptionRestoresFlags","v":"caught=InvalidOperationException:deserialize-control|during=(True,False)|after=(False,True)"}
+{"k":"copySerialized.null","v":"True"}
+{"k":"copySerialized.direct","v":"distinct=True|copy=orig:12"}
+{"k":"copySerialized.throughDeserialize","v":"distinctPayload=True|distinctList=True|a=mutated-a:55/1,2,3,99|b=shared-source:55/1,2,3"}
+{"k":"builtin.visualElement","v":"ve-name|False|vdk-1|Ignore|DynamicTransform|7|True|RTL|stats.hp|Button|keep-me"}
+{"k":"builtin.bindableElement","v":"absent=(preset.path,updated-tag)|override=(override.path,updated-tag)"}
+{"k":"builtin.textElement","v":"absent=(preset-text,True,11)|override=(serialized-text,False,False,11)"}
+{"k":"builtin.image","v":"Image"}
+{"k":"builtin.customBinding","v":"absent=(WhenDirty,pre:)|override=(WhenDirty,custom:)"}
+{"k":"builtin.dataBinding","v":"user.name|ToTarget|OnSourceChanged"}
+{"k":"uxml.plainLabel","v":"Ordinary Label|plain-tip"}
+{"k":"uxml.plainBox","v":"False"}
+{"k":"uxml.customAbsent","v":"name=uxml-absent;tooltip=;enabled=True;count=42;title=default-title;active=True;numbers=7,8;payload=init:99"}
+{"k":"uxml.customSpecified","v":"name=uxml-specified;tooltip=;enabled=True;count=0;title=;active=False;numbers=10,20;payload=from-uxml:77"}
+{"k":"uxml.customObsolete","v":"name=uxml-obsolete;tooltip=;enabled=True;count=42;title=via-alias;active=True;numbers=7,8;payload=init:99"}
+{"k":"uxml.derivedBindable","v":"player.hp|hero"}
+{"k":"uxml.derivedBindableDefault","v":"preset.path|base-tag"}
+{"k":"uxml.customLabel","v":"Custom Text|9"}
+{"k":"uxml.control","v":"ok"}
+{"k":"complete","v":true}

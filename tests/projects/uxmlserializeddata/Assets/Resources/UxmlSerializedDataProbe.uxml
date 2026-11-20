@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:probe="UxmlSerializedDataProbes">
+    <ui:Label name="plain-label" text="Ordinary Label" tooltip="plain-tip" />
+    <ui:VisualElement name="plain-box" enabled="false" />
+    <probe:CustomCounter name="uxml-absent" />
+    <probe:CustomCounter name="uxml-specified" count="0" display-title="" active="false" numbers="10,20" payload="from-uxml:77" />
+    <probe:CustomCounter name="uxml-obsolete" old-title="via-alias" />
+    <probe:DerivedBindable name="uxml-bindable" binding-path="player.hp" tag="hero" />
+    <probe:DerivedBindable name="uxml-bindable-default" />
+    <probe:CustomLabel name="uxml-text" text="Custom Text" level="9" />
+</ui:UXML>
