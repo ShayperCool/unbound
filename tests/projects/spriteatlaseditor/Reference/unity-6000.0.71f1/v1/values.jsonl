@@ -1,0 +1,23 @@
+{"k":"atlases","v":"Assets/Atlases/Main.spriteatlas|Assets/Atlases/Missing.spriteatlas|Assets/Atlases/Variant.spriteatlas"}
+{"k":"Main.spriteatlas.loaded","v":"True"}
+{"k":"Main.spriteatlas.isVariant","v":"False"}
+{"k":"Main.spriteatlas.spriteCount","v":"4"}
+{"k":"Main.spriteatlas.packables","v":"DefaultAsset:Assets/Sprites/Folder:Folder|Texture2D:Assets/Sprites/Single.png:Single|Sprite:Assets/Sprites/Sheet.png:SheetACell1"}
+{"k":"Main.spriteatlas.master","v":"<null>"}
+{"k":"Main.spriteatlas.includeInBuild","v":"True"}
+{"k":"Missing.spriteatlas.loaded","v":"True"}
+{"k":"Missing.spriteatlas.isVariant","v":"False"}
+{"k":"Missing.spriteatlas.spriteCount","v":"1"}
+{"k":"Missing.spriteatlas.packables","v":"Sprite:Assets/Sprites/Single.png:Single"}
+{"k":"Missing.spriteatlas.master","v":"<null>"}
+{"k":"Missing.spriteatlas.includeInBuild","v":"True"}
+{"k":"Variant.spriteatlas.loaded","v":"True"}
+{"k":"Variant.spriteatlas.isVariant","v":"True"}
+{"k":"Variant.spriteatlas.spriteCount","v":"4"}
+{"k":"Variant.spriteatlas.packables","v":""}
+{"k":"Variant.spriteatlas.master","v":"SpriteAtlas:Assets/Atlases/Main.spriteatlas:Main"}
+{"k":"Variant.spriteatlas.includeInBuild","v":"False"}
+{"k":"null.packables","v":"throws ArgumentNullException"}
+{"k":"null.master","v":"throws ArgumentNullException"}
+{"k":"null.includeInBuild","v":"throws ArgumentNullException"}
+{"k":"complete","v":true}

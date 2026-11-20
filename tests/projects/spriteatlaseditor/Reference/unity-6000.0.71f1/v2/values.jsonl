@@ -1,0 +1,17 @@
+{"k":"atlases","v":"Assets/Atlases/Excluded.spriteatlasv2|Assets/Atlases/Included.spriteatlasv2"}
+{"k":"Excluded.spriteatlasv2.loaded","v":"True"}
+{"k":"Excluded.spriteatlasv2.isVariant","v":"False"}
+{"k":"Excluded.spriteatlasv2.spriteCount","v":"6"}
+{"k":"Excluded.spriteatlasv2.packables","v":"DefaultAsset:Assets/Sprites/Folder:Folder|Texture2D:Assets/Sprites/Sheet.png:Sheet"}
+{"k":"Excluded.spriteatlasv2.master","v":"<null>"}
+{"k":"Excluded.spriteatlasv2.includeInBuild","v":"False"}
+{"k":"Included.spriteatlasv2.loaded","v":"True"}
+{"k":"Included.spriteatlasv2.isVariant","v":"False"}
+{"k":"Included.spriteatlasv2.spriteCount","v":"2"}
+{"k":"Included.spriteatlasv2.packables","v":"Sprite:Assets/Sprites/Single.png:Single|Sprite:Assets/Sprites/Sheet.png:SheetACell1"}
+{"k":"Included.spriteatlasv2.master","v":"<null>"}
+{"k":"Included.spriteatlasv2.includeInBuild","v":"True"}
+{"k":"null.packables","v":"throws ArgumentNullException"}
+{"k":"null.master","v":"throws ArgumentNullException"}
+{"k":"null.includeInBuild","v":"throws ArgumentNullException"}
+{"k":"complete","v":true}
