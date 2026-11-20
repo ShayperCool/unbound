@@ -27,6 +27,9 @@
     {"frame": 45, "command": "press", "key": "LeftControl"},
     {"frame": 46, "command": "press", "key": "Space"},
     {"frame": 47, "command": "release", "key": "Space"},
-    {"frame": 48, "command": "release", "key": "LeftControl"}
+    {"frame": 48, "command": "release", "key": "LeftControl"},
+    {"frame": 50, "command": "move", "x": 65, "y": 120},
+    {"frame": 51, "command": "press", "key": "Mouse0"},
+    {"frame": 52, "command": "release", "key": "Mouse0"}
   ]
 }

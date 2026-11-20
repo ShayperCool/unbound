@@ -308,6 +308,10 @@ namespace Unbound.Runtime
         /// in Unity 6000.0.71f1 (tests/projects/editortogglegroup).</summary>
         internal static bool GuiControlKeySubmitMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Mouse-button events and explicit mouse capture across GUI group clips in
+        /// Unity 6000.0.71f1 (tests/projects/editortogglegroup).</summary>
+        internal static bool GuiMouseButtonClipMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Explicit group size options keep the opposite axis's outer child margins
         /// inside its measured size (Unity 6000.0.71f1, tests/projects/imguiskin).</summary>
         internal static bool OppositeLayoutSizeKeepsMarginsInside => Family == ReleaseFamily.Unity6000_0;

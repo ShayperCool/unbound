@@ -77,9 +77,14 @@ namespace UnityEngine
 
         public EventType type
         {
-            get => m_Type;
+            get => UsesMouseButtonClip && OutsideGroupClip ? EventType.Ignore : m_Type;
             set => m_Type = value;
         }
+
+        bool UsesMouseButtonClip => (m_Type is EventType.MouseDown or EventType.MouseUp)
+            && Compat.GuiMouseButtonClipMeasured && ReferenceEquals(s_Current, this) && GUIClip.enabled;
+
+        bool OutsideGroupClip => GUIClip.Depth > 1 && !GUIClip.visibleRect.Contains(m_MousePosition);
 
         public Vector2 mousePosition
         {
@@ -173,10 +178,8 @@ namespace UnityEngine
 
         public bool isKey => m_Type == EventType.KeyDown || m_Type == EventType.KeyUp;
 
-        public bool isMouse =>
-            m_Type == EventType.MouseMove || m_Type == EventType.MouseDown || m_Type == EventType.MouseUp ||
-            m_Type == EventType.MouseDrag || m_Type == EventType.ContextClick ||
-            m_Type == EventType.MouseEnterWindow || m_Type == EventType.MouseLeaveWindow;
+        public bool isMouse => type is EventType.MouseMove or EventType.MouseDown or EventType.MouseUp or
+            EventType.MouseDrag or EventType.ContextClick or EventType.MouseEnterWindow or EventType.MouseLeaveWindow;
 
         public bool isScrollWheel => m_Type == EventType.ScrollWheel;
 
@@ -195,6 +198,8 @@ namespace UnityEngine
             }
             if (!GUI.enabled) return EventType.Ignore;
             int hot = GUIUtility.hotControl;
+            if (UsesMouseButtonClip)
+                return !OutsideGroupClip || (hot != 0 && hot == controlID) ? m_Type : EventType.Ignore;
             if (hot != 0 && hot != controlID)
             {
                 switch (m_Type)

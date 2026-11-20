@@ -385,6 +385,8 @@ namespace UnityEngine
         internal static bool DoControl(Rect position, int id, bool on, bool hover, GUIContent content, GUIStyle style)
         {
             var e = Current;
+            // Buttons use the clipped event even when a capture owner can query its raw type.
+            if (e.type == EventType.Ignore) return false;
             switch (e.GetTypeForControl(id))
             {
                 case EventType.MouseDown:

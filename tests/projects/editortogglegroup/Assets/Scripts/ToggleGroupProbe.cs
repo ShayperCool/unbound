@@ -30,6 +30,8 @@ public sealed class ToggleGroupProbe : MonoBehaviour
     bool m_Layout;
     bool m_Repaint;
     bool m_Enabled;
+    bool m_CheckCaptureAfterRelease;
+    bool m_CheckManualCapture;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
@@ -57,11 +59,21 @@ public sealed class ToggleGroupProbe : MonoBehaviour
 
     void OnGUI()
     {
+        if (m_Frame >= 49)
+        {
+            DrawManualCapture();
+            return;
+        }
         var e = Event.current;
         var type = e.type;
         int button = e.button;
         bool observeInput = type == EventType.MouseDown || type == EventType.MouseUp ||
             (type == EventType.KeyDown && e.keyCode == KeyCode.Space);
+        if (type == EventType.Repaint && m_CheckCaptureAfterRelease)
+        {
+            Put("clip/followingRepaintHot", Flag(GUIUtility.hotControl != 0));
+            m_CheckCaptureAfterRelease = false;
+        }
         DrawInteractiveGroup(observeInput, type, button);
         if (type == EventType.Layout && !m_Layout)
         {
@@ -79,11 +91,48 @@ public sealed class ToggleGroupProbe : MonoBehaviour
         }
     }
 
+    void DrawManualCapture()
+    {
+        var e = Event.current;
+        int id = GUIUtility.GetControlID(FocusType.Passive);
+        if (e.type == EventType.MouseDown)
+        {
+            GUIUtility.hotControl = id;
+            e.Use();
+        }
+        else if (e.type == EventType.MouseUp)
+        {
+            Put("clip/manualReleaseHadCapture", Flag(GUIUtility.hotControl == id));
+            m_CheckManualCapture = true;
+        }
+        else if (e.type == EventType.Repaint && m_CheckManualCapture)
+        {
+            Put("clip/manualReleaseRetainsCapture", Flag(GUIUtility.hotControl == id));
+            m_CheckManualCapture = false;
+            GUIUtility.hotControl = 0;
+        }
+    }
+
     void DrawInteractiveGroup(bool observe, EventType type, int button)
     {
+        int input = m_InputCount;
         GUILayout.BeginArea(new Rect(12, 12, 270, 70));
         try
         {
+            if (observe)
+            {
+                RecordClip(input, "area");
+                if (type == EventType.MouseUp && Event.current.mousePosition.x >= 270f)
+                    m_CheckCaptureAfterRelease = true;
+            }
+            GUI.BeginGroup(new Rect(0, 0, 100, 28));
+            try
+            {
+                if (observe) RecordClip(input, "nested");
+            }
+            finally { GUI.EndGroup(); }
+            if (observe) RecordClip(input, "afterNested");
+
             EditorGUI.BeginChangeCheck();
             bool childEnabled;
             using (var group = new EditorGUILayout.ToggleGroupScope("Enable children", m_Enabled))
@@ -109,6 +158,15 @@ public sealed class ToggleGroupProbe : MonoBehaviour
             if (observe) Put("input/" + m_InputCount++, $"\"{error.GetType().Name}\"");
         }
         finally { GUILayout.EndArea(); }
+        if (observe) RecordClip(input, "afterArea");
+    }
+
+    void RecordClip(int input, string location)
+    {
+        var e = Event.current;
+        int hot = GUIUtility.hotControl;
+        int owner = hot == 0 ? int.MaxValue : hot;
+        Put($"clip/{input}/{location}", $"[{(int)e.rawType},{(int)e.type},{(int)e.GetTypeForControl(owner)},{(int)e.GetTypeForControl(int.MaxValue)}]");
     }
 
     void DrawGroups(string phase)

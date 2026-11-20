@@ -15,11 +15,13 @@ change check, consumption, focus, mouse capture and child click count. The compa
 Game view is 320×240. Recording uses X11 and `xdotool` on a private display, and the engine
 replays the same input schedule with a focused window.
 
-The two release positions separate cancellation outside the header from input outside
-the entire area. Both cancel the change. Releasing inside the area consumes the event
-and clears capture. On a release outside the area, the Editor leaves the event unused
-and reports capture held. Unbound consumes the event and releases capture. The raw
-difference remains in the comparator output.
+Both release positions cancel the change. Releasing inside the area consumes the event
+and clears capture. Outside the area, the current event type is Ignore and its raw type
+is MouseUp. The capture owner can still read MouseUp through GetTypeForControl. This
+also holds in a nested group, and closing the clip restores the enclosing event type.
+Capture stays set on the following Repaint. The control without a group confirms
+that an unused MouseUp keeps an explicitly set hot control until the caller clears it.
+[Unity 6000.0 `GUI.BeginGroup`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUI.BeginGroup.html)
 
 ```sh
 python3 tests/projects/editortogglegroup/run.py record --label native-a

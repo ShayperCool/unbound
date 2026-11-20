@@ -743,8 +743,8 @@ namespace Unbound.Runtime
                 }
                 if (type == EventType.MouseDown && e.type != EventType.Used)
                     GUIUtility.keyboardControl = 0;
-                // A release nobody took ends whatever held the mouse.
-                if (type == EventType.MouseUp && e.type != EventType.Used)
+                // The measured release keeps explicit capture until its owner releases it.
+                if (!Compat.GuiMouseButtonClipMeasured && type == EventType.MouseUp && e.type != EventType.Used)
                     GUIUtility.hotControl = 0;
             }
         }
