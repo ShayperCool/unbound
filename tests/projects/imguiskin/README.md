@@ -18,6 +18,12 @@ as drawing a serialized property. The capture measures the internal subscription
 nested scopes and a default integer field. Each listener records the property path and rectangle.
 Removing the first listener leaves the second subscribed. A null property throws before notifying either listener.
 
+The list focus controls grab and release keyboard ownership from two lists in Layout, Repaint and
+Update. The IDs stay distinct across the events, including for lists created during separate GUI
+passes. Releasing from a non-owner leaves the current owner in place. In Update, `HasKeyboardControl`
+throws when the list owns the ID and returns false when another control owns it.
+[Unity 6000.0 `GUIUtility.keyboardControl`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUIUtility-keyboardControl.html)
+
 ```sh
 python3 tests/projects/imguiskin/run.py record --label native-a
 python3 tests/projects/imguiskin/run.py record --label native-b

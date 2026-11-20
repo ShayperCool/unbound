@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 
 /// <summary>
@@ -24,6 +25,11 @@ public sealed class ImguiSkinProbe : MonoBehaviour
     bool m_Done;
     bool m_RecordedLayout;
     bool m_RecordedRepaint;
+    ReorderableList m_ListA;
+    ReorderableList m_ListB;
+    int m_ListAId;
+    int m_ListBId;
+    int m_LastTemporaryId;
     [SerializeField] int m_First = 11;
     [SerializeField] int m_Second = 22;
 
@@ -32,7 +38,10 @@ public sealed class ImguiSkinProbe : MonoBehaviour
     {
         var dir = Environment.GetEnvironmentVariable("IMGUI_SKIN_OUT");
         if (string.IsNullOrEmpty(dir)) return;
-        new GameObject("IMGUI skin probe").AddComponent<ImguiSkinProbe>().m_Dir = dir;
+        var probe = new GameObject("IMGUI skin probe").AddComponent<ImguiSkinProbe>();
+        probe.m_Dir = dir;
+        probe.m_ListA = new ReorderableList(Array.Empty<int>(), typeof(int));
+        probe.m_ListB = new ReorderableList(Array.Empty<int>(), typeof(int));
     }
 
     void OnGUI()
@@ -42,11 +51,13 @@ public sealed class ImguiSkinProbe : MonoBehaviour
         {
             m_RecordedLayout = true;
             RecordPropertyHooks("Layout");
+            RecordListFocus("Layout");
         }
         else if (Event.current.type == EventType.Repaint && !m_RecordedRepaint)
         {
             m_RecordedRepaint = true;
             RecordPropertyHooks("Repaint");
+            RecordListFocus("Repaint");
         }
     }
 
@@ -54,6 +65,7 @@ public sealed class ImguiSkinProbe : MonoBehaviour
     {
         if (m_Done || ((!m_RecordedLayout || !m_RecordedRepaint) && Time.frameCount < 600)) return;
         m_Done = true;
+        RecordListFocus("Update");
         Put("onGUI", Json(m_Skin != null ? "called" : "not called"));
         if (m_Skin != null) Record(m_Skin);
         m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
@@ -122,6 +134,59 @@ public sealed class ImguiSkinProbe : MonoBehaviour
             remove.Invoke(null, new object[] { b });
         }
         Put("propertyHook/" + phase, "[" + string.Join(",", calls) + "]");
+    }
+
+    void RecordListFocus(string phase)
+    {
+        var observations = new List<string>();
+        void Flag(bool value) => observations.Add(value ? "true" : "false");
+        void CheckFocus(ReorderableList list)
+        {
+            try { Flag(list.HasKeyboardControl()); }
+            catch (Exception error) { observations.Add(Json(error.GetType().Name + ": " + error.Message)); }
+        }
+
+        int previous = GUIUtility.keyboardControl;
+        try
+        {
+            GUIUtility.keyboardControl = 0;
+            CheckFocus(m_ListA);
+
+            m_ListA.GrabKeyboardFocus();
+            int idA = GUIUtility.keyboardControl;
+            Flag(idA != 0);
+            Flag(m_ListAId == 0 || idA == m_ListAId);
+            m_ListAId = idA;
+            CheckFocus(m_ListA);
+
+            m_ListB.ReleaseKeyboardFocus();
+            Flag(GUIUtility.keyboardControl == idA);
+
+            m_ListB.GrabKeyboardFocus();
+            int idB = GUIUtility.keyboardControl;
+            Flag(idB != 0 && idB != idA);
+            Flag(m_ListBId == 0 || idB == m_ListBId);
+            m_ListBId = idB;
+            CheckFocus(m_ListA);
+            CheckFocus(m_ListB);
+
+            var created = new ReorderableList(Array.Empty<int>(), typeof(int));
+            created.GrabKeyboardFocus();
+            int temporaryId = GUIUtility.keyboardControl;
+            Flag(temporaryId != 0 && temporaryId != idA && temporaryId != idB && temporaryId != m_LastTemporaryId);
+            m_LastTemporaryId = temporaryId;
+            if (Event.current != null)
+            {
+                int controlId = GUIUtility.GetControlID(FocusType.Keyboard);
+                Flag(controlId != idA && controlId != idB && controlId != temporaryId);
+            }
+
+            created.ReleaseKeyboardFocus();
+            Flag(GUIUtility.keyboardControl == 0);
+            CheckFocus(created);
+        }
+        finally { GUIUtility.keyboardControl = previous; }
+        Put("listFocus/" + phase, "[" + string.Join(",", observations) + "]");
     }
 
     void Put(string key, string json) => m_Out.Append("{\"k\":").Append(Json(key)).Append(",\"v\":").Append(json).Append("}\n");
