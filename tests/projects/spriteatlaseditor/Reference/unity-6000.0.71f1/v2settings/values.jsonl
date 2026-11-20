@@ -1,0 +1,33 @@
+{"k":"atlases","v":"Assets/SettingsAtlases/Custom.spriteatlasv2|Assets/SettingsAtlases/CustomVariant.spriteatlasv2|Assets/SettingsAtlases/Defaults.spriteatlasv2"}
+{"k":"Custom.spriteatlasv2.loaded","v":"True"}
+{"k":"Custom.spriteatlasv2.isVariant","v":"False"}
+{"k":"Custom.spriteatlasv2.spriteCount","v":"1"}
+{"k":"Custom.spriteatlasv2.packables","v":"Sprite:Assets/Sprites/Single.png:Single"}
+{"k":"Custom.spriteatlasv2.master","v":"<null>"}
+{"k":"Custom.spriteatlasv2.includeInBuild","v":"True"}
+{"k":"CustomVariant.spriteatlasv2.loaded","v":"True"}
+{"k":"CustomVariant.spriteatlasv2.isVariant","v":"True"}
+{"k":"CustomVariant.spriteatlasv2.spriteCount","v":"1"}
+{"k":"CustomVariant.spriteatlasv2.packables","v":""}
+{"k":"CustomVariant.spriteatlasv2.master","v":"SpriteAtlas:Assets/SettingsAtlases/Custom.spriteatlasv2:Custom"}
+{"k":"CustomVariant.spriteatlasv2.includeInBuild","v":"False"}
+{"k":"Defaults.spriteatlasv2.loaded","v":"True"}
+{"k":"Defaults.spriteatlasv2.isVariant","v":"False"}
+{"k":"Defaults.spriteatlasv2.spriteCount","v":"1"}
+{"k":"Defaults.spriteatlasv2.packables","v":"Sprite:Assets/Sprites/Single.png:Single"}
+{"k":"Defaults.spriteatlasv2.master","v":"<null>"}
+{"k":"Defaults.spriteatlasv2.includeInBuild","v":"True"}
+{"k":"null.packables","v":"throws ArgumentNullException"}
+{"k":"null.master","v":"throws ArgumentNullException"}
+{"k":"null.includeInBuild","v":"throws ArgumentNullException"}
+{"k":"Custom.spriteatlasv2.packingSettings","v":"blockOffset=2|padding=8|enableRotation=False|enableTightPacking=False|enableAlphaDilation=True"}
+{"k":"Custom.spriteatlasv2.textureSettings","v":"maxTextureSize=1024|anisoLevel=4|filterMode=Trilinear|generateMipMaps=True|readable=True|sRGB=False"}
+{"k":"CustomVariant.spriteatlasv2.packingSettings","v":"blockOffset=2|padding=8|enableRotation=False|enableTightPacking=False|enableAlphaDilation=True"}
+{"k":"CustomVariant.spriteatlasv2.textureSettings","v":"maxTextureSize=512|anisoLevel=2|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True"}
+{"k":"Defaults.spriteatlasv2.packingSettings","v":"blockOffset=1|padding=4|enableRotation=True|enableTightPacking=True|enableAlphaDilation=False"}
+{"k":"Defaults.spriteatlasv2.textureSettings","v":"maxTextureSize=2048|anisoLevel=1|filterMode=Bilinear|generateMipMaps=False|readable=False|sRGB=True"}
+{"k":"new.packingSettings","v":"blockOffset=1|padding=4|enableRotation=True|enableTightPacking=True|enableAlphaDilation=False"}
+{"k":"new.textureSettings","v":"maxTextureSize=2048|anisoLevel=1|filterMode=Bilinear|generateMipMaps=False|readable=False|sRGB=True"}
+{"k":"null.packingSettings","v":"throws ArgumentNullException"}
+{"k":"null.textureSettings","v":"throws ArgumentNullException"}
+{"k":"complete","v":true}

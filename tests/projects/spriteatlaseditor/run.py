@@ -3,6 +3,7 @@
 import argparse
 from pathlib import Path
 import re
+import shutil
 import sys
 import time
 
@@ -14,21 +15,32 @@ BASE = [(PROBE.parent/'imguiskin', ('Assets/Scenes', 'Assets/Editor')),
         (PROBE.parent/'analyticssession', ('Packages', 'ProjectSettings'))]
 VARIABLE = 'SPRITE_ATLAS_EDITOR_OUT'
 # Each profile: the Sprite Packer mode it selects ("Sprite Atlas V1 - Always Enabled",
-# "Sprite Atlas V2 - Enabled") and the atlas files it keeps (the other kind is removed).
+# "Sprite Atlas V2 - Enabled"), the atlas folder it keeps, and the atlas suffix it keeps.
 PROFILES = {
-    'v1': (4, '.spriteatlas'),
-    'v2': (5, '.spriteatlasv2'),
+    'v1': (4, 'Atlases', '.spriteatlas'),
+    'v2': (5, 'Atlases', '.spriteatlasv2'),
+    'v1settings': (4, 'SettingsAtlases', '.spriteatlas'),
+    'v2settings': (5, 'SettingsAtlases', '.spriteatlasv2'),
 }
+ATLAS_FOLDERS = ('Atlases', 'SettingsAtlases')
 
 
 def configure(project, profile):
-    mode, kept = PROFILES[profile]
+    mode, kept_folder, kept = PROFILES[profile]
     path = project/'ProjectSettings/EditorSettings.asset'
     settings, changed = re.subn(r'(\n  m_SpritePackerMode:) \d+\n', rf'\1 {mode}\n', path.read_text())
     if changed != 1:
         raise ValueError('cannot select the Sprite Packer mode in EditorSettings')
     path.write_text(settings)
-    for atlas in (project/'Assets/Atlases').iterdir():
+    for folder in ATLAS_FOLDERS:
+        if folder != kept_folder:
+            target = project/'Assets'/folder
+            if target.exists():
+                shutil.rmtree(target)
+            meta = project/'Assets'/f'{folder}.meta'
+            if meta.exists():
+                meta.unlink()
+    for atlas in (project/'Assets'/kept_folder).iterdir():
         name = atlas.name[:-len('.meta')] if atlas.name.endswith('.meta') else atlas.name
         if Path(name).suffix != kept:
             atlas.unlink()

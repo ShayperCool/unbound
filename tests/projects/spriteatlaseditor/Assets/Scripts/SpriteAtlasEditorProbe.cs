@@ -49,10 +49,30 @@ static class SpriteAtlasEditorProbe
         Check("null.master", () => Describe(none.GetMasterAtlas()));
         Check("null.includeInBuild", () => none.IsIncludeInBuild().ToString());
 
+        foreach (var path in paths)
+        {
+            var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+            if (atlas == null) continue;
+            string key = Path.GetFileName(path);
+            Check(key + ".packingSettings", () => DescribePacking(atlas.GetPackingSettings()));
+            Check(key + ".textureSettings", () => DescribeTexture(atlas.GetTextureSettings()));
+        }
+        var fresh = new SpriteAtlas();
+        Check("new.packingSettings", () => DescribePacking(fresh.GetPackingSettings()));
+        Check("new.textureSettings", () => DescribeTexture(fresh.GetTextureSettings()));
+        Check("null.packingSettings", () => DescribePacking(none.GetPackingSettings()));
+        Check("null.textureSettings", () => DescribeTexture(none.GetTextureSettings()));
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
     }
+
+    static string DescribePacking(SpriteAtlasPackingSettings s) =>
+        $"blockOffset={s.blockOffset}|padding={s.padding}|enableRotation={s.enableRotation}|enableTightPacking={s.enableTightPacking}|enableAlphaDilation={s.enableAlphaDilation}";
+
+    static string DescribeTexture(SpriteAtlasTextureSettings s) =>
+        $"maxTextureSize={s.maxTextureSize}|anisoLevel={s.anisoLevel}|filterMode={s.filterMode}|generateMipMaps={s.generateMipMaps}|readable={s.readable}|sRGB={s.sRGB}";
 
     static string Describe(UnityEngine.Object o) =>
         o == null ? "<null>" : o.GetType().Name + ":" + AssetDatabase.GetAssetPath(o) + ":" + o.name;

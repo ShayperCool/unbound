@@ -14,4 +14,12 @@
 {"k":"null.packables","v":"throws ArgumentNullException"}
 {"k":"null.master","v":"throws ArgumentNullException"}
 {"k":"null.includeInBuild","v":"throws ArgumentNullException"}
+{"k":"Excluded.spriteatlasv2.packingSettings","v":"blockOffset=1|padding=2|enableRotation=True|enableTightPacking=True|enableAlphaDilation=False"}
+{"k":"Excluded.spriteatlasv2.textureSettings","v":"maxTextureSize=0|anisoLevel=0|filterMode=Bilinear|generateMipMaps=False|readable=True|sRGB=True"}
+{"k":"Included.spriteatlasv2.packingSettings","v":"blockOffset=1|padding=2|enableRotation=True|enableTightPacking=True|enableAlphaDilation=False"}
+{"k":"Included.spriteatlasv2.textureSettings","v":"maxTextureSize=0|anisoLevel=0|filterMode=Bilinear|generateMipMaps=False|readable=True|sRGB=True"}
+{"k":"new.packingSettings","v":"blockOffset=1|padding=4|enableRotation=True|enableTightPacking=True|enableAlphaDilation=False"}
+{"k":"new.textureSettings","v":"maxTextureSize=2048|anisoLevel=1|filterMode=Bilinear|generateMipMaps=False|readable=False|sRGB=True"}
+{"k":"null.packingSettings","v":"throws ArgumentNullException"}
+{"k":"null.textureSettings","v":"throws ArgumentNullException"}
 {"k":"complete","v":true}
