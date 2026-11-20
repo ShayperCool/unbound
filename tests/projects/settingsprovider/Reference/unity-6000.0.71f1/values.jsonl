@@ -1,0 +1,60 @@
+{"k":"ctor.basic.path","v":"Project/My Tool/General"}
+{"k":"ctor.basic.label","v":"General"}
+{"k":"ctor.basic.scope","v":"Project"}
+{"k":"ctor.basic.keywords","v":"Beta|alpha"}
+{"k":"ctor.norm.path","v":"Project/Sub Name/Leaf"}
+{"k":"ctor.norm.label","v":"Leaf"}
+{"k":"ctor.norm.scope","v":"User"}
+{"k":"ctor.norm.keywords","v":""}
+{"k":"ctor.single.path","v":"SingleToken"}
+{"k":"ctor.single.label","v":"SingleToken"}
+{"k":"ctor.trailing.path","v":"Project/Trail/"}
+{"k":"ctor.trailing.label","v":""}
+{"k":"ctor.nullPath","v":"throws NullReferenceException"}
+{"k":"label.custom","v":"Custom Label"}
+{"k":"label.emptyFallback","v":"General"}
+{"k":"label.nullFallback","v":"General"}
+{"k":"keywords.set","v":"x|y"}
+{"k":"keywords.setNull","v":"throws ArgumentNullException:collection"}
+{"k":"handlers.empty","v":"ok"}
+{"k":"handlers.delegates","v":"act:q1:el|deact|gui:q2|title|footer|update"}
+{"k":"handlers.overrides","v":"override.activate:q1|override.deactivate|override.gui:q2|override.title|override.footer|override.update"}
+{"k":"search.exactLower","v":"True"}
+{"k":"search.exactUpper","v":"True"}
+{"k":"search.exactCaseFold","v":"True"}
+{"k":"search.substr","v":"True"}
+{"k":"search.missing","v":"False"}
+{"k":"search.multiOrdered","v":"True"}
+{"k":"search.multiPartial","v":"True"}
+{"k":"search.multiReversed","v":"False"}
+{"k":"search.multiExtraSpaces","v":"True"}
+{"k":"search.spacesOnly","v":"False"}
+{"k":"search.empty","v":"False"}
+{"k":"search.null","v":"False"}
+{"k":"search.overlapSameWord","v":"False"}
+{"k":"search.overlapBoundaryChar","v":"True"}
+{"k":"search.handlerTrue","v":"True"}
+{"k":"search.handlerFalse","v":"False"}
+{"k":"keywords.fromGUIContent","v":"|first label|second label"}
+{"k":"keywords.fromGUIContentDerived","v":"derived content"}
+{"k":"keywords.populate","v":"|first label|second label"}
+{"k":"keywords.fromSerializedObject","v":"Count Value|Script|Title Text"}
+{"k":"keywords.fromMissingPath","v":""}
+{"k":"exists.single","v":"True"}
+{"k":"exists.singleWrongCase","v":"False"}
+{"k":"exists.privateUser","v":"True"}
+{"k":"exists.groupA","v":"True"}
+{"k":"exists.groupB","v":"True"}
+{"k":"exists.enumerableGroup","v":"False"}
+{"k":"exists.legacyPref","v":"True"}
+{"k":"exists.badSig","v":"False"}
+{"k":"exists.missing","v":"False"}
+{"k":"exists.null","v":"throws NullReferenceException"}
+{"k":"fetch.all","v":"User:Preferences/UnboundProbe/GroupB:GroupB|User:Preferences/UnboundProbe/LegacyPref:LegacyPref|User:Preferences/UnboundProbe/PrivateUser:PrivateUser|User:Project/UnboundProbe/CrossScope:CrossScope|Project:Project/UnboundProbe/CrossScope:CrossScope|Project:Project/UnboundProbe/Dup:<dup-valid>|Project:Project/UnboundProbe/GroupA:GroupA|Project:Project/UnboundProbe/Single:Single"}
+{"k":"fetch.project","v":"Project:Project/UnboundProbe/CrossScope|Project:Project/UnboundProbe/Dup|Project:Project/UnboundProbe/GroupA|Project:Project/UnboundProbe/Single"}
+{"k":"fetch.user","v":"User:Preferences/UnboundProbe/GroupB|User:Preferences/UnboundProbe/LegacyPref|User:Preferences/UnboundProbe/PrivateUser|User:Project/UnboundProbe/CrossScope"}
+{"k":"legacyPref.onGUI","v":"1"}
+{"k":"fetch.logs","v":"Error:Cannot create Settings Provider for: CreateThrowing|Error:Cannot create Settings Providers for: CreateThrowingGroup|Error:static System.Collections.Generic.IEnumerable`1[UnityEditor.SettingsProvider] CreateEnumerableGroup() does not match UnityEditor.SettingsProviderGroupAttribute expected signature.\u000a Use static UnityEditor.SettingsProvider[] signature()|Error:static UnityEditor.SettingsProvider CreateBadSignature(Int32) does not match UnityEditor.SettingsProviderAttribute expected signature.\u000a Use static UnityEditor.SettingsProvider signature()|Warning:There are 2 settings providers with the same name Project/UnboundProbe/Dup in Project scope."}
+{"k":"notify.noListeners","v":"ok"}
+{"k":"notify.counts","v":"1/2"}
+{"k":"complete","v":true}

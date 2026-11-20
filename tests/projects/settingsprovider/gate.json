@@ -1,0 +1,9 @@
+{
+  "commands": ["python3 tests/projects/settingsprovider/run.py gate"],
+  "summary": "settingsprovider: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/SettingsProvider.cs",
+    "managed/UnityEngine/Editor/SettingsService.cs",
+    "managed/UnityEngine/Editor/SearchUtils.cs"
+  ]
+}
