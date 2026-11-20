@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -36,7 +37,7 @@ public class TextColorProbe : MonoBehaviour
         new GameObject("TextColorProbe").AddComponent<TextColorProbe>();
     }
 
-    void Start()
+    IEnumerator Start()
     {
         var dir = Environment.GetEnvironmentVariable("TEXTCOLOR_OUT");
         Directory.CreateDirectory(dir);
@@ -56,7 +57,8 @@ public class TextColorProbe : MonoBehaviour
         Step("spacing", () => { Spacing("spacing0", spacing0); Spacing("spacing6", spacing6); });
         Step("canvas", () => ScaledCanvas(spacing0));
         Step("panel", () => Panel(emoji, dir));
-        Step("full", () => FullTexture());
+        string atlasCharacters = null;
+        Step("full", () => atlasCharacters = FullTexture());
         var logs = new List<string>(s_Logs);
         logs.Sort(StringComparer.Ordinal);
         var sb = new StringBuilder("[");
@@ -66,6 +68,9 @@ public class TextColorProbe : MonoBehaviour
         Step("legacy-exact-strike", () => LegacyEmoji(Resources.Load<Font>("Fonts/EmojiStrikeProbe"), 109, 109, "legacy/exact-strike"));
         Step("colr", () => VectorColor(Resources.Load<Font>("Fonts/LayerProbe"), "colr/plain"));
         Step("colr-hinted", () => VectorColor(Resources.Load<Font>("Fonts/HintedLayerProbe"), "colr/with-instructions"));
+        int initialFrame = Time.frameCount;
+        yield return null;
+        Step("full/next", () => FullTextureNextFrame(atlasCharacters, Time.frameCount - initialFrame));
         m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
@@ -384,7 +389,7 @@ public class TextColorProbe : MonoBehaviour
     // The built-in legacy font driven to its largest texture: 800 characters asked for at size 300 in
     // batches of 100, the texture size and rebuild count after each, then whether the first and last
     // characters are held.
-    void FullTexture()
+    string FullTexture()
     {
         var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         int logged = s_Logs.Count;
@@ -410,7 +415,49 @@ public class TextColorProbe : MonoBehaviour
         sb.Append("],\"logged\":[");
         for (int i = logged; i < s_Logs.Count; i++) sb.Append(i == logged ? "" : ",").Append(Str(s_Logs[i]));
         Value("legacy/full", sb.Append("]}").ToString());
+        return all;
     }
+
+    void FullTextureNextFrame(string characters, int elapsedFrames)
+    {
+        const int size = 300;
+        const int newSize = 500;
+        var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        char requested = characters[0];
+        const char read = 'm';
+        char untouched = characters[400];
+        const char newcomer = 'W';
+        var texture = font.material.mainTexture;
+        int logged = s_Logs.Count;
+        font.RequestCharactersInTexture(requested.ToString(), size);
+        bool wasPresent = font.GetCharacterInfo(read, out var before, size);
+
+        int rebuilt = 0;
+        var callbacks = new List<string>();
+        Action<Font> onRebuilt = f => {
+            if (f != font) return;
+            rebuilt++;
+            var current = f.material.mainTexture;
+            callbacks.Add("[" + current.width + "," + current.height + "," + Read(f, newcomer, newSize) + "]");
+        };
+        Font.textureRebuilt += onRebuilt;
+        try { font.RequestCharactersInTexture(newcomer.ToString(), newSize); }
+        finally { Font.textureRebuilt -= onRebuilt; }
+        var after = font.material.mainTexture;
+        bool readSurvives = font.GetCharacterInfo(read, out var updated, size);
+        Value("legacy/full/next", "{\"frames\":" + elapsedFrames + ",\"sameTexture\":" +
+            (texture == after ? "true" : "false") + ",\"size\":[" + after.width + "," + after.height + "]" +
+            ",\"rebuilds\":" + rebuilt + ",\"callbacks\":[" + string.Join(",", callbacks) + "]" +
+            ",\"requested\":" + Read(font, requested, size) +
+            ",\"readBefore\":" + (wasPresent ? Info(before) : "null") +
+            ",\"readAfter\":" + (readSurvives ? Info(updated) : "null") +
+            ",\"untouched\":" + Read(font, untouched, size) +
+            ",\"new\":" + Read(font, newcomer, newSize) + ",\"logs\":[" +
+            string.Join(",", s_Logs.GetRange(logged, s_Logs.Count - logged).ConvertAll(Str)) + "]}");
+    }
+
+    static string Read(Font font, char character, int size) =>
+        font.GetCharacterInfo(character, out var info, size) ? Info(info) : "null";
 
     // A texture's texels, read back through a copy into a render texture of its colour space.
     static Color32[] Pixels(Texture2D texture)

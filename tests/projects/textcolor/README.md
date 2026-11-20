@@ -19,6 +19,9 @@ records:
 - the built-in legacy font driven past its largest texture (800 characters at size 300 in batches
   of 100): the texture size and rebuild count after each batch, which characters are held, and the
   errors logged;
+- in the next frame, a request that forces the full legacy texture to rebuild. A glyph is
+  requested again, a second is read with `GetCharacterInfo`, and a third is left unused.
+  The callback records the new glyph and atlas dimensions;
 - a UI Toolkit panel (`emoji-panel.png`) drawing the three emoji with a COLOR font asset, an SDFAA
   one and the Font itself (atlases large enough for all three, so no OS fallback font is used);
 - an independent imported bitmap font requested at its exact 109-point strike twice, including
@@ -67,8 +70,7 @@ the earlier OS fallback reload warning also no longer occurs. Measured on the NV
 The exact-strike control uses a separate imported font asset so its atlas starts empty. Two
 independent GPU Editor repeats are byte-identical. It adds one observation while preserving
 all 102 preceding reference rows and the panel image byte for byte; Unbound already matched
-this behavior. Several strikes per face and a full 4096 legacy texture retaining glyphs from
-older frames remain unmeasured.
+this behavior. Several strikes per face remain unmeasured.
 
 The `colr/` observations use two synthetic COLRv0 fonts built by `make_colr_font.py`. A glyph
 has two overlapping vector layers with opaque and translucent palette entries. The other glyph
@@ -82,3 +84,10 @@ original rows and panel image.
 The Unity 6000.0 [GlyphLoadFlags](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextCore.LowLevel.GlyphLoadFlags.html)
 reference describes the requested load behaviour. The fallback choice above is measured on
 6000.0.71f1. COLRv1 paint graphs and other release families remain unmeasured.
+
+In `legacy/full/next`, the full 4096 atlas repacks in the same texture. Both the glyph requested
+in the new frame and the one read by `GetCharacterInfo` survive. The unused glyph from the prior
+frame is dropped. `Font.textureRebuilt` fires once with the new glyph available and the retained
+glyph's UV coordinates updated. This tests the
+[Unity 6000.0 rebuild callback](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Font-textureRebuilt.html)
+on an atlas whose coordinates actually change.
