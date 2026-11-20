@@ -77,4 +77,5 @@
 {"k":"toggle/valueOnRepaint","v":[false,true]}
 {"k":"togglePaint/size","v":[320,180]}
 {"k":"togglePaint/hoverInput","v":true}
+{"k":"mixedToggle/state","v":[false,false,true]}
 {"k":"complete","v":true}

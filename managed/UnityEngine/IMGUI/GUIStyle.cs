@@ -401,10 +401,11 @@ namespace UnityEngine
         {
             var state = StateFor(isHover, isActive, on, focus);
             var enabledAlpha = GUI.enabled ? 1f : 0.5f;
-            bool inspectorCheckbox = (m_Name == "toggle" || m_Name == "Toggle") && m_Normal.background == null
+            bool mixedCheckbox = m_Name == UnityEditor.InspectorTogglePaint.MixedStyleName;
+            bool inspectorCheckbox = (mixedCheckbox || m_Name == "toggle" || m_Name == "Toggle") && m_Normal.background == null
                 && Compat.InspectorGuiStylesMeasured && Native.IsReady;
             if (inspectorCheckbox)
-                UnityEditor.InspectorTogglePaint.Draw(position, isHover, isActive, on, focus, enabledAlpha);
+                UnityEditor.InspectorTogglePaint.Draw(position, isHover, isActive, on, focus, mixedCheckbox, enabledAlpha);
             else if (state.background != null)
             {
                 var bg = GUI.color * GUI.backgroundColor;

@@ -46,6 +46,7 @@ public sealed partial class EditorStylesProbe : MonoBehaviour
         for (int frame = 0; !m_PointerInView && frame < 45; frame++) yield return null;
         yield return new WaitForEndOfFrame();
         RecordTogglePaint();
+        RecordMixedTogglePaint();
         Put("complete", "true");
         File.WriteAllText(Path.Combine(Environment.GetEnvironmentVariable("EDITOR_STYLES_OUT"), "values.jsonl"), m_Values.ToString());
         EditorApplication.Exit(0);
@@ -55,6 +56,7 @@ public sealed partial class EditorStylesProbe : MonoBehaviour
     {
         if (Event.current.type == EventType.Repaint)
             DrawTogglePaint();
+        DrawMixedToggleControls();
         if (m_SawRepaint) return;
         if (Event.current.type == EventType.Layout && !m_SawLayout)
         {
@@ -96,7 +98,7 @@ public sealed partial class EditorStylesProbe : MonoBehaviour
             }
             finally { style.normal.textColor = original; }
 
-            GUI.Label(new Rect(10, 142, 150, 20), "Inspector bold", style);
+            GUI.Label(new Rect(290, 142, 150, 20), "Inspector bold", style);
         }
         catch (Exception error) { Put("Repaint/exception", Quote(error.GetType().Name)); }
 
@@ -112,8 +114,8 @@ public sealed partial class EditorStylesProbe : MonoBehaviour
             Put("toggle/sharedWithLayout", Flag(ReferenceEquals(m_ToggleLayoutStyle, style)));
             Put("toggle/distinctFromGameSkinToggle", Flag(!ReferenceEquals(GUI.skin.toggle, style)));
             DescribeStyle("toggle/", style, textureInfo: true);
-            var off = new Rect(160, 142, 150, 16);
-            var on = new Rect(160, 158, 150, 16);
+            var off = new Rect(290, 142, 150, 16);
+            var on = new Rect(290, 158, 150, 16);
             bool offValue = GUI.Toggle(off, false, "Inspector unchecked", style);
             bool onValue = GUI.Toggle(on, true, "Inspector checked", style);
             Put("toggle/valueOnRepaint", $"[{Flag(offValue)},{Flag(onValue)}]");

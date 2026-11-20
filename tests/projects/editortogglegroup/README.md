@@ -4,7 +4,7 @@ Unity 6000.0 documents a vertical layout group whose header sets the enabled sta
 its controls. The probe checks both constructors, paired calls and repeated disposal, and
 records nested groups and their arranged child rectangles. It starts one group inside an
 already disabled parent and checks restoration. The mixed group returns unchecked during
-Layout and Repaint. The mixed checkbox artwork is open.
+Layout and Repaint. The themed mixed checkbox pixels are checked in `tests/projects/editorstyles`.
 [Unity 6000.0 `BeginToggleGroup`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUILayout.BeginToggleGroup.html)
 [Unity 6000.0 `ToggleGroupScope`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUILayout.ToggleGroupScope.html)
 

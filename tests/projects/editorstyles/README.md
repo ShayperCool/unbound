@@ -23,6 +23,11 @@ the private display to move the pointer inside the focused Game view. The gate s
 both the focus and pointer position so simultaneous probes can use other windows.
 [Unity 6000.0 `GUIStyle.Draw`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUIStyle.Draw.html)
 
+The mixed checkbox capture also requires exact pixels for the dash, hover and focus.
+It includes the enabled and disabled parent paths through `EditorGUILayout.ToggleGroupScope`
+with `EditorGUI.showMixedValue` set, and controls for pressed and checked images.
+[Unity 6000.0 `EditorGUI.showMixedValue`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUI-showMixedValue.html)
+
 Two independent windowed GPU Editor runs per theme are compared byte for byte before
 publication. Recording uses Bubblewrap to isolate the Editor preferences while selecting
 the theme. Each gate sets the preference in its own run directory. The comparator checks

@@ -10,25 +10,34 @@ namespace UnityEditor
     internal sealed class InspectorTogglePaint
     {
         const float ImageSize = 14f;
+        internal const string MixedStyleName = "ToggleMixed";
         static InspectorTogglePaint s_Light;
         static InspectorTogglePaint s_Dark;
 
-        readonly Texture2D m_Unchecked;
-        readonly Texture2D m_UncheckedHover;
-        readonly Texture2D m_UncheckedFocus;
-        readonly Texture2D m_Checked;
-        readonly Texture2D m_CheckedHover;
-        readonly Texture2D m_CheckedFocus;
+        readonly struct Backgrounds
+        {
+            internal readonly Texture2D Normal;
+            internal readonly Texture2D Hover;
+            internal readonly Texture2D Focus;
+
+            internal Backgrounds(string stem)
+            {
+                Normal = Image(stem + ".png");
+                Hover = Image(stem + "_hover.png");
+                Focus = Image(stem + "_focus.png");
+            }
+        }
+
+        readonly string m_Prefix;
+        readonly Backgrounds m_Unchecked;
+        readonly Backgrounds m_Checked;
+        Backgrounds? m_Mixed;
 
         InspectorTogglePaint(bool dark)
         {
-            string prefix = "stylesheets/northstar/images/" + (dark ? "d_toggle_" : "toggle_");
-            m_Unchecked = Image(prefix + "bg.png");
-            m_UncheckedHover = Image(prefix + "bg_hover.png");
-            m_UncheckedFocus = Image(prefix + "bg_focus.png");
-            m_Checked = Image(prefix + "on.png");
-            m_CheckedHover = Image(prefix + "on_hover.png");
-            m_CheckedFocus = Image(prefix + "on_focus.png");
+            m_Prefix = "stylesheets/northstar/images/" + (dark ? "d_toggle_" : "toggle_");
+            m_Unchecked = new Backgrounds(m_Prefix + "bg");
+            m_Checked = new Backgrounds(m_Prefix + "on");
         }
 
         static Texture2D Image(string path)
@@ -37,7 +46,7 @@ namespace UnityEditor
                 ?? throw new InvalidOperationException($"Unbound: Inspector checkbox image '{path}' is unavailable.");
         }
 
-        internal static void Draw(Rect control, bool hover, bool pressed, bool on, bool focus, float enabledAlpha)
+        internal static void Draw(Rect control, bool hover, bool pressed, bool on, bool focus, bool mixed, float enabledAlpha)
         {
             if (!GUIClip.visibleRect.Overlaps(control)) return;
             var images = EditorGUIUtility.isProSkin
@@ -47,7 +56,7 @@ namespace UnityEditor
             bool enabled = GUI.enabled;
             bool focusImage = enabled && focus && Application.isFocused;
             bool hoverImage = enabled && hover && GUIUtility.hotControl == 0 && IsPointerInView();
-            var image = images.Select(on, focusImage, hoverImage, enabled && pressed);
+            var image = images.Select(on, focusImage, hoverImage, enabled && pressed, mixed);
             float scale = GUIUtility.pixelsPerPoint;
             // At a half pixel the captured Game view places the image left in X and down in Y.
             float x = Mathf.Ceil(control.x * scale - 0.5f) / scale;
@@ -58,13 +67,15 @@ namespace UnityEditor
             GuiRender.DrawTexture(rect, image, new Rect(0, 0, 1, 1), tint);
         }
 
-        Texture2D Select(bool on, bool focus, bool hover, bool pressed)
+        Texture2D Select(bool on, bool focus, bool hover, bool pressed, bool mixed)
         {
-            if (focus) return on ? m_CheckedFocus : m_UncheckedFocus;
-            // The checked pressed state uses the checked image even with hover.
-            if (on && pressed) return m_Checked;
-            if (on || pressed) return hover ? m_CheckedHover : m_Checked;
-            return hover ? m_UncheckedHover : m_Unchecked;
+            // Checked images are shared by the ordinary and mixed styles.
+            bool checkedImage = on || (pressed && !focus);
+            var images = checkedImage ? m_Checked : m_Unchecked;
+            if (mixed && !checkedImage)
+                images = m_Mixed ??= new Backgrounds(m_Prefix + "mixed_bg");
+            if (focus) return images.Focus;
+            return hover && !(on && pressed) ? images.Hover : images.Normal;
         }
 
         static bool IsPointerInView()

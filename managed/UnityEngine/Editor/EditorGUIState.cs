@@ -456,6 +456,8 @@ namespace UnityEditor
     /// own controls with the editor's label column.</summary>
     internal static class EditorGUIControls
     {
+        static GUIStyle s_MixedToggleGroupHeader;
+
         static Rect Field(Rect position, GUIContent label)
         {
             if (label == null || (string.IsNullOrEmpty(label.text) && label.image == null)) return EditorGUI.IndentedRect(position);
@@ -514,7 +516,11 @@ namespace UnityEditor
                 EditorGUIUtility.editingTextField = false;
             }
 
-            if (EditorGUI.showMixedValue) value = false;
+            if (EditorGUI.showMixedValue)
+            {
+                value = false;
+                toggleStyle = s_MixedToggleGroupHeader ??= new GUIStyle { name = InspectorTogglePaint.MixedStyleName };
+            }
             if (type == EventType.MouseDown && current.button != 0) return value;
             bool selected = GUI.DoToggle(togglePosition, id, value, GUIContent.none, toggleStyle);
             if (current.type != type) GUIUtility.keyboardControl = id;
