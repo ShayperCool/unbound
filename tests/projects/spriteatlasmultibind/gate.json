@@ -1,0 +1,4 @@
+{
+  "commands": ["python3 tests/projects/spriteatlasmultibind/run.py gate"],
+  "summary": "spriteatlasmultibind [a-z0-9]+: [0-9]+/[0-9]+ values match.*"
+}

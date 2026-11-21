@@ -1,0 +1,20 @@
+{"k":"atlases","v":"Assets/Atlases/A_MasterLowWord.spriteatlasv2|Assets/Atlases/A_VariantLowWord.spriteatlasv2|Assets/Atlases/ExclAtlas.spriteatlasv2|Assets/Atlases/IncAtlas.spriteatlasv2|Assets/Atlases/LateFirst.spriteatlasv2|Assets/Atlases/LateReverseA.spriteatlasv2|Assets/Atlases/LateReverseB.spriteatlasv2|Assets/Atlases/LateSecond.spriteatlasv2|Assets/Atlases/LateVarChild.spriteatlasv2|Assets/Atlases/LateVarMaster.spriteatlasv2|Assets/Atlases/MasterBoth.spriteatlasv2|Assets/Atlases/MasterExcl.spriteatlasv2|Assets/Atlases/VariantBoth.spriteatlasv2|Assets/Atlases/Z_MasterHighWord.spriteatlasv2|Assets/Atlases/Z_VariantHighWord.spriteatlasv2"}
+{"k":"case1.twoBuiltInMasters","v":"packed=True|hasTex=True|isSource=False|scale=1|rect=0,0,40,40|match=A_MasterLowWord(rectSame)"}
+{"k":"case1.distinctPages","v":"diffTex=True|diffRectOrScale=False"}
+{"k":"case2.builtInVsExcluded","v":"packed=True|hasTex=True|isSource=False|scale=1|rect=0,0,70,50|match=IncAtlas(rectSame)"}
+{"k":"case2.distinctPages","v":"diffTex=True|diffRectOrScale=False"}
+{"k":"case3.builtInMasterVsVariant","v":"packed=True|hasTex=True|isSource=False|scale=1|rect=0,0,32,32|match=MasterBoth(rectSame)"}
+{"k":"case3.distinctPages","v":"diffTex=True|diffRectOrScale=True"}
+{"k":"case4.exclMasterTwoBuiltInVariants","v":"packed=True|hasTex=True|isSource=False|scale=0.5|rect=0,0,32,32|match=A_VariantLowWord(rectSame)"}
+{"k":"case4.distinctPages","v":"diffTex=True|diffRectOrScale=True"}
+{"k":"case5.lateInitial","v":"packed=False|hasTex=False|isSource=False|scale=1|rect=0,32,32,32|match=<none>"}
+{"k":"case6.lateVariantInitial","v":"packed=False|hasTex=False|isSource=False|scale=1|rect=32,32,32,32|match=<none>"}
+{"k":"case7.lateSecondOnlyInitial","v":"packed=False|hasTex=False|isSource=False|scale=1|rect=0,0,30,44|match=<none>"}
+{"k":"loadLogs","v":"Warning:Sprite Single matches more than one built-in atlases. Default to use the first available atlas.||Warning:Sprite SheetACell0 matches more than one built-in atlases. Default to use the first available atlas.||Warning:Sprite SheetACell1 matches more than one built-in atlases. Default to use the first available atlas."}
+{"k":"late.requests","v":"LateFirst|LateReverseA|LateReverseB|LateSecond|LateVarMaster"}
+{"k":"late.registered","v":"LateFirst|LateReverseB|LateSecond|LateVarChild"}
+{"k":"late.callbackSteps","v":"afterLateFirst:packed=True|hasTex=True|isSource=False|scale=1|rect=0,0,32,32|match=LateFirst(rectSame)||afterLateReverseB:packed=True|hasTex=True|isSource=False|scale=1|rect=0,0,30,44|match=LateReverseB(rectSame)||afterLateSecond:packed=True|hasTex=True|isSource=False|scale=1|rect=0,0,32,32|match=LateSecond(rectSame)||afterLateVarChild:packed=True|hasTex=True|isSource=False|scale=0.5|rect=0,0,32,32|match=LateVarChild(rectSame)"}
+{"k":"case5.lateFinal","v":"packed=True|hasTex=True|isSource=False|scale=1|rect=0,0,32,32|match=LateSecond(rectSame)"}
+{"k":"case6.lateVariantFinal","v":"packed=True|hasTex=True|isSource=False|scale=0.5|rect=0,0,32,32|match=LateVarChild(rectSame)"}
+{"k":"case7.lateSecondOnlyFinal","v":"packed=True|hasTex=True|isSource=False|scale=1|rect=0,0,30,44|match=LateReverseB(rectSame)"}
+{"k":"complete","v":true}
