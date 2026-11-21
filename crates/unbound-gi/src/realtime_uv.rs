@@ -998,7 +998,11 @@ pub fn fitting_choice(
             .pop()
             .ok_or_else(|| first_error.expect("at least one layout"));
     }
-    let misfits: Vec<Option<f64>> = fitting
+    let normals = match input.charts {
+        Charts::Automatic { normals, .. } => Some(normals),
+        Charts::Preserved => None,
+    };
+    let misfits: Vec<Option<[f64; 2]>> = fitting
         .iter()
         .map(|output| {
             misfit(
@@ -1007,42 +1011,65 @@ pub fn fitting_choice(
                 st,
                 output,
                 input.positions,
+                normals,
                 input.triangles,
             )
         })
         .collect();
-    let mut order: Vec<usize> = (0..fitting.len()).collect();
-    order.sort_by(|&a, &b| {
-        let key = |i: usize| misfits[i].unwrap_or(f64::INFINITY);
-        key(a).total_cmp(&key(b))
-    });
-    let (best, next) = (misfits[order[0]], misfits[order[1]]);
-    ensure!(
-        best.is_some_and(|best| next.is_none_or(|next| best <= MISFIT_RATIO * next)),
-        "the precomputed layout fits {} ways of making the charts that the precompute's rounding decides, none clearly closest to where the system's clusters sample the surface (misfits {misfits:?} m): which the precompute took is not known",
-        fitting.len()
-    );
-    Ok(fitting.swap_remove(order[0]))
+    // By each measure, the layout clearly closest, if one is.
+    let clear = |measure: usize| -> Option<usize> {
+        let key = |i: usize| misfits[i].map_or(f64::INFINITY, |m| m[measure]);
+        let mut order: Vec<usize> = (0..fitting.len()).collect();
+        order.sort_by(|&a, &b| key(a).total_cmp(&key(b)));
+        let (best, next) = (key(order[0]), key(order[1]));
+        (best.is_finite() && best <= MISFIT_RATIO * next && next - best >= MISFIT_MARGIN)
+            .then_some(order[0])
+    };
+    let (by_place, by_place_and_facing) = (clear(0), clear(1));
+    let taken = match (by_place, by_place_and_facing) {
+        (Some(a), Some(b)) if a != b => None,
+        (a, b) => a.or(b),
+    };
+    let Some(taken) = taken else {
+        bail!(
+            "the precomputed layout fits {} ways of making the charts that the precompute's rounding decides, none clearly closest to where the system's clusters sample the surface (misfits by place and by place and facing {misfits:?} m): which the precompute took is not known",
+            fitting.len()
+        );
+    };
+    Ok(fitting.swap_remove(taken))
 }
 
-/// A layout is taken over another that fits the precomputed chart mask too when its misfit is
-/// at most this share of the other's.
+/// A layout is taken over the others that fit the precomputed chart mask too when its misfit
+/// (by place, or by place and facing: see [`misfit`]) is at most this share of every other's,
+/// and smaller by at least this many metres (misfits that a fit with too few groups brings
+/// near zero for every layout tell nothing), and the other measure does not clearly take
+/// another layout.
 const MISFIT_RATIO: f64 = 0.5;
+const MISFIT_MARGIN: f64 = 0.05;
+/// A difference of normals counts as a distance of this many metres: a texel whose surface
+/// faces otherwise than the points the cluster sampled there (another face of a box) weighs
+/// as much as being that far from them.
+const NORMAL_METRES: f64 = 1.0;
 
 /// How far a layout puts the instance's surface from where the system's clusters sample it:
-/// for each group of a cluster's points on this instance, the mean surface point (by the
-/// layout) of the texels the group samples its material from against the mean of the group's
-/// points; the root mean square distance between the two sets of means, by the group's
-/// points, after the rigid motion that brings them closest (the instance's positions may be
-/// its own, turned from the world). None with fewer than three groups.
+/// for each group of a cluster's points on this instance, the mean surface point and the mean
+/// surface normal (by the layout) of the texels the group samples its material from against
+/// the mean of the group's points and of their normals; the root mean square difference
+/// between the two sets, by the group's points, after the rigid motion that brings them
+/// closest (the instance's positions may be its own, turned from the world): of the points
+/// alone, and of the points and normals together. (Where a cluster spans faces folded into
+/// one chart its mean normal is blurred, and the points alone tell more; between congruent
+/// faces the normals do.) `normals`: the instance's vertex normals (else each triangle's own).
+/// None without such a group.
 pub(crate) fn misfit(
     system: &System,
     renderer: usize,
     st: [f32; 4],
     output: &Output,
     positions: &[[f32; 3]],
+    normals: Option<&[[f32; 3]]>,
     triangles: &[[u32; 3]],
-) -> Option<f64> {
+) -> Option<[f64; 2]> {
     let (w, h) = (output.width as usize, output.height as usize);
     let (sw, sh) = (
         system.transport.width as f32,
@@ -1073,9 +1100,9 @@ pub(crate) fn misfit(
             }
         }
     }
-    // The surface at a texel's centre: the triangle it is deepest in (or least outside of),
-    // its corners weighted by the point's place in it, held inside.
-    let surface = |x: usize, y: usize| -> Option<[f64; 3]> {
+    // The surface at a texel's centre and its normal: the triangle it is deepest in (or least
+    // outside of), its corners weighted by the point's place in it, held inside.
+    let surface = |x: usize, y: usize| -> Option<([f64; 3], [f64; 3])> {
         let at = [x as f64 + 0.5, y as f64 + 0.5];
         let mut best: Option<(f64, [f64; 3], usize)> = None;
         for &i in &cells[y * w + x] {
@@ -1098,11 +1125,29 @@ pub(crate) fn misfit(
         let b = b.map(|v| v.max(0.0));
         let total: f64 = b.iter().sum();
         let p = triangles[i].map(|v| positions[v as usize].map(|x| x as f64));
-        Some([0, 1, 2].map(|k| (b[0] * p[0][k] + b[1] * p[1][k] + b[2] * p[2][k]) / total))
+        let point = [0, 1, 2].map(|k| (b[0] * p[0][k] + b[1] * p[1][k] + b[2] * p[2][k]) / total);
+        let normal = match normals {
+            Some(normals) => {
+                let n = triangles[i].map(|v| normals[v as usize].map(|x| x as f64));
+                [0, 1, 2].map(|k| b[0] * n[0][k] + b[1] * n[1][k] + b[2] * n[2][k])
+            }
+            None => {
+                let (e1, e2) = (
+                    [0, 1, 2].map(|k| p[1][k] - p[0][k]),
+                    [0, 1, 2].map(|k| p[2][k] - p[0][k]),
+                );
+                [
+                    e1[1] * e2[2] - e1[2] * e2[1],
+                    e1[2] * e2[0] - e1[0] * e2[2],
+                    e1[0] * e2[1] - e1[1] * e2[0],
+                ]
+            }
+        };
+        Some((point, unit(normal)))
     };
     let materials = &system.materials;
     let samples = &system.input;
-    let mut pairs: Vec<([f64; 3], [f64; 3], f64)> = Vec::new();
+    let mut pairs: Vec<Pair> = Vec::new();
     for c in 0..materials.cluster_groups.len().saturating_sub(1) {
         let mut point = *samples.cluster_points.get(c)? as usize;
         for g in materials.cluster_groups[c] as usize..materials.cluster_groups[c + 1] as usize {
@@ -1112,7 +1157,7 @@ pub(crate) fn misfit(
             if materials.instance_renderers.get(instance as usize) != Some(&(renderer as u16)) {
                 continue;
             }
-            let (mut sum, mut weight) = ([0.0f64; 3], 0.0f64);
+            let (mut sum, mut facing, mut weight) = ([0.0f64; 3], [0.0f64; 3], 0.0f64);
             let first = materials.group_samples[g] as usize;
             let last = materials.group_samples[g + 1] as usize;
             for &((tx, ty), sample_weight) in &materials.samples[first..last] {
@@ -1120,51 +1165,86 @@ pub(crate) fn misfit(
                 if !(0..w as i64).contains(&x) || !(0..h as i64).contains(&y) {
                     continue;
                 }
-                if let Some(p) = surface(x as usize, y as usize) {
+                if let Some((p, n)) = surface(x as usize, y as usize) {
                     for k in 0..3 {
                         sum[k] += p[k] * sample_weight as f64;
+                        facing[k] += n[k] * sample_weight as f64;
                     }
                     weight += sample_weight as f64;
                 }
             }
             let cluster = samples.positions.get(points.clone())?;
+            let cluster_normals = samples.normals.get(points)?;
             if weight == 0.0 || cluster.is_empty() {
                 continue;
             }
-            let mut centre = [0.0f64; 3];
-            for q in cluster {
+            let (mut centre, mut normal) = ([0.0f64; 3], [0.0f64; 3]);
+            for (q, n) in cluster.iter().zip(cluster_normals) {
                 for k in 0..3 {
                     centre[k] += q[k] as f64 / cluster.len() as f64;
+                    normal[k] += n[k] as f64;
                 }
             }
-            pairs.push((sum.map(|v| v / weight), centre, count as f64));
+            pairs.push(Pair {
+                ours: (sum.map(|v| v / weight), unit(facing)),
+                theirs: (centre, unit(normal)),
+                weight: count as f64,
+            });
         }
     }
-    (pairs.len() >= 3).then(|| rigid_misfit(&pairs))
+    (!pairs.is_empty()).then(|| {
+        [
+            rigid_misfit(&pairs, 0.0),
+            rigid_misfit(&pairs, NORMAL_METRES),
+        ]
+    })
 }
 
-/// The weighted root mean square distance between `p` and `q` points after the rotation and
-/// translation that bring them closest (by the quaternion of the largest eigenvalue of their
-/// cross-covariance's symmetric 4x4 form).
-fn rigid_misfit(pairs: &[([f64; 3], [f64; 3], f64)]) -> f64 {
-    let total: f64 = pairs.iter().map(|p| p.2).sum();
+/// A vector of unit length, or zero.
+fn unit(v: [f64; 3]) -> [f64; 3] {
+    let length = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    if length > 0.0 {
+        v.map(|x| x / length)
+    } else {
+        [0.0; 3]
+    }
+}
+
+/// A point and normal of the layout's surface against a cluster group's, and its weight.
+struct Pair {
+    ours: ([f64; 3], [f64; 3]),
+    theirs: ([f64; 3], [f64; 3]),
+    weight: f64,
+}
+
+/// The weighted root mean square difference between the pairs' points (and their normals,
+/// `normal_metres` a unit) after the rotation and translation that bring ours closest to
+/// theirs (by the quaternion of the largest eigenvalue of their cross-covariance's symmetric
+/// 4x4 form).
+fn rigid_misfit(pairs: &[Pair], normal_metres: f64) -> f64 {
+    let total: f64 = pairs.iter().map(|p| p.weight).sum();
     let mut centres = [[0.0f64; 3]; 2];
-    for (p, q, w) in pairs {
+    for pair in pairs {
         for k in 0..3 {
-            centres[0][k] += p[k] * w / total;
-            centres[1][k] += q[k] * w / total;
+            centres[0][k] += pair.ours.0[k] * pair.weight / total;
+            centres[1][k] += pair.theirs.0[k] * pair.weight / total;
         }
     }
     let mut s = [[0.0f64; 3]; 3];
     let mut spread = 0.0;
-    for (p, q, w) in pairs {
-        let a = [0, 1, 2].map(|k| p[k] - centres[0][k]);
-        let b = [0, 1, 2].map(|k| q[k] - centres[1][k]);
+    for pair in pairs {
+        let w = pair.weight;
+        let a = [0, 1, 2].map(|k| pair.ours.0[k] - centres[0][k]);
+        let b = [0, 1, 2].map(|k| pair.theirs.0[k] - centres[1][k]);
+        let (na, nb) = (
+            pair.ours.1.map(|x| x * normal_metres),
+            pair.theirs.1.map(|x| x * normal_metres),
+        );
         for i in 0..3 {
             for j in 0..3 {
-                s[i][j] += w * a[i] * b[j];
+                s[i][j] += w * (a[i] * b[j] + na[i] * nb[j]);
             }
-            spread += w * (a[i] * a[i] + b[i] * b[i]);
+            spread += w * (a[i] * a[i] + b[i] * b[i] + na[i] * na[i] + nb[i] * nb[i]);
         }
     }
     let [[xx, xy, xz], [yx, yy, yz], [zx, zy, zz]] = s;
