@@ -248,8 +248,8 @@ namespace UnityEngine
             if (mesh == null) { why = "it has no mesh"; return null; }
             for (int sub = 0; sub < mesh.subMeshCount; sub++)
                 if (mesh.GetTopology(sub) != MeshTopology.Triangles) { why = $"a submesh of {mesh.GetTopology(sub)}"; return null; }
-            float scale = renderer.scaleInLightmap * resolution;
-            if (!(scale > 0f)) { why = "it has no realtime lightmap resolution"; return null; }
+            float scale = RealtimeTexelsPerUnit(renderer, resolution);
+            if (!(scale > 0f)) { why = "it has no realtime lightmap resolution (Scale In Lightmap 0 is not measured)"; return null; }
             if (!(ParametersOf(renderer.m_LightmapParameters, settings) is BakeParameters parameters))
             {
                 why = EffectiveParameters(renderer.m_LightmapParameters, settings).Guid == BuiltinExtraGuid

@@ -761,6 +761,14 @@ namespace UnityEngine
             return null;
         }
 
+        /// <summary>A renderer's realtime lightmap texels per world unit: the Lighting Settings'
+        /// realtime resolution. Its Scale In Lightmap sizes baked lightmaps only: the Unity
+        /// 6000.0.71f1 Editor's precompute lays out the same realtime charts at 4 and 0.25 as at 1
+        /// (tests/projects/realtimegi RoomCurved). A scale of 0 (not lightmapped, the Manual says
+        /// of baked lightmaps) is not measured: no texels.</summary>
+        internal static float RealtimeTexelsPerUnit(MeshRenderer renderer, float resolution) =>
+            renderer.scaleInLightmap > 0f ? resolution : 0f;
+
         /// <summary>Renderer <paramref name="r"/> of system <paramref name="index"/>'s realtime
         /// lightmap UVs (2 floats a vertex) into <paramref name="output"/>; why they could not be
         /// made, or null.</summary>
@@ -771,8 +779,10 @@ namespace UnityEngine
             bool automatic = MakesAutomaticCharts(renderer);
             for (int sub = 0; sub < mesh.subMeshCount; sub++)
                 if (mesh.GetTopology(sub) != MeshTopology.Triangles) return $"'{renderer.name}' has a submesh of {mesh.GetTopology(sub)}";
-            float scale = renderer.scaleInLightmap * resolution;
-            if (!(scale > 0f)) return $"'{renderer.name}' has no realtime lightmap resolution";
+            // Scale In Lightmap does not size realtime charts (tests/projects/realtimegi
+            // RoomCurved: 4 on a cube and a sphere, 0.25 on a slab); 0 is not measured.
+            float scale = RealtimeTexelsPerUnit(renderer, resolution);
+            if (!(scale > 0f)) return $"'{renderer.name}' has no realtime lightmap resolution (Scale In Lightmap 0 is not measured)";
             var vertices = mesh.vertices;
             // The input of realtime lightmap UVs is Mesh.uv3 when the mesh has it, else the
             // baked lightmap UVs (Mesh.uv2), else Mesh.uv (Unity 6000.0 Manual, "Generate
