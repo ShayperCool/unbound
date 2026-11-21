@@ -1,0 +1,57 @@
+{"k":"atlases","v":"Assets/ImporterIncludeAtlases/Excluded.spriteatlasv2|Assets/ImporterIncludeAtlases/Included.spriteatlasv2|Assets/ImporterIncludeAtlases/Omitted.spriteatlasv2|Assets/ImporterIncludeAtlases/Variant.spriteatlasv2"}
+{"k":"Excluded.spriteatlasv2.loaded","v":"True"}
+{"k":"Excluded.spriteatlasv2.isVariant","v":"False"}
+{"k":"Excluded.spriteatlasv2.spriteCount","v":"1"}
+{"k":"Excluded.spriteatlasv2.packables","v":"Texture2D:Assets/Sprites/Single.png:Single"}
+{"k":"Excluded.spriteatlasv2.master","v":"<null>"}
+{"k":"Excluded.spriteatlasv2.includeInBuild","v":"False"}
+{"k":"Included.spriteatlasv2.loaded","v":"True"}
+{"k":"Included.spriteatlasv2.isVariant","v":"False"}
+{"k":"Included.spriteatlasv2.spriteCount","v":"1"}
+{"k":"Included.spriteatlasv2.packables","v":"Texture2D:Assets/Sprites/Single.png:Single"}
+{"k":"Included.spriteatlasv2.master","v":"<null>"}
+{"k":"Included.spriteatlasv2.includeInBuild","v":"True"}
+{"k":"Omitted.spriteatlasv2.loaded","v":"True"}
+{"k":"Omitted.spriteatlasv2.isVariant","v":"False"}
+{"k":"Omitted.spriteatlasv2.spriteCount","v":"1"}
+{"k":"Omitted.spriteatlasv2.packables","v":"Texture2D:Assets/Sprites/Single.png:Single"}
+{"k":"Omitted.spriteatlasv2.master","v":"<null>"}
+{"k":"Omitted.spriteatlasv2.includeInBuild","v":"True"}
+{"k":"Variant.spriteatlasv2.loaded","v":"True"}
+{"k":"Variant.spriteatlasv2.isVariant","v":"True"}
+{"k":"Variant.spriteatlasv2.spriteCount","v":"1"}
+{"k":"Variant.spriteatlasv2.packables","v":""}
+{"k":"Variant.spriteatlasv2.master","v":"SpriteAtlas:Assets/ImporterIncludeAtlases/Included.spriteatlasv2:Included"}
+{"k":"Variant.spriteatlasv2.includeInBuild","v":"False"}
+{"k":"null.packables","v":"throws ArgumentNullException"}
+{"k":"null.master","v":"throws ArgumentNullException"}
+{"k":"null.includeInBuild","v":"throws ArgumentNullException"}
+{"k":"Excluded.spriteatlasv2.packingSettings","v":"blockOffset=1|padding=4|enableRotation=True|enableTightPacking=True|enableAlphaDilation=False"}
+{"k":"Excluded.spriteatlasv2.textureSettings","v":"maxTextureSize=512|anisoLevel=3|filterMode=Bilinear|generateMipMaps=False|readable=True|sRGB=True"}
+{"k":"Included.spriteatlasv2.packingSettings","v":"blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True"}
+{"k":"Included.spriteatlasv2.textureSettings","v":"maxTextureSize=1024|anisoLevel=4|filterMode=Trilinear|generateMipMaps=True|readable=True|sRGB=False"}
+{"k":"Omitted.spriteatlasv2.packingSettings","v":"blockOffset=4|padding=12|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True"}
+{"k":"Omitted.spriteatlasv2.textureSettings","v":"maxTextureSize=512|anisoLevel=5|filterMode=Point|generateMipMaps=True|readable=False|sRGB=True"}
+{"k":"Variant.spriteatlasv2.packingSettings","v":"blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True"}
+{"k":"Variant.spriteatlasv2.textureSettings","v":"maxTextureSize=512|anisoLevel=2|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True"}
+{"k":"new.packingSettings","v":"blockOffset=1|padding=4|enableRotation=True|enableTightPacking=True|enableAlphaDilation=False"}
+{"k":"new.textureSettings","v":"maxTextureSize=2048|anisoLevel=1|filterMode=Bilinear|generateMipMaps=False|readable=False|sRGB=True"}
+{"k":"null.packingSettings","v":"throws ArgumentNullException"}
+{"k":"null.textureSettings","v":"throws ArgumentNullException"}
+{"k":"new.importer.include.get","v":"throws NullReferenceException"}
+{"k":"new.importer.include.set","v":"throws NullReferenceException"}
+{"k":"Included.spriteatlasv2.impInc.initial","v":"dirty=False|dirtyDelta=0|imp=True|atlas=True|assetChanged=False|metaChanged=False|metaBind=bindAsDefault: 1"}
+{"k":"Excluded.spriteatlasv2.impInc.initial","v":"dirty=False|dirtyDelta=0|imp=False|atlas=False|assetChanged=False|metaChanged=False|metaBind=bindAsDefault: 0"}
+{"k":"Variant.spriteatlasv2.impInc.initial","v":"dirty=False|dirtyDelta=0|imp=False|atlas=False|assetChanged=False|metaChanged=False|metaBind=bindAsDefault: 0"}
+{"k":"Omitted.spriteatlasv2.impInc.initial","v":"dirty=False|dirtyDelta=0|imp=True|atlas=True|assetChanged=False|metaChanged=False|metaBind=<absent>"}
+{"k":"Included.spriteatlasv2.impInc.sameTrueNoOp","v":"dirty=False|dirtyDelta=0|imp=True|atlas=True|assetChanged=False|metaChanged=False|metaBind=bindAsDefault: 1"}
+{"k":"Included.spriteatlasv2.impInc.toggleFalseAndRepeat","v":"after1=(dirty=True|dirtyDelta=1|imp=False|atlas=True)|after2=(dirty=True|dirtyDelta=1|imp=False)|assetChanged=False|metaChanged=False|metaBind=bindAsDefault: 1"}
+{"k":"Included.spriteatlasv2.impInc.unaffectedByInMemoryAtlasEdit","v":"dirty=True|dirtyDelta=1|imp=False|atlas=True"}
+{"k":"Included.spriteatlasv2.impInc.afterSaveAssets","v":"dirty=True|dirtyDelta=1|imp=False|atlas=True|assetChanged=False|metaChanged=False|metaBind=bindAsDefault: 1"}
+{"k":"Included.spriteatlasv2.impInc.afterWriteImportSettingsIfDirty","v":"wrote1=True|wrote2=False|dirty=False|dirtyDelta=0|imp=False|atlasBeforeReimport=True|assetChanged=False|metaChanged=True|metaBind=bindAsDefault: 0"}
+{"k":"Included.spriteatlasv2.impInc.toggleTrueAndSaveAndReimport","v":"sameImp=False|sameAtlas=False|impDirty=False|atlasDirty=False|imp=True|atlas=True|texture=(maxTextureSize=1024|anisoLevel=4|filterMode=Trilinear|generateMipMaps=True|readable=True|sRGB=False)|packing=(blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True)|android=(name=Android|overridden=True|ignorePlatformSupport=False|maxTextureSize=1024|resizeAlgorithm=Bilinear|format=47|textureCompression=CompressedLQ|compressionQuality=60|crunchedCompression=True|allowsAlphaSplitting=True|androidETC2FallbackOverride=Quality32BitDownscaled)|assetChanged=False|metaChanged=False|metaBind=bindAsDefault: 1"}
+{"k":"Included.spriteatlasv2.impInc.unsavedFalseThenForceUpdate","v":"beforeForce=False|sameImp=False|sameAtlas=False|impDirty=False|metaChangedByForce=True|imp=False|atlas=False|assetChanged=False|metaChanged=True|metaBind=bindAsDefault: 0"}
+{"k":"Excluded.spriteatlasv2.impInc.toggleTrueAndSaveAndReimport","v":"sameDelta=0|impDirty=False|imp=True|atlas=True|texture=(maxTextureSize=512|anisoLevel=3|filterMode=Bilinear|generateMipMaps=False|readable=True|sRGB=True)|packing=(blockOffset=1|padding=4|enableRotation=True|enableTightPacking=True|enableAlphaDilation=False)|android=(name=Android|overridden=False|ignorePlatformSupport=False|maxTextureSize=2048|resizeAlgorithm=Mitchell|format=-1|textureCompression=Compressed|compressionQuality=50|crunchedCompression=False|allowsAlphaSplitting=False|androidETC2FallbackOverride=UseBuildSettings)|assetChanged=False|metaChanged=True|metaBind=bindAsDefault: 1"}
+{"k":"Variant.spriteatlasv2.impInc.unaffectedByMasterAndToggle","v":"before=(dirty=False|dirtyDelta=0|imp=False|atlas=False)|masterDelta=0|masterImp=False|impDirty=False|imp=True|atlas=True|texture=(maxTextureSize=512|anisoLevel=2|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True)|packing=(blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True)|android=(name=Android|overridden=True|ignorePlatformSupport=False|maxTextureSize=64|resizeAlgorithm=Mitchell|format=45|textureCompression=Compressed|compressionQuality=40|crunchedCompression=False|allowsAlphaSplitting=False|androidETC2FallbackOverride=UseBuildSettings)|assetChanged=False|metaChanged=True|metaBind=bindAsDefault: 1"}
+{"k":"Omitted.spriteatlasv2.impInc.setFalseAndSaveAndReimport","v":"sameDelta=0|impDirty=False|imp=False|atlas=False|texture=(maxTextureSize=512|anisoLevel=5|filterMode=Point|generateMipMaps=True|readable=False|sRGB=True)|packing=(blockOffset=4|padding=12|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True)|android=(name=Android|overridden=False|ignorePlatformSupport=False|maxTextureSize=2048|resizeAlgorithm=Mitchell|format=-1|textureCompression=Compressed|compressionQuality=50|crunchedCompression=False|allowsAlphaSplitting=False|androidETC2FallbackOverride=UseBuildSettings)|assetChanged=False|metaChanged=True|metaBind=bindAsDefault: 0"}
+{"k":"complete","v":true}

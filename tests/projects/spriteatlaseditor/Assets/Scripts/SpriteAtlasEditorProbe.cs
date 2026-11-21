@@ -105,6 +105,12 @@ static class SpriteAtlasEditorProbe
         if (paths.Any(p => p.StartsWith("Assets/ImporterTextureAtlases/", StringComparison.Ordinal)))
             RecordImporterTextureSettings(paths, Check);
 
+        if (paths.Any(p => p.StartsWith("Assets/ImporterVariantScaleAtlases/", StringComparison.Ordinal)))
+            RecordImporterVariantScale(paths, Check);
+
+        if (paths.Any(p => p.StartsWith("Assets/ImporterIncludeAtlases/", StringComparison.Ordinal)))
+            RecordImporterIncludeInBuild(paths, Check);
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
@@ -2940,6 +2946,424 @@ static class SpriteAtlasEditorProbe
                 var impAfter = AssetImporter.GetAtPath(omitted.path) as SpriteAtlasImporter;
                 var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(omitted.path);
                 return $"imp=({DescribeTexture(impAfter.textureSettings)})|atlas=({DescribeTexture(atlasAfter.GetTextureSettings())})|{Unrelated(atlasAfter)}|{MetaState(omitted.path, omittedOrigA, omittedOrigM)}";
+            });
+        }
+    }
+
+    static void RecordImporterVariantScale(string[] paths, Action<string, Func<string>> check)
+    {
+        var byStem = new System.Collections.Generic.Dictionary<string, (string path, string key, SpriteAtlasImporter importer, SpriteAtlas atlas)>(StringComparer.Ordinal);
+        foreach (var path in paths)
+        {
+            var importer = AssetImporter.GetAtPath(path) as SpriteAtlasImporter;
+            var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+            if (importer != null && atlas != null)
+                byStem[Path.GetFileNameWithoutExtension(path)] = (path, Path.GetFileName(path), importer, atlas);
+        }
+
+        string ScaleLine(string file)
+        {
+            foreach (var line in File.ReadAllLines(file))
+                if (line.TrimStart().StartsWith("variantMultiplier:", StringComparison.Ordinal))
+                    return line.Trim();
+            return "<absent>";
+        }
+
+        string Fmt(float v) => v.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+
+        string MetaState(string path, byte[] origAsset, byte[] origMeta)
+        {
+            bool assetChanged = !File.ReadAllBytes(path).SequenceEqual(origAsset);
+            bool metaChanged = !File.ReadAllBytes(path + ".meta").SequenceEqual(origMeta);
+            return $"assetChanged={assetChanged}|metaChanged={metaChanged}|metaScale={ScaleLine(path + ".meta")}";
+        }
+
+        string Dirty(UnityEngine.Object obj, int baseDirty) =>
+            $"dirty={EditorUtility.IsDirty(obj)}|dirtyDelta={EditorUtility.GetDirtyCount(obj) - baseDirty}";
+
+        string Unrelated(SpriteAtlas a) =>
+            $"isVariant={a.isVariant}|texture=({DescribeTexture(a.GetTextureSettings())})|packing=({DescribePacking(a.GetPackingSettings())})|android=({DescribePlatform(a.GetPlatformSettings("Android"))})|include={a.IsIncludeInBuild()}";
+
+        // 1. Uncreated importer getter and setter checks.
+        check("new.importer.variantScale.get", () =>
+        {
+            var uncreated = new SpriteAtlasImporter();
+            return Fmt(uncreated.variantScale);
+        });
+        check("new.importer.variantScale.set", () =>
+        {
+            var uncreated = new SpriteAtlasImporter();
+            uncreated.variantScale = 0.5f;
+            return "ok";
+        });
+
+        byStem.TryGetValue("Master", out var master);
+        byStem.TryGetValue("Variant", out var variant);
+        byStem.TryGetValue("Omitted", out var omitted);
+
+        // 2. Initial readbacks across Master, Variant and Omitted before any mutation.
+        int masterImpBase = master.importer != null ? EditorUtility.GetDirtyCount(master.importer) : 0;
+        var masterOrigA = master.importer != null ? File.ReadAllBytes(master.path) : null;
+        var masterOrigM = master.importer != null ? File.ReadAllBytes(master.path + ".meta") : null;
+        if (master.importer != null)
+        {
+            check(master.key + ".impScale.initial", () =>
+                $"{Dirty(master.importer, masterImpBase)}|scale={Fmt(master.importer.variantScale)}|isVariant={master.atlas.isVariant}|{MetaState(master.path, masterOrigA, masterOrigM)}");
+        }
+
+        int variantImpBase = variant.importer != null ? EditorUtility.GetDirtyCount(variant.importer) : 0;
+        var variantOrigA = variant.importer != null ? File.ReadAllBytes(variant.path) : null;
+        var variantOrigM = variant.importer != null ? File.ReadAllBytes(variant.path + ".meta") : null;
+        if (variant.importer != null)
+        {
+            check(variant.key + ".impScale.initial", () =>
+                $"{Dirty(variant.importer, variantImpBase)}|scale={Fmt(variant.importer.variantScale)}|isVariant={variant.atlas.isVariant}|{MetaState(variant.path, variantOrigA, variantOrigM)}");
+        }
+
+        int omittedImpBase = omitted.importer != null ? EditorUtility.GetDirtyCount(omitted.importer) : 0;
+        var omittedOrigA = omitted.importer != null ? File.ReadAllBytes(omitted.path) : null;
+        var omittedOrigM = omitted.importer != null ? File.ReadAllBytes(omitted.path + ".meta") : null;
+        if (omitted.importer != null)
+        {
+            check(omitted.key + ".impScale.initial", () =>
+                $"{Dirty(omitted.importer, omittedImpBase)}|scale={Fmt(omitted.importer.variantScale)}|isVariant={omitted.atlas.isVariant}|{MetaState(omitted.path, omittedOrigA, omittedOrigM)}");
+        }
+
+        // 3. Variant: same-value no-op, change + repeat no-op, in-memory atlas edit independence,
+        // SaveAssets, WriteImportSettingsIfDirty, edge/out-of-range/NaN/Infinity checks via
+        // WriteImportSettingsIfDirty, SaveAndReimport, and unsaved edit + ForceUpdate.
+        if (variant.importer != null)
+        {
+            check(variant.key + ".impScale.sameRepeatNoOp", () =>
+            {
+                variant.importer.variantScale = 0.5f;
+                return $"{Dirty(variant.importer, variantImpBase)}|scale={Fmt(variant.importer.variantScale)}|{MetaState(variant.path, variantOrigA, variantOrigM)}";
+            });
+
+            check(variant.key + ".impScale.changeAndRepeat", () =>
+            {
+                variant.importer.variantScale = 0.75f;
+                string after1 = $"{Dirty(variant.importer, variantImpBase)}|scale={Fmt(variant.importer.variantScale)}";
+                variant.importer.variantScale = 0.75f;
+                string after2 = $"{Dirty(variant.importer, variantImpBase)}|scale={Fmt(variant.importer.variantScale)}";
+                int masterDirtyDelta = master.importer != null ? EditorUtility.GetDirtyCount(master.importer) - masterImpBase : 0;
+                return $"after1=({after1})|after2=({after2})|masterDirtyDelta={masterDirtyDelta}|{MetaState(variant.path, variantOrigA, variantOrigM)}";
+            });
+
+            check(variant.key + ".impScale.unaffectedByInMemoryAtlasEdit", () =>
+            {
+                variant.atlas.SetVariantScale(0.25f);
+                return $"{Dirty(variant.importer, variantImpBase)}|scale={Fmt(variant.importer.variantScale)}|atlasDirty={EditorUtility.IsDirty(variant.atlas)}";
+            });
+
+            check(variant.key + ".impScale.afterSaveAssets", () =>
+            {
+                AssetDatabase.SaveAssets();
+                return $"{Dirty(variant.importer, variantImpBase)}|scale={Fmt(variant.importer.variantScale)}|{MetaState(variant.path, variantOrigA, variantOrigM)}";
+            });
+
+            check(variant.key + ".impScale.afterWriteImportSettingsIfDirty", () =>
+            {
+                bool wrote1 = AssetDatabase.WriteImportSettingsIfDirty(variant.path);
+                bool wrote2 = AssetDatabase.WriteImportSettingsIfDirty(variant.path);
+                return $"wrote1={wrote1}|wrote2={wrote2}|{Dirty(variant.importer, variantImpBase)}|scale={Fmt(variant.importer.variantScale)}|{MetaState(variant.path, variantOrigA, variantOrigM)}";
+            });
+
+            check(variant.key + ".impScale.edgeValuesAndNanWriteIfDirty", () =>
+            {
+                var sb = new StringBuilder();
+                foreach (var (label, val) in new (string, float)[]
+                {
+                    ("low", 0.05f),
+                    ("zero", 0f),
+                    ("negZero", -0f),
+                    ("neg", -2f),
+                    ("high", 1.5f),
+                    ("negInf", float.NegativeInfinity),
+                    ("posInf", float.PositiveInfinity),
+                    ("nan1", float.NaN),
+                    ("nan2", float.NaN),
+                })
+                {
+                    int b = EditorUtility.GetDirtyCount(variant.importer);
+                    variant.importer.variantScale = val;
+                    bool dirty = EditorUtility.IsDirty(variant.importer);
+                    int delta = EditorUtility.GetDirtyCount(variant.importer) - b;
+                    float readback = variant.importer.variantScale;
+                    bool wrote = AssetDatabase.WriteImportSettingsIfDirty(variant.path);
+                    string line = ScaleLine(variant.path + ".meta");
+                    if (sb.Length > 0) sb.Append("||");
+                    sb.Append($"{label}:val={Fmt(readback)}|dirty={dirty}|delta={delta}|wrote={wrote}|meta={line}");
+                }
+                return sb.ToString();
+            });
+
+            check(variant.key + ".impScale.saveAndReimport", () =>
+            {
+                variant.importer.variantScale = 0.25f;
+                variant.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(variant.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(variant.path);
+                bool sameImp = ReferenceEquals(variant.importer, impAfter);
+                bool sameAtlas = ReferenceEquals(variant.atlas, atlasAfter);
+                variant = (variant.path, variant.key, impAfter, atlasAfter);
+                return $"sameImp={sameImp}|sameAtlas={sameAtlas}|impDirty={EditorUtility.IsDirty(impAfter)}|atlasDirty={EditorUtility.IsDirty(atlasAfter)}|scale={Fmt(impAfter.variantScale)}|{Unrelated(atlasAfter)}|{MetaState(variant.path, variantOrigA, variantOrigM)}";
+            });
+
+            check(variant.key + ".impScale.unsavedEditThenForceUpdate", () =>
+            {
+                var origMetaBeforeForce = File.ReadAllBytes(variant.path + ".meta");
+                variant.importer.variantScale = 0.625f;
+                string beforeForce = Fmt(variant.importer.variantScale);
+                AssetDatabase.ImportAsset(variant.path, ImportAssetOptions.ForceUpdate);
+                var impAfter = AssetImporter.GetAtPath(variant.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(variant.path);
+                bool metaChangedByForce = !File.ReadAllBytes(variant.path + ".meta").SequenceEqual(origMetaBeforeForce);
+                bool sameImp = ReferenceEquals(variant.importer, impAfter);
+                bool sameAtlas = ReferenceEquals(variant.atlas, atlasAfter);
+                variant = (variant.path, variant.key, impAfter, atlasAfter);
+                return $"beforeForce={beforeForce}|sameImp={sameImp}|sameAtlas={sameAtlas}|impDirty={EditorUtility.IsDirty(impAfter)}|metaChangedByForce={metaChangedByForce}|scale={Fmt(impAfter.variantScale)}|{MetaState(variant.path, variantOrigA, variantOrigM)}";
+            });
+        }
+
+        // 4. Non-variant Master: setting variantScale updates .meta without turning it into a variant or dirtying Variant.
+        if (master.importer != null)
+        {
+            int varDirtyBase = variant.importer != null ? EditorUtility.GetDirtyCount(variant.importer) : 0;
+            check(master.key + ".impScale.nonVariantSetAndSaveAndReimport", () =>
+            {
+                master.importer.variantScale = 1f;
+                int sameDelta = EditorUtility.GetDirtyCount(master.importer) - masterImpBase;
+                master.importer.variantScale = 0.5f;
+                master.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(master.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(master.path);
+                int varDelta = variant.importer != null ? EditorUtility.GetDirtyCount(AssetImporter.GetAtPath(variant.path)) - varDirtyBase : 0;
+                return $"sameDelta={sameDelta}|varDelta={varDelta}|impDirty={EditorUtility.IsDirty(impAfter)}|scale={Fmt(impAfter.variantScale)}|{Unrelated(atlasAfter)}|{MetaState(master.path, masterOrigA, masterOrigM)}";
+            });
+        }
+
+        // 5. Omitted variantMultiplier & platformSettings: defaults to 1 and inserts cleanly on write.
+        if (omitted.importer != null)
+        {
+            check(omitted.key + ".impScale.setAndSaveAndReimport", () =>
+            {
+                omitted.importer.variantScale = 1f;
+                int sameDelta = EditorUtility.GetDirtyCount(omitted.importer) - omittedImpBase;
+                omitted.importer.variantScale = 0.5f;
+                omitted.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(omitted.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(omitted.path);
+                return $"sameDelta={sameDelta}|impDirty={EditorUtility.IsDirty(impAfter)}|scale={Fmt(impAfter.variantScale)}|{Unrelated(atlasAfter)}|{MetaState(omitted.path, omittedOrigA, omittedOrigM)}";
+            });
+        }
+    }
+
+    static void RecordImporterIncludeInBuild(string[] paths, Action<string, Func<string>> check)
+    {
+        var byStem = new System.Collections.Generic.Dictionary<string, (string path, string key, SpriteAtlasImporter importer, SpriteAtlas atlas)>(StringComparer.Ordinal);
+        foreach (var path in paths)
+        {
+            var importer = AssetImporter.GetAtPath(path) as SpriteAtlasImporter;
+            var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+            if (importer != null && atlas != null)
+                byStem[Path.GetFileNameWithoutExtension(path)] = (path, Path.GetFileName(path), importer, atlas);
+        }
+
+        string BindLine(string file)
+        {
+            foreach (var line in File.ReadAllLines(file))
+                if (line.TrimStart().StartsWith("bindAsDefault:", StringComparison.Ordinal))
+                    return line.Trim();
+            return "<absent>";
+        }
+
+        string MetaState(string path, byte[] origAsset, byte[] origMeta)
+        {
+            bool assetChanged = !File.ReadAllBytes(path).SequenceEqual(origAsset);
+            bool metaChanged = !File.ReadAllBytes(path + ".meta").SequenceEqual(origMeta);
+            return $"assetChanged={assetChanged}|metaChanged={metaChanged}|metaBind={BindLine(path + ".meta")}";
+        }
+
+        string Dirty(UnityEngine.Object obj, int baseDirty) =>
+            $"dirty={EditorUtility.IsDirty(obj)}|dirtyDelta={EditorUtility.GetDirtyCount(obj) - baseDirty}";
+
+        string Unrelated(SpriteAtlas a) =>
+            $"texture=({DescribeTexture(a.GetTextureSettings())})|packing=({DescribePacking(a.GetPackingSettings())})|android=({DescribePlatform(a.GetPlatformSettings("Android"))})";
+
+        // 1. Uncreated importer getter and setter checks.
+        check("new.importer.include.get", () =>
+        {
+            var uncreated = new SpriteAtlasImporter();
+            return uncreated.includeInBuild.ToString();
+        });
+        check("new.importer.include.set", () =>
+        {
+            var uncreated = new SpriteAtlasImporter();
+            uncreated.includeInBuild = false;
+            return "ok";
+        });
+
+        byStem.TryGetValue("Included", out var inc);
+        byStem.TryGetValue("Excluded", out var exc);
+        byStem.TryGetValue("Variant", out var variant);
+        byStem.TryGetValue("Omitted", out var omitted);
+
+        // 2. Initial readbacks across Included, Excluded, Variant and Omitted before any mutation.
+        int incBase = inc.importer != null ? EditorUtility.GetDirtyCount(inc.importer) : 0;
+        var incOrigA = inc.importer != null ? File.ReadAllBytes(inc.path) : null;
+        var incOrigM = inc.importer != null ? File.ReadAllBytes(inc.path + ".meta") : null;
+        if (inc.importer != null)
+        {
+            check(inc.key + ".impInc.initial", () =>
+                $"{Dirty(inc.importer, incBase)}|imp={inc.importer.includeInBuild}|atlas={inc.atlas.IsIncludeInBuild()}|{MetaState(inc.path, incOrigA, incOrigM)}");
+        }
+
+        int excBase = exc.importer != null ? EditorUtility.GetDirtyCount(exc.importer) : 0;
+        var excOrigA = exc.importer != null ? File.ReadAllBytes(exc.path) : null;
+        var excOrigM = exc.importer != null ? File.ReadAllBytes(exc.path + ".meta") : null;
+        if (exc.importer != null)
+        {
+            check(exc.key + ".impInc.initial", () =>
+                $"{Dirty(exc.importer, excBase)}|imp={exc.importer.includeInBuild}|atlas={exc.atlas.IsIncludeInBuild()}|{MetaState(exc.path, excOrigA, excOrigM)}");
+        }
+
+        int varBase = variant.importer != null ? EditorUtility.GetDirtyCount(variant.importer) : 0;
+        var varOrigA = variant.importer != null ? File.ReadAllBytes(variant.path) : null;
+        var varOrigM = variant.importer != null ? File.ReadAllBytes(variant.path + ".meta") : null;
+        if (variant.importer != null)
+        {
+            check(variant.key + ".impInc.initial", () =>
+                $"{Dirty(variant.importer, varBase)}|imp={variant.importer.includeInBuild}|atlas={variant.atlas.IsIncludeInBuild()}|{MetaState(variant.path, varOrigA, varOrigM)}");
+        }
+
+        int omiBase = omitted.importer != null ? EditorUtility.GetDirtyCount(omitted.importer) : 0;
+        var omiOrigA = omitted.importer != null ? File.ReadAllBytes(omitted.path) : null;
+        var omiOrigM = omitted.importer != null ? File.ReadAllBytes(omitted.path + ".meta") : null;
+        if (omitted.importer != null)
+        {
+            check(omitted.key + ".impInc.initial", () =>
+                $"{Dirty(omitted.importer, omiBase)}|imp={omitted.importer.includeInBuild}|atlas={omitted.atlas.IsIncludeInBuild()}|{MetaState(omitted.path, omiOrigA, omiOrigM)}");
+        }
+
+        // 3. Included: same-value no-op, toggle + repeat no-op, atlas independence, SaveAssets,
+        // WriteImportSettingsIfDirty, SaveAndReimport, and unsaved edit + ForceUpdate.
+        if (inc.importer != null)
+        {
+            check(inc.key + ".impInc.sameTrueNoOp", () =>
+            {
+                inc.importer.includeInBuild = true;
+                return $"{Dirty(inc.importer, incBase)}|imp={inc.importer.includeInBuild}|atlas={inc.atlas.IsIncludeInBuild()}|{MetaState(inc.path, incOrigA, incOrigM)}";
+            });
+
+            check(inc.key + ".impInc.toggleFalseAndRepeat", () =>
+            {
+                inc.importer.includeInBuild = false;
+                string after1 = $"{Dirty(inc.importer, incBase)}|imp={inc.importer.includeInBuild}|atlas={inc.atlas.IsIncludeInBuild()}";
+                inc.importer.includeInBuild = false;
+                string after2 = $"{Dirty(inc.importer, incBase)}|imp={inc.importer.includeInBuild}";
+                return $"after1=({after1})|after2=({after2})|{MetaState(inc.path, incOrigA, incOrigM)}";
+            });
+
+            check(inc.key + ".impInc.unaffectedByInMemoryAtlasEdit", () =>
+            {
+                inc.atlas.SetIncludeInBuild(false);
+                inc.atlas.SetIncludeInBuild(true);
+                return $"{Dirty(inc.importer, incBase)}|imp={inc.importer.includeInBuild}|atlas={inc.atlas.IsIncludeInBuild()}";
+            });
+
+            check(inc.key + ".impInc.afterSaveAssets", () =>
+            {
+                AssetDatabase.SaveAssets();
+                return $"{Dirty(inc.importer, incBase)}|imp={inc.importer.includeInBuild}|atlas={inc.atlas.IsIncludeInBuild()}|{MetaState(inc.path, incOrigA, incOrigM)}";
+            });
+
+            check(inc.key + ".impInc.afterWriteImportSettingsIfDirty", () =>
+            {
+                bool wrote1 = AssetDatabase.WriteImportSettingsIfDirty(inc.path);
+                bool wrote2 = AssetDatabase.WriteImportSettingsIfDirty(inc.path);
+                return $"wrote1={wrote1}|wrote2={wrote2}|{Dirty(inc.importer, incBase)}|imp={inc.importer.includeInBuild}|atlasBeforeReimport={inc.atlas.IsIncludeInBuild()}|{MetaState(inc.path, incOrigA, incOrigM)}";
+            });
+
+            check(inc.key + ".impInc.toggleTrueAndSaveAndReimport", () =>
+            {
+                inc.importer.includeInBuild = true;
+                inc.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(inc.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(inc.path);
+                bool sameImp = ReferenceEquals(inc.importer, impAfter);
+                bool sameAtlas = ReferenceEquals(inc.atlas, atlasAfter);
+                inc = (inc.path, inc.key, impAfter, atlasAfter);
+                return $"sameImp={sameImp}|sameAtlas={sameAtlas}|impDirty={EditorUtility.IsDirty(impAfter)}|atlasDirty={EditorUtility.IsDirty(atlasAfter)}|imp={impAfter.includeInBuild}|atlas={atlasAfter.IsIncludeInBuild()}|{Unrelated(atlasAfter)}|{MetaState(inc.path, incOrigA, incOrigM)}";
+            });
+
+            check(inc.key + ".impInc.unsavedFalseThenForceUpdate", () =>
+            {
+                var origMetaBeforeForce = File.ReadAllBytes(inc.path + ".meta");
+                inc.importer.includeInBuild = false;
+                bool beforeForce = inc.importer.includeInBuild;
+                AssetDatabase.ImportAsset(inc.path, ImportAssetOptions.ForceUpdate);
+                var impAfter = AssetImporter.GetAtPath(inc.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(inc.path);
+                bool metaChangedByForce = !File.ReadAllBytes(inc.path + ".meta").SequenceEqual(origMetaBeforeForce);
+                bool sameImp = ReferenceEquals(inc.importer, impAfter);
+                bool sameAtlas = ReferenceEquals(inc.atlas, atlasAfter);
+                inc = (inc.path, inc.key, impAfter, atlasAfter);
+                return $"beforeForce={beforeForce}|sameImp={sameImp}|sameAtlas={sameAtlas}|impDirty={EditorUtility.IsDirty(impAfter)}|metaChangedByForce={metaChangedByForce}|imp={impAfter.includeInBuild}|atlas={atlasAfter.IsIncludeInBuild()}|{MetaState(inc.path, incOrigA, incOrigM)}";
+            });
+        }
+
+        // 4. Excluded: same-false no-op, then toggle to true + SaveAndReimport.
+        if (exc.importer != null)
+        {
+            check(exc.key + ".impInc.toggleTrueAndSaveAndReimport", () =>
+            {
+                exc.importer.includeInBuild = false;
+                int sameDelta = EditorUtility.GetDirtyCount(exc.importer) - excBase;
+                exc.importer.includeInBuild = true;
+                exc.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(exc.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(exc.path);
+                return $"sameDelta={sameDelta}|impDirty={EditorUtility.IsDirty(impAfter)}|imp={impAfter.includeInBuild}|atlas={atlasAfter.IsIncludeInBuild()}|{Unrelated(atlasAfter)}|{MetaState(exc.path, excOrigA, excOrigM)}";
+            });
+        }
+
+        // 5. Variant: independent of master (Included) edits; toggling updates own .meta & atlas without dirtying master.
+        if (variant.importer != null)
+        {
+            int masterDirtyBase = inc.importer != null ? EditorUtility.GetDirtyCount(inc.importer) : 0;
+            check(variant.key + ".impInc.unaffectedByMasterAndToggle", () =>
+            {
+                string before = $"{Dirty(variant.importer, varBase)}|imp={variant.importer.includeInBuild}|atlas={AssetDatabase.LoadAssetAtPath<SpriteAtlas>(variant.path).IsIncludeInBuild()}";
+                variant.importer.includeInBuild = true;
+                variant.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(variant.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(variant.path);
+                var masterImpNow = AssetImporter.GetAtPath(inc.path) as SpriteAtlasImporter;
+                int masterDelta = EditorUtility.GetDirtyCount(masterImpNow) - masterDirtyBase;
+                return $"before=({before})|masterDelta={masterDelta}|masterImp={masterImpNow.includeInBuild}|impDirty={EditorUtility.IsDirty(impAfter)}|imp={impAfter.includeInBuild}|atlas={atlasAfter.IsIncludeInBuild()}|{Unrelated(atlasAfter)}|{MetaState(variant.path, varOrigA, varOrigM)}";
+            });
+        }
+
+        // 6. Omitted bindAsDefault & platformSettings: defaults to true, same-true no-op, toggle false inserts bindAsDefault: 0.
+        if (omitted.importer != null)
+        {
+            check(omitted.key + ".impInc.setFalseAndSaveAndReimport", () =>
+            {
+                omitted.importer.includeInBuild = true;
+                int sameDelta = EditorUtility.GetDirtyCount(omitted.importer) - omiBase;
+                omitted.importer.includeInBuild = false;
+                omitted.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(omitted.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(omitted.path);
+                return $"sameDelta={sameDelta}|impDirty={EditorUtility.IsDirty(impAfter)}|imp={impAfter.includeInBuild}|atlas={atlasAfter.IsIncludeInBuild()}|{Unrelated(atlasAfter)}|{MetaState(omitted.path, omiOrigA, omiOrigM)}";
             });
         }
     }

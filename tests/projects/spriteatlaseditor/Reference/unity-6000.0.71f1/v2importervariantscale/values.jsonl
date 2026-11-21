@@ -1,0 +1,48 @@
+{"k":"atlases","v":"Assets/ImporterVariantScaleAtlases/Master.spriteatlasv2|Assets/ImporterVariantScaleAtlases/Omitted.spriteatlasv2|Assets/ImporterVariantScaleAtlases/Variant.spriteatlasv2"}
+{"k":"Master.spriteatlasv2.loaded","v":"True"}
+{"k":"Master.spriteatlasv2.isVariant","v":"False"}
+{"k":"Master.spriteatlasv2.spriteCount","v":"1"}
+{"k":"Master.spriteatlasv2.packables","v":"Texture2D:Assets/Sprites/Single.png:Single"}
+{"k":"Master.spriteatlasv2.master","v":"<null>"}
+{"k":"Master.spriteatlasv2.includeInBuild","v":"True"}
+{"k":"Omitted.spriteatlasv2.loaded","v":"True"}
+{"k":"Omitted.spriteatlasv2.isVariant","v":"True"}
+{"k":"Omitted.spriteatlasv2.spriteCount","v":"1"}
+{"k":"Omitted.spriteatlasv2.packables","v":""}
+{"k":"Omitted.spriteatlasv2.master","v":"SpriteAtlas:Assets/ImporterVariantScaleAtlases/Master.spriteatlasv2:Master"}
+{"k":"Omitted.spriteatlasv2.includeInBuild","v":"False"}
+{"k":"Variant.spriteatlasv2.loaded","v":"True"}
+{"k":"Variant.spriteatlasv2.isVariant","v":"True"}
+{"k":"Variant.spriteatlasv2.spriteCount","v":"1"}
+{"k":"Variant.spriteatlasv2.packables","v":""}
+{"k":"Variant.spriteatlasv2.master","v":"SpriteAtlas:Assets/ImporterVariantScaleAtlases/Master.spriteatlasv2:Master"}
+{"k":"Variant.spriteatlasv2.includeInBuild","v":"False"}
+{"k":"null.packables","v":"throws ArgumentNullException"}
+{"k":"null.master","v":"throws ArgumentNullException"}
+{"k":"null.includeInBuild","v":"throws ArgumentNullException"}
+{"k":"Master.spriteatlasv2.packingSettings","v":"blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True"}
+{"k":"Master.spriteatlasv2.textureSettings","v":"maxTextureSize=1024|anisoLevel=4|filterMode=Trilinear|generateMipMaps=True|readable=True|sRGB=False"}
+{"k":"Omitted.spriteatlasv2.packingSettings","v":"blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True"}
+{"k":"Omitted.spriteatlasv2.textureSettings","v":"maxTextureSize=512|anisoLevel=3|filterMode=Bilinear|generateMipMaps=False|readable=True|sRGB=True"}
+{"k":"Variant.spriteatlasv2.packingSettings","v":"blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True"}
+{"k":"Variant.spriteatlasv2.textureSettings","v":"maxTextureSize=512|anisoLevel=2|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True"}
+{"k":"new.packingSettings","v":"blockOffset=1|padding=4|enableRotation=True|enableTightPacking=True|enableAlphaDilation=False"}
+{"k":"new.textureSettings","v":"maxTextureSize=2048|anisoLevel=1|filterMode=Bilinear|generateMipMaps=False|readable=False|sRGB=True"}
+{"k":"null.packingSettings","v":"throws ArgumentNullException"}
+{"k":"null.textureSettings","v":"throws ArgumentNullException"}
+{"k":"new.importer.variantScale.get","v":"throws NullReferenceException"}
+{"k":"new.importer.variantScale.set","v":"throws NullReferenceException"}
+{"k":"Master.spriteatlasv2.impScale.initial","v":"dirty=False|dirtyDelta=0|scale=1|isVariant=False|assetChanged=False|metaChanged=False|metaScale=variantMultiplier: 1"}
+{"k":"Variant.spriteatlasv2.impScale.initial","v":"dirty=False|dirtyDelta=0|scale=0.5|isVariant=True|assetChanged=False|metaChanged=False|metaScale=variantMultiplier: 0.5"}
+{"k":"Omitted.spriteatlasv2.impScale.initial","v":"dirty=False|dirtyDelta=0|scale=1|isVariant=True|assetChanged=False|metaChanged=False|metaScale=<absent>"}
+{"k":"Variant.spriteatlasv2.impScale.sameRepeatNoOp","v":"dirty=False|dirtyDelta=0|scale=0.5|assetChanged=False|metaChanged=False|metaScale=variantMultiplier: 0.5"}
+{"k":"Variant.spriteatlasv2.impScale.changeAndRepeat","v":"after1=(dirty=True|dirtyDelta=1|scale=0.75)|after2=(dirty=True|dirtyDelta=1|scale=0.75)|masterDirtyDelta=0|assetChanged=False|metaChanged=False|metaScale=variantMultiplier: 0.5"}
+{"k":"Variant.spriteatlasv2.impScale.unaffectedByInMemoryAtlasEdit","v":"dirty=True|dirtyDelta=1|scale=0.75|atlasDirty=True"}
+{"k":"Variant.spriteatlasv2.impScale.afterSaveAssets","v":"dirty=True|dirtyDelta=1|scale=0.75|assetChanged=False|metaChanged=False|metaScale=variantMultiplier: 0.5"}
+{"k":"Variant.spriteatlasv2.impScale.afterWriteImportSettingsIfDirty","v":"wrote1=True|wrote2=False|dirty=False|dirtyDelta=0|scale=0.75|assetChanged=False|metaChanged=True|metaScale=variantMultiplier: 0.75"}
+{"k":"Variant.spriteatlasv2.impScale.edgeValuesAndNanWriteIfDirty","v":"low:val=0.05|dirty=True|delta=1|wrote=True|meta=variantMultiplier: 0.05||zero:val=0|dirty=True|delta=1|wrote=True|meta=variantMultiplier: 0||negZero:val=0|dirty=False|delta=0|wrote=False|meta=variantMultiplier: 0||neg:val=-2|dirty=True|delta=1|wrote=True|meta=variantMultiplier: -2||high:val=1.5|dirty=True|delta=1|wrote=True|meta=variantMultiplier: 1.5||negInf:val=-Infinity|dirty=True|delta=1|wrote=True|meta=variantMultiplier: -Infinity||posInf:val=Infinity|dirty=True|delta=1|wrote=True|meta=variantMultiplier: Infinity||nan1:val=NaN|dirty=True|delta=1|wrote=True|meta=variantMultiplier: NaN||nan2:val=NaN|dirty=True|delta=1|wrote=False|meta=variantMultiplier: NaN"}
+{"k":"Variant.spriteatlasv2.impScale.saveAndReimport","v":"sameImp=False|sameAtlas=False|impDirty=False|atlasDirty=False|scale=0.25|isVariant=True|texture=(maxTextureSize=512|anisoLevel=2|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True)|packing=(blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True)|android=(name=Android|overridden=True|ignorePlatformSupport=False|maxTextureSize=64|resizeAlgorithm=Mitchell|format=45|textureCompression=Compressed|compressionQuality=40|crunchedCompression=False|allowsAlphaSplitting=False|androidETC2FallbackOverride=UseBuildSettings)|include=False|assetChanged=False|metaChanged=True|metaScale=variantMultiplier: 0.25"}
+{"k":"Variant.spriteatlasv2.impScale.unsavedEditThenForceUpdate","v":"beforeForce=0.625|sameImp=False|sameAtlas=False|impDirty=False|metaChangedByForce=True|scale=0.625|assetChanged=False|metaChanged=True|metaScale=variantMultiplier: 0.625"}
+{"k":"Master.spriteatlasv2.impScale.nonVariantSetAndSaveAndReimport","v":"sameDelta=0|varDelta=0|impDirty=False|scale=0.5|isVariant=False|texture=(maxTextureSize=1024|anisoLevel=4|filterMode=Trilinear|generateMipMaps=True|readable=True|sRGB=False)|packing=(blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True)|android=(name=Android|overridden=True|ignorePlatformSupport=False|maxTextureSize=1024|resizeAlgorithm=Bilinear|format=47|textureCompression=CompressedLQ|compressionQuality=60|crunchedCompression=True|allowsAlphaSplitting=True|androidETC2FallbackOverride=Quality32BitDownscaled)|include=True|assetChanged=False|metaChanged=True|metaScale=variantMultiplier: 0.5"}
+{"k":"Omitted.spriteatlasv2.impScale.setAndSaveAndReimport","v":"sameDelta=0|impDirty=False|scale=0.5|isVariant=True|texture=(maxTextureSize=512|anisoLevel=3|filterMode=Bilinear|generateMipMaps=False|readable=True|sRGB=True)|packing=(blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True)|android=(name=Android|overridden=False|ignorePlatformSupport=False|maxTextureSize=2048|resizeAlgorithm=Mitchell|format=-1|textureCompression=Compressed|compressionQuality=50|crunchedCompression=False|allowsAlphaSplitting=False|androidETC2FallbackOverride=UseBuildSettings)|include=False|assetChanged=False|metaChanged=True|metaScale=variantMultiplier: 0.5"}
+{"k":"complete","v":true}

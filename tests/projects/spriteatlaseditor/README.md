@@ -12,7 +12,7 @@ toggles, `EditorUtility.IsDirty`/`GetDirtyCount`, `AssetDatabase.SaveAssets`/`Sa
 variant flag and sprite count; also the settings of `new SpriteAtlas()` and the answers for a null
 atlas. Recorded in Play mode, in batch mode, with the Unity 6000.0.71f1 Editor.
 
-Twenty-eight profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
+Thirty profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
 
 - `v1`: Sprite Packer mode "Sprite Atlas V1 - Always Enabled" with three `.spriteatlas` assets in
   `Assets/Atlases/`: `Main` (a folder, a texture and a sprite of a sheet as packables, included in
@@ -126,6 +126,20 @@ Twenty-eight profiles, each with its own reference under `Reference/unity-6000.0
   `serializedVersion: 1` `colorSpace` to `sRGB` upgrade, omitted `textureSettings`/
   `platformSettings`, `SaveAssets`, `WriteImportSettingsIfDirty`, `SaveAndReimport`, and
   `ImportAsset(ForceUpdate)`.
+- `v2importervariantscale`: mode "Sprite Atlas V2 - Enabled" with three `.spriteatlasv2` assets in
+  `Assets/ImporterVariantScaleAtlases/` (`Master`, `Variant`, `Omitted`) and their
+  `SpriteAtlasImporter` `.meta` files, exercising `SpriteAtlasImporter.variantScale` (getter and
+  setter) across uncreated `new SpriteAtlasImporter()`, non-variant/variant/omitted defaults,
+  same-value and `-0f` no-op dirtying, unclamped out-of-range, `±Infinity` and `NaN` (`NaN != NaN`
+  dirtying and unchanged-file `WriteImportSettingsIfDirty` returning `false`), in-memory
+  `SpriteAtlasExtensions.SetVariantScale` independence, `SaveAssets`, `WriteImportSettingsIfDirty`,
+  `SaveAndReimport`, and `ImportAsset(ForceUpdate)`.
+- `v2importerinclude`: mode "Sprite Atlas V2 - Enabled" with four `.spriteatlasv2` assets in
+  `Assets/ImporterIncludeAtlases/` (`Included`, `Excluded`, `Variant`, `Omitted`) and their
+  `SpriteAtlasImporter` `.meta` files, exercising `SpriteAtlasImporter.includeInBuild` (getter and
+  setter) across uncreated `new SpriteAtlasImporter()`, included/excluded/variant/omitted defaults,
+  same-value no-op dirtying, toggle dirtying, loaded `SpriteAtlas` independence until reimport,
+  `SaveAssets`, `WriteImportSettingsIfDirty`, `SaveAndReimport`, and `ImportAsset(ForceUpdate)`.
 
 The sprites come from tests/projects/spriteatlas (files the Editor authored). The atlases are
 written from that probe's Editor-authored atlas files with other packables and settings. The
@@ -279,7 +293,20 @@ dirty even on same-value repeats without mutating the loaded `SpriteAtlas` until
 follows the same `SaveAssets`/`WriteImportSettingsIfDirty`/`SaveAndReimport`/
 `ImportAsset(ForceUpdate)` persistence and reload timing (writing `serializedVersion: 2`
 `textureSettings` and any omitted `platformSettings: []`/`packingSettings` defaults while leaving
-`.spriteatlasv2` and unmodified `.meta` sections untouched).
+`.spriteatlasv2` and unmodified `.meta` sections untouched); `SpriteAtlasImporter.variantScale`
+throws `NullReferenceException` on both accessors of an uncreated `new SpriteAtlasImporter()`,
+reads `variantMultiplier` from `.meta` (defaulting to `1` when omitted), stores assigned values
+verbatim without clamping (including out-of-range values, `±Infinity` and `NaN`), marks the
+importer dirty only when `variantScale != value` (so same finite values and `-0f` on `0f` are
+no-ops while `NaN` always dirties, and `WriteImportSettingsIfDirty` returns `false` when `.meta`
+bytes did not change), leaves `isVariant` and unrelated `.meta` sections untouched, and follows the
+same `SaveAssets`/`WriteImportSettingsIfDirty`/`SaveAndReimport`/`ImportAsset(ForceUpdate)`
+timing; `SpriteAtlasImporter.includeInBuild` throws `NullReferenceException` on both accessors of
+an uncreated `new SpriteAtlasImporter()`, reads `bindAsDefault` from `.meta` (defaulting to `true`
+when omitted), marks the importer dirty only when toggling the value, keeps master and variant
+importers and loaded `SpriteAtlas` instances independent until reimport, writes `bindAsDefault`
+(`1`/`0`, inserting after `variantMultiplier` when omitted), and follows the same
+`SaveAssets`/`WriteImportSettingsIfDirty`/`SaveAndReimport`/`ImportAsset(ForceUpdate)` timing.
 Not measured: either kind of atlas in the other kind's packer mode.
 
 Values compare exactly.
