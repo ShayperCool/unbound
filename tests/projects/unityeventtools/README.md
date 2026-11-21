@@ -14,7 +14,7 @@ then calls on `EventReceiver` and logs.
 * `register.*`: registering over an existing call in the same and another mode, and at an index
   out of range.
 * `remove.*`, `unregister*`: removing by index (also out of range), by delegate (every match, with
-  an argument, and none), and unregistering.
+  an argument, none, a static method, a destroyed target and a lambda), and unregistering.
 * `state.afterAdd`: a listener switched off after it was added.
 
 A lambda's method name is the compiler's choice, so exception texts record only that it is one.

@@ -99,6 +99,25 @@ static class UnityEventToolsProbe
             UnityEventTools.AddPersistentListener(h.plain, s_Receiver.Ping);
             UnityEventTools.RemovePersistentListener(h.plain, s_Other.Ping);
         }, h => h.plain, h => h.plain.Invoke());
+        Case("remove.static", h =>
+        {
+            UnityEventTools.AddPersistentListener(h.plain, EventReceiver.StaticPing);
+            UnityEventTools.AddPersistentListener(h.plain, s_Receiver.Ping);
+            UnityEventTools.RemovePersistentListener(h.plain, EventReceiver.StaticPing);
+        }, h => h.plain, h => h.plain.Invoke());
+        Case("remove.destroyedTarget", h =>
+        {
+            var gone = new GameObject("Gone").AddComponent<EventReceiver>();
+            UnityEventTools.AddPersistentListener(h.plain, gone.Ping);
+            UnityEventTools.AddPersistentListener(h.plain, s_Receiver.Ping);
+            Object.DestroyImmediate(gone.gameObject);
+            UnityEventTools.RemovePersistentListener(h.plain, gone.Ping);
+        }, h => h.plain, h => h.plain.Invoke());
+        Case("remove.lambda", h =>
+        {
+            UnityEventTools.AddPersistentListener(h.plain, EventReceiver.StaticPing);
+            UnityEventTools.RemovePersistentListener(h.plain, () => EventReceiver.Calls.Add("lambda"));
+        }, h => h.plain, h => h.plain.Invoke());
         Case("unregister", h =>
         {
             UnityEventTools.AddIntPersistentListener(h.plain, s_Receiver.TakeInt, 5);
