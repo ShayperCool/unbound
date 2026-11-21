@@ -178,6 +178,7 @@ namespace UnityEngine
 
         internal void ShareDrawIndices(Mesh source)
         {
+            source.EnsureModelLoaded();
             m_IndexFormat = source.m_IndexFormat;
             m_IndexBuffer = source.m_IndexBuffer;
             m_SubMeshes.Clear(); m_SubMeshes.AddRange(source.m_SubMeshes);

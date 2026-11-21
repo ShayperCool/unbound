@@ -274,6 +274,14 @@ namespace Unbound.Runtime
             s_Api.UploadMesh(handle, mesh);
         }
 
+        internal static bool UploadModelMesh(ulong handle, string guid, int index)
+        {
+            if (!s_Ready) return false;
+            GfxStream.Flush();
+            Call("upload-model-mesh", System.Text.Json.JsonSerializer.Serialize(new { handle, guid, index }));
+            return true;
+        }
+
         internal static void ReleaseMesh(ulong handle)
         {
             if (!s_Ready || handle == 0) return;

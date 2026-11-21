@@ -929,6 +929,22 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let model = imported_model(Guid::parse(&r.guid).context("bad guid")?)?;
             Ok(model_mesh_json(&model, r.index)?.to_string())
         }
+        "upload-model-mesh" => {
+            #[derive(Deserialize)]
+            struct Request {
+                handle: u64,
+                guid: String,
+                index: usize,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let model = imported_model(Guid::parse(&r.guid).context("bad guid")?)?;
+            let mesh = model.meshes.get(r.index).context("no such mesh")?;
+            s.backend
+                .read()
+                .unwrap()
+                .upload_mesh(r.handle, crate::models::model_mesh_owned(mesh));
+            Ok("{}".to_string())
+        }
         "editor-resource" => {
             #[derive(Deserialize)]
             #[serde(rename_all = "camelCase")]

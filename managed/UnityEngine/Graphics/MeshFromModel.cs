@@ -15,6 +15,29 @@ namespace UnityEngine
         internal uint[] m_BoneNameHashes;
         internal uint m_RootBoneNameHash;
 
+        // Deferred imported unreadable model mesh: metadata lives here and Sync() uploads directly
+        // from the native ImportedModel to the GPU without allocating managed vertex/index arrays.
+        // Any CPU reader or mutator materializes the full CPU arrays on demand via EnsureModelLoaded().
+        internal bool m_DeferredModel;
+        internal string m_ModelGuid;
+        internal int m_ModelMeshIndex;
+        internal int m_DeferredVertexCount;
+        internal int m_DeferredChannels;
+        bool m_LoadingModel;
+
+        const int DeferredNormalBit = 1 << 0;
+        const int DeferredTangentBit = 1 << 1;
+        const int DeferredColorBit = 1 << 2;
+        const int DeferredUv0Shift = 3;
+
+        /// <summary>Fetches a model mesh's JSON geometry from the native side (tests replace it).</summary>
+        internal static Func<string, int, string> LoadModelMeshJson = (guid, index) =>
+            Native.Call("model-mesh", JsonSerializer.Serialize(new { guid, index }));
+
+        /// <summary>Uploads a deferred model mesh directly from the native side (tests replace it).</summary>
+        internal static Func<ulong, string, int, bool> UploadDeferredModelMesh = (handle, guid, index) =>
+            Native.UploadModelMesh(handle, guid, index);
+
         internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             if (body.Get("m_UnboundBonePaths") is YNode bones)
@@ -32,15 +55,151 @@ namespace UnityEngine
                     Debug.LogWarning($"Unbound: Mesh '{m_Name}' has no vertex data Unbound reads; it stays empty.");
                 return;
             }
+            int index = body.Int("m_UnboundMesh");
+            if (body.Int("m_UnboundDeferred") != 0)
+            {
+                ReadDeferredModel(body, model, index);
+                return;
+            }
             try
             {
-                var json = Native.Call("model-mesh", JsonSerializer.Serialize(new { guid = model, index = body.Int("m_UnboundMesh") }));
-                FillFromModel(JsonDocument.Parse(json).RootElement);
+                var json = LoadModelMeshJson(model, index);
+                using var doc = JsonDocument.Parse(json);
+                FillFromModel(doc.RootElement);
             }
             catch (Exception e)
             {
                 Debug.LogWarning($"Unbound: the geometry of mesh '{m_Name}': {e.Message}");
             }
+        }
+
+        void ReadDeferredModel(YNode body, string guid, int index)
+        {
+            m_DeferredModel = true;
+            m_ModelGuid = guid;
+            m_ModelMeshIndex = index;
+            m_DeferredVertexCount = Math.Max(0, body.Int("m_UnboundVertexCount"));
+            m_DeferredChannels = body.Int("m_UnboundChannels");
+            m_HasPositionChannel = true;
+            for (int ch = 0; ch < 8; ch++)
+                m_UVDimensions[ch] = (m_DeferredChannels & (1 << (DeferredUv0Shift + ch))) != 0 ? 2 : 0;
+            m_SubMeshes.Clear();
+            var subs = body.Get("m_UnboundSubmeshes")?.Seq();
+            if (subs != null)
+            {
+                foreach (var sm in subs)
+                {
+                    var sub = new SubMesh
+                    {
+                        DeferredIndexCount = Math.Max(0, sm.Int("indexCount")),
+                        Topology = MeshTopology.Triangles,
+                        BaseVertex = 0,
+                        IndexStart = -1,
+                        FirstVertex = sm.Int("firstVertex"),
+                        VertexCount = sm.Int("vertexCount"),
+                    };
+                    if (sub.VertexCount > 0)
+                        sub.Bounds = BoundsOf(Vec3(sm.Get("boundsMin")), Vec3(sm.Get("boundsMax")));
+                    m_SubMeshes.Add(sub);
+                }
+            }
+            if (m_SubMeshes.Count == 0) m_SubMeshes.Add(new SubMesh());
+            if (m_DeferredVertexCount > 0)
+            {
+                var b = new Bounds();
+                b.SetMinMax(Vec3(body.Get("m_UnboundBoundsMin")), Vec3(body.Get("m_UnboundBoundsMax")));
+                m_Bounds = b;
+            }
+            else m_Bounds = default;
+            m_IsReadable = false;
+            m_Dirty = true;
+            m_GraphicsBuffersDirty = true;
+        }
+
+        /// <summary>Materializes the managed CPU arrays of a deferred imported model mesh on first
+        /// CPU access. Preserves readability, dirty state, handle, sync version and positions
+        /// version so lazy hydration is invisible to callers and observers.</summary>
+        internal void EnsureModelLoaded()
+        {
+            if (!m_DeferredModel || m_LoadingModel) return;
+            m_LoadingModel = true;
+            bool wasDirty = m_Dirty;
+            bool wasGfxDirty = m_GraphicsBuffersDirty;
+            bool wasGfxVertsDirty = m_GraphicsVerticesDirty;
+            bool wasGfxIndicesDirty = m_GraphicsDirtyIndices;
+            bool wasReadable = m_IsReadable;
+            int prevPositionsVersion = m_PositionsVersion;
+            m_DeferredModel = false;
+            m_IsReadable = true;
+            foreach (var s in m_SubMeshes) s.DeferredIndexCount = 0;
+            try
+            {
+                var json = LoadModelMeshJson(m_ModelGuid, m_ModelMeshIndex);
+                using var doc = JsonDocument.Parse(json);
+                Fill(doc.RootElement);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: the geometry of mesh '{m_Name}': {e.Message}");
+            }
+            finally
+            {
+                m_IsReadable = wasReadable;
+                m_Dirty = wasDirty;
+                m_GraphicsBuffersDirty = wasGfxDirty;
+                m_GraphicsVerticesDirty = wasGfxVertsDirty;
+                m_GraphicsDirtyIndices = wasGfxIndicesDirty;
+                m_PositionsVersion = prevPositionsVersion;
+                m_LoadingModel = false;
+            }
+        }
+
+        void RevertToDeferred(Mesh saved)
+        {
+            m_Vertices = Array.Empty<Vector3>();
+            m_Normals = null;
+            m_Tangents = null;
+            m_Colors = null;
+            m_PositionsVersion++;
+            for (int i = 0; i < 8; i++)
+            {
+                m_UVs[i] = null;
+                m_UVDimensions[i] = saved.m_UVDimensions[i];
+            }
+            m_SubMeshes.Clear();
+            foreach (var s in saved.m_SubMeshes)
+            {
+                m_SubMeshes.Add(new SubMesh
+                {
+                    Indices = Array.Empty<int>(),
+                    DeferredIndexCount = s.DeferredIndexCount,
+                    Topology = s.Topology,
+                    BaseVertex = s.BaseVertex,
+                    IndexStart = s.IndexStart,
+                    Bounds = s.Bounds,
+                    FirstVertex = s.FirstVertex,
+                    VertexCount = s.VertexCount,
+                });
+            }
+            m_UnmeasuredSkinBoundsMutation = false;
+            m_Layout = null;
+            m_HasPositionChannel = saved.m_HasPositionChannel;
+            m_IndexBuffer = null;
+            m_BoneWeights = null;
+            m_Bindposes = null;
+            m_BoneNameHashes = (uint[])saved.m_BoneNameHashes?.Clone();
+            m_RootBoneNameHash = saved.m_RootBoneNameHash;
+            m_Bounds = saved.m_Bounds;
+            m_IndexFormat = saved.m_IndexFormat;
+            ClearPackedChannels(false);
+            m_BlendShapes.Clear();
+            m_DeferredModel = true;
+            m_ModelGuid = saved.m_ModelGuid;
+            m_ModelMeshIndex = saved.m_ModelMeshIndex;
+            m_DeferredVertexCount = saved.m_DeferredVertexCount;
+            m_DeferredChannels = saved.m_DeferredChannels;
+            m_IsReadable = saved.m_IsReadable;
+            Changed();
         }
 
         static T[] Decoded<T>(JsonElement element, string name) where T : unmanaged

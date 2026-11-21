@@ -2,6 +2,7 @@
 //! Transforms, renderers, Materials and Mesh sub-assets with the importer's fileIDs), so that loading
 //! a model and expanding a scene's instance of one go through the same prefab machinery as a
 //! `.prefab` file; and the geometry of its meshes, which the Mesh documents only point at.
+use crate::render_protocol::{SubMeshPacket, Vector3, Vector4, owned};
 use serde_json::{Value as Json, json};
 use unbound_assets::{
     ImportedModel,
@@ -152,6 +153,9 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
             ("m_UnboundModel", scalar(&guid_text)),
             ("m_UnboundMesh", scalar(index)),
         ];
+        if can_defer_mesh(model, mesh) {
+            append_deferred_mesh_meta(&mut body, mesh);
+        }
         // A skinned mesh names its bones by their paths below the model's root (Unity's
         // bone name hashes): what skins it from an Animator's skeleton once the bones are gone.
         if let Some(skin) = model.nodes.iter().find_map(|n| {
@@ -1012,6 +1016,192 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
     )
 }
 
+/// Static unreadable imported meshes keep only metadata on the managed side and upload directly
+/// from the native `ImportedModel` on first draw, hydrating managed arrays only on CPU reads.
+fn can_defer_mesh(model: &ImportedModel, mesh: &ModelMesh) -> bool {
+    if model.settings.is_readable
+        || !mesh.bone_weights.is_empty()
+        || !mesh.bind_poses.is_empty()
+        || !mesh.blend_shapes.is_empty()
+        || mesh.uvs.len() > 8
+    {
+        return false;
+    }
+    let n = mesh.positions.len();
+    mesh.submeshes
+        .iter()
+        .all(|indices| indices.len() % 3 == 0 && indices.iter().all(|&i| (i as usize) < n))
+}
+
+fn submesh_measure(
+    positions: &[[f32; 3]],
+    indices: &[u32],
+) -> Option<(u32, u32, [f32; 3], [f32; 3])> {
+    if indices.is_empty() {
+        return None;
+    }
+    let mut min_v = u32::MAX;
+    let mut max_v = 0u32;
+    let mut lo = [f32::INFINITY; 3];
+    let mut hi = [f32::NEG_INFINITY; 3];
+    let mut any = false;
+    for &i in indices {
+        let Some(&p) = positions.get(i as usize) else {
+            continue;
+        };
+        any = true;
+        min_v = min_v.min(i);
+        max_v = max_v.max(i);
+        for k in 0..3 {
+            if p[k] < lo[k] {
+                lo[k] = p[k];
+            }
+            if p[k] > hi[k] {
+                hi[k] = p[k];
+            }
+        }
+    }
+    any.then(|| (min_v, max_v - min_v + 1, lo, hi))
+}
+
+fn append_deferred_mesh_meta(body: &mut Vec<(&str, Value)>, mesh: &ModelMesh) {
+    let n = mesh.positions.len();
+    let mut channels: u32 = 0;
+    if n > 0 {
+        if mesh.normals.len() == n {
+            channels |= 1 << 0;
+        }
+        if mesh.tangents.len() == n {
+            channels |= 1 << 1;
+        }
+        if mesh.colors.len() == n {
+            channels |= 1 << 2;
+        }
+        for (ch, uv) in mesh.uvs.iter().take(8).enumerate() {
+            if uv.len() == n {
+                channels |= 1 << (3 + ch);
+            }
+        }
+    }
+    let submeshes: Vec<Value> = mesh
+        .submeshes
+        .iter()
+        .map(|indices| {
+            let mut entries = vec![("indexCount", scalar(indices.len()))];
+            if let Some((first, count, lo, hi)) = submesh_measure(&mesh.positions, indices) {
+                entries.push(("firstVertex", scalar(first)));
+                entries.push(("vertexCount", scalar(count)));
+                entries.push(("boundsMin", vec3(lo)));
+                entries.push(("boundsMax", vec3(hi)));
+            }
+            map(entries)
+        })
+        .collect();
+    body.push(("m_UnboundDeferred", scalar(1)));
+    body.push(("m_UnboundVertexCount", scalar(n)));
+    body.push(("m_UnboundChannels", scalar(channels)));
+    body.push(("m_UnboundBoundsMin", vec3(mesh.bounds_min)));
+    body.push(("m_UnboundBoundsMax", vec3(mesh.bounds_max)));
+    body.push(("m_UnboundSubmeshes", Value::Seq(submeshes)));
+}
+
+/// Converts an imported model mesh directly into a renderer upload packet, matching the
+/// managed `MeshFromModel` + `Mesh.Sync` layout and UNorm8 vertex-color quantization.
+pub fn model_mesh_owned(mesh: &ModelMesh) -> owned::Mesh {
+    fn quantize_color_channel(v: f32) -> f32 {
+        let clamped = if v < 0.0 {
+            0.0
+        } else if v > 1.0 {
+            1.0
+        } else {
+            v
+        };
+        let byte = (f64::from(clamped * 255.0_f32).round_ties_even() as f32) as u8;
+        f32::from(byte) / 255.0_f32
+    }
+
+    let n = mesh.positions.len();
+    let positions = mesh
+        .positions
+        .iter()
+        .map(|&[x, y, z]| Vector3 { x, y, z })
+        .collect();
+    let normals = if n > 0 && mesh.normals.len() == n {
+        mesh.normals
+            .iter()
+            .map(|&[x, y, z]| Vector3 { x, y, z })
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let tangents = if n > 0 && mesh.tangents.len() == n {
+        mesh.tangents
+            .iter()
+            .map(|&[x, y, z, w]| Vector4 { x, y, z, w })
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let colors = if n > 0 && mesh.colors.len() == n {
+        mesh.colors
+            .iter()
+            .map(|&[r, g, b, a]| Vector4 {
+                x: quantize_color_channel(r),
+                y: quantize_color_channel(g),
+                z: quantize_color_channel(b),
+                w: quantize_color_channel(a),
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let uv = std::array::from_fn(|ch| {
+        if n > 0 && mesh.uvs.get(ch).is_some_and(|u| u.len() == n) {
+            mesh.uvs[ch]
+                .iter()
+                .map(|&[x, y]| Vector4 {
+                    x,
+                    y,
+                    z: 0.0,
+                    w: 0.0,
+                })
+                .collect()
+        } else {
+            Vec::new()
+        }
+    });
+    let mut indices = Vec::with_capacity(mesh.submeshes.iter().map(Vec::len).sum());
+    let mut submeshes = Vec::with_capacity(mesh.submeshes.len().max(1));
+    if mesh.submeshes.is_empty() {
+        submeshes.push(SubMeshPacket {
+            index_start: 0,
+            index_count: 0,
+            topology: 0,
+            base_vertex: 0,
+        });
+    } else {
+        for sub in &mesh.submeshes {
+            let start = indices.len() as i32;
+            indices.extend_from_slice(sub);
+            submeshes.push(SubMeshPacket {
+                index_start: start,
+                index_count: sub.len() as i32,
+                topology: 0,
+                base_vertex: 0,
+            });
+        }
+    }
+    owned::Mesh {
+        positions,
+        normals,
+        tangents,
+        colors,
+        uv,
+        indices,
+        submeshes,
+    }
+}
+
 /// A mesh's geometry for the managed Mesh: little-endian arrays in base64.
 pub fn mesh_json(mesh: &ModelMesh) -> Json {
     fn floats<const N: usize>(items: &[[f32; N]]) -> String {
@@ -1177,5 +1367,190 @@ mod tests {
         assert_eq!(base64(b"fo"), "Zm8=");
         assert_eq!(base64(b"foo"), "Zm9v");
         assert_eq!(base64(b"foobar"), "Zm9vYmFy");
+    }
+
+    #[test]
+    fn deferred_mesh_documents_and_direct_upload_match_eager_model_mesh() {
+        use super::{documents, model_mesh_owned};
+        use unbound_assets::ImportedModel;
+        use unbound_assets::meta::FileIdSource;
+        use unbound_assets::model::{
+            BoneWeight, FileId, ModelBlendFrame, ModelBlendShape, ModelMesh, ModelSettings,
+        };
+        use unbound_project::AssetDb;
+        use unbound_yaml::Guid;
+
+        let make_mesh = || ModelMesh {
+            name: "Prop".to_string(),
+            file_id: FileId {
+                id: 4300000,
+                source: FileIdSource::Fixed,
+            },
+            positions: vec![
+                [0.0, 0.0, 0.0],
+                [1.0, 2.0, 0.0],
+                [-1.0, 0.5, 3.0],
+                [2.0, -1.0, 1.0],
+            ],
+            normals: vec![
+                [0.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0],
+            ],
+            tangents: vec![
+                [1.0, 0.0, 0.0, -1.0],
+                [1.0, 0.0, 0.0, -1.0],
+                [1.0, 0.0, 0.0, -1.0],
+                [1.0, 0.0, 0.0, -1.0],
+            ],
+            uvs: vec![
+                vec![[0.0, 0.0], [0.5, 1.0], [1.0, 0.0], [0.25, 0.75]],
+                vec![[0.1, 0.2], [0.3, 0.4], [0.5, 0.6], [0.7, 0.8]],
+            ],
+            // Include out-of-range, exact half-step (0.5 * 255 = 127.5 -> banker's round 128),
+            // and NaN -> 0 controls for UNorm8 quantization parity with Unity Color32.
+            colors: vec![
+                [1.0, 0.5, -0.2, 1.5],
+                [0.0, 1.0 / 510.0, f32::NAN, 1.0],
+                [0.25, 0.75, 0.5, 1.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ],
+            submeshes: vec![vec![0, 1, 2], vec![1, 2, 3]],
+            bone_weights: Vec::new(),
+            bind_poses: Vec::new(),
+            bounds_min: [-1.0, -1.0, 0.0],
+            bounds_max: [2.0, 2.0, 3.0],
+            blend_shapes: Vec::new(),
+        };
+
+        let mesh = make_mesh();
+        let owned = model_mesh_owned(&mesh);
+        assert_eq!(owned.positions.len(), 4);
+        assert_eq!(owned.normals.len(), 4);
+        assert_eq!(owned.tangents.len(), 4);
+        assert_eq!(owned.uv[0].len(), 4);
+        assert_eq!(owned.uv[1].len(), 4);
+        assert!(owned.uv[2].is_empty());
+        assert_eq!(owned.uv[0][3].x, 0.25);
+        assert_eq!(owned.uv[0][3].y, 0.75);
+        assert_eq!(owned.uv[0][3].z, 0.0);
+        assert_eq!(owned.uv[0][3].w, 0.0);
+        // 0.5 * 255 = 127.5 -> 128 (ties to even); 1/510 * 255 = 0.5 -> 0 (ties to even).
+        assert_eq!(owned.colors[0].x, 1.0);
+        assert_eq!(owned.colors[0].y, 128.0 / 255.0);
+        assert_eq!(owned.colors[0].z, 0.0);
+        assert_eq!(owned.colors[0].w, 1.0);
+        assert_eq!(owned.colors[1].y, 0.0);
+        assert_eq!(owned.colors[1].z, 0.0);
+        assert_eq!(owned.indices, vec![0, 1, 2, 1, 2, 3]);
+        assert_eq!(owned.submeshes.len(), 2);
+        assert_eq!(owned.submeshes[0].index_start, 0);
+        assert_eq!(owned.submeshes[0].index_count, 3);
+        assert_eq!(owned.submeshes[1].index_start, 3);
+        assert_eq!(owned.submeshes[1].index_count, 3);
+
+        let guid = Guid::parse("0123456789abcdef0123456789abcdef").unwrap();
+        let db = AssetDb::default();
+        let mut settings = ModelSettings::read(&Value::Null);
+        settings.is_readable = false;
+        let mut model = ImportedModel {
+            name: "Prop".to_string(),
+            settings,
+            nodes: Vec::new(),
+            meshes: vec![mesh],
+            materials: Vec::new(),
+            clips: Vec::new(),
+            avatar: None,
+            animator: None,
+            lod_group: None,
+            file_order: Vec::new(),
+            human_description: None,
+            scale: 1.0,
+            warnings: Vec::new(),
+            user_properties: Vec::new(),
+            root_node_name: None,
+            file_id_table: Default::default(),
+        };
+
+        let docs = documents(guid, "Assets/Prop.fbx", &model, &db);
+        let mesh_doc = docs.iter().find(|d| d.type_name == "Mesh").unwrap();
+        assert_eq!(
+            mesh_doc
+                .body
+                .get("m_UnboundDeferred")
+                .and_then(Value::as_i64),
+            Some(1)
+        );
+        assert_eq!(
+            mesh_doc
+                .body
+                .get("m_UnboundVertexCount")
+                .and_then(Value::as_i64),
+            Some(4)
+        );
+        // Normal (1) | Tangent (2) | Color (4) | UV0 (8) | UV1 (16) = 31.
+        assert_eq!(
+            mesh_doc
+                .body
+                .get("m_UnboundChannels")
+                .and_then(Value::as_i64),
+            Some(31)
+        );
+        let subs = mesh_doc
+            .body
+            .get("m_UnboundSubmeshes")
+            .and_then(Value::as_seq)
+            .unwrap();
+        assert_eq!(subs.len(), 2);
+        assert_eq!(subs[0].get("indexCount").and_then(Value::as_i64), Some(3));
+        assert_eq!(subs[0].get("firstVertex").and_then(Value::as_i64), Some(0));
+        assert_eq!(subs[0].get("vertexCount").and_then(Value::as_i64), Some(3));
+        assert_eq!(subs[1].get("firstVertex").and_then(Value::as_i64), Some(1));
+        assert_eq!(subs[1].get("vertexCount").and_then(Value::as_i64), Some(3));
+
+        // Control 1: readable model stays eager.
+        model.settings.is_readable = true;
+        let readable_docs = documents(guid, "Assets/Prop.fbx", &model, &db);
+        assert!(readable_docs[0].body.get("m_UnboundDeferred").is_none());
+
+        // Control 2: skinned or blend-shape meshes stay eager even when unreadable.
+        model.settings.is_readable = false;
+        model.meshes[0].bone_weights.push(BoneWeight {
+            bones: [0; 4],
+            weights: [1.0, 0.0, 0.0, 0.0],
+        });
+        assert!(
+            documents(guid, "Assets/Prop.fbx", &model, &db)[0]
+                .body
+                .get("m_UnboundDeferred")
+                .is_none()
+        );
+        model.meshes[0].bone_weights.clear();
+        model.meshes[0].blend_shapes.push(ModelBlendShape {
+            name: "Smile".to_string(),
+            frames: vec![ModelBlendFrame {
+                weight: 100.0,
+                vertices: vec![[0.0; 3]; 4],
+                normals: Vec::new(),
+                tangents: Vec::new(),
+            }],
+        });
+        assert!(
+            documents(guid, "Assets/Prop.fbx", &model, &db)[0]
+                .body
+                .get("m_UnboundDeferred")
+                .is_none()
+        );
+
+        // Control 3: malformed submesh index stays eager so Mesh.AcceptsIndices logs its error.
+        model.meshes[0].blend_shapes.clear();
+        model.meshes[0].submeshes[0] = vec![0, 1, 99];
+        assert!(
+            documents(guid, "Assets/Prop.fbx", &model, &db)[0]
+                .body
+                .get("m_UnboundDeferred")
+                .is_none()
+        );
     }
 }

@@ -540,6 +540,8 @@ namespace Unbound.Runtime
         /// <c>cullTransparentMesh</c> culls: a graphic's colour is in its vertices).</summary>
         static bool Transparent(Mesh mesh)
         {
+            if (mesh.m_DeferredModel && !mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.Color)) return false;
+            mesh.EnsureModelLoaded();
             var colors = mesh.m_Colors;
             if (colors == null || colors.Length == 0) return false;
             foreach (var c in colors)

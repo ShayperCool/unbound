@@ -55,6 +55,8 @@ namespace UnityEngine
 
         internal uint OverrideVertexChannels(Mesh source)
         {
+            EnsureModelLoaded();
+            source.EnsureModelLoaded();
             uint mask = 0;
             int count = vertexCount;
             void Keep(VertexAttribute attribute) { mask |= 1u << (int)attribute; CopyPackedChannelFrom(source,attribute); }
@@ -83,6 +85,8 @@ namespace UnityEngine
         /// count); its attribute bit, or 0 when the source has no such channel.</summary>
         internal uint OverrideUVChannel(Mesh source, int channel)
         {
+            EnsureModelLoaded();
+            source.EnsureModelLoaded();
             if (source.m_UVs[channel] == null || source.m_UVs[channel].Length != vertexCount) return 0;
             m_UVs[channel] = source.m_UVs[channel]; m_UVDimensions[channel] = source.m_UVDimensions[channel];
             CopyPackedChannelFrom(source, VertexAttribute.TexCoord0 + channel);

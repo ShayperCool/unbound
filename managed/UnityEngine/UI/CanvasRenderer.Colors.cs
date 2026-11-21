@@ -16,6 +16,7 @@ namespace UnityEngine
         // geometry intact lets flag, tint and alpha changes rebuild without repeated conversion.
         internal Mesh PrepareCanvasMesh(Color tint, bool convertToLinear, Matrix4x4 canvasFromRenderer)
         {
+            m_Mesh.EnsureModelLoaded();
             bool geometryChanged = m_PreparedMesh == null || m_PreparedVersion != m_MeshVersion || !m_PreparedCanvasFromRenderer.Equals(canvasFromRenderer);
             if (!geometryChanged && m_PreparedTint.Equals(tint) && m_PreparedLinear == convertToLinear)
                 return m_PreparedMesh;

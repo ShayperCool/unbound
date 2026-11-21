@@ -662,6 +662,7 @@ namespace UnityEngine
             using var engineReads = Mesh.EngineReads();
             var mesh = m_Mesh;
             if (mesh == null) return 0;
+            mesh.EnsureModelLoaded();
             var source = mesh.m_Vertices;
             if (source == null || source.Length == 0) return 0;
             bool localFrame = m_Convex && Compat.ConvexColliderFrameMeasured;

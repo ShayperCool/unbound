@@ -71,8 +71,8 @@ namespace UnityEngine
                 foreach (var mesh in meshes)
                 {
                     if (mesh == null) continue;
-                    if (mesh.m_Tangents != null && mesh.m_Tangents.Length > 0) m_StreamTangents = true;
-                    if (mesh.m_UVs[1] != null && mesh.m_UVs[1].Length > 0) m_MeshUv1 = true;
+                    if (mesh.vertexCount > 0 && mesh.HasVertexAttribute(Rendering.VertexAttribute.Tangent)) m_StreamTangents = true;
+                    if (mesh.vertexCount > 0 && mesh.HasVertexAttribute(Rendering.VertexAttribute.TexCoord1)) m_MeshUv1 = true;
                 }
                 if (!m_MeshUv1) return;
                 // The default streams leave the uv alone in TexCoord0.
@@ -164,6 +164,7 @@ namespace UnityEngine
                                 int input = (int)stream - (int)ParticleSystemVertexStream.UV;
                                 if (source != null)
                                 {
+                                    source.EnsureModelLoaded();
                                     var uv = source.m_UVs[input];
                                     value = uv != null && local < uv.Length ? uv[local] : Vector4.zero;
                                 }

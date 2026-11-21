@@ -1532,6 +1532,7 @@ namespace UnityEngine
             Matrix4x4 AddMesh(ParticleSystemRenderer r, Mesh mesh, Vector3 position, Vector3 size, Vector3 emitterScale, Matrix4x4 localFrame,
                 Quaternion rotation, Color32 color, Rect uv, Vector3 velocity, View view)
             {
+                mesh.EnsureModelLoaded();
                 var vertices = mesh.m_Vertices;
                 int n = vertices.Length;
                 Quaternion orientation;

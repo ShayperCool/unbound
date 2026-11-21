@@ -211,6 +211,7 @@ namespace UnityEngine
             var mesh = p.m_Prototype.GetComponent<MeshFilter>() is MeshFilter filter ? filter.sharedMesh : null;
             if (mesh == null) return default;
             if (p.useInstancing) return mesh.bounds;
+            mesh.EnsureModelLoaded();
             float radius = 0f;
             foreach (var v in mesh.m_Vertices)
                 radius = Math.Max(radius, (float)Math.Sqrt(v.z * v.z + v.x * v.x));

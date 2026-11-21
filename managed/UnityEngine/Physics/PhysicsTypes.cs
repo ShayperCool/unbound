@@ -146,6 +146,7 @@ namespace UnityEngine
             if (!(HitCollider is MeshCollider meshCollider) || meshCollider == null || meshCollider.convex) return Vector2.zero;
             var mesh = meshCollider.sharedMesh;
             if (mesh == null || m_FaceID == uint.MaxValue) return Vector2.zero;
+            mesh.EnsureModelLoaded();
             var uv = mesh.m_UVs[channel];
             if (channel == 1 && (uv == null || uv.Length == 0) && mesh.m_UVs[0] != null && mesh.m_UVs[0].Length > 0)
             {

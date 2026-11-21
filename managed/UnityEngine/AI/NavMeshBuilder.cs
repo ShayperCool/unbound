@@ -230,6 +230,7 @@ namespace Unbound.Runtime
                     {
                         var mesh = source.sourceObject as Mesh;
                         if (mesh == null) break;
+                        mesh.EnsureModelLoaded();
                         var v = mesh.m_Vertices;
                         for (int s = 0; s < mesh.subMeshCount; s++)
                         {

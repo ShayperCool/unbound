@@ -116,6 +116,7 @@ namespace UnityEngine
             /// unchanged. Both mesh-data snapshots and GPU buffer uploads use this packer.</summary>
             internal void Update(Mesh mesh)
             {
+                mesh.EnsureModelLoaded();
                 Span<VertexAttributeDescriptor> attributes = stackalloc VertexAttributeDescriptor[MaxVertexAttributes];
                 int count = mesh.FillLayout(attributes);
                 if (!attributes.Slice(0, count).SequenceEqual(Layout)) Layout = attributes.Slice(0, count).ToArray();

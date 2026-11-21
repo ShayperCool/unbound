@@ -374,6 +374,7 @@ namespace UnityEngine
                 m_Coefficients ??= Array.Empty<ClothSkinningCoefficient>();
                 return;
             }
+            mesh.EnsureModelLoaded();
             var vertices = mesh.m_Vertices;
             var map = new Dictionary<Vector3, int>();
             m_ParticleOf = new int[vertices.Length];
@@ -437,6 +438,7 @@ namespace UnityEngine
             }
             else
             {
+                mesh.EnsureModelLoaded();
                 var scale = Matrix4x4.Scale(t.lossyScale);
                 positions = (Vector3[])mesh.m_Vertices.Clone();
                 normals = mesh.normals;

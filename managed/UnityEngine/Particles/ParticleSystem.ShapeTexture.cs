@@ -158,6 +158,7 @@ namespace UnityEngine
         /// the corner weights; <see cref="ShapeUv.Missing"/> without that channel.</summary>
         void SetMeshShapeUv(Mesh mesh, int a, int b, int c, float wa, float wb, float wc)
         {
+            mesh?.EnsureModelLoaded();
             int channel = m_Shape.textureUVChannel;
             var uvs = mesh != null && (uint)channel < (uint)mesh.m_UVs.Length ? mesh.m_UVs[channel] : null;
             int n = uvs?.Length ?? 0;

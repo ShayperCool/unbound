@@ -59,6 +59,21 @@ namespace UnityEngine
 
         bool ChannelPresent(VertexAttribute attr)
         {
+            if (m_DeferredModel)
+            {
+                switch (attr)
+                {
+                    case VertexAttribute.Position: return m_HasPositionChannel || m_DeferredVertexCount > 0;
+                    case VertexAttribute.Normal: return (m_DeferredChannels & DeferredNormalBit) != 0;
+                    case VertexAttribute.Tangent: return (m_DeferredChannels & DeferredTangentBit) != 0;
+                    case VertexAttribute.Color: return (m_DeferredChannels & DeferredColorBit) != 0;
+                    case VertexAttribute.BlendWeight:
+                    case VertexAttribute.BlendIndices: return false;
+                    default:
+                        int ch = (int)attr - (int)VertexAttribute.TexCoord0;
+                        return ch >= 0 && ch < 8 && (m_DeferredChannels & (1 << (DeferredUv0Shift + ch))) != 0;
+                }
+            }
             switch (attr)
             {
                 case VertexAttribute.Position: return m_Layout != null ? LayoutHas(attr) : m_HasPositionChannel || m_Vertices.Length > 0;
@@ -219,6 +234,7 @@ namespace UnityEngine
         internal void SetVertexBufferParamsInternal(int vertexCount, VertexAttributeDescriptor[] attributes)
         {
             if (vertexCount < 0) throw new ArgumentException("Vertex count can not be negative", nameof(vertexCount));
+            EnsureModelLoaded();
             var layout = CheckLayout(attributes);
             bool Has(VertexAttribute a) => Array.Exists(layout, d => d.attribute == a);
             T[] Resize<T>(T[] old, bool present) where T : struct
@@ -312,6 +328,7 @@ namespace UnityEngine
         /// channels for every touched attribute, including partial component writes.</summary>
         internal void WriteVertices(ReadOnlySpan<byte> bytes, int offset, int stream)
         {
+            EnsureModelLoaded();
             Span<VertexAttributeDescriptor> descriptors = stackalloc VertexAttributeDescriptor[MaxVertexAttributes];
             var layout = descriptors.Slice(0, FillLayout(descriptors));
             int stride = 0;
@@ -497,6 +514,7 @@ namespace UnityEngine
         /// <summary>The index buffer: the one set, else the submeshes' indices one after another.</summary>
         int[] IndexBuffer()
         {
+            EnsureModelLoaded();
             if (m_IndexBuffer != null) return m_IndexBuffer;
             var all = new List<int>();
             foreach (var s in m_SubMeshes)

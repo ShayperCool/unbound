@@ -91,6 +91,7 @@ namespace UnityEngine
         /// shape go in increasing weights.</summary>
         public void AddBlendShapeFrame(string shapeName, float frameWeight, Vector3[] deltaVertices, Vector3[] deltaNormals, Vector3[] deltaTangents)
         {
+            EnsureModelLoaded();
             int count = m_Vertices.Length;
             if (deltaVertices == null) throw new ArgumentException("deltaVertices must not be null", nameof(deltaVertices));
             if (deltaVertices.Length != count) throw new ArgumentException("deltaVertices size must match the mesh vertex count", nameof(deltaVertices));

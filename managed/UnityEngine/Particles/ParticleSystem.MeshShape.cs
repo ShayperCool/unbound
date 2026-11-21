@@ -114,6 +114,8 @@ namespace UnityEngine
 
             internal void Update(Mesh mesh, Matrix4x4 toLocal, Vector3 scale, Mesh topologyMesh, int subMesh, int frame)
             {
+                mesh.EnsureModelLoaded();
+                topologyMesh.EnsureModelLoaded();
                 bool vertices = ReferenceEquals(Mesh, mesh) && ReferenceEquals(SourceVertices, mesh.m_Vertices) && ReferenceEquals(SourceNormals, mesh.m_Normals)
                     && ReferenceEquals(SourceColors, mesh.m_Colors) && SyncVersion == mesh.m_SyncVersion && PositionsVersion == mesh.m_PositionsVersion
                     && ToLocal.Equals(toLocal) && Scale == scale
@@ -362,7 +364,7 @@ namespace UnityEngine
                             var localToWorld = skinned.transform.localToWorldMatrix;
                             if (!model.Equals(localToWorld)) toLocal = skinned.transform.worldToLocalMatrix * model;
                             // Its rest mesh holds the triangles and weighs them (same vertices and indices).
-                            if (shared.m_Vertices.Length == mesh.m_Vertices.Length) topologyMesh = shared;
+                            if (shared.vertexCount == mesh.vertexCount) topologyMesh = shared;
                         }
                     }
                     break;

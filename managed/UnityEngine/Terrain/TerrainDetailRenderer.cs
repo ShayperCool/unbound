@@ -508,6 +508,7 @@ namespace UnityEngine
             using var engineReads = Mesh.EngineReads();
             var mesh = PrototypeMesh(prototype.prototype, out _);
             if (mesh == null) return;
+            mesh.EnsureModelLoaded();
             var vertices = mesh.m_Vertices;
             // With a texture of its own a mesh keeps its uvs, else every vertex samples the white
             // texture's centre; both moved into the place in the atlas. (A mesh drawn without

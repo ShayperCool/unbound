@@ -202,10 +202,10 @@ namespace Unbound.Runtime
             foreach (var o in Resources.FindObjectsOfTypeAll<Mesh>())
                 if (o.m_Handle == handle)
                 {
-                    var c = o.m_Colors != null && o.m_Colors.Length > 0 ? o.m_Colors[0].ToString() : "none";
-                    var uv = o.m_UVs[0] != null && o.m_UVs[0].Length > 0 ? o.m_UVs[0][0].ToString() : "none";
-                    var v = o.m_Vertices.Length > 0 ? o.m_Vertices[0].ToString() : "none";
-                    var idx = o.m_SubMeshes.Count > 0 ? o.m_SubMeshes[0].Indices.Length : -1;
+                    var c = o.m_Colors != null && o.m_Colors.Length > 0 ? o.m_Colors[0].ToString() : o.m_DeferredModel ? "deferred" : "none";
+                    var uv = o.m_UVs[0] != null && o.m_UVs[0].Length > 0 ? o.m_UVs[0][0].ToString() : o.m_DeferredModel ? "deferred" : "none";
+                    var v = o.m_Vertices.Length > 0 ? o.m_Vertices[0].ToString() : o.m_DeferredModel ? "deferred" : "none";
+                    var idx = o.m_SubMeshes.Count > 0 ? o.m_SubMeshes[0].IndexCount : -1;
                     return $"{o.bounds} ({o.vertexCount} verts, {idx} indices, v0 {v} c0 {c} uv0 {uv})";
                 }
             return "?";

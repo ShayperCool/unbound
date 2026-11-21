@@ -236,11 +236,12 @@ namespace UnityEngine
         static int Channels(Mesh mesh)
         {
             int bits = 0;
-            if (mesh.m_Normals != null && mesh.m_Normals.Length > 0) bits |= 1;
-            if (mesh.m_Tangents != null && mesh.m_Tangents.Length > 0) bits |= 2;
-            if (mesh.m_Colors != null && mesh.m_Colors.Length > 0) bits |= 4;
+            if (mesh.vertexCount == 0) return bits;
+            if (mesh.HasVertexAttribute(Rendering.VertexAttribute.Normal)) bits |= 1;
+            if (mesh.HasVertexAttribute(Rendering.VertexAttribute.Tangent)) bits |= 2;
+            if (mesh.HasVertexAttribute(Rendering.VertexAttribute.Color)) bits |= 4;
             for (int i = 0; i < 8; i++)
-                if (mesh.m_UVs[i] != null && mesh.m_UVs[i].Length > 0) bits |= (8 << i) | (mesh.m_UVDimensions[i] << (16 + 2 * i));
+                if (mesh.HasVertexAttribute(Rendering.VertexAttribute.TexCoord0 + i)) bits |= (8 << i) | (mesh.m_UVDimensions[i] << (16 + 2 * i));
             return bits;
         }
     }

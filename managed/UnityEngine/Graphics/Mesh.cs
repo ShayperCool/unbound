@@ -43,6 +43,9 @@ namespace UnityEngine
         internal sealed class SubMesh
         {
             internal int[] Indices = Array.Empty<int>();
+            /// <summary>Index count while the mesh is deferred (Indices stays empty until loaded).</summary>
+            internal int DeferredIndexCount;
+            internal int IndexCount => Indices.Length != 0 ? Indices.Length : DeferredIndexCount;
             internal MeshTopology Topology = MeshTopology.Triangles;
             internal int BaseVertex;
             /// <summary>Where the submesh's range starts in the index buffer (SetSubMesh); -1: after
@@ -107,6 +110,11 @@ namespace UnityEngine
         /// the source's is copied into instead of made anew.</summary>
         internal void CopyGeometryFrom(Mesh source, bool reuseArrays)
         {
+            source.EnsureModelLoaded();
+            m_DeferredModel = false;
+            m_ModelGuid = null;
+            m_DeferredVertexCount = 0;
+            m_DeferredChannels = 0;
             m_Vertices = CopyOf(source.m_Vertices, m_Vertices, reuseArrays);
             m_Normals = CopyOf(source.m_Normals, m_Normals, reuseArrays);
             m_Tangents = CopyOf(source.m_Tangents, m_Tangents, reuseArrays);
@@ -167,6 +175,11 @@ namespace UnityEngine
         /// The object stays the same one (as measured for materials; meshes are unmeasured).</summary>
         internal void RevertTo(Mesh saved)
         {
+            if (saved.m_DeferredModel)
+            {
+                RevertToDeferred(saved);
+                return;
+            }
             CopyGeometryFrom(saved);
             m_IsReadable = saved.m_IsReadable;
         }
@@ -177,7 +190,7 @@ namespace UnityEngine
             m_StreamVertexCount = m_StreamIndexCount = -1;
             m_Dirty = true; m_GraphicsBuffersDirty = true;
             m_GraphicsVerticesDirty |= vertices; m_GraphicsDirtyIndices |= indices;
-            ObjectDispatch.Changed(this);
+            if (!m_LoadingModel) ObjectDispatch.Changed(this);
         }
 
         public bool isReadable => m_IsReadable;
@@ -231,7 +244,7 @@ namespace UnityEngine
         {
             public void Dispose() => s_EngineReads--;
         }
-        public int vertexCount => m_Vertices.Length;
+        public int vertexCount => m_DeferredModel ? m_DeferredVertexCount : m_Vertices.Length;
         /// <summary>Changing the format sets subMeshCount to one and clears the index buffer
         /// (documented, 6000.0 Mesh.indexFormat). Assigning the current format is not a change and
         /// keeps the indices (Unity's handling of it is unmeasured).</summary>
@@ -241,6 +254,7 @@ namespace UnityEngine
             set
             {
                 if (value == m_IndexFormat) return;
+                EnsureModelLoaded();
                 m_IndexFormat = value;
                 m_SubMeshes.Clear();
                 m_SubMeshes.Add(new SubMesh());
@@ -265,6 +279,7 @@ namespace UnityEngine
                     Debug.LogError("subMeshCount can't be set to negative value");
                     return;
                 }
+                EnsureModelLoaded();
                 while (m_SubMeshes.Count < value) m_SubMeshes.Add(new SubMesh());
                 while (m_SubMeshes.Count > value) m_SubMeshes.RemoveAt(m_SubMeshes.Count - 1);
                 Changed(false);
@@ -284,6 +299,7 @@ namespace UnityEngine
             get
             {
                 if (!Readable("vertices")) return Array.Empty<Vector3>();
+                EnsureModelLoaded();
                 return (Vector3[])m_Vertices.Clone();
             }
             set
@@ -299,6 +315,7 @@ namespace UnityEngine
                 // index setter is (matches the Unity 6000.0.71f1 Editor, tests/projects/meshreadable
                 // `set.lockedVertices`, `write.*`).
                 if (!Readable("vertices")) return;
+                EnsureModelLoaded();
                 int length = value?.Length ?? 0;
                 if (length < m_Vertices.Length && HighestIndexedVertex() >= length)
                 {
@@ -324,6 +341,7 @@ namespace UnityEngine
         /// no longer changes it, or sets it again after every change.</summary>
         internal void AdoptVertices(Vector3[] value)
         {
+            EnsureModelLoaded();
             m_Vertices = value;
             m_HasPositionChannel = true;
             m_PositionsVersion++;
@@ -354,25 +372,37 @@ namespace UnityEngine
 
         public Vector3[] normals
         {
-            get => Readable("normals") && m_Normals != null ? (Vector3[])m_Normals.Clone() : Array.Empty<Vector3>();
-            set { if (Readable("normals")) AdoptNormals(Checked(value, "normals")); }
+            get
+            {
+                if (!Readable("normals")) return Array.Empty<Vector3>();
+                EnsureModelLoaded();
+                return m_Normals != null ? (Vector3[])m_Normals.Clone() : Array.Empty<Vector3>();
+            }
+            set { if (Readable("normals")) { EnsureModelLoaded(); AdoptNormals(Checked(value, "normals")); } }
         }
 
         /// <summary>Mesh.normals with a checked array the mesh keeps (see <see cref="AdoptVertices"/>).</summary>
         internal void AdoptNormals(Vector3[] value)
         {
+            EnsureModelLoaded();
             m_Normals = value; m_PositionsVersion++; InvalidatePackedChannel(VertexAttribute.Normal); Changed(indices: false);
         }
 
         public Vector4[] tangents
         {
-            get => Readable("tangents") && m_Tangents != null ? (Vector4[])m_Tangents.Clone() : Array.Empty<Vector4>();
-            set { if (Readable("tangents")) AdoptTangents(Checked(value, "tangents")); }
+            get
+            {
+                if (!Readable("tangents")) return Array.Empty<Vector4>();
+                EnsureModelLoaded();
+                return m_Tangents != null ? (Vector4[])m_Tangents.Clone() : Array.Empty<Vector4>();
+            }
+            set { if (Readable("tangents")) { EnsureModelLoaded(); AdoptTangents(Checked(value, "tangents")); } }
         }
 
         /// <summary>Mesh.tangents with a checked array the mesh keeps (see <see cref="AdoptVertices"/>).</summary>
         internal void AdoptTangents(Vector4[] value)
         {
+            EnsureModelLoaded();
             m_Tangents = value; InvalidatePackedChannel(VertexAttribute.Tangent); Changed(indices: false);
         }
 
@@ -380,7 +410,9 @@ namespace UnityEngine
         {
             get
             {
-                if (!Readable("colors") || m_Colors == null) return Array.Empty<Color>();
+                if (!Readable("colors")) return Array.Empty<Color>();
+                EnsureModelLoaded();
+                if (m_Colors == null) return Array.Empty<Color>();
                 var result = new Color[m_Colors.Length];
                 var colors = RenderColors();
                 for (int i = 0; i < result.Length; i++) result[i] = colors[i];
@@ -389,6 +421,7 @@ namespace UnityEngine
             set
             {
                 if (!Readable("colors")) return;
+                EnsureModelLoaded();
                 if (value == null || value.Length == 0) { m_Colors = null; InvalidatePackedChannel(VertexAttribute.Color); Changed(indices: false); return; }
                 var c = new Color32[value.Length];
                 for (int i = 0; i < c.Length; i++) c[i] = value[i];
@@ -401,8 +434,13 @@ namespace UnityEngine
 
         public Color32[] colors32
         {
-            get => Readable("colors") && m_Colors != null ? (Color32[])m_Colors.Clone() : Array.Empty<Color32>();
-            set { if (!Readable("colors")) return; m_Colors = Checked(value, "colors32"); InvalidatePackedChannel(VertexAttribute.Color); SetColorFormat(VertexAttributeFormat.UNorm8); Changed(indices: false); }
+            get
+            {
+                if (!Readable("colors")) return Array.Empty<Color32>();
+                EnsureModelLoaded();
+                return m_Colors != null ? (Color32[])m_Colors.Clone() : Array.Empty<Color32>();
+            }
+            set { if (!Readable("colors")) return; EnsureModelLoaded(); m_Colors = Checked(value, "colors32"); InvalidatePackedChannel(VertexAttribute.Color); SetColorFormat(VertexAttributeFormat.UNorm8); Changed(indices: false); }
         }
 
         T[] Checked<T>(T[] value, string what)
@@ -430,8 +468,10 @@ namespace UnityEngine
 
         Vector2[] GetUV2(int channel)
         {
+            if (!Readable(s_UVNames[channel])) return Array.Empty<Vector2>();
+            EnsureModelLoaded();
             var src = m_UVs[channel];
-            if (!Readable(s_UVNames[channel]) || src == null) return Array.Empty<Vector2>();
+            if (src == null) return Array.Empty<Vector2>();
             var r = new Vector2[src.Length];
             for (int i = 0; i < r.Length; i++) r[i] = src[i];
             return r;
@@ -440,6 +480,7 @@ namespace UnityEngine
         void SetUV2(int channel, Vector2[] value)
         {
             if (!Readable(s_UVNames[channel])) return;
+            EnsureModelLoaded();
             if (value == null || value.Length == 0) { InvalidatePackedChannel(VertexAttribute.TexCoord0 + channel); m_UVs[channel] = null; m_UVDimensions[channel] = 0; Changed(indices: false); return; }
             if (value.Length != m_Vertices.Length)
             {
@@ -464,7 +505,9 @@ namespace UnityEngine
         public void GetVertices(List<Vector3> vertices)
         {
             vertices.Clear();
-            if (Readable("vertices")) vertices.AddRange(m_Vertices);
+            if (!Readable("vertices")) return;
+            EnsureModelLoaded();
+            vertices.AddRange(m_Vertices);
         }
 
         public void SetNormals(List<Vector3> inNormals) => normals = inNormals.ToArray();
@@ -475,7 +518,9 @@ namespace UnityEngine
         public void GetNormals(List<Vector3> normals)
         {
             normals.Clear();
-            if (Readable("normals") && m_Normals != null) normals.AddRange(m_Normals);
+            if (!Readable("normals")) return;
+            EnsureModelLoaded();
+            if (m_Normals != null) normals.AddRange(m_Normals);
         }
 
         public void SetTangents(List<Vector4> inTangents) => tangents = inTangents.ToArray();
@@ -486,7 +531,9 @@ namespace UnityEngine
         public void GetTangents(List<Vector4> tangents)
         {
             tangents.Clear();
-            if (Readable("tangents") && m_Tangents != null) tangents.AddRange(m_Tangents);
+            if (!Readable("tangents")) return;
+            EnsureModelLoaded();
+            if (m_Tangents != null) tangents.AddRange(m_Tangents);
         }
 
         // A null list or array is an empty one: the channel is cleared
@@ -509,7 +556,9 @@ namespace UnityEngine
         public void GetColors(List<Color32> colors)
         {
             colors.Clear();
-            if (Readable("colors") && m_Colors != null) colors.AddRange(m_Colors);
+            if (!Readable("colors")) return;
+            EnsureModelLoaded();
+            if (m_Colors != null) colors.AddRange(m_Colors);
         }
 
         const string InvalidUVChannel = "The uv index is invalid. Must be in the range 0 to 7.";
@@ -529,6 +578,7 @@ namespace UnityEngine
                 return;
             }
             if (!Readable(s_UVNames[channel])) return;
+            EnsureModelLoaded();
             if (values == null || values.Length == 0)
             {
                 InvalidatePackedChannel(VertexAttribute.TexCoord0 + channel);
@@ -587,7 +637,9 @@ namespace UnityEngine
         {
             if (uvs == null) throw new ArgumentNullException(nameof(uvs), "The result uvs list cannot be null.");
             if (!IsUVChannel(channel)) throw new IndexOutOfRangeException(InvalidUVChannel);
-            return Readable(s_UVNames[channel]) ? m_UVs[channel] : null;
+            if (!Readable(s_UVNames[channel])) return null;
+            EnsureModelLoaded();
+            return m_UVs[channel];
         }
 
         public void GetUVs(int channel, List<Vector2> uvs)
@@ -618,6 +670,7 @@ namespace UnityEngine
             get
             {
                 if (!Readable(TrianglesOrIndices)) return Array.Empty<int>();
+                EnsureModelLoaded();
                 var all = new List<int>();
                 foreach (var s in m_SubMeshes)
                     if (s.Topology == MeshTopology.Triangles)
@@ -630,6 +683,7 @@ namespace UnityEngine
                 // (tests/projects/apierrors `mesh.triangles_not_multiple_submeshes`), unless scripts
                 // cannot write it at all (tests/projects/meshreadable `write.*.triangles`).
                 if (!Readable(TrianglesOrIndices)) return;
+                EnsureModelLoaded();
                 subMeshCount = 1;
                 SetTriangles(value, 0);
             }
@@ -660,6 +714,7 @@ namespace UnityEngine
         /// tests/projects/meshreadable `*.GetTrianglesList`).</summary>
         int[] TrianglesOf(int submesh, bool applyBaseVertex)
         {
+            EnsureModelLoaded();
             var s = m_SubMeshes[submesh];
             if (s.Topology != MeshTopology.Triangles) return Array.Empty<int>();
             var r = (int[])s.Indices.Clone();
@@ -688,6 +743,7 @@ namespace UnityEngine
         /// <summary>A sub-mesh's indices, readable or not (`*.GetIndicesList`).</summary>
         int[] IndicesOf(int submesh, bool applyBaseVertex)
         {
+            EnsureModelLoaded();
             var s = m_SubMeshes[submesh];
             var r = (int[])s.Indices.Clone();
             if (applyBaseVertex && s.BaseVertex != 0) for (int i = 0; i < r.Length; i++) r[i] += s.BaseVertex;
@@ -709,14 +765,14 @@ namespace UnityEngine
             CheckSubmesh(submesh);
             if (m_SubMeshes[submesh].IndexStart >= 0) return (uint)m_SubMeshes[submesh].IndexStart;
             uint start = 0;
-            for (int i = 0; i < submesh; i++) start += (uint)m_SubMeshes[i].Indices.Length;
+            for (int i = 0; i < submesh; i++) start += (uint)m_SubMeshes[i].IndexCount;
             return start;
         }
 
         public uint GetIndexCount(int submesh)
         {
             CheckSubmesh(submesh);
-            return (uint)m_SubMeshes[submesh].Indices.Length;
+            return (uint)m_SubMeshes[submesh].IndexCount;
         }
 
         public uint GetBaseVertex(int submesh)
@@ -801,8 +857,10 @@ namespace UnityEngine
         void SetIndicesOf(int submesh, int[] indices, MeshTopology topology, bool calculateBounds, int baseVertex)
         {
             if (indices == null) throw new ArgumentNullException(nameof(indices), "indices can't be null");
+            EnsureModelLoaded();
             if (!AcceptsIndices(indices, topology, baseVertex)) return;
             var s = m_SubMeshes[submesh];
+            s.DeferredIndexCount = 0;
             s.Indices = (int[])indices.Clone();
             s.Topology = topology;
             s.BaseVertex = baseVertex;
@@ -832,7 +890,7 @@ namespace UnityEngine
             if (index < 0 || index >= m_SubMeshes.Count)
                 throw new ArgumentException($"Invalid submesh index - got {index}, should be [0,{m_SubMeshes.Count})");
             var s = m_SubMeshes[index];
-            return new SubMeshDescriptor((int)GetIndexStart(index), s.Indices.Length, s.Topology)
+            return new SubMeshDescriptor((int)GetIndexStart(index), s.IndexCount, s.Topology)
             {
                 baseVertex = s.BaseVertex,
                 bounds = s.Bounds,
@@ -845,25 +903,27 @@ namespace UnityEngine
 
         public BoneWeight[] boneWeights
         {
-            get => m_BoneWeights != null ? (BoneWeight[])m_BoneWeights.Clone() : Array.Empty<BoneWeight>();
-            set { m_BoneWeights = Checked(value, "boneWeights"); InvalidatePackedChannel(VertexAttribute.BlendWeight); InvalidatePackedChannel(VertexAttribute.BlendIndices); Changed(indices: false); }
+            get { EnsureModelLoaded(); return m_BoneWeights != null ? (BoneWeight[])m_BoneWeights.Clone() : Array.Empty<BoneWeight>(); }
+            set { EnsureModelLoaded(); m_BoneWeights = Checked(value, "boneWeights"); InvalidatePackedChannel(VertexAttribute.BlendWeight); InvalidatePackedChannel(VertexAttribute.BlendIndices); Changed(indices: false); }
         }
 
         public Matrix4x4[] bindposes
         {
-            get => m_Bindposes != null ? (Matrix4x4[])m_Bindposes.Clone() : Array.Empty<Matrix4x4>();
-            set => m_Bindposes = value != null ? (Matrix4x4[])value.Clone() : null;
+            get { EnsureModelLoaded(); return m_Bindposes != null ? (Matrix4x4[])m_Bindposes.Clone() : Array.Empty<Matrix4x4>(); }
+            set { EnsureModelLoaded(); m_Bindposes = value != null ? (Matrix4x4[])value.Clone() : null; }
         }
 
         public void GetBindposes(List<Matrix4x4> bindposes)
         {
             bindposes.Clear();
+            EnsureModelLoaded();
             if (m_Bindposes != null) bindposes.AddRange(m_Bindposes);
         }
 
         public void GetBoneWeights(List<BoneWeight> boneWeights)
         {
             boneWeights.Clear();
+            EnsureModelLoaded();
             if (m_BoneWeights != null) boneWeights.AddRange(m_BoneWeights);
         }
 
@@ -873,23 +933,35 @@ namespace UnityEngine
 
         public void Clear([Internal.DefaultValue("true")] bool keepVertexLayout)
         {
-            m_HasPositionChannel = keepVertexLayout && ChannelPresent(VertexAttribute.Position);
+            bool Keep(VertexAttribute attribute) => keepVertexLayout && ChannelPresent(attribute);
+            m_HasPositionChannel = Keep(VertexAttribute.Position);
+            bool keepNormal = Keep(VertexAttribute.Normal);
+            bool keepTangent = Keep(VertexAttribute.Tangent);
+            bool keepColor = Keep(VertexAttribute.Color);
+            bool keepWeights = Keep(VertexAttribute.BlendWeight) || Keep(VertexAttribute.BlendIndices);
+            int keepUvMask = 0;
+            for (int i = 0; i < 8; i++)
+                if (Keep(VertexAttribute.TexCoord0 + i)) keepUvMask |= 1 << i;
+            m_DeferredModel = false;
+            m_ModelGuid = null;
+            m_DeferredVertexCount = 0;
+            m_DeferredChannels = 0;
             ClearPackedChannels(keepVertexLayout);
             m_Vertices = Array.Empty<Vector3>();
-            bool Keep(VertexAttribute attribute) => keepVertexLayout && ChannelPresent(attribute);
-            m_Normals = Keep(VertexAttribute.Normal) ? Array.Empty<Vector3>() : null;
-            m_Tangents = Keep(VertexAttribute.Tangent) ? Array.Empty<Vector4>() : null;
-            m_Colors = Keep(VertexAttribute.Color) ? Array.Empty<Color32>() : null;
+            m_Normals = keepNormal ? Array.Empty<Vector3>() : null;
+            m_Tangents = keepTangent ? Array.Empty<Vector4>() : null;
+            m_Colors = keepColor ? Array.Empty<Color32>() : null;
             for (int i = 0; i < 8; i++)
             {
-                m_UVs[i] = Keep(VertexAttribute.TexCoord0 + i) ? Array.Empty<Vector4>() : null;
+                m_UVs[i] = (keepUvMask & (1 << i)) != 0 ? Array.Empty<Vector4>() : null;
                 if (!keepVertexLayout) m_UVDimensions[i] = 0;
             }
-            m_BoneWeights = Keep(VertexAttribute.BlendWeight) || Keep(VertexAttribute.BlendIndices) ? Array.Empty<BoneWeight>() : null;
+            m_BoneWeights = keepWeights ? Array.Empty<BoneWeight>() : null;
             m_BlendShapes.Clear();
             foreach (var s in m_SubMeshes)
             {
                 s.Indices = Array.Empty<int>();
+                s.DeferredIndexCount = 0;
                 s.IndexStart = -1;
             }
             m_IndexBuffer = null;
@@ -904,6 +976,7 @@ namespace UnityEngine
         public void RecalculateBounds([Internal.DefaultValue("MeshUpdateFlags.Default")] MeshUpdateFlags flags)
         {
             if (!CanCall(nameof(RecalculateBounds))) return;
+            EnsureModelLoaded();
             UpdateBounds();
         }
 
@@ -936,6 +1009,7 @@ namespace UnityEngine
         public void RecalculateNormals([Internal.DefaultValue("MeshUpdateFlags.Default")] MeshUpdateFlags flags)
         {
             if (!CanCall(nameof(RecalculateNormals))) return;
+            EnsureModelLoaded();
             var normals = new Vector3[m_Vertices.Length];
             foreach (var s in m_SubMeshes)
             {
@@ -960,6 +1034,7 @@ namespace UnityEngine
         public void RecalculateTangents([Internal.DefaultValue("MeshUpdateFlags.Default")] MeshUpdateFlags flags)
         {
             if (!CanCall(nameof(RecalculateTangents))) return;
+            EnsureModelLoaded();
             var uv = m_UVs[0];
             if (uv == null || m_Normals == null) return;
             var tan1 = new Vector3[m_Vertices.Length];
@@ -1071,6 +1146,7 @@ namespace UnityEngine
                 int offset = positions.Count;
                 var m = useMatrices ? c.transform : Matrix4x4.identity;
                 var src = c.mesh;
+                src.EnsureModelLoaded();
                 foreach (var v in src.m_Vertices) positions.Add(m.MultiplyPoint3x4(v));
                 for (int i = 0; i < src.m_Vertices.Length; i++)
                 {
@@ -1124,6 +1200,10 @@ namespace UnityEngine
         /// index buffer (Mesh.indexFormat, 6000.0).</summary>
         internal void WriteStreamedTriangles(int[] indices, int count, bool index32, bool streaming)
         {
+            m_DeferredModel = false;
+            m_ModelGuid = null;
+            m_DeferredVertexCount = 0;
+            m_DeferredChannels = 0;
             indexFormat = index32 ? IndexFormat.UInt32 : IndexFormat.UInt16;
             if (m_SubMeshes.Count != 1)
             {
@@ -1154,6 +1234,36 @@ namespace UnityEngine
         /// <summary>Sends the mesh to the renderer when it changed; returns its handle.</summary>
         internal unsafe ulong Sync()
         {
+            if (m_DeferredModel)
+            {
+                if (m_Handle == 0) m_Handle = RenderHandles.Next();
+                SyncGraphicsBuffers();
+                ClearGraphicsSources();
+                if (!m_Dirty) { SyncGraphicsBinding(); return m_Handle; }
+                // SyncGraphicsBuffers() only materializes if GetVertexBuffer/GetIndexBuffer was
+                // requested before; otherwise upload straight from the native imported model.
+                if (m_DeferredModel)
+                {
+                    m_Dirty = false;
+                    m_SyncVersion++;
+                    int deferredSubs = m_SubMeshes.Count;
+                    if (m_UploadedStarts == null || m_UploadedStarts.Length != deferredSubs + 1)
+                        m_UploadedStarts = new uint[deferredSubs + 1];
+                    m_UploadedStarts[0] = 0;
+                    for (int i = 0; i < deferredSubs; i++)
+                        m_UploadedStarts[i + 1] = m_UploadedStarts[i] + UploadedIndexCount(i);
+                    try
+                    {
+                        UploadDeferredModelMesh(m_Handle, m_ModelGuid, m_ModelMeshIndex);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"Unbound: uploading deferred mesh '{m_Name}': {e.Message}");
+                    }
+                    SyncGraphicsBinding();
+                    return m_Handle;
+                }
+            }
             bool streaming = m_StreamVertexCount >= 0;
             int count = streaming ? m_StreamVertexCount : m_Vertices.Length;
             if (m_Dirty)
@@ -1254,7 +1364,7 @@ namespace UnityEngine
         }
 
         int SyncedIndexCount(int submesh) =>
-            m_StreamIndexCount >= 0 && submesh == 0 ? m_StreamIndexCount : m_SubMeshes[submesh].Indices.Length;
+            m_StreamIndexCount >= 0 && submesh == 0 ? m_StreamIndexCount : m_SubMeshes[submesh].IndexCount;
 
         static void CheckVertexChannelLength(Array values, int count, string channel, int uvChannel = -1, bool streaming = false)
         {

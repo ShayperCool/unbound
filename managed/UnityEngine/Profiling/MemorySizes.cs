@@ -121,21 +121,21 @@ namespace Unbound.Runtime
 
         internal static long MeshVertexBytes(Mesh m)
         {
-            int n = m.m_Vertices.Length;
+            int n = m.vertexCount;
             if (n == 0) return 0;
             long stride = 12;
-            if (m.m_Normals != null) stride += 12;
-            if (m.m_Tangents != null) stride += 16;
-            if (m.m_Colors != null) stride += 4;
+            if (m.HasVertexAttribute(VertexAttribute.Normal)) stride += 12;
+            if (m.HasVertexAttribute(VertexAttribute.Tangent)) stride += 16;
+            if (m.HasVertexAttribute(VertexAttribute.Color)) stride += 4;
             for (int i = 0; i < m.m_UVs.Length; i++)
-                if (m.m_UVs[i] != null) stride += 4 * Math.Max(1, m.m_UVDimensions[i]);
+                if (m.HasVertexAttribute(VertexAttribute.TexCoord0 + i)) stride += 4 * Math.Max(1, m.m_UVDimensions[i]);
             return stride * n;
         }
 
         internal static long MeshIndexBytes(Mesh m)
         {
             long count = 0;
-            foreach (var sub in m.m_SubMeshes) count += sub.Indices.Length;
+            foreach (var sub in m.m_SubMeshes) count += sub.IndexCount;
             return count * (m.indexFormat == IndexFormat.UInt32 ? 4 : 2);
         }
 
