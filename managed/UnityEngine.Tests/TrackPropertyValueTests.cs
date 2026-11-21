@@ -40,8 +40,19 @@ namespace UnityEngine.Tests
         enum BitFlagsChoice
         {
             None = 0,
-            Read = 1,
-            Write = 2
+            Read = 1 << 0,
+            [InspectorName("Write Access")]
+            Write = 1 << 1,
+            Execute = 1 << 2,
+            ReadWrite = Read | Write,
+            All = ~0
+        }
+
+        [Flags]
+        enum SparseBitFlags
+        {
+            LowBit = 1 << 0,
+            HighBit = int.MinValue
         }
 
         [Serializable]
@@ -64,6 +75,7 @@ namespace UnityEngine.Tests
             public SignedChoice signedEnum = SignedChoice.MinusFive;
             public NonMonotonicAliasChoice aliasEnum = NonMonotonicAliasChoice.Primary;
             public BitFlagsChoice flagsEnum = BitFlagsChoice.Read;
+            public SparseBitFlags sparseFlagsEnum = SparseBitFlags.HighBit;
         }
 
         sealed class OtherTarget : ScriptableObject
@@ -999,28 +1011,56 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void EnumBindingFlagsReportStubAndScalarControlsBindEnum()
+        public void EnumBindingFlagsAndScalarControlsBindEnum()
         {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var target = ScriptableObject.CreateInstance<TestTarget>();
             using var panel = RuntimePanel.Create(settings);
             using var so = new SerializedObject(target);
             try
             {
-                const string pfFlagsKey = "UnityEditor.UIElements.PropertyField (EnumFlags)";
-                const string efFlagsKey = "UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding (Flags)";
-                int beforePf = Stubs.HitReport().FirstOrDefault(h => h.Key == pfFlagsKey).Value;
-                int beforeEf = Stubs.HitReport().FirstOrDefault(h => h.Key == efFlagsKey).Value;
-
-                var pfFlags = new PropertyField(so.FindProperty("flagsEnum"));
-                var efFlags = new EnumField();
+                // PropertyField generates EnumFlagsField for [Flags] enum and binds two-way.
+                var pfFlags = new PropertyField(so.FindProperty("flagsEnum"), "Permissions");
                 panel.visualTree.Add(pfFlags);
-                panel.visualTree.Add(efFlags);
                 pfFlags.Bind(so);
-                efFlags.BindProperty(so.FindProperty("flagsEnum"));
-                Assert.Equal(0, pfFlags.hierarchy.childCount);
-                Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == pfFlagsKey).Value > beforePf);
-                Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == efFlagsKey).Value > beforeEf);
+                Tick(panel);
+                Tick(panel);
+                var eff = Assert.IsType<EnumFlagsField>(pfFlags.hierarchy[0]);
+                Assert.Equal("Permissions", eff.label);
+                Assert.Equal((Enum)BitFlagsChoice.Read, eff.value);
+                Assert.Equal("Read", eff.text);
+
+                // All defined bits normalize to -1 (All) and write back to SerializedObject.
+                eff.value = BitFlagsChoice.Read | BitFlagsChoice.Write | BitFlagsChoice.Execute;
+                Assert.Equal(BitFlagsChoice.All, target.flagsEnum);
+                Assert.Equal("All", eff.text);
+
+                // Direct EnumFlagsField on signed high-bit / no-zero/no-all enum strips undefined bits.
+                var effSparse = new EnumFlagsField();
+                panel.visualTree.Add(effSparse);
+                effSparse.BindProperty(so.FindProperty("sparseFlagsEnum"));
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal((Enum)SparseBitFlags.HighBit, effSparse.value);
+                Assert.Equal("High Bit", effSparse.text);
+                effSparse.value = (SparseBitFlags)(1 << 8); // undefined bit strips to 0
+                Assert.Equal((SparseBitFlags)0, target.sparseFlagsEnum);
+                Assert.Equal("Nothing", effSparse.text);
+
+                // Menu toggle updates value and unbinding resets to zero without disturbing other bindings.
+                effSparse.ChangeValueFromMenu("Low Bit");
+                Assert.Equal(SparseBitFlags.LowBit, target.sparseFlagsEnum);
+                effSparse.Unbind();
+                Assert.Equal((Enum)(SparseBitFlags)0, effSparse.value);
+                Assert.Equal("Nothing", effSparse.text);
+
+                // UxmlSerializedData CreateInstance produces a valid EnumFlagsField.
+                var uxmlData = new EnumFlagsField.UxmlSerializedData();
+                var created = Assert.IsType<EnumFlagsField>(uxmlData.CreateInstance());
+                Assert.True(created.ClassListContains(EnumFlagsField.ussClassName));
+                uxmlData.Deserialize(created);
+                Assert.Null(created.value);
 
                 // IntegerField and TextField bind ordinary enums via int value and display name string.
                 var intField = new IntegerField();
@@ -1041,6 +1081,49 @@ namespace UnityEngine.Tests
             finally
             {
                 Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void EnumFlagsMixedMultiObjectAndDisposedSoAreClean()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.flagsEnum = BitFlagsChoice.Read;
+            t2.flagsEnum = BitFlagsChoice.Execute;
+            using var panel = RuntimePanel.Create(settings);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                var eff = new EnumFlagsField();
+                panel.visualTree.Add(eff);
+                eff.BindProperty(soMulti.FindProperty("flagsEnum"));
+                Tick(panel);
+                Tick(panel);
+                Assert.True(eff.showMixedValue);
+                Assert.Equal(BaseField<Enum>.mixedValueString, eff.text);
+
+                // Writing target[0]'s existing value resolves mixed state across both targets.
+                eff.value = BitFlagsChoice.Read;
+                Tick(panel);
+                Assert.False(eff.showMixedValue);
+                Assert.Equal("Read", eff.text);
+                Assert.Equal(BitFlagsChoice.Read, t1.flagsEnum);
+                Assert.Equal(BitFlagsChoice.Read, t2.flagsEnum);
+
+                // Disposed SO unbinds cleanly on update.
+                soMulti.Dispose();
+                Tick(panel);
+                Tick(panel);
+                Assert.False(eff.HasBinding(BindingExtensions.s_SerializedBindingId));
+            }
+            finally
+            {
+                soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
                 Object.DestroyImmediate(settings);
             }
         }

@@ -8,6 +8,43 @@ namespace UnityEngine.UIElements
     /// focus root delegating focus to its input.</summary>
     public abstract partial class BaseField<TValueType> : BindableElement, INotifyValueChanged<TValueType>, IMixedValueSupport, IPrefixLabel, IEditableElement
     {
+        [Serializable]
+        [UnityEngine.Internal.ExcludeFromDocs]
+        public new abstract partial class UxmlSerializedData : BindableElement.UxmlSerializedData
+        {
+#pragma warning disable 649
+            [MultilineTextField] [SerializeField] string label;
+            [UxmlIgnore] [HideInInspector] [SerializeField] UxmlAttributeFlags label_UxmlAttributeFlags;
+            [SerializeField] TValueType value;
+            [UxmlIgnore] [HideInInspector] [SerializeField] UxmlAttributeFlags value_UxmlAttributeFlags;
+#pragma warning restore 649
+
+            internal TValueType Value
+            {
+                get => value;
+                set => this.value = value;
+            }
+
+            protected UxmlSerializedData() { }
+
+            public new static void Register()
+            {
+                UxmlDescriptionCache.RegisterType(typeof(UxmlSerializedData), new[]
+                {
+                    new UxmlAttributeNames(nameof(label), "label", null),
+                    new UxmlAttributeNames(nameof(value), "value", null),
+                });
+            }
+
+            public override void Deserialize(object obj)
+            {
+                base.Deserialize(obj);
+                var field = (BaseField<TValueType>)obj;
+                if (ShouldWriteAttributeValue(label_UxmlAttributeFlags)) field.label = label;
+                if (ShouldWriteAttributeValue(value_UxmlAttributeFlags)) field.SetValueWithoutNotify(value);
+            }
+        }
+
         public static readonly string ussClassName = "unity-base-field";
         public static readonly string labelUssClassName = ussClassName + "__label";
         public static readonly string inputUssClassName = ussClassName + "__input";

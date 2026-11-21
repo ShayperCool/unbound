@@ -1435,7 +1435,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "1"
+        "value": "9"
       }
     },
     {
@@ -1455,7 +1455,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "2"
+        "value": "10"
       }
     },
     {
@@ -2337,7 +2337,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "3"
+        "value": "1"
       }
     },
     {
@@ -2357,7 +2357,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "4"
+        "value": "11"
       }
     },
     {
@@ -2390,7 +2390,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "20"
+        "value": "21"
       }
     },
     {
@@ -2410,7 +2410,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "21"
+        "value": "22"
       }
     },
     {
@@ -2430,7 +2430,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "22"
+        "value": "23"
       }
     },
     {
@@ -2450,7 +2450,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "7"
+        "value": "12"
       }
     },
     {
@@ -2470,7 +2470,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "5"
+        "value": "2"
       }
     },
     {
@@ -2529,7 +2529,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "23"
+        "value": "24"
       }
     },
     {
@@ -2549,7 +2549,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "24"
+        "value": "25"
       }
     },
     {
@@ -2569,7 +2569,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "25"
+        "value": "26"
       }
     },
     {
@@ -2578,6 +2578,18 @@
       "reason": "Q478 variable creation state: independent GPU Editor repeats differ in this value, as for the other UI events. The raw row remains visible; only this numeric creation timestamp is variable. This entry does not establish a fixed default contract.",
       "expectedPattern": "[0-9]+",
       "actualPattern": "[0-9]+"
+    },
+    {
+      "key": "UnityEngine.UIElements.DragPerformEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.DragPerformEvent>/eventTypeId",
+      "expected": {
+        "status": "value",
+        "value": "26"
+      },
+      "actual": {
+        "status": "value",
+        "value": "27"
+      },
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types."
     },
     {
       "key": "UnityEngine.UIElements.DragUpdatedEvent/Property/UnityEngine.UIElements.EventBase/timestamp",
@@ -2596,7 +2608,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "27"
+        "value": "28"
       }
     },
     {
@@ -2835,7 +2847,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "6"
+        "value": "8"
       }
     },
     {
@@ -2966,7 +2978,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "8"
+        "value": "13"
       }
     },
     {
@@ -3025,7 +3037,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "11"
+        "value": "14"
       }
     },
     {
@@ -3157,7 +3169,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "28"
+        "value": "6"
       }
     },
     {
@@ -3377,7 +3389,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "19"
+        "value": "7"
       }
     },
     {
@@ -3397,7 +3409,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "17"
+        "value": "19"
       }
     },
     {
@@ -3424,7 +3436,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "18"
+        "value": "20"
       }
     },
     {
@@ -3444,7 +3456,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "9"
+        "value": "3"
       }
     },
     {
@@ -3480,6 +3492,18 @@
       "reason": "Q403 variable creation state: independent GPU Editor repeats differ in this value. The raw row remains visible; only the named numeric leaves are variable. Queue an initialized-context or relational control; this entry does not establish a default contract.",
       "expectedPattern": "[0-9]+",
       "actualPattern": "[0-9]+"
+    },
+    {
+      "key": "UnityEngine.UIElements.PointerMoveEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.PointerMoveEvent>/eventTypeId",
+      "expected": {
+        "status": "value",
+        "value": "16"
+      },
+      "actual": {
+        "status": "value",
+        "value": "5"
+      },
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types."
     },
     {
       "key": "UnityEngine.UIElements.PointerOutEvent/Property/UnityEngine.UIElements.EventBase/timestamp",
@@ -3532,7 +3556,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "10"
+        "value": "4"
       }
     },
     {

@@ -763,3 +763,14 @@ The `PropertyField` slice adds `UnityEditor.UIElements.PropertyField` and its ne
 to the handwritten inventory. Two independent 6000.0.71f1 Linux GPU Editor captures agree
 byte-for-byte on all 61 added rows, and all 61 rows match Unbound with no new queued differences;
 every earlier committed reference row and inventory entry is unchanged.
+
+The `EnumFlagsField` slice adds `UnityEditor.UIElements.BaseMaskField`1`,
+`UnityEditor.UIElements.EnumFlagsField` (with its nested `UxmlFactory`, `UxmlSerializedData`, and
+`UxmlTraits`), and `UnityEngine.UIElements.BaseField`1+UxmlSerializedData` to the handwritten
+inventory (69 added rows from two independent 6000.0.71f1 Linux GPU Editor captures that agree
+byte-for-byte; all 69 match Unbound). Because constructing `EnumFlagsField` precedes the
+`UnityEditor.UIElements.*Event` and `UnityEngine.UIElements.*Event` types in alphabetical walk
+order and registers its base field, popup, and geometry-changed callbacks earlier, `debt.json`
+updates 22 existing `eventTypeId` actuals and re-queues 2 `eventTypeId` rows (`DragPerformEvent`
+and `PointerMoveEvent`) that shifted off coincidence; every earlier committed reference row and
+inventory entry is unchanged.

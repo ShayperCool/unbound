@@ -273,6 +273,8 @@ namespace UnityEngine.UIElements
         internal IGenericMenu m_GenericMenu;
         internal bool m_AutoCloseMenu = true;
 
+        internal static readonly BindingId choicesProperty = nameof(choices);
+
         public new static readonly string ussClassName = "unity-base-popup-field";
         public static readonly string textUssClassName = ussClassName + "__text";
         public static readonly string arrowUssClassName = ussClassName + "__arrow";

@@ -47173,28 +47173,6 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] protected override bool ProcessChangedAssets(global::System.Collections.Generic.HashSet<global::UnityEngine.UIElements.VisualTreeAsset> changedAssets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseLiveReloadVisualTreeAssetTracker.ProcessChangedAssets"); return default; }
         [global::Unbound.Stub] protected BaseLiveReloadVisualTreeAssetTracker() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseLiveReloadVisualTreeAssetTracker.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class BaseMaskField<TChoice> : global::UnityEngine.UIElements.BasePopupField<TChoice, string>
-    {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId choicesMasksProperty;
-        internal abstract TChoice MaskToValue(int newMask);
-        internal abstract int ValueToMask(TChoice value);
-        [global::Unbound.Stub] internal BaseMaskField(string label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.ctor"); }
-        [global::Unbound.Stub] internal virtual string GetNothingName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.GetNothingName"); return default; }
-        [global::Unbound.Stub] internal virtual string GetEverythingName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.GetEverythingName"); return default; }
-        [global::Unbound.Stub] internal bool IsPowerOf2(int itemIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.IsPowerOf2"); return default; }
-        [global::Unbound.Stub] internal override string GetValueToDisplay() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.GetValueToDisplay"); return default; }
-        [global::Unbound.Stub] internal override string GetListItemToDisplay(TChoice item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.GetListItemToDisplay"); return default; }
-        [global::Unbound.Stub] internal string GetDisplayedValue(int itemIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.GetDisplayedValue"); return default; }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(TChoice newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] internal override void AddMenuItems(global::UnityEngine.UIElements.IGenericMenu menu) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.AddMenuItems"); }
-        [global::Unbound.Stub] private protected virtual int UpdateMaskIfEverything(int currentMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.UpdateMaskIfEverything"); return default; }
-        [global::Unbound.Stub] internal void ChangeValueFromMenu(string menuItem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.ChangeValueFromMenu"); }
-        internal int fullChoiceMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.fullChoiceMask"); return default; } }
-        public override global::System.Collections.Generic.List<string> choices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.choices"); return new global::System.Collections.Generic.List<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.choices"); } }
-        public virtual global::System.Collections.Generic.List<int> choicesMasks { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.choicesMasks"); return new global::System.Collections.Generic.List<int>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.choicesMasks"); } }
-        public override TChoice value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BaseMaskField<TChoice>.value"); } }
-    }
     unsafe static partial class BindingExtensions
     {
         [global::Unbound.Stub] internal static void HandleStyleUpdate(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.HandleStyleUpdate"); }
@@ -47371,51 +47349,6 @@ namespace UnityEditor.UIElements
     {
         [global::Unbound.Stub] public static global::UnityEditor.UIElements.SerializableJsonDictionary GetEditorData(global::UnityEditor.EditorWindow window) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EditorWindowViewData.GetEditorData"); return default; }
         [global::Unbound.Stub] public EditorWindowViewData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EditorWindowViewData.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class EnumFlagsField : global::UnityEditor.UIElements.BaseMaskField<global::System.Enum>
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public EnumFlagsField(global::System.Enum defaultValue) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.ctor"); }
-        [global::Unbound.Stub] public EnumFlagsField(global::System.Enum defaultValue, bool includeObsoleteValues) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.ctor"); }
-        [global::Unbound.Stub] public EnumFlagsField(string label, global::System.Enum defaultValue) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.ctor"); }
-        [global::Unbound.Stub] public EnumFlagsField() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.ctor"); }
-        [global::Unbound.Stub] public EnumFlagsField(string label, global::System.Enum defaultValue, bool includeObsoleteValues) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.ctor"); }
-        [global::Unbound.Stub] public void Init(global::System.Enum defaultValue, bool includeObsoleteValues = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.Init"); }
-        [global::Unbound.Stub] public EnumFlagsField(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.ctor"); }
-        [global::Unbound.Stub] internal override global::System.Enum MaskToValue(int newMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.MaskToValue"); return default; }
-        [global::Unbound.Stub] internal override int ValueToMask(global::System.Enum value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.ValueToMask"); return default; }
-        [global::Unbound.Stub] internal void PopulateDataFromType(global::System.Type enumType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.PopulateDataFromType"); }
-        [global::Unbound.Stub] internal override string GetNothingName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.GetNothingName"); return default; }
-        [global::Unbound.Stub] internal override string GetEverythingName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.GetEverythingName"); return default; }
-        internal global::System.Type type { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.type"); return default; } }
-        internal bool includeObsoleteValues { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.includeObsoleteValues"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.includeObsoleteValues"); } }
-        internal string typeAsString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.typeAsString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.typeAsString"); } }
-        internal string valueAsString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.valueAsString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.valueAsString"); } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<global::System.Enum>.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.EnumFlagsField, global::UnityEditor.UIElements.EnumFlagsField.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::System.Enum>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EnumFlagsField.UxmlTraits.ctor"); }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class GenericOSMenu : global::UnityEngine.UIElements.IGenericMenu

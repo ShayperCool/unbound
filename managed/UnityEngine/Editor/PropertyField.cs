@@ -310,8 +310,20 @@ namespace UnityEditor.UIElements
                     var enumType = property.ManagedEnumType;
                     if (enumType != null && enumType.IsDefined(typeof(FlagsAttribute), false))
                     {
-                        Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField (EnumFlags)");
-                        return null;
+                        var flagsData = EnumDataUtility.GetCachedEnumData(enumType);
+                        if (originalField is EnumFlagsField existingFlags)
+                        {
+                            existingFlags.choices = new List<string>(flagsData.displayNames);
+                            existingFlags.value = (Enum)Enum.ToObject(enumType, property.intValue);
+                        }
+                        return ConfigureField<EnumFlagsField, Enum>(
+                            originalField as EnumFlagsField,
+                            property,
+                            () => new EnumFlagsField
+                            {
+                                choices = new List<string>(flagsData.displayNames),
+                                value = (Enum)Enum.ToObject(enumType, property.intValue),
+                            });
                     }
                     EnumData? enumData = enumType != null
                         ? EnumDataUtility.GetCachedEnumData(enumType, excludeObsolete: false)

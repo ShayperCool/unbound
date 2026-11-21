@@ -1144,15 +1144,9 @@ namespace UnityEditor.UIElements.Bindings
             {
                 SerializedDefaultEnumBinding.CreateBind(popup, this, prop);
             }
-            else if (element is EnumField enumField)
+            else if (element is EnumFlagsField || element is EnumField)
             {
-                var enumType = prop.ManagedEnumType;
-                if (enumType != null && enumType.IsDefined(typeof(FlagsAttribute), false))
-                {
-                    Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding (Flags)");
-                    return;
-                }
-                SerializedManagedEnumBinding.CreateBind(enumField, this, prop);
+                SerializedManagedEnumBinding.CreateBind((BaseField<Enum>)element, this, prop);
             }
             else if (element is INotifyValueChanged<int>)
             {
@@ -1829,6 +1823,11 @@ namespace UnityEditor.UIElements.Bindings
             {
                 if (enumVal != null) ef.Init(enumVal);
                 else { ef.PopulateDataFromType(manageType); ef.SetValueWithoutNotify(null); }
+            }
+            else if (c is EnumFlagsField eff)
+            {
+                if (enumVal != null) eff.Init(enumVal);
+                else { eff.PopulateDataFromType(manageType); eff.SetValueWithoutNotify(null); }
             }
             else
             {

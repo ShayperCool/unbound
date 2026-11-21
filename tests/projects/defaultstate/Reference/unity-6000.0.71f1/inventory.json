@@ -2406,8 +2406,38 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "open-generic",
+      "type": "UnityEditor.UIElements.BaseMaskField`1"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "static",
       "type": "UnityEditor.UIElements.BindingExtensions"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.EnumFlagsField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.EnumFlagsField+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.EnumFlagsField+UxmlSerializedData"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.EnumFlagsField+UxmlTraits"
     },
     {
       "category": "class",
@@ -8084,6 +8114,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "open-generic",
       "type": "UnityEngine.UIElements.BaseField`1"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "open-generic",
+      "type": "UnityEngine.UIElements.BaseField`1+UxmlSerializedData"
     },
     {
       "category": "class",

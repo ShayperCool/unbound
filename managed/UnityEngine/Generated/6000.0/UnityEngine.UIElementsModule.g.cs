@@ -146,15 +146,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal override global::UnityEngine.Rect GetTooltipRect() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.GetTooltipRect"); return default; }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.OnViewDataReady"); }
         internal event global::System.Action viewDataRestored { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.viewDataRestored"); } [global::Unbound.Stub] remove { } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BindableElement.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UxmlSerializedData.ctor"); }
-            internal TValueType Value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UxmlSerializedData.Value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UxmlSerializedData.Value"); } }
-        }
     }
     unsafe partial class BaseListView
     {
@@ -202,7 +193,6 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class BasePopupField<TValueType, TValueChoice>
     {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId choicesProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId textProperty;
     }
     unsafe partial class BaseRuntimePanel
@@ -1123,11 +1113,6 @@ namespace UnityEngine.UIElements
     internal unsafe partial class EnumFieldValueDecoratorAttribute : global::UnityEngine.PropertyAttribute
     {
         [global::Unbound.Stub] public EnumFieldValueDecoratorAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EnumFieldValueDecoratorAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class EnumFlagsFieldValueDecoratorAttribute : global::UnityEngine.PropertyAttribute
-    {
-        [global::Unbound.Stub] public EnumFlagsFieldValueDecoratorAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EnumFlagsFieldValueDecoratorAttribute.ctor"); }
     }
     unsafe partial class EventBase
     {
