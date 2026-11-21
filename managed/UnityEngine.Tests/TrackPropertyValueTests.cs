@@ -340,6 +340,73 @@ namespace UnityEngine.Tests
             }
         }
 
+        sealed class ThrowingIntElement : BindableElement, INotifyValueChanged<int>
+        {
+            int m_Value;
+            public bool Throw;
+            public int value
+            {
+                get => m_Value;
+                set => SetValueWithoutNotify(value);
+            }
+            public void SetValueWithoutNotify(int newValue)
+            {
+                if (Throw) throw new NullReferenceException("element bug");
+                m_Value = newValue;
+            }
+        }
+
+        sealed class ExceptionCapture : ILogHandler
+        {
+            readonly ILogHandler m_Inner;
+            public readonly List<string> Exceptions = new List<string>();
+            public ExceptionCapture(ILogHandler inner) => m_Inner = inner;
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) => m_Inner.LogFormat(logType, context, format, args);
+            public void LogException(Exception exception, Object context) => Exceptions.Add(exception.Message);
+        }
+
+        [Fact]
+        public void AnExceptionFromABoundElementOnALiveObjectIsLoggedAndTheBindingStays()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            var capture = new ExceptionCapture(previous);
+            try
+            {
+                var element = new ThrowingIntElement();
+                panel.visualTree.Add(element);
+                element.BindProperty(so.FindProperty("count"));
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(10, element.value);
+
+                logger.logHandler = capture;
+                element.Throw = true;
+                target.count = 20;
+                Tick(panel);
+                Tick(panel);
+                logger.logHandler = previous;
+                Assert.Contains("element bug", capture.Exceptions);
+                Assert.True(element.HasBinding(BindingExtensions.s_SerializedBindingId));
+
+                element.Throw = false;
+                target.count = 30;
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(30, element.value);
+            }
+            finally
+            {
+                logger.logHandler = previous;
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
         [Fact]
         public void SwappedOrShiftedStructPartsAreSeenAsChanges()
         {
