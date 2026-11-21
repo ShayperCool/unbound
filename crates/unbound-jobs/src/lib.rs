@@ -116,6 +116,9 @@ struct Graph {
     /// Jobs launched while there were no workers: their participants wait for a thread that waits
     /// for them, or for the next workers ([`set_worker_count`]).
     unhelped: Vec<Arc<Run>>,
+    /// The length at which `unhelped` drops the runs nobody needs to help any more (doubling, so
+    /// that pruning stays linear in the launches).
+    unhelped_prune_at: usize,
 }
 
 static GRAPH: Mutex<Graph> = Mutex::new(Graph {
@@ -124,7 +127,11 @@ static GRAPH: Mutex<Graph> = Mutex::new(Graph {
     batch: Vec::new(),
     callbacks: None,
     unhelped: Vec::new(),
+    unhelped_prune_at: UNHELPED_PRUNE_MIN,
 });
+
+/// The smallest length at which the list of runs launched without workers is pruned.
+const UNHELPED_PRUNE_MIN: usize = 64;
 
 /// Signalled when a job some thread waits for is done or ready to run, and, while there are no
 /// workers, when it is prepared.
@@ -520,14 +527,19 @@ fn launch(run: Arc<Run>, here: bool) {
             // or the next workers do.
             {
                 let mut graph = graph();
-                graph.unhelped.retain(|run| run.unclaimed() != 0);
+                if graph.unhelped.len() >= graph.unhelped_prune_at {
+                    graph.unhelped.retain(|run| run.unclaimed() != 0);
+                    graph.unhelped_prune_at = UNHELPED_PRUNE_MIN.max(2 * graph.unhelped.len());
+                }
                 graph.unhelped.push(run.clone());
                 if graph.node(run.key).is_some_and(|node| node.waiters != 0) {
                     CHANGED.notify_all();
                 }
             }
             // The count may have been raised meanwhile.
-            help_unhelped();
+            if worker_count() != 0 {
+                help_unhelped();
+            }
         }
     }
     if here {

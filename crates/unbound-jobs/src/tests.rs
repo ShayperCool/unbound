@@ -507,22 +507,47 @@ fn jobs_made_ready_after_a_worker_count_change_run_on_the_new_workers() {
     });
 }
 
-/// Jobs flushed while JobWorkerCount is 0 run on the workers once the count is raised, without a
-/// Complete (before, nothing handed them to the new workers).
+/// Jobs flushed while JobWorkerCount is 0, and jobs a worker of the replaced pool makes ready
+/// then, run on the workers once the count is raised, without a Complete (before, nothing handed
+/// them to the new workers).
 #[test]
 fn raising_the_worker_count_from_zero_runs_the_jobs_flushed_meanwhile() {
     run(|| {
-        set_worker_count(0);
-        let job = new_job(8, |_, thread_index| assert_ne!(thread_index, 0));
-        let handle = schedule(job.user(), 0);
+        let gate = Gate::new();
+        let started = Gate::new();
+        let blocker = new_job(1, move |_, _| {
+            started.open();
+            gate.pass();
+        });
+        let seen = Box::leak(Box::new(Mutex::new(Vec::new())));
+        let record = |seen: &'static Mutex<Vec<i32>>| {
+            move |_, thread_index| seen.lock().unwrap().push(thread_index)
+        };
+        let flushed = new_job(8, record(seen));
+        let made_ready = new_job(8, record(seen));
+        let first = schedule(blocker.user(), 0);
         flush();
-        assert!(!is_done(handle));
-        set_worker_count(max_workers());
-        while !is_done(handle) {
+        started.pass();
+        set_worker_count(0);
+        let second = schedule(flushed.user(), 0);
+        let third = schedule(made_ready.user(), first);
+        flush();
+        gate.open();
+        // The old pool's worker finishes the blocker and makes the third job ready: no workers.
+        while !is_done(first) {
             thread::sleep(Duration::from_millis(1));
         }
-        assert_eq!(job.executed.load(Ordering::SeqCst), 8);
-        release(handle);
+        assert!(!is_done(second) && !is_done(third));
+        set_worker_count(max_workers());
+        while !(is_done(second) && is_done(third)) {
+            thread::sleep(Duration::from_millis(1));
+        }
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 16);
+        assert!(seen.iter().all(|&i| i != 0), "{seen:?}");
+        for handle in [first, second, third] {
+            release(handle);
+        }
     });
 }
 
