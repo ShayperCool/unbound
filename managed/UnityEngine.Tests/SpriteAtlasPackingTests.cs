@@ -86,5 +86,35 @@ namespace UnityEngine.Tests
             Assert.Equal(Vector4.zero, UnityEngine.Sprites.DataUtility.GetPadding(sprite));
             Assert.Equal(new Vector4(0, 0, 0.5f, 1f), UnityEngine.Sprites.DataUtility.GetOuterUV(sprite));
         }
+
+        [Fact]
+        public void BuiltInMultiAtlasSelectionPrefersMasterThenUnityGuidWordOrder()
+        {
+            // Nibble-reversed 32-bit word order: "90000001..." -> word0 0x10000009 < "10000009..." -> word0 0x90000001,
+            // even though ASCII order puts "10000009..." first.
+            Assert.True(SpriteAtlasPacking.CompareUnityGuid(
+                "90000001000000000000000000000001",
+                "10000009000000000000000000000001") < 0);
+            Assert.True(SpriteAtlasPacking.CompareUnityGuid(
+                "10000009000000000000000000000001",
+                "90000001000000000000000000000001") > 0);
+            // Case-insensitive equality and tie-break in word 3 (last 8 hex digits).
+            Assert.Equal(0, SpriteAtlasPacking.CompareUnityGuid(
+                "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+                "A1B2C3D4E5F60718293A4B5C6D7E8F90"));
+            Assert.True(SpriteAtlasPacking.CompareUnityGuid(
+                "000000000000000000000000f0000001",
+                "00000000000000000000000010000002") < 0);
+
+            // Master (isVariant == false) always beats variant (isVariant == true) regardless of GUID.
+            Assert.True(SpriteAtlasPacking.CompareBuiltInAtlas(
+                aIsVariant: false, aGuid: "1000000f000000000000000000000003",
+                bIsVariant: true, bGuid: "10000001000000000000000000000003") < 0);
+
+            // Two variants break ties by UnityGUID word order.
+            Assert.True(SpriteAtlasPacking.CompareBuiltInAtlas(
+                aIsVariant: true, aGuid: "90000002000000000000000000000004",
+                bIsVariant: true, bGuid: "10000008000000000000000000000004") < 0);
+        }
     }
 }

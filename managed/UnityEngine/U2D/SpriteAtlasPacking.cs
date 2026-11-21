@@ -42,8 +42,10 @@ namespace UnityEngine.U2D
             public Vector4 UvTransform;
         }
 
-        static Dictionary<(string, long), Binding> s_Bindings;
+        static Dictionary<(string, long), List<Binding>> s_BuiltInBySprite;
+        static Dictionary<(string, long), List<Binding>> s_ExcludedBySprite;
         static Dictionary<string, Atlas> s_Atlases;
+        static readonly Dictionary<string, List<Atlas>> s_RegisteredByTag = new Dictionary<string, List<Atlas>>(StringComparer.Ordinal);
         /// <summary>The build target each atlas in <see cref="s_Atlases"/> was last packed for.</summary>
         static readonly Dictionary<string, UnityEditor.BuildTarget> s_PackedTargets = new Dictionary<string, UnityEditor.BuildTarget>(StringComparer.OrdinalIgnoreCase);
         /// <summary>Atlases already packed by Play-mode startup packing.</summary>
@@ -52,7 +54,7 @@ namespace UnityEngine.U2D
         /// empty (measured: tests/projects/spriteatlas set `over`).</summary>
         static bool s_Cancelled;
         /// <summary>Late-binding sprites waiting for their atlas, by atlas tag.</summary>
-        static readonly Dictionary<string, List<Sprite>> s_Waiting = new Dictionary<string, List<Sprite>>();
+        static readonly Dictionary<string, List<Sprite>> s_Waiting = new Dictionary<string, List<Sprite>>(StringComparer.Ordinal);
         static readonly List<string> s_Requests = new List<string>();
         static readonly List<Sprite> s_None = new List<Sprite>();
 
@@ -102,13 +104,13 @@ namespace UnityEngine.U2D
 
         static void Load()
         {
-            if (s_Bindings != null) return;
-            s_Bindings = new Dictionary<(string, long), Binding>();
+            if (s_Atlases != null) return;
+            s_BuiltInBySprite = new Dictionary<(string, long), List<Binding>>();
+            s_ExcludedBySprite = new Dictionary<(string, long), List<Binding>>();
             s_Atlases = new Dictionary<string, Atlas>(StringComparer.OrdinalIgnoreCase);
             var json = JsonSerializer.Deserialize<Json>(Native.Call("sprite-atlases", "{}"), s_Options);
             s_Cancelled = json?.Cancelled != null;
             if (json?.Atlases == null) return;
-            var shared = new Dictionary<(string, string), int>();
             var activeTarget = UnityEditor.EditorUserBuildSettings.activeBuildTarget;
             foreach (var a in json.Atlases)
             {
@@ -116,36 +118,98 @@ namespace UnityEngine.U2D
                 s_Atlases[a.Guid] = atlas;
                 s_PackedTargets[a.Guid] = activeTarget;
                 s_PlayModePacked.Add(a.Guid);
-                foreach (var binding in atlas.Sprites)
+            }
+            RebuildSpriteTables();
+        }
+
+        /// <summary>Rebuilds the per-sprite built-in and excluded atlas lookup tables from
+        /// <see cref="s_Atlases"/>. Built-in (<c>IncludeInBuild == true</c>) candidates are sorted
+        /// as the Unity 6000.0.71f1 Editor sorts them (tests/projects/spriteatlasmultibind): masters
+        /// before variants, then ascending by Unity GUID's four nibble-reversed 32-bit words.</summary>
+        static void RebuildSpriteTables()
+        {
+            s_BuiltInBySprite ??= new Dictionary<(string, long), List<Binding>>();
+            s_ExcludedBySprite ??= new Dictionary<(string, long), List<Binding>>();
+            s_BuiltInBySprite.Clear();
+            s_ExcludedBySprite.Clear();
+            if (s_Atlases == null) return;
+            // A variant atlas shares its master's tag (V2 .spriteatlasv2 omits m_Tag, so resolve
+            // it from the master atlas here as SpriteAtlas.ReadSerialized does).
+            foreach (var atlas in s_Atlases.Values)
+                if (atlas.Master != null && s_Atlases.TryGetValue(atlas.Master, out var master) && !string.IsNullOrEmpty(master.Tag))
+                    atlas.Tag = master.Tag;
+            foreach (var atlas in s_Atlases.Values)
+            {
+                var target = atlas.IncludeInBuild ? s_BuiltInBySprite : s_ExcludedBySprite;
+                for (int i = 0; i < atlas.Sprites.Count; i++)
                 {
+                    var binding = atlas.Sprites[i];
                     var key = (binding.Texture.ToLowerInvariant(), binding.FileId);
-                    // A variant's sprites are its master's: they bind to the master.
-                    if (a.Master != null) continue;
-                    // A sprite in several atlases binds to the last by path (the Editor's choice
-                    // among them is unmeasured).
-                    if (s_Bindings.TryGetValue(key, out var other))
-                    {
-                        shared.TryGetValue((other.Atlas.Name, atlas.Name), out int n);
-                        shared[(other.Atlas.Name, atlas.Name)] = n + 1;
-                    }
-                    s_Bindings[key] = binding;
+                    if (!target.TryGetValue(key, out var list))
+                        target[key] = list = new List<Binding>(1);
+                    list.Add(binding);
                 }
             }
-            // A master left out of builds with a variant in them: its sprites bind to the variant
-            // (measured: tests/projects/spriteatlas, the Manual's way to use a variant).
-            var variantOf = new Dictionary<string, string>();
-            foreach (var atlas in s_Atlases.Values)
-                if (atlas.Master != null && atlas.IncludeInBuild && s_Atlases.TryGetValue(atlas.Master, out var master) && !master.IncludeInBuild)
-                {
-                    if (variantOf.TryGetValue(master.Guid, out var other))
-                        Debug.LogWarning($"Unbound: sprite atlas {master.Name} has several variants in builds ({other}, {atlas.Name}); its sprites bind to {atlas.Name} (the Editor's choice is not reproduced)");
-                    variantOf[master.Guid] = atlas.Name;
-                    foreach (var pair in atlas.ByKey)
-                        s_Bindings[pair.Key] = pair.Value;
-                }
-            foreach (var ((first, second), n) in shared)
-                Debug.LogWarning($"Unbound: {n} sprites are in sprite atlases {first} and {second}; they bind to {second} (the Editor's choice among several atlases is not reproduced)");
+            foreach (var list in s_BuiltInBySprite.Values)
+                if (list.Count > 1) list.Sort(CompareBuiltInBinding);
         }
+
+        static int CompareBuiltInBinding(Binding a, Binding b) =>
+            CompareBuiltInAtlas(a.Atlas.Master != null, a.Atlas.Guid, b.Atlas.Master != null, b.Atlas.Guid);
+
+        /// <summary>Built-in atlas selection order when multiple <c>Include in Build</c> atlases
+        /// contain the same sprite: master (<c>false</c>) before variant (<c>true</c>), then
+        /// ascending by Unity GUID's four 32-bit words (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/spriteatlasmultibind).</summary>
+        internal static int CompareBuiltInAtlas(bool aIsVariant, string aGuid, bool bIsVariant, string bGuid)
+        {
+            int byVariant = (aIsVariant ? 1 : 0).CompareTo(bIsVariant ? 1 : 0);
+            if (byVariant != 0) return byVariant;
+            return CompareUnityGuid(aGuid, bGuid);
+        }
+
+        /// <summary>Compares two 32-hex-digit Unity asset GUID strings in Unity's four unsigned
+        /// 32-bit word order, where each 8-hex-digit chunk stores nibbles from least significant
+        /// (<c>index + 0</c>) to most significant (<c>index + 7</c>).</summary>
+        internal static int CompareUnityGuid(string a, string b)
+        {
+            if (TryParseUnityGuidWords(a, out uint a0, out uint a1, out uint a2, out uint a3)
+                && TryParseUnityGuidWords(b, out uint b0, out uint b1, out uint b2, out uint b3))
+            {
+                int c = a0.CompareTo(b0); if (c != 0) return c;
+                c = a1.CompareTo(b1); if (c != 0) return c;
+                c = a2.CompareTo(b2); if (c != 0) return c;
+                return a3.CompareTo(b3);
+            }
+            return StringComparer.OrdinalIgnoreCase.Compare(a, b);
+        }
+
+        static bool TryParseUnityGuidWords(string hex, out uint w0, out uint w1, out uint w2, out uint w3)
+        {
+            w0 = w1 = w2 = w3 = 0;
+            if (string.IsNullOrEmpty(hex) || hex.Length != 32) return false;
+            return TryParseWord(hex, 0, out w0)
+                && TryParseWord(hex, 8, out w1)
+                && TryParseWord(hex, 16, out w2)
+                && TryParseWord(hex, 24, out w3);
+        }
+
+        static bool TryParseWord(string hex, int offset, out uint word)
+        {
+            word = 0;
+            for (int nibble = 0; nibble < 8; nibble++)
+            {
+                int digit = HexDigit(hex[offset + nibble]);
+                if (digit < 0) return false;
+                word |= (uint)digit << (nibble * 4);
+            }
+            return true;
+        }
+
+        static int HexDigit(char c) =>
+            c >= '0' && c <= '9' ? c - '0' :
+            c >= 'a' && c <= 'f' ? c - 'a' + 10 :
+            c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
 
         static Atlas BuildAtlas(AtlasJson a)
         {
@@ -189,32 +253,76 @@ namespace UnityEngine.U2D
         }
 
         /// <summary>Binds an imported sprite (its texture's GUID and its file id) to its packed atlas
-        /// in Play mode.</summary>
+        /// in Play mode (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteatlas and
+        /// tests/projects/spriteatlasmultibind).</summary>
         internal static void Apply(Sprite sprite, string textureGuid, long fileId)
         {
             if (!Active) return;
             Load();
             var key = (textureGuid.ToLowerInvariant(), fileId);
-            if (!s_Bindings.TryGetValue(key, out var binding)) return;
-            sprite.m_AtlasBinding = key;
-            if (binding.Atlas.IncludeInBuild || binding.Atlas.Registered)
+            if (s_BuiltInBySprite.TryGetValue(key, out var builtIn) && builtIn.Count > 0)
             {
-                Bind(sprite, binding);
+                sprite.m_AtlasBinding = key;
+                if (builtIn.Count > 1)
+                    Debug.LogWarning($"Sprite {sprite.name} matches more than one built-in atlases. Default to use the first available atlas.");
+                Bind(sprite, builtIn[0]);
                 return;
             }
-            // Late binding: no texture until the atlas is registered.
+            if (!s_ExcludedBySprite.TryGetValue(key, out var excluded) || excluded.Count == 0) return;
+            sprite.m_AtlasBinding = key;
+
+            var tags = new List<string>(excluded.Count);
+            for (int i = 0; i < excluded.Count; i++)
+            {
+                var tag = excluded[i].Atlas.Tag;
+                if (!string.IsNullOrEmpty(tag) && !tags.Contains(tag)) tags.Add(tag);
+            }
+            tags.Sort(StringComparer.Ordinal);
+
+            // If one or more matching atlases were already registered via SpriteAtlasManager, bind now.
+            List<Binding> registeredMatches = null;
+            for (int i = 0; i < tags.Count; i++)
+            {
+                if (!s_RegisteredByTag.TryGetValue(tags[i], out var registered)) continue;
+                for (int j = 0; j < registered.Count; j++)
+                {
+                    if (registered[j].ByKey.TryGetValue(key, out var regBinding))
+                    {
+                        registeredMatches ??= new List<Binding>(1);
+                        if (!registeredMatches.Contains(regBinding)) registeredMatches.Add(regBinding);
+                    }
+                }
+            }
+            if (registeredMatches != null && registeredMatches.Count > 0)
+            {
+                if (registeredMatches.Count > 1)
+                {
+                    var names = new List<string>(registeredMatches.Count);
+                    for (int i = 0; i < registeredMatches.Count; i++) names.Add(registeredMatches[i].Atlas.Name);
+                    Debug.LogWarning($"Sprite {sprite.name} matches more than one atlases ({string.Join(", ", names)}). Default to first atlas.");
+                }
+                Bind(sprite, registeredMatches[0]);
+                return;
+            }
+
+            // Late binding: no texture until an atlas for one of its tags is registered.
             sprite.UnbindTexture();
-            if (!s_Waiting.TryGetValue(binding.Atlas.Tag, out var waiting))
-                s_Waiting[binding.Atlas.Tag] = waiting = new List<Sprite>();
-            waiting.Add(sprite);
-            if (!s_Requests.Contains(binding.Atlas.Tag)) s_Requests.Add(binding.Atlas.Tag);
+            for (int i = 0; i < tags.Count; i++)
+            {
+                var tag = tags[i];
+                if (!s_Waiting.TryGetValue(tag, out var waiting))
+                    s_Waiting[tag] = waiting = new List<Sprite>();
+                if (!waiting.Contains(sprite)) waiting.Add(sprite);
+                if (!s_Requests.Contains(tag)) s_Requests.Add(tag);
+            }
         }
 
-        /// <summary>Asks the listeners for the atlases late-binding sprites wait for
-        /// (PlayerLoop EarlyUpdate.SpriteAtlasManagerUpdate).</summary>
+        /// <summary>Asks the listeners for the atlases late-binding sprites wait for, in ordinal tag
+        /// order (PlayerLoop EarlyUpdate.SpriteAtlasManagerUpdate).</summary>
         internal static void DispatchRequests()
         {
             if (s_Requests.Count == 0) return;
+            s_Requests.Sort(StringComparer.Ordinal);
             var tags = s_Requests.ToArray();
             s_Requests.Clear();
             foreach (var tag in tags)
@@ -222,7 +330,10 @@ namespace UnityEngine.U2D
                     Debug.LogWarning($"SpriteAtlasManager.atlasRequested wasn't listened to while {tag} requested.");
         }
 
-        /// <summary>An atlas given to an atlasRequested callback: its waiting sprites bind.</summary>
+        /// <summary>An atlas given to an atlasRequested callback: its waiting sprites bind to it
+        /// (whether master or variant; a sprite waiting on multiple excluded tags re-binds to each
+        /// matching atlas registered, matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/spriteatlasmultibind).</summary>
         internal static void Register(SpriteAtlas spriteAtlas)
         {
             if (spriteAtlas == null || !Active) return;
@@ -230,14 +341,14 @@ namespace UnityEngine.U2D
             var atlas = Find(spriteAtlas);
             if (atlas == null) return;
             atlas.Registered = true;
+            if (!s_RegisteredByTag.TryGetValue(atlas.Tag, out var registered))
+                s_RegisteredByTag[atlas.Tag] = registered = new List<Atlas>(1);
+            if (!registered.Contains(atlas)) registered.Add(atlas);
             if (!s_Waiting.TryGetValue(atlas.Tag, out var waiting)) return;
             s_Waiting.Remove(atlas.Tag);
-            // A registered variant binds the sprites to its own pages (unmeasured).
-            if (atlas.Master != null)
-                Debug.LogWarning($"Unbound: variant atlas {atlas.Name} registered for late-binding sprites binds them to its pages (unmeasured)");
             foreach (var sprite in waiting)
                 if (sprite != null && sprite.m_AtlasBinding is (string Texture, long FileId) key
-                    && (atlas.ByKey.TryGetValue(key, out var binding) || s_Bindings.TryGetValue(key, out binding)))
+                    && atlas.ByKey.TryGetValue(key, out var binding))
                     Bind(sprite, binding);
         }
 
@@ -293,7 +404,7 @@ namespace UnityEngine.U2D
         internal static void PackV1(IReadOnlyList<SpriteAtlas> requestedOrder, UnityEditor.BuildTarget target)
         {
             if (requestedOrder == null || requestedOrder.Count == 0 || !Native.IsReady) return;
-            if (s_Bindings == null) Load();
+            if (s_Atlases == null) Load();
 
             var entriesByGuid = new Dictionary<string, (SpriteAtlas Atlas, string Guid, string Path, bool WasDirty, bool HadPlayModePack, List<(string, long)> PrevKeys)>(StringComparer.OrdinalIgnoreCase);
             var uniquePaths = new List<string>();
@@ -363,17 +474,11 @@ namespace UnityEngine.U2D
             var json = JsonSerializer.Deserialize<Json>(Native.Call("sprite-atlases-pack", payload), s_Options);
             if (json?.Cancelled != null || json?.Atlases == null) return;
 
-            bool playModeActive = UnityEditor.EditorSettings.IsPlayModeAtlasPackingActive;
             foreach (var a in json.Atlases)
             {
                 var atlas = BuildAtlas(a);
                 s_Atlases[a.Guid] = atlas;
                 s_PackedTargets[a.Guid] = target;
-                if (playModeActive && a.Master == null)
-                {
-                    foreach (var binding in atlas.Sprites)
-                        s_Bindings[(binding.Texture.ToLowerInvariant(), binding.FileId)] = binding;
-                }
                 if (!entriesByGuid.TryGetValue(a.Guid, out var entry)) continue;
 
                 var newKeys = new List<(string, long)>(atlas.Sprites.Count);
@@ -406,6 +511,7 @@ namespace UnityEngine.U2D
                 }
                 entry.Atlas.InvalidateCachedSprites();
             }
+            RebuildSpriteTables();
         }
 
         static int CountBuiltInAtlasesContaining((string, long) key)
