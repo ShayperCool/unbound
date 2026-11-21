@@ -1,5 +1,7 @@
 {
-  "commands": ["python3 tests/projects/toolbarcontrols/run.py gate"],
+  "commands": [
+    "python3 tests/projects/toolbarcontrols/run.py gate"
+  ],
   "summary": "toolbarcontrols: .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/Toolbar.cs",
@@ -8,6 +10,10 @@
     "managed/UnityEngine/UIElements/Controls/TextField.cs",
     "managed/UnityEngine/UIElements/Controls/TextElement.cs",
     "managed/UnityEngine/UIElements/Controls/ContextualMenu.cs",
-    "managed/UnityEngine/UIElements/Assets/UiAssets.cs"
+    "managed/UnityEngine/UIElements/Assets/UiAssets.cs",
+    "managed/UnityEngine/Editor/EditorResources.cs",
+    "managed/UnityEngine/UIElements/Uxml/VisualTreeAsset.cs",
+    "managed/UnityEngine/UIElements/Controls/ControlUxmlData.cs",
+    "managed/UnityEngine/UIElements/Style/StyleResolver.cs"
   ]
 }

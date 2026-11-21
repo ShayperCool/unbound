@@ -23,7 +23,11 @@ public class ToolbarControlsProbe : MonoBehaviour
     {
         var go = new GameObject("ToolbarControlsProbe");
         var doc = go.AddComponent<UIDocument>();
-        doc.panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+        var settings = ScriptableObject.CreateInstance<PanelSettings>();
+        // Layout values in pixels, whatever the screen's DPI.
+        settings.scaleMode = PanelScaleMode.ConstantPixelSize;
+        settings.scale = 1f;
+        doc.panelSettings = settings;
         go.AddComponent<ToolbarControlsProbe>();
     }
 
@@ -115,6 +119,15 @@ public class ToolbarControlsProbe : MonoBehaviour
             sb.Append(')');
         }
         return sb.ToString();
+    }
+
+    static string F(float v) => v.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+
+    static string Style(VisualElement e)
+    {
+        var rs = e.resolvedStyle;
+        return $"pl={F(rs.paddingLeft)}|pr={F(rs.paddingRight)}|ml={F(rs.marginLeft)}|h={F(rs.height)}|blw={F(rs.borderLeftWidth)}"
+            + $"|align={rs.unityTextAlign}|bg={rs.backgroundColor}";
     }
 
     static string Focus(VisualElement e) => $"focusable={B(e.focusable)}|tabIndex={e.tabIndex}|delegates={B(e.delegatesFocus)}";
@@ -241,7 +254,20 @@ public class ToolbarControlsProbe : MonoBehaviour
         }
         Put("crumbs", $"pushed={pushed}###popped={popped}###clicks={crumbClicks}###popOther={popOther}");
 
-        // 9. The same controls from UXML.
+        // 9. The toolbar sheet against another sheet's rule of the same selector on an ancestor.
+        var plain = new VisualElement();
+        var overridden = new VisualElement();
+        overridden.styleSheets.Add(Resources.Load<StyleSheet>("ToolbarOverride"));
+        var plainButton = new ToolbarButton { text = "A" };
+        var overriddenButton = new ToolbarButton { text = "B" };
+        plain.Add(plainButton);
+        overridden.Add(overriddenButton);
+        m_Root.Add(plain);
+        m_Root.Add(overridden);
+        Frames();
+        Put("cascade", $"plain={Style(plainButton)}###override={Style(overriddenButton)}");
+
+        // 10. The same controls from UXML.
         var asset = Resources.Load<VisualTreeAsset>("ToolbarControls");
         var clone = asset.Instantiate();
         m_Root.Add(clone);

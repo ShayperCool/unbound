@@ -1,0 +1,9 @@
+.unity-toolbar-button {
+    padding-left: 13px;
+    padding-right: 11px;
+    margin-left: 7px;
+    height: 33px;
+    border-left-width: 3px;
+    -unity-text-align: lower-right;
+    background-color: rgb(10, 200, 30);
+}
