@@ -373,6 +373,40 @@ public class QuatCharBindingProbe : MonoBehaviour
             Frames();
             string u2 = $"tip={tree.tooltip}|c={Ch(treeChar.value)}|q={Q(treeQuat.value)}";
             Put("tree_unbind_rebind", $"{u0}###{u1}###{u2}");
+
+            // 9. Character binding via UXML (TextField + PropertyField with binding-path="charVal")
+            var tUxml = ScriptableObject.CreateInstance<QuatCharTarget>();
+            var soUxml = new SerializedObject(tUxml);
+            try
+            {
+                var vta = Resources.Load<VisualTreeAsset>("CharBind");
+                var uxmlRoot = vta.Instantiate();
+                m_Root.Add(uxmlRoot);
+                uxmlRoot.Bind(soUxml);
+                Frames();
+                var uxmlTf = uxmlRoot.Q<TextField>("uxml-char");
+                var uxmlPf = uxmlRoot.Q<PropertyField>("uxml-pf-char");
+                var uxmlPfTf = uxmlPf.hierarchy.childCount > 0 ? uxmlPf.hierarchy[0] as TextField : null;
+                string ux0 = $"bp={uxmlTf?.bindingPath}|tf={Str(uxmlTf?.value)}|pfMax={uxmlPfTf?.maxLength}|pf={Str(uxmlPfTf?.value)}";
+
+                uxmlTf.value = "W";
+                Frames();
+                string ux1 = $"t={Ch(tUxml.charVal)}|tf={Str(uxmlTf.value)}|pf={Str(uxmlPfTf?.value)}";
+
+                uxmlPfTf.value = "M";
+                Frames();
+                string ux2 = $"t={Ch(tUxml.charVal)}|tf={Str(uxmlTf.value)}|pf={Str(uxmlPfTf.value)}";
+
+                tUxml.charVal = 'Q';
+                Frames();
+                string ux3 = $"tf={Str(uxmlTf.value)}|pf={Str(uxmlPfTf.value)}";
+                Put("char.uxml", $"{ux0}###{ux1}###{ux2}###{ux3}");
+            }
+            finally
+            {
+                soUxml.Dispose();
+                UnityEngine.Object.DestroyImmediate(tUxml);
+            }
         }
         finally
         {

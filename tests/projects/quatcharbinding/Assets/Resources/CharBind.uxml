@@ -1,0 +1,4 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:TextField name="uxml-char" binding-path="charVal" />
+    <uie:PropertyField name="uxml-pf-char" binding-path="charVal" />
+</ui:UXML>
