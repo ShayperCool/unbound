@@ -1,0 +1,5 @@
+{
+  "Graphics.Blit(null, rt, mat, pass) reading _ScreenParams sees zero in the Editor (also recorded in tests/projects/nativegfx residuals-metal.json), whereas Unbound provides the target's dimensions (16x16 -> 0x40, 0x40)": [
+    "dynres.shader.blitparams"
+  ]
+}

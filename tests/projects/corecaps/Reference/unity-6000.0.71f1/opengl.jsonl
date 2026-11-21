@@ -1,0 +1,97 @@
+{"k":"device","v":"OpenGLCore"}
+{"k":"bufferLimit.max","v":2147483648}
+{"k":"bufferLimit.valid","v":"True 4 4"}
+{"k":"bufferLimit.over","v":"ArgumentException: The total size of the graphics buffer (2147483652 bytes) exceeds the maximum buffer size. Maximum supported buffer size: 2147483648 bytes."}
+{"k":"tiled.max","v":2147483647}
+{"k":"tiled.R8G8B8A8_UNorm.1","v":4}
+{"k":"tiled.R8G8B8A8_UNorm.4","v":16}
+{"k":"tiled.R8G8B8A8_UNorm.8","v":32}
+{"k":"tiled.R8G8B8A8_UNorm.0","v":0}
+{"k":"tiled.R8G8B8A8_UNorm.-1","v":-4}
+{"k":"tiled.R16G16B16A16_SFloat.1","v":8}
+{"k":"tiled.R16G16B16A16_SFloat.4","v":32}
+{"k":"tiled.R16G16B16A16_SFloat.8","v":64}
+{"k":"tiled.R16G16B16A16_SFloat.0","v":0}
+{"k":"tiled.R16G16B16A16_SFloat.-1","v":-8}
+{"k":"tiled.D32_SFloat_S8_UInt.1","v":8}
+{"k":"tiled.D32_SFloat_S8_UInt.4","v":32}
+{"k":"tiled.D32_SFloat_S8_UInt.8","v":64}
+{"k":"tiled.D32_SFloat_S8_UInt.0","v":0}
+{"k":"tiled.D32_SFloat_S8_UInt.-1","v":-8}
+{"k":"tiled.R8_UNorm.1","v":1}
+{"k":"tiled.R8_UNorm.4","v":4}
+{"k":"tiled.R8_UNorm.8","v":8}
+{"k":"tiled.R8_UNorm.0","v":0}
+{"k":"tiled.R8_UNorm.-1","v":-1}
+{"k":"tiled.None.1","v":0}
+{"k":"tiled.None.4","v":0}
+{"k":"tiled.None.8","v":0}
+{"k":"tiled.None.0","v":0}
+{"k":"tiled.None.-1","v":0}
+{"k":"tiled.RGBA_DXT1_UNorm.1","v":8}
+{"k":"tiled.RGBA_DXT1_UNorm.4","v":32}
+{"k":"tiled.RGBA_DXT1_UNorm.8","v":64}
+{"k":"tiled.RGBA_DXT1_UNorm.0","v":0}
+{"k":"tiled.RGBA_DXT1_UNorm.-1","v":-8}
+{"k":"dynres.supports","v":false}
+{"k":"dynres.camera.allow.default","v":false}
+{"k":"dynres.camera.allow.setTrue","v":false}
+{"k":"dynres.camera.allow.setFalse","v":false}
+{"k":"dynres.factors.before","v":"1 1"}
+{"k":"dynres.factors.half","v":"1 1"}
+{"k":"dynres.factors.step33","v":"1 1"}
+{"k":"dynres.factors.step12","v":"1 1"}
+{"k":"dynres.factors.step95","v":"1 1"}
+{"k":"dynres.factors.step30","v":"1 1"}
+{"k":"dynres.factors.outside","v":"1 1"}
+{"k":"dynres.factors.neg","v":"1 1"}
+{"k":"dynres.factors.nan","v":"1 1"}
+{"k":"dynres.factors.reset","v":"1 1"}
+{"k":"dynres.factors.logs","v":["Assert: Invalid widthScale: 2.000000","Assert: Invalid heightScale: 0.000000","Assert: Invalid widthScale: -1.000000","Assert: Invalid widthScale: -nan"]}
+{"k":"dynres.rt.sizes","v":"16x16 16x16 15x13 15x13"}
+{"k":"dynres.cam.dynamic.allow","v":"pixel 16x16 scaled 16x16 rect (x:0.00, y:0.00, width:16.00, height:16.00)"}
+{"k":"dynres.cam.dynamic.plain","v":"pixel 16x16 scaled 16x16 rect (x:0.00, y:0.00, width:16.00, height:16.00)"}
+{"k":"dynres.cam.fixed.allow","v":"pixel 16x16 scaled 16x16 rect (x:0.00, y:0.00, width:16.00, height:16.00)"}
+{"k":"dynres.cam.fixed.plain","v":"pixel 16x16 scaled 16x16 rect (x:0.00, y:0.00, width:16.00, height:16.00)"}
+{"k":"dynres.cam.oddbefore.allow","v":"pixel 15x13 scaled 15x13 rect (x:0.00, y:0.00, width:15.00, height:13.00)"}
+{"k":"dynres.cam.oddbefore.plain","v":"pixel 15x13 scaled 15x13 rect (x:0.00, y:0.00, width:15.00, height:13.00)"}
+{"k":"dynres.cam.oddafter.allow","v":"pixel 15x13 scaled 15x13 rect (x:0.00, y:0.00, width:15.00, height:13.00)"}
+{"k":"dynres.cam.oddafter.plain","v":"pixel 15x13 scaled 15x13 rect (x:0.00, y:0.00, width:15.00, height:13.00)"}
+{"k":"dynres.cam.explicitBefore.allow","v":"pixel 16x16 scaled 16x16 rect (x:0.00, y:0.00, width:16.00, height:16.00)"}
+{"k":"dynres.cam.explicitBefore.plain","v":"pixel 16x16 scaled 16x16 rect (x:0.00, y:0.00, width:16.00, height:16.00)"}
+{"k":"dynres.cam.explicitAfter.allow","v":"pixel 16x16 scaled 16x16 rect (x:0.00, y:0.00, width:16.00, height:16.00)"}
+{"k":"dynres.render.fixed.readFull","v":["ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16"]}
+{"k":"dynres.render.dynamic.sampled","v":["ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16"]}
+{"k":"dynres.render.dynamic.readScaled","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"dynres.render.dynamic.readFull","v":["ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16"]}
+{"k":"dynres.shader.texelsize","v":["40404040*1"]}
+{"k":"dynres.shader.blitparams","v":["000000ff*1"]}
+{"k":"dynres.render.sym.sampled","v":["ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16"]}
+{"k":"dynres.render.sym.readScaled","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"dynres.render.sym.readFull","v":["ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16"]}
+{"k":"dynres.rt.logs","v":[]}
+{"k":"dynres.factors.end","v":"1 1"}
+{"k":"baselib.pageSizeInfo","v":"defaultEq=True len=1 p0Eq=True"}
+{"k":"baselib.alloc.rw","v":"err=Success nonNull=True aligned=True psEq=True pc=2 zeroed=True rw=0x12345678 rel=Success"}
+{"k":"baselib.alloc.align4","v":"err=Success nonNull=True aligned4=True rel=Success"}
+{"k":"baselib.state.roundtrip","v":"alloc=Success rw1=Success ro=Success roRead=0xcafebabe res=Success rw2=Success afterRes=0x00000000 rel=Success"}
+{"k":"baselib.state.noaccess","v":"alloc=Success rw=Success read=0x55aa55aa rel=Success"}
+{"k":"baselib.state.exec","v":"alloc=Success rox=Success rel=Success"}
+{"k":"baselib.state.ex","v":"alloc=Success setEx=Success rel=Success"}
+{"k":"baselib.err.alloc.zeroCount","v":"code=InvalidPageCount ptrNull=True"}
+{"k":"baselib.err.alloc.badPageSize","v":"code=InvalidPageSize ptrNull=True"}
+{"k":"baselib.err.alloc.badAlign0","v":"code=UnsupportedAlignment ptrNull=True"}
+{"k":"baselib.err.alloc.badAlign3","v":"code=UnsupportedAlignment ptrNull=True"}
+{"k":"baselib.err.alloc.badState","v":"code=UnsupportedPageState ptrNull=True"}
+{"k":"baselib.err.alloc.overflow","v":"code=OutOfMemory ptrNull=True"}
+{"k":"baselib.err.set.nullPtr","v":"code=Success"}
+{"k":"baselib.err.set.zeroCount","v":"code=Success"}
+{"k":"baselib.err.set.badPageSize","v":"code=InvalidPageSize"}
+{"k":"baselib.err.set.badState","v":"code=UnsupportedPageState"}
+{"k":"baselib.err.set.overflow","v":"code=OutOfMemory"}
+{"k":"baselib.err.set.sticky","v":"code=InvalidArgument"}
+{"k":"baselib.err.release.null","v":"code=Success"}
+{"k":"baselib.err.release.zeroCount","v":"code=Success"}
+{"k":"baselib.err.release.badPageSize","v":"code=InvalidPageSize"}
+{"k":"baselib.err.cleanup","v":"code=Success"}
+{"k":"complete","v":true}

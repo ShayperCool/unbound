@@ -1,0 +1,14 @@
+{
+  "Unbound scales dynamically scaled render textures along both axes independently and follows the Metal dynamic-resolution readback model (tests/projects/nativegfx: sampled fills full target, out-of-bounds ReadPixels logs an error and leaves the destination untouched, in-bounds ReadPixels reads zeros). The Linux Vulkan Editor scales both surface axes by widthScale (leaving the lower half black at (0.5, 0.25) and retaining it when only heightScale changes in the same frame) and upscales full-size ReadPixels without an out-of-bounds error": [
+    "dynres.render.dynamic.readFull",
+    "dynres.render.dynamic.sampled",
+    "dynres.render.sym.readFull",
+    "dynres.render.sym.readScaled",
+    "dynres.render.sym.sampled",
+    "dynres.rt.logs"
+  ],
+  "Unbound passes logical _MainTex_TexelSize (16x16 -> 40404040) and scaled _ScreenParams (8x4 -> 201000ff) on Blit to/from a dynamically scaled render texture (matching Metal for texelsize; blitparams is queued alongside nativegfx residuals-metal.json), whereas the Linux Vulkan Editor produces black for texelsize and leaves the prior red render for blitparams": [
+    "dynres.shader.blitparams",
+    "dynres.shader.texelsize"
+  ]
+}
