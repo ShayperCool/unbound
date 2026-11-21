@@ -263,6 +263,9 @@ fn a_panicking_job_still_completes() {
             wait(after);
             assert!(is_done(handle));
             assert_eq!(dependent.executed.load(Ordering::SeqCst), 1);
+            // A job whose preparation failed only completes: its body would run unprepared.
+            let executed = job.executed.load(Ordering::SeqCst);
+            assert_eq!(executed, if in_prepare { 0 } else { 4 });
             release(handle);
             release(after);
         }
@@ -501,6 +504,25 @@ fn jobs_made_ready_after_a_worker_count_change_run_on_the_new_workers() {
         );
         release(first);
         release(second);
+    });
+}
+
+/// Jobs flushed while JobWorkerCount is 0 run on the workers once the count is raised, without a
+/// Complete (before, nothing handed them to the new workers).
+#[test]
+fn raising_the_worker_count_from_zero_runs_the_jobs_flushed_meanwhile() {
+    run(|| {
+        set_worker_count(0);
+        let job = new_job(8, |_, thread_index| assert_ne!(thread_index, 0));
+        let handle = schedule(job.user(), 0);
+        flush();
+        assert!(!is_done(handle));
+        set_worker_count(max_workers());
+        while !is_done(handle) {
+            thread::sleep(Duration::from_millis(1));
+        }
+        assert_eq!(job.executed.load(Ordering::SeqCst), 8);
+        release(handle);
     });
 }
 

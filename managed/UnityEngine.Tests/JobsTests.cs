@@ -138,6 +138,33 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>Jobs handed out while JobWorkerCount is 0 run on the workers once it is raised,
+        /// without a Complete (before, they waited for one).</summary>
+        [Fact]
+        public void RaisingTheWorkerCountRunsJobsScheduledWithoutWorkers()
+        {
+            int workers = JobsUtility.JobWorkerCount;
+            var data = new NativeArray<int>(64, Allocator.TempJob);
+            try
+            {
+                JobsUtility.JobWorkerCount = 0;
+                var handle = new SquareParallel { Data = data }.Schedule(data.Length, 4);
+                JobHandle.ScheduleBatchedJobs();
+                Assert.False(Unbound.Runtime.Jobs.JobSystem.HasRun(handle));
+                JobsUtility.JobWorkerCount = JobsUtility.JobWorkerMaximumCount;
+                var deadline = DateTime.UtcNow.AddSeconds(10);
+                while (!Unbound.Runtime.Jobs.JobSystem.HasRun(handle) && DateTime.UtcNow < deadline) Thread.Sleep(1);
+                Assert.True(Unbound.Runtime.Jobs.JobSystem.HasRun(handle));
+                handle.Complete();
+                Assert.Equal(63 * 63, data[63]);
+            }
+            finally
+            {
+                JobsUtility.JobWorkerCount = workers;
+                data.Dispose();
+            }
+        }
+
         /// <summary>The counts come from the workers themselves (before, the managed side counted
         /// processors on its own, and worker indices could exceed ThreadIndexCount): every
         /// ThreadIndex stays within the current JobWorkerCount.</summary>

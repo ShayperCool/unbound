@@ -17,7 +17,7 @@ mod workers;
 #[cfg(test)]
 mod tests;
 
-pub use workers::{max_workers, processor_count, set_worker_count, thread_index, worker_count};
+pub use workers::{max_workers, processor_count, thread_index, worker_count};
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -76,6 +76,8 @@ struct Run {
     callbacks: Callbacks,
     /// Set by the thread that prepares the job.
     preparing: AtomicBool,
+    /// Preparing it panicked: its participants do not run its body.
+    prepare_failed: AtomicBool,
     /// 0 until the job is prepared.
     participants: AtomicU32,
     /// The next participant to claim.
@@ -111,6 +113,9 @@ struct Graph {
     /// The scheduled jobs a flush hands out; jobs started otherwise meanwhile are skipped.
     batch: Vec<Key>,
     callbacks: Option<Callbacks>,
+    /// Jobs launched while there were no workers: their participants wait for a thread that waits
+    /// for them, or for the next workers ([`set_worker_count`]).
+    unhelped: Vec<Arc<Run>>,
 }
 
 static GRAPH: Mutex<Graph> = Mutex::new(Graph {
@@ -118,9 +123,11 @@ static GRAPH: Mutex<Graph> = Mutex::new(Graph {
     free: Vec::new(),
     batch: Vec::new(),
     callbacks: None,
+    unhelped: Vec::new(),
 });
 
-/// Signalled when a job some thread waits for is done, prepared or ready to run.
+/// Signalled when a job some thread waits for is done or ready to run, and, while there are no
+/// workers, when it is prepared.
 static CHANGED: Condvar = Condvar::new();
 
 fn graph() -> MutexGuard<'static, Graph> {
@@ -189,6 +196,7 @@ impl Graph {
                 user,
                 callbacks,
                 preparing: AtomicBool::new(false),
+                prepare_failed: AtomicBool::new(false),
                 participants: AtomicU32::new(0),
                 next: AtomicU32::new(0),
                 remaining: AtomicU32::new(0),
@@ -491,6 +499,7 @@ fn launch(run: Arc<Run>, here: bool) {
     let participants = catch_unwind(AssertUnwindSafe(|| (run.callbacks.prepare)(run.user)))
         .unwrap_or_else(|panic| {
             report_panic("preparing", &run, &panic);
+            run.prepare_failed.store(true, Ordering::Relaxed);
             1
         })
         .max(1);
@@ -505,20 +514,60 @@ fn launch(run: Arc<Run>, here: bool) {
                 rayon::spawn(move || run_participants(&run));
             }
         } else if let Some(pool) = workers::pool() {
-            for _ in 0..helpers.min(pool.current_num_threads()) {
-                let run = run.clone();
-                pool.spawn(move || run_participants(&run));
-            }
+            spawn_helpers(&pool, &run, helpers);
         } else {
-            // No workers (JobWorkerCount 0): a thread waiting for the job runs its participants.
-            let graph = graph();
-            if graph.node(run.key).is_some_and(|node| node.waiters != 0) {
-                CHANGED.notify_all();
+            // No workers (JobWorkerCount 0): a thread waiting for the job runs its participants,
+            // or the next workers do.
+            {
+                let mut graph = graph();
+                graph.unhelped.retain(|run| run.unclaimed() != 0);
+                graph.unhelped.push(run.clone());
+                if graph.node(run.key).is_some_and(|node| node.waiters != 0) {
+                    CHANGED.notify_all();
+                }
             }
+            // The count may have been raised meanwhile.
+            help_unhelped();
         }
     }
     if here {
         run_participants(&run);
+    }
+}
+
+fn spawn_helpers(pool: &rayon::ThreadPool, run: &Arc<Run>, helpers: usize) {
+    for _ in 0..helpers.min(pool.current_num_threads()) {
+        let run = run.clone();
+        pool.spawn(move || run_participants(&run));
+    }
+}
+
+/// Sets `JobsUtility.JobWorkerCount` ([`workers::set_worker_count`]); the participants left of
+/// jobs launched while there were no workers go to the new workers.
+pub fn set_worker_count(count: usize) {
+    workers::set_worker_count(count);
+    help_unhelped();
+}
+
+/// Hands the participants left of the jobs launched without workers to the workers, if there are
+/// any now. (A launch adds to the list, then reads the count; a count change writes the count,
+/// then takes the list: one of them sees the other.)
+fn help_unhelped() {
+    loop {
+        let runs = std::mem::take(&mut graph().unhelped);
+        if runs.is_empty() {
+            return;
+        }
+        if let Some(pool) = workers::pool() {
+            for run in runs {
+                spawn_helpers(&pool, &run, run.unclaimed() as usize);
+            }
+            return;
+        }
+        graph().unhelped.extend(runs);
+        if worker_count() == 0 {
+            return;
+        }
     }
 }
 
@@ -542,6 +591,14 @@ fn launch_all(mut ready: Vec<Arc<Run>>) {
     }
 }
 
+impl Run {
+    /// Participants nobody claimed yet (0 before the job is prepared).
+    fn unclaimed(&self) -> u32 {
+        let participants = self.participants.load(Ordering::Acquire);
+        participants.saturating_sub(self.next.load(Ordering::Relaxed))
+    }
+}
+
 /// Claims and runs the job's participants until none is left.
 fn run_participants(run: &Run) {
     let participants = run.participants.load(Ordering::Acquire);
@@ -551,7 +608,9 @@ fn run_participants(run: &Run) {
             return;
         }
         let thread = thread_index();
-        if let Err(panic) = catch_unwind(AssertUnwindSafe(|| {
+        if run.prepare_failed.load(Ordering::Relaxed) {
+            // Its body would run unprepared; it only completes.
+        } else if let Err(panic) = catch_unwind(AssertUnwindSafe(|| {
             (run.callbacks.execute)(run.user, index as i32, thread)
         })) {
             report_panic("running", run, &panic);
