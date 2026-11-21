@@ -503,19 +503,18 @@ namespace Unity.Baselib.LowLevel
         public static void Baselib_Memory_AlignedFree(IntPtr ptr) => NativeMemory.AlignedFree((void*)ptr);
 
         public static Baselib_Memory_PageAllocation Baselib_Memory_AllocatePages(ulong pageSize, ulong pageCount, ulong alignmentInMultipleOfPageSize, Baselib_Memory_PageState pageState, Baselib_ErrorState* errorState) =>
-            BaselibMemory.AllocatePages(pageSize, pageCount, alignmentInMultipleOfPageSize, errorState);
+            BaselibMemory.AllocatePages(pageSize, pageCount, alignmentInMultipleOfPageSize, pageState, 0u, errorState);
 
         public static Baselib_Memory_PageAllocation Baselib_Memory_AllocatePagesEx(ulong pageSize, ulong pageCount, ulong alignmentInMultipleOfPageSize, Baselib_Memory_PageState pageState, uint extPageState, Baselib_ErrorState* errorState) =>
-            BaselibMemory.AllocatePages(pageSize, pageCount, alignmentInMultipleOfPageSize, errorState);
+            BaselibMemory.AllocatePages(pageSize, pageCount, alignmentInMultipleOfPageSize, pageState, extPageState, errorState);
 
         public static void Baselib_Memory_ReleasePages(Baselib_Memory_PageAllocation pageAllocation, Baselib_ErrorState* errorState) => BaselibMemory.ReleasePages(pageAllocation, errorState);
 
-        /// <summary>Page protection is not emulated: every page stays readable and writable.</summary>
         public static void Baselib_Memory_SetPageState(IntPtr addressOfFirstPage, ulong pageSize, ulong pageCount, Baselib_Memory_PageState pageState, Baselib_ErrorState* errorState) =>
-            Unbound.Runtime.Stubs.Ignored("Baselib_Memory_SetPageState", "does not protect pages yet: they stay readable and writable");
+            BaselibMemory.SetPageState(addressOfFirstPage, pageSize, pageCount, pageState, 0u, errorState);
 
         public static void Baselib_Memory_SetPageStateEx(IntPtr addressOfFirstPage, ulong pageSize, ulong pageCount, Baselib_Memory_PageState pageState, uint extPageState, Baselib_ErrorState* errorState) =>
-            Unbound.Runtime.Stubs.Ignored("Baselib_Memory_SetPageStateEx", "does not protect pages yet: they stay readable and writable");
+            BaselibMemory.SetPageState(addressOfFirstPage, pageSize, pageCount, pageState, extPageState, errorState);
 
         // ------------------------------------------------------------------ network addresses
 

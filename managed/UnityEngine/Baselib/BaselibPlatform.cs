@@ -26,10 +26,11 @@ namespace Unbound.Runtime.Baselib
 
     internal static unsafe class BaselibErrors
     {
-        /// <summary>Sets an error (Baselib writes the state only on failure).</summary>
+        /// <summary>Sets an error (Baselib writes the state only on failure and never overwrites
+        /// a non-Success code, tests/projects/corecaps <c>baselib.err.set.sticky</c>).</summary>
         internal static void Set(Baselib_ErrorState* state, Baselib_ErrorCode code, long nativeError = 0)
         {
-            if (state == null) return;
+            if (state == null || state->code != Baselib_ErrorCode.Success) return;
             state->code = code;
             state->nativeErrorCode = (ulong)nativeError;
             state->nativeErrorCodeType = nativeError != 0 ? Baselib_ErrorState_NativeErrorCodeType.PlatformDefined : Baselib_ErrorState_NativeErrorCodeType.None;
@@ -88,44 +89,212 @@ namespace Unbound.Runtime.Baselib
         }
     }
 
+    /// <summary>Virtual memory page allocation and protection backed by POSIX mmap/munmap/mprotect/madvise,
+    /// matching the Unity 6000.0.71f1 Linux Editor (tests/projects/corecaps <c>baselib.*</c>).</summary>
     internal static unsafe class BaselibMemory
     {
-        internal static Baselib_Memory_PageAllocation AllocatePages(ulong pageSize, ulong pageCount, ulong alignmentInPages, Baselib_ErrorState* error)
+        const int PROT_NONE = 0, PROT_READ = 1, PROT_WRITE = 2, PROT_EXEC = 4;
+        const int MAP_PRIVATE = 0x02;
+        const int MAP_ANONYMOUS_LINUX = 0x20;
+        const int MAP_ANON_MACOS = 0x1000;
+        const int MADV_DONTNEED = 4;
+        const int ENOMEM = 12, EACCES = 13, EINVAL = 22;
+        static readonly IntPtr MAP_FAILED = (IntPtr)(-1);
+
+        [DllImport("libc", EntryPoint = "mmap")]
+        static extern IntPtr Mmap(IntPtr addr, nuint length, int prot, int flags, int fd, nint offset);
+
+        [DllImport("libc", EntryPoint = "munmap")]
+        static extern int Munmap(IntPtr addr, nuint length);
+
+        [DllImport("libc", EntryPoint = "mprotect")]
+        static extern int Mprotect(IntPtr addr, nuint length, int prot);
+
+        [DllImport("libc", EntryPoint = "madvise")]
+        static extern int Madvise(IntPtr addr, nuint length, int advice);
+
+        [DllImport("libc", EntryPoint = "__errno_location")]
+        static extern int* LinuxErrnoLocation();
+
+        [DllImport("libc", EntryPoint = "__error")]
+        static extern int* MacErrnoLocation();
+
+        static int LastErrno()
         {
-            if (pageSize == 0 || (pageSize & (pageSize - 1)) != 0 || pageSize < (ulong)Environment.SystemPageSize)
+            int* p = OperatingSystem.IsMacOS() ? MacErrnoLocation() : LinuxErrnoLocation();
+            return p != null ? *p : 0;
+        }
+
+        static int MapAnonymousFlag => OperatingSystem.IsMacOS() ? MAP_ANON_MACOS : MAP_ANONYMOUS_LINUX;
+
+        static bool TryMapProtection(Baselib_Memory_PageState state, out int prot)
+        {
+            switch (state)
             {
-                BaselibErrors.Set(error, Baselib_ErrorCode.InvalidPageSize);
-                return default;
+                case Baselib_Memory_PageState.Reserved:
+                case Baselib_Memory_PageState.NoAccess:
+                    prot = PROT_NONE;
+                    return true;
+                case Baselib_Memory_PageState.ReadOnly:
+                    prot = PROT_READ;
+                    return true;
+                case Baselib_Memory_PageState.ReadWrite:
+                    prot = PROT_READ | PROT_WRITE;
+                    return true;
+                case Baselib_Memory_PageState.ReadOnly_Executable:
+                    prot = PROT_READ | PROT_EXEC;
+                    return true;
+                case Baselib_Memory_PageState.ReadWrite_Executable:
+                    prot = PROT_READ | PROT_WRITE | PROT_EXEC;
+                    return true;
+                default:
+                    prot = PROT_NONE;
+                    return false;
             }
+        }
+
+        static bool TryByteSize(ulong pageSize, ulong pageCount, out ulong bytes)
+        {
+            if (pageSize != 0 && pageCount <= ulong.MaxValue / pageSize)
+            {
+                ulong total = pageSize * pageCount;
+                if (total <= (ulong)long.MaxValue)
+                {
+                    bytes = total;
+                    return true;
+                }
+            }
+            bytes = 0;
+            return false;
+        }
+
+        static Baselib_ErrorCode MapProtectionError(int errno) => errno switch
+        {
+            ENOMEM => Baselib_ErrorCode.InvalidAddressRange,
+            EACCES => Baselib_ErrorCode.UnsupportedPageState,
+            EINVAL => Baselib_ErrorCode.InvalidAddressRange,
+            _ => Baselib_ErrorCode.UnexpectedError,
+        };
+
+        internal static Baselib_Memory_PageAllocation AllocatePages(ulong pageSize, ulong pageCount, ulong alignmentInPages,
+            Baselib_Memory_PageState pageState, uint extPageState, Baselib_ErrorState* error)
+        {
+            if (error != null && error->code != Baselib_ErrorCode.Success) return default;
             if (pageCount == 0)
             {
                 BaselibErrors.Set(error, Baselib_ErrorCode.InvalidPageCount);
                 return default;
             }
-            ulong alignment = pageSize * Math.Max(alignmentInPages, 1);
-            if ((alignment & (alignment - 1)) != 0)
+            ulong sysPage = (ulong)Environment.SystemPageSize;
+            if (pageSize != sysPage)
+            {
+                BaselibErrors.Set(error, Baselib_ErrorCode.InvalidPageSize);
+                return default;
+            }
+            if (alignmentInPages == 0 || (alignmentInPages & (alignmentInPages - 1)) != 0)
             {
                 BaselibErrors.Set(error, Baselib_ErrorCode.UnsupportedAlignment);
                 return default;
             }
-            var memory = NativeMemory.AlignedAlloc((nuint)(pageSize * pageCount), (nuint)alignment);
-            if (memory == null)
+            if (!TryByteSize(pageSize, pageCount, out ulong size))
             {
                 BaselibErrors.Set(error, Baselib_ErrorCode.OutOfMemory);
                 return default;
             }
-            NativeMemory.Clear(memory, (nuint)(pageSize * pageCount));
-            return new Baselib_Memory_PageAllocation { ptr = (IntPtr)memory, pageSize = pageSize, pageCount = pageCount };
+            if (!TryByteSize(pageSize, alignmentInPages, out ulong alignment))
+            {
+                BaselibErrors.Set(error, Baselib_ErrorCode.UnsupportedAlignment);
+                return default;
+            }
+            if (!TryMapProtection(pageState, out int prot))
+            {
+                BaselibErrors.Set(error, Baselib_ErrorCode.UnsupportedPageState);
+                return default;
+            }
+            ulong extra = alignment > pageSize ? alignment - pageSize : 0UL;
+            if (size > (ulong)long.MaxValue - extra)
+            {
+                BaselibErrors.Set(error, Baselib_ErrorCode.OutOfMemory);
+                return default;
+            }
+            ulong mapSize = size + extra;
+            IntPtr mapped = Mmap(IntPtr.Zero, (nuint)mapSize, prot | (int)extPageState, MAP_PRIVATE | MapAnonymousFlag, -1, 0);
+            if (mapped == MAP_FAILED)
+            {
+                int errno = LastErrno();
+                var code = errno switch
+                {
+                    ENOMEM => Baselib_ErrorCode.OutOfMemory,
+                    EACCES => Baselib_ErrorCode.UnsupportedPageState,
+                    _ => Baselib_ErrorCode.UnexpectedError,
+                };
+                BaselibErrors.Set(error, code, errno);
+                return default;
+            }
+            ulong raw = (ulong)mapped;
+            ulong aligned = (raw + alignment - 1UL) & ~(alignment - 1UL);
+            ulong lead = aligned - raw;
+            ulong trail = mapSize - size - lead;
+            if (lead > 0) Munmap((IntPtr)raw, (nuint)lead);
+            if (trail > 0) Munmap((IntPtr)(aligned + size), (nuint)trail);
+            return new Baselib_Memory_PageAllocation { ptr = (IntPtr)aligned, pageSize = pageSize, pageCount = pageCount };
+        }
+
+        internal static void SetPageState(IntPtr address, ulong pageSize, ulong pageCount,
+            Baselib_Memory_PageState pageState, uint extPageState, Baselib_ErrorState* error)
+        {
+            if (address == IntPtr.Zero || pageCount == 0) return;
+            if (error != null && error->code != Baselib_ErrorCode.Success) return;
+            if (pageSize != (ulong)Environment.SystemPageSize)
+            {
+                BaselibErrors.Set(error, Baselib_ErrorCode.InvalidPageSize);
+                return;
+            }
+            if (!TryByteSize(pageSize, pageCount, out ulong size))
+            {
+                BaselibErrors.Set(error, Baselib_ErrorCode.OutOfMemory);
+                return;
+            }
+            if (!TryMapProtection(pageState, out int prot))
+            {
+                BaselibErrors.Set(error, Baselib_ErrorCode.UnsupportedPageState);
+                return;
+            }
+            if (pageState == Baselib_Memory_PageState.Reserved)
+            {
+                if (Madvise(address, (nuint)size, MADV_DONTNEED) != 0)
+                {
+                    int errno = LastErrno();
+                    BaselibErrors.Set(error, MapProtectionError(errno), errno);
+                    return;
+                }
+            }
+            if (Mprotect(address, (nuint)size, prot | (int)extPageState) != 0)
+            {
+                int errno = LastErrno();
+                BaselibErrors.Set(error, MapProtectionError(errno), errno);
+            }
         }
 
         internal static void ReleasePages(Baselib_Memory_PageAllocation allocation, Baselib_ErrorState* error)
         {
-            if (allocation.ptr == IntPtr.Zero)
+            if (allocation.ptr == IntPtr.Zero || allocation.pageCount == 0) return;
+            if (error != null && error->code != Baselib_ErrorCode.Success) return;
+            if (allocation.pageSize != (ulong)Environment.SystemPageSize)
             {
-                BaselibErrors.Set(error, Baselib_ErrorCode.InvalidAddressRange);
+                BaselibErrors.Set(error, Baselib_ErrorCode.InvalidPageSize);
                 return;
             }
-            NativeMemory.AlignedFree((void*)allocation.ptr);
+            if (!TryByteSize(allocation.pageSize, allocation.pageCount, out ulong size))
+            {
+                BaselibErrors.Set(error, Baselib_ErrorCode.OutOfMemory);
+                return;
+            }
+            if (Munmap(allocation.ptr, (nuint)size) != 0)
+            {
+                int errno = LastErrno();
+                BaselibErrors.Set(error, errno == EINVAL ? Baselib_ErrorCode.InvalidAddressRange : Baselib_ErrorCode.UnexpectedError, errno);
+            }
         }
     }
 
