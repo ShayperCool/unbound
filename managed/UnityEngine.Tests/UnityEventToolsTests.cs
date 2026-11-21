@@ -14,6 +14,7 @@ namespace UnityEngine.Tests
             public void Ping() { }
             public void TakeInt(int value) { }
             public void TakeObject(Object value) { }
+            public void TakeTransform(Transform value) { }
             public static void StaticPing() { }
         }
 
@@ -66,6 +67,44 @@ namespace UnityEngine.Tests
             Tools.AddPersistentListener(unityEvent, Listener.StaticPing);
             Assert.Equal("StaticPing", unityEvent.GetPersistentMethodName(2));
             Assert.Null(unityEvent.GetPersistentTarget(2));
+        }
+
+        sealed class LogCapture : ILogHandler
+        {
+            internal readonly System.Collections.Generic.List<string> Lines = new System.Collections.Generic.List<string>();
+            public void LogException(Exception exception, Object context) => Lines.Add("Exception: " + exception.Message);
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                Lines.Add(logType + ": " + string.Format(format, args));
+        }
+
+        [Fact]
+        public void TheArgumentModesNameTheDelegatesOwnTargetAndCheckTheArgumentsType()
+        {
+            var listener = NewListener("L");
+            var unityEvent = new UnityEvent();
+            var logs = new LogCapture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = logs;
+            try
+            {
+                var error = Assert.Throws<ArgumentException>(() => Tools.AddIntPersistentListener(unityEvent, x => { }, 1));
+                Assert.Matches(@"^Could not register callback .+ on .+\+<>c\. The class .+\+<>c does not derive from UnityEngine.Object$", error.Message);
+                // A typed object listener with a null argument must take UnityEngine.Object.
+                Tools.AddObjectPersistentListener<Transform>(unityEvent, listener.TakeTransform, null);
+                Assert.Equal(2, unityEvent.GetPersistentEventCount());
+                Assert.Equal("", unityEvent.GetPersistentMethodName(1) ?? "");
+                Assert.Equal(new[] { $"Warning: Could not register listener {listener}.Void TakeTransform(UnityEngine.Transform) on {typeof(UnityEvent)} the method could not be found." }, logs.Lines);
+                Assert.Throws<ArgumentNullException>(() => Tools.AddObjectPersistentListener<Object>(unityEvent, null, listener));
+                Assert.Equal(3, unityEvent.GetPersistentEventCount());
+                logs.Lines.Clear();
+                Tools.AddVoidPersistentListener(unityEvent, null);
+                Assert.Equal(new[] { "Warning: Registering a Listener requires an action" }, logs.Lines);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                Object.DestroyImmediate(listener.gameObject);
+            }
         }
 
         [Fact]

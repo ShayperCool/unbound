@@ -1,5 +1,7 @@
+using System;
 using UnityEngine;
 using UnityEngine.Events;
+using Object = UnityEngine.Object;
 
 namespace UnityEditor.Events
 {
@@ -110,10 +112,15 @@ namespace UnityEditor.Events
         public static void AddObjectPersistentListener<T>(UnityEventBase unityEvent, UnityAction<T> call, T argument) where T : Object =>
             RegisterObjectPersistentListener(unityEvent, Append(unityEvent), call, argument);
 
+        /// <summary>The method must take the argument's own type, UnityEngine.Object for a null
+        /// argument; a null delegate throws (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/unityeventtools add.objectTypedNull and add.objectNullCall).</summary>
         public static void RegisterObjectPersistentListener<T>(UnityEventBase unityEvent, int index, UnityAction<T> call, T argument) where T : Object
         {
-            if (unityEvent.RegisterPersistentListener(index, call, PersistentListenerMode.Object, typeof(T)))
-                unityEvent.PersistentArguments(index).SetObjectArgument(argument);
+            if (call == null) throw new ArgumentNullException(nameof(call), "Registering a Listener requires a non null call");
+            var argumentType = argument == null ? typeof(Object) : argument.GetType();
+            if (unityEvent.RegisterPersistentListener(index, call, PersistentListenerMode.Object, argumentType))
+                unityEvent.PersistentArguments(index).unityObjectArgument = argument;
         }
 
         /// <summary>Appends an empty persistent call; its index.</summary>

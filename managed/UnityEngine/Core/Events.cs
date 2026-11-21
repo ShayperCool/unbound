@@ -22,14 +22,16 @@ namespace UnityEngine.Events
         [FormerlySerializedAs("stringArgument")] [SerializeField] string m_StringArgument;
         [SerializeField] bool m_BoolArgument;
 
-        public Object unityObjectArgument { get => m_ObjectArgument; set => m_ObjectArgument = value; }
-
-        /// <summary>The object argument with the type it names: the object's own type, empty for none
-        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/unityeventtools add.object*).</summary>
-        internal void SetObjectArgument(Object value)
+        /// <summary>The object argument; setting it also names its type: the object's own, empty for
+        /// none (matches the Unity 6000.0.71f1 Editor, tests/projects/unityeventtools add.object*).</summary>
+        public Object unityObjectArgument
         {
-            m_ObjectArgument = value;
-            m_ObjectArgumentAssemblyTypeName = !ReferenceEquals(value, null) ? value.GetType().AssemblyQualifiedName : string.Empty;
+            get => m_ObjectArgument;
+            set
+            {
+                m_ObjectArgument = value;
+                m_ObjectArgumentAssemblyTypeName = value != null ? value.GetType().AssemblyQualifiedName : string.Empty;
+            }
         }
         public string unityObjectArgumentAssemblyTypeName => m_ObjectArgumentAssemblyTypeName;
         public int intArgument { get => m_IntArgument; set => m_IntArgument = value; }
@@ -257,10 +259,13 @@ namespace UnityEngine.Events
             }
             var method = callback.Method;
             var target = callback.Target as Object;
+            // The event's own mode names the target as a UnityEngine.Object, the argument modes the
+            // delegate's target itself (a lambda's closure, for one).
+            object named = mode == PersistentListenerMode.EventDefined ? target : callback.Target;
             if (method.DeclaringType == null)
                 throw new NullReferenceException($"Method '{method.Name}' declaring type is null, global methods are not supported");
             if (!method.IsStatic && (target == null || target.GetInstanceID() == 0))
-                throw new ArgumentException($"Could not register callback {method.Name} on {target}. The class {(ReferenceEquals(target, null) ? "null" : target.GetType().ToString())} does not derive from UnityEngine.Object");
+                throw new ArgumentException($"Could not register callback {method.Name} on {named}. The class {(named == null ? "null" : named.GetType().ToString())} does not derive from UnityEngine.Object");
             if (GetValidMethodInfo(method.IsStatic ? method.DeclaringType : target.GetType(), method.Name, ParametersOf(mode, this, objectArgumentType)) == null)
             {
                 Debug.LogWarning($"Could not register listener {target}.{method} on {GetType()} the method could not be found.");
