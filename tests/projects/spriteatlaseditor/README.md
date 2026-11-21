@@ -12,7 +12,7 @@ toggles, `EditorUtility.IsDirty`/`GetDirtyCount`, `AssetDatabase.SaveAssets`/`Sa
 variant flag and sprite count; also the settings of `new SpriteAtlas()` and the answers for a null
 atlas. Recorded in Play mode, in batch mode, with the Unity 6000.0.71f1 Editor.
 
-Sixteen profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
+Eighteen profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
 
 - `v1`: Sprite Packer mode "Sprite Atlas V1 - Always Enabled" with three `.spriteatlas` assets in
   `Assets/Atlases/`: `Main` (a folder, a texture and a sprite of a sheet as packables, included in
@@ -67,6 +67,13 @@ Sixteen profiles, each with its own reference under `Reference/unity-6000.0.71f1
   `Master` with empty `packables`) and `Omitted` (absent `packables` alongside custom settings).
 - `v2add`: mode "Sprite Atlas V2 - Enabled" with the corresponding four `.spriteatlasv2` assets in
   `Assets/AddAtlases/` and their `SpriteAtlasImporter` `.meta` files.
+- `v1remove`: mode "Sprite Atlas V1 - Always Enabled" with four `.spriteatlas` assets in
+  `Assets/RemoveAtlases/`: `Master` (folder, duplicate texture, sprite of the same texture, and
+  sub-sprite alongside custom settings), `NullAndMissing` (null `{fileID: 0}` ref, missing asset
+  ref, sprite, and folder), `Variant` (variant of `Master` with its own three packables) and
+  `Omitted` (absent `packables` alongside custom settings).
+- `v2remove`: mode "Sprite Atlas V2 - Enabled" with the corresponding four `.spriteatlasv2` assets
+  in `Assets/RemoveAtlases/` and their `SpriteAtlasImporter` `.meta` files.
 
 The sprites come from tests/projects/spriteatlas (files the Editor authored). The atlases are
 written from that probe's Editor-authored atlas files with other packables and settings. The
@@ -134,8 +141,18 @@ call across V1, V2, variants (without affecting the master) and `new SpriteAtlas
 `m_EditorData.packables` on V1 `SaveAssets`/`SaveAssetIfDirty` (writing `{fileID: 0}` for runtime
 objects, inserting `packables` after `variantMultiplier` when omitted, and preserving unrelated
 settings and `.meta`) while leaving V2 files and `.meta` unchanged and dirty, and on V2
-`ImportAsset(ForceUpdate)` reloads a fresh clean atlas reverted to its `.spriteatlasv2`; a null
-atlas throws ArgumentNullException for all eleven (with non-null `src` for `SetPlatformSettings`).
+`ImportAsset(ForceUpdate)` reloads a fresh clean atlas reverted to its `.spriteatlasv2`; `Remove`
+removes every matching occurrence of each element in `objects` by swapping each removed slot with
+the last packable (preserving distinct `Texture2D` vs `Sprite` asset identities on the same PNG,
+matching destroyed runtime objects by their object identity rather than `null`, and leaving a
+destroyed runtime packable as `null` in `GetPackables()` until removed), logs no warnings for
+missing/null/invalid elements, accepts `null` and empty arrays, marks the atlas dirty once per
+element plus once after the loop (`dirtyDelta += N + 1`, or `+1` for `null`/empty) across V1, V2,
+variants (without modifying or dirtying their master) and `new SpriteAtlas()`, persists updated V1
+`m_EditorData.packables` (including `packables: []` when emptied or omitted, preserving unrelated
+settings and `.meta`) while leaving V2 `.spriteatlasv2` and `.meta` unchanged and dirty until
+`ImportAsset(ForceUpdate)` reloads from disk; a null atlas throws ArgumentNullException for all
+twelve (with non-null `src` for `SetPlatformSettings`).
 Not measured: either kind of atlas in the other kind's packer mode.
 
 Values compare exactly.

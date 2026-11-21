@@ -81,6 +81,9 @@ static class SpriteAtlasEditorProbe
         if (paths.Any(p => p.StartsWith("Assets/AddAtlases/", StringComparison.Ordinal)))
             RecordAddPackables(paths, none, Check);
 
+        if (paths.Any(p => p.StartsWith("Assets/RemoveAtlases/", StringComparison.Ordinal)))
+            RecordRemovePackables(paths, none, Check);
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
@@ -300,6 +303,224 @@ static class SpriteAtlasEditorProbe
             AssetDatabase.SaveAssetIfDirty(omitted.atlas);
             check(omitted.key + ".add.afterSaveIfDirty", () =>
                 $"packables=[{Packables(omitted.atlas)}]|{Dirty(omitted.atlas, baseDirty)}|{Unrelated(omitted.atlas)}|{FileState(omitted.path, origA, origM, includeAssetBlock: true)}|assetTexture={YamlBlock(omitted.path, "textureSettings:")}|assetPacking={YamlBlock(omitted.path, "packingSettings:")}");
+        }
+    }
+
+    static void RecordRemovePackables(string[] paths, SpriteAtlas none, Action<string, Func<string>> check)
+    {
+        var byStem = new System.Collections.Generic.Dictionary<string, (string path, string key, SpriteAtlas atlas)>(StringComparer.Ordinal);
+        foreach (var path in paths)
+        {
+            var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+            if (atlas != null)
+                byStem[Path.GetFileNameWithoutExtension(path)] = (path, Path.GetFileName(path), atlas);
+        }
+
+        var folder = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>("Assets/Sprites/Folder");
+        var singleTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Sprites/Single.png");
+        var singleSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Single.png");
+        var sheetSprite = AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/Sheet.png").OfType<Sprite>()
+            .OrderBy(s => s.name, StringComparer.Ordinal).First();
+        var runtimeTex = new Texture2D(4, 4) { name = "RuntimeTex" };
+        var runtimeSprite = Sprite.Create(runtimeTex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f));
+        runtimeSprite.name = "RuntimeSprite";
+        var doomedTex = new Texture2D(2, 2) { name = "DoomedTex" };
+        var invalidGo = new GameObject("InvalidGo");
+        var invalidRt = new RenderTexture(4, 4, 0) { name = "InvalidRt" };
+
+        string Packables(SpriteAtlas a) => string.Join(",", a.GetPackables().Select(Describe));
+
+        string Dirty(SpriteAtlas a, int baseDirty) =>
+            $"dirty={EditorUtility.IsDirty(a)}|dirtyDelta={EditorUtility.GetDirtyCount(a) - baseDirty}";
+
+        string Unrelated(SpriteAtlas a) =>
+            $"texture=({DescribeTexture(a.GetTextureSettings())})|packing=({DescribePacking(a.GetPackingSettings())})|android=({DescribePlatform(a.GetPlatformSettings("Android"))})|include={a.IsIncludeInBuild()}";
+
+        string FileState(string path, byte[] origAsset, byte[] origMeta, bool includeAssetBlock = true)
+        {
+            bool assetChanged = !File.ReadAllBytes(path).SequenceEqual(origAsset);
+            bool metaChanged = !File.ReadAllBytes(path + ".meta").SequenceEqual(origMeta);
+            return includeAssetBlock
+                ? $"assetChanged={assetChanged}|metaChanged={metaChanged}|assetPackables={PackablesBlock(path)}|metaPackables={PackablesBlock(path + ".meta")}"
+                : $"assetChanged={assetChanged}|metaChanged={metaChanged}|metaPackables={PackablesBlock(path + ".meta")}";
+        }
+
+        string CaptureLogs(Action action)
+        {
+            var logs = new System.Collections.Generic.List<string>();
+            Application.LogCallback handler = (condition, stackTrace, type) => logs.Add(type + ":" + condition);
+            Application.logMessageReceived += handler;
+            try { action(); }
+            finally { Application.logMessageReceived -= handler; }
+            return string.Join(";", logs);
+        }
+
+        check("null.remove.valid", () => { none.Remove(new UnityEngine.Object[] { singleTex }); return "ok"; });
+        check("null.remove.nullArray", () => { none.Remove(null); return "ok"; });
+
+        var mem = new SpriteAtlas();
+        int memBase = EditorUtility.GetDirtyCount(mem);
+        check("new.remove.nullArray", () =>
+        {
+            var logs = CaptureLogs(() => mem.Remove(null));
+            return $"packables=[{Packables(mem)}]|{Dirty(mem, memBase)}|logs=[{logs}]";
+        });
+        check("new.remove.emptyArray", () =>
+        {
+            var logs = CaptureLogs(() => mem.Remove(Array.Empty<UnityEngine.Object>()));
+            return $"packables=[{Packables(mem)}]|{Dirty(mem, memBase)}|logs=[{logs}]";
+        });
+        mem.Add(new UnityEngine.Object[] { folder, singleTex, singleSprite, singleTex, sheetSprite, runtimeTex, runtimeSprite, doomedTex });
+        UnityEngine.Object.DestroyImmediate(doomedTex);
+        check("new.remove.duplicatesAndOrder", () =>
+        {
+            var logs = CaptureLogs(() => mem.Remove(new UnityEngine.Object[] { singleTex }));
+            return $"packables=[{Packables(mem)}]|{Dirty(mem, memBase)}|logs=[{logs}]";
+        });
+        check("new.remove.missingAndInvalid", () =>
+        {
+            var logs = CaptureLogs(() => mem.Remove(new UnityEngine.Object[] { singleTex, invalidGo, invalidRt, mem }));
+            return $"packables=[{Packables(mem)}]|{Dirty(mem, memBase)}|logs=[{logs}]";
+        });
+        check("new.remove.nullDoesNotRemoveDestroyed", () =>
+        {
+            var logs = CaptureLogs(() => mem.Remove(new UnityEngine.Object[] { null }));
+            return $"packables=[{Packables(mem)}]|{Dirty(mem, memBase)}|logs=[{logs}]";
+        });
+        check("new.remove.destroyedByInstanceId", () =>
+        {
+            var logs = CaptureLogs(() => mem.Remove(new UnityEngine.Object[] { doomedTex }));
+            return $"packables=[{Packables(mem)}]|{Dirty(mem, memBase)}|logs=[{logs}]";
+        });
+        check("new.remove.runtimeObjects", () =>
+        {
+            var logs = CaptureLogs(() => mem.Remove(new UnityEngine.Object[] { runtimeTex, runtimeSprite }));
+            return $"packables=[{Packables(mem)}]|{Dirty(mem, memBase)}|logs=[{logs}]";
+        });
+        check("new.remove.remainingToEmpty", () =>
+        {
+            var logs = CaptureLogs(() => mem.Remove(new UnityEngine.Object[] { folder, sheetSprite, singleSprite }));
+            return $"packables=[{Packables(mem)}]|{Dirty(mem, memBase)}|logs=[{logs}]";
+        });
+        AssetDatabase.SaveAssets();
+        check("new.remove.afterSave", () => $"packables=[{Packables(mem)}]|{Dirty(mem, memBase)}");
+
+        if (byStem.TryGetValue("Master", out var master))
+        {
+            var origA = File.ReadAllBytes(master.path);
+            var origM = File.ReadAllBytes(master.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(master.atlas);
+            check(master.key + ".remove.initial", () =>
+                $"packables=[{Packables(master.atlas)}]|{Dirty(master.atlas, baseDirty)}|{Unrelated(master.atlas)}|{FileState(master.path, origA, origM)}");
+
+            check(master.key + ".remove.nullAndEmpty", () =>
+            {
+                var logs = CaptureLogs(() =>
+                {
+                    master.atlas.Remove(null);
+                    master.atlas.Remove(Array.Empty<UnityEngine.Object>());
+                });
+                return $"packables=[{Packables(master.atlas)}]|{Dirty(master.atlas, baseDirty)}|logs=[{logs}]|{FileState(master.path, origA, origM)}";
+            });
+
+            check(master.key + ".remove.texKeepsSpriteAndSwapOrder", () =>
+            {
+                var logs = CaptureLogs(() => master.atlas.Remove(new UnityEngine.Object[] { singleTex }));
+                return $"packables=[{Packables(master.atlas)}]|{Dirty(master.atlas, baseDirty)}|logs=[{logs}]|{FileState(master.path, origA, origM)}";
+            });
+
+            check(master.key + ".remove.repeatAndInvalidNoop", () =>
+            {
+                var logs = CaptureLogs(() => master.atlas.Remove(new UnityEngine.Object[] { singleTex, invalidGo, invalidRt }));
+                return $"packables=[{Packables(master.atlas)}]|{Dirty(master.atlas, baseDirty)}|logs=[{logs}]|{FileState(master.path, origA, origM)}";
+            });
+
+            AssetDatabase.SaveAssets();
+            check(master.key + ".remove.afterSave", () =>
+                $"packables=[{Packables(master.atlas)}]|{Dirty(master.atlas, baseDirty)}|{Unrelated(master.atlas)}|{FileState(master.path, origA, origM)}");
+
+            check(master.key + ".remove.clearAllAndSaveIfDirty", () =>
+            {
+                var logs = CaptureLogs(() => master.atlas.Remove(new UnityEngine.Object[] { folder, singleSprite, sheetSprite }));
+                AssetDatabase.SaveAssetIfDirty(master.atlas);
+                return $"packables=[{Packables(master.atlas)}]|{Dirty(master.atlas, baseDirty)}|logs=[{logs}]|{Unrelated(master.atlas)}|{FileState(master.path, origA, origM)}";
+            });
+
+            AssetDatabase.ImportAsset(master.path, ImportAssetOptions.ForceUpdate);
+            var reloaded = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(master.path);
+            check(master.key + ".remove.afterReimport", () =>
+                $"sameRef={ReferenceEquals(master.atlas, reloaded)}|packables=[{Packables(reloaded)}]|dirty={EditorUtility.IsDirty(reloaded)}|{Unrelated(reloaded)}|{FileState(master.path, origA, origM)}");
+            master = (master.path, master.key, reloaded);
+        }
+
+        if (byStem.TryGetValue("NullAndMissing", out var nm))
+        {
+            var origM = File.ReadAllBytes(nm.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(nm.atlas);
+            string MetaOnly() => $"metaChanged={!File.ReadAllBytes(nm.path + ".meta").SequenceEqual(origM)}|metaPackables={PackablesBlock(nm.path + ".meta")}";
+            check(nm.key + ".remove.initial", () =>
+                $"packables=[{Packables(nm.atlas)}]|{Dirty(nm.atlas, baseDirty)}|{MetaOnly()}");
+
+            check(nm.key + ".remove.nullEntryAndSave", () =>
+            {
+                var logs = CaptureLogs(() => nm.atlas.Remove(new UnityEngine.Object[] { null }));
+                AssetDatabase.SaveAssetIfDirty(nm.atlas);
+                return $"packables=[{Packables(nm.atlas)}]|{Dirty(nm.atlas, baseDirty)}|logs=[{logs}]|{MetaOnly()}";
+            });
+
+            check(nm.key + ".remove.addAndRemoveRuntimeSave", () =>
+            {
+                var doomed2 = new Texture2D(2, 2) { name = "Doomed2" };
+                nm.atlas.Add(new UnityEngine.Object[] { runtimeTex, doomed2 });
+                UnityEngine.Object.DestroyImmediate(doomed2);
+                var logs = CaptureLogs(() => nm.atlas.Remove(new UnityEngine.Object[] { runtimeTex, doomed2, singleSprite }));
+                AssetDatabase.SaveAssetIfDirty(nm.atlas);
+                return $"packables=[{Packables(nm.atlas)}]|{Dirty(nm.atlas, baseDirty)}|logs=[{logs}]|{MetaOnly()}";
+            });
+        }
+
+        if (byStem.TryGetValue("Variant", out var variant))
+        {
+            var origA = File.ReadAllBytes(variant.path);
+            var origM = File.ReadAllBytes(variant.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(variant.atlas);
+            int masterBaseDirty = byStem.ContainsKey("Master") ? EditorUtility.GetDirtyCount(master.atlas) : 0;
+            check(variant.key + ".remove.initial", () =>
+                $"packables=[{Packables(variant.atlas)}]|{Dirty(variant.atlas, baseDirty)}|{Unrelated(variant.atlas)}|{FileState(variant.path, origA, origM)}");
+
+            check(variant.key + ".remove.modified", () =>
+            {
+                var logs = CaptureLogs(() => variant.atlas.Remove(new UnityEngine.Object[] { folder }));
+                return $"packables=[{Packables(variant.atlas)}]|{Dirty(variant.atlas, baseDirty)}|masterPackables=[{Packables(master.atlas)}]|masterDirtyDelta={EditorUtility.GetDirtyCount(master.atlas) - masterBaseDirty}|logs=[{logs}]|{FileState(variant.path, origA, origM)}";
+            });
+
+            AssetDatabase.SaveAssetIfDirty(variant.atlas);
+            check(variant.key + ".remove.afterSaveIfDirty", () =>
+                $"packables=[{Packables(variant.atlas)}]|{Dirty(variant.atlas, baseDirty)}|{Unrelated(variant.atlas)}|{FileState(variant.path, origA, origM)}");
+
+            AssetDatabase.ImportAsset(variant.path, ImportAssetOptions.ForceUpdate);
+            var reloaded = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(variant.path);
+            check(variant.key + ".remove.afterReimport", () =>
+                $"sameRef={ReferenceEquals(variant.atlas, reloaded)}|packables=[{Packables(reloaded)}]|dirty={EditorUtility.IsDirty(reloaded)}|{Unrelated(reloaded)}|{FileState(variant.path, origA, origM)}");
+        }
+
+        if (byStem.TryGetValue("Omitted", out var omitted))
+        {
+            var origA = File.ReadAllBytes(omitted.path);
+            var origM = File.ReadAllBytes(omitted.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(omitted.atlas);
+            check(omitted.key + ".remove.initial", () =>
+                $"packables=[{Packables(omitted.atlas)}]|{Dirty(omitted.atlas, baseDirty)}|{Unrelated(omitted.atlas)}|{FileState(omitted.path, origA, origM, includeAssetBlock: false)}");
+
+            check(omitted.key + ".remove.modified", () =>
+            {
+                var logs = CaptureLogs(() => omitted.atlas.Remove(new UnityEngine.Object[] { singleSprite }));
+                return $"packables=[{Packables(omitted.atlas)}]|{Dirty(omitted.atlas, baseDirty)}|logs=[{logs}]|{FileState(omitted.path, origA, origM, includeAssetBlock: false)}";
+            });
+
+            AssetDatabase.SaveAssetIfDirty(omitted.atlas);
+            check(omitted.key + ".remove.afterSaveIfDirty", () =>
+                $"packables=[{Packables(omitted.atlas)}]|{Dirty(omitted.atlas, baseDirty)}|{Unrelated(omitted.atlas)}|metaChanged={!File.ReadAllBytes(omitted.path + ".meta").SequenceEqual(origM)}|assetPackables={PackablesBlock(omitted.path)}|metaPackables={PackablesBlock(omitted.path + ".meta")}|assetTexture={YamlBlock(omitted.path, "textureSettings:")}|assetPacking={YamlBlock(omitted.path, "packingSettings:")}");
         }
     }
 
