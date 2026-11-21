@@ -871,7 +871,7 @@ namespace Unbound.Runtime
         static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Object, Tuple<string, long>> s_Builtins =
             new System.Runtime.CompilerServices.ConditionalWeakTable<Object, Tuple<string, long>>();
 
-        static Object Builtin(Object o, string guid, long fileId)
+        internal static Object Builtin(Object o, string guid, long fileId)
         {
             if (o is not null) s_Builtins.AddOrUpdate(o, Tuple.Create(guid.ToLowerInvariant(), fileId));
             return o;

@@ -865,9 +865,6 @@ namespace Unbound.Runtime
 
             static string Located(Object o)
             {
-                // A built-in shader is an object of the Editor's built-in resource files.
-                if (o is Shader shader && BuiltinShaders.TryGetLocation(shader, out var builtinGuid, out var builtinId))
-                    return $"{{fileID: {builtinId}, guid: {builtinGuid}, type: 0}}";
                 if (AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId))
                 {
                     int kind;

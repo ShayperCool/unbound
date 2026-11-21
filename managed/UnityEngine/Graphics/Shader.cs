@@ -697,21 +697,20 @@ namespace Unbound.Runtime
         internal const string ExtraGuid = "0000000000000000f000000000000000";
         internal const string DefaultGuid = "0000000000000000e000000000000000";
 
-        /// <summary>Where a built-in shader is (its resource file's GUID and its file id there, the
-        /// extra resources first); false for a shader that is not the built-in one of its name.</summary>
-        internal static bool TryGetLocation(UnityEngine.Shader shader, out string guid, out long fileId)
+        /// <summary>The resource file and file id of the built-in shader of a name (the extra
+        /// resources first; an entry of another class is no shader's); false when no resource file
+        /// lists it.</summary>
+        static bool TryGetLocation(string name, out string guid, out long fileId)
         {
-            guid = null;
-            fileId = 0;
-            if (shader is null || !s_Shaders.TryGetValue(shader.name, out var known) || !ReferenceEquals(known, shader)) return false;
-            foreach (var (table, tableGuid) in new[] { (ExtraNames, ExtraGuid), (DefaultNames, DefaultGuid) })
-                foreach (var pair in table)
-                    if (pair.Value == shader.name)
+            int shaderClass = EngineTypes.EngineClassIdOf(typeof(UnityEngine.Shader));
+            foreach (var (names, classes, tableGuid) in new[] { (ExtraNames, BuiltinObjects.ExtraClasses, ExtraGuid), (DefaultNames, BuiltinObjects.DefaultClasses, DefaultGuid) })
+                foreach (var pair in names)
+                    if (pair.Value == name && (!classes.TryGetValue(pair.Key, out var classId) || classId == shaderClass))
                     {
-                        guid = tableGuid;
-                        fileId = pair.Key;
+                        (guid, fileId) = (tableGuid, pair.Key);
                         return true;
                     }
+            (guid, fileId) = (null, 0);
             return false;
         }
 
@@ -728,6 +727,9 @@ namespace Unbound.Runtime
             shader.hideFlags = UnityEngine.HideFlags.NotEditable;
             ApplySource(shader, Source(name));
             s_Shaders[name] = shader;
+            // It is the object of its resource file however it was found (by name or by a
+            // reference), so a saved file names it alike.
+            if (TryGetLocation(name, out var guid, out var fileId)) AssetDatabaseRuntime.Builtin(shader, guid, fileId);
             return shader;
         }
 
