@@ -47,8 +47,10 @@ PROFILES = {
     'v2importertexture': (5, 'ImporterTextureAtlases', '.spriteatlasv2'),
     'v2importervariantscale': (5, 'ImporterVariantScaleAtlases', '.spriteatlasv2'),
     'v2importerinclude': (5, 'ImporterIncludeAtlases', '.spriteatlasv2'),
+    'v1wholewrite': (4, 'WholeWriteAtlases', '.spriteatlas'),
+    'v2wholewrite': (5, 'WholeWriteAtlases', '.spriteatlasv2'),
 }
-ATLAS_FOLDERS = ('Atlases', 'SettingsAtlases', 'PlatformAtlases', 'IncludeAtlases', 'PackingAtlases', 'TextureAtlases', 'PlatformSetAtlases', 'AddAtlases', 'RemoveAtlases', 'VariantScaleAtlases', 'IsVariantAtlases', 'MasterAtlasAtlases', 'ImporterPlatformAtlases', 'ImporterPlatformSetAtlases', 'ImporterPackingAtlases', 'ImporterTextureAtlases', 'ImporterVariantScaleAtlases', 'ImporterIncludeAtlases')
+ATLAS_FOLDERS = ('Atlases', 'SettingsAtlases', 'PlatformAtlases', 'IncludeAtlases', 'PackingAtlases', 'TextureAtlases', 'PlatformSetAtlases', 'AddAtlases', 'RemoveAtlases', 'VariantScaleAtlases', 'IsVariantAtlases', 'MasterAtlasAtlases', 'ImporterPlatformAtlases', 'ImporterPlatformSetAtlases', 'ImporterPackingAtlases', 'ImporterTextureAtlases', 'ImporterVariantScaleAtlases', 'ImporterIncludeAtlases', 'WholeWriteAtlases')
 
 
 def configure(project, profile):

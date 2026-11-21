@@ -1,0 +1,6 @@
+{
+  "The Editor rewrites a V1 .spriteatlas saved in an older format in the current format when it imports the project, before anything loads or changes it; Unbound leaves such a file as it is until the atlas itself is saved": [
+    "Untouched.spriteatlas.atStart",
+    "Untouched.spriteatlas.wholeWrite"
+  ]
+}

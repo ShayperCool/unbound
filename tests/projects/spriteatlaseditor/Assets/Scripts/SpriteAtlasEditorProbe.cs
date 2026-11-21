@@ -29,6 +29,23 @@ static class SpriteAtlasEditorProbe
             catch (Exception e) { Put(key, "throws " + e.GetType().Name); }
         }
 
+        // A V2 variant's packing settings when its master's change in memory before anything asked
+        // the variant for its settings.
+        const string lazyVariant = "Assets/WholeWriteAtlases/LazyVariant.spriteatlasv2";
+        if (File.Exists(lazyVariant))
+            Check("LazyVariant.spriteatlasv2.packingAfterMasterEdit", () =>
+            {
+                var variant = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(lazyVariant);
+                var lazyMaster = AssetDatabase.LoadAssetAtPath<SpriteAtlas>("Assets/WholeWriteAtlases/LazyMaster.spriteatlasv2");
+                var edited = lazyMaster.GetPackingSettings();
+                edited.padding = 16;
+                lazyMaster.SetPackingSettings(edited);
+                return $"variant=({DescribePacking(variant.GetPackingSettings())})|master=({DescribePacking(lazyMaster.GetPackingSettings())})";
+            });
+        // The legacy V1 file as it stands when Play mode starts, before anything loads it.
+        const string untouched = "Assets/WholeWriteAtlases/Untouched.spriteatlas";
+        if (File.Exists(untouched))
+            Check("Untouched.spriteatlas.atStart", () => "asset=" + File.ReadAllText(untouched));
         var paths = AssetDatabase.FindAssets("t:SpriteAtlas").Select(AssetDatabase.GUIDToAssetPath)
             .Distinct().OrderBy(p => p, StringComparer.Ordinal).ToArray();
         Put("atlases", string.Join("|", paths));
@@ -111,9 +128,47 @@ static class SpriteAtlasEditorProbe
         if (paths.Any(p => p.StartsWith("Assets/ImporterIncludeAtlases/", StringComparison.Ordinal)))
             RecordImporterIncludeInBuild(paths, Check);
 
+        if (paths.Any(p => p.StartsWith("Assets/WholeWriteAtlases/", StringComparison.Ordinal)))
+            RecordWholeWrite(paths, Check);
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
+    }
+
+    /// <summary>The whole `.spriteatlas` (V1, after SaveAssetIfDirty) or `.meta` (V2, after
+    /// WriteImportSettingsIfDirty) once one unrelated setting ("Include in Build") changed, for
+    /// files holding legacy and omitted settings (Legacy), the same untouched (Untouched), and an
+    /// untouched file in the current format (Current).</summary>
+    static void RecordWholeWrite(string[] paths, Action<string, Func<string>> check)
+    {
+        foreach (var path in paths.Where(p => p.StartsWith("Assets/WholeWriteAtlases/", StringComparison.Ordinal)))
+        {
+            string key = Path.GetFileName(path);
+            bool touch = Path.GetFileNameWithoutExtension(path) == "Legacy";
+            if (path.EndsWith(".spriteatlasv2", StringComparison.Ordinal))
+            {
+                check(key + ".wholeWrite", () =>
+                {
+                    var importer = (SpriteAtlasImporter)AssetImporter.GetAtPath(path);
+                    bool dirtyBefore = EditorUtility.IsDirty(importer);
+                    if (touch) importer.includeInBuild = !importer.includeInBuild;
+                    bool written = AssetDatabase.WriteImportSettingsIfDirty(path);
+                    return $"dirtyBefore={dirtyBefore}|written={written}|meta=" + File.ReadAllText(path + ".meta");
+                });
+            }
+            else
+            {
+                check(key + ".wholeWrite", () =>
+                {
+                    var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+                    bool dirtyBefore = EditorUtility.IsDirty(atlas);
+                    if (touch) atlas.SetIncludeInBuild(!atlas.IsIncludeInBuild());
+                    AssetDatabase.SaveAssetIfDirty(atlas);
+                    return $"dirtyBefore={dirtyBefore}|asset=" + File.ReadAllText(path);
+                });
+            }
+        }
     }
 
     static string PackablesBlock(string file)

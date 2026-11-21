@@ -12,7 +12,7 @@ toggles, `EditorUtility.IsDirty`/`GetDirtyCount`, `AssetDatabase.SaveAssets`/`Sa
 variant flag and sprite count; also the settings of `new SpriteAtlas()` and the answers for a null
 atlas. Recorded in Play mode, in batch mode, with the Unity 6000.0.71f1 Editor.
 
-Thirty profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
+Thirty-two profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
 
 - `v1`: Sprite Packer mode "Sprite Atlas V1 - Always Enabled" with three `.spriteatlas` assets in
   `Assets/Atlases/`: `Main` (a folder, a texture and a sprite of a sheet as packables, included in
@@ -307,6 +307,16 @@ when omitted), marks the importer dirty only when toggling the value, keeps mast
 importers and loaded `SpriteAtlas` instances independent until reimport, writes `bindAsDefault`
 (`1`/`0`, inserting after `variantMultiplier` when omitted), and follows the same
 `SaveAssets`/`WriteImportSettingsIfDirty`/`SaveAndReimport`/`ImportAsset(ForceUpdate)` timing.
+- `v1wholewrite` / `v2wholewrite`: `Assets/WholeWriteAtlases/` holds `Legacy` and `Untouched`
+  atlases whose `.spriteatlas` (V1) or `.meta` (V2) keep legacy `textureSettings` (`colorSpace`),
+  legacy and v3 `platformSettings` entries and legacy `packingSettings` (`paddingPower: 0`) and omit
+  `secondaryTextureSettings` and `variantMultiplier`; `Legacy` changes only "Include in Build" before
+  `SaveAssetIfDirty` (V1) or `WriteImportSettingsIfDirty` (V2), `Untouched` changes nothing, nor
+  does `Current` (the same settings in the current format); each records whether the atlas or
+  importer was dirty before and the whole file written.
+  The V2 profile also loads `LazyVariant` (a variant of `LazyMaster`) and changes the master's
+  packing settings in memory before anything asks the variant for its settings.
+
 Not measured: either kind of atlas in the other kind's packer mode.
 
 Values compare exactly.
