@@ -7,7 +7,7 @@ using UnityEngine.UIElements;
 
 // Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
 // BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, Vector2,
-// Vector3, Vector4, and Vector2Int fields plus Foldout isExpanded binding),
+// Vector3, Vector4, Vector2Int, and Vector3Int fields plus Foldout isExpanded binding),
 // BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
 // BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
 // SerializedObject binding context/updater pipeline that synchronizes fields and polls changes
@@ -18,7 +18,8 @@ using UnityEngine.UIElements;
 // Editor, tests/projects/bindtree, tests/projects/bindproperty, tests/projects/enumbinding,
 // tests/projects/enumflagsbinding, tests/projects/vector2binding, tests/projects/vector3binding,
 // tests/projects/vector4binding, tests/projects/vector2intbinding,
-// tests/projects/trackpropertyvalue and tests/projects/trackserializedobjectvalue.
+// tests/projects/vector3intbinding, tests/projects/trackpropertyvalue and
+// tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
 {
@@ -1173,6 +1174,9 @@ namespace UnityEditor.UIElements.Bindings
                 case SerializedPropertyType.Vector2Int:
                     DefaultBind(element, prop, SerializedPropertyHelper.GetVector2IntPropertyValue, SerializedPropertyHelper.SetVector2IntPropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
+                case SerializedPropertyType.Vector3Int:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetVector3IntPropertyValue, SerializedPropertyHelper.SetVector3IntPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
                 case SerializedPropertyType.Generic:
                     if (prop.type == "ToggleButtonGroupState")
                         Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty (ToggleButtonGroupState)");
@@ -2084,6 +2088,7 @@ namespace UnityEditor.UIElements.Bindings
         public static Vector3 GetVector3PropertyValue(SerializedProperty p) => p.vector3Value;
         public static Vector4 GetVector4PropertyValue(SerializedProperty p) => p.vector4Value;
         public static Vector2Int GetVector2IntPropertyValue(SerializedProperty p) => p.vector2IntValue;
+        public static Vector3Int GetVector3IntPropertyValue(SerializedProperty p) => p.vector3IntValue;
         public static float GetIntPropertyValueAsFloat(SerializedProperty p) => p.intValue;
         public static float GetLongPropertyValueAsFloat(SerializedProperty p) => p.longValue;
         public static double GetFloatPropertyValueAsDouble(SerializedProperty p) => p.floatValue;
@@ -2170,6 +2175,21 @@ namespace UnityEditor.UIElements.Bindings
             else
             {
                 p.vector2IntValue = v;
+            }
+        }
+
+        public static void SetVector3IntPropertyValue(SerializedProperty p, Vector3Int v)
+        {
+            if (p.hasMultipleDifferentValues)
+            {
+                Vector3Int current = p.vector3IntValue;
+                SetIntComponentIfDifferent(p, "x", current.x, v.x);
+                SetIntComponentIfDifferent(p, "y", current.y, v.y);
+                SetIntComponentIfDifferent(p, "z", current.z, v.z);
+            }
+            else
+            {
+                p.vector3IntValue = v;
             }
         }
         public static void SetFloatPropertyValueFromDouble(SerializedProperty p, double v) => p.floatValue = (float)v;

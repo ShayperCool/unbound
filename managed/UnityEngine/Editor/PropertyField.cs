@@ -6,14 +6,15 @@ using UnityEngine;
 using UnityEngine.Internal;
 using UnityEngine.UIElements;
 
-// Editor UI Toolkit PropertyField for supported scalar, enum, Vector2, Vector3, Vector4, and
-// Vector2Int SerializedProperty types (bool, int, long, uint, ulong, float, double, string,
-// ordinary and [Flags] enum, Vector2, Vector3, Vector4 Foldout with lazy child PropertyFields,
-// and Vector2Int) and SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API
-// ("PropertyField", "PropertyField.RegisterValueChangeCallback"); matches the Unity 6000.0.71f1
-// Editor, tests/projects/propertyfield, tests/projects/enumbinding,
+// Editor UI Toolkit PropertyField for supported scalar, enum, Vector2, Vector3, Vector4,
+// Vector2Int, and Vector3Int SerializedProperty types (bool, int, long, uint, ulong, float,
+// double, string, ordinary and [Flags] enum, Vector2, Vector3, Vector4 Foldout with lazy child
+// PropertyFields, Vector2Int, and Vector3Int) and SerializedPropertyBindEvent. Documented in
+// Unity 6000.0 Scripting API ("PropertyField", "PropertyField.RegisterValueChangeCallback");
+// matches the Unity 6000.0.71f1 Editor, tests/projects/propertyfield, tests/projects/enumbinding,
 // tests/projects/enumflagsbinding, tests/projects/vector2binding, tests/projects/vector3binding,
-// tests/projects/vector4binding, and tests/projects/vector2intbinding.
+// tests/projects/vector4binding, tests/projects/vector2intbinding, and
+// tests/projects/vector3intbinding.
 
 namespace UnityEditor.UIElements
 {
@@ -137,6 +138,7 @@ namespace UnityEditor.UIElements
         static readonly Func<Vector2Field> s_CreateVector2Field = () => new Vector2Field();
         static readonly Func<Vector3Field> s_CreateVector3Field = () => new Vector3Field();
         static readonly Func<Vector2IntField> s_CreateVector2IntField = () => new Vector2IntField();
+        static readonly Func<Vector3IntField> s_CreateVector3IntField = () => new Vector3IntField();
 
         string m_Label;
         SerializedObject m_SerializedObject;
@@ -459,6 +461,8 @@ namespace UnityEditor.UIElements
                     return ConfigureField<Vector3Field, Vector3>(originalField as Vector3Field, property, s_CreateVector3Field);
                 case SerializedPropertyType.Vector2Int:
                     return ConfigureField<Vector2IntField, Vector2Int>(originalField as Vector2IntField, property, s_CreateVector2IntField);
+                case SerializedPropertyType.Vector3Int:
+                    return ConfigureField<Vector3IntField, Vector3Int>(originalField as Vector3IntField, property, s_CreateVector3IntField);
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField ({property.propertyType})");
                     return null;

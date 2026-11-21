@@ -72,6 +72,7 @@ namespace UnityEngine.Tests
             public Vector3 pos = new Vector3(1, 2, 3);
             public Vector4 pos4 = new Vector4(4, 5, 6, 7);
             public Vector2Int gridPos = new Vector2Int(15, -24);
+            public Vector3Int voxelPos = new Vector3Int(15, -24, 37);
             public Rect rectVal = new Rect(1, 2, 3, 4);
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
@@ -1558,6 +1559,101 @@ namespace UnityEngine.Tests
                 vf.value = new Vector2Int(9, 8);
                 Tick(panel);
                 Assert.Equal(new Vector2Int(int.MinValue, int.MaxValue), t1.gridPos);
+            }
+            finally
+            {
+                soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyVector3IntMultiEditAndDisposedCleanupWorksAcrossReleases()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.voxelPos = new Vector3Int(int.MinValue, 100, -10);
+            t2.voxelPos = new Vector3Int(int.MaxValue, 200, -20);
+            using var panel = RuntimePanel.Create(settings);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                var rt = new RuntimeModel { text = "rt-v3i-0" };
+                var vf = new Vector3IntField { dataSource = rt };
+                vf.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                panel.visualTree.Add(vf);
+                vf.BindProperty(soMulti.FindProperty("voxelPos"));
+                Tick(panel);
+
+                var xSub = vf.Q<IntegerField>("unity-x-input");
+                var ySub = vf.Q<IntegerField>("unity-y-input");
+                var zSub = vf.Q<IntegerField>("unity-z-input");
+                Assert.False(vf.showMixedValue);
+                Assert.True(xSub.showMixedValue);
+                Assert.True(ySub.showMixedValue);
+                Assert.True(zSub.showMixedValue);
+                Assert.Equal(new Vector3Int(int.MinValue, 100, -10), vf.value);
+                Assert.Equal("rt-v3i-0", vf.tooltip);
+
+                // Editing X via sub-field updates both targets' X while preserving distinct Y and Z values.
+                xSub.value = -500;
+                Tick(panel);
+                Assert.Equal(new Vector3Int(-500, 100, -10), t1.voxelPos);
+                Assert.Equal(new Vector3Int(-500, 200, -20), t2.voxelPos);
+                Assert.False(xSub.showMixedValue);
+                Assert.True(ySub.showMixedValue);
+                Assert.True(zSub.showMixedValue);
+
+                // PropertyField creates Vector3IntField and preserves untouched components on multi-edit.
+                var pf = new PropertyField(soMulti.FindProperty("voxelPos"));
+                panel.visualTree.Add(pf);
+                pf.Bind(soMulti);
+                Tick(panel);
+                var pfChild = Assert.IsType<Vector3IntField>(pf.hierarchy[0]);
+                Assert.Equal("Voxel Pos", pfChild.label);
+                Assert.False(pfChild.Q<IntegerField>("unity-x-input").showMixedValue);
+                Assert.True(pfChild.Q<IntegerField>("unity-y-input").showMixedValue);
+                Assert.True(pfChild.Q<IntegerField>("unity-z-input").showMixedValue);
+
+                // Reset to partial mixed (X and Z mixed, Y equal) and edit only Y via whole-vector value.
+                t1.voxelPos = new Vector3Int(1, 10, -5);
+                t2.voxelPos = new Vector3Int(2, 10, -6);
+                soMulti.Update();
+                Tick(panel);
+                pfChild.value = new Vector3Int(1, int.MaxValue, -5);
+                Tick(panel);
+                Assert.Equal(new Vector3Int(1, int.MaxValue, -5), t1.voxelPos);
+                Assert.Equal(new Vector3Int(2, int.MaxValue, -6), t2.voxelPos);
+                Assert.True(pfChild.Q<IntegerField>("unity-x-input").showMixedValue);
+                Assert.False(pfChild.Q<IntegerField>("unity-y-input").showMixedValue);
+                Assert.True(pfChild.Q<IntegerField>("unity-z-input").showMixedValue);
+
+                // Direct IntegerField bound to voxelPos.z only touches Z and preserves X and Y.
+                var compZ = new IntegerField();
+                panel.visualTree.Add(compZ);
+                compZ.BindProperty(soMulti.FindProperty("voxelPos.z"));
+                Tick(panel);
+                Assert.True(compZ.showMixedValue);
+                compZ.value = int.MinValue;
+                Tick(panel);
+                Assert.Equal(new Vector3Int(1, int.MaxValue, int.MinValue), t1.voxelPos);
+                Assert.Equal(new Vector3Int(2, int.MaxValue, int.MinValue), t2.voxelPos);
+
+                // Disposing SerializedObject causes subsequent UI edits to unbind cleanly while runtime DataBinding stays active.
+                soMulti.Dispose();
+                vf.value = new Vector3Int(9, 8, 7);
+                rt.text = "rt-v3i-1";
+                Tick(panel);
+                Assert.Equal(new Vector3Int(1, int.MaxValue, int.MinValue), t1.voxelPos);
+                Assert.Equal("rt-v3i-1", vf.tooltip);
             }
             finally
             {
