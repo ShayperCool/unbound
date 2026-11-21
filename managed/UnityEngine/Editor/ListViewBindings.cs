@@ -250,13 +250,16 @@ namespace UnityEditor.UIElements.Bindings
 
         static void SerializedObjectBindEventCallback(SerializedObjectBindEvent evt) => evt.StopPropagation();
 
-        // Objects dragged onto the list's header are added as elements after the Editor checks them
-        // against the elements' object type; that check is not implemented, so a drag of objects
-        // is reported instead of being ignored.
-        static void OnDragObjects(EventBase evt)
+        // Objects dragged onto the header of a list of object references are added as elements
+        // after the Editor checks them against the elements' object type; that check is not
+        // implemented, so such a drag is reported instead of being ignored. Other lists take no
+        // objects. The drag is accepted either way.
+        void OnDragObjects(EventBase evt)
         {
-            if (DragAndDrop.objectReferences.Length > 0)
+            if (DragAndDrop.objectReferences.Length > 0
+                && m_DataList?.ArrayProperty.arrayElementType.StartsWith("PPtr<", StringComparison.Ordinal) == true)
                 Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding (objects dragged onto a bound ListView)");
+            DragAndDrop.AcceptDrag();
         }
 
         public override void OnRelease()

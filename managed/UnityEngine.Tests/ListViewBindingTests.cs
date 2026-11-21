@@ -157,6 +157,16 @@ namespace UnityEngine.Tests
                 Tick(f.Panel);
                 Assert.Equal(before + 1, Hits(member));
                 Assert.Empty(f.Targets[0].objects);
+
+                // A list of other values takes no objects.
+                var numbersHeader = f.Bind("numbers").headerFoldout.toggle.visualInput;
+                using (var drop = DragPerformEvent.GetPooled())
+                {
+                    drop.target = numbersHeader;
+                    numbersHeader.SendEvent(drop);
+                }
+                Tick(f.Panel);
+                Assert.Equal(before + 1, Hits(member));
             }
             finally
             {
