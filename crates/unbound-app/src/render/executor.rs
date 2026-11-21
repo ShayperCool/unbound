@@ -6423,6 +6423,15 @@ impl UnityRenderer {
                 multiview_mask: None,
             });
             let mut current_viewport = None;
+            let mut current_pipeline: Option<&wgpu::RenderPipeline> = None;
+            let mut current_group1: Option<&wgpu::BindGroup> = None;
+            let mut current_group2: Option<&wgpu::BindGroup> = None;
+            let mut current_group3: Option<&wgpu::BindGroup> = None;
+            let mut current_vb0: Option<(&wgpu::Buffer, u64)> = None;
+            let mut current_vb1: Option<(&wgpu::Buffer, u64)> = None;
+            let mut current_ib: Option<(&wgpu::Buffer, wgpu::IndexFormat)> = None;
+            let mut current_stencil: Option<u32> = None;
+            let mut current_scissor: Option<[u32; 4]> = None;
             // Viewports and scissors are bottom-up (Unity's); a target stored top-down counts its
             // rows from the top.
             let target_height = pass.target.height;
@@ -6473,10 +6482,22 @@ impl UnityRenderer {
                             pass.target.width,
                             pass.target.height,
                         ));
-                        rp.set_pipeline(pipeline);
+                        if current_pipeline != Some(pipeline) {
+                            rp.set_pipeline(pipeline);
+                            current_pipeline = Some(pipeline);
+                        }
                         rp.set_bind_group(0, &draw_bg, &[*offset]);
-                        rp.set_stencil_reference(0);
-                        rp.set_scissor_rect(s[0], s[1], s[2], s[3]);
+                        current_group1 = None;
+                        current_group2 = None;
+                        current_group3 = None;
+                        if current_stencil != Some(0) {
+                            rp.set_stencil_reference(0);
+                            current_stencil = Some(0);
+                        }
+                        if current_scissor != Some(s) {
+                            rp.set_scissor_rect(s[0], s[1], s[2], s[3]);
+                            current_scissor = Some(s);
+                        }
                         rp.draw(0..3, 0..1);
                     }
                     PassItem::Draw(d) => {
@@ -6484,32 +6505,54 @@ impl UnityRenderer {
                         let Some(uniform_group) = self.compiled.uniform_group(id) else {
                             continue;
                         };
-                        rp.set_pipeline(&d.pipeline);
+                        if current_pipeline != Some(&d.pipeline) {
+                            rp.set_pipeline(&d.pipeline);
+                            current_pipeline = Some(&d.pipeline);
+                        }
                         let (offsets, count) = program_offsets.dynamic_offsets(d.offset);
                         rp.set_bind_group(0, uniform_group, &offsets[..count]);
-                        rp.set_bind_group(1, &d.material, &[]);
-                        if let Some(texture) = &d.texture {
-                            rp.set_bind_group(2, texture, &[]);
+                        if current_group1 != Some(&d.material) {
+                            rp.set_bind_group(1, &d.material, &[]);
+                            current_group1 = Some(&d.material);
                         }
-                        if let Some(buffers) = &d.buffers {
+                        if let Some(texture) = &d.texture
+                            && current_group2 != Some(texture)
+                        {
+                            rp.set_bind_group(2, texture, &[]);
+                            current_group2 = Some(texture);
+                        }
+                        if let Some(buffers) = &d.buffers
+                            && current_group3 != Some(buffers)
+                        {
                             rp.set_bind_group(3, buffers, &[]);
+                            current_group3 = Some(buffers);
                         }
                         let first = u64::from(d.first_bound_vertex);
-                        rp.set_vertex_buffer(
-                            0,
-                            d.vertex
-                                .slice(first * size_of::<resources::Vertex>() as u64..),
-                        );
-                        if let Some(extra) = &d.extra {
-                            rp.set_vertex_buffer(
-                                1,
-                                extra.slice(first * size_of::<resources::ExtraVertex>() as u64..),
-                            );
+                        let vb0_offset = first * size_of::<resources::Vertex>() as u64;
+                        if current_vb0 != Some((&d.vertex, vb0_offset)) {
+                            rp.set_vertex_buffer(0, d.vertex.slice(vb0_offset..));
+                            current_vb0 = Some((&d.vertex, vb0_offset));
                         }
-                        rp.set_index_buffer(d.index.slice(..), d.index_format);
-                        rp.set_stencil_reference(d.stencil_ref);
+                        if let Some(extra) = &d.extra {
+                            let vb1_offset = first * size_of::<resources::ExtraVertex>() as u64;
+                            if current_vb1 != Some((extra, vb1_offset)) {
+                                rp.set_vertex_buffer(1, extra.slice(vb1_offset..));
+                                current_vb1 = Some((extra, vb1_offset));
+                            }
+                        }
+                        if current_ib != Some((&d.index, d.index_format)) {
+                            rp.set_index_buffer(d.index.slice(..), d.index_format);
+                            current_ib = Some((&d.index, d.index_format));
+                        }
+                        if current_stencil != Some(d.stencil_ref) {
+                            rp.set_stencil_reference(d.stencil_ref);
+                            current_stencil = Some(d.stencil_ref);
+                        }
                         let s = stored_rect(d.scissor);
-                        rp.set_scissor_rect(s[0], s[1], s[2], s[3]);
+                        if current_scissor != Some(s) {
+                            rp.set_scissor_rect(s[0], s[1], s[2], s[3]);
+                            current_scissor = Some(s);
+                        }
                         match &d.indirect {
                             Some((args, offset, true)) => rp.draw_indexed_indirect(args, *offset),
                             Some((args, offset, false)) => rp.draw_indirect(args, *offset),

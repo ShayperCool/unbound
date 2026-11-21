@@ -621,6 +621,7 @@ impl DrawValues<'_, '_> {
     }
 
     /// The draw's own properties the program takes (all but [`DrawValues::hidden`]).
+    #[cfg(test)]
     fn taken_overrides(&self) -> impl Iterator<Item = &(String, PropertyValue)> {
         let hidden = self.hidden;
         self.overrides
