@@ -277,7 +277,7 @@ namespace UnityEngine.U2D
         internal static ObjectRef ResolvePackableRef(Object obj)
         {
             if (obj != null && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out string guid, out long localId) && !string.IsNullOrEmpty(guid))
-                return new ObjectRef(localId, guid, AssetDatabase.IsNativeAsset(obj) ? 2 : 3);
+                return new ObjectRef(localId, guid, UnityYamlWriter.Writer.IsBuiltinGuid(guid) ? 0 : AssetDatabase.IsNativeAsset(obj) ? 2 : 3);
             return default;
         }
 
@@ -325,8 +325,8 @@ namespace UnityEngine.U2D
         /// <summary>Sets the master atlas of a variant atlas; warns and leaves non-variant atlases
         /// unchanged and clean, returns without dirtying when unchanged, clears the master with a
         /// warning on self-assignment or a variant master (preserving tag and marking dirty), copies
-        /// the valid master's tag (leaving tag unchanged when cleared), clamps an out-of-range
-        /// variant scale to [0.1, 1], and marks the atlas dirty once (matches the Unity 6000.0.71f1
+        /// the valid master's tag (leaving tag unchanged when cleared), and marks the atlas dirty
+        /// once (matches the Unity 6000.0.71f1
         /// Editor, tests/projects/spriteatlaseditor v1masteratlas/v2masteratlas).</summary>
         internal void WriteMasterAtlas(SpriteAtlas value)
         {
@@ -359,7 +359,6 @@ namespace UnityEngine.U2D
                 m_Tag = m_Master.tag;
                 m_TagModified = true;
             }
-            m_Settings.VariantScale = ClampVariantScale(m_Settings.VariantScale);
             m_MasterAtlasModified = true;
             m_Sprites = null;
             EditorUtility.SetDirty(this);
@@ -381,6 +380,8 @@ namespace UnityEngine.U2D
         internal void WriteIsVariant(bool value)
         {
             if (m_IsVariant == value) return;
+            // The settings as imported, before the variant flag changes.
+            EnsureImporterSettingsRead();
             m_IsVariant = value;
             m_IsVariantModified = true;
             if (!value)
@@ -515,6 +516,12 @@ namespace UnityEngine.U2D
             // A V2 atlas's settings are its importer's, read when first asked for.
             m_Settings = m_FromImporter ? new SpriteAtlasEditorSettings() : SpriteAtlasEditorSettings.Read(data, prefixed: true);
             m_ImporterSettingsRead = !m_FromImporter;
+            // A V1 atlas's out-of-range variant scale loads clamped to [0.1, 1], a variant then
+            // dirty (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor
+            // v1wholewrite Scaled, ScaledAlone and ScaledPlain).
+            float storedScale = m_Settings.VariantScale;
+            bool scaleClamped = !m_FromImporter && !float.IsNaN(storedScale) && ClampVariantScale(storedScale) != storedScale;
+            if (scaleClamped) m_Settings.VariantScale = ClampVariantScale(storedScale);
             m_IsVariant = body.Bool("m_IsVariant");
             m_IsVariantModified = false;
             m_Tag = body.Str("m_Tag", null);
@@ -541,6 +548,7 @@ namespace UnityEngine.U2D
             m_PackedDataModified = false;
             m_Sprites = null;
             EditorUtility.ClearDirty(this);
+            if (scaleClamped && m_IsVariant) EditorUtility.SetDirty(this);
         }
     }
 }

@@ -812,12 +812,16 @@ namespace Unbound.Runtime
                 return text;
             }
 
+            /// <summary>Whether a GUID is one of the Editor's built-in resource files, whose objects
+            /// are referenced with type 0.</summary>
+            internal static bool IsBuiltinGuid(string guid) => guid != null && guid.StartsWith("0000000000000000", StringComparison.Ordinal);
+
             static string Located(Object o)
             {
                 if (AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId))
                 {
                     int kind;
-                    if (guid.StartsWith("0000000000000000", StringComparison.Ordinal)) kind = 0;
+                    if (IsBuiltinGuid(guid)) kind = 0;
                     else
                     {
                         try { kind = AssetDatabaseRuntime.Info(guid)?.Kind is "yaml" or "prefab" ? 2 : 3; }
