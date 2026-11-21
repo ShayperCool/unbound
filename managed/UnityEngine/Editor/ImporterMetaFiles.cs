@@ -114,9 +114,7 @@ namespace Unbound.Runtime
             if (string.IsNullOrEmpty(guid)) return;
             if (importer is UnityEditor.U2D.SpriteAtlasImporter)
             {
-                AssetImporter.Evict(path);
-                AssetDatabaseRuntime.Invalidate(guid);
-                AssetDatabaseRuntime.LoadFile(guid);
+                UnityEditor.U2D.SpriteAtlasImporter.ReimportAsset(path, guid);
                 AssetPostprocessing.ForgetPreprocessed(path);
                 return;
             }

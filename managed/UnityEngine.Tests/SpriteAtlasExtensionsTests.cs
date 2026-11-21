@@ -2211,6 +2211,196 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SpriteAtlasImporterPackingSettingsReadsWritesDirtiesUpgradesLegacyAndInsertsWhenOmitted()
+        {
+            // Uncreated `new SpriteAtlasImporter()`: throws NullReferenceException on 6000.0 (measured)
+            // and reads/writes defaults under unmeasured families (e.g. 6000.3).
+            var uncreated = new SpriteAtlasImporter();
+            if (Unbound.Runtime.Compat.UncreatedObjectWrappersMeasured)
+            {
+                Assert.Throws<NullReferenceException>(() => _ = uncreated.packingSettings);
+                Assert.Throws<NullReferenceException>(() => uncreated.packingSettings = default);
+            }
+            else
+            {
+                Assert.Equal(4, uncreated.packingSettings.padding);
+                Assert.Equal(1, uncreated.packingSettings.blockOffset);
+                uncreated.packingSettings = new SpriteAtlasPackingSettings { blockOffset = 3, padding = 16 };
+                Assert.Equal(16, uncreated.packingSettings.padding);
+                Assert.Equal(3, uncreated.packingSettings.blockOffset);
+            }
+
+            // Master .meta with custom textureSettings, platformSettings, and packingSettings.
+            const string sampleMeta =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7be02\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  textureSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    anisoLevel: 4\n" +
+                "    compressionQuality: 65\n" +
+                "    maxTextureSize: 1024\n" +
+                "    textureCompression: 2\n" +
+                "    filterMode: 2\n" +
+                "    generateMipMaps: 1\n" +
+                "    readable: 1\n" +
+                "    crunchedCompression: 1\n" +
+                "    sRGB: 0\n" +
+                "  platformSettings:\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: Android\n" +
+                "    maxTextureSize: 1024\n" +
+                "    resizeAlgorithm: 1\n" +
+                "    textureFormat: 47\n" +
+                "    textureCompression: 3\n" +
+                "    compressionQuality: 60\n" +
+                "    crunchedCompression: 1\n" +
+                "    allowsAlphaSplitting: 1\n" +
+                "    overridden: 1\n" +
+                "    ignorePlatformSupport: 0\n" +
+                "    androidETC2FallbackOverride: 3\n" +
+                "    forceMaximumCompressionQuality_BC6H_BC7: 0\n" +
+                "  packingSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    padding: 8\n" +
+                "    blockOffset: 2\n" +
+                "    allowAlphaSplitting: 0\n" +
+                "    enableRotation: 0\n" +
+                "    enableTightPacking: 1\n" +
+                "    enableAlphaDilation: 1\n" +
+                "  secondaryTextureSettings: {}\n" +
+                "  variantMultiplier: 1\n" +
+                "  bindAsDefault: 1\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+
+            var root = UnityYamlText.ParseTopLevel(sampleMeta);
+            var section = root.Get("SpriteAtlasImporter");
+            var importer = Assert.IsType<SpriteAtlasImporter>(
+                AssetImporter.FromMeta("Assets/Master.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7be02", "SpriteAtlasImporter", section.ToNode()));
+            Assert.False(EditorUtility.IsDirty(importer));
+            int baseDirty = EditorUtility.GetDirtyCount(importer);
+
+            var initial = importer.packingSettings;
+            Assert.Equal(2, initial.blockOffset);
+            Assert.Equal(8, initial.padding);
+            Assert.False(initial.enableRotation);
+            Assert.True(initial.enableTightPacking);
+            Assert.True(initial.enableAlphaDilation);
+
+            // Same-value repeat unconditionally marks dirty.
+            importer.packingSettings = initial;
+            Assert.True(EditorUtility.IsDirty(importer));
+            Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(importer));
+
+            // Negative values and zeroed default struct are stored and serialized verbatim, preserving unrelated blocks.
+            importer.packingSettings = new SpriteAtlasPackingSettings
+            {
+                blockOffset = -3,
+                padding = -7,
+                enableRotation = true,
+                enableTightPacking = false,
+                enableAlphaDilation = true,
+            };
+            Assert.Equal(baseDirty + 2, EditorUtility.GetDirtyCount(importer));
+            Assert.True(importer.WriteCustomMeta(section));
+            string negWritten = UnityYamlText.WriteTopLevel(root);
+            Assert.Contains("  packingSettings:\n    serializedVersion: 2\n    padding: -7\n    blockOffset: -3\n    allowAlphaSplitting: 0\n    enableRotation: 1\n    enableTightPacking: 0\n    enableAlphaDilation: 1\n", negWritten);
+            Assert.Contains("    anisoLevel: 4\n    compressionQuality: 65\n", negWritten);
+            Assert.Contains("    buildTarget: Android\n    maxTextureSize: 1024\n", negWritten);
+
+            importer.packingSettings = default;
+            Assert.True(importer.WriteCustomMeta(section));
+            string zeroWritten = UnityYamlText.WriteTopLevel(root);
+            Assert.Contains("  packingSettings:\n    serializedVersion: 2\n    padding: 0\n    blockOffset: 0\n    allowAlphaSplitting: 0\n    enableRotation: 0\n    enableTightPacking: 0\n    enableAlphaDilation: 0\n", zeroWritten);
+
+            // Legacy v1 paddingPower + hidden allowAlphaSplitting preserved on partial mutation & upgraded to v2.
+            const string legacyMeta =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7be04\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  textureSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    anisoLevel: 3\n" +
+                "    compressionQuality: 70\n" +
+                "    maxTextureSize: 512\n" +
+                "    textureCompression: 1\n" +
+                "    filterMode: 1\n" +
+                "    generateMipMaps: 0\n" +
+                "    readable: 1\n" +
+                "    crunchedCompression: 0\n" +
+                "    sRGB: 1\n" +
+                "  platformSettings: []\n" +
+                "  packingSettings:\n" +
+                "    serializedVersion: 1\n" +
+                "    paddingPower: 3\n" +
+                "    blockOffset: 2\n" +
+                "    allowAlphaSplitting: 1\n" +
+                "    enableRotation: 1\n" +
+                "    enableTightPacking: 0\n" +
+                "    enableAlphaDilation: 0\n" +
+                "  secondaryTextureSettings: {}\n" +
+                "  variantMultiplier: 1\n" +
+                "  bindAsDefault: 1\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+            var legacyRoot = UnityYamlText.ParseTopLevel(legacyMeta);
+            var legacySection = legacyRoot.Get("SpriteAtlasImporter");
+            var legacyImporter = Assert.IsType<SpriteAtlasImporter>(
+                AssetImporter.FromMeta("Assets/Legacy.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7be04", "SpriteAtlasImporter", legacySection.ToNode()));
+            var ls = legacyImporter.packingSettings;
+            Assert.Equal(8, ls.padding);
+            Assert.Equal(2, ls.blockOffset);
+            ls.padding = 6;
+            legacyImporter.packingSettings = ls;
+            Assert.True(legacyImporter.WriteCustomMeta(legacySection));
+            string legacyWritten = UnityYamlText.WriteTopLevel(legacyRoot);
+            Assert.DoesNotContain("paddingPower", legacyWritten);
+            Assert.Contains("  packingSettings:\n    serializedVersion: 2\n    padding: 6\n    blockOffset: 2\n    allowAlphaSplitting: 1\n    enableRotation: 1\n    enableTightPacking: 0\n    enableAlphaDilation: 0\n", legacyWritten);
+
+            // Control outside probe's exact setup: sparse .meta omitting textureSettings, platformSettings and packingSettings inserts all three in order.
+            const string sparseMeta =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7be09\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  secondaryTextureSettings: {}\n" +
+                "  variantMultiplier: 1\n" +
+                "  bindAsDefault: 1\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+            var sparseRoot = UnityYamlText.ParseTopLevel(sparseMeta);
+            var sparseSection = sparseRoot.Get("SpriteAtlasImporter");
+            var sparseImporter = Assert.IsType<SpriteAtlasImporter>(
+                AssetImporter.FromMeta("Assets/Sparse.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7be09", "SpriteAtlasImporter", sparseSection.ToNode()));
+            Assert.Equal(4, sparseImporter.packingSettings.padding);
+            Assert.Equal(1, sparseImporter.packingSettings.blockOffset);
+            Assert.True(sparseImporter.packingSettings.enableRotation);
+            Assert.True(sparseImporter.packingSettings.enableTightPacking);
+            Assert.False(sparseImporter.packingSettings.enableAlphaDilation);
+            sparseImporter.packingSettings = new SpriteAtlasPackingSettings
+            {
+                blockOffset = 6,
+                padding = 24,
+                enableRotation = false,
+                enableTightPacking = false,
+                enableAlphaDilation = true,
+            };
+            Assert.True(sparseImporter.WriteCustomMeta(sparseSection));
+            string sparseWritten = UnityYamlText.WriteTopLevel(sparseRoot);
+            int posTex = sparseWritten.IndexOf("  textureSettings:\n", StringComparison.Ordinal);
+            int posPlat = sparseWritten.IndexOf("  platformSettings: []\n", StringComparison.Ordinal);
+            int posPack = sparseWritten.IndexOf("  packingSettings:\n    serializedVersion: 2\n    padding: 24\n    blockOffset: 6\n", StringComparison.Ordinal);
+            int posSec = sparseWritten.IndexOf("  secondaryTextureSettings: {}\n", StringComparison.Ordinal);
+            Assert.True(posTex > 0 && posTex < posPlat && posPlat < posPack && posPack < posSec);
+        }
+
+        [Fact]
         public void ANullAtlasThrows()
         {
             SpriteAtlas none = null;

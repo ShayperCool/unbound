@@ -384,9 +384,7 @@ namespace UnityEditor
                     {
                         if (AssetImporter.TryGetCached(path) is UnityEditor.U2D.SpriteAtlasImporter cached && EditorUtility.IsDirty(cached))
                             ImporterMeta.Write(cached);
-                        AssetImporter.Evict(path);
-                        AssetDatabaseRuntime.Invalidate(guid);
-                        AssetDatabaseRuntime.LoadFile(guid);
+                        UnityEditor.U2D.SpriteAtlasImporter.ReimportAsset(path, guid);
                         return;
                     }
                     if (!AssetDatabaseRuntime.IsLoaded(guid))
