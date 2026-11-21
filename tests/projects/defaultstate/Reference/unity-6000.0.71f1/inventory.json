@@ -1602,6 +1602,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.Events.UnityEventTools"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEditor.FilePathAttribute"
     },

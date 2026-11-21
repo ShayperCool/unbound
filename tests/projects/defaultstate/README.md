@@ -806,3 +806,6 @@ its `Image` icon element earlier, `debt.json` updates 3 existing `eventTypeId` a
 (`SerializedObjectChangeEvent`, `SerializedPropertyChangeEvent`, and `CustomStyleResolvedEvent`)
 and removes the `BlurEvent` entry that now coincides with the Editor's numbering; every earlier
 committed reference row and inventory entry is unchanged.
+
+The persistent-listener tools slice adds the static `UnityEditor.Events.UnityEventTools` to the inventory, excluded as
+static: it has no default state, so no row is added and every earlier row is unchanged.
