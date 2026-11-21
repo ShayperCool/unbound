@@ -204,10 +204,10 @@ static class SpriteAtlasPackProbe
         });
 
         // 6b. A sprite loaded again after the atlases were packed (FolderBig, packed by Excluded,
-        // its texture imported again).
+        // its texture reimported through its importer).
         Check("afterPack.lateLoadedSprite", () =>
         {
-            AssetDatabase.ImportAsset("Assets/Sprites/Folder/FolderBig.png", ImportAssetOptions.ForceUpdate);
+            ((TextureImporter)AssetImporter.GetAtPath("Assets/Sprites/Folder/FolderBig.png")).SaveAndReimport();
             var sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Folder/FolderBig.png");
             var source = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Sprites/Folder/FolderBig.png");
             return sprite == null ? "<null>"
