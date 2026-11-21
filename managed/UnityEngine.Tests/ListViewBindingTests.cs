@@ -146,6 +146,22 @@ namespace UnityEngine.Tests
             Assert.Equal(6, outside.value);
         }
 
+        [Fact]
+        public void AnElementThatStopsThePropertyBindEventIsNotBound()
+        {
+            using var f = new Fixture();
+            var stopped = new IntegerField { bindingPath = "fixedOrder.Array.data[0]" };
+            var bound = new IntegerField { bindingPath = "fixedOrder.Array.data[1]" };
+            stopped.RegisterCallback<SerializedPropertyBindEvent>(evt => evt.StopPropagation());
+            f.Panel.visualTree.Add(stopped);
+            f.Panel.visualTree.Add(bound);
+            f.Panel.visualTree.Bind(f.Serialized);
+            Tick(f.Panel);
+            Tick(f.Panel);
+            Assert.Equal(0, stopped.value);
+            Assert.Equal(6, bound.value);
+        }
+
         static int Hits(string member) => Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
 
         [Fact]

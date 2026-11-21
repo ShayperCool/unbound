@@ -473,16 +473,16 @@ namespace UnityEditor.UIElements
                 foreach (var attribute in field.GetCustomAttributes<PropertyAttribute>(true))
                 {
                     if (attribute is ColorUsageAttribute || attribute is GradientUsageAttribute) continue;
-                    bool decorator = attribute is HeaderAttribute || attribute is SpaceAttribute || PropertyDrawers.DecoratorFor(attribute) != null;
+                    bool decorator = attribute is HeaderAttribute || attribute is SpaceAttribute || PropertyDrawers.HasDecorator(attribute);
                     bool drawer = attribute is RangeAttribute || attribute is MinAttribute || attribute is DelayedAttribute
                         || attribute is MultilineAttribute || attribute is TextAreaAttribute
-                        || PropertyDrawers.DrawerFor(property, null, attribute) != null;
+                        || PropertyDrawers.DrawerTypeFor(property, null, attribute) != null;
                     if ((decorator && !element) || (drawer && !collection))
                         Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField ({(decorator ? "decorator" : "drawer")} of {attribute.GetType().Name})");
                 }
             }
-            if (!collection && PropertyDrawers.DrawerFor(property, field, null) is PropertyDrawer typeDrawer)
-                Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField (drawer {typeDrawer.GetType().Name})");
+            if (!collection && PropertyDrawers.DrawerTypeFor(property, field, null) is Type typeDrawer)
+                Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField (drawer {typeDrawer.Name})");
             else if (!collection && field != null && typeof(UnityEngine.Events.UnityEventBase).IsAssignableFrom(ElementTypeOf(field.FieldType, element)))
                 Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField (drawer of UnityEvent)");
         }

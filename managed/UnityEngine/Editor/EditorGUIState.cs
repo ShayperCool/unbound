@@ -897,7 +897,21 @@ namespace UnityEditor
             return drawer;
         }
 
+        internal static bool HasDecorator(PropertyAttribute attribute) => Find(attribute.GetType(), decorator: true) != null;
+
         internal static PropertyDrawer DrawerFor(SerializedProperty property, FieldInfo field, PropertyAttribute attribute)
+        {
+            var type = DrawerTypeFor(property, field, attribute);
+            if (type == null) return null;
+            var drawer = (PropertyDrawer)Activator.CreateInstance(type, nonPublic: true);
+            drawer.m_Attribute = attribute;
+            drawer.m_FieldInfo = field;
+            return drawer;
+        }
+
+        /// <summary>The PropertyDrawer class for an attribute, else for the field's type (an
+        /// array's or list's element type), without creating it.</summary>
+        internal static Type DrawerTypeFor(SerializedProperty property, FieldInfo field, PropertyAttribute attribute)
         {
             Type type = attribute != null ? Find(attribute.GetType(), decorator: false) : null;
             if (type == null && field != null)
@@ -908,11 +922,7 @@ namespace UnityEditor
                 else if (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(List<>)) fieldType = fieldType.GetGenericArguments()[0];
                 if (fieldType != null) type = Find(fieldType, decorator: false);
             }
-            if (type == null || !typeof(PropertyDrawer).IsAssignableFrom(type)) return null;
-            var drawer = (PropertyDrawer)Activator.CreateInstance(type, nonPublic: true);
-            drawer.m_Attribute = attribute;
-            drawer.m_FieldInfo = field;
-            return drawer;
+            return type != null && typeof(PropertyDrawer).IsAssignableFrom(type) ? type : null;
         }
     }
 
