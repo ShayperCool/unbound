@@ -90,6 +90,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void BuiltInMultiAtlasSelectionPrefersMasterThenUnityGuidWordOrder()
         {
+            // Unbound's deterministic order among several built-in atlases (Unity leaves it open;
+            // it agrees with every case of tests/projects/spriteatlasmultibind).
             // Nibble-reversed 32-bit word order: "90000001..." -> word0 0x10000009 < "10000009..." -> word0 0x90000001,
             // even though ASCII order puts "10000009..." first.
             Assert.True(SpriteAtlasPacking.CompareUnityGuid(

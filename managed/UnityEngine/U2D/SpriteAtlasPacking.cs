@@ -136,9 +136,11 @@ namespace UnityEngine.U2D
         }
 
         /// <summary>Rebuilds the per-sprite built-in and excluded atlas lookup tables from
-        /// <see cref="s_Atlases"/>. Built-in (<c>IncludeInBuild == true</c>) candidates are sorted
-        /// as the Unity 6000.0.71f1 Editor sorts them (tests/projects/spriteatlasmultibind): masters
-        /// before variants, then ascending by Unity GUID's four nibble-reversed 32-bit words.</summary>
+        /// <see cref="s_Atlases"/>. Which of several built-in (<c>IncludeInBuild == true</c>) atlases
+        /// a sprite binds to Unity leaves open (the Manual: it chooses at random between a master and
+        /// its variant); Unbound sorts them deterministically, masters before variants, then by the
+        /// GUID's four nibble-reversed 32-bit words, which agrees with every case of
+        /// tests/projects/spriteatlasmultibind (asset path order agrees with them too).</summary>
         static void RebuildSpriteTables()
         {
             s_BuiltInBySprite ??= new Dictionary<(string, long), List<Binding>>();
@@ -151,8 +153,13 @@ namespace UnityEngine.U2D
             foreach (var atlas in s_Atlases.Values)
                 if (atlas.Master != null && s_Atlases.TryGetValue(atlas.Master, out var master) && !string.IsNullOrEmpty(master.Tag))
                     atlas.Tag = master.Tag;
+            // Sprites bind only to atlases packed for Play mode: one SpriteAtlasUtility packs outside
+            // the Play-mode packing modes leaves loaded sprites on their own textures (matches the
+            // Unity 6000.0.71f1 Editor, tests/projects/spriteatlaspack afterPack.lateLoadedSprite).
+            bool playModePacking = UnityEditor.EditorSettings.IsPlayModeAtlasPackingActive;
             foreach (var atlas in s_Atlases.Values)
             {
+                if (!playModePacking && !s_PlayModePacked.Contains(atlas.Guid)) continue;
                 var target = atlas.IncludeInBuild ? s_BuiltInBySprite : s_ExcludedBySprite;
                 for (int i = 0; i < atlas.Sprites.Count; i++)
                 {
@@ -170,10 +177,9 @@ namespace UnityEngine.U2D
         static int CompareBuiltInBinding(Binding a, Binding b) =>
             CompareBuiltInAtlas(a.Atlas.Master != null, a.Atlas.Guid, b.Atlas.Master != null, b.Atlas.Guid);
 
-        /// <summary>Built-in atlas selection order when multiple <c>Include in Build</c> atlases
-        /// contain the same sprite: master (<c>false</c>) before variant (<c>true</c>), then
-        /// ascending by Unity GUID's four 32-bit words (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/spriteatlasmultibind).</summary>
+        /// <summary>Unbound's order among several <c>Include in Build</c> atlases holding the same
+        /// sprite: master (<c>false</c>) before variant (<c>true</c>), then ascending by the GUID's
+        /// four 32-bit words (see <see cref="RebuildSpriteTables"/>; Unity leaves the order open).</summary>
         internal static int CompareBuiltInAtlas(bool aIsVariant, string aGuid, bool bIsVariant, string bGuid)
         {
             int byVariant = (aIsVariant ? 1 : 0).CompareTo(bIsVariant ? 1 : 0);
@@ -308,12 +314,8 @@ namespace UnityEngine.U2D
             }
             if (registeredMatches != null && registeredMatches.Count > 0)
             {
-                if (registeredMatches.Count > 1)
-                {
-                    var names = new List<string>(registeredMatches.Count);
-                    for (int i = 0; i < registeredMatches.Count; i++) names.Add(registeredMatches[i].Atlas.Name);
-                    Debug.LogWarning($"Sprite {sprite.name} matches more than one atlases ({string.Join(", ", names)}). Default to first atlas.");
-                }
+                // Which of several registered atlases a sprite loaded after their registration takes,
+                // and what the Editor logs then, is unmeasured: Unbound takes the first by tag order.
                 Bind(sprite, registeredMatches[0]);
                 return;
             }
