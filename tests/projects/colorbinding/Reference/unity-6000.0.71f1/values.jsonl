@@ -1,0 +1,65 @@
+{"k":"standalone.default","v":"(0,0,0,0)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|cls=1"}
+{"k":"standalone.flags_on","v":"(0,0,0,0)|m=0|a=0|h=1|e=1|im=0|d=undef/undef/undef/undef"}
+{"k":"standalone.mixed_on","v":"(0,0,0,0)|m=1|a=0|h=1|e=1|im=1|d=undef/undef/undef/undef"}
+{"k":"standalone.mixed_off","v":"(0,0,0,0)|m=0|a=0|h=1|e=1|im=0|d=undef/undef/undef/undef"}
+{"k":"prop.meta","v":"color:0:Color|c32:0:Color"}
+{"k":"direct.zero.initial","v":"(0,0,0,0)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|e=(0,0,0,0)->(0,0,0,0)"}
+{"k":"direct.zero.noop","v":"(0,0,0,0)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|ec=1|mod=0"}
+{"k":"direct.main.initial","v":"(0.25,0.5,0.75,0.5)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|e=(0,0,0,0)->(0.25,0.5,0.75,0.5)"}
+{"k":"direct.main.ui_to_so","v":"(0.125,0.375,0.625,0.875)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|t=(0.125,0.375,0.625,0.875)|p=(0.125,0.375,0.625,0.875)|ec=2"}
+{"k":"direct.main.noop","v":"(0.125,0.375,0.625,0.875)|ec_delta=0"}
+{"k":"direct.main.so_whole","v":"(0.75,0.25,0.125,0.5)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|t=(0.75,0.25,0.125,0.5)|ec=3"}
+{"k":"direct.main.external_target","v":"(0.5,1,0.25,0.75)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|ec=4"}
+{"k":"direct.main.so_comp_ra","v":"(0.25,1,0.25,0.125)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|t=(0.25,1,0.25,0.125)"}
+{"k":"direct.hdr.initial","v":"(2.5,0.5,4,0.75)|m=0|a=0|h=1|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"direct.hdr.ui_to_so","v":"(5,2.5,0.25,0.25)|m=0|a=0|h=1|e=0|im=0|d=undef/undef/Flex/undef|t=(5,2.5,0.25,0.25)"}
+{"k":"direct.ldr_reads_hdr","v":"(5,2.5,0.25,0.25)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"direct.color32.initial","v":"(0.0627451017,0.501960814,0.941176474,0.784313738)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|t=(16,128,240,200)"}
+{"k":"direct.color32.ui_to_so","v":"(255,0,128,64)|ui=(1,0,0.501960814,0.250980407)"}
+{"k":"direct.color32.so_to_ui","v":"(50,100,150,255)|ui=(0.196078435,0.392156869,0.588235319,1)"}
+{"k":"direct.detached.before_attach","v":"otherColor|(0,0,0,0)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"direct.detached.after_attach","v":"(0.125,0.25,0.375,1)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"multi.initial_rgb","v":"(1,0,0,1)|m=1|a=1|h=0|e=0|im=1|d=undef/undef/Flex/undef|a=(1,0,0,1)|b=(0,1,0,1)|ec=0"}
+{"k":"multi.ui_write_t0","v":"(1,0,0,1)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|a=(1,0,0,1)|b=(1,0,0,1)|ec=1"}
+{"k":"multi.ui_write_new","v":"(0.25,0.5,0.75,0.5)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|a=(0.25,0.5,0.75,0.5)|b=(0.25,0.5,0.75,0.5)|ec=2"}
+{"k":"multi.alpha_only_mixed","v":"(0.5,0.5,0.5,0.25)|m=1|a=1|h=0|e=0|im=1|d=undef/undef/Flex/undef"}
+{"k":"multi.comp_r.initial","v":"0.25:1"}
+{"k":"multi.comp_r.ui_edit","v":"0.5:0|a=(0.5,0.5,0.75,0.25)|b=(0.5,0.25,0.125,0.75)"}
+{"k":"multi.color32.initial","v":"(0.0392156877,0.0784313753,0.117647059,1)|m=1|a=1|h=0|e=0|im=1|d=undef/undef/Flex/undef"}
+{"k":"multi.color32.ui_edit","v":"(0,1,0,1)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|a=(0,255,0,255)|b=(0,255,0,255)"}
+{"k":"tree.initial","v":"(0.25,0.5,0.75,0.5)|(1,0.5,0.25,0.75)|(0.75,0.5,0.25,0.5)|(0.5,0.5,0.25,1)|1|(3,-4,5)|(1.5,2.5)|42|Beta|-1"}
+{"k":"tree.ui_to_so","v":"(0.5,0.25,1,0.5)|(0.125,0.25,0.5,0.75)|(0.5,0.5,0.25,0.25)|(0.5,0.5,0.25,0.25)|(3,-4,99)|(3.25,2.5)|77|Alpha|BitB"}
+{"k":"tree.so_to_ui","v":"(0.25,0.75,0.5,0.5)|0.5|(0.125,0.25,1,0.5)|(0.125,0.25,1,0.75)"}
+{"k":"pf.plain.initial","v":"ColorField|unity-input-myTint|My Tint|1111|(0.25,0.5,0.75,0.5)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|evts=myTint:(0.25,0.5,0.75,0.5)"}
+{"k":"pf.plain.ui_edit","v":"ColorField|unity-input-myTint|My Tint|1111|(0.5,0.25,0.125,0.75)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|t=(0.5,0.25,0.125,0.75)|ec=2"}
+{"k":"pf.plain.so_comp_g","v":"ColorField|unity-input-myTint|My Tint|1111|(0.5,0.75,0.125,0.75)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|ec=3"}
+{"k":"pf.plain.label_update","v":"ColorField|unity-input-myTint|Custom Tint|1111|(0.5,0.75,0.125,0.75)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"pf.rebind_same_type","v":"1|ColorField|unity-input-nested.tint|Custom Tint|1111|(0.5,0.5,0.25,1)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"pf.rebind_plain_to_usage","v":"1|ColorField|unity-input-hdrNoAlphaColor|Custom Tint|1111|(2,4,0.5,0.25)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"pf.rebind_vec3int","v":"Vector3IntField|unity-input-siblingVec3Int|Custom Tint|(3,-4,5)"}
+{"k":"pf.rebind_scalar","v":"IntegerField|unity-input-scalarInt|Custom Tint|42"}
+{"k":"pf.rebind_back_color","v":"ColorField|unity-input-otherColor|Custom Tint|1111|(0.125,0.25,0.375,1)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"pf.usage_no_alpha.initial","v":"ColorField||No Alpha Color|0011|(0.5,0.25,0.75,0.5)|m=0|a=0|h=0|e=0|im=0|d=undef/undef/Flex/undef|evts=noAlphaColor:(0.5,0.25,0.75,0.5)"}
+{"k":"pf.usage_no_alpha.ui_edit","v":"ColorField||No Alpha Color|0011|(0.25,0.5,0.75,0.25)|m=0|a=0|h=0|e=0|im=0|d=undef/undef/Flex/undef|t=(0.25,0.5,0.75,0.25)|ec=2"}
+{"k":"pf.usage_no_alpha.label_update","v":"ColorField||Opaque Label|0011|(0.25,0.5,0.75,0.25)|m=0|a=0|h=0|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"pf.usage_hdr_alpha.initial","v":"ColorField||HDR Glow|0011|(3,1.5,0.25,0.5)|m=0|a=1|h=1|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"pf.usage_hdr_alpha.ui_edit","v":"ColorField||HDR Glow|0011|(6,2,0.5,0.25)|m=0|a=1|h=1|e=0|im=0|d=undef/undef/Flex/undef|t=(6,2,0.5,0.25)"}
+{"k":"pf.usage_hdr_no_alpha.initial","v":"ColorField||Hdr No Alpha Color|0011|(2,4,0.5,0.25)|m=0|a=0|h=1|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"pf.usage_color32.initial","v":"ColorField||Usage Color 32|0011|(0.250980407,0.501960814,0.752941191,0.501960814)|m=0|a=0|h=1|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"pf.rebind_usage_to_plain","v":"0|ColorField|unity-input-otherColor|Other Color|1111|(0.125,0.25,0.375,1)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"pf.multi.initial","v":"ColorField|unity-input-multiColor|Multi Color|1111|(1,0,0,1)|m=1|a=1|h=0|e=0|im=1|d=undef/undef/Flex/undef|ec=0"}
+{"k":"pf.multi.ui_edit","v":"ColorField|unity-input-multiColor|Multi Color|1111|(0.5,0.75,0.25,0.5)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|a=(0.5,0.75,0.25,0.5)|b=(0.5,0.75,0.25,0.5)|ec=1"}
+{"k":"pf.multi_usage.initial","v":"ColorField||Hdr No Alpha Color|0011|(2,1,0.5,1)|m=1|a=0|h=1|e=0|im=1|d=undef/undef/Flex/undef"}
+{"k":"pf.multi_usage.ui_edit","v":"ColorField||Hdr No Alpha Color|0011|(3,2,1,0.5)|m=0|a=0|h=1|e=0|im=0|d=undef/undef/Flex/undef|a=(3,2,1,0.5)|b=(3,2,1,0.5)"}
+{"k":"unbind_rebind.initial","v":"(1,0,0,1)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|tip=rt-color-tip-0"}
+{"k":"unbind_rebind.after_unbind","v":"(0.5,0.5,0.5,0.5)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef|t1=(0.25,0.25,0.25,1)|tip=rt-color-tip-1"}
+{"k":"unbind_rebind.after_mixed_unbind","v":"(0.5,0.5,0.5,0.25)|m=1|a=1|h=0|e=0|im=1|d=undef/undef/Flex/undef"}
+{"k":"unbind_rebind.rebind_prop","v":"(0,1,0,0.5)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"unbind_rebind.rebind_prop_edit","v":"(0.75,0.25,0.5,1)|t1_start=(0.25,0.25,0.25,1)"}
+{"k":"unbind_rebind.rebind_so2","v":"(0,0,1,0.25)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"unbind_rebind.rebind_so2_edit","v":"(0.25,0.5,1,0.75)|t1_other=(0.75,0.25,0.5,1)"}
+{"k":"pf.after_unbind","v":"ColorField|unity-input-myTint|My Tint|1111|(0.25,0.25,0.25,1)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"pf.after_rebind_so2","v":"ColorField|unity-input-myTint|My Tint|1111|(0.25,0.5,1,0.75)|m=0|a=1|h=0|e=0|im=0|d=undef/undef/Flex/undef"}
+{"k":"incompatible.float_field","v":"0"}
+{"k":"logs","v":["Warning:Field type UnityEngine.UIElements.FloatField is not compatible with Color property \"myTint\""]}
+{"k":"complete","v":true}
