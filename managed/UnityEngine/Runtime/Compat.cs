@@ -77,11 +77,6 @@ namespace Unbound.Runtime
         /// target[0].z is compared against the new w component. Other families compare target[0].w
         /// against the new w component.</summary>
         internal static bool Vector4MultiEditComparesZToW => Family == ReleaseFamily.Unity6000_0;
-        /// <summary>GradientField value equality measured by tests/projects/gradientbinding
-        /// (standalone.equality_and_null) on 6000.0.71f1: key-time-only edits are treated as equal
-        /// to the current gradient and fire no change event. Other families compare the current
-        /// and incoming key times.</summary>
-        internal static bool GradientFieldIgnoresKeyTimeInEquality => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Uncreated object wrappers measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous unmeasured wrapper state.</summary>
         internal static bool UncreatedObjectWrappersMeasured => Family == ReleaseFamily.Unity6000_0;

@@ -2404,36 +2404,21 @@ namespace UnityEngine.Tests
             t1.hdrGradientVal = MakeGrad(new Color(2f, 0.5f, 0f, 1f), new Color(0f, 3f, 1f, 1f), 0.5f, 0.8f, 0.2f, GradientMode.PerceptualBlend);
             using var panel = RuntimePanel.Create(settings);
 
-            // Measured 6000.0 release control: GradientField ignores key-time-only edits (Compat.GradientFieldIgnoresKeyTimeInEquality).
-            using (TestRelease.Pin(TestRelease.Measured))
-            {
-                var gf60 = new GradientField();
-                int ev60 = 0;
-                gf60.RegisterValueChangedCallback(_ => ev60++);
-                panel.visualTree.Add(gf60);
-                gf60.value = MakeGrad(Color.red, Color.blue, 0.5f, 1f, 0f, GradientMode.Fixed);
-                Assert.Equal(1, ev60);
-                gf60.value = MakeGrad(Color.red, Color.blue, 0.75f, 1f, 0f, GradientMode.Fixed);
-                Assert.Equal(1, ev60);
-                Assert.InRange(gf60.value.colorKeys[1].time, 0.499f, 0.501f);
-                gf60.RemoveFromHierarchy();
-            }
-
-            // Unmeasured release control: GradientField compares key times properly and fires change events.
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            // A time-only edit is no change in every release: Unity's GradientField compares the
+            // incoming key time with itself.
             var soMulti = new SerializedObject(new Object[] { t1, t2 });
             var soSingle = new SerializedObject(t1);
             try
             {
                 var gfTime = new GradientField();
-                int evUnmeasured = 0;
-                gfTime.RegisterValueChangedCallback(_ => evUnmeasured++);
+                int timeEvents = 0;
+                gfTime.RegisterValueChangedCallback(_ => timeEvents++);
                 panel.visualTree.Add(gfTime);
                 gfTime.value = MakeGrad(Color.red, Color.blue, 0.5f, 1f, 0f, GradientMode.Fixed);
-                Assert.Equal(1, evUnmeasured);
+                Assert.Equal(1, timeEvents);
                 gfTime.value = MakeGrad(Color.red, Color.blue, 0.75f, 1f, 0f, GradientMode.Fixed);
-                Assert.Equal(2, evUnmeasured);
-                Assert.InRange(gfTime.value.colorKeys[1].time, 0.749f, 0.751f);
+                Assert.Equal(1, timeEvents);
+                Assert.InRange(gfTime.value.colorKeys[1].time, 0.499f, 0.501f);
                 gfTime.RemoveFromHierarchy();
 
                 var rt = new RuntimeModel { text = "rt-grad-0" };

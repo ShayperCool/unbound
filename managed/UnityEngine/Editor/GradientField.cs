@@ -183,13 +183,15 @@ namespace UnityEditor.UIElements
             if (colorCount != v.ColorKeyCount || alphaCount != v.AlphaKeyCount || rawValue.mode != v.mode)
                 return false;
 
-            bool ignoreTime = Unbound.Runtime.Compat.GradientFieldIgnoresKeyTimeInEquality;
+            // A key's time counts only when the incoming one is NaN: Unity 6000.0's equality compares
+            // the incoming key time with itself (UnityCsReference GradientField.EqualsCurrentValue,
+            // the same on later branches), so a time-only edit is no change (tests/projects/gradientbinding
+            // standalone.equality_and_null).
             for (int i = 0; i < colorCount; i++)
             {
                 var currentKey = rawValue.ColorKeyAt(i);
                 var otherKey = v.ColorKeyAt(i);
-                if (currentKey.color != otherKey.color
-                    || (!ignoreTime && !Mathf.Approximately(currentKey.time, otherKey.time)))
+                if (currentKey.color != otherKey.color || !Mathf.Approximately(otherKey.time, otherKey.time))
                 {
                     return false;
                 }
@@ -198,8 +200,7 @@ namespace UnityEditor.UIElements
             {
                 var currentKey = rawValue.AlphaKeyAt(j);
                 var otherKey = v.AlphaKeyAt(j);
-                if (!Mathf.Approximately(currentKey.alpha, otherKey.alpha)
-                    || (!ignoreTime && !Mathf.Approximately(currentKey.time, otherKey.time)))
+                if (!Mathf.Approximately(currentKey.alpha, otherKey.alpha) || !Mathf.Approximately(otherKey.time, otherKey.time))
                 {
                     return false;
                 }
