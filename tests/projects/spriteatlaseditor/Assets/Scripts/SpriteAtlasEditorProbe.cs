@@ -84,6 +84,9 @@ static class SpriteAtlasEditorProbe
         if (paths.Any(p => p.StartsWith("Assets/RemoveAtlases/", StringComparison.Ordinal)))
             RecordRemovePackables(paths, none, Check);
 
+        if (paths.Any(p => p.StartsWith("Assets/VariantScaleAtlases/", StringComparison.Ordinal)))
+            RecordVariantScale(paths, none, Check);
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
@@ -521,6 +524,184 @@ static class SpriteAtlasEditorProbe
             AssetDatabase.SaveAssetIfDirty(omitted.atlas);
             check(omitted.key + ".remove.afterSaveIfDirty", () =>
                 $"packables=[{Packables(omitted.atlas)}]|{Dirty(omitted.atlas, baseDirty)}|{Unrelated(omitted.atlas)}|metaChanged={!File.ReadAllBytes(omitted.path + ".meta").SequenceEqual(origM)}|assetPackables={PackablesBlock(omitted.path)}|metaPackables={PackablesBlock(omitted.path + ".meta")}|assetTexture={YamlBlock(omitted.path, "textureSettings:")}|assetPacking={YamlBlock(omitted.path, "packingSettings:")}");
+        }
+    }
+
+    static string VariantScaleLine(string file)
+    {
+        foreach (var line in File.ReadAllLines(file))
+            if (line.TrimStart().StartsWith("variantMultiplier:", StringComparison.Ordinal))
+                return line.Trim();
+        return "<absent>";
+    }
+
+    static void RecordVariantScale(string[] paths, SpriteAtlas none, Action<string, Func<string>> check)
+    {
+        var byStem = new System.Collections.Generic.Dictionary<string, (string path, string key, SpriteAtlas atlas)>(StringComparer.Ordinal);
+        foreach (var path in paths)
+        {
+            var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+            if (atlas != null)
+                byStem[Path.GetFileNameWithoutExtension(path)] = (path, Path.GetFileName(path), atlas);
+        }
+
+        string Dirty(SpriteAtlas a, int baseDirty) =>
+            $"dirty={EditorUtility.IsDirty(a)}|dirtyDelta={EditorUtility.GetDirtyCount(a) - baseDirty}";
+
+        string Unrelated(SpriteAtlas a) =>
+            $"isVariant={a.isVariant}|master={Describe(a.GetMasterAtlas())}|packables=[{string.Join(",", a.GetPackables().Select(Describe))}]|texture=({DescribeTexture(a.GetTextureSettings())})|packing=({DescribePacking(a.GetPackingSettings())})|android=({DescribePlatform(a.GetPlatformSettings("Android"))})|include={a.IsIncludeInBuild()}";
+
+        string FileState(string path, byte[] origAsset, byte[] origMeta, bool includeAssetLine = true)
+        {
+            bool assetChanged = !File.ReadAllBytes(path).SequenceEqual(origAsset);
+            bool metaChanged = !File.ReadAllBytes(path + ".meta").SequenceEqual(origMeta);
+            return includeAssetLine
+                ? $"assetChanged={assetChanged}|metaChanged={metaChanged}|assetScale={VariantScaleLine(path)}|metaScale={VariantScaleLine(path + ".meta")}"
+                : $"assetChanged={assetChanged}|metaChanged={metaChanged}|metaScale={VariantScaleLine(path + ".meta")}";
+        }
+
+        string CaptureLogs(Action action)
+        {
+            var logs = new System.Collections.Generic.List<string>();
+            Application.LogCallback handler = (condition, stackTrace, type) => logs.Add(type + ":" + condition);
+            Application.logMessageReceived += handler;
+            try { action(); }
+            finally { Application.logMessageReceived -= handler; }
+            return string.Join(";", logs);
+        }
+
+        check("null.setVariantScale.valid", () => { none.SetVariantScale(0.5f); return "ok"; });
+        check("null.setVariantScale.outOfRange", () => { none.SetVariantScale(-1f); return "ok"; });
+
+        var mem = new SpriteAtlas();
+        int memBase = EditorUtility.GetDirtyCount(mem);
+        check("new.variantScale.sameDefault", () =>
+        {
+            var logs = CaptureLogs(() => mem.SetVariantScale(1f));
+            return $"{Dirty(mem, memBase)}|isVariant={mem.isVariant}|logs=[{logs}]";
+        });
+        check("new.variantScale.valid", () =>
+        {
+            var logs = CaptureLogs(() => mem.SetVariantScale(0.5f));
+            return $"{Dirty(mem, memBase)}|isVariant={mem.isVariant}|logs=[{logs}]";
+        });
+        check("new.variantScale.extremes", () =>
+        {
+            var logs = CaptureLogs(() =>
+            {
+                mem.SetVariantScale(-2f);
+                mem.SetVariantScale(0f);
+                mem.SetVariantScale(0.05f);
+                mem.SetVariantScale(1.5f);
+                mem.SetVariantScale(float.PositiveInfinity);
+                mem.SetVariantScale(float.NegativeInfinity);
+                mem.SetVariantScale(float.NaN);
+            });
+            return $"{Dirty(mem, memBase)}|isVariant={mem.isVariant}|logs=[{logs}]";
+        });
+        AssetDatabase.SaveAssets();
+        check("new.variantScale.afterSave", () => $"{Dirty(mem, memBase)}|isVariant={mem.isVariant}");
+
+        byStem.TryGetValue("Master", out var master);
+
+        if (byStem.TryGetValue("Variant", out var variant))
+        {
+            var origA = File.ReadAllBytes(variant.path);
+            var origM = File.ReadAllBytes(variant.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(variant.atlas);
+            int masterBaseDirty = master.atlas != null ? EditorUtility.GetDirtyCount(master.atlas) : 0;
+
+            check(variant.key + ".variantScale.initial", () =>
+                $"{Dirty(variant.atlas, baseDirty)}|{Unrelated(variant.atlas)}|{FileState(variant.path, origA, origM)}");
+
+            check(variant.key + ".variantScale.sameRepeat", () =>
+            {
+                var logs = CaptureLogs(() => variant.atlas.SetVariantScale(0.5f));
+                return $"{Dirty(variant.atlas, baseDirty)}|masterDirtyDelta={EditorUtility.GetDirtyCount(master.atlas) - masterBaseDirty}|logs=[{logs}]|{FileState(variant.path, origA, origM)}";
+            });
+
+            check(variant.key + ".variantScale.validAndSave", () =>
+            {
+                var logs = CaptureLogs(() => variant.atlas.SetVariantScale(0.75f));
+                AssetDatabase.SaveAssets();
+                return $"{Dirty(variant.atlas, baseDirty)}|masterDirtyDelta={EditorUtility.GetDirtyCount(master.atlas) - masterBaseDirty}|logs=[{logs}]|{Unrelated(variant.atlas)}|{FileState(variant.path, origA, origM)}";
+            });
+
+            void TestExtreme(string label, float input)
+            {
+                check(variant.key + ".variantScale." + label, () =>
+                {
+                    var logs = CaptureLogs(() => variant.atlas.SetVariantScale(input));
+                    AssetDatabase.SaveAssetIfDirty(variant.atlas);
+                    return $"{Dirty(variant.atlas, baseDirty)}|logs=[{logs}]|{FileState(variant.path, origA, origM)}";
+                });
+            }
+
+            TestExtreme("clampZero", 0f);
+            TestExtreme("clampNegative", -5f);
+            TestExtreme("clampBelowMin", 0.05f);
+            TestExtreme("clampNegInf", float.NegativeInfinity);
+            TestExtreme("clampAboveMax", 2.5f);
+            TestExtreme("clampPosInf", float.PositiveInfinity);
+            TestExtreme("nan", float.NaN);
+            TestExtreme("restoreValid", 0.25f);
+
+            AssetDatabase.ImportAsset(variant.path, ImportAssetOptions.ForceUpdate);
+            var reloaded = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(variant.path);
+            check(variant.key + ".variantScale.afterReimport", () =>
+                $"sameRef={ReferenceEquals(variant.atlas, reloaded)}|dirty={EditorUtility.IsDirty(reloaded)}|{Unrelated(reloaded)}|{FileState(variant.path, origA, origM)}");
+        }
+
+        if (master.atlas != null)
+        {
+            var origA = File.ReadAllBytes(master.path);
+            var origM = File.ReadAllBytes(master.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(master.atlas);
+
+            check(master.key + ".variantScale.initial", () =>
+                $"{Dirty(master.atlas, baseDirty)}|{Unrelated(master.atlas)}|{FileState(master.path, origA, origM)}");
+
+            check(master.key + ".variantScale.sameRepeat", () =>
+            {
+                var logs = CaptureLogs(() => master.atlas.SetVariantScale(1f));
+                return $"{Dirty(master.atlas, baseDirty)}|logs=[{logs}]|{FileState(master.path, origA, origM)}";
+            });
+
+            check(master.key + ".variantScale.nonVariantSave", () =>
+            {
+                var logs = CaptureLogs(() => master.atlas.SetVariantScale(0.4f));
+                AssetDatabase.SaveAssets();
+                return $"{Dirty(master.atlas, baseDirty)}|logs=[{logs}]|{Unrelated(master.atlas)}|{FileState(master.path, origA, origM)}";
+            });
+
+            check(master.key + ".variantScale.nonVariantClampSaveIfDirty", () =>
+            {
+                var logs = CaptureLogs(() => master.atlas.SetVariantScale(0.01f));
+                AssetDatabase.SaveAssetIfDirty(master.atlas);
+                return $"{Dirty(master.atlas, baseDirty)}|logs=[{logs}]|{Unrelated(master.atlas)}|{FileState(master.path, origA, origM)}";
+            });
+
+            AssetDatabase.ImportAsset(master.path, ImportAssetOptions.ForceUpdate);
+            var reloaded = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(master.path);
+            check(master.key + ".variantScale.afterReimport", () =>
+                $"sameRef={ReferenceEquals(master.atlas, reloaded)}|dirty={EditorUtility.IsDirty(reloaded)}|{Unrelated(reloaded)}|{FileState(master.path, origA, origM)}");
+        }
+
+        if (byStem.TryGetValue("Omitted", out var omitted))
+        {
+            var origA = File.ReadAllBytes(omitted.path);
+            var origM = File.ReadAllBytes(omitted.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(omitted.atlas);
+
+            check(omitted.key + ".variantScale.initial", () =>
+                $"{Dirty(omitted.atlas, baseDirty)}|{Unrelated(omitted.atlas)}|{FileState(omitted.path, origA, origM, includeAssetLine: false)}");
+
+            check(omitted.key + ".variantScale.modifiedAndSaveIfDirty", () =>
+            {
+                var logs = CaptureLogs(() => omitted.atlas.SetVariantScale(0.6f));
+                AssetDatabase.SaveAssetIfDirty(omitted.atlas);
+                return $"{Dirty(omitted.atlas, baseDirty)}|logs=[{logs}]|{Unrelated(omitted.atlas)}|metaChanged={!File.ReadAllBytes(omitted.path + ".meta").SequenceEqual(origM)}|assetScale={VariantScaleLine(omitted.path)}|metaScale={VariantScaleLine(omitted.path + ".meta")}|assetTexture={YamlBlock(omitted.path, "textureSettings:")}|assetPacking={YamlBlock(omitted.path, "packingSettings:")}|assetPackables={PackablesBlock(omitted.path)}";
+            });
         }
     }
 
