@@ -66,7 +66,7 @@ namespace UnityEngine.Tilemaps
     public partial class ITilemap
     {
         internal Tilemap m_Tilemap;
-        internal System.Collections.Generic.SortedSet<Vector3Int> m_Collect;
+        internal Tilemap.RefreshRequests m_Collect;
 
         internal ITilemap() { }
 

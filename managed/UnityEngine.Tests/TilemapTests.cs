@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.Tilemaps;
 using Xunit;
 
@@ -9,11 +10,19 @@ namespace UnityEngine.Tests
     public class CallLogTile : TileBase
     {
         public readonly List<string> log = new List<string>();
+        /// <summary>A log shared with other tiles, for the order of calls across them.</summary>
+        public List<string> shared;
         public bool refreshNeighbours;
+
+        void Log(string call)
+        {
+            log.Add(call);
+            shared?.Add(call);
+        }
 
         public override void RefreshTile(Vector3Int position, ITilemap tilemap)
         {
-            log.Add($"{name}.Refresh {position.x},{position.y}");
+            Log($"{name}.Refresh {position.x},{position.y}");
             base.RefreshTile(position, tilemap);
             if (refreshNeighbours)
             {
@@ -24,13 +33,13 @@ namespace UnityEngine.Tests
 
         public override void GetTileData(Vector3Int position, ITilemap tilemap, ref TileData tileData)
         {
-            log.Add($"{name}.Data {position.x},{position.y}");
+            Log($"{name}.Data {position.x},{position.y}");
             tileData.color = Color.red;
         }
 
         public override bool StartUp(Vector3Int position, ITilemap tilemap, GameObject go)
         {
-            log.Add($"{name}.StartUp {position.x},{position.y}");
+            Log($"{name}.StartUp {position.x},{position.y}");
             return true;
         }
     }
@@ -385,6 +394,151 @@ namespace UnityEngine.Tests
                 map.ClearAllEditorPreviewTiles();
                 Assert.False(map.HasEditorPreviewTile(p));
             }
+        }
+
+        // The order a fill visits a 3x3 region from its centre (tests/projects/tilemappreview 07.fillOrder).
+        static readonly string[] s_CentreOrder = { "1,1", "2,1", "2,2", "1,2", "0,2", "0,1", "0,0", "1,0", "2,0" };
+
+        static List<string> Refreshed(CallLogTile tile) =>
+            tile.log.Where(l => l.Contains(".Refresh ")).Select(l => l.Substring(l.IndexOf(' ') + 1)).ToList();
+
+        [Fact]
+        public void EveryFillVisitsCellsInOneDepthFirstOrderWhateverTheBoxSize()
+        {
+            var fills = new (string Name, Action<Tilemap, TileBase> Fill)[]
+            {
+                ("BoxFill", (m, t) => m.BoxFill(new Vector3Int(1, 1, 0), t, -5000, -5000, 5000, 5000)),
+                ("FloodFill", (m, t) => m.FloodFill(new Vector3Int(1, 1, 0), t)),
+                ("EditorPreviewBoxFill", (m, t) => m.EditorPreviewBoxFill(new Vector3Int(1, 1, 0), t, -5000, -5000, 5000, 5000)),
+                ("EditorPreviewFloodFill", (m, t) => m.EditorPreviewFloodFill(new Vector3Int(1, 1, 0), t)),
+            };
+            foreach (bool farBounds in new[] { false, true })
+                foreach (var (name, fill) in fills)
+                {
+                    // A 3x3 region of A inside walls; with far tiles the bounds (and the box) span
+                    // millions of cells while the region stays small.
+                    var map = NewTilemap();
+                    var a = Tile<Tile>("A");
+                    var wall = Tile<Tile>("Wall");
+                    for (int y = -1; y <= 3; y++)
+                        for (int x = -1; x <= 3; x++)
+                            map.SetTile(new Vector3Int(x, y, 0), x < 0 || x > 2 || y < 0 || y > 2 ? wall : a);
+                    if (farBounds)
+                    {
+                        map.SetTile(new Vector3Int(-3000, -3000, 0), wall);
+                        map.SetTile(new Vector3Int(3000, 3000, 0), wall);
+                    }
+                    map.ClearAllEditorPreviewTiles();
+                    var filled = Tile<CallLogTile>("F");
+                    fill(map, filled);
+                    Assert.True(s_CentreOrder.SequenceEqual(Refreshed(filled)), $"{name}, far bounds {farBounds}: {string.Join(" ", Refreshed(filled))}");
+                }
+        }
+
+        static Vector3Int[] Row(int count) => Enumerable.Range(0, count).Select(i => new Vector3Int(count - 1 - i, 0, 0)).ToArray();
+
+        [Fact]
+        public void ChangesOfUpToFourCellsRefreshCellByCellAndLargerOnesInRequestOrderDataFirst()
+        {
+            var four = Tile<CallLogTile>("F");
+            NewTilemap().SetTiles(Row(4), Enumerable.Repeat<TileBase>(four, 4).ToArray());
+            Assert.Equal(new[]
+            {
+                "F.Refresh 3,0", "F.Refresh 2,0", "F.Refresh 1,0", "F.Refresh 0,0",
+                "F.Data 0,0", "F.StartUp 0,0", "F.Data 1,0", "F.StartUp 1,0",
+                "F.Data 2,0", "F.StartUp 2,0", "F.Data 3,0", "F.StartUp 3,0",
+            }, four.log);
+
+            // Five cells over a filled row, each new tile also asking for its neighbours: the cells
+            // refresh in the order first asked for (4, 5, 3, 2, 1, 0, -1), every GetTileData first.
+            var map = NewTilemap();
+            var shared = new List<string>();
+            var old = Tile<CallLogTile>("A");
+            old.shared = shared;
+            for (int x = -1; x <= 5; x++) map.SetTile(new Vector3Int(x, 0, 0), old);
+            shared.Clear();
+            var five = Tile<CallLogTile>("B");
+            five.shared = shared;
+            five.refreshNeighbours = true;
+            map.SetTiles(Row(5), Enumerable.Repeat<TileBase>(five, 5).ToArray());
+            Assert.Equal(new[]
+            {
+                "A.Refresh 4,0", "B.Refresh 4,0", "A.Refresh 3,0", "B.Refresh 3,0", "A.Refresh 2,0", "B.Refresh 2,0",
+                "A.Refresh 1,0", "B.Refresh 1,0", "A.Refresh 0,0", "B.Refresh 0,0",
+                "B.Data 4,0", "A.Data 5,0", "B.Data 3,0", "B.Data 2,0", "B.Data 1,0", "B.Data 0,0", "A.Data -1,0",
+                "B.StartUp 4,0", "A.StartUp 5,0", "B.StartUp 3,0", "B.StartUp 2,0", "B.StartUp 1,0", "B.StartUp 0,0", "A.StartUp -1,0",
+            }, shared);
+        }
+
+        [Fact]
+        public void RefreshTileRefreshesThePreviewTileThenTheActualTile()
+        {
+            var map = NewTilemap();
+            var shared = new List<string>();
+            var actual = Tile<CallLogTile>("A");
+            actual.shared = shared;
+            var preview = Tile<CallLogTile>("P");
+            preview.shared = shared;
+            map.SetTile(new Vector3Int(0, 0, 0), actual);
+            map.SetEditorPreviewTile(new Vector3Int(0, 0, 0), preview);
+            shared.Clear();
+            map.RefreshTile(new Vector3Int(0, 0, 0));
+            Assert.Equal(new[] { "P.Data 0,0", "A.Data 0,0", "A.StartUp 0,0" }, shared);
+
+            // Clearing the preview refreshes cell by cell at once: the old preview tile's refresh,
+            // then the actual tile's.
+            map.SetTile(new Vector3Int(1, 0, 0), actual);
+            map.SetEditorPreviewTile(new Vector3Int(1, 0, 0), preview);
+            shared.Clear();
+            map.ClearAllEditorPreviewTiles();
+            Assert.Equal(new[]
+            {
+                "P.Refresh 0,0", "A.Data 0,0", "A.StartUp 0,0", "A.Refresh 0,0", "A.Data 0,0", "A.StartUp 0,0",
+                "P.Refresh 1,0", "A.Data 1,0", "A.StartUp 1,0", "A.Refresh 1,0", "A.Data 1,0", "A.StartUp 1,0",
+            }, shared);
+        }
+
+        [Fact]
+        public void CompressBoundsKeepEditorPreviewLeavesThePreviewBounds()
+        {
+            var map = NewTilemap();
+            var a = Tile<Tile>("A");
+            var prev = Tile<Tile>("Prev");
+            map.SetTile(new Vector3Int(1, 1, 0), a);
+            map.SetTile(new Vector3Int(3, 3, 0), a);
+            map.SetTile(new Vector3Int(3, 3, 0), null);
+            map.SetEditorPreviewTile(new Vector3Int(-2, 5, 0), prev);
+            map.CompressBoundsKeepEditorPreview();
+            Assert.Equal(new Vector3Int(1, 1, 0), map.origin);
+            Assert.Equal(new Vector3Int(1, 1, 1), map.size);
+            // The preview's own bounds stay (-2,0,0) + (2,6,1); the reported ones combine both layers.
+            Assert.Equal(new Vector3Int(-2, 0, 0), map.editorPreviewOrigin);
+            Assert.Equal(new Vector3Int(2, 6, 1), map.editorPreviewSize);
+            Assert.True(map.HasEditorPreviewTile(new Vector3Int(-2, 5, 0)));
+        }
+
+        [Fact]
+        public void ChangeCallbacksReportEveryCellTheTilesAskedToRefresh()
+        {
+            var map = NewTilemap();
+            var tile = Tile<CallLogTile>("B");
+            tile.refreshNeighbours = true;
+            var reported = new List<Vector3Int>();
+            Action<Tilemap, Tilemap.SyncTile[]> onChanged = (m, tiles) =>
+            {
+                if (m == map) reported.AddRange(tiles.Select(t => t.position));
+            };
+            Tilemap.tilemapTileChanged += onChanged;
+            try
+            {
+                // The empty neighbours (-1,0) and (2,0) are reported too, in z, y, x order.
+                map.SetTiles(Row(2), new TileBase[] { tile, tile });
+            }
+            finally
+            {
+                Tilemap.tilemapTileChanged -= onChanged;
+            }
+            Assert.Equal(new[] { new Vector3Int(-1, 0, 0), new Vector3Int(0, 0, 0), new Vector3Int(1, 0, 0), new Vector3Int(2, 0, 0) }, reported);
         }
     }
 }

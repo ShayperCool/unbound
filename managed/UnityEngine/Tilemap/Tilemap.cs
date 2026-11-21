@@ -11,8 +11,9 @@ namespace UnityEngine.Tilemaps
     ///
     /// What Unity does, measured in `tests/projects/twod`: setting tiles first lets the old then
     /// the new tile of each changed cell refresh (collecting positions, <see cref="TileBase.RefreshTile"/>),
-    /// then each collected cell that has a tile, in z, y, x order, asks its tile for data,
-    /// StartUp and animation data. A cell taking a tile for the first time takes all of the data;
+    /// then each collected cell that has a tile asks its tile for data, StartUp and animation data:
+    /// cell by cell in z, y, x order after a change of up to four cells, else in the order the
+    /// cells were asked for, every cell's data first (tests/projects/tilemappreview). A cell taking a tile for the first time takes all of the data;
     /// later refreshes take the color only under LockColor and the transform only under
     /// LockTransform, so values set on the cell survive. Bounds grow to include the origin and
     /// every set cell and shrink only on CompressBounds/ClearAllTiles. The change callbacks fire
@@ -634,18 +635,74 @@ namespace UnityEngine.Tilemaps
             }
             if (applied.Count == 0) return;
             m_RenderVersion++;
-            var refresh = CollectRefreshes(applied);
             var changed = sendTo ?? new SortedSet<Vector3Int>(CellOrder.Instance);
-            foreach (var a in applied) changed.Add(a.Position);
-            foreach (var p in refresh)
-                if (RefreshCell(p)) changed.Add(p);
+            RefreshChanged(applied, changed);
             if (sendTo == null) SendChanges(changed);
         }
 
-        SortedSet<Vector3Int> CollectRefreshes(List<(Vector3Int Position, TileBase Old, TileBase New)> applied)
+        /// <summary>Refreshes after cells changed tile. The changed cells and every cell their tiles
+        /// asked to refresh, with or without a tile and whether or not its data changed, go to
+        /// <paramref name="changed"/> (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/tilemappreview 08.refreshOrder.neighbours3).</summary>
+        void RefreshChanged(List<(Vector3Int Position, TileBase Old, TileBase New)> applied, SortedSet<Vector3Int> changed)
         {
-            var refresh = new SortedSet<Vector3Int>(CellOrder.Instance);
-            var itilemap = Itilemap;
+            foreach (var a in applied) changed.Add(a.Position);
+            var requests = CollectRefreshes(Itilemap, applied);
+            foreach (var position in requests.Order) changed.Add(position);
+            RefreshRequested(requests, applied.Count, changed);
+        }
+
+        /// <summary>The cells tiles ask to refresh while a change is applied: each once, in the order
+        /// they first asked.</summary>
+        internal sealed class RefreshRequests
+        {
+            internal readonly List<Vector3Int> Order = new List<Vector3Int>();
+            readonly HashSet<Vector3Int> m_Asked = new HashSet<Vector3Int>();
+
+            internal void Add(Vector3Int position)
+            {
+                if (m_Asked.Add(position)) Order.Add(position);
+            }
+        }
+
+        /// <summary>The most changed cells whose refresh goes cell by cell in z, y, x order; after a
+        /// larger change the cells refresh in the order they were asked for, every cell's
+        /// GetTileData before the StartUp and animation data (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/tilemappreview 08.refreshOrder).</summary>
+        const int CellByCellRefreshLimit = 4;
+
+        /// <summary>Refreshes the cells asked for after <paramref name="changedCount"/> cells
+        /// changed: each cell's preview tile (its data), then its actual tile (data, StartUp,
+        /// animation data). The actual cells whose shown data changed go to
+        /// <paramref name="changed"/>.</summary>
+        void RefreshRequested(RefreshRequests requests, int changedCount, SortedSet<Vector3Int> changed)
+        {
+            var order = requests.Order;
+            if (changedCount <= CellByCellRefreshLimit)
+            {
+                order.Sort(CellOrder.Instance);
+                foreach (var position in order)
+                {
+                    RefreshPreviewCell(position);
+                    if (RefreshCell(position)) changed.Add(position);
+                }
+                return;
+            }
+            var asked = new List<(Vector3Int Position, TileBase Tile, TileData Data)>(order.Count);
+            foreach (var position in order)
+            {
+                RefreshPreviewCell(position);
+                if (AskData(position, out var data)) asked.Add((position, CellAt(position).Tile, data));
+            }
+            foreach (var (position, tile, data) in asked)
+                if (CellAt(position)?.Tile == tile && ApplyCell(position, data)) changed.Add(position);
+        }
+
+        /// <summary>Calls the old and new tiles' RefreshTile for each changed cell and returns the
+        /// cells they asked to refresh.</summary>
+        RefreshRequests CollectRefreshes(ITilemap itilemap, List<(Vector3Int Position, TileBase Old, TileBase New)> applied)
+        {
+            var refresh = new RefreshRequests();
             var previous = itilemap.m_Collect;
             itilemap.m_Collect = refresh;
             try
@@ -759,13 +816,11 @@ namespace UnityEngine.Tilemaps
             return go;
         }
 
+        /// <summary>Refreshes a cell's preview tile, then its actual tile (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/tilemappreview 07.refreshOverlay).</summary>
         public void RefreshTile(Vector3Int position)
         {
-            if (m_PreviewCells.Count > 0 && m_PreviewCells.ContainsKey(position))
-            {
-                RefreshPreviewCell(position);
-                return;
-            }
+            RefreshPreviewCell(position);
             if (RefreshCell(position))
                 SendChanges(new SortedSet<Vector3Int>(CellOrder.Instance) { position });
         }
@@ -805,16 +860,8 @@ namespace UnityEngine.Tilemaps
             }
             if (applied.Count == 0) return;
             m_RenderVersion++;
-            var refresh = CollectRefreshes(applied);
-            // Swapping asks every refreshed cell for its data first, then runs StartUp and the
-            // animation data (measured).
             var changed = new SortedSet<Vector3Int>(CellOrder.Instance);
-            foreach (var a in applied) changed.Add(a.Position);
-            var datas = new List<(Vector3Int Position, TileData Data)>();
-            foreach (var position in refresh)
-                if (AskData(position, out var data)) datas.Add((position, data));
-            foreach (var (position, data) in datas)
-                if (ApplyCell(position, data)) changed.Add(position);
+            RefreshChanged(applied, changed);
             SendChanges(changed);
         }
 
@@ -970,34 +1017,22 @@ namespace UnityEngine.Tilemaps
 
         public void FloodFill(Vector3Int position, TileBase tile) => FloodFillTileAsset(position, tile);
 
+        /// <summary>Fills the cells connected to the position holding its tile; an empty region
+        /// stays inside the bounds.</summary>
         void FloodFillTileAsset(Vector3Int position, Object tile)
         {
-            var target = GetTile(position);
+            var target = Real(GetTileAsset(position));
             var fill = tile as TileBase;
-            if (ReferenceEquals(target, fill) || (target == null && fill == null)) return;
-            var bounds = cellBounds;
-            bool limited = target == null;
-            var visited = new HashSet<Vector3Int>();
-            var queue = new Queue<Vector3Int>();
-            var cells = new List<(Vector3Int, TileBase)>();
-            queue.Enqueue(position);
-            visited.Add(position);
-            var steps = new[] { Vector3Int.right, Vector3Int.left, Vector3Int.up, Vector3Int.down };
-            while (queue.Count > 0)
+            if (ReferenceEquals(target, Real(fill))) return;
+            var min = new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
+            var max = new Vector3Int(int.MaxValue, int.MaxValue, int.MaxValue);
+            if (target == null)
             {
-                var p = queue.Dequeue();
-                cells.Add((p, fill));
-                foreach (var step in steps)
-                {
-                    var n = p + step;
-                    if (visited.Contains(n)) continue;
-                    if (limited && !bounds.Contains(n)) continue;
-                    if (!ReferenceEquals(GetTile(n), target) && !(target == null && GetTile(n) == null)) continue;
-                    visited.Add(n);
-                    queue.Enqueue(n);
-                }
+                var bounds = cellBounds;
+                min = bounds.min;
+                max = bounds.max - Vector3Int.one;
             }
-            SetTilesInternal(cells);
+            SetTilesInternal(FillChanges(ConnectedCells(position, target, min, max), fill));
         }
 
         public void BoxFill(Vector3Int position, TileBase tile, int startX, int startY, int endX, int endY) =>
@@ -1013,72 +1048,46 @@ namespace UnityEngine.Tilemaps
             int x0 = Math.Max(startX, bounds.xMin), x1 = Math.Min(endX, bounds.xMax - 1);
             int y0 = Math.Max(startY, bounds.yMin), y1 = Math.Min(endY, bounds.yMax - 1);
             if (position.x < x0 || position.x > x1 || position.y < y0 || position.y > y1) return;
-            var target = GetTile(position);
-            var fill = tile as TileBase;
-            var positions = CollectConnectedInBox(position, target, x0, y0, x1, y1);
-            var cells = new List<(Vector3Int, TileBase)>(positions.Count);
-            for (int i = 0; i < positions.Count; i++) cells.Add((positions[i], fill));
-            SetTilesInternal(cells);
+            var target = Real(GetTileAsset(position));
+            var cells = ConnectedCells(position, target, new Vector3Int(x0, y0, position.z), new Vector3Int(x1, y1, position.z));
+            SetTilesInternal(FillChanges(cells, tile as TileBase));
         }
 
-        /// <summary>Collects the 4-connected cells on <paramref name="start"/>'s Z layer inside
-        /// <c>[x0, x1] x [y0, y1]</c> whose actual tile asset matches <paramref name="target"/>.</summary>
-        List<Vector3Int> CollectConnectedInBox(Vector3Int start, Object target, int x0, int y0, int x1, int y1)
+        static List<(Vector3Int, TileBase)> FillChanges(List<Vector3Int> positions, TileBase fill)
         {
-            if (target == null) target = null;
-            int width = x1 - x0 + 1;
-            int height = y1 - y0 + 1;
+            var changes = new List<(Vector3Int, TileBase)>(positions.Count);
+            foreach (var position in positions) changes.Add((position, fill));
+            return changes;
+        }
+
+        /// <summary>The cells 4-connected to <paramref name="start"/> whose actual tile is
+        /// <paramref name="target"/>, going no further than <paramref name="min"/> to
+        /// <paramref name="max"/> (inclusive), in the order every fill visits them: depth first,
+        /// trying the right, left, upper and lower neighbour in turn (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/tilemappreview 07.fillOrder).</summary>
+        List<Vector3Int> ConnectedCells(Vector3Int start, Object target, Vector3Int min, Vector3Int max)
+        {
             var result = new List<Vector3Int>();
-            if (width <= 0 || height <= 0) return result;
-            long totalLong = (long)width * height;
-            if (totalLong <= 1 << 22)
+            var visited = new HashSet<Vector3Int>();
+            var stack = new Stack<Vector3Int>();
+            stack.Push(start);
+            while (stack.Count > 0)
             {
-                int total = (int)totalLong;
-                var visited = new uint[(total + 31) >> 5];
-                var stack = new Stack<int>();
-                stack.Push((start.y - y0) * width + (start.x - x0));
-                while (stack.Count > 0)
-                {
-                    int index = stack.Pop();
-                    int word = index >> 5;
-                    uint bit = 1u << (index & 31);
-                    if ((visited[word] & bit) != 0) continue;
-                    visited[word] |= bit;
-                    int x = x0 + (index % width);
-                    int y = y0 + (index / width);
-                    var p = new Vector3Int(x, y, start.z);
-                    var current = GetTileAsset(p);
-                    if (current == null) current = null;
-                    if (!ReferenceEquals(current, target)) continue;
-                    result.Add(p);
-                    if (y > y0) stack.Push(index - width);
-                    if (y < y1) stack.Push(index + width);
-                    if (x > x0) stack.Push(index - 1);
-                    if (x < x1) stack.Push(index + 1);
-                }
-                return result;
-            }
-            var visitedSet = new HashSet<Vector3Int> { start };
-            var queue = new Queue<Vector3Int>();
-            queue.Enqueue(start);
-            while (queue.Count > 0)
-            {
-                var p = queue.Dequeue();
+                var p = stack.Pop();
+                if (!visited.Add(p) || !ReferenceEquals(Real(GetTileAsset(p)), target)) continue;
                 result.Add(p);
-                TryEnqueue(p + Vector3Int.down);
-                TryEnqueue(p + Vector3Int.up);
-                TryEnqueue(p + Vector3Int.left);
-                TryEnqueue(p + Vector3Int.right);
+                // Pushed in reverse: the right neighbour is visited first.
+                Push(new Vector3Int(p.x, p.y - 1, p.z));
+                Push(new Vector3Int(p.x, p.y + 1, p.z));
+                Push(new Vector3Int(p.x - 1, p.y, p.z));
+                Push(new Vector3Int(p.x + 1, p.y, p.z));
             }
             return result;
 
-            void TryEnqueue(Vector3Int n)
+            void Push(Vector3Int n)
             {
-                if (n.x < x0 || n.x > x1 || n.y < y0 || n.y > y1 || !visitedSet.Add(n)) return;
-                var current = GetTileAsset(n);
-                if (current == null) current = null;
-                if (!ReferenceEquals(current, target)) return;
-                queue.Enqueue(n);
+                if (n.x >= min.x && n.x <= max.x && n.y >= min.y && n.y <= max.y && n.z >= min.z && n.z <= max.z && !visited.Contains(n))
+                    stack.Push(n);
             }
         }
 
@@ -1185,30 +1194,10 @@ namespace UnityEngine.Tilemaps
                 m_Origin = min;
                 m_Size = max - min;
             }
-            if (keepEditorPreview)
-            {
-                bool pFirst = first;
-                Vector3Int pMin = min, pMax = max;
-                foreach (var pair in m_PreviewCells)
-                {
-                    if (pair.Value.TileAsset == null) continue;
-                    var p = pair.Key;
-                    pMin = pFirst ? p : Vector3Int.Min(pMin, p);
-                    pMax = pFirst ? p + Vector3Int.one : Vector3Int.Max(pMax, p + Vector3Int.one);
-                    pFirst = false;
-                }
-                if (pFirst)
-                {
-                    m_PreviewOrigin = Vector3Int.zero;
-                    m_PreviewSize = new Vector3Int(0, 0, 1);
-                }
-                else
-                {
-                    m_PreviewOrigin = pMin;
-                    m_PreviewSize = pMax - pMin;
-                }
-            }
-            else
+            // CompressBounds takes the preview bounds to the compressed bounds; keeping the editor
+            // preview leaves them as they are (matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/tilemappreview 06.clearAndBounds and 07.compressKeepPreview).
+            if (!keepEditorPreview)
             {
                 m_PreviewOrigin = m_Origin;
                 m_PreviewSize = m_Size;
@@ -1218,8 +1207,8 @@ namespace UnityEngine.Tilemaps
 
         // ------------------------------------------------------------------ editor preview
         // Editor preview cells live in a separate layer from actual tiles (matches the Unity
-        // 6000.0.71f1 Editor, tests/projects/tilemappreview). Preview refreshes ask tiles for
-        // GetTileData only (no StartUp, animation data, prefab instantiation, or tilemap change
+        // 6000.0.71f1 Editor, tests/projects/tilemappreview). A preview cell's refresh asks its tile
+        // for GetTileData only (no StartUp, animation data, prefab instantiation or tilemap change
         // events). Preview bounds grow independently from actual bounds; editorPreviewOrigin and
         // editorPreviewSize report the componentwise min origin and max size across both layers.
 
@@ -1234,6 +1223,7 @@ namespace UnityEngine.Tilemaps
             m_PreviewSize = max - min;
         }
 
+        /// <summary>Asks a preview cell's tile for its data (nothing for a cell without a preview tile).</summary>
         void RefreshPreviewCell(Vector3Int position)
         {
             var cell = PreviewCellAt(position);
@@ -1252,37 +1242,6 @@ namespace UnityEngine.Tilemaps
             m_RenderVersion++;
         }
 
-        void RefreshPreviewOrActualCell(Vector3Int position)
-        {
-            if (m_PreviewCells.Count > 0 && m_PreviewCells.ContainsKey(position))
-                RefreshPreviewCell(position);
-            else
-                RefreshCell(position);
-        }
-
-        void FlushPreviewRefreshes(List<(Vector3Int Position, TileBase Old, TileBase New)> applied)
-        {
-            if (applied.Count == 0) return;
-            var refresh = new SortedSet<Vector3Int>(CellOrder.Instance);
-            var itilemap = PreviewItilemap;
-            var previous = itilemap.m_Collect;
-            itilemap.m_Collect = refresh;
-            try
-            {
-                foreach (var (position, old, tile) in applied)
-                {
-                    if (old != null) CallTile(() => old.RefreshTile(position, itilemap));
-                    if (tile != null) CallTile(() => tile.RefreshTile(position, itilemap));
-                }
-            }
-            finally
-            {
-                itilemap.m_Collect = previous;
-            }
-            foreach (var p in refresh)
-                RefreshPreviewOrActualCell(p);
-        }
-
         internal Object GetAnyTileAsset(Vector3Int position) => PreviewCellAt(position)?.TileAsset ?? GetTileAsset(position);
         internal TileBase GetAnyTile(Vector3Int position) => GetAnyTileAsset(position) as TileBase;
         internal T GetAnyTile<T>(Vector3Int position) where T : TileBase => GetAnyTile(position) as T;
@@ -1290,83 +1249,77 @@ namespace UnityEngine.Tilemaps
         public TileBase GetEditorPreviewTile(Vector3Int position) => PreviewCellAt(position)?.TileAsset as TileBase;
         public T GetEditorPreviewTile<T>(Vector3Int position) where T : TileBase => GetEditorPreviewTile(position) as T;
 
-        bool TryApplyEditorPreviewTile(Vector3Int position, Object tile, out TileBase oldTile, out TileBase newTile)
+        /// <summary>Puts <paramref name="tile"/> (null removes) on a cell's preview layer. True when
+        /// the tile the cell shows changed, with the tile it showed (the preview tile, else the
+        /// actual one) and the tile it shows now; <paramref name="removed"/> tells whether a preview
+        /// tile was removed.</summary>
+        bool TryApplyEditorPreviewTile(Vector3Int position, Object tile, out TileBase oldTile, out TileBase newTile, out bool removed)
         {
             oldTile = null;
             newTile = null;
-            if (tile == null) tile = null;
+            removed = false;
+            tile = Real(tile);
             var cell = PreviewCellAt(position);
             Object oldAsset;
-            Object newAsset;
             if (cell != null)
             {
-                oldAsset = cell.TileAsset;
-                if (oldAsset == null) oldAsset = null;
+                oldAsset = Real(cell.TileAsset);
                 if (ReferenceEquals(oldAsset, tile)) return false;
                 if (tile == null)
                 {
                     m_PreviewCells.Remove(position);
-                    newAsset = GetTileAsset(position);
-                    if (newAsset == null) newAsset = null;
-                    if (ReferenceEquals(oldAsset, newAsset)) return false;
+                    removed = true;
                 }
                 else
                 {
                     cell.TileAsset = tile;
-                    newAsset = tile;
                     GrowPreview(position);
                 }
             }
             else
             {
                 if (tile == null) return false;
-                oldAsset = GetTileAsset(position);
-                if (oldAsset == null) oldAsset = null;
+                oldAsset = Real(GetTileAsset(position));
                 m_PreviewCells[position] = new PreviewCell { TileAsset = tile };
-                newAsset = tile;
                 GrowPreview(position);
             }
+            var newAsset = tile ?? Real(GetTileAsset(position));
+            if (ReferenceEquals(oldAsset, newAsset)) return false;
             oldTile = oldAsset as TileBase;
             newTile = newAsset as TileBase;
             return true;
         }
 
+        /// <summary>Sets one preview tile; the old and new tiles' RefreshTile refresh the cells they
+        /// ask for at once (matches the Unity 6000.0.71f1 Editor, tests/projects/tilemappreview
+        /// 08.refreshOrder.previewSetAndClear).</summary>
         internal void SetEditorPreviewTileAsset(Vector3Int position, Object tile)
         {
-            bool hadCell = m_PreviewCells.Count > 0 && m_PreviewCells.ContainsKey(position);
-            if (!TryApplyEditorPreviewTile(position, tile, out var oldTile, out var newTile))
-            {
-                if (hadCell && (m_PreviewCells.Count == 0 || !m_PreviewCells.ContainsKey(position)))
-                    m_RenderVersion++;
-                return;
-            }
-            m_RenderVersion++;
+            bool changed = TryApplyEditorPreviewTile(position, tile, out var oldTile, out var newTile, out bool removed);
+            if (changed || removed) m_RenderVersion++;
+            if (!changed) return;
             var itilemap = PreviewItilemap;
             if (oldTile != null) CallTile(() => oldTile.RefreshTile(position, itilemap));
             if (newTile != null) CallTile(() => newTile.RefreshTile(position, itilemap));
         }
 
-        void SetEditorPreviewTileAssetsBatch(List<Vector3Int> positions, Object tile)
+        /// <summary>Sets a fill's preview tiles: the old and new tiles' RefreshTile collect the cells
+        /// to refresh, which refresh as after any change of that many cells.</summary>
+        void SetEditorPreviewTileAssets(List<Vector3Int> positions, Object tile)
         {
-            if (positions.Count == 0) return;
             var applied = new List<(Vector3Int Position, TileBase Old, TileBase New)>(positions.Count);
             bool mutated = false;
-            for (int i = 0; i < positions.Count; i++)
+            foreach (var position in positions)
             {
-                var position = positions[i];
-                bool hadCell = m_PreviewCells.Count > 0 && m_PreviewCells.ContainsKey(position);
-                if (TryApplyEditorPreviewTile(position, tile, out var oldTile, out var newTile))
-                {
-                    mutated = true;
+                if (TryApplyEditorPreviewTile(position, tile, out var oldTile, out var newTile, out bool removed))
                     applied.Add((position, oldTile, newTile));
-                }
-                else if (hadCell && (m_PreviewCells.Count == 0 || !m_PreviewCells.ContainsKey(position)))
-                {
-                    mutated = true;
-                }
+                mutated |= removed;
             }
-            if (mutated) m_RenderVersion++;
-            if (applied.Count > 0) FlushPreviewRefreshes(applied);
+            if (mutated || applied.Count > 0) m_RenderVersion++;
+            if (applied.Count == 0) return;
+            var changed = new SortedSet<Vector3Int>(CellOrder.Instance);
+            RefreshRequested(CollectRefreshes(PreviewItilemap, applied), applied.Count, changed);
+            SendChanges(changed);
         }
 
         public void SetEditorPreviewTile(Vector3Int position, TileBase tile) => SetEditorPreviewTileAsset(position, tile);
@@ -1401,44 +1354,55 @@ namespace UnityEngine.Tilemaps
                 m_PreviewOrigin.x + m_PreviewSize.x - 1, m_PreviewOrigin.y + m_PreviewSize.y - 1);
         }
 
+        /// <summary>Fills the preview layer like <see cref="BoxFill"/>, within the preview's own
+        /// bounds grown to the position, over the cells whose actual tile is the position's.</summary>
         public void EditorPreviewBoxFill(Vector3Int position, Object tile, int startX, int startY, int endX, int endY)
         {
             if (startX > endX || startY > endY) return;
-            var target = GetTileAsset(position);
-            if (target == null) target = null;
-            if (tile == null) tile = null;
-            if (ReferenceEquals(target, tile)) return;
+            var target = Real(GetTileAsset(position));
+            if (ReferenceEquals(target, Real(tile))) return;
             GrowPreview(position);
             int x0 = Math.Max(startX, m_PreviewOrigin.x);
             int x1 = Math.Min(endX, m_PreviewOrigin.x + m_PreviewSize.x - 1);
             int y0 = Math.Max(startY, m_PreviewOrigin.y);
             int y1 = Math.Min(endY, m_PreviewOrigin.y + m_PreviewSize.y - 1);
             if (position.x < x0 || position.x > x1 || position.y < y0 || position.y > y1) return;
-            var positions = CollectConnectedInBox(position, target, x0, y0, x1, y1);
-            SetEditorPreviewTileAssetsBatch(positions, tile);
+            var positions = ConnectedCells(position, target, new Vector3Int(x0, y0, position.z), new Vector3Int(x1, y1, position.z));
+            SetEditorPreviewTileAssets(positions, tile);
         }
 
+        /// <summary>Removes every preview tile, cell by cell in z, y, x order, each cell's old and new
+        /// tile refreshing the cells they ask for at once (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/tilemappreview 07.fillOrder.previewFloodFillCornerAndClear).</summary>
         public void ClearAllEditorPreviewTiles()
         {
-            List<(Vector3Int Position, TileBase Old, TileBase New)> applied = null;
+            List<(Vector3Int Position, TileBase Old, TileBase New)> cleared = null;
             if (m_PreviewCells.Count > 0)
             {
-                applied = new List<(Vector3Int, TileBase, TileBase)>(m_PreviewCells.Count);
+                cleared = new List<(Vector3Int, TileBase, TileBase)>(m_PreviewCells.Count);
                 foreach (var pair in m_PreviewCells)
                 {
-                    var oldAsset = pair.Value.TileAsset;
-                    var actual = GetTileAsset(pair.Key);
-                    if (actual == null) actual = null;
+                    var oldAsset = Real(pair.Value.TileAsset);
+                    var actual = Real(GetTileAsset(pair.Key));
                     if (!ReferenceEquals(oldAsset, actual))
-                        applied.Add((pair.Key, oldAsset as TileBase, actual as TileBase));
+                        cleared.Add((pair.Key, oldAsset as TileBase, actual as TileBase));
                 }
                 m_PreviewCells.Clear();
             }
             m_PreviewOrigin = m_Origin;
             m_PreviewSize = m_Size;
             m_RenderVersion++;
-            if (applied != null) FlushPreviewRefreshes(applied);
+            if (cleared == null) return;
+            var itilemap = PreviewItilemap;
+            foreach (var (position, old, now) in cleared)
+            {
+                if (old != null) CallTile(() => old.RefreshTile(position, itilemap));
+                if (now != null) CallTile(() => now.RefreshTile(position, itilemap));
+            }
         }
+
+        /// <summary>A Unity object reference with destroyed objects as null.</summary>
+        static Object Real(Object o) => o == null ? null : o;
 
         // ------------------------------------------------------------------ lifecycle and serialization
 
