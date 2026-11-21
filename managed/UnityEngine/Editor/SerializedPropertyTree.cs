@@ -1176,19 +1176,21 @@ namespace Unbound.Runtime
                 {
                     hash.Add((int)gradient.mode);
                     hash.Add((int)gradient.colorSpace);
-                    var colorKeys = gradient.colorKeys;
-                    hash.Add(colorKeys.Length);
-                    for (int i = 0; i < colorKeys.Length; i++)
+                    int colorCount = gradient.ColorKeyCount;
+                    hash.Add(colorCount);
+                    for (int i = 0; i < colorCount; i++)
                     {
-                        hash.Add(colorKeys[i].color);
-                        hash.Add(colorKeys[i].time);
+                        var ck = gradient.ColorKeyAt(i);
+                        hash.Add(ck.color);
+                        hash.Add(ck.time);
                     }
-                    var alphaKeys = gradient.alphaKeys;
-                    hash.Add(alphaKeys.Length);
-                    for (int i = 0; i < alphaKeys.Length; i++)
+                    int alphaCount = gradient.AlphaKeyCount;
+                    hash.Add(alphaCount);
+                    for (int i = 0; i < alphaCount; i++)
                     {
-                        hash.Add(alphaKeys[i].alpha);
-                        hash.Add(alphaKeys[i].time);
+                        var ak = gradient.AlphaKeyAt(i);
+                        hash.Add(ak.alpha);
+                        hash.Add(ak.time);
                     }
                 }
                 else if (value is RectOffset offset)

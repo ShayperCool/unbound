@@ -22643,7 +22643,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal void AppendFoldoutPPtrValue(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.AppendFoldoutPPtrValue"); }
         [global::Unbound.Stub] internal static string GetLayerMaskStringValue(uint layers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.GetLayerMaskStringValue"); return default; }
         [global::Unbound.Stub] internal bool FindPropertyRelativeInternal(string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.FindPropertyRelativeInternal"); return default; }
-        [global::Unbound.Stub] internal bool ValueEquals(global::UnityEngine.Gradient gradient) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.ValueEquals"); return default; }
         [global::Unbound.Stub] internal bool ValueEquals(string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.ValueEquals"); return default; }
         public global::UnityEngine.Object exposedReferenceValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.exposedReferenceValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.exposedReferenceValue"); } }
         internal bool isScript { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isScript"); return default; } }
@@ -47258,50 +47257,9 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] public void DropDown(global::UnityEngine.Rect position, global::UnityEngine.UIElements.VisualElement targetElement = null, bool anchored = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GenericOSMenu.DropDown"); }
         [global::System.Obsolete("Use DropDown(Rect position, VisualElement targetElement, bool anchored) instead")] [global::Unbound.Stub] public void DropDownIMGUI(global::UnityEngine.Rect position, bool anchored = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GenericOSMenu.DropDownIMGUI"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class GradientField : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Gradient>
+    unsafe partial class GradientField
     {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId colorSpaceProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId hdrProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public static readonly string contentUssClassName;
-        [global::Unbound.Stub] public static readonly string backgroundUssClassName;
-        [global::System.Obsolete("borderUssClass is not used anymore")] [global::Unbound.Stub] public static readonly string borderUssClassName;
-        [global::Unbound.Stub] internal static global::UnityEngine.Gradient GradientCopy(global::UnityEngine.Gradient other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.GradientCopy"); return default; }
-        [global::Unbound.Stub] public GradientField() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.ctor"); }
-        [global::Unbound.Stub] public GradientField(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.ctor"); }
-        [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.HandleEventBubbleUp"); }
-        [global::System.Obsolete("ExecuteDefaultAction override has been removed because default event handling was migrated to HandleEventBubbleUp. Please use HandleEventBubbleUp.")] [global::Unbound.Stub] protected override void ExecuteDefaultAction(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.ExecuteDefaultAction"); }
-        [global::System.Obsolete("ExecuteDefaultActionAtTarget override has been removed because default event handling was migrated to HandleEventBubbleUp. Please use HandleEventBubbleUp.")] [global::Unbound.Stub] protected override void ExecuteDefaultActionAtTarget(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.ExecuteDefaultActionAtTarget"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.OnViewDataReady"); }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(global::UnityEngine.Gradient newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] protected override void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.UpdateMixedValueContent"); }
-        [global::Unbound.Stub] internal override bool EqualsCurrentValue(global::UnityEngine.Gradient v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.EqualsCurrentValue"); return default; }
-        public override global::UnityEngine.Gradient value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.value"); } }
-        public global::UnityEngine.ColorSpace colorSpace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.colorSpace"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.colorSpace"); } }
-        public bool hdr { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.hdr"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.hdr"); } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Gradient>.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.GradientField, global::UnityEditor.UIElements.GradientField.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Gradient>.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.GradientField.UxmlTraits.ctor"); }
-        }
     }
     internal unsafe partial interface IEditorElementDecorator
     {

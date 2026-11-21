@@ -1012,6 +1012,12 @@ namespace UnityEditor
             set => SetTyped(SerializedPropertyType.Gradient, "gradient", value ?? new Gradient());
         }
 
+        internal bool ValueEquals(Gradient gradient)
+        {
+            var current = GetTyped<Gradient>(SerializedPropertyType.Gradient, "gradient");
+            return SerializedTree.ValueEquals(current, gradient);
+        }
+
         public Object objectReferenceValue
         {
             get

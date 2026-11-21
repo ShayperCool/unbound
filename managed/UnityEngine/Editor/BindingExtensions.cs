@@ -7,11 +7,12 @@ using UnityEngine.UIElements;
 
 // Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
 // BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, Color/Color32,
-// Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Rect, RectInt, Bounds, BoundsInt, and
-// AnimationCurve fields plus Foldout isExpanded binding), BindingExtensions.TrackPropertyValue,
-// BindingExtensions.TrackSerializedObjectValue, BindingExtensions.Unbind,
-// SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the SerializedObject binding
-// context/updater pipeline that synchronizes fields and polls changes during panel updates.
+// Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Rect, RectInt, Bounds, BoundsInt,
+// AnimationCurve, and Gradient fields plus Foldout isExpanded binding),
+// BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
+// BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
+// SerializedObject binding context/updater pipeline that synchronizes fields and polls changes
+// during panel updates.
 // Documented in Unity 6000.0 Scripting API ("BindingExtensions.Bind",
 // "BindingExtensions.BindProperty", "BindingExtensions.TrackPropertyValue",
 // "BindingExtensions.TrackSerializedObjectValue", "BindingExtensions.Unbind",
@@ -21,7 +22,8 @@ using UnityEngine.UIElements;
 // tests/projects/vector3binding, tests/projects/vector4binding, tests/projects/vector2intbinding,
 // tests/projects/vector3intbinding, tests/projects/rectbinding, tests/projects/rectintbinding,
 // tests/projects/boundsbinding, tests/projects/boundsintbinding, tests/projects/curvebinding,
-// tests/projects/trackpropertyvalue and tests/projects/trackserializedobjectvalue.
+// tests/projects/gradientbinding, tests/projects/trackpropertyvalue and
+// tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
 {
@@ -1197,6 +1199,9 @@ namespace UnityEditor.UIElements.Bindings
                 case SerializedPropertyType.AnimationCurve:
                     DefaultBind(element, prop, SerializedPropertyHelper.GetAnimationCurvePropertyValue, SerializedPropertyHelper.SetAnimationCurvePropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
+                case SerializedPropertyType.Gradient:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetGradientPropertyValue, SerializedPropertyHelper.SetGradientPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
                 case SerializedPropertyType.Generic:
                     if (prop.type == "ToggleButtonGroupState")
                         Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty (ToggleButtonGroupState)");
@@ -2116,6 +2121,7 @@ namespace UnityEditor.UIElements.Bindings
         public static Bounds GetBoundsPropertyValue(SerializedProperty p) => p.boundsValue;
         public static BoundsInt GetBoundsIntPropertyValue(SerializedProperty p) => p.boundsIntValue;
         public static AnimationCurve GetAnimationCurvePropertyValue(SerializedProperty p) => p.animationCurveValue;
+        public static Gradient GetGradientPropertyValue(SerializedProperty p) => p.gradientValue;
         public static float GetIntPropertyValueAsFloat(SerializedProperty p) => p.intValue;
         public static float GetLongPropertyValueAsFloat(SerializedProperty p) => p.longValue;
         public static double GetFloatPropertyValueAsDouble(SerializedProperty p) => p.floatValue;
@@ -2226,6 +2232,7 @@ namespace UnityEditor.UIElements.Bindings
         public static void SetBoundsPropertyValue(SerializedProperty p, Bounds v) => p.boundsValue = v;
         public static void SetBoundsIntPropertyValue(SerializedProperty p, BoundsInt v) => p.boundsIntValue = v;
         public static void SetAnimationCurvePropertyValue(SerializedProperty p, AnimationCurve v) => p.animationCurveValue = v;
+        public static void SetGradientPropertyValue(SerializedProperty p, Gradient v) => p.gradientValue = v;
         public static void SetFloatPropertyValueFromDouble(SerializedProperty p, double v) => p.floatValue = (float)v;
         public static void SetDoublePropertyValueFromFloat(SerializedProperty p, float v) => p.doubleValue = v;
 
@@ -2251,6 +2258,9 @@ namespace UnityEditor.UIElements.Bindings
                 : string.Equals(value, propertyReadFunc(p), StringComparison.Ordinal);
 
         public static bool ValueEquals(AnimationCurve value, SerializedProperty p, Func<SerializedProperty, AnimationCurve> propertyReadFunc) =>
+            p.ValueEquals(value);
+
+        public static bool ValueEquals(Gradient value, SerializedProperty p, Func<SerializedProperty, Gradient> propertyReadFunc) =>
             p.ValueEquals(value);
 
         public static bool SlowEnumValueEquals(string value, SerializedProperty p, Func<SerializedProperty, string> propertyReadFunc) =>

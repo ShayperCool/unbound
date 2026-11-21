@@ -74,6 +74,27 @@ namespace UnityEngine
             set => m_AlphaKeys = SortedAlphaKeys(value);
         }
 
+        internal int ColorKeyCount => m_ColorKeys.Length;
+        internal GradientColorKey ColorKeyAt(int index) => m_ColorKeys[index];
+        internal int AlphaKeyCount => m_AlphaKeys.Length;
+        internal GradientAlphaKey AlphaKeyAt(int index) => m_AlphaKeys[index];
+
+        internal void CopyKeysAndModeFrom(Gradient other)
+        {
+            if (other == null) throw new ArgumentNullException(nameof(other));
+            if (ReferenceEquals(this, other)) return;
+            m_ColorKeys = (GradientColorKey[])other.m_ColorKeys.Clone();
+            m_AlphaKeys = (GradientAlphaKey[])other.m_AlphaKeys.Clone();
+            m_Mode = other.m_Mode;
+        }
+
+        internal void ResetToDefaultWhite()
+        {
+            m_ColorKeys = new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) };
+            m_AlphaKeys = new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) };
+            m_Mode = GradientMode.Blend;
+        }
+
         public GradientMode mode
         {
             get => m_Mode;

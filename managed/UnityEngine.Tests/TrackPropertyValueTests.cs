@@ -83,6 +83,8 @@ namespace UnityEngine.Tests
             public BoundsInt boundsIntVal = new BoundsInt(Vector3Int.one, Vector3Int.one * 2);
             public AnimationCurve curveVal = AnimationCurve.Linear(0f, 0f, 1f, 1f);
             public Gradient gradientVal = new Gradient();
+            [GradientUsage(true, ColorSpace.Linear)]
+            public Gradient hdrGradientVal = new Gradient();
             public LayerMask layerMaskVal = 1;
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
@@ -2221,6 +2223,137 @@ namespace UnityEngine.Tests
             finally
             {
                 soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyGradientCopyIndependenceTimeEqualityMixedUsageAndDisposedCleanupWorkAcrossReleases()
+        {
+            static Gradient MakeGrad(Color c0, Color c1, float midTime, float a0, float a1, GradientMode mode = GradientMode.Blend)
+            {
+                var g = new Gradient { mode = mode };
+                g.SetKeys(
+                    new[] { new GradientColorKey(c0, 0f), new GradientColorKey(Color.green, midTime), new GradientColorKey(c1, 1f) },
+                    new[] { new GradientAlphaKey(a0, 0f), new GradientAlphaKey(0.5f, midTime), new GradientAlphaKey(a1, 1f) });
+                return g;
+            }
+
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.gradientVal = MakeGrad(Color.red, Color.blue, 0.5f, 1f, 0.5f, GradientMode.Blend);
+            t2.gradientVal = MakeGrad(Color.red, Color.blue, 0.5f, 1f, 0.5f, GradientMode.Fixed);
+            t1.hdrGradientVal = MakeGrad(new Color(2f, 0.5f, 0f, 1f), new Color(0f, 3f, 1f, 1f), 0.5f, 0.8f, 0.2f, GradientMode.PerceptualBlend);
+            using var panel = RuntimePanel.Create(settings);
+
+            // Measured 6000.0 release control: GradientField ignores key-time-only edits (Compat.GradientFieldIgnoresKeyTimeInEquality).
+            using (TestRelease.Pin(TestRelease.Measured))
+            {
+                var gf60 = new GradientField();
+                int ev60 = 0;
+                gf60.RegisterValueChangedCallback(_ => ev60++);
+                panel.visualTree.Add(gf60);
+                gf60.value = MakeGrad(Color.red, Color.blue, 0.5f, 1f, 0f, GradientMode.Fixed);
+                Assert.Equal(1, ev60);
+                gf60.value = MakeGrad(Color.red, Color.blue, 0.75f, 1f, 0f, GradientMode.Fixed);
+                Assert.Equal(1, ev60);
+                Assert.InRange(gf60.value.colorKeys[1].time, 0.499f, 0.501f);
+                gf60.RemoveFromHierarchy();
+            }
+
+            // Unmeasured release control: GradientField compares key times properly and fires change events.
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            var soSingle = new SerializedObject(t1);
+            try
+            {
+                var gfTime = new GradientField();
+                int evUnmeasured = 0;
+                gfTime.RegisterValueChangedCallback(_ => evUnmeasured++);
+                panel.visualTree.Add(gfTime);
+                gfTime.value = MakeGrad(Color.red, Color.blue, 0.5f, 1f, 0f, GradientMode.Fixed);
+                Assert.Equal(1, evUnmeasured);
+                gfTime.value = MakeGrad(Color.red, Color.blue, 0.75f, 1f, 0f, GradientMode.Fixed);
+                Assert.Equal(2, evUnmeasured);
+                Assert.InRange(gfTime.value.colorKeys[1].time, 0.749f, 0.751f);
+                gfTime.RemoveFromHierarchy();
+
+                var rt = new RuntimeModel { text = "rt-grad-0" };
+                var gf = new GradientField { dataSource = rt };
+                gf.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                panel.visualTree.Add(gf);
+                gf.BindProperty(soMulti.FindProperty("gradientVal"));
+                Tick(panel);
+
+                // Mode-only divergence sets showMixedValue and value getter returns independent copies.
+                Assert.True(gf.showMixedValue);
+                Assert.NotNull(gf.Q<Label>(className: BaseField<Gradient>.mixedValueLabelUssClassName));
+                var readA = gf.value;
+                var readB = gf.value;
+                Assert.NotSame(readA, readB);
+                Assert.NotSame(readA, t1.gradientVal);
+                readA.mode = GradientMode.PerceptualBlend;
+                Assert.Equal(GradientMode.Blend, gf.value.mode);
+                Assert.Equal("rt-grad-0", gf.tooltip);
+
+                // Editing mixed GradientField updates both targets with distinct Gradient instances.
+                var edited = MakeGrad(Color.yellow, Color.cyan, 0.25f, 0.75f, 0.25f, GradientMode.PerceptualBlend);
+                gf.value = edited;
+                edited.mode = GradientMode.Blend;
+                Tick(panel);
+                Assert.False(gf.showMixedValue);
+                Assert.NotSame(t1.gradientVal, t2.gradientVal);
+                Assert.Equal(GradientMode.PerceptualBlend, t1.gradientVal.mode);
+                Assert.Equal(GradientMode.PerceptualBlend, t2.gradientVal.mode);
+                Assert.Equal(Color.yellow, t2.gradientVal.colorKeys[0].color);
+
+                // PropertyField creates GradientField for plain and [GradientUsage(true, ColorSpace.Linear)] properties.
+                var pfPlain = new PropertyField(soMulti.FindProperty("gradientVal"));
+                panel.visualTree.Add(pfPlain);
+                pfPlain.Bind(soMulti);
+                Tick(panel);
+                var pfPlainChild = Assert.IsType<GradientField>(pfPlain.hierarchy[0]);
+                Assert.Equal("Gradient Val", pfPlainChild.label);
+                Assert.False(pfPlainChild.hdr);
+                Assert.Equal(ColorSpace.Gamma, pfPlainChild.colorSpace);
+
+                // Same key times and mode, only color and alpha changed: contentHash must differ and sync to UI.
+                uint hashBefore = soMulti.FindProperty("gradientVal").contentHash;
+                soMulti.FindProperty("gradientVal").gradientValue = MakeGrad(Color.magenta, Color.white, 0.25f, 0.25f, 0.75f, GradientMode.PerceptualBlend);
+                soMulti.ApplyModifiedProperties();
+                Assert.NotEqual(hashBefore, soMulti.FindProperty("gradientVal").contentHash);
+                Tick(panel);
+                Assert.Equal(Color.magenta, pfPlainChild.value.colorKeys[0].color);
+                Assert.Equal(0.25f, pfPlainChild.value.alphaKeys[0].alpha);
+
+                var pfUsage = new PropertyField(soSingle.FindProperty("hdrGradientVal"));
+                panel.visualTree.Add(pfUsage);
+                pfUsage.Bind(soSingle);
+                Tick(panel);
+                var pfUsageChild = Assert.IsType<GradientField>(pfUsage.hierarchy[0]);
+                Assert.True(pfUsageChild.hdr);
+                Assert.Equal(ColorSpace.Linear, pfUsageChild.colorSpace);
+                Assert.Equal(new Color(2f, 0.5f, 0f, 1f), pfUsageChild.value.colorKeys[0].color);
+
+                // Disposing SerializedObject unbinds cleanly while runtime DataBinding remains active.
+                soMulti.Dispose();
+                gf.value = MakeGrad(Color.black, Color.black, 0.5f, 1f, 1f, GradientMode.Fixed);
+                rt.text = "rt-grad-1";
+                Tick(panel);
+                Assert.Equal(GradientMode.PerceptualBlend, t1.gradientVal.mode);
+                Assert.Equal("rt-grad-1", gf.tooltip);
+            }
+            finally
+            {
+                soMulti.Dispose();
+                soSingle.Dispose();
                 Object.DestroyImmediate(t1);
                 Object.DestroyImmediate(t2);
                 Object.DestroyImmediate(settings);
