@@ -1,0 +1,53 @@
+{"k":"direct.zero.initial","v":"(0,0,0,0)|m=0|x=0:0:0|y=0:0:0|z=0:0:0|w=0:0:0|e=(0,0,0,0)->(0,0,0,0)|se="}
+{"k":"direct.zero.noop","v":"(0,0,0,0)|m=0|x=0:0:0|y=0:0:0|z=0:0:0|w=0:0:0|e=1|se=0|mod=0"}
+{"k":"direct.main.initial","v":"(1.5,-2.25,3.75,-4.5)|m=0|x=1.5:1.5:0|y=-2.25:-2.25:0|z=3.75:3.75:0|w=-4.5:-4.5:0|e=(0,0,0,0)->(1.5,-2.25,3.75,-4.5)"}
+{"k":"direct.main.ui_whole","v":"(10,20,30,40)|m=0|x=10:10:0|y=20:20:0|z=30:30:0|w=40:40:0|t=(10,20,30,40)|p=(10,20,30,40)|ec=2"}
+{"k":"direct.main.noop","v":"(10,20,30,40)|ec_delta=0"}
+{"k":"direct.main.so_whole","v":"(-4,5.5,-6.25,7.75)|m=0|x=-4:-4:0|y=5.5:5.5:0|z=-6.25:-6.25:0|w=7.75:7.75:0|t=(-4,5.5,-6.25,7.75)|ec=3"}
+{"k":"direct.main.external_target","v":"(7,8,9,10)|m=0|x=7:7:0|y=8:8:0|z=9:9:0|w=10:10:0|ec=4"}
+{"k":"direct.main.ui_x","v":"(11.5,8,9,10)|m=0|x=11.5:11.5:0|y=8:8:0|z=9:9:0|w=10:10:0|t=(11.5,8,9,10)|ec=5"}
+{"k":"direct.main.ui_y","v":"(11.5,-22.25,9,10)|m=0|x=11.5:11.5:0|y=-22.25:-22.25:0|z=9:9:0|w=10:10:0|t=(11.5,-22.25,9,10)|ec=6"}
+{"k":"direct.main.ui_z","v":"(11.5,-22.25,33.75,10)|m=0|x=11.5:11.5:0|y=-22.25:-22.25:0|z=33.75:33.75:0|w=10:10:0|t=(11.5,-22.25,33.75,10)|ec=7"}
+{"k":"direct.main.ui_w","v":"(11.5,-22.25,33.75,-44.5)|m=0|x=11.5:11.5:0|y=-22.25:-22.25:0|z=33.75:33.75:0|w=-44.5:-44.5:0|t=(11.5,-22.25,33.75,-44.5)|ec=8"}
+{"k":"direct.main.so_x","v":"(101,-22.25,33.75,-44.5)|m=0|x=101:101:0|y=-22.25:-22.25:0|z=33.75:33.75:0|w=-44.5:-44.5:0|t=(101,-22.25,33.75,-44.5)"}
+{"k":"direct.main.so_y","v":"(101,-202.5,33.75,-44.5)|m=0|x=101:101:0|y=-202.5:-202.5:0|z=33.75:33.75:0|w=-44.5:-44.5:0|t=(101,-202.5,33.75,-44.5)"}
+{"k":"direct.main.so_z","v":"(101,-202.5,303.25,-44.5)|m=0|x=101:101:0|y=-202.5:-202.5:0|z=303.25:303.25:0|w=-44.5:-44.5:0|t=(101,-202.5,303.25,-44.5)"}
+{"k":"direct.main.so_w","v":"(101,-202.5,303.25,-404.75)|m=0|x=101:101:0|y=-202.5:-202.5:0|z=303.25:303.25:0|w=-404.75:-404.75:0|t=(101,-202.5,303.25,-404.75)"}
+{"k":"direct.detached.before_attach","v":"otherVec|(0,0,0,0)|m=0|x=0:0:0|y=0:0:0|z=0:0:0|w=0:0:0"}
+{"k":"direct.detached.after_attach","v":"(10,20,30,40)|m=0|x=10:10:0|y=20:20:0|z=30:30:0|w=40:40:0"}
+{"k":"multi.eq_zw.initial","v":"(1,10,100,100)|m=0|x=1:—:1|y=10:10:0|z=100:—:1|w=100:—:1|a=(1,10,100,100)|b=(2,10,200,300)|ec=0"}
+{"k":"multi.eq_zw.ui_edit_x","v":"(5,10,100,100)|m=0|x=5:5:0|y=10:10:0|z=100:—:1|w=100:—:1|a=(5,10,100,100)|b=(5,10,200,300)|ec=1"}
+{"k":"multi.eq_zw.ui_edit_y","v":"(5,15,100,100)|m=0|x=5:5:0|y=15:15:0|z=100:—:1|w=100:—:1|a=(5,15,100,100)|b=(5,15,200,300)|ec=2"}
+{"k":"multi.eq_zw.ui_edit_w","v":"(5,15,100,400)|m=0|x=5:5:0|y=15:15:0|z=100:—:1|w=400:400:0|a=(5,15,100,400)|b=(5,15,200,400)|ec=3"}
+{"k":"multi.neq_zw.initial","v":"(1,10,100,1000)|m=0|x=1:—:1|y=10:10:0|z=100:—:1|w=1000:—:1"}
+{"k":"multi.neq_zw.ui_edit_x","v":"(6,10,100,1000)|m=0|x=6:6:0|y=10:10:0|z=100:—:1|w=1000:1000:0|a=(6,10,100,1000)|b=(6,10,200,1000)"}
+{"k":"multi.neq_zw.ui_edit_w_to_z","v":"(1,10,100,100)|m=0|x=1:—:1|y=10:10:0|z=100:—:1|w=100:—:1|a=(1,10,100,1000)|b=(2,10,200,2000)"}
+{"k":"multi.ui_whole_all","v":"(7,8,9,11)|m=0|x=7:7:0|y=8:8:0|z=9:9:0|w=11:11:0|a=(7,8,9,11)|b=(7,8,9,11)"}
+{"k":"multi.comp_w_field.initial","v":"40:—:1"}
+{"k":"multi.comp_w_field.ui_edit","v":"99:99:0|a=(10,20,30,99)|b=(50,60,70,99)"}
+{"k":"tree.initial","v":"(1.5,-2.25,3.75,-4.5)|(-7,8.5,-9.25,10.75)|(4.5,5.5,6.5,7.5)|(4,5,6,7)|7|(2,3)|(9,8,7)|42|Beta|-1"}
+{"k":"tree.ui_to_so","v":"(-7,8.5,-9.25,123.5)|(-9.5,5.5,6.5,7.5)|(4,5,6,55.25)|(4,5,6,55.25)|(2,13)|(9,8,77)|99|Alpha|BitB"}
+{"k":"tree.so_to_ui","v":"(1,2,3,4)|4|(88,8.5,-9.25,123.5)|(-9.5,5.5,6.5,-44)"}
+{"k":"pf.auto.initial_collapsed","v":"Foldout|unity-foldout-myStartVec|My Start Vec|exp=0|n=0|[]|prop_exp=0|ec=0"}
+{"k":"pf.auto.expanded","v":"Foldout|unity-foldout-myStartVec|My Start Vec|exp=1|n=4|[myStartVec.x=1.5:1.5:0;myStartVec.y=-2.25:-2.25:0;myStartVec.z=3.75:3.75:0;myStartVec.w=-4.5:-4.5:0]|prop_exp=1|ec=0"}
+{"k":"pf.auto.ui_sub_w","v":"Foldout|unity-foldout-myStartVec|My Start Vec|exp=1|n=4|[myStartVec.x=1.5:1.5:0;myStartVec.y=-2.25:-2.25:0;myStartVec.z=3.75:3.75:0;myStartVec.w=42.5:42.5:0]|t=(1.5,-2.25,3.75,42.5)|ec=0"}
+{"k":"pf.auto.so_sub_x","v":"Foldout|unity-foldout-myStartVec|My Start Vec|exp=1|n=4|[myStartVec.x=64:64:0;myStartVec.y=-2.25:-2.25:0;myStartVec.z=3.75:3.75:0;myStartVec.w=42.5:42.5:0]|ec=0"}
+{"k":"pf.auto.label_update","v":"Foldout|unity-foldout-myStartVec|My Start Vec|exp=1|n=4|[myStartVec.x=64:64:0;myStartVec.y=-2.25:-2.25:0;myStartVec.z=3.75:3.75:0;myStartVec.w=42.5:42.5:0]"}
+{"k":"pf.rebind_same_type","v":"1|Foldout|unity-foldout-nested.offset|My Start Vec|exp=1|n=4|[nested.offset.x=4:4:0;nested.offset.y=5:5:0;nested.offset.z=6:6:0;nested.offset.w=7:7:0]"}
+{"k":"pf.rebind_vec3","v":"Vector3Field|unity-input-siblingVec3|Custom Plane|(9,8,7)"}
+{"k":"pf.rebind_scalar","v":"IntegerField|unity-input-scalarInt|Custom Plane|42"}
+{"k":"pf.multi.initial","v":"Foldout|unity-foldout-multiVec|Multi Vec4|exp=1|n=4|[multiVec.x=3:—:1;multiVec.y=30:30:0;multiVec.z=300:—:1;multiVec.w=3000:—:1]"}
+{"k":"pf.multi.ui_edit_x","v":"Foldout|unity-foldout-multiVec|Multi Vec4|exp=1|n=4|[multiVec.x=9:9:0;multiVec.y=30:30:0;multiVec.z=300:—:1;multiVec.w=3000:—:1]|a=(9,30,300,3000)|b=(9,30,400,5000)"}
+{"k":"pf.multi.ui_edit_w","v":"Foldout|unity-foldout-multiVec|Multi Vec4|exp=1|n=4|[multiVec.x=9:9:0;multiVec.y=30:30:0;multiVec.z=300:—:1;multiVec.w=9000:9000:0]|a=(9,30,300,9000)|b=(9,30,400,9000)"}
+{"k":"unbind_rebind.initial","v":"(1,2,3,4)|m=0|x=1:1:0|y=2:2:0|z=3:3:0|w=4:4:0|tip=rt-vec4-tip-0"}
+{"k":"unbind_rebind.after_unbind","v":"(99,98,97,96)|m=0|x=99:99:0|y=98:98:0|z=97:97:0|w=96:96:0|t1=(11,12,13,14)|tip=rt-vec4-tip-1"}
+{"k":"unbind_rebind.after_mixed_unbind","v":"(10,20,30,99)|m=0|x=10:—:1|y=20:—:1|z=30:—:1|w=99:99:0"}
+{"k":"unbind_rebind.rebind_prop","v":"(5,6,7,8)|m=0|x=5:5:0|y=6:6:0|z=7:7:0|w=8:8:0"}
+{"k":"unbind_rebind.rebind_prop_edit","v":"(5,6,7,88)|t1_start=(11,12,13,14)"}
+{"k":"unbind_rebind.rebind_so2","v":"(70,80,90,100)|m=0|x=70:70:0|y=80:80:0|z=90:90:0|w=100:100:0"}
+{"k":"unbind_rebind.rebind_so2_edit","v":"(71,80,90,100)|t1_other=(5,6,7,88)"}
+{"k":"pf.after_unbind","v":"Foldout|unity-foldout-myStartVec|My Start Vec|exp=1|n=4|[myStartVec.x=11:11:0;myStartVec.y=12:12:0;myStartVec.z=13:13:0;myStartVec.w=14:14:0]"}
+{"k":"pf.after_rebind_so2","v":"Foldout|unity-foldout-myStartVec|My Start Vec|exp=1|n=4|[myStartVec.x=71:71:0;myStartVec.y=80:80:0;myStartVec.z=90:90:0;myStartVec.w=100:100:0]"}
+{"k":"incompatible.int_field","v":"0"}
+{"k":"logs","v":["Warning:Field type UnityEngine.UIElements.IntegerField is not compatible with Vector4 property \"myStartVec\""]}
+{"k":"complete","v":true}
