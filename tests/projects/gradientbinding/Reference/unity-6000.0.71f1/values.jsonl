@@ -1,0 +1,59 @@
+{"k":"standalone.defaults","v":"My Gradient|111|0/-1[c:(1,1,1,1)@0;(1,1,1,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0"}
+{"k":"standalone.copy_independence","v":"111|1/-1[c:(1,0,0,1)@0;(0,1,0,1)@0.500007629;(0,0,1,1)@1|a:1@0;0.5@0.500007629;0@1]|ev=1:1/-1[c:(1,0,0,1)@0;(0,1,0,1)@0.500007629;(0,0,1,1)@1|a:1@0;0.5@0.500007629;0@1]"}
+{"k":"standalone.equality_and_null","v":"0|0:1/-1[c:(1,0,0,1)@0;(0,1,0,1)@0.500007629;(0,0,1,1)@1|a:1@0;0.5@0.500007629;0@1]|0:1/-1[c:(1,0,0,1)@0;(0,1,0,1)@0.500007629;(0,0,1,1)@1|a:1@0;0.5@0.500007629;0@1]|1|1|null|ec=4|null_noop=4|restored=0/-1[c:(1,1,1,1)@0;(1,1,1,1)@1|a:1@0;1@1]"}
+{"k":"standalone.hdr_cs","v":"1|Linear"}
+{"k":"prop.meta","v":"0|Gradient"}
+{"k":"direct.default.initial","v":"0/-1[c:(1,1,1,1)@0;(1,1,1,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0|ev=0/-1[c:(1,1,1,1)@0;(1,1,1,1)@1|a:1@0;1@1]"}
+{"k":"direct.default.noop","v":"0/-1[c:(1,1,1,1)@0;(1,1,1,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0|ec=1|mod=0"}
+{"k":"direct.main.initial","v":"1/-1[c:(0.25,0.5,0.75,1)@0;(1,0.25,0,1)@0.500007629;(0,0.75,0.5,1)@1|a:0.25@0;0.75@1]|hdr=0|cs=Gamma|m=0|ml=0|ec=1"}
+{"k":"direct.main.ui_to_so","v":"1|2/-1[c:(0.5,0.25,1,1)@0;(2,0.5,0,1)@1|a:0.75@0;0.25@1]|hdr=0|cs=Gamma|m=0|ml=0|t=2/-1[c:(0.5,0.25,1,1)@0;(2,0.5,0,1)@1|a:0.75@0;0.25@1]|p=2/-1[c:(0.5,0.25,1,1)@0;(2,0.5,0,1)@1|a:0.75@0;0.25@1]|ec=2"}
+{"k":"direct.main.noop","v":"0"}
+{"k":"direct.main.so_to_ui","v":"0/-1[c:(1,0,0,1)@0;(1,0.921568632,0.0156862754,1)@0.500007629;(0,0,1,1)@1|a:1@0;0.5@1]|hdr=0|cs=Gamma|m=0|ml=0|t=0/0[c:(1,0,0,1)@0;(1,0.921568632,0.0156862754,1)@0.500007629;(0,0,1,1)@1|a:1@0;0.5@1]|ec=3"}
+{"k":"direct.main.so_mode_only","v":"1/-1[c:(1,0,0,1)@0;(1,0.921568632,0.0156862754,1)@0.500007629;(0,0,1,1)@1|a:1@0;0.5@1]|hdr=0|cs=Gamma|m=0|ml=0|t=1/0[c:(1,0,0,1)@0;(1,0.921568632,0.0156862754,1)@0.500007629;(0,0,1,1)@1|a:1@0;0.5@1]|ec=4"}
+{"k":"direct.main.so_color_only","v":"1/-1[c:(0,1,0,1)@0;(0,1,1,1)@0.500007629;(1,0,1,1)@1|a:1@0;0.5@1]|hdr=0|cs=Gamma|m=0|ml=0|ec=5"}
+{"k":"direct.main.so_alpha_only","v":"1/-1[c:(0,1,0,1)@0;(0,1,1,1)@0.500007629;(1,0,1,1)@1|a:0.25@0;0.75@1]|hdr=0|cs=Gamma|m=0|ml=0|ec=6"}
+{"k":"direct.main.external_inplace","v":"0/-1[c:(1,1,1,1)@0;(1,0,0,1)@1|a:0.5@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0|ec=7"}
+{"k":"direct.main.external_replace","v":"2/-1[c:(0,0,1,1)@0;(1,0.921568632,0.0156862754,1)@1|a:1@0;0@1]|hdr=0|cs=Gamma|m=0|ml=0|ec=8"}
+{"k":"direct.detached.before_attach","v":"otherGradient|0/-1[c:(1,1,1,1)@0;(1,1,1,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0"}
+{"k":"direct.detached.after_attach","v":"0/-1[c:(1,0,0,1)@0;(0,0,1,1)@1|a:1@0;0.5@1]|hdr=0|cs=Gamma|m=0|ml=0"}
+{"k":"multi.initial","v":"0/-1[c:(1,0,0,1)@0;(1,1,1,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=1|ml=1|a=0/-1[c:(1,0,0,1)@0;(1,1,1,1)@1|a:1@0;1@1]|b=0/-1[c:(0,0,1,1)@0;(1,1,1,1)@1|a:1@0;1@1]|ec=0"}
+{"k":"multi.ui_edit_new","v":"1|1/-1[c:(0,1,0,1)@0;(1,0.921568632,0.0156862754,1)@1|a:0.5@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0|a=1/-1[c:(0,1,0,1)@0;(1,0.921568632,0.0156862754,1)@1|a:0.5@0;1@1]|b=1/-1[c:(0,1,0,1)@0;(1,0.921568632,0.0156862754,1)@1|a:0.5@0;1@1]|ec=1"}
+{"k":"multi.mode_only_mixed","v":"0/-1[c:(1,0,0,1)@0;(0,0,1,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=1|ml=1"}
+{"k":"multi.ui_edit_to_t0","v":"0/-1[c:(1,0,0,1)@0;(0,0,1,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0|a=0/-1[c:(1,0,0,1)@0;(0,0,1,1)@1|a:1@0;1@1]|b=0/-1[c:(1,0,0,1)@0;(0,0,1,1)@1|a:1@0;1@1]"}
+{"k":"multi.alpha_only_mixed","v":"0/-1[c:(1,0,0,1)@0;(0,0,1,1)@1|a:0.25@0;1@1]|hdr=0|cs=Gamma|m=1|ml=1"}
+{"k":"tree.initial","v":"1/-1[c:(0.25,0.5,0.75,1)@0;(1,0.25,0,1)@0.500007629;(0,0.75,0.5,1)@1|a:0.25@0;0.75@1]|1/-1[c:(1,0.921568632,0.0156862754,1)@0;(1,0,0,1)@1|a:0.5@0;1@1]|0/-1[c:(0,0,1,1)@0;(0,1,0,1)@1|a:0.25@0;0.75@1]|0/-1[c:(0,1,1,1)@0;(1,0,1,1)@1|a:1@0;0.25@1]|8/8[2:1->2]|[(1,2,3);(4,5,6)]|[(1.5,-2,3);(2,3,4)]|(1,-2,30,40)|(0.25,0.5,0.75,1)|(3,-4,5)|42|Beta|-1"}
+{"k":"tree.ui_to_so","v":"0/-1[c:(1,0,1,1)@0;(0,1,1,1)@1|a:0.5@0;0.25@1]|0/-1[c:(1,0,0,1)@0;(1,0.921568632,0.0156862754,1)@1|a:1@0;0.5@1]|0/-1[c:(0,0,0,1)@0;(0,1,0,1)@1|a:0.25@0;1@1]|8/8[2:5->6]|[(11,2,3);(4,5,6)]|[(12.5,-2,3);(2,3,4)]|(15,-2,30,40)|(1,0.5,0.25,0.5)|(3,-4,77)|99|Alpha|BitB"}
+{"k":"tree.so_to_ui","v":"0/-1[c:(0,0,1,1)@0;(1,0,0,1)@1|a:0.75@0;0.25@1]|0/-1[c:(0,1,0,1)@0;(1,1,1,1)@1|a:1@0;0.5@1]|0/-1[c:(1,0.921568632,0.0156862754,1)@0;(0,0,1,1)@1|a:0.5@0;1@1]"}
+{"k":"pf.auto.initial","v":"GradientField|unity-input-myGradient|My Gradient|111111|1/-1[c:(0.25,0.5,0.75,1)@0;(1,0.25,0,1)@0.500007629;(0,0.75,0.5,1)@1|a:0.25@0;0.75@1]|hdr=0|cs=Gamma|m=0|ml=0|evts=myGradient:1/1[c:(0.25,0.5,0.75,1)@0;(1,0.25,0,1)@0.500007629;(0,0.75,0.5,1)@1|a:0.25@0;0.75@1]"}
+{"k":"pf.auto.ui_edit","v":"GradientField|unity-input-myGradient|My Gradient|111111|2/-1[c:(1,0,0,1)@0;(0,1,0,1)@1|a:0.5@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0|t=2/-1[c:(1,0,0,1)@0;(0,1,0,1)@1|a:0.5@0;1@1]|evts=2"}
+{"k":"pf.auto.so_edit","v":"GradientField|unity-input-myGradient|My Gradient|111111|0/-1[c:(0,0,1,1)@0;(0,1,1,1)@1|a:1@0;0.25@1]|hdr=0|cs=Gamma|m=0|ml=0|evts=3"}
+{"k":"pf.auto.label_update","v":"GradientField|unity-input-myGradient|Custom Gradient|111111|0/-1[c:(0,0,1,1)@0;(0,1,1,1)@1|a:1@0;0.25@1]|hdr=0|cs=Gamma|m=0|ml=0"}
+{"k":"pf.rebind_same_type","v":"1|GradientField|unity-input-nested.ramp|Custom Gradient|111111|0/-1[c:(0,1,1,1)@0;(1,0,1,1)@1|a:1@0;0.25@1]|hdr=0|cs=Gamma|m=0|ml=0"}
+{"k":"pf.rebind_plain_to_usage","v":"1|GradientField|unity-input-linearHdrGradient|Custom Gradient|111111|2/-1[c:(0.5,2,0.25,1)@0;(1,0.25,4,1)@1|a:0.800000012@0;0.200000003@1]|hdr=0|cs=Gamma|m=0|ml=0"}
+{"k":"pf.rebind_usage_to_plain","v":"GradientField|unity-input-otherGradient|Custom Gradient|111111|0/-1[c:(1,0,0,1)@0;(0,0,1,1)@1|a:1@0;0.5@1]|hdr=0|cs=Gamma|m=0|ml=0"}
+{"k":"pf.usage.hdr_initial","v":"GradientField||Hdr Gradient|001111|0/-1[c:(2,0.5,0,1)@0;(0,1.5,3,1)@1|a:1@0;0.5@1]|hdr=1|cs=Gamma|m=0|ml=0|evts=1"}
+{"k":"pf.usage.hdr_ui_edit","v":"GradientField||Hdr Gradient|001111|0/-1[c:(4,0.25,0.5,1)@0;(0.5,3,1,1)@1|a:0.75@0;0.5@1]|hdr=1|cs=Gamma|m=0|ml=0|t=0/-1[c:(4,0.25,0.5,1)@0;(0.5,3,1,1)@1|a:0.75@0;0.5@1]|evts=2"}
+{"k":"pf.usage.linear_hdr","v":"GradientField||Linear Hdr Gradient|001111|2/-1[c:(0.5,2,0.25,1)@0;(1,0.25,4,1)@1|a:0.800000012@0;0.200000003@1]|hdr=1|cs=Linear|m=0|ml=0"}
+{"k":"pf.usage.linear_ldr","v":"GradientField||Linear LDR|001111|0/-1[c:(0,1,0,1)@0;(1,0.921568632,0.0156862754,1)@1|a:1@0;1@1]|hdr=0|cs=Linear|m=0|ml=0"}
+{"k":"pf.usage.rebind_to_plain","v":"GradientField|unity-input-otherGradient|Other Gradient|111111|0/-1[c:(1,0,0,1)@0;(0,0,1,1)@1|a:1@0;0.5@1]|hdr=0|cs=Gamma|m=0|ml=0"}
+{"k":"pf.rebind_curve","v":"CurveField|unity-input-siblingCurve|Custom Gradient|8/8[2:1->2]"}
+{"k":"pf.rebind_boundsint","v":"BoundsIntField|unity-input-siblingBoundsInt|Custom Gradient|[(1,2,3);(4,5,6)]"}
+{"k":"pf.rebind_color","v":"ColorField|unity-input-siblingColor|Custom Gradient|(0.25,0.5,0.75,1)"}
+{"k":"pf.rebind_vec3","v":"Vector3Field|unity-input-siblingVec3|Custom Gradient|(3,-4,5)"}
+{"k":"pf.rebind_vec4","v":"Foldout|unity-foldout-siblingVec4|Custom Gradient|0"}
+{"k":"pf.rebind_scalar","v":"IntegerField|unity-input-scalarInt|Custom Gradient|42"}
+{"k":"pf.rebind_back_gradient","v":"GradientField|unity-input-otherGradient|Custom Gradient|111111|0/-1[c:(1,0,0,1)@0;(0,0,1,1)@1|a:1@0;0.5@1]|hdr=0|cs=Gamma|m=0|ml=0"}
+{"k":"pf.multi.initial","v":"GradientField|unity-input-multiGradient|Multi Gradient|111111|0/-1[c:(1,0,0,1)@0;(1,1,1,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=1|ml=1|ec=0"}
+{"k":"pf.multi.ui_edit","v":"GradientField|unity-input-multiGradient|Multi Gradient|111111|0/-1[c:(1,0.921568632,0.0156862754,1)@0;(0,1,0,1)@1|a:0.5@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0|a=0/-1[c:(1,0.921568632,0.0156862754,1)@0;(0,1,0,1)@1|a:0.5@0;1@1]|b=0/-1[c:(1,0.921568632,0.0156862754,1)@0;(0,1,0,1)@1|a:0.5@0;1@1]|ec=1"}
+{"k":"unbind_rebind.initial","v":"0/-1[c:(1,0,0,1)@0;(1,1,1,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0|tip=rt-grad-tip-0"}
+{"k":"unbind_rebind.after_unbind","v":"0/-1[c:(1,0,1,1)@0;(1,0,1,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0|t1=0/-1[c:(0,1,1,1)@0;(0,1,1,1)@1|a:1@0;1@1]|tip=rt-grad-tip-1"}
+{"k":"unbind_rebind.after_mixed_unbind","v":"0/-1[c:(1,0,0,1)@0;(0,0,1,1)@1|a:0.25@0;1@1]|hdr=0|cs=Gamma|m=1|ml=1"}
+{"k":"unbind_rebind.rebind_prop","v":"0/-1[c:(0,1,0,1)@0;(0,0,0,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0"}
+{"k":"unbind_rebind.rebind_prop_edit","v":"0/-1[c:(1,0.921568632,0.0156862754,1)@0;(1,0,0,1)@1|a:1@0;1@1]|t1_start=0/-1[c:(0,1,1,1)@0;(0,1,1,1)@1|a:1@0;1@1]"}
+{"k":"unbind_rebind.rebind_so2","v":"0/-1[c:(0,0,1,1)@0;(1,0.921568632,0.0156862754,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0"}
+{"k":"unbind_rebind.rebind_so2_edit","v":"0/-1[c:(1,1,1,1)@0;(0,0,1,1)@1|a:1@0;1@1]|t1_other=0/-1[c:(1,0.921568632,0.0156862754,1)@0;(1,0,0,1)@1|a:1@0;1@1]"}
+{"k":"pf.after_unbind","v":"GradientField|unity-input-myGradient|My Gradient|111111|0/-1[c:(0,1,1,1)@0;(0,1,1,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0"}
+{"k":"pf.after_rebind_so2","v":"GradientField|unity-input-myGradient|My Gradient|111111|0/-1[c:(1,1,1,1)@0;(0,0,1,1)@1|a:1@0;1@1]|hdr=0|cs=Gamma|m=0|ml=0"}
+{"k":"incompatible.int_field","v":"0"}
+{"k":"logs","v":["Warning:Field type UnityEngine.UIElements.IntegerField is not compatible with Gradient property \"myGradient\""]}
+{"k":"complete","v":true}
