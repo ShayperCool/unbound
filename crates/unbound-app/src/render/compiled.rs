@@ -3107,9 +3107,20 @@ mod tests {
                     .map_or(u32::MAX, |b| b.size);
             // Never shared under an override that reaches it; always without overrides (other
             // overrides may keep a per-draw copy: that costs a copy, not a value).
+            let bound_bit = layout
+                .bindings
+                .iter()
+                .position(|b| b.standalone_block.as_deref() == Some(bound_name))
+                .map_or(0, |k| 1u8 << k);
+            let reached = values.taken_overrides().any(|(n, _)| {
+                layout
+                    .override_binding_mask
+                    .get(n.as_str())
+                    .is_some_and(|mask| mask & bound_bit != 0)
+            });
             if targets_bound || !shares {
                 assert_eq!(shared_constants.len(), 0, "overrides {overrides:?}");
-            } else if values.taken_overrides().next().is_none() {
+            } else if !reached {
                 assert_eq!(shared_constants.len(), 1, "overrides {overrides:?}");
             }
             let mut reference = vec![0u8; size_of_program];
@@ -3775,6 +3786,262 @@ mod tests {
                 .iter()
                 .all(|&b| b == 0)
         );
+    }
+
+    /// The cached binding of a draw is reused only while what its values come from is the same:
+    /// a material texture's `_ST` (another material), a `_TexelSize` (a texture resized), the
+    /// main texture's (another main texture) and a bound constant buffer's bytes (a new revision).
+    /// Each draw's binding is what a full fill of it writes.
+    #[test]
+    fn a_cached_binding_follows_materials_textures_and_bound_buffers() {
+        let lab =
+            ShaderLab::parse(r#"Shader "S" { Properties {} SubShader { Pass { } } }"#).unwrap();
+        let material = |st: [f32; 4]| Material {
+            shader: "S".into(),
+            properties: vec![
+                ("_Detail".into(), PropertyValue::Texture { handle: 5, st }),
+                (
+                    "_MainTex".into(),
+                    PropertyValue::Texture {
+                        handle: 6,
+                        st: [1.0, 1.0, 0.0, 0.0],
+                    },
+                ),
+            ],
+            ..Default::default()
+        };
+        let (mat_a, mat_b) = (
+            material([2.0, 2.0, 0.5, 0.0]),
+            material([3.0, 1.0, 0.0, 0.25]),
+        );
+        // Binding 0: per draw. Binding 1: texture-derived values, no static bytes. Binding 2: a
+        // bound cbuffer beside a global (two blocks: not a standalone binding).
+        let program = Compiled {
+            vertex: String::new(),
+            fragment: String::new(),
+            vertex_entry: String::new(),
+            fragment_entry: String::new(),
+            uniforms: vec![
+                uniform("unity_ObjectToWorld", 0, 4, 4),
+                uniform("_Detail_ST", 256, 4, 1),
+                uniform("_Detail_TexelSize", 272, 4, 1),
+                uniform("_MainTex_TexelSize", 288, 4, 1),
+                uniform("_Bound", 512, 4, 1),
+                uniform("_G", 528, 4, 1),
+            ],
+            instanced_properties: Vec::new(),
+            mesh_instance_stride: None,
+            mesh_instance_uniform_scaling: false,
+            mesh_instance_max_count: None,
+            uniform_size: 544,
+            uniform_bindings: vec![
+                unbound_shaders::UniformBinding {
+                    offset: 0,
+                    size: 64,
+                },
+                unbound_shaders::UniformBinding {
+                    offset: 256,
+                    size: 48,
+                },
+                unbound_shaders::UniformBinding {
+                    offset: 512,
+                    size: 32,
+                },
+            ],
+            textures: vec!["_Detail".into(), "_MainTex".into()],
+            texture_dims: Vec::new(),
+            texture_slots: Vec::new(),
+            texture_aliases: Vec::new(),
+            main_texture: true,
+            buffers: Vec::new(),
+            keywords: Vec::new(),
+            blocks: vec![
+                unbound_shaders::BlockRange {
+                    name: "Params".into(),
+                    offset: 512,
+                    size: 16,
+                },
+                unbound_shaders::BlockRange {
+                    name: "$Global".into(),
+                    offset: 528,
+                    size: 16,
+                },
+            ],
+            extra_vertex_inputs: false,
+            vertex_inputs: true,
+            framebuffer_fetch: 0,
+        };
+        let plan: Vec<Source> = program
+            .uniforms
+            .iter()
+            .map(|u| Source::of(&u.name))
+            .collect();
+        let by_name: rustc_hash::FxHashMap<String, u32> = program
+            .uniforms
+            .iter()
+            .enumerate()
+            .map(|(i, u)| (u.name.clone(), i as u32))
+            .collect();
+        let layout = ProgramBindings::of(&program, &plan);
+        assert!(
+            !layout.bindings[1].has_per_draw_builtin && !layout.bindings[2].has_per_draw_builtin
+        );
+        assert!(layout.bindings[2].standalone_block.is_none());
+        let block_a = material_block(&program, &plan, &layout, &mat_a, &lab, true);
+        let block_b = material_block(&program, &plan, &layout, &mat_b, &lab, true);
+
+        let globals = vec![(
+            "_G".to_string(),
+            PropertyValue::Vector([4.0, 3.0, 2.0, 1.0]),
+        )];
+        let mut globals_index = unbound_runtime::render_protocol::owned::NameIndex::default();
+        globals_index.refresh(&globals);
+        let small = |name: &str| match name {
+            "_Detail" => Some((64, 32)),
+            "_MainTex" => Some((128, 128)),
+            _ => None,
+        };
+        let resized = |name: &str| match name {
+            "_Detail" => Some((256, 16)),
+            "_MainTex" => Some((128, 128)),
+            _ => None,
+        };
+        let other_main = |name: &str| match name {
+            "_Detail" => Some((64, 32)),
+            "_MainTex" => Some((32, 8)),
+            _ => None,
+        };
+        let params_1 = 1.0f32.to_le_bytes().repeat(4);
+        let params_2 = 7.0f32.to_le_bytes().repeat(4);
+        let bound_1 = |name: &str| {
+            (name == "Params").then_some(ConstantBufferRef {
+                handle: 3,
+                revision: 1,
+                bytes: &params_1,
+            })
+        };
+        let bound_2 = |name: &str| {
+            (name == "Params").then_some(ConstantBufferRef {
+                handle: 3,
+                revision: 2,
+                bytes: &params_2,
+            })
+        };
+        let ident = {
+            let mut m = [0.0f32; 16];
+            for i in 0..4 {
+                m[i * 5] = 1.0;
+            }
+            m
+        };
+        let base = DrawValues {
+            gizmo_draw: false,
+            color: [1.0; 4],
+            sprite_color: [1.0; 4],
+            model: ident,
+            view: ident,
+            proj: ident,
+            gpu_proj: ident,
+            flipped: false,
+            reversed_z: true,
+            camera_view: ident,
+            camera_proj: ident,
+            screen: [1280.0, 720.0],
+            time: 1.0,
+            linear: true,
+            material: &mat_a,
+            overrides: &[],
+            hidden: None,
+            lab: &lab,
+            globals: &globals,
+            globals_index: &globals_index,
+            globals_revision: 1,
+            textures_generation: 1,
+            main_texture_handle: 6,
+            main_alpha_only: false,
+            texture_size: &small,
+            constant_buffer: &bound_1,
+            instance: None,
+            instance_empty: false,
+            element: None,
+        };
+        let cam = CachedCamera::compute(1, CameraInput::from_values(&base), &base);
+        let mut data = Vec::new();
+        let mut shared_constants = HashMap::default();
+        let mut shared_bindings = HashMap::default();
+        let mut empty_slot = None;
+        let mut scratch = String::new();
+        // Pushes a draw; returns its binding offsets after checking each binding's bytes.
+        let mut draw = |values: &DrawValues, block: &MaterialBlock| {
+            let offsets = push_program_uniforms(
+                7,
+                &program,
+                &plan,
+                &by_name,
+                &layout,
+                Some(block),
+                values,
+                &cam,
+                &mut data,
+                &mut shared_constants,
+                &mut shared_bindings,
+                &mut empty_slot,
+                &mut scratch,
+            );
+            let mut full = vec![0u8; program.uniform_size as usize];
+            fill(&program, &plan, values, &mut full);
+            for k in 1..3 {
+                let b = &layout.bindings[k];
+                let at = offsets.offsets[k] as usize;
+                assert_eq!(
+                    &data[at..at + b.size as usize],
+                    &full[b.offset as usize..(b.offset + b.size) as usize],
+                    "binding {k}"
+                );
+            }
+            [offsets.offsets[1], offsets.offsets[2]]
+        };
+        let first = draw(&base, &block_a);
+        // The same draw again: both bindings reused.
+        assert_eq!(draw(&base, &block_a), first);
+        // Another material: its texture's `_ST` differs.
+        let other_material = draw(
+            &DrawValues {
+                material: &mat_b,
+                ..base
+            },
+            &block_b,
+        );
+        assert_ne!(other_material[0], first[0]);
+        // A texture resized (a new generation): its `_TexelSize` differs.
+        let resized_texture = draw(
+            &DrawValues {
+                textures_generation: 2,
+                texture_size: &resized,
+                ..base
+            },
+            &block_a,
+        );
+        assert_ne!(resized_texture[0], first[0]);
+        // Another main texture: `_MainTex_TexelSize` differs.
+        let main = draw(
+            &DrawValues {
+                main_texture_handle: 9,
+                texture_size: &other_main,
+                ..base
+            },
+            &block_a,
+        );
+        assert_ne!(main[0], first[0]);
+        // The bound buffer's next revision: binding 2's bytes differ.
+        let rewritten = draw(
+            &DrawValues {
+                constant_buffer: &bound_2,
+                ..base
+            },
+            &block_a,
+        );
+        assert_ne!(rewritten[1], first[1]);
     }
 
     #[test]
