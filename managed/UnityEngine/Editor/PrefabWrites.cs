@@ -673,10 +673,11 @@ namespace UnityEditor
             var path = SceneFiles.ProjectRelative(assetPath).Replace('\\', '/');
             if (Directory.Exists(Path.Combine(ProjectInfo.ProjectPath, path)))
                 throw new ArgumentException($"Overwriting a folder with an Asset is not allowed: '{assetPath}'");
-            // Immutable folders are those of the packages the project does not hold.
-            if (path.StartsWith("Packages/", StringComparison.OrdinalIgnoreCase) && !AssetDatabase.Editable(path))
+            // An asset folder of a package the project does not hold; a folder that is no asset
+            // folder falls through to the next check (Unity's PrefabUtility C#).
+            var folder = Path.GetDirectoryName(path)?.Replace('\\', '/');
+            if (!string.IsNullOrEmpty(folder) && AssetDatabase.IsImmutablePackagePath(folder) && AssetDatabase.IsValidFolder(folder))
                 throw new ArgumentException($"Saving Prefab to immutable folder is not allowed: '{assetPath}'");
-            var folder = Path.GetDirectoryName(path);
             if (string.IsNullOrEmpty(folder) || !Directory.Exists(Path.Combine(ProjectInfo.ProjectPath, folder)))
                 throw new ArgumentException($"Given path does not exist: '{assetPath}'");
             // The project's StreamingAssets folder (Unbound's reading of Unity's check, which is not in its C#).

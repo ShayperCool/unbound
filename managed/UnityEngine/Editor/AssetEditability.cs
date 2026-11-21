@@ -56,7 +56,8 @@ namespace UnityEditor
                 if (!IsOpenForEdit(path, out _, statusQueryOptions)) outNotEditablePaths.Add(path);
         }
 
-        static bool IsImmutablePackagePath(string path)
+        /// <summary>Whether the path is in a package the project does not hold (registry, built-in, Git).</summary>
+        internal static bool IsImmutablePackagePath(string path)
         {
             const string prefix = "Packages/";
             if (!path.StartsWith(prefix, StringComparison.Ordinal)) return false;

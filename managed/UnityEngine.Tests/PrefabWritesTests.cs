@@ -437,6 +437,33 @@ namespace UnityEngine.Tests
             Assert.Contains("references 1 scene objects outside its hierarchy",
                 Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(referencing, "Assets/Referencing.prefab", InteractionMode.AutomatedAction)).Message);
             Assert.Same(named.transform, referencing.GetComponent<PrefabTestHolder>().link);
+            // A destroyed object's reference is none, not a scene object outside the hierarchy.
+            var gone = new GameObject("Gone");
+            var dangling = new GameObject("Dangling");
+            m_Made.Add(dangling);
+            dangling.AddComponent<PrefabTestHolder>().link = gone.transform;
+            Object.DestroyImmediate(gone);
+            int outside = 0;
+            Assert.NotNull(PrefabAssets.NewPrefabText("Assets/Dangling.prefab", dangling, _ => outside++));
+            Assert.Equal(0, outside);
+            // An asset folder of a registry package is immutable; a package the project does not have
+            // is no asset folder, so its path does not exist.
+            var packages = new List<UnityEditor.PackageManager.PackageInfo>(UnityEditor.PackageManager.PackageInfo.Registered);
+            UnityEditor.PackageManager.PackageInfo.Register(new[] { UnityEditor.PackageManager.PackageInfo.Create("com.unity.ugui", "2.0.0",
+                UnityEditor.PackageManager.PackageSource.Registry, "/cache/com.unity.ugui", null, null, null, null, null, true) });
+            AssetDatabase.List("[{\"guid\":\"0000000000000000000000000000000c\",\"path\":\"Packages/com.unity.ugui/Runtime\",\"kind\":\"folder\"}]");
+            try
+            {
+                Assert.Equal("Saving Prefab to immutable folder is not allowed: 'Packages/com.unity.ugui/Runtime/X.prefab'",
+                    Assert.Throws<ArgumentException>(() => PrefabUtility.SaveAsPrefabAsset(plain, "Packages/com.unity.ugui/Runtime/X.prefab")).Message);
+                Assert.Equal("Given path does not exist: 'Packages/com.unknown/X.prefab'",
+                    Assert.Throws<ArgumentException>(() => PrefabUtility.SaveAsPrefabAsset(plain, "Packages/com.unknown/X.prefab")).Message);
+            }
+            finally
+            {
+                UnityEditor.PackageManager.PackageInfo.Register(packages);
+                AssetDatabase.List("[]");
+            }
             Assert.Equal("Can't save persistent Objects and connect them to the saved Prefab",
                 Assert.Throws<ArgumentException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(m_Asset, "Assets/Copy.prefab", InteractionMode.AutomatedAction)).Message);
             var fresh = new GameObject("Fresh");
