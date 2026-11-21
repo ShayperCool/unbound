@@ -315,7 +315,7 @@ importers and loaded `SpriteAtlas` instances independent until reimport, writes 
   does `Current` (the same settings in the current format); each records whether the atlas or
   importer was dirty before and the whole file written.
   `LegacyVariant` (a legacy variant of `Current`), `LegacyExcluded` (legacy, not included in
-  builds) and `Packed` (packing `Single.png`, its packed sprites not yet stored) are V1 controls
+  builds) and `Packed` (packing `Single.png`, its packed sprites not yet stored) with its variant `PackedVariant` are V1 controls
   too, and every V1 file is also recorded as it stands when Play mode starts (`*.atStart`).
   `v1wholewritedisabled` runs the V1 fixtures in mode "Disabled" (0), where entering Play mode
   packs nothing. The V1 profiles also give `Scaled` (a variant whose `variantMultiplier` is 2) a master with
