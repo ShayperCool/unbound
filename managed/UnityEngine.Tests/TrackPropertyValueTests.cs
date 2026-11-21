@@ -78,6 +78,7 @@ namespace UnityEngine.Tests
             public Color hdrTint = new Color(2f, 4f, 0.5f, 0.25f);
             public Color32 tint32 = new Color32(16, 128, 240, 200);
             public Rect rectVal = new Rect(1, 2, 3, 4);
+            public RectInt rectIntVal = new RectInt(1, 2, 3, 4);
             public Bounds boundsVal = new Bounds(Vector3.one, Vector3.one * 2f);
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
@@ -1836,6 +1837,90 @@ namespace UnityEngine.Tests
                 Tick(panel);
                 Assert.Equal(new Rect(10f, 20f, 99f, 40f), t1.rectVal);
                 Assert.Equal("rt-rect-1", rf.tooltip);
+            }
+            finally
+            {
+                soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyRectIntMultiEditComponentBindingAndDisposedCleanupWorkAcrossReleases()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.rectIntVal = new RectInt(int.MinValue, 10, -100, int.MaxValue);
+            t2.rectIntVal = new RectInt(2, 10, -200, int.MaxValue);
+            using var panel = RuntimePanel.Create(settings);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                var rt = new RuntimeModel { text = "rt-rectint-0" };
+                var rif = new RectIntField { dataSource = rt };
+                rif.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                panel.visualTree.Add(rif);
+                rif.BindProperty(soMulti.FindProperty("rectIntVal"));
+                Tick(panel);
+
+                var xSub = rif.Q<IntegerField>("unity-x-input");
+                var ySub = rif.Q<IntegerField>("unity-y-input");
+                var wSub = rif.Q<IntegerField>("unity-width-input");
+                var hSub = rif.Q<IntegerField>("unity-height-input");
+                Assert.False(rif.showMixedValue);
+                Assert.True(xSub.showMixedValue);
+                Assert.False(ySub.showMixedValue);
+                Assert.True(wSub.showMixedValue);
+                Assert.False(hSub.showMixedValue);
+                Assert.Equal(new RectInt(int.MinValue, 10, -100, int.MaxValue), rif.value);
+                Assert.Equal("rt-rectint-0", rif.tooltip);
+
+                // Editing a sub-field on RectIntField writes the whole RectInt across targets (matching Unity 6000.0.71f1).
+                xSub.value = 5;
+                Tick(panel);
+                Assert.Equal(new RectInt(5, 10, -100, int.MaxValue), t1.rectIntVal);
+                Assert.Equal(new RectInt(5, 10, -100, int.MaxValue), t2.rectIntVal);
+                Assert.False(xSub.showMixedValue);
+                Assert.False(wSub.showMixedValue);
+
+                // PropertyField creates RectIntField with nicified label and per-component showMixedValue.
+                t1.rectIntVal = new RectInt(10, 20, 30, 40);
+                t2.rectIntVal = new RectInt(50, 60, 70, 80);
+                soMulti.Update();
+                var pf = new PropertyField(soMulti.FindProperty("rectIntVal"));
+                panel.visualTree.Add(pf);
+                pf.Bind(soMulti);
+                Tick(panel);
+                var pfChild = Assert.IsType<RectIntField>(pf.hierarchy[0]);
+                Assert.Equal("Rect Int Val", pfChild.label);
+                Assert.True(pfChild.Q<IntegerField>("unity-width-input").showMixedValue);
+
+                // Direct IntegerField bound to rectIntVal.width updates only width and preserves x, y, and height on each target.
+                var compW = new IntegerField();
+                panel.visualTree.Add(compW);
+                compW.BindProperty(soMulti.FindProperty("rectIntVal.width"));
+                Tick(panel);
+                Assert.True(compW.showMixedValue);
+                compW.value = 99;
+                Tick(panel);
+                Assert.Equal(new RectInt(10, 20, 99, 40), t1.rectIntVal);
+                Assert.Equal(new RectInt(50, 60, 99, 80), t2.rectIntVal);
+
+                // Disposing SerializedObject unbinds cleanly while runtime DataBinding remains active.
+                soMulti.Dispose();
+                rif.value = new RectInt(9, 8, 7, 6);
+                rt.text = "rt-rectint-1";
+                Tick(panel);
+                Assert.Equal(new RectInt(10, 20, 99, 40), t1.rectIntVal);
+                Assert.Equal("rt-rectint-1", rif.tooltip);
             }
             finally
             {
