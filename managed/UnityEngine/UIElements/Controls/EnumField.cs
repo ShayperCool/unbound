@@ -156,38 +156,20 @@ namespace UnityEngine.UIElements
 
         internal void PopulateDataFromType(Type enumType) => SetType(enumType);
 
+        // The entries come from the enum data Unity's EnumField uses: names nicified (or the
+        // [InspectorName]), [InspectorOrder] applied, obsolete values marked " (Obsolete)" and
+        // obsolete-as-error values left out; an obsolete entry is shown only with
+        // includeObsoleteValues.
         void SetType(Type enumType)
         {
             m_EnumType = enumType;
             m_Entries.Clear();
-            var fields = enumType.GetFields(BindingFlags.Public | BindingFlags.Static);
-            try
-            {
-                if (fields.Length > 1 && !string.IsNullOrEmpty(fields[0].Module.Assembly.Location))
-                    Array.Sort(fields, (a, b) => a.MetadataToken.CompareTo(b.MetadataToken));
-            }
-            catch
-            {
-            }
-            for (int i = 0; i < fields.Length; i++)
-            {
-                var field = fields[i];
-                var inspectorName = (InspectorNameAttribute)Attribute.GetCustomAttribute(field, typeof(InspectorNameAttribute), false);
-                bool obsolete = field.IsDefined(typeof(ObsoleteAttribute), false);
-                string displayName = inspectorName != null
-                    ? inspectorName.displayName
-                    : UnityEditor.ObjectNames.NicifyVariableName(field.Name);
-                m_Entries.Add(new Entry((Enum)field.GetValue(null), displayName, obsolete));
-            }
-            if (Attribute.GetCustomAttribute(enumType, typeof(InspectorOrderAttribute)) is InspectorOrderAttribute order && m_Entries.Count > 1)
-            {
-                if (order.m_inspectorSort == InspectorSort.ByValue)
-                    m_Entries.Sort((a, b) => Comparer<object>.Default.Compare(a.Value, b.Value));
-                else
-                    m_Entries.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
-                if (order.m_sortDirection == InspectorSortDirection.Descending)
-                    m_Entries.Reverse();
-            }
+            var all = EnumDataUtility.GetCachedEnumData(enumType, EnumDataUtility.CachedType.IncludeObsoleteExceptErrors,
+                UnityEditor.ObjectNames.NicifyVariableName);
+            var current = EnumDataUtility.GetCachedEnumData(enumType, EnumDataUtility.CachedType.ExcludeObsolete,
+                UnityEditor.ObjectNames.NicifyVariableName);
+            for (int i = 0; i < all.values.Length; i++)
+                m_Entries.Add(new Entry(all.values[i], all.displayNames[i], Array.IndexOf(current.names, all.names[i]) < 0));
         }
 
         /// <summary>The entry showing <paramref name="enumValue"/>: its first declared name in the

@@ -390,6 +390,8 @@ namespace UnityEngine.Tests
         // [doc] "Makes a dropdown for switching between enum values"; Init's includeObsoleteValues:
         // "Set to true to display obsolete values as choices".
         // [choice] Item texts as above, in declaration order; the current value is checked.
+        // An obsolete value reads "<name> (Obsolete)", as the enum data Unity's EnumField uses
+        // names it (UnityCsReference 6000.0 EnumDataUtility).
         // Red on 9dbe3085: the stub ShowMenu adds no item.
         [Fact]
         public void MenuListsTheEnumValues()
@@ -405,7 +407,7 @@ namespace UnityEngine.Tests
             var obsoleteField = new EnumField { createMenuCallback = () => withObsolete };
             obsoleteField.Init(ProbeEnum.Alpha, true);
             obsoleteField.ShowMenu();
-            Assert.Equal(new[] { "Alpha", "Beta", "Gamma Ray", "Old" }, withObsolete.Items.Select(i => i.Name));
+            Assert.Equal(new[] { "Alpha", "Beta", "Gamma Ray", "Old (Obsolete)" }, withObsolete.Items.Select(i => i.Name));
         }
 
         // [doc] Choosing in the dropdown sets the value; the field sends ChangeEvent<Enum> (the
@@ -516,11 +518,11 @@ namespace UnityEngine.Tests
                 + $"<ui:EnumField name=\"plain\" type=\"{ProbeEnumType}\" value=\"Alpha\" />"));
             var obsolete = Assert.IsType<EnumField>(root[0]);
             var plain = Assert.IsType<EnumField>(root[1]);
-            Assert.Equal("Old", obsolete.text);
+            Assert.Equal("Old (Obsolete)", obsolete.text);
             var obsoleteMenu = new RecordingMenu();
             obsolete.createMenuCallback = () => obsoleteMenu;
             obsolete.ShowMenu();
-            Assert.Equal(new[] { "Alpha", "Beta", "Gamma Ray", "Old" }, obsoleteMenu.Items.Select(i => i.Name));
+            Assert.Equal(new[] { "Alpha", "Beta", "Gamma Ray", "Old (Obsolete)" }, obsoleteMenu.Items.Select(i => i.Name));
             Assert.Equal(new[] { false, false, false, true }, obsoleteMenu.Items.Select(i => i.Checked));
             var plainMenu = new RecordingMenu();
             plain.createMenuCallback = () => plainMenu;
