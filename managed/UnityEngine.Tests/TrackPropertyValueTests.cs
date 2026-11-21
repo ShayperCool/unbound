@@ -12,6 +12,13 @@ namespace UnityEngine.Tests
 {
     public class TrackPropertyValueTests
     {
+        [Serializable]
+        struct NestedPayload
+        {
+            public int score;
+            public string tag;
+        }
+
         sealed class TestTarget : ScriptableObject
         {
             public bool flag = true;
@@ -19,7 +26,14 @@ namespace UnityEngine.Tests
             public int other = 1;
             public string label = "alpha";
             public Vector3 pos = new Vector3(1, 2, 3);
+            public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
+        }
+
+        sealed class OtherTarget : ScriptableObject
+        {
+            public int count = 200;
+            public int onlyOther = 300;
         }
 
         sealed class RuntimeModel
@@ -533,6 +547,178 @@ namespace UnityEngine.Tests
             finally
             {
                 Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindTreeNestedPathsCoexistWithRuntimeDataBindingAndWorkOnUnmeasuredRelease()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                var model = new RuntimeModel();
+                var tree = new VisualElement { dataSource = model };
+                var nestedBox = new BindableElement { bindingPath = "nested" };
+                var scoreField = new IntegerField { bindingPath = "score" };
+                var rootFallback = new IntegerField { bindingPath = "count" };
+                var missingBox = new BindableElement { bindingPath = "noSuchContainer" };
+                var keepOuter = new TextField { bindingPath = "tag" };
+                var rtLabel = new Label("start");
+                rtLabel.SetBinding("text", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget,
+                });
+                missingBox.Add(keepOuter);
+                nestedBox.Add(scoreField);
+                nestedBox.Add(rootFallback);
+                nestedBox.Add(missingBox);
+                tree.Add(nestedBox);
+                tree.Add(rtLabel);
+                panel.visualTree.Add(tree);
+
+                tree.Bind(so);
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(5, scoreField.value);
+                Assert.Equal(10, rootFallback.value);
+                Assert.Equal("n0", keepOuter.value);
+                Assert.Equal("initial", rtLabel.text);
+                Assert.False(nestedBox.HasBinding(BindingExtensions.s_SerializedBindingId));
+
+                scoreField.value = 18;
+                keepOuter.value = "n1";
+                Assert.Equal(18, target.nested.score);
+                Assert.Equal("n1", target.nested.tag);
+
+                // Unbind stops SerializedObject bindings while preserving runtime DataBinding.
+                tree.Unbind();
+                target.nested.score = 99;
+                model.text = "kept";
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(18, scoreField.value);
+                Assert.Equal("kept", rtLabel.text);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindTreeDetachedLateChildAndCancelBeforeAttach()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                var detTree = new VisualElement();
+                var beforeField = new IntegerField { bindingPath = "count" };
+                detTree.Add(beforeField);
+                detTree.Bind(so);
+
+                // Added after detached Bind() but before attaching to panel: bound on attach.
+                var lateBeforeAttach = new TextField { bindingPath = "label" };
+                detTree.Add(lateBeforeAttach);
+                panel.visualTree.Add(detTree);
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(10, beforeField.value);
+                Assert.Equal("alpha", lateBeforeAttach.value);
+
+                // Added after attached Bind(): stays unbound until Bind() is called again.
+                var lateAfterAttach = new IntegerField { bindingPath = "other" };
+                detTree.Add(lateAfterAttach);
+                Tick(panel);
+                Assert.Equal(0, lateAfterAttach.value);
+                Assert.False(lateAfterAttach.HasBinding(BindingExtensions.s_SerializedBindingId));
+
+                detTree.Bind(so);
+                Tick(panel);
+                Assert.Equal(1, lateAfterAttach.value);
+                Assert.True(lateAfterAttach.HasBinding(BindingExtensions.s_SerializedBindingId));
+
+                // Detached Bind() cancelled by Unbind() before attach never binds.
+                var cancelTree = new VisualElement();
+                var cancelField = new IntegerField { bindingPath = "count" };
+                cancelTree.Add(cancelField);
+                cancelTree.Bind(so);
+                cancelTree.Unbind();
+                panel.visualTree.Add(cancelTree);
+                Tick(panel);
+                Assert.Equal(0, cancelField.value);
+                Assert.False(cancelField.HasBinding(BindingExtensions.s_SerializedBindingId));
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindTreeExplicitBindPropertyIndependenceAndDisposedSo()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var mainTarget = ScriptableObject.CreateInstance<TestTarget>();
+            var otherTarget = ScriptableObject.CreateInstance<OtherTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            var soMain = new SerializedObject(mainTarget);
+            using var soOther = new SerializedObject(otherTarget);
+            try
+            {
+                var tree = new VisualElement();
+                var mainField = new IntegerField { bindingPath = "count" };
+                var explicitOther = new IntegerField();
+                var explicitSame = new IntegerField();
+                tree.Add(mainField);
+                tree.Add(explicitOther);
+                tree.Add(explicitSame);
+                panel.visualTree.Add(tree);
+
+                explicitOther.BindProperty(soOther.FindProperty("onlyOther"));
+                tree.Bind(soMain);
+                explicitSame.BindProperty(soMain.FindProperty("other"));
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(10, mainField.value);
+                Assert.Equal(300, explicitOther.value);
+                Assert.Equal(1, explicitSame.value);
+
+                // Tree Unbind unbinds same-SO fields and stops at child with different SO context.
+                tree.Unbind();
+                mainTarget.count = 55;
+                mainTarget.other = 66;
+                otherTarget.onlyOther = 404;
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(10, mainField.value);
+                Assert.Equal(1, explicitSame.value);
+                Assert.Equal(404, explicitOther.value);
+
+                // Rebind tree to soMain and dispose soMain: update cleanly unbinds without throwing.
+                tree.Bind(soMain);
+                Tick(panel);
+                Assert.True(mainField.HasBinding(BindingExtensions.s_SerializedBindingId));
+                soMain.Dispose();
+                Tick(panel);
+                Tick(panel);
+                Assert.False(mainField.HasBinding(BindingExtensions.s_SerializedBindingId));
+            }
+            finally
+            {
+                soMain.Dispose();
+                Object.DestroyImmediate(mainTarget);
+                Object.DestroyImmediate(otherTarget);
                 Object.DestroyImmediate(settings);
             }
         }

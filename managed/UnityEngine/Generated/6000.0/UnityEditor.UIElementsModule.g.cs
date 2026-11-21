@@ -904,12 +904,6 @@ namespace UnityEditor.UIElements.Bindings
         [global::Unbound.Stub] public override void OnRelease() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding.OnRelease"); }
         [global::Unbound.Stub] public SerializedManagedEnumBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding.ctor"); }
     }
-    unsafe partial class SerializedObjectBindingContext
-    {
-        [global::Unbound.Stub] public void Bind(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.Bind"); }
-        [global::Unbound.Stub] internal void ContinueBinding(global::UnityEngine.UIElements.VisualElement element, global::UnityEditor.SerializedProperty parentProperty) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.ContinueBinding"); }
-        [global::Unbound.Stub] internal void BindTree(global::UnityEngine.UIElements.VisualElement element, global::UnityEditor.SerializedProperty parentProperty) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.BindTree"); }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class SerializedObjectList : global::UnityEngine.UIElements.ISerializedObjectList, global::System.Collections.IList, global::System.Collections.ICollection, global::System.Collections.IEnumerable
     {

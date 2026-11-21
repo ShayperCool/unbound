@@ -6,15 +6,16 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 // Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
-// BindingExtensions.BindProperty (supported scalar fields), BindingExtensions.TrackPropertyValue,
-// BindingExtensions.TrackSerializedObjectValue, BindingExtensions.Unbind,
-// SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the SerializedObject binding
-// context/updater pipeline that synchronizes fields and polls changes during panel updates.
-// Documented in Unity 6000.0 Scripting API ("BindingExtensions.BindProperty",
-// "BindingExtensions.TrackPropertyValue", "BindingExtensions.TrackSerializedObjectValue",
-// "BindingExtensions.Unbind", "SerializedPropertyChangeEvent", "SerializedObjectChangeEvent");
-// matches the Unity 6000.0.71f1 Editor, tests/projects/bindproperty,
-// tests/projects/trackpropertyvalue and tests/projects/trackserializedobjectvalue.
+// BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar fields),
+// BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
+// BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
+// SerializedObject binding context/updater pipeline that synchronizes fields and polls changes
+// during panel updates. Documented in Unity 6000.0 Scripting API ("BindingExtensions.Bind",
+// "BindingExtensions.BindProperty", "BindingExtensions.TrackPropertyValue",
+// "BindingExtensions.TrackSerializedObjectValue", "BindingExtensions.Unbind",
+// "SerializedPropertyChangeEvent", "SerializedObjectChangeEvent"); matches the Unity 6000.0.71f1
+// Editor, tests/projects/bindtree, tests/projects/bindproperty, tests/projects/trackpropertyvalue
+// and tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
 {
@@ -320,6 +321,8 @@ namespace UnityEditor.UIElements
         internal static readonly string s_SerializedBindingContextUpdaterId = "--unity-serialized-object-bindings-context-updater";
         internal static ISerializedObjectBindingImplementation bindingImpl = new DefaultSerializedObjectBindingImplementation();
 
+        public static void Bind(this VisualElement element, SerializedObject obj) => bindingImpl.Bind(element, obj);
+
         public static void Unbind(this VisualElement element) => bindingImpl.Unbind(element);
 
         public static SerializedProperty BindProperty(this IBindable field, SerializedObject obj) =>
@@ -387,10 +390,10 @@ namespace UnityEditor.UIElements.Bindings
                 switch (requestType)
                 {
                     case RequestType.Bind:
-                        context.BindPropertyElement(element);
+                        context.Bind(element);
                         break;
                     case RequestType.DelayBind:
-                        Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.ContinueBinding");
+                        if (context.IsValid()) context.ContinueBinding(element, parentProperty);
                         break;
                     case RequestType.TrackProperty:
                         context.AddBindingUpdater(element).AddTracking(parentProperty, callback);
@@ -415,9 +418,14 @@ namespace UnityEditor.UIElements.Bindings
 
         public DefaultSerializedObjectBindingImplementation() { }
 
-        [Unbound.Stub]
-        public void Bind(VisualElement element, SerializedObject obj) =>
-            Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.Bind");
+        public void Bind(VisualElement element, SerializedObject obj)
+        {
+            element.SetProperty(BindingExtensions.s_DataSourceProperty, obj);
+            if (element.panel != null)
+                FindOrCreateBindingContext(element, obj).Bind(element);
+            else
+                CreateBindingRequest(element, obj);
+        }
 
         public SerializedProperty BindProperty(IBindable field, SerializedObject obj)
         {
@@ -427,7 +435,7 @@ namespace UnityEditor.UIElements.Bindings
                 if (visualElement.panel == null)
                     CreateBindingRequest(visualElement, property.serializedObject);
                 else
-                    FindOrCreateBindingContext(visualElement, obj).BindPropertyElement(visualElement);
+                    FindOrCreateBindingContext(visualElement, obj).Bind(visualElement);
             }
             return property;
         }
@@ -443,7 +451,7 @@ namespace UnityEditor.UIElements.Bindings
                     CreateBindingRequest(visualElement, property.serializedObject);
                     return;
                 }
-                FindOrCreateBindingContext(visualElement, property.serializedObject).BindPropertyElement(visualElement);
+                FindOrCreateBindingContext(visualElement, property.serializedObject).Bind(visualElement);
             }
         }
 
@@ -878,7 +886,7 @@ namespace UnityEditor.UIElements.Bindings
         public SerializedObjectBindingContext(SerializedObject so)
         {
             serializedObject = so;
-            lastRevision = so != null ? so.objectVersion : 0u;
+            lastRevision = so.objectVersion;
             m_ChangeTracker = new SerializedObjectChangeTracker(so);
         }
 
@@ -985,11 +993,25 @@ namespace UnityEditor.UIElements.Bindings
             return updater;
         }
 
-        internal void BindPropertyElement(VisualElement element)
+        public void Bind(VisualElement element)
         {
             element.SetProperty(FindContextPropertyKey, this);
+            ContinueBinding(element, null);
+        }
+
+        internal void ContinueBinding(VisualElement element, SerializedProperty parentProperty) =>
+            BindTree(element, parentProperty);
+
+        internal void BindTree(VisualElement element, SerializedProperty parentProperty)
+        {
             if (element is IBindable bindable && !string.IsNullOrEmpty(bindable.bindingPath))
-                BindPropertyRelative(bindable, null);
+            {
+                var prop = BindPropertyRelative(bindable, parentProperty);
+                if (prop != null) parentProperty = prop;
+            }
+            int childCount = element.hierarchy.childCount;
+            for (int i = 0; i < childCount; i++)
+                BindTree(element.hierarchy[i], parentProperty);
         }
 
         static void SyncEditableState(VisualElement fieldElement, bool shouldBeEditable)
@@ -1087,6 +1109,12 @@ namespace UnityEditor.UIElements.Bindings
                     break;
                 case SerializedPropertyType.String:
                     DefaultBind(element, prop, SerializedPropertyHelper.GetStringPropertyValue, SerializedPropertyHelper.SetStringPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
+                case SerializedPropertyType.Generic:
+                    if (prop.type == "ToggleButtonGroupState")
+                        Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty (ToggleButtonGroupState)");
+                    else if (element is BaseListView)
+                        Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding");
                     break;
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.BindingExtensions.BindProperty ({prop.propertyType})");
