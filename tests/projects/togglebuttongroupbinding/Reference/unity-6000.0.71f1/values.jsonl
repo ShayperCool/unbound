@@ -4,6 +4,6 @@
 {"k":"direct_uxml","v":"name=|lbl=Custom|val=3:101|m=0|multi=0|emptySel=0|fixed=0|btns=[Alpha,Beta,Gamma]|emptyLbl=0###t=3:110|name=|lbl=Custom|val=3:110|m=0|multi=0|emptySel=0|fixed=0|btns=[Alpha,Beta,Gamma]|emptyLbl=0###name=|lbl=Custom|val=3:001|m=0|multi=0|emptySel=0|fixed=0|btns=[Alpha,Beta,Gamma]|emptyLbl=0###bg=name=uxml-tbg|lbl=|val=3:001|m=0|multi=0|emptySel=0|fixed=0|btns=[A,B,C]|emptyLbl=0|pf=name=unity-button-group-directState|lbl=Direct State|val=3:001|m=0|multi=0|emptySel=0|fixed=1|btns=[0,1,2]|emptyLbl=0###t=3:010|bg=3:010|pf=3:010"}
 {"k":"multi","v":"ms=4:1010(m=0)|mdPf=4:1010(m=1)|mdDir=4:1010(m=1)###t1=4:0110|t2=4:0110|mdPf=4:0110(m=0)|mdDir=4:0110(m=0)"}
 {"k":"pf.rebind","v":"name=unity-button-group-otherState|lbl=Other State|val=3:010|m=0|multi=0|emptySel=0|fixed=1|btns=[0,1,2]|emptyLbl=0###same=1|name=unity-button-group-directState|lbl=Direct State|val=3:101|m=0|multi=0|emptySel=0|fixed=1|btns=[0,1,2]|emptyLbl=0###type=Foldout|name=unity-foldout-plainStruct###type=IntegerField|val=42###type=ToggleButtonGroup|name=unity-button-group-otherState|lbl=Other State|val=3:101|m=0|multi=0|emptySel=0|fixed=1|btns=[0,1,2]|emptyLbl=0"}
-{"k":"unbind_rebind","v":"tip=rt-tbg-0|val=3:101###tip=rt-tbg-1|val=3:111###tip=rt-tbg-1|val=3:100"}
+{"k":"unbind_rebind","v":"tip=rt-tbg-0|pf=3:101|dir=3:101###tip=rt-tbg-1|pf=3:111|dir=3:101###tip=rt-tbg-1|pf=3:100|dir=3:100"}
 {"k":"logs","v":["Warning:Field type UnityEngine.UIElements.IntegerField is not compatible with ToggleButtonGroupState property \"directState\""]}
 {"k":"complete","v":true}

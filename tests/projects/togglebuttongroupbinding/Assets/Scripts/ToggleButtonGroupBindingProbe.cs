@@ -230,6 +230,7 @@ public class ToggleButtonGroupBindingProbe : MonoBehaviour
             Put("direct_uxml", $"{d0}###{d1}###{d2}###{ux0}###{ux1}");
 
             // 5. Multi-object same & different
+            soMulti.Update();
             var pfMS = new PropertyField(soMulti.FindProperty("multiSame"));
             var pfMD = new PropertyField(soMulti.FindProperty("multiDiff"));
             var bgMD = new ToggleButtonGroup();
@@ -251,6 +252,8 @@ public class ToggleButtonGroupBindingProbe : MonoBehaviour
             Put("multi", $"{m0}###{m1}");
 
             // 6. PropertyField rebind: ToggleButtonGroupState -> other ToggleButtonGroupState -> Generic struct -> int -> ToggleButtonGroupState
+            t1.directState = new ToggleButtonGroupState(0b101UL, 3);
+            so.Update();
             var pfRb = new PropertyField(so.FindProperty("otherState"));
             m_Root.Add(pfRb);
             pfRb.Bind(so);
@@ -278,7 +281,7 @@ public class ToggleButtonGroupBindingProbe : MonoBehaviour
             string r4 = $"type={pfRb.hierarchy[0]?.GetType().Name}|{GroupInfo(rb4)}";
             Put("pf.rebind", $"{r0}###{r1}###{r2}###{r3}###{r4}");
 
-            // 7. Unbind, rebind, and runtime DataBinding coexistence
+            // 7. Unbind, rebind, and runtime DataBinding coexistence (PropertyField and direct ToggleButtonGroup)
             var rt = new ToggleButtonGroupRuntimeModel();
             var pfUb = new PropertyField(so.FindProperty("otherState")) { dataSource = rt };
             pfUb.SetBinding("tooltip", new DataBinding
@@ -286,22 +289,28 @@ public class ToggleButtonGroupBindingProbe : MonoBehaviour
                 dataSourcePath = new PropertyPath(nameof(ToggleButtonGroupRuntimeModel.tip)),
                 bindingMode = BindingMode.ToTarget
             });
+            var bgUbDir = new ToggleButtonGroup();
+            for (int i = 0; i < 3; i++) bgUbDir.Add(new Button { text = $"U{i}" });
             m_Root.Add(pfUb);
+            m_Root.Add(bgUbDir);
             pfUb.Bind(so);
+            bgUbDir.BindProperty(so.FindProperty("otherState"));
             Frames();
             var bgUb = pfUb.hierarchy[0] as ToggleButtonGroup;
-            string u0 = $"tip={pfUb.tooltip}|val={StateStr(bgUb.value)}";
+            string u0 = $"tip={pfUb.tooltip}|pf={StateStr(bgUb.value)}|dir={StateStr(bgUbDir.value)}";
 
             pfUb.Unbind();
+            bgUbDir.Unbind();
             t1.otherState = new ToggleButtonGroupState(0b111UL, 3);
             rt.tip = "rt-tbg-1";
             Frames();
-            string u1 = $"tip={pfUb.tooltip}|val={StateStr(bgUb.value)}";
+            string u1 = $"tip={pfUb.tooltip}|pf={StateStr(bgUb.value)}|dir={StateStr(bgUbDir.value)}";
 
             pfUb.Bind(so);
+            bgUbDir.BindProperty(so.FindProperty("otherState"));
             Frames();
             var bgUb2 = pfUb.hierarchy[0] as ToggleButtonGroup;
-            string u2 = $"tip={pfUb.tooltip}|val={StateStr(bgUb2.value)}";
+            string u2 = $"tip={pfUb.tooltip}|pf={StateStr(bgUb2.value)}|dir={StateStr(bgUbDir.value)}";
             Put("unbind_rebind", $"{u0}###{u1}###{u2}");
         }
         finally
