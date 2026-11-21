@@ -1,0 +1,14 @@
+{"k":"state.default","v":"fog=True|skybox=True|flares=True|imageEffects=True|particles=True|vfx=True|alwaysRefresh=False|clouds=True|fx=True|fogEnabled=True|alwaysRefreshEnabled=False|skyboxEnabled=True|cloudsEnabled=True|flaresEnabled=True|imageEffectsEnabled=True|particleSystemsEnabled=True|visualEffectGraphsEnabled=True|allEnabled=False"}
+{"k":"state.allOff","v":"fog=False|skybox=False|flares=False|imageEffects=False|particles=False|vfx=False|alwaysRefresh=False|clouds=False|fx=True|fogEnabled=False|alwaysRefreshEnabled=False|skyboxEnabled=False|cloudsEnabled=False|flaresEnabled=False|imageEffectsEnabled=False|particleSystemsEnabled=False|visualEffectGraphsEnabled=False|allEnabled=False"}
+{"k":"state.allOn","v":"fog=True|skybox=True|flares=True|imageEffects=True|particles=True|vfx=True|alwaysRefresh=True|clouds=True|fx=True|fogEnabled=True|alwaysRefreshEnabled=True|skyboxEnabled=True|cloudsEnabled=True|flaresEnabled=True|imageEffectsEnabled=True|particleSystemsEnabled=True|visualEffectGraphsEnabled=True|allEnabled=True"}
+{"k":"state.fxOff","v":"fog=True|skybox=True|flares=True|imageEffects=True|particles=True|vfx=True|alwaysRefresh=True|clouds=True|fx=False|fogEnabled=False|alwaysRefreshEnabled=False|skyboxEnabled=False|cloudsEnabled=False|flaresEnabled=False|imageEffectsEnabled=False|particleSystemsEnabled=False|visualEffectGraphsEnabled=False|allEnabled=True"}
+{"k":"state.mixed","v":"fog=False|skybox=True|flares=True|imageEffects=True|particles=True|vfx=False|alwaysRefresh=True|clouds=False|fx=True|fogEnabled=False|alwaysRefreshEnabled=True|skyboxEnabled=True|cloudsEnabled=False|flaresEnabled=True|imageEffectsEnabled=True|particleSystemsEnabled=True|visualEffectGraphsEnabled=False|allEnabled=False"}
+{"k":"state.copy","v":"fog=False|skybox=True|flares=True|imageEffects=True|particles=True|vfx=False|alwaysRefresh=True|clouds=False|fx=False|fogEnabled=False|alwaysRefreshEnabled=False|skyboxEnabled=False|cloudsEnabled=False|flaresEnabled=False|imageEffectsEnabled=False|particleSystemsEnabled=False|visualEffectGraphsEnabled=False|allEnabled=False"}
+{"k":"state.vfxOnlyOff","v":"allEnabled=True"}
+{"k":"state.obsolete","v":"isAllOn=True|alwaysRefresh=False|materialUpdateEnabled=False"}
+{"k":"state.json","v":"{\"m_AlwaysRefresh\":false,\"showFog\":false,\"showSkybox\":false,\"showFlares\":false,\"showImageEffects\":false,\"showParticleSystems\":false,\"showVisualEffectGraphs\":false,\"m_FxEnabled\":false}"}
+{"k":"mode.default","v":"text=Textured|||||drawMode=Textured|name=<null>|section=<null>"}
+{"k":"mode.made","v":"text=Wireframe||Wire||Shading|drawMode=Wireframe|name=Wire|section=Shading"}
+{"k":"mode.equality","v":"hidden==True|renamed==False|redrawn==False|resectioned==False|renamed!=True|nulls==True|nullVsEmpty==False|equalsBoxed=True|equalsNull=False|equalsString=False|hashSame=True|hashNullVsEmpty=True"}
+{"k":"mode.json","v":"{\"drawMode\":6,\"name\":\"Over\",\"section\":\"Misc\"}"}
+{"k":"complete","v":true}
