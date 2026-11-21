@@ -2180,14 +2180,14 @@
     {
       "key": "UnityEngine.TextCore.Text.FontAsset/Property/UnityEngine.TextCore.Text.TextAsset/instanceID",
       "module": "UnityEngine.TextCoreTextEngineModule",
-      "reason": "Q411 object allocation now includes constructor-owned social textures and rejects unattached layout components. The exact implementation identity shifts with that creation sequence; retain the original reference identity and this exact raw difference until a relational asset identity control resolves it. No variable policy is added. The added editor-window and player-connection construction controls shift the exact implementation identity again, from -22670 to -22852. The original reference identity is unchanged; both raw discrepancies remain recorded and no variable policy is introduced. The build window and build options types added to the inventory shift it again, from -22852 to -22894. The animation, importer and object-change event types added to the inventory shift it again, from -22894 to -23186. The graphics and SRP editor types added to the inventory shift it again, from -23186 to -23190. The controller object model, AnimationUtility and AnimationMode types added to the inventory shift it again, from -23190 to -23284 (the count also takes the scene types the inventory lists before their rows are recorded). The PopupWindow inventory controls shift the implementation identity from -23284 to -23326. Adding SpriteAtlasImporter to the inventory shifts the implementation identity from -23326 to -23350. Adding SpriteAtlasAsset and ScriptablePacker to the inventory shifts the implementation identity from -23350 to -23356.",
+      "reason": "Q411 object allocation now includes constructor-owned social textures and rejects unattached layout components. The exact implementation identity shifts with that creation sequence; retain the original reference identity and this exact raw difference until a relational asset identity control resolves it. No variable policy is added. The added editor-window and player-connection construction controls shift the exact implementation identity again, from -22670 to -22852. The original reference identity is unchanged; both raw discrepancies remain recorded and no variable policy is introduced. The build window and build options types added to the inventory shift it again, from -22852 to -22894. The animation, importer and object-change event types added to the inventory shift it again, from -22894 to -23186. The graphics and SRP editor types added to the inventory shift it again, from -23186 to -23190. The controller object model, AnimationUtility and AnimationMode types added to the inventory shift it again, from -23190 to -23284 (the count also takes the scene types the inventory lists before their rows are recorded). The PopupWindow inventory controls shift the implementation identity from -23284 to -23326. Adding SpriteAtlasImporter to the inventory shifts the implementation identity from -23326 to -23350. Adding SpriteAtlasAsset and ScriptablePacker to the inventory shifts the implementation identity from -23350 to -23356. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from -23356 to -23358.",
       "expected": {
         "status": "value",
         "value": "-26654"
       },
       "actual": {
         "status": "value",
-        "value": "-23356"
+        "value": "-23358"
       }
     },
     {
@@ -2219,14 +2219,14 @@
     {
       "key": "UnityEngine.TextCore.Text.SpriteAsset/Property/UnityEngine.TextCore.Text.TextAsset/instanceID",
       "module": "UnityEngine.TextCoreTextEngineModule",
-      "reason": "Q411 object allocation now includes constructor-owned social textures and rejects unattached layout components. The exact implementation identity shifts with that creation sequence; retain the original reference identity and this exact raw difference until a relational asset identity control resolves it. No variable policy is added. The added editor-window and player-connection construction controls shift the exact implementation identity again, from -22696 to -22878. The original reference identity is unchanged; both raw discrepancies remain recorded and no variable policy is introduced. The build window and build options types added to the inventory shift it again, from -22878 to -22920. The animation, importer and object-change event types added to the inventory shift it again, from -22920 to -23212. The graphics and SRP editor types added to the inventory shift it again, from -23212 to -23216. The controller object model, AnimationUtility and AnimationMode types added to the inventory shift it again, from -23216 to -23310 (the count also takes the scene types the inventory lists before their rows are recorded). The PopupWindow inventory controls shift the implementation identity from -23310 to -23352. Adding SpriteAtlasImporter to the inventory shifts the implementation identity from -23352 to -23376. Adding SpriteAtlasAsset and ScriptablePacker to the inventory shifts the implementation identity from -23376 to -23382.",
+      "reason": "Q411 object allocation now includes constructor-owned social textures and rejects unattached layout components. The exact implementation identity shifts with that creation sequence; retain the original reference identity and this exact raw difference until a relational asset identity control resolves it. No variable policy is added. The added editor-window and player-connection construction controls shift the exact implementation identity again, from -22696 to -22878. The original reference identity is unchanged; both raw discrepancies remain recorded and no variable policy is introduced. The build window and build options types added to the inventory shift it again, from -22878 to -22920. The animation, importer and object-change event types added to the inventory shift it again, from -22920 to -23212. The graphics and SRP editor types added to the inventory shift it again, from -23212 to -23216. The controller object model, AnimationUtility and AnimationMode types added to the inventory shift it again, from -23216 to -23310 (the count also takes the scene types the inventory lists before their rows are recorded). The PopupWindow inventory controls shift the implementation identity from -23310 to -23352. Adding SpriteAtlasImporter to the inventory shifts the implementation identity from -23352 to -23376. Adding SpriteAtlasAsset and ScriptablePacker to the inventory shifts the implementation identity from -23376 to -23382. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from -23382 to -23384.",
       "expected": {
         "status": "value",
         "value": "-26680"
       },
       "actual": {
         "status": "value",
-        "value": "-23382"
+        "value": "-23384"
       }
     },
     {
@@ -2370,14 +2370,14 @@
     {
       "key": "UnityEngine.UIElements.ClickEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.ClickEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 21 to 22.",
       "expected": {
         "status": "value",
         "value": "41"
       },
       "actual": {
         "status": "value",
-        "value": "21"
+        "value": "22"
       }
     },
     {
@@ -2390,14 +2390,14 @@
     {
       "key": "UnityEngine.UIElements.ContextClickEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.ContextClickEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 22 to 23.",
       "expected": {
         "status": "value",
         "value": "42"
       },
       "actual": {
         "status": "value",
-        "value": "22"
+        "value": "23"
       }
     },
     {
@@ -2410,14 +2410,14 @@
     {
       "key": "UnityEngine.UIElements.ContextualMenuPopulateEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.ContextualMenuPopulateEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 23 to 24.",
       "expected": {
         "status": "value",
         "value": "33"
       },
       "actual": {
         "status": "value",
-        "value": "23"
+        "value": "24"
       }
     },
     {
@@ -2509,14 +2509,14 @@
     {
       "key": "UnityEngine.UIElements.DragEnterEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.DragEnterEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 24 to 25.",
       "expected": {
         "status": "value",
         "value": "43"
       },
       "actual": {
         "status": "value",
-        "value": "24"
+        "value": "25"
       }
     },
     {
@@ -2529,14 +2529,14 @@
     {
       "key": "UnityEngine.UIElements.DragExitedEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.DragExitedEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 25 to 26.",
       "expected": {
         "status": "value",
         "value": "3"
       },
       "actual": {
         "status": "value",
-        "value": "25"
+        "value": "26"
       }
     },
     {
@@ -2549,14 +2549,14 @@
     {
       "key": "UnityEngine.UIElements.DragLeaveEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.DragLeaveEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 26 to 27.",
       "expected": {
         "status": "value",
         "value": "44"
       },
       "actual": {
         "status": "value",
-        "value": "26"
+        "value": "27"
       }
     },
     {
@@ -2574,9 +2574,9 @@
       },
       "actual": {
         "status": "value",
-        "value": "27"
+        "value": "28"
       },
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types."
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 27 to 28."
     },
     {
       "key": "UnityEngine.UIElements.DragUpdatedEvent/Property/UnityEngine.UIElements.EventBase/timestamp",
@@ -2588,14 +2588,14 @@
     {
       "key": "UnityEngine.UIElements.DragUpdatedEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.DragUpdatedEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 28 to 29.",
       "expected": {
         "status": "value",
         "value": "25"
       },
       "actual": {
         "status": "value",
-        "value": "28"
+        "value": "29"
       }
     },
     {
@@ -2608,14 +2608,14 @@
     {
       "key": "UnityEngine.UIElements.ExecuteCommandEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.ExecuteCommandEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 29 to 30.",
       "expected": {
         "status": "value",
         "value": "1"
       },
       "actual": {
         "status": "value",
-        "value": "29"
+        "value": "30"
       }
     },
     {
@@ -2628,14 +2628,14 @@
     {
       "key": "UnityEngine.UIElements.Experimental.PointerDownLinkTagEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.Experimental.PointerDownLinkTagEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 30 to 31.",
       "expected": {
         "status": "value",
         "value": "45"
       },
       "actual": {
         "status": "value",
-        "value": "30"
+        "value": "31"
       }
     },
     {
@@ -2648,14 +2648,14 @@
     {
       "key": "UnityEngine.UIElements.Experimental.PointerMoveLinkTagEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.Experimental.PointerMoveLinkTagEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 31 to 32.",
       "expected": {
         "status": "value",
         "value": "46"
       },
       "actual": {
         "status": "value",
-        "value": "31"
+        "value": "32"
       }
     },
     {
@@ -2668,14 +2668,14 @@
     {
       "key": "UnityEngine.UIElements.Experimental.PointerOutLinkTagEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.Experimental.PointerOutLinkTagEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 32 to 33.",
       "expected": {
         "status": "value",
         "value": "47"
       },
       "actual": {
         "status": "value",
-        "value": "32"
+        "value": "33"
       }
     },
     {
@@ -2688,14 +2688,14 @@
     {
       "key": "UnityEngine.UIElements.Experimental.PointerOverLinkTagEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.Experimental.PointerOverLinkTagEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 33 to 34.",
       "expected": {
         "status": "value",
         "value": "48"
       },
       "actual": {
         "status": "value",
-        "value": "33"
+        "value": "34"
       }
     },
     {
@@ -2708,14 +2708,14 @@
     {
       "key": "UnityEngine.UIElements.Experimental.PointerUpLinkTagEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.Experimental.PointerUpLinkTagEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 34 to 35.",
       "expected": {
         "status": "value",
         "value": "49"
       },
       "actual": {
         "status": "value",
-        "value": "34"
+        "value": "35"
       }
     },
     {
@@ -2767,14 +2767,14 @@
     {
       "key": "UnityEngine.UIElements.FocusEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.FocusEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 35 to 36.",
       "expected": {
         "status": "value",
         "value": "13"
       },
       "actual": {
         "status": "value",
-        "value": "35"
+        "value": "36"
       }
     },
     {
@@ -2787,14 +2787,14 @@
     {
       "key": "UnityEngine.UIElements.FocusInEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.FocusInEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 36 to 37.",
       "expected": {
         "status": "value",
         "value": "21"
       },
       "actual": {
         "status": "value",
-        "value": "36"
+        "value": "37"
       }
     },
     {
@@ -2807,14 +2807,14 @@
     {
       "key": "UnityEngine.UIElements.FocusOutEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.FocusOutEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 37 to 38.",
       "expected": {
         "status": "value",
         "value": "22"
       },
       "actual": {
         "status": "value",
-        "value": "37"
+        "value": "38"
       }
     },
     {
@@ -2912,14 +2912,14 @@
     {
       "key": "UnityEngine.UIElements.IMGUIEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.IMGUIEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 41 to 42.",
       "expected": {
         "status": "value",
         "value": "6"
       },
       "actual": {
         "status": "value",
-        "value": "41"
+        "value": "42"
       }
     },
     {
@@ -2958,14 +2958,14 @@
     {
       "key": "UnityEngine.UIElements.InputEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.InputEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 13 to 17.",
       "expected": {
         "status": "value",
         "value": "37"
       },
       "actual": {
         "status": "value",
-        "value": "13"
+        "value": "17"
       }
     },
     {
@@ -3017,14 +3017,14 @@
     {
       "key": "UnityEngine.UIElements.KeyDownEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.KeyDownEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 14 to 15.",
       "expected": {
         "status": "value",
         "value": "20"
       },
       "actual": {
         "status": "value",
-        "value": "14"
+        "value": "15"
       }
     },
     {
@@ -3037,14 +3037,14 @@
     {
       "key": "UnityEngine.UIElements.KeyUpEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.KeyUpEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 42 to 43.",
       "expected": {
         "status": "value",
         "value": "32"
       },
       "actual": {
         "status": "value",
-        "value": "42"
+        "value": "43"
       }
     },
     {
@@ -3109,14 +3109,14 @@
     {
       "key": "UnityEngine.UIElements.MouseCaptureEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.MouseCaptureEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 45 to 46.",
       "expected": {
         "status": "value",
         "value": "52"
       },
       "actual": {
         "status": "value",
-        "value": "45"
+        "value": "46"
       }
     },
     {
@@ -3129,14 +3129,14 @@
     {
       "key": "UnityEngine.UIElements.MouseCaptureOutEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.MouseCaptureOutEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 46 to 47.",
       "expected": {
         "status": "value",
         "value": "53"
       },
       "actual": {
         "status": "value",
-        "value": "46"
+        "value": "47"
       }
     },
     {
@@ -3169,14 +3169,14 @@
     {
       "key": "UnityEngine.UIElements.MouseEnterEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.MouseEnterEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 47 to 48.",
       "expected": {
         "status": "value",
         "value": "27"
       },
       "actual": {
         "status": "value",
-        "value": "47"
+        "value": "48"
       }
     },
     {
@@ -3189,14 +3189,14 @@
     {
       "key": "UnityEngine.UIElements.MouseEnterWindowEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.MouseEnterWindowEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 48 to 49.",
       "expected": {
         "status": "value",
         "value": "4"
       },
       "actual": {
         "status": "value",
-        "value": "48"
+        "value": "49"
       }
     },
     {
@@ -3209,14 +3209,14 @@
     {
       "key": "UnityEngine.UIElements.MouseLeaveEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.MouseLeaveEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 49 to 50.",
       "expected": {
         "status": "value",
         "value": "28"
       },
       "actual": {
         "status": "value",
-        "value": "49"
+        "value": "50"
       }
     },
     {
@@ -3229,14 +3229,14 @@
     {
       "key": "UnityEngine.UIElements.MouseLeaveWindowEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.MouseLeaveWindowEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 50 to 51.",
       "expected": {
         "status": "value",
         "value": "5"
       },
       "actual": {
         "status": "value",
-        "value": "50"
+        "value": "51"
       }
     },
     {
@@ -3249,14 +3249,14 @@
     {
       "key": "UnityEngine.UIElements.MouseMoveEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.MouseMoveEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 51 to 52.",
       "expected": {
         "status": "value",
         "value": "31"
       },
       "actual": {
         "status": "value",
-        "value": "51"
+        "value": "52"
       }
     },
     {
@@ -3269,14 +3269,14 @@
     {
       "key": "UnityEngine.UIElements.MouseOutEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.MouseOutEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 52 to 53.",
       "expected": {
         "status": "value",
         "value": "54"
       },
       "actual": {
         "status": "value",
-        "value": "52"
+        "value": "53"
       }
     },
     {
@@ -3289,14 +3289,14 @@
     {
       "key": "UnityEngine.UIElements.MouseOverEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.MouseOverEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 53 to 54.",
       "expected": {
         "status": "value",
         "value": "55"
       },
       "actual": {
         "status": "value",
-        "value": "53"
+        "value": "54"
       }
     },
     {
@@ -3309,14 +3309,14 @@
     {
       "key": "UnityEngine.UIElements.MouseUpEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.MouseUpEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 54 to 55.",
       "expected": {
         "status": "value",
         "value": "30"
       },
       "actual": {
         "status": "value",
-        "value": "54"
+        "value": "55"
       }
     },
     {
@@ -3329,14 +3329,14 @@
     {
       "key": "UnityEngine.UIElements.NavigationCancelEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.NavigationCancelEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 55 to 56.",
       "expected": {
         "status": "value",
         "value": "11"
       },
       "actual": {
         "status": "value",
-        "value": "55"
+        "value": "56"
       }
     },
     {
@@ -3349,14 +3349,14 @@
     {
       "key": "UnityEngine.UIElements.NavigationMoveEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.NavigationMoveEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 39 to 40.",
       "expected": {
         "status": "value",
         "value": "9"
       },
       "actual": {
         "status": "value",
-        "value": "39"
+        "value": "40"
       }
     },
     {
@@ -3389,14 +3389,14 @@
     {
       "key": "UnityEngine.UIElements.PointerCancelEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.PointerCancelEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 19 to 12.",
       "expected": {
         "status": "value",
         "value": "18"
       },
       "actual": {
         "status": "value",
-        "value": "19"
+        "value": "12"
       }
     },
     {
@@ -3416,14 +3416,14 @@
     {
       "key": "UnityEngine.UIElements.PointerCaptureOutEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.PointerCaptureOutEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 20 to 13.",
       "expected": {
         "status": "value",
         "value": "19"
       },
       "actual": {
         "status": "value",
-        "value": "20"
+        "value": "13"
       }
     },
     {
@@ -3463,14 +3463,14 @@
     {
       "key": "UnityEngine.UIElements.PointerLeaveEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.PointerLeaveEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 43 to 44.",
       "expected": {
         "status": "value",
         "value": "50"
       },
       "actual": {
         "status": "value",
-        "value": "43"
+        "value": "44"
       }
     },
     {
@@ -3502,14 +3502,14 @@
     {
       "key": "UnityEngine.UIElements.PointerOutEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.PointerOutEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 44 to 45.",
       "expected": {
         "status": "value",
         "value": "51"
       },
       "actual": {
         "status": "value",
-        "value": "44"
+        "value": "45"
       }
     },
     {
@@ -3634,14 +3634,14 @@
     {
       "key": "UnityEngine.UIElements.TooltipEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.TooltipEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 60 to 61.",
       "expected": {
         "status": "value",
         "value": "34"
       },
       "actual": {
         "status": "value",
-        "value": "60"
+        "value": "61"
       }
     },
     {
@@ -3654,14 +3654,14 @@
     {
       "key": "UnityEngine.UIElements.TransitionCancelEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.TransitionCancelEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q628 UIElements event registration context: Registration identifiers are stable within one event type and distinct across types; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "reason": "Q628 UIElements event registration context: Registration identifiers are stable within one event type and distinct across types; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 61 to 62.",
       "expected": {
         "status": "value",
         "value": "60"
       },
       "actual": {
         "status": "value",
-        "value": "61"
+        "value": "62"
       }
     },
     {
@@ -3674,14 +3674,14 @@
     {
       "key": "UnityEngine.UIElements.TransitionEndEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.TransitionEndEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q628 UIElements event registration context: Registration identifiers are stable within one event type and distinct across types; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "reason": "Q628 UIElements event registration context: Registration identifiers are stable within one event type and distinct across types; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 62 to 63.",
       "expected": {
         "status": "value",
         "value": "61"
       },
       "actual": {
         "status": "value",
-        "value": "62"
+        "value": "63"
       }
     },
     {
@@ -3694,14 +3694,14 @@
     {
       "key": "UnityEngine.UIElements.TransitionRunEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.TransitionRunEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q628 UIElements event registration context: Registration identifiers are stable within one event type and distinct across types; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "reason": "Q628 UIElements event registration context: Registration identifiers are stable within one event type and distinct across types; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 63 to 64.",
       "expected": {
         "status": "value",
         "value": "62"
       },
       "actual": {
         "status": "value",
-        "value": "63"
+        "value": "64"
       }
     },
     {
@@ -3714,14 +3714,14 @@
     {
       "key": "UnityEngine.UIElements.TransitionStartEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.TransitionStartEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q628 UIElements event registration context: Registration identifiers are stable within one event type and distinct across types; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "reason": "Q628 UIElements event registration context: Registration identifiers are stable within one event type and distinct across types; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 64 to 65.",
       "expected": {
         "status": "value",
         "value": "63"
       },
       "actual": {
         "status": "value",
-        "value": "64"
+        "value": "65"
       }
     },
     {
@@ -3812,14 +3812,14 @@
     {
       "key": "UnityEngine.UIElements.ValidateCommandEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.ValidateCommandEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 65 to 66.",
       "expected": {
         "status": "value",
         "value": "2"
       },
       "actual": {
         "status": "value",
-        "value": "65"
+        "value": "66"
       }
     },
     {
@@ -3832,14 +3832,14 @@
     {
       "key": "UnityEngine.UIElements.WheelEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.WheelEvent>/eventTypeId",
       "module": "UnityEngine.UIElementsModule",
-      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types.",
+      "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types. The editor toolbar controls, their UXML data types and UxmlNamespacePrefixAttribute added to the inventory shift it from 40 to 41.",
       "expected": {
         "status": "value",
         "value": "24"
       },
       "actual": {
         "status": "value",
-        "value": "40"
+        "value": "41"
       }
     },
     {
@@ -3925,6 +3925,95 @@
       "actual": {
         "status": "value",
         "value": "[]"
+      }
+    },
+    {
+      "key": "UnityEditor.UIElements.ToolbarButton/Property/UnityEngine.UIElements.TextElement/selection",
+      "reason": "Q411 UIElements remaining context: Text interfaces and hierarchy now match, but cursor/selection values require initialized font and text-layout geometry. Unattached TextElement variants and TextField differ, so a fixed cursor-height value is not a general rule; retain this raw leaf or aggregate.",
+      "expected": {
+        "status": "value",
+        "value": "UnityEngine.UIElements.ITextSelection{cursorColor=UnityEngine.Color{r=0.70599997;g=0.70599997;b=0.70599997;a=1};cursorIndex=-1;cursorPosition=UnityEngine.Vector2{x=0;y=16.943182};doubleClickSelectsWord=true;isSelectable=false;selectAllOnFocus=false;selectAllOnMouseUp=false;selectIndex=-1;selectionColor=UnityEngine.Color{r=0.238999993;g=0.501999974;b=0.875;a=0.649999976};tripleClickSelectsLine=true}"
+      },
+      "actual": {
+        "status": "value",
+        "value": "UnityEngine.UIElements.ITextSelection{cursorColor=UnityEngine.Color{r=0.70599997;g=0.70599997;b=0.70599997;a=1};cursorIndex=-1;cursorPosition=UnityEngine.Vector2{x=0;y=0};doubleClickSelectsWord=true;isSelectable=false;selectAllOnFocus=false;selectAllOnMouseUp=false;selectIndex=-1;selectionColor=UnityEngine.Color{r=0.238999993;g=0.501999974;b=0.875;a=0.649999976};tripleClickSelectsLine=true}"
+      }
+    },
+    {
+      "key": "UnityEditor.UIElements.ToolbarMenu/Property/UnityEngine.UIElements.TextElement/selection",
+      "reason": "Q411 UIElements remaining context: Text interfaces and hierarchy now match, but cursor/selection values require initialized font and text-layout geometry. Unattached TextElement variants and TextField differ, so a fixed cursor-height value is not a general rule; retain this raw leaf or aggregate.",
+      "expected": {
+        "status": "value",
+        "value": "UnityEngine.UIElements.ITextSelection{cursorColor=UnityEngine.Color{r=0.70599997;g=0.70599997;b=0.70599997;a=1};cursorIndex=-1;cursorPosition=UnityEngine.Vector2{x=0;y=16.943182};doubleClickSelectsWord=true;isSelectable=false;selectAllOnFocus=false;selectAllOnMouseUp=false;selectIndex=-1;selectionColor=UnityEngine.Color{r=0.238999993;g=0.501999974;b=0.875;a=0.649999976};tripleClickSelectsLine=true}"
+      },
+      "actual": {
+        "status": "value",
+        "value": "UnityEngine.UIElements.ITextSelection{cursorColor=UnityEngine.Color{r=0.70599997;g=0.70599997;b=0.70599997;a=1};cursorIndex=-1;cursorPosition=UnityEngine.Vector2{x=0;y=0};doubleClickSelectsWord=true;isSelectable=false;selectAllOnFocus=false;selectAllOnMouseUp=false;selectIndex=-1;selectionColor=UnityEngine.Color{r=0.238999993;g=0.501999974;b=0.875;a=0.649999976};tripleClickSelectsLine=true}"
+      }
+    },
+    {
+      "key": "UnityEngine.UIElements.BlurEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.BlurEvent>/eventTypeId",
+      "module": "UnityEngine.UIElementsModule",
+      "reason": "Q628 UIElements event registration context: Registration identifiers are stable within one event type and distinct across types; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "expected": {
+        "status": "value",
+        "value": "12"
+      },
+      "actual": {
+        "status": "value",
+        "value": "16"
+      }
+    },
+    {
+      "key": "UnityEngine.UIElements.PointerCaptureEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.PointerCaptureEvent>/eventTypeId",
+      "module": "UnityEngine.UIElementsModule",
+      "reason": "Q628 UIElements event registration context: Registration identifiers are stable within one event type and distinct across types; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "expected": {
+        "status": "value",
+        "value": "56"
+      },
+      "actual": {
+        "status": "value",
+        "value": "57"
+      }
+    },
+    {
+      "key": "UnityEngine.UIElements.PointerEnterEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.PointerEnterEvent>/eventTypeId",
+      "module": "UnityEngine.UIElementsModule",
+      "reason": "Q628 UIElements event registration context: Registration identifiers are stable within one event type and distinct across types; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "expected": {
+        "status": "value",
+        "value": "57"
+      },
+      "actual": {
+        "status": "value",
+        "value": "58"
+      }
+    },
+    {
+      "key": "UnityEngine.UIElements.PointerOverEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.PointerOverEvent>/eventTypeId",
+      "module": "UnityEngine.UIElementsModule",
+      "reason": "Q628 UIElements event registration context: Registration identifiers are stable within one event type and distinct across types; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "expected": {
+        "status": "value",
+        "value": "58"
+      },
+      "actual": {
+        "status": "value",
+        "value": "59"
+      }
+    },
+    {
+      "key": "UnityEngine.UIElements.PointerStationaryEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.PointerStationaryEvent>/eventTypeId",
+      "module": "UnityEngine.UIElementsModule",
+      "reason": "Q628 UIElements event registration context: Registration identifiers are stable within one event type and distinct across types; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
+      "expected": {
+        "status": "value",
+        "value": "59"
+      },
+      "actual": {
+        "status": "value",
+        "value": "60"
       }
     }
   ],
