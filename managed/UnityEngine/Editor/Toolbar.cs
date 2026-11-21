@@ -42,12 +42,21 @@ namespace UnityEditor.UIElements
         static string ForCurrentFont(string sheetPath) =>
             sheetPath.Replace(".uss", "_" + UnityEditor.Experimental.EditorResources.currentFontName.ToLowerInvariant() + ".uss");
 
+        static readonly HashSet<string> s_Missing = new HashSet<string>();
+
+        // The sheet is a default sheet, as the Editor marks it: any other sheet's rule of the same
+        // property wins over it, whatever their specificity.
         static StyleSheet Sheet(string path)
         {
             if (s_Sheets.TryGetValue(path, out var sheet)) return sheet;
             sheet = Unbound.UIElements.UiResources.EditorLoad(path) as StyleSheet;
             if (sheet == null)
-                Debug.LogError($"Unbound: the Editor's toolbar style sheet '{path}' is not available (it comes from the Unity Editor's resources).");
+            {
+                if (s_Missing.Add(path))
+                    Debug.LogError($"Unbound: the Editor's toolbar style sheet '{path}' is not available (it comes from the Unity Editor's resources).");
+                return null;
+            }
+            sheet.isDefaultStyleSheet = true;
             s_Sheets[path] = sheet;
             return sheet;
         }
