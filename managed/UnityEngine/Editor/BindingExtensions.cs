@@ -6,8 +6,8 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 // Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
-// BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, Vector2,
-// Vector3, Vector4, Vector2Int, and Vector3Int fields plus Foldout isExpanded binding),
+// BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, Color/Color32,
+// Vector2, Vector3, Vector4, Vector2Int, and Vector3Int fields plus Foldout isExpanded binding),
 // BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
 // BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
 // SerializedObject binding context/updater pipeline that synchronizes fields and polls changes
@@ -16,8 +16,8 @@ using UnityEngine.UIElements;
 // "BindingExtensions.TrackSerializedObjectValue", "BindingExtensions.Unbind",
 // "SerializedPropertyChangeEvent", "SerializedObjectChangeEvent"); matches the Unity 6000.0.71f1
 // Editor, tests/projects/bindtree, tests/projects/bindproperty, tests/projects/enumbinding,
-// tests/projects/enumflagsbinding, tests/projects/vector2binding, tests/projects/vector3binding,
-// tests/projects/vector4binding, tests/projects/vector2intbinding,
+// tests/projects/enumflagsbinding, tests/projects/colorbinding, tests/projects/vector2binding,
+// tests/projects/vector3binding, tests/projects/vector4binding, tests/projects/vector2intbinding,
 // tests/projects/vector3intbinding, tests/projects/trackpropertyvalue and
 // tests/projects/trackserializedobjectvalue.
 
@@ -1159,6 +1159,9 @@ namespace UnityEditor.UIElements.Bindings
                 case SerializedPropertyType.String:
                     DefaultBind(element, prop, SerializedPropertyHelper.GetStringPropertyValue, SerializedPropertyHelper.SetStringPropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
+                case SerializedPropertyType.Color:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetColorPropertyValue, SerializedPropertyHelper.SetColorPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
                 case SerializedPropertyType.Enum:
                     CreateEnumBindingObject(element, prop);
                     break;
@@ -2084,6 +2087,7 @@ namespace UnityEditor.UIElements.Bindings
         public static float GetFloatPropertyValue(SerializedProperty p) => p.floatValue;
         public static double GetDoublePropertyValue(SerializedProperty p) => p.doubleValue;
         public static string GetStringPropertyValue(SerializedProperty p) => p.stringValue;
+        public static Color GetColorPropertyValue(SerializedProperty p) => p.colorValue;
         public static Vector2 GetVector2PropertyValue(SerializedProperty p) => p.vector2Value;
         public static Vector3 GetVector3PropertyValue(SerializedProperty p) => p.vector3Value;
         public static Vector4 GetVector4PropertyValue(SerializedProperty p) => p.vector4Value;
@@ -2109,6 +2113,7 @@ namespace UnityEditor.UIElements.Bindings
         public static void SetFloatPropertyValue(SerializedProperty p, float v) => p.floatValue = v;
         public static void SetDoublePropertyValue(SerializedProperty p, double v) => p.doubleValue = v;
         public static void SetStringPropertyValue(SerializedProperty p, string v) => p.stringValue = v;
+        public static void SetColorPropertyValue(SerializedProperty p, Color v) => p.colorValue = v;
         static void SetFloatComponentIfDifferent(SerializedProperty p, string name, float current, float next)
         {
             if (!current.Equals(next)) p.FindPropertyRelative(name).doubleValue = next;

@@ -73,6 +73,10 @@ namespace UnityEngine.Tests
             public Vector4 pos4 = new Vector4(4, 5, 6, 7);
             public Vector2Int gridPos = new Vector2Int(15, -24);
             public Vector3Int voxelPos = new Vector3Int(15, -24, 37);
+            public Color tint = new Color(0.25f, 0.5f, 0.75f, 0.5f);
+            [ColorUsage(false, true)]
+            public Color hdrTint = new Color(2f, 4f, 0.5f, 0.25f);
+            public Color32 tint32 = new Color32(16, 128, 240, 200);
             public Rect rectVal = new Rect(1, 2, 3, 4);
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
@@ -1661,6 +1665,108 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(t1);
                 Object.DestroyImmediate(t2);
                 Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyColorAndColorUsageWorkAcrossReleases()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.tint = new Color(0.25f, 0.5f, 0.75f, 0.25f);
+            t2.tint = new Color(0.25f, 0.5f, 0.75f, 0.75f);
+            t1.hdrTint = new Color(3f, 1.5f, 0.25f, 0.5f);
+            t2.hdrTint = new Color(5f, 1.5f, 0.25f, 0.5f);
+            using var panel = RuntimePanel.Create(settings);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                // Standalone defaults match Unity 6000.0 (showAlpha=true, hdr=false, showEyeDropper=false).
+                var standalone = new ColorField();
+                Assert.Equal(default(Color), standalone.value);
+                Assert.True(standalone.showAlpha);
+                Assert.False(standalone.hdr);
+                Assert.False(standalone.showEyeDropper);
+
+                // UXML traits default show-eye-dropper to true when absent.
+#pragma warning disable CS0618
+                var traits = new ColorField.UxmlTraits();
+                traits.Init(standalone, new EmptyUxmlAttributes(), default);
+#pragma warning restore CS0618
+                Assert.True(standalone.showEyeDropper);
+
+                // Alpha-only divergence shows mixed state; writing target[0]'s value resolves both targets.
+                var rt = new RuntimeModel { text = "rt-color-0" };
+                var cf = new ColorField { dataSource = rt };
+                cf.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                panel.visualTree.Add(cf);
+                cf.BindProperty(soMulti.FindProperty("tint"));
+                Tick(panel);
+                Assert.True(cf.showMixedValue);
+                Assert.Equal(t1.tint, cf.value);
+                Assert.Equal("rt-color-0", cf.tooltip);
+
+                cf.value = t1.tint;
+                Tick(panel);
+                Assert.False(cf.showMixedValue);
+                Assert.Equal(t1.tint, t2.tint);
+
+                // PropertyField applies [ColorUsage(false, true)] to generated ColorField and preserves HDR + alpha values.
+                var pfUsage = new PropertyField(soMulti.FindProperty("hdrTint"));
+                panel.visualTree.Add(pfUsage);
+                pfUsage.Bind(soMulti);
+                Tick(panel);
+                var usageField = Assert.IsType<ColorField>(pfUsage.hierarchy[0]);
+                Assert.Equal("", usageField.name);
+                Assert.Equal("Hdr Tint", usageField.label);
+                Assert.False(usageField.showAlpha);
+                Assert.True(usageField.hdr);
+                Assert.True(usageField.showMixedValue);
+                usageField.value = new Color(6f, 2f, 0.5f, 0.25f);
+                Tick(panel);
+                Assert.Equal(new Color(6f, 2f, 0.5f, 0.25f), t1.hdrTint);
+                Assert.Equal(new Color(6f, 2f, 0.5f, 0.25f), t2.hdrTint);
+                Assert.False(usageField.showMixedValue);
+
+                // Color32 binding quantizes cleanly through ColorField.
+                var cf32 = new ColorField();
+                panel.visualTree.Add(cf32);
+                cf32.BindProperty(soMulti.FindProperty("tint32"));
+                Tick(panel);
+                cf32.value = new Color(1f, 0f, 0.5f, 0.25f);
+                Tick(panel);
+                Assert.Equal(new Color32(255, 0, 128, 64), t1.tint32);
+                Assert.Equal(new Color32(255, 0, 128, 64), t2.tint32);
+
+                // Disposed SerializedObject unbinds cleanly while runtime DataBinding stays active.
+                soMulti.Dispose();
+                cf.value = Color.white;
+                rt.text = "rt-color-1";
+                Tick(panel);
+                Assert.Equal(new Color(0.25f, 0.5f, 0.75f, 0.25f), t1.tint);
+                Assert.Equal("rt-color-1", cf.tooltip);
+            }
+            finally
+            {
+                soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        sealed class EmptyUxmlAttributes : IUxmlAttributes
+        {
+            public bool TryGetAttributeValue(string attributeName, out string value)
+            {
+                value = null;
+                return false;
             }
         }
     }

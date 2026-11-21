@@ -47187,53 +47187,6 @@ namespace UnityEditor.UIElements
         internal static event global::System.Action<global::UnityEngine.UIElements.VisualElement, global::UnityEditor.SerializedProperty> updateBindingStateStyle { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingsStyleHelpers.updateBindingStateStyle"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
-    public unsafe partial class ColorField : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Color>
-    {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId showEyeDropperProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId showAlphaProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId hdrProperty;
-        [global::Unbound.Stub] internal bool setAlphaIfTransparentWhenPicked;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public static readonly string colorContainerUssClassName;
-        [global::Unbound.Stub] public static readonly string colorUssClassName;
-        [global::Unbound.Stub] public static readonly string mixedValueColorUssClassName;
-        [global::Unbound.Stub] public static readonly string eyeDropperUssClassName;
-        [global::Unbound.Stub] public static readonly string hdrLabelUssClassName;
-        [global::Unbound.Stub] public static readonly string gradientContainerUssClassName;
-        [global::Unbound.Stub] internal static readonly string internalColorFieldName;
-        [global::Unbound.Stub] public ColorField() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.ctor"); }
-        [global::Unbound.Stub] public ColorField(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.ctor"); }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(global::UnityEngine.Color newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] protected override void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.UpdateMixedValueContent"); }
-        public bool showEyeDropper { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.showEyeDropper"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.showEyeDropper"); } }
-        public bool showAlpha { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.showAlpha"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.showAlpha"); } }
-        public bool hdr { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.hdr"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.hdr"); } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Color>.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.ColorField, global::UnityEditor.UIElements.ColorField.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseFieldTraits<global::UnityEngine.Color, global::UnityEngine.UIElements.UxmlColorAttributeDescription>
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ColorField.UxmlTraits.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class CurveField : global::UnityEngine.UIElements.BaseField<global::UnityEngine.AnimationCurve>
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId renderModeProperty;

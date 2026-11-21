@@ -1,20 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using Unity.Properties;
 using UnityEngine;
 using UnityEngine.Internal;
 using UnityEngine.UIElements;
 
-// Editor UI Toolkit PropertyField for supported scalar, enum, Vector2, Vector3, Vector4,
-// Vector2Int, and Vector3Int SerializedProperty types (bool, int, long, uint, ulong, float,
-// double, string, ordinary and [Flags] enum, Vector2, Vector3, Vector4 Foldout with lazy child
-// PropertyFields, Vector2Int, and Vector3Int) and SerializedPropertyBindEvent. Documented in
-// Unity 6000.0 Scripting API ("PropertyField", "PropertyField.RegisterValueChangeCallback");
-// matches the Unity 6000.0.71f1 Editor, tests/projects/propertyfield, tests/projects/enumbinding,
-// tests/projects/enumflagsbinding, tests/projects/vector2binding, tests/projects/vector3binding,
-// tests/projects/vector4binding, tests/projects/vector2intbinding, and
-// tests/projects/vector3intbinding.
+// Editor UI Toolkit PropertyField for supported scalar, enum, Color/Color32 (including
+// ColorUsageAttribute), Vector2, Vector3, Vector4, Vector2Int, and Vector3Int SerializedProperty
+// types (bool, int, long, uint, ulong, float, double, string, ordinary and [Flags] enum,
+// Color/Color32, Vector2, Vector3, Vector4 Foldout with lazy child PropertyFields, Vector2Int,
+// and Vector3Int) and SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API
+// ("PropertyField", "PropertyField.RegisterValueChangeCallback", "ColorUsageAttribute"); matches
+// the Unity 6000.0.71f1 Editor, tests/projects/propertyfield, tests/projects/enumbinding,
+// tests/projects/enumflagsbinding, tests/projects/colorbinding, tests/projects/vector2binding,
+// tests/projects/vector3binding, tests/projects/vector4binding, tests/projects/vector2intbinding,
+// and tests/projects/vector3intbinding.
 
 namespace UnityEditor.UIElements
 {
@@ -135,6 +137,7 @@ namespace UnityEditor.UIElements
         static readonly Func<FloatField> s_CreateFloatField = () => new FloatField();
         static readonly Func<DoubleField> s_CreateDoubleField = () => new DoubleField();
         static readonly Func<TextField> s_CreateTextField = () => new TextField();
+        static readonly Func<ColorField> s_CreateColorField = () => new ColorField();
         static readonly Func<Vector2Field> s_CreateVector2Field = () => new Vector2Field();
         static readonly Func<Vector3Field> s_CreateVector3Field = () => new Vector3Field();
         static readonly Func<Vector2IntField> s_CreateVector2IntField = () => new Vector2IntField();
@@ -144,6 +147,7 @@ namespace UnityEditor.UIElements
         SerializedObject m_SerializedObject;
         SerializedProperty m_SerializedProperty;
         VisualElement m_ChildField;
+        VisualElement m_CustomPropertyGUI;
         VisualElement m_ChildrenContainer;
         List<PropertyField> m_ChildrenProperties;
 
@@ -230,10 +234,28 @@ namespace UnityEditor.UIElements
 
             m_ChildField?.Unbind();
             m_ChildField = null;
+            m_CustomPropertyGUI?.Unbind();
+            m_CustomPropertyGUI = null;
             TrimChildrenContainerSize(0);
             m_ChildrenContainer = null;
             Clear();
             if (m_SerializedProperty == null || !m_SerializedProperty.isValid) return;
+
+            if (m_SerializedProperty.propertyType == SerializedPropertyType.Color
+                && m_SerializedProperty.UnboundField?.GetCustomAttribute<ColorUsageAttribute>(false) is ColorUsageAttribute colorUsage)
+            {
+                var colorField = new ColorField(label ?? m_SerializedProperty.displayName)
+                {
+                    showAlpha = colorUsage.showAlpha,
+                    hdr = colorUsage.hdr,
+                    bindingPath = m_SerializedProperty.propertyPath
+                };
+                colorField.AddToClassList(BaseField<Color>.alignedFieldUssClassName);
+                colorField.RegisterValueChangedCallback(OnCustomPropertyFieldValueChanged);
+                m_CustomPropertyGUI = colorField;
+                hierarchy.Add(colorField);
+                return;
+            }
 
             m_ChildField = CreateOrUpdateFieldFromProperty(m_SerializedProperty, null);
             if (m_ChildField != null) hierarchy.Add(m_ChildField);
@@ -344,6 +366,12 @@ namespace UnityEditor.UIElements
                 DispatchPropertyChangedEvent();
         }
 
+        void OnCustomPropertyFieldValueChanged(EventBase evt)
+        {
+            if (ReferenceEquals(evt.target, m_CustomPropertyGUI) && m_SerializedProperty != null && m_SerializedProperty.isValid)
+                DispatchPropertyChangedEvent();
+        }
+
         void DispatchPropertyChangedEvent()
         {
             using var evt = SerializedPropertyChangeEvent.GetPooled(m_SerializedProperty);
@@ -412,6 +440,8 @@ namespace UnityEditor.UIElements
                     var textField = ConfigureField<TextField, string>(originalField as TextField, property, s_CreateTextField);
                     if (textField != null) textField.maxLength = -1;
                     return textField;
+                case SerializedPropertyType.Color:
+                    return ConfigureField<ColorField, Color>(originalField as ColorField, property, s_CreateColorField);
                 case SerializedPropertyType.Enum:
                 {
                     var enumType = property.ManagedEnumType;

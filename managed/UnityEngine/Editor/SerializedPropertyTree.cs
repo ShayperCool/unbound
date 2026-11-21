@@ -865,7 +865,7 @@ namespace Unbound.Runtime
                 case Shape.Vector2Int: return "Vector2Int";
                 case Shape.Vector3Int: return "Vector3Int";
                 case Shape.Quaternion: return "Quaternionf";
-                case Shape.Color: case Shape.Color32: return "ColorRGBA";
+                case Shape.Color: case Shape.Color32: return "Color";
                 case Shape.Rect: return "Rectf";
                 case Shape.RectInt: return "RectInt";
                 case Shape.Bounds: return "AABB";
@@ -960,6 +960,7 @@ namespace Unbound.Runtime
 
         internal static bool HasVisibleChildren(SerializedNode node)
         {
+            if (node.Shape == Shape.Color || node.Shape == Shape.Color32) return false;
             foreach (var child in node.Children)
                 if (!child.Hidden || child.Kind == SerializedNodeKind.ArrayContainer) return true;
             return false;

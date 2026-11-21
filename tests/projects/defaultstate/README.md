@@ -780,3 +780,12 @@ order and registers its base field, popup, and geometry-changed callbacks earlie
 updates 22 existing `eventTypeId` actuals and re-queues 2 `eventTypeId` rows (`DragPerformEvent`
 and `PointerMoveEvent`) that shifted off coincidence; every earlier committed reference row and
 inventory entry is unchanged.
+
+The `ColorField` slice adds `UnityEditor.UIElements.ColorField` and its nested UXML types
+(`ColorField+UxmlFactory`, `ColorField+UxmlSerializedData`, and `ColorField+UxmlTraits`) to the
+handwritten inventory (67 added rows from two independent 6000.0.71f1 Linux GPU Editor captures
+that agree byte-for-byte; all 67 match Unbound). Because constructing `ColorField` precedes
+`EnumFlagsField` in alphabetical walk order and registers `GeometryChangedEvent` via its alpha
+`ProgressBar` earlier, `debt.json` updates 6 existing `eventTypeId` actuals (`GeometryChangedEvent`,
+`PointerDownEvent`, `PointerUpEvent`, `PointerMoveEvent`, `MouseDownEvent`, and
+`NavigationSubmitEvent`); every earlier committed reference row and inventory entry is unchanged.

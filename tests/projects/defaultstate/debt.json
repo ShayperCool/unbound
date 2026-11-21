@@ -2847,7 +2847,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "8"
+        "value": "3"
       }
     },
     {
@@ -3169,7 +3169,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "6"
+        "value": "7"
       }
     },
     {
@@ -3389,7 +3389,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "7"
+        "value": "8"
       }
     },
     {
@@ -3456,7 +3456,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "3"
+        "value": "4"
       }
     },
     {
@@ -3501,7 +3501,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "5"
+        "value": "6"
       },
       "reason": "Q478 event inventory extension: absolute event registration numbers depend on initialization context and are not a documented fixed value. Keep this exact raw discrepancy; UI/eventIds/relations checks same-type stability and distinct types."
     },
@@ -3556,7 +3556,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "4"
+        "value": "5"
       }
     },
     {
