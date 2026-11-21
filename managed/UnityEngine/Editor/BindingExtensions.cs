@@ -1028,6 +1028,16 @@ namespace UnityEditor.UIElements.Bindings
 
         internal void BindTree(VisualElement element, SerializedProperty parentProperty)
         {
+            // An element that handles SerializedObjectBindEvent can stop the binding of its subtree
+            // (a bound ListView's rows, which its own binding binds). Unity sends the event to the
+            // elements interested in it; only registered callbacks take it here.
+            if (element.HasTrickleDownHandlers() || element.HasBubbleUpHandlers())
+            {
+                using var evt = SerializedObjectBindEvent.GetPooled(serializedObject);
+                evt.elementTarget = element;
+                Unbound.UIElements.Dispatching.HandleEventAtTargetAndDefaultPhase(evt, element.elementPanel, element);
+                if (evt.isPropagationStopped) return;
+            }
             if (element is IBindable bindable && !string.IsNullOrEmpty(bindable.bindingPath))
             {
                 var prop = BindPropertyRelative(bindable, parentProperty);
@@ -1088,7 +1098,8 @@ namespace UnityEditor.UIElements.Bindings
             if (prop == null || visualElement == null)
                 return prop;
             SyncEditableState(visualElement, prop.editable);
-            if (visualElement is PropertyField)
+            // A PropertyField takes the event; so does any element with a callback for it.
+            if (visualElement is PropertyField || visualElement.HasTrickleDownHandlers() || visualElement.HasBubbleUpHandlers())
             {
                 using var evt = SerializedPropertyBindEvent.GetPooled(prop);
                 evt.elementTarget = visualElement;

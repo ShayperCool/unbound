@@ -126,6 +126,26 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { 2, 3, 1, 4 }, f.Targets[0].numbers);
         }
 
+        [Fact]
+        public void AnElementThatStopsTheObjectBindEventKeepsItsSubtreeOutOfATreeBinding()
+        {
+            // A bound ListView stops the event on its rows' container this way, so binding a tree
+            // leaves the rows to the list's own binding.
+            using var f = new Fixture();
+            var stopper = new VisualElement();
+            var inside = new IntegerField { bindingPath = "fixedOrder.Array.data[0]" };
+            var outside = new IntegerField { bindingPath = "fixedOrder.Array.data[1]" };
+            stopper.RegisterCallback<SerializedObjectBindEvent>(evt => evt.StopPropagation());
+            stopper.Add(inside);
+            f.Panel.visualTree.Add(stopper);
+            f.Panel.visualTree.Add(outside);
+            f.Panel.visualTree.Bind(f.Serialized);
+            Tick(f.Panel);
+            Tick(f.Panel);
+            Assert.Equal(0, inside.value);
+            Assert.Equal(6, outside.value);
+        }
+
         static int Hits(string member) => Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
 
         [Fact]
