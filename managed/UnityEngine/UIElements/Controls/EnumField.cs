@@ -13,12 +13,14 @@ using System.Reflection;
 //   - `text` "Return the text value of the currently selected enum";
 //   - USS class names from the page's USS class table.
 // The menu is the same dropdown menu DropdownField opens (IGenericMenu, GenericDropdownMenu).
+// The items are the enum data Unity's EnumField reads (UnityCsReference 6000.0 EnumField,
+// EnumDataUtility): the value's InspectorName when it has one, else its nicified name,
+// [InspectorOrder] applied; obsolete values only with includeObsoleteValues.
 // Unbound's choices (unmeasured; the pages say nothing):
-//   - an item's text is the value's InspectorName when it has one, else its declared name as is;
-//   - a value declared under several names shows, and checks in the menu, its first declared name;
-//   - an obsolete value left out of the menu still shows its name; a value matching no declared
-//     name (an undeclared or combined [Flags] value) shows an empty text; [Flags] enums get no other
-//     treatment (EnumFlagsField is a separate control);
+//   - a value declared under several names shows, and checks in the menu, its first entry;
+//   - a value the entries leave out (an obsolete one without includeObsoleteValues, an undeclared
+//     or combined [Flags] value) shows an empty text; [Flags] enums get no other treatment
+//     (EnumFlagsField is a separate control);
 //   - Init sets the value without a ChangeEvent and throws ArgumentNullException for null;
 //   - a value of another enum type throws ArgumentException; the first value set on a field
 //     without a type gives it that value's type;
