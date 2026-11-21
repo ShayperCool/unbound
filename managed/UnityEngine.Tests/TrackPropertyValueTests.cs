@@ -1117,6 +1117,14 @@ namespace UnityEngine.Tests
                 Assert.Equal("Minus Five", popup.text);
                 popup.index = 2;
                 Assert.Equal(SignedChoice.PlusForty, target.signedEnum);
+                // Unbinding restores the choices and index the PropertyField created the popup
+                // with, which leave the obsolete value out too.
+                pf.Unbind();
+                Assert.Equal(new[] { "Minus Five", "Zero Point", "Plus Forty" }, popup.choices);
+                Assert.Equal(0, popup.index);
+                pf.Bind(so);
+                Tick(panel);
+                Tick(panel);
 
                 // Direct PopupField<string> restores original choices and index on Unbind.
                 var origChoices = new List<string> { "KeepA", "KeepB" };

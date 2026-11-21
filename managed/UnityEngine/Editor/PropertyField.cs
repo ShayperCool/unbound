@@ -645,7 +645,7 @@ namespace UnityEditor.UIElements
                             });
                     }
                     EnumData? enumData = enumType != null
-                        ? EnumDataUtility.GetCachedEnumData(enumType, excludeObsolete: false)
+                        ? EnumDataUtility.GetCachedEnumData(enumType)
                         : (EnumData?)null;
                     string[] enumDisplayNames = property.enumDisplayNames;
                     var popupEntries = new List<string>(enumData.HasValue ? enumData.Value.displayNames : enumDisplayNames);
