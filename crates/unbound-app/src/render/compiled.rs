@@ -934,7 +934,7 @@ impl CompiledPrograms {
     pub fn accepts_target(
         &self,
         id: u32,
-        first: wgpu::TextureFormat,
+        first: Option<wgpu::TextureFormat>,
         extra: &[Option<wgpu::TextureFormat>; 7],
     ) -> bool {
         super::pipelines::output_mismatch(

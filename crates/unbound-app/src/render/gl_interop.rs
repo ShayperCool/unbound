@@ -764,7 +764,9 @@ mod linux {
                                 ),
                             }
                         };
-                        attach(GL_COLOR_ATTACHMENT0, images.color, images.mip, images.layer);
+                        if images.color != 0 {
+                            attach(GL_COLOR_ATTACHMENT0, images.color, images.mip, images.layer);
+                        }
                         if let Some((depth, stencil)) = images.depth {
                             let point = if stencil {
                                 GL_DEPTH_STENCIL_ATTACHMENT

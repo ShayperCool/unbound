@@ -285,7 +285,8 @@ pub struct Presented {
 /// Where draws go.
 #[derive(Clone)]
 struct Target {
-    color: wgpu::TextureView,
+    /// First color attachment (none for a depth-only render target).
+    color: Option<wgpu::TextureView>,
     depth_slice: Option<u32>,
     /// A multisampled target's resolve: the texture's own view.
     resolve: Option<wgpu::TextureView>,
@@ -293,10 +294,14 @@ struct Target {
     depth: Option<wgpu::TextureView>,
     /// The depth buffer's format (with `depth`).
     depth_format: Option<wgpu::TextureFormat>,
-    format: wgpu::TextureFormat,
+    /// First color attachment's format (none for a depth-only render target).
+    format: Option<wgpu::TextureFormat>,
     alpha_one: bool,
     width: u32,
     height: u32,
+    /// Bound `(layer, mip)` subresource of the primary target (used by `same_target` even for
+    /// depth-only targets without a color texture).
+    subresource: (u32, u32),
     /// The screen of this frame (first use clears it).
     screen: bool,
     /// Stored as the screen is (the screen, or the render texture standing for it): drawn with
@@ -2542,36 +2547,45 @@ impl UnityRenderer {
         })
     }
 
-    /// Where the device's depth samples fill the color channels, the four-channel depth copy of
-    /// depth-only texture `handle`, which a draw samples outside a comparison: made the first time
-    /// (then brought up to date before that draw, as a new depth element is). A target sampled only
-    /// through comparisons (a shadow map) keeps its one-channel copy.
-    /// Returns whether it made the copy now (a draw brings it up to date before itself through
-    /// `depth_reads`; a dispatch through `dispatch_fills`).
+    /// Ensures a depth-only render texture (`format == 5`) has its filterable color copy when a
+    /// draw or dispatch samples it outside a depth/comparison slot: created lazily (one channel,
+    /// or four where the device's depth samples fill the color channels) and brought up to date
+    /// before that read. Shadow maps sampled only through depth/comparison slots never allocate or
+    /// copy this texture.
+    /// Returns whether it made or upgraded the copy now (a draw brings it up to date before itself
+    /// through `depth_reads`; a dispatch through `dispatch_fills`).
     fn fill_depth_copy(&mut self, handle: u64) -> bool {
-        if !resources::depth_copy_fills_color() {
-            return false;
-        }
         let Some(t) = self.textures.get(&handle) else {
             return false;
         };
-        let Some(copy) = t.depth_copy.as_ref().filter(|_| t.format == 5) else {
+        if t.format != 5 || t.layers != 1 || (t.depth_sample.is_none() && t.depth_msaa.is_none()) {
             return false;
-        };
-        if resources::filled_depth_copy(copy.texture().format()) {
+        }
+        let filled = resources::depth_copy_fills_color();
+        if let Some(copy) = &t.depth_copy
+            && (!filled || resources::filled_depth_copy(copy.texture().format()))
+        {
             return false;
         }
         let Some(depth_format) = t.depth_format() else {
             return false;
         };
-        let view = resources::depth_copy_view(&self.device, t.width, t.height, depth_format, true);
+        let view =
+            resources::depth_copy_view(&self.device, t.width, t.height, depth_format, filled);
         self.generation += 1;
         let generation = self.generation;
+        let current = {
+            let (color, depth) = self.target_handles;
+            depth_owner(color, depth) == Some(handle)
+        };
         let t = self.textures.get_mut(&handle).unwrap();
         t.depth_copy = Some(view);
         t.generation = generation;
         t.bind_groups = [None, None];
         self.evict_texture_groups(handle);
+        if current && self.depth_target.is_none() {
+            self.depth_target = Some(handle);
+        }
         self.depth_reads.insert(handle, true);
         true
     }
@@ -3294,16 +3308,17 @@ impl UnityRenderer {
         let s = self.ensure_screen(self.screen_slot);
         let (color, format) = s.view(color_space);
         Target {
-            color: color.clone(),
+            color: Some(color.clone()),
             depth_slice: None,
             resolve: None,
             samples: 1,
             depth: Some(s.depth.clone()),
             depth_format: Some(DEPTH_FORMAT),
-            format,
+            format: Some(format),
             alpha_one: false,
             width: s.width,
             height: s.height,
+            subresource: (0, 0),
             screen: true,
             screen_like: true,
             extra: Vec::new(),
@@ -3358,36 +3373,6 @@ impl UnityRenderer {
             }
             let mip = mip as u32;
             let layer = slice as u32;
-            let view = if t.volume {
-                let (raw, srgb) = &t.volume_targets[mip as usize];
-                if space == 1 {
-                    srgb.as_ref().unwrap_or(raw)
-                } else {
-                    raw
-                }
-                .clone()
-            } else {
-                t.texture.create_view(&wgpu::TextureViewDescriptor {
-                    format: Some(t.target_format(space)),
-                    usage: resources::view_usage(&t.texture, Some(t.target_format(space))),
-                    dimension: Some(wgpu::TextureViewDimension::D2),
-                    base_mip_level: mip,
-                    mip_level_count: Some(1),
-                    base_array_layer: layer,
-                    array_layer_count: Some(1),
-                    ..Default::default()
-                })
-            };
-            let (color_view, resolve, samples) = match &t.msaa {
-                Some((raw, srgb)) if mip == 0 => {
-                    let samples = match (srgb, space) {
-                        (Some(srgb), 1) => srgb.clone(),
-                        _ => raw.clone(),
-                    };
-                    (samples, Some(view), t.samples)
-                }
-                _ => (view, None, 1),
-            };
             let depth_view = t
                 .depth_texture
                 .as_ref()
@@ -3402,29 +3387,84 @@ impl UnityRenderer {
                         ..Default::default()
                     })
                 });
-            let generate_mips = t.auto_generate_mips
-                && mip == 0
-                && t.mip_count > 1
-                && !resources::is_integer(t.texture.format());
-            Target {
-                color: color_view,
-                depth_slice: t.volume.then_some(layer),
-                resolve,
-                samples,
-                depth_format: depth_view.as_ref().and(t.depth_format()),
-                depth: depth_view,
-                format: t.target_format(space),
-                alpha_one: t.format == texture_format::RGB16_SNORM,
-                width: (t.width >> mip).max(1),
-                height: (t.height >> mip).max(1),
-                screen: false,
-                screen_like,
-                extra: Vec::new(),
-                texture: Some((t.texture.clone(), layer, mip)),
-                auto_mips: generate_mips && !t.defer_mips,
-                defer_mips: (generate_mips && t.defer_mips)
-                    .then_some(t.target_format(self.color_space)),
-                packed: t.packed,
+            let depth_only = t.format == 5 && depth_view.is_some() && t.samples == 1;
+            if depth_only {
+                Target {
+                    color: None,
+                    depth_slice: None,
+                    resolve: None,
+                    samples: 1,
+                    depth_format: t.depth_format(),
+                    depth: depth_view,
+                    format: None,
+                    alpha_one: false,
+                    width: (t.width >> mip).max(1),
+                    height: (t.height >> mip).max(1),
+                    subresource: (layer, mip),
+                    screen: false,
+                    screen_like,
+                    extra: Vec::new(),
+                    texture: None,
+                    auto_mips: false,
+                    defer_mips: None,
+                    packed: 0,
+                }
+            } else {
+                let view = if t.volume {
+                    let (raw, srgb) = &t.volume_targets[mip as usize];
+                    if space == 1 {
+                        srgb.as_ref().unwrap_or(raw)
+                    } else {
+                        raw
+                    }
+                    .clone()
+                } else {
+                    t.texture.create_view(&wgpu::TextureViewDescriptor {
+                        format: Some(t.target_format(space)),
+                        usage: resources::view_usage(&t.texture, Some(t.target_format(space))),
+                        dimension: Some(wgpu::TextureViewDimension::D2),
+                        base_mip_level: mip,
+                        mip_level_count: Some(1),
+                        base_array_layer: layer,
+                        array_layer_count: Some(1),
+                        ..Default::default()
+                    })
+                };
+                let (color_view, resolve, samples) = match &t.msaa {
+                    Some((raw, srgb)) if mip == 0 => {
+                        let samples = match (srgb, space) {
+                            (Some(srgb), 1) => srgb.clone(),
+                            _ => raw.clone(),
+                        };
+                        (samples, Some(view), t.samples)
+                    }
+                    _ => (view, None, 1),
+                };
+                let generate_mips = t.auto_generate_mips
+                    && mip == 0
+                    && t.mip_count > 1
+                    && !resources::is_integer(t.texture.format());
+                Target {
+                    color: Some(color_view),
+                    depth_slice: t.volume.then_some(layer),
+                    resolve,
+                    samples,
+                    depth_format: depth_view.as_ref().and(t.depth_format()),
+                    depth: depth_view,
+                    format: Some(t.target_format(space)),
+                    alpha_one: t.format == texture_format::RGB16_SNORM,
+                    width: (t.width >> mip).max(1),
+                    height: (t.height >> mip).max(1),
+                    subresource: (layer, mip),
+                    screen: false,
+                    screen_like,
+                    extra: Vec::new(),
+                    texture: Some((t.texture.clone(), layer, mip)),
+                    auto_mips: generate_mips && !t.defer_mips,
+                    defer_mips: (generate_mips && t.defer_mips)
+                        .then_some(t.target_format(self.color_space)),
+                    packed: t.packed,
+                }
             }
         };
         if depth == commands::NO_TEXTURE {
@@ -3445,9 +3485,8 @@ impl UnityRenderer {
     fn same_target(&self, color: u64, depth: u64, mip: i32, slice: i32, extra: &[u64]) -> bool {
         self.target_handles == (color, depth)
             && self.state.target.as_ref().is_some_and(|target| {
-                target.texture.as_ref().is_some_and(|(_, layer, level)| {
-                    *layer == slice.max(0) as u32 && *level == mip.max(0) as u32
-                }) && target.extra.len() == extra.len()
+                target.subresource == (slice.max(0) as u32, mip.max(0) as u32)
+                    && target.extra.len() == extra.len()
                     && target.extra.iter().zip(extra).all(|(bound, handle)| {
                         bound
                             .texture
@@ -3838,11 +3877,14 @@ impl UnityRenderer {
                                 });
                                 continue;
                             }
+                            let (Some(color_view), Some(format)) = (t.color, t.format) else {
+                                continue;
+                            };
                             further.push(ExtraColor {
-                                color: t.color,
+                                color: color_view,
                                 depth_slice: t.depth_slice,
                                 resolve: t.resolve,
-                                format: t.format,
+                                format,
                                 alpha_one: t.alpha_one,
                                 texture: t.texture,
                                 auto_mips: t.auto_mips,
@@ -4021,11 +4063,14 @@ impl UnityRenderer {
                         passes.push(Op::Pass(pass));
                         open = true;
                     }
-                    let clear_color = flags & commands::clear::COLOR != 0;
+                    let clear_color = target.color.is_some() && flags & commands::clear::COLOR != 0;
                     if clear_color {
                         self.mark_msaa_written(&target);
                     }
-                    let color = resources::unorm8_clear(target.format, color);
+                    let color = match target.format {
+                        Some(format) => resources::unorm8_clear(format, color),
+                        None => color,
+                    };
                     let clear_depth =
                         flags & (commands::clear::DEPTH | commands::clear::STENCIL) != 0;
                     let viewport = self.state.viewport;
@@ -4035,7 +4080,7 @@ impl UnityRenderer {
                         && viewport[1] + viewport[3] >= target.height as f32;
                     // Integer targets are cleared by a pass's load (the clear pipeline writes
                     // floats): a whole-target clear after draws starts a pass of its own.
-                    let integer = resources::is_integer(target.format);
+                    let integer = target.format.is_some_and(resources::is_integer);
                     if full
                         && integer
                         && (clear_color || clear_depth)
@@ -4081,9 +4126,9 @@ impl UnityRenderer {
                         if target.alpha_one {
                             color[3] = 1.0;
                         }
-                        let color = if integer {
+                        let color = if let Some(format) = target.format.filter(|_| integer) {
                             let c = resources::integer_clear(
-                                target.format,
+                                format,
                                 wgpu::Color {
                                     r: color[0] as f64,
                                     g: color[1] as f64,
@@ -4091,7 +4136,7 @@ impl UnityRenderer {
                                     a: color[3] as f64,
                                 },
                             );
-                            let signed = target.format.sample_type(None, None)
+                            let signed = format.sample_type(None, None)
                                 == Some(wgpu::TextureSampleType::Sint);
                             [c.r, c.g, c.b, c.a].map(|v| {
                                 f32::from_bits(if signed { v as i32 as u32 } else { v as u32 })
@@ -5066,7 +5111,7 @@ impl UnityRenderer {
                     // A multisampled target's samples themselves (its color view's texture).
                     let (texture, alpha_one) = match index {
                         0 if target.samples > 1 => (
-                            Some((target.color.texture().clone(), 0, 0)),
+                            target.color.as_ref().map(|c| (c.texture().clone(), 0, 0)),
                             target.alpha_one,
                         ),
                         0 => (target.texture.clone(), target.alpha_one),
@@ -5966,32 +6011,40 @@ impl UnityRenderer {
                 }
                 load => load,
             };
-            let colors: Vec<_> = std::iter::once(Some(wgpu::RenderPassColorAttachment {
-                view: &pass.target.color,
-                depth_slice: pass.target.depth_slice,
-                resolve_target: pass.target.resolve.as_ref(),
-                ops: wgpu::Operations {
-                    load: load(
-                        pass.target.format,
-                        pass.target.alpha_one,
-                        pass.target.packed,
-                        level_of(&pass.target.texture),
-                    ),
-                    store: wgpu::StoreOp::Store,
-                },
-            }))
-            .chain(pass.target.extra.iter().map(|e| {
-                Some(wgpu::RenderPassColorAttachment {
-                    view: &e.color,
-                    depth_slice: e.depth_slice,
-                    resolve_target: e.resolve.as_ref(),
-                    ops: wgpu::Operations {
-                        load: load(e.format, e.alpha_one, e.packed, level_of(&e.texture)),
-                        store: wgpu::StoreOp::Store,
-                    },
+            let colors: Vec<_> = pass
+                .target
+                .color
+                .as_ref()
+                .zip(pass.target.format)
+                .map(|(view, format)| {
+                    Some(wgpu::RenderPassColorAttachment {
+                        view,
+                        depth_slice: pass.target.depth_slice,
+                        resolve_target: pass.target.resolve.as_ref(),
+                        ops: wgpu::Operations {
+                            load: load(
+                                format,
+                                pass.target.alpha_one,
+                                pass.target.packed,
+                                level_of(&pass.target.texture),
+                            ),
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })
                 })
-            }))
-            .collect();
+                .into_iter()
+                .chain(pass.target.extra.iter().map(|e| {
+                    Some(wgpu::RenderPassColorAttachment {
+                        view: &e.color,
+                        depth_slice: e.depth_slice,
+                        resolve_target: e.resolve.as_ref(),
+                        ops: wgpu::Operations {
+                            load: load(e.format, e.alpha_one, e.packed, level_of(&e.texture)),
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })
+                }))
+                .collect();
             let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("unbound pass"),
                 color_attachments: &colors,
@@ -6127,9 +6180,11 @@ impl UnityRenderer {
                 native.encode(&mut encoder);
             }
             if pass.target.auto_mips {
-                if let Some((texture, layer, _)) = &pass.target.texture {
+                if let (Some((texture, layer, _)), Some(format)) =
+                    (&pass.target.texture, pass.target.format)
+                {
                     self.mipmaps
-                        .encode(&mut encoder, texture, pass.target.format, *layer, 1);
+                        .encode(&mut encoder, texture, format, *layer, 1);
                 }
             }
             for extra in &pass.target.extra {

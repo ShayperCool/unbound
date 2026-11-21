@@ -1744,39 +1744,57 @@ pub fn upload_texture_with(
             e
         }
         None => {
+            // A single-sample depth-only render target (Shadowmap / Depth) draws through its depth
+            // attachment alone; keep a 1x1 placeholder for `texture` instead of a full-size color
+            // image, and create `depth_copy` lazily only when a shader reads it outside a depth slot.
+            let depth_only = t.format == 5 && render_target && t.depth_bits != 0 && samples == 1;
             // Copies may read any texture (Graphics.CopyTexture).
             let mut usage = wgpu::TextureUsages::TEXTURE_BINDING
                 | wgpu::TextureUsages::COPY_DST
                 | wgpu::TextureUsages::COPY_SRC;
-            if render_target || t.format == texture_format::RGB16_SNORM {
+            if (render_target && !depth_only) || t.format == texture_format::RGB16_SNORM {
                 usage |= wgpu::TextureUsages::RENDER_ATTACHMENT;
             }
-            if t.random_write {
+            if t.random_write && !depth_only {
                 usage |= wgpu::TextureUsages::STORAGE_BINDING;
             }
             let srgb_formats = [srgb_format];
-            let view_formats: &[wgpu::TextureFormat] = if color { &srgb_formats } else { &[] };
+            let view_formats: &[wgpu::TextureFormat] = if color && !depth_only {
+                &srgb_formats
+            } else {
+                &[]
+            };
             let texture = allocate(&wgpu::TextureDescriptor {
-                label: Some("unbound texture"),
+                label: Some(if depth_only {
+                    "unbound depth-only placeholder"
+                } else {
+                    "unbound texture"
+                }),
                 size: wgpu::Extent3d {
-                    width,
-                    height,
-                    depth_or_array_layers: layers,
+                    width: if depth_only { 1 } else { width },
+                    height: if depth_only { 1 } else { height },
+                    depth_or_array_layers: if depth_only { 1 } else { layers },
                 },
-                mip_level_count: mip_count,
+                mip_level_count: if depth_only { 1 } else { mip_count },
                 sample_count: 1,
-                dimension: if volume {
+                dimension: if volume && !depth_only {
                     wgpu::TextureDimension::D3
                 } else {
                     wgpu::TextureDimension::D2
                 },
-                format,
+                format: if depth_only {
+                    wgpu::TextureFormat::Rgba8Unorm
+                } else {
+                    format
+                },
                 usage,
                 view_formats,
             });
             // A borrowed allocation can have a different physical channel order.
             let srgb_format = texture.format().add_srgb_suffix();
-            let view_dimension = if cube {
+            let view_dimension = if depth_only {
+                None
+            } else if cube {
                 Some(wgpu::TextureViewDimension::Cube)
             } else if cube_array {
                 Some(wgpu::TextureViewDimension::CubeArray)
@@ -1787,7 +1805,7 @@ pub fn upload_texture_with(
                 dimension: view_dimension,
                 ..Default::default()
             });
-            let srgb_view = color.then(|| {
+            let srgb_view = (color && !depth_only).then(|| {
                 texture.create_view(&wgpu::TextureViewDescriptor {
                     format: Some(srgb_format),
                     dimension: view_dimension,
@@ -1795,7 +1813,7 @@ pub fn upload_texture_with(
                     ..Default::default()
                 })
             });
-            let storage_views = if t.random_write {
+            let storage_views = if t.random_write && !depth_only {
                 (0..mip_count)
                     .map(|mip| {
                         texture.create_view(&wgpu::TextureViewDescriptor {
@@ -1810,7 +1828,7 @@ pub fn upload_texture_with(
             } else {
                 Vec::new()
             };
-            let volume_targets = if volume && render_target {
+            let volume_targets = if volume && render_target && !depth_only {
                 (0..mip_count)
                     .map(|mip| {
                         let descriptor = wgpu::TextureViewDescriptor {
@@ -1931,10 +1949,17 @@ pub fn upload_texture_with(
                 queue.submit([encoder.finish()]);
             }
             // A multisampled depth buffer cannot be sampled as a texture.
+            let depth_sample_dim = if cube {
+                Some(wgpu::TextureViewDimension::Cube)
+            } else if cube_array {
+                Some(wgpu::TextureViewDimension::CubeArray)
+            } else {
+                None
+            };
             let depth_sample = depth_texture.as_ref().filter(|_| samples == 1).map(|t| {
                 t.create_view(&wgpu::TextureViewDescriptor {
                     aspect: wgpu::TextureAspect::DepthOnly,
-                    dimension: view_dimension,
+                    dimension: depth_sample_dim,
                     ..Default::default()
                 })
             });
@@ -1947,17 +1972,9 @@ pub fn upload_texture_with(
                     ..Default::default()
                 })
             });
-            let depth_copy = (t.format == 5 && layers == 1 && depth_sample.is_some()).then(|| {
-                // One channel: a draw that samples it outside a comparison makes it four where the
-                // device fills them (the executor's `fill_depth_copy`); comparisons read the depth.
-                depth_copy_view(
-                    device,
-                    width,
-                    height,
-                    depth_format(device, t.depth_bits),
-                    false,
-                )
-            });
+            // Created lazily by the executor (`ensure_depth_copy` / `depth_element_view`) only
+            // when a draw or dispatch samples the depth outside a depth/comparison slot.
+            let depth_copy = None;
             let native_depth = (t.retain_resolve && !t.bind_ms && samples > 1 && layers == 1)
                 .then(|| depth_texture.as_ref())
                 .flatten()

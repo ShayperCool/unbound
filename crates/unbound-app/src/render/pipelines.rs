@@ -15,7 +15,8 @@ pub struct PipelineKey {
     /// A strip draw's index format (none for list topologies): a mesh's indices are 32-bit, a
     /// buffer's (`DrawIndices`) 16- or 32-bit.
     pub strip_index: Option<wgpu::IndexFormat>,
-    pub format: wgpu::TextureFormat,
+    /// The first color attachment's format (none for a depth-only render target).
+    pub format: Option<wgpu::TextureFormat>,
     /// The target's depth buffer format (none: no depth buffer).
     pub depth: Option<wgpu::TextureFormat>,
     /// The target's MSAA samples.
@@ -28,7 +29,8 @@ pub struct PipelineKey {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ClearKey {
-    pub format: wgpu::TextureFormat,
+    /// The first color attachment's format (none for a depth-only render target).
+    pub format: Option<wgpu::TextureFormat>,
     /// The target's further colors: a viewport clear clears the first (Unbound), leaving them.
     pub extra: [Option<wgpu::TextureFormat>; 7],
     pub depth: Option<wgpu::TextureFormat>,
@@ -207,6 +209,28 @@ impl Pipelines {
         if let Some(p) = self.clears.get(&key) {
             return p.clone();
         }
+        let clear_targets: Vec<_> = key
+            .format
+            .into_iter()
+            .map(|format| {
+                Some(wgpu::ColorTargetState {
+                    format,
+                    blend: None,
+                    write_mask: if key.color {
+                        wgpu::ColorWrites::ALL
+                    } else {
+                        wgpu::ColorWrites::empty()
+                    },
+                })
+            })
+            .chain(key.extra.iter().flatten().map(|&format| {
+                Some(wgpu::ColorTargetState {
+                    format,
+                    blend: None,
+                    write_mask: wgpu::ColorWrites::empty(),
+                })
+            }))
+            .collect();
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("unbound viewport clear"),
             layout: Some(&self.clear_layout),
@@ -245,31 +269,15 @@ impl Pipelines {
                 count: key.samples,
                 ..Default::default()
             },
-            fragment: Some(wgpu::FragmentState {
+            fragment: key.format.map(|format| wgpu::FragmentState {
                 module: &self.clear_module,
-                entry_point: Some(match key.format.sample_type(None, None) {
+                entry_point: Some(match format.sample_type(None, None) {
                     Some(wgpu::TextureSampleType::Sint) => "fs_clear_signed",
                     Some(wgpu::TextureSampleType::Uint) => "fs_clear_unsigned",
                     _ => "fs_clear",
                 }),
                 compilation_options: Default::default(),
-                targets: &std::iter::once(Some(wgpu::ColorTargetState {
-                    format: key.format,
-                    blend: None,
-                    write_mask: if key.color {
-                        wgpu::ColorWrites::ALL
-                    } else {
-                        wgpu::ColorWrites::empty()
-                    },
-                }))
-                .chain(key.extra.iter().flatten().map(|&format| {
-                    Some(wgpu::ColorTargetState {
-                        format,
-                        blend: None,
-                        write_mask: wgpu::ColorWrites::empty(),
-                    })
-                }))
-                .collect::<Vec<_>>(),
+                targets: &clear_targets,
             }),
             multiview_mask: None,
             cache: None,
@@ -465,35 +473,40 @@ pub fn create_pipeline(
             compilation_options: Default::default(),
             // Further colors take the outputs after the first; one the program does not write,
             // the first too (a program that writes only the depth), keeps its pixels (a write
-            // mask of nothing, as WebGPU requires).
+            // mask of nothing, as WebGPU requires). Depth-only targets (`key.format == None`)
+            // attach no color targets.
             // Integer targets do not blend (OpenGL ignores blending for them).
-            targets: &std::iter::once({
-                let written = outputs & 1 != 0;
-                let (blend, write_mask) = target(0);
-                Some(wgpu::ColorTargetState {
-                    format: key.format,
-                    blend: blend.filter(|_| written && !super::resources::is_integer(key.format)),
-                    write_mask: if written {
-                        write_mask
-                    } else {
-                        wgpu::ColorWrites::empty()
-                    },
+            targets: &key
+                .format
+                .into_iter()
+                .map(|format| {
+                    let written = outputs & 1 != 0;
+                    let (blend, write_mask) = target(0);
+                    Some(wgpu::ColorTargetState {
+                        format,
+                        blend: blend.filter(|_| written && !super::resources::is_integer(format)),
+                        write_mask: if written {
+                            write_mask
+                        } else {
+                            wgpu::ColorWrites::empty()
+                        },
+                    })
                 })
-            })
-            .chain(key.extra.iter().flatten().enumerate().map(|(i, &format)| {
-                let written = outputs & (1 << (i + 1)) != 0;
-                let (blend, write_mask) = target((i + 1).min(crate::shaderlab::MAX_TARGETS - 1));
-                Some(wgpu::ColorTargetState {
-                    format,
-                    blend: blend.filter(|_| written && !super::resources::is_integer(format)),
-                    write_mask: if written {
-                        write_mask
-                    } else {
-                        wgpu::ColorWrites::empty()
-                    },
-                })
-            }))
-            .collect::<Vec<_>>(),
+                .chain(key.extra.iter().flatten().enumerate().map(|(i, &format)| {
+                    let written = outputs & (1 << (i + 1)) != 0;
+                    let (blend, write_mask) =
+                        target((i + 1).min(crate::shaderlab::MAX_TARGETS - 1));
+                    Some(wgpu::ColorTargetState {
+                        format,
+                        blend: blend.filter(|_| written && !super::resources::is_integer(format)),
+                        write_mask: if written {
+                            write_mask
+                        } else {
+                            wgpu::ColorWrites::empty()
+                        },
+                    })
+                }))
+                .collect::<Vec<_>>(),
         }),
         multiview_mask: None,
         cache: None,
@@ -598,11 +611,11 @@ pub fn takes_output(format: wgpu::TextureFormat, kind: OutputKind) -> bool {
 
 /// The first attached color whose scalar type cannot consume its fragment output.
 pub fn output_mismatch(
-    first: wgpu::TextureFormat,
+    first: Option<wgpu::TextureFormat>,
     extra: &[Option<wgpu::TextureFormat>; 7],
     kinds: [Option<OutputKind>; 8],
 ) -> Option<(usize, OutputKind, wgpu::TextureFormat)> {
-    std::iter::once(Some(first))
+    std::iter::once(first)
         .chain(extra.iter().copied())
         .zip(kinds)
         .enumerate()
@@ -625,22 +638,27 @@ mod tests {
         kinds[2] = Some(K::Sint);
         let mut extra = [None; 7];
         extra[1] = Some(F::Rgba32Sint);
-        assert_eq!(output_mismatch(F::Rgba32Uint, &extra, kinds), None);
+        assert_eq!(output_mismatch(Some(F::Rgba32Uint), &extra, kinds), None);
         assert_eq!(
-            output_mismatch(F::Rgba8Unorm, &extra, kinds),
+            output_mismatch(Some(F::Rgba8Unorm), &extra, kinds),
             Some((0, K::Uint, F::Rgba8Unorm))
         );
         extra[1] = Some(F::Rgba32Uint);
         assert_eq!(
-            output_mismatch(F::Rgba32Uint, &extra, kinds),
+            output_mismatch(Some(F::Rgba32Uint), &extra, kinds),
             Some((2, K::Sint, F::Rgba32Uint))
         );
         kinds[0] = Some(K::Float);
         assert_eq!(
-            output_mismatch(F::Rgba32Sint, &[None; 7], kinds),
+            output_mismatch(Some(F::Rgba32Sint), &[None; 7], kinds),
             Some((0, K::Float, F::Rgba32Sint))
         );
-        assert_eq!(output_mismatch(F::Rgba32Sint, &[None; 7], [None; 8]), None);
+        assert_eq!(
+            output_mismatch(Some(F::Rgba32Sint), &[None; 7], [None; 8]),
+            None
+        );
+        // Depth-only render targets attach no color targets, so any fragment output is accepted.
+        assert_eq!(output_mismatch(None, &[None; 7], kinds), None);
     }
 
     #[test]

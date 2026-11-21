@@ -2163,8 +2163,13 @@ impl UnityRenderer {
             return None;
         }
         // SAFETY: raw handles only read, while the target's views live (the renderer's).
-        let color = unsafe { target.color.as_hal::<Vulkan>().map(|v| v.raw_handle()) }?;
-        let color_format = vk_format(&self.adapter, target.format)?;
+        let (color, color_format) = match (&target.color, target.format) {
+            (Some(c), Some(f)) => (
+                unsafe { c.as_hal::<Vulkan>().map(|v| v.raw_handle()) }?,
+                vk_format(&self.adapter, f)?,
+            ),
+            _ => (vk::ImageView::null(), vk::Format::UNDEFINED),
+        };
         // A multisampled color resolves into the target's texture at the pass's end, as the
         // renderer's own passes do.
         let resolve = match target.resolve.as_ref().filter(|_| target.samples > 1) {
@@ -2184,6 +2189,9 @@ impl UnityRenderer {
             )),
             None => None,
         };
+        if color_format == vk::Format::UNDEFINED && depth.is_none() {
+            return None;
+        }
         let depth_handle = if self.target_handles.1 == 0 {
             self.target_handles.0
         } else {
@@ -2199,7 +2207,10 @@ impl UnityRenderer {
             })
             .and_then(|gpu| gpu.native_depth.as_ref())
             .and_then(|r| unsafe { r.view.as_hal::<Vulkan>().map(|v| (v.raw_handle(), &r.view)) });
-        let views: Vec<&wgpu::TextureView> = std::iter::once(&target.color)
+        let views: Vec<&wgpu::TextureView> = target
+            .color
+            .as_ref()
+            .into_iter()
             .chain(depth.map(|(_, _, d)| d))
             .chain(resolve.map(|(_, r)| r))
             .chain(depth_resolve.map(|(_, r)| r))
@@ -2277,7 +2288,9 @@ struct PassTarget {
 impl PassTarget {
     /// The framebuffer's attachments: color, depth, resolve.
     fn raw_views(&self) -> Vec<vk::ImageView> {
-        std::iter::once(self.color)
+        (self.color != vk::ImageView::null())
+            .then_some(self.color)
+            .into_iter()
             .chain(self.depth.map(|(view, _)| view))
             .chain(self.resolve)
             .chain(self.depth_resolve)
