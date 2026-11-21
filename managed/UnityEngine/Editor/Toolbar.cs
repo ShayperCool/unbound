@@ -5,6 +5,7 @@ using Unity.Properties;
 using UnityEngine;
 using UnityEngine.Internal;
 using UnityEngine.UIElements;
+using ConditionalAttribute = System.Diagnostics.ConditionalAttribute;
 
 // The editor toolbar controls of UI Toolkit (UnityEditor.UIElements): Toolbar, ToolbarButton,
 // ToolbarToggle, ToolbarMenu, ToolbarSpacer, SearchFieldBase, ToolbarSearchField,
@@ -421,6 +422,7 @@ namespace UnityEditor.UIElements
         [ExcludeFromDocs]
         public new partial class UxmlSerializedData : SearchFieldBase<TextField, string>.UxmlSerializedData
         {
+            [Conditional("UNITY_EDITOR")]
             public new static void Register() => SearchFieldBase<TextField, string>.UxmlSerializedData.Register();
             public override object CreateInstance() => new ToolbarSearchField();
             public UxmlSerializedData() { }
