@@ -642,6 +642,21 @@ namespace UnityEditor.UIElements.Bindings
         protected internal bool isReleased { get; set; }
         protected virtual VisualElement owner => m_Field as VisualElement;
 
+        Action m_SetUndoGroup;
+        Action m_UnsetUndoGroup;
+
+        void SetUndoGroup()
+        {
+            Undo.IncrementCurrentGroup();
+            (m_Field as VisualElement)?.SetProperty(UndoGroupPropertyKey, Undo.GetCurrentGroup());
+        }
+
+        void UnsetUndoGroup()
+        {
+            Undo.IncrementCurrentGroup();
+            (m_Field as VisualElement)?.SetProperty(UndoGroupPropertyKey, null);
+        }
+
         protected IBindable boundElement
         {
             get => m_Field;
@@ -651,6 +666,11 @@ namespace UnityEditor.UIElements.Bindings
                 {
                     previous.UnregisterCallback(m_OnFieldAttachedToPanel);
                     previous.UnregisterCallback(m_OnFieldDetachedFromPanel);
+                    if (previous is IEditableElement previousEditable)
+                    {
+                        previousEditable.editingStarted -= m_SetUndoGroup;
+                        previousEditable.editingEnded -= m_UnsetUndoGroup;
+                    }
                     if (m_TooltipWasSet) previous.tooltip = null;
                     m_TooltipWasSet = false;
                 }
@@ -660,6 +680,12 @@ namespace UnityEditor.UIElements.Bindings
                 {
                     current.RegisterCallback(m_OnFieldAttachedToPanel);
                     current.RegisterCallback(m_OnFieldDetachedFromPanel);
+                    // An edit that spans several value changes (a drag, typing) is one undo step.
+                    if (current is IEditableElement editable)
+                    {
+                        editable.editingStarted += m_SetUndoGroup;
+                        editable.editingEnded += m_UnsetUndoGroup;
+                    }
                     if (string.IsNullOrEmpty(current.tooltip))
                     {
                         current.tooltip = boundProperty?.tooltip;
@@ -692,6 +718,8 @@ namespace UnityEditor.UIElements.Bindings
         {
             m_OnFieldAttachedToPanel = _ => OnFieldAttached();
             m_OnFieldDetachedFromPanel = _ => OnFieldDetached();
+            m_SetUndoGroup = SetUndoGroup;
+            m_UnsetUndoGroup = UnsetUndoGroup;
         }
 
         static long GetCurrentTime() => Panel.TimeSinceStartupMs();
@@ -1591,6 +1619,7 @@ namespace UnityEditor.UIElements.Bindings
             if (isReleased || m_IsUpdating || !ReferenceEquals(evt.target, m_Field)) return;
             try
             {
+                int currentGroup = Undo.GetCurrentGroup();
                 if (m_Field is VisualElement visualElement
                     && ReferenceEquals(visualElement.GetBinding(BindingExtensions.s_SerializedBindingId), this)
                     && ResolveProperty())
@@ -1603,6 +1632,7 @@ namespace UnityEditor.UIElements.Bindings
                             bindingContext.UpdateRevision();
                             bindingContext?.ResetUpdate();
                         }
+                        Undo.CollapseUndoOperations((int?)visualElement.GetProperty(UndoGroupPropertyKey) ?? currentGroup);
                         UpdateMixedValueState(visualElement, boundProperty);
                     }
                     return;

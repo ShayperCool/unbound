@@ -252,6 +252,52 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ABoundFieldsEditFromStartToEndIsOneUndoStep()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            var other = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                Undo.ClearAll();
+                var field = new IntegerField();
+                panel.visualTree.Add(field);
+                // Each change of the field records an undoable change of another object in a group
+                // of its own; the binding collapses the groups made since the edit started.
+                field.RegisterCallback<ChangeEvent<int>>(evt =>
+                {
+                    Undo.RecordObject(other, "follow");
+                    other.count = evt.newValue;
+                    Undo.FlushUndoRecordObjects();
+                    Undo.IncrementCurrentGroup();
+                }, TrickleDown.TrickleDown);
+                field.BindProperty(so.FindProperty("count"));
+                Tick(panel);
+                Tick(panel);
+
+                // A drag or typing session: several value changes between the edit's start and end.
+                field.StartEditing(null);
+                field.value = 11;
+                field.value = 12;
+                field.value = 13;
+                field.EndEditing(null);
+                Assert.Equal(13, target.count);
+                Assert.Equal(13, other.count);
+                Undo.PerformUndo();
+                Assert.Equal(10, other.count);
+            }
+            finally
+            {
+                Undo.ClearAll();
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(other);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
         public void SwappedOrShiftedStructPartsAreSeenAsChanges()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
