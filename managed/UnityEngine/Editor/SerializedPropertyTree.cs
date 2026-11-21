@@ -1480,13 +1480,14 @@ namespace Unbound.Runtime
                     if (list.Count != count)
                     {
                         // Another target of a multi-object resize keeps its own elements; what is
-                        // added duplicates its own last element.
+                        // added duplicates its own last element. Either takes the values the edit
+                        // set in it.
                         IList resized = NewList(node, count);
                         for (int i = 0; i < count; i++)
                         {
                             var element = node.Element(i);
-                            object value = i >= list.Count ? DuplicateLastElement(node, list)
-                                : element.Dirty ? ApplyNode(element, list[i], primary) : list[i];
+                            object value = i < list.Count ? list[i] : DuplicateLastElement(node, list);
+                            if (element.Dirty) value = ApplyNode(element, value, primary);
                             if (node.ClrType.IsArray) resized[i] = value;
                             else resized.Add(value);
                         }

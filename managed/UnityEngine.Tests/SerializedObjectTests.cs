@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using Xunit;
@@ -524,6 +525,35 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "x", "y" }, new[] { a.items[0].label, a.items[1].label });
             Assert.Equal(2, b.items.Length);
             AssertIndependentCopies(b.items, 0, emptyAlone.list[0].label, emptyAlone.list[0].count);
+        }
+
+        [Fact]
+        public void AValueSetInAnAddedElementReachesEveryTarget()
+        {
+            var first = ItemList(("a", 1));
+            var second = ItemList(("s", 7));
+            var third = ItemList();
+            var serialized = new SerializedObject(new Object[] { first, second, third });
+            var list = serialized.FindProperty("list");
+            list.arraySize = 2;
+            serialized.FindProperty("list.Array.data[1].count").intValue = 99;
+            serialized.ApplyModifiedProperties();
+            Assert.Equal(new[] { 1, 99 }, first.list.Select(i => i.count));
+            Assert.Equal(new[] { 7, 99 }, second.list.Select(i => i.count));
+            Assert.Equal(new[] { "s", "s" }, second.list.Select(i => i.label));
+            Assert.Equal(99, third.list[1].count);
+            Assert.NotSame(second.list[0], second.list[1]);
+
+            var a = Create<SmallSample>();
+            var b = Create<SmallSample>();
+            a.list = new List<int> { 7 };
+            b.list = new List<int> { 5 };
+            var leaves = new SerializedObject(new Object[] { a, b });
+            leaves.FindProperty("list").arraySize = 2;
+            leaves.FindProperty("list.Array.data[1]").intValue = 99;
+            leaves.ApplyModifiedProperties();
+            Assert.Equal(new[] { 7, 99 }, a.list);
+            Assert.Equal(new[] { 5, 99 }, b.list);
         }
 
         [Fact]
