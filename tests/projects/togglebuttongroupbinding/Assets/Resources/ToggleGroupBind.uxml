@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:ToggleButtonGroup name="uxml-tbg" binding-path="directState">
+        <ui:Button text="A" />
+        <ui:Button text="B" />
+        <ui:Button text="C" />
+    </ui:ToggleButtonGroup>
+    <uie:PropertyField name="uxml-pf-tbg" binding-path="directState" />
+</ui:UXML>
