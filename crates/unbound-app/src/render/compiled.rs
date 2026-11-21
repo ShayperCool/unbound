@@ -2306,6 +2306,13 @@ mod tests {
             at("_Global", 528),
             at("unity_SHAr", 544),
         ]);
+        // Arrays: one inside the bound block, one in binding 2.
+        let array = |name: &str, offset| Uniform {
+            count: 2,
+            stride: 16,
+            ..uniform(name, offset, 4, 1)
+        };
+        uniforms.extend([array("_TileArr", 320), array("_Palette", 560)]);
         let binding = |offset, size| unbound_shaders::UniformBinding { offset, size };
         let program = Compiled {
             vertex: String::new(),
@@ -2317,8 +2324,8 @@ mod tests {
             mesh_instance_uniform_scaling: false,
             mesh_instance_max_count: None,
             uniforms,
-            uniform_size: 560,
-            uniform_bindings: vec![binding(0, 96), binding(256, 64), binding(512, 48)],
+            uniform_size: 592,
+            uniform_bindings: vec![binding(0, 96), binding(256, 96), binding(512, 80)],
             textures: Vec::new(),
             texture_dims: Vec::new(),
             main_texture: true,
@@ -2329,13 +2336,13 @@ mod tests {
             blocks: vec![unbound_shaders::BlockRange {
                 name: "Tiles".into(),
                 offset: 256,
-                size: 64,
+                size: 96,
             }],
             extra_vertex_inputs: false,
             vertex_inputs: true,
             framebuffer_fetch: 0,
         };
-        let tiles: Vec<u8> = (0..16)
+        let tiles: Vec<u8> = (0..24)
             .flat_map(|i| (i as f32 + 0.5).to_le_bytes())
             .collect();
         let layout = ProgramBindings::of(&program);
@@ -2343,7 +2350,10 @@ mod tests {
             layout.bindings[1].standalone_block.as_deref(),
             Some("Tiles")
         );
+        assert_eq!(layout.bindings[2].arrays.len(), 1);
         fill_over_block_matches(&program, "Tiles", &tiles);
+        // A bound buffer shorter than its binding is copied per draw over the material's values.
+        fill_over_block_matches(&program, "Tiles", &tiles[..32]);
     }
 
     /// Runs draws with and without overrides, hidden overrides and instances over `program`'s
@@ -2395,6 +2405,13 @@ mod tests {
         let size = |name: &str| (name == "_MainTex").then_some((64, 32));
         let globals_index = Default::default();
         let globals = [
+            (
+                "_Palette".to_string(),
+                PropertyValue::Array {
+                    components: 4,
+                    data: vec![0.5; 8].into(),
+                },
+            ),
             ("_Global".to_string(), PropertyValue::Float(3.0)),
             (
                 "unity_SHAr".to_string(),
@@ -2402,8 +2419,17 @@ mod tests {
             ),
         ];
         let texture = |handle, st| PropertyValue::Texture { handle, st };
+        let pair = |a: f32| PropertyValue::Array {
+            components: 4,
+            data: (0..8).map(|i| a + i as f32).collect::<Vec<_>>().into(),
+        };
         let cases: Vec<Vec<(String, PropertyValue)>> = vec![
             vec![],
+            // Arrays by override, in a bound block and in a binding of its own.
+            vec![
+                ("_TileArr".into(), pair(10.0)),
+                ("_Palette".into(), pair(20.0)),
+            ],
             vec![
                 (
                     "_Color".into(),
