@@ -1782,7 +1782,8 @@ pub(crate) fn fit(
         .collect();
 
     // The program's cbuffers packed into uniform bindings, laid out alike in both stages.
-    let layout = block_layout(&[&vertex, &fragment]);
+    let read_uniforms = read_uniform_names(&[&vertex, &fragment]);
+    let layout = block_layout(&[&vertex, &fragment], Some(&read_uniforms));
     merge_blocks(&mut vertex, &layout)?;
     merge_blocks(&mut fragment, &layout)?;
     pad_member_gaps(&mut vertex)?;
@@ -1818,6 +1819,9 @@ pub(crate) fn fit(
             Some(_) => {}
             None => uniforms.push(u.clone()),
         }
+    }
+    for u in &mut uniforms {
+        u.unread = !read_uniforms.contains(&u.name);
     }
     let uniform_size = [&vertex, &fragment]
         .iter()
@@ -2054,9 +2058,352 @@ fn block_name(module: &Module, g: &naga::GlobalVariable) -> String {
         .unwrap_or_default()
 }
 
+/// Collects the names of uniform struct members actually read by any stage in `modules`.
+///
+/// Compacts a temporary clone of each module so dead functions and unused global-variable
+/// expressions emitted by the SPIR-V frontend are pruned first. Any uniform global referenced
+/// outside a direct `AccessIndex` (such as a whole-block load, dynamic `Access`, or passing the
+/// block pointer to a call) conservatively marks all of its struct's members as read.
+fn read_uniform_names(modules: &[&Module]) -> HashSet<String> {
+    fn mark_global_in_block(
+        block: &naga::Block,
+        global_exprs: &HashMap<Handle<Expression>, Handle<naga::GlobalVariable>>,
+        all_read: &mut HashSet<Handle<naga::GlobalVariable>>,
+    ) {
+        let check = |eh: Handle<Expression>,
+                     all_read: &mut HashSet<Handle<naga::GlobalVariable>>| {
+            if let Some(&g) = global_exprs.get(&eh) {
+                all_read.insert(g);
+            }
+        };
+        for stmt in block.iter() {
+            match stmt {
+                naga::Statement::Block(b) => mark_global_in_block(b, global_exprs, all_read),
+                naga::Statement::If {
+                    condition,
+                    accept,
+                    reject,
+                } => {
+                    check(*condition, all_read);
+                    mark_global_in_block(accept, global_exprs, all_read);
+                    mark_global_in_block(reject, global_exprs, all_read);
+                }
+                naga::Statement::Switch { selector, cases } => {
+                    check(*selector, all_read);
+                    for c in cases {
+                        mark_global_in_block(&c.body, global_exprs, all_read);
+                    }
+                }
+                naga::Statement::Loop {
+                    body,
+                    continuing,
+                    break_if,
+                } => {
+                    mark_global_in_block(body, global_exprs, all_read);
+                    mark_global_in_block(continuing, global_exprs, all_read);
+                    if let Some(b) = break_if {
+                        check(*b, all_read);
+                    }
+                }
+                naga::Statement::Return { value } => {
+                    if let Some(v) = value {
+                        check(*v, all_read);
+                    }
+                }
+                naga::Statement::Store { pointer, value } => {
+                    check(*pointer, all_read);
+                    check(*value, all_read);
+                }
+                naga::Statement::ImageStore {
+                    image,
+                    coordinate,
+                    array_index,
+                    value,
+                } => {
+                    check(*image, all_read);
+                    check(*coordinate, all_read);
+                    if let Some(a) = array_index {
+                        check(*a, all_read);
+                    }
+                    check(*value, all_read);
+                }
+                naga::Statement::Call { arguments, .. } => {
+                    for &arg in arguments {
+                        check(arg, all_read);
+                    }
+                }
+                naga::Statement::Atomic {
+                    pointer,
+                    value,
+                    fun,
+                    ..
+                } => {
+                    check(*pointer, all_read);
+                    check(*value, all_read);
+                    if let naga::AtomicFunction::Exchange { compare: Some(cmp) } = fun {
+                        check(*cmp, all_read);
+                    }
+                }
+                naga::Statement::WorkGroupUniformLoad { pointer, .. } => check(*pointer, all_read),
+                naga::Statement::RayQuery { query, fun } => {
+                    check(*query, all_read);
+                    if let naga::RayQueryFunction::Initialize {
+                        acceleration_structure,
+                        descriptor,
+                    } = fun
+                    {
+                        check(*acceleration_structure, all_read);
+                        check(*descriptor, all_read);
+                    }
+                }
+                naga::Statement::SubgroupBallot { predicate, .. } => {
+                    if let Some(p) = predicate {
+                        check(*p, all_read);
+                    }
+                }
+                naga::Statement::SubgroupCollectiveOperation { argument, .. } => {
+                    check(*argument, all_read)
+                }
+                naga::Statement::SubgroupGather { argument, mode, .. } => {
+                    check(*argument, all_read);
+                    match mode {
+                        naga::GatherMode::BroadcastFirst => {}
+                        naga::GatherMode::Broadcast(i)
+                        | naga::GatherMode::Shuffle(i)
+                        | naga::GatherMode::ShuffleDown(i)
+                        | naga::GatherMode::ShuffleUp(i)
+                        | naga::GatherMode::ShuffleXor(i)
+                        | naga::GatherMode::QuadBroadcast(i) => check(*i, all_read),
+                        naga::GatherMode::QuadSwap(_) => {}
+                    }
+                }
+                naga::Statement::ImageAtomic {
+                    image,
+                    coordinate,
+                    array_index,
+                    value,
+                    fun,
+                } => {
+                    check(*image, all_read);
+                    check(*coordinate, all_read);
+                    if let Some(a) = array_index {
+                        check(*a, all_read);
+                    }
+                    check(*value, all_read);
+                    if let naga::AtomicFunction::Exchange { compare: Some(cmp) } = fun {
+                        check(*cmp, all_read);
+                    }
+                }
+                naga::Statement::RayPipelineFunction(_) => {
+                    all_read.extend(global_exprs.values().copied());
+                }
+                naga::Statement::Emit(_)
+                | naga::Statement::Break
+                | naga::Statement::Continue
+                | naga::Statement::Kill
+                | naga::Statement::ControlBarrier(_)
+                | naga::Statement::MemoryBarrier(_)
+                | naga::Statement::CooperativeStore { .. } => {}
+            }
+        }
+    }
+
+    fn visit_non_field_access_children(expr: &Expression, mut f: impl FnMut(Handle<Expression>)) {
+        match expr {
+            Expression::Access { base, index } => {
+                f(*base);
+                f(*index);
+            }
+            Expression::AccessIndex { .. } => {}
+            Expression::Splat { value, .. } => f(*value),
+            Expression::Swizzle { vector, .. } => f(*vector),
+            Expression::Compose { components, .. } => {
+                for &c in components {
+                    f(c);
+                }
+            }
+            Expression::Load { pointer } => f(*pointer),
+            Expression::ImageSample {
+                image,
+                sampler,
+                coordinate,
+                array_index,
+                level,
+                depth_ref,
+                ..
+            } => {
+                f(*image);
+                f(*sampler);
+                f(*coordinate);
+                if let Some(a) = array_index {
+                    f(*a);
+                }
+                match level {
+                    naga::SampleLevel::Auto | naga::SampleLevel::Zero => {}
+                    naga::SampleLevel::Exact(e) | naga::SampleLevel::Bias(e) => f(*e),
+                    naga::SampleLevel::Gradient { x, y } => {
+                        f(*x);
+                        f(*y);
+                    }
+                }
+                if let Some(d) = depth_ref {
+                    f(*d);
+                }
+            }
+            Expression::ImageLoad {
+                image,
+                coordinate,
+                array_index,
+                sample,
+                level,
+            } => {
+                f(*image);
+                f(*coordinate);
+                if let Some(a) = array_index {
+                    f(*a);
+                }
+                if let Some(s) = sample {
+                    f(*s);
+                }
+                if let Some(l) = level {
+                    f(*l);
+                }
+            }
+            Expression::ImageQuery { image, query } => {
+                f(*image);
+                if let naga::ImageQuery::Size { level: Some(l) } = query {
+                    f(*l);
+                }
+            }
+            Expression::Unary { expr, .. } => f(*expr),
+            Expression::Binary { left, right, .. } => {
+                f(*left);
+                f(*right);
+            }
+            Expression::Select {
+                condition,
+                accept,
+                reject,
+            } => {
+                f(*condition);
+                f(*accept);
+                f(*reject);
+            }
+            Expression::Derivative { expr, .. } => f(*expr),
+            Expression::Relational { argument, .. } => f(*argument),
+            Expression::Math {
+                arg,
+                arg1,
+                arg2,
+                arg3,
+                ..
+            } => {
+                f(*arg);
+                if let Some(a) = arg1 {
+                    f(*a);
+                }
+                if let Some(a) = arg2 {
+                    f(*a);
+                }
+                if let Some(a) = arg3 {
+                    f(*a);
+                }
+            }
+            Expression::As { expr, .. } => f(*expr),
+            Expression::ArrayLength(e) => f(*e),
+            Expression::RayQueryGetIntersection { query, .. }
+            | Expression::RayQueryVertexPositions { query, .. } => f(*query),
+            Expression::RayQueryProceedResult
+            | Expression::Literal(_)
+            | Expression::Constant(_)
+            | Expression::Override(_)
+            | Expression::ZeroValue(_)
+            | Expression::FunctionArgument(_)
+            | Expression::GlobalVariable(_)
+            | Expression::LocalVariable(_)
+            | Expression::CallResult(_)
+            | Expression::AtomicResult { .. }
+            | Expression::WorkGroupUniformLoadResult { .. }
+            | Expression::SubgroupOperationResult { .. }
+            | Expression::SubgroupBallotResult
+            | Expression::CooperativeLoad { .. }
+            | Expression::CooperativeMultiplyAdd { .. } => {}
+        }
+    }
+
+    let mut read_names: HashSet<String> = HashSet::new();
+    for &module in modules {
+        let mut compact = module.clone();
+        naga::compact::compact(&mut compact, naga::compact::KeepUnused::No);
+        let mut member_reads: HashMap<Handle<naga::GlobalVariable>, HashSet<u32>> = HashMap::new();
+        let mut all_read: HashSet<Handle<naga::GlobalVariable>> = HashSet::new();
+
+        for func in compact
+            .functions
+            .iter()
+            .map(|(_, f)| f)
+            .chain(compact.entry_points.iter().map(|e| &e.function))
+        {
+            let mut global_exprs: HashMap<Handle<Expression>, Handle<naga::GlobalVariable>> =
+                HashMap::new();
+            for (eh, expr) in func.expressions.iter() {
+                if let Expression::GlobalVariable(g) = *expr
+                    && compact.global_variables[g].space == AddressSpace::Uniform
+                {
+                    global_exprs.insert(eh, g);
+                }
+            }
+            if global_exprs.is_empty() {
+                continue;
+            }
+            for (_, expr) in func.expressions.iter() {
+                if let Expression::AccessIndex { base, index } = *expr {
+                    if let Some(&g) = global_exprs.get(&base) {
+                        member_reads.entry(g).or_default().insert(index);
+                    }
+                } else {
+                    visit_non_field_access_children(expr, |child| {
+                        if let Some(&g) = global_exprs.get(&child) {
+                            all_read.insert(g);
+                        }
+                    });
+                }
+            }
+            mark_global_in_block(&func.body, &global_exprs, &mut all_read);
+        }
+
+        for (g_handle, g) in compact.global_variables.iter() {
+            if g.space != AddressSpace::Uniform {
+                continue;
+            }
+            let TypeInner::Struct { members, .. } = &compact.types[g.ty].inner else {
+                continue;
+            };
+            if all_read.contains(&g_handle) {
+                for m in members {
+                    if let Some(name) = &m.name {
+                        read_names.insert(name.clone());
+                    }
+                }
+            } else if let Some(indices) = member_reads.get(&g_handle) {
+                for &idx in indices {
+                    if let Some(name) = members.get(idx as usize).and_then(|m| m.name.as_ref()) {
+                        read_names.insert(name.clone());
+                    }
+                }
+            }
+        }
+    }
+    read_names
+}
+
 /// Whether a cbuffer holds per-draw or per-material uniforms (as opposed to pass-wide/global
 /// state) and should be packed separately from shared global cbuffers when within budget.
-fn is_per_draw_block(name: &str, members: &[naga::StructMember]) -> bool {
+fn is_per_draw_block(
+    name: &str,
+    members: &[naga::StructMember],
+    read_uniforms: Option<&HashSet<String>>,
+) -> bool {
     name == "UnityPerDraw"
         || name == "UnityPerMaterial"
         || name == "PerInstance"
@@ -2064,28 +2411,32 @@ fn is_per_draw_block(name: &str, members: &[naga::StructMember]) -> bool {
         || name == "unity_DOTSInstanceData"
         || name.starts_with("UnityDOTSInstancing_")
         || members.iter().any(|m| {
+            let Some(member_name) = m.name.as_deref() else {
+                return false;
+            };
+            if read_uniforms.is_some_and(|used| !used.contains(member_name)) {
+                return false;
+            }
             matches!(
-                m.name.as_deref(),
-                Some(
-                    "unity_ObjectToWorld"
-                        | "unity_WorldToObject"
-                        | "glstate_matrix_modelview0"
-                        | "glstate_matrix_transpose_modelview0"
-                        | "glstate_matrix_invtrans_modelview0"
-                        | "unity_WorldTransformParams"
-                        | "unity_LODFade"
-                        | "unity_LightData"
-                        | "unity_ProbesOcclusion"
-                        | "unity_RenderingLayer"
-                        | "_GizmoBatchColor"
-                        | "unity_SpriteColor"
-                        | "_TextureSampleAdd"
-                )
+                member_name,
+                "unity_ObjectToWorld"
+                    | "unity_WorldToObject"
+                    | "glstate_matrix_modelview0"
+                    | "glstate_matrix_transpose_modelview0"
+                    | "glstate_matrix_invtrans_modelview0"
+                    | "unity_WorldTransformParams"
+                    | "unity_LODFade"
+                    | "unity_LightData"
+                    | "unity_ProbesOcclusion"
+                    | "unity_RenderingLayer"
+                    | "_GizmoBatchColor"
+                    | "unity_SpriteColor"
+                    | "_TextureSampleAdd"
             )
         })
 }
 
-fn block_layout(modules: &[&Module]) -> BlockLayout {
+fn block_layout(modules: &[&Module], read_uniforms: Option<&HashSet<String>>) -> BlockLayout {
     let mut blocks: Vec<(String, u32, bool)> = Vec::new();
     for module in modules {
         for (_, g) in module.global_variables.iter() {
@@ -2096,7 +2447,7 @@ fn block_layout(modules: &[&Module]) -> BlockLayout {
                 continue;
             };
             let name = block_name(module, g);
-            let per_draw = is_per_draw_block(&name, members);
+            let per_draw = is_per_draw_block(&name, members, read_uniforms);
             if let Some(existing) = blocks.iter_mut().find(|(n, _, _)| *n == name) {
                 existing.2 |= per_draw;
             } else {
@@ -2790,6 +3141,7 @@ pub(crate) fn uniform(
                 columns,
                 count: count.get(),
                 stride: *stride,
+                unread: false,
             })
         }
         inner => {
@@ -2802,6 +3154,7 @@ pub(crate) fn uniform(
                 columns,
                 count: 1,
                 stride: 0,
+                unread: false,
             })
         }
     }
@@ -3777,9 +4130,49 @@ mod tests {
         binding_layout(
             blocks
                 .iter()
-                .map(|(n, s)| (n.to_string(), *s, is_per_draw_block(n, &[])))
+                .map(|(n, s)| (n.to_string(), *s, is_per_draw_block(n, &[], None)))
                 .collect(),
         )
+    }
+
+    #[test]
+    fn unread_per_draw_member_in_global_cbuffer_does_not_block_shared_split() {
+        // $Global declares glstate_matrix_transpose_modelview0 (like URP's UnityInput.hlsl)
+        // without reading it, alongside >1 KB of globals. It must move to the shared binding (1),
+        // while UnityPerDraw stays in binding 0.
+        let unread_src = r#"
+            cbuffer UnityPerDraw { float4x4 unity_ObjectToWorld; };
+            float4x4 glstate_matrix_transpose_modelview0;
+            float4 _Globals[70];
+            float4 frag() : SV_Target { return unity_ObjectToWorld[0] + _Globals[0]; }
+        "#;
+        let unread_mod = parse(&fragment_spirv(unread_src), ClipSpace::Renderer).unwrap();
+        let read_set = read_uniform_names(&[&unread_mod]);
+        assert!(read_set.contains("unity_ObjectToWorld"));
+        assert!(read_set.contains("_Globals"));
+        assert!(
+            !read_set.contains("glstate_matrix_transpose_modelview0"),
+            "unread global member must not be marked read"
+        );
+        let l_unread = block_layout(&[&unread_mod], Some(&read_set));
+        assert_eq!(l_unread.bindings.len(), 2, "{:?}", l_unread.bindings);
+        assert_eq!(l_unread.binding("UnityPerDraw"), Some(0));
+        assert_eq!(l_unread.binding("$Global"), Some(1));
+
+        // Control: when glstate_matrix_transpose_modelview0 IS actually read, $Global stays in
+        // per-draw binding 0.
+        let read_src = r#"
+            cbuffer UnityPerDraw { float4x4 unity_ObjectToWorld; };
+            float4x4 glstate_matrix_transpose_modelview0;
+            float4 _Globals[70];
+            float4 frag() : SV_Target { return unity_ObjectToWorld[0] + glstate_matrix_transpose_modelview0[0] + _Globals[0]; }
+        "#;
+        let read_mod = parse(&fragment_spirv(read_src), ClipSpace::Renderer).unwrap();
+        let read_set2 = read_uniform_names(&[&read_mod]);
+        assert!(read_set2.contains("glstate_matrix_transpose_modelview0"));
+        let l_read = block_layout(&[&read_mod], Some(&read_set2));
+        assert_eq!(l_read.bindings.len(), 1, "{:?}", l_read.bindings);
+        assert_eq!(l_read.binding("$Global"), Some(0));
     }
 
     #[test]

@@ -35,7 +35,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 69;
+pub const FORMAT_VERSION: u32 = 70;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -121,6 +121,10 @@ pub struct Uniform {
     /// Array elements (1 when not an array) and their stride.
     pub count: u32,
     pub stride: u32,
+    /// True when neither the vertex nor fragment stage reads this uniform (still kept in
+    /// `Compiled::uniforms` for metadata/layout inspection, skipped when packing draws).
+    #[serde(default)]
+    pub unread: bool,
 }
 
 /// A compiled program, fitted to the renderer's interface:
