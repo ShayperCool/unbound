@@ -6607,6 +6607,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "unbound-jobs"
+version = "0.1.0"
+dependencies = [
+ "rayon",
+ "tracing",
+]
+
+[[package]]
 name = "unbound-project"
 version = "0.1.0"
 dependencies = [
@@ -6666,6 +6674,7 @@ dependencies = [
  "unbound-compat",
  "unbound-gi",
  "unbound-host",
+ "unbound-jobs",
  "unbound-project",
  "unbound-scene",
  "unbound-yaml",

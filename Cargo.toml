@@ -34,6 +34,7 @@ unbound-app = { path = "crates/unbound-app" }
 unbound-shaders = { path = "crates/unbound-shaders" }
 unbound-remote = { path = "crates/unbound-remote" }
 unbound-gi = { path = "crates/unbound-gi" }
+unbound-jobs = { path = "crates/unbound-jobs" }
 unbound-source-identity = { path = "crates/unbound-source-identity" }
 
 [profile.dev]
