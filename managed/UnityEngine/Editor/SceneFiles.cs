@@ -1314,6 +1314,25 @@ namespace Unbound.Runtime
                     editorData.Keys.Insert(insertPackingAt, "packingSettings");
                     editorData.Values.Insert(insertPackingAt, atlas.PackingSettings.ToYText());
                 }
+                if (atlas.PackablesModified)
+                {
+                    var packablesText = atlas.ToPackablesYText();
+                    int packablesIndex = editorData.Keys.IndexOf("packables");
+                    if (packablesIndex >= 0)
+                    {
+                        editorData.Values[packablesIndex] = packablesText;
+                    }
+                    else
+                    {
+                        int afterVariantMultiplier = editorData.Keys.IndexOf("variantMultiplier");
+                        int beforeBind = editorData.Keys.IndexOf("bindAsDefault");
+                        int insertPackablesAt = afterVariantMultiplier >= 0 ? afterVariantMultiplier + 1
+                            : beforeBind >= 0 ? beforeBind
+                            : editorData.Keys.Count;
+                        editorData.Keys.Insert(insertPackablesAt, "packables");
+                        editorData.Values.Insert(insertPackablesAt, packablesText);
+                    }
+                }
                 var value = YText.Scalar(atlas.IncludeInBuild ? "1" : "0");
                 int existing = editorData.Keys.IndexOf("bindAsDefault");
                 if (existing >= 0)

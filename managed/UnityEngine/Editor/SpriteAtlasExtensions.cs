@@ -153,8 +153,9 @@ namespace UnityEditor.U2D
     /// The Editor's view of a sprite atlas (V1 `.spriteatlas` and V2 `.spriteatlasv2` alike), as the
     /// Unity 6000.0.71f1 Editor answers it (tests/projects/spriteatlaseditor): its packables in their
     /// stored order (a folder as its folder asset, a texture, a sprite; a packable whose asset is gone
-    /// is left out), its master atlas (a variant's; null otherwise), whether builds include it, and
-    /// its packing, texture and per-platform settings. A null atlas throws ArgumentNullException.
+    /// is left out; <see cref="Add"/> appends valid packables in order without deduplication), its
+    /// master atlas (a variant's; null otherwise), whether builds include it, and its packing, texture
+    /// and per-platform settings. A null atlas throws ArgumentNullException.
     /// </summary>
     public static partial class SpriteAtlasExtensions
     {
@@ -162,8 +163,14 @@ namespace UnityEditor.U2D
         {
             if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
             var packables = new List<Object>();
-            foreach (var packable in spriteAtlas.Packables)
+            foreach (var entry in spriteAtlas.Packables)
             {
+                if (!ReferenceEquals(entry.Live, null))
+                {
+                    if (entry.Live != null) packables.Add(entry.Live);
+                    continue;
+                }
+                var packable = entry.Reference;
                 if (string.IsNullOrEmpty(packable.Guid)) continue;
                 var path = AssetDatabase.GUIDToAssetPath(packable.Guid);
                 if (string.IsNullOrEmpty(path)) continue;
@@ -173,6 +180,12 @@ namespace UnityEditor.U2D
                 if (asset != null) packables.Add(asset);
             }
             return packables.ToArray();
+        }
+
+        public static void Add(this SpriteAtlas spriteAtlas, Object[] objects)
+        {
+            if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
+            spriteAtlas.AddPackables(objects);
         }
 
         public static SpriteAtlasPackingSettings GetPackingSettings(this SpriteAtlas spriteAtlas)

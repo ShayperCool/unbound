@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unbound.Runtime;
 using UnityEditor;
 using UnityEditor.U2D;
@@ -1149,10 +1150,190 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AddValidatesInputsPreservesOrderAllowsDuplicatesAndAlwaysDirties()
+        {
+            var fresh = new SpriteAtlas();
+            int baseDirty = EditorUtility.GetDirtyCount(fresh);
+
+            var warnings = new List<string>();
+            Application.LogCallback capture = (msg, _, type) =>
+            {
+                if (msg != null && msg.StartsWith("Attempted to add ", StringComparison.Ordinal))
+                    warnings.Add($"{type}:{msg}");
+            };
+            Application.logMessageReceived += capture;
+            try
+            {
+                // Null and empty arrays log nothing, leave packables empty, and unconditionally mark dirty.
+                fresh.Add(null);
+                Assert.Empty(fresh.GetPackables());
+                Assert.Empty(warnings);
+                Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(fresh));
+
+                fresh.Add(Array.Empty<Object>());
+                Assert.Empty(fresh.GetPackables());
+                Assert.Empty(warnings);
+                Assert.Equal(baseDirty + 2, EditorUtility.GetDirtyCount(fresh));
+
+                var texA = new Texture2D(4, 4) { name = "TexA" };
+                var spriteA = Sprite.Create(texA, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f));
+                spriteA.name = "SpriteA";
+                var texB = new Texture2D(2, 2) { name = "TexB" };
+
+                // Supported runtime types append in input order and allow duplicates within and across calls.
+                fresh.Add(new Object[] { texA, spriteA, texA });
+                Assert.Empty(warnings);
+                Assert.Equal(baseDirty + 3, EditorUtility.GetDirtyCount(fresh));
+                Assert.Equal(new Object[] { texA, spriteA, texA }, fresh.GetPackables());
+
+                // Mixed array: null, GameObject, RenderTexture, SpriteAtlas, non-folder DefaultAsset are skipped with exact warnings,
+                // while valid entries before and after them are still appended in order.
+                var invalidGo = new GameObject("BadGo");
+                var invalidRt = new RenderTexture(4, 4, 0) { name = "BadRt" };
+                var unnamedAtlas = new SpriteAtlas();
+                var nonFolderDefault = DefaultAsset.ForFolder("PlainFile");
+                try
+                {
+                    fresh.Add(new Object[] { null, invalidGo, texB, invalidRt, unnamedAtlas, nonFolderDefault, spriteA });
+                    Assert.Equal(baseDirty + 4, EditorUtility.GetDirtyCount(fresh));
+                    Assert.Equal(new Object[] { texA, spriteA, texA, texB, spriteA }, fresh.GetPackables());
+                    Assert.Equal(new[]
+                    {
+                        "Warning:Attempted to add null object into a Sprite Atlas.",
+                        "Warning:Attempted to add invalid object into a Sprite Atlas. BadGo was a GameObject. Only Folder, Texture and Sprite are valid.",
+                        "Warning:Attempted to add invalid object into a Sprite Atlas. BadRt was a RenderTexture. Only Folder, Texture and Sprite are valid.",
+                        "Warning:Attempted to add invalid object into a Sprite Atlas.  was a SpriteAtlas. Only Folder, Texture and Sprite are valid.",
+                        "Warning:Attempted to add invalid object into a Sprite Atlas. PlainFile was a DefaultAsset. Only Folder, Texture and Sprite are valid.",
+                    }, warnings);
+
+                    // Control outside the probe: a destroyed valid object is treated as null and skipped cleanly.
+                    warnings.Clear();
+                    var destroyedTex = new Texture2D(2, 2) { name = "GoneTex" };
+                    Object.DestroyImmediate(destroyedTex);
+                    fresh.Add(new Object[] { destroyedTex });
+                    Assert.Equal(baseDirty + 5, EditorUtility.GetDirtyCount(fresh));
+                    Assert.Equal(new[] { "Warning:Attempted to add null object into a Sprite Atlas." }, warnings);
+
+                    // Destroying a previously added runtime packable drops it from GetPackables without throwing.
+                    Object.DestroyImmediate(texB);
+                    Assert.Equal(new Object[] { texA, spriteA, texA, spriteA }, fresh.GetPackables());
+                }
+                finally
+                {
+                    Object.DestroyImmediate(invalidGo);
+                    Object.DestroyImmediate(invalidRt);
+                    Object.DestroyImmediate(unnamedAtlas);
+                    Object.DestroyImmediate(nonFolderDefault);
+                    Object.DestroyImmediate(spriteA);
+                    Object.DestroyImmediate(texA);
+                }
+            }
+            finally
+            {
+                Application.logMessageReceived -= capture;
+            }
+        }
+
+        [Fact]
+        public void NativeDocumentsWriteUpdatesV1PackablesPreservesUntouchedAndInsertsWhenOmitted()
+        {
+            const string v1Source =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Sample\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 2\n" +
+                "      compressionQuality: 50\n" +
+                "      maxTextureSize: 1024\n" +
+                "      textureCompression: 0\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 0\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings: []\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 8\n" +
+                "      blockOffset: 2\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 0\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 1\n" +
+                "    variantMultiplier: 1\n" +
+                "    packables:\n" +
+                "    - {fileID: 21300000, guid: b828055b6a1d50b968e77fc6406e2b5c, type: 3}\n" +
+                "    bindAsDefault: 1\n" +
+                "    isAtlasV2: 0\n" +
+                "  m_IsVariant: 0\n";
+
+            var docs = UnityYamlText.Parse(v1Source);
+            var atlas = new SpriteAtlas();
+            atlas.ReadSerialized(TestYaml.DocumentBody(v1Source), null);
+            Assert.False(EditorUtility.IsDirty(atlas));
+            Assert.False(atlas.PackablesModified);
+
+            // Adding a runtime Texture2D preserves the existing serialized ref and writes {fileID: 0} for the runtime object.
+            var runtimeTex = new Texture2D(4, 4) { name = "RuntimeTex" };
+            try
+            {
+                atlas.Add(new Object[] { runtimeTex });
+                Assert.True(EditorUtility.IsDirty(atlas));
+                Assert.True(atlas.PackablesModified);
+                int unlocated = 0;
+                Assert.True(NativeDocuments.Write(docs[0], atlas, null, null, ref unlocated));
+                string written = UnityYamlText.Write(docs);
+                Assert.Contains(
+                    "    variantMultiplier: 1\n" +
+                    "    packables:\n" +
+                    "    - {fileID: 21300000, guid: b828055b6a1d50b968e77fc6406e2b5c, type: 3}\n" +
+                    "    - {fileID: 0}\n" +
+                    "    bindAsDefault: 1\n",
+                    written);
+                Assert.Contains("      padding: 8\n      blockOffset: 2\n", written);
+                Assert.Contains("      anisoLevel: 2\n      compressionQuality: 50\n", written);
+
+                // Omitted packables inserts right after variantMultiplier, before bindAsDefault.
+                const string v1Omitted =
+                    "%YAML 1.1\n" +
+                    "%TAG !u! tag:unity3d.com,2011:\n" +
+                    "--- !u!687078895 &4343727234628468602\n" +
+                    "SpriteAtlas:\n" +
+                    "  m_Name: Omitted\n" +
+                    "  m_EditorData:\n" +
+                    "    serializedVersion: 2\n" +
+                    "    variantMultiplier: 1\n" +
+                    "    bindAsDefault: 1\n" +
+                    "    isAtlasV2: 0\n" +
+                    "  m_IsVariant: 0\n";
+                var omittedDocs = UnityYamlText.Parse(v1Omitted);
+                var omittedAtlas = new SpriteAtlas();
+                omittedAtlas.ReadSerialized(TestYaml.DocumentBody(v1Omitted), null);
+                omittedAtlas.Add(new Object[] { runtimeTex });
+                Assert.True(NativeDocuments.Write(omittedDocs[0], omittedAtlas, null, null, ref unlocated));
+                Assert.Equal(
+                    v1Omitted.Replace("    variantMultiplier: 1\n    bindAsDefault: 1\n",
+                        "    variantMultiplier: 1\n    packables:\n    - {fileID: 0}\n    bindAsDefault: 1\n"),
+                    UnityYamlText.Write(omittedDocs));
+            }
+            finally
+            {
+                Object.DestroyImmediate(runtimeTex);
+            }
+        }
+
+        [Fact]
         public void ANullAtlasThrows()
         {
             SpriteAtlas none = null;
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPackables()).ParamName);
+            Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.Add(Array.Empty<Object>())).ParamName);
+            Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.Add(null)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPackingSettings()).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetPackingSettings(default)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetTextureSettings()).ParamName);

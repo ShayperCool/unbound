@@ -27,7 +27,22 @@ namespace UnityEngine.U2D
         /// own document is &amp;1).</summary>
         internal const long ImportedFileId = 100100200;
 
-        readonly List<ObjectRef> m_Packables = new List<ObjectRef>();
+        /// <summary>A packable entry: a serialized reference as read from disk, plus the live
+        /// object added via <see cref="SpriteAtlasExtensions.Add"/> when present.</summary>
+        internal readonly struct PackableEntry
+        {
+            internal readonly ObjectRef Reference;
+            internal readonly Object Live;
+
+            internal PackableEntry(ObjectRef reference, Object live)
+            {
+                Reference = reference;
+                Live = live;
+            }
+        }
+
+        readonly List<PackableEntry> m_Packables = new List<PackableEntry>();
+        bool m_PackablesModified;
         bool m_IsVariant;
         // Editor settings ("Include in Build", packingSettings, textureSettings, platformSettings):
         // a V1 atlas reads them from its editor data; a V2 atlas reads them from its
@@ -87,8 +102,18 @@ namespace UnityEngine.U2D
             if (m_Sprites != null) return m_Sprites;
             if (m_IsVariant && m_Master != null && !ReferenceEquals(m_Master, this)) return m_Sprites = m_Master.Sprites();
             var found = new List<Sprite>();
-            foreach (var packable in m_Packables)
+            foreach (var entry in m_Packables)
             {
+                if (!ReferenceEquals(entry.Live, null))
+                {
+                    if (entry.Live == null) continue;
+                    if (entry.Live is Sprite liveSprite)
+                    {
+                        found.Add(liveSprite);
+                        continue;
+                    }
+                }
+                var packable = entry.Reference;
                 if (packable.Guid == null) continue;
                 var path = AssetDatabase.GUIDToAssetPath(packable.Guid);
                 if (string.IsNullOrEmpty(path)) continue;
@@ -110,7 +135,68 @@ namespace UnityEngine.U2D
         }
 
         /// <summary>The packables as stored, in order.</summary>
-        internal IReadOnlyList<ObjectRef> Packables => m_Packables;
+        internal IReadOnlyList<PackableEntry> Packables => m_Packables;
+
+        /// <summary>Whether Add has updated this atlas's packables in memory.</summary>
+        internal bool PackablesModified => m_PackablesModified;
+
+        /// <summary>Appends valid packable objects (Texture2D, Sprite, or folder DefaultAsset) in
+        /// input order without deduplication, logs warnings for null or invalid entries, and
+        /// unconditionally marks the atlas dirty (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/spriteatlaseditor v1add/v2add).</summary>
+        internal void AddPackables(Object[] objects)
+        {
+            bool added = false;
+            if (objects != null)
+            {
+                for (int i = 0; i < objects.Length; i++)
+                {
+                    var obj = objects[i];
+                    if (obj == null)
+                    {
+                        Debug.LogWarning("Attempted to add null object into a Sprite Atlas.");
+                        continue;
+                    }
+                    bool valid = obj is Texture2D || obj is Sprite;
+                    if (!valid && obj is DefaultAsset)
+                    {
+                        var path = AssetDatabase.GetAssetPath(obj);
+                        valid = !string.IsNullOrEmpty(path) && AssetDatabase.IsValidFolder(path);
+                    }
+                    if (!valid)
+                    {
+                        Debug.LogWarning($"Attempted to add invalid object into a Sprite Atlas. {obj.name} was a {obj.GetType().Name}. Only Folder, Texture and Sprite are valid.");
+                        continue;
+                    }
+                    m_Packables.Add(new PackableEntry(ResolvePackableRef(obj), obj));
+                    added = true;
+                }
+            }
+            if (added) m_Sprites = null;
+            m_PackablesModified = true;
+            EditorUtility.SetDirty(this);
+        }
+
+        static ObjectRef ResolvePackableRef(Object obj)
+        {
+            if (obj != null && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out string guid, out long localId) && !string.IsNullOrEmpty(guid))
+                return new ObjectRef(localId, guid, AssetDatabase.IsNativeAsset(obj) ? 2 : 3);
+            return default;
+        }
+
+        internal YText ToPackablesYText()
+        {
+            var seq = YText.Seq(flow: m_Packables.Count == 0);
+            for (int i = 0; i < m_Packables.Count; i++)
+            {
+                var entry = m_Packables[i];
+                var reference = ReferenceEquals(entry.Live, null)
+                    ? entry.Reference
+                    : entry.Live == null ? default : ResolvePackableRef(entry.Live);
+                seq.Items.Add(SceneFiles.FlowValue(UnityYamlWriter.Writer.ReferenceText(reference)));
+            }
+            return seq;
+        }
 
         /// <summary>The master atlas of a variant (null for an atlas without one).</summary>
         internal SpriteAtlas MasterAtlas => m_Master;
@@ -243,7 +329,8 @@ namespace UnityEngine.U2D
             m_Packables.Clear();
             var data = body.Get("m_ImporterData") ?? body.Get("m_EditorData");
             foreach (var packable in data?.Get("packables")?.Seq() ?? Array.Empty<YNode>())
-                m_Packables.Add(packable.AsRef());
+                m_Packables.Add(new PackableEntry(packable.AsRef(), null));
+            m_PackablesModified = false;
             m_FromImporter = body.Get("m_ImporterData") != null;
             m_PackingSettingsModified = false;
             m_TextureSettingsModified = false;
