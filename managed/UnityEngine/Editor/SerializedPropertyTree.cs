@@ -331,6 +331,15 @@ namespace Unbound.Runtime
         /// <summary>The script field a node was read from, if any.</summary>
         internal static FieldInfo FieldOf(SerializedNode node) => (node?.Accessor as FieldAccessor)?.Field;
 
+        /// <summary>The script field that declares a node, as
+        /// ScriptAttributeUtility.GetFieldInfoFromProperty finds it: an array or list element is
+        /// declared by its collection's field, so that field's attributes apply to every element.</summary>
+        internal static FieldInfo DeclaringFieldOf(SerializedNode node)
+        {
+            if (node?.Parent?.Kind == SerializedNodeKind.ArrayContainer) node = node.Parent.Parent;
+            return FieldOf(node);
+        }
+
         internal static bool IsScript(Object target) => target is MonoBehaviour || target is ScriptableObject;
 
         internal static SerializedNode BuildRoot(Object target, bool callbacks)

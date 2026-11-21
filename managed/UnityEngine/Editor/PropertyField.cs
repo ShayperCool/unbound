@@ -524,7 +524,7 @@ namespace UnityEditor.UIElements
             var lengthProperty = propertyCopy.FindPropertyRelative("m_Length");
             var dataProperty = propertyCopy.FindPropertyRelative("m_Data");
             int count = lengthProperty.intValue;
-            if (property.UnboundField?.GetCustomAttribute<ToggleButtonGroupStatePropertiesAttribute>(false) is ToggleButtonGroupStatePropertiesAttribute attr)
+            if (property.UnboundDeclaringField?.GetCustomAttribute<ToggleButtonGroupStatePropertiesAttribute>(false) is ToggleButtonGroupStatePropertiesAttribute attr)
             {
                 if (attr.length >= 0)
                 {
@@ -553,7 +553,6 @@ namespace UnityEditor.UIElements
 
             void OnPropertyChanged(SerializedProperty _)
             {
-                if (!propertyCopy.isValid || !lengthProperty.isValid || !dataProperty.isValid) return;
                 int currentLength = buttonGroup.value.length;
                 int targetLength = lengthProperty.intValue;
                 ulong data = dataProperty.ulongValue;
@@ -577,7 +576,6 @@ namespace UnityEditor.UIElements
 
             void OnToggleGroupChanged(ChangeEvent<ToggleButtonGroupState> evt)
             {
-                if (!propertyCopy.isValid) return;
                 propertyCopy.structValue = evt.newValue;
                 propertyCopy.serializedObject.ApplyModifiedPropertiesWithoutUndo();
             }

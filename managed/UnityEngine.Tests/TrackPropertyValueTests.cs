@@ -3316,6 +3316,43 @@ namespace UnityEngine.Tests
             }
         }
 
+        sealed class ToggleListTarget : ScriptableObject
+        {
+            [ToggleButtonGroupStateProperties(allowMultipleSelection: false, allowEmptySelection: false, length: 3)]
+            public List<ToggleButtonGroupState> states = new List<ToggleButtonGroupState> { new ToggleButtonGroupState(0b1UL, 5) };
+        }
+
+        [Fact]
+        public void PropertyFieldAppliesToggleButtonGroupStatePropertiesOfAListToEachElement()
+        {
+            // ScriptAttributeUtility.GetFieldInfoFromProperty gives an element the list's field, so the
+            // list's attribute configures each element's group.
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<ToggleListTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                var pf = new PropertyField(so.FindProperty("states.Array.data[0]"));
+                panel.visualTree.Add(pf);
+                pf.Bind(so);
+                Tick(panel);
+                Tick(panel);
+
+                var group = Assert.IsType<ToggleButtonGroup>(pf.hierarchy[0]);
+                Assert.False(group.isMultipleSelection);
+                Assert.False(group.allowEmptySelection);
+                Assert.Equal(3, target.states[0].length);
+                Assert.Equal(3, group.Query<Button>(null, ToggleButtonGroup.buttonClassName).ToList().Count);
+            }
+            finally
+            {
+                so.Dispose();
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
         sealed class EmptyUxmlAttributes : IUxmlAttributes
         {
             public bool TryGetAttributeValue(string attributeName, out string value)

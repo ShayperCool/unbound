@@ -974,6 +974,10 @@ namespace UnityEditor
         /// <summary>The script field the property's node was read from (drawers look at its
         /// attributes and type).</summary>
         internal FieldInfo UnboundField => SerializedTree.FieldOf(N);
+
+        /// <summary>The script field that declares the property; for an array or list element, the
+        /// collection's field.</summary>
+        internal FieldInfo UnboundDeclaringField => SerializedTree.DeclaringFieldOf(N);
     }
 
     /// <summary>The Editor's control styles. Supported Inspector styles are available during
