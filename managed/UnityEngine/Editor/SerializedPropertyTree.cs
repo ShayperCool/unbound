@@ -860,7 +860,7 @@ namespace Unbound.Runtime
                 case Shape.Enum: return "Enum";
                 case Shape.UnityObject: return "PPtr<$" + type.Name + ">";
                 case Shape.Vector2: return "Vector2f";
-                case Shape.Vector3: return "Vector3f";
+                case Shape.Vector3: return "Vector3";
                 case Shape.Vector4: return "Vector4f";
                 case Shape.Vector2Int: return "Vector2Int";
                 case Shape.Vector3Int: return "Vector3Int";
@@ -1084,6 +1084,12 @@ namespace Unbound.Runtime
             switch (source.Kind)
             {
                 case SerializedNodeKind.Leaf:
+                    if (source.Replaced || source.Children.Count == 0)
+                    {
+                        if (target.ClrType == source.ClrType && !target.ReadOnly) SetValue(target, GetValue(source));
+                        return;
+                    }
+                    break;
                 case SerializedNodeKind.Component:
                 case SerializedNodeKind.ArraySize:
                     if (target.ClrType == source.ClrType && !target.ReadOnly) SetValue(target, GetValue(source));
@@ -1142,7 +1148,7 @@ namespace Unbound.Runtime
         static void AddHash(ref HashCode hash, SerializedNode node)
         {
             hash.Add((int)node.Kind);
-            if (node.Kind == SerializedNodeKind.Leaf || node.Kind == SerializedNodeKind.ArraySize)
+            if (node.Kind == SerializedNodeKind.Leaf || node.Kind == SerializedNodeKind.Component || node.Kind == SerializedNodeKind.ArraySize)
             {
                 var value = GetValue(node);
                 if (value is Object o) hash.Add(o is null ? 0 : o.GetInstanceID());

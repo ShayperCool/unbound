@@ -6,16 +6,17 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 // Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
-// BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar fields),
-// BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
+// BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, and Vector3
+// fields), BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
 // BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
 // SerializedObject binding context/updater pipeline that synchronizes fields and polls changes
 // during panel updates. Documented in Unity 6000.0 Scripting API ("BindingExtensions.Bind",
 // "BindingExtensions.BindProperty", "BindingExtensions.TrackPropertyValue",
 // "BindingExtensions.TrackSerializedObjectValue", "BindingExtensions.Unbind",
 // "SerializedPropertyChangeEvent", "SerializedObjectChangeEvent"); matches the Unity 6000.0.71f1
-// Editor, tests/projects/bindtree, tests/projects/bindproperty, tests/projects/trackpropertyvalue
-// and tests/projects/trackserializedobjectvalue.
+// Editor, tests/projects/bindtree, tests/projects/bindproperty, tests/projects/enumbinding,
+// tests/projects/enumflagsbinding, tests/projects/vector3binding,
+// tests/projects/trackpropertyvalue and tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
 {
@@ -1030,13 +1031,32 @@ namespace UnityEditor.UIElements.Bindings
             }
         }
 
+        static bool HasVisibleChildFields(SerializedProperty property)
+        {
+            switch (property.propertyType)
+            {
+                case SerializedPropertyType.Vector2:
+                case SerializedPropertyType.Vector3:
+                case SerializedPropertyType.Rect:
+                case SerializedPropertyType.Bounds:
+                case SerializedPropertyType.Vector2Int:
+                case SerializedPropertyType.Vector3Int:
+                case SerializedPropertyType.RectInt:
+                case SerializedPropertyType.BoundsInt:
+                case SerializedPropertyType.Hash128:
+                    return false;
+                default:
+                    return property.hasVisibleChildren;
+            }
+        }
+
         internal SerializedProperty BindPropertyRelative(IBindable field, SerializedProperty parentProperty)
         {
             SerializedProperty prop = null;
             var visualElement = field as VisualElement;
             if (parentProperty != null)
             {
-                prop = !parentProperty.hasVisibleChildren
+                prop = !HasVisibleChildFields(parentProperty)
                     && visualElement?.GetProperty(BaseField<string>.serializedPropertyCopyName) is SerializedProperty cachedCopy
                     ? cachedCopy
                     : parentProperty.FindPropertyRelative(field.bindingPath);
@@ -1125,6 +1145,9 @@ namespace UnityEditor.UIElements.Bindings
                     break;
                 case SerializedPropertyType.Enum:
                     CreateEnumBindingObject(element, prop);
+                    break;
+                case SerializedPropertyType.Vector3:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetVector3PropertyValue, SerializedPropertyHelper.SetVector3PropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
                 case SerializedPropertyType.Generic:
                     if (prop.type == "ToggleButtonGroupState")
@@ -1433,8 +1456,7 @@ namespace UnityEditor.UIElements.Bindings
                             bindingContext.UpdateRevision();
                             bindingContext?.ResetUpdate();
                         }
-                        if (visualElement is IMixedValueSupport mixed)
-                            mixed.showMixedValue = boundProperty.hasMultipleDifferentValues;
+                        UpdateMixedValueState(visualElement, boundProperty);
                     }
                     return;
                 }
@@ -1463,8 +1485,7 @@ namespace UnityEditor.UIElements.Bindings
                 if (field is VisualElement visualElement && ReferenceEquals(visualElement.GetBinding(bindingId), this))
                 {
                     SyncPropertyToField(field, currentPropertyIterator);
-                    if (visualElement is IMixedValueSupport mixed)
-                        mixed.showMixedValue = currentPropertyIterator.hasMultipleDifferentValues;
+                    UpdateMixedValueState(visualElement, currentPropertyIterator);
                     return;
                 }
             }
@@ -1479,6 +1500,52 @@ namespace UnityEditor.UIElements.Bindings
                 m_IsUpdating = false;
             }
             Unbind();
+        }
+
+        static bool MatchesCompositeInputName(string elementName, string propName)
+        {
+            const string prefix = "unity-";
+            const string suffix = "-input";
+            return elementName != null && propName != null
+                && elementName.Length == prefix.Length + propName.Length + suffix.Length
+                && elementName.StartsWith(prefix, StringComparison.Ordinal)
+                && elementName.EndsWith(suffix, StringComparison.Ordinal)
+                && string.CompareOrdinal(elementName, prefix.Length, propName, 0, propName.Length) == 0;
+        }
+
+        static VisualElement FindCompositeSubField(VisualElement root, string propName)
+        {
+            int count = root.hierarchy.childCount;
+            for (int i = 0; i < count; i++)
+            {
+                var child = root.hierarchy[i];
+                if (MatchesCompositeInputName(child.name, propName)) return child;
+                var found = FindCompositeSubField(child, propName);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        static void UpdateMixedValueState(VisualElement element, SerializedProperty prop)
+        {
+            if (element == null || prop == null) return;
+            if (element.ClassListContains(BaseCompositeField<int, IntegerField, int>.ussClassName))
+            {
+                var iter = prop.Copy();
+                var endProp = iter.GetEndProperty();
+                if (iter.NextVisible(true))
+                {
+                    while (!SerializedProperty.EqualContents(iter, endProp))
+                    {
+                        var subElement = FindCompositeSubField(element, iter.name);
+                        if (subElement != null) UpdateMixedValueState(subElement, iter);
+                        if (!iter.NextVisible(false)) break;
+                    }
+                }
+                return;
+            }
+            if (element is IMixedValueSupport mixed)
+                mixed.showMixedValue = prop.hasMultipleDifferentValues;
         }
 
         protected virtual bool EqualsValue(TValue a, TValue b) => s_EqualityComparer.Equals(a, b);
@@ -1943,6 +2010,7 @@ namespace UnityEditor.UIElements.Bindings
         public static float GetFloatPropertyValue(SerializedProperty p) => p.floatValue;
         public static double GetDoublePropertyValue(SerializedProperty p) => p.doubleValue;
         public static string GetStringPropertyValue(SerializedProperty p) => p.stringValue;
+        public static Vector3 GetVector3PropertyValue(SerializedProperty p) => p.vector3Value;
         public static float GetIntPropertyValueAsFloat(SerializedProperty p) => p.intValue;
         public static float GetLongPropertyValueAsFloat(SerializedProperty p) => p.longValue;
         public static double GetFloatPropertyValueAsDouble(SerializedProperty p) => p.floatValue;
@@ -1963,6 +2031,20 @@ namespace UnityEditor.UIElements.Bindings
         public static void SetFloatPropertyValue(SerializedProperty p, float v) => p.floatValue = v;
         public static void SetDoublePropertyValue(SerializedProperty p, double v) => p.doubleValue = v;
         public static void SetStringPropertyValue(SerializedProperty p, string v) => p.stringValue = v;
+        public static void SetVector3PropertyValue(SerializedProperty p, Vector3 v)
+        {
+            if (p.hasMultipleDifferentValues)
+            {
+                Vector3 current = p.vector3Value;
+                if (!current.x.Equals(v.x)) p.FindPropertyRelative("x").doubleValue = v.x;
+                if (!current.y.Equals(v.y)) p.FindPropertyRelative("y").doubleValue = v.y;
+                if (!current.z.Equals(v.z)) p.FindPropertyRelative("z").doubleValue = v.z;
+            }
+            else
+            {
+                p.vector3Value = v;
+            }
+        }
         public static void SetFloatPropertyValueFromDouble(SerializedProperty p, double v) => p.floatValue = (float)v;
         public static void SetDoublePropertyValueFromFloat(SerializedProperty p, float v) => p.doubleValue = v;
 

@@ -6,11 +6,12 @@ using UnityEngine;
 using UnityEngine.Internal;
 using UnityEngine.UIElements;
 
-// Editor UI Toolkit PropertyField for supported scalar and ordinary enum SerializedProperty types
-// (bool, int, long, uint, ulong, float, double, string, non-Flags enum) and
-// SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API ("PropertyField",
+// Editor UI Toolkit PropertyField for supported scalar, enum, and Vector3 SerializedProperty
+// types (bool, int, long, uint, ulong, float, double, string, ordinary and [Flags] enum, Vector3)
+// and SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API ("PropertyField",
 // "PropertyField.RegisterValueChangeCallback"); matches the Unity 6000.0.71f1 Editor,
-// tests/projects/propertyfield and tests/projects/enumbinding.
+// tests/projects/propertyfield, tests/projects/enumbinding, tests/projects/enumflagsbinding, and
+// tests/projects/vector3binding.
 
 namespace UnityEditor.UIElements
 {
@@ -131,6 +132,7 @@ namespace UnityEditor.UIElements
         static readonly Func<FloatField> s_CreateFloatField = () => new FloatField();
         static readonly Func<DoubleField> s_CreateDoubleField = () => new DoubleField();
         static readonly Func<TextField> s_CreateTextField = () => new TextField();
+        static readonly Func<Vector3Field> s_CreateVector3Field = () => new Vector3Field();
 
         string m_Label;
         SerializedObject m_SerializedObject;
@@ -348,6 +350,8 @@ namespace UnityEditor.UIElements
                         property,
                         () => new PopupField<string>(popupEntries, rawIndex) { index = propertyFieldIndex });
                 }
+                case SerializedPropertyType.Vector3:
+                    return ConfigureField<Vector3Field, Vector3>(originalField as Vector3Field, property, s_CreateVector3Field);
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField ({property.propertyType})");
                     return null;

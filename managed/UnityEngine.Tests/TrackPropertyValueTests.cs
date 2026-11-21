@@ -68,6 +68,7 @@ namespace UnityEngine.Tests
             public int count = 10;
             public int other = 1;
             public string label = "alpha";
+            public Vector2 pos2 = new Vector2(4, 5);
             public Vector3 pos = new Vector3(1, 2, 3);
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
@@ -574,12 +575,12 @@ namespace UnityEngine.Tests
                 Assert.False(wrongField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.Contains(warnings, w => w.Contains("not compatible") && w.Contains("\"flag\""));
 
-                // Unsupported property type (Vector3) reports explicit Stubs.NotImplemented hit and stays unbound.
-                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (Vector3)";
+                // Unsupported property type (Vector2) reports explicit Stubs.NotImplemented hit and stays unbound.
+                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (Vector2)";
                 int beforeVecHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
                 var vecField = new IntegerField();
                 panel.visualTree.Add(vecField);
-                vecField.BindProperty(so.FindProperty("pos"));
+                vecField.BindProperty(so.FindProperty("pos2"));
                 Assert.False(vecField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value > beforeVecHits);
 
@@ -863,9 +864,9 @@ namespace UnityEngine.Tests
             using var so = new SerializedObject(target);
             try
             {
-                const string vecStubKey = "UnityEditor.UIElements.PropertyField (Vector3)";
+                const string vecStubKey = "UnityEditor.UIElements.PropertyField (Vector2)";
                 int beforeHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
-                var pf = new PropertyField(so.FindProperty("pos"));
+                var pf = new PropertyField(so.FindProperty("pos2"));
                 panel.visualTree.Add(pf);
                 pf.Bind(so);
                 Assert.Equal(0, pf.hierarchy.childCount);
@@ -1118,6 +1119,139 @@ namespace UnityEngine.Tests
                 Tick(panel);
                 Tick(panel);
                 Assert.False(eff.HasBinding(BindingExtensions.s_SerializedBindingId));
+            }
+            finally
+            {
+                soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void Vector3BindingComponentsTransformMultiEditAndUnmeasuredRelease()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            var goA = new GameObject("VecGoA");
+            var goB = new GameObject("VecGoB");
+            goA.transform.localPosition = new Vector3(1f, 10f, 100f);
+            goB.transform.localPosition = new Vector3(2f, 10f, 200f);
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            using var soTransform = new SerializedObject(new Object[] { goA.transform, goB.transform });
+            try
+            {
+                // Vector3Field + PropertyField work under an unmeasured release including sub-field edits and NaN tolerance.
+                var pf = new PropertyField(so.FindProperty("pos"));
+                var pfEvents = new List<Vector3>();
+                pf.RegisterValueChangeCallback(e => pfEvents.Add(e.changedProperty.vector3Value));
+                panel.visualTree.Add(pf);
+                pf.Bind(so);
+                Tick(panel);
+                Tick(panel);
+
+                var vf = Assert.IsType<Vector3Field>(pf.hierarchy[0]);
+                Assert.Equal(new Vector3(1, 2, 3), vf.value);
+                Assert.Equal(new[] { new Vector3(1, 2, 3) }, pfEvents);
+
+                vf.Q<FloatField>("unity-y-input").value = -12.5f;
+                Assert.Equal(new Vector3(1f, -12.5f, 3f), target.pos);
+                Assert.Equal(2, pfEvents.Count);
+
+                // NaN component values round-trip cleanly without throwing.
+                so.FindProperty("pos").vector3Value = new Vector3(float.NaN, -0f, 4.5f);
+                so.ApplyModifiedProperties();
+                Tick(panel);
+                Tick(panel);
+                Assert.True(float.IsNaN(vf.value.x));
+                Assert.Equal(4.5f, vf.value.z);
+
+                // Native Transform.m_LocalPosition multi-object edit preserves untouched components on each target.
+                var tfField = new Vector3Field();
+                panel.visualTree.Add(tfField);
+                tfField.BindProperty(soTransform.FindProperty("m_LocalPosition"));
+                Tick(panel);
+                Tick(panel);
+                Assert.False(tfField.showMixedValue);
+                Assert.True(tfField.Q<FloatField>("unity-x-input").showMixedValue);
+                Assert.False(tfField.Q<FloatField>("unity-y-input").showMixedValue);
+                Assert.True(tfField.Q<FloatField>("unity-z-input").showMixedValue);
+
+                tfField.Q<FloatField>("unity-x-input").value = 9f;
+                Assert.Equal(new Vector3(9f, 10f, 100f), goA.transform.localPosition);
+                Assert.Equal(new Vector3(9f, 10f, 200f), goB.transform.localPosition);
+                Assert.False(tfField.Q<FloatField>("unity-x-input").showMixedValue);
+                Assert.True(tfField.Q<FloatField>("unity-z-input").showMixedValue);
+            }
+            finally
+            {
+                Object.DestroyImmediate(goA);
+                Object.DestroyImmediate(goB);
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void Vector3MixedMultiObjectPerComponentPreservationAndDisposedSo()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.pos = new Vector3(1f, 10f, 100f);
+            t2.pos = new Vector3(2f, 10f, 200f);
+            using var panel = RuntimePanel.Create(settings);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                var vf = new Vector3Field();
+                var compX = new FloatField();
+                panel.visualTree.Add(vf);
+                panel.visualTree.Add(compX);
+                vf.BindProperty(soMulti.FindProperty("pos"));
+                compX.BindProperty(soMulti.FindProperty("pos.x"));
+                Tick(panel);
+                Tick(panel);
+
+                var xSub = vf.Q<FloatField>("unity-x-input");
+                var ySub = vf.Q<FloatField>("unity-y-input");
+                var zSub = vf.Q<FloatField>("unity-z-input");
+                Assert.False(vf.showMixedValue);
+                Assert.True(xSub.showMixedValue);
+                Assert.False(ySub.showMixedValue);
+                Assert.True(zSub.showMixedValue);
+                Assert.True(compX.showMixedValue);
+
+                // Editing a single component updates both targets while leaving untouched mixed axes intact.
+                ySub.value = 15f;
+                Tick(panel);
+                Assert.Equal(new Vector3(1f, 15f, 100f), t1.pos);
+                Assert.Equal(new Vector3(2f, 15f, 200f), t2.pos);
+                Assert.True(xSub.showMixedValue);
+                Assert.False(ySub.showMixedValue);
+                Assert.True(zSub.showMixedValue);
+
+                // Direct component binding reflects external SO update via component contentHash.
+                soMulti.FindProperty("pos.x").floatValue = 55f;
+                soMulti.ApplyModifiedProperties();
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(55f, compX.value);
+                Assert.False(compX.showMixedValue);
+                Assert.False(xSub.showMixedValue);
+                Assert.True(zSub.showMixedValue);
+                Assert.Equal(new Vector3(55f, 15f, 100f), t1.pos);
+                Assert.Equal(new Vector3(55f, 15f, 200f), t2.pos);
+
+                // Disposed SO unbinds cleanly on update without throwing.
+                soMulti.Dispose();
+                Tick(panel);
+                Tick(panel);
+                Assert.False(vf.HasBinding(BindingExtensions.s_SerializedBindingId));
+                Assert.False(compX.HasBinding(BindingExtensions.s_SerializedBindingId));
             }
             finally
             {
