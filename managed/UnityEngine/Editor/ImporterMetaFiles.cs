@@ -85,7 +85,7 @@ namespace Unbound.Runtime
                 if (!textChanged && !wasDirty) return false;
                 if (textChanged) File.WriteAllText(meta, customWritten);
                 importer.ClearModifiedState();
-                return true;
+                return textChanged;
             }
             var unwritten = new List<string>();
             Patch(section, importer.m_Settings, "", unwritten);

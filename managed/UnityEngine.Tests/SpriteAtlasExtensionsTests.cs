@@ -2608,6 +2608,221 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SpriteAtlasImporterVariantScaleReadsWritesDirtiesOnChangeHandlesSpecialFloatsAndInsertsWhenOmitted()
+        {
+            var uncreated = new SpriteAtlasImporter();
+            if (Unbound.Runtime.Compat.UncreatedObjectWrappersMeasured)
+            {
+                Assert.Throws<NullReferenceException>(() => _ = uncreated.variantScale);
+                Assert.Throws<NullReferenceException>(() => uncreated.variantScale = 0.5f);
+            }
+            else
+            {
+                Assert.Equal(1f, uncreated.variantScale);
+                uncreated.variantScale = 0.5f;
+                Assert.Equal(0.5f, uncreated.variantScale);
+            }
+
+            const string variantMeta =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7c003\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  textureSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    anisoLevel: 2\n" +
+                "    compressionQuality: 55\n" +
+                "    maxTextureSize: 512\n" +
+                "    textureCompression: 1\n" +
+                "    filterMode: 0\n" +
+                "    generateMipMaps: 0\n" +
+                "    readable: 0\n" +
+                "    crunchedCompression: 0\n" +
+                "    sRGB: 1\n" +
+                "  platformSettings: []\n" +
+                "  packingSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    padding: 16\n" +
+                "    blockOffset: 3\n" +
+                "    allowAlphaSplitting: 0\n" +
+                "    enableRotation: 1\n" +
+                "    enableTightPacking: 0\n" +
+                "    enableAlphaDilation: 0\n" +
+                "  secondaryTextureSettings: {}\n" +
+                "  variantMultiplier: 0.5\n" +
+                "  bindAsDefault: 0\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+
+            var root = UnityYamlText.ParseTopLevel(variantMeta);
+            var section = root.Get("SpriteAtlasImporter");
+            var importer = Assert.IsType<SpriteAtlasImporter>(
+                AssetImporter.FromMeta("Assets/Variant.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7c003", "SpriteAtlasImporter", section.ToNode()));
+            Assert.False(EditorUtility.IsDirty(importer));
+            Assert.Equal(0.5f, importer.variantScale);
+
+            // Same-value repeat is a no-op (does not dirty).
+            importer.variantScale = 0.5f;
+            Assert.False(EditorUtility.IsDirty(importer));
+            Assert.Equal(0, EditorUtility.GetDirtyCount(importer));
+
+            // Changing stores verbatim without clamping and dirties once; repeating stays unchanged.
+            importer.variantScale = 0.05f;
+            Assert.Equal(0.05f, importer.variantScale);
+            Assert.Equal(1, EditorUtility.GetDirtyCount(importer));
+            importer.variantScale = 0.05f;
+            Assert.Equal(1, EditorUtility.GetDirtyCount(importer));
+
+            // 0f -> -0f is equal under IEEE-754 so no extra dirtying; ±Infinity and NaN store verbatim; NaN != NaN dirties each time.
+            importer.variantScale = 0f;
+            Assert.Equal(2, EditorUtility.GetDirtyCount(importer));
+            importer.variantScale = -0f;
+            Assert.Equal(2, EditorUtility.GetDirtyCount(importer));
+            importer.variantScale = float.NegativeInfinity;
+            Assert.True(float.IsNegativeInfinity(importer.variantScale));
+            Assert.True(importer.WriteCustomMeta(section));
+            Assert.Contains("  variantMultiplier: -Infinity\n", UnityYamlText.WriteTopLevel(root));
+            importer.variantScale = float.PositiveInfinity;
+            Assert.True(importer.WriteCustomMeta(section));
+            Assert.Contains("  variantMultiplier: Infinity\n", UnityYamlText.WriteTopLevel(root));
+            int beforeNan = EditorUtility.GetDirtyCount(importer);
+            importer.variantScale = float.NaN;
+            Assert.True(float.IsNaN(importer.variantScale));
+            Assert.Equal(beforeNan + 1, EditorUtility.GetDirtyCount(importer));
+            importer.variantScale = float.NaN;
+            Assert.Equal(beforeNan + 2, EditorUtility.GetDirtyCount(importer));
+            Assert.True(importer.WriteCustomMeta(section));
+            Assert.Contains("  variantMultiplier: NaN\n", UnityYamlText.WriteTopLevel(root));
+
+            // Control outside probe's exact setup: sparse .meta missing platformSettings, secondaryTextureSettings, variantMultiplier and bindAsDefault inserts all in order.
+            const string sparseMeta =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7c009\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+            var sparseRoot = UnityYamlText.ParseTopLevel(sparseMeta);
+            var sparseSection = sparseRoot.Get("SpriteAtlasImporter");
+            var sparseImporter = Assert.IsType<SpriteAtlasImporter>(
+                AssetImporter.FromMeta("Assets/Sparse.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7c009", "SpriteAtlasImporter", sparseSection.ToNode()));
+            Assert.Equal(1f, sparseImporter.variantScale);
+            sparseImporter.variantScale = 1f;
+            Assert.False(EditorUtility.IsDirty(sparseImporter));
+            sparseImporter.variantScale = 0.75f;
+            Assert.True(sparseImporter.WriteCustomMeta(sparseSection));
+            string sparseWritten = UnityYamlText.WriteTopLevel(sparseRoot);
+            int posSec = sparseWritten.IndexOf("  secondaryTextureSettings: {}\n", StringComparison.Ordinal);
+            int posScale = sparseWritten.IndexOf("  variantMultiplier: 0.75\n", StringComparison.Ordinal);
+            int posBind = sparseWritten.IndexOf("  bindAsDefault: 1\n", StringComparison.Ordinal);
+            int posUser = sparseWritten.IndexOf("  userData: \n", StringComparison.Ordinal);
+            Assert.True(posSec > 0 && posSec < posScale && posScale < posBind && posBind < posUser);
+        }
+
+        [Fact]
+        public void SpriteAtlasImporterIncludeInBuildReadsWritesDirtiesOnlyOnChangeAndInsertsWhenOmitted()
+        {
+            var uncreated = new SpriteAtlasImporter();
+            if (Unbound.Runtime.Compat.UncreatedObjectWrappersMeasured)
+            {
+                Assert.Throws<NullReferenceException>(() => _ = uncreated.includeInBuild);
+                Assert.Throws<NullReferenceException>(() => uncreated.includeInBuild = false);
+            }
+            else
+            {
+                Assert.True(uncreated.includeInBuild);
+                uncreated.includeInBuild = false;
+                Assert.False(uncreated.includeInBuild);
+            }
+
+            const string includedMeta =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7c102\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  textureSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    anisoLevel: 4\n" +
+                "    compressionQuality: 65\n" +
+                "    maxTextureSize: 1024\n" +
+                "    textureCompression: 2\n" +
+                "    filterMode: 2\n" +
+                "    generateMipMaps: 1\n" +
+                "    readable: 1\n" +
+                "    crunchedCompression: 1\n" +
+                "    sRGB: 0\n" +
+                "  platformSettings: []\n" +
+                "  packingSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    padding: 8\n" +
+                "    blockOffset: 2\n" +
+                "    allowAlphaSplitting: 0\n" +
+                "    enableRotation: 0\n" +
+                "    enableTightPacking: 1\n" +
+                "    enableAlphaDilation: 1\n" +
+                "  secondaryTextureSettings: {}\n" +
+                "  variantMultiplier: 1\n" +
+                "  bindAsDefault: 1\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+
+            var root = UnityYamlText.ParseTopLevel(includedMeta);
+            var section = root.Get("SpriteAtlasImporter");
+            var importer = Assert.IsType<SpriteAtlasImporter>(
+                AssetImporter.FromMeta("Assets/Included.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7c102", "SpriteAtlasImporter", section.ToNode()));
+            Assert.False(EditorUtility.IsDirty(importer));
+            Assert.True(importer.includeInBuild);
+
+            // Same-value repeat is a no-op (does not dirty).
+            importer.includeInBuild = true;
+            Assert.False(EditorUtility.IsDirty(importer));
+            Assert.Equal(0, EditorUtility.GetDirtyCount(importer));
+
+            // Toggle to false dirties once; repeat false is a no-op; writes bindAsDefault: 0 and preserves unrelated blocks.
+            importer.includeInBuild = false;
+            Assert.False(importer.includeInBuild);
+            Assert.Equal(1, EditorUtility.GetDirtyCount(importer));
+            importer.includeInBuild = false;
+            Assert.Equal(1, EditorUtility.GetDirtyCount(importer));
+            Assert.True(importer.WriteCustomMeta(section));
+            string falseWritten = UnityYamlText.WriteTopLevel(root);
+            Assert.Equal(includedMeta.Replace("  bindAsDefault: 1\n", "  bindAsDefault: 0\n"), falseWritten);
+
+            // Toggle back to true restores exact original YAML bytes.
+            importer.includeInBuild = true;
+            Assert.Equal(2, EditorUtility.GetDirtyCount(importer));
+            Assert.True(importer.WriteCustomMeta(section));
+            Assert.Equal(includedMeta, UnityYamlText.WriteTopLevel(root));
+
+            // Control outside probe's exact setup: sparse .meta omitting bindAsDefault defaults to true and inserts bindAsDefault: 0 after variantMultiplier.
+            const string sparseMeta =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7c109\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+            var sparseRoot = UnityYamlText.ParseTopLevel(sparseMeta);
+            var sparseSection = sparseRoot.Get("SpriteAtlasImporter");
+            var sparseImporter = Assert.IsType<SpriteAtlasImporter>(
+                AssetImporter.FromMeta("Assets/SparseInc.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7c109", "SpriteAtlasImporter", sparseSection.ToNode()));
+            Assert.True(sparseImporter.includeInBuild);
+            sparseImporter.includeInBuild = true;
+            Assert.False(EditorUtility.IsDirty(sparseImporter));
+            sparseImporter.includeInBuild = false;
+            Assert.True(sparseImporter.WriteCustomMeta(sparseSection));
+            string sparseWritten = UnityYamlText.WriteTopLevel(sparseRoot);
+            int posScale = sparseWritten.IndexOf("  variantMultiplier: 1\n", StringComparison.Ordinal);
+            int posBind = sparseWritten.IndexOf("  bindAsDefault: 0\n", StringComparison.Ordinal);
+            int posUser = sparseWritten.IndexOf("  userData: \n", StringComparison.Ordinal);
+            Assert.True(posScale > 0 && posScale < posBind && posBind < posUser);
+        }
+
+        [Fact]
         public void ANullAtlasThrows()
         {
             SpriteAtlas none = null;

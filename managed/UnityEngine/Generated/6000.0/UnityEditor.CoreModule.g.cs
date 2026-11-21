@@ -47005,8 +47005,6 @@ namespace UnityEditor.U2D
         [global::Unbound.Stub] internal bool GetSecondaryColorSpace(string secondaryTextureName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasImporter.GetSecondaryColorSpace"); return default; }
         [global::Unbound.Stub] internal void SetSecondaryColorSpace(string secondaryTextureName, bool srGB) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasImporter.SetSecondaryColorSpace"); }
         [global::Unbound.Stub] internal void DeleteSecondaryPlatformSettings(string secondaryTextureName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasImporter.DeleteSecondaryPlatformSettings"); }
-        public float variantScale { [global::Unbound.Stub] get { this.CheckImporterState("get_variantScale"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasImporter.variantScale"); return default; } [global::Unbound.Stub] set { this.CheckImporterState("set_variantScale"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasImporter.variantScale"); } }
-        public bool includeInBuild { [global::Unbound.Stub] get { this.CheckImporterState("get_includeInBuild"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasImporter.includeInBuild"); return default; } [global::Unbound.Stub] set { this.CheckImporterState("set_includeInBuild"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasImporter.includeInBuild"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class SpriteAtlasImporterInspector : global::UnityEditor.AssetImporters.AssetImporterEditor
