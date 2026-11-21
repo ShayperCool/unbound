@@ -206,14 +206,8 @@ namespace UnityEditor.U2D
             else
             {
                 writer.Key("packables", 2);
-                for (int i = 0; i < m_Packables.Count; i++)
-                {
-                    var entry = m_Packables[i];
-                    var reference = ReferenceEquals(entry.Live, null)
-                        ? entry.Reference
-                        : entry.Live == null ? default : SpriteAtlas.ResolvePackableRef(entry.Live);
-                    writer.SequenceValue(2, UnityYamlWriter.Writer.ReferenceText(reference));
-                }
+                foreach (var entry in m_Packables)
+                    writer.SequenceValue(2, UnityYamlWriter.Writer.ReferenceText(entry.CurrentRef));
             }
 
             writer.Bool("m_IsVariant", m_IsVariant);

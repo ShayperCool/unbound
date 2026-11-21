@@ -50,6 +50,43 @@ namespace Unbound.Runtime
             Values.Add(value);
         }
 
+        /// <summary>Replaces <paramref name="key"/>'s value, or inserts the key where
+        /// <paramref name="order"/> (the order the Editor writes this map's keys in) puts it: after
+        /// the last key present that comes before it, else before the first that comes after it,
+        /// else at the end.</summary>
+        internal void SetInOrder(string key, YText value, IReadOnlyList<string> order)
+        {
+            int index = Keys.IndexOf(key);
+            if (index >= 0)
+            {
+                Values[index] = value;
+                return;
+            }
+            int rank = IndexOf(order, key);
+            int at = -1;
+            if (rank >= 0)
+            {
+                for (int i = 0; i < Keys.Count; i++)
+                {
+                    int other = IndexOf(order, Keys[i]);
+                    if (other >= 0 && other < rank) at = i + 1;
+                }
+                if (at < 0)
+                    for (int i = 0; i < Keys.Count && at < 0; i++)
+                        if (IndexOf(order, Keys[i]) > rank) at = i;
+            }
+            if (at < 0) at = Keys.Count;
+            Keys.Insert(at, key);
+            Values.Insert(at, value);
+        }
+
+        static int IndexOf(IReadOnlyList<string> list, string item)
+        {
+            for (int i = 0; i < list.Count; i++)
+                if (list[i] == item) return i;
+            return -1;
+        }
+
         /// <summary>A scalar's value (quotes and escapes resolved).</summary>
         internal string Text => Kind == YKind.Scalar ? UnityYamlText.Unquote(Raw) : "";
 

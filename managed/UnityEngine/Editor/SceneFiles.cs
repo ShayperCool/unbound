@@ -1267,197 +1267,48 @@ namespace Unbound.Runtime
             }
             if (o is UnityEngine.U2D.SpriteAtlas atlas && !atlas.IsFromImporter)
             {
-                var editorData = doc.Body.Get("m_EditorData");
-                if (editorData == null || editorData.Kind != YKind.Map)
-                {
-                    editorData = YText.Map();
-                    doc.Body.Set("m_EditorData", editorData);
-                }
-                int textureIndex = editorData.Keys.IndexOf("textureSettings");
-                if (textureIndex >= 0)
-                {
-                    editorData.Values[textureIndex] = atlas.TextureSettings.ToYText();
-                }
-                else if (atlas.TextureSettingsModified)
-                {
-                    int afterVersion = editorData.Keys.IndexOf("serializedVersion");
-                    int insertTextureAt = afterVersion >= 0 ? afterVersion + 1 : 0;
-                    editorData.Keys.Insert(insertTextureAt, "textureSettings");
-                    editorData.Values.Insert(insertTextureAt, atlas.TextureSettings.ToYText());
-                }
-                if (atlas.PlatformSettingsModified)
-                {
-                    var platformText = TextureImporterPlatformSettings.ToYTextList(atlas.PlatformSettings);
-                    int platformIndex = editorData.Keys.IndexOf("platformSettings");
-                    if (platformIndex >= 0)
-                    {
-                        editorData.Values[platformIndex] = platformText;
-                    }
-                    else
-                    {
-                        int afterTexture = editorData.Keys.IndexOf("textureSettings");
-                        int afterVersion = editorData.Keys.IndexOf("serializedVersion");
-                        int insertPlatformAt = afterTexture >= 0 ? afterTexture + 1 : afterVersion >= 0 ? afterVersion + 1 : 0;
-                        editorData.Keys.Insert(insertPlatformAt, "platformSettings");
-                        editorData.Values.Insert(insertPlatformAt, platformText);
-                    }
-                }
-                int packingIndex = editorData.Keys.IndexOf("packingSettings");
-                if (packingIndex >= 0)
-                {
-                    editorData.Values[packingIndex] = atlas.PackingSettings.ToYText();
-                }
-                else if (atlas.PackingSettingsModified)
-                {
-                    int afterPlatform = editorData.Keys.IndexOf("platformSettings");
-                    int insertPackingAt = afterPlatform >= 0 ? afterPlatform + 1 : editorData.Keys.Count;
-                    editorData.Keys.Insert(insertPackingAt, "packingSettings");
-                    editorData.Values.Insert(insertPackingAt, atlas.PackingSettings.ToYText());
-                }
-                if (atlas.VariantScaleModified)
-                {
-                    var scaleValue = YText.Scalar(UnityYamlWriter.Writer.Number(atlas.VariantScale));
-                    int scaleIndex = editorData.Keys.IndexOf("variantMultiplier");
-                    if (scaleIndex >= 0)
-                    {
-                        editorData.Values[scaleIndex] = scaleValue;
-                    }
-                    else
-                    {
-                        int afterSecondary = editorData.Keys.IndexOf("secondaryTextureSettings");
-                        int beforePackables = editorData.Keys.IndexOf("packables");
-                        int afterPacking = editorData.Keys.IndexOf("packingSettings");
-                        int beforeBind = editorData.Keys.IndexOf("bindAsDefault");
-                        int insertScaleAt = afterSecondary >= 0 ? afterSecondary + 1
-                            : beforePackables >= 0 ? beforePackables
-                            : afterPacking >= 0 ? afterPacking + 1
-                            : beforeBind >= 0 ? beforeBind
-                            : editorData.Keys.Count;
-                        editorData.Keys.Insert(insertScaleAt, "variantMultiplier");
-                        editorData.Values.Insert(insertScaleAt, scaleValue);
-                    }
-                }
-                if (atlas.PackablesModified)
-                {
-                    var packablesText = atlas.ToPackablesYText();
-                    int packablesIndex = editorData.Keys.IndexOf("packables");
-                    if (packablesIndex >= 0)
-                    {
-                        editorData.Values[packablesIndex] = packablesText;
-                    }
-                    else
-                    {
-                        int afterVariantMultiplier = editorData.Keys.IndexOf("variantMultiplier");
-                        int beforeBind = editorData.Keys.IndexOf("bindAsDefault");
-                        int insertPackablesAt = afterVariantMultiplier >= 0 ? afterVariantMultiplier + 1
-                            : beforeBind >= 0 ? beforeBind
-                            : editorData.Keys.Count;
-                        editorData.Keys.Insert(insertPackablesAt, "packables");
-                        editorData.Values.Insert(insertPackablesAt, packablesText);
-                    }
-                }
-                var value = YText.Scalar(atlas.IncludeInBuild ? "1" : "0");
-                int existing = editorData.Keys.IndexOf("bindAsDefault");
-                if (existing >= 0)
-                {
-                    editorData.Values[existing] = value;
-                }
-                else
-                {
-                    int afterPackables = editorData.Keys.IndexOf("packables");
-                    int insertAt = afterPackables >= 0 ? afterPackables + 1 : editorData.Keys.Count;
-                    editorData.Keys.Insert(insertAt, "bindAsDefault");
-                    editorData.Values.Insert(insertAt, value);
-                }
-                if (atlas.MasterAtlasModified)
-                {
-                    var masterValue = SceneFiles.FlowValue(UnityYamlWriter.Writer.ReferenceText(atlas.MasterAtlasRef));
-                    int masterIndex = doc.Body.Keys.IndexOf("m_MasterAtlas");
-                    if (masterIndex >= 0)
-                    {
-                        doc.Body.Values[masterIndex] = masterValue;
-                    }
-                    else
-                    {
-                        int afterEditorData = doc.Body.Keys.IndexOf("m_EditorData");
-                        int insertMasterAt = afterEditorData >= 0 ? afterEditorData + 1 : doc.Body.Keys.Count;
-                        doc.Body.Keys.Insert(insertMasterAt, "m_MasterAtlas");
-                        doc.Body.Values.Insert(insertMasterAt, masterValue);
-                    }
-                }
-                if (atlas.TagModified)
-                {
-                    var tagValue = YText.Scalar(UnityYamlWriter.Scalar(atlas.RawTag ?? ""));
-                    int tagIndex = doc.Body.Keys.IndexOf("m_Tag");
-                    if (tagIndex >= 0)
-                    {
-                        doc.Body.Values[tagIndex] = tagValue;
-                    }
-                    else
-                    {
-                        int beforeIsVariant = doc.Body.Keys.IndexOf("m_IsVariant");
-                        int insertTagAt = beforeIsVariant >= 0 ? beforeIsVariant : doc.Body.Keys.Count;
-                        doc.Body.Keys.Insert(insertTagAt, "m_Tag");
-                        doc.Body.Values.Insert(insertTagAt, tagValue);
-                    }
-                }
-                if (atlas.IsVariantModified)
-                {
-                    var variantValue = YText.Scalar(atlas.isVariant ? "1" : "0");
-                    int variantIndex = doc.Body.Keys.IndexOf("m_IsVariant");
-                    if (variantIndex >= 0)
-                    {
-                        doc.Body.Values[variantIndex] = variantValue;
-                    }
-                    else
-                    {
-                        int afterTag = doc.Body.Keys.IndexOf("m_Tag");
-                        int insertVariantAt = afterTag >= 0 ? afterTag + 1 : doc.Body.Keys.Count;
-                        doc.Body.Keys.Insert(insertVariantAt, "m_IsVariant");
-                        doc.Body.Values.Insert(insertVariantAt, variantValue);
-                    }
-                }
-                if (atlas.PackedDataModified)
-                {
-                    var renderDataKeys = atlas.ToPackedRenderDataKeysYText();
-                    int keysIndex = editorData.Keys.IndexOf("packedSpriteRenderDataKeys");
-                    if (keysIndex >= 0)
-                        editorData.Values[keysIndex] = renderDataKeys;
-                    else
-                        editorData.Set("packedSpriteRenderDataKeys", renderDataKeys);
-
-                    var packedSprites = atlas.ToPackedSpritesYText();
-                    int packedIndex = doc.Body.Keys.IndexOf("m_PackedSprites");
-                    if (packedIndex >= 0)
-                    {
-                        doc.Body.Values[packedIndex] = packedSprites;
-                    }
-                    else
-                    {
-                        int afterMaster = doc.Body.Keys.IndexOf("m_MasterAtlas");
-                        int insertPackedAt = afterMaster >= 0 ? afterMaster + 1 : doc.Body.Keys.Count;
-                        doc.Body.Keys.Insert(insertPackedAt, "m_PackedSprites");
-                        doc.Body.Values.Insert(insertPackedAt, packedSprites);
-                    }
-
-                    var packedNames = atlas.ToPackedSpriteNamesYText();
-                    int namesIndex = doc.Body.Keys.IndexOf("m_PackedSpriteNamesToIndex");
-                    if (namesIndex >= 0)
-                    {
-                        doc.Body.Values[namesIndex] = packedNames;
-                    }
-                    else
-                    {
-                        int afterPacked = doc.Body.Keys.IndexOf("m_PackedSprites");
-                        int insertNamesAt = afterPacked >= 0 ? afterPacked + 1 : doc.Body.Keys.Count;
-                        doc.Body.Keys.Insert(insertNamesAt, "m_PackedSpriteNamesToIndex");
-                        doc.Body.Values.Insert(insertNamesAt, packedNames);
-                    }
-                    atlas.ClearPackedDataModified();
-                }
+                WriteSpriteAtlas(doc.Body, atlas);
                 return true;
             }
             return false;
+        }
+
+        /// <summary>The keys of a V1 sprite atlas document in the order the Editor writes them.</summary>
+        static readonly string[] s_SpriteAtlasKeyOrder =
+        {
+            "m_ObjectHideFlags", "m_CorrespondingSourceObject", "m_PrefabInstance", "m_PrefabAsset", "m_Name",
+            "m_EditorData", "m_MasterAtlas", "m_PackedSprites", "m_PackedSpriteNamesToIndex", "m_RenderDataMap", "m_Tag", "m_IsVariant",
+        };
+
+        /// <summary>Writes a V1 sprite atlas into its `.spriteatlas` document: its Editor settings
+        /// whole, and the packables, master, tag, variant flag and packed sprites that changed, each
+        /// key in the Editor's place (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/spriteatlaseditor and tests/projects/spriteatlaspack).</summary>
+        static void WriteSpriteAtlas(YText body, UnityEngine.U2D.SpriteAtlas atlas)
+        {
+            var editorData = body.Get("m_EditorData");
+            if (editorData == null || editorData.Kind != YKind.Map)
+            {
+                editorData = YText.Map();
+                body.SetInOrder("m_EditorData", editorData, s_SpriteAtlasKeyOrder);
+            }
+            var order = UnityEditor.U2D.SpriteAtlasEditorSettings.KeyOrder;
+            atlas.Settings.Write(editorData, prefixed: true);
+            if (atlas.PackablesModified)
+                editorData.SetInOrder("packables", atlas.ToPackablesYText(), order);
+            if (atlas.MasterAtlasModified)
+                body.SetInOrder("m_MasterAtlas", SceneFiles.FlowValue(UnityYamlWriter.Writer.ReferenceText(atlas.MasterAtlasRef)), s_SpriteAtlasKeyOrder);
+            if (atlas.TagModified)
+                body.SetInOrder("m_Tag", YText.Scalar(UnityYamlWriter.Scalar(atlas.RawTag ?? "")), s_SpriteAtlasKeyOrder);
+            if (atlas.IsVariantModified)
+                body.SetInOrder("m_IsVariant", YText.Scalar(atlas.isVariant ? "1" : "0"), s_SpriteAtlasKeyOrder);
+            if (atlas.PackedDataModified)
+            {
+                editorData.SetInOrder("packedSpriteRenderDataKeys", atlas.ToPackedRenderDataKeysYText(), order);
+                body.SetInOrder("m_PackedSprites", atlas.ToPackedSpritesYText(), s_SpriteAtlasKeyOrder);
+                body.SetInOrder("m_PackedSpriteNamesToIndex", atlas.ToPackedSpriteNamesYText(), s_SpriteAtlasKeyOrder);
+                atlas.ClearPackedDataModified();
+            }
         }
     }
 }

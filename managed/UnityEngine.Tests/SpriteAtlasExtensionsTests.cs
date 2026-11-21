@@ -427,6 +427,28 @@ namespace UnityEngine.Tests
                 "  m_Name: Sample\n" +
                 "  m_EditorData:\n" +
                 "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 1\n" +
+                "      compressionQuality: 50\n" +
+                "      maxTextureSize: 2048\n" +
+                "      textureCompression: 0\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 0\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings: []\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 4\n" +
+                "      blockOffset: 1\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    variantMultiplier: 1\n" +
                 "    packables: []\n" +
                 "    bindAsDefault: 1\n" +
                 "    isAtlasV2: 0\n" +
@@ -455,6 +477,28 @@ namespace UnityEngine.Tests
                 "  m_Name: Omitted\n" +
                 "  m_EditorData:\n" +
                 "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 1\n" +
+                "      compressionQuality: 50\n" +
+                "      maxTextureSize: 2048\n" +
+                "      textureCompression: 0\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 0\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings: []\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 4\n" +
+                "      blockOffset: 1\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    variantMultiplier: 1\n" +
                 "    packables: []\n" +
                 "    isAtlasV2: 0\n" +
                 "  m_IsVariant: 0\n";
@@ -537,6 +581,17 @@ namespace UnityEngine.Tests
                 "  m_Name: Sample\n" +
                 "  m_EditorData:\n" +
                 "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 1\n" +
+                "      compressionQuality: 50\n" +
+                "      maxTextureSize: 2048\n" +
+                "      textureCompression: 0\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 0\n" +
+                "      sRGB: 1\n" +
                 "    platformSettings: []\n" +
                 "    packingSettings:\n" +
                 "      serializedVersion: 2\n" +
@@ -546,6 +601,8 @@ namespace UnityEngine.Tests
                 "      enableRotation: 1\n" +
                 "      enableTightPacking: 1\n" +
                 "      enableAlphaDilation: 0\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    variantMultiplier: 1\n" +
                 "    packables: []\n" +
                 "    bindAsDefault: 1\n" +
                 "  m_IsVariant: 0\n";
@@ -592,6 +649,17 @@ namespace UnityEngine.Tests
                 "  m_Name: Legacy\n" +
                 "  m_EditorData:\n" +
                 "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 1\n" +
+                "      compressionQuality: 50\n" +
+                "      maxTextureSize: 2048\n" +
+                "      textureCompression: 0\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 0\n" +
+                "      sRGB: 1\n" +
                 "    platformSettings: []\n" +
                 "    packingSettings:\n" +
                 "      serializedVersion: 1\n" +
@@ -601,6 +669,8 @@ namespace UnityEngine.Tests
                 "      enableRotation: 1\n" +
                 "      enableTightPacking: 0\n" +
                 "      enableAlphaDilation: 0\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    variantMultiplier: 1\n" +
                 "    packables: []\n" +
                 "    bindAsDefault: 1\n" +
                 "  m_IsVariant: 0\n";
@@ -634,7 +704,20 @@ namespace UnityEngine.Tests
                 "  m_Name: Omitted\n" +
                 "  m_EditorData:\n" +
                 "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 1\n" +
+                "      compressionQuality: 50\n" +
+                "      maxTextureSize: 2048\n" +
+                "      textureCompression: 0\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 0\n" +
+                "      sRGB: 1\n" +
                 "    platformSettings: []\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    variantMultiplier: 1\n" +
                 "    packables: []\n" +
                 "    bindAsDefault: 1\n" +
                 "  m_IsVariant: 0\n";
@@ -735,7 +818,16 @@ namespace UnityEngine.Tests
                 "    - serializedVersion: 4\n" +
                 "      m_BuildTarget: Android\n" +
                 "      m_MaxTextureSize: 1024\n" +
+                "      m_ResizeAlgorithm: 0\n" +
+                "      m_TextureFormat: -1\n" +
+                "      m_TextureCompression: 1\n" +
+                "      m_CompressionQuality: 50\n" +
+                "      m_CrunchedCompression: 0\n" +
+                "      m_AllowsAlphaSplitting: 0\n" +
                 "      m_Overridden: 1\n" +
+                "      m_IgnorePlatformSupport: 0\n" +
+                "      m_AndroidETC2FallbackOverride: 0\n" +
+                "      m_ForceMaximumCompressionQuality_BC6H_BC7: 0\n" +
                 "    packingSettings:\n" +
                 "      serializedVersion: 2\n" +
                 "      padding: 8\n" +
@@ -744,6 +836,8 @@ namespace UnityEngine.Tests
                 "      enableRotation: 0\n" +
                 "      enableTightPacking: 1\n" +
                 "      enableAlphaDilation: 1\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    variantMultiplier: 1\n" +
                 "    packables: []\n" +
                 "    bindAsDefault: 1\n" +
                 "  m_IsVariant: 0\n";
@@ -765,7 +859,16 @@ namespace UnityEngine.Tests
                 "    - serializedVersion: 4\n" +
                 "      m_BuildTarget: Android\n" +
                 "      m_MaxTextureSize: 1024\n" +
+                "      m_ResizeAlgorithm: 0\n" +
+                "      m_TextureFormat: -1\n" +
+                "      m_TextureCompression: 1\n" +
+                "      m_CompressionQuality: 50\n" +
+                "      m_CrunchedCompression: 0\n" +
+                "      m_AllowsAlphaSplitting: 0\n" +
                 "      m_Overridden: 1\n" +
+                "      m_IgnorePlatformSupport: 0\n" +
+                "      m_AndroidETC2FallbackOverride: 0\n" +
+                "      m_ForceMaximumCompressionQuality_BC6H_BC7: 0\n" +
                 "    packingSettings:\n" +
                 "      serializedVersion: 2\n" +
                 "      padding: 8\n" +
@@ -801,7 +904,7 @@ namespace UnityEngine.Tests
                 "      crunchedCompression: 1\n" +
                 "      sRGB: 0\n",
                 written);
-            Assert.Contains("      m_BuildTarget: Android\n      m_MaxTextureSize: 1024\n      m_Overridden: 1\n", written);
+            Assert.Contains("      m_BuildTarget: Android\n      m_MaxTextureSize: 1024\n      m_ResizeAlgorithm: 0\n", written);
             Assert.Contains("      padding: 8\n      blockOffset: 2\n      allowAlphaSplitting: 1\n", written);
 
             // Roundtrip restores exact original YAML bytes.
@@ -829,6 +932,17 @@ namespace UnityEngine.Tests
                 "      readable: 0\n" +
                 "      crunchedCompression: 1\n" +
                 "      colorSpace: 1\n" +
+                "    platformSettings: []\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 4\n" +
+                "      blockOffset: 1\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    variantMultiplier: 1\n" +
                 "    packables: []\n" +
                 "    bindAsDefault: 1\n" +
                 "  m_IsVariant: 0\n";
@@ -879,6 +993,16 @@ namespace UnityEngine.Tests
                 "  m_EditorData:\n" +
                 "    serializedVersion: 2\n" +
                 "    platformSettings: []\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 4\n" +
+                "      blockOffset: 1\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    variantMultiplier: 1\n" +
                 "    packables: []\n" +
                 "    bindAsDefault: 1\n" +
                 "  m_IsVariant: 0\n";
@@ -1031,6 +1155,8 @@ namespace UnityEngine.Tests
                 "      enableRotation: 0\n" +
                 "      enableTightPacking: 1\n" +
                 "      enableAlphaDilation: 1\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    variantMultiplier: 1\n" +
                 "    packables: []\n" +
                 "    bindAsDefault: 1\n" +
                 "  m_IsVariant: 0\n";
@@ -1137,6 +1263,8 @@ namespace UnityEngine.Tests
                 "      enableRotation: 1\n" +
                 "      enableTightPacking: 1\n" +
                 "      enableAlphaDilation: 0\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    variantMultiplier: 1\n" +
                 "    packables: []\n" +
                 "    bindAsDefault: 1\n" +
                 "  m_IsVariant: 0\n";
@@ -1265,6 +1393,7 @@ namespace UnityEngine.Tests
                 "      enableRotation: 0\n" +
                 "      enableTightPacking: 1\n" +
                 "      enableAlphaDilation: 1\n" +
+                "    secondaryTextureSettings: {}\n" +
                 "    variantMultiplier: 1\n" +
                 "    packables:\n" +
                 "    - {fileID: 21300000, guid: b828055b6a1d50b968e77fc6406e2b5c, type: 3}\n" +
@@ -1307,6 +1436,27 @@ namespace UnityEngine.Tests
                     "  m_Name: Omitted\n" +
                     "  m_EditorData:\n" +
                     "    serializedVersion: 2\n" +
+                    "    textureSettings:\n" +
+                    "      serializedVersion: 2\n" +
+                    "      anisoLevel: 1\n" +
+                    "      compressionQuality: 50\n" +
+                    "      maxTextureSize: 2048\n" +
+                    "      textureCompression: 0\n" +
+                    "      filterMode: 1\n" +
+                    "      generateMipMaps: 0\n" +
+                    "      readable: 0\n" +
+                    "      crunchedCompression: 0\n" +
+                    "      sRGB: 1\n" +
+                    "    platformSettings: []\n" +
+                    "    packingSettings:\n" +
+                    "      serializedVersion: 2\n" +
+                    "      padding: 4\n" +
+                    "      blockOffset: 1\n" +
+                    "      allowAlphaSplitting: 0\n" +
+                    "      enableRotation: 1\n" +
+                    "      enableTightPacking: 1\n" +
+                    "      enableAlphaDilation: 0\n" +
+                    "    secondaryTextureSettings: {}\n" +
                     "    variantMultiplier: 1\n" +
                     "    bindAsDefault: 1\n" +
                     "    isAtlasV2: 0\n" +
@@ -1420,6 +1570,18 @@ namespace UnityEngine.Tests
                 "  m_Name: Sample\n" +
                 "  m_EditorData:\n" +
                 "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 1\n" +
+                "      compressionQuality: 50\n" +
+                "      maxTextureSize: 2048\n" +
+                "      textureCompression: 0\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 0\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings: []\n" +
                 "    packingSettings:\n" +
                 "      serializedVersion: 2\n" +
                 "      padding: 8\n" +
@@ -1428,6 +1590,7 @@ namespace UnityEngine.Tests
                 "      enableRotation: 0\n" +
                 "      enableTightPacking: 1\n" +
                 "      enableAlphaDilation: 1\n" +
+                "    secondaryTextureSettings: {}\n" +
                 "    variantMultiplier: 1\n" +
                 "    packables:\n" +
                 "    - {fileID: 21300000, guid: b828055b6a1d50b968e77fc6406e2b5c, type: 3}\n" +
@@ -1457,6 +1620,27 @@ namespace UnityEngine.Tests
                     "  m_Name: Omitted\n" +
                     "  m_EditorData:\n" +
                     "    serializedVersion: 2\n" +
+                    "    textureSettings:\n" +
+                    "      serializedVersion: 2\n" +
+                    "      anisoLevel: 1\n" +
+                    "      compressionQuality: 50\n" +
+                    "      maxTextureSize: 2048\n" +
+                    "      textureCompression: 0\n" +
+                    "      filterMode: 1\n" +
+                    "      generateMipMaps: 0\n" +
+                    "      readable: 0\n" +
+                    "      crunchedCompression: 0\n" +
+                    "      sRGB: 1\n" +
+                    "    platformSettings: []\n" +
+                    "    packingSettings:\n" +
+                    "      serializedVersion: 2\n" +
+                    "      padding: 4\n" +
+                    "      blockOffset: 1\n" +
+                    "      allowAlphaSplitting: 0\n" +
+                    "      enableRotation: 1\n" +
+                    "      enableTightPacking: 1\n" +
+                    "      enableAlphaDilation: 0\n" +
+                    "    secondaryTextureSettings: {}\n" +
                     "    variantMultiplier: 1\n" +
                     "    bindAsDefault: 1\n" +
                     "    isAtlasV2: 0\n" +
@@ -1483,13 +1667,11 @@ namespace UnityEngine.Tests
             var fresh = new SpriteAtlas();
             int baseDirty = EditorUtility.GetDirtyCount(fresh);
             Assert.Equal(1f, fresh.VariantScale);
-            Assert.False(fresh.VariantScaleModified);
             Assert.False(fresh.isVariant);
 
             // Same-value repeat still marks dirty and leaves isVariant untouched.
             fresh.SetVariantScale(1f);
             Assert.Equal(1f, fresh.VariantScale);
-            Assert.True(fresh.VariantScaleModified);
             Assert.False(fresh.isVariant);
             Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(fresh));
 
@@ -1528,6 +1710,18 @@ namespace UnityEngine.Tests
                 "  m_Name: Variant\n" +
                 "  m_EditorData:\n" +
                 "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 1\n" +
+                "      compressionQuality: 50\n" +
+                "      maxTextureSize: 2048\n" +
+                "      textureCompression: 0\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 0\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings: []\n" +
                 "    packingSettings:\n" +
                 "      serializedVersion: 2\n" +
                 "      padding: 16\n" +
@@ -1547,7 +1741,6 @@ namespace UnityEngine.Tests
             var loaded = new SpriteAtlas();
             loaded.ReadSerialized(TestYaml.DocumentBody(v1Source), null);
             Assert.Equal(0.5f, loaded.VariantScale);
-            Assert.False(loaded.VariantScaleModified);
             Assert.False(EditorUtility.IsDirty(loaded));
 
             loaded.SetVariantScale(0.75f);
@@ -1574,6 +1767,26 @@ namespace UnityEngine.Tests
                 "  m_Name: Omitted\n" +
                 "  m_EditorData:\n" +
                 "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 1\n" +
+                "      compressionQuality: 50\n" +
+                "      maxTextureSize: 2048\n" +
+                "      textureCompression: 0\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 0\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings: []\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 4\n" +
+                "      blockOffset: 1\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 0\n" +
                 "    secondaryTextureSettings: {}\n" +
                 "    packables: []\n" +
                 "    bindAsDefault: 0\n" +
@@ -1631,6 +1844,27 @@ namespace UnityEngine.Tests
                 "  m_Name: Variant\n" +
                 "  m_EditorData:\n" +
                 "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 1\n" +
+                "      compressionQuality: 50\n" +
+                "      maxTextureSize: 2048\n" +
+                "      textureCompression: 0\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 0\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings: []\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 4\n" +
+                "      blockOffset: 1\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    secondaryTextureSettings: {}\n" +
                 "    variantMultiplier: 0.5\n" +
                 "    packables:\n" +
                 "    - {fileID: 102900000, guid: 04a8492878d2cbe6483255cf45cabd95, type: 3}\n" +
@@ -1688,6 +1922,28 @@ namespace UnityEngine.Tests
                 "  m_Name: Omitted\n" +
                 "  m_EditorData:\n" +
                 "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 1\n" +
+                "      compressionQuality: 50\n" +
+                "      maxTextureSize: 2048\n" +
+                "      textureCompression: 0\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 0\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings: []\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 4\n" +
+                "      blockOffset: 1\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    variantMultiplier: 1\n" +
                 "    packables: []\n" +
                 "    bindAsDefault: 1\n" +
                 "  m_MasterAtlas: {fileID: 0}\n" +
@@ -2851,6 +3107,353 @@ namespace UnityEngine.Tests
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetIncludeInBuild(false)).ParamName);
             Assert.Throws<ArgumentNullException>(() => none.GetMasterAtlas());
             Assert.Throws<ArgumentNullException>(() => none.IsIncludeInBuild());
+        }
+
+        // A V1 atlas and a V2 importer `.meta` holding legacy and omitted settings, written after one
+        // unrelated change, as the Unity 6000.0.71f1 Editor writes them
+        // (tests/projects/spriteatlaseditor v1wholewrite and v2wholewrite, Legacy).
+        const string WholeWriteV1Source =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_ObjectHideFlags: 0\n" +
+                "  m_CorrespondingSourceObject: {fileID: 0}\n" +
+                "  m_PrefabInstance: {fileID: 0}\n" +
+                "  m_PrefabAsset: {fileID: 0}\n" +
+                "  m_Name: Legacy\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 1\n" +
+                "      anisoLevel: 3\n" +
+                "      compressionQuality: 82\n" +
+                "      maxTextureSize: 512\n" +
+                "      textureCompression: 3\n" +
+                "      filterMode: 0\n" +
+                "      generateMipMaps: 1\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 1\n" +
+                "      colorSpace: 0\n" +
+                "    platformSettings:\n" +
+                "    - serializedVersion: 1\n" +
+                "      m_BuildTarget: Android\n" +
+                "      m_MaxTextureSize: 256\n" +
+                "      m_ResizeAlgorithm: 0\n" +
+                "      m_TextureFormat: 36\n" +
+                "      m_TextureCompression: 1\n" +
+                "      m_CompressionQuality: 40\n" +
+                "      m_CrunchedCompression: 0\n" +
+                "      m_AllowsAlphaSplitting: 0\n" +
+                "      m_Overridden: 1\n" +
+                "      m_IgnorePlatformSupport: 0\n" +
+                "      m_AndroidETC2FallbackOverride: 0\n" +
+                "    - serializedVersion: 3\n" +
+                "      m_BuildTarget: Windows Store Apps\n" +
+                "      m_MaxTextureSize: 512\n" +
+                "      m_ResizeAlgorithm: 0\n" +
+                "      m_TextureFormat: -1\n" +
+                "      m_TextureCompression: 1\n" +
+                "      m_CompressionQuality: 50\n" +
+                "      m_CrunchedCompression: 0\n" +
+                "      m_AllowsAlphaSplitting: 0\n" +
+                "      m_Overridden: 1\n" +
+                "      m_IgnorePlatformSupport: 0\n" +
+                "      m_AndroidETC2FallbackOverride: 0\n" +
+                "      m_ForceMaximumCompressionQuality_BC6H_BC7: 0\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 1\n" +
+                "      paddingPower: 0\n" +
+                "      blockOffset: 2\n" +
+                "      allowAlphaSplitting: 1\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 0\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n" +
+                "    isAtlasV2: 0\n" +
+                "    cachedData: {fileID: 0}\n" +
+                "    packedSpriteRenderDataKeys: []\n" +
+                "  m_MasterAtlas: {fileID: 0}\n" +
+                "  m_PackedSprites: []\n" +
+                "  m_PackedSpriteNamesToIndex: []\n" +
+                "  m_RenderDataMap: {}\n" +
+                "  m_Tag: Legacy\n" +
+                "  m_IsVariant: 0\n";
+        const string WholeWriteV1Written =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_ObjectHideFlags: 0\n" +
+                "  m_CorrespondingSourceObject: {fileID: 0}\n" +
+                "  m_PrefabInstance: {fileID: 0}\n" +
+                "  m_PrefabAsset: {fileID: 0}\n" +
+                "  m_Name: Legacy\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 3\n" +
+                "      compressionQuality: 82\n" +
+                "      maxTextureSize: 512\n" +
+                "      textureCompression: 3\n" +
+                "      filterMode: 0\n" +
+                "      generateMipMaps: 1\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 1\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings:\n" +
+                "    - serializedVersion: 4\n" +
+                "      m_BuildTarget: Android\n" +
+                "      m_MaxTextureSize: 256\n" +
+                "      m_ResizeAlgorithm: 0\n" +
+                "      m_TextureFormat: 47\n" +
+                "      m_TextureCompression: 1\n" +
+                "      m_CompressionQuality: 40\n" +
+                "      m_CrunchedCompression: 0\n" +
+                "      m_AllowsAlphaSplitting: 0\n" +
+                "      m_Overridden: 1\n" +
+                "      m_IgnorePlatformSupport: 0\n" +
+                "      m_AndroidETC2FallbackOverride: 0\n" +
+                "      m_ForceMaximumCompressionQuality_BC6H_BC7: 1\n" +
+                "    - serializedVersion: 4\n" +
+                "      m_BuildTarget: WindowsStoreApps\n" +
+                "      m_MaxTextureSize: 512\n" +
+                "      m_ResizeAlgorithm: 0\n" +
+                "      m_TextureFormat: -1\n" +
+                "      m_TextureCompression: 1\n" +
+                "      m_CompressionQuality: 50\n" +
+                "      m_CrunchedCompression: 0\n" +
+                "      m_AllowsAlphaSplitting: 0\n" +
+                "      m_Overridden: 1\n" +
+                "      m_IgnorePlatformSupport: 0\n" +
+                "      m_AndroidETC2FallbackOverride: 0\n" +
+                "      m_ForceMaximumCompressionQuality_BC6H_BC7: 1\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 2\n" +
+                "      blockOffset: 2\n" +
+                "      allowAlphaSplitting: 1\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 0\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    variantMultiplier: 1\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 0\n" +
+                "    isAtlasV2: 0\n" +
+                "    cachedData: {fileID: 0}\n" +
+                "    packedSpriteRenderDataKeys: []\n" +
+                "  m_MasterAtlas: {fileID: 0}\n" +
+                "  m_PackedSprites: []\n" +
+                "  m_PackedSpriteNamesToIndex: []\n" +
+                "  m_RenderDataMap: {}\n" +
+                "  m_Tag: Legacy\n" +
+                "  m_IsVariant: 0\n";
+        const string WholeWriteV2Meta =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7f003\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  textureSettings:\n" +
+                "    serializedVersion: 1\n" +
+                "    anisoLevel: 3\n" +
+                "    compressionQuality: 82\n" +
+                "    maxTextureSize: 512\n" +
+                "    textureCompression: 3\n" +
+                "    filterMode: 0\n" +
+                "    generateMipMaps: 1\n" +
+                "    readable: 0\n" +
+                "    crunchedCompression: 1\n" +
+                "    colorSpace: 0\n" +
+                "  platformSettings:\n" +
+                "  - serializedVersion: 1\n" +
+                "    buildTarget: Android\n" +
+                "    maxTextureSize: 256\n" +
+                "    resizeAlgorithm: 0\n" +
+                "    textureFormat: 36\n" +
+                "    textureCompression: 1\n" +
+                "    compressionQuality: 40\n" +
+                "    crunchedCompression: 0\n" +
+                "    allowsAlphaSplitting: 0\n" +
+                "    overridden: 1\n" +
+                "    ignorePlatformSupport: 0\n" +
+                "    androidETC2FallbackOverride: 0\n" +
+                "  - serializedVersion: 3\n" +
+                "    buildTarget: Windows Store Apps\n" +
+                "    maxTextureSize: 512\n" +
+                "    resizeAlgorithm: 0\n" +
+                "    textureFormat: -1\n" +
+                "    textureCompression: 1\n" +
+                "    compressionQuality: 50\n" +
+                "    crunchedCompression: 0\n" +
+                "    allowsAlphaSplitting: 0\n" +
+                "    overridden: 1\n" +
+                "    ignorePlatformSupport: 0\n" +
+                "    androidETC2FallbackOverride: 0\n" +
+                "    forceMaximumCompressionQuality_BC6H_BC7: 0\n" +
+                "  packingSettings:\n" +
+                "    serializedVersion: 1\n" +
+                "    paddingPower: 0\n" +
+                "    blockOffset: 2\n" +
+                "    allowAlphaSplitting: 1\n" +
+                "    enableRotation: 1\n" +
+                "    enableTightPacking: 0\n" +
+                "    enableAlphaDilation: 0\n" +
+                "  bindAsDefault: 1\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+        const string WholeWriteV2Written =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7f003\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  textureSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    anisoLevel: 3\n" +
+                "    compressionQuality: 82\n" +
+                "    maxTextureSize: 512\n" +
+                "    textureCompression: 3\n" +
+                "    filterMode: 0\n" +
+                "    generateMipMaps: 1\n" +
+                "    readable: 0\n" +
+                "    crunchedCompression: 1\n" +
+                "    sRGB: 1\n" +
+                "  platformSettings:\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: Android\n" +
+                "    maxTextureSize: 256\n" +
+                "    resizeAlgorithm: 0\n" +
+                "    textureFormat: 47\n" +
+                "    textureCompression: 1\n" +
+                "    compressionQuality: 40\n" +
+                "    crunchedCompression: 0\n" +
+                "    allowsAlphaSplitting: 0\n" +
+                "    overridden: 1\n" +
+                "    ignorePlatformSupport: 0\n" +
+                "    androidETC2FallbackOverride: 0\n" +
+                "    forceMaximumCompressionQuality_BC6H_BC7: 1\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: WindowsStoreApps\n" +
+                "    maxTextureSize: 512\n" +
+                "    resizeAlgorithm: 0\n" +
+                "    textureFormat: -1\n" +
+                "    textureCompression: 1\n" +
+                "    compressionQuality: 50\n" +
+                "    crunchedCompression: 0\n" +
+                "    allowsAlphaSplitting: 0\n" +
+                "    overridden: 1\n" +
+                "    ignorePlatformSupport: 0\n" +
+                "    androidETC2FallbackOverride: 0\n" +
+                "    forceMaximumCompressionQuality_BC6H_BC7: 1\n" +
+                "  packingSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    padding: 2\n" +
+                "    blockOffset: 2\n" +
+                "    allowAlphaSplitting: 1\n" +
+                "    enableRotation: 1\n" +
+                "    enableTightPacking: 0\n" +
+                "    enableAlphaDilation: 0\n" +
+                "  secondaryTextureSettings: {}\n" +
+                "  variantMultiplier: 1\n" +
+                "  bindAsDefault: 0\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+
+        [Fact]
+        public void SavingAV1AtlasWritesItsWholeEditorDataAsTheEditorDoes()
+        {
+            var docs = UnityYamlText.Parse(WholeWriteV1Source);
+            var atlas = Read(
+                "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 1\n" +
+                "      anisoLevel: 3\n" +
+                "      compressionQuality: 82\n" +
+                "      maxTextureSize: 512\n" +
+                "      textureCompression: 3\n" +
+                "      filterMode: 0\n" +
+                "      generateMipMaps: 1\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 1\n" +
+                "      colorSpace: 0\n" +
+                "    platformSettings:\n" +
+                "    - serializedVersion: 1\n" +
+                "      m_BuildTarget: Android\n" +
+                "      m_MaxTextureSize: 256\n" +
+                "      m_ResizeAlgorithm: 0\n" +
+                "      m_TextureFormat: 36\n" +
+                "      m_TextureCompression: 1\n" +
+                "      m_CompressionQuality: 40\n" +
+                "      m_CrunchedCompression: 0\n" +
+                "      m_AllowsAlphaSplitting: 0\n" +
+                "      m_Overridden: 1\n" +
+                "      m_IgnorePlatformSupport: 0\n" +
+                "      m_AndroidETC2FallbackOverride: 0\n" +
+                "    - serializedVersion: 3\n" +
+                "      m_BuildTarget: Windows Store Apps\n" +
+                "      m_MaxTextureSize: 512\n" +
+                "      m_ResizeAlgorithm: 0\n" +
+                "      m_TextureFormat: -1\n" +
+                "      m_TextureCompression: 1\n" +
+                "      m_CompressionQuality: 50\n" +
+                "      m_CrunchedCompression: 0\n" +
+                "      m_AllowsAlphaSplitting: 0\n" +
+                "      m_Overridden: 1\n" +
+                "      m_IgnorePlatformSupport: 0\n" +
+                "      m_AndroidETC2FallbackOverride: 0\n" +
+                "      m_ForceMaximumCompressionQuality_BC6H_BC7: 0\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 1\n" +
+                "      paddingPower: 0\n" +
+                "      blockOffset: 2\n" +
+                "      allowAlphaSplitting: 1\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 0\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n" +
+                "    isAtlasV2: 0\n" +
+                "    cachedData: {fileID: 0}\n" +
+                "    packedSpriteRenderDataKeys: []\n");
+            atlas.SetIncludeInBuild(false);
+            int unlocated = 0;
+            Assert.True(NativeDocuments.Write(docs[0], atlas, null, null, ref unlocated));
+            Assert.Equal(WholeWriteV1Written, UnityYamlText.Write(docs));
+        }
+
+        [Fact]
+        public void WritingAChangedSpriteAtlasImporterWritesItsWholeSettingsAsTheEditorDoes()
+        {
+            var root = UnityYamlText.ParseTopLevel(WholeWriteV2Meta);
+            var section = root.Get("SpriteAtlasImporter");
+            var importer = Assert.IsType<SpriteAtlasImporter>(
+                AssetImporter.FromMeta("Assets/Legacy.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7f003", "SpriteAtlasImporter", section.ToNode()));
+            // Unchanged, the importer leaves its `.meta` alone.
+            Assert.False(importer.WriteCustomMeta(section));
+            Assert.Equal(WholeWriteV2Meta, UnityYamlText.WriteTopLevel(root));
+            importer.includeInBuild = false;
+            Assert.True(importer.WriteCustomMeta(section));
+            Assert.Equal(WholeWriteV2Written, UnityYamlText.WriteTopLevel(root));
+        }
+
+        [Fact]
+        public void SetInOrderInsertsAMissingKeyWhereTheOrderPutsIt()
+        {
+            var order = new[] { "a", "b", "c", "d" };
+            var map = YText.Map();
+            map.Add("d", YText.Scalar("4"));
+            map.SetInOrder("b", YText.Scalar("2"), order);
+            map.Add("x", YText.Scalar("unknown"));
+            map.SetInOrder("c", YText.Scalar("3"), order);
+            map.SetInOrder("a", YText.Scalar("1"), order);
+            map.SetInOrder("z", YText.Scalar("26"), order);
+            map.SetInOrder("b", YText.Scalar("two"), order);
+            Assert.Equal(new[] { "a", "b", "c", "d", "x", "z" }, map.Keys);
+            Assert.Equal("two", map.Get("b").Raw);
         }
     }
 }

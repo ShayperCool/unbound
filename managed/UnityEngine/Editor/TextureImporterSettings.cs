@@ -457,9 +457,10 @@ namespace UnityEditor
             foreach (var item in listNode.Items)
             {
                 if (item == null || item.Kind != YKind.Map) continue;
-                // Unity's YAML sequence reader caches element 0's serializedVersion for the rest
-                // of the platformSettings sequence (measured in Unity 6000.0.71f1,
-                // tests/projects/spriteatlaseditor v2importerplatformset Legacy).
+                // Every entry is read at the first entry's serializedVersion (matches the Unity
+                // 6000.0.71f1 Editor for lists of versions [1, 3, 4] and [1, 3],
+                // tests/projects/spriteatlaseditor v2importerplatformset and v1wholewrite; a list
+                // whose first entry is newer than a later one is unmeasured).
                 listVersion ??= item.Int("serializedVersion", 1);
                 entries.Add(ReadEntry(item, prefixed, listVersion.Value));
             }
