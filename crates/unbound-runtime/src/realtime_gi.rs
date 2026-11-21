@@ -758,9 +758,10 @@ const UV_CACHE_VERSION: u32 = 6;
 
 /// Renderer `renderer` of system `system`'s realtime lightmap UVs
 /// (`unbound_gi::realtime_uv::fitting_uvs`: among the ways the precompute's rounding allows, the
-/// one the system's precomputed layout has), checked against that layout and cached under
-/// `<project>/Library/Unbound/RealtimeUVs` by a hash of the inputs. Writes `2 * vertices`
-/// floats into `out`.
+/// one the system's precomputed layout has; for a system of Unbound's own bake the one its
+/// arithmetic makes, `realtime_uvs`), checked against that layout and cached under
+/// `<project>/Library/Unbound/RealtimeUVs` by a hash of the inputs and of the system. Writes
+/// `2 * vertices` floats into `out`.
 pub fn realtime_uvs(
     handle: u64,
     system: usize,
