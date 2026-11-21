@@ -5,12 +5,14 @@ using UnityEditor.UIElements.Bindings;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-// Editor UI Toolkit SerializedProperty tracking: BindingExtensions.TrackPropertyValue,
-// BindingExtensions.Unbind, SerializedPropertyChangeEvent, and the SerializedObject binding
-// context/updater pipeline that polls SerializedObject changes during panel updates.
+// Editor UI Toolkit SerializedObject/SerializedProperty tracking:
+// BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
+// BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
+// SerializedObject binding context/updater pipeline that polls changes during panel updates.
 // Documented in Unity 6000.0 Scripting API ("BindingExtensions.TrackPropertyValue",
-// "BindingExtensions.Unbind", "SerializedPropertyChangeEvent"); matches the Unity 6000.0.71f1
-// Editor, tests/projects/trackpropertyvalue.
+// "BindingExtensions.TrackSerializedObjectValue", "BindingExtensions.Unbind",
+// "SerializedPropertyChangeEvent", "SerializedObjectChangeEvent"); matches the Unity 6000.0.71f1
+// Editor, tests/projects/trackpropertyvalue and tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
 {
@@ -228,6 +230,34 @@ namespace UnityEditor
 
 namespace UnityEditor.UIElements
 {
+    public sealed partial class SerializedObjectChangeEvent : EventBase<SerializedObjectChangeEvent>
+    {
+        public SerializedObject changedObject { get; set; }
+
+        static SerializedObjectChangeEvent() => SetCreateFunction(() => new SerializedObjectChangeEvent());
+
+        protected override void Init()
+        {
+            base.Init();
+            LocalInit();
+        }
+
+        void LocalInit()
+        {
+            propagation = EventPropagation.BubblesOrTricklesDown;
+            changedObject = null;
+        }
+
+        public static SerializedObjectChangeEvent GetPooled(SerializedObject value)
+        {
+            var evt = EventBase<SerializedObjectChangeEvent>.GetPooled();
+            evt.changedObject = value;
+            return evt;
+        }
+
+        public SerializedObjectChangeEvent() => LocalInit();
+    }
+
     public sealed partial class SerializedPropertyChangeEvent : EventBase<SerializedPropertyChangeEvent>
     {
         public SerializedProperty changedProperty { get; set; }
@@ -295,6 +325,9 @@ namespace UnityEditor.UIElements
 
         internal static void TrackPropertyValue(this VisualElement element, SerializedProperty property, Action<object, SerializedProperty> callback) =>
             bindingImpl.TrackPropertyValue(element, property, callback);
+
+        public static void TrackSerializedObjectValue(this VisualElement element, SerializedObject obj, Action<SerializedObject> callback = null) =>
+            bindingImpl.TrackSerializedObjectValue(element, obj, callback);
     }
 }
 
@@ -389,9 +422,33 @@ namespace UnityEditor.UIElements.Bindings
         public void BindProperty(IBindable field, SerializedProperty property) =>
             Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindProperty");
 
-        [Unbound.Stub]
-        public void TrackSerializedObjectValue(VisualElement element, SerializedObject serializedObject, Action<SerializedObject> callback) =>
-            Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.TrackSerializedObjectValue");
+        static readonly Action<object, SerializedObject> s_SendObjectChangeCallback = SendObjectChangeCallback;
+
+        public void TrackSerializedObjectValue(VisualElement element, SerializedObject serializedObject, Action<SerializedObject> callback)
+        {
+            if (serializedObject == null) throw new ArgumentNullException(nameof(serializedObject));
+            if (element == null) return;
+            var request = BindingRequest.Create(BindingRequest.RequestType.TrackObject, serializedObject);
+            request.obj = serializedObject;
+            request.objectChangedCallback = callback != null
+                ? (_, o) => callback(o)
+                : s_SendObjectChangeCallback;
+            if (element.panel == null)
+            {
+                UaBindingRequests.Add(element, request);
+                return;
+            }
+            request.Bind(element);
+            request.Release();
+        }
+
+        static void SendObjectChangeCallback(object cookie, SerializedObject obj)
+        {
+            if (!(cookie is VisualElement visualElement)) return;
+            using var evt = SerializedObjectChangeEvent.GetPooled(obj);
+            evt.elementTarget = visualElement;
+            visualElement.SendEvent(evt);
+        }
 
         [Unbound.Stub]
         void ISerializedObjectBindingImplementation.Bind(VisualElement element, object bindingContext, SerializedProperty parentProperty) =>

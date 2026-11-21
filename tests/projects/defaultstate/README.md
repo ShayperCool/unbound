@@ -747,3 +747,13 @@ identical across both repeats, plus the variable creation-time `EventBase.timest
 its `timestamp` and `eventTypeId` rows and updates the shifted `eventTypeId` actuals for the
 subsequent `UnityEngine.UIElements.*Event` types (removing four that now coincide with the Editor's
 numbering); every earlier committed reference row and inventory entry is unchanged.
+
+The `BindingExtensions.TrackSerializedObjectValue` slice adds
+`UnityEditor.UIElements.SerializedObjectChangeEvent` to the handwritten inventory (15 added rows
+from two independent 6000.0.71f1 Linux GPU Editor captures: 14 deterministic rows identical across
+both repeats, plus the variable creation-time `EventBase.timestamp`). Because
+`SerializedObjectChangeEvent` sorts before `SerializedPropertyChangeEvent` and
+`UnityEngine.UIElements.*Event`, `debt.json` records its `timestamp` and `eventTypeId` rows, shifts
+the subsequent `eventTypeId` actuals by `+1` (removing six that now coincide with the Editor's
+numbering and re-queuing four `Transition*Event` rows that shifted off coincidence); every earlier
+committed reference row and inventory entry is unchanged.

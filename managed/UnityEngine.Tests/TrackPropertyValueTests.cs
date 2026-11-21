@@ -249,5 +249,112 @@ namespace UnityEngine.Tests
             Assert.NotEqual(typeId, DetachFromPanelEvent.TypeId());
             Assert.NotEqual(typeId, ClickEvent.TypeId());
         }
+
+        [Fact]
+        public void SerializedObjectChangeEventTypeIdIsStableAndDistinct()
+        {
+            long typeId = SerializedObjectChangeEvent.TypeId();
+            Assert.Equal(typeId, SerializedObjectChangeEvent.TypeId());
+            using var fresh = new SerializedObjectChangeEvent();
+            using var pooled = SerializedObjectChangeEvent.GetPooled(null);
+            Assert.Equal(typeId, fresh.eventTypeId);
+            Assert.Equal(typeId, pooled.eventTypeId);
+            Assert.NotEqual(typeId, SerializedPropertyChangeEvent.TypeId());
+            Assert.NotEqual(typeId, AttachToPanelEvent.TypeId());
+            Assert.NotEqual(typeId, DetachFromPanelEvent.TypeId());
+            Assert.NotEqual(typeId, ClickEvent.TypeId());
+        }
+
+        [Fact]
+        public void TrackSerializedObjectValueRecoversFromExceptionPreservesRuntimeDataBindingAndWorksOnUnmeasuredRelease()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var targetA = ScriptableObject.CreateInstance<TestTarget>();
+            var targetB = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var soA = new SerializedObject(targetA);
+            using var soB = new SerializedObject(targetB);
+            try
+            {
+                var model = new RuntimeModel();
+                var label = new Label("start") { dataSource = model };
+                label.SetBinding("text", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget,
+                });
+                panel.visualTree.Add(label);
+
+                var log = new List<string>();
+                bool shouldThrow = true;
+                label.TrackSerializedObjectValue(soA, s =>
+                {
+                    log.Add("a:" + s.FindProperty("other").intValue);
+                    if (shouldThrow) throw new InvalidOperationException("boom");
+                });
+                Tick(panel);
+                Assert.Equal("initial", label.text);
+                Assert.Empty(log);
+
+                // First change throws inside callback; revision still advances and later edits work.
+                targetA.other = 5;
+                Tick(panel);
+                Assert.Equal(new[] { "a:5" }, log);
+
+                shouldThrow = false;
+                model.text = "updated";
+                targetA.other = 6;
+                Tick(panel);
+                Assert.Equal("updated", label.text);
+                Assert.Equal(new[] { "a:5", "a:6" }, log);
+
+                // Unbind stops object tracking, preserves runtime DataBinding, and allows rebind to soB.
+                label.Unbind();
+                model.text = "kept";
+                targetA.other = 7;
+                Tick(panel);
+                Assert.Equal("kept", label.text);
+                Assert.Equal(2, log.Count);
+
+                label.TrackSerializedObjectValue(soB, s => log.Add("b:" + s.FindProperty("count").intValue));
+                Tick(panel);
+                targetB.count = 88;
+                Tick(panel);
+                Assert.Equal(new[] { "a:5", "a:6", "b:88" }, log);
+            }
+            finally
+            {
+                Object.DestroyImmediate(targetA);
+                Object.DestroyImmediate(targetB);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void DetachedTrackSerializedObjectValueCancelledByUnbindNeverFires()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                var el = new VisualElement();
+                int count = 0;
+                el.TrackSerializedObjectValue(so, _ => count++);
+                el.Unbind();
+                panel.visualTree.Add(el);
+                Tick(panel);
+                target.other = 42;
+                Tick(panel);
+                Assert.Equal(0, count);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
     }
 }

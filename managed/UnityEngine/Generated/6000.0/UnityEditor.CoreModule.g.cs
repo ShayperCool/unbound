@@ -47216,7 +47216,6 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] public static global::UnityEditor.SerializedProperty BindProperty(this global::UnityEngine.UIElements.IBindable field, global::UnityEditor.SerializedObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty"); return default; }
         [global::Unbound.Stub] public static void BindProperty(this global::UnityEngine.UIElements.IBindable field, global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty"); }
         [global::Unbound.Stub] internal static void HandleStyleUpdate(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.HandleStyleUpdate"); }
-        [global::Unbound.Stub] public static void TrackSerializedObjectValue(this global::UnityEngine.UIElements.VisualElement element, global::UnityEditor.SerializedObject obj, global::System.Action<global::UnityEditor.SerializedObject> callback = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.TrackSerializedObjectValue"); }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class BindingsStyleHelpers
@@ -47923,14 +47922,6 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] public static global::UnityEditor.UIElements.SerializedObjectBindEvent GetPooled(global::UnityEditor.SerializedObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectBindEvent.GetPooled"); return default; }
         [global::Unbound.Stub] public SerializedObjectBindEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectBindEvent.ctor"); }
         public global::UnityEditor.SerializedObject bindObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectBindEvent.bindObject"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class SerializedObjectChangeEvent : global::UnityEngine.UIElements.EventBase<global::UnityEditor.UIElements.SerializedObjectChangeEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectChangeEvent.Init"); }
-        [global::Unbound.Stub] public static global::UnityEditor.UIElements.SerializedObjectChangeEvent GetPooled(global::UnityEditor.SerializedObject value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectChangeEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] public SerializedObjectChangeEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectChangeEvent.ctor"); }
-        public global::UnityEditor.SerializedObject changedObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectChangeEvent.changedObject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectChangeEvent.changedObject"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class SerializedPropertyBindEvent : global::UnityEngine.UIElements.EventBase<global::UnityEditor.UIElements.SerializedPropertyBindEvent>
