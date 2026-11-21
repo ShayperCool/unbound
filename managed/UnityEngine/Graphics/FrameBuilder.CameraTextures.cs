@@ -260,6 +260,7 @@ namespace Unbound.Runtime
                 renderer.m_PreviousModelVersion = null;
                 renderer.m_HasPreviousModel = true;
                 renderer.m_FirstDrawnFrame = Time.frameCount;
+                MarkMotionRendererPending(renderer);
             }
             forceNoMotion = mode == MotionVectorGenerationMode.ForceNoMotion;
             moving = forceNoMotion || renderer.m_PreviousModel != model;
@@ -322,6 +323,73 @@ namespace Unbound.Runtime
             return s_MotionQuad;
         }
 
+        static bool s_MotionSeeded;
+        static readonly object s_MotionDirtyLock = new object();
+        static readonly List<Transform> s_MotionDirtyTransforms = new List<Transform>();
+        static readonly List<Transform> s_MotionDirtyScratch = new List<Transform>();
+        static readonly List<Renderer> s_MotionPendingRenderers = new List<Renderer>();
+        static readonly List<Renderer> s_MotionDynamic = new List<Renderer>();
+
+        internal static void RegisterMotionRenderer(Renderer renderer)
+        {
+            if (renderer.HasDynamicMotionMatrix && !renderer.m_InMotionDynamic)
+            {
+                renderer.m_InMotionDynamic = true;
+                s_MotionDynamic.Add(renderer);
+            }
+            if (System.Threading.Volatile.Read(ref s_MotionSeeded))
+                MarkMotionRendererPending(renderer);
+        }
+
+        internal static void UnregisterMotionRenderer(Renderer renderer)
+        {
+            if (renderer.m_InMotionDynamic)
+            {
+                renderer.m_InMotionDynamic = false;
+                s_MotionDynamic.Remove(renderer);
+            }
+        }
+
+        internal static void MarkMotionRendererPending(Renderer renderer)
+        {
+            if (renderer == null || renderer.m_MotionPending) return;
+            renderer.m_MotionPending = true;
+            s_MotionPendingRenderers.Add(renderer);
+        }
+
+        internal static void MarkMotionTransformDirty(Transform transform)
+        {
+            if (!System.Threading.Volatile.Read(ref s_MotionSeeded) || transform == null) return;
+            lock (s_MotionDirtyLock)
+            {
+                if (transform.m_MotionDirty) return;
+                transform.m_MotionDirty = true;
+                s_MotionDirtyTransforms.Add(transform);
+            }
+        }
+
+        static void UpdateMotionRenderer(Renderer renderer)
+        {
+            renderer.m_FirstDrawnFrame = -1;
+            if (!renderer.HasDynamicMotionMatrix)
+            {
+                var t = renderer.m_GameObject.m_Transform;
+                int version = t.m_Version;
+                if (renderer.m_HasPreviousModel && renderer.m_PreviousModelVersion == version
+                    && ReferenceEquals(renderer.m_PreviousModelTransform, t))
+                    return;
+                renderer.m_PreviousModel = t.localToWorldMatrix;
+                renderer.m_PreviousModelVersion = version;
+                renderer.m_PreviousModelTransform = t;
+                renderer.m_HasPreviousModel = true;
+            }
+            else
+            {
+                renderer.m_PreviousModel = renderer.MotionMatrix;
+                renderer.m_HasPreviousModel = true;
+            }
+        }
+
         /// <summary>After a frame whose player-loop cameras drew motion vectors, the renderers'
         /// matrices become the previous ones.</summary>
         internal static void EndFrameMotion()
@@ -329,27 +397,67 @@ namespace Unbound.Runtime
             if (!s_MotionRendered) return;
             s_MotionRendered = false;
             Transform.SyncJobs();
-            foreach (var renderer in RenderRegistry.Renderers)
+            if (!System.Threading.Volatile.Read(ref s_MotionSeeded))
             {
-                if (!renderer) continue;
-                renderer.m_FirstDrawnFrame = -1;
-                if (!renderer.HasDynamicMotionMatrix)
+                foreach (var renderer in RenderRegistry.Renderers)
                 {
-                    var t = renderer.m_GameObject.m_Transform;
-                    int version = t.m_Version;
-                    if (renderer.m_HasPreviousModel && renderer.m_PreviousModelVersion == version
-                        && ReferenceEquals(renderer.m_PreviousModelTransform, t))
-                        continue;
-                    renderer.m_PreviousModel = t.localToWorldMatrix;
-                    renderer.m_PreviousModelVersion = version;
-                    renderer.m_PreviousModelTransform = t;
-                    renderer.m_HasPreviousModel = true;
+                    if (!renderer) continue;
+                    UpdateMotionRenderer(renderer);
                 }
-                else
+                for (int i = 0; i < s_MotionPendingRenderers.Count; i++)
+                    s_MotionPendingRenderers[i].m_MotionPending = false;
+                s_MotionPendingRenderers.Clear();
+                lock (s_MotionDirtyLock)
                 {
-                    renderer.m_PreviousModel = renderer.MotionMatrix;
-                    renderer.m_HasPreviousModel = true;
+                    for (int i = 0; i < s_MotionDirtyTransforms.Count; i++)
+                        s_MotionDirtyTransforms[i].m_MotionDirty = false;
+                    s_MotionDirtyTransforms.Clear();
                 }
+                System.Threading.Volatile.Write(ref s_MotionSeeded, true);
+                return;
+            }
+            s_MotionDirtyScratch.Clear();
+            lock (s_MotionDirtyLock)
+            {
+                for (int i = 0; i < s_MotionDirtyTransforms.Count; i++)
+                {
+                    var t = s_MotionDirtyTransforms[i];
+                    t.m_MotionDirty = false;
+                    s_MotionDirtyScratch.Add(t);
+                }
+                s_MotionDirtyTransforms.Clear();
+            }
+            for (int i = 0; i < s_MotionDirtyScratch.Count; i++)
+            {
+                var t = s_MotionDirtyScratch[i];
+                if (!t) continue;
+                var go = t.m_GameObject;
+                if (go == null) continue;
+                var comps = go.m_Components;
+                for (int c = 0; c < comps.Count; c++)
+                {
+                    if (comps[c] is Renderer r && r.m_Registered && !r.HasDynamicMotionMatrix && r)
+                        UpdateMotionRenderer(r);
+                }
+            }
+            s_MotionDirtyScratch.Clear();
+            for (int i = 0; i < s_MotionPendingRenderers.Count; i++)
+            {
+                var r = s_MotionPendingRenderers[i];
+                r.m_MotionPending = false;
+                if (r.m_Registered && r) UpdateMotionRenderer(r);
+            }
+            s_MotionPendingRenderers.Clear();
+            for (int i = s_MotionDynamic.Count - 1; i >= 0; i--)
+            {
+                var r = s_MotionDynamic[i];
+                if (!r.m_Registered || !r)
+                {
+                    r.m_InMotionDynamic = false;
+                    s_MotionDynamic.RemoveAt(i);
+                    continue;
+                }
+                UpdateMotionRenderer(r);
             }
         }
 

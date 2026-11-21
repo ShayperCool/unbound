@@ -94,9 +94,12 @@ namespace Unbound.Runtime
             }
         }
 
+        internal readonly List<string> PassLightModes = new List<string>();
+
         /// <summary>A pass's LightMode as renderer lists match it (untagged: SRPDefaultUnlit).</summary>
         internal string LightMode(int pass) =>
-            Passes[pass].Tags.TryGetValue("LightMode", out var mode) ? mode : "SRPDefaultUnlit";
+            pass < PassLightModes.Count ? PassLightModes[pass]
+                : (Passes[pass].Tags.TryGetValue("LightMode", out var mode) ? mode : "SRPDefaultUnlit");
 
         /// <summary>Whether a pass has one of the LightMode tags.</summary>
         internal bool HasPassFor(List<string> lightModes)
@@ -109,7 +112,7 @@ namespace Unbound.Runtime
         static readonly Dictionary<(string Shader, string Pipeline), ShaderPassInfo> s_Cache = new Dictionary<(string, string), ShaderPassInfo>();
 
         /// <summary>The shader's passes under its maximum LOD (null before the renderer is up).</summary>
-        internal static ShaderPassInfo Of(Shader shader) => shader == null ? null : OfName(shader.DrawnName);
+        internal static ShaderPassInfo Of(Shader shader) => shader?.PassInfo;
 
         /// <summary>The passes of the shader the renderer knows by <paramref name="name"/>.</summary>
         internal static ShaderPassInfo OfName(string name)
@@ -158,6 +161,7 @@ namespace Unbound.Runtime
                     }
                     info.QueryTags.Add(queryTags);
                     info.Passes.Add((pass.GetProperty("name").GetString() ?? "", tags));
+                    info.PassLightModes.Add(tags.TryGetValue("LightMode", out var lm) ? lm : "SRPDefaultUnlit");
                     info.Lighting.Add(pass.TryGetProperty("lighting", out var lighting) && lighting.ValueKind == JsonValueKind.True);
                 }
             }

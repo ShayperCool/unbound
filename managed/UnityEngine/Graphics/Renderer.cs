@@ -42,11 +42,15 @@ namespace UnityEngine
             }
         }
 
+        internal bool m_MotionPending;
+        internal bool m_InMotionDynamic;
+
         internal override void OnEngineEnable()
         {
             if (!m_Enabled || m_Registered) return;
             m_Registered = true;
             RenderRegistry.Renderers.Add(this);
+            FrameBuilder.RegisterMotionRenderer(this);
             ObjectDispatch.ComponentAdded(this);
             Dirty();
         }
@@ -80,6 +84,7 @@ namespace UnityEngine
             if (!m_Registered) return;
             m_Registered = false;
             RenderRegistry.Renderers.Remove(this);
+            FrameBuilder.UnregisterMotionRenderer(this);
             SetVisible(false);
             Dirty();
         }
@@ -257,6 +262,7 @@ namespace UnityEngine
         internal BoxedVectors m_ProbeBoxes;
         /// <summary>The reflection probe vectors its draws were last given, boxed.</summary>
         internal BoxedVectors m_ReflectionBoxes;
+        internal ReflectionProbe.RendererProbeCache m_ReflectionCache;
         GameObject m_LightProbeProxyVolumeOverride;
         public GameObject lightProbeProxyVolumeOverride
         {

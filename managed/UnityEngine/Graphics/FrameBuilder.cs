@@ -841,6 +841,34 @@ namespace Unbound.Runtime
         }
 
         static readonly List<string> s_PassTagScratch = new List<string>();
+        static readonly Dictionary<ShaderPassInfo, (bool HasAny, int FirstPass, int Count)> s_ListPassMatch =
+            new Dictionary<ShaderPassInfo, (bool, int, int)>(ReferenceEqualityComparer.Instance);
+        static bool s_ListPassMatchActive;
+
+        static (bool HasAny, int FirstPass, int Count) MatchListPasses(ShaderPassInfo info)
+        {
+            if (s_ListPassMatch.TryGetValue(info, out var cached)) return cached;
+            int first = -1;
+            int count = 0;
+            s_TaggedScratch.Clear();
+            foreach (var mode in s_PassTagScratch)
+            {
+                for (int p = 0; p < info.Passes.Count; p++)
+                {
+                    if (!info.CanDraw(p) || info.LightMode(p) != mode) continue;
+                    if (!s_TaggedScratch.Contains(p))
+                    {
+                        s_TaggedScratch.Add(p);
+                        if (first < 0) first = p;
+                        count++;
+                    }
+                    break;
+                }
+            }
+            var result = (count > 0, first, count);
+            s_ListPassMatch[info] = result;
+            return result;
+        }
 
         /// <summary>The queue range of the renderer list collecting draws (with the LightModes in
         /// <see cref="s_PassTagScratch"/>); null outside one.</summary>
@@ -855,7 +883,10 @@ namespace Unbound.Runtime
             var shader = material.shader;
             if (shader != null && shader.IsLodHidden) return true;
             var info = ShaderPassInfo.Of(shader);
-            return info != null && !info.HasPassFor(lightModes);
+            if (info == null) return false;
+            if (s_ListPassMatchActive && ReferenceEquals(lightModes, s_PassTagScratch))
+                return !MatchListPasses(info).HasAny;
+            return !info.HasPassFor(lightModes);
         }
 
         /// <summary>While a renderer list collects draws: whether it leaves out a draw of this
@@ -898,6 +929,11 @@ namespace Unbound.Runtime
             // material then draws them instead).
             s_PassTagScratch.Clear();
             foreach (var tag in passNames) s_PassTagScratch.Add(tag.name);
+            s_ListPassMatch.Clear();
+            s_ListPassMatchActive = true;
+            using var probeSnapshot = ReflectionProbe.PinSnapshot();
+            try
+            {
             s_CollectingList = range;
             try
             {
@@ -1036,19 +1072,21 @@ namespace Unbound.Runtime
                         drawnPass = -1;
                         if (overrideMaterial == null && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo tags)
                         {
-                            var passes = TaggedPasses(item.Material, tags, s_PassTagScratch, includeDisabled: true);
-                            if (passes.Count > 0) drawnPass = passes[0];
-                            if (passes.Count > 1) WarnSharedPassTagOnce();
+                            var match = MatchListPasses(tags);
+                            if (match.Count > 0) drawnPass = match.FirstPass;
+                            if (match.Count > 1) WarnSharedPassTagOnce();
                         }
                     }
                     SelectTaggedState(tagged, drawn ?? ReplacementMaterial(item.Material, overrideShader), drawnPass, ref block);
                 }
                 if (motion) NextDrawMotion(item);
                 int drawnPasses = pass == GfxStream.TaggedPasses && item.Material.shader?.PassInfo is { Found: true } listed
-                    ? TaggedPasses(item.Material, listed, s_PassTagScratch).Count : 1;
+                    ? MatchListPasses(listed).Count : 1;
                 EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes, srp: true, proxyVolumes: proxyVolumes, passes: drawnPasses);
             }
             if (block >= 0) GfxStream.StateOverride(null);
+            }
+            finally { s_ListPassMatchActive = false; }
         }
 
         static readonly List<int> s_TaggedScratch = new List<int>();

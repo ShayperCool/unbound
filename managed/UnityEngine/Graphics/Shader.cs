@@ -27,7 +27,9 @@ namespace UnityEngine
 
         static readonly Dictionary<string, Shader> s_ByName = new Dictionary<string, Shader>();
         static readonly Dictionary<string, int> s_PropertyIds = new Dictionary<string, int>();
-        static readonly List<string> s_PropertyNames = new List<string>();
+        static string[] s_PropertyNames = new string[256];
+        static byte[][] s_PropertyFramedUtf8 = new byte[256][];
+        static int s_PropertyCount;
         // The engine's own names come before any shader's (texture property names list in id order).
         static readonly int s_EngineNames = PropertyToID("_MainTex") + PropertyToID("_Color");
         internal static readonly HashSet<string> s_GlobalKeywords = new HashSet<string>();
@@ -91,10 +93,10 @@ namespace UnityEngine
             {
                 int lod = EffectiveLOD;
                 if (m_PassInfoGeneration != Unbound.Runtime.ShaderPassInfo.s_Generation || lod != m_PassInfoLod
-                    || !string.Equals(m_PassInfoPipeline, s_GlobalRenderPipeline, StringComparison.Ordinal)
+                    || (!ReferenceEquals(m_PassInfoPipeline, s_GlobalRenderPipeline) && !string.Equals(m_PassInfoPipeline, s_GlobalRenderPipeline, StringComparison.Ordinal))
                     || !ReferenceEquals(m_PassInfoName, m_Name) || m_PassInfo == null)
                 {
-                    m_PassInfo = Unbound.Runtime.ShaderPassInfo.Of(this);
+                    m_PassInfo = Unbound.Runtime.ShaderPassInfo.OfName(DrawnName);
                     m_PassInfoLod = lod;
                     m_PassInfoPipeline = s_GlobalRenderPipeline;
                     m_PassInfoName = m_Name;
@@ -410,8 +412,29 @@ namespace UnityEngine
             lock (s_PropertyIds)
             {
                 if (s_PropertyIds.TryGetValue(name, out var id)) return id;
-                id = s_PropertyNames.Count;
-                s_PropertyNames.Add(name);
+                id = s_PropertyCount;
+                int utf8Len = System.Text.Encoding.UTF8.GetByteCount(name);
+                var framed = new byte[4 + utf8Len];
+                System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(framed, (uint)utf8Len);
+                System.Text.Encoding.UTF8.GetBytes(name, 0, name.Length, framed, 4);
+                if (id >= s_PropertyNames.Length)
+                {
+                    int newLen = s_PropertyNames.Length * 2;
+                    var names = new string[newLen];
+                    Array.Copy(s_PropertyNames, names, id);
+                    var utf8s = new byte[newLen][];
+                    Array.Copy(s_PropertyFramedUtf8, utf8s, id);
+                    names[id] = name;
+                    utf8s[id] = framed;
+                    System.Threading.Volatile.Write(ref s_PropertyNames, names);
+                    System.Threading.Volatile.Write(ref s_PropertyFramedUtf8, utf8s);
+                }
+                else
+                {
+                    s_PropertyNames[id] = name;
+                    s_PropertyFramedUtf8[id] = framed;
+                }
+                System.Threading.Volatile.Write(ref s_PropertyCount, id + 1);
                 s_PropertyIds[name] = id;
                 return id;
             }
@@ -419,7 +442,18 @@ namespace UnityEngine
 
         internal static string IdToName(int id)
         {
-            lock (s_PropertyIds) return id >= 0 && id < s_PropertyNames.Count ? s_PropertyNames[id] : null;
+            int count = System.Threading.Volatile.Read(ref s_PropertyCount);
+            if ((uint)id >= (uint)count) return null;
+            return System.Threading.Volatile.Read(ref s_PropertyNames)[id];
+        }
+
+        /// <summary>Returns the pre-encoded `[u32_le_len][utf8_bytes]` wire representation for a
+        /// property id without locking or re-encoding UTF-8 on every draw.</summary>
+        internal static byte[] IdToFramedUtf8(int id)
+        {
+            int count = System.Threading.Volatile.Read(ref s_PropertyCount);
+            if ((uint)id >= (uint)count) return null;
+            return System.Threading.Volatile.Read(ref s_PropertyFramedUtf8)[id];
         }
 
         // ------------------------------------------------------------------ properties

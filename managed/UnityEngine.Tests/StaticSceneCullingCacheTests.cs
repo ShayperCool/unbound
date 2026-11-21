@@ -272,5 +272,103 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(probe);
             Assert.Equal(baseline, Renderer.s_WillRenderScriptCount);
         }
+
+        [Fact]
+        public void ReflectionProbeCacheInvalidatesOnProbeIntensityMoveAndRendererMove()
+        {
+            var probeGo = Track(new GameObject("RefProbe"));
+            var probe = probeGo.AddComponent<ReflectionProbe>();
+            probe.mode = ReflectionProbeMode.Baked;
+            probe.size = new Vector3(10f, 10f, 10f);
+            probe.intensity = 1f;
+            var cubeTex = new Cubemap(4, TextureFormat.RGBA32, false);
+            probe.bakedTexture = cubeTex;
+            var cubeGo = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            var renderer = cubeGo.GetComponent<MeshRenderer>();
+            int hdr0Id = Shader.PropertyToID("unity_SpecCube0_HDR");
+            int cube0Id = Shader.PropertyToID("unity_SpecCube0");
+            try
+            {
+                ReflectionProbe.BeginFrame();
+                var d1 = ReflectionProbe.Apply(renderer, null, srp: true);
+                Assert.NotNull(d1);
+                Assert.Same(cubeTex, d1[cube0Id]);
+                var hdr1 = (Vector4)d1[hdr0Id];
+
+                // Second call with unchanged state returns cached standalone dictionary directly.
+                var d2 = ReflectionProbe.Apply(renderer, null, srp: true);
+                Assert.Same(d1, d2);
+
+                // Changing probe intensity must invalidate cache even mid-frame.
+                probe.intensity = 2.5f;
+                var d3 = ReflectionProbe.Apply(renderer, null, srp: true);
+                var hdr3 = (Vector4)d3[hdr0Id];
+                Assert.True(Mathf.Abs(hdr3.x - hdr1.x * 2.5f) < 1e-4f);
+
+                // Passing existing properties merges without mutating standalone cache.
+                int extraId = Shader.PropertyToID("_Slice4Extra");
+                var existing = new Dictionary<int, object> { [extraId] = 7f };
+                var merged = ReflectionProbe.Apply(renderer, existing, srp: true);
+                Assert.Equal(7f, merged[extraId]);
+                Assert.Same(cubeTex, merged[cube0Id]);
+                Assert.False(d3.ContainsKey(extraId));
+
+                // Moving renderer outside the probe box invalidates cache and returns input unchanged.
+                cubeGo.transform.position = new Vector3(100f, 0f, 0f);
+                Assert.Null(ReflectionProbe.Apply(renderer, null, srp: true));
+                Assert.Same(existing, ReflectionProbe.Apply(renderer, existing, srp: true));
+            }
+            finally
+            {
+                Object.DestroyImmediate(cubeTex);
+            }
+        }
+
+        [Fact]
+        public void ShaderPropertyFramedUtf8MatchesWireFormatForAsciiAndMultibyte()
+        {
+            foreach (var name in new[] { "_MainTex", "unity_SpecCube0_HDR", "_Slice4_日本語_Prop" })
+            {
+                int id = Shader.PropertyToID(name);
+                Assert.Equal(name, Shader.IdToName(id));
+                var framed = Shader.IdToFramedUtf8(id);
+                Assert.NotNull(framed);
+                var expectedUtf8 = System.Text.Encoding.UTF8.GetBytes(name);
+                Assert.Equal(4 + expectedUtf8.Length, framed.Length);
+                uint len = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(framed);
+                Assert.Equal((uint)expectedUtf8.Length, len);
+                Assert.Equal(expectedUtf8, framed.AsSpan(4).ToArray());
+            }
+            Assert.Null(Shader.IdToName(-1));
+            Assert.Null(Shader.IdToFramedUtf8(-1));
+            Assert.Null(Shader.IdToFramedUtf8(int.MaxValue));
+        }
+
+        [Fact]
+        public void EndFrameMotionTracksNewlyEnabledAndDisabledMovedReenabledRenderers()
+        {
+            // Ensure seeded first.
+            FrameBuilder.s_MotionRendered = true;
+            FrameBuilder.EndFrameMotion();
+
+            // Newly enabled renderer after seeding must get updated on next EndFrameMotion.
+            var freshGo = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            freshGo.transform.position = new Vector3(1f, 2f, 3f);
+            var fresh = freshGo.GetComponent<MeshRenderer>();
+            FrameBuilder.s_MotionRendered = true;
+            FrameBuilder.EndFrameMotion();
+            Assert.True(fresh.m_HasPreviousModel);
+            Assert.Equal(fresh.transform.localToWorldMatrix, fresh.m_PreviousModel);
+
+            // Disable, move, run EndFrameMotion while disabled, then re-enable and run EndFrameMotion.
+            fresh.enabled = false;
+            freshGo.transform.position = new Vector3(9f, 8f, 7f);
+            FrameBuilder.s_MotionRendered = true;
+            FrameBuilder.EndFrameMotion();
+            fresh.enabled = true;
+            FrameBuilder.s_MotionRendered = true;
+            FrameBuilder.EndFrameMotion();
+            Assert.Equal(fresh.transform.localToWorldMatrix, fresh.m_PreviousModel);
+        }
     }
 }

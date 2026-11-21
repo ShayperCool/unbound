@@ -383,6 +383,8 @@ namespace UnityEngine
             m_WorldDirty = false;
         }
 
+        internal bool m_MotionDirty;
+
         /// <summary>This transform changed: it and every descendant must recompute their world state.</summary>
         internal void MarkChanged()
         {
@@ -391,6 +393,7 @@ namespace UnityEngine
             m_Version++;
             m_WorldDirty = true;
             ObjectDispatch.TransformChanged(this);
+            FrameBuilder.MarkMotionTransformDirty(this);
             for (int i = 0; i < m_Children.Count; i++)
                 m_Children[i].MarkParentChanged();
             OnLocalChanged();
@@ -402,6 +405,7 @@ namespace UnityEngine
             m_Version++;
             m_WorldDirty = true;
             ObjectDispatch.TransformChanged(this);
+            FrameBuilder.MarkMotionTransformDirty(this);
             for (int i = 0; i < m_Children.Count; i++)
                 m_Children[i].MarkParentChanged();
             // Dimension listeners can read world matrices on this branch's descendants.

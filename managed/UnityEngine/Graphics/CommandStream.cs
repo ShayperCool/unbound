@@ -224,6 +224,23 @@ namespace Unbound.Runtime
             s_Length += n;
         }
 
+        static byte[] EncodeFramedUtf8(string s)
+        {
+            int n = Encoding.UTF8.GetByteCount(s);
+            var bytes = new byte[4 + n];
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(bytes, (uint)n);
+            Encoding.UTF8.GetBytes(s, 0, s.Length, bytes, 4);
+            return bytes;
+        }
+
+        static void FramedString(byte[] framed)
+        {
+            int n = framed.Length;
+            Reserve(n);
+            Buffer.BlockCopy(framed, 0, s_Buffer, s_Length, n);
+            s_Length += n;
+        }
+
         internal static void BeginFrame(int screenWidth, int screenHeight, ColorSpace colorSpace)
         {
             SpriteMasking.NewFrame();
@@ -706,7 +723,7 @@ namespace Unbound.Runtime
         /// must not happen in the middle of a command).</summary>
         struct PropertyValue
         {
-            internal string Name;
+            internal byte[] FramedName;
             internal byte Kind;
             internal Vector4 Vector;
             /// <summary>An int's value, exact (a float holds 24 bits of it).</summary>
@@ -720,6 +737,15 @@ namespace Unbound.Runtime
             internal SharedArray Shared;
         }
 
+        static readonly byte[] s_BaseCommandIdFramed = EncodeFramedUtf8("unity_BaseCommandID");
+        static readonly byte[] s_MatrixPreviousMFramed = EncodeFramedUtf8("unity_MatrixPreviousM");
+        static readonly byte[] s_MatrixPreviousMIFramed = EncodeFramedUtf8("unity_MatrixPreviousMI");
+        static readonly byte[] s_MotionVectorsParamsFramed = EncodeFramedUtf8("unity_MotionVectorsParams");
+        static readonly byte[] s_PreviousMFramed = EncodeFramedUtf8("_PreviousM");
+        static readonly byte[] s_HasLastPositionDataFramed = EncodeFramedUtf8("_HasLastPositionData");
+        static readonly byte[] s_ForceNoMotionFramed = EncodeFramedUtf8("_ForceNoMotion");
+        static readonly byte[] s_MotionVectorDepthBiasFramed = EncodeFramedUtf8("_MotionVectorDepthBias");
+
         static readonly List<PropertyValue> s_Properties = new List<PropertyValue>();
 
         static void Resolve(Dictionary<int, object> properties)
@@ -729,30 +755,30 @@ namespace Unbound.Runtime
             int command = s_PendingCommand;
             s_PendingCommand = -1;
             if (command >= 0)
-                s_Properties.Add(new PropertyValue { Name = "unity_BaseCommandID", Kind = IntKind, Int = command });
+                s_Properties.Add(new PropertyValue { FramedName = s_BaseCommandIdFramed, Kind = IntKind, Int = command });
             var motion = s_PendingMotion;
             s_PendingMotion = PendingMotion.None;
             if (motion == PendingMotion.RenderPipeline)
             {
-                s_Properties.Add(new PropertyValue { Name = "unity_MatrixPreviousM", Kind = MatrixKind, Matrix = s_MotionPrevious });
-                s_Properties.Add(new PropertyValue { Name = "unity_MatrixPreviousMI", Kind = MatrixKind, Matrix = s_MotionPrevious.inverseDoublePrecision });
-                s_Properties.Add(new PropertyValue { Name = "unity_MotionVectorsParams", Kind = VectorKind, Vector = s_MotionParams });
+                s_Properties.Add(new PropertyValue { FramedName = s_MatrixPreviousMFramed, Kind = MatrixKind, Matrix = s_MotionPrevious });
+                s_Properties.Add(new PropertyValue { FramedName = s_MatrixPreviousMIFramed, Kind = MatrixKind, Matrix = s_MotionPrevious.inverseDoublePrecision });
+                s_Properties.Add(new PropertyValue { FramedName = s_MotionVectorsParamsFramed, Kind = VectorKind, Vector = s_MotionParams });
             }
             else if (motion == PendingMotion.BuiltIn)
             {
-                s_Properties.Add(new PropertyValue { Name = "_PreviousM", Kind = MatrixKind, Matrix = s_MotionPrevious });
-                s_Properties.Add(new PropertyValue { Name = "_HasLastPositionData", Kind = FloatKind });
-                s_Properties.Add(new PropertyValue { Name = "_ForceNoMotion", Kind = FloatKind, Vector = s_MotionParams });
-                s_Properties.Add(new PropertyValue { Name = "_MotionVectorDepthBias", Kind = FloatKind });
+                s_Properties.Add(new PropertyValue { FramedName = s_PreviousMFramed, Kind = MatrixKind, Matrix = s_MotionPrevious });
+                s_Properties.Add(new PropertyValue { FramedName = s_HasLastPositionDataFramed, Kind = FloatKind });
+                s_Properties.Add(new PropertyValue { FramedName = s_ForceNoMotionFramed, Kind = FloatKind, Vector = s_MotionParams });
+                s_Properties.Add(new PropertyValue { FramedName = s_MotionVectorDepthBiasFramed, Kind = FloatKind });
             }
             if (properties == null) return;
             foreach (var p in properties)
             {
                 if (command >= 0 && p.Key == s_BaseCommandId) continue;
                 if (IsMotionValue(motion, p.Key)) continue;
-                var name = Shader.IdToName(p.Key);
-                if (name == null) continue;
-                var value = new PropertyValue { Name = name };
+                var framedName = Shader.IdToFramedUtf8(p.Key);
+                if (framedName == null) continue;
+                var value = new PropertyValue { FramedName = framedName };
                 switch (p.Value)
                 {
                     case float f: value.Kind = FloatKind; value.Vector = new Vector4(f, 0, 0, 0); break;
@@ -798,10 +824,12 @@ namespace Unbound.Runtime
             U8((byte)((clip.HasValue ? 1 : 0) | (rawWinding ? 2 : 0) | (flipWinding ? 4 : 0)
                 | (tint == DrawTint.Vertices ? 8 : 0) | (tint == DrawTint.Constant ? 16 : 0)));
             Rect(clip ?? default);
-            U32((uint)s_Properties.Count);
-            foreach (var p in s_Properties)
+            var props = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(s_Properties);
+            U32((uint)props.Length);
+            for (int i = 0; i < props.Length; i++)
             {
-                String(p.Name);
+                ref readonly var p = ref props[i];
+                FramedString(p.FramedName);
                 if (p.Kind == SharedArrayKind && s_SharedArrays.TryGetValue(p.Shared, out uint id))
                 {
                     U8(ArrayRefKind);

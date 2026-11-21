@@ -129,6 +129,7 @@ namespace UnityEngine
                 probe.m_Drawn = probe.Live;
                 probe.m_HasDrawn = true;
             }
+            s_ProbeGeneration++;
         }
 
         /// <summary>How shaders decode the texture, scaled by the intensity (measured: 0.9 for an
@@ -233,15 +234,24 @@ namespace UnityEngine
         /// side counts as fully inside along that axis when it is).</summary>
         static float InsideShare(Bounds box, Bounds bounds)
         {
+            var bMin = bounds.min;
+            var bMax = bounds.max;
+            var pMin = box.min;
+            var pMax = box.max;
             float share = 1f;
-            for (int axis = 0; axis < 3; axis++)
-            {
-                float lo = bounds.min[axis], hi = bounds.max[axis];
-                float overlap = Mathf.Min(hi, box.max[axis]) - Mathf.Max(lo, box.min[axis]);
-                float extent = hi - lo;
-                if (extent <= 0f) share *= overlap >= 0f ? 1f : 0f;
-                else share *= Mathf.Clamp01(overlap / extent);
-            }
+
+            float overlap = Mathf.Min(bMax.x, pMax.x) - Mathf.Max(bMin.x, pMin.x);
+            float extent = bMax.x - bMin.x;
+            share *= extent <= 0f ? (overlap >= 0f ? 1f : 0f) : Mathf.Clamp01(overlap / extent);
+
+            overlap = Mathf.Min(bMax.y, pMax.y) - Mathf.Max(bMin.y, pMin.y);
+            extent = bMax.y - bMin.y;
+            share *= extent <= 0f ? (overlap >= 0f ? 1f : 0f) : Mathf.Clamp01(overlap / extent);
+
+            overlap = Mathf.Min(bMax.z, pMax.z) - Mathf.Max(bMin.z, pMin.z);
+            extent = bMax.z - bMin.z;
+            share *= extent <= 0f ? (overlap >= 0f ? 1f : 0f) : Mathf.Clamp01(overlap / extent);
+
             return share;
         }
 
@@ -255,15 +265,145 @@ namespace UnityEngine
         static readonly int s_Min1 = Shader.PropertyToID("unity_SpecCube1_BoxMin");
         static readonly int s_Max1 = Shader.PropertyToID("unity_SpecCube1_BoxMax");
         static readonly int s_Pos1 = Shader.PropertyToID("unity_SpecCube1_ProbePosition");
+        static readonly int[] s_SlotKeys = { s_Cube0, s_Hdr0, s_Min0, s_Max0, s_Pos0, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1 };
         static readonly List<ReflectionProbeBlendInfo> s_Blend = new List<ReflectionProbeBlendInfo>();
+
+        static long s_ProbeGeneration = 1;
+        static long s_SnapshotVersion = 1;
+        static ulong s_LastSnapshotHash;
+        static bool s_HasSnapshot;
+        static bool s_SnapshotPinned;
+
+        internal struct SnapshotScope : IDisposable
+        {
+            readonly bool m_Previous;
+            internal SnapshotScope(bool previous) => m_Previous = previous;
+            public void Dispose() => s_SnapshotPinned = m_Previous;
+        }
+
+        /// <summary>Refreshes the probe-state snapshot once for a renderer list or camera pass so
+        /// static renderers can reuse their cached probe properties without rescanning probes.</summary>
+        internal static SnapshotScope PinSnapshot()
+        {
+            bool prev = s_SnapshotPinned;
+            if (!prev) RefreshSnapshot();
+            s_SnapshotPinned = true;
+            return new SnapshotScope(prev);
+        }
+
+        static void Mix(ref ulong h, ulong v)
+        {
+            h ^= v;
+            h *= 1099511628211UL;
+        }
+
+        static void MixFloat(ref ulong h, float v) => Mix(ref h, (uint)BitConverter.SingleToInt32Bits(v));
+
+        static void RefreshSnapshot()
+        {
+            if (s_Enabled.Count == 0) return;
+            ulong h = 14695981039346656037UL;
+            Mix(ref h, (ulong)s_ProbeGeneration);
+            Mix(ref h, (ulong)s_Enabled.Count);
+            int frame = Time.frameCount;
+            for (int i = 0; i < s_Enabled.Count; i++)
+            {
+                var probe = s_Enabled[i];
+                bool alive = probe;
+                Mix(ref h, alive ? 1UL : 0UL);
+                if (!alive) continue;
+                Mix(ref h, (ulong)(uint)System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(probe));
+                Mix(ref h, (ulong)(int)probe.m_Mode);
+                bool pending = probe.m_Mode == ReflectionProbeMode.Custom && probe.m_CustomFrame >= frame;
+                Mix(ref h, pending ? 1UL : 0UL);
+                var tex = pending ? Black : probe.texture;
+                Mix(ref h, tex != null ? (ulong)(uint)System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(tex) : 0UL);
+                MixFloat(ref h, probe.m_Intensity);
+                var pl = probe.Drawn;
+                MixFloat(ref h, pl.Position.x); MixFloat(ref h, pl.Position.y); MixFloat(ref h, pl.Position.z);
+                MixFloat(ref h, pl.Offset.x); MixFloat(ref h, pl.Offset.y); MixFloat(ref h, pl.Offset.z);
+                MixFloat(ref h, pl.Size.x); MixFloat(ref h, pl.Size.y); MixFloat(ref h, pl.Size.z);
+                Mix(ref h, (ulong)(uint)pl.Importance);
+                MixFloat(ref h, pl.BlendDistance);
+                Mix(ref h, pl.BoxProjection ? 1UL : 0UL);
+            }
+            var defTex = defaultTexture;
+            Mix(ref h, defTex != null ? (ulong)(uint)System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(defTex) : 0UL);
+            var defHdr = defaultTextureHDRDecodeValues;
+            MixFloat(ref h, defHdr.x); MixFloat(ref h, defHdr.y); MixFloat(ref h, defHdr.z); MixFloat(ref h, defHdr.w);
+            if (!s_HasSnapshot || h != s_LastSnapshotHash)
+            {
+                s_HasSnapshot = true;
+                s_LastSnapshotHash = h;
+                s_SnapshotVersion++;
+            }
+        }
+
+        /// <summary>Cached reflection probe property values for one renderer, reused while the
+        /// scene's probe snapshot, renderer bounds, usage, and pipeline mode stay unchanged.</summary>
+        internal sealed class RendererProbeCache
+        {
+            internal long SnapshotVersion;
+            internal Bounds Bounds;
+            internal ReflectionProbeUsage Usage;
+            internal bool Srp;
+            internal bool HasBlend;
+            internal readonly object[] Values = new object[10];
+            internal Dictionary<int, object> Standalone;
+        }
 
         /// <summary>A renderer's reflection: its probes' cubemaps, decode values, boxes and the
         /// first's weight (unity_SpecCube0_BoxMin.w, what the built-in shaders blend by). Nothing
         /// when it reflects the default reflection (the frame's globals). <paramref name="srp"/>:
         /// laid out as a render pipeline's draws get it (<see cref="ApplySrp"/>).</summary>
-        internal static Dictionary<int, object> Apply(Renderer renderer, Dictionary<int, object> properties, bool srp = false) =>
-            renderer == null ? properties
-                : Apply(renderer.bounds, renderer.reflectionProbeUsage, properties, srp, renderer);
+        internal static Dictionary<int, object> Apply(Renderer renderer, Dictionary<int, object> properties, bool srp = false)
+        {
+            if (renderer == null || s_Enabled.Count == 0) return properties;
+            var usage = renderer.reflectionProbeUsage;
+            if (usage == ReflectionProbeUsage.Off) return properties;
+            if (!s_SnapshotPinned) RefreshSnapshot();
+            var bounds = renderer.bounds;
+            var cache = renderer.m_ReflectionCache;
+            if (cache != null && cache.SnapshotVersion == s_SnapshotVersion && cache.Usage == usage && cache.Srp == srp
+                && FloatBits.Same(cache.Bounds.center, bounds.center) && FloatBits.Same(cache.Bounds.extents, bounds.extents))
+            {
+                if (!cache.HasBlend) return properties;
+                if (properties == null)
+                {
+                    var standalone = cache.Standalone;
+                    if (standalone == null)
+                    {
+                        standalone = new Dictionary<int, object>(10);
+                        for (int i = 0; i < 10; i++) standalone[s_SlotKeys[i]] = cache.Values[i];
+                        cache.Standalone = standalone;
+                    }
+                    return standalone;
+                }
+                var merged = DrawPropertyPool.Copy(properties);
+                for (int i = 0; i < 10; i++) merged[s_SlotKeys[i]] = cache.Values[i];
+                return merged;
+            }
+            cache ??= renderer.m_ReflectionCache = new RendererProbeCache();
+            cache.SnapshotVersion = s_SnapshotVersion;
+            cache.Bounds = bounds;
+            cache.Usage = usage;
+            cache.Srp = srp;
+            cache.Standalone = null;
+            // A render pipeline blends by its own setting: Simple samples two probes as well.
+            Closest(bounds, srp && usage == ReflectionProbeUsage.Simple ? ReflectionProbeUsage.BlendProbes : usage, s_Blend, drawn: true);
+            if (s_Blend.Count == 0)
+            {
+                cache.HasBlend = false;
+                return properties;
+            }
+            cache.HasBlend = true;
+            var boxes = renderer.m_ReflectionBoxes ??= new BoxedVectors(2 * SlotVectors);
+            var target = properties == null ? (cache.Standalone = new Dictionary<int, object>(10)) : DrawPropertyPool.Copy(properties);
+            if (srp) ApplySrp(target, boxes);
+            else ApplyBuiltIn(target, boxes, bounds, usage);
+            for (int i = 0; i < 10; i++) cache.Values[i] = target[s_SlotKeys[i]];
+            return target;
+        }
 
         /// <summary>The vectors of a slot: decode values, box min and max, position.</summary>
         const int SlotVectors = 4;
@@ -281,6 +421,11 @@ namespace UnityEngine
             properties = DrawPropertyPool.Copy(properties);
             var boxes = owner != null ? owner.m_ReflectionBoxes ??= new BoxedVectors(2 * SlotVectors) : null;
             if (srp) return ApplySrp(properties, boxes);
+            return ApplyBuiltIn(properties, boxes, bounds, usage);
+        }
+
+        static Dictionary<int, object> ApplyBuiltIn(Dictionary<int, object> properties, BoxedVectors boxes, Bounds bounds, ReflectionProbeUsage usage)
+        {
             var first = s_Blend[0].probe;
             var second = s_Blend.Count > 1 ? s_Blend[1].probe : null;
             bool blend = usage != ReflectionProbeUsage.Simple && second != null;
@@ -346,6 +491,7 @@ namespace UnityEngine
         internal override void OnEngineEnable()
         {
             if (!s_Enabled.Contains(this)) s_Enabled.Add(this);
+            s_ProbeGeneration++;
             if (m_Mode == ReflectionProbeMode.Realtime && m_RefreshMode == ReflectionProbeRefreshMode.OnAwake && !m_Awoken)
             {
                 m_Awoken = true;
@@ -356,6 +502,7 @@ namespace UnityEngine
         internal override void OnEngineDisable()
         {
             s_Enabled.Remove(this);
+            s_ProbeGeneration++;
             m_HasDrawn = false;
         }
 
