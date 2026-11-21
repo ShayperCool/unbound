@@ -90,6 +90,109 @@ namespace Unbound.Runtime
             return true;
         }
 
+        /// <summary>
+        /// A new prefab asset made of a hierarchy that is no prefab's (a plain one, or a prefab's
+        /// loaded contents): its objects copied into new asset objects, the root named after the
+        /// file, every object under a random file id, then the file imported (the PrefabImporter's
+        /// <c>.meta</c>) and loaded from it (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/scenesave edit Made.prefab, prefab-api Created.prefab, prefab-writes
+        /// ThingCopy.prefab). Null, with the reason logged, when it cannot be written.
+        /// </summary>
+        internal static LoadedFile Create(string path, GameObject source)
+        {
+            var text = NewPrefabText(path, source);
+            return text == null ? null : Imported(path, text);
+        }
+
+        /// <summary>The text of <see cref="Create"/>'s file; null with the reason logged.</summary>
+        internal static string NewPrefabText(string path, GameObject source)
+        {
+            var root = PrefabContents.NewAssetGameObject(source.m_Name, source.transform.GetType());
+            try
+            {
+                var map = new Dictionary<Object, Object>(ReferenceEqualityComparer.Instance)
+                {
+                    [source] = root,
+                    [source.transform] = root.m_Transform,
+                };
+                PrefabContents.Sync(source, root, map, new ValueReferences());
+                root.m_Name = Path.GetFileNameWithoutExtension(path);
+                return WriteNew(path, root);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root, true);
+            }
+        }
+
+        /// <summary>
+        /// A new prefab variant: a file holding the instance's PrefabInstance alone, its
+        /// modifications as the instance has them with the root named after the file, under a random
+        /// file id and with no parent (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
+        /// prefab-writes ThingVariant.prefab: an instance root with property overrides). The instance
+        /// stays an instance of its prefab. Null, with the reason logged, when it cannot be written.
+        /// </summary>
+        internal static LoadedFile CreateVariant(string path, GameObject instanceRoot)
+        {
+            var text = NewVariantText(path, instanceRoot);
+            return text == null ? null : Imported(path, text);
+        }
+
+        /// <summary>The text of <see cref="CreateVariant"/>'s file; null with the reason logged.</summary>
+        internal static string NewVariantText(string path, GameObject instanceRoot)
+        {
+            var data = PrefabLinks.Of(instanceRoot).Instance;
+            var name = instanceRoot.m_Name;
+            long fileId = data.FileId;
+            // Written as a new instance of the file (a random id of its own); the scene's instance
+            // keeps its name and its document's id.
+            instanceRoot.m_Name = Path.GetFileNameWithoutExtension(path);
+            data.FileId = 0;
+            try
+            {
+                return WriteNew(path, instanceRoot);
+            }
+            finally
+            {
+                instanceRoot.m_Name = name;
+                data.FileId = fileId;
+            }
+        }
+
+        /// <summary>A new prefab file's text with <paramref name="root"/>'s hierarchy; null with
+        /// the reason logged.</summary>
+        static string WriteNew(string path, GameObject root)
+        {
+            var target = new SceneFiles.WriteTarget
+            {
+                Path = path,
+                FileIds = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance),
+                StrippedIds = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance),
+                Roots = new List<GameObject> { root },
+            };
+            try { return SceneFiles.Write(target); }
+            catch (NotSupportedException e)
+            {
+                Debug.LogError($"Unbound: {path} is not saved: {e.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>Writes a new prefab file, imports it and loads it; null with the reason logged.</summary>
+        static LoadedFile Imported(string path, string text)
+        {
+            try { SceneFiles.WriteFile(Path.Combine(ProjectInfo.ProjectPath, path), text); }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                Debug.LogError($"Unbound: {path} is not saved: {e.Message}");
+                return null;
+            }
+            var guid = AssetDatabase.ImportOne(path);
+            var file = FileOf(guid);
+            if (file == null) Debug.LogError($"Unbound: {path} is written but could not be loaded as a prefab.");
+            return file;
+        }
+
         /// <summary>The values a prefab's objects have in its file (for an object or path the file
         /// lacks, those it has now): what its instances were merged from before a script changed
         /// the asset itself.</summary>
@@ -324,10 +427,23 @@ namespace Unbound.Runtime
             return change.Commit();
         }
 
+        /// <summary>A prefab asset's new GameObject with its transform (a <paramref name="transformType"/>).</summary>
+        internal static GameObject NewAssetGameObject(string name, Type transformType)
+        {
+            GameObject made;
+            using (ObjectRegistry.AsAssets()) made = new GameObject(name, bare: true) { m_IsPrefabAsset = true, IsPersistentAsset = true };
+            Transform t;
+            using (ObjectRegistry.AsAssets()) t = (Transform)ComponentFactory.Create(transformType, made, deserializing: true);
+            t.IsPersistentAsset = true;
+            made.m_Transform = t;
+            made.m_Components.Add(t);
+            return made;
+        }
+
         /// <summary>Makes an asset hierarchy as another one is, objects matched by
         /// <paramref name="map"/> (which takes the new asset objects): matched objects take the
         /// values, unmatched ones are made in the asset, the asset's unmatched objects are destroyed.</summary>
-        static void Sync(GameObject from, GameObject asset, Dictionary<Object, Object> map, ValueReferences refs)
+        internal static void Sync(GameObject from, GameObject asset, Dictionary<Object, Object> map, ValueReferences refs)
         {
             void Structure(GameObject source, GameObject target)
             {
@@ -363,15 +479,9 @@ namespace Unbound.Runtime
                     var childGo = child.m_GameObject;
                     if (!map.TryGetValue(childGo, out var existing) || existing == null)
                     {
-                        GameObject made;
-                        using (ObjectRegistry.AsAssets()) made = new GameObject(childGo.m_Name, bare: true) { m_IsPrefabAsset = true, IsPersistentAsset = true };
-                        Transform t;
-                        using (ObjectRegistry.AsAssets()) t = (Transform)ComponentFactory.Create(child.GetType(), made, deserializing: true);
-                        t.IsPersistentAsset = true;
-                        made.m_Transform = t;
-                        made.m_Components.Add(t);
+                        var made = NewAssetGameObject(childGo.m_Name, child.GetType());
                         existing = made;
-                        map[child] = t;
+                        map[child] = made.m_Transform;
                     }
                     var targetChild = (GameObject)existing;
                     var parent = targetChild.m_Transform.m_Parent;

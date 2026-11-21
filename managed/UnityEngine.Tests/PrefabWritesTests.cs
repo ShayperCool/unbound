@@ -317,6 +317,117 @@ namespace UnityEngine.Tests
             Assert.Contains("label: from contents", FileText());
         }
 
+        /// <summary>A new prefab's file is a copy of the hierarchy: the root named after the file,
+        /// references inside it to the copies, to a scene object outside it as none, a random id
+        /// per object; the hierarchy itself stays a plain one with its name.</summary>
+        [Fact]
+        public void ANewPrefabIsACopyOfThePlainHierarchyNamedAfterItsFile()
+        {
+            var made = new GameObject("Made");
+            var part = new GameObject("Made Part");
+            var outside = new GameObject("Outside");
+            m_Made.Add(made);
+            m_Made.Add(outside);
+            part.transform.SetParent(made.transform, false);
+            var holder = made.AddComponent<PrefabTestHolder>();
+            holder.link = part.transform;
+            holder.label = "made";
+            part.AddComponent<SphereCollider>().radius = 2f;
+            var second = made.AddComponent<PrefabTestHolder>();
+            second.link = outside.transform;
+            var text = PrefabAssets.NewPrefabText("Assets/Other.prefab", made);
+            var docs = UnityYamlText.Parse(text);
+            Assert.Equal(7, docs.Count);
+            Assert.Equal(7, new HashSet<long>(docs.ConvertAll(d => d.FileId)).Count);
+            Assert.DoesNotContain(0L, docs.ConvertAll(d => d.FileId));
+            var names = docs.FindAll(d => d.ClassName == "GameObject").ConvertAll(d => d.Body.Get("m_Name").Text);
+            Assert.Contains("Other", names);
+            Assert.Contains("Made Part", names);
+            var partTransform = docs.Find(d => d.ClassName == "Transform" && d.Body.Get("m_Father").Get("fileID").Text != "0");
+            var scripts = docs.FindAll(d => d.ClassName == "MonoBehaviour");
+            Assert.Equal("{fileID: " + partTransform.FileId + "}", scripts.Find(d => d.Body.Get("label").Text == "made").Body.Get("link").Raw);
+            Assert.Equal("{fileID: 0}", scripts.Find(d => d.Body.Get("label").Text == "plain").Body.Get("link").Raw);
+            Assert.Contains("m_Radius: 2", text);
+            Assert.Equal("Made", made.name);
+            Assert.False(PrefabUtility.IsPartOfAnyPrefab(made));
+            Assert.False(made.IsPersistentAsset);
+        }
+
+        /// <summary>A new variant's file is the instance's PrefabInstance alone, with no parent and
+        /// its root named after the file; the instance keeps its name and its document's id.</summary>
+        [Fact]
+        public void ANewVariantIsTheInstancesModificationsWithTheRootNamedAfterItsFile()
+        {
+            var parent = new GameObject("Parent");
+            m_Made.Add(parent);
+            var instance = Instance();
+            instance.transform.SetParent(parent.transform, false);
+            instance.transform.localPosition = new Vector3(8f, 0f, 0f);
+            var data = PrefabLinks.Of(instance).Instance;
+            data.FileId = 55;
+            var text = PrefabAssets.NewVariantText("Assets/ThingVariant.prefab", instance);
+            var docs = UnityYamlText.Parse(text);
+            var doc = Assert.Single(docs);
+            Assert.Equal("PrefabInstance", doc.ClassName);
+            Assert.NotEqual(55L, doc.FileId);
+            var modification = doc.Body.Get("m_Modification");
+            Assert.Equal("{fileID: 0}", modification.Get("m_TransformParent").Raw);
+            var mods = modification.Get("m_Modifications").Items;
+            var name = mods.Find(m => m.Get("propertyPath").Text == "m_Name");
+            Assert.Equal("ThingVariant", name.Get("value").Text);
+            Assert.Equal("{fileID: 100, guid: " + m_Guid + ", type: 3}", name.Get("target").Raw);
+            Assert.Equal("8", mods.Find(m => m.Get("propertyPath").Text == "m_LocalPosition.x").Get("value").Text);
+            Assert.Equal("{fileID: 100100000, guid: " + m_Guid + ", type: 3}", doc.Body.Get("m_SourcePrefab").Raw);
+            Assert.Equal("Thing", instance.name);
+            Assert.Equal(55L, data.FileId);
+        }
+
+        /// <summary>New prefabs that are not measured fail loudly before anything is written: a
+        /// hierarchy holding an instance, a variant of an instance with an added component or of
+        /// part of an instance, connecting an asset, an instance or onto a prefab that exists.</summary>
+        [Fact]
+        public void UnmeasuredNewPrefabsAreRefused()
+        {
+            // An asset listing without the new paths (the engine's is not connected in tests).
+            AssetDatabase.List("[]");
+            try { RefuseUnmeasuredNewPrefabs(); }
+            finally { AssetDatabase.Invalidate(); }
+        }
+
+        void RefuseUnmeasuredNewPrefabs()
+        {
+            var plain = new GameObject("Plain");
+            m_Made.Add(plain);
+            var nested = Instance();
+            nested.transform.SetParent(plain.transform, false);
+            Assert.StartsWith("Unbound does not make new prefabs holding prefab instances yet (Thing in Assets/Plain.prefab)",
+                Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAsset(plain, "Assets/Plain.prefab")).Message);
+            Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(plain, "Assets/Plain.prefab", InteractionMode.AutomatedAction));
+            var added = Instance();
+            added.AddComponent<SphereCollider>();
+            Assert.Contains("with added or removed objects",
+                Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAsset(added, "Assets/Variant.prefab")).Message);
+            var part = Instance().transform.Find("Part").gameObject;
+            Assert.StartsWith("Unbound makes new prefabs of plain GameObjects, prefab contents and prefab instance roots only",
+                Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAsset(part, "Assets/Part.prefab")).Message);
+            Assert.Equal("Can't save persistent Objects and connect them to the saved Prefab",
+                Assert.Throws<ArgumentException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(m_Asset, "Assets/Copy.prefab", InteractionMode.AutomatedAction)).Message);
+            var fresh = new GameObject("Fresh");
+            m_Made.Add(fresh);
+            Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(fresh, AssetPath, InteractionMode.AutomatedAction));
+            Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(Instance(), "Assets/Connected.prefab", InteractionMode.AutomatedAction));
+#pragma warning disable CS0618
+            // CreatePrefab takes SaveAsPrefabAsset's checks.
+            Assert.Equal("Given path is not valid: 'Assets/Bad.asset'",
+                Assert.Throws<ArgumentException>(() => PrefabUtility.CreatePrefab("Assets/Bad.asset", fresh)).Message);
+            Assert.Equal("Given path is not valid: 'Assets/Bad.asset'",
+                Assert.Throws<ArgumentException>(() => PrefabUtility.CreatePrefab("Assets/Bad.asset", fresh, ReplacePrefabOptions.ConnectToPrefab)).Message);
+#pragma warning restore CS0618
+            Assert.False(File.Exists(Path.Combine(m_Project, "Assets/Plain.prefab")));
+            Assert.False(File.Exists(Path.Combine(m_Project, "Assets/Variant.prefab")));
+            Assert.True(fresh.name == "Fresh" && !PrefabUtility.IsPartOfAnyPrefab(fresh));
+        }
+
         [Fact]
         public void ReloadSceneRefusesUntitledAndInvalidScenes()
         {

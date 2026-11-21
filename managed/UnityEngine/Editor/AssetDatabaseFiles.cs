@@ -129,7 +129,7 @@ namespace UnityEditor
             s_ByGuid[asset.Guid] = entry;
         }
 
-        static string ImportOne(string path, long? main = null) =>
+        internal static string ImportOne(string path, long? main = null) =>
             Import(new[] { new ImportRequest { Path = path, Main = main } }).FirstOrDefault() ?? "";
 
         sealed class Root

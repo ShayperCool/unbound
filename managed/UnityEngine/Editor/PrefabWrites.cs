@@ -16,9 +16,9 @@ namespace UnityEditor
     /// An apply writes the prefab (<see cref="PrefabAssets"/>), and every loaded instance of it takes
     /// the change keeping its own overrides (prefabInstanceUpdated is called for each); a revert
     /// changes the instance only (no callback). A user action dirties the instance's scene and can be
-    /// undone (an undo of an apply writes the prefab again); an automated one does neither. Writes
-    /// that make a new prefab asset (another path, CreatePrefab, SaveAsPrefabAssetAndConnect) fail
-    /// loudly until Unbound registers new assets.
+    /// undone (an undo of an apply writes the prefab again); an automated one does neither. New
+    /// prefab assets (SaveAsPrefabAsset to a new path, CreatePrefab, SaveAsPrefabAssetAndConnect) are
+    /// written, imported and loaded as the Editor makes them (<see cref="PrefabAssets.Create"/>).
     /// </summary>
     public sealed partial class PrefabUtility
     {
@@ -584,26 +584,111 @@ namespace UnityEditor
 
         /// <summary>A prefab's contents saved to its own file, or a plain hierarchy over a prefab
         /// that exists (its root and the root's Transform keep their ids, measured for ReplacePrefab:
-        /// tests/projects/scenesave replace.prefab). A new prefab file is not supported yet.</summary>
+        /// tests/projects/scenesave replace.prefab); to a new path, a plain hierarchy or a prefab's
+        /// contents make a new prefab and an instance's root makes a variant of its prefab
+        /// (<see cref="PrefabAssets.Create"/>, <see cref="PrefabAssets.CreateVariant"/>).</summary>
         public static GameObject SaveAsPrefabAsset(GameObject instanceRoot, string assetPath, out bool success)
         {
             success = false;
-            // The argument checks as measured (tests/projects/scenesave prefab-writes errors.*).
+            var path = PrefabPath(instanceRoot, assetPath);
+            var file = PrefabAssets.FileAt(path);
+            var contents = PrefabContents.Of(instanceRoot);
+            if (file == null)
+            {
+                bool variant = contents == null && IsPartOfAnyPrefab(instanceRoot);
+                if (!variant) RequirePlain(instanceRoot, path);
+                else if (IsOutermostPrefabInstanceRoot(instanceRoot) && !IsPartOfPrefabAsset(instanceRoot)) RequireOverridesOnly(instanceRoot, path);
+                else throw new NotSupportedException($"Unbound makes new prefabs of plain GameObjects, prefab contents and prefab instance roots only (not {instanceRoot.name} to {path})");
+                RequireNewPrefabPath(path);
+                file = variant ? PrefabAssets.CreateVariant(path, instanceRoot) : PrefabAssets.Create(path, instanceRoot);
+                success = file != null;
+            }
+            else if (contents != null && contents.File == file) success = PrefabContents.Save(contents);
+            else if (contents == null && !IsPartOfAnyPrefab(instanceRoot)) success = PrefabContents.Replace(instanceRoot, file);
+            else throw new NotSupportedException($"Unbound saves a prefab's contents to its own file, or a plain GameObject over a prefab, only (not {instanceRoot.name} to {path})");
+            return success ? file.MainObject as GameObject : null;
+        }
+
+        public static GameObject SaveAsPrefabAssetAndConnect(GameObject instanceRoot, string assetPath, InteractionMode action) =>
+            SaveAsPrefabAssetAndConnect(instanceRoot, assetPath, action, out _);
+
+        /// <summary>
+        /// A plain hierarchy saved as a new prefab (<see cref="PrefabAssets.Create"/>), then made an
+        /// instance of it, keeping its name: its root records the default overrides, prefabInstanceUpdated
+        /// is called for it and the next update publishes its structure change, the instances
+        /// updated and the instance's handle as a created object (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/scenesave prefab-writes connect.*). Unmeasured and refused: a path
+        /// that holds a prefab, an instance or prefab contents to connect, a root whose name is not
+        /// the file's (Unbound keeps the instance's name as its override).
+        /// </summary>
+        public static GameObject SaveAsPrefabAssetAndConnect(GameObject instanceRoot, string assetPath, InteractionMode action, out bool success)
+        {
+            success = false;
+            if (instanceRoot != null && instanceRoot.IsPersistentAsset)
+                throw new ArgumentException("Can't save persistent Objects and connect them to the saved Prefab");
+            var path = PrefabPath(instanceRoot, assetPath);
+            if (PrefabAssets.FileAt(path) != null || PrefabContents.Of(instanceRoot) != null || IsPartOfAnyPrefab(instanceRoot))
+                throw new NotSupportedException($"Unbound saves and connects a plain GameObject to a new prefab only (not {instanceRoot.name} to {path})");
+            RequirePlain(instanceRoot, path);
+            RequireNewPrefabPath(path);
+            var file = PrefabAssets.Create(path, instanceRoot);
+            if (file == null) return null;
+            var assetRoot = (GameObject)file.MainObject;
+            ConvertToPrefabInstance(instanceRoot, assetRoot, new ConvertToPrefabInstanceSettings { changeRootNameToAssetName = false }, action);
+            ObjectChangeEvents.Note(ObjectChangeKind.ChangeGameObjectStructureHierarchy, new ChangeGameObjectStructureHierarchyEventArgs(instanceRoot.GetInstanceID(), instanceRoot.scene));
+            PrefabAssets.Updated(new List<GameObject> { instanceRoot });
+            // A user action records the instance's handle as a created object for its undo, which
+            // publishes it (Unity's PrefabUtility C#; the undo itself is not recorded by Unbound).
+            if (action == InteractionMode.UserAction)
+            {
+                var handle = PrefabLinks.Of(instanceRoot).Instance.Handle;
+                ObjectChangeEvents.Note(ObjectChangeKind.CreateAssetObject, new CreateAssetObjectEventArgs(default, handle.GetInstanceID(), default));
+            }
+            success = true;
+            return assetRoot;
+        }
+
+        /// <summary>The project path a prefab is saved to, after the argument checks as measured
+        /// (tests/projects/scenesave prefab-writes errors.*).</summary>
+        static string PrefabPath(GameObject instanceRoot, string assetPath)
+        {
             if (instanceRoot == null) throw new ArgumentNullException("Parameter root is null");
             if (assetPath == null || !assetPath.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException($"Given path is not valid: '{assetPath}'");
             var folder = Path.GetDirectoryName(SceneFiles.ProjectRelative(assetPath));
             if (string.IsNullOrEmpty(folder) || !Directory.Exists(Path.Combine(ProjectInfo.ProjectPath, folder)))
                 throw new ArgumentException($"Given path does not exist: '{assetPath}'");
-            var path = SceneFiles.ProjectRelative(assetPath).Replace('\\', '/');
-            var file = PrefabAssets.FileAt(path);
-            if (file == null)
-                throw new NotSupportedException($"Unbound cannot make a new prefab asset ({path}) yet: only a prefab that exists can be saved");
-            var contents = PrefabContents.Of(instanceRoot);
-            if (contents != null && contents.File == file) success = PrefabContents.Save(contents);
-            else if (contents == null && !IsPartOfAnyPrefab(instanceRoot)) success = PrefabContents.Replace(instanceRoot, file);
-            else throw new NotSupportedException($"Unbound saves a prefab's contents to its own file, or a plain GameObject over a prefab, only (not {instanceRoot.name} to {path})");
-            return success ? file.MainObject as GameObject : null;
+            return SceneFiles.ProjectRelative(assetPath).Replace('\\', '/');
+        }
+
+        /// <summary>A new prefab goes to the project's own assets, where no file is (a file there that
+        /// is no prefab Unbound loads is not overwritten: unmeasured).</summary>
+        static void RequireNewPrefabPath(string path)
+        {
+            if (!AssetDatabase.Editable(path))
+                throw new NotSupportedException($"Unbound makes new prefabs in the project's own assets only (Assets/, or a package embedded or kept locally), not at {path}");
+            if (File.Exists(Path.Combine(ProjectInfo.ProjectPath, path)))
+                throw new NotSupportedException($"Unbound does not overwrite {path}: the file there is no prefab it can load");
+        }
+
+        /// <summary>A new prefab's hierarchy holds no prefab instance (nested prefabs in a new prefab
+        /// are not measured).</summary>
+        static void RequirePlain(GameObject root, string path)
+        {
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                if (PrefabLinks.Of(t.m_GameObject)?.Instance != null)
+                    throw new NotSupportedException($"Unbound does not make new prefabs holding prefab instances yet ({t.m_GameObject.name} in {path})");
+        }
+
+        /// <summary>A new variant's instance overrides properties only (added or removed components and
+        /// added GameObjects in a new variant are not measured).</summary>
+        static void RequireOverridesOnly(GameObject instanceRoot, string path)
+        {
+            if (GetAddedComponents(instanceRoot).Count > 0 || GetRemovedComponents(instanceRoot).Count > 0 || GetAddedGameObjects(instanceRoot).Count > 0)
+                throw new NotSupportedException($"Unbound makes new prefab variants of instances that override properties only, not of {instanceRoot.name} with added or removed objects ({path})");
+            foreach (var t in instanceRoot.GetComponentsInChildren<Transform>(true))
+                if (PrefabLinks.Of(t.m_GameObject)?.Instance is PrefabInstanceData data && data != PrefabLinks.Of(instanceRoot).Instance)
+                    throw new NotSupportedException($"Unbound does not make new prefab variants of instances holding other prefab instances yet ({t.m_GameObject.name} in {path})");
         }
 
 #pragma warning disable CS0618 // ReplacePrefabOptions is obsolete, as the methods taking it.
@@ -620,6 +705,18 @@ namespace UnityEditor
 
         [Obsolete("Use SaveAsPrefabAsset with a path instead.")]
         public static GameObject ReplacePrefab(GameObject go, Object targetPrefab) => ReplacePrefab(go, targetPrefab, ReplacePrefabOptions.Default);
+
+        // CreatePrefab is SaveAsPrefabAsset, or SaveAsPrefabAssetAndConnect as an automated action
+        // with ConnectToPrefab (ReplaceNameBased is ignored), as Unity's PrefabUtility C# has it
+        // (measured: tests/projects/scenesave prefab-api create.*).
+        [Obsolete("Use SaveAsPrefabAsset instead.")]
+        public static GameObject CreatePrefab(string path, GameObject go) => SaveAsPrefabAsset(go, path);
+
+        [Obsolete("Use SaveAsPrefabAsset or SaveAsPrefabAssetAndConnect instead.")]
+        public static GameObject CreatePrefab(string path, GameObject go, ReplacePrefabOptions options) =>
+            (options & ReplacePrefabOptions.ConnectToPrefab) != 0
+                ? SaveAsPrefabAssetAndConnect(go, path, InteractionMode.AutomatedAction)
+                : SaveAsPrefabAsset(go, path);
 #pragma warning restore CS0618
 
         // ------------------------------------------------------------------ conversion
