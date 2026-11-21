@@ -524,6 +524,10 @@ namespace UnityEditor.UIElements
             field.name = "unity-input-" + property.propertyPath;
             field.label = fieldLabel;
             ConfigureFieldStyles<TField, TValue>(field);
+            // A [Tooltip] property keeps its tooltip when the label is cut off, instead of the
+            // label's full text.
+            if (property.UnboundDeclaringField is FieldInfo declaring)
+                field.labelElement.displayTooltipWhenElided = !declaring.IsDefined(typeof(TooltipAttribute), false);
             return field;
         }
 

@@ -95,6 +95,14 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ATooltipPropertysLabelKeepsItsTooltipWhenElided()
+        {
+            using var f = new Fixture();
+            Assert.False(f.Field("described").Q<IntegerField>().labelElement.displayTooltipWhenElided);
+            Assert.True(f.Field("counted").Q<IntegerField>().labelElement.displayTooltipWhenElided);
+        }
+
+        [Fact]
         public void DrawersAndDecoratorsItDoesNotBuildAreReported()
         {
             const string range = "UnityEditor.UIElements.PropertyField (drawer of RangeAttribute)";
