@@ -822,3 +822,7 @@ macOS Editor captures (batch mode) that agree on them; no existing row changed. 
 and ToolbarMenu's `TextElement/selection` rows are queued with the text-layout difference of
 Button and Label. The added construction shifts the implementation's event type ids and the two
 text-asset identities, whose debt entries record the new raw values.
+
+The keyword filter slice adds the 13 `UnityEditor.ShaderKeywordFilter` attribute types to the inventory with their
+`excluded, no-public-parameterless-constructor` rows, as two Unity 6000.0.71f1 batch Editor captures on macOS write
+them (decided by the inventory alone); every earlier row is unchanged.
