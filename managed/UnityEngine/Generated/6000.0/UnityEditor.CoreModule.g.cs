@@ -7089,53 +7089,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static int DragRect(global::UnityEngine.Rect position, int value, int minValue, int maxValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragRectGUI.DragRect"); return default; }
         [global::Unbound.Stub] public DragRectGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragRectGUI.ctor"); }
     }
-    public enum DrawCameraMode
-    {
-        UserDefined = -2147483648,
-        Normal = -1,
-        Textured = 0,
-        Wireframe = 1,
-        TexturedWire = 2,
-        ShadowCascades = 3,
-        RenderPaths = 4,
-        AlphaChannel = 5,
-        Overdraw = 6,
-        Mipmaps = 7,
-        DeferredDiffuse = 8,
-        DeferredSpecular = 9,
-        DeferredSmoothness = 10,
-        DeferredNormal = 11,
-        [global::System.Obsolete("Renamed to better distinguish this mode from new Progressive baked modes. Please use RealtimeCharting instead. (UnityUpgradable) -> RealtimeCharting")] Charting = -12,
-        RealtimeCharting = 12,
-        Systems = 13,
-        [global::System.Obsolete("Renamed to better distinguish this mode from new Progressive baked modes. Please use RealtimeAlbedo instead. (UnityUpgradable) -> RealtimeAlbedo")] Albedo = -14,
-        RealtimeAlbedo = 14,
-        [global::System.Obsolete("Renamed to better distinguish this mode from new Progressive baked modes. Please use RealtimeEmissive instead. (UnityUpgradable) -> RealtimeEmissive")] Emissive = -15,
-        RealtimeEmissive = 15,
-        [global::System.Obsolete("Renamed to better distinguish this mode from new Progressive baked modes. Please use RealtimeIndirect instead. (UnityUpgradable) -> RealtimeIndirect")] Irradiance = -16,
-        RealtimeIndirect = 16,
-        [global::System.Obsolete("Renamed to better distinguish this mode from new Progressive baked modes. Please use RealtimeDirectionality instead. (UnityUpgradable) -> RealtimeDirectionality")] Directionality = -17,
-        RealtimeDirectionality = 17,
-        [global::System.Obsolete("Renamed to better distinguish this mode from new Progressive baked modes. Please use BakedLightmap instead. (UnityUpgradable) -> BakedLightmap")] Baked = -18,
-        BakedLightmap = 18,
-        Clustering = 19,
-        LitClustering = 20,
-        ValidateAlbedo = 21,
-        ValidateMetalSpecular = 22,
-        ShadowMasks = 23,
-        LightOverlap = 24,
-        BakedAlbedo = 25,
-        BakedEmissive = 26,
-        BakedDirectionality = 27,
-        BakedTexelValidity = 28,
-        BakedIndices = 29,
-        BakedCharting = 30,
-        SpriteMask = 31,
-        BakedUVOverlap = 32,
-        TextureStreaming = 33,
-        BakedLightmapCulling = 34,
-        GIContributorsReceivers = 35,
-    }
     [global::Unbound.Stub]
     internal unsafe partial struct DrawGridParameters
     {
@@ -21596,52 +21549,6 @@ namespace UnityEditor
         internal static event global::System.Func<global::UnityEditor.SceneView, global::UnityEngine.UIElements.VisualElement> addCustomVisualElementToSceneView { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.addCustomVisualElementToSceneView"); } [global::Unbound.Stub] remove { } }
         internal static event global::System.Action<global::UnityEditor.SceneView> onGUIStarted { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.onGUIStarted"); } [global::Unbound.Stub] remove { } }
         internal static event global::System.Action<global::UnityEditor.SceneView> onGUIEnded { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.onGUIEnded"); } [global::Unbound.Stub] remove { } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial struct CameraMode
-        {
-            [global::Unbound.Stub] public global::UnityEditor.DrawCameraMode drawMode;
-            [global::Unbound.Stub] public string name;
-            [global::Unbound.Stub] public string section;
-            [global::Unbound.Stub] internal bool show;
-            [global::Unbound.Stub] internal CameraMode(global::UnityEditor.DrawCameraMode drawMode, string name, string section, bool show = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.CameraMode.ctor"); }
-            [global::Unbound.Stub] public static bool operator ==(global::UnityEditor.SceneView.CameraMode a, global::UnityEditor.SceneView.CameraMode z) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.CameraMode.op_Equality"); return default; }
-            [global::Unbound.Stub] public static bool operator !=(global::UnityEditor.SceneView.CameraMode a, global::UnityEditor.SceneView.CameraMode z) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.CameraMode.op_Inequality"); return default; }
-            [global::Unbound.Stub] public override bool Equals(object otherObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.CameraMode.Equals"); return default; }
-            [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.CameraMode.GetHashCode"); return default; }
-            [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.CameraMode.ToString"); return default; }
-        }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class SceneViewState
-        {
-            [global::Unbound.Stub] public bool showFog;
-            [global::Unbound.Stub] public bool showSkybox;
-            [global::Unbound.Stub] public bool showFlares;
-            [global::Unbound.Stub] public bool showImageEffects;
-            [global::Unbound.Stub] public bool showParticleSystems;
-            [global::Unbound.Stub] public bool showVisualEffectGraphs;
-            [global::Unbound.Stub] public SceneViewState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.ctor"); }
-            [global::Unbound.Stub] public SceneViewState(global::UnityEditor.SceneView.SceneViewState other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.ctor"); }
-            [global::System.Obsolete("IsAllOn() has been deprecated. Use allEnabled instead (UnityUpgradable) -> allEnabled")] [global::Unbound.Stub] public bool IsAllOn() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.IsAllOn"); return default; }
-            [global::System.Obsolete("Toggle() has been deprecated. Use SetAllEnabled() instead (UnityUpgradable) -> SetAllEnabled(*)")] [global::Unbound.Stub] public void Toggle(bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.Toggle"); }
-            [global::Unbound.Stub] public void SetAllEnabled(bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.SetAllEnabled"); }
-            [global::System.Obsolete("Obsolete msg (UnityUpgradable) -> alwaysRefresh")] public bool showMaterialUpdate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.showMaterialUpdate"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.showMaterialUpdate"); } }
-            public bool alwaysRefresh { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.alwaysRefresh"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.alwaysRefresh"); } }
-            public bool showClouds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.showClouds"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.showClouds"); } }
-            public bool fogEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.fogEnabled"); return default; } }
-            [global::System.Obsolete("Obsolete msg (UnityUpgradable) -> alwaysRefreshEnabled")] public bool materialUpdateEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.materialUpdateEnabled"); return default; } }
-            public bool alwaysRefreshEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.alwaysRefreshEnabled"); return default; } }
-            public bool skyboxEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.skyboxEnabled"); return default; } }
-            public bool cloudsEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.cloudsEnabled"); return default; } }
-            public bool flaresEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.flaresEnabled"); return default; } }
-            public bool imageEffectsEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.imageEffectsEnabled"); return default; } }
-            public bool particleSystemsEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.particleSystemsEnabled"); return default; } }
-            public bool visualEffectGraphsEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.visualEffectGraphsEnabled"); return default; } }
-            public bool allEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.allEnabled"); return default; } }
-            public bool fxEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.fxEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.fxEnabled"); } }
-            internal event global::System.Action<bool> fxEnableChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.SceneViewState.fxEnableChanged"); } [global::Unbound.Stub] remove { } }
-        }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class CameraSettings
