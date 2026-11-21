@@ -116,7 +116,8 @@ namespace UnityEngine.TerrainUtils
         /// another tile already, and only then are its left (-X), bottom (-Z), right (+X) and top
         /// (+Z) links queued; the walk stops once the map holds more terrains than there are active
         /// terrains. A null origin, or one without data, gives null; an origin that fails the filter
-        /// gives an empty map. As Unity's own TerrainMap does; tests/projects/terrainoverrides
+        /// gives an empty map; a linked terrain without data takes its tile too (Unbound's choice,
+        /// unmeasured). As Unity's own TerrainMap does; tests/projects/terrainoverrides
         /// map.connected* records two such maps.
         /// </summary>
         public static TerrainMap CreateFromConnectedNeighbors(Terrain originTerrain, Predicate<Terrain> filter = null, bool fullValidation = true)
