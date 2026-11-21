@@ -119,6 +119,21 @@ static class SettingsProviderProbe
     static void LegacyPrefGUI() => s_PrefCalls++;
 #pragma warning restore CS0618
 
+    // Declarations of the wrong shape, under paths the rows above do not list.
+    class InstanceHolder
+    {
+        [SettingsProvider]
+        SettingsProvider InstanceSettings() => new SettingsProvider("Project/OtherProbe/Instance", SettingsScope.Project);
+    }
+
+    [SettingsProvider]
+    static SettingsProvider GenericSettings<T>() => new SettingsProvider("Project/OtherProbe/Generic", SettingsScope.Project);
+
+#pragma warning disable CS0618
+    [PreferenceItem("OtherProbeWrongPref")]
+    static int WrongPrefItem() => 0;
+#pragma warning restore CS0618
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Record()
     {
@@ -243,10 +258,13 @@ static class SettingsProviderProbe
 
         // 5. SettingsService discovery, duplicate filtering, Exists, and events.
         var logs = new List<string>();
+        var wrongShapeLogs = new List<string>();
         Application.LogCallback onLog = (msg, stack, type) =>
         {
             if (msg != null && (msg.Contains("UnboundProbe") || msg.Contains("CreateThrowing") || msg.Contains("CreateBadSignature") || msg.Contains("CreateEnumerableGroup")))
                 logs.Add(type + ":" + msg);
+            if (msg != null && (msg.Contains("InstanceSettings") || msg.Contains("GenericSettings") || msg.Contains("WrongPrefItem")))
+                wrongShapeLogs.Add(type + ":" + msg);
         };
         Application.logMessageReceived += onLog;
         try
@@ -291,10 +309,37 @@ static class SettingsProviderProbe
             // Verify duplicate warning text and provider error logs (deduplicated & sorted for determinism).
             var distinctLogs = logs.Distinct(StringComparer.Ordinal).OrderBy(s => s, StringComparer.Ordinal).ToArray();
             Check("fetch.logs", () => string.Join("|", distinctLogs));
+            // What the declarations of the wrong shape log on the first lookups, each message counted.
+            Check("fetch.wrongShapeLogs", () => string.Join("|", wrongShapeLogs.GroupBy(s => s, StringComparer.Ordinal)
+                .OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => g.Count() + "x " + g.Key)));
         }
         finally
         {
             Application.logMessageReceived -= onLog;
+        }
+
+        // How often each discovery message is logged over two more lookups, and what the
+        // declarations of the wrong shape log.
+        var repeated = new List<string>();
+        Application.LogCallback onRepeat = (msg, stack, type) =>
+        {
+            if (msg != null && (msg.Contains("UnboundProbe") || msg.Contains("OtherProbe") || msg.Contains("CreateThrowing") || msg.Contains("CreateBadSignature")
+                || msg.Contains("CreateEnumerableGroup") || msg.Contains("InstanceSettings") || msg.Contains("GenericSettings") || msg.Contains("WrongPrefItem")))
+                repeated.Add(type + ":" + msg);
+        };
+        Application.logMessageReceived += onRepeat;
+        try
+        {
+            SettingsService.Exists("Project/" + Prefix + "Single");
+            SettingsService.Exists("Project/" + Prefix + "Single");
+            Check("fetch.repeatedLogs", () => string.Join("|", repeated.GroupBy(s => s, StringComparer.Ordinal)
+                .OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => g.Count() + "x " + g.Key)));
+            Check("exists.wrongShapes", () => string.Join(",", new[] { "Project/OtherProbe/Instance", "Project/OtherProbe/Generic", "Preferences/OtherProbeWrongPref" }
+                .Select(path => path + "=" + SettingsService.Exists(path))));
+        }
+        finally
+        {
+            Application.logMessageReceived -= onRepeat;
         }
 
         // SettingsService notification methods and internal events.

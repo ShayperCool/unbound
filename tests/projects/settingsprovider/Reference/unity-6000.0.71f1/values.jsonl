@@ -55,6 +55,9 @@
 {"k":"fetch.user","v":"User:Preferences/UnboundProbe/GroupB|User:Preferences/UnboundProbe/LegacyPref|User:Preferences/UnboundProbe/PrivateUser|User:Project/UnboundProbe/CrossScope"}
 {"k":"legacyPref.onGUI","v":"1"}
 {"k":"fetch.logs","v":"Error:Cannot create Settings Provider for: CreateThrowing|Error:Cannot create Settings Providers for: CreateThrowingGroup|Error:static System.Collections.Generic.IEnumerable`1[UnityEditor.SettingsProvider] CreateEnumerableGroup() does not match UnityEditor.SettingsProviderGroupAttribute expected signature.\u000a Use static UnityEditor.SettingsProvider[] signature()|Error:static UnityEditor.SettingsProvider CreateBadSignature(Int32) does not match UnityEditor.SettingsProviderAttribute expected signature.\u000a Use static UnityEditor.SettingsProvider signature()|Warning:There are 2 settings providers with the same name Project/UnboundProbe/Dup in Project scope."}
+{"k":"fetch.wrongShapeLogs","v":"1x Error:static Int32 WrongPrefItem() does not match UnityEditor.PreferenceItem expected signature.\u000a Use static Void signature()|1x Error:static UnityEditor.SettingsProvider GenericSettings[T]() is a generic method. UnityEditor.SettingsProviderAttribute cannot be applied to it."}
+{"k":"fetch.repeatedLogs","v":"2x Error:Cannot create Settings Provider for: CreateThrowing|2x Error:Cannot create Settings Providers for: CreateThrowingGroup|2x Warning:There are 2 settings providers with the same name Project/UnboundProbe/Dup in Project scope."}
+{"k":"exists.wrongShapes","v":"Project/OtherProbe/Instance=False,Project/OtherProbe/Generic=False,Preferences/OtherProbeWrongPref=False"}
 {"k":"notify.noListeners","v":"ok"}
 {"k":"notify.counts","v":"1/2"}
 {"k":"complete","v":true}

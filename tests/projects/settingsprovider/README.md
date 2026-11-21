@@ -27,3 +27,9 @@ python3 tests/projects/settingsprovider/run.py record --label b
 python3 tests/projects/settingsprovider/run.py publish a b
 UNBOUND=/path/to/unbound python3 tests/projects/settingsprovider/run.py gate
 ```
+
+`fetch.repeatedLogs` counts each discovery message over two more lookups (a method of the wrong
+signature is reported once, when the providers are first looked up; a throwing factory and a
+duplicate path on every lookup), and `fetch.wrongShapeLogs` what an instance method, a generic
+method and a `[PreferenceItem]` of the wrong signature log on the first lookups;
+`exists.wrongShapes` that none of them provides a page.
