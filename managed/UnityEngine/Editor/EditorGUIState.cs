@@ -1222,7 +1222,8 @@ namespace UnityEditor
         /// <summary>An object's label and icon as object fields show them: "Name (Type)" for
         /// Components and ScriptableObjects, "Name" for other live objects, "None (Type)" or
         /// "Missing (Type)" for null/destroyed references, and "&lt;no type&gt;" when untyped.
-        /// Matches the Unity 6000.0.71f1 Editor (tests/projects/objectbinding).</summary>
+        /// The tooltip is left as it is (empty). Matches the Unity 6000.0.71f1 Editor
+        /// (tests/projects/objectbinding, tests/projects/editorui).</summary>
         public static GUIContent ObjectContent(Object obj, Type type) =>
             ObjectContent(obj, type, obj is null ? 0 : obj.GetInstanceID(), showNullIcon: true);
 
@@ -1252,7 +1253,6 @@ namespace UnityEditor
                 s_ObjectContent.text = "<no type>";
                 s_ObjectContent.image = null;
             }
-            s_ObjectContent.tooltip = null;
             return s_ObjectContent;
         }
 
@@ -1262,7 +1262,6 @@ namespace UnityEditor
             {
                 s_ObjectContent.text = property.objectReferenceStringValue;
                 s_ObjectContent.image = null;
-                s_ObjectContent.tooltip = null;
                 return s_ObjectContent;
             }
             if (property != null && property.isValid)
