@@ -4,12 +4,15 @@ The Editor's view of sprite atlases through `UnityEditor.U2D.SpriteAtlasExtensio
 packages such as Addressables read: for each sprite atlas of the project (in asset path order,
 found with `AssetDatabase.FindAssets("t:SpriteAtlas")`) its packables (type, asset path and name of
 each, in order), its master atlas, whether builds include it, its packing and texture settings,
-and (in the platform profiles) its per-platform `TextureImporterPlatformSettings` across target
-aliases, defaults, variants, legacy serialized versions and mutation isolation, beside its variant
-flag and sprite count; also the settings of `new SpriteAtlas()` and the answers for a null atlas.
-Recorded in Play mode, in batch mode, with the Unity 6000.0.71f1 Editor.
+(in the platform profiles) its per-platform `TextureImporterPlatformSettings` across target aliases,
+defaults, variants, legacy serialized versions and mutation isolation, and (in the include profiles)
+`SetIncludeInBuild` across V1 and V2 atlases, `new SpriteAtlas()`, null, same-value repeats,
+toggles, `EditorUtility.IsDirty`/`GetDirtyCount`, `AssetDatabase.SaveAssets`/`SaveAssetIfDirty`,
+`AssetDatabase.ImportAsset(ForceUpdate)` and on-disk `.spriteatlas`/`.meta` persistence, beside its
+variant flag and sprite count; also the settings of `new SpriteAtlas()` and the answers for a null
+atlas. Recorded in Play mode, in batch mode, with the Unity 6000.0.71f1 Editor.
 
-Six profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
+Eight profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
 
 - `v1`: Sprite Packer mode "Sprite Atlas V1 - Always Enabled" with three `.spriteatlas` assets in
   `Assets/Atlases/`: `Main` (a folder, a texture and a sprite of a sheet as packables, included in
@@ -32,6 +35,11 @@ Six profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
   (`serializedVersion: 3` build-target group names and a desktop-specific entry).
 - `v2platform`: mode "Sprite Atlas V2 - Enabled" with the corresponding five `.spriteatlasv2`
   assets in `Assets/PlatformAtlases/` and their `SpriteAtlasImporter` `.meta` files.
+- `v1include`: mode "Sprite Atlas V1 - Always Enabled" with three `.spriteatlas` assets in
+  `Assets/IncludeAtlases/`: `Included` (`bindAsDefault: 1`), `Excluded` (`bindAsDefault: 0`) and
+  `Omitted` (absent `bindAsDefault`, empty packables).
+- `v2include`: mode "Sprite Atlas V2 - Enabled" with the corresponding three `.spriteatlasv2`
+  assets in `Assets/IncludeAtlases/` and their `SpriteAtlasImporter` `.meta` files.
 
 The sprites come from tests/projects/spriteatlas (files the Editor authored). The atlases are
 written from that probe's Editor-authored atlas files with other packables and settings. The
@@ -54,9 +62,16 @@ become `""`), returns a fresh copy of a matching entry (with `compressionQuality
 when `forceMaximumCompressionQuality_BC6H_BC7` is set or `serializedVersion <= 2`, and legacy v1/v3
 migrations applied), returns fresh Editor defaults named after the normalized target when no entry
 matches (never inheriting stored `DefaultTexturePlatform`), keeps both V1 and V2 variants on their
-own platform settings, and returns defaults on `new SpriteAtlas()`; a null atlas throws
-ArgumentNullException for all six. Not measured: either kind of atlas in the other kind's packer
-mode.
+own platform settings, and returns defaults on `new SpriteAtlas()`; `SetIncludeInBuild` updates
+`IsIncludeInBuild` immediately on V1, V2 and `new SpriteAtlas()` and marks the atlas dirty only
+when the value changes (`new SpriteAtlas()` starts dirty and stays dirty across `SaveAssets`); on
+V1 `.spriteatlas`, `SaveAssets` and `SaveAssetIfDirty` write `m_EditorData.bindAsDefault` into the
+`.spriteatlas` (leaving `.meta` unchanged) and clear dirtiness, and `ImportAsset(ForceUpdate)`
+keeps the loaded instance and its saved or unsaved in-memory state; on V2 `.spriteatlasv2`,
+`SaveAssets` and `SaveAssetIfDirty` write neither `.spriteatlasv2` nor `.meta` and leave the
+imported `SpriteAtlas` dirty, while `ImportAsset(ForceUpdate)` reloads a fresh clean `SpriteAtlas`
+whose `IsIncludeInBuild` reverts to `.meta`; a null atlas throws ArgumentNullException for all
+seven. Not measured: either kind of atlas in the other kind's packer mode.
 
 Values compare exactly.
 

@@ -66,9 +66,121 @@ static class SpriteAtlasEditorProbe
         if (paths.Any(p => p.StartsWith("Assets/PlatformAtlases/", StringComparison.Ordinal)))
             RecordPlatformSettings(paths, fresh, none, Check);
 
+        if (paths.Any(p => p.StartsWith("Assets/IncludeAtlases/", StringComparison.Ordinal)))
+            RecordIncludeInBuild(paths, none, Check);
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
+    }
+
+    static void RecordIncludeInBuild(string[] paths, SpriteAtlas none, Action<string, Func<string>> check)
+    {
+        var byStem = new System.Collections.Generic.Dictionary<string, (string path, string key, SpriteAtlas atlas)>(StringComparer.Ordinal);
+        foreach (var path in paths)
+        {
+            var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+            if (atlas != null)
+                byStem[Path.GetFileNameWithoutExtension(path)] = (path, Path.GetFileName(path), atlas);
+        }
+
+        string State(SpriteAtlas a, int baseDirty) =>
+            $"include={a.IsIncludeInBuild()}|dirty={EditorUtility.IsDirty(a)}|dirtyDelta={EditorUtility.GetDirtyCount(a) - baseDirty}";
+
+        string BindLine(string file)
+        {
+            foreach (var line in File.ReadAllLines(file))
+                if (line.TrimStart().StartsWith("bindAsDefault:", StringComparison.Ordinal))
+                    return line;
+            return "<absent>";
+        }
+
+        string FileState(string path, byte[] origAsset, byte[] origMeta)
+        {
+            var curAsset = File.ReadAllBytes(path);
+            var curMeta = File.ReadAllBytes(path + ".meta");
+            bool assetChanged = !curAsset.SequenceEqual(origAsset);
+            bool metaChanged = !curMeta.SequenceEqual(origMeta);
+            return $"assetChanged={assetChanged}|metaChanged={metaChanged}|assetBind={BindLine(path)}|metaBind={BindLine(path + ".meta")}";
+        }
+
+        check("null.setInclude.true", () => { none.SetIncludeInBuild(true); return "ok"; });
+        check("null.setInclude.false", () => { none.SetIncludeInBuild(false); return "ok"; });
+
+        var mem = new SpriteAtlas();
+        int memBase = EditorUtility.GetDirtyCount(mem);
+        check("new.include.initial", () => State(mem, memBase));
+        mem.SetIncludeInBuild(true);
+        check("new.include.sameTrue", () => State(mem, memBase));
+        mem.SetIncludeInBuild(false);
+        check("new.include.setFalse", () => State(mem, memBase));
+        mem.SetIncludeInBuild(false);
+        check("new.include.sameFalse", () => State(mem, memBase));
+        mem.SetIncludeInBuild(true);
+        check("new.include.setTrue", () => State(mem, memBase));
+        AssetDatabase.SaveAssets();
+        check("new.include.afterSave", () => State(mem, memBase));
+
+        if (byStem.TryGetValue("Included", out var inc))
+        {
+            var origA = File.ReadAllBytes(inc.path);
+            var origM = File.ReadAllBytes(inc.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(inc.atlas);
+            check(inc.key + ".setInclude.initial", () => State(inc.atlas, baseDirty) + "|" + FileState(inc.path, origA, origM));
+            inc.atlas.SetIncludeInBuild(true);
+            check(inc.key + ".setInclude.sameTrue", () => State(inc.atlas, baseDirty) + "|" + FileState(inc.path, origA, origM));
+            inc.atlas.SetIncludeInBuild(false);
+            check(inc.key + ".setInclude.setFalse", () => State(inc.atlas, baseDirty) + "|" + FileState(inc.path, origA, origM));
+            inc.atlas.SetIncludeInBuild(false);
+            check(inc.key + ".setInclude.sameFalse", () => State(inc.atlas, baseDirty) + "|" + FileState(inc.path, origA, origM));
+            AssetDatabase.SaveAssets();
+            check(inc.key + ".setInclude.afterSave", () => State(inc.atlas, baseDirty) + "|" + FileState(inc.path, origA, origM));
+            AssetDatabase.ImportAsset(inc.path, ImportAssetOptions.ForceUpdate);
+            var reloaded = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(inc.path);
+            check(inc.key + ".setInclude.afterReimport", () =>
+                $"sameRef={ReferenceEquals(inc.atlas, reloaded)}|include={reloaded.IsIncludeInBuild()}|dirty={EditorUtility.IsDirty(reloaded)}|" +
+                FileState(inc.path, origA, origM));
+        }
+
+        if (byStem.TryGetValue("Excluded", out var exc))
+        {
+            var origA = File.ReadAllBytes(exc.path);
+            var origM = File.ReadAllBytes(exc.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(exc.atlas);
+            check(exc.key + ".setInclude.initial", () => State(exc.atlas, baseDirty) + "|" + FileState(exc.path, origA, origM));
+            exc.atlas.SetIncludeInBuild(false);
+            check(exc.key + ".setInclude.sameFalse", () => State(exc.atlas, baseDirty) + "|" + FileState(exc.path, origA, origM));
+            exc.atlas.SetIncludeInBuild(true);
+            check(exc.key + ".setInclude.setTrue", () => State(exc.atlas, baseDirty) + "|" + FileState(exc.path, origA, origM));
+            AssetDatabase.SaveAssets();
+            check(exc.key + ".setInclude.afterSaveTrue", () => State(exc.atlas, baseDirty) + "|" + FileState(exc.path, origA, origM));
+            exc.atlas.SetIncludeInBuild(false);
+            check(exc.key + ".setInclude.setBackFalse", () => State(exc.atlas, baseDirty) + "|" + FileState(exc.path, origA, origM));
+            AssetDatabase.SaveAssetIfDirty(exc.atlas);
+            check(exc.key + ".setInclude.afterSaveIfDirty", () => State(exc.atlas, baseDirty) + "|" + FileState(exc.path, origA, origM));
+        }
+
+        if (byStem.TryGetValue("Omitted", out var omi))
+        {
+            var origA = File.ReadAllBytes(omi.path);
+            var origM = File.ReadAllBytes(omi.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(omi.atlas);
+            string PreSaveFileState() =>
+                $"assetChanged={!File.ReadAllBytes(omi.path).SequenceEqual(origA)}|metaChanged={!File.ReadAllBytes(omi.path + ".meta").SequenceEqual(origM)}|metaBind={BindLine(omi.path + ".meta")}";
+            check(omi.key + ".setInclude.initial", () => State(omi.atlas, baseDirty) + "|" + PreSaveFileState());
+            omi.atlas.SetIncludeInBuild(false);
+            check(omi.key + ".setInclude.unsavedFalse", () => State(omi.atlas, baseDirty) + "|" + PreSaveFileState());
+            AssetDatabase.ImportAsset(omi.path, ImportAssetOptions.ForceUpdate);
+            var reloaded = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(omi.path);
+            check(omi.key + ".setInclude.afterUnsavedReimport", () =>
+                $"sameRef={ReferenceEquals(omi.atlas, reloaded)}|include={reloaded.IsIncludeInBuild()}|dirty={EditorUtility.IsDirty(reloaded)}|" +
+                PreSaveFileState());
+            reloaded.SetIncludeInBuild(false);
+            AssetDatabase.SaveAssets();
+            check(omi.key + ".setInclude.afterSaveFalse", () =>
+                $"include={reloaded.IsIncludeInBuild()}|dirty={EditorUtility.IsDirty(reloaded)}|" +
+                FileState(omi.path, origA, origM));
+        }
     }
 
     static void RecordPlatformSettings(string[] paths, SpriteAtlas fresh, SpriteAtlas none, Action<string, Func<string>> check)

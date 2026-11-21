@@ -5,6 +5,8 @@
     "managed/UnityEngine/Editor/SpriteAtlasExtensions.cs",
     "managed/UnityEngine/Editor/TextureImporterSettings.cs",
     "managed/UnityEngine/Editor/ImporterSettings.cs",
+    "managed/UnityEngine/Editor/AssetFiles.cs",
+    "managed/UnityEngine/Editor/SceneFiles.cs",
     "managed/UnityEngine/U2D/SpriteAtlas.cs",
     "managed/UnityEngine/Editor/DefaultAsset.cs",
     "managed/UnityEngine/Graphics/AssetImporters.cs",
