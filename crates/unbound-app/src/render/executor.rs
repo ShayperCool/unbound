@@ -216,9 +216,170 @@ impl bevy::platform::collections::Equivalent<BufferGroupKey> for BufferGroupLook
     }
 }
 
+/// Cached position of a global texture property inside `UnityRenderer::globals`: globals are only
+/// ever appended or updated in place, so a found slot keeps its name and an absence holds while
+/// `globals.len()` stays unchanged. High 32 bits = last seen `globals.len()`, low 32 bits = `idx + 1`
+/// or `0` when absent.
+#[derive(Default)]
+struct GlobalTexSlot(std::sync::atomic::AtomicU64);
+
+impl GlobalTexSlot {
+    #[inline]
+    fn find_handle(
+        &self,
+        globals: &[(String, owned::PropertyValue)],
+        index: &owned::NameIndex,
+        name: &str,
+    ) -> u64 {
+        use std::sync::atomic::Ordering::Relaxed;
+        let packed = self.0.load(Relaxed);
+        let (length, at) = ((packed >> 32) as usize, (packed & 0xffff_ffff) as usize);
+        if at > 0 {
+            if let Some((n, value)) = globals.get(at - 1)
+                && n == name
+            {
+                return match value {
+                    owned::PropertyValue::Texture { handle, .. } => *handle,
+                    _ => 0,
+                };
+            }
+        } else if length == globals.len() {
+            return 0;
+        }
+        let found = index.find_position(globals, name);
+        let slot = found.map_or(0, |i| i as u64 + 1);
+        self.0.store(
+            ((globals.len() as u64) << 32) | (slot & 0xffff_ffff),
+            Relaxed,
+        );
+        found.map_or(0, |i| match globals[i].1 {
+            owned::PropertyValue::Texture { handle, .. } => handle,
+            _ => 0,
+        })
+    }
+}
+
+/// Precomputed per-slot metadata for one `(GpuMaterial, program_id)` pair so steady-state
+/// `program_bind_group` calls skip repeated `ResolvedMaterial` property/declaration lookups.
+struct MaterialTextureSlot {
+    material_handle: u64,
+    default_tag: u8,
+    default_name: Arc<str>,
+    declares: bool,
+    is_2d: bool,
+    is_main_2d: bool,
+    dim: unbound_shaders::TextureDim,
+    slot: unbound_shaders::TextureSlot,
+    global_slot: GlobalTexSlot,
+}
+
+struct MaterialTexturePlan {
+    slots: Vec<MaterialTextureSlot>,
+    any_uncacheable: bool,
+}
+
+impl MaterialTexturePlan {
+    fn build(resolved: &ResolvedMaterial, program: &unbound_shaders::Compiled) -> Self {
+        let mut slots = Vec::with_capacity(program.textures.len());
+        let mut any_uncacheable = false;
+        for (k, name) in program.textures.iter().enumerate() {
+            let (material_handle, default) = resolved.texture_ref(name);
+            let dim = program
+                .texture_dims
+                .get(k)
+                .copied()
+                .unwrap_or(unbound_shaders::TextureDim::D2);
+            let slot = program.texture_slots.get(k).copied().unwrap_or_default();
+            if slot.multisampled || slot.integer() {
+                any_uncacheable = true;
+            }
+            let is_2d = dim == unbound_shaders::TextureDim::D2;
+            slots.push(MaterialTextureSlot {
+                material_handle,
+                default_tag: default_texture_tag(default),
+                default_name: Arc::from(default),
+                declares: resolved.declares(name),
+                is_2d,
+                is_main_2d: is_2d && name == "_MainTex",
+                dim,
+                slot,
+                global_slot: GlobalTexSlot::default(),
+            });
+        }
+        Self {
+            slots,
+            any_uncacheable,
+        }
+    }
+}
+
+/// Summary extracted from a single scan of a draw's per-draw `properties` (`MaterialPropertyBlock`,
+/// per-renderer overrides, or mesh-instancing limits).
+struct DrawPropertySummary {
+    /// `Some(handle)` when `_MainTex` appeared in `properties` (last wins; `Some(0)` if the last
+    /// entry was a non-texture or handle 0), `None` if `_MainTex` did not appear.
+    main_tex_override: Option<u64>,
+    has_texture_override: bool,
+    has_buffer_override: bool,
+    has_mesh_batch_limits: bool,
+    mesh_batch_limits: Option<[f32; 4]>,
+}
+
+fn scan_draw_properties(properties: &[(String, owned::PropertyValue)]) -> DrawPropertySummary {
+    let mut main_tex_override = None;
+    let mut has_texture_override = false;
+    let mut has_buffer_override = false;
+    let mut has_mesh_batch_limits = false;
+    let mut mesh_batch_limits = None;
+    for (name, value) in properties {
+        match value {
+            owned::PropertyValue::Texture { handle, .. } => {
+                has_texture_override = true;
+                if name == "_MainTex" {
+                    main_tex_override = Some(*handle);
+                }
+            }
+            owned::PropertyValue::Buffer(_) => {
+                has_buffer_override = true;
+                if name == "_MainTex" {
+                    main_tex_override = Some(0);
+                }
+            }
+            owned::PropertyValue::Vector(v) if name == "<MeshInstanceBatchLimits>" => {
+                has_mesh_batch_limits = true;
+                if mesh_batch_limits.is_none() {
+                    mesh_batch_limits = Some(*v);
+                }
+            }
+            _ => {
+                if name == "_MainTex" {
+                    main_tex_override = Some(0);
+                } else if name == "<MeshInstanceBatchLimits>" {
+                    has_mesh_batch_limits = true;
+                }
+            }
+        }
+    }
+    DrawPropertySummary {
+        main_tex_override,
+        has_texture_override,
+        has_buffer_override,
+        has_mesh_batch_limits,
+        mesh_batch_limits,
+    }
+}
+
 struct GpuMaterial {
     /// Shared: each draw holds it while it is planned (a copy per draw cost more than drawing).
     resolved: Arc<ResolvedMaterial>,
+    /// Precomputed `_MainTex` lookup from `resolved` (avoids per-draw `String` clone + lookup).
+    main_tex_handle: u64,
+    main_tex_default: Arc<str>,
+    declares_main_tex: bool,
+    /// Cached `resolved.all` pass indices matching `UnityRenderer::pass_tags` at `pass_tags_gen`.
+    tagged_passes: Option<(u64, Vec<usize>)>,
+    /// Precomputed per-slot texture plans per compiled program id.
+    texture_plans: rustc_hash::FxHashMap<u32, Arc<MaterialTexturePlan>>,
     /// The program variant (and whether it is the error shader's) per (pass, global keyword
     /// set, linear colour space, standalone mesh replay).
     /// By pass, keyword set, color space, instancing mode ([`InstancingMode`]) and whether the
@@ -226,6 +387,24 @@ struct GpuMaterial {
     variants: rustc_hash::FxHashMap<(usize, u32, bool, InstancingMode, bool), (Option<u32>, bool)>,
     /// Its uniform block per program variant (see `CompiledPrograms::material_block`).
     blocks: rustc_hash::FxHashMap<u32, Arc<compiled::MaterialBlock>>,
+}
+
+impl GpuMaterial {
+    fn new(resolved: ResolvedMaterial) -> Self {
+        let (main_tex_handle, main_default) = resolved.texture_ref("_MainTex");
+        let main_tex_default = Arc::from(main_default);
+        let declares_main_tex = resolved.declares("_MainTex");
+        Self {
+            resolved: Arc::new(resolved),
+            main_tex_handle,
+            main_tex_default,
+            declares_main_tex,
+            tagged_passes: None,
+            texture_plans: Default::default(),
+            variants: Default::default(),
+            blocks: Default::default(),
+        }
+    }
 }
 
 /// How many [`UnityRenderer::repack_texture`] shapes are kept.
@@ -357,7 +536,8 @@ struct PlannedDraw {
     /// `SV_VertexID` leaves the base vertex out (`DeviceConventions::vertex_id_from_draw_start`).
     first_bound_vertex: u32,
     material: wgpu::BindGroup,
-    texture: wgpu::BindGroup,
+    /// Group 2: legacy main-texture bind group, only populated when the program reads it.
+    texture: Option<wgpu::BindGroup>,
     /// The program's buffers (group 3), when it reads any.
     buffers: Option<wgpu::BindGroup>,
     offset: u32,
@@ -984,10 +1164,12 @@ pub struct UnityRenderer {
     /// handles; evicted on buffer release/recreation and retired after idle frames.
     program_buffer_groups:
         bevy::platform::collections::HashMap<BufferGroupKey, (u64, wgpu::BindGroup)>,
-    /// Reusable scratch buffers for zero-allocation bind group cache lookups.
+    /// Reusable scratch buffers for zero-allocation bind group cache lookups and draw planning.
     texture_slot_scratch: Vec<TextureSlotKey>,
     texture_override_scratch: Vec<usize>,
     buffer_slot_scratch: Vec<BufferSlotKey>,
+    planned_scratch: Vec<Planned>,
+    pass_indices_scratch: Vec<(usize, bool)>,
     /// The pass writing a counter at a byte offset that is not a multiple of 4.
     unaligned_count: Option<(wgpu::ComputePipeline, wgpu::BindGroupLayout)>,
     generation: u64,
@@ -1018,8 +1200,9 @@ pub struct UnityRenderer {
     /// An id of the global keyword set (equal sets, equal ids): what variants are cached by.
     keyword_set: u32,
     keyword_sets: rustc_hash::FxHashMap<Vec<String>, u32>,
-    /// The `LightMode` tags of tagged-pass draws (renderer lists).
+    /// The `LightMode` tags of tagged-pass draws (renderer lists) and their monotonic generation.
     pass_tags: Vec<String>,
+    pass_tags_gen: u64,
     state: State,
     presented: Arc<Mutex<Option<Presented>>>,
     fixed_game_view: bool,
@@ -1121,6 +1304,8 @@ impl UnityRenderer {
             texture_slot_scratch: Vec::new(),
             texture_override_scratch: Vec::new(),
             buffer_slot_scratch: Vec::new(),
+            planned_scratch: Vec::new(),
+            pass_indices_scratch: Vec::new(),
             unaligned_count: None,
             generation: 1,
             draw_buffer: None,
@@ -1142,6 +1327,7 @@ impl UnityRenderer {
             keyword_set: 0,
             keyword_sets: Default::default(),
             pass_tags: Vec::new(),
+            pass_tags_gen: 1,
             state: State {
                 target: None,
                 viewport: [0.0; 4],
@@ -1527,14 +1713,7 @@ impl UnityRenderer {
             }
             Upload::UpdateMaterial(handle, material) => {
                 let resolved = self.resolver.resolve(&material);
-                self.materials.insert(
-                    handle,
-                    GpuMaterial {
-                        resolved: Arc::new(resolved),
-                        variants: Default::default(),
-                        blocks: Default::default(),
-                    },
-                );
+                self.materials.insert(handle, GpuMaterial::new(resolved));
             }
             Upload::ReleaseMaterial(handle) => {
                 self.materials.remove(&handle);
@@ -1589,22 +1768,59 @@ impl UnityRenderer {
             .clone()
     }
 
-    /// A texture by handle, or the named default.
-    /// Whether the current target draws into a texture (its color or a further color).
-    fn drawn_into(&self, handle: u64) -> bool {
-        let (Some(t), Some(target)) = (self.textures.get(&handle), &self.state.target) else {
+    /// Whether the current target draws into the texture `t` (stored at `handle`): its color, a
+    /// further color, or, a depth-only target, its depth.
+    #[inline]
+    fn drawn_into_entry(&self, handle: u64, t: &GpuTexture) -> bool {
+        let Some(target) = &self.state.target else {
             return false;
         };
         // A depth-only target draws into its depth, with no color texture to compare.
         if t.depth_only && self.target_handles.0 == handle {
             return true;
         }
-        std::iter::once(&target.texture)
-            .chain(target.extra.iter().map(|e| &e.texture))
-            .any(|x| {
-                x.as_ref()
-                    .is_some_and(|(texture, ..)| *texture == t.texture)
-            })
+        if target
+            .texture
+            .as_ref()
+            .is_some_and(|(x, ..)| *x == t.texture)
+        {
+            return true;
+        }
+        target
+            .extra
+            .iter()
+            .any(|e| e.texture.as_ref().is_some_and(|(x, ..)| *x == t.texture))
+    }
+
+    /// Whether the current target draws into a texture (its color or a further color).
+    fn drawn_into(&self, handle: u64) -> bool {
+        let Some(t) = self.textures.get(&handle) else {
+            return false;
+        };
+        self.drawn_into_entry(handle, t)
+    }
+
+    /// Whether the legacy `_MainTex` binding for `handle` resolves to an alpha-only texture
+    /// (matching [`Self::main_bind_group`]'s `alpha_only` result without creating a bind group).
+    #[inline]
+    fn main_texture_alpha_only(&self, handle: u64) -> bool {
+        if handle == 0 {
+            return false;
+        }
+        let (base, depth_element) = handle::split(handle);
+        if depth_element {
+            return false;
+        }
+        let Some(t) = self.textures.get(&base) else {
+            return false;
+        };
+        if !t.alpha_only || t.cube || t.cube_array || resources::is_integer(t.texture.format()) {
+            return false;
+        }
+        if self.drawn_into_entry(base, t) && (t.layers > 1 || t.volume || t.format == 5) {
+            return false;
+        }
+        true
     }
 
     /// The view a draw samples a texture it draws into through: a copy made right before the
@@ -1899,6 +2115,7 @@ impl UnityRenderer {
         id: u32,
         shader: &str,
         overrides: &[(String, owned::PropertyValue)],
+        has_buf_override: bool,
         material: &owned::Material,
         globals: &[(String, owned::PropertyValue)],
         unread: Option<&str>,
@@ -1907,9 +2124,6 @@ impl UnityRenderer {
             return Ok(None);
         }
         let program = self.compiled.program(id).clone();
-        let has_buf_override = overrides
-            .iter()
-            .any(|(_, v)| matches!(v, owned::PropertyValue::Buffer(_)));
         let globals_index = &self.globals_index;
         // The buffer bound to a slot: a random write target at its UAV register (a global the
         // managed Graphics.SetRandomWriteTarget sets; cleared to no buffer, 0) first, a released
@@ -2067,54 +2281,96 @@ impl UnityRenderer {
         space: i32,
         globals: &[(String, owned::PropertyValue)],
         overrides: &[(String, owned::PropertyValue)],
+        has_texture_override: bool,
         main_override: u64,
     ) -> Option<wgpu::BindGroup> {
-        let resolved = self.materials.get(&handle)?.resolved.clone();
         let program = self.compiled.program(id).clone();
+        let plan = {
+            let mat = self.materials.get_mut(&handle)?;
+            if let Some(p) = mat.texture_plans.get(&id) {
+                p.clone()
+            } else {
+                let built = Arc::new(MaterialTexturePlan::build(&mat.resolved, &program));
+                mat.texture_plans.insert(id, built.clone());
+                built
+            }
+        };
         let is_2d = |dim: unbound_shaders::TextureDim| dim == unbound_shaders::TextureDim::D2;
 
-        // Collect only the texture overrides once so each slot checks at most a handful of entries.
+        // Collect only the texture overrides once when the draw actually has any.
         self.texture_override_scratch.clear();
-        for (idx, (_, v)) in overrides.iter().enumerate() {
-            if matches!(v, owned::PropertyValue::Texture { .. }) {
-                self.texture_override_scratch.push(idx);
-            }
-        }
-
-        self.texture_slot_scratch.clear();
-        let mut cached = true;
-        for (k, name) in program.textures.iter().enumerate() {
-            let (mut raw_h, default) = resolved.texture_ref(name);
-            for &idx in &self.texture_override_scratch {
-                if overrides[idx].0 == *name
-                    && let owned::PropertyValue::Texture { handle: h, .. } = overrides[idx].1
-                {
-                    raw_h = h;
-                    break;
+        if has_texture_override {
+            for (idx, (_, v)) in overrides.iter().enumerate() {
+                if matches!(v, owned::PropertyValue::Texture { .. }) {
+                    self.texture_override_scratch.push(idx);
                 }
             }
-            if raw_h == 0
-                && !resolved.declares(name)
-                && let Some(owned::PropertyValue::Texture { handle: h, .. }) =
-                    self.globals_index.find(globals, name)
-            {
-                raw_h = *h;
+        }
+        let has_overrides = !self.texture_override_scratch.is_empty();
+
+        self.texture_slot_scratch.clear();
+        let mut cached = !plan.any_uncacheable;
+        for (k, entry) in plan.slots.iter().enumerate() {
+            let mut raw_h = entry.material_handle;
+            if has_overrides {
+                let name = &program.textures[k];
+                for &idx in &self.texture_override_scratch {
+                    if overrides[idx].0 == *name
+                        && let owned::PropertyValue::Texture { handle: h, .. } = overrides[idx].1
+                    {
+                        raw_h = h;
+                        break;
+                    }
+                }
             }
-            let dim = program
-                .texture_dims
-                .get(k)
-                .copied()
-                .unwrap_or(unbound_shaders::TextureDim::D2);
+            if raw_h == 0 && !entry.declares {
+                raw_h = entry.global_slot.find_handle(
+                    globals,
+                    &self.globals_index,
+                    &program.textures[k],
+                );
+            }
             // Typed 2D _MainTex slots use the program layout, but still receive a
             // renderer's main texture (a sprite's, for example).
-            if name == "_MainTex" && dim == unbound_shaders::TextureDim::D2 && main_override != 0 {
+            if entry.is_main_2d && main_override != 0 {
                 raw_h = main_override;
             }
-            let slot = program.texture_slots.get(k).copied().unwrap_or_default();
-            if slot.multisampled || slot.integer() {
-                cached = false;
+            if raw_h == 0 {
+                // Handle 0 is never a GPU texture; all built-in defaults have generation 0.
+                debug_assert!(!self.textures.contains_key(&0));
+                self.texture_slot_scratch.push(TextureSlotKey {
+                    raw: 0,
+                    generation: 0,
+                    default_tag: entry.default_tag,
+                });
+                continue;
             }
             let (mut base, depth) = handle::split(raw_h);
+            let slot = entry.slot;
+            let dim = entry.dim;
+            let needs_depth_copy_check =
+                entry.is_2d && !slot.comparison && !slot.depth() && !slot.multisampled;
+
+            // Fast path: single `self.textures` lookup for ordinary color textures (no depth
+            // element, no native depth resolve, no depth-only format, no integer-in-float slot).
+            if !depth
+                && let Some(t) = self.textures.get(&base)
+                && t.native_depth.is_none()
+                && !(needs_depth_copy_check && t.format == 5)
+                && !(!slot.integer() && resources::is_integer(t.texture.format()))
+            {
+                if self.drawn_into_entry(base, t) {
+                    cached = false;
+                }
+                self.texture_slot_scratch.push(TextureSlotKey {
+                    raw: raw_h,
+                    generation: t.generation,
+                    default_tag: entry.default_tag,
+                });
+                continue;
+            }
+
+            let name = &program.textures[k];
             // A handle may name the texture's depth element (render protocol 6): its view comes
             // from the depth copy, brought up to date for this draw even when cached.
             if !slot.multisampled
@@ -2130,9 +2386,9 @@ impl UnityRenderer {
                 }
             }
             if !slot.multisampled && depth {
-                if slot.sample == SampleKind::Float && is_2d(dim) {
+                if slot.sample == SampleKind::Float && entry.is_2d {
                     self.depth_element_view(base);
-                } else if !(slot.depth() && is_2d(dim)) {
+                } else if !(slot.depth() && entry.is_2d) {
                     let name = name.clone();
                     self.warn_once(format!("depth-element-slot{id}{name}"), || {
                         format!(
@@ -2149,22 +2405,23 @@ impl UnityRenderer {
                 }
             }
             // A depth-only texture a slot reads outside a comparison reads its filled copy.
-            if is_2d(dim) && !slot.comparison && !slot.depth() && !slot.multisampled {
+            if needs_depth_copy_check {
                 self.fill_depth_copy(base);
             }
             // A texture the target draws into is read through a copy made for this draw.
             if self.drawn_into(base) {
                 cached = false;
             }
-            let generation = if is_2d(dim) {
-                self.texture_or_default(base, default).generation
+            let generation = if entry.is_2d {
+                self.texture_or_default(base, &entry.default_name)
+                    .generation
             } else {
                 self.textures.get(&base).map_or(0, |t| t.generation)
             };
             self.texture_slot_scratch.push(TextureSlotKey {
                 raw: raw_h,
                 generation,
-                default_tag: default_texture_tag(default),
+                default_tag: entry.default_tag,
             });
         }
 
@@ -2188,13 +2445,10 @@ impl UnityRenderer {
             let raw_h = slot_key.raw;
             let (mut h, depth_element) = handle::split(raw_h);
             let name = &program.textures[k];
-            let default = resolved.texture_ref(name).1;
-            let dim = program
-                .texture_dims
-                .get(k)
-                .copied()
-                .unwrap_or(unbound_shaders::TextureDim::D2);
-            let slot = program.texture_slots.get(k).copied().unwrap_or_default();
+            let entry = &plan.slots[k];
+            let default = &entry.default_name;
+            let dim = entry.dim;
+            let slot = entry.slot;
             if slot.multisampled && !slot.integer() && !depth_element {
                 let is_int = self
                     .textures
@@ -4006,18 +4260,16 @@ impl UnityRenderer {
                         for handle in handles {
                             let material = self.materials[&handle].resolved.material.clone();
                             let resolved = self.resolver.resolve(&material);
-                            self.materials.insert(
-                                handle,
-                                GpuMaterial {
-                                    resolved: Arc::new(resolved),
-                                    variants: Default::default(),
-                                    blocks: Default::default(),
-                                },
-                            );
+                            self.materials.insert(handle, GpuMaterial::new(resolved));
                         }
                     }
                 }
-                Command::PassTags(tags) => self.pass_tags = tags,
+                Command::PassTags(tags) => {
+                    if self.pass_tags != tags {
+                        self.pass_tags = tags;
+                        self.pass_tags_gen = self.pass_tags_gen.wrapping_add(1).max(1);
+                    }
+                }
                 Command::DepthBias { bias, slope } => {
                     // Toward the far plane in the device's depth direction.
                     let sign = if self.conventions.reversed_z {
@@ -4223,13 +4475,24 @@ impl UnityRenderer {
                     self.depth_reads.clear();
                     self.pre_draw.clear();
                     self.pre_copies.clear();
-                    let mut planned =
-                        self.plan_draw(&draw, &target, time, mesh_instance, dots.as_ref(), shape);
+                    let mut planned = std::mem::take(&mut self.planned_scratch);
+                    planned.clear();
+                    let mesh_batch_limits = self.plan_draw(
+                        &draw,
+                        &target,
+                        time,
+                        mesh_instance,
+                        dots.as_ref(),
+                        shape,
+                        &mut planned,
+                    );
                     if let Some(dots) = &dots {
                         // One instance per visible instance (an empty command draws nothing); an
                         // indirect command's count comes from its arguments buffer (DrawSetup).
                         if dots.indirect == 0 {
                             if dots.visible.is_empty() {
+                                planned.clear();
+                                self.planned_scratch = planned;
                                 continue;
                             }
                             for p in &mut planned {
@@ -4334,7 +4597,7 @@ impl UnityRenderer {
                     }
                     // Standalone instancing whose multiplied IDs pass a native batch.
                     let mut past_batch = false;
-                    for item in planned {
+                    for item in planned.drain(..) {
                         match item {
                             Planned::Draw(mut d) => {
                                 d.first_instance = first_instance;
@@ -4353,11 +4616,7 @@ impl UnityRenderer {
                                         .first_instance
                                         .wrapping_mul(self.state.instance_multiplier);
                                 }
-                                if let Some(owned::PropertyValue::Vector(limits)) = draw
-                                    .properties
-                                    .iter()
-                                    .find(|(name, _)| name == "<MeshInstanceBatchLimits>")
-                                    .map(|(_, value)| value)
+                                if let Some(limits) = mesh_batch_limits
                                     && limits[0] > 0.0
                                 {
                                     let program = self.compiled.program(d.program.0);
@@ -4432,6 +4691,7 @@ impl UnityRenderer {
                             }
                         }
                     }
+                    self.planned_scratch = planned;
                     if let Some(slot) = mesh_instance
                         && slot.added == 0
                         && slot.index + 1 == slot.count
@@ -4725,7 +4985,9 @@ impl UnityRenderer {
         })
     }
 
-    /// The pipelines, bind groups and uniforms of a draw: one per pass it draws.
+    /// The pipelines, bind groups and uniforms of a draw: one per pass it draws, appended to
+    /// `planned`. Returns any `<MeshInstanceBatchLimits>` vector carried in `draw.properties`.
+    #[allow(clippy::too_many_arguments)]
     fn plan_draw(
         &mut self,
         draw: &commands::Draw,
@@ -4734,8 +4996,8 @@ impl UnityRenderer {
         mesh_instance: Option<MeshInstanceSlot>,
         dots: Option<&commands::DotsDraw>,
         shape: DrawShape,
-    ) -> Vec<Planned> {
-        let mut planned = Vec::new();
+        planned: &mut Vec<Planned>,
+    ) -> Option<[f32; 4]> {
         let device = self.device.clone();
         let space = self.color_space;
         let (tw, th) = (target.width, target.height);
@@ -4743,14 +5005,17 @@ impl UnityRenderer {
             self.warn_once(format!("mat{}", draw.material), || {
                 format!("a draw uses unknown material {}; skipped", draw.material)
             });
-            return planned;
+            return None;
         };
         let resolved = material.resolved.clone();
+        let mat_main_tex_handle = material.main_tex_handle;
+        let mat_main_tex_default = material.main_tex_default.clone();
+        let mat_declares_main_tex = material.declares_main_tex;
         let Some(mesh) = self.meshes.get(&draw.mesh) else {
             self.warn_once(format!("mesh{}", draw.mesh), || {
                 format!("a draw uses unknown mesh {}; skipped", draw.mesh)
             });
-            return planned;
+            return None;
         };
         let Some(mut sub) = mesh.submeshes.get(draw.submesh.max(0) as usize).cloned() else {
             self.warn_once(format!("sub{}/{}", draw.mesh, draw.submesh), || {
@@ -4759,10 +5024,10 @@ impl UnityRenderer {
                     draw.submesh, draw.mesh
                 )
             });
-            return planned;
+            return None;
         };
         if sub.count == 0 {
-            return planned;
+            return None;
         }
         // The indices read as another topology, and only the first ones (`DrawShape`).
         if let Some(topology) = shape.topology {
@@ -4777,7 +5042,7 @@ impl UnityRenderer {
             * size_of::<resources::ExtraVertex>() as u64;
         let viewport = clamp_viewport(self.state.viewport, tw, th);
         if viewport[2] <= 0.0 || viewport[3] <= 0.0 {
-            return planned;
+            return None;
         }
         let viewport_scissor = clamp_rect(viewport, tw, th);
         let scissor = match draw.clip {
@@ -4791,7 +5056,7 @@ impl UnityRenderer {
                     draw.mesh
                 );
             }
-            return planned;
+            return None;
         }
         let (view, projection) = (self.state.view, self.state.projection);
         // The projection as the device draws with it into this target (Unity's GPU projection:
@@ -4801,55 +5066,77 @@ impl UnityRenderer {
         // Rows stored top-down turn the winding (as a mirrored transform does).
         let top_down = self.conventions.top_down(target.screen_like);
         // The passes drawn: the forward ones (a renderer's), every one, or one by index.
+        // Stored into a reusable scratch vector of `(index, from_all)` to avoid per-draw heap
+        // allocations and `pass_tags` cloning.
         let forward = resolved.passes.len();
-        let passes: Vec<(usize, &crate::materials::ResolvedPass)> = match draw.pass {
-            -1 => resolved.passes.iter().enumerate().collect(),
+        let mut pass_indices = std::mem::take(&mut self.pass_indices_scratch);
+        pass_indices.clear();
+        match draw.pass {
+            -1 => {
+                for i in 0..resolved.passes.len() {
+                    pass_indices.push((i, false));
+                }
+            }
             // A renderer list's: per tag in order, the first pass with that LightMode.
             -3 => {
-                let mut chosen = Vec::new();
-                let tags = self.pass_tags.clone();
-                for tag in &tags {
-                    let Some(i) = resolved.lab.tagged_pass(tag) else {
-                        continue;
-                    };
-                    if chosen.iter().any(|(c, _)| *c == forward + i) {
-                        continue;
+                let tags_gen = self.pass_tags_gen;
+                if let Some((cached_gen, cached_indices)) = self
+                    .materials
+                    .get(&draw.material)
+                    .and_then(|m| m.tagged_passes.as_ref())
+                    && *cached_gen == tags_gen
+                {
+                    for &i in cached_indices {
+                        pass_indices.push((i, true));
                     }
-                    match &resolved.all[i] {
-                        Ok(p) => chosen.push((forward + i, p)),
-                        Err(reason) => {
-                            let reason = reason.clone();
-                            self.warn_once(format!("{}#{i}", resolved.shader), || {
-                                format!(
-                                    "shader `{}`: pass {i} is not drawn: {reason}",
-                                    resolved.shader
-                                )
-                            });
+                } else {
+                    let mut chosen_all = Vec::new();
+                    let mut errors: Vec<(usize, String)> = Vec::new();
+                    for tag in &self.pass_tags {
+                        let Some(i) = resolved.lab.tagged_pass(tag) else {
+                            continue;
+                        };
+                        if chosen_all.contains(&i) {
+                            continue;
+                        }
+                        match &resolved.all[i] {
+                            Ok(_) => chosen_all.push(i),
+                            Err(reason) => errors.push((i, reason.clone())),
                         }
                     }
+                    for (i, reason) in errors {
+                        self.warn_once(format!("{}#{i}", resolved.shader), || {
+                            format!(
+                                "shader `{}`: pass {i} is not drawn: {reason}",
+                                resolved.shader
+                            )
+                        });
+                    }
+                    for &i in &chosen_all {
+                        pass_indices.push((i, true));
+                    }
+                    if let Some(m) = self.materials.get_mut(&draw.material) {
+                        m.tagged_passes = Some((tags_gen, chosen_all));
+                    }
                 }
-                chosen
             }
             // A blit executes shader passes without capturing framebuffer grabs.
-            -4 => resolved
-                .all
-                .iter()
-                .enumerate()
-                .filter_map(|(i, p)| {
-                    p.as_ref()
-                        .ok()
-                        .filter(|p| p.grab.is_none())
-                        .map(|p| (forward + i, p))
-                })
-                .collect(),
-            -2 => resolved
-                .all
-                .iter()
-                .enumerate()
-                .filter_map(|(i, p)| p.as_ref().ok().map(|p| (forward + i, p)))
-                .collect(),
+            -4 => {
+                for (i, p) in resolved.all.iter().enumerate() {
+                    if p.as_ref().is_ok_and(|p| p.grab.is_none()) {
+                        pass_indices.push((i, true));
+                    }
+                }
+            }
+            -2 => {
+                for (i, p) in resolved.all.iter().enumerate() {
+                    if p.is_ok() {
+                        pass_indices.push((i, true));
+                    }
+                }
+            }
             n => match resolved.all.get(n as usize) {
-                Some(Ok(p)) => vec![(forward + n as usize, p)],
+                Some(Ok(_)) => pass_indices.push((n as usize, true)),
                 Some(Err(reason)) => {
                     let reason = reason.clone();
                     self.warn_once(format!("{}#{n}", resolved.shader), || {
@@ -4858,7 +5145,8 @@ impl UnityRenderer {
                             resolved.shader
                         )
                     });
-                    return planned;
+                    self.pass_indices_scratch = pass_indices;
+                    return None;
                 }
                 None => {
                     self.warn_once(format!("{}#{n}?", resolved.shader), || {
@@ -4868,31 +5156,41 @@ impl UnityRenderer {
                             resolved.all.len()
                         )
                     });
-                    return planned;
+                    self.pass_indices_scratch = pass_indices;
+                    return None;
                 }
             },
-        };
-        // The material's properties under the draw's own (a MaterialPropertyBlock): looked up in
-        // layers, not merged (a copy per draw cost more than drawing).
-        let material_props: &owned::Material = &resolved.material;
+        }
+        if pass_indices.is_empty() {
+            self.pass_indices_scratch = pass_indices;
+            return None;
+        }
+        // Single scan of the draw's per-draw properties (`MaterialPropertyBlock`, per-renderer
+        // overrides, mesh-instancing limits).
         let overrides: &[(String, owned::PropertyValue)] = &draw.properties;
-        let layered = |name: &str| {
-            overrides
-                .iter()
-                .rev()
-                .find(|(n, _)| n == name)
-                .map(|(_, v)| v)
-                .or_else(|| material_props.get(name))
+        let prop_summary = scan_draw_properties(overrides);
+        let material_props: &owned::Material = &resolved.material;
+        let texture_of = |name: &str| {
+            if prop_summary.has_texture_override
+                && let Some((_, v)) = overrides.iter().rev().find(|(n, _)| n == name)
+            {
+                return match v {
+                    owned::PropertyValue::Texture { handle, .. } => *handle,
+                    _ => 0,
+                };
+            }
+            match material_props.get(name) {
+                Some(owned::PropertyValue::Texture { handle, .. }) => *handle,
+                _ => 0,
+            }
         };
-        let texture_of = |name: &str| match layered(name) {
-            Some(owned::PropertyValue::Texture { handle, .. }) => *handle,
-            _ => 0,
-        };
-        // `_MainTex`: the renderer's (a sprite's texture), else the material's, else a global
-        // one when the shader does not declare it.
-        let (_, main_default) = resolved.texture("_MainTex");
-        let main_handle = match (draw.main_texture, texture_of("_MainTex")) {
-            (0, 0) if !resolved.declares("_MainTex") => {
+        // `_MainTex`: the renderer's (a sprite's texture), else the draw override's, else the
+        // material's, else a global one when the shader does not declare it.
+        let layered_main = prop_summary
+            .main_tex_override
+            .unwrap_or(mat_main_tex_handle);
+        let main_handle = match (draw.main_texture, layered_main) {
+            (0, 0) if !mat_declares_main_tex => {
                 match self.globals_index.find(&self.globals, "_MainTex") {
                     Some(owned::PropertyValue::Texture { handle, .. }) => *handle,
                     _ => 0,
@@ -4901,7 +5199,8 @@ impl UnityRenderer {
             (0, material) => material,
             (renderer, _) => renderer,
         };
-        let (texture_bg, alpha_only) = self.main_bind_group(main_handle, &main_default, space);
+        let alpha_only = self.main_texture_alpha_only(main_handle);
+        let mut main_texture_bg: Option<wgpu::BindGroup> = None;
         let screen = [
             tw as f32,
             th as f32,
@@ -4923,13 +5222,18 @@ impl UnityRenderer {
         // made for the first such pass).
         let mut untinted_offset = None;
         let linear = space == 1;
-        let mesh_replay = mesh_instance.is_some()
-            || overrides
-                .iter()
-                .any(|(name, _)| name == "<MeshInstanceBatchLimits>");
+        let mesh_replay = mesh_instance.is_some() || prop_summary.has_mesh_batch_limits;
         let mut globals = self.globals.clone();
         self.globals_index.refresh(&globals);
-        for (pass_index, pass) in passes {
+        for &(raw_index, from_all) in &pass_indices {
+            let (pass_index, pass) = if from_all {
+                (
+                    forward + raw_index,
+                    resolved.all[raw_index].as_ref().expect("checked ok"),
+                )
+            } else {
+                (raw_index, &resolved.passes[raw_index])
+            };
             if let Some(name) = &pass.grab {
                 if let Some(copy) = self.grab(
                     name,
@@ -5169,10 +5473,24 @@ impl UnityRenderer {
                 space,
                 &globals,
                 &draw.properties,
+                prop_summary.has_texture_override,
                 draw.main_texture,
             ) else {
                 self.pre_draw.clear();
                 continue;
+            };
+            // Legacy group-2 `_MainTex` bind group is only created/bound when the program reads it.
+            let texture_bg = if self.compiled.program(id).main_texture {
+                Some(
+                    main_texture_bg
+                        .get_or_insert_with(|| {
+                            self.main_bind_group(main_handle, &mat_main_tex_default, space)
+                                .0
+                        })
+                        .clone(),
+                )
+            } else {
+                None
             };
             // The copies of textures it draws into and the conversions this pass reads run right
             // before it, after the grabs before it.
@@ -5190,6 +5508,7 @@ impl UnityRenderer {
                 id,
                 &resolved.shader,
                 overrides,
+                prop_summary.has_buffer_override,
                 material_props,
                 &globals,
                 unread,
@@ -5220,10 +5539,7 @@ impl UnityRenderer {
                     .map(|t| t.logical.unwrap_or((t.width, t.height)))
             };
             // A buffer bound by a cbuffer's name: the draw's, the material's, else a global one.
-            let draw_has_buffer = draw
-                .properties
-                .iter()
-                .any(|(_, v)| matches!(v, owned::PropertyValue::Buffer(_)));
+            let draw_has_buffer = prop_summary.has_buffer_override;
             let buffers = &self.buffers;
             let constant_buffer = |name: &str| -> Option<compiled::ConstantBufferRef<'_>> {
                 let handle = if draw_has_buffer {
@@ -5354,7 +5670,7 @@ impl UnityRenderer {
                 range: sub.start..sub.start + sub.count,
                 base_vertex: sub.base_vertex,
                 material: material_bg,
-                texture: texture_bg.clone(),
+                texture: texture_bg,
                 buffers: buffers_bg,
                 offset: if draw.tint == commands::DrawTint::Vertices
                     && self.compiled.declares_sprite_color(id)
@@ -5379,7 +5695,8 @@ impl UnityRenderer {
                 window,
             }));
         }
-        planned
+        self.pass_indices_scratch = pass_indices;
+        prop_summary.mesh_batch_limits
     }
 
     /// Sets the global texture `name` (0: none, the slots read their defaults).
@@ -6171,7 +6488,9 @@ impl UnityRenderer {
                         let (offsets, count) = program_offsets.dynamic_offsets(d.offset);
                         rp.set_bind_group(0, uniform_group, &offsets[..count]);
                         rp.set_bind_group(1, &d.material, &[]);
-                        rp.set_bind_group(2, &d.texture, &[]);
+                        if let Some(texture) = &d.texture {
+                            rp.set_bind_group(2, texture, &[]);
+                        }
                         if let Some(buffers) = &d.buffers {
                             rp.set_bind_group(3, buffers, &[]);
                         }
@@ -7413,5 +7732,107 @@ mod tests {
             assert!(tags.insert(tag), "duplicate tag for {name}");
         }
         assert_eq!(default_texture_tag("gray"), default_texture_tag("grey"));
+    }
+
+    #[test]
+    fn global_tex_slot_tracks_additions_and_in_place_updates() {
+        let slot = GlobalTexSlot::default();
+        let mut globals: Vec<(String, owned::PropertyValue)> = Vec::new();
+        let mut index = owned::NameIndex::default();
+        index.refresh(&globals);
+        assert_eq!(slot.find_handle(&globals, &index, "_CameraDepthTexture"), 0);
+
+        globals.push((
+            "_Other".into(),
+            owned::PropertyValue::Texture {
+                handle: 11,
+                st: [1.0, 1.0, 0.0, 0.0],
+            },
+        ));
+        index.refresh(&globals);
+        assert_eq!(slot.find_handle(&globals, &index, "_CameraDepthTexture"), 0);
+
+        globals.push((
+            "_CameraDepthTexture".into(),
+            owned::PropertyValue::Texture {
+                handle: 42,
+                st: [1.0, 1.0, 0.0, 0.0],
+            },
+        ));
+        index.refresh(&globals);
+        assert_eq!(
+            slot.find_handle(&globals, &index, "_CameraDepthTexture"),
+            42
+        );
+
+        // In-place update is observed immediately via the cached position.
+        globals[1].1 = owned::PropertyValue::Texture {
+            handle: 99,
+            st: [1.0, 1.0, 0.0, 0.0],
+        };
+        assert_eq!(
+            slot.find_handle(&globals, &index, "_CameraDepthTexture"),
+            99
+        );
+
+        // Overwriting with a non-texture returns 0.
+        globals[1].1 = owned::PropertyValue::Float(1.0);
+        assert_eq!(slot.find_handle(&globals, &index, "_CameraDepthTexture"), 0);
+    }
+
+    #[test]
+    fn scan_draw_properties_summarizes_last_wins_main_tex_and_flags() {
+        let empty = scan_draw_properties(&[]);
+        assert_eq!(empty.main_tex_override, None);
+        assert!(!empty.has_texture_override);
+        assert!(!empty.has_buffer_override);
+        assert!(!empty.has_mesh_batch_limits);
+        assert_eq!(empty.mesh_batch_limits, None);
+
+        let props = vec![
+            (
+                "_MainTex".into(),
+                owned::PropertyValue::Texture {
+                    handle: 10,
+                    st: [1.0, 1.0, 0.0, 0.0],
+                },
+            ),
+            (
+                "_MainTex".into(),
+                owned::PropertyValue::Texture {
+                    handle: 20,
+                    st: [1.0, 1.0, 0.0, 0.0],
+                },
+            ),
+            (
+                "unity_DOTSInstanceData".into(),
+                owned::PropertyValue::Buffer(7),
+            ),
+            (
+                "<MeshInstanceBatchLimits>".into(),
+                owned::PropertyValue::Vector([511.0, 1023.0, 16384.0, 0.0]),
+            ),
+        ];
+        let s = scan_draw_properties(&props);
+        assert_eq!(s.main_tex_override, Some(20));
+        assert!(s.has_texture_override);
+        assert!(s.has_buffer_override);
+        assert!(s.has_mesh_batch_limits);
+        assert_eq!(s.mesh_batch_limits, Some([511.0, 1023.0, 16384.0, 0.0]));
+
+        // Trailing non-texture `_MainTex` masks an earlier texture override.
+        let masked = vec![
+            (
+                "_MainTex".into(),
+                owned::PropertyValue::Texture {
+                    handle: 10,
+                    st: [1.0, 1.0, 0.0, 0.0],
+                },
+            ),
+            ("_MainTex".into(), owned::PropertyValue::Float(1.0)),
+        ];
+        let sm = scan_draw_properties(&masked);
+        assert_eq!(sm.main_tex_override, Some(0));
+        assert!(sm.has_texture_override);
     }
 }
