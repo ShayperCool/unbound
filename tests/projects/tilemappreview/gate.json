@@ -1,0 +1,8 @@
+{
+  "commands": ["python3 tests/projects/tilemappreview/run.py gate"],
+  "summary": "tilemappreview: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Tilemap/Tilemap.cs",
+    "managed/UnityEngine/Tilemap/Tiles.cs"
+  ]
+}
