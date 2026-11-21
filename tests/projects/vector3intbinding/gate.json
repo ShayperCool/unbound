@@ -1,0 +1,16 @@
+{
+  "commands": ["python3 tests/projects/vector3intbinding/run.py gate"],
+  "summary": "vector3intbinding: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/SerializedObject.cs",
+    "managed/UnityEngine/Editor/SerializedPropertyTree.cs",
+    "managed/UnityEngine/Editor/BindingExtensions.cs",
+    "managed/UnityEngine/Editor/PropertyField.cs",
+    "managed/UnityEngine/UIElements/Binding/",
+    "managed/UnityEngine/UIElements/Controls/BaseField.cs",
+    "managed/UnityEngine/UIElements/Controls/CompositeFields.cs",
+    "managed/UnityEngine/UIElements/Controls/Fields.cs",
+    "managed/UnityEngine/UIElements/Core/Panel.cs",
+    "managed/UnityEngine/UIElements/Core/VisualElement.cs"
+  ]
+}
