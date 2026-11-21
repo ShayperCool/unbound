@@ -998,11 +998,9 @@ fn forget(native: Native) {
         samples.map(|s| s.0),
         samples.and_then(|s| s.1),
     ];
-    let _ = gl_interop::with(|interop| {
-        for name in names.into_iter().flatten() {
-            interop.forget(name, native.views.contains(&Some(name)));
-        }
-    });
+    for name in names.into_iter().flatten() {
+        gl_interop::forget(name, native.views.contains(&Some(name)));
+    }
 }
 
 /// The OpenGL texture name of a renderer texture (wgpu's OpenGL backend).

@@ -1,10 +1,12 @@
 //! The render backend the managed engine talks to. Once the GPU device is installed, a dedicated
 //! render thread (`Unbound Render`) owns [`UnityRenderer`] and executes uploads and command
 //! streams in strict FIFO order while the game thread builds the next frame (up to one frame in
-//! flight, matching Unity's pipelined render thread). Synchronous readbacks, queries, and native
-//! plugin callbacks flush in order on the render thread and deliver plugin logs on the game
-//! thread. Calls made before the renderer exists wait in order until [`GpuBackend::install`];
-//! shader queries before then are answered by the backend's own resolver.
+//! flight, matching Unity's pipelined render thread). Synchronous readbacks and queries flush in
+//! order on the render thread; native plugin callbacks and native-texture interop temporarily
+//! borrow the renderer onto the game thread in strict FIFO order so plugin thread identity,
+//! OpenGL context ownership, and log deferral match Unity. Calls made before the renderer exists
+//! wait in order until [`GpuBackend::install`]; shader queries before then are answered by the
+//! backend's own resolver.
 use crate::materials::Resolver;
 use crate::render::executor::{UnityRenderer, Upload};
 use crate::shaderlab::ShaderIndex;
@@ -33,9 +35,15 @@ enum RenderMsg {
     Commands {
         commands: Vec<Command>,
         end_frames: usize,
-        sync: Option<SyncSender<Vec<(i32, String)>>>,
     },
     Call(Box<dyn FnOnce(&mut UnityRenderer) + Send>),
+    /// Temporarily lends `UnityRenderer` to the caller thread (in strict FIFO order after all
+    /// prior messages finish) so native plugin callbacks and GL interop calls run on the game
+    /// thread with Unity's exact thread identity and OpenGL context ownership.
+    Lend {
+        take_tx: SyncSender<UnityRenderer>,
+        return_rx: Receiver<UnityRenderer>,
+    },
     Flush(SyncSender<()>),
     Shutdown(SyncSender<()>),
 }
@@ -86,30 +94,9 @@ impl RenderQueue {
         q.items.push_back(RenderMsg::Commands {
             commands,
             end_frames,
-            sync: None,
         });
         self.has_work.notify_one();
         true
-    }
-
-    fn push_sync_commands(
-        &self,
-        commands: Vec<Command>,
-        end_frames: usize,
-    ) -> Option<Receiver<Vec<(i32, String)>>> {
-        let (tx, rx) = mpsc::sync_channel(1);
-        let mut q = self.state.lock().unwrap_or_else(|e| e.into_inner());
-        if q.closed {
-            return None;
-        }
-        q.in_flight_frames += end_frames;
-        q.items.push_back(RenderMsg::Commands {
-            commands,
-            end_frames,
-            sync: Some(tx),
-        });
-        self.has_work.notify_one();
-        Some(rx)
     }
 
     fn complete_frames(&self, count: usize) {
@@ -173,20 +160,20 @@ impl Worker {
                         RenderMsg::Commands {
                             commands,
                             end_frames,
-                            sync,
                         } => {
-                            if let Some(reply) = sync {
-                                let ((), logs) = unbound_runtime::plugin_api::capture_logs(|| {
-                                    renderer.execute(commands)
-                                });
-                                worker_queue.complete_frames(end_frames);
-                                let _ = reply.send(logs);
-                            } else {
-                                renderer.execute(commands);
-                                worker_queue.complete_frames(end_frames);
-                            }
+                            renderer.execute(commands);
+                            worker_queue.complete_frames(end_frames);
                         }
                         RenderMsg::Call(op) => op(&mut renderer),
+                        RenderMsg::Lend { take_tx, return_rx } => {
+                            if take_tx.send(renderer).is_err() {
+                                return;
+                            }
+                            match return_rx.recv() {
+                                Ok(returned) => renderer = returned,
+                                Err(_) => return,
+                            }
+                        }
                         RenderMsg::Flush(reply) => {
                             let _ = reply.send(());
                         }
@@ -212,23 +199,43 @@ impl Worker {
         op: impl FnOnce(&mut UnityRenderer) -> R + Send + 'static,
     ) -> Option<R> {
         let (tx, rx) = mpsc::sync_channel(1);
-        let result = {
-            let _gl = crate::render::gl_interop::suspend_for_render_thread();
-            if !self.queue.push(RenderMsg::Call(Box::new(move |r| {
-                let out = unbound_runtime::plugin_api::capture_logs(|| op(r));
-                let _ = tx.send(out);
-            }))) {
-                return None;
+        if !self.queue.push(RenderMsg::Call(Box::new(move |r| {
+            let _ = tx.send(op(r));
+        }))) {
+            return None;
+        }
+        rx.recv().ok()
+    }
+
+    /// Runs `op` on the caller thread after every previously queued upload and command has
+    /// completed on the render thread, then returns `UnityRenderer` to the render thread (even
+    /// if `op` unwinds).
+    fn with_renderer_on_caller<R>(&self, op: impl FnOnce(&mut UnityRenderer) -> R) -> Option<R> {
+        let (take_tx, take_rx) = mpsc::sync_channel(1);
+        let (return_tx, return_rx) = mpsc::sync_channel(1);
+        if !self.queue.push(RenderMsg::Lend { take_tx, return_rx }) {
+            return None;
+        }
+        let renderer = take_rx.recv().ok()?;
+        struct ReturnOnDrop {
+            renderer: Option<UnityRenderer>,
+            return_tx: SyncSender<UnityRenderer>,
+        }
+        impl Drop for ReturnOnDrop {
+            fn drop(&mut self) {
+                if let Some(renderer) = self.renderer.take() {
+                    let _ = self.return_tx.send(renderer);
+                }
             }
-            rx.recv().ok()
+        }
+        let mut guard = ReturnOnDrop {
+            renderer: Some(renderer),
+            return_tx,
         };
-        let (value, logs) = result?;
-        unbound_runtime::plugin_api::deliver_logs(logs);
-        Some(value)
+        Some(op(guard.renderer.as_mut().unwrap()))
     }
 
     fn flush(&self) {
-        let _gl = crate::render::gl_interop::suspend_for_render_thread();
         let (tx, rx) = mpsc::sync_channel(1);
         if self.queue.push(RenderMsg::Flush(tx)) {
             let _ = rx.recv();
@@ -240,7 +247,6 @@ impl Worker {
         let Some(handle) = handle else {
             return;
         };
-        let _gl = crate::render::gl_interop::suspend_for_render_thread();
         let (tx, rx) = mpsc::sync_channel(1);
         if self.queue.push(RenderMsg::Shutdown(tx)) {
             let _ = rx.recv();
@@ -412,21 +418,16 @@ impl RenderBackend for GpuBackend {
                 }
             }
         };
-        let end_frames = commands
-            .iter()
-            .filter(|c| matches!(c, Command::EndFrame))
-            .count();
         let has_plugin = commands.iter().any(|c| matches!(c, Command::Plugin(_)));
         if has_plugin {
-            let logs = {
-                let _gl = crate::render::gl_interop::suspend_for_render_thread();
-                match worker.queue.push_sync_commands(commands, end_frames) {
-                    Some(rx) => rx.recv().unwrap_or_default(),
-                    None => Vec::new(),
-                }
-            };
-            unbound_runtime::plugin_api::deliver_logs(logs);
+            unbound_runtime::plugin_api::while_rendering(|| {
+                let _ = worker.with_renderer_on_caller(|r| r.execute(commands));
+            });
         } else {
+            let end_frames = commands
+                .iter()
+                .filter(|c| matches!(c, Command::EndFrame))
+                .count();
             worker.queue.push_commands(commands, end_frames);
         }
     }
@@ -553,7 +554,7 @@ impl RenderBackend for GpuBackend {
             return 0;
         };
         worker
-            .call(move |r| r.native_texture(texture, depth))
+            .with_renderer_on_caller(|r| r.native_texture(texture, depth))
             .unwrap_or(0)
     }
 
@@ -563,7 +564,7 @@ impl RenderBackend for GpuBackend {
             return 0;
         };
         worker
-            .call(move |r| r.metal_render_buffer_texture(texture, image))
+            .with_renderer_on_caller(|r| r.metal_render_buffer_texture(texture, image))
             .unwrap_or(0)
     }
 
@@ -580,9 +581,8 @@ impl RenderBackend for GpuBackend {
             .worker
             .clone()
             .ok_or_else(|| "the renderer is not up yet".to_string())?;
-        let info = *info;
         worker
-            .call(move |r| r.external_texture(texture, native, &info))
+            .with_renderer_on_caller(|r| r.external_texture(texture, native, info))
             .ok_or_else(|| "the renderer has stopped".to_string())?
     }
 
@@ -729,14 +729,14 @@ SubShader {
     }
 
     #[test]
-    fn render_queue_close_unblocks_waiting_end_frame_and_sync_reply() {
+    fn render_queue_close_unblocks_waiting_end_frame_and_lend_waiter() {
         use std::time::Duration;
 
         let queue = RenderQueue::new();
-        // Queue a sync command and an in-flight frame, then close (simulating worker unwind).
-        let sync_rx = queue
-            .push_sync_commands(vec![Command::ColorSpace(1)], 0)
-            .expect("open queue accepts sync commands");
+        // Queue a lend request and an in-flight frame, then close (simulating worker unwind).
+        let (take_tx, take_rx) = mpsc::sync_channel(1);
+        let (_return_tx, return_rx) = mpsc::sync_channel(1);
+        assert!(queue.push(RenderMsg::Lend { take_tx, return_rx }));
         assert!(queue.push_commands(vec![Command::EndFrame], 1));
 
         let q2 = Arc::clone(&queue);
@@ -746,13 +746,14 @@ SubShader {
         std::thread::sleep(Duration::from_millis(25));
         queue.close();
 
-        // Both the queued sync receiver and the backpressured EndFrame producer unblock immediately.
-        assert!(sync_rx.recv().is_err());
+        // Both the queued lend receiver and the backpressured EndFrame producer unblock immediately.
+        assert!(take_rx.recv().is_err());
         assert!(!blocked_producer.join().unwrap());
-        assert!(
-            queue
-                .push_sync_commands(vec![Command::ColorSpace(0)], 0)
-                .is_none()
-        );
+        let (take_tx2, _take_rx2) = mpsc::sync_channel(1);
+        let (_return_tx2, return_rx2) = mpsc::sync_channel(1);
+        assert!(!queue.push(RenderMsg::Lend {
+            take_tx: take_tx2,
+            return_rx: return_rx2,
+        }));
     }
 }

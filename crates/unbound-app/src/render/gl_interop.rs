@@ -169,40 +169,24 @@ pub fn mark_render_thread() {
     RENDER_THREAD.with(|render| render.set(true));
 }
 
-/// Temporarily releases the plugins' OpenGL context on the game thread while the dedicated render
-/// thread runs a synchronous operation that may bind it, then restores it on drop. No-op when
-/// not on OpenGL Core or when no plugin context has been created.
-pub struct MainThreadContextGuard {
-    restore: bool,
-}
+/// Texture names released on the render thread while the plugins' OpenGL context stays current on
+/// the game thread; drained at the start of the next [`with`] call before any plugin sees them.
+static PENDING_FORGETS: std::sync::Mutex<Vec<(u32, bool)>> = std::sync::Mutex::new(Vec::new());
 
-pub fn suspend_for_render_thread() -> MainThreadContextGuard {
-    if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore
-        || !RENDER_THREAD.with(|render| render.get())
-    {
-        return MainThreadContextGuard { restore: false };
+/// Forgets a plugin-visible texture name: executes immediately when on the game thread (which owns
+/// the plugins' OpenGL context), or queues for the next [`with`] call when invoked from the
+/// dedicated render thread.
+pub fn forget(name: u32, owned: bool) {
+    if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore {
+        return;
     }
-    let slot = INTEROP
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    let Some(Ok(interop)) = slot.as_ref() else {
-        return MainThreadContextGuard { restore: false };
-    };
-    interop.release_current();
-    MainThreadContextGuard { restore: true }
-}
-
-impl Drop for MainThreadContextGuard {
-    fn drop(&mut self) {
-        if !self.restore {
-            return;
-        }
-        let slot = INTEROP
+    if RENDER_THREAD.with(|render| render.get()) {
+        let _ = with(|interop| interop.forget(name, owned));
+    } else {
+        PENDING_FORGETS
             .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        if let Some(Ok(interop)) = slot.as_ref() {
-            let _ = interop.make_current();
-        }
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .push((name, owned));
     }
 }
 
@@ -237,6 +221,14 @@ pub fn with<R>(work: impl FnOnce(&mut Interop) -> R) -> Result<R, String> {
     let interop = interop.as_mut().map_err(|reason| reason.clone())?;
     if !interop.make_current() {
         return Err("the plugins' OpenGL context cannot be made current on this thread".into());
+    }
+    let pending = std::mem::take(
+        &mut *PENDING_FORGETS
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()),
+    );
+    for (name, owned) in pending {
+        interop.forget(name, owned);
     }
     let result = work(interop);
     if !RENDER_THREAD.with(|render| render.get()) {
