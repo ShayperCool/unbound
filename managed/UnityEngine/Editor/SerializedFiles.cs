@@ -813,8 +813,9 @@ namespace Unbound.Runtime
             }
 
             /// <summary>Whether a GUID is one of the Editor's built-in resource files, whose objects
-            /// are referenced with type 0.</summary>
-            internal static bool IsBuiltinGuid(string guid) => guid != null && guid.StartsWith("0000000000000000", StringComparison.Ordinal);
+            /// are referenced with type 0 (the Assets folder's GUID has the same form but is an asset).</summary>
+            internal static bool IsBuiltinGuid(string guid) =>
+                guid != null && guid.StartsWith("0000000000000000", StringComparison.Ordinal) && !AssetDatabase.Lists(guid);
 
             static string Located(Object o)
             {
