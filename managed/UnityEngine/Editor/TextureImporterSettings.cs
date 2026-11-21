@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Unbound.Runtime;
 using UnityEngine;
 
@@ -531,6 +532,64 @@ namespace UnityEditor
             }
             result.m_Name = canonical;
             return result;
+        }
+
+        internal static void SetOrAdd(ref List<TextureImporterPlatformSettings> entries, TextureImporterPlatformSettings src)
+        {
+            string target = src.m_Name ?? "";
+            if (entries != null)
+            {
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    if (MatchesPlatform(entries[i].m_Name, target))
+                    {
+                        var copy = new TextureImporterPlatformSettings();
+                        src.CopyTo(copy);
+                        copy.m_Name = target;
+                        entries[i] = copy;
+                        return;
+                    }
+                }
+            }
+            if (!src.overridden && !string.Equals(target, DefaultPlatformName, StringComparison.Ordinal))
+                return;
+            entries ??= new List<TextureImporterPlatformSettings>();
+            var added = new TextureImporterPlatformSettings();
+            src.CopyTo(added);
+            added.m_Name = target;
+            entries.Add(added);
+        }
+
+        internal YText ToYText()
+        {
+            var map = YText.Map();
+            map.Add("serializedVersion", YText.Scalar("4"));
+            map.Add("m_BuildTarget", YText.Scalar(m_Name ?? ""));
+            map.Add("m_MaxTextureSize", YText.Scalar(m_MaxTextureSize.ToString(CultureInfo.InvariantCulture)));
+            map.Add("m_ResizeAlgorithm", YText.Scalar(m_ResizeAlgorithm.ToString(CultureInfo.InvariantCulture)));
+            map.Add("m_TextureFormat", YText.Scalar(m_TextureFormat.ToString(CultureInfo.InvariantCulture)));
+            map.Add("m_TextureCompression", YText.Scalar(m_TextureCompression.ToString(CultureInfo.InvariantCulture)));
+            map.Add("m_CompressionQuality", YText.Scalar(m_CompressionQuality.ToString(CultureInfo.InvariantCulture)));
+            map.Add("m_CrunchedCompression", YText.Scalar(m_CrunchedCompression != 0 ? "1" : "0"));
+            map.Add("m_AllowsAlphaSplitting", YText.Scalar(m_AllowsAlphaSplitting != 0 ? "1" : "0"));
+            map.Add("m_Overridden", YText.Scalar(m_Overridden != 0 ? "1" : "0"));
+            map.Add("m_IgnorePlatformSupport", YText.Scalar(m_IgnorePlatformSupport != 0 ? "1" : "0"));
+            map.Add("m_AndroidETC2FallbackOverride", YText.Scalar(m_AndroidETC2FallbackOverride.ToString(CultureInfo.InvariantCulture)));
+            map.Add("m_ForceMaximumCompressionQuality_BC6H_BC7", YText.Scalar(m_ForceMaximumCompressionQuality_BC6H_BC7 != 0 ? "1" : "0"));
+            return map;
+        }
+
+        internal static YText ToYTextList(List<TextureImporterPlatformSettings> entries)
+        {
+            var seq = YText.Seq();
+            if (entries == null || entries.Count == 0)
+            {
+                seq.Flow = true;
+                return seq;
+            }
+            for (int i = 0; i < entries.Count; i++)
+                seq.Items.Add(entries[i].ToYText());
+            return seq;
         }
     }
 }

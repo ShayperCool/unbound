@@ -1285,6 +1285,23 @@ namespace Unbound.Runtime
                     editorData.Keys.Insert(insertTextureAt, "textureSettings");
                     editorData.Values.Insert(insertTextureAt, atlas.TextureSettings.ToYText());
                 }
+                if (atlas.PlatformSettingsModified)
+                {
+                    var platformText = TextureImporterPlatformSettings.ToYTextList(atlas.PlatformSettings);
+                    int platformIndex = editorData.Keys.IndexOf("platformSettings");
+                    if (platformIndex >= 0)
+                    {
+                        editorData.Values[platformIndex] = platformText;
+                    }
+                    else
+                    {
+                        int afterTexture = editorData.Keys.IndexOf("textureSettings");
+                        int afterVersion = editorData.Keys.IndexOf("serializedVersion");
+                        int insertPlatformAt = afterTexture >= 0 ? afterTexture + 1 : afterVersion >= 0 ? afterVersion + 1 : 0;
+                        editorData.Keys.Insert(insertPlatformAt, "platformSettings");
+                        editorData.Values.Insert(insertPlatformAt, platformText);
+                    }
+                }
                 int packingIndex = editorData.Keys.IndexOf("packingSettings");
                 if (packingIndex >= 0)
                 {

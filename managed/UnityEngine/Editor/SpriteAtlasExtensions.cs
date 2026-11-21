@@ -205,6 +205,13 @@ namespace UnityEditor.U2D
             return spriteAtlas.ReadPlatformSettings(TextureImporter.GetTexturePlatformSerializationName(buildTarget));
         }
 
+        public static void SetPlatformSettings(this SpriteAtlas spriteAtlas, TextureImporterPlatformSettings src)
+        {
+            src.name = TextureImporter.GetTexturePlatformSerializationName(src.name);
+            if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
+            spriteAtlas.WritePlatformSettings(src);
+        }
+
         public static SpriteAtlas GetMasterAtlas(this SpriteAtlas spriteAtlas)
         {
             if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));

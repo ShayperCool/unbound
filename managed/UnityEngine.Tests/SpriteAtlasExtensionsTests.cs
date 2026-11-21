@@ -907,6 +907,248 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SetPlatformSettingsNormalizesCopiesAndFollowsInsertReplaceRules()
+        {
+            var fresh = new SpriteAtlas();
+            int baseDirty = EditorUtility.GetDirtyCount(fresh);
+
+            // Null src throws NullReferenceException without changing dirty count.
+            Assert.Throws<NullReferenceException>(() => fresh.SetPlatformSettings(null));
+            Assert.Equal(baseDirty, EditorUtility.GetDirtyCount(fresh));
+
+            // Absent non-Default platform with overridden=false is not appended, but still marks dirty.
+            var webOff = new TextureImporterPlatformSettings { name = "WebGL", overridden = false, maxTextureSize = 256 };
+            fresh.SetPlatformSettings(webOff);
+            Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(fresh));
+            Assert.Equal(2048, fresh.GetPlatformSettings("WebGL").maxTextureSize);
+
+            // Absent DefaultTexturePlatform with overridden=false IS appended and defensively copied.
+            var defOff = new TextureImporterPlatformSettings { name = "DefaultTexturePlatform", overridden = false, maxTextureSize = 512, compressionQuality = 77 };
+            fresh.SetPlatformSettings(defOff);
+            defOff.maxTextureSize = 64;
+            Assert.Equal(baseDirty + 2, EditorUtility.GetDirtyCount(fresh));
+            var readDef = fresh.GetPlatformSettings("DefaultTexturePlatform");
+            Assert.Equal(512, readDef.maxTextureSize);
+            Assert.Equal(77, readDef.compressionQuality);
+            Assert.False(readDef.overridden);
+
+            // Alias normalization mutates src.name in place and stores a defensive copy.
+            var ios = new TextureImporterPlatformSettings { name = "iPhone", overridden = true, maxTextureSize = 256, format = TextureImporterFormat.ASTC_6x6 };
+            fresh.SetPlatformSettings(ios);
+            Assert.Equal("iOS", ios.name);
+            ios.maxTextureSize = 32;
+            ios.name = "Mutated";
+            Assert.Equal(baseDirty + 3, EditorUtility.GetDirtyCount(fresh));
+            var readIos = fresh.GetPlatformSettings("iPhone");
+            Assert.Equal("iOS", readIos.name);
+            Assert.Equal(256, readIos.maxTextureSize);
+            Assert.True(readIos.overridden);
+
+            // Replacing an existing entry with overridden=false keeps the entry updated in place.
+            var iosOff = fresh.GetPlatformSettings("iOS");
+            iosOff.overridden = false;
+            iosOff.maxTextureSize = 128;
+            fresh.SetPlatformSettings(iosOff);
+            Assert.Equal(baseDirty + 4, EditorUtility.GetDirtyCount(fresh));
+            var readIosOff = fresh.GetPlatformSettings("iOS");
+            Assert.False(readIosOff.overridden);
+            Assert.Equal(128, readIosOff.maxTextureSize);
+
+            // Loaded V1 atlas: same-value SetPlatformSettings still marks dirty, and Standalone aliases share one entry.
+            var loaded = Read(
+                "    platformSettings:\n" +
+                "    - serializedVersion: 4\n" +
+                "      m_BuildTarget: Android\n" +
+                "      m_MaxTextureSize: 1024\n" +
+                "      m_Overridden: 1\n" +
+                "    packables: []\n");
+            Assert.False(EditorUtility.IsDirty(loaded));
+            loaded.SetPlatformSettings(loaded.GetPlatformSettings("Android"));
+            Assert.True(EditorUtility.IsDirty(loaded));
+            Assert.Equal(1, EditorUtility.GetDirtyCount(loaded));
+
+            var win = new TextureImporterPlatformSettings { name = "StandaloneWindows64", overridden = true, maxTextureSize = 4096 };
+            loaded.SetPlatformSettings(win);
+            Assert.Equal("Standalone", win.name);
+            Assert.Equal(4096, loaded.GetPlatformSettings("StandaloneLinux64").maxTextureSize);
+        }
+
+        [Fact]
+        public void NativeDocumentsWriteUpdatesV1PlatformSettingsPreservesOrderUpgradesLegacyAndInsertsWhenOmitted()
+        {
+            const string v1Source =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Sample\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 2\n" +
+                "      compressionQuality: 75\n" +
+                "      maxTextureSize: 1024\n" +
+                "      textureCompression: 2\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 1\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings:\n" +
+                "    - serializedVersion: 4\n" +
+                "      m_BuildTarget: Android\n" +
+                "      m_MaxTextureSize: 1024\n" +
+                "      m_ResizeAlgorithm: 0\n" +
+                "      m_TextureFormat: 47\n" +
+                "      m_TextureCompression: 1\n" +
+                "      m_CompressionQuality: 50\n" +
+                "      m_CrunchedCompression: 0\n" +
+                "      m_AllowsAlphaSplitting: 0\n" +
+                "      m_Overridden: 1\n" +
+                "      m_IgnorePlatformSupport: 0\n" +
+                "      m_AndroidETC2FallbackOverride: 0\n" +
+                "      m_ForceMaximumCompressionQuality_BC6H_BC7: 0\n" +
+                "    - serializedVersion: 4\n" +
+                "      m_BuildTarget: iOS\n" +
+                "      m_MaxTextureSize: 512\n" +
+                "      m_ResizeAlgorithm: 0\n" +
+                "      m_TextureFormat: 50\n" +
+                "      m_TextureCompression: 1\n" +
+                "      m_CompressionQuality: 80\n" +
+                "      m_CrunchedCompression: 0\n" +
+                "      m_AllowsAlphaSplitting: 0\n" +
+                "      m_Overridden: 1\n" +
+                "      m_IgnorePlatformSupport: 0\n" +
+                "      m_AndroidETC2FallbackOverride: 0\n" +
+                "      m_ForceMaximumCompressionQuality_BC6H_BC7: 0\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 8\n" +
+                "      blockOffset: 2\n" +
+                "      allowAlphaSplitting: 1\n" +
+                "      enableRotation: 0\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 1\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n" +
+                "  m_IsVariant: 0\n";
+
+            var docs = UnityYamlText.Parse(v1Source);
+            var atlas = Read(
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 2\n" +
+                "      compressionQuality: 75\n" +
+                "      maxTextureSize: 1024\n" +
+                "      textureCompression: 2\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 1\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings:\n" +
+                "    - serializedVersion: 4\n" +
+                "      m_BuildTarget: Android\n" +
+                "      m_MaxTextureSize: 1024\n" +
+                "      m_ResizeAlgorithm: 0\n" +
+                "      m_TextureFormat: 47\n" +
+                "      m_TextureCompression: 1\n" +
+                "      m_CompressionQuality: 50\n" +
+                "      m_CrunchedCompression: 0\n" +
+                "      m_AllowsAlphaSplitting: 0\n" +
+                "      m_Overridden: 1\n" +
+                "      m_IgnorePlatformSupport: 0\n" +
+                "      m_AndroidETC2FallbackOverride: 0\n" +
+                "      m_ForceMaximumCompressionQuality_BC6H_BC7: 0\n" +
+                "    - serializedVersion: 4\n" +
+                "      m_BuildTarget: iOS\n" +
+                "      m_MaxTextureSize: 512\n" +
+                "      m_ResizeAlgorithm: 0\n" +
+                "      m_TextureFormat: 50\n" +
+                "      m_TextureCompression: 1\n" +
+                "      m_CompressionQuality: 80\n" +
+                "      m_CrunchedCompression: 0\n" +
+                "      m_AllowsAlphaSplitting: 0\n" +
+                "      m_Overridden: 1\n" +
+                "      m_IgnorePlatformSupport: 0\n" +
+                "      m_AndroidETC2FallbackOverride: 0\n" +
+                "      m_ForceMaximumCompressionQuality_BC6H_BC7: 0\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 8\n" +
+                "      blockOffset: 2\n" +
+                "      allowAlphaSplitting: 1\n" +
+                "      enableRotation: 0\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 1\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n");
+
+            // Replace iOS via iPhone alias (keeps index 1) and append Standalone via Win64 alias (index 2).
+            var origIos = atlas.GetPlatformSettings("iOS");
+            atlas.SetPlatformSettings(new TextureImporterPlatformSettings { name = "iPhone", overridden = true, maxTextureSize = 256, format = TextureImporterFormat.ASTC_6x6, compressionQuality = 33 });
+            atlas.SetPlatformSettings(new TextureImporterPlatformSettings { name = "Win64", overridden = true, maxTextureSize = 4096 });
+            int unlocated = 0;
+            Assert.True(NativeDocuments.Write(docs[0], atlas, null, null, ref unlocated));
+            string written = UnityYamlText.Write(docs);
+            int idxAndroid = written.IndexOf("m_BuildTarget: Android", StringComparison.Ordinal);
+            int idxIos = written.IndexOf("m_BuildTarget: iOS", StringComparison.Ordinal);
+            int idxStandalone = written.IndexOf("m_BuildTarget: Standalone", StringComparison.Ordinal);
+            Assert.True(idxAndroid > 0 && idxAndroid < idxIos && idxIos < idxStandalone);
+            Assert.Contains("      m_BuildTarget: iOS\n      m_MaxTextureSize: 256\n", written);
+            Assert.Contains("      anisoLevel: 2\n      compressionQuality: 75\n", written);
+            Assert.Contains("      padding: 8\n      blockOffset: 2\n      allowAlphaSplitting: 1\n", written);
+
+            // Restore iOS on a fresh parse of v1Source and confirm exact byte roundtrip.
+            var roundtripDocs = UnityYamlText.Parse(v1Source);
+            var roundtripAtlas = new SpriteAtlas();
+            roundtripAtlas.ReadSerialized(TestYaml.DocumentBody(v1Source), null);
+            roundtripAtlas.SetPlatformSettings(origIos);
+            Assert.True(NativeDocuments.Write(roundtripDocs[0], roundtripAtlas, null, null, ref unlocated));
+            Assert.Equal(v1Source, UnityYamlText.Write(roundtripDocs));
+
+            // Control outside the probe: sparse V1 atlas with omitted platformSettings inserts it between textureSettings and packingSettings.
+            const string v1Omitted =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Omitted\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 1\n" +
+                "      compressionQuality: 50\n" +
+                "      maxTextureSize: 2048\n" +
+                "      textureCompression: 0\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 0\n" +
+                "      sRGB: 1\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 4\n" +
+                "      blockOffset: 1\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n" +
+                "  m_IsVariant: 0\n";
+            var omittedDocs = UnityYamlText.Parse(v1Omitted);
+            var omittedAtlas = Read("    packables: []\n    bindAsDefault: 1\n");
+            omittedAtlas.SetPlatformSettings(new TextureImporterPlatformSettings { name = "tvOS", overridden = true, maxTextureSize = 512 });
+            Assert.True(NativeDocuments.Write(omittedDocs[0], omittedAtlas, null, null, ref unlocated));
+            string omittedWritten = UnityYamlText.Write(omittedDocs);
+            Assert.Contains("      sRGB: 1\n    platformSettings:\n    - serializedVersion: 4\n      m_BuildTarget: tvOS\n      m_MaxTextureSize: 512\n", omittedWritten);
+            Assert.True(omittedWritten.IndexOf("platformSettings:", StringComparison.Ordinal) < omittedWritten.IndexOf("packingSettings:", StringComparison.Ordinal));
+        }
+
+        [Fact]
         public void ANullAtlasThrows()
         {
             SpriteAtlas none = null;
@@ -917,6 +1159,10 @@ namespace UnityEngine.Tests
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetTextureSettings(default)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPlatformSettings("Android")).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPlatformSettings(null)).ParamName);
+            var src = new TextureImporterPlatformSettings { name = "iPhone", overridden = true };
+            Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetPlatformSettings(src)).ParamName);
+            Assert.Equal("iOS", src.name);
+            Assert.Throws<NullReferenceException>(() => none.SetPlatformSettings(null));
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetIncludeInBuild(true)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetIncludeInBuild(false)).ParamName);
             Assert.Throws<ArgumentNullException>(() => none.GetMasterAtlas());
