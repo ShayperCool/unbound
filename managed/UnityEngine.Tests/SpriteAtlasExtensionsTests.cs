@@ -1592,6 +1592,123 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SetIsVariantTogglesDirtyOnlyOnChangeClearsMasterAndResetsTagWhenCleared()
+        {
+            var fresh = new SpriteAtlas { name = "FreshAtlas" };
+            int baseDirty = EditorUtility.GetDirtyCount(fresh);
+            Assert.False(fresh.isVariant);
+            Assert.Equal("FreshAtlas", fresh.tag);
+
+            // Same-value call does not mark dirty.
+            fresh.SetIsVariant(false);
+            Assert.False(fresh.isVariant);
+            Assert.False(fresh.IsVariantModified);
+            Assert.Equal(baseDirty, EditorUtility.GetDirtyCount(fresh));
+
+            // Toggling false -> true marks dirty once and leaves tag/scale/settings intact.
+            fresh.SetIsVariant(true);
+            Assert.True(fresh.isVariant);
+            Assert.True(fresh.IsVariantModified);
+            Assert.Equal("FreshAtlas", fresh.tag);
+            Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(fresh));
+
+            // Repeating true does not mark dirty again.
+            fresh.SetIsVariant(true);
+            Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(fresh));
+
+            // Toggling true -> false marks dirty once and keeps tag equal to name.
+            fresh.SetIsVariant(false);
+            Assert.False(fresh.isVariant);
+            Assert.Equal("FreshAtlas", fresh.tag);
+            Assert.Equal(baseDirty + 2, EditorUtility.GetDirtyCount(fresh));
+
+            // Loaded V1 variant with master atlas, master tag, variantMultiplier 0.5, and packables.
+            const string v1Variant =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Variant\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    variantMultiplier: 0.5\n" +
+                "    packables:\n" +
+                "    - {fileID: 102900000, guid: 04a8492878d2cbe6483255cf45cabd95, type: 3}\n" +
+                "    bindAsDefault: 0\n" +
+                "    isAtlasV2: 0\n" +
+                "  m_MasterAtlas: {fileID: 4343727234628468602, guid: 9a1b2c3d4e5f60718293a4b5c6d7dd02, type: 2}\n" +
+                "  m_Tag: Master\n" +
+                "  m_IsVariant: 1\n";
+
+            var masterAtlas = new SpriteAtlas { name = "Master" };
+            var resolver = new StubResolver(masterAtlas);
+            var variantDocs = UnityYamlText.Parse(v1Variant);
+            var variant = new SpriteAtlas { name = "Variant" };
+            variant.ReadSerialized(TestYaml.DocumentBody(v1Variant), resolver);
+            Assert.True(variant.isVariant);
+            Assert.Same(masterAtlas, variant.GetMasterAtlas());
+            Assert.Equal("Master", variant.tag);
+            Assert.False(EditorUtility.IsDirty(variant));
+
+            // Same-value true is a no-op.
+            variant.SetIsVariant(true);
+            Assert.False(EditorUtility.IsDirty(variant));
+            Assert.Same(masterAtlas, variant.GetMasterAtlas());
+
+            // Switching variant -> master clears master, resets tag to name, preserves variantMultiplier and packables.
+            variant.SetIsVariant(false);
+            Assert.False(variant.isVariant);
+            Assert.Null(variant.GetMasterAtlas());
+            Assert.Equal("Variant", variant.tag);
+            Assert.Equal(0.5f, variant.VariantScale);
+            Assert.Single(variant.Packables);
+            Assert.True(EditorUtility.IsDirty(variant));
+            Assert.Equal(1, EditorUtility.GetDirtyCount(variant));
+
+            int unlocated = 0;
+            Assert.True(NativeDocuments.Write(variantDocs[0], variant, null, null, ref unlocated));
+            string written = UnityYamlText.Write(variantDocs);
+            Assert.Contains("    variantMultiplier: 0.5\n", written);
+            Assert.Contains("  m_MasterAtlas: {fileID: 0}\n  m_Tag: Variant\n  m_IsVariant: 0\n", written);
+
+            // Switching back to variant writes m_IsVariant: 1 without restoring master or old tag.
+            variant.SetIsVariant(true);
+            Assert.True(variant.isVariant);
+            Assert.Null(variant.GetMasterAtlas());
+            Assert.Equal("Variant", variant.tag);
+            Assert.True(NativeDocuments.Write(variantDocs[0], variant, null, null, ref unlocated));
+            Assert.Contains("  m_MasterAtlas: {fileID: 0}\n  m_Tag: Variant\n  m_IsVariant: 1\n", UnityYamlText.Write(variantDocs));
+
+            // Omitted m_IsVariant defaults to false and appends `m_IsVariant: 1` after m_Tag when toggled true.
+            const string v1Omitted =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Omitted\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n" +
+                "  m_MasterAtlas: {fileID: 0}\n" +
+                "  m_Tag: Omitted\n";
+            var omittedDocs = UnityYamlText.Parse(v1Omitted);
+            var omitted = new SpriteAtlas { name = "Omitted" };
+            omitted.ReadSerialized(TestYaml.DocumentBody(v1Omitted), null);
+            Assert.False(omitted.isVariant);
+            omitted.SetIsVariant(true);
+            Assert.True(NativeDocuments.Write(omittedDocs[0], omitted, null, null, ref unlocated));
+            Assert.Equal(v1Omitted + "  m_IsVariant: 1\n", UnityYamlText.Write(omittedDocs));
+        }
+
+        sealed class StubResolver : IReferenceResolver
+        {
+            readonly Object m_Target;
+            public StubResolver(Object target) => m_Target = target;
+            public Object Resolve(ObjectRef reference, Type expectedType) => reference.IsNull ? null : m_Target;
+        }
+
+        [Fact]
         public void ANullAtlasThrows()
         {
             SpriteAtlas none = null;
@@ -1600,6 +1717,8 @@ namespace UnityEngine.Tests
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.Add(null)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.Remove(Array.Empty<Object>())).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.Remove(null)).ParamName);
+            Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetIsVariant(true)).ParamName);
+            Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetIsVariant(false)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetVariantScale(0.5f)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetVariantScale(-1f)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPackingSettings()).ParamName);

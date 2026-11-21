@@ -46981,7 +46981,6 @@ namespace UnityEditor.U2D
     unsafe static partial class SpriteAtlasExtensions
     {
         [global::Unbound.Stub] internal static void RemoveAt(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.RemoveAt"); }
-        [global::Unbound.Stub] public static void SetIsVariant(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.SetIsVariant"); }
         [global::Unbound.Stub] public static void SetMasterAtlas(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, global::UnityEngine.U2D.SpriteAtlas value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.SetMasterAtlas"); }
         [global::Unbound.Stub] internal static void CopyMasterAtlasSettings(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.CopyMasterAtlasSettings"); }
         [global::Unbound.Stub] internal static string GetHash(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.GetHash"); return default; }

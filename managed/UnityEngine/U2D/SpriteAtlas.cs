@@ -50,6 +50,7 @@ namespace UnityEngine.U2D
         readonly List<PackableEntry> m_Packables = new List<PackableEntry>();
         bool m_PackablesModified;
         bool m_IsVariant;
+        bool m_IsVariantModified;
         float m_VariantScale = 1f;
         bool m_VariantScaleModified;
         // Editor settings ("Include in Build", packingSettings, textureSettings, platformSettings):
@@ -66,7 +67,9 @@ namespace UnityEngine.U2D
         bool m_ImporterSettingsRead = true;
         ObjectRef m_MasterRef;
         SpriteAtlas m_Master;
+        bool m_MasterAtlasModified;
         string m_Tag;
+        bool m_TagModified;
         List<Sprite> m_Sprites;
 
         public SpriteAtlas()
@@ -278,6 +281,42 @@ namespace UnityEngine.U2D
             }
         }
 
+        /// <summary>The master atlas reference as stored.</summary>
+        internal ObjectRef MasterAtlasRef => m_MasterRef;
+
+        /// <summary>Whether m_MasterAtlas has been updated in memory.</summary>
+        internal bool MasterAtlasModified => m_MasterAtlasModified;
+
+        /// <summary>The serialized tag string.</summary>
+        internal string RawTag => m_Tag;
+
+        /// <summary>Whether m_Tag has been updated in memory.</summary>
+        internal bool TagModified => m_TagModified;
+
+        /// <summary>Whether SetIsVariant has updated m_IsVariant in memory.</summary>
+        internal bool IsVariantModified => m_IsVariantModified;
+
+        /// <summary>Sets whether this atlas is a variant; no-op when unchanged (does not dirty).
+        /// Clearing variant mode clears the master atlas reference and resets the tag to this
+        /// atlas's name while preserving packables, variant scale and all settings (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v1isvariant/v2isvariant).</summary>
+        internal void WriteIsVariant(bool value)
+        {
+            if (m_IsVariant == value) return;
+            m_IsVariant = value;
+            m_IsVariantModified = true;
+            if (!value)
+            {
+                m_Master = null;
+                m_MasterRef = default;
+                m_MasterAtlasModified = true;
+                m_Tag = name;
+                m_TagModified = true;
+            }
+            m_Sprites = null;
+            EditorUtility.SetDirty(this);
+        }
+
         /// <summary>The variant scale multiplier (default 1 when omitted or on a new atlas).</summary>
         internal float VariantScale
         {
@@ -460,10 +499,15 @@ namespace UnityEngine.U2D
                 m_ImporterSettingsRead = true;
             }
             m_IsVariant = body.Bool("m_IsVariant");
+            m_IsVariantModified = false;
             m_Tag = body.Str("m_Tag", null);
+            m_TagModified = false;
             var master = body.Ref("m_MasterAtlas");
             m_MasterRef = master;
             m_Master = master.FileId != 0 ? resolver.Resolve(master, typeof(SpriteAtlas)) as SpriteAtlas : null;
+            m_MasterAtlasModified = false;
+            if (string.IsNullOrEmpty(m_Tag) && m_IsVariant && m_Master != null)
+                m_Tag = m_Master.tag;
             m_Sprites = null;
             EditorUtility.ClearDirty(this);
         }

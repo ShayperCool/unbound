@@ -1369,6 +1369,54 @@ namespace Unbound.Runtime
                     editorData.Keys.Insert(insertAt, "bindAsDefault");
                     editorData.Values.Insert(insertAt, value);
                 }
+                if (atlas.MasterAtlasModified)
+                {
+                    var masterValue = SceneFiles.FlowValue(UnityYamlWriter.Writer.ReferenceText(atlas.MasterAtlasRef));
+                    int masterIndex = doc.Body.Keys.IndexOf("m_MasterAtlas");
+                    if (masterIndex >= 0)
+                    {
+                        doc.Body.Values[masterIndex] = masterValue;
+                    }
+                    else
+                    {
+                        int afterEditorData = doc.Body.Keys.IndexOf("m_EditorData");
+                        int insertMasterAt = afterEditorData >= 0 ? afterEditorData + 1 : doc.Body.Keys.Count;
+                        doc.Body.Keys.Insert(insertMasterAt, "m_MasterAtlas");
+                        doc.Body.Values.Insert(insertMasterAt, masterValue);
+                    }
+                }
+                if (atlas.TagModified)
+                {
+                    var tagValue = YText.Scalar(UnityYamlWriter.Scalar(atlas.RawTag ?? ""));
+                    int tagIndex = doc.Body.Keys.IndexOf("m_Tag");
+                    if (tagIndex >= 0)
+                    {
+                        doc.Body.Values[tagIndex] = tagValue;
+                    }
+                    else
+                    {
+                        int beforeIsVariant = doc.Body.Keys.IndexOf("m_IsVariant");
+                        int insertTagAt = beforeIsVariant >= 0 ? beforeIsVariant : doc.Body.Keys.Count;
+                        doc.Body.Keys.Insert(insertTagAt, "m_Tag");
+                        doc.Body.Values.Insert(insertTagAt, tagValue);
+                    }
+                }
+                if (atlas.IsVariantModified)
+                {
+                    var variantValue = YText.Scalar(atlas.isVariant ? "1" : "0");
+                    int variantIndex = doc.Body.Keys.IndexOf("m_IsVariant");
+                    if (variantIndex >= 0)
+                    {
+                        doc.Body.Values[variantIndex] = variantValue;
+                    }
+                    else
+                    {
+                        int afterTag = doc.Body.Keys.IndexOf("m_Tag");
+                        int insertVariantAt = afterTag >= 0 ? afterTag + 1 : doc.Body.Keys.Count;
+                        doc.Body.Keys.Insert(insertVariantAt, "m_IsVariant");
+                        doc.Body.Values.Insert(insertVariantAt, variantValue);
+                    }
+                }
                 return true;
             }
             return false;
