@@ -288,9 +288,19 @@ namespace UnityEngine
         /// <summary>Adds a key with tangents smoothed against its neighbours; -1 if a key exists at <paramref name="time"/>.</summary>
         public int AddKey(float time, float value)
         {
-            int index = InsertKey(new Keyframe(time, value));
-            if (index >= 0)
-                RecalculateSmoothTangents(index, 0.0f);
+            var key = new Keyframe(time, value)
+            {
+                inWeight = kDefaultWeight,
+                outWeight = kDefaultWeight,
+            };
+            int index = InsertKey(key);
+            if (index < 0)
+                return -1;
+            if (index > 0)
+                RecalculateSmoothTangents(index - 1, 0.0f);
+            RecalculateSmoothTangents(index, 0.0f);
+            if (index + 1 < m_Keys.Count)
+                RecalculateSmoothTangents(index + 1, 0.0f);
             return index;
         }
 
@@ -334,6 +344,8 @@ namespace UnityEngine
             RecalculateSmoothTangents(index, weight);
         }
 
+        private const float kMinSlopeDeltaTime = 1e-5f;
+
         private void RecalculateSmoothTangents(int index, float bias)
         {
             int count = m_Keys.Count;
@@ -345,11 +357,13 @@ namespace UnityEngine
             {
                 Keyframe next = m_Keys[1];
                 slope = SafeSlope(next.value - key.value, next.time - key.time);
+                key.outWeight = kDefaultWeight;
             }
             else if (index == count - 1)
             {
                 Keyframe prev = m_Keys[index - 1];
                 slope = SafeSlope(key.value - prev.value, key.time - prev.time);
+                key.inWeight = kDefaultWeight;
             }
             else
             {
@@ -358,13 +372,15 @@ namespace UnityEngine
                 float m1 = SafeSlope(key.value - prev.value, key.time - prev.time);
                 float m2 = SafeSlope(next.value - key.value, next.time - key.time);
                 slope = (1.0f + bias) * 0.5f * m1 + (1.0f - bias) * 0.5f * m2;
+                key.inWeight = kDefaultWeight;
+                key.outWeight = kDefaultWeight;
             }
             key.inTangent = slope;
             key.outTangent = slope;
             m_Keys[index] = key;
         }
 
-        private static float SafeSlope(float dy, float dx) => Math.Abs(dx) > 1e-12f ? dy / dx : 0.0f;
+        private static float SafeSlope(float dy, float dx) => MathF.Abs(dx) > kMinSlopeDeltaTime ? dy / dx : 0.0f;
 
         // ---- Evaluation ----------------------------------------------------------------------
 

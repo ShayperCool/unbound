@@ -219,8 +219,62 @@ namespace Unbound.Tests
             c.SmoothTangents(1, 0f);
             Near.Equal(0.75f, c[1].inTangent);
             Near.Equal(0.75f, c[1].outTangent);
+            Near.Equal(1f / 3f, c[1].inWeight);
+            Near.Equal(1f / 3f, c[1].outWeight);
             c.SmoothTangents(1, 1f);
             Near.Equal(1f, c[1].outTangent);
+            c.SmoothTangents(0, 0f);
+            Near.Equal(1f, c[0].inTangent);
+            Near.Equal(1f, c[0].outTangent);
+            Assert.Equal(0f, c[0].inWeight);
+            Near.Equal(1f / 3f, c[0].outWeight);
+            c.SmoothTangents(2, 0f);
+            Near.Equal(0.5f, c[2].inTangent);
+            Near.Equal(0.5f, c[2].outTangent);
+            Near.Equal(1f / 3f, c[2].inWeight);
+            Assert.Equal(0f, c[2].outWeight);
+        }
+
+        [Fact]
+        public void AddKeyTimeValueSmoothsInsertedKeyAndNeighboursWithDefaultWeights()
+        {
+            // Divergent initial tangents and zero weights on endpoints verify AddKey(float, float)
+            // recomputes both neighbours' tangents and adjacent weights, matching Unity 6000.0.71f1
+            // (tests/projects/curvebinding direct.main.external_inplace).
+            var c = new AnimationCurve(
+                new Keyframe(0f, -1f, 0f, 2f),
+                new Keyframe(2f, 4f, -1f, 0f));
+            Assert.Equal(1, c.AddKey(1f, 1.5f));
+            Assert.Equal(3, c.length);
+            Near.Equal(2.5f, c[0].inTangent);
+            Near.Equal(2.5f, c[0].outTangent);
+            Assert.Equal(0f, c[0].inWeight);
+            Near.Equal(1f / 3f, c[0].outWeight);
+            Near.Equal(2.5f, c[1].inTangent);
+            Near.Equal(2.5f, c[1].outTangent);
+            Near.Equal(1f / 3f, c[1].inWeight);
+            Near.Equal(1f / 3f, c[1].outWeight);
+            Near.Equal(2.5f, c[2].inTangent);
+            Near.Equal(2.5f, c[2].outTangent);
+            Near.Equal(1f / 3f, c[2].inWeight);
+            Assert.Equal(0f, c[2].outWeight);
+
+            // Asymmetric slopes: interior key averages left/right slopes, neighbours point to it.
+            var asym = new AnimationCurve(new Keyframe(0f, 0f, 5f, 5f), new Keyframe(3f, 3f, -4f, -4f));
+            Assert.Equal(1, asym.AddKey(1f, 3f));
+            Near.Equal(3f, asym[0].outTangent);
+            Near.Equal(1.5f, asym[1].inTangent);
+            Near.Equal(1.5f, asym[1].outTangent);
+            Near.Equal(0f, asym[2].inTangent);
+
+            // AddKey(Keyframe) inserts verbatim without smoothing neighbours.
+            var raw = new AnimationCurve(new Keyframe(0f, -1f, 0f, 2f), new Keyframe(2f, 4f, -1f, 0f));
+            Assert.Equal(1, raw.AddKey(new Keyframe(1f, 1.5f, 7f, 8f)));
+            Assert.Equal(2f, raw[0].outTangent);
+            Assert.Equal(0f, raw[0].outWeight);
+            Assert.Equal(7f, raw[1].inTangent);
+            Assert.Equal(8f, raw[1].outTangent);
+            Assert.Equal(-1f, raw[2].inTangent);
         }
 
         [Fact]

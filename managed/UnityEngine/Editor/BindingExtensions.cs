@@ -7,8 +7,8 @@ using UnityEngine.UIElements;
 
 // Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
 // BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, Color/Color32,
-// Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Rect, RectInt, Bounds, and BoundsInt fields
-// plus Foldout isExpanded binding), BindingExtensions.TrackPropertyValue,
+// Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Rect, RectInt, Bounds, BoundsInt, and
+// AnimationCurve fields plus Foldout isExpanded binding), BindingExtensions.TrackPropertyValue,
 // BindingExtensions.TrackSerializedObjectValue, BindingExtensions.Unbind,
 // SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the SerializedObject binding
 // context/updater pipeline that synchronizes fields and polls changes during panel updates.
@@ -20,8 +20,8 @@ using UnityEngine.UIElements;
 // tests/projects/enumflagsbinding, tests/projects/colorbinding, tests/projects/vector2binding,
 // tests/projects/vector3binding, tests/projects/vector4binding, tests/projects/vector2intbinding,
 // tests/projects/vector3intbinding, tests/projects/rectbinding, tests/projects/rectintbinding,
-// tests/projects/boundsbinding, tests/projects/boundsintbinding, tests/projects/trackpropertyvalue
-// and tests/projects/trackserializedobjectvalue.
+// tests/projects/boundsbinding, tests/projects/boundsintbinding, tests/projects/curvebinding,
+// tests/projects/trackpropertyvalue and tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
 {
@@ -1194,6 +1194,9 @@ namespace UnityEditor.UIElements.Bindings
                 case SerializedPropertyType.BoundsInt:
                     DefaultBind(element, prop, SerializedPropertyHelper.GetBoundsIntPropertyValue, SerializedPropertyHelper.SetBoundsIntPropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
+                case SerializedPropertyType.AnimationCurve:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetAnimationCurvePropertyValue, SerializedPropertyHelper.SetAnimationCurvePropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
                 case SerializedPropertyType.Generic:
                     if (prop.type == "ToggleButtonGroupState")
                         Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty (ToggleButtonGroupState)");
@@ -2112,6 +2115,7 @@ namespace UnityEditor.UIElements.Bindings
         public static RectInt GetRectIntPropertyValue(SerializedProperty p) => p.rectIntValue;
         public static Bounds GetBoundsPropertyValue(SerializedProperty p) => p.boundsValue;
         public static BoundsInt GetBoundsIntPropertyValue(SerializedProperty p) => p.boundsIntValue;
+        public static AnimationCurve GetAnimationCurvePropertyValue(SerializedProperty p) => p.animationCurveValue;
         public static float GetIntPropertyValueAsFloat(SerializedProperty p) => p.intValue;
         public static float GetLongPropertyValueAsFloat(SerializedProperty p) => p.longValue;
         public static double GetFloatPropertyValueAsDouble(SerializedProperty p) => p.floatValue;
@@ -2221,6 +2225,7 @@ namespace UnityEditor.UIElements.Bindings
         public static void SetRectIntPropertyValue(SerializedProperty p, RectInt v) => p.rectIntValue = v;
         public static void SetBoundsPropertyValue(SerializedProperty p, Bounds v) => p.boundsValue = v;
         public static void SetBoundsIntPropertyValue(SerializedProperty p, BoundsInt v) => p.boundsIntValue = v;
+        public static void SetAnimationCurvePropertyValue(SerializedProperty p, AnimationCurve v) => p.animationCurveValue = v;
         public static void SetFloatPropertyValueFromDouble(SerializedProperty p, double v) => p.floatValue = (float)v;
         public static void SetDoublePropertyValueFromFloat(SerializedProperty p, float v) => p.doubleValue = v;
 
@@ -2244,6 +2249,9 @@ namespace UnityEditor.UIElements.Bindings
                 ? p.enumValueIndex >= 0 && p.enumValueIndex < p.enumDisplayNames.Length
                   && string.Equals(p.enumDisplayNames[p.enumValueIndex], value, StringComparison.OrdinalIgnoreCase)
                 : string.Equals(value, propertyReadFunc(p), StringComparison.Ordinal);
+
+        public static bool ValueEquals(AnimationCurve value, SerializedProperty p, Func<SerializedProperty, AnimationCurve> propertyReadFunc) =>
+            p.ValueEquals(value);
 
         public static bool SlowEnumValueEquals(string value, SerializedProperty p, Func<SerializedProperty, string> propertyReadFunc) =>
             EqualityComparer<string>.Default.Equals(value, propertyReadFunc(p));

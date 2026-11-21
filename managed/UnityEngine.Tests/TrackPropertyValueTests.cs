@@ -82,6 +82,8 @@ namespace UnityEngine.Tests
             public Bounds boundsVal = new Bounds(Vector3.one, Vector3.one * 2f);
             public BoundsInt boundsIntVal = new BoundsInt(Vector3Int.one, Vector3Int.one * 2);
             public AnimationCurve curveVal = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+            public Gradient gradientVal = new Gradient();
+            public LayerMask layerMaskVal = 1;
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
             public SparseChoice sparseEnum = SparseChoice.TwentyFive;
@@ -587,12 +589,12 @@ namespace UnityEngine.Tests
                 Assert.False(wrongField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.Contains(warnings, w => w.Contains("not compatible") && w.Contains("\"flag\""));
 
-                // Unsupported property type (AnimationCurve) reports explicit Stubs.NotImplemented hit and stays unbound.
-                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (AnimationCurve)";
+                // Unsupported property type (LayerMask) reports explicit Stubs.NotImplemented hit and stays unbound.
+                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (LayerMask)";
                 int beforeVecHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
                 var vecField = new IntegerField();
                 panel.visualTree.Add(vecField);
-                vecField.BindProperty(so.FindProperty("curveVal"));
+                vecField.BindProperty(so.FindProperty("layerMaskVal"));
                 Assert.False(vecField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value > beforeVecHits);
 
@@ -876,9 +878,9 @@ namespace UnityEngine.Tests
             using var so = new SerializedObject(target);
             try
             {
-                const string vecStubKey = "UnityEditor.UIElements.PropertyField (AnimationCurve)";
+                const string vecStubKey = "UnityEditor.UIElements.PropertyField (LayerMask)";
                 int beforeHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
-                var pf = new PropertyField(so.FindProperty("curveVal"));
+                var pf = new PropertyField(so.FindProperty("layerMaskVal"));
                 panel.visualTree.Add(pf);
                 pf.Bind(so);
                 Assert.Equal(0, pf.hierarchy.childCount);
@@ -2121,6 +2123,100 @@ namespace UnityEngine.Tests
                 Tick(panel);
                 Assert.Equal(new BoundsInt(new Vector3Int(99, 20, 30), new Vector3Int(2, 4, 77)), t1.boundsIntVal);
                 Assert.Equal("rt-boundsint-1", bif.tooltip);
+            }
+            finally
+            {
+                soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyAnimationCurveCopyIndependenceMixedAndDisposedCleanupWorkAcrossReleases()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.curveVal = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 2f)) { preWrapMode = WrapMode.Loop, postWrapMode = WrapMode.ClampForever };
+            t2.curveVal = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 2f)) { preWrapMode = WrapMode.Loop, postWrapMode = WrapMode.PingPong };
+            using var panel = RuntimePanel.Create(settings);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                var rt = new RuntimeModel { text = "rt-curve-0" };
+                var cf = new CurveField { dataSource = rt };
+                cf.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                panel.visualTree.Add(cf);
+                cf.BindProperty(soMulti.FindProperty("curveVal"));
+                Tick(panel);
+
+                // Wrap-mode-only divergence sets showMixedValue and value getter returns independent copies.
+                Assert.True(cf.showMixedValue);
+                Assert.NotNull(cf.Q<Label>(className: BaseField<AnimationCurve>.mixedValueLabelUssClassName));
+                var readA = cf.value;
+                var readB = cf.value;
+                Assert.NotSame(readA, readB);
+                Assert.NotSame(readA, t1.curveVal);
+                readA.AddKey(0.5f, 99f);
+                Assert.Equal(2, cf.value.length);
+                Assert.Equal("rt-curve-0", cf.tooltip);
+
+                // Editing mixed CurveField updates both targets with distinct AnimationCurve instances.
+                var edited = new AnimationCurve(new Keyframe(0f, 5f), new Keyframe(1f, 6f)) { preWrapMode = WrapMode.PingPong, postWrapMode = WrapMode.Loop };
+                cf.value = edited;
+                edited.AddKey(0.5f, 123f);
+                Tick(panel);
+                Assert.False(cf.showMixedValue);
+                Assert.NotSame(t1.curveVal, t2.curveVal);
+                Assert.Equal(2, t1.curveVal.length);
+                Assert.Equal(2, t2.curveVal.length);
+                Assert.Equal(WrapMode.PingPong, t1.curveVal.preWrapMode);
+                Assert.Equal(WrapMode.Loop, t2.curveVal.postWrapMode);
+
+                // PropertyField creates CurveField with nicified label and propagates wrap-mode-only SO updates.
+                var pf = new PropertyField(soMulti.FindProperty("curveVal"));
+                panel.visualTree.Add(pf);
+                pf.Bind(soMulti);
+                Tick(panel);
+                var pfChild = Assert.IsType<CurveField>(pf.hierarchy[0]);
+                Assert.Equal("Curve Val", pfChild.label);
+                var wrapUpdated = soMulti.FindProperty("curveVal").animationCurveValue;
+                wrapUpdated.postWrapMode = WrapMode.ClampForever;
+                soMulti.FindProperty("curveVal").animationCurveValue = wrapUpdated;
+                soMulti.ApplyModifiedProperties();
+                Tick(panel);
+                Assert.Equal(WrapMode.ClampForever, pfChild.value.postWrapMode);
+
+                // Same key times and wrap modes, only key value/tangent/weight changed: contentHash must differ and sync to UI.
+                uint hashBefore = soMulti.FindProperty("curveVal").contentHash;
+                soMulti.FindProperty("curveVal").animationCurveValue = new AnimationCurve(
+                    new Keyframe(0f, 15f, 0f, 3f),
+                    new Keyframe(1f, 26f, -2f, 0f, 0.25f, 0.75f))
+                {
+                    preWrapMode = WrapMode.PingPong,
+                    postWrapMode = WrapMode.ClampForever,
+                };
+                soMulti.ApplyModifiedProperties();
+                Assert.NotEqual(hashBefore, soMulti.FindProperty("curveVal").contentHash);
+                Tick(panel);
+                Assert.Equal(15f, pfChild.value[0].value);
+                Assert.Equal(26f, pfChild.value[1].value);
+                Assert.Equal(0.25f, pfChild.value[1].inWeight);
+
+                // Disposing SerializedObject unbinds cleanly while runtime DataBinding remains active.
+                soMulti.Dispose();
+                cf.value = AnimationCurve.Linear(0f, 10f, 1f, 20f);
+                rt.text = "rt-curve-1";
+                Tick(panel);
+                Assert.Equal(WrapMode.ClampForever, t1.curveVal.postWrapMode);
+                Assert.Equal("rt-curve-1", cf.tooltip);
             }
             finally
             {

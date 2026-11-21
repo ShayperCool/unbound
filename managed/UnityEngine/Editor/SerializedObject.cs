@@ -1000,6 +1000,12 @@ namespace UnityEditor
             set => SetTyped(SerializedPropertyType.AnimationCurve, "animation curve", value ?? new AnimationCurve());
         }
 
+        internal bool ValueEquals(AnimationCurve curve)
+        {
+            var current = GetTyped<AnimationCurve>(SerializedPropertyType.AnimationCurve, "animation curve");
+            return SerializedTree.ValueEquals(current, curve);
+        }
+
         public Gradient gradientValue
         {
             get => (Gradient)SerializedTree.CopyLeaf(GetTyped<Gradient>(SerializedPropertyType.Gradient, "gradient"), Shape.Gradient);

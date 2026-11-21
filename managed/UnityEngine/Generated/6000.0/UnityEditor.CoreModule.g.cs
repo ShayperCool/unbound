@@ -22643,7 +22643,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal void AppendFoldoutPPtrValue(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.AppendFoldoutPPtrValue"); }
         [global::Unbound.Stub] internal static string GetLayerMaskStringValue(uint layers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.GetLayerMaskStringValue"); return default; }
         [global::Unbound.Stub] internal bool FindPropertyRelativeInternal(string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.FindPropertyRelativeInternal"); return default; }
-        [global::Unbound.Stub] internal bool ValueEquals(global::UnityEngine.AnimationCurve curve) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.ValueEquals"); return default; }
         [global::Unbound.Stub] internal bool ValueEquals(global::UnityEngine.Gradient gradient) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.ValueEquals"); return default; }
         [global::Unbound.Stub] internal bool ValueEquals(string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.ValueEquals"); return default; }
         public global::UnityEngine.Object exposedReferenceValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.exposedReferenceValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.exposedReferenceValue"); } }
@@ -47182,54 +47181,9 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] internal static void RightClickFieldMenuEvent(global::UnityEngine.UIElements.PointerUpEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingsStyleHelpers.RightClickFieldMenuEvent"); }
         internal static event global::System.Action<global::UnityEngine.UIElements.VisualElement, global::UnityEditor.SerializedProperty> updateBindingStateStyle { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingsStyleHelpers.updateBindingStateStyle"); } [global::Unbound.Stub] remove { } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class CurveField : global::UnityEngine.UIElements.BaseField<global::UnityEngine.AnimationCurve>
+    unsafe partial class CurveField
     {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId renderModeProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public static readonly string contentUssClassName;
-        [global::System.Obsolete("borderUssClass is not used anymore")] [global::Unbound.Stub] public static readonly string borderUssClassName;
-        [global::Unbound.Stub] internal global::System.Action onShowPresets;
-        [global::Unbound.Stub] internal static global::UnityEngine.AnimationCurve CopyCurve(global::UnityEngine.AnimationCurve other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.CopyCurve"); return default; }
-        [global::Unbound.Stub] public CurveField() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.ctor"); }
-        [global::Unbound.Stub] public CurveField(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.ctor"); }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(global::UnityEngine.AnimationCurve newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.HandleEventBubbleUp"); }
-        [global::System.Obsolete("ExecuteDefaultAction override has been removed because default event handling was migrated to HandleEventBubbleUp. Please use HandleEventBubbleUp.")] [global::Unbound.Stub] protected override void ExecuteDefaultAction(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.ExecuteDefaultAction"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.OnViewDataReady"); }
-        [global::Unbound.Stub] protected override void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.UpdateMixedValueContent"); }
-        [global::Unbound.Stub] internal override bool EqualsCurrentValue(global::UnityEngine.AnimationCurve v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.EqualsCurrentValue"); return default; }
-        public global::UnityEngine.Rect ranges { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.ranges"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.ranges"); } }
-        public global::UnityEditor.UIElements.CurveField.RenderMode renderMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.renderMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.renderMode"); } }
-        public override global::UnityEngine.AnimationCurve value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.value"); } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<global::UnityEngine.AnimationCurve>.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.CurveField, global::UnityEditor.UIElements.CurveField.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.AnimationCurve>.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.CurveField.UxmlTraits.ctor"); }
-        }
-        public enum RenderMode
-        {
-            Texture = 0,
-            Mesh = 1,
-            Default = 0,
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class DropdownOptionListItem : global::UnityEngine.UIElements.BindableElement

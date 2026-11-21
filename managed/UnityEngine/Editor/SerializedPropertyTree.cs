@@ -1153,8 +1153,52 @@ namespace Unbound.Runtime
             {
                 var value = GetValue(node);
                 if (value is Object o) hash.Add(o is null ? 0 : o.GetInstanceID());
-                else if (value is AnimationCurve curve) foreach (var k in curve.keys) hash.Add(k.GetHashCode());
-                else if (value != null && !(value is Gradient)) hash.Add(value);
+                else if (value is AnimationCurve curve)
+                {
+                    hash.Add((int)curve.preWrapMode);
+                    hash.Add((int)curve.postWrapMode);
+                    int keyCount = curve.length;
+                    hash.Add(keyCount);
+                    for (int i = 0; i < keyCount; i++)
+                    {
+                        var k = curve[i];
+                        hash.Add(k.time);
+                        hash.Add(k.value);
+                        hash.Add(k.inTangent);
+                        hash.Add(k.outTangent);
+                        hash.Add((int)k.weightedMode);
+                        hash.Add(k.inWeight);
+                        hash.Add(k.outWeight);
+                        hash.Add(k.tangentModeInternal);
+                    }
+                }
+                else if (value is Gradient gradient)
+                {
+                    hash.Add((int)gradient.mode);
+                    hash.Add((int)gradient.colorSpace);
+                    var colorKeys = gradient.colorKeys;
+                    hash.Add(colorKeys.Length);
+                    for (int i = 0; i < colorKeys.Length; i++)
+                    {
+                        hash.Add(colorKeys[i].color);
+                        hash.Add(colorKeys[i].time);
+                    }
+                    var alphaKeys = gradient.alphaKeys;
+                    hash.Add(alphaKeys.Length);
+                    for (int i = 0; i < alphaKeys.Length; i++)
+                    {
+                        hash.Add(alphaKeys[i].alpha);
+                        hash.Add(alphaKeys[i].time);
+                    }
+                }
+                else if (value is RectOffset offset)
+                {
+                    hash.Add(offset.left);
+                    hash.Add(offset.right);
+                    hash.Add(offset.top);
+                    hash.Add(offset.bottom);
+                }
+                else if (value != null) hash.Add(value);
                 return;
             }
             foreach (var child in node.Children)

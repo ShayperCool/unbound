@@ -9,16 +9,16 @@ using UnityEngine.UIElements;
 
 // Editor UI Toolkit PropertyField for supported scalar, enum, Color/Color32 (including
 // ColorUsageAttribute), Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Rect, RectInt, Bounds,
-// and BoundsInt SerializedProperty types (bool, int, long, uint, ulong, float, double, string,
-// ordinary and [Flags] enum, Color/Color32, Vector2, Vector3, Vector4 Foldout with lazy child
-// PropertyFields, Vector2Int, Vector3Int, Rect, RectInt, Bounds, and BoundsInt) and
-// SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API ("PropertyField",
-// "PropertyField.RegisterValueChangeCallback", "ColorUsageAttribute"); matches the Unity
-// 6000.0.71f1 Editor, tests/projects/propertyfield, tests/projects/enumbinding,
+// BoundsInt, and AnimationCurve SerializedProperty types (bool, int, long, uint, ulong, float,
+// double, string, ordinary and [Flags] enum, Color/Color32, Vector2, Vector3, Vector4 Foldout with
+// lazy child PropertyFields, Vector2Int, Vector3Int, Rect, RectInt, Bounds, BoundsInt, and
+// AnimationCurve) and SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API
+// ("PropertyField", "PropertyField.RegisterValueChangeCallback", "ColorUsageAttribute"); matches
+// the Unity 6000.0.71f1 Editor, tests/projects/propertyfield, tests/projects/enumbinding,
 // tests/projects/enumflagsbinding, tests/projects/colorbinding, tests/projects/vector2binding,
 // tests/projects/vector3binding, tests/projects/vector4binding, tests/projects/vector2intbinding,
 // tests/projects/vector3intbinding, tests/projects/rectbinding, tests/projects/rectintbinding,
-// tests/projects/boundsbinding, and tests/projects/boundsintbinding.
+// tests/projects/boundsbinding, tests/projects/boundsintbinding, and tests/projects/curvebinding.
 
 namespace UnityEditor.UIElements
 {
@@ -148,6 +148,7 @@ namespace UnityEditor.UIElements
         static readonly Func<RectIntField> s_CreateRectIntField = () => new RectIntField();
         static readonly Func<BoundsField> s_CreateBoundsField = () => new BoundsField();
         static readonly Func<BoundsIntField> s_CreateBoundsIntField = () => new BoundsIntField();
+        static readonly Func<CurveField> s_CreateCurveField = () => new CurveField();
 
         string m_Label;
         SerializedObject m_SerializedObject;
@@ -507,6 +508,8 @@ namespace UnityEditor.UIElements
                     return ConfigureField<BoundsField, Bounds>(originalField as BoundsField, property, s_CreateBoundsField);
                 case SerializedPropertyType.BoundsInt:
                     return ConfigureField<BoundsIntField, BoundsInt>(originalField as BoundsIntField, property, s_CreateBoundsIntField);
+                case SerializedPropertyType.AnimationCurve:
+                    return ConfigureField<CurveField, AnimationCurve>(originalField as CurveField, property, s_CreateCurveField);
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField ({property.propertyType})");
                     return null;
