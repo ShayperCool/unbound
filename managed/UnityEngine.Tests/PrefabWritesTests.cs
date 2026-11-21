@@ -382,7 +382,7 @@ namespace UnityEngine.Tests
             Assert.Equal(55L, data.FileId);
         }
 
-        /// <summary>A hierarchy connected to the prefab saved from it keeps its values: a script's
+        /// <summary>A hierarchy shaped like a prefab and connected to it keeps its values: a script's
         /// reference that differs from the prefab's is a stored modification (create-assets
         /// outside.*). Afterwards, as Unity documents for RecordPrefabInstancePropertyModifications,
         /// a script change is no modification until recorded (control: once recorded it is).</summary>
