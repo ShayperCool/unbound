@@ -42,6 +42,19 @@ namespace UnityEngine.Tests
             }
         }
 
+        struct ThreadIdParallel : IJobParallelFor
+        {
+            [NativeDisableParallelForRestriction] public NativeArray<int> Threads;
+            public void Execute(int index) => Threads[index] = Environment.CurrentManagedThreadId;
+        }
+
+        struct ThreadIndexParallel : IJobParallelFor
+        {
+            [NativeDisableParallelForRestriction] public NativeArray<int> Indices;
+            [NativeSetThreadIndex] public int ThreadIndex;
+            public void Execute(int index) => Indices[index] = ThreadIndex;
+        }
+
         struct RotateTransformJob : IJobParallelForTransform
         {
             public Quaternion Rotation;
@@ -75,6 +88,79 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(child);
                 Object.DestroyImmediate(parent);
                 mainThread.SetValue(null, previousMainThread);
+            }
+        }
+
+        /// <summary>An exception from a job's completion work is logged and the job still
+        /// completes (before, it left the native callback and ended the process).</summary>
+        [Fact]
+        public void AThrowingCompletionCallbackIsLoggedAndTheJobStillCompletes()
+        {
+            var data = new NativeArray<int>(4, Allocator.TempJob);
+            var logs = new System.Collections.Generic.List<(string Condition, LogType Type)>();
+            Application.LogCallback capture = (condition, _, type) => { lock (logs) logs.Add((condition, type)); };
+            Application.logMessageReceivedThreaded += capture;
+            try
+            {
+                var handle = new WriteJob { Data = data }.Schedule();
+                Unbound.Runtime.Jobs.JobSystem.RecordOf(handle).OnFinished = () => throw new InvalidOperationException("completion work failed");
+                var dependent = new AddJob { Data = data, Amount = 1 }.Schedule(handle);
+                dependent.Complete();
+                Assert.Equal(4, data[3]);
+                lock (logs) Assert.Contains(logs, l => l.Type == LogType.Exception && l.Condition.Contains("completion work failed"));
+            }
+            finally
+            {
+                Application.logMessageReceivedThreaded -= capture;
+                data.Dispose();
+            }
+        }
+
+        /// <summary>With JobWorkerCount 0 nothing but the completing thread runs the jobs.</summary>
+        [Fact]
+        public void WithoutWorkersCompleteRunsEveryParticipantOnTheCompletingThread()
+        {
+            int workers = JobsUtility.JobWorkerCount;
+            var threads = new NativeArray<int>(256, Allocator.TempJob);
+            try
+            {
+                JobsUtility.JobWorkerCount = 0;
+                Assert.Equal(0, JobsUtility.JobWorkerCount);
+                var handle = new ThreadIdParallel { Threads = threads }.Schedule(threads.Length, 1);
+                JobHandle.ScheduleBatchedJobs();
+                handle.Complete();
+                foreach (int thread in threads) Assert.Equal(Environment.CurrentManagedThreadId, thread);
+            }
+            finally
+            {
+                JobsUtility.JobWorkerCount = workers;
+                threads.Dispose();
+            }
+        }
+
+        /// <summary>The counts come from the workers themselves (before, the managed side counted
+        /// processors on its own, and worker indices could exceed ThreadIndexCount): every
+        /// ThreadIndex stays within the current JobWorkerCount.</summary>
+        [Fact]
+        public void ThreadIndicesFollowTheWorkerCount()
+        {
+            Assert.Equal(Math.Max(1, Unbound.Runtime.Jobs.JobSystem.ProcessorCount - 1), JobsUtility.JobWorkerMaximumCount);
+            Assert.Equal(JobsUtility.JobWorkerMaximumCount + 5, JobsUtility.ThreadIndexCount);
+            int workers = JobsUtility.JobWorkerCount;
+            var indices = new NativeArray<int>(512, Allocator.TempJob);
+            try
+            {
+                foreach (int count in new[] { 1, JobsUtility.JobWorkerMaximumCount })
+                {
+                    JobsUtility.JobWorkerCount = count;
+                    new ThreadIndexParallel { Indices = indices }.Schedule(indices.Length, 1).Complete();
+                    foreach (int index in indices) Assert.InRange(index, 0, count);
+                }
+            }
+            finally
+            {
+                JobsUtility.JobWorkerCount = workers;
+                indices.Dispose();
             }
         }
 
