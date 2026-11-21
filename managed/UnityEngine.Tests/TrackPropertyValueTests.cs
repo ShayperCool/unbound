@@ -2032,6 +2032,105 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Fact]
+        public void BindPropertyBoundsIntMultiEditComponentBindingAndDisposedCleanupWorkAcrossReleases()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.boundsIntVal = new BoundsInt(new Vector3Int(int.MinValue, 10, 100), new Vector3Int(-6, 8, int.MaxValue));
+            t2.boundsIntVal = new BoundsInt(new Vector3Int(2, 10, 100), new Vector3Int(-6, 8, 40));
+            using var panel = RuntimePanel.Create(settings);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                var rt = new RuntimeModel { text = "rt-boundsint-0" };
+                var bif = new BoundsIntField { dataSource = rt };
+                bif.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                panel.visualTree.Add(bif);
+                bif.BindProperty(soMulti.FindProperty("boundsIntVal"));
+                Tick(panel);
+
+                var pos = bif.Q<Vector3IntField>("unity-m_Position-input");
+                var size = bif.Q<Vector3IntField>("unity-m_Size-input");
+                var pxSub = pos.Q<IntegerField>("unity-x-input");
+                var pySub = pos.Q<IntegerField>("unity-y-input");
+                var szSub = size.Q<IntegerField>("unity-z-input");
+                Assert.False(bif.showMixedValue);
+                Assert.False(pos.showMixedValue);
+                Assert.False(size.showMixedValue);
+                Assert.True(pxSub.showMixedValue);
+                Assert.False(pySub.showMixedValue);
+                Assert.True(szSub.showMixedValue);
+                Assert.Equal(t1.boundsIntVal, bif.value);
+                Assert.Equal("rt-boundsint-0", bif.tooltip);
+
+                // Editing a sub-field on BoundsIntField writes the whole BoundsInt across targets (matching Unity 6000.0.71f1).
+                pxSub.value = 5;
+                Tick(panel);
+                var expectedWhole = new BoundsInt(new Vector3Int(5, 10, 100), new Vector3Int(-6, 8, int.MaxValue));
+                Assert.Equal(expectedWhole, t1.boundsIntVal);
+                Assert.Equal(expectedWhole, t2.boundsIntVal);
+                Assert.False(pxSub.showMixedValue);
+                Assert.False(szSub.showMixedValue);
+
+                // PropertyField creates BoundsIntField with nicified label and per-axis showMixedValue.
+                t1.boundsIntVal = new BoundsInt(new Vector3Int(10, 20, 30), new Vector3Int(2, 4, 6));
+                t2.boundsIntVal = new BoundsInt(new Vector3Int(50, 60, 70), new Vector3Int(8, 10, 12));
+                soMulti.Update();
+                var pf = new PropertyField(soMulti.FindProperty("boundsIntVal"));
+                panel.visualTree.Add(pf);
+                pf.Bind(soMulti);
+                Tick(panel);
+                var pfChild = Assert.IsType<BoundsIntField>(pf.hierarchy[0]);
+                Assert.Equal("Bounds Int Val", pfChild.label);
+                Assert.True(pfChild.Q<Vector3IntField>("unity-m_Position-input").Q<IntegerField>("unity-x-input").showMixedValue);
+                Assert.True(pfChild.Q<Vector3IntField>("unity-m_Size-input").Q<IntegerField>("unity-z-input").showMixedValue);
+
+                // Direct Vector3IntField bound to boundsIntVal.m_Position preserves untouched position axes and size on each target.
+                var compPos = new Vector3IntField();
+                panel.visualTree.Add(compPos);
+                compPos.BindProperty(soMulti.FindProperty("boundsIntVal.m_Position"));
+                Tick(panel);
+                Assert.True(compPos.Q<IntegerField>("unity-x-input").showMixedValue);
+                compPos.Q<IntegerField>("unity-x-input").value = 99;
+                Tick(panel);
+                Assert.Equal(new BoundsInt(new Vector3Int(99, 20, 30), new Vector3Int(2, 4, 6)), t1.boundsIntVal);
+                Assert.Equal(new BoundsInt(new Vector3Int(99, 60, 70), new Vector3Int(8, 10, 12)), t2.boundsIntVal);
+
+                // Direct IntegerField bound to boundsIntVal.m_Size.z updates only size.z and preserves the rest on each target.
+                var compSz = new IntegerField();
+                panel.visualTree.Add(compSz);
+                compSz.BindProperty(soMulti.FindProperty("boundsIntVal.m_Size.z"));
+                Tick(panel);
+                Assert.True(compSz.showMixedValue);
+                compSz.value = 77;
+                Tick(panel);
+                Assert.Equal(new BoundsInt(new Vector3Int(99, 20, 30), new Vector3Int(2, 4, 77)), t1.boundsIntVal);
+                Assert.Equal(new BoundsInt(new Vector3Int(99, 60, 70), new Vector3Int(8, 10, 77)), t2.boundsIntVal);
+
+                // Disposing SerializedObject unbinds cleanly while runtime DataBinding remains active.
+                soMulti.Dispose();
+                bif.value = new BoundsInt(new Vector3Int(9, 8, 7), new Vector3Int(2, 4, 6));
+                rt.text = "rt-boundsint-1";
+                Tick(panel);
+                Assert.Equal(new BoundsInt(new Vector3Int(99, 20, 30), new Vector3Int(2, 4, 77)), t1.boundsIntVal);
+                Assert.Equal("rt-boundsint-1", bif.tooltip);
+            }
+            finally
+            {
+                soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
         sealed class EmptyUxmlAttributes : IUxmlAttributes
         {
             public bool TryGetAttributeValue(string attributeName, out string value)
