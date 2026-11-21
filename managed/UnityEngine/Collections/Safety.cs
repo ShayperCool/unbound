@@ -405,19 +405,19 @@ namespace Unbound.Runtime
 
         /// <summary>Checks a container a job is about to use against the unsynced jobs using it;
         /// returns the error Unity reports, or null.</summary>
-        internal static string CheckSchedule(in AtomicSafetyHandle handle, Jobs.JobRecord job, bool writes, string jobName, string containerType, string field, Func<Jobs.JobRecord, bool> isDependency)
+        internal static string CheckSchedule(in AtomicSafetyHandle handle, Jobs.JobRecord job, bool writes, string jobName, string containerType, string field, Jobs.JobRecord dependency)
         {
             lock (s_Lock)
             {
                 var node = RealNode(handle);
                 if (node == null) return null;
                 if (node.ExternalWriter) return ExternalWriteError().Message;
-                if (node.Writer != null && node.Writer != job && !isDependency(node.Writer))
+                if (node.Writer != null && node.Writer != job && !Jobs.JobSystem.IsDependency(dependency, node.Writer))
                     return Conflict(node.Writer.Name, "writes to", node.WriterField, jobName, writes, containerType, field);
                 if (writes)
                 {
                     foreach (var (reader, readerField) in node.Readers)
-                        if (reader != job && !isDependency(reader))
+                        if (reader != job && !Jobs.JobSystem.IsDependency(dependency, reader))
                             return Conflict(reader.Name, "reads from", readerField, jobName, true, containerType, field);
                 }
                 return null;
@@ -467,7 +467,8 @@ namespace Unbound.Runtime
                         node.Writer = null;
                         node.WriterField = null;
                     }
-                    node.Readers.RemoveAll(r => r.Job == job);
+                    for (int i = node.Readers.Count - 1; i >= 0; i--)
+                        if (node.Readers[i].Job == job) node.Readers.RemoveAt(i);
                     if (!node.Released) UpdateBits(node);
                 }
                 job.Nodes.Clear();

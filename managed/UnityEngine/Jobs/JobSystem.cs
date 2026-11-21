@@ -219,7 +219,7 @@ namespace Unbound.Runtime.Jobs
         /// (transitive) dependencies.</summary>
         internal static bool IsDependency(JobHandle handle, JobRecord job) => IsDependency(Find(handle), job);
 
-        static bool IsDependency(JobRecord of, JobRecord job)
+        internal static bool IsDependency(JobRecord of, JobRecord job)
         {
             if (of == null) return false;
             if (of == job) return true;
@@ -288,6 +288,9 @@ namespace Unbound.Runtime.Jobs
         /// <summary>Schedules a job. Its Execute gets as additional data the transforms' job data
         /// (transform jobs), the deferred list (deferred parallel-for jobs, as Unity passes it) or
         /// <paramref name="additionalData"/>, which the caller owns.</summary>
+        /// <summary>The containers a Schedule checks, reused by the thread's next Schedule.</summary>
+        [ThreadStatic] static List<(JobLayout.Container Container, int Offset, AtomicSafetyHandle Handle)> t_ScheduleHandles;
+
         internal static JobHandle Schedule(ref JobsUtility.JobScheduleParameters parameters, Kind kind, int arrayLength, int innerloopBatchCount, IntPtr transforms = default, void* deferredList = null, AtomicSafetyHandle deferredListSafety = default, void* additionalData = null)
         {
             var reflection = Reflection(parameters.ReflectionData);
@@ -302,7 +305,9 @@ namespace Unbound.Runtime.Jobs
             var source = (byte*)parameters.JobDataPtr;
 
             // The containers: valid, not temp memory, not aliased, not used by a job this one does not depend on.
-            var handles = new List<(JobLayout.Container Container, int Offset, AtomicSafetyHandle Handle)>();
+            // Schedule runs no user code: the thread's list is free.
+            var handles = t_ScheduleHandles ??= new List<(JobLayout.Container Container, int Offset, AtomicSafetyHandle Handle)>();
+            handles.Clear();
             foreach (var container in layout.Containers)
             {
                 foreach (int offset in container.Handles)
@@ -343,7 +348,7 @@ namespace Unbound.Runtime.Jobs
             foreach (var (container, _, handle) in handles)
             {
                 var error = Safety.CheckSchedule(handle, record, (container.Access & ContainerAccess.Write) != 0, reflection.Name,
-                    Safety.TypeName(handle.staticSafetyId), container.Path, previous => IsDependency(dependency, previous));
+                    Safety.TypeName(handle.staticSafetyId), container.Path, dependency);
                 if (error != null)
                 {
                     record.Self.Free();
@@ -440,6 +445,9 @@ namespace Unbound.Runtime.Jobs
             }
         }
 
+        /// <summary>The participants' ranges PrepareRanges computes, reused by the thread.</summary>
+        [ThreadStatic] static List<(int Begin, int End)> t_Chunks;
+
         static void PrepareRanges(JobRecord record, Kind kind, ScheduleMode mode, int arrayLength, int batchSize, IntPtr transforms)
         {
             record.Transform = kind == Kind.Transform || kind == Kind.TransformReadOnly;
@@ -449,7 +457,9 @@ namespace Unbound.Runtime.Jobs
             {
                 total = 1;
                 batchSize = 1;
-                chunks = new List<(int, int)> { (0, 1) };
+                chunks = t_Chunks ??= new List<(int, int)>();
+                chunks.Clear();
+                chunks.Add((0, 1));
             }
             else if (kind == Kind.Transform)
             {
@@ -472,7 +482,8 @@ namespace Unbound.Runtime.Jobs
                 batchSize = Math.Max(1, batchSize);
                 int batches = (total + batchSize - 1) / batchSize;
                 int participants = mode == ScheduleMode.Parallel ? Math.Max(1, Math.Min(batches, MaximumWorkers + 1)) : 1;
-                chunks = new List<(int, int)>();
+                chunks = t_Chunks ??= new List<(int, int)>();
+                chunks.Clear();
                 // Contiguous batches per participant; a finished participant steals from the others.
                 for (int j = 0; j < participants; j++)
                 {
