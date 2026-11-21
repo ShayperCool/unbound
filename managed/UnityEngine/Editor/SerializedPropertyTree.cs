@@ -868,7 +868,7 @@ namespace Unbound.Runtime
                 case Shape.Color: case Shape.Color32: return "Color";
                 case Shape.Rect: return "Rect";
                 case Shape.RectInt: return "RectInt";
-                case Shape.Bounds: return "AABB";
+                case Shape.Bounds: return "Bounds";
                 case Shape.BoundsInt: return "BoundsInt";
                 case Shape.Matrix4x4: return "Matrix4x4f";
                 case Shape.LayerMask: return "BitField";
@@ -1085,13 +1085,13 @@ namespace Unbound.Runtime
             switch (source.Kind)
             {
                 case SerializedNodeKind.Leaf:
+                case SerializedNodeKind.Component:
                     if (source.Replaced || source.Children.Count == 0)
                     {
                         if (target.ClrType == source.ClrType && !target.ReadOnly) SetValue(target, GetValue(source));
                         return;
                     }
                     break;
-                case SerializedNodeKind.Component:
                 case SerializedNodeKind.ArraySize:
                     if (target.ClrType == source.ClrType && !target.ReadOnly) SetValue(target, GetValue(source));
                     return;

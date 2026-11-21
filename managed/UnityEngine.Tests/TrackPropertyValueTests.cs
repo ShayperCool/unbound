@@ -80,6 +80,8 @@ namespace UnityEngine.Tests
             public Rect rectVal = new Rect(1, 2, 3, 4);
             public RectInt rectIntVal = new RectInt(1, 2, 3, 4);
             public Bounds boundsVal = new Bounds(Vector3.one, Vector3.one * 2f);
+            public BoundsInt boundsIntVal = new BoundsInt(Vector3Int.one, Vector3Int.one * 2);
+            public AnimationCurve curveVal = AnimationCurve.Linear(0f, 0f, 1f, 1f);
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
             public SparseChoice sparseEnum = SparseChoice.TwentyFive;
@@ -585,12 +587,12 @@ namespace UnityEngine.Tests
                 Assert.False(wrongField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.Contains(warnings, w => w.Contains("not compatible") && w.Contains("\"flag\""));
 
-                // Unsupported property type (Bounds) reports explicit Stubs.NotImplemented hit and stays unbound.
-                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (Bounds)";
+                // Unsupported property type (AnimationCurve) reports explicit Stubs.NotImplemented hit and stays unbound.
+                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (AnimationCurve)";
                 int beforeVecHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
                 var vecField = new IntegerField();
                 panel.visualTree.Add(vecField);
-                vecField.BindProperty(so.FindProperty("boundsVal"));
+                vecField.BindProperty(so.FindProperty("curveVal"));
                 Assert.False(vecField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value > beforeVecHits);
 
@@ -874,9 +876,9 @@ namespace UnityEngine.Tests
             using var so = new SerializedObject(target);
             try
             {
-                const string vecStubKey = "UnityEditor.UIElements.PropertyField (Bounds)";
+                const string vecStubKey = "UnityEditor.UIElements.PropertyField (AnimationCurve)";
                 int beforeHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
-                var pf = new PropertyField(so.FindProperty("boundsVal"));
+                var pf = new PropertyField(so.FindProperty("curveVal"));
                 panel.visualTree.Add(pf);
                 pf.Bind(so);
                 Assert.Equal(0, pf.hierarchy.childCount);
@@ -1921,6 +1923,105 @@ namespace UnityEngine.Tests
                 Tick(panel);
                 Assert.Equal(new RectInt(10, 20, 99, 40), t1.rectIntVal);
                 Assert.Equal("rt-rectint-1", rif.tooltip);
+            }
+            finally
+            {
+                soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyBoundsMultiEditComponentBindingAndDisposedCleanupWorkAcrossReleases()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.boundsVal = new Bounds(new Vector3(1f, 10f, 100f), new Vector3(6f, 8f, 20f));
+            t2.boundsVal = new Bounds(new Vector3(2f, 10f, 100f), new Vector3(6f, 8f, 40f));
+            using var panel = RuntimePanel.Create(settings);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                var rt = new RuntimeModel { text = "rt-bounds-0" };
+                var bf = new BoundsField { dataSource = rt };
+                bf.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                panel.visualTree.Add(bf);
+                bf.BindProperty(soMulti.FindProperty("boundsVal"));
+                Tick(panel);
+
+                var center = bf.Q<Vector3Field>("unity-m_Center-input");
+                var extents = bf.Q<Vector3Field>("unity-m_Extent-input");
+                var cxSub = center.Q<FloatField>("unity-x-input");
+                var cySub = center.Q<FloatField>("unity-y-input");
+                var ezSub = extents.Q<FloatField>("unity-z-input");
+                Assert.False(bf.showMixedValue);
+                Assert.False(center.showMixedValue);
+                Assert.False(extents.showMixedValue);
+                Assert.True(cxSub.showMixedValue);
+                Assert.False(cySub.showMixedValue);
+                Assert.True(ezSub.showMixedValue);
+                Assert.Equal(t1.boundsVal, bf.value);
+                Assert.Equal("rt-bounds-0", bf.tooltip);
+
+                // Editing a sub-field on BoundsField writes the whole Bounds across targets (matching Unity 6000.0.71f1).
+                cxSub.value = 5f;
+                Tick(panel);
+                var expectedWhole = new Bounds(new Vector3(5f, 10f, 100f), new Vector3(6f, 8f, 20f));
+                Assert.Equal(expectedWhole, t1.boundsVal);
+                Assert.Equal(expectedWhole, t2.boundsVal);
+                Assert.False(cxSub.showMixedValue);
+                Assert.False(ezSub.showMixedValue);
+
+                // PropertyField creates BoundsField with nicified label and per-axis showMixedValue.
+                t1.boundsVal = new Bounds(new Vector3(10f, 20f, 30f), new Vector3(2f, 4f, 6f));
+                t2.boundsVal = new Bounds(new Vector3(50f, 60f, 70f), new Vector3(8f, 10f, 12f));
+                soMulti.Update();
+                var pf = new PropertyField(soMulti.FindProperty("boundsVal"));
+                panel.visualTree.Add(pf);
+                pf.Bind(soMulti);
+                Tick(panel);
+                var pfChild = Assert.IsType<BoundsField>(pf.hierarchy[0]);
+                Assert.Equal("Bounds Val", pfChild.label);
+                Assert.True(pfChild.Q<Vector3Field>("unity-m_Center-input").Q<FloatField>("unity-x-input").showMixedValue);
+                Assert.True(pfChild.Q<Vector3Field>("unity-m_Extent-input").Q<FloatField>("unity-z-input").showMixedValue);
+
+                // Direct Vector3Field bound to boundsVal.m_Center preserves untouched center axes and extents on each target.
+                var compCenter = new Vector3Field();
+                panel.visualTree.Add(compCenter);
+                compCenter.BindProperty(soMulti.FindProperty("boundsVal.m_Center"));
+                Tick(panel);
+                Assert.True(compCenter.Q<FloatField>("unity-x-input").showMixedValue);
+                compCenter.Q<FloatField>("unity-x-input").value = 99f;
+                Tick(panel);
+                Assert.Equal(new Bounds(new Vector3(99f, 20f, 30f), new Vector3(2f, 4f, 6f)), t1.boundsVal);
+                Assert.Equal(new Bounds(new Vector3(99f, 60f, 70f), new Vector3(8f, 10f, 12f)), t2.boundsVal);
+
+                // Direct FloatField bound to boundsVal.m_Extent.z updates only extents.z and preserves the rest on each target.
+                var compEz = new FloatField();
+                panel.visualTree.Add(compEz);
+                compEz.BindProperty(soMulti.FindProperty("boundsVal.m_Extent.z"));
+                Tick(panel);
+                Assert.True(compEz.showMixedValue);
+                compEz.value = 77f;
+                Tick(panel);
+                Assert.Equal(new Bounds(new Vector3(99f, 20f, 30f), new Vector3(2f, 4f, 154f)), t1.boundsVal);
+                Assert.Equal(new Bounds(new Vector3(99f, 60f, 70f), new Vector3(8f, 10f, 154f)), t2.boundsVal);
+
+                // Disposing SerializedObject unbinds cleanly while runtime DataBinding remains active.
+                soMulti.Dispose();
+                bf.value = new Bounds(new Vector3(9f, 8f, 7f), new Vector3(2f, 4f, 6f));
+                rt.text = "rt-bounds-1";
+                Tick(panel);
+                Assert.Equal(new Bounds(new Vector3(99f, 20f, 30f), new Vector3(2f, 4f, 154f)), t1.boundsVal);
+                Assert.Equal("rt-bounds-1", bf.tooltip);
             }
             finally
             {
