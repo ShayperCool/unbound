@@ -12,7 +12,7 @@ toggles, `EditorUtility.IsDirty`/`GetDirtyCount`, `AssetDatabase.SaveAssets`/`Sa
 variant flag and sprite count; also the settings of `new SpriteAtlas()` and the answers for a null
 atlas. Recorded in Play mode, in batch mode, with the Unity 6000.0.71f1 Editor.
 
-Twenty-five profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
+Twenty-six profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
 
 - `v1`: Sprite Packer mode "Sprite Atlas V1 - Always Enabled" with three `.spriteatlas` assets in
   `Assets/Atlases/`: `Main` (a folder, a texture and a sprite of a sheet as packables, included in
@@ -99,6 +99,15 @@ Twenty-five profiles, each with its own reference under `Reference/unity-6000.0.
   and `SpriteAtlasImporter.GetPlatformSettings(string)` alongside non-atlas, missing-path,
   uncreated `new SpriteAtlasImporter()`, fresh-copy identity, mutation isolation, and in-memory
   `SpriteAtlasExtensions.SetPlatformSettings` independence controls.
+- `v2importerplatformset`: mode "Sprite Atlas V2 - Enabled" with four `.spriteatlasv2` assets in
+  `Assets/ImporterPlatformSetAtlases/` (`Master`, `Variant`, `Legacy`, `Omitted`) and their
+  `SpriteAtlasImporter` `.meta` files, exercising `SpriteAtlasImporter.SetPlatformSettings`
+  across null `src`, uncreated `new SpriteAtlasImporter()`, alias normalization in place,
+  defensive copy isolation, same-value repeat dirtying, supported/default/absent/non-overridden
+  rules, master/variant independence, legacy v1 sequence-version upgrade, omitted `platformSettings`,
+  `AssetDatabase.SaveAssets`, `AssetDatabase.WriteImportSettingsIfDirty`,
+  `SpriteAtlasImporter.SaveAndReimport`, `AssetDatabase.ImportAsset(ForceUpdate)`, and exact
+  `.meta`/`.spriteatlasv2` persistence.
 
 The sprites come from tests/projects/spriteatlas (files the Editor authored). The atlases are
 written from that probe's Editor-authored atlas files with other packables and settings. The
@@ -215,7 +224,20 @@ max-quality rule, reads a V2 variant's own `.meta` (never inheriting its master'
 returns fresh defaults named after the normalized target when absent or omitted (never inheriting
 stored `DefaultTexturePlatform`), allocates a fresh distinct `TextureImporterPlatformSettings` copy
 on every call for both stored and absent targets, and stays unaffected by unsaved in-memory
-`SpriteAtlasExtensions.SetPlatformSettings` edits.
+`SpriteAtlasExtensions.SetPlatformSettings` edits; `SpriteAtlasImporter.SetPlatformSettings`
+normalizes `src.name` in place first (throwing `NullReferenceException` for null `src` without
+dirtying, and normalizing a non-null `src.name` before throwing `NullReferenceException` on an
+uncreated `new SpriteAtlasImporter()`), replaces matching entries in place (preserving order, even
+when `overridden` is false), appends a defensive copy when absent only for `overridden: true` or
+`DefaultTexturePlatform`, unconditionally marks the importer dirty even on same-value repeats or
+uninserted non-overridden entries, keeps master and variant importers independent, is not written
+or cleared by `AssetDatabase.SaveAssets`, writes unprefixed `serializedVersion: 4`
+`platformSettings` (inserting omitted `textureSettings`/`packingSettings` defaults around it while
+leaving `.spriteatlasv2` untouched) and clears importer dirtiness on
+`AssetDatabase.WriteImportSettingsIfDirty` (returning `true` when dirty and `false` when clean,
+without reimporting the loaded `SpriteAtlas`), and flushes `.meta`, evicts the cached importer and
+reimports a fresh clean `SpriteAtlas` on both `SaveAndReimport` and
+`AssetDatabase.ImportAsset(ForceUpdate)`.
 Not measured: either kind of atlas in the other kind's packer mode.
 
 Values compare exactly.

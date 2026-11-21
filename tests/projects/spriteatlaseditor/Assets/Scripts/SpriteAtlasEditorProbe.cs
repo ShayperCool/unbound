@@ -96,6 +96,9 @@ static class SpriteAtlasEditorProbe
         if (paths.Any(p => p.StartsWith("Assets/ImporterPlatformAtlases/", StringComparison.Ordinal)))
             RecordImporterPlatformSettings(paths, Check);
 
+        if (paths.Any(p => p.StartsWith("Assets/ImporterPlatformSetAtlases/", StringComparison.Ordinal)))
+            RecordImporterSetPlatformSettings(paths, Check);
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
@@ -2038,6 +2041,303 @@ static class SpriteAtlasEditorProbe
         if (byStem.TryGetValue("LegacyV3", out var legacyV3))
             Query(legacyV3.key, legacyV3.importer,
                 "iPhone", "iOS", "WSAPlayer", "Windows Store Apps", "Switch", "Standalone", "StandaloneWindows64");
+    }
+
+    static void RecordImporterSetPlatformSettings(string[] paths, Action<string, Func<string>> check)
+    {
+        var byStem = new System.Collections.Generic.Dictionary<string, (string path, string key, SpriteAtlasImporter importer, SpriteAtlas atlas)>(StringComparer.Ordinal);
+        foreach (var path in paths)
+        {
+            var importer = AssetImporter.GetAtPath(path) as SpriteAtlasImporter;
+            var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+            if (importer != null && atlas != null)
+                byStem[Path.GetFileNameWithoutExtension(path)] = (path, Path.GetFileName(path), importer, atlas);
+        }
+
+        string PlatformBlock(string file)
+        {
+            var lines = File.ReadAllLines(file);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string trimmed = lines[i].TrimStart();
+                if (trimmed == "platformSettings: []") return "[]";
+                if (trimmed != "platformSettings:") continue;
+                int indent = lines[i].Length - trimmed.Length;
+                var items = new System.Collections.Generic.List<string>();
+                for (int j = i + 1; j < lines.Length; j++)
+                {
+                    string t = lines[j].TrimStart();
+                    int childIndent = lines[j].Length - t.Length;
+                    if (childIndent < indent || (childIndent == indent && !t.StartsWith("- ", StringComparison.Ordinal))) break;
+                    items.Add(lines[j].Trim());
+                }
+                return string.Join(";", items);
+            }
+            return "<absent>";
+        }
+
+        string MetaState(string path, byte[] origAsset, byte[] origMeta, bool includeBlock = true)
+        {
+            bool assetChanged = !File.ReadAllBytes(path).SequenceEqual(origAsset);
+            bool metaChanged = !File.ReadAllBytes(path + ".meta").SequenceEqual(origMeta);
+            return includeBlock
+                ? $"assetChanged={assetChanged}|metaChanged={metaChanged}|metaPlatform={PlatformBlock(path + ".meta")}"
+                : $"assetChanged={assetChanged}|metaChanged={metaChanged}";
+        }
+
+        string Dirty(UnityEngine.Object obj, int baseDirty) =>
+            $"dirty={EditorUtility.IsDirty(obj)}|dirtyDelta={EditorUtility.GetDirtyCount(obj) - baseDirty}";
+
+        string Unrelated(SpriteAtlas a) =>
+            $"texture=({DescribeTexture(a.GetTextureSettings())})|packing=({DescribePacking(a.GetPackingSettings())})|include={a.IsIncludeInBuild()}";
+
+        // 1. Uncreated importer and null src checks.
+        check("new.importer.setPlatform.nullSrc", () =>
+        {
+            var uncreated = new SpriteAtlasImporter();
+            uncreated.SetPlatformSettings(null);
+            return "ok";
+        });
+        check("new.importer.setPlatform.validSrcNormalizesBeforeThrow", () =>
+        {
+            var uncreated = new SpriteAtlasImporter();
+            var src = new TextureImporterPlatformSettings { name = "iPhone", overridden = true, maxTextureSize = 256 };
+            string ex = "none";
+            try { uncreated.SetPlatformSettings(src); }
+            catch (Exception e) { ex = e.GetType().Name; }
+            return $"ex={ex}|srcNameAfter={src.name}";
+        });
+
+        byStem.TryGetValue("Variant", out var variant);
+        int variantImpBase = variant.importer != null ? EditorUtility.GetDirtyCount(variant.importer) : 0;
+        var variantOrigA = variant.importer != null ? File.ReadAllBytes(variant.path) : null;
+        var variantOrigM = variant.importer != null ? File.ReadAllBytes(variant.path + ".meta") : null;
+
+        if (byStem.TryGetValue("Master", out var master))
+        {
+            var origA = File.ReadAllBytes(master.path);
+            var origM = File.ReadAllBytes(master.path + ".meta");
+            int impBase = EditorUtility.GetDirtyCount(master.importer);
+
+            check(master.key + ".impSet.nullSrc", () =>
+            {
+                string ex = "none";
+                try { master.importer.SetPlatformSettings(null); }
+                catch (Exception e) { ex = e.GetType().Name; }
+                return $"ex={ex}|{Dirty(master.importer, impBase)}";
+            });
+
+            check(master.key + ".impSet.initial", () =>
+                $"{Dirty(master.importer, impBase)}|impAndroid=({DescribePlatform(master.importer.GetPlatformSettings("Android"))})|atlasAndroid=({DescribePlatform(master.atlas.GetPlatformSettings("Android"))})|{MetaState(master.path, origA, origM, includeBlock: false)}");
+
+            check(master.key + ".impSet.sameRepeat", () =>
+            {
+                var same = master.importer.GetPlatformSettings("Android");
+                master.importer.SetPlatformSettings(same);
+                return $"{Dirty(master.importer, impBase)}|impAndroid=({DescribePlatform(master.importer.GetPlatformSettings("Android"))})|{MetaState(master.path, origA, origM, includeBlock: false)}";
+            });
+
+            check(master.key + ".impSet.nonOverriddenAbsentAlias", () =>
+            {
+                var src = new TextureImporterPlatformSettings
+                {
+                    name = "Web",
+                    overridden = false,
+                    maxTextureSize = 128,
+                    compressionQuality = 22,
+                };
+                master.importer.SetPlatformSettings(src);
+                return $"srcNameAfter={src.name}|{Dirty(master.importer, impBase)}|impWebGL=({DescribePlatform(master.importer.GetPlatformSettings("WebGL"))})|{MetaState(master.path, origA, origM, includeBlock: false)}";
+            });
+
+            check(master.key + ".impSet.overriddenAbsentDefensiveCopy", () =>
+            {
+                var src = new TextureImporterPlatformSettings
+                {
+                    name = "Web",
+                    overridden = true,
+                    maxTextureSize = 512,
+                    resizeAlgorithm = TextureResizeAlgorithm.Bilinear,
+                    format = TextureImporterFormat.DXT5,
+                    textureCompression = TextureImporterCompression.CompressedHQ,
+                    compressionQuality = 77,
+                    crunchedCompression = true,
+                    allowsAlphaSplitting = false,
+                    ignorePlatformSupport = true,
+                    androidETC2FallbackOverride = AndroidETC2FallbackOverride.Quality16Bit,
+                };
+                master.importer.SetPlatformSettings(src);
+                string normalized = src.name;
+                src.name = "Mutated";
+                src.maxTextureSize = 32;
+                src.compressionQuality = 1;
+                src.overridden = false;
+                return $"srcNameAfter={normalized}|{Dirty(master.importer, impBase)}|impWebGL=({DescribePlatform(master.importer.GetPlatformSettings("WebGL"))})|atlasWebGL=({DescribePlatform(master.atlas.GetPlatformSettings("WebGL"))})|{MetaState(master.path, origA, origM, includeBlock: false)}";
+            });
+
+            check(master.key + ".impSet.replaceExistingOverriddenFalseAndDefault", () =>
+            {
+                var ios = new TextureImporterPlatformSettings
+                {
+                    name = "iPhone",
+                    overridden = false,
+                    maxTextureSize = 128,
+                    compressionQuality = 33,
+                };
+                master.importer.SetPlatformSettings(ios);
+
+                var def = master.importer.GetPlatformSettings("DefaultTexturePlatform");
+                def.overridden = false;
+                def.maxTextureSize = 1024;
+                def.compressionQuality = 66;
+                master.importer.SetPlatformSettings(def);
+
+                return $"iosNameAfter={ios.name}|{Dirty(master.importer, impBase)}|impIOS=({DescribePlatform(master.importer.GetPlatformSettings("iOS"))})|impDef=({DescribePlatform(master.importer.GetPlatformSettings("DefaultTexturePlatform"))})|{MetaState(master.path, origA, origM, includeBlock: false)}";
+            });
+
+            check(master.key + ".impSet.afterSaveAssets", () =>
+            {
+                AssetDatabase.SaveAssets();
+                return $"{Dirty(master.importer, impBase)}|impWebGL=({DescribePlatform(master.importer.GetPlatformSettings("WebGL"))})|atlasWebGL=({DescribePlatform(master.atlas.GetPlatformSettings("WebGL"))})|{MetaState(master.path, origA, origM, includeBlock: false)}";
+            });
+
+            check(master.key + ".impSet.afterWriteImportSettingsIfDirty", () =>
+            {
+                bool wrote1 = AssetDatabase.WriteImportSettingsIfDirty(master.path);
+                bool wrote2 = AssetDatabase.WriteImportSettingsIfDirty(master.path);
+                return $"wrote1={wrote1}|wrote2={wrote2}|{Dirty(master.importer, impBase)}|impWebGL=({DescribePlatform(master.importer.GetPlatformSettings("WebGL"))})|atlasWebGLBeforeReimport=({DescribePlatform(master.atlas.GetPlatformSettings("WebGL"))})|{MetaState(master.path, origA, origM)}";
+            });
+
+            check(master.key + ".impSet.afterSaveAndReimport", () =>
+            {
+                var android = master.importer.GetPlatformSettings("Android");
+                android.maxTextureSize = 256;
+                android.compressionQuality = 44;
+                android.overridden = true;
+                master.importer.SetPlatformSettings(android);
+                master.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(master.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(master.path);
+                bool sameImp = ReferenceEquals(master.importer, impAfter);
+                bool sameAtlas = ReferenceEquals(master.atlas, atlasAfter);
+                master = (master.path, master.key, impAfter, atlasAfter);
+                return $"sameImp={sameImp}|sameAtlas={sameAtlas}|impDirty={EditorUtility.IsDirty(impAfter)}|atlasDirty={EditorUtility.IsDirty(atlasAfter)}|impAndroid=({DescribePlatform(impAfter.GetPlatformSettings("Android"))})|atlasAndroid=({DescribePlatform(atlasAfter.GetPlatformSettings("Android"))})|atlasWebGL=({DescribePlatform(atlasAfter.GetPlatformSettings("WebGL"))})|atlasIOS=({DescribePlatform(atlasAfter.GetPlatformSettings("iOS"))})|atlasDef=({DescribePlatform(atlasAfter.GetPlatformSettings("DefaultTexturePlatform"))})|{Unrelated(atlasAfter)}|{MetaState(master.path, origA, origM)}";
+            });
+
+            check(master.key + ".impSet.unsavedEditThenForceUpdate", () =>
+            {
+                var origMetaBeforeForce = File.ReadAllBytes(master.path + ".meta");
+                var edited = master.importer.GetPlatformSettings("Android");
+                edited.maxTextureSize = 64;
+                master.importer.SetPlatformSettings(edited);
+                int beforeAndroidSize = master.importer.GetPlatformSettings("Android").maxTextureSize;
+                AssetDatabase.ImportAsset(master.path, ImportAssetOptions.ForceUpdate);
+                var impAfter = AssetImporter.GetAtPath(master.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(master.path);
+                bool metaChangedByForce = !File.ReadAllBytes(master.path + ".meta").SequenceEqual(origMetaBeforeForce);
+                return $"beforeForceSize={beforeAndroidSize}|sameImp={ReferenceEquals(master.importer, impAfter)}|sameAtlas={ReferenceEquals(master.atlas, atlasAfter)}|impDirty={EditorUtility.IsDirty(impAfter)}|metaChangedByForce={metaChangedByForce}|impAndroid=({DescribePlatform(impAfter.GetPlatformSettings("Android"))})|atlasAndroid=({DescribePlatform(atlasAfter.GetPlatformSettings("Android"))})";
+            });
+        }
+
+        if (variant.importer != null)
+        {
+            int masterImpBaseAfter = byStem.TryGetValue("Master", out var mRef)
+                ? EditorUtility.GetDirtyCount(AssetImporter.GetAtPath(mRef.path))
+                : 0;
+
+            check(variant.key + ".impSet.unaffectedByMaster", () =>
+                $"{Dirty(variant.importer, variantImpBase)}|impAndroid=({DescribePlatform(variant.importer.GetPlatformSettings("Android"))})|impWebGL=({DescribePlatform(variant.importer.GetPlatformSettings("WebGL"))})|atlasAndroid=({DescribePlatform(variant.atlas.GetPlatformSettings("Android"))})|{MetaState(variant.path, variantOrigA, variantOrigM, includeBlock: false)}");
+
+            check(variant.key + ".impSet.updateAndSaveAndReimport", () =>
+            {
+                var android = variant.importer.GetPlatformSettings("Android");
+                android.maxTextureSize = 256;
+                android.compressionQuality = 55;
+                variant.importer.SetPlatformSettings(android);
+
+                var desktop = new TextureImporterPlatformSettings
+                {
+                    name = "StandaloneWindows64",
+                    overridden = true,
+                    maxTextureSize = 512,
+                    compressionQuality = 88,
+                };
+                variant.importer.SetPlatformSettings(desktop);
+                variant.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(variant.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(variant.path);
+                var masterImpNow = AssetImporter.GetAtPath(byStem["Master"].path) as SpriteAtlasImporter;
+                int masterDirtyDelta = EditorUtility.GetDirtyCount(masterImpNow) - masterImpBaseAfter;
+                return $"desktopNameAfter={desktop.name}|masterDirtyDelta={masterDirtyDelta}|masterStandalone=({DescribePlatform(masterImpNow.GetPlatformSettings("Standalone"))})|impDirty={EditorUtility.IsDirty(impAfter)}|impAndroid=({DescribePlatform(impAfter.GetPlatformSettings("Android"))})|impStandalone=({DescribePlatform(impAfter.GetPlatformSettings("Standalone"))})|atlasAndroid=({DescribePlatform(atlasAfter.GetPlatformSettings("Android"))})|atlasStandalone=({DescribePlatform(atlasAfter.GetPlatformSettings("Standalone"))})|{Unrelated(atlasAfter)}|{MetaState(variant.path, variantOrigA, variantOrigM)}";
+            });
+        }
+
+        if (byStem.TryGetValue("Legacy", out var legacy))
+        {
+            var origA = File.ReadAllBytes(legacy.path);
+            var origM = File.ReadAllBytes(legacy.path + ".meta");
+            check(legacy.key + ".impSet.upgradeAndSaveAndReimport", () =>
+            {
+                var android = legacy.importer.GetPlatformSettings("Android");
+                android.maxTextureSize = 512;
+                legacy.importer.SetPlatformSettings(android);
+
+                var ios = new TextureImporterPlatformSettings
+                {
+                    name = "iPhone",
+                    overridden = true,
+                    maxTextureSize = 256,
+                    compressionQuality = 70,
+                };
+                legacy.importer.SetPlatformSettings(ios);
+                legacy.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(legacy.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(legacy.path);
+                return $"impAndroid=({DescribePlatform(impAfter.GetPlatformSettings("Android"))})|impWSA=({DescribePlatform(impAfter.GetPlatformSettings("WSAPlayer"))})|impPS5=({DescribePlatform(impAfter.GetPlatformSettings("PS5"))})|impIOS=({DescribePlatform(impAfter.GetPlatformSettings("iOS"))})|atlasAndroid=({DescribePlatform(atlasAfter.GetPlatformSettings("Android"))})|atlasIOS=({DescribePlatform(atlasAfter.GetPlatformSettings("iOS"))})|{MetaState(legacy.path, origA, origM)}";
+            });
+        }
+
+        if (byStem.TryGetValue("Omitted", out var omitted))
+        {
+            var origA = File.ReadAllBytes(omitted.path);
+            var origM = File.ReadAllBytes(omitted.path + ".meta");
+            check(omitted.key + ".impSet.addDefaultAndAndroidAndSaveAndReimport", () =>
+            {
+                var def = new TextureImporterPlatformSettings
+                {
+                    name = "DefaultTexturePlatform",
+                    overridden = false,
+                    maxTextureSize = 512,
+                    compressionQuality = 65,
+                };
+                omitted.importer.SetPlatformSettings(def);
+
+                var tvos = new TextureImporterPlatformSettings
+                {
+                    name = "tvOS",
+                    overridden = false,
+                    maxTextureSize = 128,
+                };
+                omitted.importer.SetPlatformSettings(tvos);
+
+                var android = new TextureImporterPlatformSettings
+                {
+                    name = "Android",
+                    overridden = true,
+                    maxTextureSize = 1024,
+                    compressionQuality = 72,
+                };
+                omitted.importer.SetPlatformSettings(android);
+                omitted.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(omitted.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(omitted.path);
+                return $"impDef=({DescribePlatform(impAfter.GetPlatformSettings("DefaultTexturePlatform"))})|impTVOS=({DescribePlatform(impAfter.GetPlatformSettings("tvOS"))})|impAndroid=({DescribePlatform(impAfter.GetPlatformSettings("Android"))})|atlasDef=({DescribePlatform(atlasAfter.GetPlatformSettings("DefaultTexturePlatform"))})|atlasAndroid=({DescribePlatform(atlasAfter.GetPlatformSettings("Android"))})|{Unrelated(atlasAfter)}|{MetaState(omitted.path, origA, origM)}";
+            });
+        }
     }
 
     static string DescribePlatform(TextureImporterPlatformSettings s) => s == null
