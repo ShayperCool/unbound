@@ -594,16 +594,22 @@ impl Scene {
             done += 1;
         }
         // The probes follow every update: they read the input values, which change with each.
-        // (Their solve is not counted in the budget: it is linear in their references.)
-        for (set, offset) in &self.probe_sets {
-            let end = offset + set.probe_set().probes.len();
-            set.solve(
-                &self.systems,
-                &self.environment,
-                frame.indirect_scale,
-                &mut self.probes[*offset..end],
-            );
-        }
+        // (Their solve is not counted in the budget: it is linear in their references.) It runs
+        // on the job workers.
+        let (probe_sets, systems, environment) =
+            (&self.probe_sets, &self.systems, &self.environment);
+        let probes = &mut self.probes;
+        unbound_jobs::install(|| {
+            for (set, offset) in probe_sets {
+                let end = offset + set.probe_set().probes.len();
+                set.solve(
+                    systems,
+                    environment,
+                    frame.indirect_scale,
+                    &mut probes[*offset..end],
+                );
+            }
+        });
         let probes = if self.probe_sets.is_empty() {
             0
         } else {
@@ -669,15 +675,23 @@ pub fn read_atlas(handle: u64, atlas: usize, out: &mut [u16]) -> Result<usize> {
             out.len(),
             atlas.texels.len()
         );
+        use rayon::prelude::*;
+        /// Texels per parallel task of the decode, on the job workers.
+        const TEXELS_PER_TASK: usize = 4096;
         let one = half::f16::ONE.to_bits();
-        for (texel, out) in atlas.texels.iter().zip(out.chunks_exact_mut(4)) {
-            // RGB9E5 values are exact in half floats.
-            let rgb = decode_rgb9e5(*texel);
-            for k in 0..3 {
-                out[k] = half::f16::from_f32(rgb[k]).to_bits();
-            }
-            out[3] = one;
-        }
+        unbound_jobs::install(|| {
+            let texels = atlas.texels.par_iter().zip(out.par_chunks_exact_mut(4));
+            texels
+                .with_min_len(TEXELS_PER_TASK)
+                .for_each(|(texel, out)| {
+                    // RGB9E5 values are exact in half floats.
+                    let rgb = decode_rgb9e5(*texel);
+                    for k in 0..3 {
+                        out[k] = half::f16::from_f32(rgb[k]).to_bits();
+                    }
+                    out[3] = one;
+                })
+        });
         Ok(atlas.texels.len())
     })
 }

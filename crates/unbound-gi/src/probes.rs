@@ -63,7 +63,7 @@ impl ProbeSetSolver {
 
     /// Each probe's coefficients from the systems' last updates and the environment's values
     /// ([`ENVIRONMENT_VALUES`] of them), times `DynamicGI.indirectScale` `scale`, into `out` (one
-    /// per probe).
+    /// per probe). The probes are solved in parallel on the current rayon pool.
     pub fn solve(
         &self,
         systems: &[SystemSolver],
@@ -71,21 +71,27 @@ impl ProbeSetSolver {
         scale: f32,
         out: &mut [ProbeSh],
     ) {
-        for (probe, sh) in self.set.probes.iter().zip(out.iter_mut()) {
-            *sh = [0.0; 3 * SH_COEFFICIENTS];
-            for (&(dependency, index), weights) in probe.references.iter().zip(&probe.weights) {
-                // Dependencies and indices were checked in `new`.
-                let value = match self.sources[dependency as usize] {
-                    Source::Environment => environment[index as usize],
-                    Source::System(s) => systems[s].values()[index as usize],
-                    Source::Absent => continue,
-                };
-                for (c, v) in value.map(|v| v * scale).into_iter().enumerate() {
-                    for (k, w) in weights.iter().enumerate() {
-                        sh[c * SH_COEFFICIENTS + k] += w * v;
+        use rayon::prelude::*;
+        /// Probes per parallel task: a probe is a few hundred multiply-adds.
+        const PROBES_PER_TASK: usize = 64;
+        let probes = self.set.probes.par_iter().zip(out.par_iter_mut());
+        probes
+            .with_min_len(PROBES_PER_TASK)
+            .for_each(|(probe, sh)| {
+                *sh = [0.0; 3 * SH_COEFFICIENTS];
+                for (&(dependency, index), weights) in probe.references.iter().zip(&probe.weights) {
+                    // Dependencies and indices were checked in `new`.
+                    let value = match self.sources[dependency as usize] {
+                        Source::Environment => environment[index as usize],
+                        Source::System(s) => systems[s].values()[index as usize],
+                        Source::Absent => continue,
+                    };
+                    for (c, v) in value.map(|v| v * scale).into_iter().enumerate() {
+                        for (k, w) in weights.iter().enumerate() {
+                            sh[c * SH_COEFFICIENTS + k] += w * v;
+                        }
                     }
                 }
-            }
-        }
+            });
     }
 }
