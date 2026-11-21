@@ -142,7 +142,7 @@ namespace Unbound.Runtime
         /// before the next render).</summary>
         static readonly Dictionary<Camera, RenderTexture> s_MotionTextures = new Dictionary<Camera, RenderTexture>();
         /// <summary>A camera the player loop rendered drew motion vectors this frame.</summary>
-        static bool s_MotionRendered;
+        internal static bool s_MotionRendered;
 
         /// <summary>_CameraMotionVectorsTexture (RG half): the camera's motion from the depth
         /// texture and its previous view-projection (Hidden/Internal-MotionVectors' camera pass,
@@ -257,6 +257,7 @@ namespace Unbound.Runtime
             if (!renderer.m_HasPreviousModel || renderer.m_FirstDrawnFrame == Time.frameCount)
             {
                 renderer.m_PreviousModel = model;
+                renderer.m_PreviousModelVersion = null;
                 renderer.m_HasPreviousModel = true;
                 renderer.m_FirstDrawnFrame = Time.frameCount;
             }
@@ -327,12 +328,28 @@ namespace Unbound.Runtime
         {
             if (!s_MotionRendered) return;
             s_MotionRendered = false;
+            Transform.SyncJobs();
             foreach (var renderer in RenderRegistry.Renderers)
             {
                 if (!renderer) continue;
-                renderer.m_PreviousModel = renderer.MotionMatrix;
-                renderer.m_HasPreviousModel = true;
                 renderer.m_FirstDrawnFrame = -1;
+                if (!renderer.HasDynamicMotionMatrix)
+                {
+                    var t = renderer.m_GameObject.m_Transform;
+                    int version = t.m_Version;
+                    if (renderer.m_HasPreviousModel && renderer.m_PreviousModelVersion == version
+                        && ReferenceEquals(renderer.m_PreviousModelTransform, t))
+                        continue;
+                    renderer.m_PreviousModel = t.localToWorldMatrix;
+                    renderer.m_PreviousModelVersion = version;
+                    renderer.m_PreviousModelTransform = t;
+                    renderer.m_HasPreviousModel = true;
+                }
+                else
+                {
+                    renderer.m_PreviousModel = renderer.MotionMatrix;
+                    renderer.m_HasPreviousModel = true;
+                }
             }
         }
 

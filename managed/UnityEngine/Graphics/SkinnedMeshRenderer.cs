@@ -512,6 +512,8 @@ namespace UnityEngine
         /// skin; moving the renderer apart from its bones does not (Unity 6000.0.71f1,
         /// tests/projects/urp motion_blur_skinned_root, motion_blur_skinned_renderer,
         /// motion_blur_skinned_root_scale).</summary>
+        internal override bool HasDynamicMotionMatrix => true;
+
         internal override Matrix4x4 MotionMatrix
         {
             get

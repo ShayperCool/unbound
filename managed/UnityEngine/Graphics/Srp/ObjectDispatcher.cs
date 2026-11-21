@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Unity.Collections;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -216,6 +217,9 @@ namespace Unbound.Runtime
     {
         /// <summary>The number of live dispatchers tracking any type (the recording fast path).</summary>
         internal static int s_Tracking;
+        /// <summary>The number of live transform-tracking queues across all dispatchers.</summary>
+        static int s_TransformTracking;
+        static readonly object s_TransformDirtyLock = new object();
         static readonly List<System> s_Systems = new List<System>();
         internal static readonly List<int> Scratch = new List<int>();
         internal static readonly List<int> ScratchDestroyed = new List<int>();
@@ -228,7 +232,7 @@ namespace Unbound.Runtime
         internal static System Create()
         {
             var system = new System();
-            s_Systems.Add(system);
+            lock (s_TransformDirtyLock) s_Systems.Add(system);
             return system;
         }
 
@@ -236,22 +240,54 @@ namespace Unbound.Runtime
         {
             if (!system.Live) return;
             system.Live = false;
-            system.Clear();
-            s_Systems.Remove(system);
+            lock (s_TransformDirtyLock)
+            {
+                system.Clear();
+                s_Systems.Remove(system);
+            }
             Recount();
         }
 
         internal static void Recount()
         {
-            int tracking = 0;
-            foreach (var system in s_Systems) tracking += system.TypeCount;
+            int tracking = 0, transforms = 0;
+            lock (s_TransformDirtyLock)
+            {
+                for (int i = 0; i < s_Systems.Count; i++)
+                {
+                    tracking += s_Systems[i].TypeCount;
+                    transforms += s_Systems[i].TransformCount;
+                }
+            }
             s_Tracking = tracking;
+            Volatile.Write(ref s_TransformTracking, transforms);
         }
 
         internal static void Created(Object obj)
         {
             if (s_Tracking == 0 || obj is null) return;
             foreach (var system in s_Systems) system.Record(obj, created: true);
+            if (obj is Component component) ComponentAdded(component);
+        }
+
+        internal static void TransformChanged(Transform transform)
+        {
+            if (Volatile.Read(ref s_TransformTracking) == 0 || transform is null) return;
+            lock (s_TransformDirtyLock)
+            {
+                for (int i = 0; i < s_Systems.Count; i++)
+                    s_Systems[i].MarkTransformDirty(transform);
+            }
+        }
+
+        internal static void ComponentAdded(Component component)
+        {
+            if (Volatile.Read(ref s_TransformTracking) == 0 || component is null) return;
+            lock (s_TransformDirtyLock)
+            {
+                for (int i = 0; i < s_Systems.Count; i++)
+                    s_Systems[i].MarkComponentDirty(component);
+            }
         }
 
         internal static void Changed(Object obj)
@@ -308,14 +344,29 @@ namespace Unbound.Runtime
             readonly Dictionary<Type, TypeQueue> m_Types = new Dictionary<Type, TypeQueue>();
             readonly List<TypeQueue> m_Queues = new List<TypeQueue>();
             readonly Dictionary<(Type, ObjectDispatcher.TransformTrackingType), TransformQueue> m_Transforms = new Dictionary<(Type, ObjectDispatcher.TransformTrackingType), TransformQueue>();
+            readonly List<TransformQueue> m_TransformQueues = new List<TransformQueue>();
 
-            internal int TypeCount => m_Queues.Count + m_Transforms.Count;
+            internal int TypeCount => m_Queues.Count + m_TransformQueues.Count;
+            internal int TransformCount => m_TransformQueues.Count;
 
             internal void Clear()
             {
                 m_Types.Clear();
                 m_Queues.Clear();
                 m_Transforms.Clear();
+                m_TransformQueues.Clear();
+            }
+
+            internal void MarkTransformDirty(Transform transform)
+            {
+                for (int i = 0; i < m_TransformQueues.Count; i++)
+                    m_TransformQueues[i].MarkTransformDirty(transform);
+            }
+
+            internal void MarkComponentDirty(Component component)
+            {
+                for (int i = 0; i < m_TransformQueues.Count; i++)
+                    m_TransformQueues[i].MarkComponentDirty(component);
             }
 
             internal void EnableType(Type type, ObjectDispatcher.TypeTrackingFlags flags)
@@ -345,13 +396,25 @@ namespace Unbound.Runtime
             internal void EnableTransforms(Type type, ObjectDispatcher.TransformTrackingType tracking)
             {
                 if (type == null || m_Transforms.ContainsKey((type, tracking))) return;
-                m_Transforms[(type, tracking)] = new TransformQueue { Type = type };
+                var queue = new TransformQueue(type);
+                lock (s_TransformDirtyLock)
+                {
+                    m_Transforms[(type, tracking)] = queue;
+                    m_TransformQueues.Add(queue);
+                }
                 Recount();
             }
 
             internal void DisableTransforms(Type type, ObjectDispatcher.TransformTrackingType tracking)
             {
-                if (type != null && m_Transforms.Remove((type, tracking))) Recount();
+                if (type == null) return;
+                bool removed;
+                lock (s_TransformDirtyLock)
+                {
+                    removed = m_Transforms.Remove((type, tracking), out var queue);
+                    if (removed) m_TransformQueues.Remove(queue);
+                }
+                if (removed) Recount();
             }
 
             internal void Record(Object obj, bool created)
@@ -500,26 +563,119 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A transform-tracked type: the transform version each live component of it had
-        /// at the last dispatch.</summary>
+        /// at the last dispatch, updated incrementally from changed transforms and newly live
+        /// components after the initial seed scan.</summary>
         sealed class TransformQueue
         {
-            internal Type Type;
+            internal readonly Type Type;
+            readonly bool m_IsRenderer;
+            readonly bool m_IsLodGroup;
             readonly Dictionary<Component, int> m_Versions = new Dictionary<Component, int>();
             readonly List<Component> m_Changed = new List<Component>();
+            readonly List<Transform> m_DirtyTransforms = new List<Transform>();
+            readonly HashSet<Transform> m_DirtyTransformSet = new HashSet<Transform>();
+            readonly List<Component> m_DirtyComponents = new List<Component>();
+            readonly HashSet<Component> m_DirtyComponentSet = new HashSet<Component>();
+            readonly List<Transform> m_DrainedTransforms = new List<Transform>();
+            readonly List<Component> m_DrainedComponents = new List<Component>();
+            bool m_Initialized;
+
+            internal TransformQueue(Type type)
+            {
+                Type = type;
+                m_IsRenderer = typeof(Renderer).IsAssignableFrom(type);
+                m_IsLodGroup = !m_IsRenderer && typeof(LODGroup).IsAssignableFrom(type);
+            }
+
+            internal void MarkTransformDirty(Transform transform)
+            {
+                if (!m_Initialized) return;
+                if (m_DirtyTransformSet.Add(transform)) m_DirtyTransforms.Add(transform);
+            }
+
+            internal void MarkComponentDirty(Component component)
+            {
+                if (!m_Initialized) return;
+                if (!Type.IsInstanceOfType(component)) return;
+                if (m_DirtyComponentSet.Add(component)) m_DirtyComponents.Add(component);
+            }
+
+            bool MatchesTracked(Component component)
+            {
+                if (!component || !Type.IsInstanceOfType(component)) return false;
+                if (m_IsRenderer) return component is Renderer r && r.m_Registered;
+                if (m_IsLodGroup) return component is LODGroup;
+                return true;
+            }
+
+            void Visit(Component component, int version)
+            {
+                if (m_Versions.TryGetValue(component, out int seen) && seen == version) return;
+                m_Versions[component] = version;
+                m_Changed.Add(component);
+            }
 
             /// <summary>The live components of the type (active and enabled ones, as the drawer's
             /// renderers and LOD groups are) whose transform changed since the last dispatch.</summary>
             internal List<Component> Take()
             {
                 m_Changed.Clear();
-                foreach (var component in TrackedComponents.Of(Type))
+                Transform.SyncJobs();
+                if (!m_Initialized)
                 {
-                    if (!component || !Type.IsInstanceOfType(component)) continue;
-                    int version = component.transform.SyncedVersion;
-                    if (m_Versions.TryGetValue(component, out int seen) && seen == version) continue;
-                    m_Versions[component] = version;
-                    m_Changed.Add(component);
+                    foreach (var component in TrackedComponents.Of(Type))
+                    {
+                        if (!component || !Type.IsInstanceOfType(component)) continue;
+                        Visit(component, component.transform.m_Version);
+                    }
+                    lock (s_TransformDirtyLock)
+                    {
+                        m_DirtyTransforms.Clear();
+                        m_DirtyTransformSet.Clear();
+                        m_DirtyComponents.Clear();
+                        m_DirtyComponentSet.Clear();
+                        m_Initialized = true;
+                    }
+                    return m_Changed;
                 }
+
+                m_DrainedTransforms.Clear();
+                m_DrainedComponents.Clear();
+                lock (s_TransformDirtyLock)
+                {
+                    if (m_DirtyTransforms.Count == 0 && m_DirtyComponents.Count == 0)
+                        return m_Changed;
+                    m_DrainedTransforms.AddRange(m_DirtyTransforms);
+                    m_DirtyTransforms.Clear();
+                    m_DirtyTransformSet.Clear();
+                    m_DrainedComponents.AddRange(m_DirtyComponents);
+                    m_DirtyComponents.Clear();
+                    m_DirtyComponentSet.Clear();
+                }
+
+                for (int i = 0; i < m_DrainedComponents.Count; i++)
+                {
+                    var component = m_DrainedComponents[i];
+                    if (!MatchesTracked(component)) continue;
+                    Visit(component, component.m_GameObject.m_Transform.m_Version);
+                }
+                for (int i = 0; i < m_DrainedTransforms.Count; i++)
+                {
+                    var transform = m_DrainedTransforms[i];
+                    if (!transform) continue;
+                    var go = transform.m_GameObject;
+                    if (go == null) continue;
+                    int version = transform.m_Version;
+                    var components = go.m_Components;
+                    for (int j = 0; j < components.Count; j++)
+                    {
+                        var component = components[j];
+                        if (!MatchesTracked(component)) continue;
+                        Visit(component, version);
+                    }
+                }
+                m_DrainedTransforms.Clear();
+                m_DrainedComponents.Clear();
                 return m_Changed;
             }
 

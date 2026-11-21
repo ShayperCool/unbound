@@ -1168,6 +1168,20 @@ namespace Unbound.Runtime
             // As in the built-in pipeline's culling (not measured in a scriptable pipeline).
             CullingGroup.EvaluateForCamera(camera);
             Renderer.SendWillRenderObject(camera != null ? camera.projectionMatrix * camera.worldToCameraMatrix : Matrix4x4.zero, (int)mask);
+            Transform.SyncJobs();
+            int planeCount = Math.Clamp(parameters.cullingPlaneCount, 0, ScriptableCullingParameters.maximumCullingPlaneCount);
+            Span<Plane> planes = stackalloc Plane[planeCount];
+            Span<Vector3> absNormals = stackalloc Vector3[planeCount];
+            for (int i = 0; i < planeCount; i++)
+            {
+                var p = parameters.GetCullingPlane(i);
+                planes[i] = p;
+                var n = p.normal;
+                absNormals[i] = new Vector3(Mathf.Abs(n.x), Mathf.Abs(n.y), Mathf.Abs(n.z));
+            }
+            bool hasCamera = camera != null;
+            var lodParams = hasCamera ? LODGroup.CameraLodParams.For(camera) : default;
+            int lodPass = hasCamera ? LODGroup.NextCullPass() : 0;
             foreach (var renderer in RenderRegistry.Renderers)
             {
                 // A live renderer's state read directly (the culling runs on the main thread).
@@ -1185,12 +1199,10 @@ namespace Unbound.Runtime
                     continue;
                 }
                 if ((mask & (1u << go.m_Layer)) == 0) continue;
-                // The camera's position (read anew, scripts may move it meanwhile) only for a
-                // renderer in an LOD group.
-                if (camera != null && renderer.m_LODGroup is not null && !LODGroup.Drawn(renderer, camera, camera.transform.position)) continue;
+                if (hasCamera && renderer.m_LODGroup is { } lodGroup && lodGroup && !lodGroup.Draws(renderer, in lodParams, lodPass)) continue;
                 data.Renderers.Add(renderer);
                 renderer.PrepareCullingBounds();
-                if (InsidePlanes(ref parameters, renderer.bounds))
+                if (InsidePlanes(planes, absNormals, renderer.bounds))
                 {
                     data.Visible.Add(renderer);
                     // Visible from the culling on, as with the built-in pipeline.
@@ -1206,7 +1218,7 @@ namespace Unbound.Runtime
                 if (q.Camera != null && q.Camera != camera) continue;
                 if ((mask & (1u << q.Layer)) == 0) continue;
                 data.Queued.Add(q);
-                if (InsidePlanes(ref parameters, q.WorldBounds ?? FrameBuilder.WorldBounds(q.Mesh.bounds, q.Matrix))) data.QueuedVisible.Add(q);
+                if (InsidePlanes(planes, absNormals, q.WorldBounds ?? FrameBuilder.WorldBounds(q.Mesh.bounds, q.Matrix))) data.QueuedVisible.Add(q);
             }
             Unbound.Runtime.Immediate.TakeCameraDraws(camera);
             Unbound.Runtime.BatchCulling.CullCamera(data, ref parameters, camera);
@@ -1224,7 +1236,7 @@ namespace Unbound.Runtime
             // sorting (importance first: the more important first; size: the smaller first).
             var probes = new List<ReflectionProbe>();
             foreach (var probe in ReflectionProbe.s_Enabled)
-                if (probe && probe.isActiveAndEnabled && probe.texture != null && InsidePlanes(ref parameters, probe.Drawn.Bounds)) probes.Add(probe);
+                if (probe && probe.isActiveAndEnabled && probe.texture != null && InsidePlanes(planes, absNormals, probe.Drawn.Bounds)) probes.Add(probe);
             var criteria = parameters.reflectionProbeSortingCriteria;
             // The probes' placement as the frame began (ReflectionProbe.Drawn).
             float Volume(ReflectionProbe p) { var s = p.Drawn.Size; return s.x * s.y * s.z; }
@@ -1331,15 +1343,16 @@ namespace Unbound.Runtime
         static readonly Comparison<Light> s_BrightestFirst = (a, b) => (b.intensity * b.color.grayscale).CompareTo(a.intensity * a.color.grayscale);
 
         /// <summary>Whether bounds touch the inside of every culling plane (planes face inwards).</summary>
-        static bool InsidePlanes(ref ScriptableCullingParameters parameters, Bounds bounds)
+        static bool InsidePlanes(ReadOnlySpan<Plane> planes, ReadOnlySpan<Vector3> absNormals, Bounds bounds)
         {
             var c = bounds.center;
             var e = bounds.extents;
-            for (int i = 0; i < parameters.cullingPlaneCount; i++)
+            for (int i = 0; i < planes.Length; i++)
             {
-                var plane = parameters.GetCullingPlane(i);
+                var plane = planes[i];
                 var n = plane.normal;
-                float radius = Mathf.Abs(n.x) * e.x + Mathf.Abs(n.y) * e.y + Mathf.Abs(n.z) * e.z;
+                var an = absNormals[i];
+                float radius = an.x * e.x + an.y * e.y + an.z * e.z;
                 if (Vector3.Dot(n, c) + plane.distance < -radius) return false;
             }
             return true;

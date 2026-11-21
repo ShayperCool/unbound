@@ -65,7 +65,7 @@ namespace UnityEngine
 
         /// <summary>The main thread waits for the transform jobs (IJobParallelForTransform) before it
         /// touches transforms, as in Unity.</summary>
-        static void SyncJobs()
+        internal static void SyncJobs()
         {
             if (Unbound.Runtime.Jobs.JobSystem.TransformJobsPending) Unbound.Runtime.Jobs.JobSystem.SyncTransformJobs();
         }
@@ -390,6 +390,7 @@ namespace UnityEngine
             m_HasChanged = true;
             m_Version++;
             m_WorldDirty = true;
+            ObjectDispatch.TransformChanged(this);
             for (int i = 0; i < m_Children.Count; i++)
                 m_Children[i].MarkParentChanged();
             OnLocalChanged();
@@ -400,6 +401,7 @@ namespace UnityEngine
             m_HasChanged = true;
             m_Version++;
             m_WorldDirty = true;
+            ObjectDispatch.TransformChanged(this);
             for (int i = 0; i < m_Children.Count; i++)
                 m_Children[i].MarkParentChanged();
             // Dimension listeners can read world matrices on this branch's descendants.
@@ -759,22 +761,44 @@ namespace UnityEngine
 
         // Keep the measured accumulation order when removing a rotation from scale.
         // TransformInputs covers every component with tilted and nested controls.
-        static Matrix4x4 MultiplyRotationScale(Matrix4x4 a, Matrix4x4 b)
+        static Matrix4x4 MultiplyRotationScale(in Matrix4x4 a, in Matrix4x4 b)
         {
-            var result = Matrix4x4.identity;
-            for (int row = 0; row < 3; row++)
-                for (int column = 0; column < 3; column++)
-                    result[row, column] = (a[row, 1] * b[1, column] + a[row, 2] * b[2, column])
-                        + a[row, 0] * b[0, column];
-            return result;
+            return new Matrix4x4
+            {
+                m00 = (a.m01 * b.m10 + a.m02 * b.m20) + a.m00 * b.m00,
+                m01 = (a.m01 * b.m11 + a.m02 * b.m21) + a.m00 * b.m01,
+                m02 = (a.m01 * b.m12 + a.m02 * b.m22) + a.m00 * b.m02,
+                m03 = 0f,
+                m10 = (a.m11 * b.m10 + a.m12 * b.m20) + a.m10 * b.m00,
+                m11 = (a.m11 * b.m11 + a.m12 * b.m21) + a.m10 * b.m01,
+                m12 = (a.m11 * b.m12 + a.m12 * b.m22) + a.m10 * b.m02,
+                m13 = 0f,
+                m20 = (a.m21 * b.m10 + a.m22 * b.m20) + a.m20 * b.m00,
+                m21 = (a.m21 * b.m11 + a.m22 * b.m21) + a.m20 * b.m01,
+                m22 = (a.m21 * b.m12 + a.m22 * b.m22) + a.m20 * b.m02,
+                m23 = 0f,
+                m33 = 1f,
+            };
         }
 
-        static Matrix4x4 MultiplyAffine(Matrix4x4 a, Matrix4x4 b)
+        static Matrix4x4 MultiplyAffine(in Matrix4x4 a, in Matrix4x4 b)
         {
-            var result = MultiplyRotationScale(a, b);
-            for (int row = 0; row < 3; row++)
-                result[row, 3] = ((a[row, 1] * b.m13 + a[row, 2] * b.m23) + a[row, 0] * b.m03) + a[row, 3];
-            return result;
+            return new Matrix4x4
+            {
+                m00 = (a.m01 * b.m10 + a.m02 * b.m20) + a.m00 * b.m00,
+                m01 = (a.m01 * b.m11 + a.m02 * b.m21) + a.m00 * b.m01,
+                m02 = (a.m01 * b.m12 + a.m02 * b.m22) + a.m00 * b.m02,
+                m03 = ((a.m01 * b.m13 + a.m02 * b.m23) + a.m00 * b.m03) + a.m03,
+                m10 = (a.m11 * b.m10 + a.m12 * b.m20) + a.m10 * b.m00,
+                m11 = (a.m11 * b.m11 + a.m12 * b.m21) + a.m10 * b.m01,
+                m12 = (a.m11 * b.m12 + a.m12 * b.m22) + a.m10 * b.m02,
+                m13 = ((a.m11 * b.m13 + a.m12 * b.m23) + a.m10 * b.m03) + a.m13,
+                m20 = (a.m21 * b.m10 + a.m22 * b.m20) + a.m20 * b.m00,
+                m21 = (a.m21 * b.m11 + a.m22 * b.m21) + a.m20 * b.m01,
+                m22 = (a.m21 * b.m12 + a.m22 * b.m22) + a.m20 * b.m02,
+                m23 = ((a.m21 * b.m13 + a.m22 * b.m23) + a.m20 * b.m03) + a.m23,
+                m33 = 1f,
+            };
         }
 
         static float ReciprocalScale(float scale)

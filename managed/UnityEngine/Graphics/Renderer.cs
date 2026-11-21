@@ -47,6 +47,7 @@ namespace UnityEngine
             if (!m_Enabled || m_Registered) return;
             m_Registered = true;
             RenderRegistry.Renderers.Add(this);
+            ObjectDispatch.ComponentAdded(this);
             Dirty();
         }
 
@@ -55,9 +56,17 @@ namespace UnityEngine
         /// through the rest of that frame (<see cref="m_FirstDrawnFrame"/>).</summary>
         internal Matrix4x4 m_PreviousModel;
         internal bool m_HasPreviousModel;
+        /// <summary>The transform and version <see cref="m_PreviousModel"/> was recorded at when
+        /// <see cref="HasDynamicMotionMatrix"/> is false, so static renderers skip copying every frame.</summary>
+        internal int? m_PreviousModelVersion;
+        internal Transform m_PreviousModelTransform;
         /// <summary>The frame <see cref="m_PreviousModel"/> was taken from the renderer's first
         /// motion vector draw in, -1 once a frame's end has kept it.</summary>
         internal int m_FirstDrawnFrame = -1;
+
+        /// <summary>True when <see cref="MotionMatrix"/> can change independently of this
+        /// renderer's own transform (e.g. bone-skinned meshes following a separate root bone).</summary>
+        internal virtual bool HasDynamicMotionMatrix => false;
 
         /// <summary>The object matrix the renderer's object motion follows (what
         /// <see cref="m_PreviousModel"/> keeps).</summary>
@@ -579,12 +588,17 @@ namespace UnityEngine
         /// may render a camera from OnWillRenderObject: each pass has its own).</summary>
         static readonly Stack<List<Renderer>> s_WillRenderLists = new Stack<List<Renderer>>();
 
+        /// <summary>Live MonoBehaviours whose type declares OnWillRenderObject; when 0,
+        /// <see cref="SendWillRenderObject"/> returns in O(1) without scanning scene renderers.</summary>
+        internal static int s_WillRenderScriptCount;
+
         /// <summary>OnWillRenderObject to the enabled scripts on the objects of the renderers a camera
         /// sees (its culling mask lets them through and their bounds touch its frustum), before any
         /// of them is drawn (Unity sends it from the camera's culling, once per camera). Scripts may
         /// change the scene meanwhile.</summary>
         internal static void SendWillRenderObject(Matrix4x4 viewProjection, int cullingMask)
         {
+            if (s_WillRenderScriptCount <= 0) return;
             // Nothing changes the registry before the first script gets the message: walk it as it
             // is, and copy the rest from that renderer on, since scripts may change the scene.
             var list = s_WillRenderLists.Count > 0 ? s_WillRenderLists.Pop() : new List<Renderer>();

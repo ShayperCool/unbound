@@ -80,15 +80,82 @@ namespace UnityEngine
             }
         }
 
-        internal Vector3 worldReferencePoint => transform.TransformPoint(m_LocalReferencePoint);
+        Transform m_WorldCacheTransform;
+        int? m_WorldCacheVersion;
+        Vector3 m_WorldCacheLocalRef;
+        float m_WorldCacheLocalSize;
+        Vector3 m_WorldCacheRef;
+        float m_WorldCacheSize;
+
+        static int s_CullPass;
+        int m_CachedCullPass;
+        int m_CachedCullLevel;
+
+        internal static int NextCullPass() => unchecked(++s_CullPass == 0 ? ++s_CullPass : s_CullPass);
+
+        void EnsureWorldCache()
+        {
+            var t = m_GameObject.m_Transform;
+            int version = t.SyncedVersion;
+            if (m_WorldCacheVersion != version || !ReferenceEquals(m_WorldCacheTransform, t)
+                || !FloatBits.Same(m_WorldCacheLocalRef, m_LocalReferencePoint)
+                || !FloatBits.Same(m_WorldCacheLocalSize, m_Size))
+            {
+                m_WorldCacheRef = t.TransformPoint(m_LocalReferencePoint);
+                var scale = t.lossyScale;
+                m_WorldCacheSize = m_Size * Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
+                m_WorldCacheTransform = t;
+                m_WorldCacheVersion = version;
+                m_WorldCacheLocalRef = m_LocalReferencePoint;
+                m_WorldCacheLocalSize = m_Size;
+            }
+        }
+
+        internal Vector3 worldReferencePoint
+        {
+            get
+            {
+                EnsureWorldCache();
+                return m_WorldCacheRef;
+            }
+        }
 
         /// <summary>The group's size in the world: its size times its largest absolute scale.</summary>
         internal float WorldSize
         {
             get
             {
-                var scale = transform.lossyScale;
-                return m_Size * Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
+                EnsureWorldCache();
+                return m_WorldCacheSize;
+            }
+        }
+
+        /// <summary>Camera-invariant LOD evaluation parameters hoisted once per camera cull.</summary>
+        internal readonly struct CameraLodParams
+        {
+            internal readonly Vector3 CameraPosition;
+            internal readonly float DistanceOrScaleSq;
+            internal readonly int MinLevel;
+            internal readonly bool Orthographic;
+
+            CameraLodParams(Vector3 cameraPosition, float distanceOrScaleSq, int minLevel, bool orthographic)
+            {
+                CameraPosition = cameraPosition;
+                DistanceOrScaleSq = distanceOrScaleSq;
+                MinLevel = minLevel;
+                Orthographic = orthographic;
+            }
+
+            internal static CameraLodParams For(Camera camera)
+            {
+                float bias = QualitySettings.lodBias;
+                int minLevel = Math.Max(0, QualitySettings.maximumLODLevel);
+                if (camera.orthographic)
+                    return new CameraLodParams(default, (camera.orthographicSize + camera.orthographicSize) / bias, minLevel, true);
+                float fieldOfView = camera.fieldOfView;
+                float tangent = Mathf.Tan((fieldOfView / 360f + fieldOfView / 360f) * Mathf.PI * 0.5f);
+                float scale = (tangent + tangent) / bias;
+                return new CameraLodParams(camera.transform.position, scale * scale, minLevel, false);
             }
         }
 
@@ -248,6 +315,50 @@ namespace UnityEngine
             return group.Draws(renderer, camera, cameraPosition);
         }
 
+        /// <summary>Fast culling path using precomputed camera LOD parameters and per-cull level caching.</summary>
+        internal bool Draws(Renderer renderer, in CameraLodParams camera, int cullPass)
+        {
+            if (!m_Enabled || !m_GameObject.ActiveInHierarchyNoThrow) return true;
+            int level;
+            if (cullPass != 0 && m_CachedCullPass == cullPass)
+            {
+                level = m_CachedCullLevel;
+            }
+            else
+            {
+                level = LevelFor(in camera);
+                m_CachedCullPass = cullPass;
+                m_CachedCullLevel = level;
+            }
+            if (level < 0) return false;
+            var drawn = m_LODs[level].renderers;
+            if (drawn == null) return false;
+            for (int i = 0; i < drawn.Length; i++)
+                if (ReferenceEquals(drawn[i], renderer)) return true;
+            return false;
+        }
+
+        int LevelFor(in CameraLodParams camera)
+        {
+            if (m_LODs.Length == 0) return -1;
+            if (m_Forced >= 0) return Math.Min(m_Forced, m_LODs.Length - 1);
+            EnsureWorldCache();
+            float distance;
+            if (camera.Orthographic)
+            {
+                distance = camera.DistanceOrScaleSq;
+            }
+            else
+            {
+                var to = m_WorldCacheRef - camera.CameraPosition;
+                distance = Mathf.Sqrt((to.z * to.z + to.y * to.y + to.x * to.x) * camera.DistanceOrScaleSq);
+            }
+            float worldSize = m_WorldCacheSize;
+            for (int i = camera.MinLevel; i < m_LODs.Length; i++)
+                if (distance < worldSize / m_LODs[i].screenRelativeTransitionHeight) return i;
+            return -1;
+        }
+
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_LocalReferencePoint = body.Vector3("m_LocalReferencePoint");
@@ -320,7 +431,11 @@ namespace UnityEngine
             SetLODs(lods);
         }
 
-        internal override void OnAttached() => s_Live.Add(this);
+        internal override void OnAttached()
+        {
+            s_Live.Add(this);
+            ObjectDispatch.ComponentAdded(this);
+        }
 
         internal override void OnEngineEnable() => ObjectDispatch.Changed(this);
 

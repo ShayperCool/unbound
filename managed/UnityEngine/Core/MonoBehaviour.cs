@@ -12,7 +12,26 @@ namespace UnityEngine
         internal bool m_EnabledState;
         internal bool m_DestroyDisableSent;
         internal bool m_DidStart;
+        bool m_TrackedWillRender;
         CancellationTokenSource m_CancellationTokenSource;
+
+        internal override void OnAttached()
+        {
+            if (ScriptMessages.For(GetType()).OnWillRenderObject != null)
+            {
+                m_TrackedWillRender = true;
+                Renderer.s_WillRenderScriptCount++;
+            }
+        }
+
+        internal override void OnEngineDestroy()
+        {
+            if (m_TrackedWillRender)
+            {
+                m_TrackedWillRender = false;
+                Renderer.s_WillRenderScriptCount--;
+            }
+        }
 
         bool m_UseGUILayout = true, m_RunInEditMode;
 
