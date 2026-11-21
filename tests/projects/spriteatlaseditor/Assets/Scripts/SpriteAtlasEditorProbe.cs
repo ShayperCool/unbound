@@ -87,6 +87,9 @@ static class SpriteAtlasEditorProbe
         if (paths.Any(p => p.StartsWith("Assets/VariantScaleAtlases/", StringComparison.Ordinal)))
             RecordVariantScale(paths, none, Check);
 
+        if (paths.Any(p => p.StartsWith("Assets/IsVariantAtlases/", StringComparison.Ordinal)))
+            RecordIsVariant(paths, none, Check);
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
@@ -701,6 +704,183 @@ static class SpriteAtlasEditorProbe
                 var logs = CaptureLogs(() => omitted.atlas.SetVariantScale(0.6f));
                 AssetDatabase.SaveAssetIfDirty(omitted.atlas);
                 return $"{Dirty(omitted.atlas, baseDirty)}|logs=[{logs}]|{Unrelated(omitted.atlas)}|metaChanged={!File.ReadAllBytes(omitted.path + ".meta").SequenceEqual(origM)}|assetScale={VariantScaleLine(omitted.path)}|metaScale={VariantScaleLine(omitted.path + ".meta")}|assetTexture={YamlBlock(omitted.path, "textureSettings:")}|assetPacking={YamlBlock(omitted.path, "packingSettings:")}|assetPackables={PackablesBlock(omitted.path)}";
+            });
+        }
+    }
+
+    static string TopFieldLine(string file, string keyPrefix)
+    {
+        foreach (var line in File.ReadAllLines(file))
+            if (line.TrimStart().StartsWith(keyPrefix, StringComparison.Ordinal))
+                return line.Trim();
+        return "<absent>";
+    }
+
+    static void RecordIsVariant(string[] paths, SpriteAtlas none, Action<string, Func<string>> check)
+    {
+        var byStem = new System.Collections.Generic.Dictionary<string, (string path, string key, SpriteAtlas atlas)>(StringComparer.Ordinal);
+        foreach (var path in paths)
+        {
+            var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+            if (atlas != null)
+                byStem[Path.GetFileNameWithoutExtension(path)] = (path, Path.GetFileName(path), atlas);
+        }
+
+        string State(SpriteAtlas a, int baseDirty) =>
+            $"isVariant={a.isVariant}|master={Describe(a.GetMasterAtlas())}|tag={a.tag}|dirty={EditorUtility.IsDirty(a)}|dirtyDelta={EditorUtility.GetDirtyCount(a) - baseDirty}";
+
+        string Unrelated(SpriteAtlas a) =>
+            $"packables=[{string.Join(",", a.GetPackables().Select(Describe))}]|texture=({DescribeTexture(a.GetTextureSettings())})|packing=({DescribePacking(a.GetPackingSettings())})|android=({DescribePlatform(a.GetPlatformSettings("Android"))})|include={a.IsIncludeInBuild()}";
+
+        string FileState(string path, byte[] origAsset, byte[] origMeta, bool includeAssetFields = true)
+        {
+            bool assetChanged = !File.ReadAllBytes(path).SequenceEqual(origAsset);
+            bool metaChanged = !File.ReadAllBytes(path + ".meta").SequenceEqual(origMeta);
+            return includeAssetFields
+                ? $"assetChanged={assetChanged}|metaChanged={metaChanged}|assetIsVariant={TopFieldLine(path, "m_IsVariant:")}|assetMaster={TopFieldLine(path, "m_MasterAtlas:")}|assetTag={TopFieldLine(path, "m_Tag:")}|assetScale={VariantScaleLine(path)}|metaScale={VariantScaleLine(path + ".meta")}"
+                : $"assetChanged={assetChanged}|metaChanged={metaChanged}|metaScale={VariantScaleLine(path + ".meta")}";
+        }
+
+        string CaptureLogs(Action action)
+        {
+            var logs = new System.Collections.Generic.List<string>();
+            Application.LogCallback handler = (condition, stackTrace, type) => logs.Add(type + ":" + condition);
+            Application.logMessageReceived += handler;
+            try { action(); }
+            finally { Application.logMessageReceived -= handler; }
+            return string.Join(";", logs);
+        }
+
+        check("null.setIsVariant.true", () => { none.SetIsVariant(true); return "ok"; });
+        check("null.setIsVariant.false", () => { none.SetIsVariant(false); return "ok"; });
+
+        var mem = new SpriteAtlas { name = "MemAtlas" };
+        int memBase = EditorUtility.GetDirtyCount(mem);
+        check("new.isVariant.sameFalse", () =>
+        {
+            var logs = CaptureLogs(() => mem.SetIsVariant(false));
+            return $"{State(mem, memBase)}|logs=[{logs}]";
+        });
+        check("new.isVariant.toTrue", () =>
+        {
+            var logs = CaptureLogs(() => mem.SetIsVariant(true));
+            return $"{State(mem, memBase)}|logs=[{logs}]";
+        });
+        check("new.isVariant.sameTrue", () =>
+        {
+            var logs = CaptureLogs(() => mem.SetIsVariant(true));
+            return $"{State(mem, memBase)}|logs=[{logs}]";
+        });
+        check("new.isVariant.backToFalse", () =>
+        {
+            var logs = CaptureLogs(() => mem.SetIsVariant(false));
+            return $"{State(mem, memBase)}|logs=[{logs}]";
+        });
+        AssetDatabase.SaveAssets();
+        check("new.isVariant.afterSave", () => State(mem, memBase));
+
+        byStem.TryGetValue("Master", out var master);
+
+        if (byStem.TryGetValue("Variant", out var variant))
+        {
+            var origA = File.ReadAllBytes(variant.path);
+            var origM = File.ReadAllBytes(variant.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(variant.atlas);
+            int masterBaseDirty = master.atlas != null ? EditorUtility.GetDirtyCount(master.atlas) : 0;
+
+            check(variant.key + ".isVariant.initial", () =>
+                $"{State(variant.atlas, baseDirty)}|{Unrelated(variant.atlas)}|{FileState(variant.path, origA, origM)}");
+
+            check(variant.key + ".isVariant.sameTrue", () =>
+            {
+                var logs = CaptureLogs(() => variant.atlas.SetIsVariant(true));
+                return $"{State(variant.atlas, baseDirty)}|masterDirtyDelta={EditorUtility.GetDirtyCount(master.atlas) - masterBaseDirty}|logs=[{logs}]|{FileState(variant.path, origA, origM)}";
+            });
+
+            check(variant.key + ".isVariant.toFalse", () =>
+            {
+                var logs = CaptureLogs(() => variant.atlas.SetIsVariant(false));
+                return $"{State(variant.atlas, baseDirty)}|masterDirtyDelta={EditorUtility.GetDirtyCount(master.atlas) - masterBaseDirty}|logs=[{logs}]|{Unrelated(variant.atlas)}|{FileState(variant.path, origA, origM)}";
+            });
+
+            check(variant.key + ".isVariant.sameFalse", () =>
+            {
+                var logs = CaptureLogs(() => variant.atlas.SetIsVariant(false));
+                return $"{State(variant.atlas, baseDirty)}|logs=[{logs}]|{FileState(variant.path, origA, origM)}";
+            });
+
+            AssetDatabase.SaveAssets();
+            check(variant.key + ".isVariant.afterSaveFalse", () =>
+                $"{State(variant.atlas, baseDirty)}|{Unrelated(variant.atlas)}|{FileState(variant.path, origA, origM)}");
+
+            check(variant.key + ".isVariant.backToTrueAndSaveIfDirty", () =>
+            {
+                var logs = CaptureLogs(() => variant.atlas.SetIsVariant(true));
+                AssetDatabase.SaveAssetIfDirty(variant.atlas);
+                return $"{State(variant.atlas, baseDirty)}|logs=[{logs}]|{Unrelated(variant.atlas)}|{FileState(variant.path, origA, origM)}";
+            });
+
+            AssetDatabase.ImportAsset(variant.path, ImportAssetOptions.ForceUpdate);
+            var reloaded = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(variant.path);
+            check(variant.key + ".isVariant.afterReimport", () =>
+                $"sameRef={ReferenceEquals(variant.atlas, reloaded)}|isVariant={reloaded.isVariant}|master={Describe(reloaded.GetMasterAtlas())}|tag={reloaded.tag}|dirty={EditorUtility.IsDirty(reloaded)}|{Unrelated(reloaded)}|{FileState(variant.path, origA, origM)}");
+        }
+
+        if (master.atlas != null)
+        {
+            var origA = File.ReadAllBytes(master.path);
+            var origM = File.ReadAllBytes(master.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(master.atlas);
+
+            check(master.key + ".isVariant.initial", () =>
+                $"{State(master.atlas, baseDirty)}|{Unrelated(master.atlas)}|{FileState(master.path, origA, origM)}");
+
+            check(master.key + ".isVariant.sameFalse", () =>
+            {
+                var logs = CaptureLogs(() => master.atlas.SetIsVariant(false));
+                return $"{State(master.atlas, baseDirty)}|logs=[{logs}]|{FileState(master.path, origA, origM)}";
+            });
+
+            check(master.key + ".isVariant.toTrueAndSave", () =>
+            {
+                var logs = CaptureLogs(() => master.atlas.SetIsVariant(true));
+                AssetDatabase.SaveAssets();
+                return $"{State(master.atlas, baseDirty)}|logs=[{logs}]|{Unrelated(master.atlas)}|{FileState(master.path, origA, origM)}";
+            });
+
+            check(master.key + ".isVariant.backToFalseAndSaveIfDirty", () =>
+            {
+                var logs = CaptureLogs(() => master.atlas.SetIsVariant(false));
+                AssetDatabase.SaveAssetIfDirty(master.atlas);
+                return $"{State(master.atlas, baseDirty)}|logs=[{logs}]|{Unrelated(master.atlas)}|{FileState(master.path, origA, origM)}";
+            });
+
+            AssetDatabase.ImportAsset(master.path, ImportAssetOptions.ForceUpdate);
+            var reloaded = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(master.path);
+            check(master.key + ".isVariant.afterReimport", () =>
+                $"sameRef={ReferenceEquals(master.atlas, reloaded)}|isVariant={reloaded.isVariant}|master={Describe(reloaded.GetMasterAtlas())}|tag={reloaded.tag}|dirty={EditorUtility.IsDirty(reloaded)}|{Unrelated(reloaded)}|{FileState(master.path, origA, origM)}");
+        }
+
+        if (byStem.TryGetValue("Omitted", out var omitted))
+        {
+            var origA = File.ReadAllBytes(omitted.path);
+            var origM = File.ReadAllBytes(omitted.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(omitted.atlas);
+
+            check(omitted.key + ".isVariant.initial", () =>
+                $"{State(omitted.atlas, baseDirty)}|{Unrelated(omitted.atlas)}|{FileState(omitted.path, origA, origM, includeAssetFields: false)}");
+
+            check(omitted.key + ".isVariant.sameFalse", () =>
+            {
+                var logs = CaptureLogs(() => omitted.atlas.SetIsVariant(false));
+                return $"{State(omitted.atlas, baseDirty)}|logs=[{logs}]|{FileState(omitted.path, origA, origM, includeAssetFields: false)}";
+            });
+
+            check(omitted.key + ".isVariant.toTrueAndSaveIfDirty", () =>
+            {
+                var logs = CaptureLogs(() => omitted.atlas.SetIsVariant(true));
+                AssetDatabase.SaveAssetIfDirty(omitted.atlas);
+                return $"{State(omitted.atlas, baseDirty)}|logs=[{logs}]|{Unrelated(omitted.atlas)}|metaChanged={!File.ReadAllBytes(omitted.path + ".meta").SequenceEqual(origM)}|assetIsVariant={TopFieldLine(omitted.path, "m_IsVariant:")}|assetMaster={TopFieldLine(omitted.path, "m_MasterAtlas:")}|assetTag={TopFieldLine(omitted.path, "m_Tag:")}|assetTexture={YamlBlock(omitted.path, "textureSettings:")}|assetPacking={YamlBlock(omitted.path, "packingSettings:")}";
             });
         }
     }

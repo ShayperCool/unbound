@@ -12,7 +12,7 @@ toggles, `EditorUtility.IsDirty`/`GetDirtyCount`, `AssetDatabase.SaveAssets`/`Sa
 variant flag and sprite count; also the settings of `new SpriteAtlas()` and the answers for a null
 atlas. Recorded in Play mode, in batch mode, with the Unity 6000.0.71f1 Editor.
 
-Twenty profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
+Twenty-two profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
 
 - `v1`: Sprite Packer mode "Sprite Atlas V1 - Always Enabled" with three `.spriteatlas` assets in
   `Assets/Atlases/`: `Main` (a folder, a texture and a sprite of a sheet as packables, included in
@@ -80,6 +80,12 @@ Twenty profiles, each with its own reference under `Reference/unity-6000.0.71f1/
   `variantMultiplier` omitted).
 - `v2variantscale`: mode "Sprite Atlas V2 - Enabled" with the corresponding three `.spriteatlasv2`
   assets in `Assets/VariantScaleAtlases/` and their `SpriteAtlasImporter` `.meta` files.
+- `v1isvariant`: mode "Sprite Atlas V1 - Always Enabled" with three `.spriteatlas` assets in
+  `Assets/IsVariantAtlases/`: `Master` (non-variant with packable and custom settings), `Variant`
+  (variant of `Master` with its own folder packable, `m_Tag: Master` and `variantMultiplier: 0.5`)
+  and `Omitted` (absent `m_IsVariant`).
+- `v2isvariant`: mode "Sprite Atlas V2 - Enabled" with the corresponding three `.spriteatlasv2`
+  assets in `Assets/IsVariantAtlases/` and their `SpriteAtlasImporter` `.meta` files.
 
 The sprites come from tests/projects/spriteatlas (files the Editor authored). The atlases are
 written from that probe's Editor-authored atlas files with other packables and settings. The
@@ -164,8 +170,17 @@ marks the atlas dirty even on same-value repeats across V1, V2, variants (withou
 master), non-variants and `new SpriteAtlas()`, persists modified V1 `m_EditorData.variantMultiplier`
 (inserting after `secondaryTextureSettings` when omitted, preserving unrelated settings, packables
 and `.meta`) while leaving V2 `.spriteatlasv2` and `.meta` unchanged and dirty until
-`ImportAsset(ForceUpdate)` reloads from disk; a null atlas throws ArgumentNullException for all
-thirteen (with non-null `src` for `SetPlatformSettings`).
+`ImportAsset(ForceUpdate)` reloads from disk; `SetIsVariant` is a no-op when `isVariant` already
+matches `value` (leaving dirtiness, master, tag, packables and settings untouched), and on change
+updates `isVariant` and marks the atlas dirty once (without dirtying a variant's master); toggling
+`true -> false` clears the master atlas reference to null and resets `tag` to the atlas's own name
+while preserving packables, `variantMultiplier` and all settings, whereas toggling `false -> true`
+leaves master, tag, packables, `variantMultiplier` and settings untouched; on V1 `.spriteatlas`,
+`SaveAssets`/`SaveAssetIfDirty` persist modified `m_IsVariant`, `m_MasterAtlas` and `m_Tag`
+(appending `m_IsVariant` after `m_Tag` when omitted, preserving unrelated fields and `.meta`) while
+leaving V2 `.spriteatlasv2` and `.meta` unchanged and dirty until `ImportAsset(ForceUpdate)` reloads
+from disk; a null atlas throws ArgumentNullException for all fourteen (with non-null `src` for
+`SetPlatformSettings`).
 Not measured: either kind of atlas in the other kind's packer mode.
 
 Values compare exactly.

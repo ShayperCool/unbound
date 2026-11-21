@@ -37,8 +37,10 @@ PROFILES = {
     'v2remove': (5, 'RemoveAtlases', '.spriteatlasv2'),
     'v1variantscale': (4, 'VariantScaleAtlases', '.spriteatlas'),
     'v2variantscale': (5, 'VariantScaleAtlases', '.spriteatlasv2'),
+    'v1isvariant': (4, 'IsVariantAtlases', '.spriteatlas'),
+    'v2isvariant': (5, 'IsVariantAtlases', '.spriteatlasv2'),
 }
-ATLAS_FOLDERS = ('Atlases', 'SettingsAtlases', 'PlatformAtlases', 'IncludeAtlases', 'PackingAtlases', 'TextureAtlases', 'PlatformSetAtlases', 'AddAtlases', 'RemoveAtlases', 'VariantScaleAtlases')
+ATLAS_FOLDERS = ('Atlases', 'SettingsAtlases', 'PlatformAtlases', 'IncludeAtlases', 'PackingAtlases', 'TextureAtlases', 'PlatformSetAtlases', 'AddAtlases', 'RemoveAtlases', 'VariantScaleAtlases', 'IsVariantAtlases')
 
 
 def configure(project, profile):
