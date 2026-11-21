@@ -1,13 +1,4 @@
 {
-  "constructorStores": {
-    "branchingConstructors": 1102,
-    "differences": [],
-    "equal": 385,
-    "unknown": 1250,
-    "unmatchedConstructors": 1620,
-    "unmatchedFields": 1785
-  },
-  "release": "6000.0.71f1",
   "types": [
     {
       "category": "class",
@@ -2384,6 +2375,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "static",
       "type": "UnityEditor.U2D.SpriteAtlasExtensions"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.U2D.SpriteAtlasImporter"
     },
     {
       "category": "struct",

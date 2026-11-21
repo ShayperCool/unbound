@@ -93,6 +93,9 @@ static class SpriteAtlasEditorProbe
         if (paths.Any(p => p.StartsWith("Assets/MasterAtlasAtlases/", StringComparison.Ordinal)))
             RecordMasterAtlas(paths, none, Check);
 
+        if (paths.Any(p => p.StartsWith("Assets/ImporterPlatformAtlases/", StringComparison.Ordinal)))
+            RecordImporterPlatformSettings(paths, Check);
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
@@ -1909,6 +1912,132 @@ static class SpriteAtlasEditorProbe
 
         Query("new", fresh, "DefaultTexturePlatform", "Android", "iOS", "StandaloneWindows64", "", null, "UnknownPlatform");
         Query("null", none, "DefaultTexturePlatform", "Android", null);
+    }
+
+    static void RecordImporterPlatformSettings(string[] paths, Action<string, Func<string>> check)
+    {
+        var byStem = new System.Collections.Generic.Dictionary<string, (string path, string key, SpriteAtlasImporter importer, SpriteAtlas atlas)>(StringComparer.Ordinal);
+        foreach (var path in paths)
+        {
+            string key = Path.GetFileName(path);
+            var raw1 = AssetImporter.GetAtPath(path);
+            var raw2 = AssetImporter.GetAtPath(path);
+            check(key + ".importer.lookup", () =>
+                raw1 == null
+                    ? "<null>"
+                    : $"type={raw1.GetType().FullName}|isSpriteAtlasImporter={raw1 is SpriteAtlasImporter}|sameInstance={ReferenceEquals(raw1, raw2)}|assetPath={raw1.assetPath}");
+            if (raw1 is SpriteAtlasImporter importer)
+            {
+                var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+                byStem[Path.GetFileNameWithoutExtension(path)] = (path, key, importer, atlas);
+            }
+        }
+
+        check("control.textureImporter", () =>
+        {
+            var raw = AssetImporter.GetAtPath("Assets/Sprites/Single.png");
+            return raw == null
+                ? "<null>"
+                : $"type={raw.GetType().FullName}|isSpriteAtlasImporter={raw is SpriteAtlasImporter}";
+        });
+        check("control.missingPath", () =>
+        {
+            var raw = AssetImporter.GetAtPath("Assets/ImporterPlatformAtlases/DoesNotExist.spriteatlasv2");
+            return raw == null ? "<null>" : raw.GetType().FullName;
+        });
+        check("new.importer.getPlatform.Android", () =>
+        {
+            var uncreated = new SpriteAtlasImporter();
+            return DescribePlatform(uncreated.GetPlatformSettings("Android"));
+        });
+        check("new.importer.getPlatform.null", () =>
+        {
+            var uncreated = new SpriteAtlasImporter();
+            return DescribePlatform(uncreated.GetPlatformSettings(null));
+        });
+
+        string Label(string target) => target == null ? "<null>" : target.Length == 0 ? "<empty>" : target;
+
+        void Query(string prefix, SpriteAtlasImporter importer, params string[] targets)
+        {
+            foreach (var target in targets)
+                check(prefix + ".importerPlatform." + Label(target), () => DescribePlatform(importer.GetPlatformSettings(target)));
+        }
+
+        if (byStem.TryGetValue("Defaults", out var defaults))
+        {
+            Query(defaults.key, defaults.importer,
+                "DefaultTexturePlatform", "Android", "iOS", "iPhone", "Standalone", "StandaloneWindows64",
+                "WebGL", "", null, "UnknownPlatform");
+        }
+
+        if (byStem.TryGetValue("Omitted", out var omitted))
+        {
+            Query(omitted.key, omitted.importer,
+                "DefaultTexturePlatform", "Android", "iOS", "StandaloneWindows64", "", null, "UnknownPlatform");
+        }
+
+        if (byStem.TryGetValue("Custom", out var custom))
+        {
+            Query(custom.key, custom.importer,
+                "DefaultTexturePlatform", "defaulttextureplatform",
+                "Android", "android", "ANDROID",
+                "iPhone", "iOS", "ios", "iphone",
+                "Standalone", "standalone", "StandaloneWindows", "StandaloneWindows64",
+                "StandaloneOSX", "StandaloneLinux64", "Win", "Win64", "OSXUniversal", "Linux64",
+                "WebGL", "webgl", "Web",
+                "WSAPlayer", "Windows Store Apps", "WSA", "UWP",
+                "tvOS", "PS4", "PS5", "XboxOne", "Switch", "VisionOS",
+                "GameCoreXboxSeries", "GameCoreScarlett", "GameCoreXboxOne",
+                "EmbeddedLinux", "QNX", "LinuxHeadlessSimulation", "CloudRendering",
+                "Switch2", "Kepler", "Server",
+                "", null, "UnknownPlatform");
+
+            check(custom.key + ".importerPlatform.identityAndMutationStored", () =>
+            {
+                var a = custom.importer.GetPlatformSettings("Android");
+                var b = custom.importer.GetPlatformSettings("Android");
+                bool distinct = !ReferenceEquals(a, b);
+                a.name = "Mutated";
+                a.maxTextureSize = 32;
+                a.overridden = false;
+                a.compressionQuality = 1;
+                var c = custom.importer.GetPlatformSettings("Android");
+                return $"distinct={distinct}|b=({DescribePlatform(b)})|c=({DescribePlatform(c)})";
+            });
+
+            check(custom.key + ".importerPlatform.identityAndMutationAbsent", () =>
+            {
+                var a = custom.importer.GetPlatformSettings("WebGL");
+                var b = custom.importer.GetPlatformSettings("WebGL");
+                bool distinct = !ReferenceEquals(a, b);
+                a.name = "MutatedAbsent";
+                a.maxTextureSize = 64;
+                a.overridden = true;
+                var c = custom.importer.GetPlatformSettings("WebGL");
+                return $"distinct={distinct}|b=({DescribePlatform(b)})|c=({DescribePlatform(c)})";
+            });
+
+            check(custom.key + ".importerPlatform.unaffectedByInMemoryAtlasEdit", () =>
+            {
+                var edited = custom.atlas.GetPlatformSettings("Android");
+                edited.maxTextureSize = 128;
+                edited.compressionQuality = 11;
+                custom.atlas.SetPlatformSettings(edited);
+                return $"atlas=({DescribePlatform(custom.atlas.GetPlatformSettings("Android"))})|importer=({DescribePlatform(custom.importer.GetPlatformSettings("Android"))})";
+            });
+        }
+
+        if (byStem.TryGetValue("CustomVariant", out var variant))
+            Query(variant.key, variant.importer, "DefaultTexturePlatform", "Android", "iPhone", "Standalone", "PS5");
+
+        if (byStem.TryGetValue("Legacy", out var legacy))
+            Query(legacy.key, legacy.importer,
+                "DefaultTexturePlatform", "Android", "Standalone", "StandaloneWindows64");
+
+        if (byStem.TryGetValue("LegacyV3", out var legacyV3))
+            Query(legacyV3.key, legacyV3.importer,
+                "iPhone", "iOS", "WSAPlayer", "Windows Store Apps", "Switch", "Standalone", "StandaloneWindows64");
     }
 
     static string DescribePlatform(TextureImporterPlatformSettings s) => s == null

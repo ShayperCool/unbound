@@ -12,7 +12,7 @@ toggles, `EditorUtility.IsDirty`/`GetDirtyCount`, `AssetDatabase.SaveAssets`/`Sa
 variant flag and sprite count; also the settings of `new SpriteAtlas()` and the answers for a null
 atlas. Recorded in Play mode, in batch mode, with the Unity 6000.0.71f1 Editor.
 
-Twenty-four profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
+Twenty-five profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
 
 - `v1`: Sprite Packer mode "Sprite Atlas V1 - Always Enabled" with three `.spriteatlas` assets in
   `Assets/Atlases/`: `Main` (a folder, a texture and a sprite of a sheet as packables, included in
@@ -93,6 +93,12 @@ Twenty-four profiles, each with its own reference under `Reference/unity-6000.0.
   `variantMultiplier: 0.75`) and `Omitted` (variant with omitted `m_MasterAtlas`).
 - `v2masteratlas`: mode "Sprite Atlas V2 - Enabled" with the corresponding five `.spriteatlasv2`
   assets in `Assets/MasterAtlasAtlases/` and their `SpriteAtlasImporter` `.meta` files.
+- `v2importerplatform`: mode "Sprite Atlas V2 - Enabled" with six `.spriteatlasv2` assets in
+  `Assets/ImporterPlatformAtlases/` (`Defaults`, `Omitted`, `Custom`, `CustomVariant`, `Legacy`,
+  `LegacyV3`) and their `SpriteAtlasImporter` `.meta` files, exercising `AssetImporter.GetAtPath`
+  and `SpriteAtlasImporter.GetPlatformSettings(string)` alongside non-atlas, missing-path,
+  uncreated `new SpriteAtlasImporter()`, fresh-copy identity, mutation isolation, and in-memory
+  `SpriteAtlasExtensions.SetPlatformSettings` independence controls.
 
 The sprites come from tests/projects/spriteatlas (files the Editor authored). The atlases are
 written from that probe's Editor-authored atlas files with other packables and settings. The
@@ -199,7 +205,17 @@ masters' dirtiness untouched, and marks the target atlas dirty once; on V1 `.spr
 or transient masters and inserting `m_MasterAtlas` after `m_EditorData` when omitted) and `m_Tag`
 (preserving unrelated fields and `.meta`) while leaving V2 `.spriteatlasv2` and `.meta` unchanged
 and dirty until `ImportAsset(ForceUpdate)` reloads from disk; a null atlas throws
-ArgumentNullException for all fifteen (with non-null `src` for `SetPlatformSettings`).
+ArgumentNullException for all fifteen (with non-null `src` for `SetPlatformSettings`);
+`AssetImporter.GetAtPath` returns the cached `SpriteAtlasImporter` instance for a `.spriteatlasv2`
+asset (while returning `TextureImporter` for a PNG and `null` for a missing path), an uncreated
+`new SpriteAtlasImporter().GetPlatformSettings(...)` throws `NullReferenceException`, and
+`SpriteAtlasImporter.GetPlatformSettings(string)` normalizes build-target names/aliases identically
+to `SpriteAtlasExtensions.GetPlatformSettings`, applies legacy v1/v2/v3 migrations and the BC6H/BC7
+max-quality rule, reads a V2 variant's own `.meta` (never inheriting its master's overrides),
+returns fresh defaults named after the normalized target when absent or omitted (never inheriting
+stored `DefaultTexturePlatform`), allocates a fresh distinct `TextureImporterPlatformSettings` copy
+on every call for both stored and absent targets, and stays unaffected by unsaved in-memory
+`SpriteAtlasExtensions.SetPlatformSettings` edits.
 Not measured: either kind of atlas in the other kind's packer mode.
 
 Values compare exactly.
