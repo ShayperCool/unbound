@@ -1265,6 +1265,29 @@ namespace Unbound.Runtime
                 SceneFiles.Overlay(doc.Body, MaterialTypeTree.FileBody(material, r => SceneFiles.FlowValue(writer.ReferenceText(r))), ref unlocated);
                 return true;
             }
+            if (o is UnityEngine.U2D.SpriteAtlas atlas && !atlas.IsFromImporter)
+            {
+                var editorData = doc.Body.Get("m_EditorData");
+                if (editorData == null || editorData.Kind != YKind.Map)
+                {
+                    editorData = YText.Map();
+                    doc.Body.Set("m_EditorData", editorData);
+                }
+                var value = YText.Scalar(atlas.IncludeInBuild ? "1" : "0");
+                int existing = editorData.Keys.IndexOf("bindAsDefault");
+                if (existing >= 0)
+                {
+                    editorData.Values[existing] = value;
+                }
+                else
+                {
+                    int afterPackables = editorData.Keys.IndexOf("packables");
+                    int insertAt = afterPackables >= 0 ? afterPackables + 1 : editorData.Keys.Count;
+                    editorData.Keys.Insert(insertAt, "bindAsDefault");
+                    editorData.Values.Insert(insertAt, value);
+                }
+                return true;
+            }
             return false;
         }
     }

@@ -174,5 +174,11 @@ namespace UnityEditor.U2D
             if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
             return spriteAtlas.IncludeInBuild;
         }
+
+        public static void SetIncludeInBuild(this SpriteAtlas spriteAtlas, bool value)
+        {
+            if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
+            spriteAtlas.WriteIncludeInBuild(value);
+        }
     }
 }

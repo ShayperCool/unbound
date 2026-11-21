@@ -42,7 +42,10 @@ namespace UnityEngine.U2D
         string m_Tag;
         List<Sprite> m_Sprites;
 
-        public SpriteAtlas() { }
+        public SpriteAtlas()
+        {
+            EditorUtility.SetDirty(this);
+        }
 
         public bool isVariant => m_IsVariant;
 
@@ -109,6 +112,10 @@ namespace UnityEngine.U2D
         /// <summary>The master atlas of a variant (null for an atlas without one).</summary>
         internal SpriteAtlas MasterAtlas => m_Master;
 
+        /// <summary>Whether the atlas was imported from a V2 `.spriteatlasv2` asset rather than a
+        /// V1 native `.spriteatlas` file.</summary>
+        internal bool IsFromImporter => m_FromImporter;
+
         /// <summary>Whether builds include the atlas ("Include in Build").</summary>
         internal bool IncludeInBuild
         {
@@ -117,6 +124,16 @@ namespace UnityEngine.U2D
                 EnsureImporterSettingsRead();
                 return m_IncludeInBuild;
             }
+        }
+
+        /// <summary>Sets whether builds include the atlas, marking it dirty only when the value
+        /// changes (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor).</summary>
+        internal void WriteIncludeInBuild(bool value)
+        {
+            EnsureImporterSettingsRead();
+            if (m_IncludeInBuild == value) return;
+            m_IncludeInBuild = value;
+            EditorUtility.SetDirty(this);
         }
 
         /// <summary>The atlas's packing settings (for a V2 variant with a non-variant master, its master's).</summary>
@@ -205,6 +222,7 @@ namespace UnityEngine.U2D
             var master = body.Ref("m_MasterAtlas");
             m_Master = master.FileId != 0 ? resolver.Resolve(master, typeof(SpriteAtlas)) as SpriteAtlas : null;
             m_Sprites = null;
+            EditorUtility.ClearDirty(this);
         }
     }
 }

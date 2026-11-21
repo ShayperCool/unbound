@@ -1,4 +1,5 @@
 using System;
+using Unbound.Runtime;
 using UnityEditor;
 using UnityEditor.U2D;
 using UnityEngine.U2D;
@@ -363,6 +364,124 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SetIncludeInBuildTogglesValueAndTracksDirtinessOnlyOnChange()
+        {
+            var fresh = new SpriteAtlas();
+            int baseDirty = EditorUtility.GetDirtyCount(fresh);
+            Assert.True(fresh.IsIncludeInBuild());
+            Assert.True(EditorUtility.IsDirty(fresh));
+
+            fresh.SetIncludeInBuild(true);
+            Assert.True(fresh.IsIncludeInBuild());
+            Assert.Equal(baseDirty, EditorUtility.GetDirtyCount(fresh));
+
+            fresh.SetIncludeInBuild(false);
+            Assert.False(fresh.IsIncludeInBuild());
+            Assert.True(EditorUtility.IsDirty(fresh));
+            Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(fresh));
+
+            fresh.SetIncludeInBuild(false);
+            Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(fresh));
+
+            fresh.SetIncludeInBuild(true);
+            Assert.True(fresh.IsIncludeInBuild());
+            Assert.Equal(baseDirty + 2, EditorUtility.GetDirtyCount(fresh));
+
+            var loadedIncluded = Read("    packables: []\n    bindAsDefault: 1\n");
+            Assert.True(loadedIncluded.IsIncludeInBuild());
+            Assert.False(EditorUtility.IsDirty(loadedIncluded));
+            Assert.Equal(0, EditorUtility.GetDirtyCount(loadedIncluded));
+
+            loadedIncluded.SetIncludeInBuild(true);
+            Assert.False(EditorUtility.IsDirty(loadedIncluded));
+            Assert.Equal(0, EditorUtility.GetDirtyCount(loadedIncluded));
+
+            loadedIncluded.SetIncludeInBuild(false);
+            Assert.False(loadedIncluded.IsIncludeInBuild());
+            Assert.True(EditorUtility.IsDirty(loadedIncluded));
+            Assert.Equal(1, EditorUtility.GetDirtyCount(loadedIncluded));
+
+            loadedIncluded.SetIncludeInBuild(false);
+            Assert.Equal(1, EditorUtility.GetDirtyCount(loadedIncluded));
+
+            var loadedExcluded = Read("    packables: []\n    bindAsDefault: 0\n");
+            Assert.False(loadedExcluded.IsIncludeInBuild());
+            Assert.False(EditorUtility.IsDirty(loadedExcluded));
+            loadedExcluded.SetIncludeInBuild(false);
+            Assert.False(EditorUtility.IsDirty(loadedExcluded));
+            loadedExcluded.SetIncludeInBuild(true);
+            Assert.True(loadedExcluded.IsIncludeInBuild());
+            Assert.True(EditorUtility.IsDirty(loadedExcluded));
+            Assert.Equal(1, EditorUtility.GetDirtyCount(loadedExcluded));
+        }
+
+        [Fact]
+        public void NativeDocumentsWriteUpdatesV1BindAsDefaultAndSkipsV2ImportedAtlas()
+        {
+            const string v1Source =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Sample\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n" +
+                "    isAtlasV2: 0\n" +
+                "  m_IsVariant: 0\n";
+
+            var docs = UnityYamlText.Parse(v1Source);
+            var atlas = Read("    packables: []\n    bindAsDefault: 1\n");
+            atlas.SetIncludeInBuild(false);
+
+            int unlocated = 0;
+            Assert.True(NativeDocuments.Write(docs[0], atlas, null, null, ref unlocated));
+            Assert.Equal(0, unlocated);
+            Assert.Equal(v1Source.Replace("    bindAsDefault: 1\n", "    bindAsDefault: 0\n"), UnityYamlText.Write(docs));
+
+            // Toggling back restores exact original YAML bytes.
+            atlas.SetIncludeInBuild(true);
+            Assert.True(NativeDocuments.Write(docs[0], atlas, null, null, ref unlocated));
+            Assert.Equal(v1Source, UnityYamlText.Write(docs));
+
+            // Omitted bindAsDefault is inserted right after packables.
+            const string v1Omitted =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Omitted\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    packables: []\n" +
+                "    isAtlasV2: 0\n" +
+                "  m_IsVariant: 0\n";
+            var omittedDocs = UnityYamlText.Parse(v1Omitted);
+            var omittedAtlas = Read("    packables: []\n");
+            omittedAtlas.SetIncludeInBuild(false);
+            Assert.True(NativeDocuments.Write(omittedDocs[0], omittedAtlas, null, null, ref unlocated));
+            Assert.Equal(v1Omitted.Replace("    packables: []\n", "    packables: []\n    bindAsDefault: 0\n"), UnityYamlText.Write(omittedDocs));
+
+            // Control: a V2 imported SpriteAtlas is not written through NativeDocuments.Write.
+            const string v2Source =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!612988286 &1\n" +
+                "SpriteAtlasAsset:\n" +
+                "  m_Name: \n" +
+                "  m_ImporterData:\n" +
+                "    packables: []\n" +
+                "  m_IsVariant: 0\n";
+            var v2Docs = UnityYamlText.Parse(v2Source);
+            var v2Atlas = new SpriteAtlas();
+            v2Atlas.ReadSerialized(TestYaml.DocumentBody("SpriteAtlasAsset:\n  m_Name: \n  m_ImporterData:\n    packables: []\n  m_IsVariant: 0\n"), null);
+            Assert.True(v2Atlas.IsFromImporter);
+            Assert.False(NativeDocuments.Write(v2Docs[0], v2Atlas, null, null, ref unlocated));
+            Assert.Equal(v2Source, UnityYamlText.Write(v2Docs));
+        }
+
+        [Fact]
         public void ANullAtlasThrows()
         {
             SpriteAtlas none = null;
@@ -371,6 +490,8 @@ namespace UnityEngine.Tests
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetTextureSettings()).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPlatformSettings("Android")).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPlatformSettings(null)).ParamName);
+            Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetIncludeInBuild(true)).ParamName);
+            Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetIncludeInBuild(false)).ParamName);
             Assert.Throws<ArgumentNullException>(() => none.GetMasterAtlas());
             Assert.Throws<ArgumentNullException>(() => none.IsIncludeInBuild());
         }

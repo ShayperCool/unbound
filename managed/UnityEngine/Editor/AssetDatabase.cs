@@ -373,10 +373,22 @@ namespace UnityEditor
             {
                 if (VisualEffectImports.Reimport(path)) return;
                 var guid = AssetPathToGUID(path);
-                if (!string.IsNullOrEmpty(guid) && !IsValidFolder(path) && !AssetDatabaseRuntime.IsLoaded(guid))
+                if (!string.IsNullOrEmpty(guid) && !IsValidFolder(path))
                 {
-                    AssetDatabaseRuntime.LoadFile(guid);
-                    return;
+                    // A V2 sprite atlas is imported by SpriteAtlasImporter; a forced import
+                    // reloads it from its source and .meta as a fresh clean SpriteAtlas
+                    // (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v2include).
+                    if (path.EndsWith(".spriteatlasv2", StringComparison.OrdinalIgnoreCase))
+                    {
+                        AssetDatabaseRuntime.Invalidate(guid);
+                        AssetDatabaseRuntime.LoadFile(guid);
+                        return;
+                    }
+                    if (!AssetDatabaseRuntime.IsLoaded(guid))
+                    {
+                        AssetDatabaseRuntime.LoadFile(guid);
+                        return;
+                    }
                 }
             }
             Stubs.Ignored("AssetDatabase.ImportAsset", "does not re-import (assets are read from the project as they are)");
