@@ -10,19 +10,20 @@ using UnityEngine.UIElements;
 // Editor UI Toolkit PropertyField for supported scalar, enum, Color/Color32 (including
 // ColorUsageAttribute), Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Rect, RectInt, Bounds,
 // BoundsInt, AnimationCurve, Gradient (including GradientUsageAttribute), ObjectReference, Hash128,
-// LayerMask, and RenderingLayerMask SerializedProperty types (bool, int, long, uint, ulong, float,
-// double, string, ordinary and [Flags] enum, Color/Color32, Vector2, Vector3, Vector4 Foldout with
-// lazy child PropertyFields, Vector2Int, Vector3Int, Rect, RectInt, Bounds, BoundsInt,
-// AnimationCurve, Gradient, ObjectReference, Hash128, LayerMask, and RenderingLayerMask) and
-// SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API ("PropertyField",
-// "PropertyField.RegisterValueChangeCallback", "ColorUsageAttribute", "GradientUsageAttribute");
-// matches the Unity 6000.0.71f1 Editor, tests/projects/propertyfield, tests/projects/enumbinding,
-// tests/projects/enumflagsbinding, tests/projects/colorbinding, tests/projects/vector2binding,
-// tests/projects/vector3binding, tests/projects/vector4binding, tests/projects/vector2intbinding,
+// LayerMask, RenderingLayerMask, and non-array Generic inline-foldout SerializedProperty types
+// (bool, int, long, uint, ulong, float, double, string, ordinary and [Flags] enum, Color/Color32,
+// Vector2, Vector3, Vector4 and Generic inline Foldout with lazy child PropertyFields, Vector2Int,
+// Vector3Int, Rect, RectInt, Bounds, BoundsInt, AnimationCurve, Gradient, ObjectReference, Hash128,
+// LayerMask, and RenderingLayerMask) and SerializedPropertyBindEvent. Documented in Unity 6000.0
+// Scripting API ("PropertyField", "PropertyField.RegisterValueChangeCallback",
+// "ColorUsageAttribute", "GradientUsageAttribute"); matches the Unity 6000.0.71f1 Editor,
+// tests/projects/propertyfield, tests/projects/enumbinding, tests/projects/enumflagsbinding,
+// tests/projects/colorbinding, tests/projects/vector2binding, tests/projects/vector3binding,
+// tests/projects/vector4binding, tests/projects/vector2intbinding,
 // tests/projects/vector3intbinding, tests/projects/rectbinding, tests/projects/rectintbinding,
 // tests/projects/boundsbinding, tests/projects/boundsintbinding, tests/projects/curvebinding,
-// tests/projects/gradientbinding, tests/projects/objectbinding, tests/projects/hash128binding, and
-// tests/projects/maskbinding.
+// tests/projects/gradientbinding, tests/projects/objectbinding, tests/projects/hash128binding,
+// tests/projects/maskbinding, and tests/projects/genericfoldoutbinding.
 
 namespace UnityEditor.UIElements
 {
@@ -237,7 +238,7 @@ namespace UnityEditor.UIElements
                     {
                         m_ChildField.RemoveFromHierarchy();
                         m_ChildField = updated;
-                        if (m_ChildField != null) hierarchy.Insert(index, m_ChildField);
+                        hierarchy.Insert(index, m_ChildField);
                     }
                     else
                     {
@@ -446,7 +447,11 @@ namespace UnityEditor.UIElements
 
         VisualElement CreateOrUpdateFieldFromProperty(SerializedProperty property, object originalField)
         {
-            if (property.propertyType == SerializedPropertyType.Vector4)
+            if (property.propertyType == SerializedPropertyType.Vector4
+                || (property.propertyType == SerializedPropertyType.Generic
+                    && !property.isArray
+                    && property.type != "ToggleButtonGroupState"
+                    && property.hasVisibleChildren))
                 return CreateFoldout(property, originalField);
             TrimChildrenContainerSize(0);
             m_ChildrenContainer = null;
@@ -550,6 +555,18 @@ namespace UnityEditor.UIElements
                     return ConfigureField<LayerMaskField, int>(originalField as LayerMaskField, property, s_CreateLayerMaskField);
                 case SerializedPropertyType.RenderingLayerMask:
                     return ConfigureField<RenderingLayerMaskField, uint>(originalField as RenderingLayerMaskField, property, s_CreateRenderingLayerMaskField);
+                case SerializedPropertyType.Generic:
+                    if (property.type == "ToggleButtonGroupState")
+                    {
+                        Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField (ToggleButtonGroupState)");
+                        return null;
+                    }
+                    if (property.isArray)
+                    {
+                        Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField (Array)");
+                        return null;
+                    }
+                    return null;
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField ({property.propertyType})");
                     return null;

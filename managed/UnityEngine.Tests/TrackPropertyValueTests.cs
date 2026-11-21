@@ -62,6 +62,26 @@ namespace UnityEngine.Tests
             public string tag;
         }
 
+        [Serializable]
+        struct EmptyInlinePayload
+        {
+        }
+
+        [Serializable]
+        struct OuterInlinePayload
+        {
+            public string title;
+            public NestedPayload inner;
+            [HideInInspector] public int hidden;
+        }
+
+        [Serializable]
+        struct NamedInlineItem
+        {
+            public string name;
+            public int power;
+        }
+
         sealed class RefAsset : ScriptableObject
         {
             public int id;
@@ -124,6 +144,18 @@ namespace UnityEngine.Tests
             public RenderingLayerMask otherRenderingLayerMaskVal = 4u;
             public Quaternion quatVal = Quaternion.identity;
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
+            public EmptyInlinePayload emptyPayload;
+            public OuterInlinePayload outerPayload = new OuterInlinePayload
+            {
+                title = "outer-0",
+                inner = new NestedPayload { score = 11, tag = "inner-0" },
+                hidden = 77
+            };
+            public NamedInlineItem[] namedItems = new[]
+            {
+                new NamedInlineItem { name = "Scout", power = 3 },
+                new NamedInlineItem { name = "", power = 1 }
+            };
             public string[] items = new[] { "x", "y" };
             public SparseChoice sparseEnum = SparseChoice.TwentyFive;
             public SignedChoice signedEnum = SignedChoice.MinusFive;
@@ -2777,6 +2809,124 @@ namespace UnityEngine.Tests
             finally
             {
                 RenderingLayerMask.s_Names = savedRenderingLayers;
+                soMulti.Dispose();
+                soSingle.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyGenericInlineFoldoutLazyNestedLabelsMultiRebindAndDisposedCleanupWorkAcrossReleases()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t2.nested = new NestedPayload { score = 99, tag = "n0" };
+
+            using var panel = RuntimePanel.Create(settings);
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var soSingle = new SerializedObject(t1);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                // Empty generic struct creates no foldout and reports no stub.
+                var pfEmpty = new PropertyField(soSingle.FindProperty("emptyPayload"));
+                panel.visualTree.Add(pfEmpty);
+                pfEmpty.Bind(soSingle);
+                Tick(panel);
+                Assert.Equal(0, pfEmpty.hierarchy.childCount);
+
+                // Collapsed nested generic foldout creates children lazily and hides [HideInInspector] siblings.
+                var pOuter = soSingle.FindProperty("outerPayload");
+                var pInner = soSingle.FindProperty("outerPayload.inner");
+                pOuter.isExpanded = false;
+                pInner.isExpanded = false;
+                var pfOuter = new PropertyField(pOuter);
+                panel.visualTree.Add(pfOuter);
+                pfOuter.Bind(soSingle);
+                Tick(panel);
+                var fOuter = Assert.IsType<Foldout>(pfOuter.hierarchy[0]);
+                Assert.Equal("unity-foldout-outerPayload", fOuter.name);
+                Assert.False(fOuter.value);
+                Assert.Equal(0, fOuter.childCount);
+
+                fOuter.value = true;
+                Tick(panel);
+                Assert.True(pOuter.isExpanded);
+                Assert.Equal(2, fOuter.childCount); // title + inner (hidden excluded)
+                var fInner = fOuter.Q<Foldout>("unity-foldout-outerPayload.inner");
+                Assert.NotNull(fInner);
+                Assert.False(fInner.value);
+                Assert.Equal(0, fInner.childCount);
+
+                fInner.value = true;
+                Tick(panel);
+                Assert.True(pInner.isExpanded);
+                var scoreField = fInner.Q<IntegerField>("unity-input-outerPayload.inner.score");
+                Assert.NotNull(scoreField);
+                Assert.Equal(11, scoreField.value);
+                scoreField.value = 42;
+                Tick(panel);
+                Assert.Equal(42, t1.outerPayload.inner.score);
+                t1.outerPayload.inner.score = 73;
+                Tick(panel);
+                Assert.Equal(73, scoreField.value);
+
+                // Array-element generic struct uses non-empty first string child for displayName and updates foldout title.
+                var pElem0 = soSingle.FindProperty("namedItems").GetArrayElementAtIndex(0);
+                var pElem1 = soSingle.FindProperty("namedItems").GetArrayElementAtIndex(1);
+                Assert.Equal("Scout", pElem0.displayName);
+                Assert.Equal("Element 1", pElem1.displayName);
+                var pfElem0 = new PropertyField(pElem0);
+                panel.visualTree.Add(pfElem0);
+                pfElem0.Bind(soSingle);
+                Tick(panel);
+                var fElem0 = Assert.IsType<Foldout>(pfElem0.hierarchy[0]);
+                Assert.Equal("Scout", fElem0.text);
+                t1.namedItems[0].name = "Ranger";
+                Tick(panel);
+                Assert.Equal("Ranger", fElem0.text);
+                t1.namedItems[0].name = "";
+                Tick(panel);
+                Assert.Equal("Element 0", fElem0.text);
+
+                // Multi-object generic foldout shows mixed vs aligned children and coexists with runtime DataBinding.
+                var rt = new RuntimeModel { text = "rt-gen-0" };
+                var pMultiNested = soMulti.FindProperty("nested");
+                pMultiNested.isExpanded = true;
+                var pfMulti = new PropertyField(pMultiNested) { dataSource = rt };
+                pfMulti.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                panel.visualTree.Add(pfMulti);
+                pfMulti.Bind(soMulti);
+                Tick(panel);
+                var fMulti = Assert.IsType<Foldout>(pfMulti.hierarchy[0]);
+                var mScore = fMulti.Q<IntegerField>("unity-input-nested.score");
+                var mTag = fMulti.Q<TextField>("unity-input-nested.tag");
+                Assert.True(mScore.showMixedValue);
+                Assert.False(mTag.showMixedValue);
+                Assert.Equal("rt-gen-0", pfMulti.tooltip);
+                mScore.value = 500;
+                Tick(panel);
+                Assert.False(mScore.showMixedValue);
+                Assert.Equal(500, t1.nested.score);
+                Assert.Equal(500, t2.nested.score);
+
+                // Disposing SerializedObject unbinds foldout and children cleanly while runtime DataBinding keeps updating.
+                soMulti.Dispose();
+                mScore.value = 888;
+                rt.text = "rt-gen-1";
+                Tick(panel);
+                Assert.Equal(500, t2.nested.score);
+                Assert.Equal("rt-gen-1", pfMulti.tooltip);
+            }
+            finally
+            {
                 soMulti.Dispose();
                 soSingle.Dispose();
                 Object.DestroyImmediate(t1);

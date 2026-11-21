@@ -241,9 +241,20 @@ namespace Unbound.Runtime
             }
         }
 
-        internal string DisplayName => Kind == SerializedNodeKind.Root ? Name : m_DisplayName ??= IsElement
-            ? "Element " + Index.ToString(CultureInfo.InvariantCulture)
-            : ObjectNames.NicifyVariableName(Name);
+        internal string DisplayName
+        {
+            get
+            {
+                if (Kind == SerializedNodeKind.Root) return Name;
+                if (IsElement && PropertyType == SerializedPropertyType.Generic
+                    && Children.Count > 0 && Children[0].Shape == Shape.String
+                    && Children[0].Value is string firstStr && firstStr.Length > 0)
+                    return firstStr;
+                return m_DisplayName ??= IsElement
+                    ? "Element " + Index.ToString(CultureInfo.InvariantCulture)
+                    : ObjectNames.NicifyVariableName(Name);
+            }
+        }
 
         internal Type ClrType;
         internal Shape Shape;
