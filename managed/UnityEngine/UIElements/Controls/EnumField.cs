@@ -47,13 +47,11 @@ namespace UnityEngine.UIElements
         {
             public readonly Enum Value;
             public readonly string Name;
-            public readonly bool Obsolete;
 
-            public Entry(Enum value, string name, bool obsolete)
+            public Entry(Enum value, string name)
             {
                 Value = value;
                 Name = name;
-                Obsolete = obsolete;
             }
         }
 
@@ -134,11 +132,10 @@ namespace UnityEngine.UIElements
         internal void ShowMenu()
         {
             var menu = createMenuCallback != null ? createMenuCallback() : new GenericDropdownMenu();
-            int current = showMixedValue ? -1 : IndexOf(rawValue, includeHidden: false);
+            int current = showMixedValue ? -1 : IndexOf(rawValue);
             for (int i = 0; i < m_Entries.Count; i++)
             {
                 var entry = m_Entries[i];
-                if (entry.Obsolete && !m_IncludeObsoleteValues) continue;
                 var chosen = entry.Value;
                 menu.AddItem(entry.Name, i == current, () => value = chosen);
             }
@@ -156,35 +153,28 @@ namespace UnityEngine.UIElements
 
         internal void PopulateDataFromType(Type enumType) => SetType(enumType);
 
-        // The entries come from the enum data Unity's EnumField uses: names nicified (or the
-        // [InspectorName]), [InspectorOrder] applied, obsolete values marked " (Obsolete)" and
-        // obsolete-as-error values left out; an obsolete entry is shown only with
-        // includeObsoleteValues.
+        // The entries are the enum data Unity's EnumField reads when its type is set: names
+        // nicified (or the [InspectorName]) and [InspectorOrder] applied; obsolete values only
+        // with includeObsoleteValues, marked " (Obsolete)", and never those obsolete as errors.
         void SetType(Type enumType)
         {
             m_EnumType = enumType;
             m_Entries.Clear();
-            var all = EnumDataUtility.GetCachedEnumData(enumType, EnumDataUtility.CachedType.IncludeObsoleteExceptErrors,
+            var data = EnumDataUtility.GetCachedEnumData(enumType,
+                m_IncludeObsoleteValues ? EnumDataUtility.CachedType.IncludeObsoleteExceptErrors : EnumDataUtility.CachedType.ExcludeObsolete,
                 UnityEditor.ObjectNames.NicifyVariableName);
-            var current = EnumDataUtility.GetCachedEnumData(enumType, EnumDataUtility.CachedType.ExcludeObsolete,
-                UnityEditor.ObjectNames.NicifyVariableName);
-            for (int i = 0; i < all.values.Length; i++)
-                m_Entries.Add(new Entry(all.values[i], all.displayNames[i], Array.IndexOf(current.names, all.names[i]) < 0));
+            for (int i = 0; i < data.values.Length; i++)
+                m_Entries.Add(new Entry(data.values[i], data.displayNames[i]));
         }
 
-        /// <summary>The entry showing <paramref name="enumValue"/>: its first declared name in the
-        /// menu, else (with <paramref name="includeHidden"/>) its first obsolete name.</summary>
-        int IndexOf(Enum enumValue, bool includeHidden)
+        /// <summary>The first entry showing <paramref name="enumValue"/>; none for a value the
+        /// entries leave out, which shows no text.</summary>
+        int IndexOf(Enum enumValue)
         {
             if (enumValue == null) return -1;
-            int hidden = -1;
             for (int i = 0; i < m_Entries.Count; i++)
-            {
-                if (!m_Entries[i].Value.Equals(enumValue)) continue;
-                if (!m_Entries[i].Obsolete || m_IncludeObsoleteValues) return i;
-                if (hidden < 0) hidden = i;
-            }
-            return includeHidden ? hidden : -1;
+                if (m_Entries[i].Value.Equals(enumValue)) return i;
+            return -1;
         }
 
         void UpdateText()
@@ -196,7 +186,7 @@ namespace UnityEngine.UIElements
             }
             else
             {
-                int index = IndexOf(rawValue, includeHidden: true);
+                int index = IndexOf(rawValue);
                 shown = index >= 0 ? m_Entries[index].Name : string.Empty;
             }
             ((INotifyValueChanged<string>)m_TextElement).SetValueWithoutNotify(shown);
