@@ -2412,21 +2412,59 @@ unsafe fn create_depth_resolve_pass(device: &ash::Device, key: PassKey) -> Optio
 
 /// A render pass over a target as `key` describes it (attachments loaded and stored, in their
 /// resting layouts) whose contents are secondary command buffers.
+/// Where a plugin render pass's attachments sit (without a depth resolve): its color (absent for
+/// a depth-only target, whose color format is undefined), its depth, then the color's resolve.
+#[derive(Debug, PartialEq, Eq)]
+struct PassAttachments {
+    color: Option<u32>,
+    depth: Option<u32>,
+    resolve: Option<u32>,
+    count: u32,
+}
+
+impl PassAttachments {
+    fn of(key: &PassKey) -> PassAttachments {
+        let mut count = 0;
+        let mut next = |present: bool| {
+            present.then(|| {
+                count += 1;
+                count - 1
+            })
+        };
+        let has_color = key.color != vk::Format::UNDEFINED;
+        let color = next(has_color);
+        let depth = next(key.depth.is_some());
+        let resolve = next(has_color && key.resolve);
+        PassAttachments {
+            color,
+            depth,
+            resolve,
+            count,
+        }
+    }
+}
+
+/// A render pass over a target as `key` describes it (attachments loaded and stored, in their
+/// resting layouts) whose contents are secondary command buffers.
 unsafe fn create_render_pass(device: &ash::Device, key: PassKey) -> Option<vk::RenderPass> {
     if key.depth_resolve {
         return unsafe { create_depth_resolve_pass(device, key) };
     }
-    let mut attachments = vec![
-        vk::AttachmentDescription::default()
-            .format(key.color)
-            .samples(key.samples)
-            .load_op(vk::AttachmentLoadOp::LOAD)
-            .store_op(vk::AttachmentStoreOp::STORE)
-            .stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
-            .stencil_store_op(vk::AttachmentStoreOp::DONT_CARE)
-            .initial_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
-            .final_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL),
-    ];
+    let at = PassAttachments::of(&key);
+    let mut attachments = Vec::with_capacity(at.count as usize);
+    if at.color.is_some() {
+        attachments.push(
+            vk::AttachmentDescription::default()
+                .format(key.color)
+                .samples(key.samples)
+                .load_op(vk::AttachmentLoadOp::LOAD)
+                .store_op(vk::AttachmentStoreOp::STORE)
+                .stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
+                .stencil_store_op(vk::AttachmentStoreOp::DONT_CARE)
+                .initial_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
+                .final_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL),
+        );
+    }
     if let Some(format) = key.depth {
         attachments.push(
             vk::AttachmentDescription::default()
@@ -2440,19 +2478,7 @@ unsafe fn create_render_pass(device: &ash::Device, key: PassKey) -> Option<vk::R
                 .final_layout(vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL),
         );
     }
-    let color_ref = [vk::AttachmentReference {
-        attachment: 0,
-        layout: vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
-    }];
-    let depth_ref = vk::AttachmentReference {
-        attachment: 1,
-        layout: vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-    };
-    let resolve_ref = [vk::AttachmentReference {
-        attachment: attachments.len() as u32,
-        layout: vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
-    }];
-    if key.resolve {
+    if at.resolve.is_some() {
         attachments.push(
             vk::AttachmentDescription::default()
                 .format(key.color)
@@ -2465,14 +2491,32 @@ unsafe fn create_render_pass(device: &ash::Device, key: PassKey) -> Option<vk::R
                 .final_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL),
         );
     }
-    let mut subpass = vk::SubpassDescription::default()
-        .pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS)
-        .color_attachments(&color_ref);
-    if key.resolve {
-        subpass = subpass.resolve_attachments(&resolve_ref);
+    let color_ref = at.color.map(|attachment| {
+        [vk::AttachmentReference {
+            attachment,
+            layout: vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
+        }]
+    });
+    let depth_ref = at.depth.map(|attachment| vk::AttachmentReference {
+        attachment,
+        layout: vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    });
+    let resolve_ref = at.resolve.map(|attachment| {
+        [vk::AttachmentReference {
+            attachment,
+            layout: vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
+        }]
+    });
+    let mut subpass =
+        vk::SubpassDescription::default().pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS);
+    if let Some(color_ref) = &color_ref {
+        subpass = subpass.color_attachments(color_ref);
     }
-    if key.depth.is_some() {
-        subpass = subpass.depth_stencil_attachment(&depth_ref);
+    if let Some(resolve_ref) = &resolve_ref {
+        subpass = subpass.resolve_attachments(resolve_ref);
+    }
+    if let Some(depth_ref) = &depth_ref {
+        subpass = subpass.depth_stencil_attachment(depth_ref);
     }
     // Everything before, then the pass; the pass, then everything after.
     let dependencies = [
@@ -2657,6 +2701,53 @@ pub fn vk_format(adapter: &wgpu::Adapter, format: wgpu::TextureFormat) -> Option
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A plugin pass over a depth-only target (no color format) has its depth alone, at
+    /// attachment 0, and no color or resolve; with a color, the depth follows it.
+    #[test]
+    fn a_depth_only_plugin_pass_has_its_depth_alone() {
+        let key = |color, depth, resolve| PassKey {
+            color,
+            samples: vk::SampleCountFlags::TYPE_1,
+            depth,
+            resolve,
+            depth_resolve: false,
+        };
+        let d32 = Some(vk::Format::D32_SFLOAT);
+        let depth_only = PassAttachments::of(&key(vk::Format::UNDEFINED, d32, false));
+        assert_eq!(
+            depth_only,
+            PassAttachments {
+                color: None,
+                depth: Some(0),
+                resolve: None,
+                count: 1
+            }
+        );
+        // A resolve needs a color.
+        assert_eq!(
+            PassAttachments::of(&key(vk::Format::UNDEFINED, d32, true)),
+            depth_only
+        );
+        assert_eq!(
+            PassAttachments::of(&key(vk::Format::R8G8B8A8_UNORM, d32, true)),
+            PassAttachments {
+                color: Some(0),
+                depth: Some(1),
+                resolve: Some(2),
+                count: 3
+            }
+        );
+        assert_eq!(
+            PassAttachments::of(&key(vk::Format::R8G8B8A8_UNORM, None, true)),
+            PassAttachments {
+                color: Some(0),
+                depth: None,
+                resolve: Some(1),
+                count: 2
+            }
+        );
+    }
 
     #[test]
     fn foreign_srgb_views_need_no_mutable_format_permission() {

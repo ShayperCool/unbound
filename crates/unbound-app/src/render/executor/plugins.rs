@@ -414,8 +414,7 @@ impl UnityRenderer {
                     views[slot] = Some(view);
                     Ok(view)
                 };
-                let color_target =
-                    (gpu.format != 5 || gpu.depth_texture.is_none()).then(|| shape.target());
+                let color_target = (!gpu.depth_only).then(|| shape.target());
                 name(0, storage, color_target, true).and_then(|color| {
                     Ok(match samples {
                         // A multisampled target: its samples, and their depth buffer as it is.
@@ -811,8 +810,7 @@ impl UnityRenderer {
                                 let shape = if depth { shape.depth() } else { shape };
                                 shape.layered().then_some(slice.max(0) as u32)
                             };
-                            let depth_only =
-                                self.textures[&color].format == 5 && attached.is_some();
+                            let depth_only = self.textures[&color].depth_only && attached.is_some();
                             gl_interop::TargetImages {
                                 color: if depth_only { 0 } else { names.color },
                                 mip: mip.max(0) as u32,

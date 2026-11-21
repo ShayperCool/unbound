@@ -1592,6 +1592,10 @@ impl UnityRenderer {
         let (Some(t), Some(target)) = (self.textures.get(&handle), &self.state.target) else {
             return false;
         };
+        // A depth-only target draws into its depth, with no color texture to compare.
+        if t.depth_only && self.target_handles.0 == handle {
+            return true;
+        }
         std::iter::once(&target.texture)
             .chain(target.extra.iter().map(|e| &e.texture))
             .any(|x| {
@@ -2558,7 +2562,7 @@ impl UnityRenderer {
         let Some(t) = self.textures.get(&handle) else {
             return false;
         };
-        if t.format != 5 || t.layers != 1 || (t.depth_sample.is_none() && t.depth_msaa.is_none()) {
+        if t.format != 5 || t.layers != 1 || t.depth_sample.is_none() {
             return false;
         }
         let filled = resources::depth_copy_fills_color();
@@ -3387,8 +3391,13 @@ impl UnityRenderer {
                         ..Default::default()
                     })
                 });
-            let depth_only = t.format == 5 && depth_view.is_some() && t.samples == 1;
-            if depth_only {
+            if t.depth_only && depth_view.is_none() {
+                self.warn_once(format!("rt-depth-only{color}/{mip}"), || {
+                    format!("render target {color} is depth-only and has no depth at mip {mip}: draw skipped")
+                });
+                return None;
+            }
+            if t.depth_only {
                 Target {
                     color: None,
                     depth_slice: None,
@@ -3477,6 +3486,14 @@ impl UnityRenderer {
                 .and_then(|d| Some((d.depth.clone()?, d.depth_format()?)));
             target.depth_format = separate.as_ref().map(|(_, format)| *format);
             target.depth = separate.map(|(view, _)| view);
+        }
+        if target.color.is_none() && target.depth.is_none() {
+            // A depth-only target paired with no depth (or a texture without one): nothing to
+            // draw into (unmeasured).
+            self.warn_once(format!("rt-no-attachment{color}/{depth}"), || {
+                format!("depth-only render target {color} is bound without a depth buffer: draws and clears skipped")
+            });
+            return None;
         }
         Some(target)
     }
@@ -5583,6 +5600,14 @@ impl UnityRenderer {
             });
             return None;
         };
+        let depth_only = |handle| self.textures.get(&handle).is_some_and(|t| t.depth_only);
+        if depth_only(source) || depth_only(destination) {
+            // Its texels are its depth, which CopyTexture does not copy here (unmeasured).
+            self.warn_once(format!("copy-depth-only{source}-{destination}"), || {
+                format!("CopyTexture from {source} to {destination} involves a depth-only render texture, which has no color image: skipped")
+            });
+            return None;
+        }
         let opaque = |handle| {
             self.textures
                 .get(&handle)
@@ -6256,6 +6281,13 @@ impl UnityRenderer {
                 }
             }
         } else {
+            let gpu = self.textures.get(&texture)?;
+            if gpu.depth_only {
+                self.warn_once(format!("read-depth-only{texture}"), || {
+                    format!("reading the pixels of depth-only render texture {texture}, which has no color image (unmeasured): nothing read")
+                });
+                return None;
+            }
             let current = &self.textures.get(&texture)?.texture;
             if retained_resolve {
                 self.resolve_history

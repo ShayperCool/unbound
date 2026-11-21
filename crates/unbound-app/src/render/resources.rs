@@ -543,9 +543,10 @@ pub struct GpuTexture {
     /// The depth buffer's depth, for shaders that sample it.
     pub depth_sample: Option<wgpu::TextureView>,
     /// A render target's depth in a filterable color texture, copied after the passes that draw into
-    /// it: what sampling a depth-only target reads (Unity's depth textures read as their depth),
-    /// and what its depth element reads (`render_protocol::handle::DEPTH_ELEMENT`; made the first
-    /// time a draw samples it for a target with color).
+    /// it: what sampling a depth-format target outside a depth slot reads (Unity's depth textures
+    /// read as their depth), and what its depth element reads
+    /// (`render_protocol::handle::DEPTH_ELEMENT`); made the first time a draw or dispatch samples
+    /// it so (the executor's `fill_depth_copy` / `depth_element_view`).
     pub depth_copy: Option<wgpu::TextureView>,
     /// A multisampled target's depth buffer, as the depth copy reads it.
     pub depth_msaa: Option<wgpu::TextureView>,
@@ -558,6 +559,9 @@ pub struct GpuTexture {
     pub bind_ms: bool,
     /// Texture-owned comparison state for measured render textures; absent for other releases.
     pub depth_compare: Option<bool>,
+    /// A depth-only target ([`is_depth_only`]): it renders through its depth alone and `texture`
+    /// is a 1x1 placeholder with no color texels to read or copy.
+    pub depth_only: bool,
     /// Published single-sample depth for native plugins. Clears, shader reads and explicit
     /// self-resolves publish it. Vulkan also publishes stencil and ordinary attachment writes
     /// when the device supports depth/stencil resolves (tests/projects/nativegfx).
@@ -1613,6 +1617,20 @@ fn screen_ordered(format: wgpu::TextureFormat, screen_order: bool) -> wgpu::Text
 }
 
 /// Creates (or rewrites in place, when the shape is unchanged) a texture from a packet.
+/// A depth-format (Unity `RenderTextureFormat.Depth` / `Shadowmap`) render target that draws
+/// through its depth attachment alone: single-sample, one layer, not a volume. Its color image is a
+/// 1x1 placeholder; layered and multisampled ones keep a color image of their size, as their views
+/// and resolves need.
+pub fn is_depth_only(
+    t: &owned::Texture,
+    render_target: bool,
+    samples: u32,
+    layers: u32,
+    volume: bool,
+) -> bool {
+    t.format == 5 && render_target && t.depth_bits != 0 && samples == 1 && layers == 1 && !volume
+}
+
 pub fn upload_texture(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
@@ -1747,7 +1765,7 @@ pub fn upload_texture_with(
             // A single-sample depth-only render target (Shadowmap / Depth) draws through its depth
             // attachment alone; keep a 1x1 placeholder for `texture` instead of a full-size color
             // image, and create `depth_copy` lazily only when a shader reads it outside a depth slot.
-            let depth_only = t.format == 5 && render_target && t.depth_bits != 0 && samples == 1;
+            let depth_only = is_depth_only(t, render_target, samples, layers, volume);
             // Copies may read any texture (Graphics.CopyTexture).
             let mut usage = wgpu::TextureUsages::TEXTURE_BINDING
                 | wgpu::TextureUsages::COPY_DST
@@ -1972,8 +1990,8 @@ pub fn upload_texture_with(
                     ..Default::default()
                 })
             });
-            // Created lazily by the executor (`ensure_depth_copy` / `depth_element_view`) only
-            // when a draw or dispatch samples the depth outside a depth/comparison slot.
+            // Created lazily by the executor (`fill_depth_copy` / `depth_element_view`) only when a
+            // draw or dispatch samples the depth outside a depth/comparison slot.
             let depth_copy = None;
             let native_depth = (t.retain_resolve && !t.bind_ms && samples > 1 && layers == 1)
                 .then(|| depth_texture.as_ref())
@@ -2010,6 +2028,7 @@ pub fn upload_texture_with(
                 depth_sample,
                 depth_copy,
                 depth_msaa,
+                depth_only,
                 depth_texture,
                 msaa,
                 samples,
@@ -2271,6 +2290,42 @@ fn gpu_mip_count(width: u32, height: u32, layers: u32, volume: bool, requested: 
 
 #[cfg(test)]
 mod tests {
+    /// Only single-sample, single-layer depth-format targets draw through their depth alone:
+    /// shadow cubemaps, arrays, volumes and multisampled depth targets keep a color image of their
+    /// size, which their views, bindings and resolves need.
+    #[test]
+    fn only_plain_depth_targets_drop_their_color_image() {
+        let t = |format, depth_bits| unbound_runtime::render_protocol::owned::Texture {
+            format,
+            depth_bits,
+            ..Default::default()
+        };
+        let depth = t(5, 24);
+        assert!(super::is_depth_only(&depth, true, 1, 1, false));
+        assert!(
+            !super::is_depth_only(&depth, false, 1, 1, false),
+            "not a render target"
+        );
+        assert!(
+            !super::is_depth_only(&depth, true, 4, 1, false),
+            "multisampled"
+        );
+        assert!(
+            !super::is_depth_only(&depth, true, 1, 6, false),
+            "a cubemap"
+        );
+        assert!(!super::is_depth_only(&depth, true, 1, 4, false), "an array");
+        assert!(!super::is_depth_only(&depth, true, 1, 1, true), "a volume");
+        assert!(
+            !super::is_depth_only(&t(5, 0), true, 1, 1, false),
+            "no depth bits"
+        );
+        assert!(
+            !super::is_depth_only(&t(4, 24), true, 1, 1, false),
+            "a color format"
+        );
+    }
+
     use super::*;
     use unbound_runtime::render_protocol::{SubMeshPacket, Vector3, Vector4};
 
