@@ -62,6 +62,21 @@ and a dynamic probe-lit sphere. Ambient: flat color, no skybox.
   `BoxSliver` and `BoxPoint` (a box of 0.6 m
   and a triangle of no area a metre away: three points on a line, three at one point), and
   `Many` (11 x 10 loose quads in one plane with Max Distance 0.1).
+- `RoomCurved`: as `RoomAuto`'s room (`run.py setup-curved` adds this scene alone), with
+  curved and bent parts, each left on its own so that the precompute keeps its lightmap UVs or
+  takes its projection: Unity's sphere (`Ball`), cylinder (`Drum`) and capsule (`Pill`); strips
+  of a quarter cylinder (`RealtimeGISetup.Strip`, radius and height 1.2 m) whose UVs unroll it
+  true to the surface (`Arc`), stretch it along the surface (`ArcStretched`) and fold it onto
+  itself (`ArcFolded`); two flat quads 40 degrees apart sharing their edge, unrolled true to
+  them (`Bent`), and two of different widths, each stretched over half of a narrow UV strip
+  (`BentStretched`); and Scale In Lightmap 4 on the sphere and a cube of 0.6 (`ScaleUp`) and
+  0.25 on a 2.4 x 0.1 x 1.6 slab (`ScaleDown`).
+- `RoomRounding`: as `RoomAuto`'s room (`run.py setup-rounding` adds this scene alone), with
+  shapes whose charts the rounding of the precompute's arithmetic decides: a 1.6 x 0.1 x 1.2
+  slab modelled turned 45 degrees about Y (`Slab45`), a roof whose sides lean 20 degrees from the plane through both with Max Angle 20
+  (`RoofAtLimit`), a 0.6 x 0.4 x 0.5 box modelled turned 30 degrees about Y away from its mesh's
+  origin (`BoxOffOrigin`) and a 2 x 1.2 m quad on a tilted plane whose lightmap UVs are a true
+  copy of it turned a quarter (`TiltedQuad`).
 
 `Assets/Scripts/RealtimeGIProbe.cs` (with `REALTIME_GI_OUT` set) changes one input at a time and
 records, per case:
@@ -191,8 +206,9 @@ the cube given again and `RoomBakedEnvironment` loaded alone, its lights put out
 
 Then `RoomAuto`: `roomauto-base` and `roomauto-moved` (the point light moved), recorded as the
 `RoomCharts` cases are. The charts the precompute made are in the scene's precomputed data, as
-there. Then `RoomTurned` the same way: `roomturned-base` and `roomturned-moved`. Then `RoomHoles`
-(`roomholes-base`). Then the Room loaded seven more times with a script's light delegate
+there. Then `RoomTurned` the same way: `roomturned-base` and `roomturned-moved`, `RoomCurved`
+(`roomcurved-base`, `roomcurved-moved`) and `RoomRounding` (`roomrounding-base`,
+`roomrounding-moved`). Then `RoomHoles` (`roomholes-base`). Then the Room loaded seven more times with a script's light delegate
 (`GlobalIllumination.Lightmapping.SetDelegate`, set before the load) that extracts the lights as
 `LightmapperUtils` does but gives the point and spot lights one falloff type each:
 `room-delegate-legacy` and `room-delegate-undefined` at the point light's own range,
@@ -464,6 +480,14 @@ Observations (not documented guarantees):
   chart of 4 x 6 texels (projected onto the plane between them and scaled to their area),
   without it two; a triangle of no area is a chart of one block with all its corners at its
   corner; the 110 quads are 110 charts.
+  `RoomCurved`: each strip's and bent part's chart is its own lightmap UVs where they are true
+  to it (`Arc`, `Bent`) and its projection where they are stretched (`ArcStretched`,
+  `BentStretched`) or folded (`ArcFolded`), in charts of other sizes than the other choice's
+  (the Editor's GI cache has the same UVs vertex by vertex); Unity's sphere, cylinder side and
+  capsule keep their own UVs; Scale In Lightmap 4 and 0.25 leave the charts and clusters as at
+  1. `RoomRounding`: the roof at its Max Angle is one chart, the tilted quad is its projection
+  (6 x 4 texels; its own UVs would be 4 x 6), and the slab and the box are laid out as the one of the ways the rounding
+  allows that the system's clusters tell from the other that fits the chart mask.
   docs/REALTIME_GI.md (Automatic charts) has the rule Unbound makes them by and what it does
   not make.
 
@@ -522,10 +546,30 @@ byte-identical captures): the bake answers true with both events, Play mode star
 realtime GI (all 7 renderers at index -1, no lighting data), and in Play mode both calls warn
 "Computing lightmaps is not available in play mode." and answer false.
 
+A script's bake in Edit mode (`script_bake.py --edit`, `Reference/unity-6000.0.71f1/scriptbake/edit.jsonl`):
+`Assets/Editor/EditBake.cs` opens `RoomScriptBake` in Edit mode and bakes it twice with
+`Lightmapping.Bake`, recording each answer, the events with `isRunning` at each (and apart,
+whether the lighting data is on disk and named at each), the scene's lighting data, dirty
+flag, files and file content and its renderers' realtime lightmap indices; then it enters Play
+mode, where `Assets/Scripts/EditBakeProbe.cs` records what is drawn. The Editor runs it with
+`-executeMethod EditBake.Record` (Linux, batch mode on the GPU; two byte-identical captures),
+Unbound with `unbound test` in Edit mode, where it starts itself
+(`REALTIME_GI_EDIT_BAKE_AUTO`). Both bakes answer true: `bakeStarted` (isRunning false), then
+`lightingDataUpdated` 22 and 14 times (isRunning true; compared by runs, the count not being
+specified), then `bakeCompleted` (isRunning false); the first writes
+`RoomScriptBake/LightingData.asset`, its `.meta` and the folder's `.meta`, which the scene names
+from then on; the scene is dirty, its file unchanged; every renderer has realtime lightmap index
+0 at once and in Play mode. The records of the lighting data asset (`files`, `lightingData`,
+`eventData`, `play.lightingData`) and of the Editor's log (on this machine an assertion about
+its denoiser library) are reported, not gated: Unbound writes no lighting data asset (said
+once).
+
 ```bash
 python3 tests/projects/realtimegi/script_bake.py native --label sb1   # and sb2
 python3 tests/projects/realtimegi/script_bake.py publish sb1 sb2
-python3 tests/projects/realtimegi/script_bake.py check               # Unbound (gate.json)
+python3 tests/projects/realtimegi/script_bake.py native --edit --label eb1   # and eb2
+python3 tests/projects/realtimegi/script_bake.py publish --edit eb1 eb2
+python3 tests/projects/realtimegi/script_bake.py check               # Unbound, both (gate.json)
 ```
 
 

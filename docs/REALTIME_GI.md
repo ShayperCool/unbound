@@ -7,7 +7,7 @@ environment, updated at runtime from data precomputed in the Editor. This page r
 data holds, how the runtime update behaves (documented, then measured against the Unity
 6000.0.71f1 Editor in [tests/projects/realtimegi](../tests/projects/realtimegi)), and how Unbound
 implements it. Status: the engine draws precomputed realtime GI for scenes whose renderers have
-Preserve UVs or [automatic charts](#automatic-charts) of flat parts, lit by point, spot and directional lights and the environment (an ambient color, a
+Preserve UVs or [automatic charts](#automatic-charts), lit by point, spot and directional lights and the environment (an ambient color, a
 gradient, the skybox or a cube a script sets), non-directional or directional (with its
 [directionality](#directionality)), in the built-in
 pipeline and, for its lights and environment, under a render pipeline that gives realtime GI its
@@ -16,8 +16,8 @@ frames drawn by a pipeline's own shaders are not compared). For tests/projects/r
 renderer covers the same realtime lightmap texels as in the Editor and the lightmaps of the light
 cases match within the comparator's tolerance but for a few isolated texels, as its frames do (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
 drawn only in part. Not supported yet, each with a warning ([Open](#open) lists the main ones):
-automatic charts of curved parts and of choices the precompute's rounding decides
-([Automatic charts](#automatic-charts)),
+automatic charts whose choices the precompute's rounding decides and the system's data cannot
+tell apart ([Automatic charts](#automatic-charts)),
 light types other than point, spot and directional (the scene's realtime GI is then not drawn: its
 renderers take light probes again; area lights are baked only), light probes whose probe set cannot be read or placed (they light nothing; the
 lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
@@ -529,7 +529,9 @@ layout check below; `RoomSystems` gives three renderers parameters of their own 
 - Charts: the triangles of those UVs that share a vertex, or a vertex position and UV; in the
   order of their first triangle.
 - Each chart keeps its UV shape, scaled uniformly so its area is its world area at the realtime
-  resolution (Lighting Settings' resolution times the renderer's Scale In Lightmap), in blocks of
+  resolution (the Lighting Settings' realtime resolution: the renderer's Scale In Lightmap,
+  which sizes its baked lightmap, leaves its realtime charts as at 1, measured at 4 on a cube and
+  a sphere and 0.25 on a slab in `RoomCurved`; 0 is not measured and refused), in blocks of
   2x2 texels. Its width and height become whole blocks separately: `max(ceil(size + 0.5 +
   1e-4), minimum chart size / 2)`, the chart filling it less half a texel on each side.
 - Charts are rasterized into block masks (every block a chart triangle, grown by a quarter block,
@@ -654,8 +656,22 @@ measured beyond them.
   (`BoxSliver`, `BoxPoint`: three points on a line and three at one point, a metre from a box).
 - Each set is projected onto its plane, in world units, with its axes turned to the direction
   along which the legs of its right-angled triangles carry the most area (directions within 3
-  degrees of parallel or perpendicular count as one). A part left on its own is projected too,
-  unless its own lightmap UVs are truer to its shape (compared by the angles of its triangles).
+  degrees of parallel or perpendicular count as one).
+- A part left on its own (no round took it and it was not folded: a curved part, a bent one,
+  the last flat part of a mesh) is projected onto the plane fitted to it the same way, and then
+  keeps that projection or its own lightmap UVs by two measures of each (`uv_choice.rs`): the
+  overlap, its triangles drawn into a grid of 256 x 256 cells over the larger side of their
+  UV bounds (that side spanning 0.999 of it), each cell taking the area of every triangle over
+  it, as the area covered more than once over the area covered (UVs without extent: 1); and the
+  mapping error, over its triangles the triangle's area times the summed squares of the
+  differences between its corners' angles in space and in the UVs. Its own UVs are kept when
+  the projection overlaps more by at least 0.25, or when the two overlap within 0.25 of each
+  other and its own UVs have the smaller mapping error; else the projection. In `RoomCurved`:
+  Unity's sphere, cylinder side and capsule keep their own UVs (their projections overlap),
+  a quarter of a cylinder and a bent strip whose UVs unroll them true to their shape keep
+  them (smaller mapping error), the same shapes with UVs stretched along them are projected
+  (larger mapping error), and the quarter cylinder with UVs folded onto themselves is projected
+  (its own UVs overlap); the Editor's GI cache holds the same UVs for each, vertex by vertex.
 - The charts are sized and packed as [above](#realtime-lightmap-uvs), scaled to their world
   area: a flat chart's projection is in world units already, so a chart has the proportions of
   the surface, not of its UVs: at two texels a metre a 6 x 4 m face takes 14 x 10 texels and a
@@ -681,45 +697,75 @@ one's matrix is the scale alone: one geometry for both), and `RoofDistance`, `Fo
 systems of it. Its renderers' charts cover the precomputed chart masks in chart order too
 (`roomturned-base`, `roomturned-moved`).
 
-The check against the precomputed chart mask compares the blocks the charts cover, not which
-face lies in them: two charts of one size taken in the other order would pass it with their
-lighting exchanged. So what Unbound cannot make as the Editor does is refused, not left to the
-check. Each refusal is a warning that names the renderer, and its system is then not drawn:
+`RoomCurved` is the Room so too with Unity's sphere, cylinder and capsule, three strips of a
+quarter cylinder (lightmap UVs unrolled true to the surface, stretched along it, folded onto
+themselves) and two bent strips (two flat quads 40 degrees apart sharing their edge, unrolled
+true to them; and of different widths, each stretched over half of a narrow UV strip), sized
+so that each choice gives another chart size, and with Scale In Lightmap 4 on the sphere and a
+cube and 0.25 on a slab. Its renderers' charts cover the precomputed chart masks
+(`roomcurved-base`, `roomcurved-moved`).
 
+The precompute's arithmetic rounds as the machine that ran it does, and some choices hang on that rounding, the last digits of a
+normalisation here and in the precompute being apart: two neighbouring flat parts whose
+normals' cosine could have the other sign there (it is closer to zero than that rounding
+against its terms, or zero only because its terms cancel: a slab modelled at 45 degrees, a cube
+of 0.45 turned 25 degrees) that one plane could hold within the limits; a test of facing that
+close to Max Angle; two different sets that are the largest of a round, of the same area or of
+one but for rounding (within 1e-5 of each other); a leftover as near to two sets in the same
+way; a part left on its own whose two UV sets overlap within 1e-4 of the margin, or whose
+mapping errors are within a thousandth of each other (unless the projection is exact: on a
+plane along the coordinate axes it repeats the positions' own coordinates and its error is
+zero in any arithmetic), and whose two layouts differ; and the plane of such a part when its
+spread across it is within 1e-4 of its spread along the next axis, or when its normal, summed
+over triangles facing every way, is too short to tell its side. Along the coordinate axes the
+arithmetic is exact and ties are taken in order, as the Editor takes them in the scene's boxes
+and steps (the two charts of a step's tread and riser of one size among them); off them only
+sets of the very same area that are equal by their shape are taken in order: their projections
+are images of each other whatever the scale of the projection axes (checked by a sweep of
+those scales over a few units in the last place), as for the two sides of the scene's roofs
+and the opposite faces of a box modelled turned about its mesh's origin.
+
+Every way of taking such choices is made (at most 256; a round's choice is made only for the
+pairs that could win it, from the largest down), each different layout once, the first the one
+the arithmetic here gives. With the Editor's data the layout is the one that covers the
+precomputed chart mask; where several do (charts of one size in each other's blocks), the one
+that puts the renderer's surface where the system's clusters sample it: for each group of a
+cluster's points on the renderer, the mean surface point and normal of the texels it samples
+its material from against the mean of its points and of their normals, the two sets brought
+together by the rigid motion that fits them best, measured by the points alone and by points
+and normals together (a normal's difference counting as that many metres). The layout taken is
+the one whose remaining difference by one measure is at most half any other's and 0.05 m
+smaller, where the other measure does not so take another. (A cluster that spans faces folded
+into one chart has a blurred mean normal, and the points tell; congruent faces the normals
+tell.) Unbound's own bake (no Editor data) takes the first. `RoomRounding` is the Room so too
+with a 1.6 x 0.1 x 1.2 m slab modelled turned 45 degrees about Y (faces at a right angle but
+for rounding; its thin faces as near to its top as to its bottom but for it), a roof
+whose sides lean 20 degrees from the plane through both with Max Angle 20, a box modelled turned
+30 degrees about Y away from its mesh's origin (opposite faces of one area but for rounding) and
+a 2 x 1.2 m quad on a tilted plane whose lightmap UVs are a true copy of it turned a quarter: the
+Editor took the roof as one chart and the quad's projection (6 x 4 texels, where its own UVs,
+which the arithmetic here prefers by a mapping error smaller in its last digits, give 4 x 6: the
+chart mask tells), and the
+slab's and the box's layouts are the ones of four and ten that the clusters tell from the other
+that fits the mask (the slab by its points, 0.08 against 0.43 m; the box by points and normals,
+0.30 against 0.96 m), as the Editor's GI cache has them, vertex by vertex, for all four
+(`roomrounding-base`, `roomrounding-moved`).
+
+What Unbound cannot make as the Editor does is refused. Each refusal is a warning that names
+the renderer, and its system is then not drawn:
+
+- Ways of taking the rounding's choices that the system's data cannot tell apart: two that
+  fit the chart mask with none clearly closest to the clusters (a renderer with fewer than three
+  cluster groups cannot tell: a cube of 0.45 turned 25 degrees about Y fits its chart mask 117
+  ways and lies in one cluster), or more than 256 ways (a small cube turned about two axes).
 - Renderers that share their mesh, chart settings and instance matrix to thousandths with one
   whose matrix is another and lays the charts out otherwise (an unturned twin of a turned
   renderer, say): which matrix the shared geometry was made of is not known.
-
-- Choices that rounding decides, the last digits of a normalisation here and in the
-  precompute being apart: two neighbouring flat parts whose normals' cosine could have the
-  other sign there (it is closer to zero than that rounding against its terms, or zero only
-  because its terms cancel: a slab modelled at 45 degrees, a cube of 0.45 turned 25 degrees)
-  that one plane could hold within the limits; a test of facing that close to Max Angle; two
-  different sets that are
-  the largest of a round, of the same area or of one but for rounding (within 1e-5 of each
-  other); a leftover as near to two sets in the same way. Along the coordinate axes the
-  arithmetic is exact and such ties are taken in order, as the Editor takes them in the scene's
-  boxes and steps (the two charts of a step's tread and riser of one size among them). Off the
-  axes the last digits of a unit vector need not be the precompute's, and only sets of the very
-  same area that are equal by their shape are taken in order: their projections are images of
-  each other whatever the scale of the projection axes (checked by a sweep of those scales over
-  a few units in the last place), as for the two sides of the scene's roofs and the opposite
-  faces of a box modelled turned about its mesh's origin. Congruent faces of such a box moved
-  off that origin, sets within 1e-5 of the winner's area and a leftover as near to two sets
-  are refused there.
-- A part that is not flat within the limits and that nothing folds in: curved surfaces. Their
-  charts need a measure of overlap in the projection, which is not implemented.
-- A bent part left on its own (flat within the limits, not planar): whether it keeps its own
-  lightmap UVs or is projected is a comparison of the two that is not implemented. Joined in
-  a round, as when its mesh has other parts and it is not the last of them, it is projected.
-- A planar part left on its own on a plane that is not along the coordinate axes, whose own
-  lightmap UVs are an undistorted copy of its shape and are laid out otherwise than its
-  projection: both are then equally true but for rounding.
-- A zero or mirrored scale anywhere up the hierarchy, a Max Angle of a right angle or more and
-  a mesh without normals: not measured. A renderer that shares a geometry with one of these is
-  refused with it. (In a scratch bake a bent
-  part alone in its mesh, two quads 40 degrees apart, was laid out as its projection and its
-  own UVs both would be; that does not tell the choice.)
+- A projected part whose normals cancel out (a closed part kept projected): on which side of
+  its plane is not made.
+- A zero or mirrored scale anywhere up the hierarchy, a Scale In Lightmap of 0, a Max Angle of
+  a right angle or more and a mesh without normals: not measured. A renderer that shares a
+  geometry with one of these is refused with it.
 
 Not measured, and implemented as written above: scale under turned parents that skews it (the
 instance matrix carries the skew), meshes that mix triangles wound with and against their
@@ -780,7 +826,8 @@ is how the Editor's products are made in the measured release, as follows.
   precompute scales (each renderer's UV space is taken at its own size).
 - **Clusters** (`clusters.rs`): a system's surfaces are cut by a grid of cubic voxels from the
   corner of the system's bounds, of the cluster size (one over the realtime resolution times
-  the renderer's Scale In Lightmap times the Cluster Resolution: 1 m in the probe's scenes).
+  the Cluster Resolution: 1 m in the probe's scenes; Scale In Lightmap leaves it as at 1: in
+  `RoomCurved` the cube and sphere at 4 have the clusters they have at 1).
   Within a voxel the touching pieces of one renderer whose normals are all within a right
   angle of each other form a part. A part larger than 0.4 of a face of the smallest voxels is
   a cluster; a smaller one first joins touching small parts of its plane until they are
@@ -1011,8 +1058,26 @@ false; called by editor code as the Editor enters Play mode, `Bake` bakes the op
 `bakeStarted` and then `bakeCompleted`, answers true and writes the scene's lighting data, but
 Play mode starts with the scene as it was: none of its renderers has a realtime lightmap.
 Unbound answers and sends the same and writes no lighting data (which later sessions would use;
-said once); a bake in Edit mode (`unbound test`) is not implemented (it warns and answers false),
-nor is `BakeAsync` outside Play mode. Not measured: data the Editor finds invalid (moved geometry,
+said once). In Edit mode (`script_bake.py --edit`: editor code opens a scene without lighting
+data and bakes it twice, then enters Play mode; two identical captures) `Bake` bakes the open
+scene synchronously and answers true: it sends `bakeStarted` (`Lightmapping.isRunning` still
+false), then `lightingDataUpdated` while it works (`isRunning` true; 22 times in the first
+bake and 14 in the second, a count the Scripting API does not specify: "called when any
+lighting data changes") and `bakeCompleted` (`isRunning` false again); by then it has written
+`LightingData.asset` and its `.meta` into a folder beside the scene named as the scene (with
+the folder's `.meta`), which the scene names (`Lightmapping.lightingDataAsset`), and the scene
+is dirty but not saved (its file unchanged); its renderers have their realtime lightmap index
+at once, and Play mode draws the bake's realtime GI. Unbound does the same with its own
+precompute (`RealtimeGI.BakeInEditMode`, cached as a bake on open is), sending
+`lightingDataUpdated` once, and keeps the bake for the scene for the session (also when Play
+mode loads it again); it writes no lighting data asset (the Editor's binary format with its
+precomputed data is not made: said once, and `lightingDataAsset` stays null), and the baked
+lightmaps and baked probes of a scene with baked global illumination (Q677), the environment
+lighting from a sky and baked reflection probes are not made (each said once). Renderers a
+script added to the scene after it loaded are not baked (named). The records of the asset and
+the Editor's log are reported, not gated. Not measured: several open scenes (Unbound bakes them
+one by one as they would load), a scene with Editor lighting data baked again (Unbound bakes it
+anew), and `BakeAsync` outside Play mode (not implemented). Not measured: data the Editor finds invalid (moved geometry,
 changed settings; Unbound bakes only for missing data), a scene that references the built-in
 default lighting data, a scene saved by an earlier release with Auto Generate on (it has no
 bake-on-load setting of its own), and additive opens of several scenes. A scene that does
@@ -1107,12 +1172,10 @@ The main things the runtime over Unity's precomputed data does not make yet, eac
 loudly or recorded above with its scope (each section lists the rest of what it does not
 measure):
 
-- Automatic charts: curved parts (a measure of overlap in the projection), a bent part left on
-  its own and a planar one off the axes whose own UVs are an undistorted copy of it (the choice
-  between its own UVs and its projection), choices the precompute's rounding of normals decides
-  (faces at a right angle but for it, ties, facing at the Max Angle limit), a Max Angle of a
-  right angle or more, renderers sharing a geometry whose layouts differ by the matrix it is
-  made of, a zero or mirrored scale up the hierarchy and meshes without normals
+- Automatic charts: ways of taking the choices the precompute's rounding decides that the
+  system's chart mask and clusters cannot tell apart, a Max Angle of a right angle or more,
+  renderers sharing a geometry whose layouts differ by the matrix it is made of, a zero or
+  mirrored scale up the hierarchy, a Scale In Lightmap of 0 and meshes without normals
   ([Automatic charts](#automatic-charts)).
 - Packing: what giving a region up changes for later charts, the count of the region open to
   the rows above every chart, the order of equal regions made by different placements, and the
@@ -1168,5 +1231,6 @@ measure):
   to 10% of their values outside the comparator's tolerance (most of it from the clusters). The
   engine uses it for a scene the Editor would bake when it opens it
   (`Lightmapping.bakeOnSceneLoad`, no lighting data), cached by a content hash and format
-  version ([When the engine uses it](#when-the-engine-uses-it)). Open: lighting that matches the
-  Editor's, the automatic charts still open, and script bakes in Edit mode.
+  version ([When the engine uses it](#when-the-engine-uses-it)), and for a script's bake in Edit
+  mode. Open: lighting that matches the Editor's, the automatic charts still open, and the
+  lighting data asset a bake writes.
