@@ -70,6 +70,9 @@ namespace UnityEngine.U2D
         bool m_MasterAtlasModified;
         string m_Tag;
         bool m_TagModified;
+        readonly List<ObjectRef> m_SerializedPackedSprites = new List<ObjectRef>();
+        readonly List<string> m_SerializedPackedSpriteNames = new List<string>();
+        bool m_PackedDataModified;
         List<Sprite> m_Sprites;
 
         public SpriteAtlas()
@@ -112,42 +115,64 @@ namespace UnityEngine.U2D
             var packed = SpriteAtlasPacking.PackedSprites(this);
             if (packed != null) return packed;
             if (m_Sprites != null) return m_Sprites;
-            if (m_IsVariant)
+            if (!IsPersistentAsset || m_SerializedPackedSprites.Count == 0)
+                return s_EmptySprites;
+            var found = new List<Sprite>(m_SerializedPackedSprites.Count);
+            foreach (var r in m_SerializedPackedSprites)
             {
-                var master = MasterAtlas;
-                if (master != null && !ReferenceEquals(master, this)) return m_Sprites = master.Sprites();
+                if (string.IsNullOrEmpty(r.Guid) || r.FileId == 0) continue;
+                if (AssetDatabaseRuntime.Load(r.Guid, r.FileId, typeof(Sprite)) is Sprite s)
+                    found.Add(s);
             }
-            var found = new List<Sprite>();
-            foreach (var entry in m_Packables)
+            return m_Sprites = found;
+        }
+
+        static readonly List<Sprite> s_EmptySprites = new List<Sprite>();
+
+        internal IReadOnlyList<ObjectRef> SerializedPackedSprites => m_SerializedPackedSprites;
+        internal bool PackedDataModified => m_PackedDataModified;
+
+        internal void ApplyPackedSprites(List<ObjectRef> refs, List<string> names, bool markModified)
+        {
+            m_SerializedPackedSprites.Clear();
+            if (refs != null) m_SerializedPackedSprites.AddRange(refs);
+            m_SerializedPackedSpriteNames.Clear();
+            if (names != null) m_SerializedPackedSpriteNames.AddRange(names);
+            if (markModified) m_PackedDataModified = true;
+            m_Sprites = null;
+        }
+
+        internal void ClearPackedDataModified() => m_PackedDataModified = false;
+
+        internal void InvalidateCachedSprites() => m_Sprites = null;
+
+        internal YText ToPackedRenderDataKeysYText()
+        {
+            var seq = YText.Seq(flow: m_SerializedPackedSprites.Count == 0);
+            for (int i = 0; i < m_SerializedPackedSprites.Count; i++)
             {
-                if (!ReferenceEquals(entry.Live, null))
-                {
-                    if (entry.Live == null) continue;
-                    if (entry.Live is Sprite liveSprite)
-                    {
-                        found.Add(liveSprite);
-                        continue;
-                    }
-                }
-                var packable = entry.Reference;
-                if (packable.Guid == null) continue;
-                var path = AssetDatabase.GUIDToAssetPath(packable.Guid);
-                if (string.IsNullOrEmpty(path)) continue;
-                if (AssetDatabase.IsValidFolder(path))
-                {
-                    foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { path }))
-                        found.AddRange(AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GUIDToAssetPath(guid)).OfType<Sprite>());
-                }
-                else if (AssetDatabase.LoadAssetAtPath(path, typeof(Object)) is Texture2D)
-                {
-                    // A texture: all its sprites; a sprite of it, that one.
-                    var sprites = AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>();
-                    if (packable.FileId != 2800000)
-                        sprites = sprites.Where(s => AssetDatabase.TryGetGUIDAndLocalFileIdentifier(s, out _, out long id) && id == packable.FileId);
-                    found.AddRange(sprites);
-                }
+                var r = m_SerializedPackedSprites[i];
+                var entry = YText.Map();
+                entry.Set(r.Guid ?? "", YText.Scalar(r.FileId.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                seq.Items.Add(entry);
             }
-            return m_Sprites = found.Distinct().OrderBy(s => s.name, StringComparer.Ordinal).ToList();
+            return seq;
+        }
+
+        internal YText ToPackedSpritesYText()
+        {
+            var seq = YText.Seq(flow: m_SerializedPackedSprites.Count == 0);
+            for (int i = 0; i < m_SerializedPackedSprites.Count; i++)
+                seq.Items.Add(SceneFiles.FlowValue(UnityYamlWriter.Writer.ReferenceText(m_SerializedPackedSprites[i])));
+            return seq;
+        }
+
+        internal YText ToPackedSpriteNamesYText()
+        {
+            var seq = YText.Seq(flow: m_SerializedPackedSpriteNames.Count == 0);
+            for (int i = 0; i < m_SerializedPackedSpriteNames.Count; i++)
+                seq.Items.Add(YText.Scalar(UnityYamlWriter.Scalar(m_SerializedPackedSpriteNames[i] ?? "")));
+            return seq;
         }
 
         /// <summary>The packables as stored, in order.</summary>
@@ -576,6 +601,13 @@ namespace UnityEngine.U2D
             m_MasterAtlasModified = false;
             if (string.IsNullOrEmpty(m_Tag) && m_IsVariant && m_Master != null)
                 m_Tag = m_Master.tag;
+            m_SerializedPackedSprites.Clear();
+            foreach (var packedSprite in body.Get("m_PackedSprites")?.Seq() ?? Array.Empty<YNode>())
+                m_SerializedPackedSprites.Add(packedSprite.AsRef());
+            m_SerializedPackedSpriteNames.Clear();
+            foreach (var packedName in body.Get("m_PackedSpriteNamesToIndex")?.Seq() ?? Array.Empty<YNode>())
+                m_SerializedPackedSpriteNames.Add(packedName.Scalar ?? "");
+            m_PackedDataModified = false;
             m_Sprites = null;
             EditorUtility.ClearDirty(this);
         }

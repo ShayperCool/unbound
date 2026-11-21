@@ -414,11 +414,20 @@ namespace UnityEngine
         /// <summary>Draws the sprite from a packed atlas's page: its texture rect and UV transform
         /// (pixels per unit, offset) there, in a page of `uvSize` (a variant's scaled page keeps its
         /// master's rects and UVs, with its `scale`); the UVs follow, mirrored as the packer flipped
-        /// the sprite (Unity 6000.0.71f1, tests/projects/spriteatlas).</summary>
+        /// the sprite (Unity 6000.0.71f1, tests/projects/spriteatlas). When <paramref name="reportAsPacked"/>
+        /// is false (explicit V1 packing outside Play-mode packing modes, tests/projects/spriteatlaspack),
+        /// the clone binds its texture to the packed page while `packed` remains false and
+        /// `spriteAtlasTextureScale` remains 1.</summary>
         internal void BindAtlas(Texture2D page, Rect atlasRect, Vector4 uvTransform, SpritePackingMode mode, SpritePackingRotation rotation,
-            Vector2 uvSize, float scale)
+            Vector2 uvSize, float scale, bool reportAsPacked = true)
         {
             m_Texture = page;
+            if (!reportAsPacked)
+            {
+                m_AtlasRect = null;
+                m_AtlasScale = 1f;
+                return;
+            }
             m_AtlasRect = atlasRect;
             m_PackingMode = mode;
             m_PackingRotation = rotation;

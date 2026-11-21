@@ -47001,16 +47001,6 @@ namespace UnityEditor.U2D
         [global::Unbound.Stub] public override void OnPreviewGUI(global::UnityEngine.Rect r, global::UnityEngine.GUIStyle background) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasInspector.OnPreviewGUI"); }
         [global::Unbound.Stub] public SpriteAtlasInspector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasInspector.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class SpriteAtlasUtility
-    {
-        [global::Unbound.Stub] internal static void EnableV2Import(bool onOff) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasUtility.EnableV2Import"); }
-        [global::Unbound.Stub] public static void CleanupAtlasPacking() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasUtility.CleanupAtlasPacking"); }
-        [global::Unbound.Stub] public static void PackAllAtlases(global::UnityEditor.BuildTarget target, bool canCancel = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasUtility.PackAllAtlases"); }
-        [global::Unbound.Stub] internal static void PackAtlasesInternal(global::UnityEngine.U2D.SpriteAtlas[] atlases, global::UnityEditor.BuildTarget target, bool canCancel = true, bool invokedFromImporter = false, bool unloadSprites = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasUtility.PackAtlasesInternal"); }
-        [global::Unbound.Stub] public static void PackAtlases(global::UnityEngine.U2D.SpriteAtlas[] atlases, global::UnityEditor.BuildTarget target, bool canCancel = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasUtility.PackAtlases"); }
-        [global::Unbound.Stub] public SpriteAtlasUtility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasUtility.ctor"); }
-    }
     unsafe static partial class SpriteEditorExtension
     {
         [global::Unbound.Stub] internal static global::UnityEngine.U2D.SpriteAtlas GetActiveAtlas(this global::UnityEngine.Sprite sprite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteEditorExtension.GetActiveAtlas"); return default; }

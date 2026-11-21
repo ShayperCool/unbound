@@ -59,8 +59,8 @@ pub struct RuntimeState {
     pub audio: crate::audio::Engine,
     /// The atlases the project's Sprite Packer mode packs for Play mode.
     pub play_mode_atlases: Option<unbound_project::PlayModeAtlases>,
-    /// Those atlases packed (on first use, in Play mode).
-    atlases: OnceLock<crate::sprite_atlases::AtlasSet>,
+    /// Those atlases packed (on first use in Play mode, or updated via SpriteAtlasUtility.PackAtlases).
+    atlases: RwLock<Option<crate::sprite_atlases::AtlasSet>>,
     /// The texels of the imported texture traced last (Sprite.Create often cuts many sprites
     /// from one texture).
     traced_texels: std::sync::Mutex<Option<(String, Arc<Texels>)>>,
@@ -451,7 +451,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             unbound_compat::AudioOutputRules::for_version(project.version),
         ),
         play_mode_atlases,
-        atlases: OnceLock::new(),
+        atlases: RwLock::new(None),
         traced_texels: std::sync::Mutex::new(None),
     };
     if STATE.set(state).is_err() {
@@ -1221,7 +1221,31 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             })
             .to_string())
         }
-        "sprite-atlases" => Ok(crate::sprite_atlases::to_json(page_set(s)).to_string()),
+        "sprite-atlases" => Ok(with_page_set(s, crate::sprite_atlases::to_json).to_string()),
+        "sprite-atlases-pack" => {
+            #[derive(Deserialize)]
+            struct Request {
+                paths: Vec<String>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            if r.paths.iter().any(|p| s.db().by_path(p).is_none()) {
+                let _ = s.refresh_assets();
+            }
+            let packed = crate::sprite_atlases::pack_all(
+                &r.paths,
+                &s.db(),
+                &texture_importer(s),
+                &s.imports,
+            );
+            let json = crate::sprite_atlases::to_json(&packed).to_string();
+            // Ensure Play-mode atlases are initialized before merging newly packed atlases.
+            let _ = with_page_set(s, |_| ());
+            let mut guard = s.atlases.write().unwrap_or_else(|e| e.into_inner());
+            if let Some(set) = guard.as_mut() {
+                set.merge(&packed);
+            }
+            Ok(json)
+        }
         "sprite-geometry" => {
             // A sprite made at runtime (Sprite.Create), or an imported sprite's fallback outline:
             // its Tight mesh, texture rect and fallback physics shape, traced as the importer
@@ -2196,7 +2220,7 @@ fn block_code(format: unbound_assets::texture::BlockFormat, srgb: bool) -> i32 {
 pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     let s = state();
     if let Some(page) = guid.strip_prefix(crate::sprite_atlases::PAGE_KEY_PREFIX) {
-        let texture = crate::sprite_atlases::page(page_set(s), page)?;
+        let texture = with_page_set(s, |set| crate::sprite_atlases::page(set, page))?;
         return upload_imported(s, handle, texture, None, 0);
     }
     if guid.starts_with(GENERATED_KEY_PREFIX) {
@@ -2417,7 +2441,9 @@ fn imported_texture(
     key: &str,
 ) -> Result<Arc<unbound_assets::texture::ImportedTexture>> {
     if let Some(page) = key.strip_prefix(crate::sprite_atlases::PAGE_KEY_PREFIX) {
-        return Ok(Arc::new(crate::sprite_atlases::page(page_set(s), page)?));
+        return Ok(Arc::new(with_page_set(s, |set| {
+            crate::sprite_atlases::page(set, page)
+        })?));
     }
     if key.starts_with(GENERATED_KEY_PREFIX) {
         let texture = s.generated.read().unwrap().get(key).cloned();
@@ -2431,19 +2457,26 @@ fn imported_texture(
         .get_or_import(&texture_importer(s), &asset.file, &meta)
 }
 
-/// The Play-mode sprite atlases, packed on first use.
-fn page_set(s: &RuntimeState) -> &crate::sprite_atlases::AtlasSet {
-    s.atlases.get_or_init(|| {
-        crate::sprite_atlases::pack_all(
-            s.play_mode_atlases
-                .as_ref()
-                .map(|a| a.paths.as_slice())
-                .unwrap_or_default(),
-            &s.db(),
-            &texture_importer(s),
-            &s.imports,
-        )
-    })
+/// Runs `f` on the Play-mode sprite atlases, packing them on first use.
+fn with_page_set<R>(s: &RuntimeState, f: impl FnOnce(&crate::sprite_atlases::AtlasSet) -> R) -> R {
+    {
+        let guard = s.atlases.read().unwrap_or_else(|e| e.into_inner());
+        if let Some(set) = guard.as_ref() {
+            return f(set);
+        }
+    }
+    let initial = crate::sprite_atlases::pack_all(
+        s.play_mode_atlases
+            .as_ref()
+            .map(|a| a.paths.as_slice())
+            .unwrap_or_default(),
+        &s.db(),
+        &texture_importer(s),
+        &s.imports,
+    );
+    let mut guard = s.atlases.write().unwrap_or_else(|e| e.into_inner());
+    let set = guard.get_or_insert(initial);
+    f(set)
 }
 
 /// Uploads an imported texture (`source`: its file and `.meta`, for an asset) to a handle.

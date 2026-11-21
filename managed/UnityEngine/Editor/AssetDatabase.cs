@@ -489,6 +489,7 @@ namespace UnityEditor
         static readonly object s_LoadLock = new object();
         static bool s_EnterPlayModeOptionsEnabled;
         static EnterPlayModeOptions s_EnterPlayModeOptions;
+        static int s_SpritePackerMode;
         // The Editor's default for a project whose asset does not set it (new projects write 1;
         // a project without the key is not measured).
         const bool ForceAssetUnloadAndGCOnSceneLoadDefault = true;
@@ -514,6 +515,7 @@ namespace UnityEditor
                             if (doc.ClassId != EditorSettingsClassId) continue;
                             s_EnterPlayModeOptionsEnabled = doc.Body.Bool("m_EnterPlayModeOptionsEnabled");
                             s_EnterPlayModeOptions = (EnterPlayModeOptions)doc.Body.Int("m_EnterPlayModeOptions", 0);
+                            s_SpritePackerMode = doc.Body.Int("m_SpritePackerMode", 0);
                             s_ForceAssetUnloadAndGCOnSceneLoad = doc.Body.Bool("m_ForceAssetUnloadAndGCOnSceneLoad", ForceAssetUnloadAndGCOnSceneLoadDefault);
                         }
                 }
@@ -521,6 +523,7 @@ namespace UnityEditor
                 {
                     s_EnterPlayModeOptionsEnabled = false;
                     s_EnterPlayModeOptions = EnterPlayModeOptions.None;
+                    s_SpritePackerMode = 0;
                     s_ForceAssetUnloadAndGCOnSceneLoad = ForceAssetUnloadAndGCOnSceneLoadDefault;
                     failure = e.Message;
                 }
@@ -529,6 +532,32 @@ namespace UnityEditor
             // Logged once loaded: a log listener reading these settings does not come back here.
             if (failure != null)
                 Debug.LogWarning("Unbound: ProjectSettings/EditorSettings.asset cannot be read (" + failure + "): its settings keep their defaults");
+        }
+
+        internal const int SpritePackerModeDisabled = 0;
+        internal const int SpritePackerModeBuildTimeOnly = 1;
+        internal const int SpritePackerModeAlwaysOn = 2;
+        internal const int SpritePackerModeBuildTimeOnlyAtlas = 3;
+        internal const int SpritePackerModeAlwaysOnAtlas = 4;
+        internal const int SpritePackerModeSpriteAtlasV2 = 5;
+        internal const int SpritePackerModeSpriteAtlasV2Build = 6;
+
+        /// <summary>The project's configured Sprite Packer mode (`m_SpritePackerMode`, Disabled when unset).</summary>
+        internal static int SpritePackerModeValue
+        {
+            get { Load(); return s_SpritePackerMode; }
+            set { Load(); s_SpritePackerMode = value; }
+        }
+
+        /// <summary>Whether the project's Sprite Packer mode packs atlases for Play mode
+        /// (`AlwaysOnAtlas` or `SpriteAtlasV2`).</summary>
+        internal static bool IsPlayModeAtlasPackingActive
+        {
+            get
+            {
+                int mode = SpritePackerModeValue;
+                return mode == SpritePackerModeAlwaysOnAtlas || mode == SpritePackerModeSpriteAtlasV2;
+            }
         }
 
         /// <summary>The options Play mode is entered with: the project's when enabled, else None.</summary>

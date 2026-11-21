@@ -1417,6 +1417,44 @@ namespace Unbound.Runtime
                         doc.Body.Values.Insert(insertVariantAt, variantValue);
                     }
                 }
+                if (atlas.PackedDataModified)
+                {
+                    var renderDataKeys = atlas.ToPackedRenderDataKeysYText();
+                    int keysIndex = editorData.Keys.IndexOf("packedSpriteRenderDataKeys");
+                    if (keysIndex >= 0)
+                        editorData.Values[keysIndex] = renderDataKeys;
+                    else
+                        editorData.Set("packedSpriteRenderDataKeys", renderDataKeys);
+
+                    var packedSprites = atlas.ToPackedSpritesYText();
+                    int packedIndex = doc.Body.Keys.IndexOf("m_PackedSprites");
+                    if (packedIndex >= 0)
+                    {
+                        doc.Body.Values[packedIndex] = packedSprites;
+                    }
+                    else
+                    {
+                        int afterMaster = doc.Body.Keys.IndexOf("m_MasterAtlas");
+                        int insertPackedAt = afterMaster >= 0 ? afterMaster + 1 : doc.Body.Keys.Count;
+                        doc.Body.Keys.Insert(insertPackedAt, "m_PackedSprites");
+                        doc.Body.Values.Insert(insertPackedAt, packedSprites);
+                    }
+
+                    var packedNames = atlas.ToPackedSpriteNamesYText();
+                    int namesIndex = doc.Body.Keys.IndexOf("m_PackedSpriteNamesToIndex");
+                    if (namesIndex >= 0)
+                    {
+                        doc.Body.Values[namesIndex] = packedNames;
+                    }
+                    else
+                    {
+                        int afterPacked = doc.Body.Keys.IndexOf("m_PackedSprites");
+                        int insertNamesAt = afterPacked >= 0 ? afterPacked + 1 : doc.Body.Keys.Count;
+                        doc.Body.Keys.Insert(insertNamesAt, "m_PackedSpriteNamesToIndex");
+                        doc.Body.Values.Insert(insertNamesAt, packedNames);
+                    }
+                    atlas.ClearPackedDataModified();
+                }
                 return true;
             }
             return false;

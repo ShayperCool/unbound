@@ -44,6 +44,10 @@ namespace UnityEngine.U2D
 
         static Dictionary<(string, long), Binding> s_Bindings;
         static Dictionary<string, Atlas> s_Atlases;
+        /// <summary>The build target each atlas in <see cref="s_Atlases"/> was last packed for.</summary>
+        static readonly Dictionary<string, UnityEditor.BuildTarget> s_PackedTargets = new Dictionary<string, UnityEditor.BuildTarget>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Atlases already packed by Play-mode startup packing.</summary>
+        static readonly HashSet<string> s_PlayModePacked = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         /// <summary>A sprite larger than its atlas's page cancelled the packing: every atlas is
         /// empty (measured: tests/projects/spriteatlas set `over`).</summary>
         static bool s_Cancelled;
@@ -105,26 +109,16 @@ namespace UnityEngine.U2D
             s_Cancelled = json?.Cancelled != null;
             if (json?.Atlases == null) return;
             var shared = new Dictionary<(string, string), int>();
+            var activeTarget = UnityEditor.EditorUserBuildSettings.activeBuildTarget;
             foreach (var a in json.Atlases)
             {
-                var atlas = new Atlas
-                {
-                    Guid = a.Guid, Name = a.Name, Tag = a.Tag, Master = a.Master,
-                    IncludeInBuild = a.IncludeInBuild, Tight = a.Tight, Scale = a.Scale,
-                    Pages = a.Pages.ConvertAll(p => new Page { Key = p.Key, Name = p.Name, Width = p.Width, Height = p.Height, UvWidth = p.UvWidth, UvHeight = p.UvHeight }).ToArray(),
-                };
+                var atlas = BuildAtlas(a);
                 s_Atlases[a.Guid] = atlas;
-                foreach (var s in a.Sprites)
+                s_PackedTargets[a.Guid] = activeTarget;
+                s_PlayModePacked.Add(a.Guid);
+                foreach (var binding in atlas.Sprites)
                 {
-                    var binding = new Binding
-                    {
-                        Atlas = atlas, Texture = s.Texture, FileId = s.FileId, Page = s.Page, Rotation = s.Rotation,
-                        Rect = new Rect(s.Rect[0], s.Rect[1], s.Rect[2], s.Rect[3]),
-                        UvTransform = new Vector4(s.UvTransform[0], s.UvTransform[1], s.UvTransform[2], s.UvTransform[3]),
-                    };
-                    atlas.Sprites.Add(binding);
-                    var key = (s.Texture.ToLowerInvariant(), s.FileId);
-                    atlas.ByKey[key] = binding;
+                    var key = (binding.Texture.ToLowerInvariant(), binding.FileId);
                     // A variant's sprites are its master's: they bind to the master.
                     if (a.Master != null) continue;
                     // A sprite in several atlases binds to the last by path (the Editor's choice
@@ -153,6 +147,28 @@ namespace UnityEngine.U2D
                 Debug.LogWarning($"Unbound: {n} sprites are in sprite atlases {first} and {second}; they bind to {second} (the Editor's choice among several atlases is not reproduced)");
         }
 
+        static Atlas BuildAtlas(AtlasJson a)
+        {
+            var atlas = new Atlas
+            {
+                Guid = a.Guid, Name = a.Name, Tag = a.Tag, Master = a.Master,
+                IncludeInBuild = a.IncludeInBuild, Tight = a.Tight, Scale = a.Scale,
+                Pages = a.Pages.ConvertAll(p => new Page { Key = p.Key, Name = p.Name, Width = p.Width, Height = p.Height, UvWidth = p.UvWidth, UvHeight = p.UvHeight }).ToArray(),
+            };
+            foreach (var s in a.Sprites)
+            {
+                var binding = new Binding
+                {
+                    Atlas = atlas, Texture = s.Texture, FileId = s.FileId, Page = s.Page, Rotation = s.Rotation,
+                    Rect = new Rect(s.Rect[0], s.Rect[1], s.Rect[2], s.Rect[3]),
+                    UvTransform = new Vector4(s.UvTransform[0], s.UvTransform[1], s.UvTransform[2], s.UvTransform[3]),
+                };
+                atlas.Sprites.Add(binding);
+                atlas.ByKey[(s.Texture.ToLowerInvariant(), s.FileId)] = binding;
+            }
+            return atlas;
+        }
+
         static Texture2D PageTexture(Page page)
         {
             if (page.Texture != null) return page.Texture;
@@ -164,12 +180,12 @@ namespace UnityEngine.U2D
             return page.Texture;
         }
 
-        static void Bind(Sprite sprite, Binding binding)
+        static void Bind(Sprite sprite, Binding binding, bool reportAsPacked = true)
         {
             var page = binding.Atlas.Pages[binding.Page];
             sprite.BindAtlas(PageTexture(page), binding.Rect, binding.UvTransform,
                 binding.Atlas.Tight ? SpritePackingMode.Tight : SpritePackingMode.Rectangle, (SpritePackingRotation)binding.Rotation,
-                new Vector2(page.UvWidth, page.UvHeight), binding.Atlas.Scale);
+                new Vector2(page.UvWidth, page.UvHeight), binding.Atlas.Scale, reportAsPacked);
         }
 
         /// <summary>Binds an imported sprite (its texture's GUID and its file id) to its packed atlas
@@ -227,7 +243,7 @@ namespace UnityEngine.U2D
 
         static Atlas Find(SpriteAtlas spriteAtlas)
         {
-            if (!AssetDatabaseRuntime.TryGetLocation(spriteAtlas, out var guid, out _)) return null;
+            if (s_Atlases == null || !AssetDatabaseRuntime.TryGetLocation(spriteAtlas, out var guid, out _)) return null;
             return s_Atlases.TryGetValue(guid, out var atlas) ? atlas : null;
         }
 
@@ -235,8 +251,8 @@ namespace UnityEngine.U2D
         /// null when the atlas is not packed now.</summary>
         internal static List<Sprite> PackedSprites(SpriteAtlas spriteAtlas)
         {
-            if (!Active) return null;
-            Load();
+            if (Active) Load();
+            if (s_Atlases == null) return null;
             if (s_Cancelled) return s_None;
             var atlas = Find(spriteAtlas);
             if (atlas == null) return null;
@@ -252,14 +268,171 @@ namespace UnityEngine.U2D
         internal static Sprite Clone(SpriteAtlas spriteAtlas, Sprite sprite)
         {
             var copy = (Sprite)Object.Instantiate(sprite);
-            if (!Active || sprite.m_AtlasBinding is not (string Texture, long FileId) key) return copy;
-            Load();
+            if (Active) Load();
+            if (s_Atlases == null) return copy;
+            (string Texture, long FileId) key;
+            if (sprite.m_AtlasBinding is (string boundTex, long boundId))
+                key = (boundTex, boundId);
+            else if (UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(sprite, out var guid, out var fileId) && !string.IsNullOrEmpty(guid))
+                key = (guid.ToLowerInvariant(), fileId);
+            else
+                return copy;
             var atlas = Find(spriteAtlas);
             // On the pages of the atlas it comes from, whichever atlas the sprite itself binds to
-            // (measured: a master left out of builds gives clones on its own pages).
+            // (measured: a master left out of builds gives clones on its own pages; outside Play-mode
+            // packing modes the clone binds its texture to the packed page while `packed` stays false
+            // and `spriteAtlasTextureScale` stays 1, tests/projects/spriteatlaspack).
             if (atlas != null && atlas.ByKey.TryGetValue(key, out var binding))
-                Bind(copy, binding);
+                Bind(copy, binding, reportAsPacked: UnityEditor.EditorSettings.IsPlayModeAtlasPackingActive);
             return copy;
+        }
+
+        /// <summary>Packs persistent V1 <see cref="SpriteAtlas"/> assets through the native sprite
+        /// atlas packer, refreshes in-memory packed atlas state, and persists updated V1 packed
+        /// sprite lists to disk (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaspack).</summary>
+        internal static void PackV1(IReadOnlyList<SpriteAtlas> requestedOrder, UnityEditor.BuildTarget target)
+        {
+            if (requestedOrder == null || requestedOrder.Count == 0 || !Native.IsReady) return;
+            if (s_Bindings == null) Load();
+
+            var entriesByGuid = new Dictionary<string, (SpriteAtlas Atlas, string Guid, string Path, bool WasDirty, bool HadPlayModePack, List<(string, long)> PrevKeys)>(StringComparer.OrdinalIgnoreCase);
+            var uniquePaths = new List<string>();
+            for (int i = 0; i < requestedOrder.Count; i++)
+            {
+                var sa = requestedOrder[i];
+                if (sa == null || !AssetDatabaseRuntime.TryGetLocation(sa, out var guid, out _) || string.IsNullOrEmpty(guid))
+                    continue;
+                if (entriesByGuid.ContainsKey(guid)) continue;
+                var path = AssetDatabaseRuntime.PathOf(guid);
+                if (string.IsNullOrEmpty(path)) continue;
+                bool wasDirty = UnityEditor.EditorUtility.IsDirty(sa);
+                bool hadPlayModePack = s_PlayModePacked.Contains(guid);
+                List<(string, long)> prevKeys = null;
+                if (s_Atlases.TryGetValue(guid, out var existing))
+                {
+                    prevKeys = new List<(string, long)>(existing.Sprites.Count);
+                    for (int k = 0; k < existing.Sprites.Count; k++)
+                        prevKeys.Add((existing.Sprites[k].Texture.ToLowerInvariant(), existing.Sprites[k].FileId));
+                }
+                entriesByGuid[guid] = (sa, guid, path, wasDirty, hadPlayModePack, prevKeys);
+                uniquePaths.Add(path);
+            }
+            if (uniquePaths.Count == 0) return;
+
+            // In Play-mode packing (AlwaysOnAtlas), packing atlases whose cached pack already matches
+            // the target reconciles their packed sprites (masters first, then variants, without
+            // deduplicating the input array), resetting and re-resolving sprites against built-in
+            // atlases and warning when a sprite matches more than one built-in atlas.
+            if (UnityEditor.EditorSettings.IsPlayModeAtlasPackingActive)
+            {
+                var resetSprites = new HashSet<(string, long)>();
+                for (int pass = 0; pass < 2; pass++)
+                {
+                    bool wantVariant = pass == 1;
+                    for (int i = 0; i < requestedOrder.Count; i++)
+                    {
+                        var sa = requestedOrder[i];
+                        if (sa == null || sa.isVariant != wantVariant) continue;
+                        if (!AssetDatabaseRuntime.TryGetLocation(sa, out var guid, out _) || !entriesByGuid.TryGetValue(guid, out var entry))
+                            continue;
+                        if (entry.WasDirty) continue;
+                        if (!s_PackedTargets.TryGetValue(guid, out var prevTarget) || prevTarget != target) continue;
+                        if (!s_Atlases.TryGetValue(guid, out var existing)) continue;
+                        for (int k = 0; k < existing.Sprites.Count; k++)
+                        {
+                            var b = existing.Sprites[k];
+                            var key = (b.Texture.ToLowerInvariant(), b.FileId);
+                            if (resetSprites.Contains(key) && CountBuiltInAtlasesContaining(key) > 1)
+                            {
+                                var sprite = AssetDatabaseRuntime.Load(b.Texture, b.FileId, typeof(Sprite)) as Sprite;
+                                Debug.LogWarning($"Sprite {(sprite != null ? sprite.name : "")} matches more than one built-in atlases. Default to use the first available atlas.");
+                            }
+                            resetSprites.Add(key);
+                        }
+                    }
+                }
+            }
+
+            // Flush any pending in-memory edits on the V1 atlases to disk so the native packer reads
+            // their updated packables and settings.
+            foreach (var entry in entriesByGuid.Values)
+                if (entry.WasDirty)
+                    AssetFiles.SaveDirty(entry.Atlas);
+
+            var payload = JsonSerializer.Serialize(new { paths = uniquePaths }, s_Options);
+            var json = JsonSerializer.Deserialize<Json>(Native.Call("sprite-atlases-pack", payload), s_Options);
+            if (json?.Cancelled != null || json?.Atlases == null) return;
+
+            bool playModeActive = UnityEditor.EditorSettings.IsPlayModeAtlasPackingActive;
+            foreach (var a in json.Atlases)
+            {
+                var atlas = BuildAtlas(a);
+                s_Atlases[a.Guid] = atlas;
+                s_PackedTargets[a.Guid] = target;
+                if (playModeActive && a.Master == null)
+                {
+                    foreach (var binding in atlas.Sprites)
+                        s_Bindings[(binding.Texture.ToLowerInvariant(), binding.FileId)] = binding;
+                }
+                if (!entriesByGuid.TryGetValue(a.Guid, out var entry)) continue;
+
+                var newKeys = new List<(string, long)>(atlas.Sprites.Count);
+                var packedRefs = new List<ObjectRef>(atlas.Sprites.Count);
+                var packedNames = new List<string>(atlas.Sprites.Count);
+                for (int k = 0; k < atlas.Sprites.Count; k++)
+                {
+                    var b = atlas.Sprites[k];
+                    var key = (b.Texture.ToLowerInvariant(), b.FileId);
+                    newKeys.Add(key);
+                    packedRefs.Add(new ObjectRef(b.FileId, key.Item1, 3));
+                    var sprite = AssetDatabaseRuntime.Load(b.Texture, b.FileId, typeof(Sprite)) as Sprite;
+                    packedNames.Add(sprite != null ? sprite.name : "");
+                }
+
+                bool serializedMatches = KeysEqual(entry.Atlas.SerializedPackedSprites, newKeys);
+                bool needWrite = entry.WasDirty
+                    || (!entry.HadPlayModePack && !serializedMatches)
+                    || (entry.HadPlayModePack && !KeysEqual(entry.PrevKeys, newKeys));
+
+                entry.Atlas.ApplyPackedSprites(packedRefs, packedNames, markModified: needWrite);
+                if (needWrite)
+                {
+                    UnityEditor.EditorUtility.SetDirty(entry.Atlas);
+                    AssetFiles.SaveDirty(entry.Atlas);
+                }
+                else
+                {
+                    UnityEditor.EditorUtility.ClearDirty(entry.Atlas);
+                }
+                entry.Atlas.InvalidateCachedSprites();
+            }
+        }
+
+        static int CountBuiltInAtlasesContaining((string, long) key)
+        {
+            int count = 0;
+            foreach (var atlas in s_Atlases.Values)
+                if (atlas.IncludeInBuild && atlas.ByKey.ContainsKey(key))
+                    count++;
+            return count;
+        }
+
+        static bool KeysEqual(List<(string, long)> a, List<(string, long)> b)
+        {
+            if (a == null || b == null || a.Count != b.Count) return false;
+            for (int i = 0; i < a.Count; i++)
+                if (a[i].Item2 != b[i].Item2 || !string.Equals(a[i].Item1, b[i].Item1, StringComparison.OrdinalIgnoreCase))
+                    return false;
+            return true;
+        }
+
+        static bool KeysEqual(IReadOnlyList<ObjectRef> a, List<(string, long)> b)
+        {
+            if (a == null || b == null || a.Count != b.Count) return false;
+            for (int i = 0; i < a.Count; i++)
+                if (a[i].FileId != b[i].Item2 || !string.Equals(a[i].Guid, b[i].Item1, StringComparison.OrdinalIgnoreCase))
+                    return false;
+            return true;
         }
     }
 }

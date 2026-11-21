@@ -31,6 +31,24 @@ pub struct AtlasSet {
     pub cancelled: Option<String>,
 }
 
+impl AtlasSet {
+    /// Merges newly packed atlases into this set, replacing existing entries with the same GUID
+    /// and preserving all unrelated atlases.
+    pub fn merge(&mut self, other: &AtlasSet) {
+        if other.cancelled.is_some() {
+            return;
+        }
+        self.cancelled = None;
+        for (guid, atlas) in &other.atlases {
+            if let Some(existing) = self.atlases.iter_mut().find(|(g, _)| g == guid) {
+                existing.1 = atlas.clone();
+            } else {
+                self.atlases.push((*guid, atlas.clone()));
+            }
+        }
+    }
+}
+
 /// Packs the atlases at `paths` (asset paths) in parallel, through the import cache. Atlases that
 /// fail to read or import are reported and left out; a sprite larger than its atlas's page
 /// cancels the packing of every atlas, with the Editor's error.
@@ -708,5 +726,47 @@ mod tests {
         let after = importer.dependencies(&atlas).unwrap();
         assert!(after.iter().any(|p| p.ends_with("b.psb")) && after.len() == before.len() + 1);
         std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn atlas_set_merge_replaces_matching_guid_and_preserves_others() {
+        let g1 = Guid::parse("10000000000000000000000000000001").unwrap();
+        let g2 = Guid::parse("20000000000000000000000000000002").unwrap();
+        let g3 = Guid::parse("30000000000000000000000000000003").unwrap();
+        let make = |name: &str| PackedAtlas {
+            name: name.into(),
+            tag: name.into(),
+            include_in_build: true,
+            tight: true,
+            master: None,
+            scale: 1.0,
+            uv_sizes: Vec::new(),
+            pages: Vec::new(),
+            page_names: Vec::new(),
+            sprites: Vec::new(),
+            oversize: None,
+            warnings: Vec::new(),
+        };
+        let mut set = AtlasSet {
+            atlases: vec![(g1, make("A")), (g2, make("B"))],
+            cancelled: None,
+        };
+        let update = AtlasSet {
+            atlases: vec![(g2, make("B-updated")), (g3, make("C"))],
+            cancelled: None,
+        };
+        set.merge(&update);
+        assert_eq!(set.atlases.len(), 3);
+        assert_eq!(set.atlases[0].1.name, "A");
+        assert_eq!(set.atlases[1].1.name, "B-updated");
+        assert_eq!(set.atlases[2].1.name, "C");
+
+        // A cancelled pack leaves the existing set untouched.
+        let cancelled = AtlasSet {
+            atlases: vec![(g1, make("A-bad"))],
+            cancelled: Some("oversize".into()),
+        };
+        set.merge(&cancelled);
+        assert_eq!(set.atlases[0].1.name, "A");
     }
 }
