@@ -385,8 +385,8 @@ namespace UnityEngine.Tests
         /// <summary>Unity's argument checks (part of an instance, a folder at the path, a null path,
         /// connecting under StreamingAssets or a persistent object), and new prefabs that are not
         /// measured failing loudly before anything is written: a hierarchy holding an instance, a
-        /// variant of an instance with an added component, connecting an instance, onto a prefab that
-        /// exists, under another name or with references to scene objects outside the hierarchy.</summary>
+        /// variant of an instance with an added component, connecting an instance or onto a prefab
+        /// that exists.</summary>
         [Fact]
         public void UnmeasuredNewPrefabsAreRefused()
         {
@@ -425,18 +425,6 @@ namespace UnityEngine.Tests
             m_Made.Add(streamed);
             Assert.Equal("Can't connect a Prefab in the StreamingAssets folder to GameObjects in the scene. To save a Prefab to the StreamingAssets folder use SaveAsPrefabAsset instead.",
                 Assert.Throws<ArgumentException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(streamed, "Assets/StreamingAssets/Streamed.prefab", InteractionMode.AutomatedAction)).Message);
-            // Connecting is refused where what the instance keeps is not measured: another name than
-            // the file's, a reference to a scene object outside the hierarchy.
-            var named = new GameObject("Named");
-            m_Made.Add(named);
-            Assert.Contains("only to a new prefab of its own name",
-                Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(named, "Assets/Other.prefab", InteractionMode.AutomatedAction)).Message);
-            var referencing = new GameObject("Referencing");
-            m_Made.Add(referencing);
-            referencing.AddComponent<PrefabTestHolder>().link = named.transform;
-            Assert.Contains("references 1 scene objects outside its hierarchy",
-                Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(referencing, "Assets/Referencing.prefab", InteractionMode.AutomatedAction)).Message);
-            Assert.Same(named.transform, referencing.GetComponent<PrefabTestHolder>().link);
             // An asset folder of a registry package is immutable; a package the project does not have
             // is no asset folder, so its path does not exist.
             var packages = new List<UnityEditor.PackageManager.PackageInfo>(UnityEditor.PackageManager.PackageInfo.Registered);
@@ -472,7 +460,6 @@ namespace UnityEngine.Tests
 #pragma warning restore CS0618
             Assert.False(File.Exists(Path.Combine(m_Project, "Assets/Plain.prefab")));
             Assert.False(File.Exists(Path.Combine(m_Project, "Assets/Variant.prefab")));
-            Assert.False(File.Exists(Path.Combine(m_Project, "Assets/Referencing.prefab")));
             Assert.True(fresh.name == "Fresh" && !PrefabUtility.IsPartOfAnyPrefab(fresh));
         }
 

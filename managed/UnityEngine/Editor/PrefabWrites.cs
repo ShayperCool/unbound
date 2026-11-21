@@ -614,13 +614,13 @@ namespace UnityEditor
 
         /// <summary>
         /// A plain hierarchy saved as a new prefab (<see cref="PrefabAssets.Create"/>), then made an
-        /// instance of it, keeping its name: its root records the default overrides, prefabInstanceUpdated
-        /// is called for it and the next update publishes its structure change, the instances
-        /// updated and the instance's handle as a created object (matches the Unity 6000.0.71f1
-        /// Editor, tests/projects/scenesave prefab-writes connect.*). Unmeasured and refused before
-        /// anything is written: a path that holds a prefab, an instance or prefab contents to connect,
-        /// a root whose name is not the file's, a hierarchy referencing scene objects outside it
-        /// (the new prefab holds none there; what the instance keeps is not measured).
+        /// instance of it keeping every value it has: its root records the default overrides (its
+        /// name too, when the file's differs), a reference to a scene object outside the hierarchy
+        /// (none in the prefab) is an override; prefabInstanceUpdated is called for it and the next
+        /// update publishes its structure change, the instances updated and the instance's handle as
+        /// a created object (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
+        /// prefab-writes connect.*, create-assets named.*, outside.*). Unmeasured and refused: a
+        /// path that holds a prefab, an instance or prefab contents to connect.
         /// </summary>
         public static GameObject SaveAsPrefabAssetAndConnect(GameObject instanceRoot, string assetPath, InteractionMode action, out bool success)
         {
@@ -628,19 +628,17 @@ namespace UnityEditor
             var path = PrefabPath(instanceRoot, assetPath, connect: true);
             if (PrefabAssets.FileAt(path) != null || PrefabContents.Of(instanceRoot) != null || IsPartOfAnyPrefab(instanceRoot))
                 throw new NotSupportedException($"Unbound saves and connects a plain GameObject to a new prefab only (not {instanceRoot.name} to {path})");
-            if (instanceRoot.m_Name != Path.GetFileNameWithoutExtension(path))
-                throw new NotSupportedException($"Unbound connects {instanceRoot.name} only to a new prefab of its own name, not {path} (unmeasured)");
             RequirePlain(instanceRoot, path);
-            int outside = 0;
-            var text = PrefabAssets.NewPrefabText(path, instanceRoot, _ => outside++);
-            if (text == null) return null;
-            if (outside > 0)
-                throw new NotSupportedException($"Unbound does not connect {instanceRoot.name} to a new prefab while it references {outside} scene objects outside its hierarchy (unmeasured)");
             RequireNewPrefabPath(path);
-            var file = PrefabAssets.Imported(path, text);
+            var file = PrefabAssets.Create(path, instanceRoot);
             if (file == null) return null;
             var assetRoot = (GameObject)file.MainObject;
-            ConvertToPrefabInstance(instanceRoot, assetRoot, new ConvertToPrefabInstanceSettings { changeRootNameToAssetName = false }, action);
+            // The instance keeps its values: where they differ from the new prefab's (references
+            // the prefab cannot hold), they are overrides. Its scripts' values are the serialized
+            // ones from now on, as a recorded modification's.
+            foreach (var script in instanceRoot.GetComponentsInChildren<MonoBehaviour>(true)) PrefabRecords.Record(script);
+            ConvertToPrefabInstance(instanceRoot, assetRoot,
+                new ConvertToPrefabInstanceSettings { changeRootNameToAssetName = false, recordPropertyOverridesOfMatches = true }, action);
             ObjectChangeEvents.Note(ObjectChangeKind.ChangeGameObjectStructureHierarchy, new ChangeGameObjectStructureHierarchyEventArgs(instanceRoot.GetInstanceID(), instanceRoot.scene));
             PrefabAssets.Updated(new List<GameObject> { instanceRoot });
             // A user action records the instance's handle as a created object for its undo, which

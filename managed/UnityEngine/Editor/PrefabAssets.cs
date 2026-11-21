@@ -104,10 +104,9 @@ namespace Unbound.Runtime
             return text == null ? null : Imported(path, text);
         }
 
-        /// <summary>The text of <see cref="Create"/>'s file; null with the reason logged.
-        /// <paramref name="outside"/> is given each scene object outside the hierarchy that a reference
-        /// in it names (written as none: an asset holds no scene object).</summary>
-        internal static string NewPrefabText(string path, GameObject source, Action<Object> outside = null)
+        /// <summary>The text of <see cref="Create"/>'s file (a reference to a scene object outside the
+        /// hierarchy is none: an asset holds no scene object); null with the reason logged.</summary>
+        internal static string NewPrefabText(string path, GameObject source)
         {
             var root = PrefabContents.NewAssetGameObject(source.m_Name, source.transform.GetType());
             try
@@ -117,7 +116,7 @@ namespace Unbound.Runtime
                     [source] = root,
                     [source.transform] = root.m_Transform,
                 };
-                PrefabContents.Sync(source, root, map, new ValueReferences(), outside);
+                PrefabContents.Sync(source, root, map, new ValueReferences());
                 root.m_Name = Path.GetFileNameWithoutExtension(path);
                 return WriteNew(path, root);
             }
@@ -181,7 +180,7 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Writes a new prefab file, imports it and loads it; null with the reason logged.</summary>
-        internal static LoadedFile Imported(string path, string text)
+        static LoadedFile Imported(string path, string text)
         {
             try { SceneFiles.WriteFile(Path.Combine(ProjectInfo.ProjectPath, path), text); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
@@ -444,10 +443,8 @@ namespace Unbound.Runtime
 
         /// <summary>Makes an asset hierarchy as another one is, objects matched by
         /// <paramref name="map"/> (which takes the new asset objects): matched objects take the
-        /// values, unmatched ones are made in the asset, the asset's unmatched objects are destroyed.
-        /// A reference to a scene object outside the hierarchy becomes none (given to
-        /// <paramref name="outside"/>).</summary>
-        internal static void Sync(GameObject from, GameObject asset, Dictionary<Object, Object> map, ValueReferences refs, Action<Object> outside = null)
+        /// values, unmatched ones are made in the asset, the asset's unmatched objects are destroyed.</summary>
+        internal static void Sync(GameObject from, GameObject asset, Dictionary<Object, Object> map, ValueReferences refs)
         {
             void Structure(GameObject source, GameObject target)
             {
@@ -505,12 +502,7 @@ namespace Unbound.Runtime
                 if (x is null) return null;
                 if (map.TryGetValue(x, out var mapped)) return mapped;
                 // An object of a scene cannot be referenced by an asset.
-                if (!x.IsPersistentAsset && (x is GameObject || x is Component))
-                {
-                    outside?.Invoke(x);
-                    return null;
-                }
-                return x;
+                return !x.IsPersistentAsset && (x is GameObject || x is Component) ? null : x;
             }
             foreach (var pair in map)
                 if (pair.Key != null && pair.Value != null)
