@@ -209,10 +209,8 @@ namespace Unbound.Runtime
                             assets.Add((fileId, type));
                             s_PluginScriptLocations[type] = (guid, fileId);
                         }
-                        // A nested class's script has no class to resolve to (its file ID can
-                        // equal a top-level class's of the same name).
-                        if (!IsScriptClass(type) || type.IsNested) continue;
-                        s_PluginScripts[(guid, PluginScriptFileId(type))] = type;
+                        if (!IsScriptClass(type)) continue;
+                        AddPluginScript(s_PluginScripts, (guid, PluginScriptFileId(type)), type);
                     }
                     catch (Exception)
                     {
@@ -265,6 +263,15 @@ namespace Unbound.Runtime
         /// (behaviours, scriptable objects, importers, editors).</summary>
         static bool IsScriptClass(Type type) =>
             !type.IsAbstract && !type.ContainsGenericParameters && typeof(UnityEngine.Object).IsAssignableFrom(type);
+
+        /// <summary>Lists a plug-in class under the file ID a serialized reference names it by. A
+        /// nested class is hashed without its namespace, so its file ID can be a top-level class's
+        /// of the same name: the top-level class keeps it.</summary>
+        internal static void AddPluginScript<TKey>(Dictionary<TKey, Type> map, TKey key, Type type)
+        {
+            if (type.IsNested && map.TryGetValue(key, out var listed) && !listed.IsNested) return;
+            map[key] = type;
+        }
 
         /// <summary>A class a plugin DLL has a script sub-asset for: every behaviour and scriptable
         /// object class, abstract, generic and nested ones too, but not other UnityEngine.Object
@@ -326,7 +333,7 @@ namespace Unbound.Runtime
                     var assembly = Find(assemblyName);
                     if (assembly != null)
                         foreach (var type in SafeTypes(assembly))
-                            if (IsScriptClass(type)) byFileId[PluginScriptFileId(type)] = type;
+                            if (IsScriptClass(type)) AddPluginScript(byFileId, PluginScriptFileId(type), type);
                     s_LegacyScripts[legacyGuid] = byFileId;
                 }
                 return byFileId.TryGetValue(fileId, out var found) ? found : null;

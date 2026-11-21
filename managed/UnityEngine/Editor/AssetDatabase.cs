@@ -139,6 +139,7 @@ namespace UnityEditor
             var main = AssetDatabaseRuntime.LoadMain(guid, type ?? typeof(Object));
             if (main != null) return main;
             if (type == null) return null;
+            WarnIfScriptsUnknown(assetPath, guid);
             foreach (var o in AssetDatabaseRuntime.LoadAll(guid))
                 if (type.IsInstanceOfType(o)) return o;
             return null;

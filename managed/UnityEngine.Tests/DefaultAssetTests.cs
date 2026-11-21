@@ -178,6 +178,66 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void APlugInNotLoadedForTheEditorWarnsOnceWhereItsScriptsAreAskedFor()
+        {
+            const string listed = "dddddddddddddddddddddddddddddd01", typed = "dddddddddddddddddddddddddddddd02";
+            AssetDatabase.List("[{\"guid\":\"" + listed + "\",\"path\":\"Assets/Plugins/A.dll\",\"kind\":\"plugin\",\"importer\":\"PluginImporter\"},"
+                + "{\"guid\":\"" + typed + "\",\"path\":\"Assets/Plugins/B.dll\",\"kind\":\"plugin\",\"importer\":\"PluginImporter\"}]");
+            var a = DefaultAsset.Create("", HideFlags.None);
+            var b = DefaultAsset.Create("", HideFlags.None);
+            var logs = new LogCapture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = logs;
+            try
+            {
+                AssetDatabaseRuntime.Adopt(listed, "Assets/Plugins/A.dll", a, DefaultAsset.FileId).ScriptsUnknown = true;
+                AssetDatabaseRuntime.Adopt(typed, "Assets/Plugins/B.dll", b, DefaultAsset.FileId).ScriptsUnknown = true;
+                // Its DefaultAsset is measured: loading it says nothing.
+                Assert.Same(a, AssetDatabase.LoadMainAssetAtPath("Assets/Plugins/A.dll"));
+                Assert.Empty(logs.Lines);
+                Assert.Empty(AssetDatabase.LoadAllAssetsAtPath("Assets/Plugins/A.dll"));
+                Assert.Empty(AssetDatabase.LoadAllAssetRepresentationsAtPath("Assets/Plugins/A.dll"));
+                Assert.Null(AssetDatabase.LoadAssetAtPath<MonoScript>("Assets/Plugins/B.dll"));
+                Assert.Equal(new[]
+                {
+                    "Warning: Unbound: Assets/Plugins/A.dll is not loaded for the Editor, so its scripts are not listed as its sub-assets (not supported yet).",
+                    "Warning: Unbound: Assets/Plugins/B.dll is not loaded for the Editor, so its scripts are not listed as its sub-assets (not supported yet).",
+                }, logs.Lines);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                AssetDatabaseRuntime.Invalidate(listed);
+                AssetDatabaseRuntime.Invalidate(typed);
+                Object.DestroyImmediate(a);
+                Object.DestroyImmediate(b);
+                AssetDatabase.Invalidate();
+            }
+        }
+
+        [Fact]
+        public void ANestedPlugInClassDoesNotTakeATopLevelClasssFileId()
+        {
+            var map = new Dictionary<long, Type>();
+            GameDomain.AddPluginScript(map, 1L, typeof(ScriptPlugin.PluginBehaviourForTest));
+            GameDomain.AddPluginScript(map, 1L, typeof(ScriptPlugin.PluginOuter.PluginNested));
+            Assert.Same(typeof(ScriptPlugin.PluginBehaviourForTest), map[1L]);
+            // Listed first, a nested class gives way to the top-level one; alone, it is listed.
+            GameDomain.AddPluginScript(map, 2L, typeof(ScriptPlugin.PluginOuter.PluginNested));
+            Assert.Same(typeof(ScriptPlugin.PluginOuter.PluginNested), map[2L]);
+            GameDomain.AddPluginScript(map, 2L, typeof(ScriptPlugin.PluginBehaviourForTest));
+            Assert.Same(typeof(ScriptPlugin.PluginBehaviourForTest), map[2L]);
+        }
+
+        sealed class LogCapture : ILogHandler
+        {
+            internal readonly List<string> Lines = new List<string>();
+            public void LogException(Exception exception, Object context) => Lines.Add("Exception: " + exception.Message);
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                Lines.Add(logType + ": " + string.Format(format, args));
+        }
+
+        [Fact]
         public void APluginsScriptsHaveTheirClassesFileIdsAndNoClassWhenNested()
         {
             // The file IDs of tests/projects/defaultasset's ScriptPlugin.dll classes in the Editor.
