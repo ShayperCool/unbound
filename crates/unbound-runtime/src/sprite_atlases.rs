@@ -127,6 +127,7 @@ pub fn to_json(set: &AtlasSet) -> serde_json::Value {
                 "name": atlas.name,
                 "tag": atlas.tag,
                 "includeInBuild": atlas.include_in_build,
+                "complete": atlas.complete,
                 "tight": atlas.tight,
                 "master": atlas.master.map(guid_text),
                 "scale": atlas.scale,
@@ -175,6 +176,9 @@ pub struct PackedAtlas {
     pub oversize: Option<u32>,
     /// What could not be packed as the Editor packs it.
     pub warnings: Vec<String>,
+    /// Every sprite of the atlas's packables was packed: no packable, texture or master was left
+    /// out (an incomplete pack is not stored into the atlas's file).
+    pub complete: bool,
 }
 
 /// A sprite's place in its atlas.
@@ -334,6 +338,7 @@ impl AtlasImporter<'_> {
                 "variant atlas {}: its master atlas is missing (or itself); it is not packed",
                 def.name
             ));
+            packed.complete = false;
             return Ok(packed);
         };
         let master = self
@@ -345,9 +350,11 @@ impl AtlasImporter<'_> {
                 "variant atlas {}: its master is a variant; it is not packed",
                 def.name
             ));
+            packed.complete = false;
             return Ok(packed);
         }
         packed.oversize = master.oversize;
+        packed.complete = master.complete;
         packed.scale = scale;
         packed.sprites = master.sprites.clone();
         packed.uv_sizes = master.uv_sizes.clone();
@@ -388,7 +395,7 @@ impl Importer for AtlasImporter<'_> {
     const KIND: &'static str = "sprite-atlases";
     // 2: warnings for skipped packables and compressed variant masters.
     // 3: compressed pages keep their block format (the size fallback resolves per page).
-    // 4: each packed sprite keeps its name.
+    // 4: each packed sprite keeps its name; an atlas tells whether its pack is complete.
     const VERSION: u32 = 4;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<PathBuf>> {
@@ -450,12 +457,14 @@ impl Importer for AtlasImporter<'_> {
             sprites: Vec::new(),
             oversize: None,
             warnings: Vec::new(),
+            complete: true,
         };
         if let Some((master, scale)) = def.variant {
             return self.variant(source, packed, &def, master, scale);
         }
         let skipped = self.skipped(&def.packables);
         if !skipped.is_empty() {
+            packed.complete = false;
             packed.warnings.push(format!(
                 "atlas {}: packables that are not textures are not packed (their sprites keep their \
                  own textures, and the other sprites are laid out without them): {}",
@@ -487,6 +496,7 @@ impl Importer for AtlasImporter<'_> {
         for (t, (guid, texture, only)) in textures.iter().enumerate() {
             if texture.format != unbound_assets::texture::TextureFormat::Rgba8 {
                 if !texture.sprites.is_empty() {
+                    packed.complete = false;
                     packed.warnings.push(format!(
                         "atlas {}: the sprites of floating-point texture {} are not packed",
                         def.name, texture.name
@@ -734,6 +744,64 @@ mod tests {
     }
 
     #[test]
+    fn a_pack_that_leaves_packables_out_is_incomplete() {
+        let root =
+            std::env::temp_dir().join(format!("unbound-atlas-incomplete-{}", std::process::id()));
+        let assets = root.join("Assets");
+        std::fs::create_dir_all(assets.join("F")).unwrap();
+        std::fs::create_dir_all(assets.join("E")).unwrap();
+        let meta = |path: &Path, guid: &str| {
+            std::fs::write(
+                format!("{}.meta", path.display()),
+                format!("fileFormatVersion: 2\nguid: {guid}\n"),
+            )
+            .unwrap()
+        };
+        meta(&assets.join("F"), "f0000000000000000000000000000000");
+        meta(&assets.join("E"), "e0000000000000000000000000000000");
+        std::fs::write(assets.join("F/b.psb"), b"").unwrap();
+        meta(&assets.join("F/b.psb"), "b0000000000000000000000000000000");
+        let atlas = |name: &str, folder: &str, guid: &str| {
+            let file = assets.join(format!("{name}.spriteatlas"));
+            std::fs::write(&file, format!("%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!687078895 &1\nSpriteAtlas:\n  m_Name: {name}\n  m_EditorData:\n    packables:\n    - {{fileID: 102900000, guid: {folder}, type: 3}}\n")).unwrap();
+            meta(&file, guid);
+            file
+        };
+        let scripted = atlas(
+            "S",
+            "f0000000000000000000000000000000",
+            "c0000000000000000000000000000000",
+        );
+        let empty = atlas(
+            "N",
+            "e0000000000000000000000000000000",
+            "d0000000000000000000000000000000",
+        );
+        let db = AssetDb::scan(&[unbound_project::assetdb::Root {
+            dir: &assets,
+            virtual_path: "Assets".into(),
+        }]);
+        let textures = TextureImporter::default();
+        let cache = AssetCache::new(root.join("cache"));
+        let importer = AtlasImporter {
+            db: &db,
+            textures: &textures,
+            cache: &cache,
+        };
+        let import = |file: &Path| {
+            let bytes = std::fs::read(file).unwrap();
+            let meta =
+                unbound_yaml::parse_value(&std::fs::read_to_string(meta_path(file)).unwrap())
+                    .unwrap();
+            importer.import(file, &bytes, &meta).unwrap()
+        };
+        // A scripted importer's file left out: incomplete; nothing to pack: complete.
+        assert!(!import(&scripted).complete);
+        assert!(import(&empty).complete);
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
     fn atlas_set_merge_replaces_matching_guid_and_preserves_others() {
         let g1 = Guid::parse("10000000000000000000000000000001").unwrap();
         let g2 = Guid::parse("20000000000000000000000000000002").unwrap();
@@ -751,6 +819,7 @@ mod tests {
             sprites: Vec::new(),
             oversize: None,
             warnings: Vec::new(),
+            complete: true,
         };
         let mut set = AtlasSet {
             atlases: vec![(g1, make("A")), (g2, make("B"))],

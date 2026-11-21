@@ -24,6 +24,8 @@ namespace UnityEngine.U2D
         {
             public string Guid, Name, Tag, Master;
             public bool IncludeInBuild, Tight, Registered;
+            /// <summary>Every sprite of its packables was packed (see <see cref="StorablePack"/>).</summary>
+            public bool Complete = true;
             public float Scale = 1f;
             public Page[] Pages;
             public List<Binding> Sprites = new List<Binding>();
@@ -85,6 +87,7 @@ namespace UnityEngine.U2D
             public string Tag { get; set; }
             public bool IncludeInBuild { get; set; }
             public bool Tight { get; set; }
+            public bool Complete { get; set; } = true;
             public string Master { get; set; }
             public float Scale { get; set; }
             public List<PageJson> Pages { get; set; }
@@ -239,7 +242,7 @@ namespace UnityEngine.U2D
             var atlas = new Atlas
             {
                 Guid = a.Guid, Name = a.Name, Tag = a.Tag, Master = a.Master,
-                IncludeInBuild = a.IncludeInBuild, Tight = a.Tight, Scale = a.Scale,
+                IncludeInBuild = a.IncludeInBuild, Tight = a.Tight, Complete = a.Complete, Scale = a.Scale,
                 Pages = a.Pages.ConvertAll(p => new Page { Key = p.Key, Name = p.Name, Width = p.Width, Height = p.Height, UvWidth = p.UvWidth, UvHeight = p.UvHeight }).ToArray(),
             };
             foreach (var s in a.Sprites)
@@ -499,6 +502,7 @@ namespace UnityEngine.U2D
                 s_Atlases[a.Guid] = atlas;
                 s_PackedTargets[a.Guid] = target;
                 if (!entriesByGuid.TryGetValue(a.Guid, out var entry)) continue;
+                if (!StorablePack(atlas)) continue;
 
                 var (newKeys, packedRefs, packedNames) = PackedSpriteLists(atlas);
 
@@ -520,6 +524,15 @@ namespace UnityEngine.U2D
                 entry.Atlas.InvalidateCachedSprites();
             }
             RebuildSpriteTables();
+        }
+
+        /// <summary>Whether a pack may be stored into the atlas's file: not when Unbound left some of
+        /// its packables, textures or its master out, which it then reports.</summary>
+        static bool StorablePack(Atlas atlas)
+        {
+            if (atlas.Complete) return true;
+            Debug.LogWarning($"Unbound: sprite atlas {atlas.Name} is packed only in part (see the packing warnings); its stored packed sprites are left as they are");
+            return false;
         }
 
         /// <summary>A packed atlas's sprites as its `.spriteatlas` stores them: their keys, references
@@ -556,7 +569,13 @@ namespace UnityEngine.U2D
             {
                 var path = UnityEditor.AssetDatabase.GUIDToAssetPath(packed.Guid);
                 var atlas = string.IsNullOrEmpty(path) ? null : UnityEditor.AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
-                if (atlas == null || atlas.IsFromImporter) continue;
+                if (atlas == null || atlas.IsFromImporter || !StorablePack(packed)) continue;
+                // Unsaved edits are not stored with a pack of the file as it was (unmeasured).
+                if (UnityEditor.EditorUtility.IsDirty(atlas))
+                {
+                    Debug.LogWarning($"Unbound: sprite atlas {atlas.name} has unsaved changes; entering Play mode does not store its pack");
+                    continue;
+                }
                 if (atlas.isVariant)
                 {
                     variants.Add(atlas);

@@ -102,7 +102,7 @@ namespace Unbound.Runtime
             if (unlocated > 0)
                 Debug.LogWarning($"Unbound: {info.Path} is saved with {unlocated} references to assets Unbound cannot name written as none.");
             var written = UnityYamlText.Write(docs);
-            if (!unchangedStays || !File.Exists(info.File) || File.ReadAllText(info.File) != written)
+            if (!unchangedStays || !File.Exists(info.File) || File.ReadAllText(info.File).Replace("\r\n", "\n") != written)
                 SceneFiles.WriteFile(info.File, written);
             foreach (var o in loaded.Objects.Values)
                 if (o is not null) EditorUtility.ClearDirty(o);
