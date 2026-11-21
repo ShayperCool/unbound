@@ -13,6 +13,8 @@
 {"k":"pack.excluded","v":"ex=none|logs=<none>|excluded=(count=2|canBind=False|clone=<null>|dirty=False)|excludedDisk=(assetSame=True|metaSame=True)"}
 {"k":"pack.androidTarget","v":"ex=none|logs=<none>|main=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=1)|dirty=False)"}
 {"k":"packAll.linux","v":"ex=none|logs=<none>|main=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=1)|dirty=False)|second=(count=4|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=1)|dirty=False)|variant=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=0.5)|dirty=False)|excluded=(count=2|canBind=False|clone=<null>|dirty=False)"}
+{"k":"afterPack.lateLoadedSprite","v":"packed=False|hasTex=False|source=False"}
 {"k":"pack.afterInMemoryAdd","v":"ex=none|logs=<none>|dirtyBefore=True|dirtyAfter=True|hasSingle=False|count=4|secondDisk=(assetSame=True|metaSame=True)"}
+{"k":"pack.afterInMemoryAdd.written","v":"%YAML 1.1\u000a%TAG !u! tag:unity3d.com,2011:\u000a--- !u!612988286 &1\u000aSpriteAtlasAsset:\u000a  m_ObjectHideFlags: 0\u000a  m_CorrespondingSourceObject: {fileID: 0}\u000a  m_PrefabInstance: {fileID: 0}\u000a  m_PrefabAsset: {fileID: 0}\u000a  m_Name: \u000a  serializedVersion: 2\u000a  m_MasterAtlas: {fileID: 0}\u000a  m_ImporterData:\u000a    packables:\u000a    - {fileID: 2800000, guid: fc8704f6f6d36beb6a7735b91dfe4263, type: 3}\u000a  m_IsVariant: 0\u000a  m_ScriptablePacker: {fileID: 0}\u000a"}
 {"k":"cleanup","v":"ex=none|logs=<none>|main=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=1)|dirty=False)"}
 {"k":"complete","v":true}

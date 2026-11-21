@@ -203,6 +203,17 @@ static class SpriteAtlasPackProbe
             return $"ex={ex?.GetType().Name ?? "none"}|logs={logs}|main=({AtlasSummary(main, "Single", singleTex, singleSprite)})|second=({AtlasSummary(second, sheetSprite.name, sheetTex, sheetSprite)})|variant=({AtlasSummary(variant, "Single", singleTex, singleSprite)})|excluded=({AtlasSummary(excluded, "FolderLeaf", null, null)})";
         });
 
+        // 6b. A sprite loaded again after the atlases were packed (FolderBig, packed by Excluded,
+        // its texture imported again).
+        Check("afterPack.lateLoadedSprite", () =>
+        {
+            AssetDatabase.ImportAsset("Assets/Sprites/Folder/FolderBig.png", ImportAssetOptions.ForceUpdate);
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Folder/FolderBig.png");
+            var source = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Sprites/Folder/FolderBig.png");
+            return sprite == null ? "<null>"
+                : $"packed={sprite.packed}|hasTex={sprite.texture != null}|source={ReferenceEquals(sprite.texture, source)}";
+        });
+
         // 7. Dirty in-memory Add on Second, then PackAtlases (without SaveAssets)
         Check("pack.afterInMemoryAdd", () =>
         {
@@ -215,6 +226,9 @@ static class SpriteAtlasPackProbe
                 File.Copy(byStem["Second"].path, Path.Combine(writtenDir, Path.GetFileName(byStem["Second"].path)), true);
             return $"ex={ex?.GetType().Name ?? "none"}|logs={logs}|dirtyBefore={dirtyBefore}|dirtyAfter={dirtyAfter}|hasSingle={afterSecond.GetSprite("Single") != null}|count={afterSecond.spriteCount}|secondDisk=({DiskState("Second")})";
         });
+
+        // The whole .spriteatlas the pack wrote for Second.
+        Check("pack.afterInMemoryAdd.written", () => File.ReadAllText(byStem["Second"].path));
 
         // 8. CleanupAtlasPacking
         Check("cleanup", () =>
