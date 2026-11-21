@@ -382,6 +382,37 @@ namespace UnityEngine.Tests
             Assert.Equal(55L, data.FileId);
         }
 
+        /// <summary>A hierarchy connected to the prefab saved from it keeps its values: a script's
+        /// reference that differs from the prefab's is a stored modification (create-assets
+        /// outside.*). Afterwards, as Unity documents for RecordPrefabInstancePropertyModifications,
+        /// a script change is no modification until recorded (control: once recorded it is).</summary>
+        [Fact]
+        public void AConnectedHierarchyStoresItsDifferencesAndLaterScriptChangesNeedARecord()
+        {
+            var outside = new GameObject("Outside");
+            var plain = new GameObject("Thing");
+            m_Made.Add(outside);
+            m_Made.Add(plain);
+            var part = new GameObject("Part");
+            part.transform.SetParent(plain.transform, false);
+            part.transform.localPosition = new Vector3(0f, 1f, 0f);
+            part.AddComponent<BoxCollider>();
+            var holder = plain.AddComponent<PrefabTestHolder>();
+            holder.link = outside.transform;
+            PrefabUtility.Connect(plain, m_Asset, InteractionMode.AutomatedAction);
+            Assert.True(PrefabUtility.IsOutermostPrefabInstanceRoot(plain));
+            Assert.Same(outside.transform, holder.link);
+            string Paths() => string.Join(",", Array.ConvertAll(PrefabUtility.GetPropertyModifications(plain), m => m.propertyPath));
+            var link = Array.Find(PrefabUtility.GetPropertyModifications(plain), m => m.propertyPath == "link");
+            Assert.NotNull(link);
+            Assert.Same(outside.transform, link.objectReference);
+            Assert.DoesNotContain("label", Paths().Split(','));
+            holder.label = "later";
+            Assert.DoesNotContain("label", Paths().Split(','));
+            PrefabUtility.RecordPrefabInstancePropertyModifications(holder);
+            Assert.Contains("label", Paths().Split(','));
+        }
+
         /// <summary>Unity's argument checks (part of an instance, a folder at the path, a null path,
         /// connecting under StreamingAssets or a persistent object), and new prefabs that are not
         /// measured failing loudly before anything is written: a hierarchy holding an instance, a

@@ -633,11 +633,19 @@ namespace UnityEditor
             var file = PrefabAssets.Create(path, instanceRoot);
             if (file == null) return null;
             var assetRoot = (GameObject)file.MainObject;
-            // The instance keeps its values: where they differ from the new prefab's (references
-            // the prefab cannot hold), they are the instance's stored modifications.
+            Connect(instanceRoot, assetRoot, action);
+            success = true;
+            return assetRoot;
+        }
+
+        /// <summary>A plain hierarchy made an instance of the prefab saved from it (<see
+        /// cref="SaveAsPrefabAssetAndConnect(GameObject, string, InteractionMode, out bool)"/>), keeping
+        /// its values: where they differ from the prefab's (its name, references the prefab cannot
+        /// hold), they are the instance's stored modifications.</summary>
+        internal static void Connect(GameObject instanceRoot, GameObject assetRoot, InteractionMode action)
+        {
             Convert(instanceRoot, assetRoot, new ConvertToPrefabInstanceSettings { changeRootNameToAssetName = false, recordPropertyOverridesOfMatches = true },
-                action, allScripts: true);
-            StoreScriptDifferences(PrefabLinks.Of(instanceRoot).Instance);
+                action, storeScripts: true);
             ObjectChangeEvents.Note(ObjectChangeKind.ChangeGameObjectStructureHierarchy, new ChangeGameObjectStructureHierarchyEventArgs(instanceRoot.GetInstanceID(), instanceRoot.scene));
             PrefabAssets.Updated(new List<GameObject> { instanceRoot });
             // A user action records the instance's handle as a created object for its undo, which
@@ -647,8 +655,6 @@ namespace UnityEditor
                 var handle = PrefabLinks.Of(instanceRoot).Instance.Handle;
                 ObjectChangeEvents.Note(ObjectChangeKind.CreateAssetObject, new CreateAssetObjectEventArgs(default, handle.GetInstanceID(), default));
             }
-            success = true;
-            return assetRoot;
         }
 
         /// <summary>The project path a prefab is saved to, after the argument checks in the order and
@@ -757,11 +763,11 @@ namespace UnityEditor
         /// defaults: prefab-writes settings.defaults; other match modes fail loudly).
         /// </summary>
         public static void ConvertToPrefabInstance(GameObject plainGameObject, GameObject prefabAssetRoot, ConvertToPrefabInstanceSettings settings, InteractionMode mode) =>
-            Convert(plainGameObject, prefabAssetRoot, settings, mode, allScripts: false);
+            Convert(plainGameObject, prefabAssetRoot, settings, mode, storeScripts: false);
 
-        /// <summary><see cref="ConvertToPrefabInstance"/>; <paramref name="allScripts"/>: the scripts'
-        /// live differences count as overrides although their changes were not recorded.</summary>
-        static void Convert(GameObject plainGameObject, GameObject prefabAssetRoot, ConvertToPrefabInstanceSettings settings, InteractionMode mode, bool allScripts)
+        /// <summary><see cref="ConvertToPrefabInstance"/>; <paramref name="storeScripts"/>: the scripts'
+        /// differences from the prefab are stored modifications (their changes need no record).</summary>
+        static void Convert(GameObject plainGameObject, GameObject prefabAssetRoot, ConvertToPrefabInstanceSettings settings, InteractionMode mode, bool storeScripts)
         {
             if (plainGameObject == null) throw new ArgumentNullException(nameof(plainGameObject));
             if (prefabAssetRoot == null) throw new ArgumentNullException(nameof(prefabAssetRoot));
@@ -805,9 +811,11 @@ namespace UnityEditor
                     Object live = target is GameObject ? plainGameObject : plainGameObject.transform;
                     data.Stored.Add((new ObjectRef(targetId, targetGuid, 3), path, DefaultOverrideValue(live, path), default));
                 }
+            // Stored first: the capture keeps the live value of every stored path.
+            if (storeScripts) StoreScriptDifferences(data);
             data.OrderByTarget();
             var refs = new ValueReferences();
-            var snapshot = PrefabInstances.Capture(data, refs, liveDifferences: settings.recordPropertyOverridesOfMatches, allScripts: allScripts);
+            var snapshot = PrefabInstances.Capture(data, refs, liveDifferences: settings.recordPropertyOverridesOfMatches);
             // The prefab's objects the plain one lacks are made (none is a removed override).
             snapshot.Removed.Clear();
             PrefabInstances.Merge(data, snapshot);
@@ -834,7 +842,6 @@ namespace UnityEditor
                     data.Edited = true;
                 }
             }
-            data.OrderByTarget();
         }
 
         static void LinkTo(Object instance, Object asset, PrefabInstanceData data)
