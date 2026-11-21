@@ -131,6 +131,22 @@ namespace UnityEditor.U2D
                 settings.m_sRGB = node.Bool("sRGB", settings.m_sRGB);
             return settings;
         }
+
+        internal YText ToYText()
+        {
+            var map = YText.Map();
+            map.Add("serializedVersion", YText.Scalar("2"));
+            map.Add("anisoLevel", YText.Scalar(m_AnisoLevel.ToString(CultureInfo.InvariantCulture)));
+            map.Add("compressionQuality", YText.Scalar(m_CompressionQuality.ToString(CultureInfo.InvariantCulture)));
+            map.Add("maxTextureSize", YText.Scalar(m_MaxTextureSize.ToString(CultureInfo.InvariantCulture)));
+            map.Add("textureCompression", YText.Scalar(m_TextureCompression.ToString(CultureInfo.InvariantCulture)));
+            map.Add("filterMode", YText.Scalar(m_FilterMode.ToString(CultureInfo.InvariantCulture)));
+            map.Add("generateMipMaps", YText.Scalar(m_GenerateMipMaps ? "1" : "0"));
+            map.Add("readable", YText.Scalar(m_Readable ? "1" : "0"));
+            map.Add("crunchedCompression", YText.Scalar(m_CrunchedCompression ? "1" : "0"));
+            map.Add("sRGB", YText.Scalar(m_sRGB ? "1" : "0"));
+            return map;
+        }
     }
 
     /// <summary>
@@ -175,6 +191,12 @@ namespace UnityEditor.U2D
         {
             if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
             return spriteAtlas.TextureSettings;
+        }
+
+        public static void SetTextureSettings(this SpriteAtlas spriteAtlas, SpriteAtlasTextureSettings src)
+        {
+            if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
+            spriteAtlas.WriteTextureSettings(src);
         }
 
         public static TextureImporterPlatformSettings GetPlatformSettings(this SpriteAtlas spriteAtlas, string buildTarget)

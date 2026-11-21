@@ -646,6 +646,267 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SetTextureSettingsCopiesVerbatimAndAlwaysDirties()
+        {
+            var fresh = new SpriteAtlas();
+            int baseDirty = EditorUtility.GetDirtyCount(fresh);
+            var initial = fresh.GetTextureSettings();
+            fresh.SetTextureSettings(initial);
+            Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(fresh));
+
+            var copy = initial;
+            copy.anisoLevel = 8;
+            copy.filterMode = FilterMode.Trilinear;
+            copy.generateMipMaps = true;
+            copy.readable = true;
+            copy.sRGB = false;
+            fresh.SetTextureSettings(copy);
+            Assert.Equal(baseDirty + 2, EditorUtility.GetDirtyCount(fresh));
+            var readCopy = fresh.GetTextureSettings();
+            Assert.Equal(2048, readCopy.maxTextureSize);
+            Assert.Equal(8, readCopy.anisoLevel);
+            Assert.Equal(FilterMode.Trilinear, readCopy.filterMode);
+            Assert.True(readCopy.generateMipMaps);
+            Assert.True(readCopy.readable);
+            Assert.False(readCopy.sRGB);
+
+            fresh.SetTextureSettings(new SpriteAtlasTextureSettings
+            {
+                anisoLevel = -5,
+                filterMode = (FilterMode)99,
+                generateMipMaps = true,
+                readable = false,
+                sRGB = true,
+            });
+            Assert.Equal(baseDirty + 3, EditorUtility.GetDirtyCount(fresh));
+            var readEdge = fresh.GetTextureSettings();
+            Assert.Equal(0, readEdge.maxTextureSize);
+            Assert.Equal(-5, readEdge.anisoLevel);
+            Assert.Equal((FilterMode)99, readEdge.filterMode);
+            Assert.True(readEdge.generateMipMaps);
+            Assert.False(readEdge.readable);
+            Assert.True(readEdge.sRGB);
+
+            var loaded = Read(
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 2\n" +
+                "      compressionQuality: 75\n" +
+                "      maxTextureSize: 1024\n" +
+                "      textureCompression: 2\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 1\n" +
+                "      sRGB: 1\n" +
+                "    packables: []\n");
+            Assert.False(EditorUtility.IsDirty(loaded));
+            Assert.Equal(0, EditorUtility.GetDirtyCount(loaded));
+            // Same-value SetTextureSettings still marks dirty (unlike SetIncludeInBuild).
+            loaded.SetTextureSettings(loaded.GetTextureSettings());
+            Assert.True(EditorUtility.IsDirty(loaded));
+            Assert.Equal(1, EditorUtility.GetDirtyCount(loaded));
+        }
+
+        [Fact]
+        public void NativeDocumentsWriteUpdatesV1TextureSettingsUpgradesLegacyAndInsertsWhenOmitted()
+        {
+            const string v1Source =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Sample\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 2\n" +
+                "      compressionQuality: 75\n" +
+                "      maxTextureSize: 1024\n" +
+                "      textureCompression: 2\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 1\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings:\n" +
+                "    - serializedVersion: 4\n" +
+                "      m_BuildTarget: Android\n" +
+                "      m_MaxTextureSize: 1024\n" +
+                "      m_Overridden: 1\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 8\n" +
+                "      blockOffset: 2\n" +
+                "      allowAlphaSplitting: 1\n" +
+                "      enableRotation: 0\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 1\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n" +
+                "  m_IsVariant: 0\n";
+
+            var docs = UnityYamlText.Parse(v1Source);
+            var atlas = Read(
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 2\n" +
+                "      compressionQuality: 75\n" +
+                "      maxTextureSize: 1024\n" +
+                "      textureCompression: 2\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 1\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings:\n" +
+                "    - serializedVersion: 4\n" +
+                "      m_BuildTarget: Android\n" +
+                "      m_MaxTextureSize: 1024\n" +
+                "      m_Overridden: 1\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 8\n" +
+                "      blockOffset: 2\n" +
+                "      allowAlphaSplitting: 1\n" +
+                "      enableRotation: 0\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 1\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n");
+            var original = atlas.GetTextureSettings();
+            var edited = original;
+            edited.anisoLevel = 6;
+            edited.filterMode = FilterMode.Trilinear;
+            edited.generateMipMaps = true;
+            edited.readable = true;
+            edited.sRGB = false;
+            atlas.SetTextureSettings(edited);
+
+            int unlocated = 0;
+            Assert.True(NativeDocuments.Write(docs[0], atlas, null, null, ref unlocated));
+            string written = UnityYamlText.Write(docs);
+            Assert.Contains(
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 6\n" +
+                "      compressionQuality: 75\n" +
+                "      maxTextureSize: 1024\n" +
+                "      textureCompression: 2\n" +
+                "      filterMode: 2\n" +
+                "      generateMipMaps: 1\n" +
+                "      readable: 1\n" +
+                "      crunchedCompression: 1\n" +
+                "      sRGB: 0\n",
+                written);
+            Assert.Contains("      m_BuildTarget: Android\n      m_MaxTextureSize: 1024\n      m_Overridden: 1\n", written);
+            Assert.Contains("      padding: 8\n      blockOffset: 2\n      allowAlphaSplitting: 1\n", written);
+
+            // Roundtrip restores exact original YAML bytes.
+            atlas.SetTextureSettings(original);
+            Assert.True(NativeDocuments.Write(docs[0], atlas, null, null, ref unlocated));
+            Assert.Equal(v1Source, UnityYamlText.Write(docs));
+
+            // Control outside the probe: legacy v1 colorSpace: 1 (linear -> sRGB: 0) upgrades to v2 and keeps hidden fields.
+            const string v1Legacy =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: LegacyLinear\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 1\n" +
+                "      anisoLevel: 3\n" +
+                "      compressionQuality: 82\n" +
+                "      maxTextureSize: 512\n" +
+                "      textureCompression: 3\n" +
+                "      filterMode: 0\n" +
+                "      generateMipMaps: 1\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 1\n" +
+                "      colorSpace: 1\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n" +
+                "  m_IsVariant: 0\n";
+            var legacyDocs = UnityYamlText.Parse(v1Legacy);
+            var legacyAtlas = Read(
+                "    textureSettings:\n" +
+                "      serializedVersion: 1\n" +
+                "      anisoLevel: 3\n" +
+                "      compressionQuality: 82\n" +
+                "      maxTextureSize: 512\n" +
+                "      textureCompression: 3\n" +
+                "      filterMode: 0\n" +
+                "      generateMipMaps: 1\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 1\n" +
+                "      colorSpace: 1\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n");
+            var legacySettings = legacyAtlas.GetTextureSettings();
+            Assert.False(legacySettings.sRGB);
+            legacySettings.anisoLevel = 9;
+            legacySettings.sRGB = true;
+            legacyAtlas.SetTextureSettings(legacySettings);
+            Assert.True(NativeDocuments.Write(legacyDocs[0], legacyAtlas, null, null, ref unlocated));
+            string legacyWritten = UnityYamlText.Write(legacyDocs);
+            Assert.DoesNotContain("colorSpace", legacyWritten);
+            Assert.Contains(
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 9\n" +
+                "      compressionQuality: 82\n" +
+                "      maxTextureSize: 512\n" +
+                "      textureCompression: 3\n" +
+                "      filterMode: 0\n" +
+                "      generateMipMaps: 1\n" +
+                "      readable: 0\n" +
+                "      crunchedCompression: 1\n" +
+                "      sRGB: 1\n",
+                legacyWritten);
+
+            // Sparse V1 atlas with omitted textureSettings inserts the block right after serializedVersion when mutated.
+            const string v1Omitted =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Omitted\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    platformSettings: []\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n" +
+                "  m_IsVariant: 0\n";
+            var omittedDocs = UnityYamlText.Parse(v1Omitted);
+            var omittedAtlas = Read("    platformSettings: []\n    packables: []\n    bindAsDefault: 1\n");
+            var omittedSettings = omittedAtlas.GetTextureSettings();
+            omittedSettings.anisoLevel = 3;
+            omittedSettings.readable = true;
+            omittedAtlas.SetTextureSettings(omittedSettings);
+            Assert.True(NativeDocuments.Write(omittedDocs[0], omittedAtlas, null, null, ref unlocated));
+            string omittedWritten = UnityYamlText.Write(omittedDocs);
+            Assert.Contains(
+                "    serializedVersion: 2\n" +
+                "    textureSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      anisoLevel: 3\n" +
+                "      compressionQuality: 50\n" +
+                "      maxTextureSize: 2048\n" +
+                "      textureCompression: 0\n" +
+                "      filterMode: 1\n" +
+                "      generateMipMaps: 0\n" +
+                "      readable: 1\n" +
+                "      crunchedCompression: 0\n" +
+                "      sRGB: 1\n" +
+                "    platformSettings: []\n",
+                omittedWritten);
+        }
+
+        [Fact]
         public void ANullAtlasThrows()
         {
             SpriteAtlas none = null;
@@ -653,6 +914,7 @@ namespace UnityEngine.Tests
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPackingSettings()).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetPackingSettings(default)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetTextureSettings()).ParamName);
+            Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetTextureSettings(default)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPlatformSettings("Android")).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPlatformSettings(null)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetIncludeInBuild(true)).ParamName);

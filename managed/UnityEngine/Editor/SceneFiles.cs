@@ -1273,6 +1273,18 @@ namespace Unbound.Runtime
                     editorData = YText.Map();
                     doc.Body.Set("m_EditorData", editorData);
                 }
+                int textureIndex = editorData.Keys.IndexOf("textureSettings");
+                if (textureIndex >= 0)
+                {
+                    editorData.Values[textureIndex] = atlas.TextureSettings.ToYText();
+                }
+                else if (atlas.TextureSettingsModified)
+                {
+                    int afterVersion = editorData.Keys.IndexOf("serializedVersion");
+                    int insertTextureAt = afterVersion >= 0 ? afterVersion + 1 : 0;
+                    editorData.Keys.Insert(insertTextureAt, "textureSettings");
+                    editorData.Values.Insert(insertTextureAt, atlas.TextureSettings.ToYText());
+                }
                 int packingIndex = editorData.Keys.IndexOf("packingSettings");
                 if (packingIndex >= 0)
                 {

@@ -36,6 +36,7 @@ namespace UnityEngine.U2D
         SpriteAtlasPackingSettings m_PackingSettings = SpriteAtlasPackingSettings.Default;
         bool m_PackingSettingsModified;
         SpriteAtlasTextureSettings m_TextureSettings = SpriteAtlasTextureSettings.Default;
+        bool m_TextureSettingsModified;
         List<TextureImporterPlatformSettings> m_PlatformSettings;
         bool m_FromImporter;
         bool m_ImporterSettingsRead = true;
@@ -171,6 +172,19 @@ namespace UnityEngine.U2D
             }
         }
 
+        /// <summary>Whether SetTextureSettings has updated this atlas's texture settings in memory.</summary>
+        internal bool TextureSettingsModified => m_TextureSettingsModified;
+
+        /// <summary>Replaces the atlas's texture settings verbatim and marks it dirty (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v1texture/v2texture).</summary>
+        internal void WriteTextureSettings(SpriteAtlasTextureSettings src)
+        {
+            EnsureImporterSettingsRead();
+            m_TextureSettings = src;
+            m_TextureSettingsModified = true;
+            EditorUtility.SetDirty(this);
+        }
+
         /// <summary>A fresh copy of the atlas's platform settings for <paramref name="buildTarget"/>,
         /// or fresh Editor defaults named after the normalized target when no entry matches.</summary>
         internal TextureImporterPlatformSettings ReadPlatformSettings(string buildTarget)
@@ -214,6 +228,7 @@ namespace UnityEngine.U2D
                 m_Packables.Add(packable.AsRef());
             m_FromImporter = body.Get("m_ImporterData") != null;
             m_PackingSettingsModified = false;
+            m_TextureSettingsModified = false;
             if (m_FromImporter)
             {
                 m_IncludeInBuild = true;
