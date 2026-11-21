@@ -2054,19 +2054,53 @@ fn block_name(module: &Module, g: &naga::GlobalVariable) -> String {
         .unwrap_or_default()
 }
 
+/// Whether a cbuffer holds per-draw or per-material uniforms (as opposed to pass-wide/global
+/// state) and should be packed separately from shared global cbuffers when within budget.
+fn is_per_draw_block(name: &str, members: &[naga::StructMember]) -> bool {
+    name == "UnityPerDraw"
+        || name == "UnityPerMaterial"
+        || name == "PerInstance"
+        || name == "UnityInstancingDOTS_InstanceVisibility"
+        || name == "unity_DOTSInstanceData"
+        || name.starts_with("UnityDOTSInstancing_")
+        || members.iter().any(|m| {
+            matches!(
+                m.name.as_deref(),
+                Some(
+                    "unity_ObjectToWorld"
+                        | "unity_WorldToObject"
+                        | "glstate_matrix_modelview0"
+                        | "glstate_matrix_transpose_modelview0"
+                        | "glstate_matrix_invtrans_modelview0"
+                        | "unity_WorldTransformParams"
+                        | "unity_LODFade"
+                        | "unity_LightData"
+                        | "unity_ProbesOcclusion"
+                        | "unity_RenderingLayer"
+                        | "_GizmoBatchColor"
+                        | "unity_SpriteColor"
+                        | "_TextureSampleAdd"
+                )
+            )
+        })
+}
+
 fn block_layout(modules: &[&Module]) -> BlockLayout {
-    let mut blocks: Vec<(String, u32)> = Vec::new();
+    let mut blocks: Vec<(String, u32, bool)> = Vec::new();
     for module in modules {
         for (_, g) in module.global_variables.iter() {
             if g.space != AddressSpace::Uniform {
                 continue;
             }
-            let TypeInner::Struct { span, .. } = module.types[g.ty].inner else {
+            let TypeInner::Struct { members, span } = &module.types[g.ty].inner else {
                 continue;
             };
             let name = block_name(module, g);
-            if !blocks.iter().any(|(n, _)| *n == name) {
-                blocks.push((name, span));
+            let per_draw = is_per_draw_block(&name, members);
+            if let Some(existing) = blocks.iter_mut().find(|(n, _, _)| *n == name) {
+                existing.2 |= per_draw;
+            } else {
+                blocks.push((name, *span, per_draw));
             }
         }
     }
@@ -2078,23 +2112,31 @@ fn block_layout(modules: &[&Module]) -> BlockLayout {
 /// avoid being merged with per-draw uniforms and can be shared across draws without copying.
 const STANDALONE_CBUFFER_BYTES: u32 = 16384;
 
-/// Maximum uniform bindings created by isolating large standalone cbuffers. Leaves room for the
-/// renderer's per-draw uniform within WebGPU's default 8 dynamic uniform buffers per layout.
+/// Minimum combined size of shared (non-per-draw) cbuffers before separating them from per-draw
+/// cbuffers into their own uniform binding so the renderer can cache and reuse them across draws.
+const SHARED_SPLIT_MIN_BYTES: u32 = 1024;
+
+/// Maximum uniform bindings created by splitting per-draw, shared, and large standalone cbuffers.
+/// Leaves room for the renderer's per-draw uniform within WebGPU's default 8 dynamic uniform
+/// buffers per layout.
 const MAX_SPLIT_BINDINGS: usize = 6;
 
-/// Packs a program's cbuffers (name and size, in declaration order) into uniform bindings, each
-/// at most [`crate::UNIFORM_BINDING_BYTES`] long: Unity binds every cbuffer as a uniform buffer
-/// of its own, which a device limits to that size (URP's Forward+ cbuffers together take more,
-/// its tile buffer alone that much), and to a handful per stage, which a program's cbuffers can
-/// outnumber. Large cbuffers ([`STANDALONE_CBUFFER_BYTES`] or more) get their own aligned binding
-/// when isolating them keeps the program within [`MAX_SPLIT_BINDINGS`], so a constant buffer bound
-/// by name can be shared across draws without being copied into every draw's uniform data. A
+/// Packs a program's cbuffers (name, size, and whether they hold per-draw/per-material state, in
+/// declaration order) into uniform bindings, each at most [`crate::UNIFORM_BINDING_BYTES`] long:
+/// Unity binds every cbuffer as a uniform buffer of its own, which a device limits to that size
+/// (URP's Forward+ cbuffers together take more, its tile buffer alone that much), and to a handful
+/// per stage, which a program's cbuffers can outnumber. Large cbuffers
+/// ([`STANDALONE_CBUFFER_BYTES`] or more) get their own aligned binding, and non-per-draw cbuffers
+/// totaling at least [`SHARED_SPLIT_MIN_BYTES`] are separated from per-draw cbuffers into their own
+/// binding(s) when the split stays within [`MAX_SPLIT_BINDINGS`], so both bound constant buffers
+/// and pass-wide globals can be shared across draws without repacking or copying them per draw. A
 /// cbuffer otherwise starts the next binding when it does not fit the current one's rest; every
 /// binding after the first starts [`crate::UNIFORM_BINDING_ALIGN`]-aligned. A program whose
-/// cbuffers fit one binding without large standalone blocks keeps the layout of a single block:
-/// each cbuffer 16-byte aligned after the one before. A cbuffer over the size is a binding of its
-/// own, which the renderer refuses by name on a device that does not take it.
-fn binding_layout(blocks: Vec<(String, u32)>) -> BlockLayout {
+/// cbuffers fit one binding without large standalone blocks or large shared globals keeps the
+/// layout of a single block: each cbuffer 16-byte aligned after the one before. A cbuffer over the
+/// size is a binding of its own, which the renderer refuses by name on a device that does not take
+/// it.
+fn binding_layout(blocks: Vec<(String, u32, bool)>) -> BlockLayout {
     fn pack_sequential(
         items: &[(String, u32)],
         bases: &mut Vec<(String, u32)>,
@@ -2160,20 +2202,33 @@ fn binding_layout(blocks: Vec<(String, u32)>) -> BlockLayout {
     let mut bindings: Vec<crate::UniformBinding> = Vec::new();
     let mut size = 0u32;
 
-    let (small, large): (Vec<_>, Vec<_>) = blocks
-        .iter()
-        .cloned()
-        .partition(|(_, span)| *span < STANDALONE_CBUFFER_BYTES);
-    let small_bins = sequential_binding_count(&small);
-    if blocks.len() >= 2 && !large.is_empty() && small_bins + large.len() <= MAX_SPLIT_BINDINGS {
-        pack_sequential(
-            &small,
-            &mut bases,
-            &mut spans,
-            &mut binding_of,
-            &mut bindings,
-            &mut size,
-        );
+    let mut per_draw = Vec::new();
+    let mut shared = Vec::new();
+    let mut large = Vec::new();
+    for (name, span, is_draw) in &blocks {
+        if *span >= STANDALONE_CBUFFER_BYTES {
+            large.push((name.clone(), *span));
+        } else if *is_draw {
+            per_draw.push((name.clone(), *span));
+        } else {
+            shared.push((name.clone(), *span));
+        }
+    }
+
+    let shared_total: u32 = shared.iter().map(|(_, s)| *s).sum();
+    let per_draw_bins = sequential_binding_count(&per_draw);
+    let shared_bins = sequential_binding_count(&shared);
+    let split_per_draw = !per_draw.is_empty()
+        && !shared.is_empty()
+        && shared_total >= SHARED_SPLIT_MIN_BYTES
+        && per_draw_bins + shared_bins + large.len() <= MAX_SPLIT_BINDINGS;
+
+    let pack_large = |large: Vec<(String, u32)>,
+                      bases: &mut Vec<(String, u32)>,
+                      spans: &mut Vec<u32>,
+                      binding_of: &mut Vec<usize>,
+                      bindings: &mut Vec<crate::UniformBinding>,
+                      size: &mut u32| {
         for (name, span) in large {
             let base = size.div_ceil(crate::UNIFORM_BINDING_ALIGN) * crate::UNIFORM_BINDING_ALIGN;
             bindings.push(crate::UniformBinding {
@@ -2183,17 +2238,71 @@ fn binding_layout(blocks: Vec<(String, u32)>) -> BlockLayout {
             binding_of.push(bindings.len() - 1);
             bases.push((name, base));
             spans.push(span);
-            size = base + span;
+            *size = base + span;
         }
-    } else {
+    };
+
+    if split_per_draw {
         pack_sequential(
-            &blocks,
+            &per_draw,
             &mut bases,
             &mut spans,
             &mut binding_of,
             &mut bindings,
             &mut size,
         );
+        pack_sequential(
+            &shared,
+            &mut bases,
+            &mut spans,
+            &mut binding_of,
+            &mut bindings,
+            &mut size,
+        );
+        pack_large(
+            large,
+            &mut bases,
+            &mut spans,
+            &mut binding_of,
+            &mut bindings,
+            &mut size,
+        );
+    } else {
+        let small: Vec<(String, u32)> = blocks
+            .iter()
+            .filter(|(_, span, _)| *span < STANDALONE_CBUFFER_BYTES)
+            .map(|(n, s, _)| (n.clone(), *s))
+            .collect();
+        let small_bins = sequential_binding_count(&small);
+        if blocks.len() >= 2 && !large.is_empty() && small_bins + large.len() <= MAX_SPLIT_BINDINGS
+        {
+            pack_sequential(
+                &small,
+                &mut bases,
+                &mut spans,
+                &mut binding_of,
+                &mut bindings,
+                &mut size,
+            );
+            pack_large(
+                large,
+                &mut bases,
+                &mut spans,
+                &mut binding_of,
+                &mut bindings,
+                &mut size,
+            );
+        } else {
+            let flat: Vec<(String, u32)> = blocks.into_iter().map(|(n, s, _)| (n, s)).collect();
+            pack_sequential(
+                &flat,
+                &mut bases,
+                &mut spans,
+                &mut binding_of,
+                &mut bindings,
+                &mut size,
+            );
+        }
     }
 
     BlockLayout {
@@ -3665,7 +3774,64 @@ mod tests {
     }
 
     fn layout(blocks: &[(&str, u32)]) -> BlockLayout {
-        binding_layout(blocks.iter().map(|(n, s)| (n.to_string(), *s)).collect())
+        binding_layout(
+            blocks
+                .iter()
+                .map(|(n, s)| (n.to_string(), *s, is_per_draw_block(n, &[])))
+                .collect(),
+        )
+    }
+
+    #[test]
+    fn shared_globals_split_from_per_draw_within_budget() {
+        // GL Forward+ layout: per-draw+material in binding 0, shared globals in binding 1,
+        // large standalone tables in bindings 2 and 3.
+        let gl = layout(&[
+            ("UnityPerDraw", 720),
+            ("$Global", 2192),
+            ("LightShadows", 528),
+            ("AdditionalLights", 3072),
+            ("urp_ReflectionProbeBuffer", 5120),
+            ("UnityPerMaterial", 224),
+            ("urp_ZBinBuffer", 16384),
+            ("urp_TileBuffer", 16384),
+        ]);
+        assert_eq!(gl.bindings.len(), 4);
+        assert_eq!(gl.binding("UnityPerDraw"), Some(0));
+        assert_eq!(gl.binding("UnityPerMaterial"), Some(0));
+        assert_eq!(gl.binding("$Global"), Some(1));
+        assert_eq!(gl.binding("LightShadows"), Some(1));
+        assert_eq!(gl.binding("AdditionalLights"), Some(1));
+        assert_eq!(gl.binding("urp_ReflectionProbeBuffer"), Some(1));
+        assert_eq!(gl.binding("urp_ZBinBuffer"), Some(2));
+        assert_eq!(gl.binding("urp_TileBuffer"), Some(3));
+        assert_eq!(gl.bindings[0].size, 944);
+
+        // Vulkan Forward+ layout: AdditionalLights is >= 16 KB so it gets its own binding too
+        // (total 5 <= MAX_SPLIT_BINDINGS).
+        let vk = layout(&[
+            ("UnityPerDraw", 720),
+            ("$Global", 2176),
+            ("LightShadows", 528),
+            ("urp_ReflectionProbeBuffer", 10240),
+            ("UnityPerMaterial", 208),
+            ("urp_ZBinBuffer", 16384),
+            ("urp_TileBuffer", 65536),
+            ("AdditionalLights", 24576),
+        ]);
+        assert_eq!(vk.bindings.len(), 5);
+        assert_eq!(vk.binding("UnityPerDraw"), Some(0));
+        assert_eq!(vk.binding("UnityPerMaterial"), Some(0));
+        assert_eq!(vk.binding("$Global"), Some(1));
+        assert_eq!(vk.binding("LightShadows"), Some(1));
+        assert_eq!(vk.binding("urp_ReflectionProbeBuffer"), Some(1));
+        assert_eq!(vk.binding("urp_ZBinBuffer"), Some(2));
+        assert_eq!(vk.binding("urp_TileBuffer"), Some(3));
+        assert_eq!(vk.binding("AdditionalLights"), Some(4));
+
+        // Tiny shared blocks (< SHARED_SPLIT_MIN_BYTES) stay in binding 0.
+        let tiny = layout(&[("UnityPerDraw", 720), ("$Global", 256)]);
+        assert_eq!(tiny.bindings.len(), 1);
     }
 
     #[test]

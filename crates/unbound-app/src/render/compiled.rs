@@ -10,7 +10,7 @@ use unbound_runtime::render_protocol::owned::{Material, PropertyValue};
 use unbound_shaders::{Compiled, Program, Scalar, Settings, ShaderCompiler, TextureDim};
 
 /// Per-binding metadata precomputed once per compiled program for packing draw uniforms and
-/// sharing standalone bound constant buffers across draws in a frame.
+/// sharing both standalone bound constant buffers and pass-wide/global bindings across draws.
 struct BindingPlan {
     /// Byte offset of this binding in the program's logical uniform layout.
     offset: u32,
@@ -23,6 +23,17 @@ struct BindingPlan {
     blocks: Vec<u32>,
     /// Indices into `Compiled::uniforms` that are arrays (`stride > 0`) lying in this binding.
     arrays: Vec<u32>,
+    /// True if any uniform in this binding varies per draw (per-draw builtins, instanced
+    /// properties, per-draw derived values, or DOTS instancing blocks).
+    has_per_draw_builtin: bool,
+    /// True if any uniform in this binding depends on camera/projection/screen/time state.
+    has_camera_builtin: bool,
+    /// True if any uniform in this binding derives `_TexelSize` (depends on texture sizes).
+    has_texel_size: bool,
+    /// True if any uniform in this binding derives `_MainTex_ST` or `_MainTex_TexelSize`.
+    has_main_tex_derived: bool,
+    /// Unique stripped texture names for `_ST` / `_TexelSize` uniforms in this binding.
+    tex_derived_bases: Vec<Box<str>>,
 }
 
 /// How a program's uniforms and cbuffers map onto its uniform bindings.
@@ -32,10 +43,13 @@ struct ProgramBindings {
     uniform_binding: Vec<u8>,
     /// By uniform index: byte offset relative to its binding's start.
     uniform_local_offset: Vec<u32>,
+    /// Maps each uniform name (and each stripped `_ST` / `_TexelSize` texture base name) to the
+    /// bitmask of bindings it can affect when present in a draw's overrides.
+    override_binding_mask: rustc_hash::FxHashMap<String, u8>,
 }
 
 impl ProgramBindings {
-    fn of(program: &Compiled) -> ProgramBindings {
+    fn of(program: &Compiled, plan: &[Source]) -> ProgramBindings {
         let mut bindings: Vec<BindingPlan> = if !program.uniform_bindings.is_empty() {
             program
                 .uniform_bindings
@@ -46,6 +60,11 @@ impl ProgramBindings {
                     standalone_block: None,
                     blocks: Vec::new(),
                     arrays: Vec::new(),
+                    has_per_draw_builtin: false,
+                    has_camera_builtin: false,
+                    has_texel_size: false,
+                    has_main_tex_derived: false,
+                    tex_derived_bases: Vec::new(),
                 })
                 .collect()
         } else if program.uniform_size > 0 {
@@ -55,6 +74,11 @@ impl ProgramBindings {
                 standalone_block: None,
                 blocks: Vec::new(),
                 arrays: Vec::new(),
+                has_per_draw_builtin: false,
+                has_camera_builtin: false,
+                has_texel_size: false,
+                has_main_tex_derived: false,
+                tex_derived_bases: Vec::new(),
             }]
         } else {
             Vec::new()
@@ -69,6 +93,9 @@ impl ProgramBindings {
         for (i, block) in program.blocks.iter().enumerate() {
             if let Some(k) = binding_for(&bindings, block.offset) {
                 bindings[k].blocks.push(i as u32);
+                if super::dots::DotsLayout::uses_block(&block.name) {
+                    bindings[k].has_per_draw_builtin = true;
+                }
             }
         }
         for b in &mut bindings {
@@ -82,6 +109,7 @@ impl ProgramBindings {
 
         let mut uniform_binding = Vec::with_capacity(program.uniforms.len());
         let mut uniform_local_offset = Vec::with_capacity(program.uniforms.len());
+        let mut override_binding_mask: rustc_hash::FxHashMap<String, u8> = Default::default();
         for (i, u) in program.uniforms.iter().enumerate() {
             let k = binding_for(&bindings, u.offset).unwrap_or(0);
             let local = bindings
@@ -89,10 +117,58 @@ impl ProgramBindings {
                 .map_or(u.offset, |b| u.offset.saturating_sub(b.offset));
             uniform_binding.push(k as u8);
             uniform_local_offset.push(local);
-            if u.stride > 0
-                && let Some(b) = bindings.get_mut(k)
-            {
-                b.arrays.push(i as u32);
+            let bit = if k < MAX_UNIFORM_BINDINGS {
+                1u8 << k
+            } else {
+                0
+            };
+            if bit != 0 {
+                *override_binding_mask.entry(u.name.clone()).or_insert(0) |= bit;
+            }
+            if let Some(b) = bindings.get_mut(k) {
+                if u.stride > 0 {
+                    b.arrays.push(i as u32);
+                }
+                if let Some(source) = plan.get(i) {
+                    match source {
+                        Source::Builtin { which, .. } => {
+                            if which.is_per_draw() {
+                                b.has_per_draw_builtin = true;
+                            } else {
+                                b.has_camera_builtin = true;
+                            }
+                        }
+                        Source::Named => {}
+                    }
+                }
+                if u.name == SPRITE_COLOR
+                    || u.name == "_TextureSampleAdd"
+                    || program.instanced_properties.contains(&u.name)
+                {
+                    b.has_per_draw_builtin = true;
+                }
+                if let Some(base) = u
+                    .name
+                    .strip_suffix("_ST")
+                    .or_else(|| u.name.strip_suffix("_TexelSize"))
+                {
+                    if u.name.ends_with("_TexelSize") {
+                        b.has_texel_size = true;
+                    }
+                    if base == "_MainTex" {
+                        b.has_main_tex_derived = true;
+                    }
+                    if !b
+                        .tex_derived_bases
+                        .iter()
+                        .any(|existing| &**existing == base)
+                    {
+                        b.tex_derived_bases.push(base.into());
+                    }
+                    if bit != 0 {
+                        *override_binding_mask.entry(base.to_string()).or_insert(0) |= bit;
+                    }
+                }
             }
         }
 
@@ -100,6 +176,7 @@ impl ProgramBindings {
             bindings,
             uniform_binding,
             uniform_local_offset,
+            override_binding_mask,
         }
     }
 
@@ -277,6 +354,124 @@ fn texture_bindings_refused(program: &Compiled, limits: &wgpu::Limits) -> Option
     })
 }
 
+/// Bitwise camera/target/time inputs for caching derived camera built-ins across draws.
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct CameraInput {
+    view: [u32; 16],
+    proj: [u32; 16],
+    gpu_proj: [u32; 16],
+    camera_view: [u32; 16],
+    camera_proj: [u32; 16],
+    screen: [u32; 2],
+    time: u32,
+    flipped: bool,
+    reversed_z: bool,
+}
+
+impl CameraInput {
+    fn from_values(v: &DrawValues) -> Self {
+        Self {
+            view: v.view.map(f32::to_bits),
+            proj: v.proj.map(f32::to_bits),
+            gpu_proj: v.gpu_proj.map(f32::to_bits),
+            camera_view: v.camera_view.map(f32::to_bits),
+            camera_proj: v.camera_proj.map(f32::to_bits),
+            screen: v.screen.map(f32::to_bits),
+            time: v.time.to_bits(),
+            flipped: v.flipped,
+            reversed_z: v.reversed_z,
+        }
+    }
+}
+
+/// Camera/time/screen derived built-ins computed once per camera state change rather than per draw.
+#[derive(Clone, Copy)]
+struct CachedCamera {
+    input: CameraInput,
+    id: u64,
+    view_inv: Mat,
+    view_inv_t: Mat,
+    matrix_vp: Mat,
+    proj_inv: Mat,
+    world_to_camera: Mat,
+    camera_to_world: Mat,
+    camera_pos: [f32; 4],
+    projection_params: [f32; 4],
+    screen_params: [f32; 4],
+    zbuffer_params: [f32; 4],
+    ortho_params: [f32; 4],
+    time_vec: [f32; 4],
+    sin_time: [f32; 4],
+    cos_time: [f32; 4],
+}
+
+impl CachedCamera {
+    fn compute(id: u64, input: CameraInput, v: &DrawValues) -> Self {
+        let flip_z = [
+            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+        ];
+        let view_inv = inverse(&v.view);
+        let view_inv_t = transpose(&view_inv);
+        let matrix_vp = mul(&v.gpu_proj, &v.view);
+        let proj_inv = inverse(&v.proj);
+        let world_to_camera = mul(&flip_z, &v.camera_view);
+        let camera_to_world = inverse(&world_to_camera);
+        let cam_inv = inverse(&v.camera_view);
+        let camera_pos = [cam_inv[12], cam_inv[13], cam_inv[14], 1.0];
+        let (near, far, ortho) = clip_planes(&v.camera_proj);
+        let projection_params = [if v.flipped { -1.0 } else { 1.0 }, near, far, 1.0 / far];
+        let [w, h] = v.screen;
+        let screen_params = [w, h, 1.0 + 1.0 / w, 1.0 + 1.0 / h];
+        let (zx, zy) = if v.reversed_z {
+            (far / near - 1.0, 1.0)
+        } else {
+            (1.0 - far / near, far / near)
+        };
+        let zbuffer_params = [zx, zy, zx / far, zy / far];
+        let ortho_params = [
+            1.0 / v.camera_proj[0],
+            1.0 / v.camera_proj[5],
+            0.0,
+            if ortho { 1.0 } else { 0.0 },
+        ];
+        let t = v.time;
+        let time_vec = [t / 20.0, t, t * 2.0, t * 3.0];
+        let sin_time = [(t / 8.0).sin(), (t / 4.0).sin(), (t / 2.0).sin(), t.sin()];
+        let cos_time = [(t / 8.0).cos(), (t / 4.0).cos(), (t / 2.0).cos(), t.cos()];
+        Self {
+            input,
+            id,
+            view_inv,
+            view_inv_t,
+            matrix_vp,
+            proj_inv,
+            world_to_camera,
+            camera_to_world,
+            camera_pos,
+            projection_params,
+            screen_params,
+            zbuffer_params,
+            ortho_params,
+            time_vec,
+            sin_time,
+            cos_time,
+        }
+    }
+}
+
+/// Cache key for a non-per-draw uniform binding shared across draws within a frame.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct SharedBindingKey {
+    program_id: u32,
+    binding: u8,
+    camera_id: u64,
+    globals_revision: u64,
+    textures_generation: u64,
+    main_texture_handle: u64,
+    material_key: u64,
+    cbuffers_hash: u64,
+}
+
 /// Compiled programs and this frame's uniform blocks.
 pub struct CompiledPrograms {
     compiler: Option<ShaderCompiler>,
@@ -292,6 +487,11 @@ pub struct CompiledPrograms {
     /// Standalone constant buffers already copied into `data` this frame:
     /// `(buffer handle, buffer revision, binding size) -> byte offset in data`.
     shared_constants: HashMap<(u64, u64, u32), u32>,
+    /// Shared non-per-draw bindings already packed into `data` this frame.
+    shared_bindings: HashMap<SharedBindingKey, u32>,
+    /// Cached derived built-ins for the most recent camera/target/time state.
+    camera_cache: Option<CachedCamera>,
+    next_camera_id: u64,
     /// Shared zeroed `DRAW_SLOT` in `data` for programs without uniform bindings, allocated once
     /// per frame.
     empty_slot: Option<u32>,
@@ -335,6 +535,12 @@ pub struct DrawValues<'a, 'buffers> {
     pub globals: &'a [(String, PropertyValue)],
     /// Where each global property is in `globals`.
     pub globals_index: &'a unbound_runtime::render_protocol::owned::NameIndex,
+    /// Monotonic revision incremented whenever `globals` changes.
+    pub globals_revision: u64,
+    /// Monotonic revision incremented whenever any GPU texture is created, resized or removed.
+    pub textures_generation: u64,
+    /// The draw's resolved `_MainTex` handle (for caching bindings with `_MainTex_ST`/`_TexelSize`).
+    pub main_texture_handle: u64,
     /// Whether the main texture is alpha-only (UI text): `_TextureSampleAdd` defaults to white.
     pub main_alpha_only: bool,
     /// A texture property's texture size (width, height), when one is bound.
@@ -443,6 +649,9 @@ impl CompiledPrograms {
             buffer: None,
             name: String::new(),
             shared_constants: HashMap::default(),
+            shared_bindings: HashMap::default(),
+            camera_cache: None,
+            next_camera_id: 1,
             empty_slot: None,
         }
     }
@@ -646,20 +855,22 @@ impl CompiledPrograms {
             ],
             immediate_size: 0,
         });
+        let plan: Vec<Source> = program
+            .uniforms
+            .iter()
+            .map(|u| Source::of(&u.name))
+            .collect();
+        let bindings = ProgramBindings::of(&program, &plan);
         let gpu = ProgramGpu {
             shader: shader.into(),
-            plan: program
-                .uniforms
-                .iter()
-                .map(|u| Source::of(&u.name))
-                .collect(),
+            plan,
             by_name: program
                 .uniforms
                 .iter()
                 .enumerate()
                 .map(|(i, u)| (u.name.clone(), i as u32))
                 .collect(),
-            bindings: ProgramBindings::of(&program),
+            bindings,
             vertex_inputs: program.vertex_inputs,
             sprite_color: program.uniforms.iter().any(|u| u.name == SPRITE_COLOR),
             dots: super::dots::DotsLayout::of(&program),
@@ -801,7 +1012,22 @@ impl CompiledPrograms {
         self.data.clear();
         self.used.clear();
         self.shared_constants.clear();
+        self.shared_bindings.clear();
         self.empty_slot = None;
+    }
+
+    fn cached_camera(&mut self, values: &DrawValues) -> CachedCamera {
+        let input = CameraInput::from_values(values);
+        if let Some(cam) = self.camera_cache
+            && cam.input == input
+        {
+            return cam;
+        }
+        let id = self.next_camera_id;
+        self.next_camera_id = self.next_camera_id.wrapping_add(1).max(1);
+        let cam = CachedCamera::compute(id, input, values);
+        self.camera_cache = Some(cam);
+        cam
     }
 
     /// A draw's uniform bindings; returns each binding's offset in this frame's buffer.
@@ -812,16 +1038,20 @@ impl CompiledPrograms {
         block: Option<&MaterialBlock>,
     ) -> DrawOffsets {
         self.used.insert(id);
+        let cam = self.cached_camera(values);
         let gpu = &self.programs[id as usize];
         push_program_uniforms(
+            id,
             &gpu.program,
             &gpu.plan,
             &gpu.by_name,
             &gpu.bindings,
             block,
             values,
+            &cam,
             &mut self.data,
             &mut self.shared_constants,
+            &mut self.shared_bindings,
             &mut self.empty_slot,
             &mut self.name,
         )
@@ -1167,6 +1397,28 @@ enum Builtin {
     RenderingLayer,
 }
 
+impl Builtin {
+    /// Whether this built-in varies per draw (object matrix, gizmo color, per-renderer flags)
+    /// rather than per camera/target/frame.
+    fn is_per_draw(self) -> bool {
+        use Builtin::*;
+        matches!(
+            self,
+            GizmoColor
+                | ObjectToWorld
+                | WorldToObject
+                | TransposeModelView
+                | InvTransModelView
+                | ModelView
+                | WorldTransformParams
+                | LodFade
+                | LightData
+                | ProbesOcclusion
+                | RenderingLayer
+        )
+    }
+}
+
 impl Source {
     fn of(name: &str) -> Source {
         use Builtin::*;
@@ -1249,26 +1501,27 @@ fn value(name: &str, source: Source, v: &DrawValues, textures: &[String]) -> Opt
             which
         }
     };
-    builtin_value(which, name, v, textures)
+    builtin_value(which, name, v, textures, None)
 }
 
 /// A built-in variable's value (past the draw's and material's properties of its name).
-fn builtin_value(which: Builtin, name: &str, v: &DrawValues, textures: &[String]) -> Option<Value> {
+fn builtin_value(
+    which: Builtin,
+    name: &str,
+    v: &DrawValues,
+    textures: &[String],
+    cam: Option<&CachedCamera>,
+) -> Option<Value> {
     let vec = |a: [f32; 4]| Some(Value::Vector(a));
     let mat = |m: Mat| Some(Value::Matrix(m));
     let t = v.time;
-    let view_inverse = || inverse(&v.view);
+    let view_inverse = || cam.map_or_else(|| inverse(&v.view), |c| c.view_inv);
     let camera_view_inverse = || inverse(&v.camera_view);
     // Unity's camera matrices: worldToCameraMatrix has OpenGL's negated z; the transform's
     // world-to-local does not.
-    let flip_z = {
-        let mut m = [0.0; 16];
-        m[0] = 1.0;
-        m[5] = 1.0;
-        m[10] = -1.0;
-        m[15] = 1.0;
-        m
-    };
+    let flip_z = [
+        1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+    ];
     use Builtin::*;
     match which {
         GizmoColor => {
@@ -1290,55 +1543,82 @@ fn builtin_value(which: Builtin, name: &str, v: &DrawValues, textures: &[String]
         }),
         MatrixV => mat(v.view),
         MatrixInvV => mat(view_inverse()),
-        MatrixVP => mat(mul(&v.gpu_proj, &v.view)),
+        MatrixVP => mat(cam.map_or_else(|| mul(&v.gpu_proj, &v.view), |c| c.matrix_vp)),
         Projection => mat(v.gpu_proj),
         // The camera's own projection and its inverse stay in the API's convention.
         CameraProjection => mat(v.proj),
-        InvProjection => mat(inverse(&v.proj)),
-        WorldToCamera => mat(mul(&flip_z, &v.camera_view)),
-        CameraToWorld => mat(inverse(&mul(&flip_z, &v.camera_view))),
+        InvProjection => mat(cam.map_or_else(|| inverse(&v.proj), |c| c.proj_inv)),
+        WorldToCamera => {
+            mat(cam.map_or_else(|| mul(&flip_z, &v.camera_view), |c| c.world_to_camera))
+        }
+        CameraToWorld => mat(cam.map_or_else(
+            || inverse(&mul(&flip_z, &v.camera_view)),
+            |c| c.camera_to_world,
+        )),
         TransposeModelView => mat(transpose(&mul(&v.view, &v.model))),
         InvTransModelView => mat(if v.gizmo_draw {
-            mul(&transpose(&inverse(&v.view)), &v.model)
+            let vit = cam.map_or_else(|| transpose(&inverse(&v.view)), |c| c.view_inv_t);
+            mul(&vit, &v.model)
         } else {
             transpose(&inverse(&mul(&v.view, &v.model)))
         }),
         ModelView => mat(mul(&v.view, &v.model)),
-        Time => vec([t / 20.0, t, t * 2.0, t * 3.0]),
-        SinTime => vec([(t / 8.0).sin(), (t / 4.0).sin(), (t / 2.0).sin(), t.sin()]),
-        CosTime => vec([(t / 8.0).cos(), (t / 4.0).cos(), (t / 2.0).cos(), t.cos()]),
+        Time => vec(cam.map_or_else(|| [t / 20.0, t, t * 2.0, t * 3.0], |c| c.time_vec)),
+        SinTime => vec(cam.map_or_else(
+            || [(t / 8.0).sin(), (t / 4.0).sin(), (t / 2.0).sin(), t.sin()],
+            |c| c.sin_time,
+        )),
+        CosTime => vec(cam.map_or_else(
+            || [(t / 8.0).cos(), (t / 4.0).cos(), (t / 2.0).cos(), t.cos()],
+            |c| c.cos_time,
+        )),
         DeltaTime => vec([1.0 / 60.0, 60.0, 1.0 / 60.0, 60.0]),
-        CameraPos => {
-            let i = camera_view_inverse();
-            vec([i[12], i[13], i[14], 1.0])
-        }
-        ProjectionParams => {
-            let (near, far, _) = clip_planes(&v.camera_proj);
-            vec([if v.flipped { -1.0 } else { 1.0 }, near, far, 1.0 / far])
-        }
-        ScreenParams => {
-            let [w, h] = v.screen;
-            vec([w, h, 1.0 + 1.0 / w, 1.0 + 1.0 / h])
-        }
-        ZBufferParams => {
-            let (near, far, _) = clip_planes(&v.camera_proj);
-            // Reversed depth: x = -1 + far/near, y = 1 (Unity's built-in shader variables).
-            let (x, y) = if v.reversed_z {
-                (far / near - 1.0, 1.0)
-            } else {
-                (1.0 - far / near, far / near)
-            };
-            vec([x, y, x / far, y / far])
-        }
-        OrthoParams => {
-            let (_, _, ortho) = clip_planes(&v.camera_proj);
-            vec([
-                1.0 / v.camera_proj[0],
-                1.0 / v.camera_proj[5],
-                0.0,
-                if ortho { 1.0 } else { 0.0 },
-            ])
-        }
+        CameraPos => vec(cam.map_or_else(
+            || {
+                let i = camera_view_inverse();
+                [i[12], i[13], i[14], 1.0]
+            },
+            |c| c.camera_pos,
+        )),
+        ProjectionParams => vec(cam.map_or_else(
+            || {
+                let (near, far, _) = clip_planes(&v.camera_proj);
+                [if v.flipped { -1.0 } else { 1.0 }, near, far, 1.0 / far]
+            },
+            |c| c.projection_params,
+        )),
+        ScreenParams => vec(cam.map_or_else(
+            || {
+                let [w, h] = v.screen;
+                [w, h, 1.0 + 1.0 / w, 1.0 + 1.0 / h]
+            },
+            |c| c.screen_params,
+        )),
+        ZBufferParams => vec(cam.map_or_else(
+            || {
+                let (near, far, _) = clip_planes(&v.camera_proj);
+                // Reversed depth: x = -1 + far/near, y = 1 (Unity's built-in shader variables).
+                let (x, y) = if v.reversed_z {
+                    (far / near - 1.0, 1.0)
+                } else {
+                    (1.0 - far / near, far / near)
+                };
+                [x, y, x / far, y / far]
+            },
+            |c| c.zbuffer_params,
+        )),
+        OrthoParams => vec(cam.map_or_else(
+            || {
+                let (_, _, ortho) = clip_planes(&v.camera_proj);
+                [
+                    1.0 / v.camera_proj[0],
+                    1.0 / v.camera_proj[5],
+                    0.0,
+                    if ortho { 1.0 } else { 0.0 },
+                ]
+            },
+            |c| c.ortho_params,
+        )),
         WorldTransformParams => vec([0.0, 0.0, 0.0, 1.0]),
         LodFade => vec([1.0, 1.0, 0.0, 0.0]),
         // Per renderer, as Unity fills it for scriptable pipelines: no per-object additional
@@ -1418,22 +1698,32 @@ fn derived_value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Valu
     }
 }
 
+static NEXT_MATERIAL_BLOCK_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
+/// One dynamic uniform entry within a binding of a [`MaterialBlock`].
+struct DynamicUniform {
+    index: u32,
+    local_offset: u32,
+    shared: Shared,
+    global_slot: GlobalSlot,
+}
+
 /// A program's uniform block as a material fills it (see [`CompiledPrograms::material_block`]).
 pub struct MaterialBlock {
+    /// Monotonic unique identifier for cache keying material-dependent bindings without ABA reuse.
+    id: u64,
     /// Static material/default bytes per uniform binding; empty when that binding has no static
     /// values (avoids keeping large zeroed copies of Forward+ constant-buffer bindings per
     /// material).
     binding_bytes: Vec<Vec<u8>>,
-    /// The uniforms the draw fills (built-in variables, global properties, values derived from
-    /// bound textures).
-    dynamic: Vec<u32>,
-    /// By uniform index: whether it is one of `dynamic`.
+    /// Per-binding list of dynamic uniforms (built-in variables, global properties, derived values)
+    /// so shared/cached bindings are skipped without iterating their uniforms.
+    binding_dynamic: Vec<Vec<DynamicUniform>>,
+    /// By uniform index: whether it is dynamic (filled at draw time).
     is_dynamic: Vec<bool>,
-    /// By place in `dynamic`: where its value comes from when the draw's own properties are
-    /// left out (the material's and the shader's are known with the block).
-    shared: Vec<Shared>,
-    /// By place in `dynamic`: where the global property of its name is, once looked up.
-    global_slots: Vec<GlobalSlot>,
+    /// Per binding: true if this material contributes static values, material arrays, or declared
+    /// material texture `_ST`/`_TexelSize` properties to the binding (requires keying by `id`).
+    binding_material_dependent: Vec<bool>,
 }
 
 /// Where a uniform the draw fills takes its value from, its own properties left out.
@@ -1444,8 +1734,21 @@ enum Shared {
     /// The global property of its name, else what the name derives (the material and the
     /// shader give it nothing).
     Global,
+    /// The global property of its name only (name cannot match [`derived_value`]).
+    GlobalOnly,
     /// Decided per draw (`_GizmoBatchColor`: the gizmo's colour or a property).
     Draw,
+}
+
+/// Whether [`derived_value`] can ever produce a value for `name`.
+fn may_derive(name: &str) -> bool {
+    name.ends_with("_ST")
+        || name.ends_with("_TexelSize")
+        || name.ends_with("_HDR")
+        || matches!(
+            name,
+            "_ClipRect" | "_TextureSampleAdd" | SPRITE_COLOR | "unity_SpriteProps"
+        )
 }
 
 /// Where a global property is among the globals, learnt once per uniform: global properties are
@@ -1615,67 +1918,102 @@ fn material_block(
     lab: &ShaderLab,
     linear: bool,
 ) -> MaterialBlock {
-    let mut binding_bytes: Vec<Vec<u8>> = vec![Vec::new(); layout.bindings.len()];
-    let mut dynamic = Vec::new();
+    let n_bindings = layout.bindings.len();
+    let mut binding_bytes: Vec<Vec<u8>> = vec![Vec::new(); n_bindings];
+    let mut binding_dynamic: Vec<Vec<DynamicUniform>> =
+        (0..n_bindings).map(|_| Vec::new()).collect();
     let mut is_dynamic = vec![false; program.uniforms.len()];
-    let mut shared = Vec::new();
     for (i, (u, source)) in program.uniforms.iter().zip(plan).enumerate() {
         if u.count != 1 || u.stride > 0 {
             continue;
         }
+        let k = layout.uniform_binding[i] as usize;
+        let local = layout.uniform_local_offset[i];
         match static_value(&u.name, *source, material, lab, linear) {
             Some(value) => {
-                let k = layout.uniform_binding[i] as usize;
-                let local = layout.uniform_local_offset[i] as usize;
                 if let Some(bytes) = binding_bytes.get_mut(k) {
                     if bytes.is_empty() {
                         bytes.resize(layout.bindings[k].size as usize, 0);
                     }
-                    write_value_at(u, local, &value, bytes);
+                    write_value_at(u, local as usize, &value, bytes);
                 }
             }
             None => {
-                dynamic.push(i as u32);
                 is_dynamic[i] = true;
                 // Without a value of the material's (`static_value` found none), what `value`
                 // goes on to.
-                shared.push(match *source {
+                let shared = match *source {
                     Source::Builtin {
                         which: Builtin::GizmoColor,
                         ..
                     } => Shared::Draw,
                     Source::Builtin { which, .. } => Shared::Builtin(which),
-                    Source::Named => Shared::Global,
-                });
+                    Source::Named => {
+                        if may_derive(&u.name) {
+                            Shared::Global
+                        } else {
+                            Shared::GlobalOnly
+                        }
+                    }
+                };
+                if let Some(list) = binding_dynamic.get_mut(k) {
+                    list.push(DynamicUniform {
+                        index: i as u32,
+                        local_offset: local,
+                        shared,
+                        global_slot: GlobalSlot::default(),
+                    });
+                }
             }
         }
     }
-    let global_slots = dynamic.iter().map(|_| GlobalSlot::default()).collect();
+    let mut binding_material_dependent = Vec::with_capacity(n_bindings);
+    for (k, bp) in layout.bindings.iter().enumerate() {
+        let has_static = !binding_bytes[k].is_empty();
+        let has_material_array = bp.arrays.iter().any(|&i| {
+            matches!(
+                material.get(&program.uniforms[i as usize].name),
+                Some(PropertyValue::Array { .. })
+            )
+        });
+        let has_material_tex = bp
+            .tex_derived_bases
+            .iter()
+            .any(|tex| lab.property(tex).is_some() || material.get(tex).is_some());
+        binding_material_dependent.push(has_static || has_material_array || has_material_tex);
+    }
     MaterialBlock {
+        id: NEXT_MATERIAL_BLOCK_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
         binding_bytes,
-        dynamic,
+        binding_dynamic,
         is_dynamic,
-        shared,
-        global_slots,
+        binding_material_dependent,
     }
 }
 
 /// Allocates and fills one draw's uniform bindings in `data`. Standalone cbuffer bindings covered
 /// completely by a bound constant buffer (with no draw overrides targeting their uniforms) are
-/// copied once per `(handle, revision, size)` and shared by offset across draws in the frame.
+/// shared across all programs by `(handle, revision, size)`, and non-per-draw bindings without
+/// draw overrides are cached per `(program, binding, camera, globals, textures, material, cbuffers)`
+/// so pass-wide globals and arrays are packed once instead of every draw.
 #[allow(clippy::too_many_arguments)]
 fn push_program_uniforms(
+    program_id: u32,
     program: &Compiled,
     plan: &[Source],
     by_name: &rustc_hash::FxHashMap<String, u32>,
     layout: &ProgramBindings,
     block: Option<&MaterialBlock>,
     values: &DrawValues,
+    cam: &CachedCamera,
     data: &mut Vec<u8>,
     shared_constants: &mut HashMap<(u64, u64, u32), u32>,
+    shared_bindings: &mut HashMap<SharedBindingKey, u32>,
     empty_slot: &mut Option<u32>,
     name: &mut String,
 ) -> DrawOffsets {
+    use std::hash::{Hash, Hasher};
+
     let mut offsets = [0u32; MAX_UNIFORM_BINDINGS];
     if layout.bindings.is_empty() {
         let slot = *empty_slot.get_or_insert_with(|| {
@@ -1687,43 +2025,53 @@ fn push_program_uniforms(
         return DrawOffsets { offsets, count: 0 };
     }
 
-    let mut shared_cb: [Option<ConstantBufferRef<'_>>; MAX_UNIFORM_BINDINGS] =
-        [None; MAX_UNIFORM_BINDINGS];
-    let mut any_shared = false;
-    for (k, bp) in layout.bindings.iter().enumerate() {
-        if let Some(ref block_name) = bp.standalone_block
-            && let Some(cb) = (values.constant_buffer)(block_name)
-            && cb.bytes.len() >= bp.size as usize
-        {
-            shared_cb[k] = Some(cb);
-            any_shared = true;
-        }
-    }
-    // Over a MaterialBlock, draw overrides run after bound constant buffers; keep a binding
-    // per-draw if any override targets a uniform inside it.
-    if any_shared && block.is_some() && !values.overrides.is_empty() {
-        for (property, value) in values.taken_overrides() {
-            if let Some(&i) = by_name.get(property.as_str()) {
-                shared_cb[layout.uniform_binding[i as usize] as usize] = None;
-            }
-            if matches!(value, PropertyValue::Texture { .. }) {
-                for suffix in TEXTURE_SUFFIXES {
-                    name.clear();
-                    name.push_str(property);
-                    name.push_str(suffix);
-                    if let Some(&i) = by_name.get(name.as_str()) {
-                        shared_cb[layout.uniform_binding[i as usize] as usize] = None;
-                    }
-                }
+    // Compute bitmask of bindings targeted by any draw override in O(overrides.len()).
+    let mut override_mask = 0u8;
+    if block.is_some() && !values.overrides.is_empty() {
+        for (property, _) in values.taken_overrides() {
+            if let Some(&mask) = layout.override_binding_mask.get(property.as_str()) {
+                override_mask |= mask;
             }
         }
     }
 
+    let can_cache_draw = block.is_some()
+        && values.instance.is_none()
+        && !values.instance_empty
+        && values.element.is_none();
+
     let mut shared_mask = 0u8;
+    let mut pending_cache: [(SharedBindingKey, u32); MAX_UNIFORM_BINDINGS] = [(
+        SharedBindingKey {
+            program_id: 0,
+            binding: 0,
+            camera_id: 0,
+            globals_revision: 0,
+            textures_generation: 0,
+            main_texture_handle: 0,
+            material_key: 0,
+            cbuffers_hash: 0,
+        },
+        0,
+    );
+        MAX_UNIFORM_BINDINGS];
+    let mut pending_count = 0usize;
+
     for (k, bp) in layout.bindings.iter().enumerate() {
+        let bit = if k < MAX_UNIFORM_BINDINGS {
+            1u8 << k
+        } else {
+            0
+        };
         let alloc = (bp.size.max(16) as u64).div_ceil(DRAW_SLOT) * DRAW_SLOT;
-        if let Some(cb) = shared_cb[k] {
-            shared_mask |= 1 << k;
+
+        // Fast path 1: standalone bound constant buffer (shared across programs by buffer revision).
+        if (override_mask & bit) == 0
+            && let Some(ref block_name) = bp.standalone_block
+            && let Some(cb) = (values.constant_buffer)(block_name)
+            && cb.bytes.len() >= bp.size as usize
+        {
+            shared_mask |= bit;
             let key = (cb.handle, cb.revision, bp.size);
             offsets[k] = *shared_constants.entry(key).or_insert_with(|| {
                 let at = data.len();
@@ -1732,17 +2080,84 @@ fn push_program_uniforms(
                 data[at..at + n].copy_from_slice(&cb.bytes[..n]);
                 at as u32
             });
-        } else {
+            continue;
+        }
+
+        // Fast path 2: general non-per-draw binding cache (pass-wide globals, light/probe arrays).
+        if can_cache_draw
+            && !bp.has_per_draw_builtin
+            && (override_mask & bit) == 0
+            && let Some(block) = block
+        {
+            let mut cbuffers_hash = 0u64;
+            if !bp.blocks.is_empty() {
+                let mut hasher: Option<rustc_hash::FxHasher> = None;
+                for &bi in &bp.blocks {
+                    let b = &program.blocks[bi as usize];
+                    if let Some(cb) = (values.constant_buffer)(&b.name) {
+                        let h = hasher.get_or_insert_with(Default::default);
+                        bi.hash(h);
+                        cb.handle.hash(h);
+                        cb.revision.hash(h);
+                        cb.bytes.len().hash(h);
+                    }
+                }
+                if let Some(h) = hasher {
+                    cbuffers_hash = h.finish() | 1;
+                }
+            }
+            let key = SharedBindingKey {
+                program_id,
+                binding: k as u8,
+                camera_id: if bp.has_camera_builtin { cam.id } else { 0 },
+                globals_revision: values.globals_revision,
+                textures_generation: if bp.has_texel_size {
+                    values.textures_generation
+                } else {
+                    0
+                },
+                main_texture_handle: if bp.has_main_tex_derived {
+                    values.main_texture_handle
+                } else {
+                    0
+                },
+                material_key: if block.binding_material_dependent[k] {
+                    block.id
+                } else {
+                    0
+                },
+                cbuffers_hash,
+            };
+            if let Some(&cached_at) = shared_bindings.get(&key) {
+                offsets[k] = cached_at;
+                shared_mask |= bit;
+                continue;
+            }
             let at = data.len();
             data.resize(at + alloc as usize, 0);
             offsets[k] = at as u32;
-            if let Some(block) = block
-                && let Some(src) = block.binding_bytes.get(k)
+            if let Some(src) = block.binding_bytes.get(k)
                 && !src.is_empty()
             {
                 let n = src.len().min(bp.size as usize);
                 data[at..at + n].copy_from_slice(&src[..n]);
             }
+            if pending_count < MAX_UNIFORM_BINDINGS {
+                pending_cache[pending_count] = (key, at as u32);
+                pending_count += 1;
+            }
+            continue;
+        }
+
+        let at = data.len();
+        data.resize(at + alloc as usize, 0);
+        offsets[k] = at as u32;
+        if let Some(block) = block
+            && let Some(src) = block.binding_bytes.get(k)
+            && !src.is_empty()
+        {
+            let n = src.len().min(bp.size as usize);
+            data[at..at + n].copy_from_slice(&src[..n]);
         }
     }
 
@@ -1789,32 +2204,39 @@ fn push_program_uniforms(
                 overrides: &[],
                 ..*values
             };
-            for (d, &i) in block.dynamic.iter().enumerate() {
-                let k = layout.uniform_binding[i as usize] as usize;
-                if shared_mask & (1 << k) != 0 {
+            for (k, dynamics) in block.binding_dynamic.iter().enumerate() {
+                if shared_mask & (1 << k) != 0 || dynamics.is_empty() {
                     continue;
                 }
-                let u = &program.uniforms[i as usize];
-                let local = layout.uniform_local_offset[i as usize] as usize;
                 let out = &mut data[binding_range(k)];
-                // What `write_uniform` gives without the draw's properties, past the material's.
-                let value = match block.shared[d] {
-                    Shared::Builtin(which) => {
-                        builtin_value(which, &u.name, &shared, &program.textures)
+                for entry in dynamics {
+                    let i = entry.index as usize;
+                    let u = &program.uniforms[i];
+                    let local = entry.local_offset as usize;
+                    // What `write_uniform` gives without the draw's properties, past the material's.
+                    let value = match entry.shared {
+                        Shared::Builtin(which) => {
+                            builtin_value(which, &u.name, &shared, &program.textures, Some(cam))
+                        }
+                        Shared::Global => global_value(entry.global_slot.find(
+                            values.globals,
+                            values.globals_index,
+                            &u.name,
+                        ))
+                        .or_else(|| derived_value(&u.name, &shared, &program.textures)),
+                        Shared::GlobalOnly => global_value(entry.global_slot.find(
+                            values.globals,
+                            values.globals_index,
+                            &u.name,
+                        )),
+                        Shared::Draw => {
+                            write_uniform_at(program, plan, i, local, &shared, out);
+                            continue;
+                        }
+                    };
+                    if let Some(value) = value {
+                        write_value_at(u, local, &value, out);
                     }
-                    Shared::Global => global_value(block.global_slots[d].find(
-                        values.globals,
-                        values.globals_index,
-                        &u.name,
-                    ))
-                    .or_else(|| derived_value(&u.name, &shared, &program.textures)),
-                    Shared::Draw => {
-                        write_uniform_at(program, plan, i as usize, local, &shared, out);
-                        continue;
-                    }
-                };
-                if let Some(value) = value {
-                    write_value_at(u, local, &value, out);
                 }
             }
             // The draw's own properties over the material's, written when a full fill writes them:
@@ -1900,6 +2322,10 @@ fn push_program_uniforms(
                 }
             }
         }
+    }
+
+    for &(key, at) in &pending_cache[..pending_count] {
+        shared_bindings.insert(key, at);
     }
 
     DrawOffsets {
@@ -2209,8 +2635,10 @@ mod tests {
             }
         }
         fill_arrays(program, values, out);
-        for &i in &block.dynamic {
-            write_uniform(program, plan, i as usize, values, out);
+        for dynamics in &block.binding_dynamic {
+            for entry in dynamics {
+                write_uniform(program, plan, entry.index as usize, values, out);
+            }
         }
         fill_constant_buffers(program, values, out);
         for (name, value) in values.taken_overrides() {
@@ -2345,7 +2773,12 @@ mod tests {
         let tiles: Vec<u8> = (0..24)
             .flat_map(|i| (i as f32 + 0.5).to_le_bytes())
             .collect();
-        let layout = ProgramBindings::of(&program);
+        let plan: Vec<Source> = program
+            .uniforms
+            .iter()
+            .map(|u| Source::of(&u.name))
+            .collect();
+        let layout = ProgramBindings::of(&program, &plan);
         assert_eq!(
             layout.bindings[1].standalone_block.as_deref(),
             Some("Tiles")
@@ -2390,7 +2823,7 @@ mod tests {
             .enumerate()
             .map(|(i, u)| (u.name.clone(), i as u32))
             .collect();
-        let layout = ProgramBindings::of(program);
+        let layout = ProgramBindings::of(program, &plan);
         let block = material_block(program, &plan, &layout, &material, &lab, true);
         let index = |name: &str| by_name[name] as usize;
         assert!(
@@ -2504,6 +2937,9 @@ mod tests {
                 material: &material,
                 lab: &lab,
                 globals: &globals,
+                globals_revision: 0,
+                textures_generation: 0,
+                main_texture_handle: 0,
                 main_alpha_only: false,
                 texture_size: &size,
                 constant_buffer: &|name| {
@@ -2529,16 +2965,21 @@ mod tests {
             assert_eq!(full, without, "hidden {hidden:?}, overrides {overrides:?}");
             let mut data = Vec::new();
             let mut shared_constants = HashMap::default();
+            let mut shared_bindings = HashMap::default();
             let mut empty_slot = None;
+            let cam = CachedCamera::compute(1, CameraInput::from_values(&values), &values);
             let draw_offsets = push_program_uniforms(
+                0,
                 program,
                 &plan,
                 &by_name,
                 &layout,
                 Some(&block),
                 &values,
+                &cam,
                 &mut data,
                 &mut shared_constants,
+                &mut shared_bindings,
                 &mut empty_slot,
                 &mut String::new(),
             );
@@ -2572,11 +3013,13 @@ mod tests {
                     .iter()
                     .find(|b| b.standalone_block.as_deref() == Some(bound_name))
                     .map_or(u32::MAX, |b| b.size);
-            assert_eq!(
-                shared_constants.len(),
-                usize::from(shares && !targets_bound),
-                "overrides {overrides:?}"
-            );
+            // Never shared under an override that reaches it; always without overrides (other
+            // overrides may keep a per-draw copy: that costs a copy, not a value).
+            if targets_bound || !shares {
+                assert_eq!(shared_constants.len(), 0, "overrides {overrides:?}");
+            } else if values.taken_overrides().next().is_none() {
+                assert_eq!(shared_constants.len(), 1, "overrides {overrides:?}");
+            }
             let mut reference = vec![0u8; size_of_program];
             fill_over_block_reference(
                 program,
@@ -2709,6 +3152,9 @@ mod tests {
             material: &material,
             lab: &lab,
             globals: &[("_Global".to_string(), PropertyValue::Float(3.0))],
+            globals_revision: 0,
+            textures_generation: 0,
+            main_texture_handle: 0,
             main_alpha_only: false,
             texture_size: &size,
             constant_buffer: &|name| {
@@ -2991,7 +3437,7 @@ mod tests {
             .enumerate()
             .map(|(i, u)| (u.name.clone(), i as u32))
             .collect();
-        let layout = ProgramBindings::of(&program);
+        let layout = ProgramBindings::of(&program, &plan);
         assert_eq!(
             layout.bindings[0].standalone_block.as_deref(),
             Some("UnityPerDraw")
@@ -3037,6 +3483,9 @@ mod tests {
             lab: &lab,
             globals: &[],
             globals_index: &globals_index,
+            globals_revision: 0,
+            textures_generation: 0,
+            main_texture_handle: 0,
             main_alpha_only: false,
             texture_size: &size,
             constant_buffer: &none_cb,
@@ -3047,8 +3496,10 @@ mod tests {
 
         let mut data = Vec::new();
         let mut shared = HashMap::default();
+        let mut shared_bindings = HashMap::default();
         let mut empty_slot = None;
         let mut scratch = String::new();
+        let cam = CachedCamera::compute(1, CameraInput::from_values(&base), &base);
 
         let cb1 = |name: &str| {
             (name == "urp_TileBuffer").then_some(ConstantBufferRef {
@@ -3063,14 +3514,17 @@ mod tests {
             ..base
         };
         let d1 = push_program_uniforms(
+            0,
             &program,
             &plan,
             &by_name,
             &layout,
             Some(&block),
             &v1,
+            &cam,
             &mut data,
             &mut shared,
+            &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
         );
@@ -3081,14 +3535,17 @@ mod tests {
             ..base
         };
         let d2 = push_program_uniforms(
+            0,
             &program,
             &plan,
             &by_name,
             &layout,
             Some(&block),
             &v2,
+            &cam,
             &mut data,
             &mut shared,
+            &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
         );
@@ -3124,14 +3581,17 @@ mod tests {
             ..base
         };
         let d3 = push_program_uniforms(
+            0,
             &program,
             &plan,
             &by_name,
             &layout,
             Some(&block),
             &v3,
+            &cam,
             &mut data,
             &mut shared,
+            &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
         );
@@ -3158,14 +3618,17 @@ mod tests {
             ..base
         };
         let d4 = push_program_uniforms(
+            0,
             &program,
             &plan,
             &by_name,
             &layout,
             Some(&block),
             &v4,
+            &cam,
             &mut data,
             &mut shared,
+            &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
         );
@@ -3197,14 +3660,17 @@ mod tests {
             ..base
         };
         let d5 = push_program_uniforms(
+            0,
             &program,
             &plan,
             &by_name,
             &layout,
             Some(&block),
             &v5,
+            &cam,
             &mut data,
             &mut shared,
+            &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
         );
@@ -3216,6 +3682,421 @@ mod tests {
             data[d5.offsets[1] as usize + 64..d5.offsets[1] as usize + 16384]
                 .iter()
                 .all(|&b| b == 0)
+        );
+    }
+
+    #[test]
+    fn shared_global_binding_and_camera_cache_reuse_and_invalidate() {
+        use unbound_shaders::{BlockRange, Uniform, UniformBinding};
+
+        let lab = ShaderLab::parse(
+            r#"Shader "S" { Properties { _Color ("C", Color) = (1, 1, 1, 1) } SubShader { Pass { } } }"#,
+        )
+        .unwrap();
+        let mat_a = Material {
+            shader: "S".into(),
+            properties: vec![("_Color".into(), PropertyValue::Vector([0.2, 0.4, 0.6, 1.0]))],
+            ..Default::default()
+        };
+        let mat_b = Material {
+            shader: "S".into(),
+            properties: vec![("_Color".into(), PropertyValue::Vector([0.8, 0.1, 0.2, 1.0]))],
+            ..Default::default()
+        };
+        let scalar = |name: &str, offset: u32, rows: u32, columns: u32| Uniform {
+            name: name.into(),
+            offset,
+            rows,
+            columns,
+            count: 1,
+            stride: 0,
+            scalar: Scalar::Float,
+        };
+        // Binding 0: UnityPerDraw + UnityPerMaterial (per-draw + per-material).
+        // Binding 1: $Global (camera built-in + global scalar).
+        // Binding 2: AdditionalLights (camera-free global array).
+        let program = Compiled {
+            vertex: String::new(),
+            fragment: String::new(),
+            vertex_entry: String::new(),
+            fragment_entry: String::new(),
+            uniforms: vec![
+                scalar("unity_ObjectToWorld", 0, 4, 4),
+                scalar("_Color", 64, 4, 1),
+                scalar("unity_MatrixVP", 256, 4, 4),
+                scalar("_WorldSpaceCameraPos", 320, 4, 1),
+                scalar("_MainLightIntensity", 336, 1, 1),
+                Uniform {
+                    name: "_AdditionalLightsColor".into(),
+                    offset: 512,
+                    rows: 4,
+                    columns: 1,
+                    count: 4,
+                    stride: 16,
+                    scalar: Scalar::Float,
+                },
+            ],
+            instanced_properties: Vec::new(),
+            mesh_instance_stride: None,
+            mesh_instance_uniform_scaling: false,
+            mesh_instance_max_count: None,
+            uniform_size: 576,
+            uniform_bindings: vec![
+                UniformBinding {
+                    offset: 0,
+                    size: 80,
+                },
+                UniformBinding {
+                    offset: 256,
+                    size: 96,
+                },
+                UniformBinding {
+                    offset: 512,
+                    size: 64,
+                },
+            ],
+            textures: Vec::new(),
+            texture_dims: Vec::new(),
+            texture_slots: Vec::new(),
+            texture_aliases: Vec::new(),
+            main_texture: false,
+            buffers: Vec::new(),
+            keywords: Vec::new(),
+            blocks: vec![
+                BlockRange {
+                    name: "UnityPerDraw".into(),
+                    offset: 0,
+                    size: 64,
+                },
+                BlockRange {
+                    name: "UnityPerMaterial".into(),
+                    offset: 64,
+                    size: 16,
+                },
+                BlockRange {
+                    name: "$Global".into(),
+                    offset: 256,
+                    size: 96,
+                },
+                BlockRange {
+                    name: "AdditionalLights".into(),
+                    offset: 512,
+                    size: 64,
+                },
+            ],
+            extra_vertex_inputs: false,
+            vertex_inputs: true,
+            framebuffer_fetch: 0,
+        };
+
+        let plan: Vec<Source> = program
+            .uniforms
+            .iter()
+            .map(|u| Source::of(&u.name))
+            .collect();
+        let by_name: rustc_hash::FxHashMap<String, u32> = program
+            .uniforms
+            .iter()
+            .enumerate()
+            .map(|(i, u)| (u.name.clone(), i as u32))
+            .collect();
+        let layout = ProgramBindings::of(&program, &plan);
+        assert!(layout.bindings[0].has_per_draw_builtin);
+        assert!(!layout.bindings[1].has_per_draw_builtin && layout.bindings[1].has_camera_builtin);
+        assert!(!layout.bindings[2].has_per_draw_builtin && !layout.bindings[2].has_camera_builtin);
+
+        let block_a = material_block(&program, &plan, &layout, &mat_a, &lab, true);
+        let block_b = material_block(&program, &plan, &layout, &mat_b, &lab, true);
+        assert!(block_a.binding_material_dependent[0]);
+        assert!(!block_a.binding_material_dependent[1]);
+        assert!(!block_a.binding_material_dependent[2]);
+
+        let ident = [
+            1.0f32, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+        ];
+        let mut view1 = ident;
+        view1[12] = 3.0;
+        view1[13] = 4.0;
+        view1[14] = -5.0;
+        let mut view2 = ident;
+        view2[12] = -9.0;
+        let mut proj = ident;
+        proj[0] = 1.5;
+        proj[5] = 2.0;
+        proj[10] = -1.02;
+        proj[11] = -1.0;
+        proj[14] = -0.2;
+        proj[15] = 0.0;
+
+        let mut model1 = ident;
+        model1[12] = 10.0;
+        let mut model2 = ident;
+        model2[12] = 20.0;
+
+        let globals1 = vec![
+            ("_MainLightIntensity".to_string(), PropertyValue::Float(2.5)),
+            (
+                "_AdditionalLightsColor".to_string(),
+                PropertyValue::Array {
+                    components: 4,
+                    data: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0].into(),
+                },
+            ),
+        ];
+        let mut globals_index1 = unbound_runtime::render_protocol::owned::NameIndex::default();
+        globals_index1.refresh(&globals1);
+        let size = |_: &str| None;
+        let none_cb = |_: &str| None;
+
+        let base = DrawValues {
+            gizmo_draw: false,
+            color: [1.0; 4],
+            sprite_color: [1.0; 4],
+            model: model1,
+            view: view1,
+            proj,
+            gpu_proj: proj,
+            flipped: false,
+            reversed_z: true,
+            camera_view: view1,
+            camera_proj: proj,
+            screen: [1280.0, 720.0],
+            time: 1.5,
+            linear: true,
+            material: &mat_a,
+            overrides: &[],
+            hidden: None,
+            lab: &lab,
+            globals: &globals1,
+            globals_index: &globals_index1,
+            globals_revision: 1,
+            textures_generation: 1,
+            main_texture_handle: 0,
+            main_alpha_only: false,
+            texture_size: &size,
+            constant_buffer: &none_cb,
+            instance: None,
+            instance_empty: false,
+            element: None,
+        };
+
+        // CachedCamera must match uncached builtin_value bit-for-bit.
+        let cam1 = CachedCamera::compute(1, CameraInput::from_values(&base), &base);
+        for which in [
+            Builtin::MatrixInvV,
+            Builtin::MatrixVP,
+            Builtin::InvProjection,
+            Builtin::WorldToCamera,
+            Builtin::CameraToWorld,
+            Builtin::CameraPos,
+            Builtin::ProjectionParams,
+            Builtin::ScreenParams,
+            Builtin::ZBufferParams,
+            Builtin::OrthoParams,
+            Builtin::Time,
+            Builtin::SinTime,
+            Builtin::CosTime,
+        ] {
+            let a = builtin_value(which, "", &base, &[], None).unwrap();
+            let b = builtin_value(which, "", &base, &[], Some(&cam1)).unwrap();
+            assert_eq!(
+                a.as_slice().iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+                b.as_slice().iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+                "CachedCamera mismatch for {which:?}"
+            );
+        }
+
+        let mut data = Vec::new();
+        let mut shared_constants = HashMap::default();
+        let mut shared_bindings = HashMap::default();
+        let mut empty_slot = None;
+        let mut scratch = String::new();
+
+        // Draw 1 (mat_a, model1) populates bindings 0, 1, 2.
+        let d1 = push_program_uniforms(
+            7,
+            &program,
+            &plan,
+            &by_name,
+            &layout,
+            Some(&block_a),
+            &base,
+            &cam1,
+            &mut data,
+            &mut shared_constants,
+            &mut shared_bindings,
+            &mut empty_slot,
+            &mut scratch,
+        );
+        let len_after_d1 = data.len();
+
+        // Draw 2 (mat_b, model2, same camera & globals) MUST reuse BOTH binding 1 and binding 2!
+        let v2 = DrawValues {
+            model: model2,
+            material: &mat_b,
+            ..base
+        };
+        let d2 = push_program_uniforms(
+            7,
+            &program,
+            &plan,
+            &by_name,
+            &layout,
+            Some(&block_b),
+            &v2,
+            &cam1,
+            &mut data,
+            &mut shared_constants,
+            &mut shared_bindings,
+            &mut empty_slot,
+            &mut scratch,
+        );
+        assert_ne!(
+            d1.offsets[0], d2.offsets[0],
+            "per-draw binding stays distinct"
+        );
+        assert_eq!(
+            d1.offsets[1], d2.offsets[1],
+            "shared $Global reused across materials"
+        );
+        assert_eq!(
+            d1.offsets[2], d2.offsets[2],
+            "shared AdditionalLights reused across materials"
+        );
+        assert_eq!(
+            data.len() - len_after_d1,
+            DRAW_SLOT as usize,
+            "second draw only allocates per-draw binding 0"
+        );
+
+        // Verify bit-exact parity with uncached full fill for draw 2.
+        let mut full2 = vec![0u8; program.uniform_size as usize];
+        fill(&program, &plan, &v2, &mut full2);
+        for (k, bp) in layout.bindings.iter().enumerate() {
+            let at = d2.offsets[k] as usize;
+            let lo = bp.offset as usize;
+            assert_eq!(
+                &data[at..at + bp.size as usize],
+                &full2[lo..lo + bp.size as usize],
+                "binding {k} bytes must match uncached fill"
+            );
+        }
+
+        // Camera change invalidates binding 1 (has_camera_builtin) while binding 2 stays shared!
+        let v3 = DrawValues {
+            view: view2,
+            camera_view: view2,
+            ..base
+        };
+        let cam2 = CachedCamera::compute(2, CameraInput::from_values(&v3), &v3);
+        let d3 = push_program_uniforms(
+            7,
+            &program,
+            &plan,
+            &by_name,
+            &layout,
+            Some(&block_a),
+            &v3,
+            &cam2,
+            &mut data,
+            &mut shared_constants,
+            &mut shared_bindings,
+            &mut empty_slot,
+            &mut scratch,
+        );
+        assert_ne!(
+            d3.offsets[1], d1.offsets[1],
+            "camera change invalidates $Global"
+        );
+        assert_eq!(
+            d3.offsets[2], d1.offsets[2],
+            "camera-free AdditionalLights stays shared"
+        );
+
+        // Globals revision change invalidates both binding 1 and binding 2.
+        let globals2 = vec![
+            ("_MainLightIntensity".to_string(), PropertyValue::Float(9.0)),
+            (
+                "_AdditionalLightsColor".to_string(),
+                PropertyValue::Array {
+                    components: 4,
+                    data: vec![9.0, 8.0, 7.0, 6.0].into(),
+                },
+            ),
+        ];
+        let mut globals_index2 = unbound_runtime::render_protocol::owned::NameIndex::default();
+        globals_index2.refresh(&globals2);
+        let v4 = DrawValues {
+            globals: &globals2,
+            globals_index: &globals_index2,
+            globals_revision: 2,
+            ..base
+        };
+        let d4 = push_program_uniforms(
+            7,
+            &program,
+            &plan,
+            &by_name,
+            &layout,
+            Some(&block_a),
+            &v4,
+            &cam1,
+            &mut data,
+            &mut shared_constants,
+            &mut shared_bindings,
+            &mut empty_slot,
+            &mut scratch,
+        );
+        assert_ne!(d4.offsets[1], d1.offsets[1]);
+        assert_ne!(d4.offsets[2], d1.offsets[2]);
+
+        // Draw override targeting a uniform in binding 1 bypasses cache without poisoning d1.
+        let overrides = [(
+            "_MainLightIntensity".to_string(),
+            PropertyValue::Float(42.0),
+        )];
+        let v5 = DrawValues {
+            overrides: &overrides,
+            ..base
+        };
+        let d5 = push_program_uniforms(
+            7,
+            &program,
+            &plan,
+            &by_name,
+            &layout,
+            Some(&block_a),
+            &v5,
+            &cam1,
+            &mut data,
+            &mut shared_constants,
+            &mut shared_bindings,
+            &mut empty_slot,
+            &mut scratch,
+        );
+        assert_ne!(
+            d5.offsets[1], d1.offsets[1],
+            "override bypasses shared binding 1"
+        );
+        assert_eq!(
+            d5.offsets[2], d1.offsets[2],
+            "unaffected binding 2 stays shared"
+        );
+        assert_eq!(
+            f32::from_le_bytes(
+                data[d5.offsets[1] as usize + 80..d5.offsets[1] as usize + 84]
+                    .try_into()
+                    .unwrap()
+            ),
+            42.0
+        );
+        assert_eq!(
+            f32::from_le_bytes(
+                data[d1.offsets[1] as usize + 80..d1.offsets[1] as usize + 84]
+                    .try_into()
+                    .unwrap()
+            ),
+            2.5
         );
     }
 

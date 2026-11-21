@@ -28,6 +28,49 @@ use super::{
     pipelines::{ClearKey, DEPTH_FORMAT, DRAW_SLOT, PipelineKey, Pipelines},
     resources::{self, GpuMesh, GpuTexture, SamplerKey},
 };
+
+fn same_property_value(a: &owned::PropertyValue, b: &owned::PropertyValue) -> bool {
+    use owned::PropertyValue::*;
+    match (a, b) {
+        (Float(x), Float(y)) => x.to_bits() == y.to_bits(),
+        (Int(x), Int(y)) => x == y,
+        (Buffer(x), Buffer(y)) => x == y,
+        (Vector(x), Vector(y)) => x.iter().zip(y).all(|(p, q)| p.to_bits() == q.to_bits()),
+        (Matrix(x), Matrix(y)) => x.iter().zip(y).all(|(p, q)| p.to_bits() == q.to_bits()),
+        (Texture { handle: hx, st: sx }, Texture { handle: hy, st: sy }) => {
+            hx == hy && sx.iter().zip(sy).all(|(p, q)| p.to_bits() == q.to_bits())
+        }
+        (
+            Image {
+                handle: hx,
+                mip: mx,
+            },
+            Image {
+                handle: hy,
+                mip: my,
+            },
+        ) => hx == hy && mx == my,
+        (
+            Array {
+                components: cx,
+                data: dx,
+            },
+            Array {
+                components: cy,
+                data: dy,
+            },
+        ) => {
+            cx == cy
+                && (Arc::ptr_eq(dx, dy)
+                    || (dx.len() == dy.len()
+                        && dx
+                            .iter()
+                            .zip(dy.iter())
+                            .all(|(p, q)| p.to_bits() == q.to_bits())))
+        }
+        _ => false,
+    }
+}
 use crate::materials::{ResolvedMaterial, Resolver};
 use bytemuck::{Pod, Zeroable};
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
@@ -868,6 +911,8 @@ pub struct UnityRenderer {
     globals: Arc<Vec<(String, owned::PropertyValue)>>,
     /// Where each global property is (rebuilt when the list grows or shrinks).
     globals_index: owned::NameIndex,
+    /// Monotonic revision incremented whenever `globals` changes.
+    globals_revision: u64,
     keywords: Vec<String>,
     /// An id of the global keyword set (equal sets, equal ids): what variants are cached by.
     keyword_set: u32,
@@ -985,6 +1030,7 @@ impl UnityRenderer {
             anisotropy: [1, 9, 16],
             globals: Arc::new(Vec::new()),
             globals_index: Default::default(),
+            globals_revision: 0,
             keywords: Vec::new(),
             keyword_set: 0,
             keyword_sets: Default::default(),
@@ -3708,8 +3754,16 @@ impl UnityRenderer {
                 Command::Global(name, value) => {
                     let globals = Arc::make_mut(&mut self.globals);
                     match self.globals_index.position(globals, &name) {
-                        Some(i) => globals[i].1 = value,
-                        None => globals.push((name, value)),
+                        Some(i) => {
+                            if !same_property_value(&globals[i].1, &value) {
+                                globals[i].1 = value;
+                                self.globals_revision = self.globals_revision.wrapping_add(1);
+                            }
+                        }
+                        None => {
+                            globals.push((name, value));
+                            self.globals_revision = self.globals_revision.wrapping_add(1);
+                        }
                     }
                 }
                 Command::RenderPipeline(tag) => {
@@ -4937,23 +4991,27 @@ impl UnityRenderer {
                     .map(|t| t.logical.unwrap_or((t.width, t.height)))
             };
             // A buffer bound by a cbuffer's name: the draw's, the material's, else a global one.
+            let draw_has_buffer = draw
+                .properties
+                .iter()
+                .any(|(_, v)| matches!(v, owned::PropertyValue::Buffer(_)));
             let buffers = &self.buffers;
             let constant_buffer = |name: &str| -> Option<compiled::ConstantBufferRef<'_>> {
-                let handle = draw
-                    .properties
-                    .iter()
-                    .rev()
-                    .find_map(|(n, v)| match v {
+                let handle = if draw_has_buffer {
+                    draw.properties.iter().rev().find_map(|(n, v)| match v {
                         owned::PropertyValue::Buffer(h) if n == name => Some(*h),
                         _ => None,
                     })
-                    .or_else(|| match material_props.get(name) {
+                } else {
+                    None
+                }
+                .or_else(|| match material_props.get(name) {
+                    Some(owned::PropertyValue::Buffer(h)) => Some(*h),
+                    _ => match globals_index.find(&globals, name) {
                         Some(owned::PropertyValue::Buffer(h)) => Some(*h),
-                        _ => match globals_index.find(&globals, name) {
-                            Some(owned::PropertyValue::Buffer(h)) => Some(*h),
-                            _ => None,
-                        },
-                    })?;
+                        _ => None,
+                    },
+                })?;
                 let b = buffers.get(&handle)?;
                 let bytes = b.shadow.as_deref()?;
                 Some(compiled::ConstantBufferRef {
@@ -4993,6 +5051,9 @@ impl UnityRenderer {
                 lab: &resolved.lab,
                 globals: &globals,
                 globals_index,
+                globals_revision: self.globals_revision,
+                textures_generation: self.generation,
+                main_texture_handle: main_handle,
                 main_alpha_only: alpha_only,
                 texture_size: &size,
                 constant_buffer: &constant_buffer,
@@ -5100,8 +5161,16 @@ impl UnityRenderer {
         };
         let globals = Arc::make_mut(&mut self.globals);
         match globals.iter_mut().find(|(n, _)| n == name) {
-            Some(slot) => slot.1 = value,
-            None => globals.push((name.to_string(), value)),
+            Some(slot) => {
+                if !same_property_value(&slot.1, &value) {
+                    slot.1 = value;
+                    self.globals_revision = self.globals_revision.wrapping_add(1);
+                }
+            }
+            None => {
+                globals.push((name.to_string(), value));
+                self.globals_revision = self.globals_revision.wrapping_add(1);
+            }
         }
     }
 
@@ -5235,13 +5304,19 @@ impl UnityRenderer {
             height as f32,
         ];
         let texel_size = |n: &str| n.strip_prefix(name) == Some("_TexelSize");
+        let value = owned::PropertyValue::Vector(texel);
         let globals = Arc::make_mut(&mut self.globals);
         match globals.iter_mut().find(|(n, _)| texel_size(n)) {
-            Some(slot) => slot.1 = owned::PropertyValue::Vector(texel),
-            None => globals.push((
-                format!("{name}_TexelSize"),
-                owned::PropertyValue::Vector(texel),
-            )),
+            Some(slot) => {
+                if !same_property_value(&slot.1, &value) {
+                    slot.1 = value;
+                    self.globals_revision = self.globals_revision.wrapping_add(1);
+                }
+            }
+            None => {
+                globals.push((format!("{name}_TexelSize"), value));
+                self.globals_revision = self.globals_revision.wrapping_add(1);
+            }
         }
         Some(Copy {
             channels: None,
