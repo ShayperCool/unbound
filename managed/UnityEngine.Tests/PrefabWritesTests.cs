@@ -382,9 +382,11 @@ namespace UnityEngine.Tests
             Assert.Equal(55L, data.FileId);
         }
 
-        /// <summary>New prefabs that are not measured fail loudly before anything is written: a
-        /// hierarchy holding an instance, a variant of an instance with an added component or of
-        /// part of an instance, connecting an asset, an instance or onto a prefab that exists.</summary>
+        /// <summary>Unity's argument checks (part of an instance, a folder at the path, a null path,
+        /// connecting under StreamingAssets or a persistent object), and new prefabs that are not
+        /// measured failing loudly before anything is written: a hierarchy holding an instance, a
+        /// variant of an instance with an added component, connecting an instance, onto a prefab that
+        /// exists, under another name or with references to scene objects outside the hierarchy.</summary>
         [Fact]
         public void UnmeasuredNewPrefabsAreRefused()
         {
@@ -407,9 +409,34 @@ namespace UnityEngine.Tests
             added.AddComponent<SphereCollider>();
             Assert.Contains("with added or removed objects",
                 Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAsset(added, "Assets/Variant.prefab")).Message);
+            // Unity's own argument checks, before the path's (its PrefabUtility C#).
             var part = Instance().transform.Find("Part").gameObject;
-            Assert.StartsWith("Unbound makes new prefabs of plain GameObjects, prefab contents and prefab instance roots only",
-                Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAsset(part, "Assets/Part.prefab")).Message);
+            Assert.Equal("Can't save part of a Prefab instance as a Prefab",
+                Assert.Throws<ArgumentException>(() => PrefabUtility.SaveAsPrefabAsset(part, "Assets/Bad.asset")).Message);
+            Assert.Equal("Can't save part of a Prefab instance as a Prefab",
+                Assert.Throws<ArgumentException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(part, "Assets/Part.prefab", InteractionMode.AutomatedAction)).Message);
+            Directory.CreateDirectory(Path.Combine(m_Project, "Assets/Folder.prefab"));
+            Assert.Equal("Overwriting a folder with an Asset is not allowed: 'Assets/Folder.prefab'",
+                Assert.Throws<ArgumentException>(() => PrefabUtility.SaveAsPrefabAsset(plain, "Assets/Folder.prefab")).Message);
+            Assert.Equal("Value cannot be null.\nParameter name: path is null or empty",
+                MonoExceptions.MessageOf(Assert.Throws<ArgumentNullException>(() => PrefabUtility.SaveAsPrefabAsset(plain, null))));
+            Directory.CreateDirectory(Path.Combine(m_Project, "Assets/StreamingAssets"));
+            var streamed = new GameObject("Streamed");
+            m_Made.Add(streamed);
+            Assert.Equal("Can't connect a Prefab in the StreamingAssets folder to GameObjects in the scene. To save a Prefab to the StreamingAssets folder use SaveAsPrefabAsset instead.",
+                Assert.Throws<ArgumentException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(streamed, "Assets/StreamingAssets/Streamed.prefab", InteractionMode.AutomatedAction)).Message);
+            // Connecting is refused where what the instance keeps is not measured: another name than
+            // the file's, a reference to a scene object outside the hierarchy.
+            var named = new GameObject("Named");
+            m_Made.Add(named);
+            Assert.Contains("only to a new prefab of its own name",
+                Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(named, "Assets/Other.prefab", InteractionMode.AutomatedAction)).Message);
+            var referencing = new GameObject("Referencing");
+            m_Made.Add(referencing);
+            referencing.AddComponent<PrefabTestHolder>().link = named.transform;
+            Assert.Contains("references 1 scene objects outside its hierarchy",
+                Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(referencing, "Assets/Referencing.prefab", InteractionMode.AutomatedAction)).Message);
+            Assert.Same(named.transform, referencing.GetComponent<PrefabTestHolder>().link);
             Assert.Equal("Can't save persistent Objects and connect them to the saved Prefab",
                 Assert.Throws<ArgumentException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(m_Asset, "Assets/Copy.prefab", InteractionMode.AutomatedAction)).Message);
             var fresh = new GameObject("Fresh");
@@ -425,6 +452,7 @@ namespace UnityEngine.Tests
 #pragma warning restore CS0618
             Assert.False(File.Exists(Path.Combine(m_Project, "Assets/Plain.prefab")));
             Assert.False(File.Exists(Path.Combine(m_Project, "Assets/Variant.prefab")));
+            Assert.False(File.Exists(Path.Combine(m_Project, "Assets/Referencing.prefab")));
             Assert.True(fresh.name == "Fresh" && !PrefabUtility.IsPartOfAnyPrefab(fresh));
         }
 
