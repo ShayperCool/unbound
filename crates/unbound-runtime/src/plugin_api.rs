@@ -319,6 +319,25 @@ thread_local! {
     static HELD: std::cell::RefCell<Option<Vec<(i32, String)>>> = const { std::cell::RefCell::new(None) };
 }
 
+/// Runs `render` while capturing messages logged through [`log`] on this thread, returning them
+/// without delivering them yet (for a render thread whose logs are delivered on the game thread).
+pub fn capture_logs<R>(render: impl FnOnce() -> R) -> (R, Vec<(i32, String)>) {
+    let previous = HELD.with(|held| held.borrow_mut().replace(Vec::new()));
+    let result = render();
+    let messages = HELD
+        .with(|held| std::mem::replace(&mut *held.borrow_mut(), previous))
+        .unwrap_or_default();
+    (result, messages)
+}
+
+/// Delivers messages captured by [`capture_logs`] on the caller's thread (holding them if the
+/// caller is itself inside [`while_rendering`]).
+pub fn deliver_logs(messages: Vec<(i32, String)>) {
+    for (kind, message) in messages {
+        log(kind, &message);
+    }
+}
+
 /// Runs `render` (which holds the renderer) and then delivers the plugin messages logged
 /// meanwhile, in order: a script's log handler may render, which needs the renderer.
 pub fn while_rendering<R>(render: impl FnOnce() -> R) -> R {

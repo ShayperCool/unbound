@@ -1,15 +1,26 @@
-//! The render backend the managed engine talks to. Its calls arrive on the game's thread and run
-//! on the GPU right away (`UnityRenderer`), in order; calls made before the renderer exists (the
-//! window's GPU is not up yet) wait and run when it is installed. Shader queries need no GPU:
-//! until then the backend's own resolver answers them.
+//! The render backend the managed engine talks to. Once the GPU device is installed, a dedicated
+//! render thread (`Unbound Render`) owns [`UnityRenderer`] and executes uploads and command
+//! streams in strict FIFO order while the game thread builds the next frame (up to one frame in
+//! flight, matching Unity's pipelined render thread). Synchronous readbacks, queries, and native
+//! plugin callbacks flush in order on the render thread and deliver plugin logs on the game
+//! thread. Calls made before the renderer exists wait in order until [`GpuBackend::install`];
+//! shader queries before then are answered by the backend's own resolver.
 use crate::materials::Resolver;
 use crate::render::executor::{UnityRenderer, Upload};
 use crate::shaderlab::ShaderIndex;
+use std::collections::VecDeque;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::mpsc::{self, Receiver, SyncSender};
+use std::sync::{Arc, Condvar, Mutex};
+use std::thread::JoinHandle;
 use unbound_runtime::render_protocol::{
     RenderBackend, ShaderWarmupRequest, commands::Command, owned,
 };
+
+/// Maximum completed frames (`Command::EndFrame`) allowed to be queued ahead of the render thread.
+/// One frame in flight overlaps managed frame building with GPU command encoding/submission
+/// without growing latency or command-buffer memory unboundedly.
+const MAX_IN_FLIGHT_FRAMES: usize = 1;
 
 enum Pending {
     Upload(Upload),
@@ -17,9 +28,232 @@ enum Pending {
     Warmup(ShaderWarmupRequest),
 }
 
+enum RenderMsg {
+    Upload(Upload),
+    Commands {
+        commands: Vec<Command>,
+        end_frames: usize,
+        sync: Option<SyncSender<Vec<(i32, String)>>>,
+    },
+    Call(Box<dyn FnOnce(&mut UnityRenderer) + Send>),
+    Flush(SyncSender<()>),
+    Shutdown(SyncSender<()>),
+}
+
+#[derive(Default)]
+struct QueueState {
+    items: VecDeque<RenderMsg>,
+    in_flight_frames: usize,
+    closed: bool,
+}
+
+struct RenderQueue {
+    state: Mutex<QueueState>,
+    has_work: Condvar,
+    frame_slot: Condvar,
+}
+
+impl RenderQueue {
+    fn new() -> Arc<Self> {
+        Arc::new(Self {
+            state: Mutex::new(QueueState::default()),
+            has_work: Condvar::new(),
+            frame_slot: Condvar::new(),
+        })
+    }
+
+    fn push(&self, msg: RenderMsg) -> bool {
+        let mut q = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        if q.closed {
+            return false;
+        }
+        q.items.push_back(msg);
+        self.has_work.notify_one();
+        true
+    }
+
+    fn push_commands(&self, commands: Vec<Command>, end_frames: usize) -> bool {
+        let mut q = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        if end_frames > 0 {
+            while q.in_flight_frames >= MAX_IN_FLIGHT_FRAMES && !q.closed {
+                q = self.frame_slot.wait(q).unwrap_or_else(|e| e.into_inner());
+            }
+        }
+        if q.closed {
+            return false;
+        }
+        q.in_flight_frames += end_frames;
+        q.items.push_back(RenderMsg::Commands {
+            commands,
+            end_frames,
+            sync: None,
+        });
+        self.has_work.notify_one();
+        true
+    }
+
+    fn push_sync_commands(
+        &self,
+        commands: Vec<Command>,
+        end_frames: usize,
+    ) -> Option<Receiver<Vec<(i32, String)>>> {
+        let (tx, rx) = mpsc::sync_channel(1);
+        let mut q = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        if q.closed {
+            return None;
+        }
+        q.in_flight_frames += end_frames;
+        q.items.push_back(RenderMsg::Commands {
+            commands,
+            end_frames,
+            sync: Some(tx),
+        });
+        self.has_work.notify_one();
+        Some(rx)
+    }
+
+    fn complete_frames(&self, count: usize) {
+        if count == 0 {
+            return;
+        }
+        let mut q = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        q.in_flight_frames = q.in_flight_frames.saturating_sub(count);
+        self.frame_slot.notify_all();
+    }
+
+    fn pop(&self) -> Option<RenderMsg> {
+        let mut q = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        loop {
+            if let Some(msg) = q.items.pop_front() {
+                return Some(msg);
+            }
+            if q.closed {
+                return None;
+            }
+            q = self.has_work.wait(q).unwrap_or_else(|e| e.into_inner());
+        }
+    }
+
+    fn close(&self) {
+        let mut q = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        q.closed = true;
+        // Drop any queued sync senders so callers waiting on replies unblock immediately.
+        q.items.clear();
+        self.has_work.notify_all();
+        self.frame_slot.notify_all();
+    }
+}
+
+/// Ensures the render queue is closed and waiting callers unblock even if the render thread
+/// unwinds on a panic.
+struct CloseOnDrop(Arc<RenderQueue>);
+
+impl Drop for CloseOnDrop {
+    fn drop(&mut self) {
+        self.0.close();
+    }
+}
+
+struct Worker {
+    queue: Arc<RenderQueue>,
+    join: Mutex<Option<JoinHandle<()>>>,
+}
+
+impl Worker {
+    fn spawn(mut renderer: UnityRenderer) -> Arc<Self> {
+        let queue = RenderQueue::new();
+        let worker_queue = Arc::clone(&queue);
+        let handle = std::thread::Builder::new()
+            .name("Unbound Render".into())
+            .spawn(move || {
+                let _close_on_exit = CloseOnDrop(Arc::clone(&worker_queue));
+                while let Some(msg) = worker_queue.pop() {
+                    match msg {
+                        RenderMsg::Upload(u) => renderer.apply(u),
+                        RenderMsg::Commands {
+                            commands,
+                            end_frames,
+                            sync,
+                        } => {
+                            if let Some(reply) = sync {
+                                let ((), logs) = unbound_runtime::plugin_api::capture_logs(|| {
+                                    renderer.execute(commands)
+                                });
+                                worker_queue.complete_frames(end_frames);
+                                let _ = reply.send(logs);
+                            } else {
+                                renderer.execute(commands);
+                                worker_queue.complete_frames(end_frames);
+                            }
+                        }
+                        RenderMsg::Call(op) => op(&mut renderer),
+                        RenderMsg::Flush(reply) => {
+                            let _ = reply.send(());
+                        }
+                        RenderMsg::Shutdown(reply) => {
+                            drop(renderer);
+                            worker_queue.close();
+                            let _ = reply.send(());
+                            return;
+                        }
+                    }
+                }
+                drop(renderer);
+            })
+            .expect("failed to spawn Unbound Render thread");
+        Arc::new(Self {
+            queue,
+            join: Mutex::new(Some(handle)),
+        })
+    }
+
+    fn call<R: Send + 'static>(
+        &self,
+        op: impl FnOnce(&mut UnityRenderer) -> R + Send + 'static,
+    ) -> Option<R> {
+        let (tx, rx) = mpsc::sync_channel(1);
+        let result = {
+            let _gl = crate::render::gl_interop::suspend_for_render_thread();
+            if !self.queue.push(RenderMsg::Call(Box::new(move |r| {
+                let out = unbound_runtime::plugin_api::capture_logs(|| op(r));
+                let _ = tx.send(out);
+            }))) {
+                return None;
+            }
+            rx.recv().ok()
+        };
+        let (value, logs) = result?;
+        unbound_runtime::plugin_api::deliver_logs(logs);
+        Some(value)
+    }
+
+    fn flush(&self) {
+        let _gl = crate::render::gl_interop::suspend_for_render_thread();
+        let (tx, rx) = mpsc::sync_channel(1);
+        if self.queue.push(RenderMsg::Flush(tx)) {
+            let _ = rx.recv();
+        }
+    }
+
+    fn shutdown(&self) {
+        let handle = self.join.lock().unwrap_or_else(|e| e.into_inner()).take();
+        let Some(handle) = handle else {
+            return;
+        };
+        let _gl = crate::render::gl_interop::suspend_for_render_thread();
+        let (tx, rx) = mpsc::sync_channel(1);
+        if self.queue.push(RenderMsg::Shutdown(tx)) {
+            let _ = rx.recv();
+        } else {
+            self.queue.close();
+        }
+        let _ = handle.join();
+    }
+}
+
 #[derive(Default)]
 struct Inner {
-    renderer: Option<UnityRenderer>,
+    worker: Option<Arc<Worker>>,
     pending: Vec<Pending>,
     /// Where `.shader` files are, for the resolver.
     shader_roots: Vec<PathBuf>,
@@ -45,6 +279,20 @@ impl Inner {
 #[derive(Default)]
 pub struct GpuBackend {
     inner: Mutex<Inner>,
+}
+
+impl Drop for GpuBackend {
+    fn drop(&mut self) {
+        let worker = self
+            .inner
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .worker
+            .take();
+        if let Some(worker) = worker {
+            worker.shutdown();
+        }
+    }
 }
 
 impl GpuBackend {
@@ -74,7 +322,7 @@ impl GpuBackend {
         resolver
     }
 
-    /// Hands the backend its renderer and runs what waited for it.
+    /// Hands the backend its renderer, drains what waited for it, and starts the render thread.
     pub fn install(&self, renderer: UnityRenderer) {
         unbound_runtime::plugin_api::while_rendering(|| self.install_holding(renderer));
     }
@@ -92,13 +340,27 @@ impl GpuBackend {
                 }
             }
         }
-        inner.renderer = Some(renderer);
+        inner.worker = Some(Worker::spawn(renderer));
+    }
+
+    /// Waits until every upload and command submitted before this call has finished executing on
+    /// the render thread (for frame-exact screenshots/snapshots, plugin context handoff, and
+    /// clean shutdown).
+    pub fn flush(&self) {
+        let worker = self.inner.lock().unwrap().worker.clone();
+        if let Some(worker) = worker {
+            worker.flush();
+        }
     }
 
     fn upload(&self, upload: Upload) {
         let mut inner = self.inner.lock().unwrap();
-        match &mut inner.renderer {
-            Some(r) => r.apply(upload),
+        match &inner.worker {
+            Some(worker) => {
+                let worker = Arc::clone(worker);
+                drop(inner);
+                worker.queue.push(RenderMsg::Upload(upload));
+            }
             None => inner.pending.push(Pending::Upload(upload)),
         }
     }
@@ -138,76 +400,111 @@ impl RenderBackend for GpuBackend {
     }
 
     fn submit_commands(&self, commands: Vec<Command>) {
-        // The thread that submits drives the renderer: the plugins' context stays current on it.
+        // The game thread keeps the plugins' OpenGL context current between script calls.
         crate::render::gl_interop::mark_render_thread();
-        // Plugin callbacks among the commands may log; scripts see that once the renderer is free.
-        unbound_runtime::plugin_api::while_rendering(|| {
+        let worker = {
             let mut inner = self.inner.lock().unwrap();
-            match &mut inner.renderer {
-                Some(r) => r.execute(commands),
-                None => inner.pending.push(Pending::Commands(commands)),
+            match &inner.worker {
+                Some(w) => Arc::clone(w),
+                None => {
+                    inner.pending.push(Pending::Commands(commands));
+                    return;
+                }
             }
-        })
+        };
+        let end_frames = commands
+            .iter()
+            .filter(|c| matches!(c, Command::EndFrame))
+            .count();
+        let has_plugin = commands.iter().any(|c| matches!(c, Command::Plugin(_)));
+        if has_plugin {
+            let logs = {
+                let _gl = crate::render::gl_interop::suspend_for_render_thread();
+                match worker.queue.push_sync_commands(commands, end_frames) {
+                    Some(rx) => rx.recv().unwrap_or_default(),
+                    None => Vec::new(),
+                }
+            };
+            unbound_runtime::plugin_api::deliver_logs(logs);
+        } else {
+            worker.queue.push_commands(commands, end_frames);
+        }
     }
 
     fn read_buffer(&self, buffer: u64, offset: u64, size: u64) -> Option<Vec<u8>> {
-        self.inner
-            .lock()
-            .unwrap()
-            .renderer
-            .as_mut()?
-            .read_buffer(buffer, offset, size)
+        let worker = self.inner.lock().unwrap().worker.clone()?;
+        worker.call(move |r| r.read_buffer(buffer, offset, size))?
     }
 
     fn graphics_fence(&self, insert: bool) -> Result<u64, String> {
-        self.inner
+        let worker = self
+            .inner
             .lock()
             .unwrap()
-            .renderer
-            .as_mut()
-            .ok_or_else(|| "the renderer is not up yet".to_string())?
-            .graphics_fence(insert)
+            .worker
+            .clone()
+            .ok_or_else(|| "the renderer is not up yet".to_string())?;
+        worker
+            .call(move |r| r.graphics_fence(insert))
+            .ok_or_else(|| "the renderer has stopped".to_string())?
     }
 
     fn shader_passes(&self, shader: &str) -> Result<String, String> {
-        let mut inner = self.inner.lock().unwrap();
-        if let Some(r) = inner.renderer.as_mut() {
-            return Ok(r.shader_passes(shader));
-        }
-        if inner.shader_roots.is_empty() {
-            return Err("the renderer is not up yet".into());
-        }
-        // The pipeline the waiting commands leave active, as the renderer will see it.
-        let tag = inner
-            .pending
-            .iter()
-            .rev()
-            .filter_map(|p| match p {
-                Pending::Commands(commands) => commands.iter().rev().find_map(|c| match c {
-                    Command::RenderPipeline(tag) => Some(tag.as_str()),
-                    _ => None,
-                }),
-                Pending::Upload(_) | Pending::Warmup(_) => None,
-            })
-            .next()
-            .unwrap_or("")
-            .to_string();
-        let resolver = inner.resolver();
-        resolver.set_pipeline(&tag);
-        Ok(resolver.describe(shader))
+        let worker = {
+            let mut inner = self.inner.lock().unwrap();
+            if let Some(w) = &inner.worker {
+                Some(Arc::clone(w))
+            } else {
+                if inner.shader_roots.is_empty() {
+                    return Err("the renderer is not up yet".into());
+                }
+                // The pipeline the waiting commands leave active, as the renderer will see it.
+                let tag = inner
+                    .pending
+                    .iter()
+                    .rev()
+                    .filter_map(|p| match p {
+                        Pending::Commands(commands) => {
+                            commands.iter().rev().find_map(|c| match c {
+                                Command::RenderPipeline(tag) => Some(tag.as_str()),
+                                _ => None,
+                            })
+                        }
+                        Pending::Upload(_) | Pending::Warmup(_) => None,
+                    })
+                    .next()
+                    .unwrap_or("")
+                    .to_string();
+                let resolver = inner.resolver();
+                resolver.set_pipeline(&tag);
+                return Ok(resolver.describe(shader));
+            }
+        };
+        let shader = shader.to_string();
+        worker
+            .unwrap()
+            .call(move |r| r.shader_passes(&shader))
+            .ok_or_else(|| "the renderer has stopped".to_string())
     }
 
     fn shader_warmup(&self, request: ShaderWarmupRequest) -> Result<String, String> {
-        let mut inner = self.inner.lock().unwrap();
-        if let Some(renderer) = inner.renderer.as_mut() {
-            return renderer.shader_warmup(request);
-        }
-        if request.stats {
-            return Err("shader statistics require an active renderer".into());
-        }
-        // Like uploads and draws, preparation waits for the device and keeps submission order.
-        inner.pending.push(Pending::Warmup(request));
-        Ok("{}".into())
+        let worker = {
+            let mut inner = self.inner.lock().unwrap();
+            if let Some(w) = &inner.worker {
+                Some(Arc::clone(w))
+            } else {
+                if request.stats {
+                    return Err("shader statistics require an active renderer".into());
+                }
+                // Like uploads and draws, preparation waits for the device and keeps submission order.
+                inner.pending.push(Pending::Warmup(request));
+                return Ok("{}".into());
+            }
+        };
+        worker
+            .unwrap()
+            .call(move |r| r.shader_warmup(request))
+            .ok_or_else(|| "the renderer has stopped".to_string())?
     }
 
     fn kernel_threads(
@@ -216,10 +513,19 @@ impl RenderBackend for GpuBackend {
         kernel: &str,
         keywords: &[String],
     ) -> Result<[u32; 3], String> {
-        match self.inner.lock().unwrap().renderer.as_mut() {
-            Some(r) => r.kernel_threads(file, kernel, keywords),
-            None => Err("the renderer is not up yet".into()),
-        }
+        let worker = self
+            .inner
+            .lock()
+            .unwrap()
+            .worker
+            .clone()
+            .ok_or_else(|| "the renderer is not up yet".to_string())?;
+        let file = file.to_string();
+        let kernel = kernel.to_string();
+        let keywords = keywords.to_vec();
+        worker
+            .call(move |r| r.kernel_threads(&file, &kernel, &keywords))
+            .ok_or_else(|| "the renderer has stopped".to_string())?
     }
 
     fn with_plugin_context(&self, work: &mut dyn FnMut()) {
@@ -228,6 +534,9 @@ impl RenderBackend for GpuBackend {
         if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore {
             return work();
         }
+        // Flush any queued texture/target uploads before the plugin inspects the GL share group.
+        self.flush();
+        crate::render::gl_interop::mark_render_thread();
         // The renderer is not held meanwhile: the plugin may call back into the engine.
         let mut ran = false;
         let _ = crate::render::gl_interop::with(|_| {
@@ -240,18 +549,22 @@ impl RenderBackend for GpuBackend {
     }
 
     fn native_texture(&self, texture: u64, depth: bool) -> u64 {
-        match self.inner.lock().unwrap().renderer.as_mut() {
-            Some(r) => r.native_texture(texture, depth),
-            None => 0,
-        }
+        let Some(worker) = self.inner.lock().unwrap().worker.clone() else {
+            return 0;
+        };
+        worker
+            .call(move |r| r.native_texture(texture, depth))
+            .unwrap_or(0)
     }
 
     #[cfg(target_os = "macos")]
     fn render_buffer_texture(&self, texture: u64, image: u8) -> u64 {
-        match self.inner.lock().unwrap().renderer.as_mut() {
-            Some(r) => r.metal_render_buffer_texture(texture, image),
-            None => 0,
-        }
+        let Some(worker) = self.inner.lock().unwrap().worker.clone() else {
+            return 0;
+        };
+        worker
+            .call(move |r| r.metal_render_buffer_texture(texture, image))
+            .unwrap_or(0)
     }
 
     fn external_texture(
@@ -260,19 +573,22 @@ impl RenderBackend for GpuBackend {
         native: u64,
         info: &unbound_runtime::render_protocol::ExternalTextureInfo,
     ) -> Result<(), String> {
-        match self.inner.lock().unwrap().renderer.as_mut() {
-            Some(r) => r.external_texture(texture, native, info),
-            None => Err("the renderer is not up yet".into()),
-        }
+        let worker = self
+            .inner
+            .lock()
+            .unwrap()
+            .worker
+            .clone()
+            .ok_or_else(|| "the renderer is not up yet".to_string())?;
+        let info = *info;
+        worker
+            .call(move |r| r.external_texture(texture, native, &info))
+            .ok_or_else(|| "the renderer has stopped".to_string())?
     }
 
     fn read_pixels(&self, texture: u64, rect: [i32; 4], float: bool) -> Option<Vec<u8>> {
-        self.inner
-            .lock()
-            .unwrap()
-            .renderer
-            .as_mut()?
-            .read_pixels(texture, rect, float)
+        let worker = self.inner.lock().unwrap().worker.clone()?;
+        worker.call(move |r| r.read_pixels(texture, rect, float))?
     }
 
     fn read_texture(
@@ -284,14 +600,9 @@ impl RenderBackend for GpuBackend {
         float: bool,
         current_attachment: bool,
     ) -> Option<Vec<u8>> {
-        self.inner.lock().unwrap().renderer.as_mut()?.read_texture(
-            texture,
-            mip,
-            layer,
-            rect,
-            float,
-            current_attachment,
-        )
+        let worker = self.inner.lock().unwrap().worker.clone()?;
+        worker
+            .call(move |r| r.read_texture(texture, mip, layer, rect, float, current_attachment))?
     }
 }
 
@@ -374,5 +685,74 @@ SubShader {
         // Without shader roots nothing can answer before the renderer.
         assert!(GpuBackend::new().shader_passes("Test/Pipelines").is_err());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn render_queue_backpressures_second_end_frame_until_first_completes() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::time::Duration;
+
+        let queue = RenderQueue::new();
+        // Frame 1 Enqueues immediately (0 -> 1 in flight) and mid-frame chunks do not block.
+        assert!(queue.push_commands(vec![Command::ColorSpace(1)], 0));
+        assert!(queue.push_commands(vec![Command::EndFrame], 1));
+
+        let pushed_second = Arc::new(AtomicBool::new(false));
+        let flag = Arc::clone(&pushed_second);
+        let q2 = Arc::clone(&queue);
+        let producer = std::thread::spawn(move || {
+            assert!(q2.push_commands(vec![Command::EndFrame], 1));
+            flag.store(true, Ordering::SeqCst);
+        });
+
+        // Give the producer a moment to hit the backpressure wait.
+        std::thread::sleep(Duration::from_millis(25));
+        assert!(!pushed_second.load(Ordering::SeqCst));
+
+        // FIFO: first item is ColorSpace(1) (0 end frames), second is EndFrame (1 end frame).
+        let first = queue.pop().unwrap();
+        assert!(matches!(first, RenderMsg::Commands { end_frames: 0, .. }));
+        assert!(!pushed_second.load(Ordering::SeqCst));
+
+        let second = queue.pop().unwrap();
+        assert!(matches!(second, RenderMsg::Commands { end_frames: 1, .. }));
+        queue.complete_frames(1);
+
+        producer.join().unwrap();
+        assert!(pushed_second.load(Ordering::SeqCst));
+
+        let third = queue.pop().unwrap();
+        assert!(matches!(third, RenderMsg::Commands { end_frames: 1, .. }));
+        queue.complete_frames(1);
+        queue.close();
+        assert!(queue.pop().is_none());
+    }
+
+    #[test]
+    fn render_queue_close_unblocks_waiting_end_frame_and_sync_reply() {
+        use std::time::Duration;
+
+        let queue = RenderQueue::new();
+        // Queue a sync command and an in-flight frame, then close (simulating worker unwind).
+        let sync_rx = queue
+            .push_sync_commands(vec![Command::ColorSpace(1)], 0)
+            .expect("open queue accepts sync commands");
+        assert!(queue.push_commands(vec![Command::EndFrame], 1));
+
+        let q2 = Arc::clone(&queue);
+        let blocked_producer =
+            std::thread::spawn(move || q2.push_commands(vec![Command::EndFrame], 1));
+
+        std::thread::sleep(Duration::from_millis(25));
+        queue.close();
+
+        // Both the queued sync receiver and the backpressured EndFrame producer unblock immediately.
+        assert!(sync_rx.recv().is_err());
+        assert!(!blocked_producer.join().unwrap());
+        assert!(
+            queue
+                .push_sync_commands(vec![Command::ColorSpace(0)], 0)
+                .is_none()
+        );
     }
 }

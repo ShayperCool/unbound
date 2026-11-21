@@ -105,6 +105,7 @@ impl Default for AppOptions {
 
 struct Driver {
     inner: Box<dyn FrameDriver>,
+    backend: Arc<GpuBackend>,
     last: Option<Instant>,
     frames: u32,
     stopped: bool,
@@ -130,7 +131,9 @@ impl Driver {
     fn stop(&mut self) {
         if !self.stopped {
             self.stopped = true;
+            self.backend.flush();
             self.inner.shutdown();
+            self.backend.flush();
         }
     }
 }
@@ -233,12 +236,13 @@ pub fn run(
             .build(),
     );
     app.add_plugins(render::UnityRenderPlugin {
-        backend,
+        backend: backend.clone(),
         shader_roots: options.shader_roots.clone(),
         shader_compiler: options.shader_compiler.clone(),
     });
     app.insert_non_send(Driver {
         inner: driver,
+        backend,
         last: None,
         frames: 0,
         stopped: false,

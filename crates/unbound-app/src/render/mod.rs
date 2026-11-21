@@ -58,17 +58,28 @@ struct WindowCapture {
 /// view's rectangle), drawn apart from the window. A window macOS reports covered gets no image
 /// of its own to read (no surface texture is acquired while it is occluded), so a capture of the
 /// window's own image would be black there.
-#[derive(Resource, Clone, Default)]
+#[derive(Resource, Clone)]
 pub struct WindowCaptures {
+    backend: Arc<GpuBackend>,
     pending: Arc<Mutex<Vec<WindowCapture>>>,
     /// The latest complete frame (the executor's `Presented`).
     latest: Arc<Mutex<Option<Presented>>>,
 }
 
 impl WindowCaptures {
+    fn new(backend: Arc<GpuBackend>) -> Self {
+        Self {
+            backend,
+            pending: Arc::new(Mutex::new(Vec::new())),
+            latest: Arc::new(Mutex::new(None)),
+        }
+    }
+
     /// Asks for the image of the latest complete frame as a PNG file at `path`; `written` is
-    /// called once it is written or has failed.
+    /// called once it is written or has failed. Flushes the render thread first so the captured
+    /// frame matches the exact frame just submitted by the game thread.
     pub fn request(&self, path: PathBuf, written: impl FnOnce() + Send + 'static) {
+        self.backend.flush();
         let frame = self.latest.lock().unwrap().clone();
         self.pending.lock().unwrap().push(WindowCapture {
             frame,
@@ -96,7 +107,7 @@ struct Presenter {
 
 impl Plugin for UnityRenderPlugin {
     fn build(&self, app: &mut App) {
-        let captures = WindowCaptures::default();
+        let captures = WindowCaptures::new(self.backend.clone());
         app.insert_resource(captures.clone());
         let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;

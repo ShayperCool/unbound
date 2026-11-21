@@ -163,10 +163,47 @@ thread_local! {
     static RENDER_THREAD: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
-/// Marks this thread as the renderer's (the game's: it submits the rendering commands): the
-/// context stays current on it after [`with`].
+/// Marks this thread as the game thread that keeps the plugins' OpenGL context current after
+/// [`with`] returns (so scripts' direct OpenGL calls find a context current).
 pub fn mark_render_thread() {
     RENDER_THREAD.with(|render| render.set(true));
+}
+
+/// Temporarily releases the plugins' OpenGL context on the game thread while the dedicated render
+/// thread runs a synchronous operation that may bind it, then restores it on drop. No-op when
+/// not on OpenGL Core or when no plugin context has been created.
+pub struct MainThreadContextGuard {
+    restore: bool,
+}
+
+pub fn suspend_for_render_thread() -> MainThreadContextGuard {
+    if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore
+        || !RENDER_THREAD.with(|render| render.get())
+    {
+        return MainThreadContextGuard { restore: false };
+    }
+    let slot = INTEROP
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let Some(Ok(interop)) = slot.as_ref() else {
+        return MainThreadContextGuard { restore: false };
+    };
+    interop.release_current();
+    MainThreadContextGuard { restore: true }
+}
+
+impl Drop for MainThreadContextGuard {
+    fn drop(&mut self) {
+        if !self.restore {
+            return;
+        }
+        let slot = INTEROP
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some(Ok(interop)) = slot.as_ref() {
+            let _ = interop.make_current();
+        }
+    }
 }
 
 /// Runs `work` with the plugins' context current on this thread; on another thread than the
