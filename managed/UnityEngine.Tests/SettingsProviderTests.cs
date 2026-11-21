@@ -97,7 +97,19 @@ namespace UnityEngine.Tests
 #pragma warning disable CS0618
         [PreferenceItem(TestPrefix + "Legacy")]
         static void UnitLegacyPref() => s_PrefCalls++;
+
+        [PreferenceItem(TestPrefix + "WrongPref")]
+        static int UnitWrongPref() => 0;
 #pragma warning restore CS0618
+
+        [SettingsProvider]
+        static SettingsProvider UnitGeneric<T>() => new SettingsProvider("Project/" + TestPrefix + "Generic", SettingsScope.Project);
+
+        sealed class InstanceHolder
+        {
+            [SettingsProvider]
+            SettingsProvider UnitInstance() => new SettingsProvider("Project/" + TestPrefix + "Instance", SettingsScope.Project);
+        }
 
         [Fact]
         public void ConstructorNormalizesPathLabelTokensAndKeywords()
@@ -249,7 +261,22 @@ namespace UnityEngine.Tests
                 Assert.True(SettingsService.Exists("Preferences/" + TestPrefix + "Legacy"));
                 Assert.False(SettingsService.Exists("Project/" + TestPrefix + "BadSig"));
                 Assert.False(SettingsService.Exists("Project/" + TestPrefix + "Missing"));
+                Assert.False(SettingsService.Exists("Project/" + TestPrefix + "Generic"));
+                Assert.False(SettingsService.Exists("Project/" + TestPrefix + "Instance"));
+                Assert.False(SettingsService.Exists("Preferences/" + TestPrefix + "WrongPref"));
                 Assert.Throws<NullReferenceException>(() => SettingsService.Exists(null));
+
+                // Methods of the wrong shape are reported once, on the first lookup; an instance
+                // method is passed over; a throwing factory fails on every lookup.
+                int lookups = 12;
+                string Message(LogType type, string text) => type + ":" + text;
+                var counts = logs.GroupBy(l => Message(l.Type, l.Message)).ToDictionary(g => g.Key, g => g.Count());
+                Assert.Equal(1, counts[Message(LogType.Error, "static UnityEditor.SettingsProvider UnitBadSignature(Int32) does not match UnityEditor.SettingsProviderAttribute expected signature.\n Use static UnityEditor.SettingsProvider signature()")]);
+                Assert.Equal(1, counts[Message(LogType.Error, "static System.Collections.Generic.IEnumerable`1[UnityEditor.SettingsProvider] UnitBadGroup() does not match UnityEditor.SettingsProviderGroupAttribute expected signature.\n Use static UnityEditor.SettingsProvider[] signature()")]);
+                Assert.Equal(1, counts[Message(LogType.Error, "static Int32 UnitWrongPref() does not match UnityEditor.PreferenceItem expected signature.\n Use static Void signature()")]);
+                Assert.Equal(1, counts[Message(LogType.Error, "static UnityEditor.SettingsProvider UnitGeneric[T]() is a generic method. UnityEditor.SettingsProviderAttribute cannot be applied to it.")]);
+                Assert.DoesNotContain(logs, l => l.Message.Contains("UnitInstance"));
+                Assert.Equal(lookups, counts[Message(LogType.Error, "Cannot create Settings Provider for: UnitThrowing")]);
 
                 logs.Clear();
                 var all = SettingsService.FetchSettingsProviders();
@@ -258,8 +285,7 @@ namespace UnityEngine.Tests
                 Assert.Contains(logs, l => l.Type == LogType.Warning && l.Message == $"There are 2 settings providers with the same name Project/{TestPrefix}Dup in Project scope.");
                 Assert.Contains(logs, l => l.Type == LogType.Error && l.Message == "Cannot create Settings Provider for: UnitThrowing");
                 Assert.Contains(logs, l => l.Type == LogType.Error && l.Message == "Cannot create Settings Providers for: UnitThrowingGroup");
-                Assert.Contains(logs, l => l.Type == LogType.Error && l.Message.Contains("UnitBadSignature(Int32) does not match UnityEditor.SettingsProviderAttribute expected signature."));
-                Assert.Contains(logs, l => l.Type == LogType.Error && l.Message.Contains("UnitBadGroup() does not match UnityEditor.SettingsProviderGroupAttribute expected signature."));
+                Assert.DoesNotContain(logs, l => l.Message.Contains("expected signature") || l.Message.Contains("generic method"));
 
                 var userOnly = SettingsService.FetchSettingsProviders(SettingsScope.User);
                 Assert.All(userOnly, p => Assert.Equal(SettingsScope.User, p.scope));

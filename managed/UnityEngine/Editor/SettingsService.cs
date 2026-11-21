@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Unbound.Runtime;
 using UnityEngine;
 
 namespace UnityEditor
@@ -86,21 +87,51 @@ namespace UnityEditor
             return false;
         }
 
+        /// <summary>The methods of each attribute that have its shape, found once per game domain:
+        /// a static method of another shape is reported then, once (an instance method is passed
+        /// over silently), while factories run, and report their failures, on every lookup
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/settingsprovider fetch.logs,
+        /// fetch.repeatedLogs and fetch.wrongShapeLogs).</summary>
+        static int s_DiscoveredGeneration = -1;
+        static MethodInfo[] s_ProviderMethods, s_GroupMethods, s_PreferenceMethods;
+
+        static void Discover()
+        {
+            if (s_DiscoveredGeneration == GameDomain.Generation) return;
+            s_ProviderMethods = MethodsOfShape<SettingsProviderAttribute>(typeof(SettingsProvider));
+            s_GroupMethods = MethodsOfShape<SettingsProviderGroupAttribute>(typeof(SettingsProvider[]));
+            s_PreferenceMethods = MethodsOfShape<PreferenceItem>(typeof(void));
+            s_DiscoveredGeneration = GameDomain.Generation;
+        }
+
+        static MethodInfo[] MethodsOfShape<TAttribute>(Type returnType) where TAttribute : Attribute
+        {
+            var found = new List<MethodInfo>();
+            foreach (var method in TypeCache.GetMethodsWithAttribute<TAttribute>())
+            {
+                if (!method.IsStatic) continue;
+                if (method.ContainsGenericParameters)
+                    Debug.LogError($"static {method} is a generic method. {typeof(TAttribute)} cannot be applied to it.");
+                else if (method.ReturnType != returnType || method.GetParameters().Length != 0)
+                    Debug.LogError($"static {method} does not match {typeof(TAttribute)} expected signature.\n Use static {TypeName(returnType)} signature()");
+                else
+                    found.Add(method);
+            }
+            return found.ToArray();
+        }
+
+        /// <summary>A type as a method's text names it: a primitive or void by its short name.</summary>
+        static string TypeName(Type type) => type.IsPrimitive || type == typeof(void) ? type.Name : type.ToString();
+
         static IEnumerable<SettingsProvider> FetchSettingProviderFromAttribute()
         {
-            foreach (var method in TypeCache.GetMethodsWithAttribute<SettingsProviderAttribute>())
+            Discover();
+            foreach (var method in s_ProviderMethods)
             {
-                if (!MatchesSignature(method, typeof(SettingsProvider)))
-                {
-                    Debug.LogError($"{FormatMethodSignature(method)} does not match {typeof(SettingsProviderAttribute)} expected signature.\n Use static {typeof(SettingsProvider)} signature()");
-                    continue;
-                }
-
                 SettingsProvider provider = null;
                 try
                 {
-                    var factory = Delegate.CreateDelegate(typeof(Func<SettingsProvider>), method) as Func<SettingsProvider>;
-                    provider = factory?.Invoke();
+                    provider = (SettingsProvider)method.Invoke(null, null);
                 }
                 catch
                 {
@@ -112,73 +143,33 @@ namespace UnityEditor
 
         static IEnumerable<SettingsProvider> FetchSettingProvidersFromAttribute()
         {
-            foreach (var method in TypeCache.GetMethodsWithAttribute<SettingsProviderGroupAttribute>())
+            Discover();
+            foreach (var method in s_GroupMethods)
             {
-                if (!MatchesSignature(method, typeof(SettingsProvider[])))
-                {
-                    Debug.LogError($"{FormatMethodSignature(method)} does not match {typeof(SettingsProviderGroupAttribute)} expected signature.\n Use static {typeof(SettingsProvider[])} signature()");
-                    continue;
-                }
-
                 SettingsProvider[] group = null;
                 try
                 {
-                    var factory = Delegate.CreateDelegate(typeof(Func<SettingsProvider[]>), method) as Func<SettingsProvider[]>;
-                    group = factory?.Invoke();
+                    group = (SettingsProvider[])method.Invoke(null, null);
                 }
                 catch
                 {
                     Debug.LogError("Cannot create Settings Providers for: " + method.Name);
                 }
-
-                if (group != null)
-                {
-                    foreach (var provider in group)
-                        yield return provider;
-                }
+                if (group == null) continue;
+                foreach (var provider in group)
+                    yield return provider;
             }
         }
 
         static IEnumerable<SettingsProvider> FetchPreferenceItems()
         {
-            foreach (var method in TypeCache.GetMethodsWithAttribute<PreferenceItem>())
+            Discover();
+            foreach (var method in s_PreferenceMethods)
             {
-                if (!method.IsStatic || method.ContainsGenericParameters || method.ReturnType != typeof(void) || method.GetParameters().Length != 0)
-                    continue;
-
-                var callback = Delegate.CreateDelegate(typeof(Action), method, false) as Action;
-                if (callback == null)
-                    continue;
-
+                var callback = (Action)Delegate.CreateDelegate(typeof(Action), method);
                 foreach (PreferenceItem attr in method.GetCustomAttributes(typeof(PreferenceItem), true))
-                {
-                    SettingsProvider provider = null;
-                    try
-                    {
-                        provider = new SettingsProvider("Preferences/" + attr.name, SettingsScope.User)
-                        {
-                            guiHandler = _ => callback(),
-                        };
-                    }
-                    catch
-                    {
-                        Debug.LogError("Cannot create preference wrapper for: " + attr.name);
-                    }
-                    yield return provider;
-                }
+                    yield return new SettingsProvider("Preferences/" + attr.name, SettingsScope.User) { guiHandler = _ => callback() };
             }
-        }
-
-        static bool MatchesSignature(MethodInfo method, Type returnType) =>
-            method.IsStatic && !method.ContainsGenericParameters && method.ReturnType == returnType && method.GetParameters().Length == 0;
-
-        static string FormatMethodSignature(MethodInfo method)
-        {
-            var parameters = method.GetParameters();
-            string paramList = parameters.Length == 0
-                ? string.Empty
-                : string.Join(", ", parameters.Select(p => p.ParameterType.Name));
-            return (method.IsStatic ? "static " : string.Empty) + method.ReturnType + " " + method.Name + "(" + paramList + ")";
         }
     }
 }
