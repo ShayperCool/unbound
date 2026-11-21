@@ -129,15 +129,96 @@ struct DrawUniform {
     pad: [f32; 4],
 }
 
-/// A compiled program's texture bind group and what it was built from (program, color space,
-/// per slot the handle as bound, element bits included, and its texture's generation).
-type ProgramTextures = (wgpu::BindGroup, (u32, i32, Vec<(u64, u64)>));
+/// Idle frame retention window for cached program texture and buffer bind groups.
+const PROGRAM_BINDING_IDLE_FRAMES: u64 = 8;
+
+/// Canonical tag for a ShaderLab texture default name, disambiguating unbound/fallback slots in
+/// [`TextureGroupKey`].
+fn default_texture_tag(default: &str) -> u8 {
+    match default {
+        "white" => 1,
+        "black" => 2,
+        "unbound-unassigned" => 3,
+        "gray" | "grey" => 4,
+        "linearGray" => 5,
+        "bump" => 6,
+        "red" => 7,
+        _ => 0,
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct TextureSlotKey {
+    /// Effective raw handle (depth-element bit included), or 0 when unbound or unreadable as float.
+    raw: u64,
+    /// Texture generation (0 when unbound/missing; `default_tag` disambiguates).
+    generation: u64,
+    /// Default texture tag used when unbound/missing or falling back.
+    default_tag: u8,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct TextureGroupKey {
+    program: u32,
+    space: i32,
+    slots: Vec<TextureSlotKey>,
+}
+
+struct TextureGroupLookup<'a> {
+    program: u32,
+    space: i32,
+    slots: &'a [TextureSlotKey],
+}
+
+impl std::hash::Hash for TextureGroupLookup<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.program.hash(state);
+        self.space.hash(state);
+        self.slots.hash(state);
+    }
+}
+
+impl bevy::platform::collections::Equivalent<TextureGroupKey> for TextureGroupLookup<'_> {
+    fn equivalent(&self, key: &TextureGroupKey) -> bool {
+        key.program == self.program && key.space == self.space && key.slots.as_slice() == self.slots
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct BufferSlotKey {
+    /// Buffer handle (0 when unbound -> `empty_storage`).
+    handle: u64,
+    /// Whether this slot binds the buffer's hidden counter instead of its data buffer.
+    counter: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct BufferGroupKey {
+    program: u32,
+    slots: Vec<BufferSlotKey>,
+}
+
+struct BufferGroupLookup<'a> {
+    program: u32,
+    slots: &'a [BufferSlotKey],
+}
+
+impl std::hash::Hash for BufferGroupLookup<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.program.hash(state);
+        self.slots.hash(state);
+    }
+}
+
+impl bevy::platform::collections::Equivalent<BufferGroupKey> for BufferGroupLookup<'_> {
+    fn equivalent(&self, key: &BufferGroupKey) -> bool {
+        key.program == self.program && key.slots.as_slice() == self.slots
+    }
+}
 
 struct GpuMaterial {
     /// Shared: each draw holds it while it is planned (a copy per draw cost more than drawing).
     resolved: Arc<ResolvedMaterial>,
-    /// Per pass: the textures of the program it last drew with.
-    pass_textures: Vec<Option<ProgramTextures>>,
     /// The program variant (and whether it is the error shader's) per (pass, global keyword
     /// set, linear colour space, standalone mesh replay).
     /// By pass, keyword set, color space, instancing mode ([`InstancingMode`]) and whether the
@@ -889,6 +970,19 @@ pub struct UnityRenderer {
     empty_storage: Option<wgpu::Buffer>,
     kernels: compute::KernelCache,
     compute_bindings: compute::BindingCache,
+    /// Cached program texture bind groups (group 1), keyed by program, color space, and resolved
+    /// slot handles/generations/defaults; evicted on texture/sampler/anisotropy changes and
+    /// retired after idle frames.
+    program_texture_groups:
+        bevy::platform::collections::HashMap<TextureGroupKey, (u64, wgpu::BindGroup)>,
+    /// Cached program storage-buffer bind groups (group 3), keyed by program and resolved buffer
+    /// handles; evicted on buffer release/recreation and retired after idle frames.
+    program_buffer_groups:
+        bevy::platform::collections::HashMap<BufferGroupKey, (u64, wgpu::BindGroup)>,
+    /// Reusable scratch buffers for zero-allocation bind group cache lookups.
+    texture_slot_scratch: Vec<TextureSlotKey>,
+    texture_override_scratch: Vec<usize>,
+    buffer_slot_scratch: Vec<BufferSlotKey>,
     /// The pass writing a counter at a byte offset that is not a multiple of 4.
     unaligned_count: Option<(wgpu::ComputePipeline, wgpu::BindGroupLayout)>,
     generation: u64,
@@ -1015,6 +1109,11 @@ impl UnityRenderer {
             empty_storage: None,
             kernels: Default::default(),
             compute_bindings: Default::default(),
+            program_texture_groups: Default::default(),
+            program_buffer_groups: Default::default(),
+            texture_slot_scratch: Vec::new(),
+            texture_override_scratch: Vec::new(),
+            buffer_slot_scratch: Vec::new(),
             unaligned_count: None,
             generation: 1,
             draw_buffer: None,
@@ -1098,6 +1197,7 @@ impl UnityRenderer {
     ) {
         let device = self.device.clone();
         if let Some((previous, sampler)) = &previous {
+            self.evict_texture_groups(handle);
             if *sampler != gpu.sampler_key {
                 self.compute_bindings.release_sampler(&gpu.texture);
             }
@@ -1374,9 +1474,11 @@ impl UnityRenderer {
                 self.depth_main_groups.retain(|(h, _), _| *h != handle);
                 self.feedback_copies.remove(&handle);
                 self.full_resolution.remove(&handle);
+                self.evict_texture_groups(handle);
             }
             Upload::TextureMipBias(handle, bias) => {
                 self.texture_mip_biases.insert(handle, bias);
+                self.evict_texture_groups(handle);
                 if let Some(texture) = self.textures.get_mut(&handle) {
                     self.generation += 1;
                     let bias = if bias == 0.0 || !self.conventions.mip_bias {
@@ -1393,6 +1495,7 @@ impl UnityRenderer {
                 }
             }
             Upload::TextureSampler(handle, [filter, wrap_u, wrap_v, wrap_w, aniso]) => {
+                self.evict_texture_groups(handle);
                 if let Some(texture) = self.textures.get_mut(&handle) {
                     self.generation += 1;
                     if (
@@ -1416,12 +1519,10 @@ impl UnityRenderer {
             }
             Upload::UpdateMaterial(handle, material) => {
                 let resolved = self.resolver.resolve(&material);
-                let pass_textures = vec![None; resolved.passes.len() + resolved.all.len()];
                 self.materials.insert(
                     handle,
                     GpuMaterial {
                         resolved: Arc::new(resolved),
-                        pass_textures,
                         variants: Default::default(),
                         blocks: Default::default(),
                     },
@@ -1431,6 +1532,21 @@ impl UnityRenderer {
                 self.materials.remove(&handle);
             }
         }
+    }
+
+    /// Drops cached program texture bind groups referencing `handle`.
+    fn evict_texture_groups(&mut self, handle: u64) {
+        self.program_texture_groups.retain(|key, _| {
+            !key.slots
+                .iter()
+                .any(|slot| handle::split(slot.raw).0 == handle)
+        });
+    }
+
+    /// Drops cached program storage-buffer bind groups referencing `handle`.
+    pub(super) fn evict_buffer_groups(&mut self, handle: u64) {
+        self.program_buffer_groups
+            .retain(|key, _| !key.slots.iter().any(|slot| slot.handle == handle));
     }
 
     /// A texture's anisotropic level under the global setting.
@@ -1778,7 +1894,102 @@ impl UnityRenderer {
         if self.compiled.buffer_layout(id).is_none() {
             return Ok(None);
         }
-        if self.empty_storage.is_none() {
+        let program = self.compiled.program(id).clone();
+        let has_buf_override = overrides
+            .iter()
+            .any(|(_, v)| matches!(v, owned::PropertyValue::Buffer(_)));
+        let globals_index = &self.globals_index;
+        // The buffer bound to a slot: a random write target at its UAV register (a global the
+        // managed Graphics.SetRandomWriteTarget sets; cleared to no buffer, 0) first, a released
+        // one binding nothing; else one of its name.
+        let handle_of = |b: &unbound_shaders::BufferSlot| {
+            let target = b.register.and_then(|r| {
+                let key = format!("{RANDOM_WRITE_TARGET}{r}");
+                match globals_index.find(globals, &key) {
+                    Some(owned::PropertyValue::Buffer(h)) if *h != 0 => Some(*h),
+                    _ => None,
+                }
+            });
+            target.or_else(|| {
+                if has_buf_override
+                    && let Some(h) = overrides.iter().rev().find_map(|(n, v)| match v {
+                        owned::PropertyValue::Buffer(h) if *n == b.name => Some(*h),
+                        _ => None,
+                    })
+                {
+                    return Some(h);
+                }
+                if let Some(owned::PropertyValue::Buffer(h)) = material.get(&b.name) {
+                    return Some(*h);
+                }
+                match globals_index.find(globals, &b.name) {
+                    Some(owned::PropertyValue::Buffer(h)) => Some(*h),
+                    _ => None,
+                }
+            })
+        };
+
+        self.buffer_slot_scratch.clear();
+        let mut any_missing = false;
+        for b in &program.buffers {
+            let direct = handle_of(b);
+            if !b.read_only
+                && let Some(buffer) = direct.and_then(|h| self.buffers.get_mut(&h))
+            {
+                buffer.revision = buffer.revision.wrapping_add(1);
+            }
+            // glslang's hidden counter of an Append or Counter buffer (`<name>@count`) binds
+            // that buffer's counter.
+            if let Some(owner) = b.name.strip_suffix(compute::COUNTER_SUFFIX) {
+                let owner_handle = program
+                    .buffers
+                    .iter()
+                    .find(|o| o.name == owner)
+                    .and_then(&handle_of);
+                let has_counter = owner_handle
+                    .and_then(|h| self.buffers.get_mut(&h))
+                    .is_some_and(|g| {
+                        g.counter_used |= g.counter.is_some();
+                        g.counter.is_some()
+                    });
+                if !has_counter {
+                    self.warn_once(format!("drawcount{shader}{owner}"), || {
+                        format!(
+                            "shader `{shader}` uses the counter of buffer `{owner}`, which is not set or not an Append or Counter buffer: the draw is skipped"
+                        )
+                    });
+                    return Err(());
+                }
+                self.buffer_slot_scratch.push(BufferSlotKey {
+                    handle: owner_handle.unwrap(),
+                    counter: true,
+                });
+            } else if let Some(h) = direct.filter(|h| self.buffers.contains_key(h)) {
+                self.buffer_slot_scratch.push(BufferSlotKey {
+                    handle: h,
+                    counter: false,
+                });
+            } else {
+                any_missing = true;
+                self.buffer_slot_scratch.push(BufferSlotKey {
+                    handle: 0,
+                    counter: false,
+                });
+            }
+        }
+
+        if !any_missing {
+            let lookup = BufferGroupLookup {
+                program: id,
+                slots: &self.buffer_slot_scratch,
+            };
+            if let Some((last_frame, group)) = self.program_buffer_groups.get_mut(&lookup) {
+                *last_frame = self.frame_number;
+                return Ok(Some(group.clone()));
+            }
+        }
+
+        if any_missing && self.empty_storage.is_none() {
             self.empty_storage = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("unbound empty storage"),
                 size: 256,
@@ -1786,64 +1997,17 @@ impl UnityRenderer {
                 mapped_at_creation: false,
             }));
         }
-        let program = self.compiled.program(id).clone();
-        // The buffer bound to a slot: a random write target at its UAV register (a global the
-        // managed Graphics.SetRandomWriteTarget sets; cleared to no buffer, 0) first, a released
-        // one binding nothing; else one of its name.
-        let handle_of = |b: &unbound_shaders::BufferSlot| {
-            let target = b.register.and_then(|r| {
-                let key = format!("{RANDOM_WRITE_TARGET}{r}");
-                globals.iter().find_map(|(n, v)| match v {
-                    owned::PropertyValue::Buffer(h) if *n == key && *h != 0 => Some(*h),
-                    _ => None,
-                })
-            });
-            target.or_else(|| {
-                overrides
-                    .iter()
-                    .rev()
-                    .chain(material.properties.iter())
-                    .chain(globals.iter())
-                    .find_map(|(n, v)| match v {
-                        owned::PropertyValue::Buffer(h) if *n == b.name => Some(*h),
-                        _ => None,
-                    })
-            })
-        };
+        let slot_keys = self.buffer_slot_scratch.clone();
         let mut missing = Vec::new();
-        let mut bound: Vec<wgpu::Buffer> = Vec::with_capacity(program.buffers.len());
-        for b in &program.buffers {
-            if !b.read_only {
-                if let Some(buffer) = handle_of(b).and_then(|h| self.buffers.get_mut(&h)) {
-                    buffer.revision = buffer.revision.wrapping_add(1);
-                }
-            }
-            // glslang's hidden counter of an Append or Counter buffer (`<name>@count`) binds
-            // that buffer's counter.
-            let owner = b.name.strip_suffix(compute::COUNTER_SUFFIX);
-            let buffer = match owner {
-                Some(owner) => program
-                    .buffers
-                    .iter()
-                    .find(|o| o.name == owner)
-                    .and_then(&handle_of)
-                    .and_then(|h| self.buffers.get_mut(&h))
-                    .and_then(|g| {
-                        g.counter_used |= g.counter.is_some();
-                        g.counter.clone()
-                    }),
-                None => handle_of(b)
-                    .and_then(|h| self.buffers.get(&h))
-                    .map(|g| g.buffer.clone()),
+        let mut bound: Vec<wgpu::Buffer> = Vec::with_capacity(slot_keys.len());
+        for (slot, b) in slot_keys.iter().zip(&program.buffers) {
+            let buffer = if slot.counter {
+                self.buffers[&slot.handle].counter.clone()
+            } else if slot.handle != 0 {
+                Some(self.buffers[&slot.handle].buffer.clone())
+            } else {
+                None
             };
-            if let (Some(owner), None) = (owner, &buffer) {
-                self.warn_once(format!("drawcount{shader}{owner}"), || {
-                    format!(
-                        "shader `{shader}` uses the counter of buffer `{owner}`, which is not set or not an Append or Counter buffer: the draw is skipped"
-                    )
-                });
-                return Err(());
-            }
             bound.push(buffer.unwrap_or_else(|| {
                 missing.push(b.name.clone());
                 self.empty_storage.clone().unwrap()
@@ -1872,78 +2036,75 @@ impl UnityRenderer {
                 )
             });
         }
+        if !any_missing {
+            self.program_buffer_groups.insert(
+                BufferGroupKey {
+                    program: id,
+                    slots: slot_keys,
+                },
+                (self.frame_number, group.clone()),
+            );
+        }
         Ok(Some(group))
     }
 
     fn program_bind_group(
         &mut self,
         handle: u64,
-        pass: usize,
         id: u32,
         space: i32,
         globals: &[(String, owned::PropertyValue)],
         overrides: &[(String, owned::PropertyValue)],
         main_override: u64,
     ) -> Option<wgpu::BindGroup> {
+        let resolved = self.materials.get(&handle)?.resolved.clone();
         let program = self.compiled.program(id).clone();
-        let texture_override = |name: &str| {
-            overrides.iter().find_map(|(n, v)| match v {
-                owned::PropertyValue::Texture { handle, .. } if n == name => Some(*handle),
-                _ => None,
-            })
-        };
-        // Per-draw textures make a bind group of their own, not cached on the material.
-        let mut cached = !overrides
-            .iter()
-            .any(|(_, v)| matches!(v, owned::PropertyValue::Texture { .. }));
-        let slots: Vec<(
-            u64,
-            String,
-            unbound_shaders::TextureDim,
-            unbound_shaders::TextureSlot,
-        )> = {
-            let resolved = &self.materials.get(&handle)?.resolved;
-            program
-                .textures
-                .iter()
-                .enumerate()
-                .map(|(k, name)| {
-                    let (mut texture, default) = resolved.texture(name);
-                    if let Some(h) = texture_override(name) {
-                        texture = h;
-                    }
-                    if texture == 0
-                        && !resolved.declares(name)
-                        && let Some((_, owned::PropertyValue::Texture { handle, .. })) =
-                            globals.iter().find(|(n, _)| n == name)
-                    {
-                        texture = *handle;
-                    }
-                    let dim = program
-                        .texture_dims
-                        .get(k)
-                        .copied()
-                        .unwrap_or(unbound_shaders::TextureDim::D2);
-                    // Typed 2D _MainTex slots use the program layout, but still receive a
-                    // renderer's main texture (a sprite's, for example).
-                    if name == "_MainTex"
-                        && dim == unbound_shaders::TextureDim::D2
-                        && main_override != 0
-                    {
-                        texture = main_override;
-                    }
-                    let slot = program.texture_slots.get(k).copied().unwrap_or_default();
-                    (texture, default, dim, slot)
-                })
-                .collect()
-        };
         let is_2d = |dim: unbound_shaders::TextureDim| dim == unbound_shaders::TextureDim::D2;
-        // A handle may name the texture's depth element (render protocol 6): its view comes from
-        // the depth copy, brought up to date for this draw even when the bind group is cached.
-        let raw: Vec<u64> = slots.iter().map(|(h, ..)| *h).collect();
-        let mut element_views: Vec<Option<wgpu::TextureView>> = Vec::with_capacity(slots.len());
-        for (k, (h, _, dim, slot)) in slots.iter().enumerate() {
-            let (base, depth) = handle::split(*h);
+
+        // Collect only the texture overrides once so each slot checks at most a handful of entries.
+        self.texture_override_scratch.clear();
+        for (idx, (_, v)) in overrides.iter().enumerate() {
+            if matches!(v, owned::PropertyValue::Texture { .. }) {
+                self.texture_override_scratch.push(idx);
+            }
+        }
+
+        self.texture_slot_scratch.clear();
+        let mut cached = true;
+        for (k, name) in program.textures.iter().enumerate() {
+            let (mut raw_h, default) = resolved.texture_ref(name);
+            for &idx in &self.texture_override_scratch {
+                if overrides[idx].0 == *name
+                    && let owned::PropertyValue::Texture { handle: h, .. } = overrides[idx].1
+                {
+                    raw_h = h;
+                    break;
+                }
+            }
+            if raw_h == 0
+                && !resolved.declares(name)
+                && let Some(owned::PropertyValue::Texture { handle: h, .. }) =
+                    self.globals_index.find(globals, name)
+            {
+                raw_h = *h;
+            }
+            let dim = program
+                .texture_dims
+                .get(k)
+                .copied()
+                .unwrap_or(unbound_shaders::TextureDim::D2);
+            // Typed 2D _MainTex slots use the program layout, but still receive a
+            // renderer's main texture (a sprite's, for example).
+            if name == "_MainTex" && dim == unbound_shaders::TextureDim::D2 && main_override != 0 {
+                raw_h = main_override;
+            }
+            let slot = program.texture_slots.get(k).copied().unwrap_or_default();
+            if slot.multisampled || slot.integer() {
+                cached = false;
+            }
+            let (mut base, depth) = handle::split(raw_h);
+            // A handle may name the texture's depth element (render protocol 6): its view comes
+            // from the depth copy, brought up to date for this draw even when cached.
             if !slot.multisampled
                 && self
                     .textures
@@ -1956,184 +2117,92 @@ impl UnityRenderer {
                     self.depth_reads.entry(base).or_insert(false);
                 }
             }
-            element_views.push(if slot.multisampled || !depth {
-                None
-            } else if slot.sample == SampleKind::Float && is_2d(*dim) {
-                self.depth_element_view(base)
-            } else if slot.depth() && is_2d(*dim) {
-                None
-            } else {
-                let name = program.textures[k].clone();
-                self.warn_once(format!("depth-element-slot{id}{name}"), || {
-                    format!("texture `{name}` samples a render texture's depth element, which its slot ({:?}, {dim:?}) cannot read; the slot reads its default", slot.sample)
-                });
-                None
-            });
-        }
-        let mut slots: Vec<_> = slots
-            .into_iter()
-            .map(|(h, d, dim, slot)| (handle::split(h).0, d, dim, slot))
-            .collect();
-        for k in 0..slots.len() {
-            let (h, slot) = (slots[k].0, slots[k].3);
-            if !slot.integer()
-                && !handle::split(raw[k]).1
-                && self.unreadable_as_float(h, &program.textures[k])
-            {
-                slots[k].0 = 0;
-            }
-        }
-        // Integer slots read a float texture's values as their bits, within its size, and zeros
-        // where nothing is bound (as Unity does on OpenGL Core: tests/projects/rtdepth
-        // fmt.*.stencil.uint, fmt.*.globalStencil.uint). The bits are copied before every draw.
-        // A depth-only texture a slot reads outside a comparison (as floats, or their bits, by
-        // itself or as its depth element) reads its filled copy.
-        for (h, _, dim, slot) in slots.iter() {
-            if is_2d(*dim) && !slot.comparison && !slot.depth() && !slot.multisampled {
-                self.fill_depth_copy(*h);
-            }
-        }
-        let mut integer_views: Vec<Option<wgpu::TextureView>> = Vec::with_capacity(slots.len());
-        for (k, (h, _, dim, slot)) in slots.iter().enumerate() {
-            if !slot.integer() || slot.multisampled {
-                integer_views.push(None);
-                continue;
-            }
-            let name = &program.textures[k];
-            let texture = self.textures.get(h);
-            // An array slot with nothing bound reads Unity's default array texture's bits.
-            if *dim == unbound_shaders::TextureDim::D2Array
-                && texture.is_none()
-                && !handle::split(raw[k]).1
-            {
-                let signed = slot.sample == SampleKind::Sint;
-                integer_views.push(Some(self.integer_array_default(signed, space)));
-                continue;
-            }
-            // Integer slots read 2D textures otherwise (their default is a 2D texture of zeros):
-            // any other slot shape skips the draw, bound or not, as does a layered texture or a
-            // depth element.
-            if !is_2d(*dim)
-                || handle::split(raw[k]).1
-                || texture.is_some_and(|t| t.layers > 1 || t.volume)
-            {
-                let name = name.clone();
-                let h = *h;
-                self.warn_once(format!("integer-slot{id}{name}{h}"), || {
-                    format!("integer texture `{name}` ({dim:?}) of a shader is bound to texture {h}, whose shape or element it cannot read: the draw is skipped")
-                });
-                return None;
-            }
-            let Some(t) = texture else {
-                integer_views.push(None);
-                continue;
-            };
-            let signed = slot.sample == SampleKind::Sint;
-            // An integer texture is read as it is, by a slot of its signedness (a slot of the
-            // other one reads zeros).
-            let format = t.texture.format();
-            if resources::is_integer(format) {
-                let same = format.sample_type(None, None)
-                    == Some(if signed {
-                        wgpu::TextureSampleType::Sint
-                    } else {
-                        wgpu::TextureSampleType::Uint
+            if !slot.multisampled && depth {
+                if slot.sample == SampleKind::Float && is_2d(dim) {
+                    self.depth_element_view(base);
+                } else if !(slot.depth() && is_2d(dim)) {
+                    let name = name.clone();
+                    self.warn_once(format!("depth-element-slot{id}{name}"), || {
+                        format!(
+                            "texture `{name}` samples a render texture's depth element, which its slot ({:?}, {dim:?}) cannot read; the slot reads its default",
+                            slot.sample
+                        )
                     });
-                let view = (same && !self.drawn_into(*h)).then(|| t.view.clone());
-                let view = match view {
-                    Some(view) => Some(view),
-                    None if same => self.feedback_view(*h, space),
-                    None => {
-                        let (name, h) = (name.clone(), *h);
-                        self.warn_once(format!("int-sign{id}{name}{h}"), || {
-                            format!("integer texture `{name}` reads the {format:?} render texture {h} of the other signedness: it reads zeros")
-                        });
-                        None
-                    }
-                };
-                integer_views.push(view);
-                continue;
+                }
             }
-            let (width, height, source) = (t.width, t.height, self.sampled_texture_view(t, space));
-            let fits = self
-                .bit_views
-                .get(&(*h, signed))
-                .is_some_and(|(w, hh, _)| *w == width && *hh == height);
-            if !fits {
-                let view = self
-                    .device
-                    .create_texture(&wgpu::TextureDescriptor {
-                        label: Some("unbound integer bits"),
-                        size: wgpu::Extent3d {
-                            width,
-                            height,
-                            depth_or_array_layers: 1,
-                        },
-                        mip_level_count: 1,
-                        sample_count: 1,
-                        dimension: wgpu::TextureDimension::D2,
-                        format: if signed {
-                            wgpu::TextureFormat::Rgba32Sint
-                        } else {
-                            wgpu::TextureFormat::Rgba32Uint
-                        },
-                        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                            | wgpu::TextureUsages::TEXTURE_BINDING,
-                        view_formats: &[],
-                    })
-                    .create_view(&wgpu::TextureViewDescriptor::default());
-                self.bit_views.insert((*h, signed), (width, height, view));
+            if !slot.integer() && !depth && self.unreadable_as_float(base, name) {
+                base = 0;
+                if !slot.multisampled {
+                    raw_h = 0;
+                }
             }
-            let target = self.bit_views[&(*h, signed)].2.clone();
-            self.pre_draw.push(DepthCopy {
-                depth: source,
-                target: target.clone(),
-                kind: if signed {
-                    CopyKind::SintBits
-                } else {
-                    CopyKind::UintBits
-                },
+            // A depth-only texture a slot reads outside a comparison reads its filled copy.
+            if is_2d(dim) && !slot.comparison && !slot.depth() && !slot.multisampled {
+                self.fill_depth_copy(base);
+            }
+            // A texture the target draws into is read through a copy made for this draw.
+            if self.drawn_into(base) {
+                cached = false;
+            }
+            let generation = if is_2d(dim) {
+                self.texture_or_default(base, default).generation
+            } else {
+                self.textures.get(&base).map_or(0, |t| t.generation)
+            };
+            self.texture_slot_scratch.push(TextureSlotKey {
+                raw: raw_h,
+                generation,
+                default_tag: default_texture_tag(default),
             });
-            integer_views.push(Some(target));
         }
-        let generations: Vec<(u64, u64)> = slots
-            .iter()
-            .zip(&raw)
-            .map(|((h, d, dim, _), raw)| {
-                let generation = if is_2d(*dim) {
-                    self.texture_or_default(*h, d).generation
-                } else {
-                    self.textures.get(h).map_or(0, |t| t.generation)
-                };
-                // The color and the depth element of one texture are different bindings.
-                (*raw, generation)
-            })
-            .collect();
-        let stamp = (id, space, generations);
-        // A texture the target draws into is read through a copy made for this draw.
-        if slots.iter().any(|(h, ..)| self.drawn_into(*h)) {
-            cached = false;
+
+        if cached {
+            let lookup = TextureGroupLookup {
+                program: id,
+                space,
+                slots: &self.texture_slot_scratch,
+            };
+            if let Some((last_frame, bg)) = self.program_texture_groups.get_mut(&lookup) {
+                *last_frame = self.frame_number;
+                return Some(bg.clone());
+            }
         }
-        if cached
-            && let Some(Some((bg, built))) = self.materials[&handle].pass_textures.get(pass)
-            && *built == stamp
-        {
-            return Some(bg.clone());
-        }
-        let mut views = Vec::new();
-        let mut samplers = Vec::new();
-        for (k, (h, d, dim, slot)) in slots.iter().enumerate() {
-            let depth_element = handle::split(raw[k]).1;
+
+        let slot_keys = self.texture_slot_scratch.clone();
+        let count = slot_keys.len();
+        let mut views = Vec::with_capacity(count);
+        let mut samplers = Vec::with_capacity(count);
+        for (k, slot_key) in slot_keys.iter().enumerate() {
+            let raw_h = slot_key.raw;
+            let (mut h, depth_element) = handle::split(raw_h);
+            let name = &program.textures[k];
+            let default = resolved.texture_ref(name).1;
+            let dim = program
+                .texture_dims
+                .get(k)
+                .copied()
+                .unwrap_or(unbound_shaders::TextureDim::D2);
+            let slot = program.texture_slots.get(k).copied().unwrap_or_default();
+            if slot.multisampled && !slot.integer() && !depth_element {
+                let is_int = self
+                    .textures
+                    .get(&h)
+                    .is_some_and(|t| resources::is_integer(t.texture.format()));
+                if is_int {
+                    h = 0;
+                }
+            }
+
             // A sampler is the texture's, or the state its name spells where the program could
             // not pair it with one texture (samples through inline samplers use their texture's
             // own sampler: `unbound_shaders`' samplers module); comparison samplers compare
             // less-or-equal (Unity's shadow maps, without reversed depth).
             let mut key = match slot.inline {
                 Some(inline) => resources::SamplerKey::inline(inline),
-                None if is_2d(*dim) => self.texture_or_default(*h, d).sampler_key,
+                None if is_2d(dim) => self.texture_or_default(h, default).sampler_key,
                 None => self
                     .textures
-                    .get(h)
+                    .get(&h)
                     .map_or(resources::SamplerKey::LINEAR_CLAMP, |t| t.sampler_key),
             };
             // The global setting is every 2D and 2D array texture's, render textures included
@@ -2141,14 +2210,14 @@ impl UnityRenderer {
             // where its depth buffer turns anisotropy off: managed
             // RenderTexture.SamplerAnisoLevel); shadow maps compare and cubemaps keep their own
             // level (measured, tests/projects/urp's reflection under ForceEnable).
-            let planar = is_2d(*dim) || *dim == unbound_shaders::TextureDim::D2Array;
+            let planar = is_2d(dim) || dim == unbound_shaders::TextureDim::D2Array;
             if slot.inline.is_none() && !slot.comparison && planar {
                 key.aniso = self.effective_aniso(key.aniso);
             }
             if slot.comparison {
                 let state = self
                     .textures
-                    .get(h)
+                    .get(&h)
                     .filter(|t| t.depth_texture.is_some())
                     .and_then(|t| t.depth_compare);
                 key.compare = resources::depth_comparison_mode(
@@ -2164,15 +2233,15 @@ impl UnityRenderer {
                 }
             }
             if slot.inline.is_none() {
-                key.lod_bias_bits = self.sampler_lod_bias(*h);
+                key.lod_bias_bits = self.sampler_lod_bias(h);
             }
 
             if slot.multisampled {
                 let Some(view) = self
-                    .multisampled_view(raw[k], *dim, slot.sample, space)
-                    .filter(|_| !self.drawn_into(*h))
+                    .multisampled_view(raw_h, dim, slot.sample, space)
+                    .filter(|_| !self.drawn_into(h))
                 else {
-                    let name = program.textures[k].clone();
+                    let name = name.clone();
                     self.warn_once(format!("multisampled-slot{id}{name}{h}"), || format!(
                         "multisampled texture `{name}` requires a compatible 2D bindTextureMS render texture distinct from the draw target: the draw is skipped"));
                     return None;
@@ -2185,6 +2254,93 @@ impl UnityRenderer {
                 }));
                 views.push(view);
             } else if slot.integer() {
+                // Integer slots read a float texture's values as their bits, within its size, and
+                // zeros where nothing is bound (as Unity does on OpenGL Core: tests/projects/rtdepth
+                // fmt.*.stencil.uint, fmt.*.globalStencil.uint). The bits are copied before every draw.
+                let signed = slot.sample == SampleKind::Sint;
+                let texture = self.textures.get(&h);
+                let integer_view = if dim == unbound_shaders::TextureDim::D2Array
+                    && texture.is_none()
+                    && !depth_element
+                {
+                    Some(self.integer_array_default(signed, space))
+                } else if !is_2d(dim)
+                    || depth_element
+                    || texture.is_some_and(|t| t.layers > 1 || t.volume)
+                {
+                    let name = name.clone();
+                    self.warn_once(format!("integer-slot{id}{name}{h}"), || {
+                        format!("integer texture `{name}` ({dim:?}) of a shader is bound to texture {h}, whose shape or element it cannot read: the draw is skipped")
+                    });
+                    return None;
+                } else if let Some(t) = texture {
+                    let format = t.texture.format();
+                    if resources::is_integer(format) {
+                        let same = format.sample_type(None, None)
+                            == Some(if signed {
+                                wgpu::TextureSampleType::Sint
+                            } else {
+                                wgpu::TextureSampleType::Uint
+                            });
+                        let view = (same && !self.drawn_into(h)).then(|| t.view.clone());
+                        match view {
+                            Some(view) => Some(view),
+                            None if same => self.feedback_view(h, space),
+                            None => {
+                                let name = name.clone();
+                                self.warn_once(format!("int-sign{id}{name}{h}"), || {
+                                    format!("integer texture `{name}` reads the {format:?} render texture {h} of the other signedness: it reads zeros")
+                                });
+                                None
+                            }
+                        }
+                    } else {
+                        let (width, height, source) =
+                            (t.width, t.height, self.sampled_texture_view(t, space));
+                        let fits = self
+                            .bit_views
+                            .get(&(h, signed))
+                            .is_some_and(|(w, hh, _)| *w == width && *hh == height);
+                        if !fits {
+                            let view = self
+                                .device
+                                .create_texture(&wgpu::TextureDescriptor {
+                                    label: Some("unbound integer bits"),
+                                    size: wgpu::Extent3d {
+                                        width,
+                                        height,
+                                        depth_or_array_layers: 1,
+                                    },
+                                    mip_level_count: 1,
+                                    sample_count: 1,
+                                    dimension: wgpu::TextureDimension::D2,
+                                    format: if signed {
+                                        wgpu::TextureFormat::Rgba32Sint
+                                    } else {
+                                        wgpu::TextureFormat::Rgba32Uint
+                                    },
+                                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                                        | wgpu::TextureUsages::TEXTURE_BINDING,
+                                    view_formats: &[],
+                                })
+                                .create_view(&wgpu::TextureViewDescriptor::default());
+                            self.bit_views.insert((h, signed), (width, height, view));
+                        }
+                        let target = self.bit_views[&(h, signed)].2.clone();
+                        self.pre_draw.push(DepthCopy {
+                            depth: source,
+                            target: target.clone(),
+                            kind: if signed {
+                                CopyKind::SintBits
+                            } else {
+                                CopyKind::UintBits
+                            },
+                        });
+                        Some(target)
+                    }
+                } else {
+                    None
+                };
                 // Integers are read unfiltered.
                 samplers.push(self.sampler(resources::SamplerKey {
                     filter: 0,
@@ -2196,28 +2352,32 @@ impl UnityRenderer {
                     lod_bias_bits: 0,
                     base_level_only: false,
                 }));
-                let view = match integer_views[k].take() {
+                let view = match integer_view {
                     Some(view) => view,
-                    None => self.integer_default(slot.sample == SampleKind::Sint),
+                    None => self.integer_default(signed),
                 };
                 views.push(view);
-            } else if let Some(view) = element_views[k].take() {
+            } else if depth_element && slot.sample == SampleKind::Float && is_2d(dim) {
                 samplers.push(self.sampler(key));
+                let view = match self.depth_element_view(h) {
+                    Some(view) => view,
+                    None => self.texture_or_default(0, default).view_for(space).clone(),
+                };
                 views.push(view);
             } else if depth_element && !slot.depth() {
                 // A depth element the slot or the texture cannot provide: the slot's default.
                 samplers.push(self.sampler(key));
-                views.push(match is_2d(*dim) {
-                    true => self.texture_or_default(0, d).view_for(space).clone(),
-                    false => self.dim_default(*dim, d),
+                views.push(match is_2d(dim) {
+                    true => self.texture_or_default(0, default).view_for(space).clone(),
+                    false => self.dim_default(dim, default),
                 });
             } else if slot.depth() {
                 samplers.push(self.sampler(key));
                 // The texture's depth when its shape is the slot's, else a far-plane default.
-                let cube_slot = *dim == unbound_shaders::TextureDim::Cube;
+                let cube_slot = dim == unbound_shaders::TextureDim::Cube;
                 let view = self
                     .textures
-                    .get(h)
+                    .get(&h)
                     .filter(|t| t.cube == cube_slot)
                     .and_then(|t| {
                         t.depth_sample
@@ -2226,29 +2386,29 @@ impl UnityRenderer {
                     })
                     .unwrap_or_else(|| self.depth_default(cube_slot));
                 views.push(view);
-            } else if is_2d(*dim) && self.drawn_into(*h) {
+            } else if is_2d(dim) && self.drawn_into(h) {
                 samplers.push(self.sampler(key));
-                let view = match self.feedback_view(*h, space) {
+                let view = match self.feedback_view(h, space) {
                     Some(view) => view,
-                    None => self.texture_or_default(0, d).view_for(space).clone(),
+                    None => self.texture_or_default(0, default).view_for(space).clone(),
                 };
                 views.push(view);
-            } else if is_2d(*dim) {
+            } else if is_2d(dim) {
                 samplers.push(self.sampler(key));
-                views.push(self.sampled_texture_view(self.texture_or_default(*h, d), space));
-            } else if self.drawn_into(*h) {
+                views.push(self.sampled_texture_view(self.texture_or_default(h, default), space));
+            } else if self.drawn_into(h) {
                 samplers.push(self.sampler(key));
-                let (name, h) = (program.textures[k].clone(), *h);
+                let name = name.clone();
                 self.warn_once(format!("feedback-dim{id}{name}{h}"), || {
                     format!("texture `{name}` ({dim:?}) samples render texture {h} while drawing into it: it reads its default")
                 });
-                views.push(self.dim_default(*dim, d));
+                views.push(self.dim_default(dim, default));
             } else {
                 samplers.push(self.sampler(key));
                 // A cubemap bound to a cube slot, a 3D texture to a 3D slot, a 2D texture (of
                 // any layers) to an array slot; anything else reads the slot's default.
                 use unbound_shaders::TextureDim;
-                let bound = self.textures.get(h).and_then(|t| match dim {
+                let bound = self.textures.get(&h).and_then(|t| match dim {
                     TextureDim::Cube if t.cube => Some(self.sampled_texture_view(t, space)),
                     TextureDim::CubeArray if t.cube_array => {
                         Some(self.sampled_texture_view(t, space))
@@ -2271,18 +2431,19 @@ impl UnityRenderer {
                 });
                 match bound {
                     Some(view) => views.push(view),
-                    None => views.push(self.dim_default(*dim, d)),
+                    None => views.push(self.dim_default(dim, default)),
                 }
             }
         }
-        let mut entries = Vec::new();
+        let mut entries = Vec::with_capacity(2 * count + program.texture_aliases.len());
         for (k, (view, sampler)) in views.iter().zip(&samplers).enumerate() {
             entries.push(wgpu::BindGroupEntry {
                 binding: 2 * k as u32,
                 resource: wgpu::BindingResource::TextureView(view),
             });
             // Only the samplers the program samples through are bindings of its layout.
-            if !slots[k].3.sampler {
+            let slot = program.texture_slots.get(k).copied().unwrap_or_default();
+            if !slot.sampler {
                 continue;
             }
             entries.push(wgpu::BindGroupEntry {
@@ -2302,15 +2463,15 @@ impl UnityRenderer {
             layout: self.compiled.texture_layout(id),
             entries: &entries,
         });
-        if cached
-            && let Some(slot) = self
-                .materials
-                .get_mut(&handle)
-                .unwrap()
-                .pass_textures
-                .get_mut(pass)
-        {
-            *slot = Some((bg.clone(), stamp));
+        if cached {
+            self.program_texture_groups.insert(
+                TextureGroupKey {
+                    program: id,
+                    space,
+                    slots: slot_keys,
+                },
+                (self.frame_number, bg.clone()),
+            );
         }
         Some(bg)
     }
@@ -2410,6 +2571,7 @@ impl UnityRenderer {
         t.depth_copy = Some(view);
         t.generation = generation;
         t.bind_groups = [None, None];
+        self.evict_texture_groups(handle);
         self.depth_reads.insert(handle, true);
         true
     }
@@ -2464,6 +2626,7 @@ impl UnityRenderer {
         t.depth_copy = Some(view.clone());
         t.generation = generation;
         t.bind_groups = [None, None];
+        self.evict_texture_groups(handle);
         if current && self.depth_target.is_none() {
             self.depth_target = Some(handle);
         }
@@ -3502,6 +3665,13 @@ impl UnityRenderer {
                     self.frame_number += 1;
                     self.readback.frame(self.frame_number);
                     self.compute_bindings.frame(self.frame_number);
+                    let cutoff = self
+                        .frame_number
+                        .saturating_sub(PROGRAM_BINDING_IDLE_FRAMES - 1);
+                    self.program_texture_groups
+                        .retain(|_, (last, _)| *last >= cutoff);
+                    self.program_buffer_groups
+                        .retain(|_, (last, _)| *last >= cutoff);
                     self.state.target = None;
                     self.target_handles = (0, 0);
                     #[cfg(target_os = "macos")]
@@ -3774,13 +3944,10 @@ impl UnityRenderer {
                         for handle in handles {
                             let material = self.materials[&handle].resolved.material.clone();
                             let resolved = self.resolver.resolve(&material);
-                            let pass_textures =
-                                vec![None; resolved.passes.len() + resolved.all.len()];
                             self.materials.insert(
                                 handle,
                                 GpuMaterial {
                                     resolved: Arc::new(resolved),
-                                    pass_textures,
                                     variants: Default::default(),
                                     blocks: Default::default(),
                                 },
@@ -3808,10 +3975,8 @@ impl UnityRenderer {
                     let anisotropy = [mode, forced_min, global_max];
                     if anisotropy != self.anisotropy {
                         self.anisotropy = anisotropy;
-                        // The materials' bind groups hold samplers of the old levels.
-                        for material in self.materials.values_mut() {
-                            material.pass_textures.iter_mut().for_each(|p| *p = None);
-                        }
+                        // Cached bind groups hold samplers of the old anisotropy levels.
+                        self.program_texture_groups.clear();
                         for texture in self.textures.values_mut().chain(self.defaults.values_mut())
                         {
                             texture.bind_groups = [None, None];
@@ -4935,7 +5100,6 @@ impl UnityRenderer {
             }
             let Some(material_bg) = self.program_bind_group(
                 draw.material,
-                pass_index,
                 id,
                 space,
                 &globals,
@@ -7023,5 +7187,140 @@ mod tests {
         procedural.vertex_inputs = false;
         assert!(external_index_refusal(index, (4, 1, 6), 0, &[procedural]).is_some());
         assert!(external_index_refusal(index, (4, 0, 6), 0, &[stand_in(false)]).is_some());
+    }
+
+    #[test]
+    fn texture_and_buffer_group_lookups_match_owned_keys_and_disambiguate_defaults() {
+        let mut tex_map: bevy::platform::collections::HashMap<TextureGroupKey, u32> =
+            Default::default();
+        let slots_white = vec![
+            TextureSlotKey {
+                raw: 42,
+                generation: 7,
+                default_tag: default_texture_tag("white"),
+            },
+            TextureSlotKey {
+                raw: 0,
+                generation: 0,
+                default_tag: default_texture_tag("white"),
+            },
+        ];
+        let slots_bump = vec![
+            TextureSlotKey {
+                raw: 42,
+                generation: 7,
+                default_tag: default_texture_tag("white"),
+            },
+            TextureSlotKey {
+                raw: 0,
+                generation: 0,
+                default_tag: default_texture_tag("bump"),
+            },
+        ];
+        tex_map.insert(
+            TextureGroupKey {
+                program: 3,
+                space: 1,
+                slots: slots_white.clone(),
+            },
+            100,
+        );
+        tex_map.insert(
+            TextureGroupKey {
+                program: 3,
+                space: 1,
+                slots: slots_bump.clone(),
+            },
+            200,
+        );
+        assert_eq!(
+            tex_map.get(&TextureGroupLookup {
+                program: 3,
+                space: 1,
+                slots: &slots_white,
+            }),
+            Some(&100)
+        );
+        assert_eq!(
+            tex_map.get(&TextureGroupLookup {
+                program: 3,
+                space: 1,
+                slots: &slots_bump,
+            }),
+            Some(&200)
+        );
+        assert_eq!(
+            tex_map.get(&TextureGroupLookup {
+                program: 3,
+                space: 0,
+                slots: &slots_white,
+            }),
+            None
+        );
+        // Different generation invalidates lookup even for the same raw handle.
+        let mut stale = slots_white.clone();
+        stale[0].generation = 8;
+        assert_eq!(
+            tex_map.get(&TextureGroupLookup {
+                program: 3,
+                space: 1,
+                slots: &stale,
+            }),
+            None
+        );
+
+        let mut buf_map: bevy::platform::collections::HashMap<BufferGroupKey, u32> =
+            Default::default();
+        let buf_slots = vec![
+            BufferSlotKey {
+                handle: 11,
+                counter: false,
+            },
+            BufferSlotKey {
+                handle: 11,
+                counter: true,
+            },
+        ];
+        buf_map.insert(
+            BufferGroupKey {
+                program: 9,
+                slots: buf_slots.clone(),
+            },
+            300,
+        );
+        assert_eq!(
+            buf_map.get(&BufferGroupLookup {
+                program: 9,
+                slots: &buf_slots,
+            }),
+            Some(&300)
+        );
+        let mut non_counter = buf_slots.clone();
+        non_counter[1].counter = false;
+        assert_eq!(
+            buf_map.get(&BufferGroupLookup {
+                program: 9,
+                slots: &non_counter,
+            }),
+            None
+        );
+
+        // Every built-in default texture name maps to a distinct non-zero tag (gray/grey share).
+        let distinct = [
+            "white",
+            "black",
+            "unbound-unassigned",
+            "gray",
+            "linearGray",
+            "bump",
+            "red",
+        ];
+        let mut tags = std::collections::HashSet::new();
+        for name in distinct {
+            let tag = default_texture_tag(name);
+            assert_ne!(tag, 0);
+            assert!(tags.insert(tag), "duplicate tag for {name}");
+        }
+        assert_eq!(default_texture_tag("gray"), default_texture_tag("grey"));
     }
 }

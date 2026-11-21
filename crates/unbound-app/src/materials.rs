@@ -121,8 +121,8 @@ pub struct ResolvedMaterial {
 }
 
 impl ResolvedMaterial {
-    /// A texture property's texture handle (0: none) and default texture name.
-    pub fn texture(&self, name: &str) -> (u64, String) {
+    /// A texture property's texture handle (0: none) and default texture name, without allocating.
+    pub fn texture_ref(&self, name: &str) -> (u64, &str) {
         let handle = match self.material.get(name) {
             Some(PropertyValue::Texture { handle, .. }) => *handle,
             _ => 0,
@@ -130,11 +130,17 @@ impl ResolvedMaterial {
         // Declared empty texture defaults use gray; a sampler without a ShaderLab property has
         // a distinct neutral placeholder (resources defaults.texels, builtinrp events probes).
         let default = match self.lab.property(name) {
-            Some(PropertyDefault::Texture(t)) if !t.is_empty() => t.clone(),
-            Some(PropertyDefault::Texture(_)) => "gray".to_string(),
-            _ => "unbound-unassigned".to_string(),
+            Some(PropertyDefault::Texture(t)) if !t.is_empty() => t.as_str(),
+            Some(PropertyDefault::Texture(_)) => "gray",
+            _ => "unbound-unassigned",
         };
         (handle, default)
+    }
+
+    /// A texture property's texture handle (0: none) and default texture name.
+    pub fn texture(&self, name: &str) -> (u64, String) {
+        let (handle, default) = self.texture_ref(name);
+        (handle, default.to_string())
     }
 
     /// Whether the shader's Properties block declares `name`: a declared texture reads the

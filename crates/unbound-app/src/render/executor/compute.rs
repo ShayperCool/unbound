@@ -784,6 +784,7 @@ fn main() {
     }
 
     pub(super) fn release_buffer(&mut self, handle: u64) {
+        self.evict_buffer_groups(handle);
         if let Some(buffer) = self.buffers.remove(&handle) {
             self.compute_bindings.release_buffer(&buffer.buffer);
             if let Some(counter) = buffer.counter {
