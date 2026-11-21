@@ -1,0 +1,47 @@
+{"k":"ctor.empty","v":"null|null|1|0"}
+{"k":"ctor.prop","v":"count|null|0"}
+{"k":"ctor.custom","v":"count|Custom|0"}
+{"k":"ctor.nullProp","v":"null|NoProp"}
+{"k":"ctor.emptyLabelIsEmpty","v":true}
+{"k":"creation.bool","v":"Toggle|unity-input-flag|Flag|1"}
+{"k":"creation.int","v":"IntegerField|unity-input-count|Count|42|0|Count tip"}
+{"k":"creation.intClasses","v":"1|1|1"}
+{"k":"creation.long","v":"LongField|unity-input-bigValue|Big Value|10000000000"}
+{"k":"creation.uint","v":"UnsignedIntegerField|unity-input-u32|U32|3000000000"}
+{"k":"creation.ulong","v":"UnsignedLongField|unity-input-u64|U64|12000000000000"}
+{"k":"creation.float","v":"FloatField|unity-input-ratio|Ratio|1.5"}
+{"k":"creation.double","v":"DoubleField|unity-input-precise|Precise|3.25"}
+{"k":"creation.string","v":"TextField|unity-input-title|Title|hello|-1"}
+{"k":"label.custom","v":"My Count"}
+{"k":"label.empty","v":""}
+{"k":"label.emptyNoLabelClass","v":true}
+{"k":"label.afterDynamicChange","v":"Updated Label|1|42"}
+{"k":"label.afterResetNull","v":"Count"}
+{"k":"bind.bySerializedProperty","v":"IntegerField|unity-input-count|Count|42"}
+{"k":"bind.bySerializedObject","v":"count|42"}
+{"k":"bind.detachedBeforeAttachChildren","v":0}
+{"k":"bind.detachedAfterAttach","v":"1|42"}
+{"k":"bind.nested","v":"IntegerField|unity-input-nested.score|Score|19"}
+{"k":"bind.missingPathChildren","v":0}
+{"k":"sync.initialImmediate","v":"count=42;count=42"}
+{"k":"sync.initialAfterFrames","v":"count=42;count=42"}
+{"k":"sync.afterTargetEdit","v":"99;count=99;count=99"}
+{"k":"sync.afterFieldEdit","v":"123;count=123;count=123"}
+{"k":"sync.afterUnrelated","v":"0,0"}
+{"k":"sync.descendantEventFiltered","v":"0,1"}
+{"k":"rebind.first","v":"IntegerField|unity-input-count|Count|11"}
+{"k":"rebind.sameTypeReuse","v":"1|1|IntegerField|unity-input-otherInt|Other Int|22"}
+{"k":"rebind.secondSo","v":"1|44"}
+{"k":"rebind.intToLong","v":"0|1|LongField|unity-input-bigValue|Big Value|3333333333"}
+{"k":"rebind.longToBool","v":"1|Toggle|unity-input-flag|Flag|0"}
+{"k":"unbind.afterUnbindState","v":"1|0"}
+{"k":"unbind.afterTargetEdit","v":"42|0"}
+{"k":"unbind.afterChildEdit","v":"500|1"}
+{"k":"unbind.detachedCancelChildren","v":0}
+{"k":"mixed.initial","v":"1:1|1:10|0"}
+{"k":"mixed.afterPrimaryEdit","v":"10,10|0|10"}
+{"k":"coexist.beforeUnbind","v":"42|rt-tip-0|rt-msg-0"}
+{"k":"coexist.afterBothUpdate","v":"61|rt-tip-1|rt-msg-1"}
+{"k":"coexist.afterUnbind","v":"61|rt-tip-2|rt-msg-2"}
+{"k":"logs","v":[]}
+{"k":"complete","v":true}
