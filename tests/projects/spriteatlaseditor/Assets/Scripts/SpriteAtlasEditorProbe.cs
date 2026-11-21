@@ -164,6 +164,9 @@ static class SpriteAtlasEditorProbe
                     var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
                     bool dirtyBefore = EditorUtility.IsDirty(atlas);
                     if (touch) atlas.SetIncludeInBuild(!atlas.IsIncludeInBuild());
+                    // A variant whose variantMultiplier is out of range gets a master.
+                    if (Path.GetFileNameWithoutExtension(path) == "Scaled")
+                        atlas.SetMasterAtlas(AssetDatabase.LoadAssetAtPath<SpriteAtlas>("Assets/WholeWriteAtlases/Current.spriteatlas"));
                     AssetDatabase.SaveAssetIfDirty(atlas);
                     return $"dirtyBefore={dirtyBefore}|asset=" + File.ReadAllText(path);
                 });

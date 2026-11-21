@@ -314,7 +314,9 @@ importers and loaded `SpriteAtlas` instances independent until reimport, writes 
   `SaveAssetIfDirty` (V1) or `WriteImportSettingsIfDirty` (V2), `Untouched` changes nothing, nor
   does `Current` (the same settings in the current format); each records whether the atlas or
   importer was dirty before and the whole file written.
-  The V2 profile also loads `LazyVariant` (a variant of `LazyMaster`) and changes the master's
+  The V1 profile also gives `Scaled` (a variant whose `variantMultiplier` is 2) a master with
+  `SetMasterAtlas` before saving it, and saves `ScaledAlone` (the same) and
+  `ScaledPlain` (not a variant) without it. The V2 profile also loads `LazyVariant` (a variant of `LazyMaster`) and changes the master's
   packing settings in memory before anything asks the variant for its settings.
 
 Not measured: either kind of atlas in the other kind's packer mode.
