@@ -540,5 +540,54 @@ namespace UnityEngine.Tests
             }
             Assert.Equal(new[] { new Vector3Int(-1, 0, 0), new Vector3Int(0, 0, 0), new Vector3Int(1, 0, 0), new Vector3Int(2, 0, 0) }, reported);
         }
+
+        /// <summary>Logs what the tilemap answers, from GetTileData, for the cell to the right.</summary>
+        public class RightViewTile : TileBase
+        {
+            public readonly List<string> seen = new List<string>();
+
+            public override void GetTileData(Vector3Int position, ITilemap tilemap, ref TileData tileData)
+            {
+                var right = position + Vector3Int.right;
+                seen.Add($"{tilemap.GetTile(position)?.name}|{tilemap.GetTile(right)?.name}|{tilemap.GetColor(right)}");
+            }
+        }
+
+        [Fact]
+        public void TilesSeeThePreviewLayerThroughITilemapWhicheverLayerRefreshes()
+        {
+            var map = NewTilemap();
+            var actual = Tile<Tile>("Actual");
+            actual.color = Color.green;
+            var preview = Tile<Tile>("Preview");
+            preview.color = Color.blue;
+            map.SetTile(new Vector3Int(1, 0, 0), actual);
+            map.SetEditorPreviewTile(new Vector3Int(1, 0, 0), preview);
+            var viewer = Tile<RightViewTile>("A");
+            map.SetTile(new Vector3Int(0, 0, 0), viewer);
+            viewer.seen.Clear();
+            map.RefreshTile(new Vector3Int(0, 0, 0));
+            Assert.Equal(new[] { $"A|Preview|{Color.blue}" }, viewer.seen);
+
+            // With a preview tile on its own cell, the actual tile sees that preview tile.
+            var overlay = Tile<RightViewTile>("V");
+            map.SetEditorPreviewTile(new Vector3Int(0, 0, 0), overlay);
+            viewer.seen.Clear();
+            map.RefreshTile(new Vector3Int(0, 0, 0));
+            Assert.Equal(new[] { $"V|Preview|{Color.blue}" }, viewer.seen);
+        }
+
+        [Fact]
+        public void APreviewTileEqualToTheActualTileTakesItsData()
+        {
+            var map = NewTilemap();
+            var tile = Tile<Tile>("T");
+            tile.color = Color.green;
+            tile.flags = TileFlags.None;
+            map.SetTile(Vector3Int.zero, tile);
+            map.SetEditorPreviewTile(Vector3Int.zero, tile);
+            Assert.True(map.HasEditorPreviewTile(Vector3Int.zero));
+            Assert.Equal(Color.green, map.GetEditorPreviewColor(Vector3Int.zero));
+        }
     }
 }

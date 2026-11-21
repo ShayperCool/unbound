@@ -83,12 +83,13 @@ namespace UnityEngine.Tilemaps
         public Bounds localBounds => m_Tilemap.localBounds;
         public BoundsInt cellBounds => m_Tilemap.cellBounds;
 
-        public virtual Sprite GetSprite(Vector3Int position) => m_Tilemap.GetSprite(position);
-        public virtual Color GetColor(Vector3Int position) => m_Tilemap.GetColor(position);
-        public virtual Matrix4x4 GetTransformMatrix(Vector3Int position) => m_Tilemap.GetTransformMatrix(position);
-        public virtual TileFlags GetTileFlags(Vector3Int position) => m_Tilemap.GetTileFlags(position);
-        public virtual TileBase GetTile(Vector3Int position) => m_Tilemap.GetTile(position);
-        public virtual T GetTile<T>(Vector3Int position) where T : TileBase => m_Tilemap.GetTile<T>(position);
+        // A cell's editor preview tile where it has one, else its actual tile.
+        public virtual Sprite GetSprite(Vector3Int position) => m_Tilemap.GetAnySprite(position);
+        public virtual Color GetColor(Vector3Int position) => m_Tilemap.GetAnyColor(position);
+        public virtual Matrix4x4 GetTransformMatrix(Vector3Int position) => m_Tilemap.GetAnyTransformMatrix(position);
+        public virtual TileFlags GetTileFlags(Vector3Int position) => m_Tilemap.GetAnyTileFlags(position);
+        public virtual TileBase GetTile(Vector3Int position) => m_Tilemap.GetAnyTile(position);
+        public virtual T GetTile<T>(Vector3Int position) where T : TileBase => m_Tilemap.GetAnyTile<T>(position);
 
         public void RefreshTile(Vector3Int position)
         {

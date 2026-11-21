@@ -73,7 +73,6 @@ namespace UnityEngine.Tilemaps
         Matrix4x4 m_OrientationMatrix = Matrix4x4.identity;
         float m_AnimationFrameRate = 1f;
         ITilemap m_ITilemap;
-        PreviewITilemap m_PreviewITilemap;
         bool m_BufferSyncTile;
 
         sealed class PreviewCell
@@ -86,20 +85,6 @@ namespace UnityEngine.Tilemaps
             internal bool Fresh = true;
         }
 
-        sealed class PreviewITilemap : ITilemap
-        {
-            internal PreviewITilemap(Tilemap tilemap) => m_Tilemap = tilemap;
-            public override Sprite GetSprite(Vector3Int position) =>
-                m_Tilemap.HasEditorPreviewTile(position) ? m_Tilemap.GetEditorPreviewSprite(position) : m_Tilemap.GetSprite(position);
-            public override Color GetColor(Vector3Int position) =>
-                m_Tilemap.HasEditorPreviewTile(position) ? m_Tilemap.GetEditorPreviewColor(position) : m_Tilemap.GetColor(position);
-            public override Matrix4x4 GetTransformMatrix(Vector3Int position) =>
-                m_Tilemap.HasEditorPreviewTile(position) ? m_Tilemap.GetEditorPreviewTransformMatrix(position) : m_Tilemap.GetTransformMatrix(position);
-            public override TileFlags GetTileFlags(Vector3Int position) =>
-                m_Tilemap.HasEditorPreviewTile(position) ? m_Tilemap.GetEditorPreviewTileFlags(position) : m_Tilemap.GetTileFlags(position);
-            public override TileBase GetTile(Vector3Int position) => m_Tilemap.GetAnyTile(position);
-            public override T GetTile<T>(Vector3Int position) => m_Tilemap.GetAnyTile<T>(position);
-        }
         /// <summary>Bumped when what the tilemap draws changes.</summary>
         internal int m_RenderVersion;
         /// <summary>Bumped when what colliders are built from changes.</summary>
@@ -126,7 +111,6 @@ namespace UnityEngine.Tilemaps
         public Tilemap() { }
 
         ITilemap Itilemap => m_ITilemap ??= new ITilemap { m_Tilemap = this };
-        PreviewITilemap PreviewItilemap => m_PreviewITilemap ??= new PreviewITilemap(this);
 
         internal override Grid LayoutSource => layoutGrid;
 
@@ -1212,6 +1196,8 @@ namespace UnityEngine.Tilemaps
         // events). Preview bounds grow independently from actual bounds; editorPreviewOrigin and
         // editorPreviewSize report the componentwise min origin and max size across both layers.
 
+        internal bool HasEditorPreviewCells => m_PreviewCells.Count > 0;
+
         PreviewCell PreviewCellAt(Vector3Int position) =>
             m_PreviewCells.Count > 0 && m_PreviewCells.TryGetValue(position, out var cell) ? cell : null;
 
@@ -1231,7 +1217,7 @@ namespace UnityEngine.Tilemaps
             var tile = cell.TileAsset as TileBase;
             if (tile == null) return;
             var data = TileData.Default;
-            var itilemap = PreviewItilemap;
+            var itilemap = Itilemap;
             CallTile(() => tile.GetTileData(position, itilemap, ref data));
             if (PreviewCellAt(position)?.TileAsset != tile) return;
             cell.Sprite = data.sprite;
@@ -1242,15 +1228,23 @@ namespace UnityEngine.Tilemaps
             m_RenderVersion++;
         }
 
-        internal Object GetAnyTileAsset(Vector3Int position) => PreviewCellAt(position)?.TileAsset ?? GetTileAsset(position);
+        // What tiles see through ITilemap: a cell's preview tile where it has one, else its actual
+        // tile, whichever layer is refreshing (matches the Unity 6000.0.71f1 Editor,
+        // tests/projects/tilemappreview 09.itilemapView).
+        internal Object GetAnyTileAsset(Vector3Int position) => Real(PreviewCellAt(position)?.TileAsset) ?? GetTileAsset(position);
         internal TileBase GetAnyTile(Vector3Int position) => GetAnyTileAsset(position) as TileBase;
         internal T GetAnyTile<T>(Vector3Int position) where T : TileBase => GetAnyTile(position) as T;
+        internal Sprite GetAnySprite(Vector3Int position) => HasEditorPreviewTile(position) ? GetEditorPreviewSprite(position) : GetSprite(position);
+        internal Color GetAnyColor(Vector3Int position) => HasEditorPreviewTile(position) ? GetEditorPreviewColor(position) : GetColor(position);
+        internal Matrix4x4 GetAnyTransformMatrix(Vector3Int position) =>
+            HasEditorPreviewTile(position) ? GetEditorPreviewTransformMatrix(position) : GetTransformMatrix(position);
+        internal TileFlags GetAnyTileFlags(Vector3Int position) => HasEditorPreviewTile(position) ? GetEditorPreviewTileFlags(position) : GetTileFlags(position);
         internal Object GetEditorPreviewTileAsset(Vector3Int position) => PreviewCellAt(position)?.TileAsset;
         public TileBase GetEditorPreviewTile(Vector3Int position) => PreviewCellAt(position)?.TileAsset as TileBase;
         public T GetEditorPreviewTile<T>(Vector3Int position) where T : TileBase => GetEditorPreviewTile(position) as T;
 
         /// <summary>Puts <paramref name="tile"/> (null removes) on a cell's preview layer. True when
-        /// the tile the cell shows changed, with the tile it showed (the preview tile, else the
+        /// the tile the cell shows changed or a preview cell was made, with the tile it showed (the preview tile, else the
         /// actual one) and the tile it shows now; <paramref name="removed"/> tells whether a preview
         /// tile was removed.</summary>
         bool TryApplyEditorPreviewTile(Vector3Int position, Object tile, out TileBase oldTile, out TileBase newTile, out bool removed)
@@ -1261,6 +1255,7 @@ namespace UnityEngine.Tilemaps
             tile = Real(tile);
             var cell = PreviewCellAt(position);
             Object oldAsset;
+            bool created = false;
             if (cell != null)
             {
                 oldAsset = Real(cell.TileAsset);
@@ -1281,10 +1276,13 @@ namespace UnityEngine.Tilemaps
                 if (tile == null) return false;
                 oldAsset = Real(GetTileAsset(position));
                 m_PreviewCells[position] = new PreviewCell { TileAsset = tile };
+                created = true;
                 GrowPreview(position);
             }
             var newAsset = tile ?? Real(GetTileAsset(position));
-            if (ReferenceEquals(oldAsset, newAsset)) return false;
+            // A new preview cell refreshes even over the same actual tile, so it takes the tile's
+            // data (tests/projects/tilemappreview 09.previewSameAsActualAndReplace).
+            if (ReferenceEquals(oldAsset, newAsset) && !created) return false;
             oldTile = oldAsset as TileBase;
             newTile = newAsset as TileBase;
             return true;
@@ -1298,7 +1296,7 @@ namespace UnityEngine.Tilemaps
             bool changed = TryApplyEditorPreviewTile(position, tile, out var oldTile, out var newTile, out bool removed);
             if (changed || removed) m_RenderVersion++;
             if (!changed) return;
-            var itilemap = PreviewItilemap;
+            var itilemap = Itilemap;
             if (oldTile != null) CallTile(() => oldTile.RefreshTile(position, itilemap));
             if (newTile != null) CallTile(() => newTile.RefreshTile(position, itilemap));
         }
@@ -1318,7 +1316,7 @@ namespace UnityEngine.Tilemaps
             if (mutated || applied.Count > 0) m_RenderVersion++;
             if (applied.Count == 0) return;
             var changed = new SortedSet<Vector3Int>(CellOrder.Instance);
-            RefreshRequested(CollectRefreshes(PreviewItilemap, applied), applied.Count, changed);
+            RefreshRequested(CollectRefreshes(Itilemap, applied), applied.Count, changed);
             SendChanges(changed);
         }
 
@@ -1393,7 +1391,7 @@ namespace UnityEngine.Tilemaps
             m_PreviewSize = m_Size;
             m_RenderVersion++;
             if (cleared == null) return;
-            var itilemap = PreviewItilemap;
+            var itilemap = Itilemap;
             foreach (var (position, old, now) in cleared)
             {
                 if (old != null) CallTile(() => old.RefreshTile(position, itilemap));

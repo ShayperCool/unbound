@@ -79,6 +79,8 @@ namespace UnityEngine.Tilemaps
 
         void Rebuild(Tilemap tilemap)
         {
+            if (tilemap.HasEditorPreviewCells)
+                Stubs.Ignored("TilemapRenderer editor preview tiles", "are kept and answered but not drawn");
             foreach (var batch in m_Batches) if (batch.Mesh != null) DestroyImmediate(batch.Mesh);
             m_Batches.Clear();
             var tint = tilemap.color;
