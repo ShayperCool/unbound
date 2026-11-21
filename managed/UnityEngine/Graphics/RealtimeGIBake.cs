@@ -26,24 +26,97 @@ namespace UnityEngine
 
         internal static bool BakedThisSession(string path) => !string.IsNullOrEmpty(path) && s_BakedScenes.Contains(path);
 
-        /// <summary>Says once what the Editor's bake of a scene it opens without lighting data
-        /// would make and Unbound does not: baked lightmaps and the light probes' baked lighting
-        /// (baked global illumination on; a scene without Lighting Settings has the defaults',
-        /// which have it on), the environment lighting from a sky (the ambient probe and the
-        /// default reflection), baked reflection probes. Unbound makes the realtime GI alone
-        /// (<see cref="Bake"/>).</summary>
-        internal static void NoteBakeParts(LoadedFile file, LightingSettings settings)
+        /// <summary>The scenes (paths) a script baked in Edit mode this session
+        /// (<see cref="BakeInEditMode"/>): their bake stays theirs for the session, also when
+        /// Play mode loads them.</summary>
+        static readonly HashSet<string> s_ScriptBakedScenes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        internal static bool ScriptBakedThisSession(string path) => !string.IsNullOrEmpty(path) && s_ScriptBakedScenes.Contains(path);
+
+        /// <summary>The files the loaded scenes were made from, by scene handle: an Edit-mode bake
+        /// bakes the renderers they made.</summary>
+        static readonly Dictionary<int, LoadedFile> s_SceneFiles = new Dictionary<int, LoadedFile>();
+
+        /// <summary>Lightmapping.isRunning: true while a bake runs.</summary>
+        internal static bool Baking { get; private set; }
+
+        internal const string BakeOnLoad = "its bake on load (Lightmapping.bakeOnSceneLoad)";
+        internal const string ScriptBake = "Lightmapping.Bake";
+
+        /// <summary>
+        /// Lightmapping.Bake in Edit mode: bakes the open scenes synchronously, as the Unity
+        /// 6000.0.71f1 Editor does (tests/projects/realtimegi `script_bake.py --edit`): it sends
+        /// bakeStarted (isRunning still false), lightingDataUpdated while it runs (the Editor
+        /// sends it as its work goes on, a number of times that is not specified: here once) and
+        /// bakeCompleted (isRunning false again), answers true, and the scene then has the bake's
+        /// realtime GI, in Edit mode at once and in Play mode, and is dirty (not saved). The
+        /// realtime GI is Unbound's own precompute of the scene's renderers (<see cref="Bake"/>),
+        /// cached under Library/Unbound/RealtimeGI. Not made, each said once per scene: the
+        /// lighting data asset the Editor writes beside the scene (LightingData.asset and its
+        /// .meta, with the scene's folder's .meta), which the scene then names; baked lightmaps
+        /// and the light probes' baked lighting where the scene's Lighting Settings have baked
+        /// global illumination on (Q677); the environment lighting from a sky and baked
+        /// reflection probes. Renderers a script added to the scene after it loaded are not
+        /// baked (named). Several open scenes are baked one by one as they would load (not
+        /// measured).
+        /// </summary>
+        internal static bool BakeInEditMode()
+        {
+            UnityEditor.Lightmapping.RaiseBakeStarted();
+            Baking = true;
+            try
+            {
+                bool first = true;
+                foreach (var scene in Unbound.Runtime.SceneRegistry.Loaded.ToArray())
+                {
+                    if (!scene.IsLoaded || scene.IsPreview) continue;
+                    if (!s_SceneFiles.TryGetValue(scene.Handle.Value, out var file))
+                    {
+                        Warn("script-bake-file:" + scene.Path, $"{scene.Path}: Lightmapping.Bake bakes it in the Editor; it was not made from a scene file, so Unbound does not bake it.");
+                        continue;
+                    }
+                    var settings = scene.LightingSettings;
+                    Warn("script-bake-asset:" + scene.Path, $"{scene.Path}: Lightmapping.Bake writes its lighting data (LightingData.asset beside it) in the Editor, which the scene then names; Unbound keeps its own bake for the session (Library/Unbound/RealtimeGI) and writes none.");
+                    var made = new HashSet<Object>(file.Objects.Values);
+                    foreach (var root in scene.Roots)
+                        foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>(true))
+                            if (!made.Contains(renderer))
+                                Warn("script-bake-added:" + scene.Path + renderer.GetInstanceID(), $"{scene.Path}: '{renderer.name}' was added after the scene loaded; Unbound's bake (Lightmapping.Bake) does not take it.");
+                    if (!string.IsNullOrEmpty(scene.Path)) s_ScriptBakedScenes.Add(scene.Path);
+                    scene.BakedOnOpen = true;
+                    NoteBakeParts(file, settings, ScriptBake);
+                    SceneLoaded(scene.Handle.Value, default, file, settings, first, bake: true);
+                    first = false;
+                    UnityEditor.SceneManagement.EditorSceneManager.Dirty(scene);
+                }
+                UnityEditor.Lightmapping.RaiseLightingDataUpdated();
+            }
+            finally
+            {
+                Baking = false;
+            }
+            UnityEditor.Lightmapping.RaiseBakeCompleted();
+            return true;
+        }
+
+        /// <summary>Says once what the Editor's bake of a scene (<paramref name="what"/>: when it
+        /// opens it without lighting data, or a script's) would make and Unbound does not: baked
+        /// lightmaps and the light probes' baked lighting (baked global illumination on; a scene
+        /// without Lighting Settings has the defaults', which have it on; Q677), the environment
+        /// lighting from a sky (the ambient probe and the default reflection), baked reflection
+        /// probes. Unbound makes the realtime GI alone (<see cref="Bake"/>).</summary>
+        internal static void NoteBakeParts(LoadedFile file, LightingSettings settings, string what)
         {
             string path = file?.Path ?? "a scene";
             if (settings == null || settings.bakedGI)
-                Warn("bake-baked:" + path, $"{path}: its bake on load (Lightmapping.bakeOnSceneLoad) would make baked lightmaps and the light probes' baked lighting, which Unbound does not make.");
+                Warn("bake-baked:" + what + path, $"{path}: {what} would make baked lightmaps and the light probes' baked lighting, which Unbound does not make (Q677).");
             if (RenderSettings.skybox != null || RenderSettings.ambientMode == Rendering.AmbientMode.Skybox)
-                Warn("bake-environment:" + path, $"{path}: its bake on load (Lightmapping.bakeOnSceneLoad) would make the environment lighting from the sky (the ambient probe and the default reflection), which Unbound does not make.");
+                Warn("bake-environment:" + what + path, $"{path}: {what} would make the environment lighting from the sky (the ambient probe and the default reflection), which Unbound does not make.");
             if (file != null)
                 foreach (var obj in file.Objects.Values)
-                    if (obj is ReflectionProbe probe && probe.mode == Rendering.ReflectionProbeMode.Baked)
+                    if (obj is ReflectionProbe probe && probe != null && probe.mode == Rendering.ReflectionProbeMode.Baked)
                     {
-                        Warn("bake-reflection:" + path, $"{path}: its bake on load (Lightmapping.bakeOnSceneLoad) would bake its reflection probes, which Unbound does not make.");
+                        Warn("bake-reflection:" + what + path, $"{path}: {what} would bake its reflection probes, which Unbound does not make.");
                         break;
                     }
         }
@@ -190,7 +263,8 @@ namespace UnityEngine
                         probePositions.Add(p);
                         probes.Add(p.x); probes.Add(p.y); probes.Add(p.z);
                     }
-                if (!(pair.Value is MeshRenderer renderer) || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
+                // (A renderer destroyed since the scene loaded is not baked.)
+                if (!(pair.Value is MeshRenderer renderer) || renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
                 if ((renderer.gameObject.m_StaticEditorFlags & ContributeGI) == 0 || renderer.receiveGI != ReceiveGI.Lightmaps
                     || lowerLods.Contains(renderer)) continue;
                 if (BakeRequestOf(pair.Key, renderer, resolution, settings, out var why) is object request) renderers.Add(request);

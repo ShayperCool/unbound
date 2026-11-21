@@ -76,15 +76,15 @@ namespace Unbound.Tests
                 // defaults have it): the baked lightmaps and probes are not made.
                 var logs = Logged(() =>
                 {
-                    RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = true, realtimeGI = true });
-                    RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = true, realtimeGI = true });
+                    RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = true, realtimeGI = true }, RealtimeGI.BakeOnLoad);
+                    RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = true, realtimeGI = true }, RealtimeGI.BakeOnLoad);
                 });
                 Assert.Single(logs, l => l.Contains("baked lightmaps"));
-                Assert.Empty(Logged(() => RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = false, realtimeGI = true })));
-                Assert.Single(Logged(() => RealtimeGI.NoteBakeParts(file, null)), l => l.Contains("baked lightmaps"));
+                Assert.Empty(Logged(() => RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = false, realtimeGI = true }, RealtimeGI.BakeOnLoad)));
+                Assert.Single(Logged(() => RealtimeGI.NoteBakeParts(file, null, RealtimeGI.BakeOnLoad)), l => l.Contains("baked lightmaps"));
                 // A sky as the ambient source: its environment lighting is not made.
                 RenderSettings.ambientMode = AmbientMode.Skybox;
-                Assert.Contains(Logged(() => RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = false, realtimeGI = true })),
+                Assert.Contains(Logged(() => RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = false, realtimeGI = true }, RealtimeGI.BakeOnLoad)),
                     l => l.Contains("environment lighting"));
             }
             finally

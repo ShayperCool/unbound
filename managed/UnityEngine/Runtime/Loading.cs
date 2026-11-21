@@ -710,9 +710,13 @@ namespace Unbound.Runtime
                 bool first = scene == null || SceneRegistry.Loaded.TrueForAll(s => s == scene || SceneRegistry.IsDontDestroyOnLoad(s) || !s.IsLoaded);
                 var references = LightingReferences(doc.Body);
                 // The Editor bakes a scene it opens; its bake then stays the scene's for the
-                // session, also when the scene is loaded again at runtime.
-                bool bake = scene != null && AsksForBake(doc.Body, references.Data)
-                    && (scene.OpenedInEditor || RealtimeGI.BakedThisSession(scene.Path));
+                // session, also when the scene is loaded again at runtime. So does a script's
+                // bake in Edit mode (Lightmapping.Bake), whose lighting data the scene then names
+                // in place of what its file names.
+                bool scriptBaked = scene != null && RealtimeGI.ScriptBakedThisSession(scene.Path);
+                if (scriptBaked) references.Data = default;
+                bool bake = scene != null && (scriptBaked || (AsksForBake(doc.Body, references.Data)
+                    && (scene.OpenedInEditor || RealtimeGI.BakedThisSession(scene.Path))));
                 RenderSettings.ReadLightingData(references.Data, resolver as LoadedFile, first, scene?.Handle.Value ?? 0);
                 if (scene != null)
                 {

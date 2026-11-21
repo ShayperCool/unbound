@@ -150,6 +150,7 @@ namespace UnityEngine
                 Reset();
                 s_MixedAreRealtime = settings == null || !settings.bakedGI;
             }
+            if (file != null) s_SceneFiles[scene] = file;
             if (!Native.IsReady || file == null) return;
             JsonElement root;
             bool baked = lightingData.IsNull || lightingData.Guid == null;
@@ -158,7 +159,7 @@ namespace UnityEngine
                 if (!bake) return;
                 if (Unbound.Runtime.SceneRegistry.Get(new Unbound.Runtime.SceneHandle(scene)) is { } opened && !string.IsNullOrEmpty(opened.Path))
                     s_BakedScenes.Add(opened.Path);
-                NoteBakeParts(file, settings);
+                NoteBakeParts(file, settings, BakeOnLoad);
                 // A scene without Lighting Settings has the defaults', which leave realtime GI off.
                 if (settings == null || !settings.realtimeGI) return;
                 if (!(Bake(scene, file, settings) is JsonElement made)) return;
@@ -284,6 +285,7 @@ namespace UnityEngine
 
         internal static void SceneUnloaded(int scene)
         {
+            s_SceneFiles.Remove(scene);
             for (int i = s_Scenes.Count - 1; i >= 0; i--)
                 if (s_Scenes[i].Scene == scene) Release(i);
         }

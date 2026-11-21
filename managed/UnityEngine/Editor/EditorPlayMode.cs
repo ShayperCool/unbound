@@ -26,6 +26,8 @@ namespace UnityEditor
         public static event Action bakeCompleted;
         public static event Action bakeCancelled;
         public static event Action lightingDataCleared;
+        public static event Action lightingDataUpdated;
+        public static event Action lightingDataAssetCleared;
     }
     public static partial class ClipboardUtility
     {

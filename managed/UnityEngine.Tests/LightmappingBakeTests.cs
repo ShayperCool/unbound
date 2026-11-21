@@ -42,7 +42,7 @@ namespace UnityEngine.Tests
     /// <summary>Lightmapping.Bake and BakeAsync from scripts in each phase of the Editor (Scripting
     /// API 6000.0; measured in the Unity 6000.0.71f1 Editor, tests/projects/realtimegi
     /// `script_bake.py`): refused with a warning in Play mode, a bake with its events as Play mode
-    /// is entered.</summary>
+    /// is entered and in Edit mode.</summary>
     public class LightmappingBakeTests
     {
         const string PlayMode = "Computing lightmaps is not available in play mode.";
@@ -119,24 +119,98 @@ namespace UnityEngine.Tests
             Assert.Equal("", Run(Phase.Play, () => Assert.False(Lightmapping.Bake())).Events);
         }
 
-        [Fact]
-        public void InEditModeABakeIsNotMadeAndSaysSo()
+        /// <summary>The bake events with Lightmapping.isRunning at each: "S" bakeStarted, "U"
+        /// lightingDataUpdated, "C" bakeCompleted.</summary>
+        static List<string> BakeEvents(Action body)
         {
+            var events = new List<string>();
+            Action started = () => events.Add("S:" + Lightmapping.isRunning),
+                updated = () => events.Add("U:" + Lightmapping.isRunning),
+                completed = () => events.Add("C:" + Lightmapping.isRunning);
+            Lightmapping.bakeStarted += started;
+            Lightmapping.lightingDataUpdated += updated;
+            Lightmapping.bakeCompleted += completed;
+            try { body(); }
+            finally
+            {
+                Lightmapping.bakeStarted -= started;
+                Lightmapping.lightingDataUpdated -= updated;
+                Lightmapping.bakeCompleted -= completed;
+            }
+            return events;
+        }
+
+        [Fact]
+        public void InEditModeBakeRunsWithItsEventsAndAnswersTrue()
+        {
+            // Measured (script_bake.py --edit): bakeStarted with isRunning still false,
+            // lightingDataUpdated while it runs, bakeCompleted with isRunning false again; twice.
             for (int call = 0; call < 2; call++)
             {
-                bool result = true;
-                var (logs, events) = Run(Phase.Edit, () => result = Lightmapping.Bake());
-                Assert.False(result);
-                Assert.Equal("", events);
-                Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("Edit mode is not implemented"));
+                bool result = false;
+                List<string> events = null;
+                var (logs, started) = Run(Phase.Edit, () => events = BakeEvents(() => result = Lightmapping.Bake()));
+                Assert.True(result);
+                Assert.Equal("SC", started);
+                Assert.Equal(new[] { "S:False", "U:True", "C:False" }, events);
+                Assert.False(Lightmapping.isRunning);
+                Assert.DoesNotContain(logs.Messages, m => m.Message == PlayMode);
             }
         }
 
         [Fact]
-        public void EditCodeThatAsksForPlayModeOrRunsAsItIsLeftStillBakesInEditMode()
+        public void AnEditModeBakeBakesTheOpenScenesAndKeepsTheBakeForTheSession()
+        {
+            var scene = UnityEngine.SceneManagement.SceneManager.CreateScene("EditBaked");
+            var data = scene.Data;
+            data.Path = "Assets/EditBaked.unity";
+            var settings = new LightingSettings { bakedGI = true, realtimeGI = true };
+            data.LightingSettings = settings;
+            var file = new LoadedFile { Path = data.Path };
+            var made = new GameObject("Made");
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(made, scene);
+            var renderer = made.AddComponent<MeshRenderer>();
+            file.Objects[1] = renderer;
+            RealtimeGI.SceneLoaded(data.Handle.Value, default, file, settings, true);
+            // A renderer a script adds after the load is not baked: named.
+            var added = new GameObject("Added");
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(added, scene);
+            added.AddComponent<MeshRenderer>();
+            RealtimeGI.s_Warned.Clear();
+            try
+            {
+                Assert.False(RealtimeGI.ScriptBakedThisSession(data.Path));
+                Assert.False(data.IsDirty);
+                bool result = false;
+                var (logs, events) = Run(Phase.Edit, () => result = Lightmapping.Bake());
+                Assert.True(result);
+                Assert.Equal("SC", events);
+                // The scene is dirty and keeps the bake (its lighting data asset, which the Editor
+                // writes and names, is not written: lightingDataAsset stays null, said once).
+                Assert.True(data.IsDirty);
+                Assert.True(RealtimeGI.ScriptBakedThisSession(data.Path));
+                Assert.True(data.BakedOnOpen);
+                Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("LightingData.asset"));
+                Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("Q677"));
+                Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("'Added'"));
+                Assert.DoesNotContain(logs.Messages, m => m.Message.Contains("'Made'"));
+                // Said once: a second bake says nothing again.
+                var again = Run(Phase.Edit, () => Assert.True(Lightmapping.Bake()));
+                Assert.DoesNotContain(again.Logs.Messages, m => m.Message.Contains("LightingData.asset") || m.Message.Contains("Q677"));
+            }
+            finally
+            {
+                RealtimeGI.s_Warned.Clear();
+                RealtimeGI.SceneUnloaded(data.Handle.Value);
+                UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        [Fact]
+        public void EditCodeThatAsksForPlayModeOrRunsAsItIsLeftBakesInEditMode()
         {
             // Play mode requested in Edit mode, and ExitingEditMode (sent before the domain
-            // reloads): the bake would be an Edit-mode one, which Unbound does not make.
+            // reloads): the bake is an Edit-mode one.
             bool wasPlaying = EditorSession.IsPlaying, wasEditMode = EditorSession.StartedInEditMode;
             try
             {
@@ -144,9 +218,9 @@ namespace UnityEngine.Tests
                 EditorSession.IsPlaying = false;
                 EditorSession.Request(true);
                 Assert.True(EditorSession.WillChange);
-                var (logs, events) = Run(Phase.Edit, () => Assert.False(Lightmapping.Bake()));
-                Assert.Equal("", events);
-                Assert.Contains(logs.Messages, m => m.Message.Contains("Edit mode is not implemented"));
+                var (logs, events) = Run(Phase.Edit, () => Assert.True(Lightmapping.Bake()));
+                Assert.Equal("SC", events);
+                Assert.DoesNotContain(logs.Messages, m => m.Message == PlayMode);
             }
             finally
             {
@@ -157,18 +231,17 @@ namespace UnityEngine.Tests
             var exiting = Run(Phase.Edit, () =>
             {
                 EditorSession.BeginEnteringPlayMode();
-                try { Assert.False(Lightmapping.Bake()); }
+                try { Assert.True(Lightmapping.Bake()); }
                 finally { EditorSession.EndEnteringPlayMode(); }
             });
-            Assert.Equal("", exiting.Events);
-            Assert.Contains(exiting.Logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("Edit mode is not implemented"));
+            Assert.Equal("SC", exiting.Events);
         }
 
         [Fact]
-        public void TheDomainLoadForPlayModeBakesAndExitingEditModeDoesNot()
+        public void TheDomainLoadForPlayModeBakesAndExitingEditModeBakesInEditMode()
         {
             // The domain loads for Play mode with this assembly's editor code: its load callbacks
-            // bake; ExitingEditMode, sent between them, is an Edit-mode bake (not made).
+            // bake; ExitingEditMode, sent between them, is an Edit-mode bake.
             var assemblies = (List<System.Reflection.Assembly>)typeof(GameDomain)
                 .GetField("s_Assemblies", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).GetValue(null);
             var own = typeof(BakeFromDomainLoad).Assembly;
@@ -195,8 +268,7 @@ namespace UnityEngine.Tests
                 BakeFromDomainLoad.Active = false;
                 if (added) assemblies.Remove(own);
             }
-            Assert.Equal(new[] { "load:True:SC", "exiting:False:", "reload:True:SC" }, BakeFromDomainLoad.Results);
-            Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("Edit mode is not implemented"));
+            Assert.Equal(new[] { "load:True:SC", "exiting:True:SC", "reload:True:SC" }, BakeFromDomainLoad.Results);
             Assert.False(EditorInitialization.PlayModeDomainLoading);
         }
 

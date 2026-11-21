@@ -66,11 +66,12 @@ namespace UnityEditor
         /// scenes, sending <see cref="bakeStarted"/> and <see cref="bakeCompleted"/> before it answers
         /// true, and writes their lighting data, but Play mode starts with the scenes as they were
         /// (no realtime GI from that bake). Unbound answers and sends the same then and writes no
-        /// lighting data (which later sessions would use: said once). A bake in Edit mode (also
-        /// from ExitingEditMode or while Play mode is requested) is not implemented: it warns and
-        /// answers false. Entering Play mode from Edit mode without a domain reload (`unbound
-        /// test`), [InitializeOnEnterPlayMode] code runs with isPlaying already true and gets the
-        /// Play mode answer (the Editor's is not measured there).
+        /// lighting data (which later sessions would use: said once). In Edit mode (`unbound
+        /// test`, editor scripts) it bakes the open scenes' realtime GI with Unbound's own
+        /// precompute (`script_bake.py --edit`; RealtimeGI.BakeInEditMode). Entering Play mode
+        /// from Edit mode without a domain reload (`unbound test`), [InitializeOnEnterPlayMode]
+        /// code runs with isPlaying already true and gets the Play mode answer (the Editor's is
+        /// not measured there).
         /// </summary>
         public static bool Bake()
         {
@@ -79,16 +80,20 @@ namespace UnityEditor
                 Debug.LogWarning(k_PlayMode);
                 return false;
             }
-            if (!EditorInitialization.PlayModeDomainLoading)
-            {
-                Debug.LogWarning("Unbound: Lightmapping.Bake in Edit mode is not implemented: nothing is baked.");
-                return false;
-            }
+            if (!EditorInitialization.PlayModeDomainLoading) return RealtimeGI.BakeInEditMode();
             Stubs.Ignored("Lightmapping.Bake", "as Play mode is entered writes the open scenes' lighting data in the Editor, which later sessions use; Unbound writes none");
-            bakeStarted?.Invoke();
-            bakeCompleted?.Invoke();
+            RaiseBakeStarted();
+            RaiseBakeCompleted();
             return true;
         }
+
+        /// <summary>Whether a bake is running: from just after bakeStarted to just before
+        /// bakeCompleted (measured: tests/projects/realtimegi `script_bake.py --edit`).</summary>
+        public static bool isRunning => RealtimeGI.Baking;
+
+        internal static void RaiseBakeStarted() => bakeStarted?.Invoke();
+        internal static void RaiseBakeCompleted() => bakeCompleted?.Invoke();
+        internal static void RaiseLightingDataUpdated() => lightingDataUpdated?.Invoke();
 
         /// <summary>In Play mode as <see cref="Bake"/> (measured: the same warning, false); an
         /// asynchronous bake outside Play mode is not implemented.</summary>

@@ -1,0 +1,32 @@
+{"key":"edit.before.lightingData","value":"False"}
+{"key":"edit.before.dirty","value":"False"}
+{"key":"edit.before.files","value":"RoomScriptBake.unity RoomScriptBake.unity.meta"}
+{"key":"edit.before.sceneHash","value":"36AD72FB3A3C0792"}
+{"key":"edit.before.indices","value":"Back:-1 Block:-1 Ceiling:-1 Floor:-1 Left:-1 Panel:-1 Right:-1"}
+{"key":"edit.first.result","value":"True"}
+{"key":"edit.first.events","value":"bakeStarted(running False), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), bakeCompleted(running False)"}
+{"key":"edit.first.eventData","value":"bakeStarted(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), lightingDataUpdated(on disk False, named False), bakeCompleted(on disk True, named True)"}
+{"key":"edit.first.isRunning","value":"False"}
+{"key":"edit.first.log","value":"Assert: Assertion failed on expression: 'IsDenoiserLibraryAvailable()' || Assert: Assertion failed on expression: 'IsDenoiserLibraryAvailable()'"}
+{"key":"edit.first.lightingData","value":"LightingData at Assets/Scenes/RoomScriptBake/LightingData.asset"}
+{"key":"edit.first.dirty","value":"True"}
+{"key":"edit.first.files","value":"RoomScriptBake.meta RoomScriptBake.unity RoomScriptBake.unity.meta RoomScriptBake/LightingData.asset RoomScriptBake/LightingData.asset.meta"}
+{"key":"edit.first.sceneHash","value":"36AD72FB3A3C0792"}
+{"key":"edit.first.indices","value":"Back:0 Block:0 Ceiling:0 Floor:0 Left:0 Panel:0 Right:0"}
+{"key":"edit.first.lightmaps","value":"0"}
+{"key":"edit.second.result","value":"True"}
+{"key":"edit.second.events","value":"bakeStarted(running False), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), lightingDataUpdated(running True), bakeCompleted(running False)"}
+{"key":"edit.second.eventData","value":"bakeStarted(on disk True, named True), lightingDataUpdated(on disk True, named True), lightingDataUpdated(on disk True, named True), lightingDataUpdated(on disk True, named True), lightingDataUpdated(on disk True, named True), lightingDataUpdated(on disk True, named True), lightingDataUpdated(on disk True, named True), lightingDataUpdated(on disk True, named True), lightingDataUpdated(on disk True, named True), lightingDataUpdated(on disk True, named True), lightingDataUpdated(on disk True, named True), lightingDataUpdated(on disk True, named True), lightingDataUpdated(on disk True, named True), lightingDataUpdated(on disk True, named True), lightingDataUpdated(on disk True, named True), bakeCompleted(on disk True, named True)"}
+{"key":"edit.second.isRunning","value":"False"}
+{"key":"edit.second.log","value":""}
+{"key":"edit.second.lightingData","value":"LightingData at Assets/Scenes/RoomScriptBake/LightingData.asset"}
+{"key":"edit.second.dirty","value":"True"}
+{"key":"edit.second.files","value":"RoomScriptBake.meta RoomScriptBake.unity RoomScriptBake.unity.meta RoomScriptBake/LightingData.asset RoomScriptBake/LightingData.asset.meta"}
+{"key":"edit.second.sceneHash","value":"36AD72FB3A3C0792"}
+{"key":"edit.second.indices","value":"Back:0 Block:0 Ceiling:0 Floor:0 Left:0 Panel:0 Right:0"}
+{"key":"edit.second.lightmaps","value":"0"}
+{"key":"play.contributing","value":"7"}
+{"key":"play.withRealtimeLightmap","value":"7"}
+{"key":"play.indices","value":"Back:0 Block:0 Ceiling:0 Floor:0 Left:0 Panel:0 Right:0"}
+{"key":"play.lightingData","value":"True"}
+{"key":"complete","value":"1"}
