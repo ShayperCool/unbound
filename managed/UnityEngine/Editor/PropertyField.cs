@@ -153,6 +153,7 @@ namespace UnityEditor.UIElements
         static readonly Func<CurveField> s_CreateCurveField = () => new CurveField();
         static readonly Func<GradientField> s_CreateGradientField = () => new GradientField();
         static readonly Func<ObjectField> s_CreateObjectField = () => new ObjectField();
+        static readonly Func<Hash128Field> s_CreateHash128Field = () => new Hash128Field();
 
         string m_Label;
         SerializedObject m_SerializedObject;
@@ -539,6 +540,8 @@ namespace UnityEditor.UIElements
                     objectField.UpdateDisplay();
                     return objectField;
                 }
+                case SerializedPropertyType.Hash128:
+                    return ConfigureField<Hash128Field, Hash128>(originalField as Hash128Field, property, s_CreateHash128Field);
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField ({property.propertyType})");
                     return null;

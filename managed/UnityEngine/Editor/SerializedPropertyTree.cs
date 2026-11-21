@@ -101,6 +101,27 @@ namespace Unbound.Runtime
             var renderingLayerBits = C<RenderingLayerMask, uint>("m_Bits", Shape.UInt, v => v.value, (v, p) => { v.value = p; return v; });
             renderingLayerBits.Hidden = true;
             renderingLayerBits.TypeName = "uint";
+            var hashBytes = new ComponentDef[16];
+            for (int i = 0; i < 16; i++)
+            {
+                int idx = i;
+                hashBytes[i] = C<Hash128, byte>($"bytes[{i}]", Shape.Byte,
+                    v => idx < 8 ? (byte)(v.u64_0 >> (8 * idx)) : (byte)(v.u64_1 >> (8 * (idx - 8))),
+                    (v, p) =>
+                    {
+                        if (idx < 8)
+                        {
+                            int shift = 8 * idx;
+                            v.u64_0 = (v.u64_0 & ~(0xffUL << shift)) | ((ulong)p << shift);
+                        }
+                        else
+                        {
+                            int shift = 8 * (idx - 8);
+                            v.u64_1 = (v.u64_1 & ~(0xffUL << shift)) | ((ulong)p << shift);
+                        }
+                        return v;
+                    });
+            }
             return new Dictionary<Shape, ComponentDef[]>
             {
                 [Shape.Vector2] = new[]
@@ -189,6 +210,7 @@ namespace Unbound.Runtime
                 [Shape.Matrix4x4] = matrix.ToArray(),
                 // Measured: tests/projects/builtinserial (the mask's bits are hidden, the coefficients visible).
                 [Shape.RenderingLayerMask] = new[] { renderingLayerBits },
+                [Shape.Hash128] = hashBytes,
                 [Shape.SphericalHarmonicsL2] = harmonics,
             };
         }
@@ -1192,6 +1214,13 @@ namespace Unbound.Runtime
                         hash.Add(ak.alpha);
                         hash.Add(ak.time);
                     }
+                }
+                else if (value is Hash128 h128)
+                {
+                    hash.Add((uint)h128.u64_0);
+                    hash.Add((uint)(h128.u64_0 >> 32));
+                    hash.Add((uint)h128.u64_1);
+                    hash.Add((uint)(h128.u64_1 >> 32));
                 }
                 else if (value is RectOffset offset)
                 {

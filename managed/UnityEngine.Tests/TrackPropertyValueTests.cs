@@ -116,6 +116,8 @@ namespace UnityEngine.Tests
             public RefAsset refAssetVal;
             public Texture2D textureVal;
             public Transform transformVal;
+            public Hash128 hashVal = Hash128.Parse("0123456789abcdef1122334455667788");
+            public Hash128 otherHashVal = Hash128.Parse("fedcba98765432108877665544332211");
             public LayerMask layerMaskVal = 1;
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
@@ -2531,6 +2533,94 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(a3);
                 Object.DestroyImmediate(a2);
                 Object.DestroyImmediate(a1);
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyHash128MixedSwappedHalvesReuseAndDisposedCleanupWorkAcrossReleases()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            var hA = new Hash128(0x1122334455667788UL, 0x99aabbccddeeff00UL);
+            var hSwapped = new Hash128(0x99aabbccddeeff00UL, 0x1122334455667788UL);
+            var hC = Hash128.Compute("unbound-hash128-unit");
+            t1.hashVal = hA;
+            t2.hashVal = hSwapped;
+
+            using var panel = RuntimePanel.Create(settings);
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            var soSingle = new SerializedObject(t1);
+            try
+            {
+                // Swapped halves must produce distinct contentHash values and report mixed state.
+                var pSingle = soSingle.FindProperty("hashVal");
+                Assert.Equal(SerializedPropertyType.Hash128, pSingle.propertyType);
+                Assert.True(pSingle.hasVisibleChildren);
+                uint hashA = pSingle.contentHash;
+                pSingle.hash128Value = hSwapped;
+                Assert.NotEqual(hashA, pSingle.contentHash);
+                pSingle.hash128Value = hA;
+                soSingle.ApplyModifiedProperties();
+
+                var rt = new RuntimeModel { text = "rt-hash-0" };
+                var hf = new Hash128Field { dataSource = rt };
+                hf.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                panel.visualTree.Add(hf);
+                hf.BindProperty(soMulti.FindProperty("hashVal"));
+                Tick(panel);
+
+                Assert.True(hf.showMixedValue);
+                Assert.Equal(BaseField<Hash128>.mixedValueString, hf.text);
+                Assert.Equal("rt-hash-0", hf.tooltip);
+
+                // Editing mixed Hash128Field to target[0]'s value writes both targets and clears mixed.
+                hf.value = hA;
+                Tick(panel);
+                Assert.False(hf.showMixedValue);
+                Assert.Equal(hA, t1.hashVal);
+                Assert.Equal(hA, t2.hashVal);
+                Assert.Equal(hA.ToString(), hf.text);
+
+                // PropertyField creates and reuses Hash128Field and updates on external swapped-halves mutation.
+                var pf = new PropertyField(soSingle.FindProperty("hashVal"));
+                panel.visualTree.Add(pf);
+                pf.Bind(soSingle);
+                Tick(panel);
+                var pfChild = Assert.IsType<Hash128Field>(pf.hierarchy[0]);
+                Assert.Equal("Hash Val", pfChild.label);
+                Assert.Equal(hA, pfChild.value);
+
+                t1.hashVal = hSwapped;
+                Tick(panel);
+                Assert.Equal(hSwapped, pfChild.value);
+                Assert.Equal(hSwapped.ToString(), pfChild.text);
+
+                pf.BindProperty(soSingle.FindProperty("otherHashVal"));
+                Tick(panel);
+                Assert.Same(pfChild, pf.hierarchy[0]);
+                Assert.Equal(t1.otherHashVal, pfChild.value);
+
+                // Disposing SerializedObject unbinds cleanly while runtime DataBinding remains active.
+                soMulti.Dispose();
+                hf.value = hC;
+                rt.text = "rt-hash-1";
+                Tick(panel);
+                Assert.Equal(hA, t2.hashVal);
+                Assert.Equal("rt-hash-1", hf.tooltip);
+            }
+            finally
+            {
+                soMulti.Dispose();
+                soSingle.Dispose();
                 Object.DestroyImmediate(t1);
                 Object.DestroyImmediate(t2);
                 Object.DestroyImmediate(settings);
