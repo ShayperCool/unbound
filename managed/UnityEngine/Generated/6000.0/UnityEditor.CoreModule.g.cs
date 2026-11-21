@@ -44162,26 +44162,6 @@ namespace UnityEditor.SearchService
 namespace UnityEditor.ShaderKeywordFilter
 {
     [global::Unbound.Stub]
-    public unsafe partial class ApplyRulesIfGraphicsAPIAttribute : global::UnityEditor.ShaderKeywordFilter.GraphicsAPIConstraintAttribute
-    {
-        [global::Unbound.Stub] public ApplyRulesIfGraphicsAPIAttribute(params global::UnityEngine.Rendering.GraphicsDeviceType[] graphicsDeviceTypes) : base(default(bool), default(global::UnityEngine.Rendering.GraphicsDeviceType[])) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.ApplyRulesIfGraphicsAPIAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ApplyRulesIfNotGraphicsAPIAttribute : global::UnityEditor.ShaderKeywordFilter.GraphicsAPIConstraintAttribute
-    {
-        [global::Unbound.Stub] public ApplyRulesIfNotGraphicsAPIAttribute(params global::UnityEngine.Rendering.GraphicsDeviceType[] graphicsDeviceTypes) : base(default(bool), default(global::UnityEngine.Rendering.GraphicsDeviceType[])) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.ApplyRulesIfNotGraphicsAPIAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ApplyRulesIfTagsEqualAttribute : global::UnityEditor.ShaderKeywordFilter.TagConstraintAttribute
-    {
-        [global::Unbound.Stub] public ApplyRulesIfTagsEqualAttribute(params string[] tags) : base(default(bool), default(string[])) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.ApplyRulesIfTagsEqualAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ApplyRulesIfTagsNotEqualAttribute : global::UnityEditor.ShaderKeywordFilter.TagConstraintAttribute
-    {
-        [global::Unbound.Stub] public ApplyRulesIfTagsNotEqualAttribute(params string[] tags) : base(default(bool), default(string[])) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.ApplyRulesIfTagsNotEqualAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial struct ConstraintState
     {
         [global::Unbound.Stub] internal string[] tags;
@@ -44197,38 +44177,6 @@ namespace UnityEditor.ShaderKeywordFilter
         internal global::System.Collections.Generic.List<global::UnityEditor.ShaderKeywordFilter.TagConstraintAttribute> TagConstraints { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.Constraints.TagConstraints"); return new global::System.Collections.Generic.List<global::UnityEditor.ShaderKeywordFilter.TagConstraintAttribute>(); } }
         internal global::System.Collections.Generic.List<global::UnityEditor.ShaderKeywordFilter.GraphicsAPIConstraintAttribute> GraphicsAPIConstraints { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.Constraints.GraphicsAPIConstraints"); return new global::System.Collections.Generic.List<global::UnityEditor.ShaderKeywordFilter.GraphicsAPIConstraintAttribute>(); } }
     }
-    public enum FilterAction
-    {
-        Select = 0,
-        Remove = 1,
-        SelectOrRemove = 2,
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)256, AllowMultiple = true)]
-    [global::Unbound.Stub]
-    public unsafe partial class FilterAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public FilterAttribute(global::UnityEditor.ShaderKeywordFilter.FilterAction action, global::UnityEditor.ShaderKeywordFilter.FilterAttribute.Precedence precedence, global::UnityEditor.ShaderKeywordFilter.FilterAttribute.EvaluationMode evaluationMode, object condition, string fileName, int lineNumber, params string[] keywordNames) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterAttribute.ctor"); }
-        [global::Unbound.Stub] internal string GetFilterActionName(global::UnityEditor.ShaderKeywordFilter.FilterAction action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterAttribute.GetFilterActionName"); return default; }
-        [global::Unbound.Stub] internal void EnableLogging() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterAttribute.EnableLogging"); }
-        [global::Unbound.Stub] internal void DisableLogging() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterAttribute.DisableLogging"); }
-        [global::Unbound.Stub] internal string GetFormattedResolutionMessageActive(object data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterAttribute.GetFormattedResolutionMessageActive"); return default; }
-        [global::Unbound.Stub] internal string GetFormattedResolutionMessageInactive(object data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterAttribute.GetFormattedResolutionMessageInactive"); return default; }
-        [global::Unbound.Stub] internal string GetFormattedResolutionMessageOverride(object data, global::UnityEditor.ShaderKeywordFilter.FilterRule originalRule) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterAttribute.GetFormattedResolutionMessageOverride"); return default; }
-        [global::Unbound.Stub] internal bool GetActiveFilterAction(object data, out global::UnityEditor.ShaderKeywordFilter.FilterAction action) { action = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterAttribute.GetActiveFilterAction"); return default; }
-        internal global::UnityEditor.ShaderKeywordFilter.FilterAttribute.Precedence RulePrecedence { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterAttribute.RulePrecedence"); return default; } }
-        internal string[] KeywordNames { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterAttribute.KeywordNames"); return global::System.Array.Empty<string>(); } }
-        internal global::UnityEditor.ShaderKeywordFilter.FilterAction Action { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterAttribute.Action"); return default; } }
-        public enum Precedence
-        {
-            Normal = 0,
-            Override = 1,
-        }
-        public enum EvaluationMode
-        {
-            Normal = 0,
-            Negated = 1,
-        }
-    }
     [global::Unbound.Stub]
     internal unsafe partial struct FilterData
     {
@@ -44237,15 +44185,6 @@ namespace UnityEditor.ShaderKeywordFilter
         [global::Unbound.Stub] internal global::UnityEditor.ShaderKeywordFilter.Constraints constraints;
         [global::Unbound.Stub] internal object value;
         [global::Unbound.Stub] internal FilterData(string fieldName, global::UnityEditor.ShaderKeywordFilter.FilterAttribute attribute, global::UnityEditor.ShaderKeywordFilter.Constraints constraints, object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterData.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct FilterRule
-    {
-        [global::Unbound.Stub] internal string keywordName;
-        [global::Unbound.Stub] internal bool withEmptyKeyword;
-        [global::Unbound.Stub] internal global::UnityEditor.ShaderKeywordFilter.FilterAction action;
-        [global::Unbound.Stub] internal string resolutionMessage;
-        [global::Unbound.Stub] internal FilterRule(string keywordName, bool withEmptyKeyword, global::UnityEditor.ShaderKeywordFilter.FilterAction action, string resolutionMessage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterRule.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct FilterStats
@@ -44257,45 +44196,6 @@ namespace UnityEditor.ShaderKeywordFilter
         [global::Unbound.Stub] internal uint m_NumberOfSelectKeywordsResolved;
         [global::Unbound.Stub] internal void CountActionUnresolved(global::UnityEditor.ShaderKeywordFilter.FilterAction a) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterStats.CountActionUnresolved"); }
         [global::Unbound.Stub] internal void CountActionResolved(global::UnityEditor.ShaderKeywordFilter.FilterAction a) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.FilterStats.CountActionResolved"); }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)268, AllowMultiple = false)]
-    [global::Unbound.Stub]
-    public unsafe partial class GraphicsAPIConstraintAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public GraphicsAPIConstraintAttribute(bool negate, params global::UnityEngine.Rendering.GraphicsDeviceType[] graphicsDeviceTypes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.GraphicsAPIConstraintAttribute.ctor"); }
-        [global::Unbound.Stub] internal bool ShouldApplyRules(global::UnityEngine.Rendering.GraphicsDeviceType currentGraphicDeviceType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.GraphicsAPIConstraintAttribute.ShouldApplyRules"); return default; }
-        internal bool Negated { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.GraphicsAPIConstraintAttribute.Negated"); return default; } }
-        internal global::UnityEngine.Rendering.GraphicsDeviceType[] GraphicsAPIs { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.GraphicsAPIConstraintAttribute.GraphicsAPIs"); return global::System.Array.Empty<global::UnityEngine.Rendering.GraphicsDeviceType>(); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class RemoveIfAttribute : global::UnityEditor.ShaderKeywordFilter.FilterAttribute
-    {
-        [global::Unbound.Stub] public RemoveIfAttribute(object condition, bool overridePriority = false, string filePath = "", int lineNumber = 0, params string[] keywordNames) : base(default(global::UnityEditor.ShaderKeywordFilter.FilterAction), default(global::UnityEditor.ShaderKeywordFilter.FilterAttribute.Precedence), default(global::UnityEditor.ShaderKeywordFilter.FilterAttribute.EvaluationMode), default(object), default(string), default(int), default(string[])) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.RemoveIfAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class RemoveIfNotAttribute : global::UnityEditor.ShaderKeywordFilter.FilterAttribute
-    {
-        [global::Unbound.Stub] public RemoveIfNotAttribute(object condition, bool overridePriority = false, string filePath = "", int lineNumber = 0, params string[] keywordNames) : base(default(global::UnityEditor.ShaderKeywordFilter.FilterAction), default(global::UnityEditor.ShaderKeywordFilter.FilterAttribute.Precedence), default(global::UnityEditor.ShaderKeywordFilter.FilterAttribute.EvaluationMode), default(object), default(string), default(int), default(string[])) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.RemoveIfNotAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class RemoveOrSelectAttribute : global::UnityEditor.ShaderKeywordFilter.FilterAttribute
-    {
-        [global::Unbound.Stub] public RemoveOrSelectAttribute(object condition, bool overridePriority = false, string filePath = "", int lineNumber = 0, params string[] keywordNames) : base(default(global::UnityEditor.ShaderKeywordFilter.FilterAction), default(global::UnityEditor.ShaderKeywordFilter.FilterAttribute.Precedence), default(global::UnityEditor.ShaderKeywordFilter.FilterAttribute.EvaluationMode), default(object), default(string), default(int), default(string[])) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.RemoveOrSelectAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class SelectIfAttribute : global::UnityEditor.ShaderKeywordFilter.FilterAttribute
-    {
-        [global::Unbound.Stub] public SelectIfAttribute(object condition, bool overridePriority = false, string filePath = "", int lineNumber = 0, params string[] keywordNames) : base(default(global::UnityEditor.ShaderKeywordFilter.FilterAction), default(global::UnityEditor.ShaderKeywordFilter.FilterAttribute.Precedence), default(global::UnityEditor.ShaderKeywordFilter.FilterAttribute.EvaluationMode), default(object), default(string), default(int), default(string[])) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.SelectIfAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class SelectIfNotAttribute : global::UnityEditor.ShaderKeywordFilter.FilterAttribute
-    {
-        [global::Unbound.Stub] public SelectIfNotAttribute(object condition, bool overridePriority = false, string filePath = "", int lineNumber = 0, params string[] keywordNames) : base(default(global::UnityEditor.ShaderKeywordFilter.FilterAction), default(global::UnityEditor.ShaderKeywordFilter.FilterAttribute.Precedence), default(global::UnityEditor.ShaderKeywordFilter.FilterAttribute.EvaluationMode), default(object), default(string), default(int), default(string[])) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.SelectIfNotAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class SelectOrRemoveAttribute : global::UnityEditor.ShaderKeywordFilter.FilterAttribute
-    {
-        [global::Unbound.Stub] public SelectOrRemoveAttribute(object condition, bool overridePriority = false, string filePath = "", int lineNumber = 0, params string[] keywordNames) : base(default(global::UnityEditor.ShaderKeywordFilter.FilterAction), default(global::UnityEditor.ShaderKeywordFilter.FilterAttribute.Precedence), default(global::UnityEditor.ShaderKeywordFilter.FilterAttribute.EvaluationMode), default(object), default(string), default(int), default(string[])) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.SelectOrRemoveAttribute.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class SettingsNode
@@ -44331,15 +44231,6 @@ namespace UnityEditor.ShaderKeywordFilter
             [global::Unbound.Stub] public global::UnityEngine.Hash128 dependencyHash;
             [global::Unbound.Stub] public global::UnityEditor.ShaderKeywordFilter.SettingsNode settingsNode;
         }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)268, AllowMultiple = true)]
-    [global::Unbound.Stub]
-    public unsafe partial class TagConstraintAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public TagConstraintAttribute(bool negate, params string[] tags) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.TagConstraintAttribute.ctor"); }
-        [global::Unbound.Stub] internal bool ShouldApplyRules(params string[] currentTags) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.TagConstraintAttribute.ShouldApplyRules"); return default; }
-        internal bool Negated { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.TagConstraintAttribute.Negated"); return default; } }
-        internal string[] Tags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderKeywordFilter.TagConstraintAttribute.Tags"); return global::System.Array.Empty<string>(); } }
     }
 }
 namespace UnityEditor.ShortcutManagement
