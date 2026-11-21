@@ -17,4 +17,12 @@
 {"k": "MonoAbort.returned", "v": false}
 {"k": "MonoAbort.lines", "v": "* Assertion at unity-utils.c:183, condition `klass' not met"}
 {"k": "MonoAbort.signal", "v": "SIGABRT"}
+{"k": "7.before", "v": "forcing 7"}
+{"k": "7.returned", "v": false}
+{"k": "7.lines", "v": "* Assertion at unity-utils.c:183, condition `klass' not met"}
+{"k": "7.signal", "v": "SIGABRT"}
+{"k": "-1.before", "v": "forcing -1"}
+{"k": "-1.returned", "v": false}
+{"k": "-1.lines", "v": "* Assertion at unity-utils.c:183, condition `klass' not met"}
+{"k": "-1.signal", "v": "SIGABRT"}
 {"k": "complete", "v": true}

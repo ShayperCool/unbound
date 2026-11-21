@@ -1,25 +1,34 @@
-using System.Linq;
-using Unbound.Runtime;
 using UnityEngine.Diagnostics;
 using Xunit;
 
-// Utils.ForceCrash with a value outside ForcedCrashCategory is unmeasured (tests/projects/forcecrash
-// measures each category in its own Editor run): it is reported and the process keeps running.
+// Utils.ForceCrash categories including values outside ForcedCrashCategory (7, -1):
+// tests/projects/forcecrash measures every category in its own Editor and Unbound run; here we
+// verify the crash plan routing without killing the test runner process.
 
 namespace UnityEngine.Tests
 {
     public sealed class ForceCrashTests
     {
-        static int Hits(string member) => Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
-
         [Fact]
-        public void AValueOutsideTheCategoriesIsReportedWithoutACrash()
+        public void ValuesOutsideForcedCrashCategoryFollowMonoAbortPlan()
         {
-            const string member = "Utils.ForceCrash with a value outside ForcedCrashCategory";
-            int before = Hits(member);
-            Utils.ForceCrash((ForcedCrashCategory)7);
-            Utils.ForceCrash((ForcedCrashCategory)(-1));
-            Assert.Equal(before + 2, Hits(member));
+            var mono = Utils.Plan(ForcedCrashCategory.MonoAbort);
+            Assert.Equal(Utils.SIGABRT, mono.Signal);
+            Assert.Single(mono.Lines);
+            Assert.Null(mono.Error);
+
+            foreach (var invalid in new[] { (ForcedCrashCategory)7, (ForcedCrashCategory)(-1), (ForcedCrashCategory)int.MaxValue })
+            {
+                var plan = Utils.Plan(invalid);
+                Assert.Equal(mono.Signal, plan.Signal);
+                Assert.Equal(mono.Lines, plan.Lines);
+                Assert.Null(plan.Error);
+            }
+
+            // Control: AccessViolation uses SIGSEGV, not SIGABRT.
+            var av = Utils.Plan(ForcedCrashCategory.AccessViolation);
+            Assert.Equal(Utils.SIGSEGV, av.Signal);
+            Assert.NotEqual(mono.Lines, av.Lines);
         }
     }
 }

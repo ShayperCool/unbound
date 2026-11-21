@@ -19,7 +19,9 @@ namespace ForceCrashProbe
             var dir = Environment.GetEnvironmentVariable("FORCE_CRASH_OUT");
             var name = Environment.GetEnvironmentVariable("FORCE_CRASH_CATEGORY");
             if (string.IsNullOrEmpty(dir) || string.IsNullOrEmpty(name)) return;
-            var category = (ForcedCrashCategory)Enum.Parse(typeof(ForcedCrashCategory), name);
+            var category = int.TryParse(name, out int raw)
+                ? (ForcedCrashCategory)raw
+                : (ForcedCrashCategory)Enum.Parse(typeof(ForcedCrashCategory), name);
             File.WriteAllText(Path.Combine(dir, "before.txt"), "forcing " + category);
             Debug.Log("ForceCrashProbe: forcing " + category);
             Utils.ForceCrash(category);

@@ -21,7 +21,7 @@ import value_probe  # noqa: E402
 from probe_paths import run_root, reference_root  # noqa: E402
 import editor_runner  # noqa: E402
 
-CATEGORIES = ['AccessViolation', 'FatalError', 'Abort', 'PureVirtualFunction', 'MonoAbort']
+CATEGORIES = ['AccessViolation', 'FatalError', 'Abort', 'PureVirtualFunction', 'MonoAbort', '7', '-1']
 # Values the reference cannot have: after FatalError the Editor never exits by itself (its runner's
 # watchdog ends it), so Unbound's end is shown, not compared.
 NOT_COMPARED = {'FatalError.signal': "the Editor's run ends at the watchdog"}
@@ -74,12 +74,12 @@ def read(path):
     return {row['k']: row['v'] for row in rows}
 
 
-def record(label):
+def record(label, categories=None):
     if sys.platform != 'linux':
         raise SystemExit('forcecrash records only with the Linux GPU Editor')
     root = run_root(PROBE, label)
     values = {}
-    for category in CATEGORIES:
+    for category in (categories or CATEGORIES):
         out = root/category
         project = value_probe.assemble(PROBE, out)
         capture = out/'capture'
@@ -154,9 +154,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=['record', 'publish', 'gate'])
     parser.add_argument('labels', nargs='*')
+    parser.add_argument('--categories', nargs='+', help='record only these categories')
     args = parser.parse_args()
     if args.mode == 'record':
-        return record(args.labels[0])
+        return record(args.labels[0], args.categories)
     if args.mode == 'publish':
         return publish(args.labels)
     return gate()

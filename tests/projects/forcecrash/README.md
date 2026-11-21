@@ -15,11 +15,11 @@ Measured:
 - AccessViolation prints "Forcing a crash -- Intentionally Dereferencing NULL pointer" and dies of
   SIGSEGV.
 - Abort prints nothing and dies of SIGABRT; PureVirtualFunction prints "pure virtual method called"
-  and "terminate called without an active exception", MonoAbort a Mono assertion line, and both die
-  of SIGABRT.
+  and "terminate called without an active exception", MonoAbort and values outside the enum (`7`,
+  `-1`) print the Mono assertion line, and all die of SIGABRT.
 - FatalError logs "Intentionally caused fatal error" as an error, starts shutting down and does not
   exit by itself (the run's watchdog ends it), so its exit is not compared; Unbound aborts after the
   error.
 - No call returns.
 
-Unmeasured: the macOS Editor, batch mode, worker threads, values outside the enum, other releases.
+Unmeasured: the macOS Editor, batch mode, worker threads, other releases.
