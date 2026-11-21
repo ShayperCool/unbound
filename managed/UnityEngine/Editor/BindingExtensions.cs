@@ -2310,88 +2310,60 @@ namespace UnityEditor.UIElements.Bindings
         public static void SetDoublePropertyValue(SerializedProperty p, double v) => p.doubleValue = v;
         public static void SetStringPropertyValue(SerializedProperty p, string v) => p.stringValue = v;
         public static void SetColorPropertyValue(SerializedProperty p, Color v) => p.colorValue = v;
-        static void SetFloatComponentIfDifferent(SerializedProperty p, string name, float current, float next)
+        // Editing several objects writes only the parts that differ from the first target's value,
+        // read again after every write; a Vector4's w is compared with z (Unity's
+        // SerializedPropertyHelper does both, on 6000.0 and its later branches;
+        // tests/projects/vector4binding).
+        static readonly string[] s_Axes = { "x", "y", "z", "w" };
+        static readonly Func<SerializedProperty, Vector4> s_ReadVector2 = p => p.vector2Value;
+        static readonly Func<SerializedProperty, Vector4> s_ReadVector3 = p => p.vector3Value;
+        static readonly Func<SerializedProperty, Vector4> s_ReadVector4 = p => p.vector4Value;
+        static readonly Func<SerializedProperty, Vector3Int> s_ReadVector2Int = p => (Vector3Int)p.vector2IntValue;
+        static readonly Func<SerializedProperty, Vector3Int> s_ReadVector3Int = p => p.vector3IntValue;
+
+        static void SetChangedParts(SerializedProperty p, Vector4 v, int count, Func<SerializedProperty, Vector4> read)
         {
-            if (!current.Equals(next)) p.FindPropertyRelative(name).doubleValue = next;
+            for (int i = 0; i < count; i++)
+            {
+                int compared = i == 3 ? 2 : i;
+                if (!read(p)[compared].Equals(v[i])) p.FindPropertyRelative(s_Axes[i]).doubleValue = v[i];
+            }
+        }
+
+        static void SetChangedParts(SerializedProperty p, Vector3Int v, int count, Func<SerializedProperty, Vector3Int> read)
+        {
+            for (int i = 0; i < count; i++)
+                if (!read(p)[i].Equals(v[i])) p.FindPropertyRelative(s_Axes[i]).intValue = v[i];
         }
 
         public static void SetVector2PropertyValue(SerializedProperty p, Vector2 v)
         {
-            if (p.hasMultipleDifferentValues)
-            {
-                Vector2 current = p.vector2Value;
-                SetFloatComponentIfDifferent(p, "x", current.x, v.x);
-                SetFloatComponentIfDifferent(p, "y", current.y, v.y);
-            }
-            else
-            {
-                p.vector2Value = v;
-            }
+            if (p.hasMultipleDifferentValues) SetChangedParts(p, v, 2, s_ReadVector2);
+            else p.vector2Value = v;
         }
 
         public static void SetVector3PropertyValue(SerializedProperty p, Vector3 v)
         {
-            if (p.hasMultipleDifferentValues)
-            {
-                Vector3 current = p.vector3Value;
-                SetFloatComponentIfDifferent(p, "x", current.x, v.x);
-                SetFloatComponentIfDifferent(p, "y", current.y, v.y);
-                SetFloatComponentIfDifferent(p, "z", current.z, v.z);
-            }
-            else
-            {
-                p.vector3Value = v;
-            }
+            if (p.hasMultipleDifferentValues) SetChangedParts(p, v, 3, s_ReadVector3);
+            else p.vector3Value = v;
         }
 
         public static void SetVector4PropertyValue(SerializedProperty p, Vector4 v)
         {
-            if (p.hasMultipleDifferentValues)
-            {
-                Vector4 current = p.vector4Value;
-                SetFloatComponentIfDifferent(p, "x", current.x, v.x);
-                SetFloatComponentIfDifferent(p, "y", current.y, v.y);
-                SetFloatComponentIfDifferent(p, "z", current.z, v.z);
-                SetFloatComponentIfDifferent(p, "w", Unbound.Runtime.Compat.Vector4MultiEditComparesZToW ? current.z : current.w, v.w);
-            }
-            else
-            {
-                p.vector4Value = v;
-            }
-        }
-
-        static void SetIntComponentIfDifferent(SerializedProperty p, string name, int current, int next)
-        {
-            if (!current.Equals(next)) p.FindPropertyRelative(name).intValue = next;
+            if (p.hasMultipleDifferentValues) SetChangedParts(p, v, 4, s_ReadVector4);
+            else p.vector4Value = v;
         }
 
         public static void SetVector2IntPropertyValue(SerializedProperty p, Vector2Int v)
         {
-            if (p.hasMultipleDifferentValues)
-            {
-                Vector2Int current = p.vector2IntValue;
-                SetIntComponentIfDifferent(p, "x", current.x, v.x);
-                SetIntComponentIfDifferent(p, "y", current.y, v.y);
-            }
-            else
-            {
-                p.vector2IntValue = v;
-            }
+            if (p.hasMultipleDifferentValues) SetChangedParts(p, (Vector3Int)v, 2, s_ReadVector2Int);
+            else p.vector2IntValue = v;
         }
 
         public static void SetVector3IntPropertyValue(SerializedProperty p, Vector3Int v)
         {
-            if (p.hasMultipleDifferentValues)
-            {
-                Vector3Int current = p.vector3IntValue;
-                SetIntComponentIfDifferent(p, "x", current.x, v.x);
-                SetIntComponentIfDifferent(p, "y", current.y, v.y);
-                SetIntComponentIfDifferent(p, "z", current.z, v.z);
-            }
-            else
-            {
-                p.vector3IntValue = v;
-            }
+            if (p.hasMultipleDifferentValues) SetChangedParts(p, v, 3, s_ReadVector3Int);
+            else p.vector3IntValue = v;
         }
 
         public static void SetRectPropertyValue(SerializedProperty p, Rect v) => p.rectValue = v;

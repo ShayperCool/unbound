@@ -1527,9 +1527,8 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void Vector4BindingUnmeasuredPreservesWAndDisposedSo()
+        public void Vector4MultiEditComparesWWithTheNewZAndDisposedSoUnbinds()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
             var t2 = ScriptableObject.CreateInstance<TestTarget>();
@@ -1540,7 +1539,9 @@ namespace UnityEngine.Tests
             using var soSingle = new SerializedObject(t1);
             try
             {
-                // On unmeasured releases, editing x on mixed Vector4 with z != w preserves both z and w cleanly.
+                // Each part is compared with the first target's value read again after the earlier
+                // writes, and w with z: editing x writes x and, as the first target's z (100)
+                // differs from its w (1000), w as well.
                 var vf = new Vector4Field();
                 panel.visualTree.Add(vf);
                 vf.BindProperty(soMulti.FindProperty("pos4"));
@@ -1560,17 +1561,24 @@ namespace UnityEngine.Tests
                 xSub.value = 6f;
                 Tick(panel);
                 Assert.Equal(new Vector4(6f, 10f, 100f, 1000f), t1.pos4);
-                Assert.Equal(new Vector4(6f, 10f, 200f, 2000f), t2.pos4);
+                Assert.Equal(new Vector4(6f, 10f, 200f, 1000f), t2.pos4);
                 Assert.False(xSub.showMixedValue);
                 Assert.True(zSub.showMixedValue);
-                Assert.True(wSub.showMixedValue);
+                Assert.False(wSub.showMixedValue);
 
-                // Editing w to equal target[0].z writes w cleanly on unmeasured releases.
+                // A w equal to the new z is not written.
                 wSub.value = 100f;
                 Tick(panel);
-                Assert.Equal(new Vector4(6f, 10f, 100f, 100f), t1.pos4);
-                Assert.Equal(new Vector4(6f, 10f, 200f, 100f), t2.pos4);
-                Assert.False(wSub.showMixedValue);
+                Assert.Equal(new Vector4(6f, 10f, 100f, 1000f), t1.pos4);
+                Assert.Equal(new Vector4(6f, 10f, 200f, 1000f), t2.pos4);
+
+                // The field still shows the w it was given. Editing z writes z, and that w because
+                // the new z (7) differs from it.
+                Assert.Equal(100f, wSub.value);
+                zSub.value = 7f;
+                Tick(panel);
+                Assert.Equal(new Vector4(6f, 10f, 7f, 100f), t1.pos4);
+                Assert.Equal(new Vector4(6f, 10f, 7f, 100f), t2.pos4);
 
                 // NaN tolerance on single-target Vector4Field.
                 var singleField = new Vector4Field();

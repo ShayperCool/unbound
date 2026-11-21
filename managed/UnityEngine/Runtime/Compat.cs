@@ -72,11 +72,6 @@ namespace Unbound.Runtime
         /// two-argument overload accepts it) and UxmlAttributeNames normalizes a null obsoleteNames
         /// array to an empty array. Other families retain their unmeasured constructor values.</summary>
         internal static bool UxmlSerializedDataMeasured => Family == ReleaseFamily.Unity6000_0;
-        /// <summary>Multi-object Vector4 SerializedProperty binding measured by
-        /// tests/projects/vector4binding on 6000.0.71f1: when hasMultipleDifferentValues is true,
-        /// target[0].z is compared against the new w component. Other families compare target[0].w
-        /// against the new w component.</summary>
-        internal static bool Vector4MultiEditComparesZToW => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Uncreated object wrappers measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous unmeasured wrapper state.</summary>
         internal static bool UncreatedObjectWrappersMeasured => Family == ReleaseFamily.Unity6000_0;
