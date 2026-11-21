@@ -85,12 +85,12 @@ namespace UnityEngine.Tests
             Assert.False(UnityYamlWriter.WritesNew(Own(new Mesh())));
             Assert.False(UnityYamlWriter.WritesNew(Own(new AnimationClip())));
             Assert.False(UnityYamlWriter.WritesNew(Own(new Texture2D(2, 2))));
-            Assert.True(UnityYamlWriter.WritesNew(Own(ScriptableObject.CreateInstance<PrefabTestData>())));
+            Assert.True(UnityYamlWriter.WritesNew(Own(ScriptableObject.CreateInstance<NewAssetTestData>())));
             Assert.Throws<NotSupportedException>(() => Write(Own(new Mesh()), 4300000));
         }
     }
 
-    public class PrefabTestData : ScriptableObject
+    public class NewAssetTestData : ScriptableObject
     {
         public int count;
     }
