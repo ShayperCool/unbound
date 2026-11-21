@@ -47,6 +47,71 @@ class PreviewLogTile : Tile
     static string TileName(TileBase t) => t == null ? "null" : t.name;
 }
 
+/// <summary>A tile that writes its callbacks, in call order, to one log shared by all such tiles.</summary>
+class OrderLogTile : Tile
+{
+    public static readonly List<string> Log = new List<string>();
+
+    public override void RefreshTile(Vector3Int position, ITilemap tilemap)
+    {
+        Log.Add($"{name}.R({position.x},{position.y})");
+        base.RefreshTile(position, tilemap);
+    }
+
+    public override void GetTileData(Vector3Int position, ITilemap tilemap, ref TileData tileData)
+    {
+        Log.Add($"{name}.D({position.x},{position.y})");
+        base.GetTileData(position, tilemap, ref tileData);
+    }
+
+    public override bool StartUp(Vector3Int position, ITilemap tilemap, GameObject go)
+    {
+        Log.Add($"{name}.S({position.x},{position.y})");
+        return base.StartUp(position, tilemap, go);
+    }
+
+    public override bool GetTileAnimationData(Vector3Int position, ITilemap tilemap, ref TileAnimationData tileAnimationData)
+    {
+        Log.Add($"{name}.N({position.x},{position.y})");
+        return base.GetTileAnimationData(position, tilemap, ref tileAnimationData);
+    }
+}
+
+/// <summary>A tile whose RefreshTile asks to refresh its own cell and, optionally, its left and
+/// right neighbours, logging to <see cref="OrderLogTile.Log"/>.</summary>
+class NeighbourLogTile : TileBase
+{
+    public Sprite sprite;
+    public bool neighbours;
+
+    public override void RefreshTile(Vector3Int position, ITilemap tilemap)
+    {
+        OrderLogTile.Log.Add($"{name}.R({position.x},{position.y})");
+        tilemap.RefreshTile(position);
+        if (!neighbours) return;
+        tilemap.RefreshTile(position + Vector3Int.right);
+        tilemap.RefreshTile(position + Vector3Int.left);
+    }
+
+    public override void GetTileData(Vector3Int position, ITilemap tilemap, ref TileData tileData)
+    {
+        OrderLogTile.Log.Add($"{name}.D({position.x},{position.y})");
+        tileData.sprite = sprite;
+    }
+
+    public override bool StartUp(Vector3Int position, ITilemap tilemap, GameObject go)
+    {
+        OrderLogTile.Log.Add($"{name}.S({position.x},{position.y})");
+        return true;
+    }
+
+    public override bool GetTileAnimationData(Vector3Int position, ITilemap tilemap, ref TileAnimationData tileAnimationData)
+    {
+        OrderLogTile.Log.Add($"{name}.N({position.x},{position.y})");
+        return false;
+    }
+}
+
 /// <summary>
 /// Records, in Play mode, what the Unity 6000.0 Editor answers for Tilemap editor-preview APIs:
 /// SetEditorPreviewTile, SetEditorPreviewColor, SetEditorPreviewTransformMatrix,
@@ -439,6 +504,166 @@ static class TilemapPreviewProbe
             return $"before=({beforeClear})|afterClear=({afterClear})|compress=({afterCompress})|growActual=({afterGrowActual})|resize=({afterResize})|clearAll=({afterClearAll})";
         });
 
+        // 7. Fill order: the cells a fill visits, the order of the old and new tiles' RefreshTile and
+        // of the GetTileData/StartUp that follow, and the order of the changed-cell events.
+        var orderOld = ScriptableObject.CreateInstance<OrderLogTile>();
+        orderOld.name = "A";
+        orderOld.sprite = spriteB;
+        var orderNew = ScriptableObject.CreateInstance<OrderLogTile>();
+        orderNew.name = "F";
+        orderNew.sprite = spriteC;
+        Action<Tilemap, Tilemap.SyncTile[]> logTiles = (_, tiles) =>
+            OrderLogTile.Log.Add("T[" + string.Join(";", tiles.Select(t => $"{t.position.x},{t.position.y}")) + "]");
+        Action<Tilemap, NativeArray<Vector3Int>> logPositions = (_, positions) =>
+            OrderLogTile.Log.Add("P[" + string.Join(";", positions.Select(p => $"{p.x},{p.y}")) + "]");
+        Tilemap.tilemapTileChanged += logTiles;
+        Tilemap.tilemapPositionsChanged += logPositions;
+
+        Tilemap OrderMap(string name, int width, int height)
+        {
+            var map = NewMap(name);
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                    map.SetTile(new Vector3Int(x, y, 0), orderOld);
+            OrderLogTile.Log.Clear();
+            return map;
+        }
+
+        string Ordered(Action act)
+        {
+            OrderLogTile.Log.Clear();
+            act();
+            var s = string.Join(" ", OrderLogTile.Log);
+            OrderLogTile.Log.Clear();
+            return s;
+        }
+
+        Check("07.fillOrder.boxFill", () =>
+        {
+            var map = OrderMap("OrderBox", 3, 3);
+            return Ordered(() => map.BoxFill(new Vector3Int(1, 1, 0), orderNew, 0, 0, 2, 2));
+        });
+        Check("07.fillOrder.floodFill", () =>
+        {
+            var map = OrderMap("OrderFlood", 3, 3);
+            return Ordered(() => map.FloodFill(new Vector3Int(1, 1, 0), orderNew));
+        });
+        Check("07.fillOrder.floodFillCorner", () =>
+        {
+            var map = OrderMap("OrderFloodCorner", 4, 3);
+            return Ordered(() => map.FloodFill(new Vector3Int(0, 0, 0), orderNew));
+        });
+        Check("07.fillOrder.floodFillEmpty", () =>
+        {
+            var map = NewMap("OrderFloodEmpty");
+            map.SetTile(new Vector3Int(0, 0, 0), tileA);
+            map.SetTile(new Vector3Int(3, 2, 0), tileA);
+            return Ordered(() => map.FloodFill(new Vector3Int(1, 1, 0), orderNew));
+        });
+        Check("07.fillOrder.previewBoxFill", () =>
+        {
+            var map = OrderMap("OrderPreviewBox", 3, 3);
+            map.ClearAllEditorPreviewTiles();
+            return Ordered(() => map.EditorPreviewBoxFill(new Vector3Int(1, 1, 0), orderNew, 0, 0, 2, 2));
+        });
+        Check("07.fillOrder.previewFloodFill", () =>
+        {
+            var map = OrderMap("OrderPreviewFlood", 3, 3);
+            map.ClearAllEditorPreviewTiles();
+            return Ordered(() => map.EditorPreviewFloodFill(new Vector3Int(1, 1, 0), orderNew));
+        });
+        Check("07.fillOrder.previewFloodFillCornerAndClear", () =>
+        {
+            var map = OrderMap("OrderPreviewFloodCorner", 4, 3);
+            map.ClearAllEditorPreviewTiles();
+            string fill = Ordered(() => map.EditorPreviewFloodFill(new Vector3Int(0, 0, 0), orderNew));
+            string clear = Ordered(() => map.ClearAllEditorPreviewTiles());
+            return $"fill=({fill})|clear=({clear})";
+        });
+
+        // RefreshTile of a cell that holds both an actual and a preview tile, and of an actual-only cell.
+        Check("07.refreshOverlay", () =>
+        {
+            var map = OrderMap("OrderRefreshOverlay", 2, 1);
+            map.SetEditorPreviewTile(new Vector3Int(0, 0, 0), orderNew);
+            string both = Ordered(() => map.RefreshTile(new Vector3Int(0, 0, 0)));
+            string actualOnly = Ordered(() => map.RefreshTile(new Vector3Int(1, 0, 0)));
+            return $"both=({both})|actualOnly=({actualOnly})";
+        });
+
+        // The internal CompressBoundsKeepEditorPreview (called by the Tile Palette).
+        Check("07.compressKeepPreview", () =>
+        {
+            var method = typeof(Tilemap).GetMethod("CompressBoundsKeepEditorPreview",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            if (method == null) return "missing";
+            var map = NewMap("CompressKeep");
+            map.SetTile(new Vector3Int(1, 1, 0), tileA);
+            map.SetTile(new Vector3Int(3, 3, 0), tileA);
+            map.SetTile(new Vector3Int(3, 3, 0), null);
+            map.SetEditorPreviewTile(new Vector3Int(-2, 5, 0), tilePreview);
+            method.Invoke(map, null);
+            string withActual = BoundsSummary(map) + "|has=" + map.HasEditorPreviewTile(new Vector3Int(-2, 5, 0));
+            var onlyPreview = NewMap("CompressKeepOnlyPreview");
+            onlyPreview.SetEditorPreviewTile(new Vector3Int(2, 3, 0), tilePreview);
+            onlyPreview.SetEditorPreviewTile(new Vector3Int(4, 3, 0), tilePreview);
+            method.Invoke(onlyPreview, null);
+            string previewOnly = BoundsSummary(onlyPreview);
+            return $"withActual=({withActual})|previewOnly=({previewOnly})";
+        });
+
+        // 8. The refresh after a change: up to four changed cells are refreshed in z, y, x order, each
+        // cell's GetTileData, StartUp and GetTileAnimationData together; from five on, in the order
+        // the tiles asked for them, every GetTileData first. Preview tiles set one at a time refresh at once.
+        Vector3Int[] Row(int count)
+        {
+            var row = new Vector3Int[count];
+            for (int i = 0; i < count; i++) row[i] = new Vector3Int(count - 1 - i, 0, 0);
+            return row;
+        }
+        TileBase[] Same(TileBase tile, int count) => Enumerable.Repeat(tile, count).ToArray();
+        var neighbourTile = ScriptableObject.CreateInstance<NeighbourLogTile>();
+        neighbourTile.name = "B";
+        neighbourTile.sprite = spriteB;
+        neighbourTile.neighbours = true;
+        Check("08.refreshOrder.set4", () =>
+        {
+            var map = NewMap("RefreshSet4");
+            return Ordered(() => map.SetTiles(Row(4), Same(orderNew, 4)));
+        });
+        Check("08.refreshOrder.set5", () =>
+        {
+            var map = NewMap("RefreshSet5");
+            return Ordered(() => map.SetTiles(Row(5), Same(orderNew, 5)));
+        });
+        Check("08.refreshOrder.neighbours3", () =>
+        {
+            var map = NewMap("RefreshNeighbours3");
+            for (int x = -1; x <= 3; x++) map.SetTile(new Vector3Int(x, 0, 0), orderOld);
+            return Ordered(() => map.SetTiles(Row(3), Same(neighbourTile, 3)));
+        });
+        Check("08.refreshOrder.neighbours5", () =>
+        {
+            var map = NewMap("RefreshNeighbours5");
+            for (int x = -1; x <= 5; x++) map.SetTile(new Vector3Int(x, 0, 0), orderOld);
+            return Ordered(() => map.SetTiles(Row(5), Same(neighbourTile, 5)));
+        });
+        Check("08.refreshOrder.previewBoxFill2", () =>
+        {
+            var map = OrderMap("RefreshPreviewBox2", 2, 1);
+            map.ClearAllEditorPreviewTiles();
+            return Ordered(() => map.EditorPreviewBoxFill(new Vector3Int(1, 0, 0), orderNew, 0, 0, 1, 0));
+        });
+        Check("08.refreshOrder.previewSetAndClear", () =>
+        {
+            var map = OrderMap("RefreshPreviewSet", 2, 1);
+            string set = Ordered(() => map.SetEditorPreviewTile(new Vector3Int(1, 0, 0), orderNew));
+            string clear = Ordered(() => map.SetEditorPreviewTile(new Vector3Int(1, 0, 0), null));
+            return $"set=({set})|clear=({clear})";
+        });
+
+        Tilemap.tilemapTileChanged -= logTiles;
+        Tilemap.tilemapPositionsChanged -= logPositions;
         Tilemap.tilemapTileChanged -= onTileChanged;
         Tilemap.tilemapPositionsChanged -= onPosChanged;
         Object.DestroyImmediate(dummyPrefab);
