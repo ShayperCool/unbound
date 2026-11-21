@@ -130,6 +130,21 @@ fn graph() -> MutexGuard<'static, Graph> {
     GRAPH.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
+impl Node {
+    /// Whether a thread waiting for it may still have to run part of it or wait for it: not
+    /// done, and not prepared with every participant taken.
+    fn open_here(&self) -> bool {
+        if self.state != State::Launched {
+            return self.state != State::Done;
+        }
+        let run = &self.run;
+        let participants = run.participants.load(Ordering::Acquire);
+        !run.preparing.load(Ordering::Acquire)
+            || participants == 0
+            || run.next.load(Ordering::Relaxed) < participants
+    }
+}
+
 impl Graph {
     fn node(&self, key: Key) -> Option<&Node> {
         let slot = self.slots.get(key.slot as usize)?;
@@ -388,59 +403,84 @@ pub fn release(handle: u64) {
 }
 
 /// Returns once the job is done (`JobHandle.Complete` without the flush and the safety sync). What
-/// it waits for that has not started runs here, dependencies first; a parallel job's participants
-/// left run here too.
-pub fn wait(handle: u64) {
+/// it waits for that has not started runs here, dependencies first, and so do a parallel job's
+/// participants left; the thread sleeps only while everything it waits for runs elsewhere.
+/// Returns whether the job was not done yet.
+pub fn wait(handle: u64) -> bool {
     let Some(target) = Key::of(handle) else {
-        return;
+        return false;
     };
     let mut graph = graph();
-    for key in graph.in_dependency_order(target) {
-        graph = run_here(graph, key);
-    }
-}
-
-fn run_here(mut graph: MutexGuard<'static, Graph>, key: Key) -> MutexGuard<'static, Graph> {
+    let mut order = graph.in_dependency_order(target);
+    let open =
+        |graph: &Graph, key: Key| key == target || graph.node(key).is_some_and(Node::open_here);
+    // Jobs before `first` are done or taken by other threads.
+    let mut first = 0;
+    let mut pending = false;
     loop {
-        let Some(node) = graph.node_mut(key) else {
-            return graph;
-        };
-        let run = node.run.clone();
-        match node.state {
-            State::Done => return graph,
-            State::Batched | State::Waiting if node.pending == 0 && !node.combination => {
-                node.state = State::Launched;
-                drop(graph);
-                launch(run, true);
-                graph = self::graph();
-                continue;
-            }
-            State::Launched => {
-                // Handed out but not prepared yet: prepared and run here unless another thread
-                // already prepares it.
-                if !run.preparing.load(Ordering::Acquire) {
-                    drop(graph);
-                    launch(run, true);
-                    graph = self::graph();
-                    continue;
-                }
-                let participants = run.participants.load(Ordering::Acquire);
-                if participants != 0 && run.next.load(Ordering::Relaxed) < participants {
-                    drop(graph);
-                    run_participants(&run);
-                    graph = self::graph();
-                    continue;
-                }
-            }
-            _ => {}
+        if graph
+            .node(target)
+            .is_none_or(|node| node.state == State::Done)
+        {
+            return pending;
         }
-        // Running elsewhere (or, for a combination, its dependencies): sleep until it changes.
-        node.waiters += 1;
+        pending = true;
+        while !open(&graph, order[first]) {
+            first += 1;
+        }
+        if let Some((run, prepared)) = runnable_here(&mut graph, &order[first..]) {
+            drop(graph);
+            if prepared {
+                run_participants(&run);
+            } else {
+                launch(run, true);
+            }
+            graph = self::graph();
+            continue;
+        }
+        // Everything left runs elsewhere (or waits for what does): sleep until the first of it
+        // is done or ready. What this thread no longer waits for or can take part in drops out.
+        order.drain(..first);
+        first = 0;
+        order.retain(|&key| open(&graph, key));
+        let key = order[0];
+        if let Some(node) = graph.node_mut(key) {
+            node.waiters += 1;
+        }
         graph = CHANGED.wait(graph).unwrap_or_else(PoisonError::into_inner);
         if let Some(node) = graph.node_mut(key) {
             node.waiters -= 1;
         }
     }
+}
+
+/// The first of `keys` this thread can work on: a job whose dependencies are done that nobody
+/// prepared yet (claimed for launching here: false), or a prepared one with participants left
+/// (true).
+fn runnable_here(graph: &mut Graph, keys: &[Key]) -> Option<(Arc<Run>, bool)> {
+    for &key in keys {
+        let Some(node) = graph.node_mut(key) else {
+            continue;
+        };
+        match node.state {
+            State::Batched | State::Waiting if node.pending == 0 && !node.combination => {
+                node.state = State::Launched;
+                return Some((node.run.clone(), false));
+            }
+            State::Launched => {
+                let run = &node.run;
+                if !run.preparing.load(Ordering::Acquire) {
+                    return Some((run.clone(), false));
+                }
+                let participants = run.participants.load(Ordering::Acquire);
+                if participants != 0 && run.next.load(Ordering::Relaxed) < participants {
+                    return Some((run.clone(), true));
+                }
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 /// Prepares a launched job, unless another thread already does, and runs its participants: on

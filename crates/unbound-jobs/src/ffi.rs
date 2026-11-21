@@ -24,7 +24,8 @@ pub struct JobsApi {
     pub set_held: extern "C" fn(u64, i32) -> i32,
     pub flush: extern "C" fn(),
     pub start: extern "C" fn(u64),
-    pub wait: extern "C" fn(u64),
+    /// (handle) -> whether the job was not done yet: runs or waits for it.
+    pub wait: extern "C" fn(u64) -> i32,
     pub is_done: extern "C" fn(u64) -> i32,
     pub release: extern "C" fn(u64),
     pub processor_count: extern "C" fn() -> i32,
@@ -121,8 +122,8 @@ extern "C" fn start(handle: u64) {
     crate::start(handle);
 }
 
-extern "C" fn wait(handle: u64) {
-    crate::wait(handle);
+extern "C" fn wait(handle: u64) -> i32 {
+    crate::wait(handle).into()
 }
 
 extern "C" fn release(handle: u64) {

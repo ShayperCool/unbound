@@ -123,8 +123,9 @@ fn a_batched_job_starts_only_when_flushed() {
         assert_eq!(job.prepared.load(Ordering::SeqCst), 0);
         assert!(!is_done(handle));
         flush();
-        wait(handle);
+        assert!(wait(handle));
         assert!(is_done(handle));
+        assert!(!wait(handle));
         assert_eq!(
             (
                 job.prepared.load(Ordering::SeqCst),
@@ -475,5 +476,32 @@ fn install_runs_on_the_job_workers() {
         let ran = AtomicBool::new(false);
         install(|| ran.store(true, Ordering::SeqCst));
         assert!(ran.load(Ordering::SeqCst));
+    });
+}
+
+/// Wait runs what it can of the jobs it waits for while another of them runs on a worker (here
+/// the worker's job blocks until the waiting thread ran the other).
+#[test]
+fn wait_runs_later_jobs_while_an_earlier_one_runs_elsewhere() {
+    run(|| {
+        let gate = Gate::new();
+        let started = Gate::new();
+        let blocked = new_job(1, move |_, _| {
+            started.open();
+            gate.pass();
+        });
+        let opener = new_job(1, move |_, thread_index| {
+            assert_eq!(thread_index, 0);
+            gate.open();
+        });
+        let first = schedule(blocked.user(), 0);
+        let second = schedule(opener.user(), 0);
+        let both = combine(0, &[first, second]);
+        start(first);
+        started.pass();
+        wait(both);
+        for handle in [first, second, both] {
+            release(handle);
+        }
     });
 }

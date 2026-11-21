@@ -732,11 +732,7 @@ namespace Unbound.Runtime.Jobs
         {
             var record = Find(handle);
             if (record == null) return;
-            if (!record.Done)
-            {
-                Api->Wait(record.Id);
-                Flush();
-            }
+            if (Api->Wait(record.Id) != 0) Flush();
             Sync(record);
         }
 

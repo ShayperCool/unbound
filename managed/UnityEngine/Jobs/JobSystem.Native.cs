@@ -21,7 +21,8 @@ namespace Unbound.Runtime.Jobs
         internal delegate* unmanaged<ulong, int, int> SetHeld;
         internal delegate* unmanaged<void> Flush;
         internal delegate* unmanaged<ulong, void> Start;
-        internal delegate* unmanaged<ulong, void> Wait;
+        /// <summary>(handle) -> whether the job was not done yet: runs or waits for it.</summary>
+        internal delegate* unmanaged<ulong, int> Wait;
         internal delegate* unmanaged<ulong, int> IsDone;
         internal delegate* unmanaged<ulong, void> Release;
         internal delegate* unmanaged<int> ProcessorCount;
