@@ -1203,12 +1203,57 @@ namespace UnityEditor
 
         public static Texture2D whiteTexture => Texture2D.whiteTexture;
 
-        /// <summary>An object's label and icon as object fields show them: "Name (Type)", "None (Type)".</summary>
-        public static GUIContent ObjectContent(Object obj, Type type)
+        static readonly GUIContent s_ObjectContent = new GUIContent();
+
+        /// <summary>An object's label and icon as object fields show them: "Name (Type)" for
+        /// Components and ScriptableObjects, "Name" for other live objects, "None (Type)" or
+        /// "Missing (Type)" for null/destroyed references, and "&lt;no type&gt;" when untyped.
+        /// Matches the Unity 6000.0.71f1 Editor (tests/projects/objectbinding).</summary>
+        public static GUIContent ObjectContent(Object obj, Type type) =>
+            ObjectContent(obj, type, obj is null ? 0 : obj.GetInstanceID(), showNullIcon: true);
+
+        internal static GUIContent ObjectContent(Object obj, Type type, bool showNullIcon) =>
+            ObjectContent(obj, type, obj is null ? 0 : obj.GetInstanceID(), showNullIcon);
+
+        internal static GUIContent ObjectContent(Object obj, Type type, int instanceID, bool showNullIcon = true)
         {
-            var typeName = ObjectNames.NicifyVariableName((obj != null ? obj.GetType() : type)?.Name ?? "Object");
-            var text = obj != null ? $"{obj.name} ({typeName})" : $"None ({typeName})";
-            return new GUIContent(text, EditorIcons.Load(((obj != null ? obj.GetType() : type)?.Name ?? "DefaultAsset") + " Icon", logError: false) ?? EditorIcons.Placeholder);
+            if (obj != null)
+            {
+                var objType = obj.GetType();
+                s_ObjectContent.text = (obj is Component || obj is ScriptableObject)
+                    ? $"{obj.name} ({ObjectNames.NicifyVariableName(objType.Name)})"
+                    : obj.name;
+                s_ObjectContent.image = EditorIcons.Load(objType.Name + " Icon", logError: false) ?? EditorIcons.Placeholder;
+            }
+            else if (type != null)
+            {
+                var prefix = instanceID != 0 ? "Missing (" : "None (";
+                s_ObjectContent.text = prefix + ObjectNames.NicifyVariableName(type.Name) + ")";
+                s_ObjectContent.image = showNullIcon
+                    ? (EditorIcons.Load(type.Name + " Icon", logError: false) ?? EditorIcons.Placeholder)
+                    : null;
+            }
+            else
+            {
+                s_ObjectContent.text = "<no type>";
+                s_ObjectContent.image = null;
+            }
+            s_ObjectContent.tooltip = null;
+            return s_ObjectContent;
+        }
+
+        internal static GUIContent ObjectContentForProperty(Object obj, Type type, SerializedProperty property)
+        {
+            if (obj == null && type == null && property != null && property.isValid)
+            {
+                s_ObjectContent.text = property.objectReferenceStringValue;
+                s_ObjectContent.image = null;
+                s_ObjectContent.tooltip = null;
+                return s_ObjectContent;
+            }
+            if (property != null && property.isValid)
+                return ObjectContent(obj, type, property.objectReferenceInstanceIDValue, showNullIcon: false);
+            return ObjectContent(obj, type, showNullIcon: false);
         }
 
         /// <summary>The system copy buffer: the same system-wide clipboard, and the same in-process

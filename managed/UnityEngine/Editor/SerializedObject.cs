@@ -452,6 +452,7 @@ namespace UnityEditor
                 m_UnboundPath = m_UnboundPath,
                 m_UnboundVersion = m_UnboundVersion,
                 m_UnboundAtEnd = m_UnboundAtEnd,
+                unsafeMode = unsafeMode,
             };
             return copy;
         }
@@ -1023,10 +1024,11 @@ namespace UnityEditor
             get
             {
                 var n = N;
-                // A placeholder (no engine object, instance id 0) reads as no reference, as the
-                // Editor's native data does; a destroyed object keeps its id.
+                // A destroyed object or placeholder reads as null via objectReferenceValue while
+                // keeping its non-zero instance ID in objectReferenceInstanceIDValue, matching the
+                // Unity 6000.0.71f1 Editor (tests/projects/objectbinding).
                 if (n.PropertyType == SerializedPropertyType.ObjectReference)
-                    return SerializedTree.GetValue(n) is Object value && !(value.m_InstanceID == 0 && value.m_Destroyed) ? value : null;
+                    return SerializedTree.GetValue(n) is Object value && value != null ? value : null;
                 Unsupported("pptr");
                 return null;
             }
@@ -1038,8 +1040,14 @@ namespace UnityEditor
                     Unsupported("pptr");
                     return;
                 }
-                // A reference of the wrong type is not assigned, as in the Editor.
-                if (!(value is null) && !n.ClrType.IsInstanceOfType(value)) return;
+                // Normally a reference of an incompatible type is not assigned; in unsafeMode
+                // (used by ObjectField binding) an incompatible value clears the reference to null,
+                // matching the Unity 6000.0.71f1 Editor (tests/projects/objectbinding).
+                if (!(value is null) && !n.ClrType.IsInstanceOfType(value))
+                {
+                    if (!unsafeMode) return;
+                    value = null;
+                }
                 Write(n, value);
             }
         }
@@ -1048,10 +1056,63 @@ namespace UnityEditor
         {
             get
             {
-                var obj = objectReferenceValue;
-                return obj is null ? 0 : obj.GetInstanceID();
+                var n = N;
+                if (n.PropertyType != SerializedPropertyType.ObjectReference)
+                {
+                    Unsupported("pptr");
+                    return 0;
+                }
+                return SerializedTree.GetValue(n) is Object raw && !(raw.m_InstanceID == 0 && raw.m_Destroyed)
+                    ? raw.GetInstanceID()
+                    : 0;
             }
             set => objectReferenceValue = value == 0 ? null : ObjectRegistry.FindById(value);
+        }
+
+        internal string objectReferenceStringValue
+        {
+            get
+            {
+                var n = N;
+                if (n.PropertyType != SerializedPropertyType.ObjectReference) return "";
+                return EditorGUIUtility.ObjectContent(objectReferenceValue, ObjectReferenceFieldType, objectReferenceInstanceIDValue, showNullIcon: false).text;
+            }
+        }
+
+        static readonly Dictionary<string, Type> s_NativePPtrTypeCache = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
+
+        internal Type ObjectReferenceFieldType
+        {
+            get
+            {
+                var n = N;
+                if (n.PropertyType != SerializedPropertyType.ObjectReference) return null;
+                if (n.ClrType != null && n.ClrType != typeof(Object) && typeof(Object).IsAssignableFrom(n.ClrType))
+                    return n.ClrType;
+                if (n.TypeName != null && n.TypeName.StartsWith("PPtr<", StringComparison.Ordinal) && n.TypeName.EndsWith(">", StringComparison.Ordinal))
+                {
+                    int start = 5;
+                    if (start < n.TypeName.Length && n.TypeName[start] == '$') start++;
+                    string rawName = n.TypeName.Substring(start, n.TypeName.Length - 1 - start);
+                    if (string.Equals(rawName, "Object", StringComparison.Ordinal))
+                        return typeof(Object);
+                    if (s_NativePPtrTypeCache.TryGetValue(rawName, out var cached))
+                        return cached;
+                    Type matched = null;
+                    foreach (var candidate in TypeCache.GetTypesDerivedFrom<Object>())
+                    {
+                        if (!candidate.Name.Equals(rawName, StringComparison.OrdinalIgnoreCase)
+                            || typeof(MonoBehaviour).IsAssignableFrom(candidate)
+                            || typeof(ScriptableObject).IsAssignableFrom(candidate))
+                            continue;
+                        matched = candidate;
+                        break;
+                    }
+                    s_NativePPtrTypeCache[rawName] = matched;
+                    return matched;
+                }
+                return n.ClrType != null && typeof(Object).IsAssignableFrom(n.ClrType) ? n.ClrType : typeof(Object);
+            }
         }
 
         // ------------------------------------------------------------ enums

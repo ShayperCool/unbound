@@ -9,18 +9,18 @@ using UnityEngine.UIElements;
 
 // Editor UI Toolkit PropertyField for supported scalar, enum, Color/Color32 (including
 // ColorUsageAttribute), Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Rect, RectInt, Bounds,
-// BoundsInt, AnimationCurve, and Gradient (including GradientUsageAttribute) SerializedProperty
-// types (bool, int, long, uint, ulong, float, double, string, ordinary and [Flags] enum,
-// Color/Color32, Vector2, Vector3, Vector4 Foldout with lazy child PropertyFields, Vector2Int,
-// Vector3Int, Rect, RectInt, Bounds, BoundsInt, AnimationCurve, and Gradient) and
-// SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API ("PropertyField",
-// "PropertyField.RegisterValueChangeCallback", "ColorUsageAttribute", "GradientUsageAttribute");
-// matches the Unity 6000.0.71f1 Editor, tests/projects/propertyfield, tests/projects/enumbinding,
-// tests/projects/enumflagsbinding, tests/projects/colorbinding, tests/projects/vector2binding,
-// tests/projects/vector3binding, tests/projects/vector4binding, tests/projects/vector2intbinding,
-// tests/projects/vector3intbinding, tests/projects/rectbinding, tests/projects/rectintbinding,
-// tests/projects/boundsbinding, tests/projects/boundsintbinding, tests/projects/curvebinding,
-// and tests/projects/gradientbinding.
+// BoundsInt, AnimationCurve, Gradient (including GradientUsageAttribute), and ObjectReference
+// SerializedProperty types (bool, int, long, uint, ulong, float, double, string, ordinary and
+// [Flags] enum, Color/Color32, Vector2, Vector3, Vector4 Foldout with lazy child PropertyFields,
+// Vector2Int, Vector3Int, Rect, RectInt, Bounds, BoundsInt, AnimationCurve, Gradient, and
+// ObjectReference) and SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API
+// ("PropertyField", "PropertyField.RegisterValueChangeCallback", "ColorUsageAttribute",
+// "GradientUsageAttribute"); matches the Unity 6000.0.71f1 Editor, tests/projects/propertyfield,
+// tests/projects/enumbinding, tests/projects/enumflagsbinding, tests/projects/colorbinding,
+// tests/projects/vector2binding, tests/projects/vector3binding, tests/projects/vector4binding,
+// tests/projects/vector2intbinding, tests/projects/vector3intbinding, tests/projects/rectbinding,
+// tests/projects/rectintbinding, tests/projects/boundsbinding, tests/projects/boundsintbinding,
+// tests/projects/curvebinding, tests/projects/gradientbinding, and tests/projects/objectbinding.
 
 namespace UnityEditor.UIElements
 {
@@ -152,6 +152,7 @@ namespace UnityEditor.UIElements
         static readonly Func<BoundsIntField> s_CreateBoundsIntField = () => new BoundsIntField();
         static readonly Func<CurveField> s_CreateCurveField = () => new CurveField();
         static readonly Func<GradientField> s_CreateGradientField = () => new GradientField();
+        static readonly Func<ObjectField> s_CreateObjectField = () => new ObjectField();
 
         string m_Label;
         SerializedObject m_SerializedObject;
@@ -531,6 +532,13 @@ namespace UnityEditor.UIElements
                     return ConfigureField<CurveField, AnimationCurve>(originalField as CurveField, property, s_CreateCurveField);
                 case SerializedPropertyType.Gradient:
                     return ConfigureField<GradientField, Gradient>(originalField as GradientField, property, s_CreateGradientField);
+                case SerializedPropertyType.ObjectReference:
+                {
+                    var objectField = ConfigureField<ObjectField, UnityEngine.Object>(originalField as ObjectField, property, s_CreateObjectField);
+                    objectField.SetObjectTypeWithoutDisplayUpdate(property.ObjectReferenceFieldType);
+                    objectField.UpdateDisplay();
+                    return objectField;
+                }
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField ({property.propertyType})");
                     return null;

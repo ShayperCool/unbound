@@ -62,6 +62,34 @@ namespace UnityEngine.Tests
             public string tag;
         }
 
+        sealed class RefAsset : ScriptableObject
+        {
+            public int id;
+        }
+
+        sealed class TypedRefElement : VisualElement, IBindable, INotifyValueChanged<RefAsset>
+        {
+            RefAsset m_Value;
+            public IBinding binding { get; set; }
+            public string bindingPath { get; set; }
+
+            public RefAsset value
+            {
+                get => m_Value;
+                set
+                {
+                    if (EqualityComparer<RefAsset>.Default.Equals(m_Value, value)) return;
+                    var prev = m_Value;
+                    m_Value = value;
+                    using var evt = ChangeEvent<RefAsset>.GetPooled(prev, m_Value);
+                    evt.target = this;
+                    SendEvent(evt);
+                }
+            }
+
+            public void SetValueWithoutNotify(RefAsset newValue) => m_Value = newValue;
+        }
+
         sealed class TestTarget : ScriptableObject
         {
             public bool flag = true;
@@ -85,6 +113,9 @@ namespace UnityEngine.Tests
             public Gradient gradientVal = new Gradient();
             [GradientUsage(true, ColorSpace.Linear)]
             public Gradient hdrGradientVal = new Gradient();
+            public RefAsset refAssetVal;
+            public Texture2D textureVal;
+            public Transform transformVal;
             public LayerMask layerMaskVal = 1;
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
@@ -2354,6 +2385,152 @@ namespace UnityEngine.Tests
             {
                 soMulti.Dispose();
                 soSingle.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyObjectReferenceCoercionMissingMixedTypedElementsAndDisposedCleanupWorkAcrossReleases()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            var a1 = ScriptableObject.CreateInstance<RefAsset>();
+            a1.name = "FirstAsset";
+            var a2 = ScriptableObject.CreateInstance<RefAsset>();
+            a2.name = "SecondAsset";
+            var a3 = ScriptableObject.CreateInstance<RefAsset>();
+            a3.name = "ThirdAsset";
+            var doomed = ScriptableObject.CreateInstance<RefAsset>();
+            doomed.name = "DoomedAsset";
+            var tex = new Texture2D(2, 2) { name = "IconTex" };
+            var go = new GameObject("ActorHost");
+            t1.refAssetVal = a1;
+            t2.refAssetVal = a2;
+            t1.textureVal = tex;
+            t1.transformVal = go.transform;
+
+            using var panel = RuntimePanel.Create(settings);
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            var soSingle = new SerializedObject(t1);
+            try
+            {
+                // Standalone coercion, display formatting and UXML traits defaults.
+                var ofStandalone = new ObjectField("Ref") { objectType = typeof(Transform) };
+                Assert.True(ofStandalone.allowSceneObjects);
+                Assert.Equal("None (Transform)", ofStandalone.Q<Label>(className: "unity-object-field-display__label").text);
+                ofStandalone.value = go;
+                Assert.Same(go.transform, ofStandalone.value);
+                Assert.Equal("ActorHost (Transform)", ofStandalone.Q<Label>(className: "unity-object-field-display__label").text);
+                ofStandalone.objectType = typeof(Texture2D);
+                ofStandalone.value = tex;
+                Assert.Equal("IconTex", ofStandalone.Q<Label>(className: "unity-object-field-display__label").text);
+                ofStandalone.objectType = null;
+                ofStandalone.value = null;
+                Assert.Equal("<no type>", ofStandalone.Q<Label>(className: "unity-object-field-display__label").text);
+
+                // Multi-object mixed binding + runtime DataBinding coexistence.
+                var rt = new RuntimeModel { text = "rt-obj-0" };
+                var ofMulti = new ObjectField { objectType = typeof(RefAsset), dataSource = rt };
+                ofMulti.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                panel.visualTree.Add(ofMulti);
+                ofMulti.BindProperty(soMulti.FindProperty("refAssetVal"));
+                Tick(panel);
+
+                Assert.True(ofMulti.showMixedValue);
+                var mixedLbl = ofMulti.Q<Label>(className: "unity-object-field-display__label");
+                Assert.Equal(BaseField<Object>.mixedValueString, mixedLbl.text);
+                Assert.True(mixedLbl.ClassListContains(BaseField<Object>.mixedValueLabelUssClassName));
+                Assert.Equal("rt-obj-0", ofMulti.tooltip);
+
+                // Editing mixed field to target[0]'s value overwrites all targets and clears mixed.
+                ofMulti.value = a1;
+                Tick(panel);
+                Assert.False(ofMulti.showMixedValue);
+                Assert.Same(a1, t1.refAssetVal);
+                Assert.Same(a1, t2.refAssetVal);
+                Assert.Equal("FirstAsset (Ref Asset)", mixedLbl.text);
+
+                // Typed custom INotifyValueChanged<RefAsset> binds via DefaultBindUnityObject.
+                var typedEl = new TypedRefElement();
+                panel.visualTree.Add(typedEl);
+                typedEl.BindProperty(soSingle.FindProperty("refAssetVal"));
+                Tick(panel);
+                Assert.Same(a1, typedEl.value);
+                typedEl.value = a3;
+                Tick(panel);
+                Assert.Same(a3, t1.refAssetVal);
+
+                // Missing/destroyed reference reports Missing via ObjectContent and clears on value = null.
+                t1.refAssetVal = doomed;
+                soSingle.Update();
+                var ofMiss = new ObjectField { objectType = typeof(RefAsset) };
+                panel.visualTree.Add(ofMiss);
+                ofMiss.BindProperty(soSingle.FindProperty("refAssetVal"));
+                Tick(panel);
+                Assert.Same(doomed, ofMiss.value);
+                Object.DestroyImmediate(doomed);
+                soSingle.Update();
+                var pMiss = soSingle.FindProperty("refAssetVal");
+                Assert.True(ReferenceEquals(pMiss.objectReferenceValue, null));
+                Assert.NotEqual(0, pMiss.objectReferenceInstanceIDValue);
+                Assert.True(ObjectField.IsMissingObjectReference(pMiss));
+                ofMiss.value = null;
+                Tick(panel);
+                soSingle.Update();
+                Assert.Equal(0, soSingle.FindProperty("refAssetVal").objectReferenceInstanceIDValue);
+                Assert.True(ReferenceEquals(t1.refAssetVal, null));
+                Assert.Equal("None (Ref Asset)", ofMiss.Q<Label>(className: "unity-object-field-display__label").text);
+
+                // Wrong type assigned to bound ObjectField clears target via unsafeMode and syncs back to null.
+                t1.refAssetVal = a2;
+                Tick(panel);
+                Assert.Same(a2, ofMiss.value);
+                ofMiss.value = tex;
+                Tick(panel);
+                Assert.Null(t1.refAssetVal);
+                Assert.Null(ofMiss.value);
+
+                // PropertyField infers objectType and reuses ObjectField across different object-reference types.
+                var pf = new PropertyField(soSingle.FindProperty("refAssetVal"));
+                panel.visualTree.Add(pf);
+                pf.Bind(soSingle);
+                Tick(panel);
+                var pfOf = Assert.IsType<ObjectField>(pf.hierarchy[0]);
+                Assert.Equal(typeof(RefAsset), pfOf.objectType);
+                Assert.Equal("Ref Asset Val", pfOf.label);
+                pf.BindProperty(soSingle.FindProperty("textureVal"));
+                Tick(panel);
+                Assert.Same(pfOf, pf.hierarchy[0]);
+                Assert.Equal(typeof(Texture2D), pfOf.objectType);
+                Assert.Same(tex, pfOf.value);
+                Assert.Equal("IconTex", pfOf.Q<Label>(className: "unity-object-field-display__label").text);
+
+                // Disposing SerializedObject unbinds cleanly while runtime DataBinding remains active.
+                soMulti.Dispose();
+                ofMulti.value = a3;
+                rt.text = "rt-obj-1";
+                Tick(panel);
+                Assert.Same(a1, t2.refAssetVal);
+                Assert.Equal("rt-obj-1", ofMulti.tooltip);
+            }
+            finally
+            {
+                soMulti.Dispose();
+                soSingle.Dispose();
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(tex);
+                Object.DestroyImmediate(doomed);
+                Object.DestroyImmediate(a3);
+                Object.DestroyImmediate(a2);
+                Object.DestroyImmediate(a1);
                 Object.DestroyImmediate(t1);
                 Object.DestroyImmediate(t2);
                 Object.DestroyImmediate(settings);

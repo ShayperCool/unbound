@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Unity.Properties;
 using UnityEditor.UIElements.Bindings;
 using UnityEngine;
@@ -8,7 +9,7 @@ using UnityEngine.UIElements;
 // Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
 // BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, Color/Color32,
 // Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Rect, RectInt, Bounds, BoundsInt,
-// AnimationCurve, and Gradient fields plus Foldout isExpanded binding),
+// AnimationCurve, Gradient, and ObjectReference fields plus Foldout isExpanded binding),
 // BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
 // BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
 // SerializedObject binding context/updater pipeline that synchronizes fields and polls changes
@@ -22,8 +23,8 @@ using UnityEngine.UIElements;
 // tests/projects/vector3binding, tests/projects/vector4binding, tests/projects/vector2intbinding,
 // tests/projects/vector3intbinding, tests/projects/rectbinding, tests/projects/rectintbinding,
 // tests/projects/boundsbinding, tests/projects/boundsintbinding, tests/projects/curvebinding,
-// tests/projects/gradientbinding, tests/projects/trackpropertyvalue and
-// tests/projects/trackserializedobjectvalue.
+// tests/projects/gradientbinding, tests/projects/objectbinding, tests/projects/trackpropertyvalue
+// and tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
 {
@@ -877,6 +878,10 @@ namespace UnityEditor.UIElements.Bindings
         static readonly PropertyName k_EnabledOverrideSet = new PropertyName("__UnityEnabledOverrideSet");
         static readonly Action<object, SerializedProperty> s_DefaultOnPropertyChange = (o, p) => (o as SerializedObjectBindingBase)?.OnPropertyValueChanged(p);
         static readonly Action<object> s_OnPropertyUpdate = o => (o as SerializedObjectBindingBase)?.SyncObjectVersion();
+        static readonly Dictionary<Type, Action<SerializedObjectBindingContext, VisualElement, SerializedProperty>> s_DefaultBindUnityObjectMethods =
+            new Dictionary<Type, Action<SerializedObjectBindingContext, VisualElement, SerializedProperty>>();
+        static readonly MethodInfo s_CreateUnityObjectBindingMethod =
+            typeof(SerializedObjectBindingContext).GetMethod(nameof(CreateUnityObjectBinding), BindingFlags.Static | BindingFlags.NonPublic);
 
         readonly SerializedObjectChangeTracker m_ChangeTracker;
         readonly TrackedValues m_ValueTracker = new TrackedValues();
@@ -1202,6 +1207,12 @@ namespace UnityEditor.UIElements.Bindings
                 case SerializedPropertyType.Gradient:
                     DefaultBind(element, prop, SerializedPropertyHelper.GetGradientPropertyValue, SerializedPropertyHelper.SetGradientPropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
+                case SerializedPropertyType.ObjectReference:
+                    if (element is ObjectField objectField)
+                        SerializedObjectReferenceBinding.CreateBind(objectField, this, prop);
+                    else
+                        DefaultBindUnityObject(element, prop);
+                    break;
                 case SerializedPropertyType.Generic:
                     if (prop.type == "ToggleButtonGroupState")
                         Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty (ToggleButtonGroupState)");
@@ -1232,6 +1243,30 @@ namespace UnityEditor.UIElements.Bindings
             {
                 DefaultBind(element, prop, SerializedPropertyHelper.GetEnumPropertyValueAsString, SerializedPropertyHelper.SetEnumPropertyValueFromString, SerializedPropertyHelper.SlowEnumValueEquals);
             }
+        }
+
+        static void CreateUnityObjectBinding<TValue>(SerializedObjectBindingContext context, VisualElement element, SerializedProperty prop)
+            where TValue : UnityEngine.Object
+        {
+            context.DefaultBind(element, prop, SerializedPropertyHelper.GetObjectRefPropertyValue<TValue>, SerializedPropertyHelper.SetObjectRefPropertyValue, SerializedPropertyHelper.ValueEquals);
+        }
+
+        void DefaultBindUnityObject(VisualElement element, SerializedProperty prop)
+        {
+            var type = prop.ObjectReferenceFieldType;
+            if (type == null || type == typeof(UnityEngine.Object) || element is INotifyValueChanged<UnityEngine.Object>)
+            {
+                CreateUnityObjectBinding<UnityEngine.Object>(this, element, prop);
+                return;
+            }
+            if (!s_DefaultBindUnityObjectMethods.TryGetValue(type, out var bindMethod))
+            {
+                var closed = s_CreateUnityObjectBindingMethod.MakeGenericMethod(type);
+                bindMethod = (Action<SerializedObjectBindingContext, VisualElement, SerializedProperty>)Delegate.CreateDelegate(
+                    typeof(Action<SerializedObjectBindingContext, VisualElement, SerializedProperty>), closed);
+                s_DefaultBindUnityObjectMethods.Add(type, bindMethod);
+            }
+            bindMethod(this, element, prop);
         }
 
         void DefaultBind<TValue>(
@@ -2100,8 +2135,94 @@ namespace UnityEditor.UIElements.Bindings
         }
     }
 
+    internal partial class SerializedObjectReferenceBinding : SerializedObjectBindingPropertyToBaseField<UnityEngine.Object, UnityEngine.Object>
+    {
+        public SerializedObjectReferenceBinding() { }
+
+        public static void CreateBind(ObjectField field, SerializedObjectBindingContext context, SerializedProperty property)
+        {
+            var binding = new SerializedObjectReferenceBinding { isReleased = false };
+            field.SetBinding(BindingExtensions.s_SerializedBindingId, binding);
+            binding.SetBinding(field, context, property);
+        }
+
+        void SetBinding(ObjectField c, SerializedObjectBindingContext context, SerializedProperty property)
+        {
+            property.unsafeMode = true;
+            propGetValue = SerializedPropertyHelper.GetObjectRefPropertyValue<UnityEngine.Object>;
+            propSetValue = SerializedPropertyHelper.SetObjectRefPropertyValue;
+            propCompareValues = SerializedPropertyHelper.ValueEquals;
+            SetContext(context, property);
+            if (boundProperty != null) boundProperty.unsafeMode = true;
+            lastFieldValue = c.value;
+            field = c;
+        }
+
+        protected override void SyncPropertyToField(INotifyValueChanged<UnityEngine.Object> c, SerializedProperty p)
+        {
+            if (c == null) throw new ArgumentNullException(nameof(c));
+            lastFieldValue = propGetValue(p);
+            var currentValue = field.value;
+            if (p.hasMultipleDifferentValues || ObjectField.IsMissingObjectReference(p))
+                AssignValueToFieldWithoutNotify(lastFieldValue);
+            else
+                AssignValueToField(lastFieldValue);
+
+            if (lastFieldValue == currentValue && lastFieldValue == null && field is ObjectField objectField)
+            {
+                objectField.SetProperty(ObjectField.serializedPropertyKey, boundProperty);
+                objectField.UpdateDisplay();
+                objectField.SetProperty(ObjectField.serializedPropertyKey, null);
+            }
+        }
+
+        protected override bool SyncFieldValueToProperty()
+        {
+            if (lastFieldValue != boundProperty.objectReferenceValue
+                || boundProperty.hasMultipleDifferentValues
+                || ObjectField.IsMissingObjectReference(boundProperty))
+            {
+                boundProperty.unsafeMode = true;
+                boundProperty.objectReferenceValue = lastFieldValue;
+                boundProperty.m_SerializedObject.ApplyModifiedProperties();
+                if (field is ObjectField objectField) objectField.UpdateDisplay();
+                return true;
+            }
+            return false;
+        }
+
+        protected override void ResetCachedValues()
+        {
+            base.ResetCachedValues();
+            if (field is ObjectField objectField)
+            {
+                objectField.SetProperty(ObjectField.serializedPropertyKey, boundProperty);
+                objectField.UpdateDisplay();
+            }
+        }
+
+        protected override bool EqualsValue(UnityEngine.Object a, UnityEngine.Object b)
+        {
+            if (boundProperty != null && ObjectField.IsMissingObjectReference(boundProperty)) return false;
+            return base.EqualsValue(a, b);
+        }
+
+        protected override void AssignValueToField(UnityEngine.Object lastValue) =>
+            ((ObjectField)field).SetValueWithoutValidation(lastValue);
+
+        protected override void AssignValueToFieldWithoutNotify(UnityEngine.Object lastValue) =>
+            field.SetValueWithoutNotify(lastValue);
+
+        protected override void UpdateLastFieldValue()
+        {
+            if (field != null) lastFieldValue = field.value;
+        }
+    }
+
     internal static partial class SerializedPropertyHelper
     {
+        public static T GetObjectRefPropertyValue<T>(SerializedProperty p) where T : UnityEngine.Object => p.objectReferenceValue as T;
+        public static void SetObjectRefPropertyValue<T>(SerializedProperty p, T v) where T : UnityEngine.Object => p.objectReferenceValue = v;
         public static bool GetBoolPropertyValue(SerializedProperty p) => p.boolValue;
         public static int GetIntPropertyValue(SerializedProperty p) => p.intValue;
         public static uint GetUIntPropertyValue(SerializedProperty p) => p.uintValue;

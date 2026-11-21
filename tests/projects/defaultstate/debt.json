@@ -1435,7 +1435,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "9"
+        "value": "10"
       }
     },
     {
@@ -1455,7 +1455,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "10"
+        "value": "11"
       }
     },
     {
@@ -2348,19 +2348,6 @@
       "actualPattern": "[0-9]+"
     },
     {
-      "key": "UnityEngine.UIElements.BlurEvent/Property/UnityEngine.UIElements.EventBase`1<UnityEngine.UIElements.BlurEvent>/eventTypeId",
-      "module": "UnityEngine.UIElementsModule",
-      "reason": "Q411 UIElements remaining context: Registration identifiers are stable within one event type and distinct across types in the added controls; absolute numbering is not documented. Preserve the raw release/context values rather than impose a global registration order.",
-      "expected": {
-        "status": "value",
-        "value": "12"
-      },
-      "actual": {
-        "status": "value",
-        "value": "11"
-      }
-    },
-    {
       "key": "UnityEngine.UIElements.Button/Property/UnityEngine.UIElements.TextElement/selection",
       "module": "UnityEngine.UIElementsModule",
       "reason": "Q411 UIElements remaining context: Text interfaces and hierarchy now match, but cursor/selection values require initialized font and text-layout geometry. Unattached TextElement variants and TextField differ, so a fixed cursor-height value is not a general rule; retain this raw leaf or aggregate.",
@@ -2450,7 +2437,7 @@
       },
       "actual": {
         "status": "value",
-        "value": "12"
+        "value": "9"
       }
     },
     {

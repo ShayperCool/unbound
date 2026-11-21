@@ -2512,6 +2512,30 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
+      "type": "UnityEditor.UIElements.ObjectField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.ObjectField+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.ObjectField+UxmlSerializedData"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.ObjectField+UxmlTraits"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
       "type": "UnityEditor.UIElements.PropertyField"
     },
     {

@@ -789,3 +789,14 @@ that agree byte-for-byte; all 67 match Unbound). Because constructing `ColorFiel
 `ProgressBar` earlier, `debt.json` updates 6 existing `eventTypeId` actuals (`GeometryChangedEvent`,
 `PointerDownEvent`, `PointerUpEvent`, `PointerMoveEvent`, `MouseDownEvent`, and
 `NavigationSubmitEvent`); every earlier committed reference row and inventory entry is unchanged.
+
+The `ObjectField` slice adds `UnityEditor.UIElements.ObjectField` and its nested UXML types
+(`ObjectField+UxmlFactory`, `ObjectField+UxmlSerializedData`, and `ObjectField+UxmlTraits`) to the
+handwritten inventory (66 added rows from two independent 6000.0.71f1 Linux GPU Editor captures
+that agree byte-for-byte; all 66 match Unbound). Because constructing `ObjectField` precedes
+`SerializedObjectChangeEvent`, `SerializedPropertyChangeEvent`, `BlurEvent`, and
+`CustomStyleResolvedEvent` in alphabetical walk order and registers `CustomStyleResolvedEvent` via
+its `Image` icon element earlier, `debt.json` updates 3 existing `eventTypeId` actuals
+(`SerializedObjectChangeEvent`, `SerializedPropertyChangeEvent`, and `CustomStyleResolvedEvent`)
+and removes the `BlurEvent` entry that now coincides with the Editor's numbering; every earlier
+committed reference row and inventory entry is unchanged.

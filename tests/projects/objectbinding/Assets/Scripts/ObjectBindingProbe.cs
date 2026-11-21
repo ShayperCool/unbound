@@ -457,7 +457,7 @@ public class ObjectBindingProbe : MonoBehaviour
         tMain.nested = new NestedObjectData { asset = assetB, deep = new DeepObjectData { asset = assetC } };
         tMain.assetArray = new[] { assetA, assetB, assetC };
         var soMain = new SerializedObject(tMain);
-        var soComp = new SerializedObject(compA);
+        var soComp = new SerializedObject(this);
 
         var pAny = soMain.FindProperty("anyObjRef");
         var pAsset = soMain.FindProperty("assetRef");

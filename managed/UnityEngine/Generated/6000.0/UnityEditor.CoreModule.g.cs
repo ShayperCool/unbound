@@ -8782,8 +8782,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent IconContent<T>(string text = null) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.IconContent"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent IconContent(string name, string text, bool logError) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.IconContent"); return default; }
         [global::Unbound.Stub] internal static void Internal_SwitchSkin() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.Internal_SwitchSkin"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.GUIContent ObjectContent(global::UnityEngine.Object obj, global::System.Type type, bool showNullIcon) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.ObjectContent"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.GUIContent ObjectContent(global::UnityEngine.Object obj, global::System.Type type, int instanceID, bool showNullIcon = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.ObjectContent"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent ObjectContent(global::UnityEngine.Object obj, global::System.Type type, global::UnityEditor.SerializedProperty property, global::UnityEditor.EditorGUI.ObjectFieldValidator validator = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.ObjectContent"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent TempContent(string t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.TempContent"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent TempContent(string text, string tip) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.TempContent"); return default; }
@@ -22658,7 +22656,6 @@ namespace UnityEditor
         internal double[] allDoubleValues { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.allDoubleValues"); return global::System.Array.Empty<double>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.allDoubleValues"); } }
         internal long[] allLongValues { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.allLongValues"); return global::System.Array.Empty<long>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.allLongValues"); } }
         internal object structValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.structValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.structValue"); } }
-        internal string objectReferenceStringValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.objectReferenceStringValue"); return default; } }
         internal string objectReferenceTypeString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.objectReferenceTypeString"); return default; } }
         internal uint layerMaskBits { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.layerMaskBits"); return default; } }
         internal bool isValidDisplayNameCache { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isValidDisplayNameCache"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isValidDisplayNameCache"); } }
@@ -47481,67 +47478,6 @@ namespace UnityEditor.UIElements
         protected unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.ParticleSystem.MinMaxGradient>.UxmlTraits
         {
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MinMaxGradientField.UxmlTraits.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ObjectField : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Object>
-    {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId objectTypeProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId allowSceneObjectsProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public static readonly string objectUssClassName;
-        [global::Unbound.Stub] public static readonly string selectorUssClassName;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.PropertyName serializedPropertyKey;
-        [global::Unbound.Stub] internal override bool EqualsCurrentValue(global::UnityEngine.Object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.EqualsCurrentValue"); return default; }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(global::UnityEngine.Object newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] internal void SetObjectTypeWithoutDisplayUpdate(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.SetObjectTypeWithoutDisplayUpdate"); }
-        [global::Unbound.Stub] protected override void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.UpdateMixedValueContent"); }
-        [global::Unbound.Stub] internal virtual void UpdateDisplay() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.UpdateDisplay"); }
-        [global::Unbound.Stub] internal static bool IsMissingObjectReference(global::UnityEditor.SerializedProperty p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.IsMissingObjectReference"); return default; }
-        [global::Unbound.Stub] public ObjectField() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.ctor"); }
-        [global::Unbound.Stub] public ObjectField(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.ctor"); }
-        [global::Unbound.Stub] internal void OnObjectChanged(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.OnObjectChanged"); }
-        [global::Unbound.Stub] internal void OnObjectSelectorClosed(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.OnObjectSelectorClosed"); }
-        [global::Unbound.Stub] internal void ShowObjectSelector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.ShowObjectSelector"); }
-        public global::System.Type objectType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.objectType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.objectType"); } }
-        public bool allowSceneObjects { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.allowSceneObjects"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.allowSceneObjects"); } }
-        internal event global::System.Action onObjectSelectorShow { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.onObjectSelectorShow"); } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action<global::UnityEngine.Object, bool> SelectorClosed { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.SelectorClosed"); } [global::Unbound.Stub] remove { } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Object>.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.ObjectField, global::UnityEditor.UIElements.ObjectField.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Object>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.UxmlTraits.ctor"); }
-        }
-        [global::Unbound.Stub]
-        internal unsafe partial class ObjectFieldDisplay : global::UnityEngine.UIElements.VisualElement
-        {
-            [global::Unbound.Stub] internal static readonly string labelUssClassName;
-            [global::Unbound.Stub] internal static readonly string nullLabelUssClassName;
-            [global::Unbound.Stub] internal void ShowMixedValue(bool show) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.ObjectFieldDisplay.ShowMixedValue"); }
-            [global::Unbound.Stub] public ObjectFieldDisplay(global::UnityEditor.UIElements.ObjectField objectField) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.ObjectFieldDisplay.ctor"); }
-            [global::Unbound.Stub] public void Update() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.ObjectFieldDisplay.Update"); }
-            [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.ObjectFieldDisplay.HandleEventBubbleUp"); }
-            [global::Unbound.Stub] internal override void HandleEventBubbleUpDisabled(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.ObjectFieldDisplay.HandleEventBubbleUpDisabled"); }
-            public bool isObjectMissing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.ObjectFieldDisplay.isObjectMissing"); return default; } }
         }
     }
     [global::Unbound.Stub]
