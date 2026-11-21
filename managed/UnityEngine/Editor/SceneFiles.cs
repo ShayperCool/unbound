@@ -1273,6 +1273,18 @@ namespace Unbound.Runtime
                     editorData = YText.Map();
                     doc.Body.Set("m_EditorData", editorData);
                 }
+                int packingIndex = editorData.Keys.IndexOf("packingSettings");
+                if (packingIndex >= 0)
+                {
+                    editorData.Values[packingIndex] = atlas.PackingSettings.ToYText();
+                }
+                else if (atlas.PackingSettingsModified)
+                {
+                    int afterPlatform = editorData.Keys.IndexOf("platformSettings");
+                    int insertPackingAt = afterPlatform >= 0 ? afterPlatform + 1 : editorData.Keys.Count;
+                    editorData.Keys.Insert(insertPackingAt, "packingSettings");
+                    editorData.Values.Insert(insertPackingAt, atlas.PackingSettings.ToYText());
+                }
                 var value = YText.Scalar(atlas.IncludeInBuild ? "1" : "0");
                 int existing = editorData.Keys.IndexOf("bindAsDefault");
                 if (existing >= 0)

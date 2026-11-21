@@ -482,11 +482,176 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SetPackingSettingsCopiesVerbatimAndAlwaysDirties()
+        {
+            var fresh = new SpriteAtlas();
+            int baseDirty = EditorUtility.GetDirtyCount(fresh);
+            var initial = fresh.GetPackingSettings();
+            fresh.SetPackingSettings(initial);
+            Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(fresh));
+
+            var edge = new SpriteAtlasPackingSettings
+            {
+                blockOffset = -3,
+                padding = -7,
+                enableRotation = false,
+                enableTightPacking = false,
+                enableAlphaDilation = true,
+            };
+            fresh.SetPackingSettings(edge);
+            Assert.Equal(baseDirty + 2, EditorUtility.GetDirtyCount(fresh));
+            var readBack = fresh.GetPackingSettings();
+            Assert.Equal(-3, readBack.blockOffset);
+            Assert.Equal(-7, readBack.padding);
+            Assert.False(readBack.enableRotation);
+            Assert.False(readBack.enableTightPacking);
+            Assert.True(readBack.enableAlphaDilation);
+
+            var loaded = Read(
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 4\n" +
+                "      blockOffset: 1\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    packables: []\n");
+            Assert.False(EditorUtility.IsDirty(loaded));
+            Assert.Equal(0, EditorUtility.GetDirtyCount(loaded));
+            // Same-value SetPackingSettings still marks dirty (unlike SetIncludeInBuild).
+            loaded.SetPackingSettings(loaded.GetPackingSettings());
+            Assert.True(EditorUtility.IsDirty(loaded));
+            Assert.Equal(1, EditorUtility.GetDirtyCount(loaded));
+        }
+
+        [Fact]
+        public void NativeDocumentsWriteUpdatesV1PackingSettingsUpgradesLegacyAndInsertsWhenOmitted()
+        {
+            const string v1Source =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Sample\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    platformSettings: []\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 4\n" +
+                "      blockOffset: 1\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n" +
+                "  m_IsVariant: 0\n";
+
+            var docs = UnityYamlText.Parse(v1Source);
+            var atlas = Read(
+                "    platformSettings: []\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 4\n" +
+                "      blockOffset: 1\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n");
+            var original = atlas.GetPackingSettings();
+            atlas.SetPackingSettings(new SpriteAtlasPackingSettings
+            {
+                blockOffset = -2,
+                padding = 12,
+                enableRotation = false,
+                enableTightPacking = false,
+                enableAlphaDilation = true,
+            });
+
+            int unlocated = 0;
+            Assert.True(NativeDocuments.Write(docs[0], atlas, null, null, ref unlocated));
+            string written = UnityYamlText.Write(docs);
+            Assert.Contains("      padding: 12\n      blockOffset: -2\n      allowAlphaSplitting: 0\n      enableRotation: 0\n      enableTightPacking: 0\n      enableAlphaDilation: 1\n", written);
+
+            // Roundtrip restores exact original YAML bytes.
+            atlas.SetPackingSettings(original);
+            Assert.True(NativeDocuments.Write(docs[0], atlas, null, null, ref unlocated));
+            Assert.Equal(v1Source, UnityYamlText.Write(docs));
+
+            // Legacy v1 packingSettings upgrades to v2 and preserves hidden allowAlphaSplitting.
+            const string v1Legacy =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Legacy\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    platformSettings: []\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 1\n" +
+                "      paddingPower: 3\n" +
+                "      blockOffset: 2\n" +
+                "      allowAlphaSplitting: 1\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 0\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n" +
+                "  m_IsVariant: 0\n";
+            var legacyDocs = UnityYamlText.Parse(v1Legacy);
+            var legacyAtlas = Read(
+                "    packingSettings:\n" +
+                "      serializedVersion: 1\n" +
+                "      paddingPower: 3\n" +
+                "      blockOffset: 2\n" +
+                "      allowAlphaSplitting: 1\n" +
+                "      enableRotation: 1\n" +
+                "      enableTightPacking: 0\n" +
+                "      enableAlphaDilation: 0\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n");
+            var s = legacyAtlas.GetPackingSettings();
+            Assert.Equal(8, s.padding);
+            s.padding = 6;
+            legacyAtlas.SetPackingSettings(s);
+            Assert.True(NativeDocuments.Write(legacyDocs[0], legacyAtlas, null, null, ref unlocated));
+            string legacyWritten = UnityYamlText.Write(legacyDocs);
+            Assert.DoesNotContain("paddingPower", legacyWritten);
+            Assert.Contains("      serializedVersion: 2\n      padding: 6\n      blockOffset: 2\n      allowAlphaSplitting: 1\n      enableRotation: 1\n      enableTightPacking: 0\n      enableAlphaDilation: 0\n", legacyWritten);
+
+            // Control outside the probe: sparse V1 atlas with omitted packingSettings inserts the block after platformSettings when mutated.
+            const string v1Omitted =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Omitted\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    platformSettings: []\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 1\n" +
+                "  m_IsVariant: 0\n";
+            var omittedDocs = UnityYamlText.Parse(v1Omitted);
+            var omittedAtlas = Read("    platformSettings: []\n    packables: []\n    bindAsDefault: 1\n");
+            omittedAtlas.SetPackingSettings(new SpriteAtlasPackingSettings { blockOffset = 4, padding = 10, enableRotation = true });
+            Assert.True(NativeDocuments.Write(omittedDocs[0], omittedAtlas, null, null, ref unlocated));
+            string omittedWritten = UnityYamlText.Write(omittedDocs);
+            Assert.Contains("    platformSettings: []\n    packingSettings:\n      serializedVersion: 2\n      padding: 10\n      blockOffset: 4\n", omittedWritten);
+        }
+
+        [Fact]
         public void ANullAtlasThrows()
         {
             SpriteAtlas none = null;
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPackables()).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPackingSettings()).ParamName);
+            Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetPackingSettings(default)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetTextureSettings()).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPlatformSettings("Android")).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPlatformSettings(null)).ParamName);

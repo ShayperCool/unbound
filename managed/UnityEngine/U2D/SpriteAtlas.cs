@@ -34,6 +34,7 @@ namespace UnityEngine.U2D
         // SpriteAtlasImporter .meta when first asked (m_ImporterSettingsRead).
         bool m_IncludeInBuild = true;
         SpriteAtlasPackingSettings m_PackingSettings = SpriteAtlasPackingSettings.Default;
+        bool m_PackingSettingsModified;
         SpriteAtlasTextureSettings m_TextureSettings = SpriteAtlasTextureSettings.Default;
         List<TextureImporterPlatformSettings> m_PlatformSettings;
         bool m_FromImporter;
@@ -136,19 +137,28 @@ namespace UnityEngine.U2D
             EditorUtility.SetDirty(this);
         }
 
-        /// <summary>The atlas's packing settings (for a V2 variant with a non-variant master, its master's).</summary>
+        /// <summary>The atlas's packing settings (a V2 variant copies its non-variant master's
+        /// settings on import, and subsequent SetPackingSettings calls update the atlas itself).</summary>
         internal SpriteAtlasPackingSettings PackingSettings
         {
             get
             {
                 EnsureImporterSettingsRead();
-                if (m_FromImporter && m_IsVariant && m_Master != null && !ReferenceEquals(m_Master, this) && !m_Master.m_IsVariant)
-                {
-                    m_Master.EnsureImporterSettingsRead();
-                    return m_Master.m_PackingSettings;
-                }
                 return m_PackingSettings;
             }
+        }
+
+        /// <summary>Whether SetPackingSettings has updated this atlas's packing settings in memory.</summary>
+        internal bool PackingSettingsModified => m_PackingSettingsModified;
+
+        /// <summary>Replaces the atlas's packing settings verbatim and marks it dirty (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v1packing/v2packing).</summary>
+        internal void WritePackingSettings(SpriteAtlasPackingSettings src)
+        {
+            EnsureImporterSettingsRead();
+            m_PackingSettings = src;
+            m_PackingSettingsModified = true;
+            EditorUtility.SetDirty(this);
         }
 
         /// <summary>The atlas's texture settings.</summary>
@@ -182,7 +192,9 @@ namespace UnityEngine.U2D
                     {
                         var importer = docs[0].Body;
                         m_IncludeInBuild = importer.Bool("bindAsDefault", true);
-                        m_PackingSettings = SpriteAtlasPackingSettings.Read(importer.Get("packingSettings"));
+                        m_PackingSettings = m_IsVariant && m_Master != null && !ReferenceEquals(m_Master, this) && !m_Master.m_IsVariant
+                            ? m_Master.PackingSettings
+                            : SpriteAtlasPackingSettings.Read(importer.Get("packingSettings"));
                         m_TextureSettings = SpriteAtlasTextureSettings.Read(importer.Get("textureSettings"));
                         m_PlatformSettings = TextureImporterPlatformSettings.ReadList(importer.Get("platformSettings"), prefixed: false);
                     }
@@ -201,6 +213,7 @@ namespace UnityEngine.U2D
             foreach (var packable in data?.Get("packables")?.Seq() ?? Array.Empty<YNode>())
                 m_Packables.Add(packable.AsRef());
             m_FromImporter = body.Get("m_ImporterData") != null;
+            m_PackingSettingsModified = false;
             if (m_FromImporter)
             {
                 m_IncludeInBuild = true;

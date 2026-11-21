@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Unbound.Runtime;
 using UnityEngine;
 using UnityEngine.U2D;
@@ -57,6 +58,19 @@ namespace UnityEditor.U2D
             settings.m_EnableTightPacking = node.Bool("enableTightPacking", settings.m_EnableTightPacking);
             settings.m_EnableAlphaDilation = node.Bool("enableAlphaDilation", settings.m_EnableAlphaDilation);
             return settings;
+        }
+
+        internal YText ToYText()
+        {
+            var map = YText.Map();
+            map.Add("serializedVersion", YText.Scalar("2"));
+            map.Add("padding", YText.Scalar(m_Padding.ToString(CultureInfo.InvariantCulture)));
+            map.Add("blockOffset", YText.Scalar(m_BlockOffset.ToString(CultureInfo.InvariantCulture)));
+            map.Add("allowAlphaSplitting", YText.Scalar(m_AllowAlphaSplitting ? "1" : "0"));
+            map.Add("enableRotation", YText.Scalar(m_EnableRotation ? "1" : "0"));
+            map.Add("enableTightPacking", YText.Scalar(m_EnableTightPacking ? "1" : "0"));
+            map.Add("enableAlphaDilation", YText.Scalar(m_EnableAlphaDilation ? "1" : "0"));
+            return map;
         }
     }
 
@@ -149,6 +163,12 @@ namespace UnityEditor.U2D
         {
             if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
             return spriteAtlas.PackingSettings;
+        }
+
+        public static void SetPackingSettings(this SpriteAtlas spriteAtlas, SpriteAtlasPackingSettings src)
+        {
+            if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
+            spriteAtlas.WritePackingSettings(src);
         }
 
         public static SpriteAtlasTextureSettings GetTextureSettings(this SpriteAtlas spriteAtlas)
