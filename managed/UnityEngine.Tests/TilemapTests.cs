@@ -164,5 +164,227 @@ namespace UnityEngine.Tests
             Assert.Equal(new BoundsInt(0, 0, 0, 2, 2, 1), map.cellBounds);
             Assert.Equal(new TileBase[] { green, red, green, green }, map.GetTilesBlock(map.cellBounds));
         }
+
+        [Fact]
+        public void EditorPreviewTilesStaySeparateFromActualTilesAndSkipStartup()
+        {
+            var map = NewTilemap();
+            var actual = Tile<Tile>("actual");
+            actual.color = Color.red;
+            actual.flags = TileFlags.LockColor;
+            var preview = Tile<CallLogTile>("preview");
+            preview.refreshNeighbours = true;
+            var neighbor = Tile<CallLogTile>("neighbor");
+
+            var p = new Vector3Int(1, 1, 0);
+            var pNbr = new Vector3Int(2, 1, 0);
+            map.SetTile(p, actual);
+            map.SetTile(pNbr, neighbor);
+            neighbor.log.Clear();
+
+            int tileEvents = 0, posEvents = 0;
+            Action<Tilemap, Tilemap.SyncTile[]> onTile = (_, _) => tileEvents++;
+            Action<Tilemap, Unity.Collections.NativeArray<Vector3Int>> onPos = (_, _) => posEvents++;
+            Tilemap.tilemapTileChanged += onTile;
+            Tilemap.tilemapPositionsChanged += onPos;
+            try
+            {
+                map.SetEditorPreviewTile(p, preview);
+                Assert.True(map.HasEditorPreviewTile(p));
+                Assert.Same(preview, map.GetEditorPreviewTile(p));
+                Assert.Same(preview, map.GetEditorPreviewTile<CallLogTile>(p));
+                Assert.Same(actual, map.GetTile(p));
+                Assert.Equal(Color.red, map.GetEditorPreviewColor(p));
+                // Replacing an underlying actual tile refreshes old (calling GetTileData on preview)
+                // then new (RefreshTile + GetTileData on preview), with no StartUp.
+                Assert.Equal(new[] { "preview.Data 1,1", "preview.Refresh 1,1", "preview.Data 1,1" }, preview.log);
+                Assert.Equal(new[] { "neighbor.Data 2,1", "neighbor.StartUp 2,1" }, neighbor.log);
+
+                // Setting a preview tile on an empty cell runs only new.RefreshTile + GetTileData.
+                var emptyPos = new Vector3Int(0, 3, 0);
+                preview.log.Clear();
+                map.SetEditorPreviewTile(emptyPos, preview);
+                Assert.Equal(new[] { "preview.Refresh 0,3", "preview.Data 0,3" }, preview.log);
+                map.SetEditorPreviewTile(emptyPos, null);
+
+                // Repeating the same preview tile is a no-op.
+                preview.log.Clear();
+                map.SetEditorPreviewTile(p, preview);
+                Assert.Empty(preview.log);
+
+                // Clearing preview restores default empty getters while preserving actual tile.
+                map.SetEditorPreviewTile(p, null);
+                Assert.False(map.HasEditorPreviewTile(p));
+                Assert.Null(map.GetEditorPreviewTile(p));
+                Assert.Equal(Color.white, map.GetEditorPreviewColor(p));
+                Assert.Equal(Matrix4x4.identity, map.GetEditorPreviewTransformMatrix(p));
+                Assert.Equal(TileFlags.None, map.GetEditorPreviewTileFlags(p));
+                Assert.Same(actual, map.GetTile(p));
+                Assert.Equal(0, tileEvents);
+                Assert.Equal(0, posEvents);
+            }
+            finally
+            {
+                Tilemap.tilemapTileChanged -= onTile;
+                Tilemap.tilemapPositionsChanged -= onPos;
+            }
+        }
+
+        [Fact]
+        public void EditorPreviewColorAndTransformRespectLocksAndRequirePreviewTile()
+        {
+            var map = NewTilemap();
+            var free = Tile<Tile>("free");
+            free.flags = TileFlags.None;
+            free.color = Color.green;
+            var lockColor = Tile<Tile>("lc");
+            lockColor.flags = TileFlags.LockColor;
+            lockColor.color = Color.blue;
+            var lockTransform = Tile<Tile>("lt");
+            lockTransform.flags = TileFlags.LockTransform;
+            lockTransform.transform = Matrix4x4.Scale(new Vector3(2f, 2f, 1f));
+
+            var customColor = new Color(0.25f, 0.5f, 0.75f, 0.5f);
+            var customMatrix = Matrix4x4.Translate(new Vector3(3f, 4f, 0f));
+
+            // Actual-only cell: preview setters are no-ops and do not alter actual tile.
+            var pAct = new Vector3Int(0, 0, 0);
+            map.SetTile(pAct, free);
+            map.SetEditorPreviewColor(pAct, customColor);
+            map.SetEditorPreviewTransformMatrix(pAct, customMatrix);
+            Assert.False(map.HasEditorPreviewTile(pAct));
+            Assert.Equal(Color.green, map.GetColor(pAct));
+            Assert.Equal(Matrix4x4.identity, map.GetTransformMatrix(pAct));
+
+            var pFree = new Vector3Int(1, 0, 0);
+            map.SetEditorPreviewTile(pFree, free);
+            map.SetEditorPreviewColor(pFree, customColor);
+            map.SetEditorPreviewTransformMatrix(pFree, customMatrix);
+            Assert.Equal(customColor, map.GetEditorPreviewColor(pFree));
+            Assert.Equal(customMatrix, map.GetEditorPreviewTransformMatrix(pFree));
+
+            var pLC = new Vector3Int(2, 0, 0);
+            map.SetEditorPreviewTile(pLC, lockColor);
+            map.SetEditorPreviewColor(pLC, customColor);
+            map.SetEditorPreviewTransformMatrix(pLC, customMatrix);
+            Assert.Equal(Color.blue, map.GetEditorPreviewColor(pLC));
+            Assert.Equal(customMatrix, map.GetEditorPreviewTransformMatrix(pLC));
+
+            var pLT = new Vector3Int(3, 0, 0);
+            map.SetEditorPreviewTile(pLT, lockTransform);
+            map.SetEditorPreviewColor(pLT, customColor);
+            map.SetEditorPreviewTransformMatrix(pLT, customMatrix);
+            Assert.Equal(customColor, map.GetEditorPreviewColor(pLT));
+            Assert.Equal(Matrix4x4.Scale(new Vector3(2f, 2f, 1f)), map.GetEditorPreviewTransformMatrix(pLT));
+        }
+
+        [Fact]
+        public void EditorPreviewBoxAndFloodFillUsePreviewBoundsAndActualTargets()
+        {
+            var map = NewTilemap();
+            var a = Tile<Tile>("A");
+            var wall = Tile<Tile>("Wall");
+            var prev = Tile<Tile>("Prev");
+            var other = Tile<Tile>("Other");
+
+            map.SetTile(new Vector3Int(0, 0, 0), a);
+            map.SetTile(new Vector3Int(1, 0, 0), a);
+            map.SetTile(new Vector3Int(0, 1, 0), a);
+            map.SetTile(new Vector3Int(2, 0, 0), wall);
+            map.SetTile(new Vector3Int(2, 1, 0), wall);
+            map.SetTile(new Vector3Int(3, 0, 0), a);
+
+            // Inverted box does nothing and does not grow preview bounds.
+            map.EditorPreviewBoxFill(new Vector3Int(5, 5, 0), prev, 3, 0, 1, 2);
+            Assert.Equal(new Vector3Int(4, 2, 1), map.editorPreviewSize);
+            Assert.False(map.HasEditorPreviewTile(new Vector3Int(5, 5, 0)));
+
+            // Sync preview bounds via ClearAllEditorPreviewTiles, then flood/box fill respects wall.
+            map.ClearAllEditorPreviewTiles();
+            map.EditorPreviewBoxFill(new Vector3Int(0, 0, 0), prev, 0, 0, 3, 1);
+            Assert.Same(prev, map.GetEditorPreviewTile(new Vector3Int(0, 0, 0)));
+            Assert.Same(prev, map.GetEditorPreviewTile(new Vector3Int(1, 0, 0)));
+            Assert.Same(prev, map.GetEditorPreviewTile(new Vector3Int(0, 1, 0)));
+            Assert.False(map.HasEditorPreviewTile(new Vector3Int(3, 0, 0)));
+
+            // Non-TileBase Object is accepted without throwing and sets HasEditorPreviewTile.
+            var tex = new Texture2D(2, 2);
+            m_Made.Add(tex);
+            map.ClearAllEditorPreviewTiles();
+            map.EditorPreviewBoxFill(new Vector3Int(0, 0, 0), tex, 0, 0, 1, 0);
+            Assert.True(map.HasEditorPreviewTile(new Vector3Int(0, 0, 0)));
+            Assert.Null(map.GetEditorPreviewTile(new Vector3Int(0, 0, 0)));
+
+            // Flood fill with null at an empty far point still grows preview bounds without filling.
+            map.ClearAllEditorPreviewTiles();
+            map.EditorPreviewFloodFill(new Vector3Int(6, 5, 0), null);
+            Assert.Equal(new Vector3Int(7, 6, 1), map.editorPreviewSize);
+            Assert.False(map.HasEditorPreviewTile(new Vector3Int(6, 5, 0)));
+
+            // Z-layer isolation and null clear over preview overlays.
+            map.ClearAllEditorPreviewTiles();
+            map.SetTile(new Vector3Int(-2, -1, 3), a);
+            map.SetTile(new Vector3Int(-1, -1, 3), a);
+            map.ClearAllEditorPreviewTiles();
+            map.EditorPreviewFloodFill(new Vector3Int(-2, -1, 3), other);
+            Assert.Same(other, map.GetEditorPreviewTile(new Vector3Int(-2, -1, 3)));
+            Assert.Same(other, map.GetEditorPreviewTile(new Vector3Int(-1, -1, 3)));
+            Assert.False(map.HasEditorPreviewTile(new Vector3Int(-2, -1, 0)));
+            map.EditorPreviewFloodFill(new Vector3Int(-2, -1, 3), null);
+            Assert.False(map.HasEditorPreviewTile(new Vector3Int(-2, -1, 3)));
+            Assert.False(map.HasEditorPreviewTile(new Vector3Int(-1, -1, 3)));
+        }
+
+        [Fact]
+        public void EditorPreviewBoundsInteractWithClearCompressResizeAndClearAll()
+        {
+            var map = NewTilemap();
+            var a = Tile<Tile>("A");
+            var prev = Tile<Tile>("Prev");
+
+            map.SetTile(new Vector3Int(1, 1, 0), a);
+            map.SetTile(new Vector3Int(3, 3, 0), a);
+            map.SetEditorPreviewTile(new Vector3Int(-2, 5, 0), prev);
+            Assert.Equal(new Vector3Int(-2, 0, 0), map.editorPreviewOrigin);
+            Assert.Equal(new Vector3Int(4, 6, 1), map.editorPreviewSize);
+
+            map.ClearAllEditorPreviewTiles();
+            Assert.False(map.HasEditorPreviewTile(new Vector3Int(-2, 5, 0)));
+            Assert.Equal(new Vector3Int(0, 0, 0), map.editorPreviewOrigin);
+            Assert.Equal(new Vector3Int(4, 4, 1), map.editorPreviewSize);
+            Assert.Same(a, map.GetTile(new Vector3Int(1, 1, 0)));
+
+            // CompressBounds resets preview bounds to compressed actual bounds while keeping preview cells.
+            map.SetTile(new Vector3Int(3, 3, 0), null);
+            map.SetEditorPreviewTile(new Vector3Int(5, 5, 0), prev);
+            map.CompressBounds();
+            Assert.Equal(new Vector3Int(1, 1, 0), map.editorPreviewOrigin);
+            Assert.Equal(new Vector3Int(1, 1, 1), map.editorPreviewSize);
+            Assert.True(map.HasEditorPreviewTile(new Vector3Int(5, 5, 0)));
+
+            // ClearAllTiles clears both actual and preview cells and resets both bounds.
+            map.ClearAllTiles();
+            Assert.False(map.HasEditorPreviewTile(new Vector3Int(5, 5, 0)));
+            Assert.Equal(new Vector3Int(0, 0, 0), map.editorPreviewOrigin);
+            Assert.Equal(new Vector3Int(0, 0, 1), map.editorPreviewSize);
+        }
+
+        [Fact]
+        public void EditorPreviewApisWorkUnderUnmeasuredReleaseProfile()
+        {
+            using (TestRelease.Pin(TestRelease.Unmeasured))
+            {
+                var map = NewTilemap();
+                var tile = Tile<Tile>("T");
+                tile.color = Color.cyan;
+                var p = new Vector3Int(2, 3, 0);
+                map.SetEditorPreviewTile(p, tile);
+                Assert.True(map.HasEditorPreviewTile(p));
+                Assert.Same(tile, map.GetEditorPreviewTile(p));
+                Assert.Equal(Color.cyan, map.GetEditorPreviewColor(p));
+                map.ClearAllEditorPreviewTiles();
+                Assert.False(map.HasEditorPreviewTile(p));
+            }
+        }
     }
 }

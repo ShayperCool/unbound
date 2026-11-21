@@ -59,8 +59,11 @@ namespace UnityEngine.Tilemaps
         }
 
         internal readonly SortedDictionary<Vector3Int, Cell> m_Cells = new SortedDictionary<Vector3Int, Cell>(CellOrder.Instance);
+        readonly SortedDictionary<Vector3Int, PreviewCell> m_PreviewCells = new SortedDictionary<Vector3Int, PreviewCell>(CellOrder.Instance);
         Vector3Int m_Origin;
         Vector3Int m_Size = new Vector3Int(0, 0, 1);
+        Vector3Int m_PreviewOrigin;
+        Vector3Int m_PreviewSize = new Vector3Int(0, 0, 1);
         /// <summary>The z extent localBounds reports (Unity keeps it until the tiles are cleared).</summary>
         int m_LocalZMin, m_LocalZMax = 1;
         Color m_Color = Color.white;
@@ -69,7 +72,33 @@ namespace UnityEngine.Tilemaps
         Matrix4x4 m_OrientationMatrix = Matrix4x4.identity;
         float m_AnimationFrameRate = 1f;
         ITilemap m_ITilemap;
+        PreviewITilemap m_PreviewITilemap;
         bool m_BufferSyncTile;
+
+        sealed class PreviewCell
+        {
+            internal Object TileAsset;
+            internal Sprite Sprite;
+            internal Color Color = Color.white;
+            internal Matrix4x4 Transform = Matrix4x4.identity;
+            internal TileFlags Flags;
+            internal bool Fresh = true;
+        }
+
+        sealed class PreviewITilemap : ITilemap
+        {
+            internal PreviewITilemap(Tilemap tilemap) => m_Tilemap = tilemap;
+            public override Sprite GetSprite(Vector3Int position) =>
+                m_Tilemap.HasEditorPreviewTile(position) ? m_Tilemap.GetEditorPreviewSprite(position) : m_Tilemap.GetSprite(position);
+            public override Color GetColor(Vector3Int position) =>
+                m_Tilemap.HasEditorPreviewTile(position) ? m_Tilemap.GetEditorPreviewColor(position) : m_Tilemap.GetColor(position);
+            public override Matrix4x4 GetTransformMatrix(Vector3Int position) =>
+                m_Tilemap.HasEditorPreviewTile(position) ? m_Tilemap.GetEditorPreviewTransformMatrix(position) : m_Tilemap.GetTransformMatrix(position);
+            public override TileFlags GetTileFlags(Vector3Int position) =>
+                m_Tilemap.HasEditorPreviewTile(position) ? m_Tilemap.GetEditorPreviewTileFlags(position) : m_Tilemap.GetTileFlags(position);
+            public override TileBase GetTile(Vector3Int position) => m_Tilemap.GetAnyTile(position);
+            public override T GetTile<T>(Vector3Int position) => m_Tilemap.GetAnyTile<T>(position);
+        }
         /// <summary>Bumped when what the tilemap draws changes.</summary>
         internal int m_RenderVersion;
         /// <summary>Bumped when what colliders are built from changes.</summary>
@@ -96,6 +125,7 @@ namespace UnityEngine.Tilemaps
         public Tilemap() { }
 
         ITilemap Itilemap => m_ITilemap ??= new ITilemap { m_Tilemap = this };
+        PreviewITilemap PreviewItilemap => m_PreviewITilemap ??= new PreviewITilemap(this);
 
         internal override Grid LayoutSource => layoutGrid;
 
@@ -230,8 +260,8 @@ namespace UnityEngine.Tilemaps
             return m;
         }
 
-        public Vector3Int editorPreviewOrigin => m_Origin;
-        public Vector3Int editorPreviewSize => m_Size;
+        public Vector3Int editorPreviewOrigin => Vector3Int.Min(m_Origin, m_PreviewOrigin);
+        public Vector3Int editorPreviewSize => Vector3Int.Max(m_Size, m_PreviewSize);
 
         internal bool bufferSyncTile
         {
@@ -731,6 +761,11 @@ namespace UnityEngine.Tilemaps
 
         public void RefreshTile(Vector3Int position)
         {
+            if (m_PreviewCells.Count > 0 && m_PreviewCells.ContainsKey(position))
+            {
+                RefreshPreviewCell(position);
+                return;
+            }
             if (RefreshCell(position))
                 SendChanges(new SortedSet<Vector3Int>(CellOrder.Instance) { position });
         }
@@ -980,24 +1015,71 @@ namespace UnityEngine.Tilemaps
             if (position.x < x0 || position.x > x1 || position.y < y0 || position.y > y1) return;
             var target = GetTile(position);
             var fill = tile as TileBase;
-            var visited = new HashSet<Vector3Int> { position };
+            var positions = CollectConnectedInBox(position, target, x0, y0, x1, y1);
+            var cells = new List<(Vector3Int, TileBase)>(positions.Count);
+            for (int i = 0; i < positions.Count; i++) cells.Add((positions[i], fill));
+            SetTilesInternal(cells);
+        }
+
+        /// <summary>Collects the 4-connected cells on <paramref name="start"/>'s Z layer inside
+        /// <c>[x0, x1] x [y0, y1]</c> whose actual tile asset matches <paramref name="target"/>.</summary>
+        List<Vector3Int> CollectConnectedInBox(Vector3Int start, Object target, int x0, int y0, int x1, int y1)
+        {
+            if (target == null) target = null;
+            int width = x1 - x0 + 1;
+            int height = y1 - y0 + 1;
+            var result = new List<Vector3Int>();
+            if (width <= 0 || height <= 0) return result;
+            long totalLong = (long)width * height;
+            if (totalLong <= 1 << 22)
+            {
+                int total = (int)totalLong;
+                var visited = new uint[(total + 31) >> 5];
+                var stack = new Stack<int>();
+                stack.Push((start.y - y0) * width + (start.x - x0));
+                while (stack.Count > 0)
+                {
+                    int index = stack.Pop();
+                    int word = index >> 5;
+                    uint bit = 1u << (index & 31);
+                    if ((visited[word] & bit) != 0) continue;
+                    visited[word] |= bit;
+                    int x = x0 + (index % width);
+                    int y = y0 + (index / width);
+                    var p = new Vector3Int(x, y, start.z);
+                    var current = GetTileAsset(p);
+                    if (current == null) current = null;
+                    if (!ReferenceEquals(current, target)) continue;
+                    result.Add(p);
+                    if (y > y0) stack.Push(index - width);
+                    if (y < y1) stack.Push(index + width);
+                    if (x > x0) stack.Push(index - 1);
+                    if (x < x1) stack.Push(index + 1);
+                }
+                return result;
+            }
+            var visitedSet = new HashSet<Vector3Int> { start };
             var queue = new Queue<Vector3Int>();
-            queue.Enqueue(position);
-            var cells = new List<(Vector3Int, TileBase)>();
-            var steps = new[] { Vector3Int.right, Vector3Int.left, Vector3Int.up, Vector3Int.down };
+            queue.Enqueue(start);
             while (queue.Count > 0)
             {
                 var p = queue.Dequeue();
-                cells.Add((p, fill));
-                foreach (var step in steps)
-                {
-                    var n = p + step;
-                    if (n.x < x0 || n.x > x1 || n.y < y0 || n.y > y1 || !visited.Add(n)) continue;
-                    if (GetTile(n) != target) continue;
-                    queue.Enqueue(n);
-                }
+                result.Add(p);
+                TryEnqueue(p + Vector3Int.down);
+                TryEnqueue(p + Vector3Int.up);
+                TryEnqueue(p + Vector3Int.left);
+                TryEnqueue(p + Vector3Int.right);
             }
-            SetTilesInternal(cells);
+            return result;
+
+            void TryEnqueue(Vector3Int n)
+            {
+                if (n.x < x0 || n.x > x1 || n.y < y0 || n.y > y1 || !visitedSet.Add(n)) return;
+                var current = GetTileAsset(n);
+                if (current == null) current = null;
+                if (!ReferenceEquals(current, target)) return;
+                queue.Enqueue(n);
+            }
         }
 
         public void InsertCells(Vector3Int position, Vector3Int insertCells) => InsertCells(position, insertCells.x, insertCells.y, insertCells.z);
@@ -1051,8 +1133,11 @@ namespace UnityEngine.Tilemaps
             foreach (var cell in m_Cells.Values)
                 if (cell.Instantiated != null) Object.DestroyImmediate(cell.Instantiated);
             m_Cells.Clear();
+            m_PreviewCells.Clear();
             m_Origin = Vector3Int.zero;
             m_Size = new Vector3Int(0, 0, 1);
+            m_PreviewOrigin = m_Origin;
+            m_PreviewSize = m_Size;
             m_LocalZMin = 0;
             m_LocalZMax = 1;
             m_RenderVersion++;
@@ -1100,38 +1185,260 @@ namespace UnityEngine.Tilemaps
                 m_Origin = min;
                 m_Size = max - min;
             }
+            if (keepEditorPreview)
+            {
+                bool pFirst = first;
+                Vector3Int pMin = min, pMax = max;
+                foreach (var pair in m_PreviewCells)
+                {
+                    if (pair.Value.TileAsset == null) continue;
+                    var p = pair.Key;
+                    pMin = pFirst ? p : Vector3Int.Min(pMin, p);
+                    pMax = pFirst ? p + Vector3Int.one : Vector3Int.Max(pMax, p + Vector3Int.one);
+                    pFirst = false;
+                }
+                if (pFirst)
+                {
+                    m_PreviewOrigin = Vector3Int.zero;
+                    m_PreviewSize = new Vector3Int(0, 0, 1);
+                }
+                else
+                {
+                    m_PreviewOrigin = pMin;
+                    m_PreviewSize = pMax - pMin;
+                }
+            }
+            else
+            {
+                m_PreviewOrigin = m_Origin;
+                m_PreviewSize = m_Size;
+            }
             m_RenderVersion++;
         }
 
         // ------------------------------------------------------------------ editor preview
-        // Editor preview tiles are not kept: the preview layer is the tiles themselves.
+        // Editor preview cells live in a separate layer from actual tiles (matches the Unity
+        // 6000.0.71f1 Editor, tests/projects/tilemappreview). Preview refreshes ask tiles for
+        // GetTileData only (no StartUp, animation data, prefab instantiation, or tilemap change
+        // events). Preview bounds grow independently from actual bounds; editorPreviewOrigin and
+        // editorPreviewSize report the componentwise min origin and max size across both layers.
 
-        internal Object GetAnyTileAsset(Vector3Int position) => GetTileAsset(position);
-        internal TileBase GetAnyTile(Vector3Int position) => GetTile(position);
-        internal T GetAnyTile<T>(Vector3Int position) where T : TileBase => GetTile(position) as T;
-        internal Object GetEditorPreviewTileAsset(Vector3Int position) => null;
-        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
-        public TileBase GetEditorPreviewTile(Vector3Int position) => null;
-        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
-        public T GetEditorPreviewTile<T>(Vector3Int position) where T : TileBase => null;
-        internal void SetEditorPreviewTileAsset(Vector3Int position, Object tile) { }
-        public void SetEditorPreviewTile(Vector3Int position, TileBase tile) => Stubs.Ignored("Tilemap.SetEditorPreviewTile", "is not honoured yet: editor preview tiles are not kept or drawn");
-        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
-        public bool HasEditorPreviewTile(Vector3Int position) => false;
-        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
-        public Sprite GetEditorPreviewSprite(Vector3Int position) => null;
-        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
-        public Matrix4x4 GetEditorPreviewTransformMatrix(Vector3Int position) => Matrix4x4.identity;
-        public void SetEditorPreviewTransformMatrix(Vector3Int position, Matrix4x4 transform) => Stubs.Ignored("Tilemap.SetEditorPreviewTransformMatrix", "is not honoured yet: editor preview tiles are not kept or drawn");
-        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
-        public Color GetEditorPreviewColor(Vector3Int position) => Color.white;
-        public void SetEditorPreviewColor(Vector3Int position, Color color) => Stubs.Ignored("Tilemap.SetEditorPreviewColor", "is not honoured yet: editor preview tiles are not kept or drawn");
-        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
-        public TileFlags GetEditorPreviewTileFlags(Vector3Int position) => TileFlags.None;
-        public void EditorPreviewFloodFill(Vector3Int position, TileBase tile) => Stubs.Ignored("Tilemap.EditorPreviewFloodFill", "is not honoured yet: editor preview tiles are not kept or drawn");
-        public void EditorPreviewBoxFill(Vector3Int position, Object tile, int startX, int startY, int endX, int endY) => Stubs.Ignored("Tilemap.EditorPreviewBoxFill", "is not honoured yet: editor preview tiles are not kept or drawn");
-        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
-        public void ClearAllEditorPreviewTiles() { }
+        PreviewCell PreviewCellAt(Vector3Int position) =>
+            m_PreviewCells.Count > 0 && m_PreviewCells.TryGetValue(position, out var cell) ? cell : null;
+
+        void GrowPreview(Vector3Int p)
+        {
+            var min = Vector3Int.Min(m_PreviewOrigin, p);
+            var max = Vector3Int.Max(m_PreviewOrigin + m_PreviewSize, p + Vector3Int.one);
+            m_PreviewOrigin = min;
+            m_PreviewSize = max - min;
+        }
+
+        void RefreshPreviewCell(Vector3Int position)
+        {
+            var cell = PreviewCellAt(position);
+            if (cell == null) return;
+            var tile = cell.TileAsset as TileBase;
+            if (tile == null) return;
+            var data = TileData.Default;
+            var itilemap = PreviewItilemap;
+            CallTile(() => tile.GetTileData(position, itilemap, ref data));
+            if (PreviewCellAt(position)?.TileAsset != tile) return;
+            cell.Sprite = data.sprite;
+            cell.Flags = data.flags;
+            if (cell.Fresh || (data.flags & TileFlags.LockColor) != 0) cell.Color = data.color;
+            if (cell.Fresh || (data.flags & TileFlags.LockTransform) != 0) cell.Transform = data.transform;
+            cell.Fresh = false;
+            m_RenderVersion++;
+        }
+
+        void RefreshPreviewOrActualCell(Vector3Int position)
+        {
+            if (m_PreviewCells.Count > 0 && m_PreviewCells.ContainsKey(position))
+                RefreshPreviewCell(position);
+            else
+                RefreshCell(position);
+        }
+
+        void FlushPreviewRefreshes(List<(Vector3Int Position, TileBase Old, TileBase New)> applied)
+        {
+            if (applied.Count == 0) return;
+            var refresh = new SortedSet<Vector3Int>(CellOrder.Instance);
+            var itilemap = PreviewItilemap;
+            var previous = itilemap.m_Collect;
+            itilemap.m_Collect = refresh;
+            try
+            {
+                foreach (var (position, old, tile) in applied)
+                {
+                    if (old != null) CallTile(() => old.RefreshTile(position, itilemap));
+                    if (tile != null) CallTile(() => tile.RefreshTile(position, itilemap));
+                }
+            }
+            finally
+            {
+                itilemap.m_Collect = previous;
+            }
+            foreach (var p in refresh)
+                RefreshPreviewOrActualCell(p);
+        }
+
+        internal Object GetAnyTileAsset(Vector3Int position) => PreviewCellAt(position)?.TileAsset ?? GetTileAsset(position);
+        internal TileBase GetAnyTile(Vector3Int position) => GetAnyTileAsset(position) as TileBase;
+        internal T GetAnyTile<T>(Vector3Int position) where T : TileBase => GetAnyTile(position) as T;
+        internal Object GetEditorPreviewTileAsset(Vector3Int position) => PreviewCellAt(position)?.TileAsset;
+        public TileBase GetEditorPreviewTile(Vector3Int position) => PreviewCellAt(position)?.TileAsset as TileBase;
+        public T GetEditorPreviewTile<T>(Vector3Int position) where T : TileBase => GetEditorPreviewTile(position) as T;
+
+        bool TryApplyEditorPreviewTile(Vector3Int position, Object tile, out TileBase oldTile, out TileBase newTile)
+        {
+            oldTile = null;
+            newTile = null;
+            if (tile == null) tile = null;
+            var cell = PreviewCellAt(position);
+            Object oldAsset;
+            Object newAsset;
+            if (cell != null)
+            {
+                oldAsset = cell.TileAsset;
+                if (oldAsset == null) oldAsset = null;
+                if (ReferenceEquals(oldAsset, tile)) return false;
+                if (tile == null)
+                {
+                    m_PreviewCells.Remove(position);
+                    newAsset = GetTileAsset(position);
+                    if (newAsset == null) newAsset = null;
+                    if (ReferenceEquals(oldAsset, newAsset)) return false;
+                }
+                else
+                {
+                    cell.TileAsset = tile;
+                    newAsset = tile;
+                    GrowPreview(position);
+                }
+            }
+            else
+            {
+                if (tile == null) return false;
+                oldAsset = GetTileAsset(position);
+                if (oldAsset == null) oldAsset = null;
+                m_PreviewCells[position] = new PreviewCell { TileAsset = tile };
+                newAsset = tile;
+                GrowPreview(position);
+            }
+            oldTile = oldAsset as TileBase;
+            newTile = newAsset as TileBase;
+            return true;
+        }
+
+        internal void SetEditorPreviewTileAsset(Vector3Int position, Object tile)
+        {
+            bool hadCell = m_PreviewCells.Count > 0 && m_PreviewCells.ContainsKey(position);
+            if (!TryApplyEditorPreviewTile(position, tile, out var oldTile, out var newTile))
+            {
+                if (hadCell && (m_PreviewCells.Count == 0 || !m_PreviewCells.ContainsKey(position)))
+                    m_RenderVersion++;
+                return;
+            }
+            m_RenderVersion++;
+            var itilemap = PreviewItilemap;
+            if (oldTile != null) CallTile(() => oldTile.RefreshTile(position, itilemap));
+            if (newTile != null) CallTile(() => newTile.RefreshTile(position, itilemap));
+        }
+
+        void SetEditorPreviewTileAssetsBatch(List<Vector3Int> positions, Object tile)
+        {
+            if (positions.Count == 0) return;
+            var applied = new List<(Vector3Int Position, TileBase Old, TileBase New)>(positions.Count);
+            bool mutated = false;
+            for (int i = 0; i < positions.Count; i++)
+            {
+                var position = positions[i];
+                bool hadCell = m_PreviewCells.Count > 0 && m_PreviewCells.ContainsKey(position);
+                if (TryApplyEditorPreviewTile(position, tile, out var oldTile, out var newTile))
+                {
+                    mutated = true;
+                    applied.Add((position, oldTile, newTile));
+                }
+                else if (hadCell && (m_PreviewCells.Count == 0 || !m_PreviewCells.ContainsKey(position)))
+                {
+                    mutated = true;
+                }
+            }
+            if (mutated) m_RenderVersion++;
+            if (applied.Count > 0) FlushPreviewRefreshes(applied);
+        }
+
+        public void SetEditorPreviewTile(Vector3Int position, TileBase tile) => SetEditorPreviewTileAsset(position, tile);
+        public bool HasEditorPreviewTile(Vector3Int position) => PreviewCellAt(position)?.TileAsset != null;
+        public Sprite GetEditorPreviewSprite(Vector3Int position) => PreviewCellAt(position)?.Sprite;
+        public Matrix4x4 GetEditorPreviewTransformMatrix(Vector3Int position) => PreviewCellAt(position)?.Transform ?? Matrix4x4.identity;
+
+        public void SetEditorPreviewTransformMatrix(Vector3Int position, Matrix4x4 transform)
+        {
+            var cell = PreviewCellAt(position);
+            if (cell == null || (cell.Flags & TileFlags.LockTransform) != 0 || cell.Transform == transform) return;
+            cell.Transform = transform;
+            m_RenderVersion++;
+        }
+
+        public Color GetEditorPreviewColor(Vector3Int position) => PreviewCellAt(position)?.Color ?? Color.white;
+
+        public void SetEditorPreviewColor(Vector3Int position, Color color)
+        {
+            var cell = PreviewCellAt(position);
+            if (cell == null || (cell.Flags & TileFlags.LockColor) != 0 || cell.Color == color) return;
+            cell.Color = color;
+            m_RenderVersion++;
+        }
+
+        public TileFlags GetEditorPreviewTileFlags(Vector3Int position) => PreviewCellAt(position)?.Flags ?? TileFlags.None;
+
+        public void EditorPreviewFloodFill(Vector3Int position, TileBase tile)
+        {
+            GrowPreview(position);
+            EditorPreviewBoxFill(position, tile, m_PreviewOrigin.x, m_PreviewOrigin.y,
+                m_PreviewOrigin.x + m_PreviewSize.x - 1, m_PreviewOrigin.y + m_PreviewSize.y - 1);
+        }
+
+        public void EditorPreviewBoxFill(Vector3Int position, Object tile, int startX, int startY, int endX, int endY)
+        {
+            if (startX > endX || startY > endY) return;
+            var target = GetTileAsset(position);
+            if (target == null) target = null;
+            if (tile == null) tile = null;
+            if (ReferenceEquals(target, tile)) return;
+            GrowPreview(position);
+            int x0 = Math.Max(startX, m_PreviewOrigin.x);
+            int x1 = Math.Min(endX, m_PreviewOrigin.x + m_PreviewSize.x - 1);
+            int y0 = Math.Max(startY, m_PreviewOrigin.y);
+            int y1 = Math.Min(endY, m_PreviewOrigin.y + m_PreviewSize.y - 1);
+            if (position.x < x0 || position.x > x1 || position.y < y0 || position.y > y1) return;
+            var positions = CollectConnectedInBox(position, target, x0, y0, x1, y1);
+            SetEditorPreviewTileAssetsBatch(positions, tile);
+        }
+
+        public void ClearAllEditorPreviewTiles()
+        {
+            List<(Vector3Int Position, TileBase Old, TileBase New)> applied = null;
+            if (m_PreviewCells.Count > 0)
+            {
+                applied = new List<(Vector3Int, TileBase, TileBase)>(m_PreviewCells.Count);
+                foreach (var pair in m_PreviewCells)
+                {
+                    var oldAsset = pair.Value.TileAsset;
+                    var actual = GetTileAsset(pair.Key);
+                    if (actual == null) actual = null;
+                    if (!ReferenceEquals(oldAsset, actual))
+                        applied.Add((pair.Key, oldAsset as TileBase, actual as TileBase));
+                }
+                m_PreviewCells.Clear();
+            }
+            m_PreviewOrigin = m_Origin;
+            m_PreviewSize = m_Size;
+            m_RenderVersion++;
+            if (applied != null) FlushPreviewRefreshes(applied);
+        }
 
         // ------------------------------------------------------------------ lifecycle and serialization
 
@@ -1226,6 +1533,9 @@ namespace UnityEngine.Tilemaps
             if (origin != null) m_Origin = new Vector3Int(origin.Int("x"), origin.Int("y"), origin.Int("z"));
             var size = body.Get("m_Size");
             if (size != null) m_Size = new Vector3Int(size.Int("x"), size.Int("y"), size.Int("z"));
+            m_PreviewCells.Clear();
+            m_PreviewOrigin = m_Origin;
+            m_PreviewSize = m_Size;
             m_LocalZMin = m_Origin.z;
             m_LocalZMax = m_Origin.z + m_Size.z;
             m_TileAnchor = body.Vector3("m_TileAnchor", new Vector3(0.5f, 0.5f, 0f));
@@ -1258,6 +1568,9 @@ namespace UnityEngine.Tilemaps
             }
             m_Origin = s.m_Origin;
             m_Size = s.m_Size;
+            m_PreviewCells.Clear();
+            m_PreviewOrigin = m_Origin;
+            m_PreviewSize = m_Size;
             m_LocalZMin = s.m_LocalZMin;
             m_LocalZMax = s.m_LocalZMax;
             m_Color = s.m_Color;
