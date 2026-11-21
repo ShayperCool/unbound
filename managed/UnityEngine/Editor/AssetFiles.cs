@@ -22,8 +22,9 @@ namespace Unbound.Runtime
     internal static class AssetFiles
     {
         /// <summary>Writes the files of the dirty asset objects (<paramref name="only"/>: of that
-        /// object only, when it is dirty).</summary>
-        internal static void SaveDirty(Object only = null)
+        /// object only, when it is dirty); with <paramref name="unchangedStays"/>, a file whose text
+        /// would not change is left untouched.</summary>
+        internal static void SaveDirty(Object only = null, bool unchangedStays = false)
         {
             Undo.FlushDirtiness();
             // The assets CreateAsset made are written from their objects (and so no longer dirty).
@@ -45,7 +46,7 @@ namespace Unbound.Runtime
             }
             foreach (var pair in byGuid)
             {
-                try { Save(pair.Key, pair.Value); }
+                try { Save(pair.Key, pair.Value, unchangedStays); }
                 catch (Exception e) when (e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
                 {
                     Debug.LogError($"Unbound: {AssetDatabaseRuntime.PathOf(pair.Key)} is not saved: {e.Message}");
@@ -65,7 +66,7 @@ namespace Unbound.Runtime
             return docs;
         }
 
-        static void Save(string guid, List<Object> dirty)
+        static void Save(string guid, List<Object> dirty, bool unchangedStays)
         {
             var info = AssetDatabaseRuntime.Info(guid);
             var loaded = AssetDatabaseRuntime.LoadFile(guid);
@@ -100,7 +101,9 @@ namespace Unbound.Runtime
                 Debug.LogWarning($"Unbound: {info.Path} is saved with its {string.Join(", ", keptAsRead)} objects as they were read: Unbound does not write their fields yet, so changes to them are not saved.");
             if (unlocated > 0)
                 Debug.LogWarning($"Unbound: {info.Path} is saved with {unlocated} references to assets Unbound cannot name written as none.");
-            SceneFiles.WriteFile(info.File, UnityYamlText.Write(docs));
+            var written = UnityYamlText.Write(docs);
+            if (!unchangedStays || !File.Exists(info.File) || File.ReadAllText(info.File) != written)
+                SceneFiles.WriteFile(info.File, written);
             foreach (var o in loaded.Objects.Values)
                 if (o is not null) EditorUtility.ClearDirty(o);
         }

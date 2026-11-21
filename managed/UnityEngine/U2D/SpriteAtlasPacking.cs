@@ -566,7 +566,7 @@ namespace UnityEngine.U2D
                 var (_, refs, names) = PackedSpriteLists(packed);
                 atlas.ApplyPackedSprites(refs, names, markModified: true);
                 UnityEditor.EditorUtility.SetDirty(atlas);
-                AssetFiles.SaveDirty(atlas);
+                AssetFiles.SaveDirty(atlas, unchangedStays: true);
                 UnityEditor.EditorUtility.ClearDirty(atlas);
                 atlas.InvalidateCachedSprites();
             }
