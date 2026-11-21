@@ -1,0 +1,38 @@
+{"k":"lod.base","v":"errors=0,0,0,0,0.01583196|extents=0.000946102664/0.4993591,0.00079350546/0.499633759,0.001037661/0.49862662,0.00079350546/0.4987792,0.00079350546/0.499633759|bounds=(50.0000, 12.5107, 50.0000)(100.0000, 24.9420, 100.0000)"}
+{"k":"lod.errorOverride","v":"throws=<none>|logs=<none>|errors=0,0,0,0,0.01583196|extents=0.000946102664/0.4993591,0.00079350546/0.499633759,0.001037661/0.49862662,0.00079350546/0.4987792,0.00079350546/0.499633759|bounds=(50.0000, 12.5107, 50.0000)(100.0000, 24.9420, 100.0000)"}
+{"k":"lod.errorOverrideShort","v":"throws=<none>|logs=Error:Override maximum height error array size 2 not equal to patchCount of 5 bytes|errors=0,0,0,0,0.01583196|extents=0.000946102664/0.4993591,0.00079350546/0.499633759,0.001037661/0.49862662,0.00079350546/0.4987792,0.00079350546/0.499633759|bounds=(50.0000, 12.5107, 50.0000)(100.0000, 24.9420, 100.0000)"}
+{"k":"lod.errorOverrideLong","v":"throws=<none>|logs=Error:Override maximum height error array size 8 not equal to patchCount of 5 bytes|errors=0,0,0,0,0.01583196|extents=0.000946102664/0.4993591,0.00079350546/0.499633759,0.001037661/0.49862662,0.00079350546/0.4987792,0.00079350546/0.499633759|bounds=(50.0000, 12.5107, 50.0000)(100.0000, 24.9420, 100.0000)"}
+{"k":"lod.errorOverrideNull","v":"throws=<none>|logs=Error:Override maximum height error array size 0 not equal to patchCount of 5 bytes|errors=0,0,0,0,0.01583196|extents=0.000946102664/0.4993591,0.00079350546/0.499633759,0.001037661/0.49862662,0.00079350546/0.4987792,0.00079350546/0.499633759|bounds=(50.0000, 12.5107, 50.0000)(100.0000, 24.9420, 100.0000)"}
+{"k":"lod.errorOverrideThenHeights","v":"errors=0,0,0,0,0.324986279|extents=0.000946102664/0.8999878,0.00079350546/0.499633759,0.001037661/0.49862662,0.00079350546/0.4987792,0.00079350546/0.8999878|bounds=(50.0000, 22.5195, 50.0000)(100.0000, 44.9597, 100.0000)"}
+{"k":"lod.extentsOverride","v":"throws=<none>|logs=<none>|errors=0,0,0,0,0.01583196|extents=0.000946102664/0.4993591,0.00079350546/0.499633759,0.001037661/0.49862662,0.00079350546/0.4987792,0.00079350546/0.499633759|bounds=(50.0000, 25.0000, 50.0000)(100.0000, 10.0000, 100.0000)"}
+{"k":"lod.extentsOverrideShort","v":"throws=<none>|logs=Error:Override patch heights array size 2 not equal to patchCount of 10 bytes|errors=0,0,0,0,0.01583196|extents=0.000946102664/0.4993591,0.00079350546/0.499633759,0.001037661/0.49862662,0.00079350546/0.4987792,0.00079350546/0.499633759|bounds=(50.0000, 12.5107, 50.0000)(100.0000, 24.9420, 100.0000)"}
+{"k":"lod.extentsOverrideNull","v":"throws=<none>|logs=Error:Override patch heights array size 0 not equal to patchCount of 10 bytes|errors=0,0,0,0,0.01583196|extents=0.000946102664/0.4993591,0.00079350546/0.499633759,0.001037661/0.49862662,0.00079350546/0.4987792,0.00079350546/0.499633759|bounds=(50.0000, 12.5107, 50.0000)(100.0000, 24.9420, 100.0000)"}
+{"k":"lod.extentsOverrideThenHeights","v":"errors=0,0,0,0,0.324986279|extents=0.000946102664/0.8999878,0.00079350546/0.499633759,0.001037661/0.49862662,0.00079350546/0.4987792,0.00079350546/0.8999878|bounds=(50.0000, 2.7500, 50.0000)(100.0000, 0.5000, 100.0000)"}
+{"k":"lod.delayedHeights","v":"delayed:errors=Infinity,0,0,0,Infinity|extents=0.000946102664/0.8999878,0.00079350546/0.499633759,0.001037661/0.49862662,0.00079350546/0.4987792,0.00079350546/0.8999878|bounds=(50.0000, 22.5195, 50.0000)(100.0000, 44.9597, 100.0000)|synced:errors=0,0,0,0,0.324986279|extents=0.000946102664/0.8999878,0.00079350546/0.499633759,0.001037661/0.49862662,0.00079350546/0.4987792,0.00079350546/0.8999878|bounds=(50.0000, 22.5195, 50.0000)(100.0000, 44.9597, 100.0000)"}
+{"k":"map.grid.validated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=B,0:1=C,1:1=D"}
+{"k":"map.grid.unvalidated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=B,0:1=C,1:1=D"}
+{"k":"map.overlap.validated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=B"}
+{"k":"map.overlap.unvalidated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=B"}
+{"k":"map.sizeMismatch.validated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=Big"}
+{"k":"map.sizeMismatch.unvalidated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=Big"}
+{"k":"map.resolutionMismatch.validated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=Fine"}
+{"k":"map.resolutionMismatch.unvalidated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=Fine"}
+{"k":"map.offGrid.validated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=Shifted"}
+{"k":"map.offGrid.unvalidated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=Shifted"}
+{"k":"map.heightOffset.validated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=Raised"}
+{"k":"map.heightOffset.unvalidated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=Raised"}
+{"k":"map.otherGroup.validated","v":"throws=<none>|logs=<none>|map=0:0=A"}
+{"k":"map.otherGroup.unvalidated","v":"throws=<none>|logs=<none>|map=0:0=A"}
+{"k":"map.filterAll.validated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=Other"}
+{"k":"map.filterAll.unvalidated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=Other"}
+{"k":"map.gridOrigin.validated","v":"throws=<none>|logs=<none>|map=0:0=A"}
+{"k":"map.gridOrigin.unvalidated","v":"throws=<none>|logs=<none>|map=0:0=A"}
+{"k":"map.noneMatch.validated","v":"throws=<none>|logs=<none>|map=<null>"}
+{"k":"map.noneMatch.unvalidated","v":"throws=<none>|logs=<none>|map=<null>"}
+{"k":"map.connected.validated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=B,1:1=C"}
+{"k":"map.connected.unvalidated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=B,1:1=C"}
+{"k":"map.connectedClash.validated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=B,0:1=C,1:1=A"}
+{"k":"map.connectedClash.unvalidated","v":"throws=<none>|logs=<none>|map=0:0=A,1:0=B,0:1=C,1:1=A"}
+{"k":"map.nullOrigin","v":"throws=<none>|logs=<none>|map=<null>"}
+{"k":"map.nullConnectedOrigin","v":"throws=<none>|logs=<none>|map=<null>"}
+{"k":"complete","v":true}
