@@ -9,7 +9,8 @@ using UnityEngine.UIElements;
 // Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
 // BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, Color/Color32,
 // Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Rect, RectInt, Bounds, BoundsInt,
-// AnimationCurve, Gradient, ObjectReference, and Hash128 fields plus Foldout isExpanded binding),
+// AnimationCurve, Gradient, ObjectReference, Hash128, LayerMask, and RenderingLayerMask fields
+// plus Foldout isExpanded binding),
 // BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
 // BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
 // SerializedObject binding context/updater pipeline that synchronizes fields and polls changes
@@ -24,7 +25,8 @@ using UnityEngine.UIElements;
 // tests/projects/vector3intbinding, tests/projects/rectbinding, tests/projects/rectintbinding,
 // tests/projects/boundsbinding, tests/projects/boundsintbinding, tests/projects/curvebinding,
 // tests/projects/gradientbinding, tests/projects/objectbinding, tests/projects/hash128binding,
-// tests/projects/trackpropertyvalue and tests/projects/trackserializedobjectvalue.
+// tests/projects/maskbinding, tests/projects/trackpropertyvalue and
+// tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
 {
@@ -1216,6 +1218,12 @@ namespace UnityEditor.UIElements.Bindings
                 case SerializedPropertyType.Hash128:
                     DefaultBind(element, prop, SerializedPropertyHelper.GetHash128PropertyValue, SerializedPropertyHelper.SetHash128PropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
+                case SerializedPropertyType.LayerMask:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetLayerMaskPropertyValue, SerializedPropertyHelper.SetLayerMaskPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
+                case SerializedPropertyType.RenderingLayerMask:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetRenderingLayerMaskPropertyValue, SerializedPropertyHelper.SetRenderingLayerMaskPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
                 case SerializedPropertyType.Generic:
                     if (prop.type == "ToggleButtonGroupState")
                         Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty (ToggleButtonGroupState)");
@@ -2247,6 +2255,8 @@ namespace UnityEditor.UIElements.Bindings
         public static AnimationCurve GetAnimationCurvePropertyValue(SerializedProperty p) => p.animationCurveValue;
         public static Gradient GetGradientPropertyValue(SerializedProperty p) => p.gradientValue;
         public static Hash128 GetHash128PropertyValue(SerializedProperty p) => p.hash128Value;
+        public static int GetLayerMaskPropertyValue(SerializedProperty p) => p.intValue;
+        public static uint GetRenderingLayerMaskPropertyValue(SerializedProperty p) => p.uintValue;
         public static float GetIntPropertyValueAsFloat(SerializedProperty p) => p.intValue;
         public static float GetLongPropertyValueAsFloat(SerializedProperty p) => p.longValue;
         public static double GetFloatPropertyValueAsDouble(SerializedProperty p) => p.floatValue;
@@ -2359,6 +2369,8 @@ namespace UnityEditor.UIElements.Bindings
         public static void SetAnimationCurvePropertyValue(SerializedProperty p, AnimationCurve v) => p.animationCurveValue = v;
         public static void SetGradientPropertyValue(SerializedProperty p, Gradient v) => p.gradientValue = v;
         public static void SetHash128PropertyValue(SerializedProperty p, Hash128 v) => p.hash128Value = v;
+        public static void SetLayerMaskPropertyValue(SerializedProperty p, int v) => p.intValue = v;
+        public static void SetRenderingLayerMaskPropertyValue(SerializedProperty p, uint v) => p.uintValue = v;
         public static void SetFloatPropertyValueFromDouble(SerializedProperty p, double v) => p.floatValue = (float)v;
         public static void SetDoublePropertyValueFromFloat(SerializedProperty p, float v) => p.doubleValue = v;
 

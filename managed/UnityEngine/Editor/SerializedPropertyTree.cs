@@ -98,6 +98,8 @@ namespace Unbound.Runtime
                 harmonics[i] = C<UnityEngine.Rendering.SphericalHarmonicsL2, float>(UnityEngine.Rendering.SphericalHarmonicsL2.SerializedNames[i], Shape.Float,
                     sh => sh.Coefficient(index), (sh, v) => { sh.SetCoefficient(index, v); return sh; });
             }
+            var layerBits = C<LayerMask, uint>("m_Bits", Shape.UInt, v => (uint)v.value, (v, p) => (LayerMask)(int)p);
+            layerBits.Hidden = true;
             var renderingLayerBits = C<RenderingLayerMask, uint>("m_Bits", Shape.UInt, v => v.value, (v, p) => { v.value = p; return v; });
             renderingLayerBits.Hidden = true;
             renderingLayerBits.TypeName = "uint";
@@ -196,10 +198,7 @@ namespace Unbound.Runtime
                     C<BoundsInt, Vector3Int>("m_Position", Shape.Vector3Int, v => v.position, (v, p) => { v.position = p; return v; }),
                     C<BoundsInt, Vector3Int>("m_Size", Shape.Vector3Int, v => v.size, (v, p) => { v.size = p; return v; }),
                 },
-                [Shape.LayerMask] = new[]
-                {
-                    C<LayerMask, uint>("m_Bits", Shape.UInt, v => (uint)v.value, (v, p) => (LayerMask)(int)p),
-                },
+                [Shape.LayerMask] = new[] { layerBits },
                 [Shape.RectOffset] = new[]
                 {
                     C<RectOffset, int>("m_Left", Shape.Int, v => v.left, (v, p) => new RectOffset(p, v.right, v.top, v.bottom)),
@@ -893,7 +892,7 @@ namespace Unbound.Runtime
                 case Shape.Bounds: return "Bounds";
                 case Shape.BoundsInt: return "BoundsInt";
                 case Shape.Matrix4x4: return "Matrix4x4f";
-                case Shape.LayerMask: return "BitField";
+                case Shape.LayerMask: return "LayerMask";
                 case Shape.Hash128: return "Hash128";
                 case Shape.AnimationCurve: return "AnimationCurve";
                 case Shape.Gradient: return "Gradient";

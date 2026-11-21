@@ -1,4 +1,13 @@
 {
+  "constructorStores": {
+    "branchingConstructors": 1113,
+    "differences": [],
+    "equal": 397,
+    "unknown": 1293,
+    "unmatchedConstructors": 1649,
+    "unmatchedFields": 1878
+  },
+  "release": "6000.0.71f1",
   "types": [
     {
       "category": "class",
@@ -2524,6 +2533,54 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
+      "type": "UnityEditor.UIElements.LayerMaskField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.LayerMaskField+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.LayerMaskField+UxmlSerializedData"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.LayerMaskField+UxmlTraits"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.MaskField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.MaskField+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.MaskField+UxmlSerializedData"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.MaskField+UxmlTraits"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
       "type": "UnityEditor.UIElements.ObjectField"
     },
     {
@@ -2567,6 +2624,18 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.UIElements.PropertyField+UxmlTraits"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.RenderingLayerMaskField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.RenderingLayerMaskField+UxmlSerializedData"
     },
     {
       "category": "class",

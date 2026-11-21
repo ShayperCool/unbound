@@ -98,6 +98,7 @@ namespace UnityEngine
             Array.Copy(s_Names, names, s_Names.Length);
             names[^1] = name ?? "";
             s_Names = names;
+            UnityEditor.TagManager.onRenderingLayersChanged?.Invoke();
             return true;
         }
 
@@ -116,6 +117,7 @@ namespace UnityEngine
             var names = (string[])s_Names.Clone();
             names[index] = name ?? "";
             s_Names = names;
+            UnityEditor.TagManager.onRenderingLayersChanged?.Invoke();
             return true;
         }
 
@@ -127,6 +129,7 @@ namespace UnityEngine
                 return false;
             }
             s_Names = s_Names[..^1];
+            UnityEditor.TagManager.onRenderingLayersChanged?.Invoke();
             return true;
         }
     }

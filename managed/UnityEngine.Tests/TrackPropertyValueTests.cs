@@ -119,6 +119,10 @@ namespace UnityEngine.Tests
             public Hash128 hashVal = Hash128.Parse("0123456789abcdef1122334455667788");
             public Hash128 otherHashVal = Hash128.Parse("fedcba98765432108877665544332211");
             public LayerMask layerMaskVal = 1;
+            public LayerMask otherLayerMaskVal = 16;
+            public RenderingLayerMask renderingLayerMaskVal = 1u;
+            public RenderingLayerMask otherRenderingLayerMaskVal = 4u;
+            public Quaternion quatVal = Quaternion.identity;
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
             public SparseChoice sparseEnum = SparseChoice.TwentyFive;
@@ -624,12 +628,12 @@ namespace UnityEngine.Tests
                 Assert.False(wrongField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.Contains(warnings, w => w.Contains("not compatible") && w.Contains("\"flag\""));
 
-                // Unsupported property type (LayerMask) reports explicit Stubs.NotImplemented hit and stays unbound.
-                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (LayerMask)";
+                // Unsupported property type (Quaternion) reports explicit Stubs.NotImplemented hit and stays unbound.
+                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (Quaternion)";
                 int beforeVecHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
                 var vecField = new IntegerField();
                 panel.visualTree.Add(vecField);
-                vecField.BindProperty(so.FindProperty("layerMaskVal"));
+                vecField.BindProperty(so.FindProperty("quatVal"));
                 Assert.False(vecField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value > beforeVecHits);
 
@@ -913,9 +917,9 @@ namespace UnityEngine.Tests
             using var so = new SerializedObject(target);
             try
             {
-                const string vecStubKey = "UnityEditor.UIElements.PropertyField (LayerMask)";
+                const string vecStubKey = "UnityEditor.UIElements.PropertyField (Quaternion)";
                 int beforeHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
-                var pf = new PropertyField(so.FindProperty("layerMaskVal"));
+                var pf = new PropertyField(so.FindProperty("quatVal"));
                 panel.visualTree.Add(pf);
                 pf.Bind(so);
                 Assert.Equal(0, pf.hierarchy.childCount);
@@ -2619,6 +2623,160 @@ namespace UnityEngine.Tests
             }
             finally
             {
+                soMulti.Dispose();
+                soSingle.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyLayerMaskAndRenderingLayerMaskMixedNormalizationReuseAndDisposedCleanupWorkAcrossReleases()
+        {
+            var savedRenderingLayers = (string[])RenderingLayerMask.s_Names.Clone();
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.layerMaskVal = 1;
+            t2.layerMaskVal = 16;
+            t1.renderingLayerMaskVal = 1u;
+            t2.renderingLayerMaskVal = 4u;
+
+            using var panel = RuntimePanel.Create(settings);
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            var soSingle = new SerializedObject(t1);
+            try
+            {
+                // Ensure additional rendering layers exist and trigger TagManager.onRenderingLayersChanged.
+                RenderingLayerMask.s_Names = new[] { "Default" };
+                int layersChangedCount = 0;
+                Action onChanged = () => layersChangedCount++;
+                UnityEditor.TagManager.onRenderingLayersChanged += onChanged;
+                try
+                {
+                    Assert.True(RenderingLayerMask.TryAddName("UnitLayer1"));
+                    Assert.True(RenderingLayerMask.TryAddName("UnitLayer2"));
+                    Assert.Equal(2, layersChangedCount);
+                }
+                finally
+                {
+                    UnityEditor.TagManager.onRenderingLayersChanged -= onChanged;
+                }
+
+                // BitOperationUtils helpers.
+                Assert.Equal(0, BitOperationUtils.CountBits(0u));
+                Assert.Equal(3, BitOperationUtils.CountBits(0b1011u));
+                Assert.Equal(32, BitOperationUtils.CountBits(uint.MaxValue));
+                Assert.True(BitOperationUtils.IsValueSmallerOrEqualThanIndex(0b0100u, 2));
+                Assert.False(BitOperationUtils.IsValueSmallerOrEqualThanIndex(0b1000u, 2));
+                Assert.True(BitOperationUtils.AreAllBitsSetForValues(uint.MaxValue, new[] { 1, 2, 4 }));
+                Assert.Equal(5u, BitOperationUtils.ModifyMaskByValuesArrayAndBitCount(uint.MaxValue & ~2u, new[] { 1, 2, 4 }, 3));
+
+                // Property metadata: LayerMask & RenderingLayerMask have no visible children and exact type names.
+                var pLayer = soSingle.FindProperty("layerMaskVal");
+                var pRlm = soSingle.FindProperty("renderingLayerMaskVal");
+                Assert.Equal(SerializedPropertyType.LayerMask, pLayer.propertyType);
+                Assert.Equal("LayerMask", pLayer.type);
+                Assert.False(pLayer.hasVisibleChildren);
+                Assert.Equal(SerializedPropertyType.RenderingLayerMask, pRlm.propertyType);
+                Assert.Equal("RenderingLayerMask", pRlm.type);
+                Assert.False(pRlm.hasVisibleChildren);
+
+                // Standalone MaskField normalization and custom choices (detached falls back to Mixed..., attached fits names).
+                var mf = new MaskField(new List<string> { "Alpha", "Beta", "Gamma" }, 7);
+                Assert.Equal(-1, mf.value);
+                Assert.Equal("Everything", mf.text);
+                mf.value = 3;
+                Assert.Equal("Mixed...", mf.text);
+                mf.style.width = 240f;
+                panel.visualTree.Add(mf);
+                Tick(panel);
+                Assert.Equal("Alpha, Beta", mf.text);
+
+                // Standalone RenderingLayerMaskField: deselecting one bit from Everything narrows to defined bits,
+                // and unnamed high bit appends Unnamed Layer N.
+                var rlmStandalone = new RenderingLayerMaskField();
+                Assert.Equal(1u, rlmStandalone.value);
+                rlmStandalone.value = uint.MaxValue;
+                Assert.Equal(uint.MaxValue, rlmStandalone.value);
+                rlmStandalone.value = uint.MaxValue & ~2u;
+                Assert.Equal(5u, rlmStandalone.value);
+                rlmStandalone.value = 1u << 6;
+                Assert.Contains("Unnamed Layer 6", rlmStandalone.choices);
+                Assert.Equal("Unnamed Layer 6", rlmStandalone.text);
+
+                // Multi-object mixed binding + runtime DataBinding coexistence for LayerMaskField & RenderingLayerMaskField.
+                var rt = new RuntimeModel { text = "rt-mask-0" };
+                var lmField = new LayerMaskField { dataSource = rt };
+                lmField.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                var rlmField = new RenderingLayerMaskField();
+                panel.visualTree.Add(lmField);
+                panel.visualTree.Add(rlmField);
+                lmField.BindProperty(soMulti.FindProperty("layerMaskVal"));
+                rlmField.BindProperty(soMulti.FindProperty("renderingLayerMaskVal"));
+                Tick(panel);
+
+                Assert.True(lmField.showMixedValue);
+                Assert.Equal(BaseField<int>.mixedValueString, lmField.text);
+                Assert.Equal("rt-mask-0", lmField.tooltip);
+                Assert.True(rlmField.showMixedValue);
+                Assert.Equal(BaseField<uint>.mixedValueString, rlmField.text);
+
+                // Editing mixed fields to target[0]'s value writes both targets and clears mixed.
+                lmField.value = 1;
+                rlmField.value = 1u;
+                Tick(panel);
+                Assert.False(lmField.showMixedValue);
+                Assert.Equal(1, t1.layerMaskVal.value);
+                Assert.Equal(1, t2.layerMaskVal.value);
+                Assert.False(rlmField.showMixedValue);
+                Assert.Equal(1u, t1.renderingLayerMaskVal.value);
+                Assert.Equal(1u, t2.renderingLayerMaskVal.value);
+                Assert.Equal("Default", rlmField.text);
+
+                // PropertyField creates and reuses LayerMaskField and RenderingLayerMaskField, and switches cleanly.
+                var pf = new PropertyField(soSingle.FindProperty("layerMaskVal"));
+                panel.visualTree.Add(pf);
+                pf.Bind(soSingle);
+                Tick(panel);
+                var pfLm = Assert.IsType<LayerMaskField>(pf.hierarchy[0]);
+                Assert.Equal("Layer Mask Val", pfLm.label);
+                Assert.Equal(1, pfLm.value);
+
+                pf.BindProperty(soSingle.FindProperty("otherLayerMaskVal"));
+                Tick(panel);
+                Assert.Same(pfLm, pf.hierarchy[0]);
+                Assert.Equal(16, pfLm.value);
+
+                pf.BindProperty(soSingle.FindProperty("renderingLayerMaskVal"));
+                Tick(panel);
+                var pfRlm = Assert.IsType<RenderingLayerMaskField>(pf.hierarchy[0]);
+                Assert.Equal(1u, pfRlm.value);
+
+                pf.BindProperty(soSingle.FindProperty("otherRenderingLayerMaskVal"));
+                Tick(panel);
+                Assert.Same(pfRlm, pf.hierarchy[0]);
+                Assert.Equal(4u, pfRlm.value);
+
+                // Disposing SerializedObject unbinds cleanly while runtime DataBinding remains active.
+                soMulti.Dispose();
+                lmField.value = 32;
+                rlmField.value = 2u;
+                rt.text = "rt-mask-1";
+                Tick(panel);
+                Assert.Equal(1, t2.layerMaskVal.value);
+                Assert.Equal(1u, t2.renderingLayerMaskVal.value);
+                Assert.Equal("rt-mask-1", lmField.tooltip);
+            }
+            finally
+            {
+                RenderingLayerMask.s_Names = savedRenderingLayers;
                 soMulti.Dispose();
                 soSingle.Dispose();
                 Object.DestroyImmediate(t1);

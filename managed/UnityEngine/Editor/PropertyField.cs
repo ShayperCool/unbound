@@ -9,18 +9,20 @@ using UnityEngine.UIElements;
 
 // Editor UI Toolkit PropertyField for supported scalar, enum, Color/Color32 (including
 // ColorUsageAttribute), Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Rect, RectInt, Bounds,
-// BoundsInt, AnimationCurve, Gradient (including GradientUsageAttribute), and ObjectReference
-// SerializedProperty types (bool, int, long, uint, ulong, float, double, string, ordinary and
-// [Flags] enum, Color/Color32, Vector2, Vector3, Vector4 Foldout with lazy child PropertyFields,
-// Vector2Int, Vector3Int, Rect, RectInt, Bounds, BoundsInt, AnimationCurve, Gradient, and
-// ObjectReference) and SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API
-// ("PropertyField", "PropertyField.RegisterValueChangeCallback", "ColorUsageAttribute",
-// "GradientUsageAttribute"); matches the Unity 6000.0.71f1 Editor, tests/projects/propertyfield,
-// tests/projects/enumbinding, tests/projects/enumflagsbinding, tests/projects/colorbinding,
-// tests/projects/vector2binding, tests/projects/vector3binding, tests/projects/vector4binding,
-// tests/projects/vector2intbinding, tests/projects/vector3intbinding, tests/projects/rectbinding,
-// tests/projects/rectintbinding, tests/projects/boundsbinding, tests/projects/boundsintbinding,
-// tests/projects/curvebinding, tests/projects/gradientbinding, and tests/projects/objectbinding.
+// BoundsInt, AnimationCurve, Gradient (including GradientUsageAttribute), ObjectReference, Hash128,
+// LayerMask, and RenderingLayerMask SerializedProperty types (bool, int, long, uint, ulong, float,
+// double, string, ordinary and [Flags] enum, Color/Color32, Vector2, Vector3, Vector4 Foldout with
+// lazy child PropertyFields, Vector2Int, Vector3Int, Rect, RectInt, Bounds, BoundsInt,
+// AnimationCurve, Gradient, ObjectReference, Hash128, LayerMask, and RenderingLayerMask) and
+// SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API ("PropertyField",
+// "PropertyField.RegisterValueChangeCallback", "ColorUsageAttribute", "GradientUsageAttribute");
+// matches the Unity 6000.0.71f1 Editor, tests/projects/propertyfield, tests/projects/enumbinding,
+// tests/projects/enumflagsbinding, tests/projects/colorbinding, tests/projects/vector2binding,
+// tests/projects/vector3binding, tests/projects/vector4binding, tests/projects/vector2intbinding,
+// tests/projects/vector3intbinding, tests/projects/rectbinding, tests/projects/rectintbinding,
+// tests/projects/boundsbinding, tests/projects/boundsintbinding, tests/projects/curvebinding,
+// tests/projects/gradientbinding, tests/projects/objectbinding, tests/projects/hash128binding, and
+// tests/projects/maskbinding.
 
 namespace UnityEditor.UIElements
 {
@@ -154,6 +156,8 @@ namespace UnityEditor.UIElements
         static readonly Func<GradientField> s_CreateGradientField = () => new GradientField();
         static readonly Func<ObjectField> s_CreateObjectField = () => new ObjectField();
         static readonly Func<Hash128Field> s_CreateHash128Field = () => new Hash128Field();
+        static readonly Func<LayerMaskField> s_CreateLayerMaskField = () => new LayerMaskField();
+        static readonly Func<RenderingLayerMaskField> s_CreateRenderingLayerMaskField = () => new RenderingLayerMaskField();
 
         string m_Label;
         SerializedObject m_SerializedObject;
@@ -542,6 +546,10 @@ namespace UnityEditor.UIElements
                 }
                 case SerializedPropertyType.Hash128:
                     return ConfigureField<Hash128Field, Hash128>(originalField as Hash128Field, property, s_CreateHash128Field);
+                case SerializedPropertyType.LayerMask:
+                    return ConfigureField<LayerMaskField, int>(originalField as LayerMaskField, property, s_CreateLayerMaskField);
+                case SerializedPropertyType.RenderingLayerMask:
+                    return ConfigureField<RenderingLayerMaskField, uint>(originalField as RenderingLayerMaskField, property, s_CreateRenderingLayerMaskField);
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField ({property.propertyType})");
                     return null;

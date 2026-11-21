@@ -24080,11 +24080,8 @@ namespace UnityEditor
         [global::Unbound.Stub] protected TabbedEditor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TabbedEditor.ctor"); }
         public global::UnityEditor.Editor activeEditor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TabbedEditor.activeEditor"); return default; } }
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class TagManager : global::UnityEditorInternal.ProjectSettingsBase
+    unsafe partial class TagManager
     {
-        [global::Unbound.Stub] internal static global::System.Action onRenderingLayersChanged;
-        [global::Unbound.Stub] internal static int GetDefinedLayerCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TagManager.GetDefinedLayerCount"); return default; }
         [global::Unbound.Stub] internal void AddSortingLayer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TagManager.AddSortingLayer"); }
         [global::Unbound.Stub] internal int GetSortingLayerCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TagManager.GetSortingLayerCount"); return default; }
         [global::Unbound.Stub] internal void UpdateSortingLayersOrder() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TagManager.UpdateSortingLayersOrder"); }
@@ -24093,7 +24090,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal void SetSortingLayerName(int index, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TagManager.SetSortingLayerName"); }
         [global::Unbound.Stub] internal int AddTag(string tag) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TagManager.AddTag"); return default; }
         [global::Unbound.Stub] internal void RemoveTag(string tag) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TagManager.RemoveTag"); }
-        [global::Unbound.Stub] internal static void GetDefinedLayers(ref string[] layerNames, ref int[] layerValues) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TagManager.GetDefinedLayers"); }
         [global::Unbound.Stub] internal bool IsIndexReservedForDefaultRenderingLayer(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TagManager.IsIndexReservedForDefaultRenderingLayer"); return default; }
         [global::Unbound.Stub] internal bool TryAddRenderingLayerName(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TagManager.TryAddRenderingLayerName"); return default; }
         [global::Unbound.Stub] internal int GetRenderingLayerCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TagManager.GetRenderingLayerCount"); return default; }
@@ -47342,89 +47338,10 @@ namespace UnityEditor.UIElements
         }
     }
     [global::Unbound.Stub]
-    public unsafe partial class LayerMaskField : global::UnityEditor.UIElements.MaskField
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public LayerMaskField(int defaultMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.ctor"); }
-        [global::Unbound.Stub] public LayerMaskField(string label, int defaultMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.ctor"); }
-        [global::Unbound.Stub] public LayerMaskField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.ctor"); }
-        [global::Unbound.Stub] public LayerMaskField(string label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.ctor"); }
-        [global::Unbound.Stub] internal override void AddMenuItems(global::UnityEngine.UIElements.IGenericMenu menu) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.AddMenuItems"); }
-        internal global::System.Collections.Generic.List<string> layerChoices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.layerChoices"); return new global::System.Collections.Generic.List<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.layerChoices"); } }
-        internal global::UnityEngine.LayerMask layerMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.layerMask"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.layerMask"); } }
-        public override global::System.Func<string, string> formatSelectedValueCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.formatSelectedValueCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.formatSelectedValueCallback"); } }
-        public override global::System.Func<string, string> formatListItemCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.formatListItemCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.formatListItemCallback"); } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEditor.UIElements.MaskField.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.LayerMaskField, global::UnityEditor.UIElements.LayerMaskField.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<int>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LayerMaskField.UxmlTraits.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class LiveReloadStyleSheetAssetTracker : global::UnityEditor.UIElements.BaseLiveReloadAssetTracker<global::UnityEngine.UIElements.StyleSheet>
     {
         [global::Unbound.Stub] public override bool OnAssetsImported(global::System.Collections.Generic.HashSet<global::UnityEngine.UIElements.StyleSheet> changedAssets, global::System.Collections.Generic.HashSet<string> deletedAssets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LiveReloadStyleSheetAssetTracker.OnAssetsImported"); return default; }
         [global::Unbound.Stub] public LiveReloadStyleSheetAssetTracker() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.LiveReloadStyleSheetAssetTracker.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MaskField : global::UnityEditor.UIElements.BaseMaskField<int>
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] internal override int MaskToValue(int newMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.MaskToValue"); return default; }
-        [global::Unbound.Stub] internal override int ValueToMask(int value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.ValueToMask"); return default; }
-        [global::Unbound.Stub] internal override string GetListItemToDisplay(int itemIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.GetListItemToDisplay"); return default; }
-        [global::Unbound.Stub] internal override string GetValueToDisplay() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.GetValueToDisplay"); return default; }
-        [global::Unbound.Stub] internal bool ShouldFormatListItem(int itemIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.ShouldFormatListItem"); return default; }
-        [global::Unbound.Stub] internal bool ShouldFormatSelectedValue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.ShouldFormatSelectedValue"); return default; }
-        [global::Unbound.Stub] public MaskField(global::System.Collections.Generic.List<string> choices, int defaultMask, global::System.Func<string, string> formatSelectedValueCallback = null, global::System.Func<string, string> formatListItemCallback = null) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.ctor"); }
-        [global::Unbound.Stub] public MaskField(string label, global::System.Collections.Generic.List<string> choices, int defaultMask, global::System.Func<string, string> formatSelectedValueCallback = null, global::System.Func<string, string> formatListItemCallback = null) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.ctor"); }
-        [global::Unbound.Stub] public MaskField() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.ctor"); }
-        [global::Unbound.Stub] public MaskField(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.ctor"); }
-        public virtual global::System.Func<string, string> formatSelectedValueCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.formatSelectedValueCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.formatSelectedValueCallback"); } }
-        public virtual global::System.Func<string, string> formatListItemCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.formatListItemCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.formatListItemCallback"); } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<int>.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.MaskField, global::UnityEditor.UIElements.MaskField.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<int>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.MaskField.UxmlTraits.ctor"); }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class MinMaxGradientField : global::UnityEngine.UIElements.BaseField<global::UnityEngine.ParticleSystem.MinMaxGradient>
@@ -47470,33 +47387,6 @@ namespace UnityEditor.UIElements
             [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectFieldWithPrompt.UxmlSerializedData.CreateInstance"); return default; }
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectFieldWithPrompt.UxmlSerializedData.Deserialize"); }
             [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectFieldWithPrompt.UxmlSerializedData.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class RenderingLayerMaskField : global::UnityEditor.UIElements.BaseMaskField<uint>
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public RenderingLayerMaskField(uint defaultMask) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.ctor"); }
-        [global::Unbound.Stub] public RenderingLayerMaskField(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.ctor"); }
-        [global::Unbound.Stub] public RenderingLayerMaskField() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.ctor"); }
-        [global::Unbound.Stub] public RenderingLayerMaskField(string label, uint defaultMask) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.ctor"); }
-        [global::Unbound.Stub] internal override uint MaskToValue(int newMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.MaskToValue"); return default; }
-        [global::Unbound.Stub] internal override int ValueToMask(uint value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.ValueToMask"); return default; }
-        [global::Unbound.Stub] private protected override int UpdateMaskIfEverything(int currentMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.UpdateMaskIfEverything"); return default; }
-        [global::Unbound.Stub] internal override string GetValueToDisplay() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.GetValueToDisplay"); return default; }
-        [global::Unbound.Stub] protected void UpdateLayersInfo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.UpdateLayersInfo"); }
-        internal global::UnityEngine.RenderingLayerMask layerMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.layerMask"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.layerMask"); } }
-        public override uint value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.value"); } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<uint>.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.RenderingLayerMaskField.UxmlSerializedData.ctor"); }
         }
     }
     [global::Unbound.Stub]

@@ -415,21 +415,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal void SetIndicesInternalList(object list) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BillboardAsset.SetIndicesInternalList"); }
         [global::Unbound.Stub] internal void MakeMaterialProperties(global::UnityEngine.MaterialPropertyBlock properties, global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BillboardAsset.MakeMaterialProperties"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class BitOperationUtils
-    {
-        [global::Unbound.Stub] internal static int CountBits(int mask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BitOperationUtils.CountBits"); return default; }
-        [global::Unbound.Stub] internal static int CountBits(uint mask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BitOperationUtils.CountBits"); return default; }
-        [global::Unbound.Stub] internal static uint ModifyMaskByValuesArrayAndBitCount(uint mask, global::System.Collections.Generic.IEnumerable<int> values, int bitCount = 32) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BitOperationUtils.ModifyMaskByValuesArrayAndBitCount"); return default; }
-        [global::Unbound.Stub] internal static bool AreAllBitsSetForValues(uint mask, global::System.Collections.Generic.IEnumerable<int> values, int bitCount = 32) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BitOperationUtils.AreAllBitsSetForValues"); return default; }
-        [global::Unbound.Stub] internal static uint IndexToValue(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BitOperationUtils.IndexToValue"); return default; }
-        [global::Unbound.Stub] internal static bool IsValueSmallerThanIndex(uint value, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BitOperationUtils.IsValueSmallerThanIndex"); return default; }
-        [global::Unbound.Stub] internal static bool IsValueBiggerThanIndex(uint value, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BitOperationUtils.IsValueBiggerThanIndex"); return default; }
-        [global::Unbound.Stub] internal static bool IsValueSmallerOrEqualThanIndex(uint value, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BitOperationUtils.IsValueSmallerOrEqualThanIndex"); return default; }
-        [global::Unbound.Stub] internal static bool IsValueBiggerOrEqualThanIndex(uint value, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BitOperationUtils.IsValueBiggerOrEqualThanIndex"); return default; }
-        [global::Unbound.Stub] internal static bool AnyBitMatch(uint mask, uint value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BitOperationUtils.AnyBitMatch"); return default; }
-        [global::Unbound.Stub] internal static int BitCountToIndex(int bitCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BitOperationUtils.BitCountToIndex"); return default; }
-    }
     [global::System.Serializable]
     [global::Unbound.Stub]
     internal unsafe partial struct BlendShape
