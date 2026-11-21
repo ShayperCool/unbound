@@ -6,8 +6,8 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 // Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
-// BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, and Vector3
-// fields), BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
+// BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, Vector2, and
+// Vector3 fields), BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
 // BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
 // SerializedObject binding context/updater pipeline that synchronizes fields and polls changes
 // during panel updates. Documented in Unity 6000.0 Scripting API ("BindingExtensions.Bind",
@@ -15,7 +15,7 @@ using UnityEngine.UIElements;
 // "BindingExtensions.TrackSerializedObjectValue", "BindingExtensions.Unbind",
 // "SerializedPropertyChangeEvent", "SerializedObjectChangeEvent"); matches the Unity 6000.0.71f1
 // Editor, tests/projects/bindtree, tests/projects/bindproperty, tests/projects/enumbinding,
-// tests/projects/enumflagsbinding, tests/projects/vector3binding,
+// tests/projects/enumflagsbinding, tests/projects/vector2binding, tests/projects/vector3binding,
 // tests/projects/trackpropertyvalue and tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
@@ -1146,6 +1146,9 @@ namespace UnityEditor.UIElements.Bindings
                 case SerializedPropertyType.Enum:
                     CreateEnumBindingObject(element, prop);
                     break;
+                case SerializedPropertyType.Vector2:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetVector2PropertyValue, SerializedPropertyHelper.SetVector2PropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
                 case SerializedPropertyType.Vector3:
                     DefaultBind(element, prop, SerializedPropertyHelper.GetVector3PropertyValue, SerializedPropertyHelper.SetVector3PropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
@@ -2010,6 +2013,7 @@ namespace UnityEditor.UIElements.Bindings
         public static float GetFloatPropertyValue(SerializedProperty p) => p.floatValue;
         public static double GetDoublePropertyValue(SerializedProperty p) => p.doubleValue;
         public static string GetStringPropertyValue(SerializedProperty p) => p.stringValue;
+        public static Vector2 GetVector2PropertyValue(SerializedProperty p) => p.vector2Value;
         public static Vector3 GetVector3PropertyValue(SerializedProperty p) => p.vector3Value;
         public static float GetIntPropertyValueAsFloat(SerializedProperty p) => p.intValue;
         public static float GetLongPropertyValueAsFloat(SerializedProperty p) => p.longValue;
@@ -2031,14 +2035,33 @@ namespace UnityEditor.UIElements.Bindings
         public static void SetFloatPropertyValue(SerializedProperty p, float v) => p.floatValue = v;
         public static void SetDoublePropertyValue(SerializedProperty p, double v) => p.doubleValue = v;
         public static void SetStringPropertyValue(SerializedProperty p, string v) => p.stringValue = v;
+        static void SetFloatComponentIfDifferent(SerializedProperty p, string name, float current, float next)
+        {
+            if (!current.Equals(next)) p.FindPropertyRelative(name).doubleValue = next;
+        }
+
+        public static void SetVector2PropertyValue(SerializedProperty p, Vector2 v)
+        {
+            if (p.hasMultipleDifferentValues)
+            {
+                Vector2 current = p.vector2Value;
+                SetFloatComponentIfDifferent(p, "x", current.x, v.x);
+                SetFloatComponentIfDifferent(p, "y", current.y, v.y);
+            }
+            else
+            {
+                p.vector2Value = v;
+            }
+        }
+
         public static void SetVector3PropertyValue(SerializedProperty p, Vector3 v)
         {
             if (p.hasMultipleDifferentValues)
             {
                 Vector3 current = p.vector3Value;
-                if (!current.x.Equals(v.x)) p.FindPropertyRelative("x").doubleValue = v.x;
-                if (!current.y.Equals(v.y)) p.FindPropertyRelative("y").doubleValue = v.y;
-                if (!current.z.Equals(v.z)) p.FindPropertyRelative("z").doubleValue = v.z;
+                SetFloatComponentIfDifferent(p, "x", current.x, v.x);
+                SetFloatComponentIfDifferent(p, "y", current.y, v.y);
+                SetFloatComponentIfDifferent(p, "z", current.z, v.z);
             }
             else
             {

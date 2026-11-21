@@ -6,11 +6,12 @@ using UnityEngine;
 using UnityEngine.Internal;
 using UnityEngine.UIElements;
 
-// Editor UI Toolkit PropertyField for supported scalar, enum, and Vector3 SerializedProperty
-// types (bool, int, long, uint, ulong, float, double, string, ordinary and [Flags] enum, Vector3)
-// and SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API ("PropertyField",
-// "PropertyField.RegisterValueChangeCallback"); matches the Unity 6000.0.71f1 Editor,
-// tests/projects/propertyfield, tests/projects/enumbinding, tests/projects/enumflagsbinding, and
+// Editor UI Toolkit PropertyField for supported scalar, enum, Vector2, and Vector3
+// SerializedProperty types (bool, int, long, uint, ulong, float, double, string, ordinary and
+// [Flags] enum, Vector2, Vector3) and SerializedPropertyBindEvent. Documented in Unity 6000.0
+// Scripting API ("PropertyField", "PropertyField.RegisterValueChangeCallback"); matches the
+// Unity 6000.0.71f1 Editor, tests/projects/propertyfield, tests/projects/enumbinding,
+// tests/projects/enumflagsbinding, tests/projects/vector2binding, and
 // tests/projects/vector3binding.
 
 namespace UnityEditor.UIElements
@@ -132,6 +133,7 @@ namespace UnityEditor.UIElements
         static readonly Func<FloatField> s_CreateFloatField = () => new FloatField();
         static readonly Func<DoubleField> s_CreateDoubleField = () => new DoubleField();
         static readonly Func<TextField> s_CreateTextField = () => new TextField();
+        static readonly Func<Vector2Field> s_CreateVector2Field = () => new Vector2Field();
         static readonly Func<Vector3Field> s_CreateVector3Field = () => new Vector3Field();
 
         string m_Label;
@@ -350,6 +352,8 @@ namespace UnityEditor.UIElements
                         property,
                         () => new PopupField<string>(popupEntries, rawIndex) { index = propertyFieldIndex });
                 }
+                case SerializedPropertyType.Vector2:
+                    return ConfigureField<Vector2Field, Vector2>(originalField as Vector2Field, property, s_CreateVector2Field);
                 case SerializedPropertyType.Vector3:
                     return ConfigureField<Vector3Field, Vector3>(originalField as Vector3Field, property, s_CreateVector3Field);
                 default:

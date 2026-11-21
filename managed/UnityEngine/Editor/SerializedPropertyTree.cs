@@ -859,7 +859,7 @@ namespace Unbound.Runtime
                 case Shape.String: return "string";
                 case Shape.Enum: return "Enum";
                 case Shape.UnityObject: return "PPtr<$" + type.Name + ">";
-                case Shape.Vector2: return "Vector2f";
+                case Shape.Vector2: return "Vector2";
                 case Shape.Vector3: return "Vector3";
                 case Shape.Vector4: return "Vector4f";
                 case Shape.Vector2Int: return "Vector2Int";

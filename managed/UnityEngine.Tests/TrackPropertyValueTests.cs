@@ -70,6 +70,7 @@ namespace UnityEngine.Tests
             public string label = "alpha";
             public Vector2 pos2 = new Vector2(4, 5);
             public Vector3 pos = new Vector3(1, 2, 3);
+            public Vector4 pos4 = new Vector4(4, 5, 6, 7);
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
             public SparseChoice sparseEnum = SparseChoice.TwentyFive;
@@ -575,12 +576,12 @@ namespace UnityEngine.Tests
                 Assert.False(wrongField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.Contains(warnings, w => w.Contains("not compatible") && w.Contains("\"flag\""));
 
-                // Unsupported property type (Vector2) reports explicit Stubs.NotImplemented hit and stays unbound.
-                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (Vector2)";
+                // Unsupported property type (Vector4) reports explicit Stubs.NotImplemented hit and stays unbound.
+                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (Vector4)";
                 int beforeVecHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
                 var vecField = new IntegerField();
                 panel.visualTree.Add(vecField);
-                vecField.BindProperty(so.FindProperty("pos2"));
+                vecField.BindProperty(so.FindProperty("pos4"));
                 Assert.False(vecField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value > beforeVecHits);
 
@@ -864,9 +865,9 @@ namespace UnityEngine.Tests
             using var so = new SerializedObject(target);
             try
             {
-                const string vecStubKey = "UnityEditor.UIElements.PropertyField (Vector2)";
+                const string vecStubKey = "UnityEditor.UIElements.PropertyField (Vector4)";
                 int beforeHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
-                var pf = new PropertyField(so.FindProperty("pos2"));
+                var pf = new PropertyField(so.FindProperty("pos4"));
                 panel.visualTree.Add(pf);
                 pf.Bind(so);
                 Assert.Equal(0, pf.hierarchy.childCount);
@@ -1252,6 +1253,83 @@ namespace UnityEngine.Tests
                 Tick(panel);
                 Assert.False(vf.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.False(compX.HasBinding(BindingExtensions.s_SerializedBindingId));
+            }
+            finally
+            {
+                soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void Vector2BindingMixedPerComponentUnmeasuredAndDisposedSo()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.pos2 = new Vector2(1f, 100f);
+            t2.pos2 = new Vector2(2f, 200f);
+            using var panel = RuntimePanel.Create(settings);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            using var soSingle = new SerializedObject(t1);
+            try
+            {
+                // PropertyField + Vector2Field on mixed multi-object targets preserve untouched component.
+                var pf = new PropertyField(soMulti.FindProperty("pos2"));
+                var compY = new FloatField();
+                panel.visualTree.Add(pf);
+                panel.visualTree.Add(compY);
+                pf.Bind(soMulti);
+                compY.BindProperty(soMulti.FindProperty("pos2.y"));
+                Tick(panel);
+                Tick(panel);
+
+                var vf = Assert.IsType<Vector2Field>(pf.hierarchy[0]);
+                var xSub = vf.Q<FloatField>("unity-x-input");
+                var ySub = vf.Q<FloatField>("unity-y-input");
+                Assert.False(vf.showMixedValue);
+                Assert.True(xSub.showMixedValue);
+                Assert.True(ySub.showMixedValue);
+                Assert.True(compY.showMixedValue);
+
+                xSub.value = 9f;
+                Tick(panel);
+                Assert.Equal(new Vector2(9f, 100f), t1.pos2);
+                Assert.Equal(new Vector2(9f, 200f), t2.pos2);
+                Assert.False(xSub.showMixedValue);
+                Assert.True(ySub.showMixedValue);
+
+                // External SO component edit updates both direct FloatField and Vector2Field.
+                soMulti.FindProperty("pos2.y").floatValue = 350f;
+                soMulti.ApplyModifiedProperties();
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(350f, compY.value);
+                Assert.False(compY.showMixedValue);
+                Assert.False(ySub.showMixedValue);
+                Assert.Equal(new Vector2(9f, 350f), t1.pos2);
+                Assert.Equal(new Vector2(9f, 350f), t2.pos2);
+
+                // NaN tolerance on single-target binding.
+                var singleField = new Vector2Field();
+                panel.visualTree.Add(singleField);
+                singleField.BindProperty(soSingle.FindProperty("pos2"));
+                Tick(panel);
+                soSingle.FindProperty("pos2").vector2Value = new Vector2(float.NaN, -0f);
+                soSingle.ApplyModifiedProperties();
+                Tick(panel);
+                Tick(panel);
+                Assert.True(float.IsNaN(singleField.value.x));
+
+                // Disposed SO unbinds cleanly without throwing.
+                soMulti.Dispose();
+                Tick(panel);
+                Tick(panel);
+                Assert.False(vf.HasBinding(BindingExtensions.s_SerializedBindingId));
+                Assert.False(compY.HasBinding(BindingExtensions.s_SerializedBindingId));
             }
             finally
             {
