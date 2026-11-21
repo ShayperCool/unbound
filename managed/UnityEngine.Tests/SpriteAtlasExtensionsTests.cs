@@ -1858,6 +1858,186 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SpriteAtlasImporterFromMetaReadsV2PlatformSettingsAliasesLegacyAndReturnsFreshCopies()
+        {
+            static SpriteAtlasImporter ImporterFromMeta(string path, string guid, string metaBody)
+            {
+                var doc = TestYaml.DocumentBody("SpriteAtlasImporter:\n" + metaBody);
+                var raw = AssetImporter.FromMeta(path, guid, "SpriteAtlasImporter", doc);
+                var importer = Assert.IsType<SpriteAtlasImporter>(raw);
+                Assert.Equal(path, importer.assetPath);
+                return importer;
+            }
+
+            // Master with custom DefaultTexturePlatform, Android, iPhone, Standalone, and v4 BC6H/BC7 entries.
+            var custom = ImporterFromMeta(
+                "Assets/ImporterPlatformAtlases/Custom.spriteatlasv2",
+                "9a1b2c3d4e5f60718293a4b5c6d7bc03",
+                "  externalObjects: {}\n" +
+                "  platformSettings:\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: DefaultTexturePlatform\n" +
+                "    maxTextureSize: 512\n" +
+                "    resizeAlgorithm: 1\n" +
+                "    textureFormat: 4\n" +
+                "    textureCompression: 2\n" +
+                "    compressionQuality: 75\n" +
+                "    crunchedCompression: 1\n" +
+                "    allowsAlphaSplitting: 1\n" +
+                "    overridden: 0\n" +
+                "    ignorePlatformSupport: 1\n" +
+                "    androidETC2FallbackOverride: 2\n" +
+                "    forceMaximumCompressionQuality_BC6H_BC7: 1\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: Android\n" +
+                "    maxTextureSize: 1024\n" +
+                "    textureFormat: 47\n" +
+                "    compressionQuality: 60\n" +
+                "    overridden: 1\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: iPhone\n" +
+                "    maxTextureSize: 256\n" +
+                "    textureFormat: 50\n" +
+                "    compressionQuality: 80\n" +
+                "    overridden: 1\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: Standalone\n" +
+                "    maxTextureSize: 4096\n" +
+                "    textureFormat: 12\n" +
+                "    compressionQuality: 90\n" +
+                "    overridden: 1\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: PS4\n" +
+                "    textureFormat: 24\n" +
+                "    compressionQuality: 42\n" +
+                "    overridden: 1\n" +
+                "    forceMaximumCompressionQuality_BC6H_BC7: 0\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: PS5\n" +
+                "    textureFormat: 25\n" +
+                "    compressionQuality: 42\n" +
+                "    overridden: 1\n" +
+                "    forceMaximumCompressionQuality_BC6H_BC7: 1\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: tvOS\n" +
+                "    textureFormat: 50\n" +
+                "    compressionQuality: 37\n" +
+                "    overridden: 1\n" +
+                "    forceMaximumCompressionQuality_BC6H_BC7: 1\n");
+
+            var def = custom.GetPlatformSettings("DefaultTexturePlatform");
+            Assert.Equal("DefaultTexturePlatform", def.name);
+            Assert.Equal(512, def.maxTextureSize);
+            Assert.Equal(75, def.compressionQuality);
+            Assert.True(def.ignorePlatformSupport);
+
+            // Wrong-case DefaultTexturePlatform and absent platforms get fresh defaults, never inheriting stored DefaultTexturePlatform.
+            var wrongCase = custom.GetPlatformSettings("defaulttextureplatform");
+            Assert.Equal("defaulttextureplatform", wrongCase.name);
+            Assert.Equal(2048, wrongCase.maxTextureSize);
+            Assert.Equal(50, wrongCase.compressionQuality);
+
+            var webgl = custom.GetPlatformSettings("Web");
+            Assert.Equal("WebGL", webgl.name);
+            Assert.False(webgl.overridden);
+            Assert.Equal(2048, webgl.maxTextureSize);
+
+            // Aliases and BC6H/BC7 rules (plus control outside probe's exact inputs: non-BC6H/BC7 tvOS keeps 37).
+            Assert.Equal("iOS", custom.GetPlatformSettings("iphone").name);
+            Assert.Equal(256, custom.GetPlatformSettings("iOS").maxTextureSize);
+            Assert.Equal("Standalone", custom.GetPlatformSettings("StandaloneWindows64").name);
+            Assert.Equal(4096, custom.GetPlatformSettings("Linux64").maxTextureSize);
+            Assert.Equal("WindowsStoreApps", custom.GetPlatformSettings("WSAPlayer").name);
+            Assert.Equal("GameCoreScarlett", custom.GetPlatformSettings("GameCoreXboxSeries").name);
+            Assert.Equal("CloudRendering", custom.GetPlatformSettings("LinuxHeadlessSimulation").name);
+            Assert.Equal("", custom.GetPlatformSettings("").name);
+            Assert.Equal("", custom.GetPlatformSettings(null).name);
+            Assert.Equal("CustomUnknown", custom.GetPlatformSettings("CustomUnknown").name);
+            Assert.Equal(42, custom.GetPlatformSettings("PS4").compressionQuality);
+            Assert.Equal(100, custom.GetPlatformSettings("PS5").compressionQuality);
+            Assert.Equal("tvOS", custom.GetPlatformSettings("AppleTV").name);
+            Assert.Equal(37, custom.GetPlatformSettings("AppleTV").compressionQuality);
+
+            // Distinct object identity and mutation isolation for both stored and absent targets.
+            var a1 = custom.GetPlatformSettings("Android");
+            var a2 = custom.GetPlatformSettings("Android");
+            Assert.NotSame(a1, a2);
+            a1.name = "Mutated";
+            a1.maxTextureSize = 32;
+            a1.overridden = false;
+            Assert.Equal("Android", a2.name);
+            Assert.Equal(1024, a2.maxTextureSize);
+            Assert.True(a2.overridden);
+            var a3 = custom.GetPlatformSettings("Android");
+            Assert.Equal("Android", a3.name);
+            Assert.Equal(1024, a3.maxTextureSize);
+            Assert.True(a3.overridden);
+
+            var w1 = custom.GetPlatformSettings("WebGL");
+            var w2 = custom.GetPlatformSettings("WebGL");
+            Assert.NotSame(w1, w2);
+            w1.overridden = true;
+            w1.maxTextureSize = 64;
+            Assert.False(w2.overridden);
+            Assert.Equal(2048, custom.GetPlatformSettings("WebGL").maxTextureSize);
+
+            // Empty and omitted platformSettings both return fresh Editor defaults.
+            foreach (var body in new[] { "  platformSettings: []\n", "  bindAsDefault: 1\n" })
+            {
+                var empty = ImporterFromMeta("Assets/Defaults.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7bc02", body);
+                var s = empty.GetPlatformSettings("iPhone");
+                Assert.Equal("iOS", s.name);
+                Assert.False(s.overridden);
+                Assert.Equal(2048, s.maxTextureSize);
+                Assert.Equal(50, s.compressionQuality);
+            }
+
+            // Legacy v1/v2/v3 migrations match V2 meta deserialization.
+            var legacy = ImporterFromMeta(
+                "Assets/Legacy.spriteatlasv2",
+                "9a1b2c3d4e5f60718293a4b5c6d7bc05",
+                "  platformSettings:\n" +
+                "  - serializedVersion: 1\n" +
+                "    buildTarget: DefaultTexturePlatform\n" +
+                "    textureFormat: 35\n" +
+                "  - serializedVersion: 1\n" +
+                "    buildTarget: Android\n" +
+                "    textureFormat: 36\n" +
+                "    overridden: 1\n" +
+                "  - serializedVersion: 2\n" +
+                "    buildTarget: Standalone\n" +
+                "    textureFormat: 25\n" +
+                "    compressionQuality: 50\n" +
+                "    overridden: 1\n" +
+                "  - serializedVersion: 3\n" +
+                "    buildTarget: Nintendo Switch\n" +
+                "    maxTextureSize: 256\n" +
+                "    overridden: 1\n" +
+                "  - serializedVersion: 3\n" +
+                "    buildTarget: StandaloneWindows64\n" +
+                "    maxTextureSize: 256\n" +
+                "    overridden: 1\n");
+            Assert.Equal(34, (int)legacy.GetPlatformSettings("DefaultTexturePlatform").format);
+            Assert.Equal(47, (int)legacy.GetPlatformSettings("Android").format);
+            Assert.Equal(100, legacy.GetPlatformSettings("StandaloneWindows64").compressionQuality);
+            Assert.Equal(256, legacy.GetPlatformSettings("Switch").maxTextureSize);
+
+            // Uncreated `new SpriteAtlasImporter()` throws NullReferenceException on 6000.0 (measured)
+            // and returns fresh defaults under unmeasured families (e.g. 6000.3).
+            var uncreated = new SpriteAtlasImporter();
+            if (Unbound.Runtime.Compat.UncreatedObjectWrappersMeasured)
+            {
+                Assert.Throws<NullReferenceException>(() => uncreated.GetPlatformSettings("Android"));
+                Assert.Throws<NullReferenceException>(() => uncreated.GetPlatformSettings(null));
+            }
+            else
+            {
+                Assert.Equal("Android", uncreated.GetPlatformSettings("Android").name);
+                Assert.Equal("", uncreated.GetPlatformSettings(null).name);
+            }
+        }
+
+        [Fact]
         public void ANullAtlasThrows()
         {
             SpriteAtlas none = null;

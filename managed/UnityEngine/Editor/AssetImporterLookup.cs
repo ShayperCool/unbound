@@ -91,6 +91,7 @@ namespace UnityEditor
                 {
                     var type = typeof(AssetImporter).Assembly.GetType("UnityEditor." + typeName)
                         ?? typeof(AssetImporter).Assembly.GetType("UnityEditor.AssetImporters." + typeName)
+                        ?? typeof(AssetImporter).Assembly.GetType("UnityEditor.U2D." + typeName)
                         ?? typeof(AssetImporter).Assembly.GetType("UnityEditor.VFX." + typeName);
                     importer = type != null && typeof(AssetImporter).IsAssignableFrom(type) && !type.IsAbstract
                         ? (AssetImporter)ObjectConstruction.CreateWithBacking(type)
