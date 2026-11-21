@@ -1440,6 +1440,7 @@
 {"key":"UnityEditor.U2D.SpriteAtlasTextureSettings/Property/UnityEditor.U2D.SpriteAtlasTextureSettings/maxTextureSize","status":"value","value":"0"}
 {"key":"UnityEditor.U2D.SpriteAtlasTextureSettings/Property/UnityEditor.U2D.SpriteAtlasTextureSettings/readable","status":"value","value":"false"}
 {"key":"UnityEditor.U2D.SpriteAtlasTextureSettings/Property/UnityEditor.U2D.SpriteAtlasTextureSettings/sRGB","status":"value","value":"false"}
+{"key":"UnityEditor.U2D.SpriteAtlasUtility/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.U2D.SpriteEditorExtension/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.UIElements.BaseMaskField`1/@factory","status":"excluded","value":"open-generic"}
 {"key":"UnityEditor.UIElements.BindingExtensions/@factory","status":"excluded","value":"static"}

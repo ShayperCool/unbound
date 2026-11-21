@@ -1,0 +1,18 @@
+{"k":"atlases","v":"Assets/Atlases/Excluded.spriteatlasv2|Assets/Atlases/Main.spriteatlasv2|Assets/Atlases/Second.spriteatlasv2|Assets/Atlases/Variant.spriteatlasv2"}
+{"k":"ctor.default","v":"created=True|type=UnityEditor.U2D.SpriteAtlasUtility"}
+{"k":"initial.state","v":"main=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=1)|dirty=False)|second=(count=4|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=1)|dirty=False)|variant=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=0.5)|dirty=False)|excluded=(count=2|canBind=False|clone=<null>|dirty=False)|singlePacked=True|sheetPacked=True"}
+{"k":"pack.nullArray","v":"ex=ArgumentNullException|param=atlases|msg=Value for parameter atlases is null|logs=<none>"}
+{"k":"pack.nullElement","v":"ex=ArgumentNullException|param=atlases|msg=One of the elements in atlases is null. Please check your Inputs.|logs=<none>"}
+{"k":"pack.mixedNullElement","v":"ex=ArgumentNullException|param=atlases|msg=One of the elements in atlases is null. Please check your Inputs.|logs=<none>"}
+{"k":"pack.destroyedElement","v":"ex=ArgumentNullException|param=atlases|msg=One of the elements in atlases is null. Please check your Inputs.|logs=<none>"}
+{"k":"pack.emptyArray","v":"ex=none|logs=<none>"}
+{"k":"pack.nonPersistent","v":"ex=none|count=0|logs=Warning:Packing non-persistent SpriteAtlases are not supported and were skipped."}
+{"k":"pack.mainOnly","v":"ex=none|logs=<none>|main=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=1)|dirty=False)|second=(count=4|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=1)|dirty=False)|mainDisk=(assetSame=True|metaSame=True)|secondDisk=(assetSame=True|metaSame=True)"}
+{"k":"pack.variantOnly","v":"ex=none|logs=<none>|variant=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=0.5)|dirty=False)|variantDisk=(assetSame=True|metaSame=True)"}
+{"k":"pack.masterAndVariantAndDup","v":"ex=none|logs=<none>|main=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=1)|dirty=False)|variant=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=0.5)|dirty=False)|mainDisk=(assetSame=True|metaSame=True)|variantDisk=(assetSame=True|metaSame=True)"}
+{"k":"pack.excluded","v":"ex=none|logs=<none>|excluded=(count=2|canBind=False|clone=<null>|dirty=False)|excludedDisk=(assetSame=True|metaSame=True)"}
+{"k":"pack.androidTarget","v":"ex=none|logs=<none>|main=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=1)|dirty=False)"}
+{"k":"packAll.linux","v":"ex=none|logs=<none>|main=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=1)|dirty=False)|second=(count=4|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=1)|dirty=False)|variant=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=0.5)|dirty=False)|excluded=(count=2|canBind=False|clone=<null>|dirty=False)"}
+{"k":"pack.afterInMemoryAdd","v":"ex=none|logs=<none>|dirtyBefore=True|dirtyAfter=True|hasSingle=False|count=4|secondDisk=(assetSame=True|metaSame=True)"}
+{"k":"cleanup","v":"ex=none|logs=<none>|main=(count=1|canBind=True|clone=(packed=True|hasTex=True|page=True|scale=1)|dirty=False)"}
+{"k":"complete","v":true}

@@ -1,0 +1,4 @@
+{
+  "commands": ["python3 tests/projects/spriteatlaspack/run.py gate"],
+  "summary": "spriteatlaspack [a-z0-9]+: [0-9]+/[0-9]+ values match.*"
+}
