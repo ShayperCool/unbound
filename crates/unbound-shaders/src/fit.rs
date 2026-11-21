@@ -2016,8 +2016,9 @@ fn slot_property(name: &str, sampler: bool) -> Option<String> {
 }
 
 /// The program's uniform blocks (cbuffers) by name: each one's offset in the draw's uniform
-/// data, in the order the vertex then the fragment program declare them (each 16-byte aligned),
-/// and the uniform bindings they are packed into ([`binding_layout`]).
+/// data (each 16-byte aligned), in the order the vertex then the fragment program declare them,
+/// except that blocks given standalone bindings follow the others ([`binding_layout`]), and the
+/// uniform bindings they are packed into.
 struct BlockLayout {
     bases: Vec<(String, u32)>,
     /// Each block's size, by `bases` index.

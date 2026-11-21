@@ -2235,24 +2235,6 @@ mod tests {
     /// fill, the texture's over a block).
     #[test]
     fn a_draw_over_its_material_block_fills_what_it_did() {
-        let lab = ShaderLab::parse(r#"Shader "S" { Properties { _Color ("C", Color) = (0.5, 1, 1, 1) _Cut ("Cut", Range(0,1)) = 0.25 } SubShader { Pass { } } }"#).unwrap();
-        let material = Material {
-            shader: "S".into(),
-            properties: vec![
-                (
-                    "_MainTex".into(),
-                    PropertyValue::Texture {
-                        handle: 7,
-                        st: [2.0, 3.0, 0.5, 0.0],
-                    },
-                ),
-                (
-                    "_Detail_ST".into(),
-                    PropertyValue::Vector([5.0, 6.0, 7.0, 8.0]),
-                ),
-            ],
-            ..Default::default()
-        };
         let names = [
             ("unity_ObjectToWorld", 4),
             ("_Color", 1),
@@ -2303,21 +2285,106 @@ mod tests {
             vertex_inputs: true,
             framebuffer_fetch: 0,
         };
+        fill_over_block_matches(&program, "Bound", &BOUND);
+    }
+
+    /// The same over a program of three bindings: a bound constant buffer that fills binding 1
+    /// (shared across draws unless an override targets a uniform in it: a texture's `_ST` there),
+    /// and the material's, global and instanced values in binding 2, at their offsets in it.
+    #[test]
+    fn a_draw_over_its_material_block_fills_what_it_did_across_bindings() {
+        let at = |name: &str, offset| uniform(name, offset, 4, 1);
+        let mut uniforms = vec![uniform("unity_ObjectToWorld", 0, 4, 4)];
+        uniforms.extend([
+            at("_Cut", 64),
+            at("_ClipRect", 80),
+            at("_MainTex_ST", 256),
+            at("_MainTex_TexelSize", 272),
+            at("_Detail_ST", 288),
+            at("_Mask_ST", 304),
+            at("_Color", 512),
+            at("_Global", 528),
+            at("unity_SHAr", 544),
+        ]);
+        let binding = |offset, size| unbound_shaders::UniformBinding { offset, size };
+        let program = Compiled {
+            vertex: String::new(),
+            fragment: String::new(),
+            vertex_entry: String::new(),
+            fragment_entry: String::new(),
+            instanced_properties: vec!["_Cut".into()],
+            mesh_instance_stride: Some(0),
+            mesh_instance_uniform_scaling: false,
+            mesh_instance_max_count: None,
+            uniforms,
+            uniform_size: 560,
+            uniform_bindings: vec![binding(0, 96), binding(256, 64), binding(512, 48)],
+            textures: Vec::new(),
+            texture_dims: Vec::new(),
+            main_texture: true,
+            keywords: Vec::new(),
+            texture_slots: Vec::new(),
+            texture_aliases: Vec::new(),
+            buffers: Vec::new(),
+            blocks: vec![unbound_shaders::BlockRange {
+                name: "Tiles".into(),
+                offset: 256,
+                size: 64,
+            }],
+            extra_vertex_inputs: false,
+            vertex_inputs: true,
+            framebuffer_fetch: 0,
+        };
+        let tiles: Vec<u8> = (0..16)
+            .flat_map(|i| (i as f32 + 0.5).to_le_bytes())
+            .collect();
+        let layout = ProgramBindings::of(&program);
+        assert_eq!(
+            layout.bindings[1].standalone_block.as_deref(),
+            Some("Tiles")
+        );
+        fill_over_block_matches(&program, "Tiles", &tiles);
+    }
+
+    /// Runs draws with and without overrides, hidden overrides and instances over `program`'s
+    /// material block, with `bound` bound to the cbuffer `bound_name`, and checks the per-binding
+    /// fill against the reference and the full fill.
+    fn fill_over_block_matches(program: &Compiled, bound_name: &str, bound: &[u8]) {
+        let size_of_program = program.uniform_size as usize;
+        let lab = ShaderLab::parse(r#"Shader "S" { Properties { _Color ("C", Color) = (0.5, 1, 1, 1) _Cut ("Cut", Range(0,1)) = 0.25 } SubShader { Pass { } } }"#).unwrap();
+        let material = Material {
+            shader: "S".into(),
+            properties: vec![
+                (
+                    "_MainTex".into(),
+                    PropertyValue::Texture {
+                        handle: 7,
+                        st: [2.0, 3.0, 0.5, 0.0],
+                    },
+                ),
+                (
+                    "_Detail_ST".into(),
+                    PropertyValue::Vector([5.0, 6.0, 7.0, 8.0]),
+                ),
+            ],
+            ..Default::default()
+        };
         let plan: Vec<Source> = program
             .uniforms
             .iter()
             .map(|u| Source::of(&u.name))
             .collect();
-        let by_name = program
+        let by_name: rustc_hash::FxHashMap<String, u32> = program
             .uniforms
             .iter()
             .enumerate()
             .map(|(i, u)| (u.name.clone(), i as u32))
             .collect();
-        let layout = ProgramBindings::of(&program);
-        let block = material_block(&program, &plan, &layout, &material, &lab, true);
+        let layout = ProgramBindings::of(program);
+        let block = material_block(program, &plan, &layout, &material, &lab, true);
+        let index = |name: &str| by_name[name] as usize;
         assert!(
-            block.is_dynamic[3] && !block.is_dynamic[5],
+            block.is_dynamic[index("_MainTex_ST")] && !block.is_dynamic[index("_Detail_ST")],
             "_MainTex_ST per draw, _Detail_ST the material's"
         );
         let mut model = [0.0; 16];
@@ -2414,31 +2481,31 @@ mod tests {
                 main_alpha_only: false,
                 texture_size: &size,
                 constant_buffer: &|name| {
-                    (name == "Bound").then_some(ConstantBufferRef {
+                    (name == bound_name).then_some(ConstantBufferRef {
                         handle: 1,
                         revision: 1,
-                        bytes: &BOUND[..],
+                        bytes: bound,
                     })
                 },
                 instance,
                 instance_empty: false,
                 element: None,
             };
-            let mut full = vec![0u8; offset as usize];
-            fill(&program, &plan, &values, &mut full);
-            let mut without = vec![0u8; offset as usize];
+            let mut full = vec![0u8; size_of_program];
+            fill(program, &plan, &values, &mut full);
+            let mut without = vec![0u8; size_of_program];
             let unhidden = DrawValues {
                 overrides: &kept,
                 hidden: None,
                 ..values
             };
-            fill(&program, &plan, &unhidden, &mut without);
+            fill(program, &plan, &unhidden, &mut without);
             assert_eq!(full, without, "hidden {hidden:?}, overrides {overrides:?}");
             let mut data = Vec::new();
             let mut shared_constants = HashMap::default();
             let mut empty_slot = None;
             let draw_offsets = push_program_uniforms(
-                &program,
+                program,
                 &plan,
                 &by_name,
                 &layout,
@@ -2449,11 +2516,44 @@ mod tests {
                 &mut empty_slot,
                 &mut String::new(),
             );
-            let at = draw_offsets.offsets[0] as usize;
-            let over = data[at..at + offset as usize].to_vec();
-            let mut reference = vec![0u8; offset as usize];
+            // Each binding's bytes at its place in the program's uniform block.
+            let mut over = vec![0u8; size_of_program];
+            for (k, bp) in layout.bindings.iter().enumerate() {
+                let at = draw_offsets.offsets[k] as usize;
+                let (start, len) = (bp.offset as usize, bp.size as usize);
+                over[start..start + len].copy_from_slice(&data[at..at + len]);
+            }
+            // A bound buffer that fills its binding is shared unless an override targets a
+            // uniform in it.
+            let targets_bound = values.taken_overrides().any(|(n, v)| {
+                let in_bound = |name: &str| {
+                    by_name.get(name).is_some_and(|&i| {
+                        layout.bindings[layout.uniform_binding[i as usize] as usize]
+                            .standalone_block
+                            .as_deref()
+                            == Some(bound_name)
+                    })
+                };
+                in_bound(n)
+                    || matches!(v, PropertyValue::Texture { .. })
+                        && TEXTURE_SUFFIXES
+                            .iter()
+                            .any(|s| in_bound(&format!("{n}{s}")))
+            });
+            let shares = bound.len() as u32
+                >= layout
+                    .bindings
+                    .iter()
+                    .find(|b| b.standalone_block.as_deref() == Some(bound_name))
+                    .map_or(u32::MAX, |b| b.size);
+            assert_eq!(
+                shared_constants.len(),
+                usize::from(shares && !targets_bound),
+                "overrides {overrides:?}"
+            );
+            let mut reference = vec![0u8; size_of_program];
             fill_over_block_reference(
-                &program,
+                program,
                 &plan,
                 &by_name,
                 &layout,
