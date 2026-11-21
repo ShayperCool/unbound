@@ -1992,8 +1992,9 @@ namespace UnityEngine.Tests
                 Assert.Equal(50, s.compressionQuality);
             }
 
-            // Legacy v1/v2/v3 migrations match V2 meta deserialization.
-            var legacy = ImporterFromMeta(
+            // Legacy v1/v2/v3 migrations match V2 meta deserialization (each platformSettings
+            // sequence caches element 0's serializedVersion across subsequent entries).
+            var legacyV1 = ImporterFromMeta(
                 "Assets/Legacy.spriteatlasv2",
                 "9a1b2c3d4e5f60718293a4b5c6d7bc05",
                 "  platformSettings:\n" +
@@ -2004,11 +2005,20 @@ namespace UnityEngine.Tests
                 "    buildTarget: Android\n" +
                 "    textureFormat: 36\n" +
                 "    overridden: 1\n" +
-                "  - serializedVersion: 2\n" +
-                "    buildTarget: Standalone\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: PS5\n" +
                 "    textureFormat: 25\n" +
-                "    compressionQuality: 50\n" +
+                "    compressionQuality: 42\n" +
                 "    overridden: 1\n" +
+                "    forceMaximumCompressionQuality_BC6H_BC7: 0\n");
+            Assert.Equal(34, (int)legacyV1.GetPlatformSettings("DefaultTexturePlatform").format);
+            Assert.Equal(47, (int)legacyV1.GetPlatformSettings("Android").format);
+            Assert.Equal(100, legacyV1.GetPlatformSettings("PS5").compressionQuality);
+
+            var legacyV3 = ImporterFromMeta(
+                "Assets/LegacyV3.spriteatlasv2",
+                "9a1b2c3d4e5f60718293a4b5c6d7bc06",
+                "  platformSettings:\n" +
                 "  - serializedVersion: 3\n" +
                 "    buildTarget: Nintendo Switch\n" +
                 "    maxTextureSize: 256\n" +
@@ -2017,10 +2027,10 @@ namespace UnityEngine.Tests
                 "    buildTarget: StandaloneWindows64\n" +
                 "    maxTextureSize: 256\n" +
                 "    overridden: 1\n");
-            Assert.Equal(34, (int)legacy.GetPlatformSettings("DefaultTexturePlatform").format);
-            Assert.Equal(47, (int)legacy.GetPlatformSettings("Android").format);
-            Assert.Equal(100, legacy.GetPlatformSettings("StandaloneWindows64").compressionQuality);
-            Assert.Equal(256, legacy.GetPlatformSettings("Switch").maxTextureSize);
+            Assert.Equal(256, legacyV3.GetPlatformSettings("Switch").maxTextureSize);
+            // Desktop-specific buildTarget in serializedVersion 3 stays "StandaloneWindows64" and
+            // does not match normalized "Standalone" (returns fresh defaults).
+            Assert.Equal(2048, legacyV3.GetPlatformSettings("StandaloneWindows64").maxTextureSize);
 
             // Uncreated `new SpriteAtlasImporter()` throws NullReferenceException on 6000.0 (measured)
             // and returns fresh defaults under unmeasured families (e.g. 6000.3).
@@ -2035,6 +2045,169 @@ namespace UnityEngine.Tests
                 Assert.Equal("Android", uncreated.GetPlatformSettings("Android").name);
                 Assert.Equal("", uncreated.GetPlatformSettings(null).name);
             }
+        }
+
+        [Fact]
+        public void SpriteAtlasImporterSetPlatformSettingsNormalizesDirtiesCopiesAndWritesUnprefixedMeta()
+        {
+            static SpriteAtlasImporter ImporterFromMeta(string path, string guid, string metaBody)
+            {
+                var doc = TestYaml.DocumentBody("SpriteAtlasImporter:\n" + metaBody);
+                var importer = Assert.IsType<SpriteAtlasImporter>(AssetImporter.FromMeta(path, guid, "SpriteAtlasImporter", doc));
+                Assert.False(EditorUtility.IsDirty(importer));
+                return importer;
+            }
+
+            // Uncreated `new SpriteAtlasImporter()`: null src throws NullReferenceException; non-null src
+            // normalizes src.name in place BEFORE CheckImporterState throws on 6000.0 (or succeeds on 6000.3).
+            var uncreated = new SpriteAtlasImporter();
+            Assert.Throws<NullReferenceException>(() => uncreated.SetPlatformSettings(null));
+            var aliasForUncreated = new TextureImporterPlatformSettings { name = "iPhone", overridden = true, maxTextureSize = 128 };
+            if (Unbound.Runtime.Compat.UncreatedObjectWrappersMeasured)
+            {
+                Assert.Throws<NullReferenceException>(() => uncreated.SetPlatformSettings(aliasForUncreated));
+                Assert.Equal("iOS", aliasForUncreated.name);
+            }
+            else
+            {
+                uncreated.SetPlatformSettings(aliasForUncreated);
+                Assert.Equal("iOS", aliasForUncreated.name);
+                Assert.Equal(128, uncreated.GetPlatformSettings("iOS").maxTextureSize);
+            }
+
+            const string sampleMeta =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7bd02\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  textureSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    anisoLevel: 4\n" +
+                "    compressionQuality: 65\n" +
+                "    maxTextureSize: 1024\n" +
+                "    textureCompression: 2\n" +
+                "    filterMode: 2\n" +
+                "    generateMipMaps: 1\n" +
+                "    readable: 1\n" +
+                "    crunchedCompression: 1\n" +
+                "    sRGB: 0\n" +
+                "  platformSettings:\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: Android\n" +
+                "    maxTextureSize: 1024\n" +
+                "    resizeAlgorithm: 0\n" +
+                "    textureFormat: 47\n" +
+                "    textureCompression: 1\n" +
+                "    compressionQuality: 60\n" +
+                "    crunchedCompression: 0\n" +
+                "    allowsAlphaSplitting: 0\n" +
+                "    overridden: 1\n" +
+                "    ignorePlatformSupport: 0\n" +
+                "    androidETC2FallbackOverride: 0\n" +
+                "    forceMaximumCompressionQuality_BC6H_BC7: 0\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: iPhone\n" +
+                "    maxTextureSize: 256\n" +
+                "    resizeAlgorithm: 0\n" +
+                "    textureFormat: 50\n" +
+                "    textureCompression: 2\n" +
+                "    compressionQuality: 80\n" +
+                "    crunchedCompression: 0\n" +
+                "    allowsAlphaSplitting: 0\n" +
+                "    overridden: 1\n" +
+                "    ignorePlatformSupport: 0\n" +
+                "    androidETC2FallbackOverride: 0\n" +
+                "    forceMaximumCompressionQuality_BC6H_BC7: 0\n" +
+                "  packingSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    padding: 8\n" +
+                "    blockOffset: 2\n" +
+                "    allowAlphaSplitting: 0\n" +
+                "    enableRotation: 0\n" +
+                "    enableTightPacking: 0\n" +
+                "    enableAlphaDilation: 1\n" +
+                "  secondaryTextureSettings: {}\n" +
+                "  variantMultiplier: 1\n" +
+                "  bindAsDefault: 1\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+
+            var root = UnityYamlText.ParseTopLevel(sampleMeta);
+            var importer = Assert.IsType<SpriteAtlasImporter>(
+                AssetImporter.FromMeta("Assets/Master.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7bd02", "SpriteAtlasImporter", root.Get("SpriteAtlasImporter").ToNode()));
+            Assert.False(EditorUtility.IsDirty(importer));
+            int baseDirty = EditorUtility.GetDirtyCount(importer);
+
+            // Null src throws NullReferenceException without dirtying.
+            Assert.Throws<NullReferenceException>(() => importer.SetPlatformSettings(null));
+            Assert.False(EditorUtility.IsDirty(importer));
+            Assert.Equal(baseDirty, EditorUtility.GetDirtyCount(importer));
+
+            // Same-value repeat still marks dirty.
+            importer.SetPlatformSettings(importer.GetPlatformSettings("Android"));
+            Assert.True(EditorUtility.IsDirty(importer));
+            Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(importer));
+
+            // Absent non-Default platform with overridden=false is not stored, but still dirties.
+            var tvOff = new TextureImporterPlatformSettings { name = "AppleTV", overridden = false, maxTextureSize = 128 };
+            importer.SetPlatformSettings(tvOff);
+            Assert.Equal("tvOS", tvOff.name);
+            Assert.Equal(baseDirty + 2, EditorUtility.GetDirtyCount(importer));
+            Assert.Equal(2048, importer.GetPlatformSettings("tvOS").maxTextureSize);
+
+            // Replacing an existing entry in place via alias works even with overridden=false and copies defensively.
+            var iosOff = new TextureImporterPlatformSettings { name = "iPhone", overridden = false, maxTextureSize = 128, compressionQuality = 33 };
+            importer.SetPlatformSettings(iosOff);
+            Assert.Equal("iOS", iosOff.name);
+            iosOff.maxTextureSize = 32;
+            iosOff.name = "Mutated";
+            Assert.Equal(128, importer.GetPlatformSettings("iOS").maxTextureSize);
+            Assert.False(importer.GetPlatformSettings("iOS").overridden);
+
+            // Absent overridden entry appends at the end via alias, and absent DefaultTexturePlatform appends even with overridden=false.
+            var webOn = new TextureImporterPlatformSettings { name = "Web", overridden = true, maxTextureSize = 512, compressionQuality = 77 };
+            importer.SetPlatformSettings(webOn);
+            Assert.Equal("WebGL", webOn.name);
+            var defOff = new TextureImporterPlatformSettings { name = "DefaultTexturePlatform", overridden = false, maxTextureSize = 512, compressionQuality = 65 };
+            importer.SetPlatformSettings(defOff);
+
+            var section = root.Get("SpriteAtlasImporter");
+            Assert.True(importer.WriteCustomMeta(section));
+            string written = UnityYamlText.WriteTopLevel(root);
+            Assert.DoesNotContain("m_BuildTarget", written);
+            int idxAndroid = written.IndexOf("    buildTarget: Android\n", StringComparison.Ordinal);
+            int idxIos = written.IndexOf("    buildTarget: iOS\n", StringComparison.Ordinal);
+            int idxWeb = written.IndexOf("    buildTarget: WebGL\n", StringComparison.Ordinal);
+            int idxDef = written.IndexOf("    buildTarget: DefaultTexturePlatform\n", StringComparison.Ordinal);
+            Assert.True(idxAndroid > 0 && idxAndroid < idxIos && idxIos < idxWeb && idxWeb < idxDef);
+            Assert.Contains("    anisoLevel: 4\n    compressionQuality: 65\n", written);
+            Assert.Contains("    padding: 8\n    blockOffset: 2\n", written);
+
+            // Control outside probe's exact setup: sparse .meta missing textureSettings, platformSettings and packingSettings inserts defaults in exact order.
+            const string sparseMeta =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7bd09\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  secondaryTextureSettings: {}\n" +
+                "  variantMultiplier: 1\n" +
+                "  bindAsDefault: 1\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+            var sparseRoot = UnityYamlText.ParseTopLevel(sparseMeta);
+            var sparseSection = sparseRoot.Get("SpriteAtlasImporter");
+            var sparseImporter = Assert.IsType<SpriteAtlasImporter>(
+                AssetImporter.FromMeta("Assets/Sparse.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7bd09", "SpriteAtlasImporter", sparseSection.ToNode()));
+            sparseImporter.SetPlatformSettings(new TextureImporterPlatformSettings { name = "Linux64", overridden = true, maxTextureSize = 256 });
+            Assert.True(sparseImporter.WriteCustomMeta(sparseSection));
+            string sparseWritten = UnityYamlText.WriteTopLevel(sparseRoot);
+            int posTex = sparseWritten.IndexOf("  textureSettings:\n", StringComparison.Ordinal);
+            int posPlat = sparseWritten.IndexOf("  platformSettings:\n  - serializedVersion: 4\n    buildTarget: Standalone\n    maxTextureSize: 256\n", StringComparison.Ordinal);
+            int posPack = sparseWritten.IndexOf("  packingSettings:\n", StringComparison.Ordinal);
+            int posSec = sparseWritten.IndexOf("  secondaryTextureSettings: {}\n", StringComparison.Ordinal);
+            Assert.True(posTex > 0 && posTex < posPlat && posPlat < posPack && posPack < posSec);
         }
 
         [Fact]

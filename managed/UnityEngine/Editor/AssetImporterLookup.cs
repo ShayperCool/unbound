@@ -68,6 +68,20 @@ namespace UnityEditor
             return importer;
         }
 
+        internal static AssetImporter TryGetCached(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+            path = path.Replace('\\', '/');
+            if (s_Importing.TryGetValue(path, out var importing)) return importing;
+            return s_ByPath.TryGetValue(path, out var cached) ? cached : null;
+        }
+
+        internal static void Evict(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            s_ByPath.Remove(path.Replace('\\', '/'));
+        }
+
         static AssetImporter Create(string path, string guid)
         {
             var settings = Native.LoadDocuments("meta:" + guid);
@@ -109,11 +123,27 @@ namespace UnityEditor
             importer.assetBundleName = body.Str("assetBundleName");
             importer.assetBundleVariant = body.Str("assetBundleVariant");
             importer.ReadSettings(body);
+            EditorUtility.ClearDirty(importer);
             return importer;
         }
 
         /// <summary>Reads the importer's own settings from its section of the .meta.</summary>
         internal virtual void ReadSettings(YNode body) { }
+
+        /// <summary>Whether <see cref="AssetDatabase.WriteImportSettingsIfDirty"/> checks
+        /// <see cref="EditorUtility.IsDirty"/> and <see cref="WriteCustomMeta"/>.</summary>
+        internal virtual bool UsesDirtyFlagForWrite => false;
+
+        /// <summary>Writes importer-specific sections into its `.meta` YAML map; returns true when
+        /// it updated <paramref name="section"/>.</summary>
+        internal virtual bool WriteCustomMeta(YText section) => false;
+
+        /// <summary>Clears dirty and pending-write tracking after writing `.meta`.</summary>
+        internal virtual void ClearModifiedState()
+        {
+            m_SettingsChanged = false;
+            EditorUtility.ClearDirty(this);
+        }
     }
 
     /// <summary>A precompiled plugin's settings: on which platforms it is enabled, and with what.</summary>

@@ -73,6 +73,20 @@ namespace Unbound.Runtime
             var root = UnityYamlText.ParseTopLevel(text);
             var section = root.Get(importer.m_SettingsType);
             if (section == null || section.Kind != YKind.Map) return false;
+            if (importer.UsesDirtyFlagForWrite)
+            {
+                bool wasDirty = EditorUtility.IsDirty(importer) || importer.m_SettingsChanged;
+                importer.WriteCustomMeta(section);
+                SetScalar(section, "userData", importer.userData);
+                SetScalar(section, "assetBundleName", importer.assetBundleName?.ToLowerInvariant());
+                SetScalar(section, "assetBundleVariant", importer.assetBundleVariant?.ToLowerInvariant());
+                var customWritten = UnityYamlText.WriteTopLevel(root);
+                bool textChanged = customWritten != text.Replace("\r\n", "\n");
+                if (!textChanged && !wasDirty) return false;
+                if (textChanged) File.WriteAllText(meta, customWritten);
+                importer.ClearModifiedState();
+                return true;
+            }
             var unwritten = new List<string>();
             Patch(section, importer.m_Settings, "", unwritten);
             if (unwritten.Count > 0)
@@ -98,6 +112,14 @@ namespace Unbound.Runtime
             var path = importer.assetPath;
             var guid = AssetDatabase.AssetPathToGUID(path);
             if (string.IsNullOrEmpty(guid)) return;
+            if (importer is UnityEditor.U2D.SpriteAtlasImporter)
+            {
+                AssetImporter.Evict(path);
+                AssetDatabaseRuntime.Invalidate(guid);
+                AssetDatabaseRuntime.LoadFile(guid);
+                AssetPostprocessing.ForgetPreprocessed(path);
+                return;
+            }
             try
             {
                 Native.Call("import-settings", "{\"guid\":" + System.Text.Json.JsonSerializer.Serialize(guid) + ",\"importer\":"

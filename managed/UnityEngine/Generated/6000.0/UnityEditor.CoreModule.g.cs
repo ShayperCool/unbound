@@ -46999,7 +46999,6 @@ namespace UnityEditor.U2D
     unsafe partial class SpriteAtlasImporter
     {
         [global::Unbound.Stub] internal static void MigrateAllSpriteAtlases() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasImporter.MigrateAllSpriteAtlases"); }
-        [global::Unbound.Stub] public void SetPlatformSettings(global::UnityEditor.TextureImporterPlatformSettings src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasImporter.SetPlatformSettings"); }
         [global::Unbound.Stub] internal global::UnityEngine.TextureFormat GetTextureFormat(global::UnityEditor.BuildTarget target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasImporter.GetTextureFormat"); return default; }
         [global::Unbound.Stub] internal global::UnityEditor.TextureImporterPlatformSettings GetSecondaryPlatformSettings(string buildTarget, string secondaryTextureName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasImporter.GetSecondaryPlatformSettings"); return default; }
         [global::Unbound.Stub] internal void SetSecondaryPlatformSettings(global::UnityEditor.TextureImporterPlatformSettings src, string secondaryTextureName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasImporter.SetSecondaryPlatformSettings"); }

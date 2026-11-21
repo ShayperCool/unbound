@@ -376,10 +376,15 @@ namespace UnityEditor
                 if (!string.IsNullOrEmpty(guid) && !IsValidFolder(path))
                 {
                     // A V2 sprite atlas is imported by SpriteAtlasImporter; a forced import
-                    // reloads it from its source and .meta as a fresh clean SpriteAtlas
-                    // (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v2include).
+                    // flushes any dirty cached importer to `.meta`, evicts the cached importer,
+                    // and reloads a fresh clean SpriteAtlas from its source and `.meta` (matches
+                    // the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v2include and
+                    // v2importerplatformset).
                     if (path.EndsWith(".spriteatlasv2", StringComparison.OrdinalIgnoreCase))
                     {
+                        if (AssetImporter.TryGetCached(path) is UnityEditor.U2D.SpriteAtlasImporter cached && EditorUtility.IsDirty(cached))
+                            ImporterMeta.Write(cached);
+                        AssetImporter.Evict(path);
                         AssetDatabaseRuntime.Invalidate(guid);
                         AssetDatabaseRuntime.LoadFile(guid);
                         return;

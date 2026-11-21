@@ -453,18 +453,22 @@ namespace UnityEditor
             if (listNode == null || listNode.Kind != YKind.Seq || listNode.Items.Length == 0)
                 return null;
             var entries = new List<TextureImporterPlatformSettings>(listNode.Items.Length);
+            int? listVersion = null;
             foreach (var item in listNode.Items)
             {
                 if (item == null || item.Kind != YKind.Map) continue;
-                entries.Add(ReadEntry(item, prefixed));
+                // Unity's YAML sequence reader caches element 0's serializedVersion for the rest
+                // of the platformSettings sequence (measured in Unity 6000.0.71f1,
+                // tests/projects/spriteatlaseditor v2importerplatformset Legacy).
+                listVersion ??= item.Int("serializedVersion", 1);
+                entries.Add(ReadEntry(item, prefixed, listVersion.Value));
             }
             return entries.Count > 0 ? entries : null;
         }
 
-        static TextureImporterPlatformSettings ReadEntry(YNode node, bool prefixed)
+        static TextureImporterPlatformSettings ReadEntry(YNode node, bool prefixed, int version)
         {
             var settings = new TextureImporterPlatformSettings();
-            int version = node.Int("serializedVersion", 1);
 
             string buildTargetKey = prefixed ? "m_BuildTarget" : "buildTarget";
             string name = node.Get(buildTargetKey) != null ? node.Str(buildTargetKey, "") : DefaultPlatformName;
@@ -560,26 +564,26 @@ namespace UnityEditor
             entries.Add(added);
         }
 
-        internal YText ToYText()
+        internal YText ToYText(bool prefixed = true)
         {
             var map = YText.Map();
             map.Add("serializedVersion", YText.Scalar("4"));
-            map.Add("m_BuildTarget", YText.Scalar(m_Name ?? ""));
-            map.Add("m_MaxTextureSize", YText.Scalar(m_MaxTextureSize.ToString(CultureInfo.InvariantCulture)));
-            map.Add("m_ResizeAlgorithm", YText.Scalar(m_ResizeAlgorithm.ToString(CultureInfo.InvariantCulture)));
-            map.Add("m_TextureFormat", YText.Scalar(m_TextureFormat.ToString(CultureInfo.InvariantCulture)));
-            map.Add("m_TextureCompression", YText.Scalar(m_TextureCompression.ToString(CultureInfo.InvariantCulture)));
-            map.Add("m_CompressionQuality", YText.Scalar(m_CompressionQuality.ToString(CultureInfo.InvariantCulture)));
-            map.Add("m_CrunchedCompression", YText.Scalar(m_CrunchedCompression != 0 ? "1" : "0"));
-            map.Add("m_AllowsAlphaSplitting", YText.Scalar(m_AllowsAlphaSplitting != 0 ? "1" : "0"));
-            map.Add("m_Overridden", YText.Scalar(m_Overridden != 0 ? "1" : "0"));
-            map.Add("m_IgnorePlatformSupport", YText.Scalar(m_IgnorePlatformSupport != 0 ? "1" : "0"));
-            map.Add("m_AndroidETC2FallbackOverride", YText.Scalar(m_AndroidETC2FallbackOverride.ToString(CultureInfo.InvariantCulture)));
-            map.Add("m_ForceMaximumCompressionQuality_BC6H_BC7", YText.Scalar(m_ForceMaximumCompressionQuality_BC6H_BC7 != 0 ? "1" : "0"));
+            map.Add(prefixed ? "m_BuildTarget" : "buildTarget", YText.Scalar(m_Name ?? ""));
+            map.Add(prefixed ? "m_MaxTextureSize" : "maxTextureSize", YText.Scalar(m_MaxTextureSize.ToString(CultureInfo.InvariantCulture)));
+            map.Add(prefixed ? "m_ResizeAlgorithm" : "resizeAlgorithm", YText.Scalar(m_ResizeAlgorithm.ToString(CultureInfo.InvariantCulture)));
+            map.Add(prefixed ? "m_TextureFormat" : "textureFormat", YText.Scalar(m_TextureFormat.ToString(CultureInfo.InvariantCulture)));
+            map.Add(prefixed ? "m_TextureCompression" : "textureCompression", YText.Scalar(m_TextureCompression.ToString(CultureInfo.InvariantCulture)));
+            map.Add(prefixed ? "m_CompressionQuality" : "compressionQuality", YText.Scalar(m_CompressionQuality.ToString(CultureInfo.InvariantCulture)));
+            map.Add(prefixed ? "m_CrunchedCompression" : "crunchedCompression", YText.Scalar(m_CrunchedCompression != 0 ? "1" : "0"));
+            map.Add(prefixed ? "m_AllowsAlphaSplitting" : "allowsAlphaSplitting", YText.Scalar(m_AllowsAlphaSplitting != 0 ? "1" : "0"));
+            map.Add(prefixed ? "m_Overridden" : "overridden", YText.Scalar(m_Overridden != 0 ? "1" : "0"));
+            map.Add(prefixed ? "m_IgnorePlatformSupport" : "ignorePlatformSupport", YText.Scalar(m_IgnorePlatformSupport != 0 ? "1" : "0"));
+            map.Add(prefixed ? "m_AndroidETC2FallbackOverride" : "androidETC2FallbackOverride", YText.Scalar(m_AndroidETC2FallbackOverride.ToString(CultureInfo.InvariantCulture)));
+            map.Add(prefixed ? "m_ForceMaximumCompressionQuality_BC6H_BC7" : "forceMaximumCompressionQuality_BC6H_BC7", YText.Scalar(m_ForceMaximumCompressionQuality_BC6H_BC7 != 0 ? "1" : "0"));
             return map;
         }
 
-        internal static YText ToYTextList(List<TextureImporterPlatformSettings> entries)
+        internal static YText ToYTextList(List<TextureImporterPlatformSettings> entries, bool prefixed = true)
         {
             var seq = YText.Seq();
             if (entries == null || entries.Count == 0)
@@ -588,7 +592,7 @@ namespace UnityEditor
                 return seq;
             }
             for (int i = 0; i < entries.Count; i++)
-                seq.Items.Add(entries[i].ToYText());
+                seq.Items.Add(entries[i].ToYText(prefixed));
             return seq;
         }
     }
