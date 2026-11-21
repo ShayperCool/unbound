@@ -14,23 +14,48 @@ namespace UnityEditor
 {
     public sealed partial class EditorGUIUtility : GUIUtility
     {
+        /// <summary>After an element moved from <paramref name="oldActiveElement"/> to
+        /// <paramref name="newActiveElement"/>, moves the foldout states that stay with their
+        /// paths along with it: the element's own and those of its nested foldouts, the elements
+        /// between shifting by one.</summary>
         internal static void MoveArrayExpandedState(SerializedProperty elements, int oldActiveElement, int newActiveElement)
         {
             if (elements == null || oldActiveElement == newActiveElement) return;
             int count = elements.arraySize;
             if (oldActiveElement < 0 || oldActiveElement >= count || newActiveElement < 0 || newActiveElement >= count) return;
-            bool movedExpanded = elements.GetArrayElementAtIndex(oldActiveElement).isExpanded;
-            if (oldActiveElement < newActiveElement)
+            var moved = elements.GetArrayElementAtIndex(oldActiveElement);
+            var movedStates = new List<bool> { moved.isExpanded };
+            int step = oldActiveElement < newActiveElement ? 1 : -1;
+            var current = moved;
+            for (int i = oldActiveElement + step; i != newActiveElement + step; i += step)
             {
-                for (int i = oldActiveElement; i < newActiveElement; i++)
-                    elements.GetArrayElementAtIndex(i).isExpanded = elements.GetArrayElementAtIndex(i + 1).isExpanded;
+                var next = elements.GetArrayElementAtIndex(i);
+                foreach (var (to, from) in NestedFoldouts(current, next))
+                {
+                    movedStates.Add(to.isExpanded);
+                    to.isExpanded = from.isExpanded;
+                }
+                current.isExpanded = next.isExpanded;
+                current = next;
             }
-            else
+            current.isExpanded = movedStates[0];
+            int index = 1;
+            foreach (var (to, _) in NestedFoldouts(current, elements.GetArrayElementAtIndex(oldActiveElement)))
             {
-                for (int i = oldActiveElement; i > newActiveElement; i--)
-                    elements.GetArrayElementAtIndex(i).isExpanded = elements.GetArrayElementAtIndex(i - 1).isExpanded;
+                if (index >= movedStates.Count) break;
+                to.isExpanded = movedStates[index++];
             }
-            elements.GetArrayElementAtIndex(newActiveElement).isExpanded = movedExpanded;
+        }
+
+        // The visible properties with visible children of two elements, side by side, as long as
+        // both have them.
+        static IEnumerable<(SerializedProperty, SerializedProperty)> NestedFoldouts(SerializedProperty a, SerializedProperty b)
+        {
+            a = a.Copy();
+            b = b.Copy();
+            int depth = Math.Min(a.depth, b.depth);
+            while (a.NextVisible(true) && a.depth > depth && b.NextVisible(true) && b.depth > depth)
+                if (a.hasVisibleChildren && b.hasVisibleChildren) yield return (a, b);
         }
     }
 }
@@ -187,7 +212,12 @@ namespace UnityEditor.UIElements.Bindings
     {
         public SerializedObjectListReorderableDragAndDropController(BaseListView baseListView) : base(baseListView) { }
 
-        public override void OnDrop(IListDragAndDropArgs args) => base.OnDrop(args);
+        public override void OnDrop(IListDragAndDropArgs args)
+        {
+            if (args.dragAndDropPosition != DragAndDropPosition.BetweenItems && args.dragAndDropPosition != DragAndDropPosition.OutsideItems)
+                throw new ArgumentException($"{args.dragAndDropPosition} is not supported by {nameof(SerializedObjectListReorderableDragAndDropController)}.");
+            base.OnDrop(args);
+        }
     }
 
     internal abstract partial class BaseListViewSerializedObjectBinding : SerializedObjectBindingBase
@@ -213,10 +243,21 @@ namespace UnityEditor.UIElements.Bindings
         {
             m_DefaultMakeItem = MakeItem;
             m_DefaultUnbindItem = UnbindListViewItem;
+            m_DragUpdatedCallback = OnDragObjects;
+            m_DragPerformCallback = OnDragObjects;
             m_SerializedObjectBindEventCallback = SerializedObjectBindEventCallback;
         }
 
         static void SerializedObjectBindEventCallback(SerializedObjectBindEvent evt) => evt.StopPropagation();
+
+        // Objects dragged onto the list's header are added as elements after the Editor checks them
+        // against the elements' object type; that check is not implemented, so a drag of objects
+        // is reported instead of being ignored.
+        static void OnDragObjects(EventBase evt)
+        {
+            if (DragAndDrop.objectReferences.Length > 0)
+                Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding (objects dragged onto a bound ListView)");
+        }
 
         public override void OnRelease()
         {
@@ -242,14 +283,10 @@ namespace UnityEditor.UIElements.Bindings
                     Unbind();
                     return new BindingResult(BindingStatus.Failure, "Failed to update ListView binding.");
                 }
-                int arraySize = m_DataList.arraySize;
+                // A mixed or hidden size is refreshed only by OnPropertyValueChanged.
                 var sizeField = baseListView.arraySizeField;
-                if ((sizeField != null && sizeField.showMixedValue) || sizeField == null)
-                {
-                    if (arraySize != m_ListViewArraySize) UpdateArraySize();
-                    return default;
-                }
-                if (arraySize != m_ListViewArraySize) UpdateArraySize();
+                if (sizeField == null || sizeField.showMixedValue) return default;
+                if (m_DataList.arraySize != m_ListViewArraySize) UpdateArraySize();
                 return default;
             }
             catch (NullReferenceException)
@@ -291,8 +328,6 @@ namespace UnityEditor.UIElements.Bindings
             bool isOverLimit = m_DataList.IsOverMaxMultiEditLimit;
             baseListView.footer?.SetEnabled(!isOverLimit);
             baseListView.SetOverMaxMultiEditLimit(isOverLimit, m_DataList.ArrayProperty.serializedObject.maxArraySizeForMultiEditing);
-            if (baseListView.arraySizeField != null && m_DataList.ArraySize != null)
-                baseListView.arraySizeField.showMixedValue = m_DataList.ArraySize.hasMultipleDifferentValues;
             baseListView.RefreshItems();
             if (baseListView.arraySizeField != null && m_DataList.ArraySize != null)
                 baseListView.arraySizeField.showMixedValue = m_DataList.ArraySize.hasMultipleDifferentValues;
@@ -342,15 +377,15 @@ namespace UnityEditor.UIElements.Bindings
                 return;
             }
             baseListView = view;
-            baseListView.SetProperty("__unity-collection-view-internal-binding", this);
+            baseListView.SetProperty(BaseListView.internalBindingKey, this);
             object boundPf = baseListView.GetProperty(PropertyField.listViewBoundFieldProperty);
             SetDefaultCallbacks();
             baseListView.scrollView.contentContainer.RegisterCallback(m_SerializedObjectBindEventCallback);
             bool reorderable = baseListView.reorderable;
             if (boundPf != null)
             {
-                reorderable = true;
-                baseListView.reorderMode = ListViewReorderMode.Animated;
+                reorderable = IsArrayReorderable(m_DataList.ArrayProperty);
+                baseListView.reorderMode = reorderable ? ListViewReorderMode.Animated : ListViewReorderMode.Simple;
             }
             SetEditorViewController();
             baseListView.SetDragAndDropController(new SerializedObjectListReorderableDragAndDropController(baseListView)
@@ -359,6 +394,20 @@ namespace UnityEditor.UIElements.Bindings
             });
             baseListView.itemsSource = m_DataList;
             baseListView.SetupArraySizeField();
+            var header = baseListView.headerFoldout?.toggle?.visualInput;
+            if (header != null)
+            {
+                header.RegisterCallback(m_DragUpdatedCallback);
+                header.RegisterCallback(m_DragPerformCallback);
+            }
+        }
+
+        // A PropertyField's list can be reordered unless its field is [NonReorderable].
+        static bool IsArrayReorderable(SerializedProperty property)
+        {
+            if (property?.serializedObject?.targetObject == null) return false;
+            var field = property.UnboundDeclaringField;
+            return field == null || !field.IsDefined(typeof(NonReorderableAttribute), false);
         }
 
         static IBindable FindFirstBindable(VisualElement root)
@@ -404,13 +453,19 @@ namespace UnityEditor.UIElements.Bindings
         {
             if (baseListView == null) return;
             if (baseListView.arraySizeField != null) baseListView.arraySizeField.showMixedValue = false;
-            baseListView.SetProperty("__unity-collection-view-internal-binding", null);
+            baseListView.SetProperty(BaseListView.internalBindingKey, null);
             baseListView.itemsSource = null;
             baseListView.SetupArraySizeField();
             baseListView.Rebuild();
             ResetCallbacks();
             baseListView.scrollView.contentContainer.UnregisterCallback(m_SerializedObjectBindEventCallback);
             baseListView.SetViewController(null);
+            var header = baseListView.headerFoldout?.toggle?.visualInput;
+            if (header != null)
+            {
+                header.UnregisterCallback(m_DragUpdatedCallback);
+                header.UnregisterCallback(m_DragPerformCallback);
+            }
             baseListView = null;
         }
 

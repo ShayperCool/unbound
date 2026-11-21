@@ -1317,7 +1317,7 @@ namespace UnityEngine.UIElements
         /// first in the list labelled "Size" for bound collections. Editing it adds or removes items at the end.</summary>
         internal void SetupArraySizeField()
         {
-            if (!showBoundCollectionSize || (!showFoldoutHeader && GetProperty("__unity-collection-view-internal-binding") == null) || m_DrawnHeader != null)
+            if (!showBoundCollectionSize || (!showFoldoutHeader && GetProperty(internalBindingKey) == null) || m_DrawnHeader != null)
             {
                 m_ArraySizeField?.RemoveFromHierarchy();
                 return;
@@ -1813,8 +1813,9 @@ namespace UnityEngine.UIElements
             public void ClearItems()
             {
                 if (serializedObjectList == null) return;
-                int minCount = GetItemsMinCount();
-                var indices = Enumerable.Range(0, Math.Max(0, minCount - 1));
+                // Every index but the last is reported removed, and an empty list throws here before
+                // anything changes, as in Unity 6000.0 (UnityCsReference, BaseListViewController).
+                var indices = Enumerable.Range(0, GetItemsMinCount() - 1);
                 serializedObjectList.arraySize = 0;
                 serializedObjectList.ApplyChanges();
                 m_BaseListViewController.RaiseItemsRemoved(indices);
