@@ -595,14 +595,6 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] internal bool HasAnyAssetAttributes(global::UnityEditor.UIElements.UxmlSerializedDataDescription description) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlCodeDependencies.HasAnyAssetAttributes"); return default; }
         internal static global::UnityEditor.UIElements.UxmlCodeDependencies instance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlCodeDependencies.instance"); return default; } }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)1, AllowMultiple = true)]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class UxmlNamespacePrefixAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public UxmlNamespacePrefixAttribute(string ns, string prefix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlNamespacePrefixAttribute.ctor"); }
-        public string ns { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlNamespacePrefixAttribute.ns"); return default; } }
-        public string prefix { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlNamespacePrefixAttribute.prefix"); return default; } }
-    }
     [global::System.Obsolete("UxmlObjectEditorFactories is deprecated and will be removed. Use UxmlElementAttribute instead.")]
     [global::Unbound.Stub]
     internal unsafe partial class UxmlObjectEditorFactories : global::UnityEngine.UIElements.UxmlObjectFactoryRegistry
