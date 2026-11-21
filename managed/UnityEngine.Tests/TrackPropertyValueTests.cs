@@ -1579,7 +1579,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyVector2IntMultiEditAndDisposedCleanupWorksAcrossReleases()
+        public void BindPropertyVector2IntMultiEditAndDisposedCleanupWorks()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
@@ -1660,7 +1660,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyVector3IntMultiEditAndDisposedCleanupWorksAcrossReleases()
+        public void BindPropertyVector3IntMultiEditAndDisposedCleanupWorks()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
@@ -1754,7 +1754,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyColorAndColorUsageWorkAcrossReleases()
+        public void BindPropertyColorAndColorUsageWork()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
@@ -1846,7 +1846,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyRectMultiEditComponentBindingAndDisposedCleanupWorkAcrossReleases()
+        public void BindPropertyRectMultiEditComponentBindingAndDisposedCleanupWork()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
@@ -1929,7 +1929,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyRectIntMultiEditComponentBindingAndDisposedCleanupWorkAcrossReleases()
+        public void BindPropertyRectIntMultiEditComponentBindingAndDisposedCleanupWork()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
@@ -2012,7 +2012,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyBoundsMultiEditComponentBindingAndDisposedCleanupWorkAcrossReleases()
+        public void BindPropertyBoundsMultiEditComponentBindingAndDisposedCleanupWork()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
@@ -2110,7 +2110,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyBoundsIntMultiEditComponentBindingAndDisposedCleanupWorkAcrossReleases()
+        public void BindPropertyBoundsIntMultiEditComponentBindingAndDisposedCleanupWork()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
@@ -2208,7 +2208,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyAnimationCurveCopyIndependenceMixedAndDisposedCleanupWorkAcrossReleases()
+        public void BindPropertyAnimationCurveCopyIndependenceMixedAndDisposedCleanupWork()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
@@ -2432,7 +2432,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyObjectReferenceCoercionMissingMixedTypedElementsAndDisposedCleanupWorkAcrossReleases()
+        public void BindPropertyObjectReferenceCoercionMissingMixedTypedElementsAndDisposedCleanupWork()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
@@ -2577,7 +2577,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyHash128MixedSwappedHalvesReuseAndDisposedCleanupWorkAcrossReleases()
+        public void BindPropertyHash128MixedSwappedHalvesReuseAndDisposedCleanupWork()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
@@ -2664,7 +2664,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyLayerMaskAndRenderingLayerMaskMixedNormalizationReuseAndDisposedCleanupWorkAcrossReleases()
+        public void BindPropertyLayerMaskAndRenderingLayerMaskMixedNormalizationReuseAndDisposedCleanupWork()
         {
             var savedRenderingLayers = (string[])RenderingLayerMask.s_Names.Clone();
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
@@ -2817,7 +2817,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyGenericInlineFoldoutLazyNestedLabelsMultiRebindAndDisposedCleanupWorkAcrossReleases()
+        public void BindPropertyGenericInlineFoldoutLazyNestedLabelsMultiRebindAndDisposedCleanupWork()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
@@ -2934,7 +2934,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyArrayAndListListViewResizeMultiEditReuseAndDisposedCleanupWorkAcrossReleases()
+        public void BindPropertyArrayAndListListViewResizeMultiEditReuseAndDisposedCleanupWork()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
@@ -3060,7 +3060,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyQuaternionAndCharacterControlsMultiEditReuseAndDisposedCleanupWorkAcrossReleases()
+        public void BindPropertyQuaternionAndCharacterControlsMultiEditReuseAndDisposedCleanupWork()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
@@ -3202,7 +3202,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BindPropertyToggleButtonGroupStateAttributesMultiEditAndDisposedCleanupWorkAcrossReleases()
+        public void BindPropertyToggleButtonGroupStateAttributesMultiEditAndDisposedCleanupWork()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
