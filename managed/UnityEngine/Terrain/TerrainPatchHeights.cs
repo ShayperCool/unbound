@@ -164,6 +164,13 @@ namespace UnityEngine
             return result;
         }
 
+        /// <summary>The patches of the heightmap, all levels; 0 when it is not drawn in patches.</summary>
+        int PatchCount()
+        {
+            var patches = Patches();
+            return patches == null ? 0 : PatchCount(patches);
+        }
+
         static int PatchCount(PatchHeights patches)
         {
             int count = 0;

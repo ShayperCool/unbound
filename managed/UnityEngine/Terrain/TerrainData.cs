@@ -78,6 +78,8 @@ namespace UnityEngine
                 var size = this.size;
                 m_Resolution = resolution;
                 m_Heights = new ushort[resolution * resolution];
+                // Overrides are per patch of the old heightmap (Unbound's choice, unmeasured).
+                ClearLodOverrides();
                 m_Solid = Filled((resolution - 1) * (resolution - 1));
                 this.size = size;
                 HeightsChanged();
@@ -111,9 +113,22 @@ namespace UnityEngine
         {
             get
             {
-                var (min, max) = HeightRange();
                 var s = size;
-                float low = min / (float)MaxHeight * s.y, high = max / (float)MaxHeight * s.y;
+                float low, high;
+                if (m_ExtentsOverride != null && m_ExtentsOverride.Length > 0)
+                {
+                    // The whole heightmap's patch, the last of the overridden extents (matches the
+                    // Unity 6000.0.71f1 Editor, tests/projects/terrainoverrides lod.extents*).
+                    var root = m_ExtentsOverride[m_ExtentsOverride.Length - 1];
+                    low = root.min * s.y;
+                    high = root.max * s.y;
+                }
+                else
+                {
+                    var (min, max) = HeightRange();
+                    low = min / (float)MaxHeight * s.y;
+                    high = max / (float)MaxHeight * s.y;
+                }
                 return new Bounds(new Vector3(s.x * 0.5f, (low + high) * 0.5f, s.z * 0.5f), new Vector3(s.x, Math.Max(high - low, MinimumBoundsHeight), s.z));
             }
         }
@@ -308,11 +323,60 @@ namespace UnityEngine
 
         public void CopyActiveRenderTextureToHeightmap(RectInt sourceRect, Vector2Int dest, TerrainHeightmapSyncControl syncControl) => ReportUnsupported("CopyActiveRenderTextureToHeightmap");
 
-        public void OverrideMinMaxPatchHeights(PatchExtents[] minMaxHeights) =>
-            Unbound.Runtime.Stubs.Ignored("TerrainData.OverrideMinMaxPatchHeights", "is not honoured yet: the levels of detail use the heights of the heightmap");
+        // ------------------------------------------------------------ level-of-detail overrides
 
-        public void OverrideMaximumHeightError(float[] maxError) =>
-            Unbound.Runtime.Stubs.Ignored("TerrainData.OverrideMaximumHeightError", "is not honoured yet: the levels of detail use the errors of the heightmap");
+        float[] m_ErrorOverride;
+        PatchExtents[] m_ExtentsOverride;
+        internal int m_LodOverrideVersion;
+
+        /// <summary>The overridden largest height error of each patch, in the getter's order and
+        /// units; null when not overridden.</summary>
+        internal float[] ErrorOverride => m_ErrorOverride;
+
+        /// <summary>The overridden lowest and highest heights of each patch; null when not overridden.</summary>
+        internal PatchExtents[] ExtentsOverride => m_ExtentsOverride;
+
+        /// <summary>Replaces the patches' height errors the levels of detail are chosen by; one value
+        /// a patch, in GetMaximumHeightError's order, else an error and nothing changes. The getter
+        /// keeps answering the heightmap's own errors, and the override outlives later height
+        /// changes (matches the Unity 6000.0.71f1 Editor, tests/projects/terrainoverrides
+        /// lod.error*).</summary>
+        public void OverrideMaximumHeightError(float[] maxError)
+        {
+            int given = maxError?.Length ?? 0, count = PatchCount();
+            if (given != count)
+            {
+                Debug.LogError($"Override maximum height error array size {given} not equal to patchCount of {count} bytes");
+                return;
+            }
+            m_ErrorOverride = (float[])maxError.Clone();
+            m_LodOverrideVersion++;
+        }
+
+        /// <summary>Replaces the patches' height ranges culling and the bounds use; one pair a patch,
+        /// in GetPatchMinMaxHeights' order (the sizes in the error count both heights of each), else
+        /// an error and nothing changes. The getter keeps answering the heightmap's own ranges; the
+        /// bounds take the whole heightmap's patch, the last, also after later height changes
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/terrainoverrides lod.extents*).</summary>
+        public void OverrideMinMaxPatchHeights(PatchExtents[] minMaxHeights)
+        {
+            int given = minMaxHeights?.Length ?? 0, count = PatchCount();
+            if (given != count)
+            {
+                Debug.LogError($"Override patch heights array size {given * 2} not equal to patchCount of {count * 2} bytes");
+                return;
+            }
+            m_ExtentsOverride = (PatchExtents[])minMaxHeights.Clone();
+            m_LodOverrideVersion++;
+        }
+
+        void ClearLodOverrides()
+        {
+            if (m_ErrorOverride == null && m_ExtentsOverride == null) return;
+            m_ErrorOverride = null;
+            m_ExtentsOverride = null;
+            m_LodOverrideVersion++;
+        }
 
         // ------------------------------------------------------------ holes
 

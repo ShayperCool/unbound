@@ -11,9 +11,9 @@ namespace UnityEngine.Tests
     /// CreateFromPlacement maps the active terrains on the grid of the origin terrain's position
     /// and size, and a null filter keeps the origin's group; CreateFromConnectedNeighbors gives the
     /// origin tile (0,0), and a null filter applies none; both can give null when no terrain passes
-    /// the filter; GetTerrain gives null when there is no valid terrain at the tile. The placement
-    /// tolerance, overlap handling, link walk and fullValidation effect are Unbound's choices
-    /// (unmeasured): the tests marked so check the implementation, not a Unity guarantee. Each test
+    /// the filter; GetTerrain gives null when there is no valid terrain at the tile. Placement by
+    /// rounding, overlaps, the link walk and fullValidation follow the Unity 6000.0.71f1 Editor
+    /// (tests/projects/terrainoverrides); the tests marked unmeasured check Unbound's choices. Each test
     /// uses its own grouping IDs so terrains of other tests cannot reach its maps.
     /// </summary>
     public class TerrainUtilityTests
@@ -111,7 +111,7 @@ namespace UnityEngine.Tests
             Assert.Same(northEast, fromNorthEast.GetTerrain(0, 0));
             Assert.Same(southWest, fromNorthEast.GetTerrain(-1, -1));
 
-            // Unbound's choice (unmeasured): fullValidation does not change the map.
+            // fullValidation does not change the map (tests/projects/terrainoverrides map.*).
             var unvalidated = TerrainMap.CreateFromPlacement(southWest, null, false);
             Assert.NotNull(unvalidated);
             Assert.Equal(4, unvalidated.terrainTiles.Count);
@@ -201,11 +201,12 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void PlacementUsesTheAutoConnectTileGrid()
+        public void PlacementRoundsEachPositionToATileAndKeepsTheFirstOfATile()
         {
-            // Unbound's choice (unmeasured): placement and auto-connect share one tile-grid rule
-            // (same X/Z size, a whole number of cells from the origin within a ten-thousandth of
-            // the cell size, heights ignored); a cell several terrains share stays empty.
+            // Measured (tests/projects/terrainoverrides map.*): a terrain goes to the tile its X/Z
+            // position rounds to, whatever its size, height or offset; a tile keeps the first
+            // terrain placed on it, without a warning. Auto-connect keeps its own tile-grid rule
+            // (Unbound's choice, unmeasured).
             using var tiles = new Tiles();
             var origin = tiles.Add("Origin", 0f, 0f, group: 77);
             var aligned = tiles.Add("Aligned", 2f * k_Size, 0f, group: 77);
@@ -223,19 +224,40 @@ namespace UnityEngine.Tests
             Assert.Same(aligned, map.GetTerrain(2, 0));
             Assert.Same(nearly, map.GetTerrain(0, 1));
             Assert.Same(raised, map.GetTerrain(-1, 0));
-            Assert.Null(map.GetTerrain(1, 1));
-            Assert.Equal(4, map.terrainTiles.Count);
+            Assert.Same(large, map.GetTerrain(0, -2));
+            Assert.Same(first, map.GetTerrain(1, 1));
+            Assert.Equal(6, map.terrainTiles.Count);
+            // Halfway rounds to tile (0, 0), which Origin holds; Second shares First's tile.
             Assert.DoesNotContain(halfway, map.terrainTiles.Values);
-            Assert.DoesNotContain(large, map.terrainTiles.Values);
-            Assert.DoesNotContain(first, map.terrainTiles.Values);
             Assert.DoesNotContain(second, map.terrainTiles.Values);
-            Assert.Contains(capture.Warnings, w => w.Contains("sit on tile (1, 1)"));
+            Assert.Empty(capture.Warnings);
 
-            // The same rule decides the auto-connect neighbours.
             Terrain.SetConnectivityDirty();
             Assert.Same(nearly, origin.topNeighbor);
             Assert.Same(raised, origin.leftNeighbor);
             Assert.Null(origin.bottomNeighbor);
+        }
+
+        [Fact]
+        public void ALinkedTerrainFillsAnyEmptyTileItIsReachedAt()
+        {
+            // Measured (tests/projects/terrainoverrides map.connectedClash): B, right of A, links A
+            // as its top: A also takes tile (1, 1); C, reaching B again at (1, 1), changes nothing.
+            using var tiles = new Tiles();
+            var a = tiles.Add("A", 0f, 0f, group: 81, autoConnect: false);
+            var b = tiles.Add("B", k_Size, 0f, group: 81, autoConnect: false);
+            var c = tiles.Add("C", 0f, k_Size, group: 81, autoConnect: false);
+            a.SetNeighbors(null, c, b, null);
+            b.SetNeighbors(a, a, null, null);
+            c.SetNeighbors(null, null, b, a);
+            using var capture = new WarningCapture();
+            var map = TerrainMap.CreateFromConnectedNeighbors(a);
+            Assert.Equal(4, map.terrainTiles.Count);
+            Assert.Same(a, map.GetTerrain(0, 0));
+            Assert.Same(b, map.GetTerrain(1, 0));
+            Assert.Same(c, map.GetTerrain(0, 1));
+            Assert.Same(a, map.GetTerrain(1, 1));
+            Assert.Empty(capture.Warnings);
         }
 
         [Fact]

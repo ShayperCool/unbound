@@ -42,6 +42,7 @@ namespace UnityEngine
         PatchTree m_Patches;
         TerrainData m_PatchData;
         int m_PatchVersion = -1;
+        int m_PatchOverrideVersion = -1;
         bool m_PatchWarned;
         /// <summary>What the drawn levels were worked out for: the camera, its frame, place, view
         /// and viewport.</summary>
@@ -324,10 +325,16 @@ namespace UnityEngine
 
         internal PatchTree PatchesOf(TerrainData data)
         {
-            if (m_PatchData == data && m_PatchVersion == data.m_HeightsVersion) return m_Patches;
+            if (m_PatchData == data && m_PatchVersion == data.m_HeightsVersion && m_PatchOverrideVersion == data.m_LodOverrideVersion) return m_Patches;
             DestroyPatches();
             m_PatchData = data;
             m_PatchVersion = data.m_HeightsVersion;
+            m_PatchOverrideVersion = data.m_LodOverrideVersion;
+            // Overrides replace the heightmap's own values, patch by patch in the getters' order
+            // (TerrainData.OverrideMaximumHeightError / OverrideMinMaxPatchHeights).
+            var errorOverride = data.ErrorOverride;
+            var extentsOverride = data.ExtentsOverride;
+            int flat = 0;
             var heights = data.Patches();
             if (heights == null)
             {
@@ -355,13 +362,16 @@ namespace UnityEngine
                 for (int z = 0; z < side; z++)
                     for (int x = 0; x < side; x++)
                     {
-                        int i = z * side + x;
-                        tree.Error[level][i] = heights.Error[level][i] * heightUnit;
+                        int i = z * side + x, n = flat + i;
+                        tree.Error[level][i] = errorOverride != null ? errorOverride[n] * data.size.y : heights.Error[level][i] * heightUnit;
+                        float low = extentsOverride != null ? extentsOverride[n].min * data.size.y : heights.Low[level][i] * heightUnit;
+                        float high = extentsOverride != null ? extentsOverride[n].max * data.size.y : heights.High[level][i] * heightUnit;
                         var bounds = new Bounds();
-                        bounds.SetMinMax(new Vector3(x * span * scale.x, heights.Low[level][i] * heightUnit, z * span * scale.z),
-                            new Vector3((x + 1) * span * scale.x, heights.High[level][i] * heightUnit, (z + 1) * span * scale.z));
+                        bounds.SetMinMax(new Vector3(x * span * scale.x, low, z * span * scale.z),
+                            new Vector3((x + 1) * span * scale.x, high, (z + 1) * span * scale.z));
                         tree.Bounds[level][i] = bounds;
                     }
+                flat += count;
             }
             return m_Patches = tree;
         }
