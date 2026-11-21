@@ -1,0 +1,50 @@
+{"k":"standalone.defaults","v":"My Label|(0,0,0,0)|Default|110|8/8[]|m=0|ml=0"}
+{"k":"standalone.copy_independence","v":"111|2/8[0,1,0,0,0,0,0;1,2,0,0,0,0,0]|ev=1:2/8[0,1,0,0,0,0,0;1,2,0,0,0,0,0]"}
+{"k":"standalone.equality_and_null","v":"0|1|null|ec=3|null_noop=3|restored=8/8[0,0,0,1,0,0,0;1,1,1,0,0,0,0]"}
+{"k":"standalone.render_mode","v":"10"}
+{"k":"prop.meta","v":"0|AnimationCurve"}
+{"k":"direct.empty.initial","v":"8/8[]|m=0|ml=0|ev=8/8[]"}
+{"k":"direct.empty.noop","v":"8/8[]|m=0|ml=0|ec=1|mod=0"}
+{"k":"direct.main.initial","v":"2/4[0,0.5,0,1.5,0,0,0;1,2,-0.5,0,3,0.25,0.75]|m=0|ml=0|ec=1"}
+{"k":"direct.main.ui_to_so","v":"1|4/2[0,3,0,0,0,0,0;0.5,4,0,0,0,0,0;1,5,0,0,0,0,0]|m=0|ml=0|t=4/2[0,3,0,0,0,0,0;0.5,4,0,0,0,0,0;1,5,0,0,0,0,0]|p=4/2[0,3,0,0,0,0,0;0.5,4,0,0,0,0,0;1,5,0,0,0,0,0]|ec=2"}
+{"k":"direct.main.noop","v":"0"}
+{"k":"direct.main.so_to_ui","v":"8/2[0,-1,0,2,0,0,0;2,4,-1,0,0,0,0]|m=0|ml=0|t=8/2[0,-1,0,2,0,0,0;2,4,-1,0,0,0,0]|ec=3"}
+{"k":"direct.main.so_wrap_only","v":"4/2[0,-1,0,2,0,0,0;2,4,-1,0,0,0,0]|m=0|ml=0|t=4/2[0,-1,0,2,0,0,0;2,4,-1,0,0,0,0]|ec=4"}
+{"k":"direct.main.external_inplace","v":"4/2[0,-1,2.5,2.5,0,0,0.333333343;1,1.5,2.5,2.5,0,0.333333343,0.333333343;2,4,2.5,2.5,0,0.333333343,0]|m=0|ml=0|ec=5"}
+{"k":"direct.main.external_replace","v":"8/8[0,10,0,10,0,0,0;1,20,10,0,0,0,0]|m=0|ml=0|ec=6"}
+{"k":"direct.detached.before_attach","v":"otherCurve|8/8[]|m=0|ml=0"}
+{"k":"direct.detached.after_attach","v":"8/8[0,1,0,1,0,0,0;2,3,1,0,0,0,0]|m=0|ml=0"}
+{"k":"multi.initial","v":"8/8[0,1,0,0,0,0,0;1,2,0,0,0,0,0]|m=1|ml=1|a=8/8[0,1,0,0,0,0,0;1,2,0,0,0,0,0]|b=8/8[0,3,0,0,0,0,0;1,4,0,0,0,0,0]|ec=0"}
+{"k":"multi.ui_edit_new","v":"1|2/4[0,5,0,0,0,0,0;1,6,0,0,0,0,0]|m=0|ml=0|a=2/4[0,5,0,0,0,0,0;1,6,0,0,0,0,0]|b=2/4[0,5,0,0,0,0,0;1,6,0,0,0,0,0]|ec=1"}
+{"k":"multi.wrap_only_mixed","v":"8/2[0,1,0,0,0,0,0;1,2,0,0,0,0,0]|m=1|ml=1"}
+{"k":"multi.ui_edit_to_t0","v":"8/2[0,1,0,0,0,0,0;1,2,0,0,0,0,0]|m=0|ml=0|a=8/2[0,1,0,0,0,0,0;1,2,0,0,0,0,0]|b=8/2[0,1,0,0,0,0,0;1,2,0,0,0,0,0]"}
+{"k":"tree.initial","v":"2/4[0,0.5,0,1.5,0,0,0;1,2,-0.5,0,3,0.25,0.75]|8/8[0,1,0,-1,0,0,0;1,0,-1,0,0,0,0]|8/8[0,2,0,2,0,0,0;1,4,2,0,0,0,0]|8/8[0,0,0,0,0,0,0;1,1,0,0,0,0,0]|[(1,2,3);(4,5,6)]|[(1.5,-2,3);(2,3,4)]|(1,-2,30,40)|(0.25,0.5,0.75,1)|(3,-4,5)|42|Beta|-1"}
+{"k":"tree.ui_to_so","v":"8/8[0,9,0,0,0,0,0;1,8,0,0,0,0,0]|8/8[0,-2,0,0,0,0,0;1,-4,0,0,0,0,0]|8/8[0,0.25,0,0,0,0,0;1,0.75,0,0,0,0,0]|[(11,2,3);(4,5,6)]|[(12.5,-2,3);(2,3,4)]|(15,-2,30,40)|(1,0.5,0.25,0.5)|(3,-4,77)|99|Alpha|BitB"}
+{"k":"tree.so_to_ui","v":"8/8[0,3,0,0,0,0,0;1,6,0,0,0,0,0]|8/8[0,7,0,0,0,0,0;1,0,0,0,0,0,0]|8/8[0,1,0,0,0,0,0;2,2,0,0,0,0,0]"}
+{"k":"pf.auto.initial","v":"CurveField|unity-input-myCurve|My Curve|11111|2/4[0,0.5,0,1.5,0,0,0;1,2,-0.5,0,3,0.25,0.75]|m=0|ml=0|evts=myCurve:2/4[0,0.5,0,1.5,0,0,0;1,2,-0.5,0,3,0.25,0.75]"}
+{"k":"pf.auto.ui_edit","v":"CurveField|unity-input-myCurve|My Curve|11111|2/2[0,11,0,0,0,0,0;1,22,0,0,0,0,0]|m=0|ml=0|t=2/2[0,11,0,0,0,0,0;1,22,0,0,0,0,0]|evts=2"}
+{"k":"pf.auto.so_edit","v":"CurveField|unity-input-myCurve|My Curve|11111|8/8[0,33,0,0,0,0,0;1,44,0,0,0,0,0]|m=0|ml=0|evts=3"}
+{"k":"pf.auto.label_update","v":"CurveField|unity-input-myCurve|Custom Curve|11111|8/8[0,33,0,0,0,0,0;1,44,0,0,0,0,0]|m=0|ml=0"}
+{"k":"pf.rebind_same_type","v":"1|CurveField|unity-input-nested.blend|Custom Curve|11111|8/8[0,0,0,0,0,0,0;1,1,0,0,0,0,0]|m=0|ml=0"}
+{"k":"pf.rebind_boundsint","v":"BoundsIntField|unity-input-siblingBoundsInt|Custom Curve|[(1,2,3);(4,5,6)]"}
+{"k":"pf.rebind_bounds","v":"BoundsField|unity-input-siblingBounds|Custom Curve|[(1.5,-2,3);(2,3,4)]"}
+{"k":"pf.rebind_rectint","v":"RectIntField|unity-input-siblingRectInt|Custom Curve|(1,-2,30,40)"}
+{"k":"pf.rebind_color","v":"ColorField|unity-input-siblingColor|Custom Curve|(0.25,0.5,0.75,1)"}
+{"k":"pf.rebind_vec3","v":"Vector3Field|unity-input-siblingVec3|Custom Curve|(3,-4,5)"}
+{"k":"pf.rebind_vec4","v":"Foldout|unity-foldout-siblingVec4|Custom Curve|0"}
+{"k":"pf.rebind_scalar","v":"IntegerField|unity-input-scalarInt|Custom Curve|42"}
+{"k":"pf.rebind_back_curve","v":"CurveField|unity-input-otherCurve|Custom Curve|11111|8/8[0,1,0,1,0,0,0;2,3,1,0,0,0,0]|m=0|ml=0"}
+{"k":"pf.multi.initial","v":"CurveField|unity-input-multiCurve|Multi Curve|11111|8/8[0,1,0,0,0,0,0;1,2,0,0,0,0,0]|m=1|ml=1|ec=0"}
+{"k":"pf.multi.ui_edit","v":"CurveField|unity-input-multiCurve|Multi Curve|11111|8/8[0,7,0,0,0,0,0;1,8,0,0,0,0,0]|m=0|ml=0|a=8/8[0,7,0,0,0,0,0;1,8,0,0,0,0,0]|b=8/8[0,7,0,0,0,0,0;1,8,0,0,0,0,0]|ec=1"}
+{"k":"unbind_rebind.initial","v":"8/8[0,1,0,0,0,0,0;1,2,0,0,0,0,0]|m=0|ml=0|tip=rt-curve-tip-0"}
+{"k":"unbind_rebind.after_unbind","v":"8/8[0,99,0,0,0,0,0;1,98,0,0,0,0,0]|m=0|ml=0|t1=8/8[0,11,0,0,0,0,0;1,12,0,0,0,0,0]|tip=rt-curve-tip-1"}
+{"k":"unbind_rebind.after_mixed_unbind","v":"8/8[0,10,0,0,0,0,0;1,20,0,0,0,0,0]|m=1|ml=1"}
+{"k":"unbind_rebind.rebind_prop","v":"8/8[0,5,0,0,0,0,0;1,6,0,0,0,0,0]|m=0|ml=0"}
+{"k":"unbind_rebind.rebind_prop_edit","v":"8/8[0,55,0,0,0,0,0;1,66,0,0,0,0,0]|t1_start=8/8[0,11,0,0,0,0,0;1,12,0,0,0,0,0]"}
+{"k":"unbind_rebind.rebind_so2","v":"8/8[0,70,0,0,0,0,0;1,80,0,0,0,0,0]|m=0|ml=0"}
+{"k":"unbind_rebind.rebind_so2_edit","v":"8/8[0,71,0,0,0,0,0;1,81,0,0,0,0,0]|t1_other=8/8[0,55,0,0,0,0,0;1,66,0,0,0,0,0]"}
+{"k":"pf.after_unbind","v":"CurveField|unity-input-myCurve|My Curve|11111|8/8[0,11,0,0,0,0,0;1,12,0,0,0,0,0]|m=0|ml=0"}
+{"k":"pf.after_rebind_so2","v":"CurveField|unity-input-myCurve|My Curve|11111|8/8[0,71,0,0,0,0,0;1,81,0,0,0,0,0]|m=0|ml=0"}
+{"k":"incompatible.int_field","v":"0"}
+{"k":"logs","v":["Warning:Field type UnityEngine.UIElements.IntegerField is not compatible with AnimationCurve property \"myCurve\""]}
+{"k":"complete","v":true}
