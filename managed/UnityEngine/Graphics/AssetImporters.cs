@@ -34,8 +34,12 @@ namespace Unbound.Runtime
             AssetDatabaseRuntime.Importers["scene"] = ImportScene;
             FontImporter.Register();
             Unbound.UIElements.UiImporters.Register();
-            // Files Unity imports as DefaultAsset: nothing loadable.
-            AssetDatabaseRuntime.Importers["unknown"] = _ => new LoadedFile();
+            // Files Unity imports as DefaultAsset (unrecognized/unclaimed extensions, extensionless
+            // files, .rsp/.modulecompilationtrigger, StreamingAssets/WebGLTemplates/WebPlayerTemplates,
+            // precompiled plugins, and folders; matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/defaultasset).
+            AssetDatabaseRuntime.Importers["unknown"] = ImportDefault;
+            AssetDatabaseRuntime.Importers["plugin"] = ImportPlugin;
             AssetDatabaseRuntime.Importers["folder"] = ImportFolder;
         }
 
@@ -65,24 +69,46 @@ namespace Unbound.Runtime
             return file;
         }
 
-        /// <summary>A folder: its DefaultAsset, named after the folder.</summary>
+        /// <summary>A folder: its DefaultAsset, named after the full folder name (dots kept).</summary>
         static LoadedFile ImportFolder(AssetDatabaseRuntime.AssetInfo info)
         {
             var folder = UnityEditor.DefaultAsset.ForFolder(System.IO.Path.GetFileName(info.Path.TrimEnd('/')));
             var file = new LoadedFile { MainObject = folder };
-            file.Objects[UnityEditor.DefaultAsset.FolderFileId] = folder;
+            file.Objects[UnityEditor.DefaultAsset.FileId] = folder;
+            return file;
+        }
+
+        /// <summary>A DefaultImporter file: its DefaultAsset, named after the file without its last
+        /// extension, with HideFlags.NotEditable (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/defaultasset).</summary>
+        static LoadedFile ImportDefault(AssetDatabaseRuntime.AssetInfo info)
+        {
+            var asset = UnityEditor.DefaultAsset.Create(System.IO.Path.GetFileNameWithoutExtension(info.Path), HideFlags.NotEditable);
+            var file = new LoadedFile { MainObject = asset };
+            file.Objects[UnityEditor.DefaultAsset.FileId] = asset;
+            return file;
+        }
+
+        /// <summary>A precompiled plugin: its DefaultAsset, unnamed with HideFlags.None (matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/defaultasset).</summary>
+        static LoadedFile ImportPlugin(AssetDatabaseRuntime.AssetInfo info)
+        {
+            var asset = UnityEditor.DefaultAsset.Create("", HideFlags.None);
+            var file = new LoadedFile { MainObject = asset };
+            file.Objects[UnityEditor.DefaultAsset.FileId] = asset;
             return file;
         }
 
         internal const long SceneAssetFileId = 102900000;
 
         /// <summary>A scene file as the Editor's asset database has it: a SceneAsset (fileID
-        /// 102900000) named after the file; its contents load through the scene manager.</summary>
+        /// 102900000) named after the file with HideFlags.NotEditable; its contents load through
+        /// the scene manager.</summary>
         static LoadedFile ImportScene(AssetDatabaseRuntime.AssetInfo info)
         {
             UnityEditor.SceneAsset scene;
             using (ObjectRegistry.AsAssets())
-                scene = new UnityEditor.SceneAsset { name = System.IO.Path.GetFileNameWithoutExtension(info.Path), IsPersistentAsset = true };
+                scene = new UnityEditor.SceneAsset { name = System.IO.Path.GetFileNameWithoutExtension(info.Path), IsPersistentAsset = true, hideFlags = HideFlags.NotEditable };
             var file = new LoadedFile { MainObject = scene };
             file.Objects[SceneAssetFileId] = scene;
             return file;

@@ -494,9 +494,35 @@ fn resources_keys(path: &str) -> Vec<String> {
     keys
 }
 
+/// Top-level `Assets/` trees whose files the Editor imports with `DefaultImporter` as
+/// `DefaultAsset` instead of their extension's importer (matches the Unity 6000.0.71f1 Editor,
+/// `tests/projects/defaultasset`: `Assets/StreamingAssets/`, `Assets/WebGLTemplates/`,
+/// `Assets/WebPlayerTemplates/`; a nested `Assets/Data/StreamingAssets/` is not special).
+fn is_special_default_imported_folder(path: &str) -> bool {
+    const ROOTS: [&str; 3] = [
+        "assets/streamingassets/",
+        "assets/webgltemplates/",
+        "assets/webplayertemplates/",
+    ];
+    ROOTS.iter().any(|root| {
+        path.len() > root.len()
+            && path
+                .as_bytes()
+                .get(..root.len())
+                .is_some_and(|prefix| prefix.eq_ignore_ascii_case(root.as_bytes()))
+    })
+}
+
 /// What the managed side asks about an asset.
 fn asset_kind(path: &str) -> &'static str {
-    let ext = path.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+    if is_special_default_imported_folder(path) {
+        return "unknown";
+    }
+    let name = path.rsplit('/').next().unwrap_or(path);
+    let ext = name
+        .rsplit_once('.')
+        .map(|(_, e)| e.to_ascii_lowercase())
+        .unwrap_or_default();
     match ext.as_str() {
         "prefab" => "prefab",
         "unity" => "scene",
@@ -1859,8 +1885,11 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
     Ok(unbound_scene::encode_documents(&[doc]))
 }
 
-/// The importer the Editor uses for a file whose .meta names none, by its extension.
+/// The importer the Editor uses for a file whose .meta names none, by its path and extension.
 fn default_importer(path: &str) -> &'static str {
+    if is_special_default_imported_folder(path) {
+        return "DefaultImporter";
+    }
     let name = path.rsplit('/').next().unwrap_or(path);
     if name == "package.json" {
         return "PackageManifestImporter";
@@ -2809,6 +2838,57 @@ mod tests {
         );
         assert_eq!(default_importer("Assets/Art/Hero.PNG"), "TextureImporter");
         assert_eq!(default_importer("Assets/Folder"), "DefaultImporter");
+        assert_eq!(
+            default_importer("Assets/StreamingAssets/note.txt"),
+            "DefaultImporter"
+        );
+        assert_eq!(
+            default_importer("Assets/StreamingAssets/SubDir/img.png"),
+            "DefaultImporter"
+        );
+        assert_eq!(
+            default_importer("Assets/WebGLTemplates/Custom/index.html"),
+            "DefaultImporter"
+        );
+        assert_eq!(
+            default_importer("Assets/WebPlayerTemplates/Legacy/readme.txt"),
+            "DefaultImporter"
+        );
+        assert_eq!(
+            default_importer("Assets/Data/StreamingAssets/nested_not_root.txt"),
+            "TextScriptImporter"
+        );
+    }
+
+    #[test]
+    fn asset_kind_respects_special_default_folders_and_extensionless_files() {
+        assert_eq!(asset_kind("Assets/Data/Blob.xyz"), "unknown");
+        assert_eq!(asset_kind("Assets/Data/csc.rsp"), "unknown");
+        assert_eq!(asset_kind("Assets/Data/NoExtension"), "unknown");
+        assert_eq!(asset_kind("Assets/Data/txt"), "unknown");
+        assert_eq!(asset_kind("Assets/Folder.WithDot/NoExtension"), "unknown");
+        assert_eq!(asset_kind("Assets/StreamingAssets/note.txt"), "unknown");
+        assert_eq!(asset_kind("Assets/StreamingAssets/img.png"), "unknown");
+        assert_eq!(
+            asset_kind("Assets/StreamingAssets/SubDir/nested.txt"),
+            "unknown"
+        );
+        assert_eq!(
+            asset_kind("Assets/WebGLTemplates/Custom/index.html"),
+            "unknown"
+        );
+        assert_eq!(
+            asset_kind("Assets/WebPlayerTemplates/Legacy/readme.txt"),
+            "unknown"
+        );
+        assert_eq!(
+            asset_kind("Assets/Data/StreamingAssets/nested_not_root.txt"),
+            "text"
+        );
+        assert_eq!(asset_kind("Assets/Data/Plain.txt"), "text");
+        assert_eq!(asset_kind("Assets/Sprites/Single.png"), "texture");
+        assert_eq!(asset_kind("Assets/Scenes/Probe.unity"), "scene");
+        assert_eq!(asset_kind("Assets/Data/ProbeSame.dll"), "plugin");
     }
 
     #[test]

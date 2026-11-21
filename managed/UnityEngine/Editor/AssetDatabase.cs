@@ -53,8 +53,13 @@ namespace UnityEditor
 
         internal static void Invalidate() => s_Entries = null;
 
+        /// <summary>The built-in GUID the Editor assigns to the root <c>Assets</c> folder
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/defaultasset).</summary>
+        internal const string AssetsRootGuid = "00000000000000001000000000000000";
+
         public static string GUIDToAssetPath(string guid)
         {
+            if (string.Equals(guid, AssetsRootGuid, StringComparison.OrdinalIgnoreCase)) return "Assets";
             if (SettingsAssets.ByGuid(guid) is SettingsFile settings) return settings.AssetPath;
             _ = Entries;
             return guid != null && s_ByGuid.TryGetValue(guid, out var e) ? e.Path : DeletedPath(guid);
@@ -75,17 +80,21 @@ namespace UnityEditor
         static string ExistingGuid(string path)
         {
             if (SettingsAssets.AtPath(path) is SettingsFile settings) return settings.Guid;
+            var normalized = path?.Replace('\\', '/').TrimEnd('/');
+            if (string.Equals(normalized, "Assets", StringComparison.OrdinalIgnoreCase)) return AssetsRootGuid;
             _ = Entries;
-            return path != null && s_ByPath.TryGetValue(path.Replace('\\', '/'), out var e) ? e.Guid : "";
+            return normalized != null && s_ByPath.TryGetValue(normalized, out var e) ? e.Guid : "";
         }
 
         public static GUID GUIDFromAssetPath(string path) => new GUID(AssetPathToGUID(path));
 
         public static bool IsValidFolder(string path)
         {
+            path = path?.Replace('\\', '/').TrimEnd('/');
+            if (string.Equals(path, "Assets", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(path, "Packages", StringComparison.OrdinalIgnoreCase))
+                return true;
             _ = Entries;
-            path = path?.TrimEnd('/');
-            if (path == "Assets" || path == "Packages") return true;
             return path != null && s_ByPath.TryGetValue(path, out var e) && e.Kind == "folder";
         }
 
@@ -140,7 +149,13 @@ namespace UnityEditor
         {
             if (SettingsAssets.AtPath(assetPath) is SettingsFile settings) return new[] { settings.Object };
             var guid = AssetPathToGUID(assetPath);
-            return string.IsNullOrEmpty(guid) ? Array.Empty<Object>() : AssetDatabaseRuntime.LoadAll(guid, hierarchy: true).ToArray();
+            if (string.IsNullOrEmpty(guid)) return Array.Empty<Object>();
+            // DefaultAsset (folders, unrecognized/StreamingAssets files, plugins) and SceneAsset
+            // load via LoadAssetAtPath/LoadMainAssetAtPath, while LoadAllAssetsAtPath returns an
+            // empty array (matches the Unity 6000.0.71f1 Editor, tests/projects/defaultasset).
+            var main = AssetDatabaseRuntime.LoadMain(guid, null);
+            if (main is DefaultAsset || main is SceneAsset) return Array.Empty<Object>();
+            return AssetDatabaseRuntime.LoadAll(guid, hierarchy: true).ToArray();
         }
 
         public static Object[] LoadAllAssetRepresentationsAtPath(string assetPath)
@@ -190,10 +205,13 @@ namespace UnityEditor
         public static bool IsNativeAsset(Object obj)
         {
             var path = GetAssetPath(obj);
-            return path.EndsWith(".asset") || path.EndsWith(".prefab") || path.EndsWith(".mat") || path.EndsWith(".unity");
+            return path.EndsWith(".asset", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(".mat", StringComparison.OrdinalIgnoreCase);
         }
 
-        public static bool IsForeignAsset(Object obj) => obj != null && obj.IsPersistentAsset && !IsNativeAsset(obj);
+        public static bool IsForeignAsset(Object obj) =>
+            obj != null && obj.IsPersistentAsset && !IsNativeAsset(obj) && !IsValidFolder(GetAssetPath(obj));
 
         public static bool TryGetGUIDAndLocalFileIdentifier(Object obj, out string guid, out long localId)
         {
@@ -230,7 +248,7 @@ namespace UnityEditor
             foreach (var e in Entries)
             {
                 if (folders != null && !folders.Any(f => e.Path.StartsWith(f, StringComparison.OrdinalIgnoreCase))) continue;
-                var fileName = System.IO.Path.GetFileNameWithoutExtension(e.Path);
+                var fileName = e.Kind == "folder" ? System.IO.Path.GetFileName(e.Path) : System.IO.Path.GetFileNameWithoutExtension(e.Path);
                 if (names.Any(n => fileName.IndexOf(n, StringComparison.OrdinalIgnoreCase) < 0)) continue;
                 if (labels.Count > 0 && (e.Labels == null || !labels.Any(l => e.Labels.Contains(l, StringComparer.OrdinalIgnoreCase)))) continue;
                 if (types.Count > 0 && !types.Any(t => MatchesType(e, t))) continue;
@@ -292,7 +310,7 @@ namespace UnityEditor
                 case "spriteatlas": return ext == ".spriteatlas" || ext == ".spriteatlasv2";
                 case "model": case "mesh": return e.Kind == "model";
                 case "monoscript": case "script": return e.Kind == "script";
-                case "defaultasset": return e.Kind == "folder" || e.Kind == "unknown";
+                case "defaultasset": return e.Kind == "folder" || e.Kind == "unknown" || e.Kind == "plugin" || e.Kind == "scene";
                 case "folder": return e.Kind == "folder";
                 case "object": return true;
             }

@@ -806,7 +806,8 @@ namespace Unbound.Runtime
             if (guid.StartsWith("bundle:", StringComparison.Ordinal)) return BundleFiles.Load(guid, fileId);
             if (string.Equals(guid, "0000000000000000d000000000000000", StringComparison.OrdinalIgnoreCase))
                 return Builtin(Unbound.UIElements.UiResources.LoadObject(fileId), guid, fileId);
-            if (guid.StartsWith("0000000000000000", StringComparison.Ordinal))
+            if (guid.StartsWith("0000000000000000", StringComparison.Ordinal)
+                && !string.Equals(guid, UnityEditor.AssetDatabase.AssetsRootGuid, StringComparison.OrdinalIgnoreCase))
                 return Builtin(BuiltinShaders.Resolve(guid, fileId), guid, fileId);
             if (s_Objects.TryGetValue((guid, fileId), out var cached) && !cached.m_Destroyed) return Reloaded(cached);
             var file = LoadFile(guid);
@@ -949,6 +950,15 @@ namespace Unbound.Runtime
         internal static LoadedFile LoadFile(string guid)
         {
             if (s_Files.TryGetValue(guid, out var loaded)) return loaded;
+            if (string.Equals(guid, UnityEditor.AssetDatabase.AssetsRootGuid, StringComparison.OrdinalIgnoreCase))
+            {
+                var root = UnityEditor.DefaultAsset.ForFolder("Assets");
+                var rootFile = new LoadedFile { MainObject = root, Guid = UnityEditor.AssetDatabase.AssetsRootGuid, Path = "Assets" };
+                rootFile.Objects[UnityEditor.DefaultAsset.FileId] = root;
+                s_Objects[(UnityEditor.AssetDatabase.AssetsRootGuid, UnityEditor.DefaultAsset.FileId)] = root;
+                s_Files[UnityEditor.AssetDatabase.AssetsRootGuid] = rootFile;
+                return rootFile;
+            }
             // An import's own postprocessors loading the asset: the Editor's first import has no
             // artifact to give yet (ShaderGraph's OnPreprocessAsset asks, expecting null), and the
             // asset is not imported from inside its own callbacks.
@@ -1062,7 +1072,7 @@ namespace Unbound.Runtime
                     foreach (var pair in file.Objects)
                     {
                         s_Objects[(guid, pair.Key)] = pair.Value;
-                        if (string.IsNullOrEmpty(pair.Value.m_Name) && pair.Value == file.MainObject)
+                        if (string.IsNullOrEmpty(pair.Value.m_Name) && pair.Value == file.MainObject && info.Kind != "plugin")
                             pair.Value.m_Name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
                     }
                 }
