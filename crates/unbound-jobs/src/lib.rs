@@ -9,8 +9,7 @@
 //! until the job is done. A combination (`CombineDependencies`) is done when its dependencies are.
 //!
 //! The jobs are the managed engine's: each carries a `user` value its callbacks get back
-//! (`managed/UnityEngine/Jobs/JobSystem.cs`, through [`ffi`]). Engine code in Rust runs its
-//! parallel work on the same workers with [`install`].
+//! (`managed/UnityEngine/Jobs/JobSystem.cs`, through [`ffi`]).
 
 pub mod ffi;
 mod workers;
@@ -18,9 +17,7 @@ mod workers;
 #[cfg(test)]
 mod tests;
 
-pub use workers::{
-    install, max_workers, processor_count, set_worker_count, thread_index, worker_count,
-};
+pub use workers::{max_workers, processor_count, set_worker_count, thread_index, worker_count};
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -240,8 +237,10 @@ impl Graph {
     /// run. Returns whether a thread waits for one of them.
     fn complete(&mut self, key: Key, ready: &mut Vec<Arc<Run>>) -> bool {
         let mut wake = false;
-        let mut done = vec![key];
-        while let Some(key) = done.pop() {
+        // Combinations completed on the way (allocated only for them).
+        let mut combinations = Vec::new();
+        let mut next = Some(key);
+        while let Some(key) = next.take().or_else(|| combinations.pop()) {
             let Some(node) = self.node_mut(key) else {
                 continue;
             };
@@ -258,7 +257,7 @@ impl Graph {
                 // A waiting thread may run a batched job now.
                 wake |= node.waiters != 0;
                 if node.combination {
-                    done.push(dependent);
+                    combinations.push(dependent);
                 } else if node.state == State::Waiting {
                     node.state = State::Launched;
                     ready.push(node.run.clone());
@@ -499,8 +498,8 @@ fn launch(run: Arc<Run>, here: bool) {
     run.participants.store(participants, Ordering::Release);
     let helpers = (participants - u32::from(here)) as usize;
     if helpers != 0 {
-        if thread_index() != 0 {
-            // On a job worker: its own pool's queue, without the workers' lock.
+        if workers::on_current_worker() {
+            // On a worker of the current pool: its own queue, without the workers' lock.
             for _ in 0..helpers.min(rayon::current_num_threads()) {
                 let run = run.clone();
                 rayon::spawn(move || run_participants(&run));
@@ -523,11 +522,12 @@ fn launch(run: Arc<Run>, here: bool) {
     }
 }
 
-/// Launches jobs that became ready. Several ready on a thread that is not a worker (a flush) go
+/// Launches jobs that became ready. Several ready on a thread that is not a current worker (a
+/// flush, or a worker of a pool the worker count replaced) go
 /// to the workers in one task, which launches them there: one wake-up of the pool instead of one
 /// per job.
 fn launch_all(mut ready: Vec<Arc<Run>>) {
-    if ready.len() > 1 && thread_index() == 0 {
+    if ready.len() > 1 && !workers::on_current_worker() {
         if let Some(pool) = workers::pool() {
             pool.spawn(move || ready.into_iter().for_each(|run| launch(run, false)));
             return;

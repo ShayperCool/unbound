@@ -1,5 +1,5 @@
 use super::*;
-use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32};
+use std::sync::atomic::{AtomicI32, AtomicU32};
 use std::sync::{Condvar, Mutex, Once, mpsc};
 use std::thread;
 use std::time::Duration;
@@ -461,21 +461,46 @@ fn waiting_for_a_long_chain_does_not_recurse() {
     });
 }
 
+/// A job a worker of the replaced pool makes ready runs on the current pool's workers, with their
+/// thread indices (before, it went to the old pool's queue, indices above the new count).
 #[test]
-fn install_runs_on_the_job_workers() {
+fn jobs_made_ready_after_a_worker_count_change_run_on_the_new_workers() {
     run(|| {
-        use rayon::prelude::*;
-        let indices: Vec<i32> =
-            install(|| (0..1000).into_par_iter().map(|_| thread_index()).collect());
+        if max_workers() < 2 {
+            return;
+        }
+        let gate = Gate::new();
+        let started = Gate::new();
+        let blocker = new_job(1, move |_, _| {
+            started.open();
+            gate.pass();
+        });
+        let seen = Box::leak(Box::new(Mutex::new(Vec::new())));
+        let dependent = {
+            let seen = &*seen;
+            new_job(64, move |_, thread_index| {
+                seen.lock().unwrap().push(thread_index)
+            })
+        };
+        let first = schedule(blocker.user(), 0);
+        flush();
+        started.pass();
+        set_worker_count(1);
+        let second = schedule(dependent.user(), first);
+        flush();
+        gate.open();
+        // Not waiting here: the dependent is launched by the old pool's worker that ran the
+        // blocker.
+        while !is_done(second) {
+            thread::sleep(Duration::from_millis(1));
+        }
         assert!(
-            indices
-                .iter()
-                .all(|&i| (1..=worker_count() as i32).contains(&i))
+            seen.lock().unwrap().iter().all(|&i| i == 1),
+            "{:?}",
+            seen.lock().unwrap()
         );
-        set_worker_count(0);
-        let ran = AtomicBool::new(false);
-        install(|| ran.store(true, Ordering::SeqCst));
-        assert!(ran.load(Ordering::SeqCst));
+        release(first);
+        release(second);
     });
 }
 
