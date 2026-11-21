@@ -79,6 +79,7 @@ namespace Unbound.Runtime
         static void EnterPlayMode()
         {
             EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
+            UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
             IsPlaying = true;
             Time.ResetForPlayMode();
             EditorInitialization.EnterPlayModeMethods();

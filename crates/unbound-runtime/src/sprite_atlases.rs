@@ -141,6 +141,7 @@ pub fn to_json(set: &AtlasSet) -> serde_json::Value {
                 "sprites": atlas.sprites.iter().map(|s| json!({
                     "texture": guid_text(s.texture),
                     "fileId": s.file_id,
+                    "name": s.name,
                     "page": s.page,
                     "rect": s.texture_rect,
                     "uvTransform": s.uv_transform,
@@ -181,6 +182,8 @@ pub struct PackedAtlas {
 pub struct PackedSprite {
     pub texture: u128,
     pub file_id: i64,
+    /// The sprite's name, as the atlas lists it (`m_PackedSpriteNamesToIndex`).
+    pub name: String,
     pub page: u32,
     pub texture_rect: [f32; 4],
     pub uv_transform: [f32; 4],
@@ -385,7 +388,8 @@ impl Importer for AtlasImporter<'_> {
     const KIND: &'static str = "sprite-atlases";
     // 2: warnings for skipped packables and compressed variant masters.
     // 3: compressed pages keep their block format (the size fallback resolves per page).
-    const VERSION: u32 = 3;
+    // 4: each packed sprite keeps its name.
+    const VERSION: u32 = 4;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<PathBuf>> {
         let bytes = std::fs::read(source)?;
@@ -609,6 +613,7 @@ impl Importer for AtlasImporter<'_> {
             packed.sprites.push(PackedSprite {
                 texture: textures[t].0.0,
                 file_id: sprite.file_id,
+                name: sprite.name.clone(),
                 page: p.page,
                 texture_rect: layout.texture_rect(i, inputs[i].rect),
                 uv_transform: layout.uv_transform(i, inputs[i].uv_transform),

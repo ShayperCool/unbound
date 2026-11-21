@@ -56,6 +56,7 @@ namespace UnityEditor
                 EditorSession.IsPlaying = false;
                 LoadEditorDomain();
                 EditorSession.BeginEnteringPlayMode();
+                UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
                 try
                 {
                     EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
@@ -68,6 +69,8 @@ namespace UnityEditor
                 return;
             }
             EditorSession.BeginEnteringPlayMode();
+            // Play mode's atlases are packed before its domain loads.
+            UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
             try { LoadEditorDomain(enteringPlayMode: true); }
             finally { EditorSession.EndEnteringPlayMode(); }
         }

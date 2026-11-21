@@ -2049,9 +2049,9 @@ namespace UnityEngine.Tests
                 Assert.Equal(varBaseDirty + 6, EditorUtility.GetDirtyCount(variant));
                 Assert.Empty(logs);
 
-                // An out-of-range variantMultiplier on disk loads clamped to [0.1, 1], a variant
-                // dirty (tests/projects/spriteatlaseditor v1wholewrite measures 2 -> 1; below the
-                // range, 0.02 here, is unmeasured and follows the same clamp).
+                // An out-of-range variantMultiplier loads as it is, clean; SetMasterAtlas clamps it
+                // to [0.1, 1] (tests/projects/spriteatlaseditor v1wholewritedisabled Scaled measures
+                // 2 -> 1; below the range, 0.02 here, is unmeasured and follows the same clamp).
                 const string v1OmittedAndOutOfRange =
                     "%YAML 1.1\n" +
                     "%TAG !u! tag:unity3d.com,2011:\n" +
@@ -2069,12 +2069,8 @@ namespace UnityEngine.Tests
                 var omittedDocs = UnityYamlText.Parse(v1OmittedAndOutOfRange);
                 var omitted = new SpriteAtlas { name = "Omitted" };
                 omitted.ReadSerialized(TestYaml.DocumentBody(v1OmittedAndOutOfRange), null);
-                Assert.Equal(0.1f, omitted.VariantScale);
-                Assert.True(EditorUtility.IsDirty(omitted));
-                var plain = new SpriteAtlas { name = "Plain" };
-                plain.ReadSerialized(TestYaml.DocumentBody(v1OmittedAndOutOfRange.Replace("  m_IsVariant: 1\n", "  m_IsVariant: 0\n").Replace("variantMultiplier: 0.02", "variantMultiplier: 2")), null);
-                Assert.Equal(1f, plain.VariantScale);
-                Assert.False(EditorUtility.IsDirty(plain));
+                Assert.Equal(0.02f, omitted.VariantScale);
+                Assert.False(EditorUtility.IsDirty(omitted));
                 omitted.SetMasterAtlas(masterA);
                 Assert.Same(masterA, omitted.GetMasterAtlas());
                 Assert.Equal("MasterA", omitted.tag);
