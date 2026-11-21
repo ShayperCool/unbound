@@ -24,4 +24,6 @@
 {"k":"08.refreshOrder.neighbours3Empty","v":"B.R(2,0) B.R(1,0) B.R(0,0) B.D(0,0) B.S(0,0) B.N(0,0) B.D(1,0) B.S(1,0) B.N(1,0) B.D(2,0) B.S(2,0) B.N(2,0) T[-1,0;0,0;1,0;2,0;3,0] P[-1,0;0,0;1,0;2,0;3,0]"}
 {"k":"09.itilemapView","v":"refresh=(A.D(0,0)[self=A,right=LockColor/SheetACell0/(0,0,1)])|previewSet=(V.D(0,0)[self=V,right=LockColor/SheetACell0/(0,0,1)] A.D(0,0)[self=V,right=LockColor/SheetACell0/(0,0,1)] V.D(0,0)[self=V,right=LockColor/SheetACell0/(0,0,1)] A.D(0,0)[self=V,right=LockColor/SheetACell0/(0,0,1)])|actualSet=(V.D(0,0)[self=V,right=LockColor/SheetACell0/(0,0,1)] A2.D(0,0)[self=V,right=LockColor/SheetACell0/(0,0,1)] T[0,0] P[0,0])"}
 {"k":"09.previewSameAsActualAndReplace","v":"same=(has=True|tile=Free|typed=Free|sprite=SheetACell0|color=(0,1,0,1)|mat=T(0.25,-0.5,0)S(2,3,1)|flags=None)|replaced=(has=True|tile=Prev|typed=Prev|sprite=SheetACell0|color=(0.5,0.5,0.5,1)|mat=T(1,2,0)S(0.5,0.5,1)|flags=None)"}
+{"k":"09.previewSameAsActualRefresh","v":"A.R(0,0) A.D(0,0) A.D(0,0) A.S(0,0) A.N(0,0)"}
+{"k":"09.destroyedPreview","v":"cell=(has=False|tile=<null>|typed=<null>|sprite=SheetACell1|color=(0,0,1,1)|mat=I|flags=LockColor)|view=(W.D(-1,0)[self=W,right=A/SheetACell0/(1,1,1)])|clear=(A.R(0,0) A.D(0,0) A.S(0,0) A.N(0,0))|after=(has=False|tile=<null>|typed=<null>|sprite=<null>|color=(1,1,1,1)|mat=I|flags=None)"}
 {"k":"complete","v":true}

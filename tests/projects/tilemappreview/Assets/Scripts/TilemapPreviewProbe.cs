@@ -723,6 +723,35 @@ static class TilemapPreviewProbe
             return $"same=({same})|replaced=({replaced})";
         });
 
+        // The refresh when a preview tile equal to the actual tile is set.
+        Check("09.previewSameAsActualRefresh", () =>
+        {
+            var map = OrderMap("PreviewSameRefresh", 1, 1);
+            return Ordered(() => map.SetEditorPreviewTile(new Vector3Int(0, 0, 0), orderOld));
+        });
+
+        // A preview tile destroyed while set: the preview getters, what a neighbour sees through
+        // ITilemap, and ClearAllEditorPreviewTiles.
+        Check("09.destroyedPreview", () =>
+        {
+            var map = OrderMap("DestroyedPreview", 1, 1);
+            var viewer = ScriptableObject.CreateInstance<ViewLogTile>();
+            viewer.name = "W";
+            viewer.sprite = spriteB;
+            map.SetTile(new Vector3Int(-1, 0, 0), viewer);
+            var doomed = ScriptableObject.CreateInstance<Tile>();
+            doomed.name = "Doomed";
+            doomed.sprite = spriteC;
+            doomed.color = Color.blue;
+            var p = new Vector3Int(0, 0, 0);
+            map.SetEditorPreviewTile(p, doomed);
+            Object.DestroyImmediate(doomed);
+            string cell = PreviewCell(map, p);
+            string view = Ordered(() => map.RefreshTile(new Vector3Int(-1, 0, 0)));
+            string clear = Ordered(() => map.ClearAllEditorPreviewTiles());
+            return $"cell=({cell})|view=({view})|clear=({clear})|after=({PreviewCell(map, p)})";
+        });
+
         Tilemap.tilemapTileChanged -= logTiles;
         Tilemap.tilemapPositionsChanged -= logPositions;
         Tilemap.tilemapTileChanged -= onTileChanged;
