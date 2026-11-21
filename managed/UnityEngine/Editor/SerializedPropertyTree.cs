@@ -1194,12 +1194,12 @@ namespace Unbound.Runtime
                 // A value with parts (vectors, rects, bounds, colours, quaternions, Hash128...)
                 // hashes part by part: their own hash codes combine fields with XOR, so swapped
                 // or shifted values (a RectInt's width and height) would collide.
-                if (node.Children.Count > 0 && node.Children[0].Kind == SerializedNodeKind.Component)
+                var value = GetValue(node);
+                if (HasParts(node))
                 {
-                    foreach (var part in node.Children) AddHash(ref hash, part);
+                    AddPartsHash(ref hash, node, value);
                     return;
                 }
-                var value = GetValue(node);
                 if (value is Object o) hash.Add(o is null ? 0 : o.GetInstanceID());
                 else if (value is AnimationCurve curve)
                 {
@@ -1229,7 +1229,10 @@ namespace Unbound.Runtime
                     for (int i = 0; i < colorCount; i++)
                     {
                         var ck = gradient.ColorKeyAt(i);
-                        hash.Add(ck.color);
+                        hash.Add(ck.color.r);
+                        hash.Add(ck.color.g);
+                        hash.Add(ck.color.b);
+                        hash.Add(ck.color.a);
                         hash.Add(ck.time);
                     }
                     int alphaCount = gradient.AlphaKeyCount;
@@ -1241,18 +1244,25 @@ namespace Unbound.Runtime
                         hash.Add(ak.time);
                     }
                 }
-                else if (value is RectOffset offset)
-                {
-                    hash.Add(offset.left);
-                    hash.Add(offset.right);
-                    hash.Add(offset.top);
-                    hash.Add(offset.bottom);
-                }
                 else if (value != null) hash.Add(value);
                 return;
             }
             foreach (var child in node.Children)
                 if (child.Kind != SerializedNodeKind.Component) AddHash(ref hash, child);
+        }
+
+        static bool HasParts(SerializedNode node) => node.Children.Count > 0 && node.Children[0].Kind == SerializedNodeKind.Component;
+
+        // The parts of a value, read from the value once, recursively for parts with parts.
+        static void AddPartsHash(ref HashCode hash, SerializedNode node, object value)
+        {
+            foreach (var part in node.Children)
+            {
+                hash.Add((int)part.Kind);
+                var partValue = part.Component.Get(value);
+                if (HasParts(part)) AddPartsHash(ref hash, part, partValue);
+                else if (partValue != null) hash.Add(partValue);
+            }
         }
 
         // ---------------------------------------------------------------- arrays
