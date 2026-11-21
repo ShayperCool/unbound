@@ -135,8 +135,10 @@ namespace Unbound.Runtime
         /// values the instance was last merged from, when the source changed since (else its values now).</summary>
         /// <param name="liveDifferences">Whether values that differ from the source's are overrides
         /// (false: only the stored modifications are, for an instance being made).</param>
+        /// <param name="allScripts">Whether a script's live differences count although its changes
+        /// were not recorded (an instance made of the very objects its prefab was saved from).</param>
         internal static Snapshot Capture(PrefabInstanceData data, ValueReferences refs, Func<Object, Dictionary<string, YText>> baseline = null,
-            bool liveDifferences = true)
+            bool liveDifferences = true, bool allScripts = false)
         {
             var snapshot = new Snapshot { Refs = refs };
             var toSource = ToSource(data);
@@ -159,7 +161,7 @@ namespace Unbound.Runtime
                         unmatched.Add((stored.Path, stored.Value, StoredReference(data, stored, o)));
                     }
                 }
-                if (liveDifferences && Considered(o))
+                if (liveDifferences && (allScripts || Considered(o)))
                 {
                     var before = baseline?.Invoke(source) ?? PrefabValues.ByPath(PrefabValues.Flatten(PrefabValues.Fields(source, null, refs)));
                     foreach (var (path, value) in PrefabValues.Flatten(PrefabValues.Fields(o, toSource, refs)))

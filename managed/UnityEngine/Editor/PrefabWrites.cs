@@ -634,11 +634,10 @@ namespace UnityEditor
             if (file == null) return null;
             var assetRoot = (GameObject)file.MainObject;
             // The instance keeps its values: where they differ from the new prefab's (references
-            // the prefab cannot hold), they are overrides. Its scripts' values are the serialized
-            // ones from now on, as a recorded modification's.
-            foreach (var script in instanceRoot.GetComponentsInChildren<MonoBehaviour>(true)) PrefabRecords.Record(script);
-            ConvertToPrefabInstance(instanceRoot, assetRoot,
-                new ConvertToPrefabInstanceSettings { changeRootNameToAssetName = false, recordPropertyOverridesOfMatches = true }, action);
+            // the prefab cannot hold), they are the instance's stored modifications.
+            Convert(instanceRoot, assetRoot, new ConvertToPrefabInstanceSettings { changeRootNameToAssetName = false, recordPropertyOverridesOfMatches = true },
+                action, allScripts: true);
+            StoreScriptDifferences(PrefabLinks.Of(instanceRoot).Instance);
             ObjectChangeEvents.Note(ObjectChangeKind.ChangeGameObjectStructureHierarchy, new ChangeGameObjectStructureHierarchyEventArgs(instanceRoot.GetInstanceID(), instanceRoot.scene));
             PrefabAssets.Updated(new List<GameObject> { instanceRoot });
             // A user action records the instance's handle as a created object for its undo, which
@@ -757,7 +756,12 @@ namespace UnityEditor
         /// among its siblings (measured: tests/projects/scenesave prefab-api convert.*, the settings'
         /// defaults: prefab-writes settings.defaults; other match modes fail loudly).
         /// </summary>
-        public static void ConvertToPrefabInstance(GameObject plainGameObject, GameObject prefabAssetRoot, ConvertToPrefabInstanceSettings settings, InteractionMode mode)
+        public static void ConvertToPrefabInstance(GameObject plainGameObject, GameObject prefabAssetRoot, ConvertToPrefabInstanceSettings settings, InteractionMode mode) =>
+            Convert(plainGameObject, prefabAssetRoot, settings, mode, allScripts: false);
+
+        /// <summary><see cref="ConvertToPrefabInstance"/>; <paramref name="allScripts"/>: the scripts'
+        /// live differences count as overrides although their changes were not recorded.</summary>
+        static void Convert(GameObject plainGameObject, GameObject prefabAssetRoot, ConvertToPrefabInstanceSettings settings, InteractionMode mode, bool allScripts)
         {
             if (plainGameObject == null) throw new ArgumentNullException(nameof(plainGameObject));
             if (prefabAssetRoot == null) throw new ArgumentNullException(nameof(prefabAssetRoot));
@@ -803,11 +807,34 @@ namespace UnityEditor
                 }
             data.OrderByTarget();
             var refs = new ValueReferences();
-            var snapshot = PrefabInstances.Capture(data, refs, liveDifferences: settings.recordPropertyOverridesOfMatches);
+            var snapshot = PrefabInstances.Capture(data, refs, liveDifferences: settings.recordPropertyOverridesOfMatches, allScripts: allScripts);
             // The prefab's objects the plain one lacks are made (none is a removed override).
             snapshot.Removed.Clear();
             PrefabInstances.Merge(data, snapshot);
             Dirty(plainGameObject, mode);
+        }
+
+        /// <summary>Stores each value an instance's scripts have that differs from their source's as a
+        /// modification of the instance (a reference by its object), as an instance's file holds them
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave create-assets outside.*).</summary>
+        static void StoreScriptDifferences(PrefabInstanceData data)
+        {
+            var refs = new ValueReferences();
+            var toSource = PrefabInstances.ToSource(data);
+            foreach (var o in PrefabInstances.ObjectsOf(data))
+            {
+                if (o is not MonoBehaviour || PrefabLinks.Of(o) is not PrefabLink link || PrefabLinks.Source(o) is not Object source) continue;
+                var before = PrefabValues.ByPath(PrefabValues.Flatten(PrefabValues.Fields(source, null, refs)));
+                foreach (var (path, value) in PrefabValues.Flatten(PrefabValues.Fields(o, toSource, refs)))
+                {
+                    if (before.TryGetValue(path, out var was) && PrefabValues.Same(was, value)) continue;
+                    bool reference = value.Kind == YKind.Map;
+                    data.Stored.Add((new ObjectRef(link.SourceFileId, link.SourceGuid, 3), path, reference ? "" : value.Text, default));
+                    if (reference) data.ReferenceObjects[(link.SourceFileId, path)] = refs.ObjectOf(value);
+                    data.Edited = true;
+                }
+            }
+            data.OrderByTarget();
         }
 
         static void LinkTo(Object instance, Object asset, PrefabInstanceData data)
