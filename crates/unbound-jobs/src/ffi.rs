@@ -32,7 +32,6 @@ pub struct JobsApi {
     pub max_workers: extern "C" fn() -> i32,
     pub worker_count: extern "C" fn() -> i32,
     pub set_worker_count: extern "C" fn(i32),
-    pub thread_index: extern "C" fn() -> i32,
 }
 
 static API: JobsApi = JobsApi {
@@ -50,7 +49,6 @@ static API: JobsApi = JobsApi {
     max_workers,
     worker_count,
     set_worker_count,
-    thread_index,
 };
 
 /// The table.
@@ -128,8 +126,4 @@ extern "C" fn wait(handle: u64) -> i32 {
 
 extern "C" fn release(handle: u64) {
     crate::release(handle);
-}
-
-extern "C" fn thread_index() -> i32 {
-    crate::thread_index()
 }

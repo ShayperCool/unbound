@@ -29,7 +29,6 @@ namespace Unbound.Runtime.Jobs
         internal delegate* unmanaged<int> MaxWorkers;
         internal delegate* unmanaged<int> WorkerCount;
         internal delegate* unmanaged<int, void> SetWorkerCount;
-        internal delegate* unmanaged<int> ThreadIndex;
     }
 
     internal static unsafe partial class JobSystem
