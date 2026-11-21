@@ -745,10 +745,14 @@ pub fn read_probes(handle: u64, out: &mut [f32]) -> Result<usize> {
 /// its normals and limits).
 /// 5: automatic charts of the instance's geometry as the precompute makes it (turned instances
 /// too), a Max Distance of zero, parts without area and the rounds' limit.
-const UV_CACHE_VERSION: u32 = 5;
+/// 6: parts left on their own keep their own UVs or their projection as the precompute
+/// chooses; choices the rounding decides are taken as the system's layout and clusters have
+/// them (`realtime_uv::fitting_uvs`).
+const UV_CACHE_VERSION: u32 = 6;
 
 /// Renderer `renderer` of system `system`'s realtime lightmap UVs
-/// (`unbound_gi::realtime_uv`), checked against the system's precomputed layout and cached under
+/// (`unbound_gi::realtime_uv::fitting_uvs`: among the ways the precompute's rounding allows, the
+/// one the system's precomputed layout has), checked against that layout and cached under
 /// `<project>/Library/Unbound/RealtimeUVs` by a hash of the inputs. Writes `2 * vertices`
 /// floats into `out`.
 pub fn realtime_uvs(
@@ -795,19 +799,16 @@ pub fn realtime_uvs(
     let output = cached_or_fresh(
         &path,
         input.positions.len(),
-        || unbound_gi::realtime_uv::realtime_uvs(input),
+        || {
+            // Made outside the scenes' lock; only the choice among them takes the layout.
+            let choices = unbound_gi::realtime_uv::realtime_uv_choices(input)?;
+            with_layout(handle, system, renderer, |layout, st| {
+                unbound_gi::realtime_uv::fitting_choice(choices, input, layout, renderer, st)
+            })
+        },
         |output| {
-            with_scene(handle, |scene| {
-                let solver = scene
-                    .systems
-                    .get(system)
-                    .with_context(|| format!("no system {system}"))?;
-                let st = *scene
-                    .renderer_st
-                    .get(system)
-                    .and_then(|r| r.get(renderer))
-                    .with_context(|| format!("no renderer {renderer} in system {system}"))?;
-                unbound_gi::realtime_uv::check_layout(solver.system(), st, output)
+            with_layout(handle, system, renderer, |layout, st| {
+                unbound_gi::realtime_uv::check_layout(layout, st, output)
             })
         },
     )?;
@@ -815,6 +816,28 @@ pub fn realtime_uvs(
         o.copy_from_slice(uv);
     }
     Ok(())
+}
+
+/// `f` of system `system`'s precomputed data and the place of its renderer `renderer` in it
+/// (`dynamicLightmapSTInSystem`).
+fn with_layout<T>(
+    handle: u64,
+    system: usize,
+    renderer: usize,
+    f: impl FnOnce(&unbound_gi::data::System, [f32; 4]) -> Result<T>,
+) -> Result<T> {
+    with_scene(handle, |scene| {
+        let solver = scene
+            .systems
+            .get(system)
+            .with_context(|| format!("no system {system}"))?;
+        let st = *scene
+            .renderer_st
+            .get(system)
+            .and_then(|r| r.get(renderer))
+            .with_context(|| format!("no renderer {renderer} in system {system}"))?;
+        f(solver.system(), st)
+    })
 }
 
 /// The cache entry at `path` when it passes `check` (a cached layout is checked again, with its

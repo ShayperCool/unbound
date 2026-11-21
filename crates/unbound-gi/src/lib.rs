@@ -13,6 +13,7 @@ pub mod precompute;
 pub mod probes;
 pub mod realtime_uv;
 pub mod solver;
+mod uv_choice;
 pub mod visibility;
 
 #[cfg(test)]

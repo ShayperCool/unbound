@@ -939,8 +939,249 @@ pub(crate) fn pack_in_order(
     }
 }
 
-/// The instance's realtime lightmap UVs.
+/// The instance's realtime lightmap UVs, as the arithmetic here makes them (the first of
+/// [`realtime_uv_choices`]).
 pub fn realtime_uvs(input: &Input) -> Result<Output> {
+    Ok(realtime_uv_choices(input)?.swap_remove(0))
+}
+
+/// Two layouts whose UVs are this close, in texels, are one.
+const SAME_LAYOUT_TEXELS: f64 = 1e-3;
+
+/// Whether two layouts put every vertex at the same texel.
+fn same_layout(a: &Output, b: &Output) -> bool {
+    a.width == b.width
+        && a.height == b.height
+        && a.uvs.len() == b.uvs.len()
+        && a.uvs.iter().zip(&b.uvs).all(|(p, q)| {
+            ((p[0] - q[0]) as f64 * a.width as f64).abs() <= SAME_LAYOUT_TEXELS
+                && ((p[1] - q[1]) as f64 * a.height as f64).abs() <= SAME_LAYOUT_TEXELS
+        })
+}
+
+/// The instance's realtime lightmap UVs that a system's precomputed layout has (`check_layout`)
+/// among those the precompute's rounding allows ([`realtime_uv_choices`]). When several that
+/// differ fit it (charts of one size in each other's blocks), the one that puts the surface
+/// where the system's clusters sample it ([`misfit`]) is taken when it does so clearly better
+/// than the others. Fails with the check's error of the first when none fits, and when no one
+/// of several fits clearly best: which the precompute made is then not known. `renderer`: the
+/// instance's place among the system's renderers.
+pub fn fitting_uvs(
+    input: &Input,
+    system: &System,
+    renderer: usize,
+    st: [f32; 4],
+) -> Result<Output> {
+    fitting_choice(realtime_uv_choices(input)?, input, system, renderer, st)
+}
+
+/// [`fitting_uvs`] among `choices`, the instance's [`realtime_uv_choices`].
+pub fn fitting_choice(
+    choices: Vec<Output>,
+    input: &Input,
+    system: &System,
+    renderer: usize,
+    st: [f32; 4],
+) -> Result<Output> {
+    let mut first_error = None;
+    let mut fitting: Vec<Output> = Vec::new();
+    for output in choices {
+        match check_layout(system, st, &output) {
+            Ok(()) => fitting.push(output),
+            Err(e) => {
+                first_error.get_or_insert(e);
+            }
+        }
+    }
+    if fitting.len() <= 1 {
+        return fitting
+            .pop()
+            .ok_or_else(|| first_error.expect("at least one layout"));
+    }
+    let misfits: Vec<Option<f64>> = fitting
+        .iter()
+        .map(|output| {
+            misfit(
+                system,
+                renderer,
+                st,
+                output,
+                input.positions,
+                input.triangles,
+            )
+        })
+        .collect();
+    let mut order: Vec<usize> = (0..fitting.len()).collect();
+    order.sort_by(|&a, &b| {
+        let key = |i: usize| misfits[i].unwrap_or(f64::INFINITY);
+        key(a).total_cmp(&key(b))
+    });
+    let (best, next) = (misfits[order[0]], misfits[order[1]]);
+    ensure!(
+        best.is_some_and(|best| next.is_none_or(|next| best <= MISFIT_RATIO * next)),
+        "the precomputed layout fits {} ways of making the charts that the precompute's rounding decides, none clearly closest to where the system's clusters sample the surface (misfits {misfits:?} m): which the precompute took is not known",
+        fitting.len()
+    );
+    Ok(fitting.swap_remove(order[0]))
+}
+
+/// A layout is taken over another that fits the precomputed chart mask too when its misfit is
+/// at most this share of the other's.
+const MISFIT_RATIO: f64 = 0.5;
+
+/// How far a layout puts the instance's surface from where the system's clusters sample it:
+/// for each group of a cluster's points on this instance, the mean surface point (by the
+/// layout) of the texels the group samples its material from against the mean of the group's
+/// points; the root mean square distance between the two sets of means, by the group's
+/// points, after the rigid motion that brings them closest (the instance's positions may be
+/// its own, turned from the world). None with fewer than three groups.
+pub(crate) fn misfit(
+    system: &System,
+    renderer: usize,
+    st: [f32; 4],
+    output: &Output,
+    positions: &[[f32; 3]],
+    triangles: &[[u32; 3]],
+) -> Option<f64> {
+    let (w, h) = (output.width as usize, output.height as usize);
+    let (sw, sh) = (
+        system.transport.width as f32,
+        system.transport.height as f32,
+    );
+    let origin = [st[2] * sw, st[3] * sh].map(|v| v.round() as i64);
+    // Each texel's triangles: those whose bounds, a texel wider, cover it.
+    let mut cells: Vec<Vec<u32>> = vec![Vec::new(); w * h];
+    let corners = |t: &[u32; 3]| {
+        t.map(|v| {
+            let uv = output.uvs[v as usize];
+            [uv[0] as f64 * w as f64, uv[1] as f64 * h as f64]
+        })
+    };
+    for (i, t) in triangles.iter().enumerate() {
+        let c = corners(t);
+        let low =
+            |k: usize| (c.iter().map(|p| p[k]).fold(f64::MAX, f64::min).floor() - 1.0).max(0.0);
+        let high = |k: usize, n: usize| {
+            (c.iter().map(|p| p[k]).fold(f64::MIN, f64::max).floor() + 1.0).min(n as f64 - 1.0)
+        };
+        if high(0, w) < low(0) || high(1, h) < low(1) {
+            continue;
+        }
+        for y in low(1) as usize..=high(1, h) as usize {
+            for x in low(0) as usize..=high(0, w) as usize {
+                cells[y * w + x].push(i as u32);
+            }
+        }
+    }
+    // The surface at a texel's centre: the triangle it is deepest in (or least outside of),
+    // its corners weighted by the point's place in it, held inside.
+    let surface = |x: usize, y: usize| -> Option<[f64; 3]> {
+        let at = [x as f64 + 0.5, y as f64 + 0.5];
+        let mut best: Option<(f64, [f64; 3], usize)> = None;
+        for &i in &cells[y * w + x] {
+            let c = corners(&triangles[i as usize]);
+            let area = cross2(c[0], c[1], c[2]);
+            if area == 0.0 {
+                continue;
+            }
+            let b = [
+                cross2(at, c[1], c[2]) / area,
+                cross2(c[0], at, c[2]) / area,
+                cross2(c[0], c[1], at) / area,
+            ];
+            let depth = b[0].min(b[1]).min(b[2]);
+            if best.is_none_or(|(d, ..)| depth > d) {
+                best = Some((depth, b, i as usize));
+            }
+        }
+        let (_, b, i) = best?;
+        let b = b.map(|v| v.max(0.0));
+        let total: f64 = b.iter().sum();
+        let p = triangles[i].map(|v| positions[v as usize].map(|x| x as f64));
+        Some([0, 1, 2].map(|k| (b[0] * p[0][k] + b[1] * p[1][k] + b[2] * p[2][k]) / total))
+    };
+    let materials = &system.materials;
+    let samples = &system.input;
+    let mut pairs: Vec<([f64; 3], [f64; 3], f64)> = Vec::new();
+    for c in 0..materials.cluster_groups.len().saturating_sub(1) {
+        let mut point = *samples.cluster_points.get(c)? as usize;
+        for g in materials.cluster_groups[c] as usize..materials.cluster_groups[c + 1] as usize {
+            let (instance, count) = materials.groups[g];
+            let points = point..point + count as usize;
+            point += count as usize;
+            if materials.instance_renderers.get(instance as usize) != Some(&(renderer as u16)) {
+                continue;
+            }
+            let (mut sum, mut weight) = ([0.0f64; 3], 0.0f64);
+            let first = materials.group_samples[g] as usize;
+            let last = materials.group_samples[g + 1] as usize;
+            for &((tx, ty), sample_weight) in &materials.samples[first..last] {
+                let (x, y) = (tx as i64 - origin[0], ty as i64 - origin[1]);
+                if !(0..w as i64).contains(&x) || !(0..h as i64).contains(&y) {
+                    continue;
+                }
+                if let Some(p) = surface(x as usize, y as usize) {
+                    for k in 0..3 {
+                        sum[k] += p[k] * sample_weight as f64;
+                    }
+                    weight += sample_weight as f64;
+                }
+            }
+            let cluster = samples.positions.get(points.clone())?;
+            if weight == 0.0 || cluster.is_empty() {
+                continue;
+            }
+            let mut centre = [0.0f64; 3];
+            for q in cluster {
+                for k in 0..3 {
+                    centre[k] += q[k] as f64 / cluster.len() as f64;
+                }
+            }
+            pairs.push((sum.map(|v| v / weight), centre, count as f64));
+        }
+    }
+    (pairs.len() >= 3).then(|| rigid_misfit(&pairs))
+}
+
+/// The weighted root mean square distance between `p` and `q` points after the rotation and
+/// translation that bring them closest (by the quaternion of the largest eigenvalue of their
+/// cross-covariance's symmetric 4x4 form).
+fn rigid_misfit(pairs: &[([f64; 3], [f64; 3], f64)]) -> f64 {
+    let total: f64 = pairs.iter().map(|p| p.2).sum();
+    let mut centres = [[0.0f64; 3]; 2];
+    for (p, q, w) in pairs {
+        for k in 0..3 {
+            centres[0][k] += p[k] * w / total;
+            centres[1][k] += q[k] * w / total;
+        }
+    }
+    let mut s = [[0.0f64; 3]; 3];
+    let mut spread = 0.0;
+    for (p, q, w) in pairs {
+        let a = [0, 1, 2].map(|k| p[k] - centres[0][k]);
+        let b = [0, 1, 2].map(|k| q[k] - centres[1][k]);
+        for i in 0..3 {
+            for j in 0..3 {
+                s[i][j] += w * a[i] * b[j];
+            }
+            spread += w * (a[i] * a[i] + b[i] * b[i]);
+        }
+    }
+    let [[xx, xy, xz], [yx, yy, yz], [zx, zy, zz]] = s;
+    let n = [
+        [xx + yy + zz, yz - zy, zx - xz, xy - yx],
+        [yz - zy, xx - yy - zz, xy + yx, zx + xz],
+        [zx - xz, xy + yx, -xx + yy - zz, yz + zy],
+        [xy - yx, zx + xz, yz + zy, -xx - yy + zz],
+    ];
+    let (_, values) = crate::eigen::eigen_decomposition(&n);
+    ((spread - 2.0 * values[3]).max(0.0) / total).sqrt()
+}
+
+/// The instance's realtime lightmap UVs in each way the choices that the precompute's rounding
+/// decides can be taken (automatic charts: [`auto_charts::auto_chart_choices`]), each layout
+/// once; the first is the one the arithmetic here gives.
+pub fn realtime_uv_choices(input: &Input) -> Result<Vec<Output>> {
     ensure!(
         input.uvs.len() == input.positions.len(),
         "{} UVs for {} vertices",
@@ -971,23 +1212,42 @@ pub fn realtime_uvs(input: &Input) -> Result<Output> {
     {
         bail!("a vertex with a non-finite position or lightmap UV");
     }
-    let made;
-    let (lists, chart_uvs, automatic) = match input.charts {
-        Charts::Preserved => (charts(input), input.uvs, false),
-        Charts::Automatic { normals, params } => {
-            let auto_charts::Charts { uvs, triangles } = auto_charts::auto_charts(
-                &auto_charts::Mesh {
-                    positions: input.positions,
-                    normals,
-                    uvs: input.uvs,
-                    triangles: input.triangles,
-                },
-                &params,
-            )?;
-            made = uvs;
-            (triangles, made.as_slice(), true)
-        }
+    let made = match input.charts {
+        Charts::Preserved => return Ok(vec![laid_out(input, charts(input), input.uvs, false)?]),
+        Charts::Automatic { normals, params } => auto_charts::auto_chart_choices(
+            &auto_charts::Mesh {
+                positions: input.positions,
+                normals,
+                uvs: input.uvs,
+                triangles: input.triangles,
+            },
+            &params,
+        )?,
     };
+    let mut outputs: Vec<Output> = Vec::with_capacity(made.len());
+    for (i, auto_charts::Charts { uvs, triangles }) in made.into_iter().enumerate() {
+        match laid_out(input, triangles, &uvs, true) {
+            Ok(output) => {
+                if !outputs.iter().any(|o| same_layout(o, &output)) {
+                    outputs.push(output);
+                }
+            }
+            Err(e) if i == 0 => return Err(e),
+            // Another way that cannot be laid out is not one the precompute took.
+            Err(_) => {}
+        }
+    }
+    Ok(outputs)
+}
+
+/// The charts (`lists`: each chart's triangles; `chart_uvs`: their UVs) sized, packed and laid
+/// out in the instance's UV space.
+fn laid_out(
+    input: &Input,
+    lists: Vec<Vec<usize>>,
+    chart_uvs: &[[f32; 2]],
+    automatic: bool,
+) -> Result<Output> {
     let charts: Vec<Chart> = lists
         .into_iter()
         .map(|t| build_chart(input, chart_uvs, automatic, t))

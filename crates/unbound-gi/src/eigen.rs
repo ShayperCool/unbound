@@ -1,14 +1,12 @@
-//! Eigenvalues and eigenvectors of a symmetric 3x3 matrix: Householder tridiagonalisation and
+//! Eigenvalues and eigenvectors of a symmetric matrix: Householder tridiagonalisation and
 //! the QL method with implicit shifts (the classic public-domain routines). The eigenvalues
 //! come out ascending; column `k` of the result is the eigenvector of eigenvalue `k`.
-
-const N: usize = 3;
 
 fn hypot2(x: f64, y: f64) -> f64 {
     (x * x + y * y).sqrt()
 }
 
-fn tred2(v: &mut [[f64; N]; N], d: &mut [f64; N], e: &mut [f64; N]) {
+fn tred2<const N: usize>(v: &mut [[f64; N]; N], d: &mut [f64; N], e: &mut [f64; N]) {
     for j in 0..N {
         d[j] = v[N - 1][j];
     }
@@ -102,7 +100,7 @@ fn tred2(v: &mut [[f64; N]; N], d: &mut [f64; N], e: &mut [f64; N]) {
     e[0] = 0.0;
 }
 
-fn tql2(v: &mut [[f64; N]; N], d: &mut [f64; N], e: &mut [f64; N]) {
+fn tql2<const N: usize>(v: &mut [[f64; N]; N], d: &mut [f64; N], e: &mut [f64; N]) {
     for i in 1..N {
         e[i - 1] = e[i];
     }
@@ -193,7 +191,7 @@ fn tql2(v: &mut [[f64; N]; N], d: &mut [f64; N], e: &mut [f64; N]) {
 }
 
 /// `(vectors, values)` of a symmetric matrix.
-pub fn eigen_decomposition(a: &[[f64; N]; N]) -> ([[f64; N]; N], [f64; N]) {
+pub fn eigen_decomposition<const N: usize>(a: &[[f64; N]; N]) -> ([[f64; N]; N], [f64; N]) {
     let mut v = *a;
     let mut d = [0.0; N];
     let mut e = [0.0; N];

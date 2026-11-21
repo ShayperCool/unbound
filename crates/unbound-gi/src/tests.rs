@@ -4394,3 +4394,187 @@ fn the_room_baked_from_its_renderers_lights_as_the_editors() {
     // Measured: 76 (over the Editor's layout 75).
     assert!(fails * 100 <= 76 * 115, "{fails}");
 }
+
+/// A mesh asset of the probe as `RealtimeGISetup.Custom` writes it (positions, normals, uv0 and
+/// uv1 interleaved in one stream of 40 bytes a vertex; 16-bit indices): its positions, normals,
+/// lightmap UVs (uv1) and triangles.
+fn probe_mesh(asset: &str) -> AutoMesh {
+    let text = std::fs::read_to_string(probe().join(format!("Assets/Scenes/{asset}.asset")))
+        .unwrap_or_else(|e| panic!("{asset}: {e}"));
+    let field = |name: &str| {
+        let line = text
+            .lines()
+            .find(|l| l.trim_start().starts_with(name))
+            .unwrap_or_else(|| panic!("{asset}: no {name}"));
+        line.split_once(':').unwrap().1.trim().to_string()
+    };
+    let bytes = |hex: &str| -> Vec<u8> {
+        (0..hex.len() / 2)
+            .map(|i| u8::from_str_radix(&hex[2 * i..2 * i + 2], 16).unwrap())
+            .collect()
+    };
+    assert_eq!(field("m_IndexFormat:"), "0", "{asset}");
+    let count: usize = field("m_VertexCount:").parse().unwrap();
+    let data = bytes(&field("_typelessdata:"));
+    assert_eq!(data.len(), count * 40, "{asset}");
+    let float = |at: usize| f32::from_le_bytes(data[at..at + 4].try_into().unwrap());
+    let indices: Vec<u32> = bytes(&field("m_IndexBuffer:"))
+        .chunks_exact(2)
+        .map(|c| u16::from_le_bytes([c[0], c[1]]) as u32)
+        .collect();
+    let positions = (0..count)
+        .map(|v| [0, 1, 2].map(|k| float(40 * v + 4 * k)))
+        .collect();
+    let normals = (0..count)
+        .map(|v| [0, 1, 2].map(|k| float(40 * v + 12 + 4 * k)))
+        .collect();
+    let uvs = (0..count)
+        .map(|v| [0, 1].map(|k| float(40 * v + 32 + 4 * k)))
+        .collect();
+    let triangles = indices
+        .chunks_exact(3)
+        .map(|t| [t[0], t[1], t[2]])
+        .collect();
+    (positions, normals, uvs, triangles)
+}
+
+/// A renderer as `check_fitting_layouts` takes it: its mesh, instance matrix, limits and world
+/// units per texel.
+type FittingShape = (
+    AutoMesh,
+    crate::instance::Matrix,
+    crate::auto_charts::Params,
+    f32,
+);
+
+/// Checks each renderer of `scene` that `shape` names (its mesh, instance matrix and limits)
+/// against the scene's precomputed chart mask, its realtime lightmap UVs taken among the ways
+/// the precompute's rounding allows (`realtime_uv::fitting_uvs`); answers the number of charts
+/// of each renderer checked, by name.
+fn check_fitting_layouts(
+    scene: &str,
+    shape: &dyn Fn(&str) -> Option<FittingShape>,
+) -> std::collections::BTreeMap<String, usize> {
+    let data = scene_data(scene);
+    let names = renderer_names(scene);
+    let mut checked = std::collections::BTreeMap::new();
+    for (k, &(object, _)) in data.renderers.iter().enumerate() {
+        let name = names[&object].as_str();
+        let Some(((positions, normals, uvs, triangles), matrix, params, pixel_size)) = shape(name)
+        else {
+            continue;
+        };
+        let system = data
+            .systems
+            .iter()
+            .find(|s| (s.first_renderer..s.first_renderer + s.renderer_count).contains(&k))
+            .unwrap();
+        let (positions, normals) = crate::instance::apply(&matrix, &positions, &normals).unwrap();
+        let out = crate::realtime_uv::fitting_uvs(
+            &crate::realtime_uv::Input {
+                positions: &positions,
+                uvs: &uvs,
+                triangles: &triangles,
+                pixel_size,
+                min_chart_texels: 4,
+                charts: crate::realtime_uv::Charts::Automatic {
+                    normals: &normals,
+                    params,
+                },
+            },
+            system,
+            k - system.first_renderer,
+            data.renderer_st[k],
+        )
+        .unwrap_or_else(|e| panic!("{scene} {name}: {e:#}"));
+        checked.insert(name.to_string(), out.charts.len());
+    }
+    checked
+}
+
+/// The Room's own renderers (cubes) of a scene made as RoomAuto's room is.
+fn room_cube(name: &str) -> Option<FittingShape> {
+    let &(_, asset, scale, _, _) = AUTO_SHAPES.iter().take(7).find(|s| s.0 == name)?;
+    assert!(asset.is_none());
+    let cube = (
+        CUBE_POSITIONS.to_vec(),
+        CUBE_NORMALS.to_vec(),
+        CUBE_UV2.to_vec(),
+        CUBE_TRIANGLES.to_vec(),
+    );
+    Some((cube, scaled(scale), DEFAULT_LIMITS, 0.5))
+}
+
+#[test]
+fn charts_of_curved_and_bent_parts_lie_where_the_precompute_put_them() {
+    // RoomCurved: strips of a quarter circle and bent strips, each one part left on its own,
+    // whose chart is its projection or its own lightmap UVs as their overlap and mapping error
+    // decide. (Unity's sphere, cylinder and capsule are drawn by the probe's gate.)
+    let shape = |name: &str| {
+        if let Some(cube) = room_cube(name) {
+            return Some(cube);
+        }
+        match name {
+            "Arc" | "ArcStretched" | "ArcFolded" | "Bent" | "BentStretched" => Some((
+                probe_mesh(&format!("RoomCurved{name}")),
+                ONE.map(f32::from_bits),
+                DEFAULT_LIMITS,
+                0.5,
+            )),
+            // Scale In Lightmap 4 and 0.25: laid out at the scene's realtime resolution as
+            // they are at 1.
+            "ScaleUp" | "ScaleDown" => {
+                let size = if name == "ScaleUp" {
+                    [0.6; 3]
+                } else {
+                    [2.4, 0.1, 1.6]
+                };
+                let cube = (
+                    CUBE_POSITIONS.to_vec(),
+                    CUBE_NORMALS.to_vec(),
+                    CUBE_UV2.to_vec(),
+                    CUBE_TRIANGLES.to_vec(),
+                );
+                Some((cube, scaled(size), DEFAULT_LIMITS, 0.5))
+            }
+            "Ball" | "Drum" | "Pill" => None,
+            _ => panic!("{name}"),
+        }
+    };
+    let checked = check_fitting_layouts("RoomCurved", &shape);
+    eprintln!("{checked:?}");
+    assert_eq!(checked.len(), 7 + 7);
+}
+
+#[test]
+fn charts_that_rounding_decides_lie_where_the_precompute_put_them() {
+    // RoomRounding: shapes whose charts the precompute's rounding decides, made each way it
+    // allows and taken as the precomputed chart mask and clusters have them.
+    let shape = |name: &str| {
+        if let Some(cube) = room_cube(name) {
+            return Some(cube);
+        }
+        let limits = |max_angle| crate::auto_charts::Params {
+            max_angle,
+            ..DEFAULT_LIMITS
+        };
+        match name {
+            "Slab45" | "BoxOffOrigin" | "TiltedQuad" => Some((
+                probe_mesh(&format!("RoomRounding{name}")),
+                ONE.map(f32::from_bits),
+                DEFAULT_LIMITS,
+                0.5,
+            )),
+            "RoofAtLimit" => Some((
+                probe_mesh("RoomRoundingRoofAtLimit"),
+                ONE.map(f32::from_bits),
+                limits(20.0),
+                0.5,
+            )),
+            _ => panic!("{name}"),
+        }
+    };
+    let checked = check_fitting_layouts("RoomRounding", &shape);
+    eprintln!("{checked:?}");
+    assert_eq!(checked.len(), 7 + 4);
+}

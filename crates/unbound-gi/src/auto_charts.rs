@@ -10,6 +10,7 @@
 //! small beside and near to, or stays a chart of its own. Every chart is then projected onto its
 //! plane, in world units, with its axes turned to the legs of its right-angled triangles.
 use crate::eigen::eigen_decomposition;
+use crate::uv_choice;
 use anyhow::{Result, bail, ensure};
 
 /// The limits of a renderer's Optimize Realtime UVs (Mesh Renderer, Lightmapping).
@@ -54,9 +55,6 @@ const SMALL_SHARE: f32 = 0.1;
 /// digit; off them its normals differ from the ones here in theirs, and a choice between the
 /// two is not made.
 const TIE: f32 = 1e-5;
-/// A group left on its own is planar when its vertices are within this share of its size of
-/// its plane.
-const PLANAR: f32 = 1e-5;
 /// Pairs tried per round, and rounds at most: the precompute's own counts, which no renderer
 /// setting changes.
 const TRIES_PER_ROUND: u32 = 300;
@@ -112,6 +110,13 @@ struct Plane {
 }
 
 impl Plane {
+    /// The plane across `n` through `centre`.
+    fn across(n: [f64; 3], centre: [f64; 3]) -> Plane {
+        Plane {
+            n,
+            d: -((centre[0] * n[0] + n[1] * centre[1]) + n[2] * centre[2]),
+        }
+    }
     /// Whether the plane lies along two coordinate axes.
     fn along_axes(&self) -> bool {
         self.n.iter().filter(|x| **x != 0.0).count() == 1
@@ -129,6 +134,15 @@ impl Plane {
         let n = self.normal();
         ((self.d as f32 + p[1] * n[1]) + (p[2] * n[2] + p[0] * n[0])).abs()
     }
+}
+
+/// How vertices spread about their centre: the axes of their spread, least first, its size
+/// along each, and the plane across the first axis through the centre.
+struct Spread {
+    plane: Plane,
+    axes: [[f64; 3]; 3],
+    values: [f64; 3],
+    centre: [f64; 3],
 }
 
 /// The frame a plane is projected in: a point of it and two unit axes.
@@ -244,6 +258,8 @@ struct Group {
     min: V3,
     max: V3,
     area: f64,
+    /// Its triangles' normals summed by area.
+    normal_sum: [f64; 3],
     normal: V3,
     plane: Plane,
     /// Flat within the limits, and facing one way.
@@ -257,8 +273,84 @@ struct Geometry<'a> {
     max_distance: f32,
     cosine: f32,
     groups: Vec<Group>,
-    /// Set when a test of facing was decided by less than the precompute's rounding.
-    ambiguous: std::cell::Cell<bool>,
+    /// The choices this run takes where the rounding decides.
+    choices: &'a Choices,
+}
+
+/// Choices that the rounding of the precompute's arithmetic decides: a cosine that could have
+/// the other sign there, a test of facing at the Max Angle limit, sets or distances equal but
+/// for rounding, a chart's own UVs and its projection as good but for rounding. Its rounding
+/// may be that of the machine that ran it, so
+/// such a choice has no one answer: every way of taking them is made (`auto_chart_choices`),
+/// the first the one the arithmetic here gives, and a scene's precomputed chart mask and
+/// clusters tell which the Editor took (`realtime_uv::fitting_uvs`).
+struct Choices {
+    /// The options to take at the first choices met, in order; the arithmetic's own after them.
+    forced: Vec<usize>,
+    /// Each choice met: the option taken and how many there were.
+    made: std::cell::RefCell<Vec<(usize, usize)>>,
+    /// The tests decided, so that one test answers alike each time it is made.
+    tests: std::cell::RefCell<std::collections::HashMap<Test, bool>>,
+}
+
+/// A yes-or-no test that the rounding decides.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Test {
+    /// Whether two groups' normals face the same half-space.
+    Side(usize, usize),
+    /// Whether a group faces as a plane does within Max Angle.
+    Facing(usize, [u64; 4]),
+}
+
+impl Test {
+    fn facing(group: usize, plane: &Plane) -> Test {
+        Test::Facing(
+            group,
+            [plane.n[0], plane.n[1], plane.n[2], plane.d].map(f64::to_bits),
+        )
+    }
+    fn side(a: usize, b: usize) -> Test {
+        Test::Side(a.min(b), a.max(b))
+    }
+}
+
+impl Choices {
+    fn new(forced: Vec<usize>) -> Choices {
+        Choices {
+            forced,
+            made: Default::default(),
+            tests: Default::default(),
+        }
+    }
+    /// The answer to a test decided before.
+    fn decided(&self, test: Test) -> Option<bool> {
+        self.tests.borrow().get(&test).copied()
+    }
+    /// The answer to a test: the one decided before, else `ours` or the other, from now on.
+    fn decide(&self, test: Test, ours: bool) -> bool {
+        if let Some(answer) = self.decided(test) {
+            return answer;
+        }
+        let answer = self.either(ours);
+        self.tests.borrow_mut().insert(test, answer);
+        answer
+    }
+    /// One of `options` ways; 0 is the one the arithmetic here gives.
+    fn pick(&self, options: usize) -> usize {
+        let mut made = self.made.borrow_mut();
+        let taken = self
+            .forced
+            .get(made.len())
+            .copied()
+            .unwrap_or(0)
+            .min(options - 1);
+        made.push((taken, options));
+        taken
+    }
+    /// A yes or no that the rounding decides: `ours` or the other.
+    fn either(&self, ours: bool) -> bool {
+        (self.pick(2) == 0) == ours
+    }
 }
 
 fn triangle_area(p: [V3; 3]) -> f32 {
@@ -290,12 +382,22 @@ impl Geometry<'_> {
             plane
         }
     }
+    /// A test of facing at the limit, decided once for the group and the plane.
+    fn decided_facing(&self, group: usize, plane: &Plane, ours: bool) -> bool {
+        self.choices.decide(Test::facing(group, plane), ours)
+    }
     fn corners(&self, triangle: usize) -> [V3; 3] {
         self.triangles[triangle].map(|v| self.mesh.positions[v as usize])
     }
 
     /// The plane through the groups' vertices that their squared distances are least from.
     fn fit(&self, groups: &[usize]) -> Plane {
+        self.spread(groups).plane
+    }
+
+    /// The groups' vertices' spread about their centre: its axes, least spread first, and the
+    /// plane across the first.
+    fn spread(&self, groups: &[usize]) -> Spread {
         let mut sum = [0.0f64; 3];
         let mut count = 0usize;
         for &g in groups {
@@ -324,11 +426,13 @@ impl Geometry<'_> {
         m[1][0] = m[0][1];
         m[2][0] = m[0][2];
         m[2][1] = m[1][2];
-        let (vectors, _) = eigen_decomposition(&m);
-        let n = [vectors[0][0], vectors[1][0], vectors[2][0]];
-        Plane {
-            n,
-            d: -((centre[0] * n[0] + n[1] * centre[1]) + n[2] * centre[2]),
+        let (vectors, values) = eigen_decomposition(&m);
+        let axes = [0, 1, 2].map(|j| [vectors[0][j], vectors[1][j], vectors[2][j]]);
+        Spread {
+            plane: Plane::across(axes[0], centre),
+            axes,
+            values,
+            centre,
         }
     }
 
@@ -455,7 +559,7 @@ fn wound(mesh: &Mesh) -> Vec<[u32; 3]> {
         .collect()
 }
 
-fn geometry<'a>(mesh: &'a Mesh<'a>, params: &Params) -> Geometry<'a> {
+fn geometry<'a>(mesh: &'a Mesh<'a>, params: &Params, choices: &'a Choices) -> Geometry<'a> {
     let triangles = wound(mesh);
     let mut geometry = Geometry {
         mesh,
@@ -463,7 +567,7 @@ fn geometry<'a>(mesh: &'a Mesh<'a>, params: &Params) -> Geometry<'a> {
         max_distance: params.max_distance,
         cosine: (2.0 * (params.max_angle / 360.0) * std::f32::consts::PI).cos(),
         groups: Vec::new(),
-        ambiguous: std::cell::Cell::new(false),
+        choices,
     };
     for triangles in groups(mesh, params.ignore_normals) {
         let mut vertices: Vec<usize> = triangles
@@ -517,6 +621,7 @@ fn geometry<'a>(mesh: &'a Mesh<'a>, params: &Params) -> Geometry<'a> {
             min,
             max,
             area: if degenerate { 0.0 } else { area },
+            normal_sum: sum,
             normal,
             plane: Plane {
                 n: [0.0; 3],
@@ -533,7 +638,6 @@ fn geometry<'a>(mesh: &'a Mesh<'a>, params: &Params) -> Geometry<'a> {
         }
         let (facing, near) = geometry.facing(&plane, normal, geometry.cosine);
         let within = geometry.reach(index, &plane) <= geometry.max_distance;
-        let flat = has_normal && facing && within;
         // The share of its area that faces away from its normal.
         let away: f32 = areas
             .iter()
@@ -543,9 +647,12 @@ fn geometry<'a>(mesh: &'a Mesh<'a>, params: &Params) -> Geometry<'a> {
             .sum();
         let two_sided = degenerate || (away as f64 / area) > SMALL_SHARE as f64;
         // Whether the part is flat is the rounding's only where facing alone decides it.
-        if has_normal && within && !two_sided && near {
-            geometry.ambiguous.set(true);
-        }
+        let facing = if has_normal && within && !two_sided && near {
+            geometry.decided_facing(index, &plane, facing)
+        } else {
+            facing
+        };
+        let flat = has_normal && facing && within;
         let group = &mut geometry.groups[index];
         group.plane = plane;
         group.candidate = flat && !two_sided;
@@ -634,12 +741,14 @@ impl Neighbours {
 }
 
 /// The candidates other than the seeds that lie on the plane within their limits and face as
-/// it does.
+/// it does. A test of facing at the limit is decided (`Choices`), or with `tentative` answered
+/// as decided before or else as the arithmetic here answers it.
 fn on_plane(
     geometry: &Geometry,
     candidates: &[usize],
     seeds: &[usize],
     plane: &Plane,
+    tentative: bool,
 ) -> Vec<usize> {
     candidates
         .iter()
@@ -651,9 +760,16 @@ fn on_plane(
                 return false;
             }
             let within = geometry.reach(g, plane) <= geometry.max_distance;
-            if within && near {
-                geometry.ambiguous.set(true);
-            }
+            let facing = if within && near && tentative {
+                geometry
+                    .choices
+                    .decided(Test::facing(g, plane))
+                    .unwrap_or(facing)
+            } else if within && near {
+                geometry.decided_facing(g, plane, facing)
+            } else {
+                facing
+            };
             facing && within
         })
         .collect()
@@ -774,16 +890,19 @@ fn set_key(set: &[usize]) -> u64 {
     })
 }
 
-/// One pair tried in a round, and the area of the set it gathered.
+/// One pair tried in a round, and the area of the set it gathered; `open`: the tests the
+/// rounding decides that the pair must pass to be taken, not decided yet, with the answer of
+/// the arithmetic here.
 struct Try {
     area: f32,
     key: u64,
     plane: Plane,
     a: usize,
     b: usize,
+    open: Vec<(Test, bool)>,
 }
 
-fn join(geometry: &Geometry) -> Result<Joined> {
+fn join(geometry: &Geometry) -> Joined {
     let count = geometry.groups.len();
     let mut joined = Joined {
         of_group: vec![NONE; count],
@@ -805,16 +924,26 @@ fn join(geometry: &Geometry) -> Result<Joined> {
     // rounding of their normals could give it the other sign: whether they face the same
     // half-space, and so whether they may be joined at all, is then the rounding's. A cosine
     // all of whose terms are zero is zero in any arithmetic.
+    let mut unsettled = std::collections::HashSet::new();
     for &a in &candidates {
         for &b in neighbours.lists[a].iter().filter(|&&b| b > a) {
             let (na, nb) = (geometry.groups[a].normal, geometry.groups[b].normal);
             let exactly_zero = (0..3).all(|k| na[k] == 0.0 || nb[k] == 0.0);
-            ensure!(
-                exactly_zero || cosine_settled(na, nb) || !joins_at_right_angle(geometry, a, b),
-                "two faces at a right angle but for rounding are close enough to one plane to be joined: whether the precompute joins them hangs on that rounding"
-            );
+            if !exactly_zero && !cosine_settled(na, nb) && joins_at_right_angle(geometry, a, b) {
+                unsettled.insert(Test::side(a, b));
+            }
         }
     }
+    // A test the rounding decides: its answer if decided, else noted as open (`Try`).
+    let open_test = |test: Test, ours: bool, open: &mut Vec<(Test, bool)>| -> bool {
+        match geometry.choices.decided(test) {
+            Some(answer) => answer,
+            None => {
+                open.push((test, ours));
+                true
+            }
+        }
+    };
     let mut boxes: Vec<(V3, V3)> = Vec::new();
     let mut random = Random::new();
     let mut place = vec![NONE; count];
@@ -825,9 +954,8 @@ fn join(geometry: &Geometry) -> Result<Joined> {
         if candidates.len() < 2 {
             break;
         }
-        let mut best: Option<(f32, Plane, usize, usize, u64)> = None;
         tries.clear();
-        for _ in 0..TRIES_PER_ROUND {
+        'tries: for _ in 0..TRIES_PER_ROUND {
             let a = candidates[(random.next() as u64 % candidates.len() as u64) as usize];
             neighbours.tidy(a);
             if neighbours.lists[a].is_empty() {
@@ -836,7 +964,14 @@ fn join(geometry: &Geometry) -> Result<Joined> {
             let b = neighbours.lists[a]
                 [(random.next() as u64 % neighbours.lists[a].len() as u64) as usize];
             let (na, nb) = (geometry.groups[a].normal, geometry.groups[b].normal);
-            if dot(na, nb) <= 0.0 {
+            let mut open = Vec::new();
+            let side = Test::side(a, b);
+            let same = if unsettled.contains(&side) {
+                open_test(side, dot(na, nb) > 0.0, &mut open)
+            } else {
+                dot(na, nb) > 0.0
+            };
+            if !same {
                 continue;
             }
             let plane = geometry.oriented(geometry.fit(&[a, b]), na);
@@ -850,14 +985,18 @@ fn join(geometry: &Geometry) -> Result<Joined> {
             {
                 continue;
             }
-            // Within reach, a test near its limit decides whether the pair is tried.
-            if near_a || near_b {
-                geometry.ambiguous.set(true);
+            // Within reach, a test near its limit decides whether the pair is taken.
+            for (g, facing, near) in [(a, fa, near_a), (b, fb, near_b)] {
+                let facing = if near {
+                    open_test(Test::facing(g, &plane), facing, &mut open)
+                } else {
+                    facing
+                };
+                if !facing {
+                    continue 'tries;
+                }
             }
-            if !(fa && fb) {
-                continue;
-            }
-            let mut rest = on_plane(geometry, &candidates, &[a, b], &plane);
+            let mut rest = on_plane(geometry, &candidates, &[a, b], &plane, true);
             let mut set = if a == b { vec![a] } else { vec![a, b] };
             take_connected(&neighbours, &mut set, &mut rest, &mut place);
             let area = geometry.projected_area(&set, &plane);
@@ -868,30 +1007,55 @@ fn join(geometry: &Geometry) -> Result<Joined> {
                 plane,
                 a,
                 b,
+                open,
             });
-            if best.as_ref().is_none_or(|(most, ..)| area > *most) && area > 0.0 {
-                best = Some((area, plane, a, b, key));
-            }
         }
-        let Some((most, plane, a, b, key)) = best else {
+        // The first pair of the largest area is taken (later ones of the same area are not
+        // larger). A pair with open tests is taken when they pass; they are decided from the
+        // largest pair down, only until a pair is taken.
+        let mut order: Vec<usize> = (0..tries.len()).filter(|&i| tries[i].area > 0.0).collect();
+        order.sort_by(|&i, &j| tries[j].area.total_cmp(&tries[i].area).then(i.cmp(&j)));
+        let Some(first) = order.into_iter().find(|&i| {
+            tries[i]
+                .open
+                .iter()
+                .all(|&(test, ours)| geometry.choices.decide(test, ours))
+        }) else {
             break;
         };
+        let Try {
+            area: most,
+            mut plane,
+            mut a,
+            mut b,
+            key,
+            ..
+        } = tries[first];
         let gather = |a: usize, b: usize, plane: &Plane, place: &mut [usize]| {
-            let mut rest = on_plane(geometry, &candidates, &[a, b], plane);
+            let mut rest = on_plane(geometry, &candidates, &[a, b], plane, false);
             let mut set = if a == b { vec![a] } else { vec![a, b] };
             take_connected(&neighbours, &mut set, &mut rest, place);
             set
         };
-        let set = gather(a, b, &plane, &mut place);
+        let mut set = gather(a, b, &plane, &mut place);
         // Another set whose area is the winner's or is so but for rounding: along the
         // coordinate axes the arithmetic here is the precompute's, and the first tried is
         // taken. Off them the precompute's own rounding decides, unless the two areas are the
         // very same and stay so over the sweep of `stays_tied`: equal by their shape, the first
-        // tried is taken there too.
+        // tried is taken there too. Otherwise each of them may win.
         let along = plane.along_axes();
         let mut checked: Vec<(u64, Plane)> = Vec::new();
+        let mut rivals: Vec<(Plane, usize, usize)> = Vec::new();
         for other in &tries {
             if other.key == key || (other.area != most && !tied(other.area, most)) {
+                continue;
+            }
+            // (A pair whose open tests are not all decided to pass is not taken as a rival.)
+            if !other
+                .open
+                .iter()
+                .all(|&(test, _)| geometry.choices.decided(test) == Some(true))
+            {
                 continue;
             }
             if along && other.plane.along_axes() {
@@ -905,11 +1069,16 @@ fn join(geometry: &Geometry) -> Result<Joined> {
                 let other_set = gather(other.a, other.b, &other.plane, &mut place);
                 stays_tied(geometry, (&set, &plane), (&other_set, &other.plane))
             };
-            ensure!(
-                by_shape,
-                "two sets of faces are the largest of a round but for rounding (areas {most} and {}): which the precompute takes hangs on that rounding",
-                other.area
-            );
+            if !by_shape {
+                rivals.push((other.plane, other.a, other.b));
+            }
+        }
+        if !rivals.is_empty() {
+            let taken = geometry.choices.pick(rivals.len() + 1);
+            if taken > 0 {
+                (plane, a, b) = rivals[taken - 1];
+                set = gather(a, b, &plane, &mut place);
+            }
         }
         let mut fitted = geometry.fit(&set);
         if dot(plane.normal(), fitted.normal()) < 0.0 {
@@ -932,7 +1101,7 @@ fn join(geometry: &Geometry) -> Result<Joined> {
         boxes.push(bounds);
     }
     for list in [&others, &candidates] {
-        fold(geometry, &mut joined, list, &boxes)?;
+        fold(geometry, &mut joined, list, &boxes);
     }
     joined.joined = joined.planes.len();
     for g in 0..count {
@@ -941,18 +1110,13 @@ fn join(geometry: &Geometry) -> Result<Joined> {
             joined.planes.push(geometry.groups[g].plane);
         }
     }
-    Ok(joined)
+    joined
 }
 
 /// Folds small groups into the joined set they are nearest to: one whose box they reach, that
 /// is more than ten times their area, and whose plane all their vertices are within the
 /// distance limit of. Their direction is not asked.
-fn fold(
-    geometry: &Geometry,
-    joined: &mut Joined,
-    list: &[usize],
-    boxes: &[(V3, V3)],
-) -> Result<()> {
+fn fold(geometry: &Geometry, joined: &mut Joined, list: &[usize], boxes: &[(V3, V3)]) {
     let mut areas = vec![0.0f32; joined.planes.len()];
     for (g, &set) in joined.of_group.iter().enumerate() {
         if set != NONE {
@@ -980,17 +1144,25 @@ fn fold(
             continue;
         }
         // Sets as near or so but for rounding: the first is taken along the axes (a slab's
-        // end face between its two large faces); off them the choice is not made.
+        // end face between its two large faces); off them each may take it.
         let along = joined.planes[into].along_axes();
-        ensure!(
-            reaches.iter().all(|&(reach, set)| set == into
-                || (reach != nearest && !tied(reach, nearest))
-                || (along && joined.planes[set].along_axes())),
-            "a small part is as near to two sets of faces but for rounding: which of them the precompute folds it into hangs on that rounding"
-        );
+        let rivals: Vec<usize> = reaches
+            .iter()
+            .filter(|&&(reach, set)| {
+                set != into
+                    && (reach == nearest || tied(reach, nearest))
+                    && !(along && joined.planes[set].along_axes())
+            })
+            .map(|&(_, set)| set)
+            .collect();
+        if !rivals.is_empty() {
+            let taken = geometry.choices.pick(rivals.len() + 1);
+            if taken > 0 {
+                into = rivals[taken - 1];
+            }
+        }
         joined.of_group[g] = into;
     }
-    Ok(())
 }
 
 /// A right-angled triangle's two legs and their directions: the first corner, in the order
@@ -1251,38 +1423,9 @@ fn joins_at_right_angle(geometry: &Geometry, a: usize, b: usize) -> bool {
     })
 }
 
-/// Below this, a chart's own lightmap UVs are as true to its shape as its projection is: the
-/// largest difference between the scales of a triangle's three edges, over the smallest.
+/// Two charts are laid out alike when one is the other but for a scale and an offset along each
+/// axis within this share of its extent.
 const OWN_UVS_AS_TRUE: f32 = 1e-3;
-
-/// How far a group's own lightmap UVs are from a scaled copy of its shape: over its triangles,
-/// the largest ratio between the scales (UV length over length) of two edges, less one.
-fn own_uv_distortion(geometry: &Geometry, group: &Group) -> f32 {
-    let mut worst = 0.0f32;
-    for &t in &group.triangles {
-        let [a, b, c] = geometry.triangles[t].map(|v| v as usize);
-        let (mut least, mut most) = (f32::MAX, 0.0f32);
-        for (i, j) in [(a, b), (a, c), (b, c)] {
-            let e = sub(geometry.mesh.positions[j], geometry.mesh.positions[i]);
-            let length = dot(e, e).sqrt();
-            let (p, q) = (geometry.mesh.uvs[i], geometry.mesh.uvs[j]);
-            let own = ((q[0] - p[0]).powi(2) + (q[1] - p[1]).powi(2)).sqrt();
-            if length <= 0.0 {
-                continue;
-            }
-            least = least.min(own / length);
-            most = most.max(own / length);
-        }
-        if most > 0.0 {
-            worst = worst.max(if least > 0.0 {
-                most / least - 1.0
-            } else {
-                f32::MAX
-            });
-        }
-    }
-    worst
-}
 
 /// Whether a group's own lightmap UVs lay it out as `projected` does: the same but for a scale
 /// and an offset along each axis, which a chart's fit into its texels takes out again. Then it
@@ -1311,12 +1454,91 @@ fn laid_out_alike(mesh: &Mesh, projected: &[[f32; 2]], group: &Group) -> bool {
     })
 }
 
-/// The automatic charts of a mesh. Fails for what is not made as the Editor makes it: Ignore
-/// Normals, a part of the mesh that is not flat within the limits, a part left on its own that
-/// is bent or whose own UVs are as true to its shape as its projection on a tilted plane, and
-/// every choice that rounding decides (faces at a right angle but for rounding that could
-/// join, sets or distances that tie but for rounding).
+/// How far apart two overlaps may be from the choice's margin, and two mapping errors (a share
+/// of the larger), for the precompute's rounding to give the other answer: overlaps from the
+/// same triangles drawn in other last digits, angles from unit vectors of other last digits.
+const OVERLAP_ROUNDING: f32 = 1e-4;
+const MAPPING_ROUNDING: f64 = 1e-3;
+/// Mapping errors below this, per square metre of the chart, are rounding alone.
+const MAPPING_NOISE: f64 = 1e-8;
+/// A group's spread across its plane within this share of its spread along the next axis
+/// leaves the plane to the rounding: any direction between the two axes may be the normal.
+const SPREAD_ROUNDING: f64 = 1e-4;
+/// A normal shorter than this share of its group's area, summed over triangles facing every
+/// way, has a direction the rounding gives it.
+const NORMAL_ROUNDING: f64 = 1e-5;
+
+/// Whether the precompute's rounding may choose otherwise between a chart's projection and its
+/// own UVs: an overlap difference at the margin, or mapping errors that differ by rounding
+/// alone (unless the projection is exact: on a plane along the coordinate axes the projection
+/// repeats the positions' own coordinates, its error is zero in any arithmetic and the own UVs
+/// cannot have less).
+fn choice_is_rounding(
+    projected: uv_choice::Measure,
+    own: uv_choice::Measure,
+    exact: bool,
+    area: f64,
+) -> bool {
+    let difference = projected.overlap - own.overlap;
+    if (difference.abs() - uv_choice::OVERLAP_MARGIN).abs() <= OVERLAP_ROUNDING {
+        return true;
+    }
+    if !(difference.abs() < uv_choice::OVERLAP_MARGIN) || (exact && projected.error == 0.0) {
+        return false;
+    }
+    let (a, b) = (projected.error, own.error);
+    (a - b).abs() <= MAPPING_ROUNDING * a.max(b) || a.max(b) <= MAPPING_NOISE * area
+}
+
+/// The planes a group left on its own may be projected on: its own, and where the rounding
+/// decides it, the others it may be (its plane across another axis of its spread when the two
+/// spreads are equal but for rounding; the plane turned over when its normal is too short to
+/// tell a side).
+fn lone_planes(geometry: &Geometry, group: usize) -> Vec<Plane> {
+    let g = &geometry.groups[group];
+    let spread = geometry.spread(&[group]);
+    let [least, next, most] = spread.values;
+    let mut normals = vec![spread.axes[0]];
+    if next - least <= SPREAD_ROUNDING * most.abs() {
+        normals.push(spread.axes[1]);
+        if most - next <= SPREAD_ROUNDING * most.abs() {
+            normals.push(spread.axes[2]);
+        }
+    }
+    let sum = g.normal_sum.map(|x| x * x).iter().sum::<f64>().sqrt();
+    let sided = sum > NORMAL_ROUNDING * g.area;
+    let mut planes = Vec::new();
+    for n in normals {
+        let plane = Plane::across(n, spread.centre);
+        // Turned to face as the group does (`geometry`).
+        let plane = if dot(plane.normal(), g.normal) < 0.0 {
+            plane.flipped()
+        } else {
+            plane
+        };
+        planes.push(plane);
+        if !sided {
+            planes.push(plane.flipped());
+        }
+    }
+    planes
+}
+
+/// The automatic charts of a mesh, as the arithmetic here makes them. Fails for what is not
+/// made as the Editor makes it: limits of zero or of a right angle or more, and parts without
+/// normals projected.
 pub fn auto_charts(mesh: &Mesh, params: &Params) -> Result<Charts> {
+    Ok(auto_chart_choices(mesh, params)?.swap_remove(0))
+}
+
+/// How many ways of taking the choices the rounding decides are made at most.
+const MAX_CHOICE_RUNS: usize = 256;
+
+/// The automatic charts of a mesh in every way the choices that the precompute's rounding
+/// decides can be taken (`Choices`), different charts once each; the first is the one the
+/// arithmetic here gives. Fails when that one fails, or when there are more than
+/// `MAX_CHOICE_RUNS` ways.
+pub fn auto_chart_choices(mesh: &Mesh, params: &Params) -> Result<Vec<Charts>> {
     ensure!(
         mesh.normals.len() == mesh.positions.len() && mesh.uvs.len() == mesh.positions.len(),
         "{} normals and {} UVs for {} vertices",
@@ -1350,13 +1572,55 @@ pub fn auto_charts(mesh: &Mesh, params: &Params) -> Result<Charts> {
     {
         bail!("a vertex with a non-finite position, normal or lightmap UV");
     }
-    let geometry = geometry(mesh, params);
-    let joined = join(&geometry)?;
-    ensure!(
-        !geometry.ambiguous.get(),
-        "a part faces a plane at the Max Angle limit ({} degrees) but for rounding: whether the precompute joins it there hangs on that rounding",
-        params.max_angle
-    );
+    let mut made: Vec<Charts> = Vec::new();
+    let mut pending: Vec<Vec<usize>> = vec![Vec::new()];
+    let mut runs = 0;
+    let mut grid = uv_choice::Grid::new();
+    while let Some(forced) = pending.pop() {
+        runs += 1;
+        ensure!(
+            runs <= MAX_CHOICE_RUNS,
+            "the mesh's charts hang on more than {MAX_CHOICE_RUNS} ways of taking choices that the precompute's rounding decides"
+        );
+        let choices = Choices::new(forced);
+        let result = charts_with(mesh, params, &choices, &mut grid);
+        let Choices {
+            forced, made: met, ..
+        } = choices;
+        let met = met.into_inner();
+        // Every other option of each choice met after the forced ones, the earlier ones as
+        // taken: each way is made once.
+        for i in (forced.len()..met.len()).rev() {
+            for option in (1..met[i].1).rev() {
+                let mut next: Vec<usize> = met[..i].iter().map(|&(taken, _)| taken).collect();
+                next.push(option);
+                pending.push(next);
+            }
+        }
+        match result {
+            Ok(charts) => {
+                if !made.contains(&charts) {
+                    made.push(charts);
+                }
+            }
+            // The arithmetic's own way must be made; another way that cannot be is not one
+            // the precompute took.
+            Err(e) if made.is_empty() => return Err(e),
+            Err(_) => {}
+        }
+    }
+    Ok(made)
+}
+
+/// The charts made taking the choices as `choices` says.
+fn charts_with(
+    mesh: &Mesh,
+    params: &Params,
+    choices: &Choices,
+    grid: &mut uv_choice::Grid,
+) -> Result<Charts> {
+    let geometry = geometry(mesh, params, choices);
+    let joined = join(&geometry);
     let sets = joined.planes.len();
     // Each set's triangles: its groups' in group order.
     let mut triangles = vec![Vec::new(); sets];
@@ -1368,9 +1632,22 @@ pub fn auto_charts(mesh: &Mesh, params: &Params) -> Result<Charts> {
             set_of_vertex[v] = set;
         }
     }
+    // A group left on its own may be projected on a plane the rounding gives it: one is taken.
+    let mut planes = joined.planes.clone();
+    for (g, group) in geometry.groups.iter().enumerate() {
+        let set = joined.of_group[g];
+        if set >= joined.joined && group.area > 0.0 {
+            let options = lone_planes(&geometry, g);
+            planes[set] = options[if options.len() > 1 {
+                choices.pick(options.len())
+            } else {
+                0
+            }];
+        }
+    }
     let frames: Vec<Frame> = (0..sets)
         .map(|set| {
-            let mut frame = Frame::of(&joined.planes[set]);
+            let mut frame = Frame::of(&planes[set]);
             turn(&mut frame, &geometry, &triangles[set]);
             frame
         })
@@ -1386,15 +1663,58 @@ pub fn auto_charts(mesh: &Mesh, params: &Params) -> Result<Charts> {
         }
     }
     let mut uvs = vec![[0.0f32; 2]; mesh.positions.len()];
+    for v in 0..mesh.positions.len() {
+        let set = set_of_vertex[v];
+        if set != NONE && !empty[set] {
+            uvs[v] = frames[set].project(mesh.positions[v]);
+        }
+    }
+    // A group left on its own keeps its own lightmap UVs when they overlap clearly less than
+    // its projection, or about as much with a smaller mapping error (`uv_choice`).
+    for (g, group) in geometry.groups.iter().enumerate() {
+        let set = joined.of_group[g];
+        if set < joined.joined || empty[set] {
+            continue;
+        }
+        let corners: Vec<[u32; 3]> = group
+            .triangles
+            .iter()
+            .map(|&t| geometry.triangles[t])
+            .collect();
+        let measure = |uvs: &[[f32; 2]], grid: &mut uv_choice::Grid| uv_choice::Measure {
+            overlap: grid.overlap(uvs, &corners),
+            error: uv_choice::mapping_error(mesh.positions, uvs, &corners),
+        };
+        let projected = measure(&uvs, grid);
+        let own = measure(mesh.uvs, grid);
+        let ours = uv_choice::pick(projected, own) == uv_choice::Pick::Own;
+        let keep_own = if !laid_out_alike(mesh, &uvs, group)
+            && choice_is_rounding(projected, own, planes[set].along_axes(), group.area)
+        {
+            choices.either(ours)
+        } else {
+            ours
+        };
+        if keep_own {
+            for &v in &group.vertices {
+                uvs[v] = mesh.uvs[v];
+            }
+        } else {
+            ensure!(
+                group.normal != [0.0; 3],
+                "a part of the mesh ({} triangles) whose normals cancel out is projected: on which side of its plane is not made yet",
+                group.triangles.len()
+            );
+        }
+    }
+    // Each chart from the corner of its bounds.
     let mut corner = vec![[f32::MAX; 2]; sets];
     for v in 0..mesh.positions.len() {
         let set = set_of_vertex[v];
-        if set == NONE || empty[set] {
-            continue;
-        }
-        uvs[v] = frames[set].project(mesh.positions[v]);
-        for k in 0..2 {
-            corner[set][k] = corner[set][k].min(uvs[v][k]);
+        if set != NONE && !empty[set] {
+            for k in 0..2 {
+                corner[set][k] = corner[set][k].min(uvs[v][k]);
+            }
         }
     }
     for v in 0..mesh.positions.len() {
@@ -1402,43 +1722,6 @@ pub fn auto_charts(mesh: &Mesh, params: &Params) -> Result<Charts> {
         if set != NONE && !empty[set] {
             uvs[v] = [uvs[v][0] - corner[set][0], uvs[v][1] - corner[set][1]];
         }
-    }
-    // A group left on its own keeps its own lightmap UVs when they are truer to its shape than
-    // its projection (by the angles of its triangles). That comparison is made here for planar
-    // groups alone: the projection of one on a plane along the coordinate axes repeats the
-    // positions' own coordinates and is exact; elsewhere it is the truer one when the own UVs
-    // are clearly not a scaled copy of the shape. Otherwise the two differ by rounding alone:
-    // the choice is not made here, unless both lay the chart out the same way.
-    for (g, group) in geometry.groups.iter().enumerate() {
-        let set = joined.of_group[g];
-        if set < joined.joined || empty[set] {
-            continue;
-        }
-        ensure!(
-            group.normal != [0.0; 3],
-            "a part of the mesh ({} triangles) has no normal to face along",
-            group.triangles.len()
-        );
-        ensure!(
-            group.candidate,
-            "a part of the mesh ({} triangles) is not flat within Max Distance {} and Max Angle {}: charts of such parts are not made yet",
-            group.triangles.len(),
-            params.max_distance,
-            params.max_angle
-        );
-        let size = dot(sub(group.max, group.min), sub(group.max, group.min)).sqrt();
-        ensure!(
-            geometry.reach(g, &group.plane) <= PLANAR * size,
-            "a bent part of the mesh ({} triangles) is left on its own: whether the precompute keeps its lightmap UVs or projects it is not made yet",
-            group.triangles.len()
-        );
-        ensure!(
-            joined.planes[set].along_axes()
-                || own_uv_distortion(&geometry, group) >= OWN_UVS_AS_TRUE
-                || laid_out_alike(mesh, &uvs, group),
-            "a chart on a tilted plane ({} triangles) has lightmap UVs as true to its shape as its projection: which of the two the precompute keeps is not made yet",
-            group.triangles.len()
-        );
     }
     Ok(Charts { uvs, triangles })
 }
@@ -1652,8 +1935,10 @@ mod tests {
         assert_eq!(groups(&shape.mesh(), false).len(), 1);
     }
 
+    /// A part that is not flat, left on its own, keeps its own lightmap UVs or takes its
+    /// projection as their overlap and mapping error decide (`uv_choice`).
     #[test]
-    fn a_part_that_is_not_flat_fails() {
+    fn a_part_that_is_not_flat_keeps_its_uvs_or_is_projected() {
         // Two quads of 4 m at a right angle that share their edge's vertices.
         let mut bend = Shape::default();
         let smooth = normalized([0.0, 1.0, -1.0]);
@@ -1675,22 +1960,32 @@ mod tests {
         ];
         bend.uvs = vec![
             [0.0, 0.0],
-            [1.0, 0.0],
-            [1.0, 0.5],
+            [0.5, 0.0],
+            [0.5, 0.5],
             [0.0, 0.5],
-            [1.0, 1.0],
+            [0.5, 1.0],
             [0.0, 1.0],
         ];
         bend.triangles = vec![[0, 2, 1], [0, 3, 2], [3, 4, 2], [3, 5, 4]];
-        let error = auto_charts(&bend.mesh(), &LIMITS).unwrap_err().to_string();
-        assert!(error.contains("not flat"), "{error}");
-        // Within a distance limit that holds it, it is flat within the limits, and bent.
+        // Its UVs unroll it true to its shape: projected on the plane between the quads its
+        // angles are not kept, so its own UVs are its chart.
+        let own = auto_charts(&bend.mesh(), &LIMITS).unwrap();
+        assert_eq!(own.uvs, bend.uvs);
+        assert_eq!(own.triangles.len(), 1);
+        // Folded onto one half, its own UVs overlap fully: the projection is its chart, a
+        // 4 x 5.66 m rectangle seen along the plane between the quads.
+        bend.uvs[4] = [0.5, 0.0];
+        bend.uvs[5] = [0.0, 0.0];
+        let projected = auto_charts(&bend.mesh(), &LIMITS).unwrap();
+        let extent = |k: usize| projected.uvs.iter().map(|uv| uv[k]).fold(0.0f32, f32::max);
+        let (a, b) = (extent(0).min(extent(1)), extent(0).max(extent(1)));
+        assert!(near(a, 4.0) && (b - 32.0f32.sqrt()).abs() < 1e-4, "{a} {b}");
+        // Flat within a distance limit that holds it (bent, left on its own): the same choice.
         let wide = Params {
             max_distance: 4.0,
             ..LIMITS
         };
-        let error = auto_charts(&bend.mesh(), &wide).unwrap_err().to_string();
-        assert!(error.contains("bent part"), "{error}");
+        assert_eq!(auto_charts(&bend.mesh(), &wide).unwrap(), projected);
     }
 
     /// A small part that is not flat, beside a large flat one, is folded into its chart.
@@ -1718,7 +2013,7 @@ mod tests {
         shape.uvs = vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.2, 0.8]];
         shape.triangles = vec![[0, 2, 1], [0, 3, 2]];
         let mesh = shape.mesh();
-        assert!(!geometry(&mesh, &narrow).groups[0].candidate);
+        assert!(!geometry(&mesh, &narrow, &Choices::new(Vec::new())).groups[0].candidate);
         let floor = |shape: &mut Shape, x: f32, size: f32| {
             shape.quad(
                 [
@@ -1783,10 +2078,10 @@ mod tests {
         assert!(firsts.windows(2).all(|w| w[0] < w[1]), "{firsts:?}");
     }
 
-    /// A part that faces a plane at the Max Angle limit but for rounding is not joined or kept
-    /// apart here; limits of zero are not automatic charts at all.
+    /// A part that faces a plane at the Max Angle limit but for rounding is joined and kept
+    /// apart; limits of zero are not automatic charts at all.
     #[test]
-    fn a_part_at_the_angle_limit_and_limits_of_zero_fail() {
+    fn a_part_at_the_angle_limit_is_made_both_ways_and_limits_of_zero_fail() {
         // Two quads 40 degrees apart, each 20 from the plane through both.
         let (sin, cos) = 20.0f32.to_radians().sin_cos();
         let mut roof = Shape::default();
@@ -1818,8 +2113,21 @@ mod tests {
             )
         };
         assert!(at(20.5).is_ok() && at(19.5).is_ok());
-        let error = at(20.0).unwrap_err().to_string();
-        assert!(error.contains("Max Angle limit"), "{error}");
+        // At the limit both ways are made: the sides one chart, or two (tests/projects/
+        // realtimegi RoomRounding, RoofAtLimit: the Editor's precompute made one).
+        let choices = |max_angle: f32| {
+            auto_chart_choices(
+                &roof.mesh(),
+                &Params {
+                    max_angle,
+                    ..LIMITS
+                },
+            )
+            .unwrap()
+        };
+        let counts: Vec<usize> = choices(20.0).iter().map(|c| c.triangles.len()).collect();
+        assert_eq!(counts, [1, 2]);
+        assert_eq!(choices(20.5).len(), 1);
         for limits in [
             Params {
                 max_distance: 0.0,
@@ -1896,10 +2204,13 @@ mod tests {
                 .len(),
             2
         );
-        let error = auto_charts(&roof.mesh(), &limits(0.3))
-            .unwrap_err()
-            .to_string();
-        assert!(error.contains("Max Angle limit"), "{error}");
+        // Within reach they decide whether the sides are one chart.
+        let counts: Vec<usize> = auto_chart_choices(&roof.mesh(), &limits(0.3))
+            .unwrap()
+            .iter()
+            .map(|c| c.triangles.len())
+            .collect();
+        assert_eq!(counts, [1, 2]);
     }
 
     /// A cosine of normals far from zero against its terms has the precompute's sign; one of
@@ -1932,14 +2243,15 @@ mod tests {
     }
 
     /// Faces that are at a right angle but for the rounding of their normals: where a plane
-    /// through two of them is within the limits of both, that rounding would decide whether
-    /// they are joined.
+    /// through two of them is within the limits of both, that rounding decides whether they
+    /// are joined, and both ways are made.
     #[test]
-    fn faces_at_a_right_angle_but_for_rounding_fail_where_they_could_join() {
+    fn faces_at_a_right_angle_but_for_rounding_are_made_both_ways_where_they_could_join() {
         let could_join = |size: V3| {
             let shape = solid(size);
             let mesh = shape.mesh();
-            let geometry = geometry(&mesh, &LIMITS);
+            let choices = Choices::new(Vec::new());
+            let geometry = geometry(&mesh, &LIMITS, &choices);
             (0..6).any(|a| {
                 (0..a).any(|b| {
                     dot(geometry.groups[a].normal, geometry.groups[b].normal) == 0.0
@@ -1953,7 +2265,12 @@ mod tests {
         assert!(!could_join([4.0, 3.0, 5.0]));
         // Along the axes the faces are at a right angle exactly and are not joined; turned in
         // the mesh, their normals are so but for rounding.
-        for size in [[3.0, 0.2, 2.0], [1.0, 1.0, 1.0]] {
+        // (A cube turned so has more ways than are made: its equal faces tie in every round.)
+        let mut cube = solid([1.0, 1.0, 1.0]);
+        turn_in_mesh(&mut cube, 30.0, 20.0);
+        let error = auto_charts(&cube.mesh(), &LIMITS).unwrap_err().to_string();
+        assert!(error.contains("more than 256 ways"), "{error}");
+        for size in [[3.0, 0.2, 2.0]] {
             let mut shape = solid(size);
             assert!(auto_charts(&shape.mesh(), &LIMITS).is_ok());
             turn_in_mesh(&mut shape, 30.0, 20.0);
@@ -1964,31 +2281,37 @@ mod tests {
                 })
             });
             assert!(rounded);
-            let error = auto_charts(&shape.mesh(), &LIMITS).unwrap_err().to_string();
-            assert!(error.contains("but for rounding"), "{error}");
+            let charts = |shape: &Shape| -> Vec<usize> {
+                auto_chart_choices(&shape.mesh(), &LIMITS)
+                    .unwrap()
+                    .iter()
+                    .map(|c| c.triangles.len())
+                    .collect()
+            };
+            // Each way of the cosines' signs: faces joined or not, other numbers of charts.
+            let counts = charts(&shape);
+            let (least, most) = (counts.iter().min().unwrap(), counts.iter().max().unwrap());
+            assert!(least < most, "{size:?}: {counts:?}");
+            assert_eq!(charts(&solid(size)).len(), 1);
         }
-        let mut cube = solid([1.0, 1.0, 1.0]);
-        turn_in_mesh(&mut cube, 30.0, 20.0);
-        let error = auto_charts(&cube.mesh(), &LIMITS).unwrap_err().to_string();
-        assert!(error.contains("right angle but for rounding"), "{error}");
         // Turned by 45 degrees the cosine of a thin side and a large face is zero here because
         // its terms cancel, which the precompute's own normals need not do.
         let mut slab = solid([3.0, 0.2, 2.0]);
         turn_in_mesh(&mut slab, 0.0, 45.0);
         let mesh = slab.mesh();
-        let geometry = geometry(&mesh, &LIMITS);
+        let choices = Choices::new(Vec::new());
+        let geometry = geometry(&mesh, &LIMITS, &choices);
         assert!((0..6).any(|a| (0..a).any(|b| {
             let (na, nb) = (geometry.groups[a].normal, geometry.groups[b].normal);
             dot(na, nb) == 0.0 && (0..3).any(|k| na[k] != 0.0 && nb[k] != 0.0)
         })));
-        let error = auto_charts(&mesh, &LIMITS).unwrap_err().to_string();
-        assert!(error.contains("right angle but for rounding"), "{error}");
+        assert!(auto_chart_choices(&mesh, &LIMITS).unwrap().len() > 1);
     }
 
-    /// Off the coordinate axes a set of the very same area as the winner's is refused unless
-    /// the two areas stay equal over a sweep of the axes' scales: equal by their shape.
+    /// Off the coordinate axes a set of the very same area as the winner's may win as well
+    /// unless the two areas stay equal over a sweep of the axes' scales: equal by their shape.
     #[test]
-    fn congruent_sets_off_the_axes_are_refused_unless_they_stay_tied_by_shape() {
+    fn congruent_sets_off_the_axes_may_each_win_unless_they_stay_tied_by_shape() {
         let mut centred = solid([4.0, 3.0, 5.0]);
         turn_in_mesh(&mut centred, 45.0, 0.0);
         // Opposite faces about the mesh's origin are normalised from the same squared lengths,
@@ -2005,14 +2328,15 @@ mod tests {
         for p in &mut moved.positions {
             *p = [p[0] + 1.3, p[1] + 0.7, p[2] - 2.1];
         }
-        let error = auto_charts(&moved.mesh(), &LIMITS).unwrap_err().to_string();
-        assert!(
-            error.contains("largest of a round but for rounding"),
-            "{error}"
+        assert_eq!(
+            auto_chart_choices(&centred.mesh(), &LIMITS).unwrap().len(),
+            1
         );
+        assert!(auto_chart_choices(&moved.mesh(), &LIMITS).unwrap().len() > 1);
         let opposite_faces_settle = |shape: &Shape| {
             let mesh = shape.mesh();
-            let geometry = geometry(&mesh, &LIMITS);
+            let choices = Choices::new(Vec::new());
+            let geometry = geometry(&mesh, &LIMITS, &choices);
             (0..6).all(|a| {
                 let n = geometry.groups[a].normal;
                 let b = (0..6)
@@ -2040,18 +2364,19 @@ mod tests {
             );
         }
         turn_in_mesh(&mut pair, 37.0, 23.0);
-        let error = auto_charts(&pair.mesh(), &LIMITS).unwrap_err().to_string();
-        assert!(
-            error.contains("largest of a round but for rounding"),
-            "{error}"
-        );
+        let firsts: Vec<Vec<usize>> = auto_chart_choices(&pair.mesh(), &LIMITS)
+            .unwrap()
+            .iter()
+            .map(|c| c.triangles[0].clone())
+            .collect();
+        assert_eq!(firsts, [vec![2, 3], vec![0, 1]]);
     }
 
     /// Two rectangles of the same size that lie differently: their areas along their planes
-    /// differ in the last digits, and which is taken first would be the rounding's. Along the
-    /// coordinate axes the arithmetic is exact, and the first tried is.
+    /// differ in the last digits, and which is taken first is the rounding's: both ways are
+    /// made. Along the coordinate axes the arithmetic is exact, and the first tried is.
     #[test]
-    fn sets_that_tie_but_for_rounding_fail() {
+    fn sets_that_tie_but_for_rounding_are_made_both_ways() {
         let pair = |yaw: f32, pitch: f32| {
             let mut first = Shape::default();
             first.quad(
@@ -2085,18 +2410,22 @@ mod tests {
             auto_charts(&level.mesh(), &LIMITS).unwrap().triangles.len(),
             2
         );
-        let error = auto_charts(&pair(37.0, 23.0).mesh(), &LIMITS)
-            .unwrap_err()
-            .to_string();
-        assert!(
-            error.contains("largest of a round but for rounding"),
-            "{error}"
-        );
+        assert_eq!(auto_chart_choices(&level.mesh(), &LIMITS).unwrap().len(), 1);
+        let firsts: Vec<Vec<usize>> = auto_chart_choices(&pair(37.0, 23.0).mesh(), &LIMITS)
+            .unwrap()
+            .iter()
+            .map(|c| c.triangles[0].clone())
+            .collect();
+        assert_eq!(firsts.len(), 2, "{firsts:?}");
+        assert_ne!(firsts[0], firsts[1]);
         assert!(tied(1.0, 1.000_001) && !tied(1.0, 1.0) && !tied(1.0, 1.001));
     }
 
+    /// A bent part left on its own keeps its lightmap UVs when they are true to it, and is
+    /// projected when they are not (tests/projects/realtimegi RoomCurved, Bent and
+    /// BentStretched).
     #[test]
-    fn a_bent_part_left_on_its_own_fails() {
+    fn a_bent_part_left_on_its_own_keeps_true_uvs() {
         // Two quads 40 degrees apart that share their ridge's vertices, lightmap UVs and
         // normals: one part, flat within the limits, and not planar.
         let (sin, cos) = 20.0f32.to_radians().sin_cos();
@@ -2126,8 +2455,26 @@ mod tests {
             [1.0, 1.0],
         ];
         bend.triangles = vec![[0, 3, 4], [0, 4, 1], [1, 4, 5], [1, 5, 2]];
-        let error = auto_charts(&bend.mesh(), &LIMITS).unwrap_err().to_string();
-        assert!(error.contains("bent part"), "{error}");
+        // Its UVs unroll it: 2 x 1 m as 1 x 1, stretched along it, so the projection's angles
+        // are truer to it.
+        let projected = auto_charts(&bend.mesh(), &LIMITS).unwrap();
+        let extent = extents(&bend, &projected)[0];
+        assert!(
+            near(extent[0], 2.0 * cos) && near(extent[1], 1.0),
+            "{extent:?}"
+        );
+        // Unrolled true to its shape (2 x 1), its own UVs win.
+        let mut unrolled = Shape {
+            uvs: bend.uvs.iter().map(|uv| [2.0 * uv[0], uv[1]]).collect(),
+            ..Shape::default()
+        };
+        unrolled.positions = bend.positions.clone();
+        unrolled.normals = bend.normals.clone();
+        unrolled.triangles = bend.triangles.clone();
+        assert_eq!(
+            auto_charts(&unrolled.mesh(), &LIMITS).unwrap().uvs,
+            unrolled.uvs
+        );
         // Beside a second part it is taken in a round, and projected onto its plane.
         bend.quad(
             [
@@ -2166,12 +2513,13 @@ mod tests {
         assert_eq!(charts.triangles[6], [12]);
         assert!(charts.uvs[24..].iter().all(|uv| *uv == [0.0, 0.0]));
 
+        // A face whose normals cancel out, projected: on which side is not made.
         let mut cube = solid([1.0, 1.0, 1.0]);
         for normal in &mut cube.normals[..4] {
             *normal = [0.0; 3];
         }
         let error = auto_charts(&cube.mesh(), &LIMITS).unwrap_err().to_string();
-        assert!(error.contains("no normal"), "{error}");
+        assert!(error.contains("normals cancel out"), "{error}");
     }
 
     /// Max Angle bounds each part's lean from the plane through a pair, Max Distance its
@@ -2242,7 +2590,8 @@ mod tests {
         shapes.extend([1, 7, 9, 23, 39, 57].map(|step| cells(8, 8, step)));
         for shape in &shapes {
             let mesh = shape.mesh();
-            let geometry = geometry(&mesh, &LIMITS);
+            let choices = Choices::new(Vec::new());
+            let geometry = geometry(&mesh, &LIMITS, &choices);
             let candidates: Vec<usize> = (0..geometry.groups.len()).collect();
             let mut neighbours = Neighbours::new(&geometry, &candidates);
             let retired = candidates.len() / 2;
@@ -2266,6 +2615,10 @@ mod tests {
         }
     }
 
+    /// A lone planar chart off the axes: projected when its own UVs are not true to it, the
+    /// same chart when they are a scaled copy of the projection, and both ways when they are a
+    /// turned copy (as true as the projection but for rounding; tests/projects/realtimegi
+    /// RoomRounding, TiltedQuad: the Editor's precompute took the projection).
     #[test]
     fn a_lone_chart_on_a_tilted_plane_is_projected_when_its_own_uvs_are_not_true_to_it() {
         let stretched = tilted([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
@@ -2287,10 +2640,16 @@ mod tests {
             let [x, y] = charts.uvs[v];
             [0.5 + (x - y) * 0.2, (x + y) * 0.2]
         });
-        let error = auto_charts(&tilted(turned).mesh(), &LIMITS)
-            .unwrap_err()
-            .to_string();
-        assert!(error.contains("tilted plane"), "{error}");
+        let both = auto_chart_choices(&tilted(turned).mesh(), &LIMITS).unwrap();
+        assert_eq!(both.len(), 2);
+        assert!(both.iter().any(|c| c == &charts));
+        // The other: its own UVs from the corner of their bounds.
+        let corner = [0, 1].map(|k| turned.iter().map(|t| t[k]).fold(f32::MAX, f32::min));
+        let own: Vec<[f32; 2]> = turned
+            .iter()
+            .map(|t| [t[0] - corner[0], t[1] - corner[1]])
+            .collect();
+        assert!(both.iter().any(|c| c.uvs == own), "{both:?}");
     }
 
     #[test]
