@@ -43,7 +43,7 @@ namespace UnityEditorInternal
         /// </summary>
         public static Object[] LoadSerializedFileAndForget(string path)
         {
-            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (string.IsNullOrEmpty(path)) return Array.Empty<Object>();
             var file = SerializedFiles.ReadablePath(path);
             if (file == null) return Array.Empty<Object>();
             List<YDocument> documents;
@@ -56,12 +56,30 @@ namespace UnityEditorInternal
                 Debug.LogError($"Unbound: {path} cannot be read ({e.Message}); only Unity's text serialization is supported.");
                 return Array.Empty<Object>();
             }
-            var loaded = ObjectGraphBuilder.Build(documents, path, null, ObjectGraphBuilder.Kind.Asset, null);
             var objects = new List<Object>();
-            foreach (var o in loaded.Objects.Values)
+            var otherDocuments = new List<YDocument>();
+            foreach (var doc in documents)
             {
-                o.IsPersistentAsset = false;
-                objects.Add(o);
+                if (doc.ClassId == UnityEditor.U2D.SpriteAtlasAsset.ClassId)
+                {
+                    var asset = new UnityEditor.U2D.SpriteAtlasAsset(fromDeserialization: true);
+                    asset.ReadSerialized(doc.Body);
+                    asset.IsPersistentAsset = false;
+                    objects.Add(asset);
+                }
+                else
+                {
+                    otherDocuments.Add(doc);
+                }
+            }
+            if (otherDocuments.Count > 0)
+            {
+                var loaded = ObjectGraphBuilder.Build(otherDocuments, path, null, ObjectGraphBuilder.Kind.Asset, null);
+                foreach (var o in loaded.Objects.Values)
+                {
+                    o.IsPersistentAsset = false;
+                    objects.Add(o);
+                }
             }
             return objects.ToArray();
         }
@@ -73,9 +91,24 @@ namespace UnityEditorInternal
         public static void SaveToSerializedFileAndForget(Object[] obj, string path, bool allowTextSerialization)
         {
             if (obj == null) throw new ArgumentNullException(nameof(obj));
-            if (path == null) throw new ArgumentNullException(nameof(path));
-            var target = SerializedFiles.WritablePath(path);
-            Directory.CreateDirectory(Path.GetDirectoryName(target));
+            foreach (var o in obj)
+                if (o != null) EditorUtility.ClearDirty(o);
+            if (string.IsNullOrEmpty(path))
+            {
+                Debug.LogError("File couldn't be written because path is empty.");
+                return;
+            }
+            var target = SerializedFiles.WritablePath(path, out bool isOverlay);
+            var dir = Path.GetDirectoryName(target);
+            if (isOverlay)
+            {
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            }
+            else if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            {
+                Debug.LogError($"File {path} couldn't be written because its directory does not exist.");
+                return;
+            }
             File.WriteAllText(target, UnityYamlWriter.Write(obj));
         }
     }
@@ -105,11 +138,15 @@ namespace Unbound.Runtime
             return null;
         }
 
-        internal static string WritablePath(string path)
+        internal static string WritablePath(string path, out bool isOverlay)
         {
             var absolute = Absolute(path);
-            return Overlay(absolute) ?? absolute;
+            var overlay = Overlay(absolute);
+            isOverlay = overlay != null;
+            return overlay ?? absolute;
         }
+
+        internal static string WritablePath(string path) => WritablePath(path, out _);
 
         /// <summary>The file to read for a path (Unbound's copy first); null when there is none.</summary>
         internal static string ReadablePath(string path)
@@ -145,9 +182,16 @@ namespace Unbound.Runtime
             foreach (var o in objects)
             {
                 if (o == null) continue;
+                var writer = new Writer(sb, ids);
+                if (o is UnityEditor.U2D.SpriteAtlasAsset atlasAsset)
+                {
+                    sb.Append("--- !u!").Append(UnityEditor.U2D.SpriteAtlasAsset.ClassId).Append(" &").Append(ids[o]).Append('\n');
+                    sb.Append("SpriteAtlasAsset:\n");
+                    atlasAsset.WriteYaml(writer);
+                    continue;
+                }
                 if (!SerializedTree.IsScript(o))
                     throw new NotSupportedException($"Unbound writes script objects only; {o.GetType().Name} '{o.name}' cannot be saved.");
-                var writer = new Writer(sb, ids);
                 sb.Append("--- !u!114 &").Append(ids[o]).Append('\n');
                 sb.Append("MonoBehaviour:\n");
                 writer.ScriptBody(o);
@@ -323,6 +367,12 @@ namespace Unbound.Runtime
                 if (o is not ISerializationCallbackReceiver receiver) return;
                 try { receiver.OnBeforeSerialize(); }
                 catch (Exception e) { Debug.LogException(e); }
+            }
+
+            internal void SequenceValue(int level, string value)
+            {
+                Indent(level);
+                m_Out.Append("- ").Append(value).Append('\n');
             }
 
             internal void Line(int level, string key, string value)

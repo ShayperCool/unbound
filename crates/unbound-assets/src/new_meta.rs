@@ -39,6 +39,7 @@ pub enum NewImporter {
     Model,
     Audio,
     Font,
+    SpriteAtlas,
     /// A ScriptedImporter of the Editor's own (UI Toolkit's style sheets, documents, themes):
     /// the importer script's file id in the built-in extra resources, and whether its settings
     /// have `disableValidation`.
@@ -85,6 +86,7 @@ pub fn importer_for(path: &Path, is_dir: bool) -> Option<NewImporter> {
             NewImporter::Audio
         }
         "ttf" | "otf" | "ttc" | "dfont" => NewImporter::Font,
+        "spriteatlasv2" => NewImporter::SpriteAtlas,
         "uss" => NewImporter::Scripted {
             script: STYLE_SHEET_IMPORTER,
             validation: true,
@@ -204,6 +206,9 @@ pub fn text(importer: NewImporter, guid: Guid, asset: &Path, context: &MetaConte
                 None => " []".into(),
             };
             out.push_str(&include_str!("new_meta/font_importer.yaml").replace("{names}", &names));
+        }
+        NewImporter::SpriteAtlas => {
+            out.push_str(include_str!("new_meta/sprite_atlas_importer.yaml"))
         }
         NewImporter::Scripted { script, validation } => {
             out.push_str(&format!(
@@ -451,5 +456,22 @@ mod tests {
                 .is_empty()
         );
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn sprite_atlas_v2_meta_matches_editor_defaults() {
+        let path = Path::new("Assets/Atlases/SavedNew.spriteatlasv2");
+        assert_eq!(importer_for(path, false), Some(NewImporter::SpriteAtlas));
+        let rendered = text(
+            NewImporter::SpriteAtlas,
+            Guid(0x302dcf2a13c64c0838742e9c90bcf6ca),
+            path,
+            &MetaContext::default(),
+        );
+        assert!(rendered.starts_with("fileFormatVersion: 2\nguid: "));
+        assert!(rendered.contains("\nSpriteAtlasImporter:\n"));
+        assert!(rendered.contains("  platformSettings: []\n"));
+        assert!(rendered.contains("  variantMultiplier: 1\n  bindAsDefault: 1\n"));
+        assert!(rendered.ends_with("  userData: \n  assetBundleName: \n  assetBundleVariant: \n"));
     }
 }

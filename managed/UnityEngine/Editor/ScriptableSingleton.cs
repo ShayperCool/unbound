@@ -58,6 +58,8 @@ namespace UnityEditor
                 Debug.LogWarning($"Saving has no effect. Your class '{GetType()}' is missing the FilePathAttribute. Use this attribute to specify where to save your ScriptableSingleton.\nOnly call Save() and use this attribute if you want your state to survive between sessions of Unity.");
                 return;
             }
+            var dir = Path.GetDirectoryName(Unbound.Runtime.SerializedFiles.WritablePath(path));
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
             InternalEditorUtility.SaveToSerializedFileAndForget(new UnityEngine.Object[] { s_Instance }, path, saveAsText);
         }
 

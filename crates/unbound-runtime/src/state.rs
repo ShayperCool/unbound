@@ -1863,6 +1863,7 @@ fn default_importer(path: &str) -> &'static str {
         "wav" | "mp3" | "ogg" | "aif" | "aiff" | "mod" | "it" | "s3m" | "xm" => "AudioImporter",
         "dll" | "so" | "a" | "aar" | "jar" | "bundle" | "framework" => "PluginImporter",
         "ttf" | "otf" => "TrueTypeFontImporter",
+        "spriteatlasv2" => "SpriteAtlasImporter",
         "mat" | "asset" | "prefab" | "anim" | "controller" | "mask" | "physicmaterial" => {
             "NativeFormatImporter"
         }

@@ -162,35 +162,38 @@ namespace UnityEngine.U2D
         /// tests/projects/spriteatlaseditor v1add/v2add).</summary>
         internal void AddPackables(Object[] objects)
         {
-            bool added = false;
-            if (objects != null)
-            {
-                for (int i = 0; i < objects.Length; i++)
-                {
-                    var obj = objects[i];
-                    if (obj == null)
-                    {
-                        Debug.LogWarning("Attempted to add null object into a Sprite Atlas.");
-                        continue;
-                    }
-                    bool valid = obj is Texture2D || obj is Sprite;
-                    if (!valid && obj is DefaultAsset)
-                    {
-                        var path = AssetDatabase.GetAssetPath(obj);
-                        valid = !string.IsNullOrEmpty(path) && AssetDatabase.IsValidFolder(path);
-                    }
-                    if (!valid)
-                    {
-                        Debug.LogWarning($"Attempted to add invalid object into a Sprite Atlas. {obj.name} was a {obj.GetType().Name}. Only Folder, Texture and Sprite are valid.");
-                        continue;
-                    }
-                    m_Packables.Add(new PackableEntry(ResolvePackableRef(obj), obj));
-                    added = true;
-                }
-            }
-            if (added) m_Sprites = null;
+            if (AddPackableItems(m_Packables, objects, "Sprite Atlas")) m_Sprites = null;
             m_PackablesModified = true;
             EditorUtility.SetDirty(this);
+        }
+
+        internal static bool AddPackableItems(List<PackableEntry> list, Object[] objects, string targetLabel)
+        {
+            bool added = false;
+            if (objects == null) return false;
+            for (int i = 0; i < objects.Length; i++)
+            {
+                var obj = objects[i];
+                if (obj == null)
+                {
+                    Debug.LogWarning($"Attempted to add null object into a {targetLabel}.");
+                    continue;
+                }
+                bool valid = obj is Texture2D || obj is Sprite;
+                if (!valid && obj is DefaultAsset)
+                {
+                    var path = AssetDatabase.GetAssetPath(obj);
+                    valid = !string.IsNullOrEmpty(path) && AssetDatabase.IsValidFolder(path);
+                }
+                if (!valid)
+                {
+                    Debug.LogWarning($"Attempted to add invalid object into a {targetLabel}. {obj.name} was a {obj.GetType().Name}. Only Folder, Texture and Sprite are valid.");
+                    continue;
+                }
+                list.Add(new PackableEntry(ResolvePackableRef(obj), obj));
+                added = true;
+            }
+            return added;
         }
 
         /// <summary>Removes all occurrences of each object in <paramref name="objects"/> by
@@ -200,51 +203,54 @@ namespace UnityEngine.U2D
         /// the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v1remove/v2remove).</summary>
         internal void RemovePackables(Object[] objects)
         {
-            bool removed = false;
-            if (objects != null)
-            {
-                for (int i = 0; i < objects.Length; i++)
-                {
-                    var target = objects[i];
-                    if (!ReferenceEquals(target, null))
-                    {
-                        string targetGuid = null;
-                        long targetFileId = 0;
-                        bool hasAssetRef = target != null
-                            && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(target, out targetGuid, out targetFileId)
-                            && !string.IsNullOrEmpty(targetGuid);
-
-                        int j = 0;
-                        while (j < m_Packables.Count)
-                        {
-                            var entry = m_Packables[j];
-                            bool matches = (!ReferenceEquals(entry.Live, null) && ReferenceEquals(entry.Live, target))
-                                || (hasAssetRef
-                                    && !string.IsNullOrEmpty(entry.Reference.Guid)
-                                    && entry.Reference.FileId == targetFileId
-                                    && string.Equals(entry.Reference.Guid, targetGuid, StringComparison.OrdinalIgnoreCase));
-                            if (matches)
-                            {
-                                int last = m_Packables.Count - 1;
-                                m_Packables[j] = m_Packables[last];
-                                m_Packables.RemoveAt(last);
-                                removed = true;
-                            }
-                            else
-                            {
-                                j++;
-                            }
-                        }
-                    }
-                    EditorUtility.SetDirty(this);
-                }
-            }
-            if (removed) m_Sprites = null;
+            if (RemovePackableItems(m_Packables, objects, this)) m_Sprites = null;
             m_PackablesModified = true;
             EditorUtility.SetDirty(this);
         }
 
-        static ObjectRef ResolvePackableRef(Object obj)
+        internal static bool RemovePackableItems(List<PackableEntry> list, Object[] objects, Object dirtyTarget)
+        {
+            bool removed = false;
+            if (objects == null) return false;
+            for (int i = 0; i < objects.Length; i++)
+            {
+                var target = objects[i];
+                if (!ReferenceEquals(target, null))
+                {
+                    string targetGuid = null;
+                    long targetFileId = 0;
+                    bool hasAssetRef = target != null
+                        && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(target, out targetGuid, out targetFileId)
+                        && !string.IsNullOrEmpty(targetGuid);
+
+                    int j = 0;
+                    while (j < list.Count)
+                    {
+                        var entry = list[j];
+                        bool matches = (!ReferenceEquals(entry.Live, null) && ReferenceEquals(entry.Live, target))
+                            || (hasAssetRef
+                                && !string.IsNullOrEmpty(entry.Reference.Guid)
+                                && entry.Reference.FileId == targetFileId
+                                && string.Equals(entry.Reference.Guid, targetGuid, StringComparison.OrdinalIgnoreCase));
+                        if (matches)
+                        {
+                            int last = list.Count - 1;
+                            list[j] = list[last];
+                            list.RemoveAt(last);
+                            removed = true;
+                        }
+                        else
+                        {
+                            j++;
+                        }
+                    }
+                }
+                EditorUtility.SetDirty(dirtyTarget);
+            }
+            return removed;
+        }
+
+        internal static ObjectRef ResolvePackableRef(Object obj)
         {
             if (obj != null && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out string guid, out long localId) && !string.IsNullOrEmpty(guid))
                 return new ObjectRef(localId, guid, AssetDatabase.IsNativeAsset(obj) ? 2 : 3);
@@ -289,12 +295,12 @@ namespace UnityEngine.U2D
         /// <summary>Whether m_MasterAtlas has been updated in memory.</summary>
         internal bool MasterAtlasModified => m_MasterAtlasModified;
 
-        static ObjectRef ResolveMasterRef(SpriteAtlas atlas)
+        internal static ObjectRef ResolveMasterRef(SpriteAtlas atlas)
         {
             if (atlas != null
                 && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(atlas, out string guid, out long localId)
                 && !string.IsNullOrEmpty(guid))
-                return new ObjectRef(localId, guid, atlas.m_FromImporter ? 3 : 2);
+                return new ObjectRef(atlas.m_FromImporter ? ImportedFileId : localId, guid, atlas.m_FromImporter ? 3 : 2);
             return default;
         }
 

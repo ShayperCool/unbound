@@ -1017,9 +1017,14 @@ namespace Unbound.Runtime
                     case "yaml":
                         file = ObjectGraphBuilder.Build(Native.LoadDocuments(guid), info.Path, guid, ObjectGraphBuilder.Kind.Asset, null, Publish);
                         if (info.MainFileId != 0 && file.Objects.TryGetValue(info.MainFileId, out var main)) file.MainObject = main;
-                        // A sprite atlas v2 is referenced by the object its importer makes.
-                        if (file.MainObject is UnityEngine.U2D.SpriteAtlas)
-                            file.Objects[UnityEngine.U2D.SpriteAtlas.ImportedFileId] = file.MainObject;
+                        // A sprite atlas v2 is referenced by the object its importer makes, named
+                        // after the asset file even when SpriteAtlasAsset.m_Name differs.
+                        if (file.MainObject is UnityEngine.U2D.SpriteAtlas atlas)
+                        {
+                            if (atlas.IsFromImporter)
+                                atlas.m_Name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
+                            file.Objects[UnityEngine.U2D.SpriteAtlas.ImportedFileId] = atlas;
+                        }
                         break;
                     case "vfx":
                         // A graph's models look their asset up while they load and compile.

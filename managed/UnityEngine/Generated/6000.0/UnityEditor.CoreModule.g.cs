@@ -46883,12 +46883,10 @@ namespace UnityEditor.U2D.Interface
 }
 namespace UnityEditor.U2D
 {
-    [global::Unbound.Stub]
-    public unsafe abstract partial class ScriptablePacker : global::UnityEngine.ScriptableObject
+    unsafe partial class ScriptablePacker
     {
-        public abstract bool Pack(global::UnityEditor.U2D.SpriteAtlasPackingSettings config, global::UnityEditor.U2D.SpriteAtlasTextureSettings setting, global::UnityEditor.U2D.ScriptablePacker.PackerData input);
+        [global::Unbound.Stub] public virtual bool Pack(global::UnityEditor.U2D.SpriteAtlasPackingSettings config, global::UnityEditor.U2D.SpriteAtlasTextureSettings setting, global::UnityEditor.U2D.ScriptablePacker.PackerData input) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.ScriptablePacker.Pack"); return default; }
         [global::Unbound.Stub] internal bool PackInternal(global::UnityEditor.U2D.SpriteAtlasPackingSettings config, global::UnityEditor.U2D.SpriteAtlasTextureSettings setting, global::UnityEditor.U2D.ScriptablePacker.PackerDataInternal packerData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.ScriptablePacker.PackInternal"); return default; }
-        [global::Unbound.Stub] protected ScriptablePacker() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.ScriptablePacker.ctor"); }
         public enum PackTransform
         {
             None = 0,
@@ -46946,32 +46944,6 @@ namespace UnityEditor.U2D
             [global::Unbound.Stub] public global::Unity.Collections.NativeArray<int> indexData;
             [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Vector2> vertexData;
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class SpriteAtlasAsset : global::UnityEngine.Object
-    {
-        [global::Unbound.Stub] public SpriteAtlasAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.ctor"); }
-        [global::Unbound.Stub] public void SetIsVariant(bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.SetIsVariant"); }
-        [global::Unbound.Stub] public void SetMasterAtlas(global::UnityEngine.U2D.SpriteAtlas atlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.SetMasterAtlas"); }
-        [global::Unbound.Stub] public global::UnityEngine.U2D.SpriteAtlas GetMasterAtlas() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.GetMasterAtlas"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Object GetPacker() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.GetPacker"); return default; }
-        [global::Unbound.Stub] internal void SetPacker(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.SetPacker"); }
-        [global::Unbound.Stub] public void Add(global::UnityEngine.Object[] objects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.Add"); }
-        [global::Unbound.Stub] public void Remove(global::UnityEngine.Object[] objects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.Remove"); }
-        [global::Unbound.Stub] public void SetScriptablePacker(global::UnityEditor.U2D.ScriptablePacker obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.SetScriptablePacker"); }
-        [global::Unbound.Stub] internal void RemoveAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.RemoveAt"); }
-        [global::System.Obsolete("SetVariantScale is no longer supported and will be removed. Use SpriteAtlasImporter.SetVariantScale instead.")] [global::Unbound.Stub] public void SetVariantScale(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.SetVariantScale"); }
-        [global::System.Obsolete("SetIncludeInBuild is no longer supported and will be removed. Use SpriteAtlasImporter.SetIncludeInBuild instead.")] [global::Unbound.Stub] public void SetIncludeInBuild(bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.SetIncludeInBuild"); }
-        [global::System.Obsolete("IsIncludeInBuild is no longer supported and will be removed. Use SpriteAtlasImporter.IsIncludeInBuild instead.")] [global::Unbound.Stub] public bool IsIncludeInBuild() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.IsIncludeInBuild"); return default; }
-        [global::System.Obsolete("SetPlatformSettings is no longer supported and will be removed. Use SpriteAtlasImporter.SetPlatformSettings instead.")] [global::Unbound.Stub] public void SetPlatformSettings(global::UnityEditor.TextureImporterPlatformSettings src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.SetPlatformSettings"); }
-        [global::System.Obsolete("SetTextureSettings is no longer supported and will be removed. Use SpriteAtlasImporter.SetTextureSettings instead.")] [global::Unbound.Stub] public void SetTextureSettings(global::UnityEditor.U2D.SpriteAtlasTextureSettings src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.SetTextureSettings"); }
-        [global::System.Obsolete("SetPackingSettings is no longer supported and will be removed. Use SpriteAtlasImporter.SetPackingSettings instead.")] [global::Unbound.Stub] public void SetPackingSettings(global::UnityEditor.U2D.SpriteAtlasPackingSettings src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.SetPackingSettings"); }
-        [global::System.Obsolete("GetPackingSettings is no longer supported and will be removed. Use SpriteAtlasImporter.GetPackingSettings instead.")] [global::Unbound.Stub] public global::UnityEditor.U2D.SpriteAtlasPackingSettings GetPackingSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.GetPackingSettings"); return default; }
-        [global::System.Obsolete("GetTextureSettings is no longer supported and will be removed. Use SpriteAtlasImporter.GetTextureSettings instead.")] [global::Unbound.Stub] public global::UnityEditor.U2D.SpriteAtlasTextureSettings GetTextureSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.GetTextureSettings"); return default; }
-        [global::System.Obsolete("GetPlatformSettings is no longer supported and will be removed. Use SpriteAtlasImporter.GetPlatformSettingss instead.")] [global::Unbound.Stub] public global::UnityEditor.TextureImporterPlatformSettings GetPlatformSettings(string buildTarget) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.GetPlatformSettings"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.U2D.SpriteAtlasAsset Load(string assetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.Load"); return default; }
-        [global::Unbound.Stub] public static void Save(global::UnityEditor.U2D.SpriteAtlasAsset asset, string assetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.Save"); }
-        public bool isVariant { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.isVariant"); return default; } }
     }
     unsafe static partial class SpriteAtlasExtensions
     {
