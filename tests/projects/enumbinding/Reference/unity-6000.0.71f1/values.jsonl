@@ -1,0 +1,57 @@
+{"k":"ef.sparse.initial","v":"SparseNonzeroMode.TwentyFive(25)|Mid Twenty Five|0|1"}
+{"k":"ef.sparse.ui_to_so","v":"SparseNonzeroMode.HundredMax(100)|Hundred Max|0|SparseNonzeroMode.HundredMax(100)|100|2|2"}
+{"k":"ef.sparse.so_to_ui","v":"SparseNonzeroMode.TenStep(10)|Ten Step|0|SparseNonzeroMode.TenStep(10)|3"}
+{"k":"ef.sparse.uninit_zero","v":"SparseNonzeroMode.TenStep(10)|Ten Step|0|0"}
+{"k":"ef.negative.initial","v":"NegativeSignedMode.MinusTen(-10)|Minus Ten|0"}
+{"k":"ef.negative.ui_to_so","v":"NegativeSignedMode.PlusFifty(50)|Plus Fifty|0|NegativeSignedMode.PlusFifty(50)"}
+{"k":"ef.negative.so_zero","v":"NegativeSignedMode.ZeroPoint(0)|Zero Point|0"}
+{"k":"ef.negative.so_minus","v":"NegativeSignedMode.MinusTen(-10)|Minus Ten|0"}
+{"k":"ef.byte.initial","v":"ByteBackedMode.Low(2)|Low|0"}
+{"k":"ef.byte.ui_255","v":"null||0|255|255"}
+{"k":"ef.byte.so_128","v":"ByteBackedMode.MediumValue(128)|Medium Value|0"}
+{"k":"ef.alias.initial","v":"AliasMode(5)|Primary|0"}
+{"k":"ef.alias.ui_distinct","v":"AliasMode(20)|Distinct|0|AliasMode(20)"}
+{"k":"ef.alias.so_5","v":"AliasMode(5)|Primary|0"}
+{"k":"ef.ordered.initial","v":"OrderedMode.Alpha(1)|Alpha|0"}
+{"k":"ef.ordered.ui_charlie","v":"OrderedMode.Charlie(2)|Charlie|0|OrderedMode.Charlie(2)"}
+{"k":"ef.detached.beforeAttach","v":"null||0"}
+{"k":"ef.detached.afterAttach","v":"SparseNonzeroMode.TwentyFive(25)|Mid Twenty Five|0"}
+{"k":"ef.detached.afterUiEdit","v":"SparseNonzeroMode.TenStep(10)|Ten Step|0|SparseNonzeroMode.TenStep(10)"}
+{"k":"tree.initial","v":"SparseNonzeroMode.TwentyFive(25)|Mid Twenty Five|0 || SequentialMode.Gamma(2)|Gamma Custom|0 || 0|Minus Ten|Minus Ten|0|[Minus Ten,Zero Point,Plus Fifty]"}
+{"k":"tree.ui_to_so","v":"SequentialMode.Alpha(0)|NegativeSignedMode.PlusFifty(50)|2|Plus Fifty|Plus Fifty|0|[Minus Ten,Zero Point,Plus Fifty]"}
+{"k":"tree.so_to_ui","v":"SequentialMode.BetaValue(1)|Beta Value|0 || 1|Zero Point|Zero Point|0|[Minus Ten,Zero Point,Plus Fifty]"}
+{"k":"tree.afterUnbind","v":"null||0 || 1|OrigB|OrigB|0|[OrigA,OrigB]"}
+{"k":"ef.rebind.initialA","v":"SparseNonzeroMode.TenStep(10)|Ten Step|0"}
+{"k":"ef.rebind.afterB","v":"SparseNonzeroMode.HundredMax(100)|Hundred Max|0"}
+{"k":"ef.rebind.editB","v":"SparseNonzeroMode.TenStep(10)|SparseNonzeroMode.TwentyFive(25)"}
+{"k":"ef.rebind.diffType","v":"NegativeSignedMode.PlusFifty(50)|Plus Fifty|0"}
+{"k":"ef.rebind.diffTypeEdit","v":"NegativeSignedMode.MinusTen(-10)|NegativeSignedMode.MinusTen(-10)|Minus Ten|0"}
+{"k":"ef.rebind.afterUnbind","v":"null||0"}
+{"k":"ef.mixed.initial","v":"SparseNonzeroMode.TenStep(10)|—|1|0"}
+{"k":"ef.mixed.converged","v":"SparseNonzeroMode.TenStep(10)|—|1|0"}
+{"k":"ef.mixed.rediverged","v":"SparseNonzeroMode.TenStep(10)|—|1"}
+{"k":"ef.mixed.uiNew","v":"SparseNonzeroMode.HundredMax(100)|Hundred Max|0|SparseNonzeroMode.HundredMax(100),SparseNonzeroMode.HundredMax(100)"}
+{"k":"ef.mixed.beforePrimaryWrite","v":"SparseNonzeroMode.HundredMax(100)|Hundred Max|0"}
+{"k":"ef.mixed.afterPrimaryWrite","v":"SparseNonzeroMode.HundredMax(100)|Hundred Max|0|SparseNonzeroMode.HundredMax(100),SparseNonzeroMode.TenStep(10)"}
+{"k":"pf.sparse.initial","v":"PopupField|unity-input-sparse|Sparse|111|1|Mid Twenty Five|Mid Twenty Five|0|[Ten Step,Mid Twenty Five,Hundred Max]|evts=1"}
+{"k":"pf.negative.initial","v":"PopupField|unity-input-negative|Negative|111|0|Minus Ten|Minus Ten|0|[Minus Ten,Zero Point,Plus Fifty]"}
+{"k":"pf.ordered.initial","v":"PopupField|unity-input-ordered|Ordered|111|2|Alpha|Alpha|0|[Charlie,Bravo,Alpha]"}
+{"k":"pf.alias.initial","v":"PopupField|unity-input-alias|Alias|111|0|Primary|Primary|0|[Primary,Alias Of Primary,Distinct]"}
+{"k":"pf.labeled.initial","v":"PopupField|unity-input-sequential|Custom Enum|111|1|Beta Value|Beta Value|0|[Alpha,Beta Value,Gamma Custom]"}
+{"k":"pf.sparse.ui_to_so","v":"PopupField|unity-input-sparse|Sparse|111|2|Hundred Max|Hundred Max|0|[Ten Step,Mid Twenty Five,Hundred Max]|SparseNonzeroMode.HundredMax(100)|evts=25:1;100:2"}
+{"k":"pf.sparse.so_to_ui","v":"PopupField|unity-input-sparse|Sparse|111|0|Ten Step|Ten Step|0|[Ten Step,Mid Twenty Five,Hundred Max]|SparseNonzeroMode.TenStep(10)|evts=25:1;100:2;10:0"}
+{"k":"pf.ordered.ui_to_so","v":"PopupField|unity-input-ordered|Ordered|111|0|Charlie|Charlie|0|[Charlie,Bravo,Alpha]|OrderedMode.Charlie(2)"}
+{"k":"pf.alias.ui_to_so","v":"PopupField|unity-input-alias|Alias|111|2|Distinct|Distinct|0|[Primary,Alias Of Primary,Distinct]|AliasMode(20)"}
+{"k":"pf.labeled.dynamic","v":"PopupField|unity-input-sequential|Updated Enum|111|1|Beta Value|Beta Value|0|[Alpha,Beta Value,Gamma Custom]"}
+{"k":"pf.mixed.initial","v":"PopupField|unity-input-sparse|Sparse|111|0|Ten Step|—|1|[Ten Step,Mid Twenty Five,Hundred Max]|evts=0"}
+{"k":"pf.mixed.afterUiEdit","v":"PopupField|unity-input-sparse|Sparse|111|1|Mid Twenty Five|Mid Twenty Five|0|[Ten Step,Mid Twenty Five,Hundred Max]|SparseNonzeroMode.TwentyFive(25),SparseNonzeroMode.TwentyFive(25)|evts=25"}
+{"k":"pf.mixed.rediverged","v":"PopupField|unity-input-sparse|Sparse|111|1|Mid Twenty Five|Mid Twenty Five|0|[Ten Step,Mid Twenty Five,Hundred Max]"}
+{"k":"pf.mixed.converged","v":"PopupField|unity-input-sparse|Sparse|111|1|Mid Twenty Five|Mid Twenty Five|0|[Ten Step,Mid Twenty Five,Hundred Max]"}
+{"k":"pf.rebind.enumToEnum","v":"1|PopupField|unity-input-negative|Negative|111|0|Minus Ten|Minus Ten|0|[Minus Ten,Zero Point,Plus Fifty]"}
+{"k":"pf.rebind.enumToScalar","v":"0|IntegerField|unity-input-scalarInt|Scalar Int|42"}
+{"k":"pf.rebind.scalarToEnum","v":"0|PopupField|unity-input-sparse|Sparse|111|0|Ten Step|Ten Step|0|[Ten Step,Mid Twenty Five,Hundred Max]"}
+{"k":"coexist.beforeUnbind","v":"SparseNonzeroMode.TwentyFive(25)|Mid Twenty Five|0|rt-enum-tip-0"}
+{"k":"coexist.afterBothUpdate","v":"SparseNonzeroMode.TenStep(10)|Ten Step|0|rt-enum-tip-1"}
+{"k":"coexist.afterUnbind","v":"null||0|rt-enum-tip-2"}
+{"k":"logs","v":[]}
+{"k":"complete","v":true}
