@@ -47790,52 +47790,6 @@ namespace UnityEditor.UIElements
         }
     }
     [global::Unbound.Stub]
-    public unsafe partial class PropertyField : global::UnityEngine.UIElements.VisualElement, global::UnityEngine.UIElements.IBindable
-    {
-        [global::Unbound.Stub] internal static readonly string foldoutTitleBoundLabelProperty;
-        [global::Unbound.Stub] internal static readonly string decoratorDrawersContainerClassName;
-        [global::Unbound.Stub] internal static readonly string listViewBoundFieldProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public static readonly string inspectorElementUssClassName;
-        [global::Unbound.Stub] internal static readonly string imguiContainerPropertyUssClassName;
-        [global::Unbound.Stub] public PropertyField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.ctor"); }
-        [global::Unbound.Stub] public PropertyField(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.ctor"); }
-        [global::Unbound.Stub] public PropertyField(global::UnityEditor.SerializedProperty property, string label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.ctor"); }
-        [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.HandleEventBubbleUp"); }
-        [global::System.Obsolete("ExecuteDefaultActionAtTarget override has been removed because default event handling was migrated to HandleEventBubbleUp. Please use HandleEventBubbleUp.")] [global::Unbound.Stub] protected override void ExecuteDefaultActionAtTarget(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.ExecuteDefaultActionAtTarget"); }
-        [global::Unbound.Stub] internal static void ConfigureFieldStyles<TField, TValue>(TField field) where TField : global::UnityEngine.UIElements.BaseField<TValue> { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.ConfigureFieldStyles"); }
-        [global::Unbound.Stub] public void RegisterValueChangeCallback(global::UnityEngine.UIElements.EventCallback<global::UnityEditor.UIElements.SerializedPropertyChangeEvent> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.RegisterValueChangeCallback"); }
-        public global::UnityEngine.UIElements.IBinding binding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.binding"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.binding"); } }
-        public string bindingPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.bindingPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.bindingPath"); } }
-        public string label { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.label"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.label"); } }
-        internal global::UnityEditor.SerializedObject serializedObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.serializedObject"); return default; } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
-        {
-            [global::Unbound.Stub] internal string label;
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.PropertyField, global::UnityEditor.UIElements.PropertyField.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.VisualElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.UxmlTraits.ctor"); }
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField.UxmlTraits.Init"); }
-        }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class RenderingLayerMaskField : global::UnityEditor.UIElements.BaseMaskField<uint>
     {
         [global::Unbound.Stub] public static readonly string ussClassName;
@@ -47916,14 +47870,6 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] public static global::UnityEditor.UIElements.SerializedObjectBindEvent GetPooled(global::UnityEditor.SerializedObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectBindEvent.GetPooled"); return default; }
         [global::Unbound.Stub] public SerializedObjectBindEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectBindEvent.ctor"); }
         public global::UnityEditor.SerializedObject bindObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectBindEvent.bindObject"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class SerializedPropertyBindEvent : global::UnityEngine.UIElements.EventBase<global::UnityEditor.UIElements.SerializedPropertyBindEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedPropertyBindEvent.Init"); }
-        [global::Unbound.Stub] public static global::UnityEditor.UIElements.SerializedPropertyBindEvent GetPooled(global::UnityEditor.SerializedProperty obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedPropertyBindEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] public SerializedPropertyBindEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedPropertyBindEvent.ctor"); }
-        public global::UnityEditor.SerializedProperty bindProperty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedPropertyBindEvent.bindProperty"); return default; } }
     }
     [global::Unbound.Stub]
     public unsafe partial class TagField : global::UnityEngine.UIElements.PopupField<string>

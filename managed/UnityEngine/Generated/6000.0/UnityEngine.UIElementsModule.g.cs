@@ -143,7 +143,6 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class BaseField<TValueType>
     {
-        [global::Unbound.Stub] protected internal static readonly global::UnityEngine.PropertyName serializedPropertyCopyName;
         [global::Unbound.Stub] internal override global::UnityEngine.Rect GetTooltipRect() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.GetTooltipRect"); return default; }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.OnViewDataReady"); }
         internal event global::System.Action viewDataRestored { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.viewDataRestored"); } [global::Unbound.Stub] remove { } }

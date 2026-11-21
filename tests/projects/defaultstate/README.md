@@ -757,3 +757,9 @@ both repeats, plus the variable creation-time `EventBase.timestamp`). Because
 the subsequent `eventTypeId` actuals by `+1` (removing six that now coincide with the Editor's
 numbering and re-queuing four `Transition*Event` rows that shifted off coincidence); every earlier
 committed reference row and inventory entry is unchanged.
+
+The `PropertyField` slice adds `UnityEditor.UIElements.PropertyField` and its nested UXML types
+(`PropertyField+UxmlFactory`, `PropertyField+UxmlSerializedData`, and `PropertyField+UxmlTraits`)
+to the handwritten inventory. Two independent 6000.0.71f1 Linux GPU Editor captures agree
+byte-for-byte on all 61 added rows, and all 61 rows match Unbound with no new queued differences;
+every earlier committed reference row and inventory entry is unchanged.

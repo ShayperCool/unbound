@@ -911,6 +911,7 @@ namespace UnityEditor.UIElements.Bindings
             {
                 if (!ReferenceEquals(prop, this)) return;
                 element.ClearProperty(FindContextPropertyKey);
+                element.ClearProperty(BaseField<string>.serializedPropertyCopyName);
             }
             if (element.GetBinding(BindingExtensions.s_SerializedBindingId) is SerializedObjectBindingBase binding)
                 binding.Unbind();
@@ -1034,12 +1035,24 @@ namespace UnityEditor.UIElements.Bindings
             SerializedProperty prop = null;
             var visualElement = field as VisualElement;
             if (parentProperty != null)
-                prop = parentProperty.FindPropertyRelative(field.bindingPath);
+            {
+                prop = !parentProperty.hasVisibleChildren
+                    && visualElement?.GetProperty(BaseField<string>.serializedPropertyCopyName) is SerializedProperty cachedCopy
+                    ? cachedCopy
+                    : parentProperty.FindPropertyRelative(field.bindingPath);
+            }
             if (prop == null)
                 prop = serializedObject?.FindProperty(field.bindingPath);
             if (prop == null || visualElement == null)
                 return prop;
             SyncEditableState(visualElement, prop.editable);
+            if (visualElement is PropertyField)
+            {
+                using var evt = SerializedPropertyBindEvent.GetPooled(prop);
+                evt.elementTarget = visualElement;
+                Unbound.UIElements.Dispatching.HandleEventAtTargetAndDefaultPhase(evt, visualElement.elementPanel, visualElement);
+                if (evt.isPropagationStopped) return prop;
+            }
             RemoveBinding(field, forceRemove: true);
             CreateBindingObjectForProperty(visualElement, prop);
             return prop;

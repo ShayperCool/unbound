@@ -722,5 +722,120 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(settings);
             }
         }
+
+        [Fact]
+        public void PropertyFieldScalarLifecycleDynamicLabelAndUnmeasuredRelease()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                var pf = new PropertyField(so.FindProperty("count"), "Initial");
+                var events = new List<int>();
+                pf.RegisterValueChangeCallback(e => events.Add(e.changedProperty.intValue));
+                panel.visualTree.Add(pf);
+
+                pf.Bind(so);
+                Tick(panel);
+                Tick(panel);
+                var intField = Assert.IsType<IntegerField>(pf.hierarchy[0]);
+                Assert.Equal("Initial", intField.label);
+                Assert.Equal(10, intField.value);
+                Assert.Equal(new[] { 10 }, events);
+
+                // Dynamic label update reuses child field and updates label.
+                pf.label = "Renamed";
+                Tick(panel);
+                Assert.Same(intField, pf.hierarchy[0]);
+                Assert.Equal("Renamed", intField.label);
+
+                // Two-way sync.
+                intField.value = 33;
+                Assert.Equal(33, target.count);
+                target.count = 44;
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(44, intField.value);
+                Assert.Equal(44, events[^1]);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void PropertyFieldRebindUnbindAndDisposedSoAreClean()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            var so = new SerializedObject(target);
+            try
+            {
+                var pf = new PropertyField(so.FindProperty("count"));
+                panel.visualTree.Add(pf);
+                pf.Bind(so);
+                Tick(panel);
+                var origInt = Assert.IsType<IntegerField>(pf.hierarchy[0]);
+                Assert.Equal(10, origInt.value);
+
+                // Rebind to bool replaces child field with Toggle.
+                pf.BindProperty(so.FindProperty("flag"));
+                Tick(panel);
+                var toggle = Assert.IsType<Toggle>(pf.hierarchy[0]);
+                Assert.Equal(1, pf.hierarchy.childCount);
+                Assert.True(toggle.value);
+
+                // Dispose SO -> editing label or ticking does not throw and cleans up binding.
+                so.Dispose();
+                pf.label = "AfterDispose";
+                Tick(panel);
+                Tick(panel);
+                Assert.False(toggle.HasBinding(BindingExtensions.s_SerializedBindingId));
+            }
+            finally
+            {
+                so.Dispose();
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void PropertyFieldUnsupportedPropertyTypeReportsStubAndUxmlDataDeserializes()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                const string vecStubKey = "UnityEditor.UIElements.PropertyField (Vector3)";
+                int beforeHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
+                var pf = new PropertyField(so.FindProperty("pos"));
+                panel.visualTree.Add(pf);
+                pf.Bind(so);
+                Assert.Equal(0, pf.hierarchy.childCount);
+                Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value > beforeHits);
+
+                // UxmlSerializedData CreateInstance produces a valid PropertyField with ussClassName.
+                var data = new PropertyField.UxmlSerializedData();
+                var created = Assert.IsType<PropertyField>(data.CreateInstance());
+                Assert.True(created.ClassListContains(PropertyField.ussClassName));
+                data.Deserialize(created);
+                Assert.Null(created.label);
+                Assert.Null(created.bindingPath);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
     }
 }

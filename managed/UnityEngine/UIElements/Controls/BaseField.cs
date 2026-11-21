@@ -16,6 +16,7 @@ namespace UnityEngine.UIElements
         public static readonly string mixedValueLabelUssClassName = labelUssClassName + "--mixed-value";
         public static readonly string alignedFieldUssClassName = ussClassName + "__aligned";
         protected internal static readonly string mixedValueString = "—";
+        protected internal static readonly PropertyName serializedPropertyCopyName = new PropertyName("__unity-serialized-property-copy");
 
         VisualElement m_VisualInput;
         [global::Unity.Properties.@DontCreatePropertyAttribute] [global::UnityEngine.@SerializeField] TValueType m_Value;
