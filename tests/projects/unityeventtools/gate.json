@@ -1,0 +1,8 @@
+{
+  "commands": ["python3 tests/projects/unityeventtools/run.py gate"],
+  "summary": "unityeventtools: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/UnityEventTools.cs",
+    "managed/UnityEngine/Core/Events.cs"
+  ]
+}

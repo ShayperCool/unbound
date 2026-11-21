@@ -1,0 +1,5 @@
+{
+  "Unbound's engine assembly UnityEngine.CoreModule has version 1.0.0.0 where Unity's modules have 0.0.0.0, so an engine type's assembly-qualified name differs in its version": [
+    "add.objectTyped"
+  ]
+}
