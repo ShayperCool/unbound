@@ -85,7 +85,7 @@ namespace UnityEngine
                     if (!string.IsNullOrEmpty(scene.Path)) s_ScriptBakedScenes.Add(scene.Path);
                     scene.BakedOnOpen = true;
                     NoteBakeParts(file, settings, ScriptBake);
-                    SceneLoaded(scene.Handle.Value, default, file, settings, first, bake: true);
+                    SceneLoaded(scene.Handle.Value, default, file, settings, first, bake: true, scriptBake: true);
                     first = false;
                     UnityEditor.SceneManagement.EditorSceneManager.Dirty(scene);
                 }

@@ -143,7 +143,9 @@ namespace UnityEngine
         /// <para><paramref name="bake"/>: the Editor would bake the scene now (it opened it, its
         /// LightmapSettings ask for a bake on load and it has no lighting data): its realtime GI
         /// is then Unbound's own precompute of it (<see cref="Bake"/>).</para>
-        internal static void SceneLoaded(int scene, ObjectRef lightingData, LoadedFile file, LightingSettings settings, bool first, bool bake = false)
+        /// <para><paramref name="scriptBake"/>: the bake is a script's in Edit mode
+        /// (<see cref="BakeInEditMode"/>), not one on open.</para>
+        internal static void SceneLoaded(int scene, ObjectRef lightingData, LoadedFile file, LightingSettings settings, bool first, bool bake = false, bool scriptBake = false)
         {
             if (first)
             {
@@ -157,9 +159,10 @@ namespace UnityEngine
             if (baked)
             {
                 if (!bake) return;
-                if (Unbound.Runtime.SceneRegistry.Get(new Unbound.Runtime.SceneHandle(scene)) is { } opened && !string.IsNullOrEmpty(opened.Path))
+                if (!scriptBake && Unbound.Runtime.SceneRegistry.Get(new Unbound.Runtime.SceneHandle(scene)) is { } opened && !string.IsNullOrEmpty(opened.Path))
                     s_BakedScenes.Add(opened.Path);
-                NoteBakeParts(file, settings, BakeOnLoad);
+                // (A script's bake says what it does not make itself, BakeInEditMode.)
+                if (!scriptBake) NoteBakeParts(file, settings, BakeOnLoad);
                 // A scene without Lighting Settings has the defaults', which leave realtime GI off.
                 if (settings == null || !settings.realtimeGI) return;
                 if (!(Bake(scene, file, settings) is JsonElement made)) return;

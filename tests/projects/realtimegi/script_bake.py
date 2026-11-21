@@ -137,8 +137,7 @@ def engine(label, edit=False):
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print('engine exit', code, 'log', out/'engine.log')
-    # (`unbound test` without tests answers its run error code: the records decide.)
-    return int(not target.is_file()) if edit else code or int(not target.is_file())
+    return code or int(not target.is_file())
 
 
 def rows(path):

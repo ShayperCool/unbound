@@ -573,6 +573,11 @@ impl SystemSolver {
         &self.system
     }
 
+    /// The system, shared (to use it without holding what holds the solver).
+    pub fn shared_system(&self) -> Arc<System> {
+        self.system.clone()
+    }
+
     /// The direct light of `lights` on each cluster. Fails for a directional light when the
     /// system's precomputed visibility could not be read.
     pub fn set_lights(&mut self, lights: &[Light]) -> Result<()> {

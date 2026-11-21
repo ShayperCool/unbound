@@ -1528,7 +1528,13 @@ fn lone_planes(geometry: &Geometry, group: usize) -> Vec<Plane> {
 /// made as the Editor makes it: limits of zero or of a right angle or more, and parts without
 /// normals projected.
 pub fn auto_charts(mesh: &Mesh, params: &Params) -> Result<Charts> {
-    Ok(auto_chart_choices(mesh, params)?.swap_remove(0))
+    check_mesh(mesh, params)?;
+    charts_with(
+        mesh,
+        params,
+        &Choices::new(Vec::new()),
+        &mut uv_choice::Grid::new(),
+    )
 }
 
 /// How many ways of taking the choices the rounding decides are made at most.
@@ -1539,39 +1545,7 @@ const MAX_CHOICE_RUNS: usize = 256;
 /// arithmetic here gives. Fails when that one fails, or when there are more than
 /// `MAX_CHOICE_RUNS` ways.
 pub fn auto_chart_choices(mesh: &Mesh, params: &Params) -> Result<Vec<Charts>> {
-    ensure!(
-        mesh.normals.len() == mesh.positions.len() && mesh.uvs.len() == mesh.positions.len(),
-        "{} normals and {} UVs for {} vertices",
-        mesh.normals.len(),
-        mesh.uvs.len(),
-        mesh.positions.len()
-    );
-    // (With a limit of zero the precompute keeps the mesh's own charts: those are not made
-    // here. A Max Angle of a right angle or more is not measured.)
-    ensure!(
-        params.max_distance > 0.0 && params.max_angle > 0.0 && params.max_angle < 90.0,
-        "automatic charts with Max Distance {} and Max Angle {}",
-        params.max_distance,
-        params.max_angle
-    );
-    if mesh
-        .triangles
-        .iter()
-        .flatten()
-        .any(|&v| v as usize >= mesh.positions.len())
-    {
-        bail!("a triangle past the {} vertices", mesh.positions.len());
-    }
-    if mesh
-        .positions
-        .iter()
-        .chain(mesh.normals)
-        .flatten()
-        .chain(mesh.uvs.iter().flatten())
-        .any(|v| !v.is_finite())
-    {
-        bail!("a vertex with a non-finite position, normal or lightmap UV");
-    }
+    check_mesh(mesh, params)?;
     let mut made: Vec<Charts> = Vec::new();
     let mut pending: Vec<Vec<usize>> = vec![Vec::new()];
     let mut runs = 0;
@@ -1610,6 +1584,44 @@ pub fn auto_chart_choices(mesh: &Mesh, params: &Params) -> Result<Vec<Charts>> {
         }
     }
     Ok(made)
+}
+
+/// Fails for a mesh or limits that automatic charts are not made of.
+fn check_mesh(mesh: &Mesh, params: &Params) -> Result<()> {
+    ensure!(
+        mesh.normals.len() == mesh.positions.len() && mesh.uvs.len() == mesh.positions.len(),
+        "{} normals and {} UVs for {} vertices",
+        mesh.normals.len(),
+        mesh.uvs.len(),
+        mesh.positions.len()
+    );
+    // (With a limit of zero the precompute keeps the mesh's own charts: those are not made
+    // here. A Max Angle of a right angle or more is not measured.)
+    ensure!(
+        params.max_distance > 0.0 && params.max_angle > 0.0 && params.max_angle < 90.0,
+        "automatic charts with Max Distance {} and Max Angle {}",
+        params.max_distance,
+        params.max_angle
+    );
+    if mesh
+        .triangles
+        .iter()
+        .flatten()
+        .any(|&v| v as usize >= mesh.positions.len())
+    {
+        bail!("a triangle past the {} vertices", mesh.positions.len());
+    }
+    if mesh
+        .positions
+        .iter()
+        .chain(mesh.normals)
+        .flatten()
+        .chain(mesh.uvs.iter().flatten())
+        .any(|v| !v.is_finite())
+    {
+        bail!("a vertex with a non-finite position, normal or lightmap UV");
+    }
+    Ok(())
 }
 
 /// The charts made taking the choices as `choices` says.
@@ -2268,8 +2280,12 @@ mod tests {
         // (A cube turned so has more ways than are made: its equal faces tie in every round.)
         let mut cube = solid([1.0, 1.0, 1.0]);
         turn_in_mesh(&mut cube, 30.0, 20.0);
-        let error = auto_charts(&cube.mesh(), &LIMITS).unwrap_err().to_string();
+        let error = auto_chart_choices(&cube.mesh(), &LIMITS)
+            .unwrap_err()
+            .to_string();
         assert!(error.contains("more than 256 ways"), "{error}");
+        // The arithmetic's own way is made all the same (Unbound's own bake takes it).
+        assert!(auto_charts(&cube.mesh(), &LIMITS).is_ok());
         for size in [[3.0, 0.2, 2.0]] {
             let mut shape = solid(size);
             assert!(auto_charts(&shape.mesh(), &LIMITS).is_ok());

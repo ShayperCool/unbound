@@ -84,6 +84,9 @@ struct Atlas {
 
 struct Scene {
     systems: Vec<SystemSolver>,
+    /// The systems are Unbound's own precompute (`bake`), laid out with the realtime lightmap
+    /// UVs its arithmetic makes, not the Editor's data.
+    own_bake: bool,
     /// Per system, its renderers' scale and offset within it.
     renderer_st: Vec<Vec<[f32; 4]>>,
     atlases: Vec<Atlas>,
@@ -169,7 +172,7 @@ pub fn load(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) -> Result
         read_precomputed(&file, file_id)?
     };
     match read {
-        Some((data, ranges)) => register(data, &ranges),
+        Some((data, ranges)) => register(data, &ranges, false),
         None => Ok(Json::Null),
     }
 }
@@ -261,6 +264,7 @@ fn light_probe_ranges(
 fn register(
     data: unbound_gi::data::Precomputed,
     ranges: &[([u8; 16], usize, usize)],
+    own_bake: bool,
 ) -> Result<Json> {
     let systems_json = data
         .systems
@@ -348,6 +352,7 @@ fn register(
             handle,
             Scene {
                 systems,
+                own_bake,
                 renderer_st,
                 atlases,
                 solver_lights: Vec::new(),
@@ -747,7 +752,8 @@ pub fn read_probes(handle: u64, out: &mut [f32]) -> Result<usize> {
 /// too), a Max Distance of zero, parts without area and the rounds' limit.
 /// 6: parts left on their own keep their own UVs or their projection as the precompute
 /// chooses; choices the rounding decides are taken as the system's layout and clusters have
-/// them (`realtime_uv::fitting_uvs`).
+/// them (`realtime_uv::fitting_uvs`), so an entry is of one system (its hash, the renderer's
+/// place in it, and whether it is Unbound's own bake).
 const UV_CACHE_VERSION: u32 = 6;
 
 /// Renderer `renderer` of system `system`'s realtime lightmap UVs
@@ -768,8 +774,26 @@ pub fn realtime_uvs(
         out.len(),
         input.positions.len()
     );
+    // The system's data, shared, so that the layout is chosen without holding the scenes.
+    let (layout, st, own_bake) = with_scene(handle, |scene| {
+        let solver = scene
+            .systems
+            .get(system)
+            .with_context(|| format!("no system {system}"))?;
+        let st = *scene
+            .renderer_st
+            .get(system)
+            .and_then(|r| r.get(renderer))
+            .with_context(|| format!("no renderer {renderer} in system {system}"))?;
+        Ok((solver.shared_system(), st, scene.own_bake))
+    })?;
     let mut key = blake3::Hasher::new();
     key.update(&UV_CACHE_VERSION.to_le_bytes());
+    // Which of the layouts the precompute's rounding allows is taken depends on the system.
+    key.update(&layout.hash);
+    key.update(bytes_of(&st[..]));
+    key.update(&(renderer as u64).to_le_bytes());
+    key.update(&[own_bake as u8]);
     key.update(&input.pixel_size.to_le_bytes());
     key.update(&input.min_chart_texels.to_le_bytes());
     match input.charts {
@@ -800,44 +824,19 @@ pub fn realtime_uvs(
         &path,
         input.positions.len(),
         || {
-            // Made outside the scenes' lock; only the choice among them takes the layout.
-            let choices = unbound_gi::realtime_uv::realtime_uv_choices(input)?;
-            with_layout(handle, system, renderer, |layout, st| {
-                unbound_gi::realtime_uv::fitting_choice(choices, input, layout, renderer, st)
-            })
+            if own_bake {
+                // Unbound's own precompute laid the system out with its own arithmetic's way.
+                unbound_gi::realtime_uv::realtime_uvs(input)
+            } else {
+                unbound_gi::realtime_uv::fitting_uvs(input, &layout, renderer, st)
+            }
         },
-        |output| {
-            with_layout(handle, system, renderer, |layout, st| {
-                unbound_gi::realtime_uv::check_layout(layout, st, output)
-            })
-        },
+        |output| unbound_gi::realtime_uv::check_layout(&layout, st, output),
     )?;
     for (o, uv) in out.chunks_exact_mut(2).zip(&output.uvs) {
         o.copy_from_slice(uv);
     }
     Ok(())
-}
-
-/// `f` of system `system`'s precomputed data and the place of its renderer `renderer` in it
-/// (`dynamicLightmapSTInSystem`).
-fn with_layout<T>(
-    handle: u64,
-    system: usize,
-    renderer: usize,
-    f: impl FnOnce(&unbound_gi::data::System, [f32; 4]) -> Result<T>,
-) -> Result<T> {
-    with_scene(handle, |scene| {
-        let solver = scene
-            .systems
-            .get(system)
-            .with_context(|| format!("no system {system}"))?;
-        let st = *scene
-            .renderer_st
-            .get(system)
-            .and_then(|r| r.get(renderer))
-            .with_context(|| format!("no renderer {renderer} in system {system}"))?;
-        f(solver.system(), st)
-    })
 }
 
 /// The cache entry at `path` when it passes `check` (a cached layout is checked again, with its
@@ -1056,7 +1055,7 @@ pub fn bake(inputs: &[BakeInput], probes: &[[f32; 3]]) -> Result<Json> {
         .iter()
         .map(|set| (set.hash, 0, set.probes.len()))
         .collect();
-    let mut answer = register(baked.data, &ranges)?;
+    let mut answer = register(baked.data, &ranges, true)?;
     answer["refused"] = baked
         .refused
         .iter()
@@ -1405,7 +1404,9 @@ mod tests {
             ..point([-1.0, 3.0, -0.5])
         };
         let lit = |ranges: &[f32]| -> Vec<u16> {
-            let handle = register(room(), &[]).unwrap()["handle"].as_u64().unwrap();
+            let handle = register(room(), &[], false).unwrap()["handle"]
+                .as_u64()
+                .unwrap();
             set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
             set_environment(handle, &[0.01f32, 0.01, 0.02].repeat(FACE_VALUES)).unwrap();
             let first = update(handle, &frame, &[at(ranges[0])]).unwrap();
@@ -1441,7 +1442,7 @@ mod tests {
 
     #[test]
     fn a_scene_updates_until_converged_and_again_after_a_change() {
-        let reply = register(room(), &[]).unwrap();
+        let reply = register(room(), &[], false).unwrap();
         let handle = reply["handle"].as_u64().unwrap();
         assert_eq!(reply["atlases"], json!([64]));
         let system = &reply["systems"][0];
@@ -1615,7 +1616,7 @@ mod tests {
         // The baked and the realtime probe sets both cover the nine probes.
         assert_eq!(ranges.len(), 2);
         assert!(ranges.iter().all(|r| (r.1, r.2) == (0, 9)));
-        let reply = register(data, &ranges).unwrap();
+        let reply = register(data, &ranges, false).unwrap();
         assert_eq!(reply["probes"], json!({ "count": 9, "error": null }));
         let handle = reply["handle"].as_u64().unwrap();
         set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
@@ -1657,7 +1658,7 @@ mod tests {
         assert!(read_probes(handle, &mut [0f32; 26]).is_err());
         release(handle);
         // A probe set the light probes do not list lights nothing, and says so.
-        let reply = register(room(), &[]).unwrap();
+        let reply = register(room(), &[], false).unwrap();
         assert_eq!(reply["probes"]["count"], json!(0));
         assert!(
             reply["probes"]["error"]
@@ -1671,7 +1672,7 @@ mod tests {
         data.probe_sets.clear();
         data.probe_errors
             .push("a light probe set of another version".into());
-        let reply = register(data, &ranges).unwrap();
+        let reply = register(data, &ranges, false).unwrap();
         assert_eq!(reply["systems"].as_array().unwrap().len(), 1);
         assert_eq!(reply["probes"]["count"], json!(0));
         assert_eq!(
@@ -1686,7 +1687,9 @@ mod tests {
         // DynamicGI.indirectScale 0 and updateThreshold 0 from a scene's first frame on (the
         // solvers start at 1 and 1%): the drawn texels are black, and the threshold reaches
         // the solvers.
-        let handle = register(room(), &[]).unwrap()["handle"].as_u64().unwrap();
+        let handle = register(room(), &[], false).unwrap()["handle"]
+            .as_u64()
+            .unwrap();
         set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
         let frame = GiFrame {
             indirect_scale: 0.0,
@@ -1716,7 +1719,9 @@ mod tests {
 
     #[test]
     fn a_directional_scene_fills_its_directionality_atlas() {
-        let handle = register(room(), &[]).unwrap()["handle"].as_u64().unwrap();
+        let handle = register(room(), &[], false).unwrap()["handle"]
+            .as_u64()
+            .unwrap();
         set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
         let mut frame = GiFrame {
             indirect_scale: 1.0,
@@ -1785,7 +1790,7 @@ mod tests {
         // A copy of a texel onto itself: the reply says that the scene has copies.
         let texel = transport.segments[0].texels[0];
         transport.segments[0].copies.push((texel, texel));
-        let reply = register(data, &[]).unwrap();
+        let reply = register(data, &[], false).unwrap();
         assert_eq!(
             reply["directionality"],
             json!({ "error": "no blocks", "copies": true })
@@ -1812,7 +1817,9 @@ mod tests {
         let mut texels = vec![0u8; 4 * 64 * 64];
         assert_eq!(read_directionality(handle, 0, &mut texels).unwrap(), 0);
         release(handle);
-        let whole = register(room(), &[]).unwrap()["handle"].as_u64().unwrap();
+        let whole = register(room(), &[], false).unwrap()["handle"]
+            .as_u64()
+            .unwrap();
         assert!(light.chunks_exact(4).any(|l| l[0] != 0));
         assert!(light == lightmap(whole, 0));
         release(whole);
@@ -1830,7 +1837,7 @@ mod tests {
         let data = unbound_gi::data::read_precomputed(&serialized.read(112000000).unwrap())
             .unwrap()
             .unwrap();
-        let reply = register(data, &[]).unwrap();
+        let reply = register(data, &[], false).unwrap();
         assert_eq!(
             reply["directionality"],
             json!({ "error": null, "copies": false })

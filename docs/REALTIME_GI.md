@@ -1075,9 +1075,12 @@ precomputed data is not made: said once, and `lightingDataAsset` stays null), an
 lightmaps and baked probes of a scene with baked global illumination (Q677), the environment
 lighting from a sky and baked reflection probes are not made (each said once). Renderers a
 script added to the scene after it loaded are not baked (named). The records of the asset and
-the Editor's log are reported, not gated. Not measured: several open scenes (Unbound bakes them
-one by one as they would load), a scene with Editor lighting data baked again (Unbound bakes it
-anew), and `BakeAsync` outside Play mode (not implemented). Not measured: data the Editor finds invalid (moved geometry,
+the Editor's log are reported, not gated. (`unbound test` runs without a graphics device, where
+realtime GI is baked but never drawn.) Not measured: several open scenes (Unbound bakes them
+one by one as they would load), a scene with Editor lighting data baked again (Unbound bakes
+its realtime GI anew; in Edit mode the scene keeps the rest of that data, its baked lightmaps
+and environment, until it loads again, when the script's bake replaces it all), and
+`BakeAsync` outside Play mode (not implemented). Not measured: data the Editor finds invalid (moved geometry,
 changed settings; Unbound bakes only for missing data), a scene that references the built-in
 default lighting data, a scene saved by an earlier release with Auto Generate on (it has no
 bake-on-load setting of its own), and additive opens of several scenes. A scene that does

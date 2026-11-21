@@ -940,9 +940,24 @@ pub(crate) fn pack_in_order(
 }
 
 /// The instance's realtime lightmap UVs, as the arithmetic here makes them (the first of
-/// [`realtime_uv_choices`]).
+/// [`realtime_uv_choices`], made alone): what Unbound's own precompute lays out.
 pub fn realtime_uvs(input: &Input) -> Result<Output> {
-    Ok(realtime_uv_choices(input)?.swap_remove(0))
+    check_input(input)?;
+    match input.charts {
+        Charts::Preserved => laid_out(input, charts(input), input.uvs, false),
+        Charts::Automatic { normals, params } => {
+            let auto_charts::Charts { uvs, triangles } = auto_charts::auto_charts(
+                &auto_charts::Mesh {
+                    positions: input.positions,
+                    normals,
+                    uvs: input.uvs,
+                    triangles: input.triangles,
+                },
+                &params,
+            )?;
+            laid_out(input, triangles, &uvs, true)
+        }
+    }
 }
 
 /// Two layouts whose UVs are this close, in texels, are one.
@@ -1262,6 +1277,37 @@ fn rigid_misfit(pairs: &[Pair], normal_metres: f64) -> f64 {
 /// decides can be taken (automatic charts: [`auto_charts::auto_chart_choices`]), each layout
 /// once; the first is the one the arithmetic here gives.
 pub fn realtime_uv_choices(input: &Input) -> Result<Vec<Output>> {
+    check_input(input)?;
+    let made = match input.charts {
+        Charts::Preserved => return Ok(vec![laid_out(input, charts(input), input.uvs, false)?]),
+        Charts::Automatic { normals, params } => auto_charts::auto_chart_choices(
+            &auto_charts::Mesh {
+                positions: input.positions,
+                normals,
+                uvs: input.uvs,
+                triangles: input.triangles,
+            },
+            &params,
+        )?,
+    };
+    let mut outputs: Vec<Output> = Vec::with_capacity(made.len());
+    for (i, auto_charts::Charts { uvs, triangles }) in made.into_iter().enumerate() {
+        match laid_out(input, triangles, &uvs, true) {
+            Ok(output) => {
+                if !outputs.iter().any(|o| same_layout(o, &output)) {
+                    outputs.push(output);
+                }
+            }
+            Err(e) if i == 0 => return Err(e),
+            // Another way that cannot be laid out is not one the precompute took.
+            Err(_) => {}
+        }
+    }
+    Ok(outputs)
+}
+
+/// Fails for input that cannot be laid out.
+fn check_input(input: &Input) -> Result<()> {
     ensure!(
         input.uvs.len() == input.positions.len(),
         "{} UVs for {} vertices",
@@ -1292,32 +1338,7 @@ pub fn realtime_uv_choices(input: &Input) -> Result<Vec<Output>> {
     {
         bail!("a vertex with a non-finite position or lightmap UV");
     }
-    let made = match input.charts {
-        Charts::Preserved => return Ok(vec![laid_out(input, charts(input), input.uvs, false)?]),
-        Charts::Automatic { normals, params } => auto_charts::auto_chart_choices(
-            &auto_charts::Mesh {
-                positions: input.positions,
-                normals,
-                uvs: input.uvs,
-                triangles: input.triangles,
-            },
-            &params,
-        )?,
-    };
-    let mut outputs: Vec<Output> = Vec::with_capacity(made.len());
-    for (i, auto_charts::Charts { uvs, triangles }) in made.into_iter().enumerate() {
-        match laid_out(input, triangles, &uvs, true) {
-            Ok(output) => {
-                if !outputs.iter().any(|o| same_layout(o, &output)) {
-                    outputs.push(output);
-                }
-            }
-            Err(e) if i == 0 => return Err(e),
-            // Another way that cannot be laid out is not one the precompute took.
-            Err(_) => {}
-        }
-    }
-    Ok(outputs)
+    Ok(())
 }
 
 /// The charts (`lists`: each chart's triangles; `chart_uvs`: their UVs) sized, packed and laid
