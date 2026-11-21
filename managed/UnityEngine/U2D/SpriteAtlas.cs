@@ -282,10 +282,72 @@ namespace UnityEngine.U2D
         }
 
         /// <summary>The master atlas reference as stored.</summary>
-        internal ObjectRef MasterAtlasRef => m_MasterRef;
+        internal ObjectRef MasterAtlasRef => m_MasterAtlasModified
+            ? (m_Master != null ? ResolveMasterRef(m_Master) : default)
+            : m_MasterRef;
 
         /// <summary>Whether m_MasterAtlas has been updated in memory.</summary>
         internal bool MasterAtlasModified => m_MasterAtlasModified;
+
+        static ObjectRef ResolveMasterRef(SpriteAtlas atlas)
+        {
+            if (atlas != null
+                && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(atlas, out string guid, out long localId)
+                && !string.IsNullOrEmpty(guid))
+                return new ObjectRef(localId, guid, atlas.m_FromImporter ? 3 : 2);
+            return default;
+        }
+
+        /// <summary>Sets the master atlas of a variant atlas; warns and leaves non-variant atlases
+        /// unchanged and clean, returns without dirtying when unchanged, clears the master with a
+        /// warning on self-assignment or a variant master (preserving tag and marking dirty), copies
+        /// the valid master's tag (leaving tag unchanged when cleared), clamps an out-of-range
+        /// variant scale to [0.1, 1], and marks the atlas dirty once (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/spriteatlaseditor v1masteratlas/v2masteratlas).</summary>
+        internal void WriteMasterAtlas(SpriteAtlas value)
+        {
+            if (value == null) value = null;
+            if (!m_IsVariant)
+            {
+                Debug.LogWarning("Cannot set a master to this atlas because it was not set as a variant atlas.");
+                return;
+            }
+            var current = MasterAtlas;
+            if (current == value) return;
+            m_Master = value;
+            m_MasterRef = ResolveMasterRef(value);
+            if (ReferenceEquals(m_Master, this))
+            {
+                Debug.LogWarning("Cannot set itself as the master atlas.");
+                m_Master = null;
+                m_MasterRef = default;
+            }
+            else if (m_Master != null && m_Master.m_IsVariant)
+            {
+                Debug.LogWarning("Cannot set a variant atlas as a master atlas.");
+                m_Master = null;
+                m_MasterRef = default;
+            }
+            if (m_Master != null)
+            {
+                m_Tag = m_Master.tag;
+                m_TagModified = true;
+            }
+            EnsureImporterSettingsRead();
+            if (m_VariantScale < MinVariantScale)
+            {
+                m_VariantScale = MinVariantScale;
+                m_VariantScaleModified = true;
+            }
+            else if (m_VariantScale > MaxVariantScale)
+            {
+                m_VariantScale = MaxVariantScale;
+                m_VariantScaleModified = true;
+            }
+            m_MasterAtlasModified = true;
+            m_Sprites = null;
+            EditorUtility.SetDirty(this);
+        }
 
         /// <summary>The serialized tag string.</summary>
         internal string RawTag => m_Tag;
