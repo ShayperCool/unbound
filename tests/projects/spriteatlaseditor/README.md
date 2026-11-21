@@ -12,7 +12,7 @@ toggles, `EditorUtility.IsDirty`/`GetDirtyCount`, `AssetDatabase.SaveAssets`/`Sa
 variant flag and sprite count; also the settings of `new SpriteAtlas()` and the answers for a null
 atlas. Recorded in Play mode, in batch mode, with the Unity 6000.0.71f1 Editor.
 
-Twenty-six profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
+Twenty-seven profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
 
 - `v1`: Sprite Packer mode "Sprite Atlas V1 - Always Enabled" with three `.spriteatlas` assets in
   `Assets/Atlases/`: `Main` (a folder, a texture and a sprite of a sheet as packables, included in
@@ -108,6 +108,15 @@ Twenty-six profiles, each with its own reference under `Reference/unity-6000.0.7
   `AssetDatabase.SaveAssets`, `AssetDatabase.WriteImportSettingsIfDirty`,
   `SpriteAtlasImporter.SaveAndReimport`, `AssetDatabase.ImportAsset(ForceUpdate)`, and exact
   `.meta`/`.spriteatlasv2` persistence.
+- `v2importerpacking`: mode "Sprite Atlas V2 - Enabled" with four `.spriteatlasv2` assets in
+  `Assets/ImporterPackingAtlases/` (`Master`, `Variant`, `Legacy`, `Omitted`) and their
+  `SpriteAtlasImporter` `.meta` files, exercising `SpriteAtlasImporter.packingSettings` (getter and
+  setter) across uncreated `new SpriteAtlasImporter()`, V2 master/variant own-`.meta` vs imported
+  master-inheritance behavior, immediate readback and loaded `SpriteAtlas` independence, same-value
+  repeat dirtying, negative and zeroed `default` values, legacy `serializedVersion: 1`
+  `paddingPower` and hidden `allowAlphaSplitting` preservation, omitted `packingSettings`/
+  `platformSettings`, `SaveAssets`, `WriteImportSettingsIfDirty`, `SaveAndReimport` (including
+  dependent V2 variant reimport when a master reimports), and `ImportAsset(ForceUpdate)`.
 
 The sprites come from tests/projects/spriteatlas (files the Editor authored). The atlases are
 written from that probe's Editor-authored atlas files with other packables and settings. The
@@ -237,7 +246,20 @@ leaving `.spriteatlasv2` untouched) and clears importer dirtiness on
 `AssetDatabase.WriteImportSettingsIfDirty` (returning `true` when dirty and `false` when clean,
 without reimporting the loaded `SpriteAtlas`), and flushes `.meta`, evicts the cached importer and
 reimports a fresh clean `SpriteAtlas` on both `SaveAndReimport` and
-`AssetDatabase.ImportAsset(ForceUpdate)`.
+`AssetDatabase.ImportAsset(ForceUpdate)`; `SpriteAtlasImporter.packingSettings` throws
+`NullReferenceException` on both accessors of an uncreated `new SpriteAtlasImporter()`, reads the
+importer's own `.meta` `packingSettings` (returning Editor defaults when omitted, converting legacy
+v1 `paddingPower` while keeping hidden `allowAlphaSplitting`, and returning a V2 variant's own
+`.meta` settings independently of its master), stores assigned values verbatim (including negative
+and zeroed `default` values) and unconditionally marks the importer dirty even on same-value
+repeats (leaving the loaded `SpriteAtlas` unaffected until reimport and staying unaffected by
+unsaved in-memory `SpriteAtlasExtensions.SetPackingSettings` edits), follows the same `SaveAssets`
+(no write, stays dirty), `WriteImportSettingsIfDirty` (writes `serializedVersion: 2`
+`packingSettings` and any omitted `platformSettings: []`/`textureSettings` defaults while leaving
+`.spriteatlasv2` and unrelated `.meta` sections untouched, clears dirty, does not reimport), and
+`SaveAndReimport`/`ImportAsset(ForceUpdate)` persistence and reload timing, and reimporting a V2
+master atlas also updates its loaded V2 variant `SpriteAtlas` to inherit the master's updated
+packing settings while leaving the variant importer's own `.meta` untouched.
 Not measured: either kind of atlas in the other kind's packer mode.
 
 Values compare exactly.
