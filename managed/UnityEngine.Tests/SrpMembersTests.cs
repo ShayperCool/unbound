@@ -359,8 +359,10 @@ namespace Unbound.Tests
                 Assert.Equal(0, SystemInfo.GetTiledRenderTargetStorageSize(GraphicsFormat.None, 1));
                 GraphicsDeviceProfile.Select("Metal");
                 Assert.Equal(64, SystemInfo.maxTiledPixelStorageSize);
-                GraphicsDeviceProfile.Select("Vulkan");
                 Assert.Equal(0, SystemInfo.GetTiledRenderTargetStorageSize(GraphicsFormat.R8G8B8A8_UNorm, 1));
+                GraphicsDeviceProfile.Select("Vulkan");
+                Assert.Equal(32, SystemInfo.maxTiledPixelStorageSize);
+                Assert.Equal(4, SystemInfo.GetTiledRenderTargetStorageSize(GraphicsFormat.R8G8B8A8_UNorm, 1));
             }
             finally
             {

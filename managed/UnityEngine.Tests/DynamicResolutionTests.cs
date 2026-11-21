@@ -293,26 +293,54 @@ namespace Unbound.Tests
             }
         }
 
-        /// <summary>The Linux Editor's devices do not scale: the factors stay 1, a dynamic texture
-        /// keeps its size and cameras report false.</summary>
+        /// <summary>OpenGL Core does not scale buffers: the factors stay 1, a dynamic texture
+        /// keeps its size, cameras report false, yet invalid scale arguments still log assertions
+        /// (tests/projects/corecaps <c>dynres.factors.logs</c>). Vulkan scales and quantizes to
+        /// 20 discrete 0.05 steps.</summary>
         [Fact]
-        public void TheLinuxDevicesDoNotScale()
+        public void OpenGLCoreValidatesWithoutScalingAndVulkanScalesWithQuantization()
         {
-            foreach (var device in new[] { "OpenGLCore", "Vulkan" })
+            GraphicsDeviceProfile.Select("OpenGLCore");
+            Assert.False(SystemInfo.supportsDynamicResolution);
+            var logs = new List<string>();
+            void OnLog(string message, string stack, LogType type) => logs.Add(type + ": " + message);
+            Application.logMessageReceived += OnLog;
+            try
             {
-                GraphicsDeviceProfile.Select(device);
                 ScalableBufferManager.ResizeBuffers(0.5f, 0.25f);
-                Assert.Equal((1f, 1f), (ScalableBufferManager.widthScaleFactor, ScalableBufferManager.heightScaleFactor));
-                var dynamic = Target(16, 16, true);
-                Assert.Equal((16, 16, 0, 0), Last(dynamic));
-                Assert.False(dynamic.DynamicallyScaled);
-                var camera = Keep(new GameObject("camera")).AddComponent<Camera>();
-                camera.enabled = false;
-                camera.allowDynamicResolution = true;
-                Assert.False(camera.allowDynamicResolution);
-                camera.targetTexture = dynamic;
-                Assert.Equal((16, 16), (camera.scaledPixelWidth, camera.scaledPixelHeight));
+                ScalableBufferManager.ResizeBuffers(2f, 0f);
+                ScalableBufferManager.ResizeBuffers(float.NaN, 0.5f);
             }
+            finally { Application.logMessageReceived -= OnLog; }
+            Assert.Equal((1f, 1f), (ScalableBufferManager.widthScaleFactor, ScalableBufferManager.heightScaleFactor));
+            Assert.Equal(new[] { "Assert: Invalid widthScale: 2.000000", "Assert: Invalid heightScale: 0.000000", "Assert: Invalid widthScale: -nan" }, logs);
+            var dynamic = Target(16, 16, true);
+            Assert.Equal((16, 16, 0, 0), Last(dynamic));
+            Assert.False(dynamic.DynamicallyScaled);
+            var camera = Keep(new GameObject("camera")).AddComponent<Camera>();
+            camera.enabled = false;
+            camera.allowDynamicResolution = true;
+            Assert.False(camera.allowDynamicResolution);
+            camera.targetTexture = dynamic;
+            Assert.Equal((16, 16), (camera.scaledPixelWidth, camera.scaledPixelHeight));
+
+            // Vulkan: scales and quantizes to Unity's 20 discrete 0.05 steps (corecaps).
+            GraphicsDeviceProfile.Select("Vulkan");
+            Assert.True(SystemInfo.supportsDynamicResolution);
+            camera.allowDynamicResolution = true;
+            Assert.True(camera.allowDynamicResolution);
+            ScalableBufferManager.ResizeBuffers(0.33f, 0.99f);
+            Assert.Equal((0.349999964f, 1f), (ScalableBufferManager.widthScaleFactor, ScalableBufferManager.heightScaleFactor));
+            ScalableBufferManager.ResizeBuffers(0.12f, 0.06f);
+            Assert.Equal((0.149999976f, 0.0999999642f), (ScalableBufferManager.widthScaleFactor, ScalableBufferManager.heightScaleFactor));
+            ScalableBufferManager.ResizeBuffers(0.95f, 0.94f);
+            Assert.Equal((0.95f, 0.95f), (ScalableBufferManager.widthScaleFactor, ScalableBufferManager.heightScaleFactor));
+            ScalableBufferManager.ResizeBuffers(0.3f, 0.7f);
+            Assert.Equal((0.3f, 0.7f), (ScalableBufferManager.widthScaleFactor, ScalableBufferManager.heightScaleFactor));
+            ScalableBufferManager.ResizeBuffers(0.5f, 0.25f);
+            Assert.Equal((8, 4, 16, 16), Last(dynamic));
+            Assert.Equal((8, 4), (camera.scaledPixelWidth, camera.scaledPixelHeight));
+            ScalableBufferManager.ResizeBuffers(1f, 1f);
         }
 
         static (int, int, int, int) Last(RenderTexture texture)

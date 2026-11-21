@@ -81,10 +81,11 @@ namespace Unbound.Runtime
         internal bool EditorGeometryShaders { get; init; } = true;
         internal bool EditorConservativeRaster { get; init; } = true;
         internal bool HiddenSurfaceRemovalOnGPU { get; init; }
-        /// <summary>The Editor's device scales buffers dynamically (Metal: SystemInfo answers true,
-        /// a camera keeps allowDynamicResolution, ScalableBufferManager.ResizeBuffers sets the
-        /// factors and dynamically scaled render textures take the scaled size;
-        /// tests/projects/nativegfx dynres.*). Unbound scales them as it does.</summary>
+        /// <summary>The Editor's device scales buffers dynamically (Metal and Vulkan: SystemInfo
+        /// answers true, a camera keeps allowDynamicResolution, ScalableBufferManager.ResizeBuffers
+        /// sets quantized factors and dynamically scaled render textures take the scaled size;
+        /// tests/projects/nativegfx dynres.*, tests/projects/corecaps dynres.*). Unbound scales
+        /// both dimensions by their respective factors.</summary>
         internal bool EditorDynamicResolution { get; init; }
         /// <summary>A partial screen camera's HDR intermediate, where it keeps the color under it
         /// (Depth only, Don't Clear), starts from the screen's stored bytes read as linear values,
@@ -148,9 +149,8 @@ namespace Unbound.Runtime
         internal bool? Compressed3DTextures { get; init; }
 
         /// <summary>SystemInfo.supportsDynamicResolution is measured on the device: true where
-        /// <see cref="EditorDynamicResolution"/> (Metal), else false (OpenGL Core: tests/projects/urp
-        /// `device-opengl.jsonl`). The Vulkan Editor answers true, but whether it scales buffers as
-        /// the Metal one does is unmeasured, so it stays a stub there.</summary>
+        /// <see cref="EditorDynamicResolution"/> (Metal, Vulkan), else false (OpenGL Core:
+        /// tests/projects/urp `device-opengl.jsonl`, tests/projects/corecaps).</summary>
         internal bool DynamicResolutionMeasured { get; init; }
 
         /// <summary>How Texture2D.ReadPixels and AsyncGPUReadback treat a render texture whose format
@@ -190,10 +190,16 @@ namespace Unbound.Runtime
 
         /// <summary>SystemInfo.maxTiledPixelStorageSize (Metal: 64, tests/projects/urp
         /// `device-metal.jsonl`; OpenGL Core: int.MaxValue, tests/projects/srpmembers tiled.max;
-        /// Vulkan: 32, `device-vulkan.jsonl`). On OpenGL Core GetTiledRenderTargetStorageSize is
-        /// measured too (<see cref="TiledStorageMeasured"/>).</summary>
+        /// Vulkan: 32, `device-vulkan.jsonl`). On OpenGL Core and Vulkan
+        /// GetTiledRenderTargetStorageSize is measured too (<see cref="TiledStorageMeasured"/>;
+        /// tests/projects/srpmembers tiled.*, tests/projects/corecaps tiled.*).</summary>
         internal int? MaxTiledPixelStorage { get; init; }
         internal bool TiledStorageMeasured { get; init; }
+
+        /// <summary>SystemInfo.maxGraphicsBufferSize where fixed per device (OpenGL Core and
+        /// Vulkan: 2 GiB = 2147483648, tests/projects/corecaps bufferLimit.*); null on Metal
+        /// where it comes from the device's maxBufferLength.</summary>
+        internal long? MaxGraphicsBufferBytes { get; init; }
 
         /// <summary>SystemInfo answers measured on the device's Editor alone; null where they are
         /// not measured (the members stay stubs there).</summary>
@@ -260,6 +266,7 @@ namespace Unbound.Runtime
         {
             MaxTiledPixelStorage = int.MaxValue,
             TiledStorageMeasured = true,
+            MaxGraphicsBufferBytes = 2L << 30,
             ProceduralQuads = UnityEngine.MeshTopology.Points,
             PackedTargetsKeepChannelBits = true,
             // tests/projects/urp CapsProbe `device-opengl.jsonl` (two identical captures, NVIDIA
@@ -288,7 +295,11 @@ namespace Unbound.Runtime
             // RTX 4060): the driver's per-stage storage buffer limit for the graphics stages, 32
             // for compute shaders.
             Compressed3DTextures = true,
+            EditorDynamicResolution = true,
+            DynamicResolutionMeasured = true,
             MaxTiledPixelStorage = 32,
+            TiledStorageMeasured = true,
+            MaxGraphicsBufferBytes = 2L << 30,
             Limits = new MeasuredLimits
             {
                 ComputeBufferInputs = 1048576,

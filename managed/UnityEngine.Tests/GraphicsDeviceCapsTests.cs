@@ -178,8 +178,6 @@ namespace Unbound.Tests
                     // Not done by Unbound's renderer (no foveation, no GPU recorder).
                     "foveatedRenderingCaps: FoveationImage -> None",
                     "supportsGpuRecorder: True -> False",
-                    // The Vulkan Editor's buffer scaling is unmeasured: a stub (false).
-                    "supportsDynamicResolution: True -> False",
                 });
             return expected;
         }
@@ -276,17 +274,19 @@ namespace Unbound.Tests
                 GraphicsDeviceProfile.Select("OpenGLCore");
                 Assert.Equal(new[] { 16, 16, 16 }, new[] { SystemInfo.maxComputeBufferInputsVertex, SystemInfo.maxComputeBufferInputsGeometry, SystemInfo.maxComputeBufferInputsCompute });
                 Assert.Equal(int.MaxValue, SystemInfo.maxTiledPixelStorageSize);
+                Assert.Equal(16, SystemInfo.GetTiledRenderTargetStorageSize(GraphicsFormat.R8G8B8A8_UNorm, 4));
                 Assert.False(SystemInfo.supportsDynamicResolution);
                 Assert.False(SystemInfo.supportsCompressed3DTextures);
-                Assert.Equal(0L, SystemInfo.maxGraphicsBufferSize);
+                Assert.Equal(2L << 30, SystemInfo.maxGraphicsBufferSize);
                 GraphicsDeviceProfile.Select("Vulkan");
                 // Control: the compute stage's limit differs from the graphics stages'.
                 Assert.Equal(new[] { 1048576, 1048576, 32 }, new[] { SystemInfo.maxComputeBufferInputsVertex, SystemInfo.maxComputeBufferInputsGeometry, SystemInfo.maxComputeBufferInputsCompute });
                 Assert.Equal(32, SystemInfo.maxTiledPixelStorageSize);
+                Assert.Equal(16, SystemInfo.GetTiledRenderTargetStorageSize(GraphicsFormat.R8G8B8A8_UNorm, 4));
                 Assert.True(SystemInfo.supportsCompressed3DTextures);
                 Assert.True(SystemInfo.supportsParallelPSOCreation);
-                Assert.False(SystemInfo.supportsDynamicResolution);
-                Assert.Equal(0L, SystemInfo.maxGraphicsBufferSize);
+                Assert.True(SystemInfo.supportsDynamicResolution);
+                Assert.Equal(2L << 30, SystemInfo.maxGraphicsBufferSize);
                 Assert.Equal(32768, SystemInfo.maxTextureSize);
                 GraphicsDeviceProfile.Select("Metal");
                 Assert.Equal(16384, SystemInfo.maxTextureSize);

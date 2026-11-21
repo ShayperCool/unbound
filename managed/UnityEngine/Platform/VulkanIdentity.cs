@@ -106,14 +106,37 @@ namespace Unbound.Runtime
             };
         }
 
-        /// <summary>The vendor's name as the Vulkan device answers it: measured for NVIDIA only;
-        /// another vendor answers its PCI id (reported).</summary>
-        static string VendorName(int vendor)
+        /// <summary>Maps a PCI/Vulkan vendor ID to the vendor name reported by SystemInfo.graphicsDeviceVendor.
+        /// Measured for NVIDIA (0x10de) on the Linux Editor (tests/projects/urp device-vulkan.jsonl);
+        /// other vendor IDs and the unknown-ID fallback are unmeasured on this NVIDIA-only machine.</summary>
+        internal static string VendorName(int vendor) => vendor switch
         {
-            if (vendor == 0x10de) return "NVIDIA";
-            Stubs.Ignored("SystemInfo.graphicsDeviceVendor", $"is not known for PCI vendor 0x{vendor:x4} on Vulkan: it answers the id");
-            return $"0x{vendor:x4}";
-        }
+            0x0000 => "REFERENCE",
+            0x1002 => "ATI",
+            0x1010 => "Imagination Technologies",
+            0x1023 => "Trident",
+            0x102b => "Matrox",
+            0x1039 => "SIS",
+            0x104a => "Imagination Technologies",
+            0x10de => "NVIDIA",
+            0x1106 => "VIA/S3",
+            0x121a => "3dfx",
+            0x13b5 => "ARM",
+            0x1414 => "Microsoft",
+            0x144d => "Samsung",
+            0x15ad => "VMWare",
+            0x18ca => "XGI",
+            0x1ab8 => "Parallels",
+            0x1d9e => "Anka",
+            0x3d3d => "3dLabs",
+            0x4144564e => "NVIDIA",
+            0x4d4f4351 => "Qualcomm",
+            0x5143 => "Qualcomm",
+            0x5333 => "S3",
+            0x8086 => "Intel",
+            0x80ee => "VirtualBox",
+            _ => $"Unknown (ID={vendor:x})",
+        };
 
         static MachineIdentity.Gpu Fail(string why)
         {

@@ -58,26 +58,108 @@ namespace UnityEngine
         static Unbound.Runtime.MachineIdentity.Gpu Gpu => Unbound.Runtime.MachineIdentity.Graphics;
         static Unbound.Runtime.GraphicsDeviceProfile Device => Unbound.Runtime.GraphicsDeviceProfile.Current;
 
-        /// <summary>The Linux Editor on a machine without a battery answers -1 and Full; a
-        /// battery's own state (Linux laptops, macOS) is not read yet.</summary>
-        public static float batteryLevel { get { WarnBattery(); return -1f; } }
-        public static BatteryStatus batteryStatus { get { WarnBattery(); return BatteryStatus.Full; } }
+        /// <summary>Battery charge level in [0, 1] or -1 when unavailable, and battery status.
+        /// Measured on Linux without a battery (-1 and Full: tests/projects/appfacts). On Linux
+        /// machines with a system battery, reads <c>/sys/class/power_supply</c> (skipping
+        /// device-scoped peripheral batteries; unmeasured in the Editor on this battery-less host).
+        /// On macOS, battery reading is not implemented yet and warns.</summary>
+        public static float batteryLevel => ReadBattery().Level;
+        public static BatteryStatus batteryStatus => ReadBattery().Status;
 
-        static readonly Lazy<bool> s_HasBattery = new Lazy<bool>(() =>
+        static (float Level, BatteryStatus Status) ReadBattery()
         {
-            if (OperatingSystem.IsMacOS()) return true;
+            if (OperatingSystem.IsLinux()) return ReadLinuxBattery("/sys/class/power_supply");
+            if (OperatingSystem.IsMacOS())
+                Unbound.Runtime.Stubs.Ignored("SystemInfo.batteryLevel/batteryStatus", "do not read the battery on macOS yet: they answer -1 and Full");
+            return (-1f, BatteryStatus.Full);
+        }
+
+        internal static (float Level, BatteryStatus Status) ReadLinuxBattery(string powerSupplyRoot)
+        {
+            string[] dirs;
             try
             {
-                foreach (var supply in Directory.GetDirectories("/sys/class/power_supply"))
-                    if (File.Exists(Path.Combine(supply, "type")) && File.ReadAllText(Path.Combine(supply, "type")).Trim() == "Battery") return true;
+                if (!Directory.Exists(powerSupplyRoot)) return (-1f, BatteryStatus.Full);
+                dirs = Directory.GetDirectories(powerSupplyRoot);
             }
-            catch (Exception) { }
-            return false;
-        });
+            catch (Exception)
+            {
+                return (-1f, BatteryStatus.Full);
+            }
+            bool foundSystemBattery = false;
+            bool chosenHasValues = false;
+            int chosenPercent = -1;
+            long chosenSeconds = -1;
+            BatteryStatus chosenStatus = BatteryStatus.Unknown;
 
-        static void WarnBattery()
+            foreach (var dir in dirs)
+            {
+                if (!string.Equals(ReadTrimmed(Path.Combine(dir, "type")), "Battery", StringComparison.Ordinal))
+                    continue;
+                if (string.Equals(ReadTrimmed(Path.Combine(dir, "scope")), "Device", StringComparison.Ordinal))
+                    continue;
+
+                foundSystemBattery = true;
+                var present = ReadTrimmed(Path.Combine(dir, "present"));
+                BatteryStatus status;
+                int percent = -1;
+                long seconds = -1;
+
+                if (string.Equals(present, "0", StringComparison.Ordinal))
+                {
+                    status = BatteryStatus.Full;
+                }
+                else
+                {
+                    status = ReadTrimmed(Path.Combine(dir, "status")) switch
+                    {
+                        "Charging" => BatteryStatus.Charging,
+                        "Discharging" => BatteryStatus.Discharging,
+                        "Full" or "Not charging" => BatteryStatus.Full,
+                        _ => BatteryStatus.Unknown,
+                    };
+                    if (TryReadLong(Path.Combine(dir, "capacity"), out long cap) && cap >= 0)
+                        percent = (int)Math.Min(cap, 100L);
+                    if (TryReadLong(Path.Combine(dir, "time_to_empty_now"), out long tte) && tte >= 0)
+                        seconds = tte;
+                    else if (TryReadLong(Path.Combine(dir, "energy_now"), out long energyNow) &&
+                             TryReadLong(Path.Combine(dir, "power_now"), out long powerNow) &&
+                             energyNow >= 0 && powerNow > 0)
+                        seconds = (energyNow * 3600L) / powerNow;
+                    else if (TryReadLong(Path.Combine(dir, "charge_now"), out long chargeNow) &&
+                             TryReadLong(Path.Combine(dir, "current_now"), out long currentNow) &&
+                             chargeNow >= 0 && currentNow > 0)
+                        seconds = (chargeNow * 3600L) / currentNow;
+                }
+
+                // Prefer a battery reporting time/capacity; break ties by highest remaining time or capacity.
+                bool better = !chosenHasValues
+                    || (seconds > chosenSeconds)
+                    || (seconds == chosenSeconds && percent > chosenPercent);
+                if (better)
+                {
+                    chosenHasValues = true;
+                    chosenStatus = status;
+                    chosenPercent = percent;
+                    chosenSeconds = seconds;
+                }
+            }
+
+            if (!foundSystemBattery) return (-1f, BatteryStatus.Full);
+            float level = chosenPercent >= 0 ? chosenPercent / 100f : -1f;
+            return (level, chosenStatus);
+        }
+
+        static string ReadTrimmed(string path)
         {
-            if (s_HasBattery.Value) Unbound.Runtime.Stubs.Ignored("SystemInfo.batteryLevel/batteryStatus", "do not read the battery yet: they answer -1 and Full, as for a machine without one");
+            try { return File.Exists(path) ? File.ReadAllText(path).Trim() : null; }
+            catch (Exception) { return null; }
+        }
+
+        static bool TryReadLong(string path, out long value)
+        {
+            var text = ReadTrimmed(path);
+            return long.TryParse(text, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out value);
         }
 
         /// <summary>As the Editor words it: <c>Mac OS X 15.3.1</c>, <c>Linux 7.0 Ubuntu 26.04 64bit</c>
@@ -402,8 +484,8 @@ namespace UnityEngine
         }
 
         /// <summary>A render target's bytes per pixel of tile storage: the format's block size
-        /// times the samples (OpenGL Core, tests/projects/srpmembers tiled.*); a stub on the other
-        /// devices.</summary>
+        /// times the samples (OpenGL Core: tests/projects/srpmembers tiled.*, Vulkan:
+        /// tests/projects/corecaps tiled.*); a stub on Metal (unmeasured).</summary>
         public static int GetTiledRenderTargetStorageSize(GraphicsFormat format, int sampleCount)
         {
             if (Device.TiledStorageMeasured) return (int)GraphicsFormatUtility.GetBlockSize(format) * sampleCount;
@@ -423,9 +505,10 @@ namespace UnityEngine
                 return false;
             }
         }
-        /// <summary>True on the Metal device, whose Editor answers true and scales buffers
-        /// (ScalableBufferManager); false on OpenGL Core, as its Editor answers; a stub on Vulkan,
-        /// whose Editor answers true but whose scaling is unmeasured.</summary>
+        /// <summary>True on Metal and Vulkan, whose Editors answer true and scale buffers
+        /// (ScalableBufferManager; tests/projects/nativegfx, tests/projects/corecaps); false on
+        /// OpenGL Core, as its Editor answers.</summary>
+        [Unbound.EditorFaithful("measured on Metal, Vulkan and OpenGL Core (tests/projects/nativegfx, corecaps, urp device-*.jsonl)")]
         public static bool supportsDynamicResolution
         {
             get
@@ -443,12 +526,15 @@ namespace UnityEngine
         [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp device-*.jsonl")]
         public static bool supportsParallelPSOCreation => Measured(static l => l.ParallelPSOCreation, "UnityEngine.SystemInfo.supportsParallelPSOCreation");
 
-        /// <summary>maxGraphicsBufferSize where it is measured (Metal), else 0, without a warning.</summary>
-        internal static long MeasuredMaxGraphicsBufferSize => Device.Type == GraphicsDeviceType.Metal ? Gpu?.MaxBufferBytes ?? 0 : 0;
+        /// <summary>maxGraphicsBufferSize where it is measured (Metal: device maxBufferLength;
+        /// OpenGL Core and Vulkan: 2 GiB, tests/projects/corecaps bufferLimit.*), else 0, without a warning.</summary>
+        internal static long MeasuredMaxGraphicsBufferSize =>
+            Device.MaxGraphicsBufferBytes ?? (Device.Type == GraphicsDeviceType.Metal ? Gpu?.MaxBufferBytes ?? 0 : 0);
 
-        /// <summary>The Metal device's maxBufferLength, as the macOS Editor answers (two captures
-        /// on an Apple M2 Pro with 16 GB: 9534832640, its maxBufferLength); a stub on the other
-        /// devices.</summary>
+        /// <summary>The maximum graphics buffer size in bytes: on Metal the device's maxBufferLength
+        /// (two captures on an Apple M2 Pro with 16 GB: 9534832640); on Linux OpenGL Core and Vulkan
+        /// 2147483648 (2 GiB, tests/projects/corecaps bufferLimit.*).</summary>
+        [Unbound.EditorFaithful("measured on Metal (maxBufferLength), OpenGL Core and Vulkan (2 GiB, tests/projects/corecaps bufferLimit.*)")]
         public static long maxGraphicsBufferSize
         {
             get

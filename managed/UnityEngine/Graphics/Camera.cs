@@ -213,13 +213,13 @@ namespace UnityEngine
         public int targetDisplay { get => m_TargetDisplay; set => m_TargetDisplay = value; }
         public bool allowHDR { get => m_AllowHDR; set => m_AllowHDR = value; }
         public bool allowMSAA { get => m_AllowMSAA; set => m_AllowMSAA = value; }
-        /// <summary>The value set on a device whose Editor scales buffers (the macOS Editor's Metal
-        /// device); false on the Linux Editor's devices (measured: tests/projects/builtinfx, a
-        /// camera saved with it on reports false). A render texture target marked
+        /// <summary>The value set on a device whose Editor scales buffers (Metal and Vulkan:
+        /// tests/projects/nativegfx, tests/projects/corecaps); false on OpenGL Core (measured:
+        /// tests/projects/builtinfx, tests/projects/corecaps). A render texture target marked
         /// <c>useDynamicScale</c> scales whatever it says (tests/projects/nativegfx
-        /// <c>dynres.*.plain</c>); a camera drawing to the screen renders at full size (warned
-        /// while scaling: unmeasured).</summary>
-        [Unbound.EditorFaithful("the Linux Editor's devices do not support dynamic resolution: the camera reports false")]
+        /// <c>dynres.*.plain</c>, corecaps); a camera drawing to the screen renders at full size
+        /// (warned while scaling: unmeasured).</summary>
+        [Unbound.EditorFaithful("keeps the value on Metal and Vulkan; false on OpenGL Core (tests/projects/corecaps, builtinfx)")]
         public bool allowDynamicResolution
         {
             get => m_AllowDynamicResolution && Unbound.Runtime.GraphicsDeviceProfile.Current.EditorDynamicResolution;
