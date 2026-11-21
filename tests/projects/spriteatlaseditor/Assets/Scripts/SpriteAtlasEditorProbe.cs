@@ -69,9 +69,185 @@ static class SpriteAtlasEditorProbe
         if (paths.Any(p => p.StartsWith("Assets/IncludeAtlases/", StringComparison.Ordinal)))
             RecordIncludeInBuild(paths, none, Check);
 
+        if (paths.Any(p => p.StartsWith("Assets/PackingAtlases/", StringComparison.Ordinal)))
+            RecordPackingSettings(paths, none, Check);
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
+    }
+
+    static void RecordPackingSettings(string[] paths, SpriteAtlas none, Action<string, Func<string>> check)
+    {
+        var byStem = new System.Collections.Generic.Dictionary<string, (string path, string key, SpriteAtlas atlas)>(StringComparer.Ordinal);
+        foreach (var path in paths)
+        {
+            var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+            if (atlas != null)
+                byStem[Path.GetFileNameWithoutExtension(path)] = (path, Path.GetFileName(path), atlas);
+        }
+
+        string State(SpriteAtlas a, int baseDirty) =>
+            $"{DescribePacking(a.GetPackingSettings())}|dirty={EditorUtility.IsDirty(a)}|dirtyDelta={EditorUtility.GetDirtyCount(a) - baseDirty}";
+
+        string PackingBlock(string file)
+        {
+            var lines = File.ReadAllLines(file);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].TrimStart() != "packingSettings:") continue;
+                int indent = lines[i].Length - lines[i].TrimStart().Length;
+                var items = new System.Collections.Generic.List<string>();
+                for (int j = i + 1; j < lines.Length; j++)
+                {
+                    int childIndent = lines[j].Length - lines[j].TrimStart().Length;
+                    if (childIndent <= indent) break;
+                    items.Add(lines[j].Trim());
+                }
+                return string.Join(";", items);
+            }
+            return "<absent>";
+        }
+
+        string FileState(string path, byte[] origAsset, byte[] origMeta, bool includeAssetBlock = true)
+        {
+            bool assetChanged = !File.ReadAllBytes(path).SequenceEqual(origAsset);
+            bool metaChanged = !File.ReadAllBytes(path + ".meta").SequenceEqual(origMeta);
+            return includeAssetBlock
+                ? $"assetChanged={assetChanged}|metaChanged={metaChanged}|assetPacking={PackingBlock(path)}|metaPacking={PackingBlock(path + ".meta")}"
+                : $"assetChanged={assetChanged}|metaChanged={metaChanged}|metaPacking={PackingBlock(path + ".meta")}";
+        }
+
+        check("null.setPacking", () => { none.SetPackingSettings(default); return "ok"; });
+
+        var mem = new SpriteAtlas();
+        int memBase = EditorUtility.GetDirtyCount(mem);
+        check("new.packing.initial", () => State(mem, memBase));
+        mem.SetPackingSettings(mem.GetPackingSettings());
+        check("new.packing.sameRepeat", () => State(mem, memBase));
+        mem.SetPackingSettings(new SpriteAtlasPackingSettings
+        {
+            blockOffset = 5,
+            padding = 16,
+            enableRotation = false,
+            enableTightPacking = false,
+            enableAlphaDilation = true,
+        });
+        check("new.packing.modified", () => State(mem, memBase));
+        mem.SetPackingSettings(new SpriteAtlasPackingSettings
+        {
+            blockOffset = -3,
+            padding = -7,
+            enableRotation = true,
+            enableTightPacking = false,
+            enableAlphaDilation = true,
+        });
+        check("new.packing.edgeValues", () => State(mem, memBase));
+        mem.SetPackingSettings(default);
+        check("new.packing.zeroed", () => State(mem, memBase));
+        AssetDatabase.SaveAssets();
+        check("new.packing.afterSave", () => State(mem, memBase));
+
+        if (byStem.TryGetValue("Master", out var master))
+        {
+            var origA = File.ReadAllBytes(master.path);
+            var origM = File.ReadAllBytes(master.path + ".meta");
+            var origSettings = master.atlas.GetPackingSettings();
+            int baseDirty = EditorUtility.GetDirtyCount(master.atlas);
+            check(master.key + ".setPacking.initial", () => State(master.atlas, baseDirty) + "|" + FileState(master.path, origA, origM));
+            master.atlas.SetPackingSettings(origSettings);
+            check(master.key + ".setPacking.sameRepeat", () => State(master.atlas, baseDirty) + "|" + FileState(master.path, origA, origM));
+            var custom = new SpriteAtlasPackingSettings
+            {
+                blockOffset = 3,
+                padding = 12,
+                enableRotation = false,
+                enableTightPacking = false,
+                enableAlphaDilation = true,
+            };
+            master.atlas.SetPackingSettings(custom);
+            check(master.key + ".setPacking.modified", () => State(master.atlas, baseDirty) + "|" + FileState(master.path, origA, origM));
+            AssetDatabase.SaveAssets();
+            check(master.key + ".setPacking.afterSave", () => State(master.atlas, baseDirty) + "|" + FileState(master.path, origA, origM));
+            master.atlas.SetPackingSettings(new SpriteAtlasPackingSettings
+            {
+                blockOffset = -2,
+                padding = 0,
+                enableRotation = true,
+                enableTightPacking = true,
+                enableAlphaDilation = false,
+            });
+            AssetDatabase.SaveAssetIfDirty(master.atlas);
+            check(master.key + ".setPacking.afterSaveEdge", () => State(master.atlas, baseDirty) + "|" + FileState(master.path, origA, origM));
+            master.atlas.SetPackingSettings(origSettings);
+            AssetDatabase.SaveAssetIfDirty(master.atlas);
+            check(master.key + ".setPacking.afterRoundtrip", () => State(master.atlas, baseDirty) + "|" + FileState(master.path, origA, origM));
+            master.atlas.SetPackingSettings(custom);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(master.path, ImportAssetOptions.ForceUpdate);
+            var reloaded = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(master.path);
+            check(master.key + ".setPacking.afterReimport", () =>
+                $"sameRef={ReferenceEquals(master.atlas, reloaded)}|{DescribePacking(reloaded.GetPackingSettings())}|dirty={EditorUtility.IsDirty(reloaded)}|" +
+                FileState(master.path, origA, origM));
+            // Restore master in memory/disk before variant checks so master state is clean and known.
+            reloaded.SetPackingSettings(origSettings);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(master.path, ImportAssetOptions.ForceUpdate);
+            master = (master.path, master.key, AssetDatabase.LoadAssetAtPath<SpriteAtlas>(master.path));
+        }
+
+        if (byStem.TryGetValue("Variant", out var variant))
+        {
+            var origA = File.ReadAllBytes(variant.path);
+            var origM = File.ReadAllBytes(variant.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(variant.atlas);
+            int masterBaseDirty = byStem.ContainsKey("Master") ? EditorUtility.GetDirtyCount(master.atlas) : 0;
+            check(variant.key + ".setPacking.initial", () => State(variant.atlas, baseDirty) + "|" + FileState(variant.path, origA, origM));
+            var variantCustom = new SpriteAtlasPackingSettings
+            {
+                blockOffset = 7,
+                padding = 32,
+                enableRotation = false,
+                enableTightPacking = true,
+                enableAlphaDilation = true,
+            };
+            variant.atlas.SetPackingSettings(variantCustom);
+            check(variant.key + ".setPacking.modified", () =>
+                State(variant.atlas, baseDirty) + "|master=" + DescribePacking(master.atlas.GetPackingSettings()) +
+                "|masterDirtyDelta=" + (EditorUtility.GetDirtyCount(master.atlas) - masterBaseDirty) + "|" +
+                FileState(variant.path, origA, origM));
+            master.atlas.SetPackingSettings(new SpriteAtlasPackingSettings
+            {
+                blockOffset = 9,
+                padding = 2,
+                enableRotation = true,
+                enableTightPacking = false,
+                enableAlphaDilation = false,
+            });
+            check(variant.key + ".setPacking.afterMasterMemEdit", () =>
+                State(variant.atlas, baseDirty) + "|master=" + DescribePacking(master.atlas.GetPackingSettings()));
+            AssetDatabase.SaveAssetIfDirty(variant.atlas);
+            check(variant.key + ".setPacking.afterSaveIfDirty", () => State(variant.atlas, baseDirty) + "|" + FileState(variant.path, origA, origM));
+            AssetDatabase.ImportAsset(variant.path, ImportAssetOptions.ForceUpdate);
+            var reloaded = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(variant.path);
+            check(variant.key + ".setPacking.afterReimport", () =>
+                $"sameRef={ReferenceEquals(variant.atlas, reloaded)}|{DescribePacking(reloaded.GetPackingSettings())}|dirty={EditorUtility.IsDirty(reloaded)}|" +
+                FileState(variant.path, origA, origM));
+        }
+
+        if (byStem.TryGetValue("Legacy", out var legacy))
+        {
+            var origA = File.ReadAllBytes(legacy.path);
+            var origM = File.ReadAllBytes(legacy.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(legacy.atlas);
+            check(legacy.key + ".setPacking.initial", () => State(legacy.atlas, baseDirty) + "|" + FileState(legacy.path, origA, origM, includeAssetBlock: false));
+            var s = legacy.atlas.GetPackingSettings();
+            s.padding = 6;
+            legacy.atlas.SetPackingSettings(s);
+            check(legacy.key + ".setPacking.modified", () => State(legacy.atlas, baseDirty) + "|" + FileState(legacy.path, origA, origM, includeAssetBlock: false));
+            AssetDatabase.SaveAssetIfDirty(legacy.atlas);
+            check(legacy.key + ".setPacking.afterSaveIfDirty", () => State(legacy.atlas, baseDirty) + "|" + FileState(legacy.path, origA, origM, includeAssetBlock: true));
+        }
     }
 
     static void RecordIncludeInBuild(string[] paths, SpriteAtlas none, Action<string, Func<string>> check)

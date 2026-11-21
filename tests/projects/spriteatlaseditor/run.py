@@ -25,8 +25,10 @@ PROFILES = {
     'v2platform': (5, 'PlatformAtlases', '.spriteatlasv2'),
     'v1include': (4, 'IncludeAtlases', '.spriteatlas'),
     'v2include': (5, 'IncludeAtlases', '.spriteatlasv2'),
+    'v1packing': (4, 'PackingAtlases', '.spriteatlas'),
+    'v2packing': (5, 'PackingAtlases', '.spriteatlasv2'),
 }
-ATLAS_FOLDERS = ('Atlases', 'SettingsAtlases', 'PlatformAtlases', 'IncludeAtlases')
+ATLAS_FOLDERS = ('Atlases', 'SettingsAtlases', 'PlatformAtlases', 'IncludeAtlases', 'PackingAtlases')
 
 
 def configure(project, profile):
