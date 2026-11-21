@@ -13995,6 +13995,7 @@
 {"key":"UnityEditor.EditorWindowTitleAttribute/Property/UnityEditor.EditorWindowTitleAttribute/icon","status":"value","value":"null"}
 {"key":"UnityEditor.EditorWindowTitleAttribute/Property/UnityEditor.EditorWindowTitleAttribute/title","status":"value","value":"null"}
 {"key":"UnityEditor.EditorWindowTitleAttribute/Property/UnityEditor.EditorWindowTitleAttribute/useTypeNameAsIconName","status":"value","value":"false"}
+{"key":"UnityEditor.Events.UnityEventTools/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.ExcludeFromObjectFactoryAttribute/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.ExcludeFromObjectFactoryAttribute/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEngine.ExcludeFromObjectFactoryAttribute"}
 {"key":"UnityEditor.AssetImporter+SourceAssetIdentifier/@factory","status":"value","value":"struct"}

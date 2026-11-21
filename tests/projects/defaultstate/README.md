@@ -807,5 +807,6 @@ its `Image` icon element earlier, `debt.json` updates 3 existing `eventTypeId` a
 and removes the `BlurEvent` entry that now coincides with the Editor's numbering; every earlier
 committed reference row and inventory entry is unchanged.
 
-The persistent-listener tools slice adds the static `UnityEditor.Events.UnityEventTools` to the inventory, excluded as
-static: it has no default state, so no row is added and every earlier row is unchanged.
+The persistent-listener tools slice adds the static `UnityEditor.Events.UnityEventTools` to the inventory with its one
+`excluded, static` row, as two Unity 6000.0.71f1 batch Editor captures on macOS write it (the row comes from the
+inventory alone, before any Unity call); every earlier row is unchanged.
