@@ -53,8 +53,21 @@ namespace UnityEngine.U2D
         /// <summary>A sprite larger than its atlas's page cancelled the packing: every atlas is
         /// empty (measured: tests/projects/spriteatlas set `over`).</summary>
         static bool s_Cancelled;
+        /// <summary>Late-binding sprites waiting for an atlas with one tag, each once, in the order
+        /// they started waiting.</summary>
+        sealed class Waiting
+        {
+            internal readonly List<Sprite> Sprites = new List<Sprite>();
+            readonly HashSet<Sprite> m_Added = new HashSet<Sprite>(ReferenceEqualityComparer.Instance);
+
+            internal void Add(Sprite sprite)
+            {
+                if (m_Added.Add(sprite)) Sprites.Add(sprite);
+            }
+        }
+
         /// <summary>Late-binding sprites waiting for their atlas, by atlas tag.</summary>
-        static readonly Dictionary<string, List<Sprite>> s_Waiting = new Dictionary<string, List<Sprite>>(StringComparer.Ordinal);
+        static readonly Dictionary<string, Waiting> s_Waiting = new Dictionary<string, Waiting>(StringComparer.Ordinal);
         static readonly List<string> s_Requests = new List<string>();
         static readonly List<Sprite> s_None = new List<Sprite>();
 
@@ -311,8 +324,8 @@ namespace UnityEngine.U2D
             {
                 var tag = tags[i];
                 if (!s_Waiting.TryGetValue(tag, out var waiting))
-                    s_Waiting[tag] = waiting = new List<Sprite>();
-                if (!waiting.Contains(sprite)) waiting.Add(sprite);
+                    s_Waiting[tag] = waiting = new Waiting();
+                waiting.Add(sprite);
                 if (!s_Requests.Contains(tag)) s_Requests.Add(tag);
             }
         }
@@ -346,7 +359,7 @@ namespace UnityEngine.U2D
             if (!registered.Contains(atlas)) registered.Add(atlas);
             if (!s_Waiting.TryGetValue(atlas.Tag, out var waiting)) return;
             s_Waiting.Remove(atlas.Tag);
-            foreach (var sprite in waiting)
+            foreach (var sprite in waiting.Sprites)
                 if (sprite != null && sprite.m_AtlasBinding is (string Texture, long FileId) key
                     && atlas.ByKey.TryGetValue(key, out var binding))
                     Bind(sprite, binding);
