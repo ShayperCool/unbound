@@ -15,6 +15,8 @@ pub struct Asset {
     pub is_folder: bool,
     /// The asset labels its `.meta` lists (`labels:`).
     pub labels: Vec<String>,
+    /// The importer its `.meta` names (`NativeFormatImporter:`, ...), if it names one.
+    pub importer: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -76,8 +78,8 @@ impl AssetDb {
         let read: Vec<_> = metas
             .into_par_iter()
             .map(|(meta, file, path)| {
-                let (guid, labels) = read_meta_header(&meta);
-                (guid, labels, file, path)
+                let (guid, labels, importer) = read_meta_header(&meta);
+                (guid, labels, importer, file, path)
             })
             .collect();
         let mut db = AssetDb::default();
@@ -90,9 +92,10 @@ impl AssetDb {
                 file: root.dir.to_path_buf(),
                 is_folder: true,
                 labels: Vec::new(),
+                importer: Some("DefaultImporter".to_string()),
             });
         }
-        for (guid, labels, file, path) in read {
+        for (guid, labels, importer, file, path) in read {
             let Some(guid) = guid else {
                 db.problems.push(format!("{path}: .meta has no guid"));
                 continue;
@@ -116,6 +119,7 @@ impl AssetDb {
                 path,
                 file,
                 labels,
+                importer,
             });
         }
         db
@@ -209,9 +213,12 @@ pub fn changes(
     let changed = metas
         .into_par_iter()
         .filter_map(|(path, meta)| {
-            let (guid, labels) = read_meta_header(&meta);
+            let (guid, labels, importer) = read_meta_header(&meta);
             let same = db.by_path(&path).is_some_and(|known| {
-                Some(known.guid) == guid && known.labels == labels && known.path == path
+                Some(known.guid) == guid
+                    && known.labels == labels
+                    && known.importer == importer
+                    && known.path == path
             });
             (!same).then_some(path)
         })
@@ -226,12 +233,22 @@ pub fn changes(
     (changed, gone)
 }
 
-/// The `guid:` and the `labels:` of a `.meta`; the rest is parsed by the importer that needs it.
-pub fn read_meta_header(meta: &Path) -> (Option<Guid>, Vec<String>) {
+/// The `guid:`, the `labels:` and the importer section's name of a `.meta`; the rest is parsed by
+/// the importer that needs it.
+pub fn read_meta_header(meta: &Path) -> (Option<Guid>, Vec<String>, Option<String>) {
     let Ok(text) = std::fs::read_to_string(meta) else {
-        return (None, Vec::new());
+        return (None, Vec::new(), None);
     };
-    header(text.as_str())
+    let (guid, labels) = header(text.as_str());
+    (guid, labels, importer_section(&text))
+}
+
+/// The name of a `.meta`'s importer section: its top-level key ending in `Importer`.
+pub fn importer_section(text: &str) -> Option<String> {
+    text.lines().find_map(|line| {
+        let key = line.strip_suffix(':')?;
+        (!key.starts_with([' ', '\t']) && key.ends_with("Importer")).then(|| key.to_string())
+    })
 }
 
 /// Reads only the `guid:` line; the rest of a `.meta` is parsed by the importer that needs it.
@@ -307,6 +324,16 @@ mod header_tests {
         // An importer can reject its body without hiding the asset's envelope identity.
         let malformed = "guid: 11111111111111111111111111111111\nModelImporter:\n  invalid: [\n";
         assert_eq!(header(malformed).0, header(text).0);
+        assert_eq!(importer_section(text).as_deref(), Some("ModelImporter"));
+        assert_eq!(
+            importer_section(malformed).as_deref(),
+            Some("ModelImporter")
+        );
+        // A .meta without an importer section, and nested keys that only end like one.
+        assert_eq!(
+            importer_section("guid: 1\nfolderAsset: yes\nsettings:\n  ScriptedImporter:\n"),
+            None
+        );
     }
 }
 
@@ -401,6 +428,7 @@ mod db_tests {
             file: PathBuf::from(path),
             is_folder: false,
             labels: Vec::new(),
+            importer: None,
         }
     }
 

@@ -809,8 +809,11 @@ namespace Unbound.Runtime
             if (string.Equals(guid, "0000000000000000d000000000000000", StringComparison.OrdinalIgnoreCase))
                 return Builtin(Unbound.UIElements.UiResources.LoadObject(fileId), guid, fileId);
             // The built-in resources' GUIDs; the Assets folder's GUID has the same form but is an asset.
-            if (guid.StartsWith("0000000000000000", StringComparison.Ordinal) && !UnityEditor.AssetDatabase.Lists(guid))
-                return Builtin(BuiltinShaders.Resolve(guid, fileId), guid, fileId);
+            if (guid.StartsWith("0000000000000000", StringComparison.Ordinal))
+            {
+                var builtin = BuiltinShaders.Resolve(guid, fileId);
+                if (builtin != null || !UnityEditor.AssetDatabase.Lists(guid)) return Builtin(builtin, guid, fileId);
+            }
             if (s_Objects.TryGetValue((guid, fileId), out var cached) && !cached.m_Destroyed) return Reloaded(cached);
             var file = LoadFile(guid);
             if (file == null) return null;

@@ -151,6 +151,7 @@ impl RuntimeState {
                     let mut result = json!({
                         "guid": asset.guid.to_string(),
                         "kind": listed_kind(&asset),
+                        "importer": asset_importer(&asset),
                         "labels": asset.labels,
                     });
                     if let Some((guid, owner)) = conflict {
@@ -241,7 +242,7 @@ impl RuntimeState {
                 unbound_assets::new_meta::text(importer, guid, &file, &self.new_meta),
             )?;
         }
-        let (guid, labels) = unbound_project::assetdb::read_meta_header(&meta);
+        let (guid, labels, importer) = unbound_project::assetdb::read_meta_header(&meta);
         let mut guid = guid.with_context(|| format!("{}.meta has no guid", request.path))?;
         let path = request.path.to_ascii_lowercase();
         let owner = db
@@ -272,6 +273,7 @@ impl RuntimeState {
                 is_folder: file.is_dir(),
                 file,
                 labels,
+                importer,
             },
             conflict,
         )))
@@ -1899,14 +1901,20 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
 /// (Unity 6000.0.71f1, tests/projects/defaultasset `asset.plugin.*` and `native.*`) except the
 /// native-format `.fontsettings`, `.guiskin`, `.preset`, `.brush`, `.signal` and `.playable`.
 fn default_importer(path: &str) -> &'static str {
+    importer_of_path(path).unwrap_or("DefaultImporter")
+}
+
+/// The importer the Editor picks for a path by its extension (and the special root folders); None
+/// for an extension the list does not know.
+fn importer_of_path(path: &str) -> Option<&'static str> {
     if is_special_default_imported_folder(path) {
-        return "DefaultImporter";
+        return Some("DefaultImporter");
     }
     let name = path.rsplit('/').next().unwrap_or(path);
     if name == "package.json" {
-        return "PackageManifestImporter";
+        return Some("PackageManifestImporter");
     }
-    match path_extension(path).as_str() {
+    Some(match path_extension(path).as_str() {
         "txt" | "html" | "htm" | "xml" | "json" | "csv" | "yaml" | "bytes" | "fnt" | "md" => {
             "TextScriptImporter"
         }
@@ -1934,8 +1942,9 @@ fn default_importer(path: &str) -> &'static str {
         | "physicsmaterial2d" | "mask" | "fontsettings" | "guiskin" | "mixer" | "rendertexture"
         | "flare" | "spriteatlas" | "lighting" | "preset" | "brush" | "terrainlayer" | "signal"
         | "playable" | "shadervariants" | "giparams" | "cubemap" => "NativeFormatImporter",
-        _ => "DefaultImporter",
-    }
+        "" | "unity" | "rsp" | "modulecompilationtrigger" => "DefaultImporter",
+        _ => return None,
+    })
 }
 
 /// Whether a listed asset is a folder of the database: a folder that is not one plug-in.
@@ -1943,22 +1952,32 @@ fn is_plain_folder(asset: &unbound_project::assetdb::Asset) -> bool {
     asset.is_folder && !unbound_assets::new_meta::is_folder_plugin(&asset.file)
 }
 
-/// The importer of a listed asset: a plain folder's is the DefaultImporter.
-fn asset_importer(asset: &unbound_project::assetdb::Asset) -> &'static str {
+/// The importer of a listed asset: a plain folder's is the DefaultImporter; a file's is the one the
+/// Editor picks by its extension, or for an extension the list does not know, the one its `.meta`
+/// names (a native-format kind of a package, for one).
+fn asset_importer(asset: &unbound_project::assetdb::Asset) -> &str {
     if is_plain_folder(asset) {
-        "DefaultImporter"
-    } else {
-        default_importer(&asset.path)
+        return "DefaultImporter";
     }
+    importer_of_path(&asset.path)
+        .or(asset.importer.as_deref())
+        .unwrap_or("DefaultImporter")
 }
 
-/// How a listed asset loads: a plain folder, or by its path (a folder plug-in as a plug-in).
+/// How a listed asset loads: a plain folder; a file of an extension the importer list does not
+/// know by the importer its `.meta` names; else by its path (a folder plug-in as a plug-in).
 fn listed_kind(asset: &unbound_project::assetdb::Asset) -> &'static str {
     if is_plain_folder(asset) {
-        "folder"
-    } else {
-        asset_kind(&asset.path)
+        return "folder";
     }
+    if importer_of_path(&asset.path).is_none() {
+        match asset.importer.as_deref() {
+            Some("NativeFormatImporter") => return "yaml",
+            Some("PluginImporter") => return "plugin",
+            _ => {}
+        }
+    }
+    asset_kind(&asset.path)
 }
 
 /// Installs the renderer that executes the managed side's render protocol.
@@ -2932,6 +2951,46 @@ mod tests {
             "unknown"
         );
         assert_eq!(asset_kind("Assets/streamingassets/raw.so"), "unknown");
+    }
+
+    #[test]
+    fn a_meta_names_the_importer_only_of_an_extension_the_list_does_not_know() {
+        let asset = |path: &str, importer: Option<&str>| unbound_project::assetdb::Asset {
+            guid: Guid(1),
+            path: path.to_string(),
+            file: PathBuf::from(path),
+            is_folder: false,
+            labels: Vec::new(),
+            importer: importer.map(str::to_string),
+        };
+        // A native-format kind the list does not know (a package's preset library).
+        let colors = asset(
+            "Assets/Editor/Swatches.colors",
+            Some("NativeFormatImporter"),
+        );
+        assert_eq!(asset_importer(&colors), "NativeFormatImporter");
+        assert_eq!(listed_kind(&colors), "yaml");
+        // A .meta from before the extension got its own importer does not change it.
+        let prefab = asset("Assets/Old.prefab", Some("NativeFormatImporter"));
+        assert_eq!(asset_importer(&prefab), "PrefabImporter");
+        assert_eq!(listed_kind(&prefab), "prefab");
+        let dll = asset("Assets/Plugins/Lib.dll", Some("DefaultImporter"));
+        assert_eq!(asset_importer(&dll), "PluginImporter");
+        assert_eq!(listed_kind(&dll), "plugin");
+        // Without a .meta importer: the extension list, else the DefaultImporter.
+        assert_eq!(
+            asset_importer(&asset("Assets/A.anim", None)),
+            "NativeFormatImporter"
+        );
+        assert_eq!(
+            asset_importer(&asset("Assets/A.xyz", None)),
+            "DefaultImporter"
+        );
+        assert_eq!(listed_kind(&asset("Assets/A.xyz", None)), "unknown");
+        assert_eq!(
+            listed_kind(&asset("Assets/UI/A.uxml", Some("ScriptedImporter"))),
+            "uxml"
+        );
     }
 
     #[test]

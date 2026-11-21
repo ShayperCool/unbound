@@ -43,6 +43,8 @@ namespace UnityEditor
             public string Path { get; set; }
             public string Guid { get; set; }
             public string Kind { get; set; }
+            /// <summary>The importer the Editor gives the asset.</summary>
+            public string Importer { get; set; }
             public string[] Labels { get; set; }
             /// <summary>Why the path was not imported (no .meta is written for it).</summary>
             public string Error { get; set; }
@@ -121,7 +123,7 @@ namespace UnityEditor
                 s_Entries.Remove(moved);
                 s_ByPath.Remove(moved.Path);
             }
-            var entry = new Entry { Guid = asset.Guid, Path = path, Kind = asset.Kind, Labels = asset.Labels ?? Array.Empty<string>() };
+            var entry = new Entry { Guid = asset.Guid, Path = path, Kind = asset.Kind, Importer = asset.Importer, Labels = asset.Labels ?? Array.Empty<string>() };
             s_Entries.Add(entry);
             s_ByPath[path] = entry;
             s_ByGuid[asset.Guid] = entry;

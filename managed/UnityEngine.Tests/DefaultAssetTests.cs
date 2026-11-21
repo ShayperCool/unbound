@@ -155,6 +155,29 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AnAssetListedAgainByAnImportKeepsItsImporter()
+        {
+            const string guid = "cccccccccccccccccccccccccccccccc";
+            AssetDatabase.List(Table);
+            var created = new AnimationClip { name = "New" };
+            try
+            {
+                // What an import (CreateAsset, ImportAsset, a refresh) answers for the path.
+                AssetDatabase.ApplyRefresh("{\"assets\":[{\"path\":\"Assets/Native/New.anim\",\"guid\":\"" + guid
+                    + "\",\"kind\":\"yaml\",\"importer\":\"NativeFormatImporter\",\"labels\":[]}]}");
+                AssetDatabaseRuntime.Adopt(guid, "Assets/Native/New.anim", created, 7400000);
+                Assert.True(AssetDatabase.IsNativeAsset(created));
+                Assert.False(AssetDatabase.IsForeignAsset(created));
+            }
+            finally
+            {
+                AssetDatabaseRuntime.Invalidate(guid);
+                Object.DestroyImmediate(created);
+                AssetDatabase.Invalidate();
+            }
+        }
+
+        [Fact]
         public void APluginsScriptsHaveTheirClassesFileIdsAndNoClassWhenNested()
         {
             // The file IDs of tests/projects/defaultasset's ScriptPlugin.dll classes in the Editor.
