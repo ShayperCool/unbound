@@ -71,6 +71,7 @@ namespace UnityEngine.Tests
             public Vector2 pos2 = new Vector2(4, 5);
             public Vector3 pos = new Vector3(1, 2, 3);
             public Vector4 pos4 = new Vector4(4, 5, 6, 7);
+            public Vector2Int gridPos = new Vector2Int(15, -24);
             public Rect rectVal = new Rect(1, 2, 3, 4);
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
@@ -1479,6 +1480,88 @@ namespace UnityEngine.Tests
             }
             finally
             {
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyVector2IntMultiEditAndDisposedCleanupWorksAcrossReleases()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.gridPos = new Vector2Int(int.MinValue, 100);
+            t2.gridPos = new Vector2Int(int.MaxValue, 200);
+            using var panel = RuntimePanel.Create(settings);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                var vf = new Vector2IntField();
+                panel.visualTree.Add(vf);
+                vf.BindProperty(soMulti.FindProperty("gridPos"));
+                Tick(panel);
+
+                var xSub = vf.Q<IntegerField>("unity-x-input");
+                var ySub = vf.Q<IntegerField>("unity-y-input");
+                Assert.False(vf.showMixedValue);
+                Assert.True(xSub.showMixedValue);
+                Assert.True(ySub.showMixedValue);
+                Assert.Equal(int.MinValue, vf.value.x);
+                Assert.Equal(100, vf.value.y);
+
+                // Editing X via sub-field updates both targets' X while preserving distinct Y values.
+                xSub.value = -500;
+                Tick(panel);
+                Assert.Equal(new Vector2Int(-500, 100), t1.gridPos);
+                Assert.Equal(new Vector2Int(-500, 200), t2.gridPos);
+                Assert.False(xSub.showMixedValue);
+                Assert.True(ySub.showMixedValue);
+
+                // PropertyField creates Vector2IntField and preserves untouched components on multi-edit.
+                var pf = new PropertyField(soMulti.FindProperty("gridPos"));
+                panel.visualTree.Add(pf);
+                pf.Bind(soMulti);
+                Tick(panel);
+                var pfChild = Assert.IsType<Vector2IntField>(pf.hierarchy[0]);
+                Assert.Equal("Grid Pos", pfChild.label);
+                Assert.False(pfChild.Q<IntegerField>("unity-x-input").showMixedValue);
+                Assert.True(pfChild.Q<IntegerField>("unity-y-input").showMixedValue);
+
+                // Reset to partial mixed (X mixed, Y equal) and edit only Y via whole-vector value.
+                t1.gridPos = new Vector2Int(1, 10);
+                t2.gridPos = new Vector2Int(2, 10);
+                soMulti.Update();
+                Tick(panel);
+                pfChild.value = new Vector2Int(1, int.MaxValue);
+                Tick(panel);
+                Assert.Equal(new Vector2Int(1, int.MaxValue), t1.gridPos);
+                Assert.Equal(new Vector2Int(2, int.MaxValue), t2.gridPos);
+                Assert.True(pfChild.Q<IntegerField>("unity-x-input").showMixedValue);
+                Assert.False(pfChild.Q<IntegerField>("unity-y-input").showMixedValue);
+
+                // Direct IntegerField bound to gridPos.x only touches X.
+                var compX = new IntegerField();
+                panel.visualTree.Add(compX);
+                compX.BindProperty(soMulti.FindProperty("gridPos.x"));
+                Tick(panel);
+                Assert.True(compX.showMixedValue);
+                compX.value = int.MinValue;
+                Tick(panel);
+                Assert.Equal(new Vector2Int(int.MinValue, int.MaxValue), t1.gridPos);
+                Assert.Equal(new Vector2Int(int.MinValue, int.MaxValue), t2.gridPos);
+
+                // Disposing SerializedObject causes subsequent UI edits to unbind cleanly without throwing.
+                soMulti.Dispose();
+                vf.value = new Vector2Int(9, 8);
+                Tick(panel);
+                Assert.Equal(new Vector2Int(int.MinValue, int.MaxValue), t1.gridPos);
+            }
+            finally
+            {
+                soMulti.Dispose();
                 Object.DestroyImmediate(t1);
                 Object.DestroyImmediate(t2);
                 Object.DestroyImmediate(settings);

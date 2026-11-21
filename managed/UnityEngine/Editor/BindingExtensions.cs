@@ -7,18 +7,18 @@ using UnityEngine.UIElements;
 
 // Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
 // BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, Vector2,
-// Vector3, and Vector4 fields plus Foldout isExpanded binding), BindingExtensions.TrackPropertyValue,
-// BindingExtensions.TrackSerializedObjectValue, BindingExtensions.Unbind,
-// SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the SerializedObject binding
-// context/updater pipeline that synchronizes fields and polls changes during panel updates.
-// Documented in Unity 6000.0 Scripting API ("BindingExtensions.Bind",
+// Vector3, Vector4, and Vector2Int fields plus Foldout isExpanded binding),
+// BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
+// BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
+// SerializedObject binding context/updater pipeline that synchronizes fields and polls changes
+// during panel updates. Documented in Unity 6000.0 Scripting API ("BindingExtensions.Bind",
 // "BindingExtensions.BindProperty", "BindingExtensions.TrackPropertyValue",
 // "BindingExtensions.TrackSerializedObjectValue", "BindingExtensions.Unbind",
 // "SerializedPropertyChangeEvent", "SerializedObjectChangeEvent"); matches the Unity 6000.0.71f1
 // Editor, tests/projects/bindtree, tests/projects/bindproperty, tests/projects/enumbinding,
 // tests/projects/enumflagsbinding, tests/projects/vector2binding, tests/projects/vector3binding,
-// tests/projects/vector4binding, tests/projects/trackpropertyvalue and
-// tests/projects/trackserializedobjectvalue.
+// tests/projects/vector4binding, tests/projects/vector2intbinding,
+// tests/projects/trackpropertyvalue and tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
 {
@@ -1170,6 +1170,9 @@ namespace UnityEditor.UIElements.Bindings
                 case SerializedPropertyType.Vector4:
                     DefaultBind(element, prop, SerializedPropertyHelper.GetVector4PropertyValue, SerializedPropertyHelper.SetVector4PropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
+                case SerializedPropertyType.Vector2Int:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetVector2IntPropertyValue, SerializedPropertyHelper.SetVector2IntPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
                 case SerializedPropertyType.Generic:
                     if (prop.type == "ToggleButtonGroupState")
                         Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty (ToggleButtonGroupState)");
@@ -2080,6 +2083,7 @@ namespace UnityEditor.UIElements.Bindings
         public static Vector2 GetVector2PropertyValue(SerializedProperty p) => p.vector2Value;
         public static Vector3 GetVector3PropertyValue(SerializedProperty p) => p.vector3Value;
         public static Vector4 GetVector4PropertyValue(SerializedProperty p) => p.vector4Value;
+        public static Vector2Int GetVector2IntPropertyValue(SerializedProperty p) => p.vector2IntValue;
         public static float GetIntPropertyValueAsFloat(SerializedProperty p) => p.intValue;
         public static float GetLongPropertyValueAsFloat(SerializedProperty p) => p.longValue;
         public static double GetFloatPropertyValueAsDouble(SerializedProperty p) => p.floatValue;
@@ -2147,6 +2151,25 @@ namespace UnityEditor.UIElements.Bindings
             else
             {
                 p.vector4Value = v;
+            }
+        }
+
+        static void SetIntComponentIfDifferent(SerializedProperty p, string name, int current, int next)
+        {
+            if (!current.Equals(next)) p.FindPropertyRelative(name).intValue = next;
+        }
+
+        public static void SetVector2IntPropertyValue(SerializedProperty p, Vector2Int v)
+        {
+            if (p.hasMultipleDifferentValues)
+            {
+                Vector2Int current = p.vector2IntValue;
+                SetIntComponentIfDifferent(p, "x", current.x, v.x);
+                SetIntComponentIfDifferent(p, "y", current.y, v.y);
+            }
+            else
+            {
+                p.vector2IntValue = v;
             }
         }
         public static void SetFloatPropertyValueFromDouble(SerializedProperty p, double v) => p.floatValue = (float)v;
