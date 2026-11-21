@@ -252,6 +252,48 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SwappedOrShiftedStructPartsAreSeenAsChanges()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            target.rectIntVal = new RectInt(0, 0, 10, 20);
+            target.gridPos = new Vector2Int(4, 0);
+            target.voxelPos = new Vector3Int(16, 0, 0);
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                var rect = new RectIntField();
+                var grid = new Vector2IntField();
+                panel.visualTree.Add(rect);
+                panel.visualTree.Add(grid);
+                rect.BindProperty(so.FindProperty("rectIntVal"));
+                grid.BindProperty(so.FindProperty("gridPos"));
+                var changes = new List<string>();
+                rect.TrackPropertyValue(so.FindProperty("voxelPos"), p => changes.Add("voxel:" + p.vector3IntValue));
+                Tick(panel);
+                Tick(panel);
+
+                // Their own hash codes combine fields with XOR: each pair below collides.
+                uint rectHash = so.FindProperty("rectIntVal").contentHash;
+                target.rectIntVal = new RectInt(0, 0, 20, 10);
+                target.gridPos = new Vector2Int(0, 1);
+                target.voxelPos = new Vector3Int(0, 1, 0);
+                Tick(panel);
+                Tick(panel);
+                Assert.NotEqual(rectHash, so.FindProperty("rectIntVal").contentHash);
+                Assert.Equal(new RectInt(0, 0, 20, 10), rect.value);
+                Assert.Equal(new Vector2Int(0, 1), grid.value);
+                Assert.Equal(new[] { "voxel:" + new Vector3Int(0, 1, 0) }, changes);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
         public void ACallbackThatWritesABoundFieldDoesNotCutOffTheOtherCallbacks()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();

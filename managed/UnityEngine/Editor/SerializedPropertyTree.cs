@@ -1191,6 +1191,14 @@ namespace Unbound.Runtime
             hash.Add((int)node.Kind);
             if (node.Kind == SerializedNodeKind.Leaf || node.Kind == SerializedNodeKind.Component || node.Kind == SerializedNodeKind.ArraySize)
             {
+                // A value with parts (vectors, rects, bounds, colours, quaternions, Hash128...)
+                // hashes part by part: their own hash codes combine fields with XOR, so swapped
+                // or shifted values (a RectInt's width and height) would collide.
+                if (node.Children.Count > 0 && node.Children[0].Kind == SerializedNodeKind.Component)
+                {
+                    foreach (var part in node.Children) AddHash(ref hash, part);
+                    return;
+                }
                 var value = GetValue(node);
                 if (value is Object o) hash.Add(o is null ? 0 : o.GetInstanceID());
                 else if (value is AnimationCurve curve)
@@ -1233,26 +1241,12 @@ namespace Unbound.Runtime
                         hash.Add(ak.time);
                     }
                 }
-                else if (value is Hash128 h128)
-                {
-                    hash.Add((uint)h128.u64_0);
-                    hash.Add((uint)(h128.u64_0 >> 32));
-                    hash.Add((uint)h128.u64_1);
-                    hash.Add((uint)(h128.u64_1 >> 32));
-                }
                 else if (value is RectOffset offset)
                 {
                     hash.Add(offset.left);
                     hash.Add(offset.right);
                     hash.Add(offset.top);
                     hash.Add(offset.bottom);
-                }
-                else if (value is Quaternion quat)
-                {
-                    hash.Add(quat.x);
-                    hash.Add(quat.y);
-                    hash.Add(quat.z);
-                    hash.Add(quat.w);
                 }
                 else if (value != null) hash.Add(value);
                 return;
