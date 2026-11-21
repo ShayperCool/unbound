@@ -16640,4 +16640,9 @@
 {"key":"UnityEditor.EditorGUILayout+HorizontalScope/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.EditorGUILayout+VerticalScope/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.EditorGUILayout+ToggleGroupScope/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.U2D.ScriptablePacker/@factory","status":"excluded","value":"abstract"}
+{"key":"UnityEditor.U2D.SpriteAtlasAsset/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.U2D.SpriteAtlasAsset/Property/UnityEditor.U2D.SpriteAtlasAsset/isVariant","status":"value","value":"false"}
+{"key":"UnityEditor.U2D.SpriteAtlasAsset/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:0"}
+{"key":"UnityEditor.U2D.SpriteAtlasAsset/Property/UnityEngine.Object/name","status":"value","value":"string:"}
 {"key":"complete","status":"value","value":"1"}

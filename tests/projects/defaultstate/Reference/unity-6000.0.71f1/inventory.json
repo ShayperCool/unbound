@@ -2371,6 +2371,18 @@
       "type": "UnityEditor.TypeCache+TypeCollection+Enumerator"
     },
     {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "abstract",
+      "type": "UnityEditor.U2D.ScriptablePacker"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.U2D.SpriteAtlasAsset"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "static",
