@@ -114,6 +114,18 @@ namespace UnityEngine.Tests
             Assert.Throws<ArgumentException>(() => controller.OnDrop(new DragAndDropArgs { dragAndDropPosition = DragAndDropPosition.OverItem }));
         }
 
+        [Fact]
+        public void DraggingItemsBetweenRowsReordersTheBoundArray()
+        {
+            using var f = new Fixture();
+            var list = f.Bind("numbers");
+            var controller = new SerializedObjectListReorderableDragAndDropController(list) { enableReordering = true };
+            controller.SetupDragAndDrop(new[] { list.viewController.GetIdForIndex(0) }, skipText: true);
+            controller.OnDrop(new DragAndDropArgs { dragAndDropPosition = DragAndDropPosition.BetweenItems, insertAtIndex = 3 });
+            Tick(f.Panel);
+            Assert.Equal(new[] { 2, 3, 1, 4 }, f.Targets[0].numbers);
+        }
+
         static int Hits(string member) => Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
 
         [Fact]
