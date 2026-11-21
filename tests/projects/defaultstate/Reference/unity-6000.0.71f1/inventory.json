@@ -2182,6 +2182,18 @@
       "type": "UnityEditor.SceneView"
     },
     {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SceneView+CameraMode"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SceneView+SceneViewState"
+    },
+    {
       "category": "scriptable",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",

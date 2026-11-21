@@ -810,3 +810,7 @@ committed reference row and inventory entry is unchanged.
 The persistent-listener tools slice adds the static `UnityEditor.Events.UnityEventTools` to the inventory with its one
 `excluded, static` row, as two Unity 6000.0.71f1 batch Editor captures on macOS write it (the row comes from the
 inventory alone, before any Unity call); every earlier row is unchanged.
+
+The Scene view types slice adds `SceneView.CameraMode` and `SceneView.SceneViewState` to the inventory with their 25
+rows, as two Unity 6000.0.71f1 batch Editor captures on macOS write them (plain field and switch values, independent
+of the OS and graphics device); every earlier row is unchanged.
