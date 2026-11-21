@@ -72,6 +72,25 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void WrittenReferencesTakeTheAssetsFolderForAnAssetAndBuiltInResourcesForType0()
+        {
+            AssetDatabase.List(Table);
+            try
+            {
+                // The Assets folder's GUID has a built-in resource's form but is a listed asset.
+                Assert.False(UnityYamlWriter.Writer.IsBuiltinGuid(RootGuid));
+                Assert.True(UnityYamlWriter.Writer.IsBuiltinGuid("0000000000000000f000000000000000"));
+                Assert.True(UnityYamlWriter.Writer.IsBuiltinGuid("0000000000000000e000000000000000"));
+                Assert.False(UnityYamlWriter.Writer.IsBuiltinGuid("11111111111111111111111111111111"));
+                Assert.False(UnityYamlWriter.Writer.IsBuiltinGuid(null));
+            }
+            finally
+            {
+                AssetDatabase.Invalidate();
+            }
+        }
+
+        [Fact]
         public void TheAssetsFolderIsAListedAssetNoSearchFinds()
         {
             AssetDatabase.List(Table);
