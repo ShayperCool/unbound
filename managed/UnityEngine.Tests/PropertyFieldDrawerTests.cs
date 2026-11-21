@@ -131,6 +131,7 @@ namespace UnityEngine.Tests
             try
             {
                 int throwingBefore = Hits("UnityEditor.UIElements.PropertyField (drawer ThrowingDrawer)");
+                int genericBefore = Hits("UnityEditor.UIElements.PropertyField (drawer GenericDrawer`1)");
                 foreach (var path in new[] { "throwing", "generic" })
                 {
                     var field = new PropertyField(so.FindProperty(path));
@@ -141,6 +142,7 @@ namespace UnityEngine.Tests
                     Assert.NotNull(field.Q<Foldout>());
                 }
                 Assert.Equal(throwingBefore + 1, Hits("UnityEditor.UIElements.PropertyField (drawer ThrowingDrawer)"));
+                Assert.Equal(genericBefore + 1, Hits("UnityEditor.UIElements.PropertyField (drawer GenericDrawer`1)"));
             }
             finally
             {
