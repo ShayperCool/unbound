@@ -23,7 +23,7 @@ pub use workers::{
 };
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 
 /// The functions a job's `user` value is passed to. They may unwind (Rust callers' panics are
@@ -77,6 +77,8 @@ struct Run {
     key: Key,
     user: usize,
     callbacks: Callbacks,
+    /// Set by the thread that prepares the job.
+    preparing: AtomicBool,
     /// 0 until the job is prepared.
     participants: AtomicU32,
     /// The next participant to claim.
@@ -174,6 +176,7 @@ impl Graph {
                 key,
                 user,
                 callbacks,
+                preparing: AtomicBool::new(false),
                 participants: AtomicU32::new(0),
                 next: AtomicU32::new(0),
                 remaining: AtomicU32::new(0),
@@ -339,9 +342,7 @@ pub fn flush() {
         });
         graph.batch = batch;
     }
-    for run in ready {
-        launch(run, false);
-    }
+    launch_all(ready);
 }
 
 /// Hands one batched job to the workers, held or not, leaving the rest of the batch.
@@ -415,6 +416,14 @@ fn run_here(mut graph: MutexGuard<'static, Graph>, key: Key) -> MutexGuard<'stat
                 continue;
             }
             State::Launched => {
+                // Handed out but not prepared yet: prepared and run here unless another thread
+                // already prepares it.
+                if !run.preparing.load(Ordering::Acquire) {
+                    drop(graph);
+                    launch(run, true);
+                    graph = self::graph();
+                    continue;
+                }
                 let participants = run.participants.load(Ordering::Acquire);
                 if participants != 0 && run.next.load(Ordering::Relaxed) < participants {
                     drop(graph);
@@ -434,8 +443,12 @@ fn run_here(mut graph: MutexGuard<'static, Graph>, key: Key) -> MutexGuard<'stat
     }
 }
 
-/// Prepares a launched job and runs its participants: on this thread too when `here`.
+/// Prepares a launched job, unless another thread already does, and runs its participants: on
+/// this thread too when `here`.
 fn launch(run: Arc<Run>, here: bool) {
+    if run.preparing.swap(true, Ordering::AcqRel) {
+        return;
+    }
     let participants = catch_unwind(AssertUnwindSafe(|| (run.callbacks.prepare)(run.user)))
         .unwrap_or_else(|panic| {
             report_panic("preparing", &run, &panic);
@@ -444,27 +457,48 @@ fn launch(run: Arc<Run>, here: bool) {
         .max(1);
     run.remaining.store(participants, Ordering::Relaxed);
     run.participants.store(participants, Ordering::Release);
-    let helpers = participants - u32::from(here);
+    let helpers = (participants - u32::from(here)) as usize;
     if helpers != 0 {
-        match workers::pool() {
-            Some(pool) => {
-                let tasks = (helpers as usize).min(pool.current_num_threads());
-                for _ in 0..tasks {
-                    let run = run.clone();
-                    pool.spawn(move || run_participants(&run));
-                }
+        if thread_index() != 0 {
+            // On a job worker: its own pool's queue, without the workers' lock.
+            for _ in 0..helpers.min(rayon::current_num_threads()) {
+                let run = run.clone();
+                rayon::spawn(move || run_participants(&run));
             }
+        } else if let Some(pool) = workers::pool() {
+            for _ in 0..helpers.min(pool.current_num_threads()) {
+                let run = run.clone();
+                pool.spawn(move || run_participants(&run));
+            }
+        } else {
             // No workers (JobWorkerCount 0): a thread waiting for the job runs its participants.
-            None => {
-                let graph = graph();
-                if graph.node(run.key).is_some_and(|node| node.waiters != 0) {
-                    CHANGED.notify_all();
-                }
+            let graph = graph();
+            if graph.node(run.key).is_some_and(|node| node.waiters != 0) {
+                CHANGED.notify_all();
             }
         }
     }
     if here {
         run_participants(&run);
+    }
+}
+
+/// Launches jobs that became ready. Several ready on a thread that is not a worker (a flush) go
+/// to the workers in one task, which launches them there: one wake-up of the pool instead of one
+/// per job.
+fn launch_all(mut ready: Vec<Arc<Run>>) {
+    if ready.len() > 1 && thread_index() == 0 {
+        if let Some(pool) = workers::pool() {
+            pool.spawn(move || ready.into_iter().for_each(|run| launch(run, false)));
+            return;
+        }
+    }
+    if ready.len() == 1 {
+        launch(ready.pop().unwrap(), false);
+        return;
+    }
+    for run in ready {
+        launch(run, false);
     }
 }
 
@@ -497,9 +531,7 @@ fn finish(run: &Run) {
     if wake {
         CHANGED.notify_all();
     }
-    for run in ready {
-        launch(run, false);
-    }
+    launch_all(ready);
 }
 
 fn report_panic(what: &str, run: &Run, panic: &Box<dyn std::any::Any + Send>) {
