@@ -669,6 +669,23 @@ public class RealtimeGIProbe : MonoBehaviour
         yield return Converge();
         Capture("roomturned-moved", s);
 
+        // The room and curved and bent parts (Unity's sphere, cylinder and capsule, strips of a
+        // quarter circle and bent strips whose lightmap UVs are true to them, stretched or
+        // folded), each chart its projection or its own lightmap UVs as the precompute chooses,
+        // and renderers with Scale In Lightmap 4 and 0.25; then shapes whose charts the
+        // rounding of the precompute's arithmetic decides: as each loads and with the point
+        // light moved.
+        foreach (var scene in new[] { "RoomCurved", "RoomRounding" })
+        {
+            yield return Load(scene);
+            s = Scene();
+            yield return Converge();
+            Capture(scene.ToLowerInvariant() + "-base", s);
+            s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
+            yield return Converge();
+            Capture(scene.ToLowerInvariant() + "-moved", s);
+        }
+
         // The room with two panels whose two holes are of one size, and a plate either holds.
         yield return Load("RoomHoles");
         s = Scene();

@@ -8,6 +8,8 @@
     run.py setup-auto                         # Editor: add the RoomAuto scene alone
     run.py setup-turned                       # Editor: add the RoomTurned scene alone
     run.py setup-holes                        # Editor: add the RoomHoles scene alone
+    run.py setup-curved                       # Editor: add the RoomCurved scene alone
+    run.py setup-rounding                     # Editor: add the RoomRounding scene alone
     run.py record --label native1             # Editor capture (GPU, through the job pool)
     run.py publish native1 native2            # two identical captures become Reference/unity-<version>/
     run.py gate --label gate-1                # engine run compared with Reference/ (the land gate)
@@ -164,6 +166,8 @@ ADDED = {'setup-systems': ('RoomSystems', 'RealtimeGISetup.CreateSystems'),
          'setup-auto': ('RoomAuto', 'RealtimeGISetup.CreateAuto'),
          'setup-turned': ('RoomTurned', 'RealtimeGISetup.CreateTurned'),
          'setup-holes': ('RoomHoles', 'RealtimeGISetup.CreateHoles'),
+         'setup-curved': ('RoomCurved', 'RealtimeGISetup.CreateCurved'),
+         'setup-rounding': ('RoomRounding', 'RealtimeGISetup.CreateRounding'),
          'setup-bake': ('RoomBake', 'RealtimeGISetup.CreateBake')}
 
 

@@ -121,6 +121,32 @@ public static class RealtimeGISetup
         }
     }
 
+    /// <summary>Adds the <c>RoomCurved</c> scene alone: the room and curved and bent shapes with
+    /// Preserve UVs off, whose charts are their own lightmap UVs or their projection.</summary>
+    public static void CreateCurved() => AddScene("RoomCurved", curved: true);
+
+    /// <summary>Adds the <c>RoomRounding</c> scene alone: the room and shapes with Preserve UVs
+    /// off whose charts the rounding of the precompute's arithmetic decides.</summary>
+    public static void CreateRounding() => AddScene("RoomRounding", rounding: true);
+
+    static void AddScene(string name, bool curved = false, bool rounding = false)
+    {
+        try
+        {
+            CreateRoom(name, LightmapsMode.NonDirectional, 1f, 1f, curved: curved, rounding: rounding);
+            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+            scenes.Add(new EditorBuildSettingsScene($"{Scenes}/{name}.unity", true));
+            EditorBuildSettings.scenes = scenes.ToArray();
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(0);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+            EditorApplication.Exit(1);
+        }
+    }
+
     /// <summary>Adds the <c>RoomHoles</c> scene alone: the room with panels of two holes of one
     /// size and a plate either holds.</summary>
     public static void CreateHoles()
@@ -482,7 +508,40 @@ public static class RealtimeGISetup
         triangles.AddRange(new[] { first, first + 1, first + 2, first, first + 2, first + 3 });
     }
 
-    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false, bool charts = false, bool autoCharts = false, bool turned = false, bool holes = false, bool bakeOnLoad = false)
+    /// <summary>
+    /// A strip bent about the y axis: <paramref name="columns"/> + 1 columns of two vertices (at
+    /// y 0 and <paramref name="height"/>) at the angles of <paramref name="angles"/> (degrees) on
+    /// a circle of <paramref name="radius"/> about (0, 0, <paramref name="radius"/>), so that the
+    /// strip bulges towards -z; each vertex's normal points out of the circle, so the strip is one
+    /// part. Lightmap UVs: <paramref name="uvs"/> of the column (its index) and the row (0 or 1).
+    /// </summary>
+    static Renderer Strip(string scene, string name, Vector3 position, Material material, float radius, float height,
+        float[] angles, System.Func<int, int, Vector2> uvs)
+    {
+        List<Vector3> v = new(), n = new();
+        List<Vector2> uv = new();
+        List<int> t = new();
+        for (var c = 0; c < angles.Length; c++)
+        {
+            var a = angles[c] * Mathf.Deg2Rad;
+            var normal = new Vector3(Mathf.Sin(a), 0f, -Mathf.Cos(a));
+            for (var r = 0; r < 2; r++)
+            {
+                v.Add(new Vector3(0f, r * height, radius) + normal * radius);
+                n.Add(normal);
+                uv.Add(uvs(c, r));
+            }
+        }
+        for (var c = 0; c + 1 < angles.Length; c++)
+        {
+            int a = 2 * c, b = a + 1, d = a + 2, e = a + 3;
+            // Wound so that cross(b - a, c - a) is the outward normal.
+            t.AddRange(new[] { a, b, e, a, e, d });
+        }
+        return Custom(scene, name, position, Vector3.zero, Vector3.one, material, v, n, uv, t);
+    }
+
+    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false, bool charts = false, bool autoCharts = false, bool turned = false, bool holes = false, bool bakeOnLoad = false, bool curved = false, bool rounding = false)
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var camera = new GameObject("Main Camera", typeof(Camera));
@@ -710,6 +769,106 @@ public static class RealtimeGISetup
                     so.FindProperty("m_AutoUVMaxAngle").floatValue = limit.angle;
                     so.FindProperty("m_IgnoreNormalsForChartDetection").boolValue = limit.ignoreNormals;
                 }
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+
+        if (curved || rounding)
+        {
+            var limits = new Dictionary<string, (float distance, float angle)>();
+            var lightmapScales = new Dictionary<string, float>();
+            if (curved)
+            {
+                // Curved parts: Unity's sphere, cylinder (a curved side between two flat caps) and
+                // capsule; strips of a quarter circle whose lightmap UVs are unrolled true to the
+                // surface, stretched along it, and folded onto themselves.
+                lit.Add(Static(PrimitiveType.Sphere, "Ball", new Vector3(2f, 0.3f, -2f), new Vector3(0.6f, 0.6f, 0.6f), white));
+                lit.Add(Static(PrimitiveType.Cylinder, "Drum", new Vector3(-2.2f, 0.3f, 2.2f), new Vector3(0.5f, 0.3f, 0.5f), white));
+                lit.Add(Static(PrimitiveType.Capsule, "Pill", new Vector3(2.3f, 0.4f, 1.9f), new Vector3(0.4f, 0.4f, 0.4f), white));
+                var quarter = new float[9];
+                for (var c = 0; c < quarter.Length; c++) quarter[c] = -45f + 11.25f * c;
+                // Unrolled: the arc is 1.2 * pi / 2 = 1.885 long and 1.2 high. (At this size the
+                // two choices give charts of other sizes.)
+                var arc = 1.2f * Mathf.PI / 2f;
+                lit.Add(Strip(name, "Arc", new Vector3(-1f, 0.01f, -2.4f), white, 1.2f, 1.2f, quarter,
+                    (c, r) => new Vector2(0.05f + 0.9f * c / 8f, 0.05f + 0.9f * r * 1.2f / arc)));
+                lit.Add(Strip(name, "ArcStretched", new Vector3(-1.6f, 2.4f, 2.5f), white, 1.2f, 1.2f, quarter,
+                    (c, r) => new Vector2(0.05f + 0.9f * (c / 8f) * (c / 8f), 0.05f + 0.9f * r)));
+                lit.Add(Strip(name, "ArcFolded", new Vector3(1f, 2.6f, -2f), white, 1.2f, 1.2f, quarter,
+                    (c, r) => new Vector2(0.05f + 0.9f * Mathf.Abs(c - 4) / 4f, 0.05f + 0.9f * r)));
+                // Bent parts alone in their meshes: two flat quads 40 degrees apart that share their
+                // edge, unrolled true to their shape; and two of different widths, 40 and 20
+                // degrees from the middle, each stretched over half of a UV strip of a quarter of
+                // its height.
+                lit.Add(Strip(name, "Bent", new Vector3(-1.8f, 1.5f, -0.8f), white, 1.2f, 1.4f, new[] { -40f, 0f, 40f },
+                    (c, r) => new Vector2(0.05f + 0.9f * c / 2f, 0.05f + 0.9f * r * 1.4f / (4.8f * Mathf.Sin(20f * Mathf.Deg2Rad)))));
+                lit.Add(Strip(name, "BentStretched", new Vector3(1.6f, 1.8f, 0.2f), white, 1.2f, 1.4f, new[] { -40f, 0f, 20f },
+                    (c, r) => new Vector2(0.05f + 0.9f * c / 2f, 0.05f + 0.25f * r)));
+                // Scale In Lightmap 4 on a cube and the sphere, and 0.25 on a slab whose large
+                // faces would then be below the minimum chart size.
+                lit.Add(Static(PrimitiveType.Cube, "ScaleUp", new Vector3(-0.2f, 3.3f, 0.2f), new Vector3(0.6f, 0.6f, 0.6f), white));
+                lit.Add(Static(PrimitiveType.Cube, "ScaleDown", new Vector3(1.4f, 3.85f, -0.8f), new Vector3(2.4f, 0.1f, 1.6f), white));
+                lightmapScales["Ball"] = 4f;
+                lightmapScales["ScaleUp"] = 4f;
+                lightmapScales["ScaleDown"] = 0.25f;
+            }
+            if (rounding)
+            {
+                // Choices the rounding of normals and areas decides: a slab modelled turned 45
+                // degrees about Y (faces at a right angle but for it; its thin faces as near to
+                // its top as to its bottom but for it), a roof whose sides are as far from the
+                // plane through both as its Max Angle, a box modelled turned 30 degrees about Y
+                // away from its mesh's origin (opposite faces of one area but for it), and a quad
+                // on a tilted plane whose lightmap UVs are a true copy of it turned a quarter.
+                Vector3[][] Turned(Vector3[][] faces, Quaternion turn, Vector3 offset)
+                {
+                    var made = new Vector3[faces.Length][];
+                    for (var f = 0; f < faces.Length; f++)
+                    {
+                        made[f] = new Vector3[faces[f].Length];
+                        for (var i = 0; i < faces[f].Length; i++) made[f][i] = turn * faces[f][i] + offset;
+                    }
+                    return made;
+                }
+                var slab = new[] { new Vector2(0f, 0f), new Vector2(1.6f, 0f), new Vector2(1.6f, 0.1f), new Vector2(0f, 0.1f) };
+                var y45 = Quaternion.Euler(0f, 45f, 0f);
+                lit.Add(Solid(name, "Slab45", new Vector3(-1.9f, 0.01f, -2f), Vector3.zero, white, y45 * new Vector3(0.8f, 0.05f, 0.6f), false,
+                    Turned(Prism(slab, 1.2f), y45, Vector3.zero)));
+                lit.Add(Solid(name, "RoofAtLimit", new Vector3(1.6f, 2.6f, -1.2f), Vector3.zero, white, new Vector3(0f, -1f, 0.65f), false, Roof(20f, 0.7f, 1.3f)));
+                limits["RoofAtLimit"] = (0.5f, 20f);
+                var box = new[] { new Vector2(0f, 0f), new Vector2(0.6f, 0f), new Vector2(0.6f, 0.4f), new Vector2(0f, 0.4f) };
+                var y30 = Quaternion.Euler(0f, 30f, 0f);
+                var away = new Vector3(0.9f, 0f, 0.4f);
+                lit.Add(Solid(name, "BoxOffOrigin", new Vector3(-0.7f, 0.01f, -2.9f), Vector3.zero, white, y30 * new Vector3(0.3f, 0.2f, 0.25f) + away, false,
+                    Turned(Prism(box, 0.5f), y30, away)));
+                {
+                    List<Vector3> v = new(), n = new();
+                    List<Vector2> uv = new();
+                    List<int> t = new();
+                    var tilt = Quaternion.Euler(30f, 20f, 0f);
+                    // 2 x 1.2 m: its chart is 6 x 4 texels laid out one way and 4 x 6 the other.
+                    var corners = new[] { new Vector3(0f, 0f, 0f), new Vector3(2f, 0f, 0f), new Vector3(2f, 1.2f, 0f), new Vector3(0f, 1.2f, 0f) };
+                    foreach (var corner in corners)
+                    {
+                        v.Add(tilt * corner);
+                        n.Add(tilt * Vector3.back);
+                        // The quad's own shape turned a quarter: x up, y to the left.
+                        uv.Add(new Vector2(0.05f + 0.45f * (1.2f - corner.y), 0.05f + 0.45f * corner.x));
+                    }
+                    t.AddRange(new[] { 0, 2, 1, 0, 3, 2 });
+                    lit.Add(Custom(name, "TiltedQuad", new Vector3(-1.2f, 1.9f, 2.2f), Vector3.zero, Vector3.one, white, v, n, uv, t));
+                }
+            }
+            foreach (var r in lit)
+            {
+                var so = new SerializedObject(r);
+                so.FindProperty("m_PreserveUVs").boolValue = false;
+                if (limits.TryGetValue(r.name, out var limit))
+                {
+                    so.FindProperty("m_AutoUVMaxDistance").floatValue = limit.distance;
+                    so.FindProperty("m_AutoUVMaxAngle").floatValue = limit.angle;
+                }
+                if (lightmapScales.TryGetValue(r.name, out var lightmapScale)) so.FindProperty("m_ScaleInLightmap").floatValue = lightmapScale;
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
         }
