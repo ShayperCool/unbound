@@ -317,7 +317,9 @@ importers and loaded `SpriteAtlas` instances independent until reimport, writes 
   The V1 profile also gives `Scaled` (a variant whose `variantMultiplier` is 2) a master with
   `SetMasterAtlas` before saving it, and saves `ScaledAlone` (the same) and
   `ScaledPlain` (not a variant) without it. The V2 profile also loads `LazyVariant` (a variant of `LazyMaster`) and changes the master's
-  packing settings in memory before anything asks the variant for its settings.
+  packing settings in memory before anything asks the variant for its settings, changes
+  `EarlyMaster`'s before `EarlyVariant` first loads, and writes `UserData` (a legacy `.meta`)
+  after changing only its importer's `userData`.
 
 Not measured: either kind of atlas in the other kind's packer mode.
 

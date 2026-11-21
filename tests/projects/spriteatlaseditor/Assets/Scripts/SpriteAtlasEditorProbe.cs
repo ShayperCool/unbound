@@ -42,6 +42,18 @@ static class SpriteAtlasEditorProbe
                 lazyMaster.SetPackingSettings(edited);
                 return $"variant=({DescribePacking(variant.GetPackingSettings())})|master=({DescribePacking(lazyMaster.GetPackingSettings())})";
             });
+        // A V2 variant first loaded after its master's packing settings changed in memory.
+        const string earlyMaster = "Assets/WholeWriteAtlases/EarlyMaster.spriteatlasv2";
+        if (File.Exists(earlyMaster))
+            Check("EarlyVariant.spriteatlasv2.packingAfterMasterEdit", () =>
+            {
+                var master = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(earlyMaster);
+                var edited = master.GetPackingSettings();
+                edited.padding = 16;
+                master.SetPackingSettings(edited);
+                var variant = AssetDatabase.LoadAssetAtPath<SpriteAtlas>("Assets/WholeWriteAtlases/EarlyVariant.spriteatlasv2");
+                return $"variant=({DescribePacking(variant.GetPackingSettings())})|master=({DescribePacking(master.GetPackingSettings())})";
+            });
         // The legacy V1 file as it stands when Play mode starts, before anything loads it.
         const string untouched = "Assets/WholeWriteAtlases/Untouched.spriteatlas";
         if (File.Exists(untouched))
@@ -153,6 +165,8 @@ static class SpriteAtlasEditorProbe
                     var importer = (SpriteAtlasImporter)AssetImporter.GetAtPath(path);
                     bool dirtyBefore = EditorUtility.IsDirty(importer);
                     if (touch) importer.includeInBuild = !importer.includeInBuild;
+                    // UserData changes only the importer's userData.
+                    if (Path.GetFileNameWithoutExtension(path) == "UserData") importer.userData = "changed";
                     bool written = AssetDatabase.WriteImportSettingsIfDirty(path);
                     return $"dirtyBefore={dirtyBefore}|written={written}|meta=" + File.ReadAllText(path + ".meta");
                 });
