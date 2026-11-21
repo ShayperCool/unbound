@@ -1,5 +1,7 @@
 {
-  "commands": ["python3 tests/projects/spriteatlaseditor/run.py gate"],
+  "commands": [
+    "python3 tests/projects/spriteatlaseditor/run.py gate"
+  ],
   "summary": "spriteatlaseditor [a-z0-9]+: [0-9]+/[0-9]+ values match.*",
   "engine_paths": [
     "managed/UnityEngine/Editor/SpriteAtlasExtensions.cs",
@@ -10,6 +12,9 @@
     "managed/UnityEngine/U2D/SpriteAtlas.cs",
     "managed/UnityEngine/Editor/DefaultAsset.cs",
     "managed/UnityEngine/Graphics/AssetImporters.cs",
-    "managed/UnityEngine/Editor/AssetDatabase.cs"
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/SpriteAtlasEditorSettings.cs",
+    "managed/UnityEngine/Editor/ImporterMetaFiles.cs",
+    "managed/UnityEngine/Editor/SpriteAtlasImporter.cs"
   ]
 }
