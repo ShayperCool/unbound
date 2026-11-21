@@ -72,9 +72,214 @@ static class SpriteAtlasEditorProbe
         if (paths.Any(p => p.StartsWith("Assets/PackingAtlases/", StringComparison.Ordinal)))
             RecordPackingSettings(paths, none, Check);
 
+        if (paths.Any(p => p.StartsWith("Assets/TextureAtlases/", StringComparison.Ordinal)))
+            RecordTextureSettings(paths, none, Check);
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
+    }
+
+    static string YamlBlock(string file, string keyLine)
+    {
+        var lines = File.ReadAllLines(file);
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].TrimStart() != keyLine) continue;
+            int indent = lines[i].Length - lines[i].TrimStart().Length;
+            var items = new System.Collections.Generic.List<string>();
+            for (int j = i + 1; j < lines.Length; j++)
+            {
+                int childIndent = lines[j].Length - lines[j].TrimStart().Length;
+                if (childIndent <= indent) break;
+                items.Add(lines[j].Trim());
+            }
+            return string.Join(";", items);
+        }
+        return "<absent>";
+    }
+
+    static void RecordTextureSettings(string[] paths, SpriteAtlas none, Action<string, Func<string>> check)
+    {
+        var byStem = new System.Collections.Generic.Dictionary<string, (string path, string key, SpriteAtlas atlas)>(StringComparer.Ordinal);
+        foreach (var path in paths)
+        {
+            var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+            if (atlas != null)
+                byStem[Path.GetFileNameWithoutExtension(path)] = (path, Path.GetFileName(path), atlas);
+        }
+
+        string State(SpriteAtlas a, int baseDirty) =>
+            $"{DescribeTexture(a.GetTextureSettings())}|dirty={EditorUtility.IsDirty(a)}|dirtyDelta={EditorUtility.GetDirtyCount(a) - baseDirty}";
+
+        string Unrelated(SpriteAtlas a) =>
+            $"packing=({DescribePacking(a.GetPackingSettings())})|android=({DescribePlatform(a.GetPlatformSettings("Android"))})|include={a.IsIncludeInBuild()}";
+
+        string FileState(string path, byte[] origAsset, byte[] origMeta, bool includeAssetBlock = true)
+        {
+            bool assetChanged = !File.ReadAllBytes(path).SequenceEqual(origAsset);
+            bool metaChanged = !File.ReadAllBytes(path + ".meta").SequenceEqual(origMeta);
+            return includeAssetBlock
+                ? $"assetChanged={assetChanged}|metaChanged={metaChanged}|assetTexture={YamlBlock(path, "textureSettings:")}|metaTexture={YamlBlock(path + ".meta", "textureSettings:")}"
+                : $"assetChanged={assetChanged}|metaChanged={metaChanged}|metaTexture={YamlBlock(path + ".meta", "textureSettings:")}";
+        }
+
+        check("null.setTexture", () => { none.SetTextureSettings(default); return "ok"; });
+
+        var mem = new SpriteAtlas();
+        int memBase = EditorUtility.GetDirtyCount(mem);
+        check("new.texture.initial", () => State(mem, memBase));
+        mem.SetTextureSettings(mem.GetTextureSettings());
+        check("new.texture.sameRepeat", () => State(mem, memBase));
+        var memCopy = mem.GetTextureSettings();
+        memCopy.anisoLevel = 8;
+        memCopy.filterMode = FilterMode.Trilinear;
+        memCopy.generateMipMaps = true;
+        memCopy.readable = true;
+        memCopy.sRGB = false;
+        mem.SetTextureSettings(memCopy);
+        check("new.texture.modifiedCopy", () => State(mem, memBase));
+        mem.SetTextureSettings(new SpriteAtlasTextureSettings
+        {
+            anisoLevel = -5,
+            filterMode = (FilterMode)99,
+            generateMipMaps = true,
+            readable = false,
+            sRGB = true,
+        });
+        check("new.texture.edgeValues", () => State(mem, memBase));
+        mem.SetTextureSettings(default);
+        check("new.texture.zeroed", () => State(mem, memBase));
+        AssetDatabase.SaveAssets();
+        check("new.texture.afterSave", () => State(mem, memBase));
+
+        if (byStem.TryGetValue("Master", out var master))
+        {
+            var origA = File.ReadAllBytes(master.path);
+            var origM = File.ReadAllBytes(master.path + ".meta");
+            var origSettings = master.atlas.GetTextureSettings();
+            int baseDirty = EditorUtility.GetDirtyCount(master.atlas);
+            check(master.key + ".setTexture.initial", () =>
+                State(master.atlas, baseDirty) + "|" + Unrelated(master.atlas) + "|" + FileState(master.path, origA, origM));
+            master.atlas.SetTextureSettings(origSettings);
+            check(master.key + ".setTexture.sameRepeat", () =>
+                State(master.atlas, baseDirty) + "|" + FileState(master.path, origA, origM));
+            var customCopy = origSettings;
+            customCopy.anisoLevel = 6;
+            customCopy.filterMode = FilterMode.Trilinear;
+            customCopy.generateMipMaps = true;
+            customCopy.readable = true;
+            customCopy.sRGB = false;
+            master.atlas.SetTextureSettings(customCopy);
+            check(master.key + ".setTexture.modifiedCopy", () =>
+                State(master.atlas, baseDirty) + "|" + Unrelated(master.atlas) + "|" + FileState(master.path, origA, origM));
+            AssetDatabase.SaveAssets();
+            check(master.key + ".setTexture.afterSave", () =>
+                State(master.atlas, baseDirty) + "|" + Unrelated(master.atlas) + "|" + FileState(master.path, origA, origM));
+            master.atlas.SetTextureSettings(new SpriteAtlasTextureSettings
+            {
+                anisoLevel = -5,
+                filterMode = (FilterMode)99,
+                generateMipMaps = false,
+                readable = true,
+                sRGB = false,
+            });
+            AssetDatabase.SaveAssetIfDirty(master.atlas);
+            check(master.key + ".setTexture.afterSaveEdge", () =>
+                State(master.atlas, baseDirty) + "|" + Unrelated(master.atlas) + "|" + FileState(master.path, origA, origM));
+            master.atlas.SetTextureSettings(origSettings);
+            AssetDatabase.SaveAssetIfDirty(master.atlas);
+            check(master.key + ".setTexture.afterRoundtrip", () =>
+                State(master.atlas, baseDirty) + "|" + Unrelated(master.atlas) + "|" + FileState(master.path, origA, origM));
+            master.atlas.SetTextureSettings(customCopy);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(master.path, ImportAssetOptions.ForceUpdate);
+            var reloaded = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(master.path);
+            check(master.key + ".setTexture.afterReimport", () =>
+                $"sameRef={ReferenceEquals(master.atlas, reloaded)}|{DescribeTexture(reloaded.GetTextureSettings())}|dirty={EditorUtility.IsDirty(reloaded)}|" +
+                Unrelated(reloaded) + "|" + FileState(master.path, origA, origM));
+            reloaded.SetTextureSettings(origSettings);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(master.path, ImportAssetOptions.ForceUpdate);
+            master = (master.path, master.key, AssetDatabase.LoadAssetAtPath<SpriteAtlas>(master.path));
+        }
+
+        if (byStem.TryGetValue("Variant", out var variant))
+        {
+            var origA = File.ReadAllBytes(variant.path);
+            var origM = File.ReadAllBytes(variant.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(variant.atlas);
+            int masterBaseDirty = byStem.ContainsKey("Master") ? EditorUtility.GetDirtyCount(master.atlas) : 0;
+            check(variant.key + ".setTexture.initial", () =>
+                State(variant.atlas, baseDirty) + "|" + Unrelated(variant.atlas) + "|" + FileState(variant.path, origA, origM));
+            var variantCustom = variant.atlas.GetTextureSettings();
+            variantCustom.anisoLevel = 12;
+            variantCustom.filterMode = FilterMode.Trilinear;
+            variantCustom.generateMipMaps = false;
+            variantCustom.readable = false;
+            variantCustom.sRGB = true;
+            variant.atlas.SetTextureSettings(variantCustom);
+            check(variant.key + ".setTexture.modified", () =>
+                State(variant.atlas, baseDirty) + "|master=" + DescribeTexture(master.atlas.GetTextureSettings()) +
+                "|masterDirtyDelta=" + (EditorUtility.GetDirtyCount(master.atlas) - masterBaseDirty) + "|" +
+                FileState(variant.path, origA, origM));
+            var masterEdit = master.atlas.GetTextureSettings();
+            masterEdit.anisoLevel = 15;
+            masterEdit.filterMode = FilterMode.Point;
+            masterEdit.sRGB = false;
+            master.atlas.SetTextureSettings(masterEdit);
+            check(variant.key + ".setTexture.afterMasterMemEdit", () =>
+                State(variant.atlas, baseDirty) + "|master=" + DescribeTexture(master.atlas.GetTextureSettings()));
+            AssetDatabase.SaveAssetIfDirty(variant.atlas);
+            check(variant.key + ".setTexture.afterSaveIfDirty", () =>
+                State(variant.atlas, baseDirty) + "|" + Unrelated(variant.atlas) + "|" + FileState(variant.path, origA, origM));
+            AssetDatabase.ImportAsset(variant.path, ImportAssetOptions.ForceUpdate);
+            var reloaded = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(variant.path);
+            check(variant.key + ".setTexture.afterReimport", () =>
+                $"sameRef={ReferenceEquals(variant.atlas, reloaded)}|{DescribeTexture(reloaded.GetTextureSettings())}|dirty={EditorUtility.IsDirty(reloaded)}|" +
+                Unrelated(reloaded) + "|" + FileState(variant.path, origA, origM));
+        }
+
+        if (byStem.TryGetValue("Legacy", out var legacy))
+        {
+            var origA = File.ReadAllBytes(legacy.path);
+            var origM = File.ReadAllBytes(legacy.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(legacy.atlas);
+            check(legacy.key + ".setTexture.initial", () =>
+                State(legacy.atlas, baseDirty) + "|" + Unrelated(legacy.atlas) + "|" + FileState(legacy.path, origA, origM, includeAssetBlock: false));
+            var s = legacy.atlas.GetTextureSettings();
+            s.anisoLevel = 7;
+            s.sRGB = false;
+            legacy.atlas.SetTextureSettings(s);
+            check(legacy.key + ".setTexture.modified", () =>
+                State(legacy.atlas, baseDirty) + "|" + FileState(legacy.path, origA, origM, includeAssetBlock: false));
+            AssetDatabase.SaveAssetIfDirty(legacy.atlas);
+            check(legacy.key + ".setTexture.afterSaveIfDirty", () =>
+                State(legacy.atlas, baseDirty) + "|" + Unrelated(legacy.atlas) + "|" +
+                FileState(legacy.path, origA, origM, includeAssetBlock: true) +
+                "|assetPacking=" + YamlBlock(legacy.path, "packingSettings:"));
+        }
+
+        if (byStem.TryGetValue("Omitted", out var omitted))
+        {
+            var origA = File.ReadAllBytes(omitted.path);
+            var origM = File.ReadAllBytes(omitted.path + ".meta");
+            int baseDirty = EditorUtility.GetDirtyCount(omitted.atlas);
+            check(omitted.key + ".setTexture.initial", () =>
+                State(omitted.atlas, baseDirty) + "|" + Unrelated(omitted.atlas) + "|" + FileState(omitted.path, origA, origM, includeAssetBlock: false));
+            var s = omitted.atlas.GetTextureSettings();
+            s.anisoLevel = 3;
+            s.filterMode = FilterMode.Point;
+            s.readable = true;
+            omitted.atlas.SetTextureSettings(s);
+            check(omitted.key + ".setTexture.modified", () =>
+                State(omitted.atlas, baseDirty) + "|" + FileState(omitted.path, origA, origM, includeAssetBlock: false));
+            AssetDatabase.SaveAssetIfDirty(omitted.atlas);
+            check(omitted.key + ".setTexture.afterSaveIfDirty", () =>
+                State(omitted.atlas, baseDirty) + "|" + Unrelated(omitted.atlas) + "|" +
+                FileState(omitted.path, origA, origM, includeAssetBlock: true) +
+                "|assetPacking=" + YamlBlock(omitted.path, "packingSettings:"));
+        }
     }
 
     static void RecordPackingSettings(string[] paths, SpriteAtlas none, Action<string, Func<string>> check)
