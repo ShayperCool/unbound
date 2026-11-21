@@ -36,9 +36,32 @@ static class DefaultAssetProbe
         ("streaming.bin", "Assets/StreamingAssets/raw.bin"),
         ("streaming.nestedTxt", "Assets/StreamingAssets/SubDir/nested.txt"),
         ("webglTemplate.html", "Assets/WebGLTemplates/Custom/index.html"),
-        ("webplayerTemplate.txt", "Assets/WebPlayerTemplates/Legacy/readme.txt"),
+        // The WebPlayerTemplates root spelled in lower case: whether the special roots match by case.
+        ("webplayerTemplate.txt", "Assets/webplayertemplates/Legacy/readme.txt"),
         ("nonRootStreaming.txt", "Assets/Data/StreamingAssets/nested_not_root.txt"),
         ("plugin.dll", "Assets/Data/ProbeSame.dll"),
+        ("plugin.so", "Assets/PluginKinds/libnative.so"),
+        ("plugin.a", "Assets/PluginKinds/libstatic.a"),
+        ("plugin.dylib", "Assets/PluginKinds/libmac.dylib"),
+        ("plugin.jar", "Assets/PluginKinds/library.jar"),
+        ("plugin.aar", "Assets/PluginKinds/library.aar"),
+        ("plugin.jslib", "Assets/PluginKinds/bridge.jslib"),
+        ("plugin.cpp", "Assets/PluginKinds/Source.cpp"),
+        ("plugin.h", "Assets/PluginKinds/Header.h"),
+        ("plugin.mm", "Assets/PluginKinds/Bridge.mm"),
+        ("plugin.java", "Assets/PluginKinds/Native.java"),
+        ("plugin.swift", "Assets/PluginKinds/Native.swift"),
+        ("plugin.bundle", "Assets/PluginKinds/Kit.bundle"),
+        ("plugin.framework", "Assets/PluginKinds/Kit.framework"),
+        ("plugin.androidlib", "Assets/PluginKinds/Lib.androidlib"),
+        ("plugin.nativeDll", "Assets/PluginKinds/native.dll"),
+        ("plugin.c", "Assets/PluginKinds/Source.c"),
+        ("plugin.m", "Assets/PluginKinds/Bridge.m"),
+        ("plugin.cc", "Assets/PluginKinds/Source.cc"),
+        ("plugin.kt", "Assets/PluginKinds/Native.kt"),
+        ("plugin.jspre", "Assets/PluginKinds/prelude.jspre"),
+        ("plugin.xcframework", "Assets/PluginKinds/Kit.xcframework"),
+        ("plugin.plugin", "Assets/PluginKinds/Kit.plugin"),
         ("control.txt", "Assets/Data/Plain.txt"),
         ("control.json", "Assets/Data/Data.json"),
         ("control.png", "Assets/Sprites/Single.png"),
@@ -54,9 +77,42 @@ static class DefaultAssetProbe
         "Assets/Data",
         "Assets/StreamingAssets",
         "Assets/WebGLTemplates",
-        "Assets/WebPlayerTemplates",
+        "Assets/webplayertemplates",
         "Assets/Sprites",
         "Assets/Scenes",
+    };
+
+    /// <summary>Files of the Editor's own formats and their importers' neighbours, for
+    /// IsNativeAsset / IsForeignAsset of the main object and of the other objects of the file.</summary>
+    static readonly (string Key, string Path)[] NativeCases = new[]
+    {
+        ("asset", "Assets/Native/Data.asset"),
+        ("mat", "Assets/Native/Plain.mat"),
+        ("prefab", "Assets/Native/Thing.prefab"),
+        ("anim", "Assets/Native/Clip.anim"),
+        ("controller", "Assets/Native/Controller.controller"),
+        ("overrideController", "Assets/Native/Override.overrideController"),
+        ("mask", "Assets/Native/Mask.mask"),
+        ("mixer", "Assets/Native/Mixer.mixer"),
+        ("renderTexture", "Assets/Native/Target.renderTexture"),
+        ("physicMaterial", "Assets/Native/Bouncy.physicMaterial"),
+        ("physicsMaterial2D", "Assets/Native/Bouncy2D.physicsMaterial2D"),
+        ("spriteatlas", "Assets/Native/Atlas.spriteatlas"),
+        ("spriteatlasv2", "Assets/Native/AtlasV2.spriteatlasv2"),
+        ("lighting", "Assets/Native/Settings.lighting"),
+        ("flare", "Assets/Native/Glow.flare"),
+        ("cubemap", "Assets/Native/Sky.cubemap"),
+        ("terrainlayer", "Assets/Native/Ground.terrainlayer"),
+        ("shadervariants", "Assets/Native/Variants.shadervariants"),
+        ("giparams", "Assets/Native/Params.giparams"),
+        ("settings", "ProjectSettings/TagManager.asset"),
+        ("texture", "Assets/Sprites/Single.png"),
+        ("text", "Assets/Data/Plain.txt"),
+        ("script", "Assets/Scripts/ProbeData.cs"),
+        ("scene", "Assets/Scenes/Probe.unity"),
+        ("folder", "Assets/SampleFolder"),
+        ("unknown", "Assets/Data/Blob.xyz"),
+        ("plugin", "Assets/Plugins/ScriptPlugin.dll"),
     };
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -131,6 +187,101 @@ static class DefaultAssetProbe
             });
         }
 
+        // DefaultAsset's internal inspector message and warning flag.
+        var message = typeof(DefaultAsset).GetProperty("message", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var isWarning = typeof(DefaultAsset).GetProperty("isWarning", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        foreach (var entry in Cases)
+        {
+            if (!(AssetDatabase.LoadMainAssetAtPath(entry.Path) is DefaultAsset asset)) continue;
+            Check("inspector." + entry.Key, () => "message=" + message.GetValue(asset) + "|isWarning=" + isWarning.GetValue(asset));
+        }
+
+        // Native and foreign assets: the main object and every other object of the file.
+        foreach (var entry in NativeCases)
+        {
+            string path = entry.Path;
+            Check("native." + entry.Key, () =>
+            {
+                var main = AssetDatabase.LoadMainAssetAtPath(path);
+                var others = AssetDatabase.LoadAllAssetsAtPath(path).Where(o => o != main).ToArray();
+                string Set(Func<Object, bool> f) => others.Length == 0 ? "-" : string.Join("/", others.Select(f).Distinct().OrderBy(b => b));
+                var importer = AssetImporter.GetAtPath(path);
+                return string.Join("|", new[]
+                {
+                    "main=" + (main != null ? main.GetType().FullName : "<null>"),
+                    "importer=" + (importer != null ? importer.GetType().FullName : "<null>"),
+                    "isNative=" + (main != null && AssetDatabase.IsNativeAsset(main)),
+                    "isForeign=" + (main != null && AssetDatabase.IsForeignAsset(main)),
+                    "othersNative=" + Set(AssetDatabase.IsNativeAsset),
+                    "othersForeign=" + Set(AssetDatabase.IsForeignAsset),
+                });
+            });
+        }
+        Check("native.inMemory", () =>
+        {
+            var created = ScriptableObject.CreateInstance<ProbeData>();
+            var result = "isNative=" + AssetDatabase.IsNativeAsset(created) + "|isForeign=" + AssetDatabase.IsForeignAsset(created);
+            Object.DestroyImmediate(created);
+            return result;
+        });
+        Check("native.null", () => "isNative=" + AssetDatabase.IsNativeAsset((Object)null));
+        Check("foreign.null", () => "isForeign=" + AssetDatabase.IsForeignAsset((Object)null));
+
+        // The scripts of a precompiled managed plug-in.
+        const string scriptDll = "Assets/Plugins/ScriptPlugin.dll";
+        Check("dllScripts.objects", () => string.Join(";", AssetDatabase.LoadAllAssetsAtPath(scriptDll)
+            .OrderBy(o => o.name, StringComparer.Ordinal)
+            .Select(o =>
+            {
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(o, out string _, out long id);
+                var cls = (o as MonoScript)?.GetClass();
+                return string.Join(",", new[]
+                {
+                    Describe(o), "id=" + id, "hideFlags=" + o.hideFlags,
+                    "class=" + (cls != null ? cls.FullName : "<null>"),
+                    "isMain=" + AssetDatabase.IsMainAsset(o), "isSub=" + AssetDatabase.IsSubAsset(o),
+                    "isNative=" + AssetDatabase.IsNativeAsset(o), "isForeign=" + AssetDatabase.IsForeignAsset(o),
+                    "path=" + AssetDatabase.GetAssetPath(o),
+                });
+            })));
+        // The order of a plug-in's scripts is not documented: lists are sorted by name.
+        Check("dllScripts.main", () =>
+        {
+            var main = AssetDatabase.LoadMainAssetAtPath(scriptDll);
+            AssetDatabase.TryGetGUIDAndLocalFileIdentifier(main, out string _, out long id);
+            string Sorted(Object[] items) => DescribeList(items.OrderBy(o => o.name, StringComparer.Ordinal).ToArray());
+            var all = AssetDatabase.LoadAllAssetsAtPath(scriptDll);
+            return string.Join("|", new[]
+            {
+                "obj=" + Describe(main), "hideFlags=" + main.hideFlags, "localId=" + id,
+                "inAll=" + all.Contains(main), "all=" + Sorted(all),
+                "reps=" + Sorted(AssetDatabase.LoadAllAssetRepresentationsAtPath(scriptDll)),
+                "importer=" + AssetImporter.GetAtPath(scriptDll)?.GetType().FullName,
+            });
+        });
+        Check("dllScripts.loadMonoScript", () =>
+        {
+            var script = AssetDatabase.LoadAssetAtPath<MonoScript>(scriptDll);
+            return "type=" + (script != null ? script.GetType().FullName : "<null>")
+                + "|listed=" + AssetDatabase.LoadAllAssetsAtPath(scriptDll).Contains(script);
+        });
+        Check("dllScripts.fromBehaviour", () =>
+        {
+            var go = new GameObject("probe");
+            var script = MonoScript.FromMonoBehaviour(go.AddComponent<ScriptPlugin.PluginBehaviour>());
+            Object.DestroyImmediate(go);
+            var listed = AssetDatabase.LoadAllAssetsAtPath(scriptDll).Contains(script);
+            return Describe(script) + "|path=" + (script != null ? AssetDatabase.GetAssetPath(script) : "") + "|listed=" + listed;
+        });
+        Check("dllScripts.fromScriptableObject", () =>
+        {
+            var data = ScriptableObject.CreateInstance<ScriptPlugin.PluginData>();
+            var script = MonoScript.FromScriptableObject(data);
+            Object.DestroyImmediate(data);
+            var listed = AssetDatabase.LoadAllAssetsAtPath(scriptDll).Contains(script);
+            return Describe(script) + "|path=" + (script != null ? AssetDatabase.GetAssetPath(script) : "") + "|listed=" + listed;
+        });
+
         // FindAssets queries
         string FindPaths(string filter, string[] folders) =>
             string.Join(",", AssetDatabase.FindAssets(filter, folders)
@@ -164,6 +315,20 @@ static class DefaultAssetProbe
         });
 
         Check("folder.assetsRoot.guid", () => AssetDatabase.AssetPathToGUID("Assets"));
+        // Whether the root folder is listed like other assets, and how its path matches.
+        Check("folder.assetsRoot.listed", () =>
+        {
+            var root = AssetDatabase.AssetPathToGUID("Assets");
+            var paths = AssetDatabase.GetAllAssetPaths();
+            return "allPaths=" + paths.Contains("Assets") + "/" + paths.Contains("Packages")
+                + "|findFolder=" + AssetDatabase.FindAssets("t:Folder").Contains(root)
+                + "|findName=" + AssetDatabase.FindAssets("Assets").Contains(root)
+                + "|findInAssets=" + AssetDatabase.FindAssets("t:DefaultAsset", new[] { "Assets" }).Contains(root);
+        });
+        Check("folder.assetsRoot.case", () => "guid=" + AssetDatabase.AssetPathToGUID("assets")
+            + "|validFolder=" + AssetDatabase.IsValidFolder("assets")
+            + "|load=" + Describe(AssetDatabase.LoadMainAssetAtPath("assets"))
+            + "|child=" + (AssetDatabase.AssetPathToGUID("assets/SampleFolder") == AssetDatabase.AssetPathToGUID("Assets/SampleFolder")));
 
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
