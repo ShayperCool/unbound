@@ -44,8 +44,9 @@ PROFILES = {
     'v2importerplatform': (5, 'ImporterPlatformAtlases', '.spriteatlasv2'),
     'v2importerplatformset': (5, 'ImporterPlatformSetAtlases', '.spriteatlasv2'),
     'v2importerpacking': (5, 'ImporterPackingAtlases', '.spriteatlasv2'),
+    'v2importertexture': (5, 'ImporterTextureAtlases', '.spriteatlasv2'),
 }
-ATLAS_FOLDERS = ('Atlases', 'SettingsAtlases', 'PlatformAtlases', 'IncludeAtlases', 'PackingAtlases', 'TextureAtlases', 'PlatformSetAtlases', 'AddAtlases', 'RemoveAtlases', 'VariantScaleAtlases', 'IsVariantAtlases', 'MasterAtlasAtlases', 'ImporterPlatformAtlases', 'ImporterPlatformSetAtlases', 'ImporterPackingAtlases')
+ATLAS_FOLDERS = ('Atlases', 'SettingsAtlases', 'PlatformAtlases', 'IncludeAtlases', 'PackingAtlases', 'TextureAtlases', 'PlatformSetAtlases', 'AddAtlases', 'RemoveAtlases', 'VariantScaleAtlases', 'IsVariantAtlases', 'MasterAtlasAtlases', 'ImporterPlatformAtlases', 'ImporterPlatformSetAtlases', 'ImporterPackingAtlases', 'ImporterTextureAtlases')
 
 
 def configure(project, profile):

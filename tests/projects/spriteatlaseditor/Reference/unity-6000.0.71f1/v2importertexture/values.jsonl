@@ -1,0 +1,59 @@
+{"k":"atlases","v":"Assets/ImporterTextureAtlases/Legacy.spriteatlasv2|Assets/ImporterTextureAtlases/Master.spriteatlasv2|Assets/ImporterTextureAtlases/Omitted.spriteatlasv2|Assets/ImporterTextureAtlases/Variant.spriteatlasv2"}
+{"k":"Legacy.spriteatlasv2.loaded","v":"True"}
+{"k":"Legacy.spriteatlasv2.isVariant","v":"False"}
+{"k":"Legacy.spriteatlasv2.spriteCount","v":"1"}
+{"k":"Legacy.spriteatlasv2.packables","v":"Texture2D:Assets/Sprites/Single.png:Single"}
+{"k":"Legacy.spriteatlasv2.master","v":"<null>"}
+{"k":"Legacy.spriteatlasv2.includeInBuild","v":"True"}
+{"k":"Master.spriteatlasv2.loaded","v":"True"}
+{"k":"Master.spriteatlasv2.isVariant","v":"False"}
+{"k":"Master.spriteatlasv2.spriteCount","v":"1"}
+{"k":"Master.spriteatlasv2.packables","v":"Texture2D:Assets/Sprites/Single.png:Single"}
+{"k":"Master.spriteatlasv2.master","v":"<null>"}
+{"k":"Master.spriteatlasv2.includeInBuild","v":"True"}
+{"k":"Omitted.spriteatlasv2.loaded","v":"True"}
+{"k":"Omitted.spriteatlasv2.isVariant","v":"False"}
+{"k":"Omitted.spriteatlasv2.spriteCount","v":"1"}
+{"k":"Omitted.spriteatlasv2.packables","v":"Texture2D:Assets/Sprites/Single.png:Single"}
+{"k":"Omitted.spriteatlasv2.master","v":"<null>"}
+{"k":"Omitted.spriteatlasv2.includeInBuild","v":"True"}
+{"k":"Variant.spriteatlasv2.loaded","v":"True"}
+{"k":"Variant.spriteatlasv2.isVariant","v":"True"}
+{"k":"Variant.spriteatlasv2.spriteCount","v":"1"}
+{"k":"Variant.spriteatlasv2.packables","v":""}
+{"k":"Variant.spriteatlasv2.master","v":"SpriteAtlas:Assets/ImporterTextureAtlases/Master.spriteatlasv2:Master"}
+{"k":"Variant.spriteatlasv2.includeInBuild","v":"False"}
+{"k":"null.packables","v":"throws ArgumentNullException"}
+{"k":"null.master","v":"throws ArgumentNullException"}
+{"k":"null.includeInBuild","v":"throws ArgumentNullException"}
+{"k":"Legacy.spriteatlasv2.packingSettings","v":"blockOffset=1|padding=4|enableRotation=True|enableTightPacking=True|enableAlphaDilation=False"}
+{"k":"Legacy.spriteatlasv2.textureSettings","v":"maxTextureSize=512|anisoLevel=3|filterMode=Point|generateMipMaps=True|readable=False|sRGB=False"}
+{"k":"Master.spriteatlasv2.packingSettings","v":"blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True"}
+{"k":"Master.spriteatlasv2.textureSettings","v":"maxTextureSize=1024|anisoLevel=4|filterMode=Trilinear|generateMipMaps=True|readable=True|sRGB=False"}
+{"k":"Omitted.spriteatlasv2.packingSettings","v":"blockOffset=4|padding=12|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True"}
+{"k":"Omitted.spriteatlasv2.textureSettings","v":"maxTextureSize=2048|anisoLevel=1|filterMode=Bilinear|generateMipMaps=False|readable=False|sRGB=True"}
+{"k":"Variant.spriteatlasv2.packingSettings","v":"blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True"}
+{"k":"Variant.spriteatlasv2.textureSettings","v":"maxTextureSize=512|anisoLevel=2|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True"}
+{"k":"new.packingSettings","v":"blockOffset=1|padding=4|enableRotation=True|enableTightPacking=True|enableAlphaDilation=False"}
+{"k":"new.textureSettings","v":"maxTextureSize=2048|anisoLevel=1|filterMode=Bilinear|generateMipMaps=False|readable=False|sRGB=True"}
+{"k":"null.packingSettings","v":"throws ArgumentNullException"}
+{"k":"null.textureSettings","v":"throws ArgumentNullException"}
+{"k":"new.importer.texture.get","v":"throws NullReferenceException"}
+{"k":"new.importer.texture.set","v":"throws NullReferenceException"}
+{"k":"Master.spriteatlasv2.impTex.initial","v":"dirty=False|dirtyDelta=0|imp=(maxTextureSize=1024|anisoLevel=4|filterMode=Trilinear|generateMipMaps=True|readable=True|sRGB=False)|atlas=(maxTextureSize=1024|anisoLevel=4|filterMode=Trilinear|generateMipMaps=True|readable=True|sRGB=False)|assetChanged=False|metaChanged=False"}
+{"k":"Variant.spriteatlasv2.impTex.initial","v":"dirty=False|dirtyDelta=0|imp=(maxTextureSize=512|anisoLevel=2|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True)|atlas=(maxTextureSize=512|anisoLevel=2|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True)|assetChanged=False|metaChanged=False"}
+{"k":"Legacy.spriteatlasv2.impTex.initial","v":"dirty=False|dirtyDelta=0|imp=(maxTextureSize=512|anisoLevel=3|filterMode=Point|generateMipMaps=True|readable=False|sRGB=False)|atlas=(maxTextureSize=512|anisoLevel=3|filterMode=Point|generateMipMaps=True|readable=False|sRGB=False)|assetChanged=False|metaChanged=False"}
+{"k":"Omitted.spriteatlasv2.impTex.initial","v":"dirty=False|dirtyDelta=0|imp=(maxTextureSize=2048|anisoLevel=1|filterMode=Bilinear|generateMipMaps=False|readable=False|sRGB=True)|atlas=(maxTextureSize=2048|anisoLevel=1|filterMode=Bilinear|generateMipMaps=False|readable=False|sRGB=True)|assetChanged=False|metaChanged=False"}
+{"k":"Master.spriteatlasv2.impTex.sameRepeat","v":"dirty=True|dirtyDelta=1|imp=(maxTextureSize=1024|anisoLevel=4|filterMode=Trilinear|generateMipMaps=True|readable=True|sRGB=False)|assetChanged=False|metaChanged=False"}
+{"k":"Master.spriteatlasv2.impTex.modifiedCopyAndAtlasIndependence","v":"dirty=True|dirtyDelta=2|imp=(maxTextureSize=1024|anisoLevel=8|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True)|atlas=(maxTextureSize=1024|anisoLevel=4|filterMode=Trilinear|generateMipMaps=True|readable=True|sRGB=False)|assetChanged=False|metaChanged=False"}
+{"k":"Master.spriteatlasv2.impTex.unaffectedByInMemoryAtlasEdit","v":"dirty=True|dirtyDelta=2|imp=(maxTextureSize=1024|anisoLevel=8|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True)|atlas=(maxTextureSize=0|anisoLevel=16|filterMode=Bilinear|generateMipMaps=True|readable=True|sRGB=False)"}
+{"k":"Master.spriteatlasv2.impTex.afterSaveAssets","v":"dirty=True|dirtyDelta=2|imp=(maxTextureSize=1024|anisoLevel=8|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True)|atlas=(maxTextureSize=0|anisoLevel=16|filterMode=Bilinear|generateMipMaps=True|readable=True|sRGB=False)|assetChanged=False|metaChanged=False"}
+{"k":"Master.spriteatlasv2.impTex.afterWriteImportSettingsIfDirty","v":"wrote1=True|wrote2=False|dirty=False|dirtyDelta=0|imp=(maxTextureSize=1024|anisoLevel=8|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True)|atlasBeforeReimport=(maxTextureSize=0|anisoLevel=16|filterMode=Bilinear|generateMipMaps=True|readable=True|sRGB=False)|assetChanged=False|metaChanged=True|metaTexture=serializedVersion: 2;anisoLevel: 8;compressionQuality: 65;maxTextureSize: 1024;textureCompression: 2;filterMode: 0;generateMipMaps: 0;readable: 0;crunchedCompression: 1;sRGB: 1"}
+{"k":"Master.spriteatlasv2.impTex.edgeAndZeroWriteIfDirty","v":"edgeMem=(maxTextureSize=0|anisoLevel=-5|filterMode=99|generateMipMaps=True|readable=False|sRGB=False)|wroteEdge=True|edgeMeta=serializedVersion: 2;anisoLevel: -5;compressionQuality: 0;maxTextureSize: 0;textureCompression: 0;filterMode: 99;generateMipMaps: 1;readable: 0;crunchedCompression: 0;sRGB: 0|zeroMem=(maxTextureSize=0|anisoLevel=0|filterMode=Point|generateMipMaps=False|readable=False|sRGB=False)|wroteZero=True|zeroMeta=serializedVersion: 2;anisoLevel: 0;compressionQuality: 0;maxTextureSize: 0;textureCompression: 0;filterMode: 0;generateMipMaps: 0;readable: 0;crunchedCompression: 0;sRGB: 0|impDirty=False"}
+{"k":"Master.spriteatlasv2.impTex.saveAndReimport","v":"sameImp=False|sameAtlas=False|impDirty=False|atlasDirty=False|imp=(maxTextureSize=1024|anisoLevel=6|filterMode=Bilinear|generateMipMaps=False|readable=True|sRGB=True)|atlas=(maxTextureSize=1024|anisoLevel=6|filterMode=Bilinear|generateMipMaps=False|readable=True|sRGB=True)|packing=(blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True)|android=(name=Android|overridden=True|ignorePlatformSupport=False|maxTextureSize=1024|resizeAlgorithm=Bilinear|format=47|textureCompression=CompressedLQ|compressionQuality=60|crunchedCompression=True|allowsAlphaSplitting=True|androidETC2FallbackOverride=Quality32BitDownscaled)|include=True|assetChanged=False|metaChanged=True|metaTexture=serializedVersion: 2;anisoLevel: 6;compressionQuality: 65;maxTextureSize: 1024;textureCompression: 2;filterMode: 1;generateMipMaps: 0;readable: 1;crunchedCompression: 1;sRGB: 1"}
+{"k":"Master.spriteatlasv2.impTex.unsavedEditThenForceUpdate","v":"beforeForce=(maxTextureSize=1024|anisoLevel=9|filterMode=Trilinear|generateMipMaps=True|readable=False|sRGB=False)|sameImp=False|sameAtlas=False|impDirty=False|metaChangedByForce=True|imp=(maxTextureSize=1024|anisoLevel=9|filterMode=Trilinear|generateMipMaps=True|readable=False|sRGB=False)|atlas=(maxTextureSize=1024|anisoLevel=9|filterMode=Trilinear|generateMipMaps=True|readable=False|sRGB=False)"}
+{"k":"Variant.spriteatlasv2.impTex.unaffectedByMasterEdits","v":"dirty=False|dirtyDelta=0|imp=(maxTextureSize=512|anisoLevel=2|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True)|atlas=(maxTextureSize=512|anisoLevel=2|filterMode=Point|generateMipMaps=False|readable=False|sRGB=True)|assetChanged=False|metaChanged=False"}
+{"k":"Variant.spriteatlasv2.impTex.editVariantAndSaveAndReimport","v":"masterDirtyDelta=0|masterImp=(maxTextureSize=1024|anisoLevel=9|filterMode=Trilinear|generateMipMaps=True|readable=False|sRGB=False)|impDirty=False|imp=(maxTextureSize=512|anisoLevel=7|filterMode=Trilinear|generateMipMaps=True|readable=True|sRGB=False)|atlas=(maxTextureSize=512|anisoLevel=7|filterMode=Trilinear|generateMipMaps=True|readable=True|sRGB=False)|packing=(blockOffset=2|padding=8|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True)|android=(name=Android|overridden=True|ignorePlatformSupport=False|maxTextureSize=64|resizeAlgorithm=Mitchell|format=45|textureCompression=Compressed|compressionQuality=40|crunchedCompression=False|allowsAlphaSplitting=False|androidETC2FallbackOverride=UseBuildSettings)|include=False|assetChanged=False|metaChanged=True|metaTexture=serializedVersion: 2;anisoLevel: 7;compressionQuality: 55;maxTextureSize: 512;textureCompression: 1;filterMode: 2;generateMipMaps: 1;readable: 1;crunchedCompression: 0;sRGB: 0"}
+{"k":"Legacy.spriteatlasv2.impTex.mutatePreservesHiddenAndUpgradesV2","v":"imp=(maxTextureSize=512|anisoLevel=7|filterMode=Point|generateMipMaps=True|readable=False|sRGB=True)|atlas=(maxTextureSize=512|anisoLevel=7|filterMode=Point|generateMipMaps=True|readable=False|sRGB=True)|packing=(blockOffset=1|padding=4|enableRotation=True|enableTightPacking=True|enableAlphaDilation=False)|android=(name=Android|overridden=False|ignorePlatformSupport=False|maxTextureSize=2048|resizeAlgorithm=Mitchell|format=-1|textureCompression=Compressed|compressionQuality=50|crunchedCompression=False|allowsAlphaSplitting=False|androidETC2FallbackOverride=UseBuildSettings)|include=True|assetChanged=False|metaChanged=True|metaTexture=serializedVersion: 2;anisoLevel: 7;compressionQuality: 82;maxTextureSize: 512;textureCompression: 3;filterMode: 0;generateMipMaps: 1;readable: 0;crunchedCompression: 1;sRGB: 1"}
+{"k":"Omitted.spriteatlasv2.impTex.setAndSaveAndReimport","v":"imp=(maxTextureSize=2048|anisoLevel=3|filterMode=Point|generateMipMaps=False|readable=True|sRGB=False)|atlas=(maxTextureSize=2048|anisoLevel=3|filterMode=Point|generateMipMaps=False|readable=True|sRGB=False)|packing=(blockOffset=4|padding=12|enableRotation=False|enableTightPacking=True|enableAlphaDilation=True)|android=(name=Android|overridden=False|ignorePlatformSupport=False|maxTextureSize=2048|resizeAlgorithm=Mitchell|format=-1|textureCompression=Compressed|compressionQuality=50|crunchedCompression=False|allowsAlphaSplitting=False|androidETC2FallbackOverride=UseBuildSettings)|include=True|assetChanged=False|metaChanged=True|metaTexture=serializedVersion: 2;anisoLevel: 3;compressionQuality: 50;maxTextureSize: 2048;textureCompression: 0;filterMode: 0;generateMipMaps: 0;readable: 1;crunchedCompression: 0;sRGB: 0"}
+{"k":"complete","v":true}

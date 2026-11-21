@@ -102,6 +102,9 @@ static class SpriteAtlasEditorProbe
         if (paths.Any(p => p.StartsWith("Assets/ImporterPackingAtlases/", StringComparison.Ordinal)))
             RecordImporterPackingSettings(paths, Check);
 
+        if (paths.Any(p => p.StartsWith("Assets/ImporterTextureAtlases/", StringComparison.Ordinal)))
+            RecordImporterTextureSettings(paths, Check);
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
@@ -2649,6 +2652,294 @@ static class SpriteAtlasEditorProbe
                 var impAfter = AssetImporter.GetAtPath(omitted.path) as SpriteAtlasImporter;
                 var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(omitted.path);
                 return $"imp=({DescribePacking(impAfter.packingSettings)})|atlas=({DescribePacking(atlasAfter.GetPackingSettings())})|{Unrelated(atlasAfter)}|{MetaState(omitted.path, omittedOrigA, omittedOrigM)}";
+            });
+        }
+    }
+
+    static void RecordImporterTextureSettings(string[] paths, Action<string, Func<string>> check)
+    {
+        var byStem = new System.Collections.Generic.Dictionary<string, (string path, string key, SpriteAtlasImporter importer, SpriteAtlas atlas)>(StringComparer.Ordinal);
+        foreach (var path in paths)
+        {
+            var importer = AssetImporter.GetAtPath(path) as SpriteAtlasImporter;
+            var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+            if (importer != null && atlas != null)
+                byStem[Path.GetFileNameWithoutExtension(path)] = (path, Path.GetFileName(path), importer, atlas);
+        }
+
+        string TextureBlock(string file)
+        {
+            var lines = File.ReadAllLines(file);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string trimmed = lines[i].TrimStart();
+                if (trimmed != "textureSettings:") continue;
+                int indent = lines[i].Length - trimmed.Length;
+                var items = new System.Collections.Generic.List<string>();
+                for (int j = i + 1; j < lines.Length; j++)
+                {
+                    string t = lines[j].TrimStart();
+                    int childIndent = lines[j].Length - t.Length;
+                    if (childIndent <= indent) break;
+                    items.Add(lines[j].Trim());
+                }
+                return string.Join(";", items);
+            }
+            return "<absent>";
+        }
+
+        string MetaState(string path, byte[] origAsset, byte[] origMeta, bool includeBlock = true)
+        {
+            bool assetChanged = !File.ReadAllBytes(path).SequenceEqual(origAsset);
+            bool metaChanged = !File.ReadAllBytes(path + ".meta").SequenceEqual(origMeta);
+            return includeBlock
+                ? $"assetChanged={assetChanged}|metaChanged={metaChanged}|metaTexture={TextureBlock(path + ".meta")}"
+                : $"assetChanged={assetChanged}|metaChanged={metaChanged}";
+        }
+
+        string Dirty(UnityEngine.Object obj, int baseDirty) =>
+            $"dirty={EditorUtility.IsDirty(obj)}|dirtyDelta={EditorUtility.GetDirtyCount(obj) - baseDirty}";
+
+        string Unrelated(SpriteAtlas a) =>
+            $"packing=({DescribePacking(a.GetPackingSettings())})|android=({DescribePlatform(a.GetPlatformSettings("Android"))})|include={a.IsIncludeInBuild()}";
+
+        // 1. Uncreated importer getter and setter checks.
+        check("new.importer.texture.get", () =>
+        {
+            var uncreated = new SpriteAtlasImporter();
+            return DescribeTexture(uncreated.textureSettings);
+        });
+        check("new.importer.texture.set", () =>
+        {
+            var uncreated = new SpriteAtlasImporter();
+            uncreated.textureSettings = new SpriteAtlasTextureSettings
+            {
+                anisoLevel = 4,
+                filterMode = FilterMode.Point,
+                generateMipMaps = true,
+                readable = true,
+                sRGB = false,
+            };
+            return "ok";
+        });
+
+        byStem.TryGetValue("Master", out var master);
+        byStem.TryGetValue("Variant", out var variant);
+        byStem.TryGetValue("Legacy", out var legacy);
+        byStem.TryGetValue("Omitted", out var omitted);
+
+        // 2. Initial readbacks across Master, Variant, Legacy and Omitted before any mutation.
+        int masterImpBase = master.importer != null ? EditorUtility.GetDirtyCount(master.importer) : 0;
+        var masterOrigA = master.importer != null ? File.ReadAllBytes(master.path) : null;
+        var masterOrigM = master.importer != null ? File.ReadAllBytes(master.path + ".meta") : null;
+        if (master.importer != null)
+        {
+            check(master.key + ".impTex.initial", () =>
+                $"{Dirty(master.importer, masterImpBase)}|imp=({DescribeTexture(master.importer.textureSettings)})|atlas=({DescribeTexture(master.atlas.GetTextureSettings())})|{MetaState(master.path, masterOrigA, masterOrigM, includeBlock: false)}");
+        }
+
+        int variantImpBase = variant.importer != null ? EditorUtility.GetDirtyCount(variant.importer) : 0;
+        var variantOrigA = variant.importer != null ? File.ReadAllBytes(variant.path) : null;
+        var variantOrigM = variant.importer != null ? File.ReadAllBytes(variant.path + ".meta") : null;
+        if (variant.importer != null)
+        {
+            check(variant.key + ".impTex.initial", () =>
+                $"{Dirty(variant.importer, variantImpBase)}|imp=({DescribeTexture(variant.importer.textureSettings)})|atlas=({DescribeTexture(variant.atlas.GetTextureSettings())})|{MetaState(variant.path, variantOrigA, variantOrigM, includeBlock: false)}");
+        }
+
+        int legacyImpBase = legacy.importer != null ? EditorUtility.GetDirtyCount(legacy.importer) : 0;
+        var legacyOrigA = legacy.importer != null ? File.ReadAllBytes(legacy.path) : null;
+        var legacyOrigM = legacy.importer != null ? File.ReadAllBytes(legacy.path + ".meta") : null;
+        if (legacy.importer != null)
+        {
+            check(legacy.key + ".impTex.initial", () =>
+                $"{Dirty(legacy.importer, legacyImpBase)}|imp=({DescribeTexture(legacy.importer.textureSettings)})|atlas=({DescribeTexture(legacy.atlas.GetTextureSettings())})|{MetaState(legacy.path, legacyOrigA, legacyOrigM, includeBlock: false)}");
+        }
+
+        int omittedImpBase = omitted.importer != null ? EditorUtility.GetDirtyCount(omitted.importer) : 0;
+        var omittedOrigA = omitted.importer != null ? File.ReadAllBytes(omitted.path) : null;
+        var omittedOrigM = omitted.importer != null ? File.ReadAllBytes(omitted.path + ".meta") : null;
+        if (omitted.importer != null)
+        {
+            check(omitted.key + ".impTex.initial", () =>
+                $"{Dirty(omitted.importer, omittedImpBase)}|imp=({DescribeTexture(omitted.importer.textureSettings)})|atlas=({DescribeTexture(omitted.atlas.GetTextureSettings())})|{MetaState(omitted.path, omittedOrigA, omittedOrigM, includeBlock: false)}");
+        }
+
+        // 3. Master: same-value repeat, copy mutation preserving hidden fields, atlas independence,
+        // SaveAssets, WriteImportSettingsIfDirty, negative/out-of-range/zeroed WriteIfDirty,
+        // SaveAndReimport, and unsaved edit + ForceUpdate.
+        if (master.importer != null)
+        {
+            var initialCopy = master.importer.textureSettings;
+
+            check(master.key + ".impTex.sameRepeat", () =>
+            {
+                master.importer.textureSettings = master.importer.textureSettings;
+                return $"{Dirty(master.importer, masterImpBase)}|imp=({DescribeTexture(master.importer.textureSettings)})|{MetaState(master.path, masterOrigA, masterOrigM, includeBlock: false)}";
+            });
+
+            check(master.key + ".impTex.modifiedCopyAndAtlasIndependence", () =>
+            {
+                var edited = master.importer.textureSettings;
+                edited.anisoLevel = 8;
+                edited.filterMode = FilterMode.Point;
+                edited.generateMipMaps = false;
+                edited.readable = false;
+                edited.sRGB = true;
+                master.importer.textureSettings = edited;
+                return $"{Dirty(master.importer, masterImpBase)}|imp=({DescribeTexture(master.importer.textureSettings)})|atlas=({DescribeTexture(master.atlas.GetTextureSettings())})|{MetaState(master.path, masterOrigA, masterOrigM, includeBlock: false)}";
+            });
+
+            check(master.key + ".impTex.unaffectedByInMemoryAtlasEdit", () =>
+            {
+                master.atlas.SetTextureSettings(new SpriteAtlasTextureSettings
+                {
+                    anisoLevel = 16,
+                    filterMode = FilterMode.Bilinear,
+                    generateMipMaps = true,
+                    readable = true,
+                    sRGB = false,
+                });
+                return $"{Dirty(master.importer, masterImpBase)}|imp=({DescribeTexture(master.importer.textureSettings)})|atlas=({DescribeTexture(master.atlas.GetTextureSettings())})";
+            });
+
+            check(master.key + ".impTex.afterSaveAssets", () =>
+            {
+                AssetDatabase.SaveAssets();
+                return $"{Dirty(master.importer, masterImpBase)}|imp=({DescribeTexture(master.importer.textureSettings)})|atlas=({DescribeTexture(master.atlas.GetTextureSettings())})|{MetaState(master.path, masterOrigA, masterOrigM, includeBlock: false)}";
+            });
+
+            check(master.key + ".impTex.afterWriteImportSettingsIfDirty", () =>
+            {
+                bool wrote1 = AssetDatabase.WriteImportSettingsIfDirty(master.path);
+                bool wrote2 = AssetDatabase.WriteImportSettingsIfDirty(master.path);
+                return $"wrote1={wrote1}|wrote2={wrote2}|{Dirty(master.importer, masterImpBase)}|imp=({DescribeTexture(master.importer.textureSettings)})|atlasBeforeReimport=({DescribeTexture(master.atlas.GetTextureSettings())})|{MetaState(master.path, masterOrigA, masterOrigM)}";
+            });
+
+            check(master.key + ".impTex.edgeAndZeroWriteIfDirty", () =>
+            {
+                master.importer.textureSettings = new SpriteAtlasTextureSettings
+                {
+                    anisoLevel = -5,
+                    filterMode = (FilterMode)99,
+                    generateMipMaps = true,
+                    readable = false,
+                    sRGB = false,
+                };
+                string edgeMem = DescribeTexture(master.importer.textureSettings);
+                bool wroteEdge = AssetDatabase.WriteImportSettingsIfDirty(master.path);
+                string edgeMeta = TextureBlock(master.path + ".meta");
+
+                master.importer.textureSettings = default;
+                string zeroMem = DescribeTexture(master.importer.textureSettings);
+                bool wroteZero = AssetDatabase.WriteImportSettingsIfDirty(master.path);
+                string zeroMeta = TextureBlock(master.path + ".meta");
+
+                return $"edgeMem=({edgeMem})|wroteEdge={wroteEdge}|edgeMeta={edgeMeta}|zeroMem=({zeroMem})|wroteZero={wroteZero}|zeroMeta={zeroMeta}|impDirty={EditorUtility.IsDirty(master.importer)}";
+            });
+
+            check(master.key + ".impTex.saveAndReimport", () =>
+            {
+                var restored = initialCopy;
+                restored.anisoLevel = 6;
+                restored.filterMode = FilterMode.Bilinear;
+                restored.generateMipMaps = false;
+                restored.readable = true;
+                restored.sRGB = true;
+                master.importer.textureSettings = restored;
+                master.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(master.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(master.path);
+                bool sameImp = ReferenceEquals(master.importer, impAfter);
+                bool sameAtlas = ReferenceEquals(master.atlas, atlasAfter);
+                master = (master.path, master.key, impAfter, atlasAfter);
+                return $"sameImp={sameImp}|sameAtlas={sameAtlas}|impDirty={EditorUtility.IsDirty(impAfter)}|atlasDirty={EditorUtility.IsDirty(atlasAfter)}|imp=({DescribeTexture(impAfter.textureSettings)})|atlas=({DescribeTexture(atlasAfter.GetTextureSettings())})|{Unrelated(atlasAfter)}|{MetaState(master.path, masterOrigA, masterOrigM)}";
+            });
+
+            check(master.key + ".impTex.unsavedEditThenForceUpdate", () =>
+            {
+                var origMetaBeforeForce = File.ReadAllBytes(master.path + ".meta");
+                var edited = master.importer.textureSettings;
+                edited.anisoLevel = 9;
+                edited.filterMode = FilterMode.Trilinear;
+                edited.generateMipMaps = true;
+                edited.readable = false;
+                edited.sRGB = false;
+                master.importer.textureSettings = edited;
+                string beforeForce = DescribeTexture(master.importer.textureSettings);
+                AssetDatabase.ImportAsset(master.path, ImportAssetOptions.ForceUpdate);
+                var impAfter = AssetImporter.GetAtPath(master.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(master.path);
+                bool metaChangedByForce = !File.ReadAllBytes(master.path + ".meta").SequenceEqual(origMetaBeforeForce);
+                bool sameImp = ReferenceEquals(master.importer, impAfter);
+                bool sameAtlas = ReferenceEquals(master.atlas, atlasAfter);
+                master = (master.path, master.key, impAfter, atlasAfter);
+                return $"beforeForce=({beforeForce})|sameImp={sameImp}|sameAtlas={sameAtlas}|impDirty={EditorUtility.IsDirty(impAfter)}|metaChangedByForce={metaChangedByForce}|imp=({DescribeTexture(impAfter.textureSettings)})|atlas=({DescribeTexture(atlasAfter.GetTextureSettings())})";
+            });
+        }
+
+        // 4. Variant: own textureSettings independence from Master (both importer and loaded SpriteAtlas).
+        if (variant.importer != null)
+        {
+            int masterImpBaseAfter = master.importer != null ? EditorUtility.GetDirtyCount(master.importer) : 0;
+
+            check(variant.key + ".impTex.unaffectedByMasterEdits", () =>
+                $"{Dirty(variant.importer, variantImpBase)}|imp=({DescribeTexture(variant.importer.textureSettings)})|atlas=({DescribeTexture(AssetDatabase.LoadAssetAtPath<SpriteAtlas>(variant.path).GetTextureSettings())})|{MetaState(variant.path, variantOrigA, variantOrigM, includeBlock: false)}");
+
+            check(variant.key + ".impTex.editVariantAndSaveAndReimport", () =>
+            {
+                var edited = variant.importer.textureSettings;
+                edited.anisoLevel = 7;
+                edited.filterMode = FilterMode.Trilinear;
+                edited.generateMipMaps = true;
+                edited.readable = true;
+                edited.sRGB = false;
+                variant.importer.textureSettings = edited;
+                variant.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(variant.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(variant.path);
+                var masterImpNow = AssetImporter.GetAtPath(master.path) as SpriteAtlasImporter;
+                int masterDirtyDelta = EditorUtility.GetDirtyCount(masterImpNow) - masterImpBaseAfter;
+                variant = (variant.path, variant.key, impAfter, atlasAfter);
+                return $"masterDirtyDelta={masterDirtyDelta}|masterImp=({DescribeTexture(masterImpNow.textureSettings)})|impDirty={EditorUtility.IsDirty(impAfter)}|imp=({DescribeTexture(impAfter.textureSettings)})|atlas=({DescribeTexture(atlasAfter.GetTextureSettings())})|{Unrelated(atlasAfter)}|{MetaState(variant.path, variantOrigA, variantOrigM)}";
+            });
+        }
+
+        // 5. Legacy v1 colorSpace: 1 (linear -> sRGB: false) + hidden fields preserved on copy mutation & v2 upgrade.
+        if (legacy.importer != null)
+        {
+            check(legacy.key + ".impTex.mutatePreservesHiddenAndUpgradesV2", () =>
+            {
+                var s = legacy.importer.textureSettings;
+                s.anisoLevel = 7;
+                s.sRGB = true;
+                legacy.importer.textureSettings = s;
+                legacy.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(legacy.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(legacy.path);
+                return $"imp=({DescribeTexture(impAfter.textureSettings)})|atlas=({DescribeTexture(atlasAfter.GetTextureSettings())})|{Unrelated(atlasAfter)}|{MetaState(legacy.path, legacyOrigA, legacyOrigM)}";
+            });
+        }
+
+        // 6. Omitted textureSettings & platformSettings: default readback and exact YAML insertion on write.
+        if (omitted.importer != null)
+        {
+            check(omitted.key + ".impTex.setAndSaveAndReimport", () =>
+            {
+                var s = omitted.importer.textureSettings;
+                s.anisoLevel = 3;
+                s.filterMode = FilterMode.Point;
+                s.readable = true;
+                s.sRGB = false;
+                omitted.importer.textureSettings = s;
+                omitted.importer.SaveAndReimport();
+
+                var impAfter = AssetImporter.GetAtPath(omitted.path) as SpriteAtlasImporter;
+                var atlasAfter = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(omitted.path);
+                return $"imp=({DescribeTexture(impAfter.textureSettings)})|atlas=({DescribeTexture(atlasAfter.GetTextureSettings())})|{Unrelated(atlasAfter)}|{MetaState(omitted.path, omittedOrigA, omittedOrigM)}";
             });
         }
     }

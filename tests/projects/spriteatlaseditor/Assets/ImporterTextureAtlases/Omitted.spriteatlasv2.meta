@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 9a1b2c3d4e5f60718293a4b5c6d7bf05
+SpriteAtlasImporter:
+  externalObjects: {}
+  packingSettings:
+    serializedVersion: 2
+    padding: 12
+    blockOffset: 4
+    allowAlphaSplitting: 0
+    enableRotation: 0
+    enableTightPacking: 1
+    enableAlphaDilation: 1
+  secondaryTextureSettings: {}
+  variantMultiplier: 1
+  bindAsDefault: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
