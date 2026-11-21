@@ -5,14 +5,16 @@ using UnityEditor.UIElements.Bindings;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-// Editor UI Toolkit SerializedObject/SerializedProperty tracking:
-// BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
-// BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
-// SerializedObject binding context/updater pipeline that polls changes during panel updates.
-// Documented in Unity 6000.0 Scripting API ("BindingExtensions.TrackPropertyValue",
-// "BindingExtensions.TrackSerializedObjectValue", "BindingExtensions.Unbind",
-// "SerializedPropertyChangeEvent", "SerializedObjectChangeEvent"); matches the Unity 6000.0.71f1
-// Editor, tests/projects/trackpropertyvalue and tests/projects/trackserializedobjectvalue.
+// Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
+// BindingExtensions.BindProperty (supported scalar fields), BindingExtensions.TrackPropertyValue,
+// BindingExtensions.TrackSerializedObjectValue, BindingExtensions.Unbind,
+// SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the SerializedObject binding
+// context/updater pipeline that synchronizes fields and polls changes during panel updates.
+// Documented in Unity 6000.0 Scripting API ("BindingExtensions.BindProperty",
+// "BindingExtensions.TrackPropertyValue", "BindingExtensions.TrackSerializedObjectValue",
+// "BindingExtensions.Unbind", "SerializedPropertyChangeEvent", "SerializedObjectChangeEvent");
+// matches the Unity 6000.0.71f1 Editor, tests/projects/bindproperty,
+// tests/projects/trackpropertyvalue and tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
 {
@@ -320,6 +322,12 @@ namespace UnityEditor.UIElements
 
         public static void Unbind(this VisualElement element) => bindingImpl.Unbind(element);
 
+        public static SerializedProperty BindProperty(this IBindable field, SerializedObject obj) =>
+            bindingImpl.BindProperty(field, obj);
+
+        public static void BindProperty(this IBindable field, SerializedProperty property) =>
+            bindingImpl.BindProperty(field, property);
+
         public static void TrackPropertyValue(this VisualElement element, SerializedProperty property, Action<SerializedProperty> callback = null) =>
             bindingImpl.TrackPropertyValue(element, property, callback == null ? null : (Action<object, SerializedProperty>)((_, p) => callback(p)));
 
@@ -379,7 +387,7 @@ namespace UnityEditor.UIElements.Bindings
                 switch (requestType)
                 {
                     case RequestType.Bind:
-                        Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.Bind");
+                        context.BindPropertyElement(element);
                         break;
                     case RequestType.DelayBind:
                         Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.ContinueBinding");
@@ -411,16 +419,36 @@ namespace UnityEditor.UIElements.Bindings
         public void Bind(VisualElement element, SerializedObject obj) =>
             Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.Bind");
 
-        [Unbound.Stub]
         public SerializedProperty BindProperty(IBindable field, SerializedObject obj)
         {
-            Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindProperty");
-            return default;
+            var property = obj?.FindProperty(field.bindingPath);
+            if (property != null && field is VisualElement visualElement)
+            {
+                if (visualElement.panel == null)
+                    CreateBindingRequest(visualElement, property.serializedObject);
+                else
+                    FindOrCreateBindingContext(visualElement, obj).BindPropertyElement(visualElement);
+            }
+            return property;
         }
 
-        [Unbound.Stub]
-        public void BindProperty(IBindable field, SerializedProperty property) =>
-            Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindProperty");
+        public void BindProperty(IBindable field, SerializedProperty property)
+        {
+            if (property == null) throw new ArgumentNullException(nameof(property));
+            field.bindingPath = property.propertyPath;
+            if (field is VisualElement visualElement)
+            {
+                if (visualElement.panel == null)
+                {
+                    CreateBindingRequest(visualElement, property.serializedObject);
+                    return;
+                }
+                FindOrCreateBindingContext(visualElement, property.serializedObject).BindPropertyElement(visualElement);
+            }
+        }
+
+        static void CreateBindingRequest(VisualElement element, SerializedObject obj) =>
+            UaBindingRequests.Add(element, BindingRequest.Create(BindingRequest.RequestType.Bind, obj));
 
         static readonly Action<object, SerializedObject> s_SendObjectChangeCallback = SendObjectChangeCallback;
 
@@ -830,6 +858,9 @@ namespace UnityEditor.UIElements.Bindings
         }
 
         static readonly PropertyName FindContextPropertyKey = new PropertyName("__UnityBindingContext");
+        static readonly PropertyName k_EnabledOverrideSet = new PropertyName("__UnityEnabledOverrideSet");
+        static readonly Action<object, SerializedProperty> s_DefaultOnPropertyChange = (o, p) => (o as SerializedObjectBindingBase)?.OnPropertyValueChanged(p);
+        static readonly Action<object> s_OnPropertyUpdate = o => (o as SerializedObjectBindingBase)?.SyncObjectVersion();
 
         readonly SerializedObjectChangeTracker m_ChangeTracker;
         readonly TrackedValues m_ValueTracker = new TrackedValues();
@@ -954,14 +985,152 @@ namespace UnityEditor.UIElements.Bindings
             return updater;
         }
 
+        internal void BindPropertyElement(VisualElement element)
+        {
+            element.SetProperty(FindContextPropertyKey, this);
+            if (element is IBindable bindable && !string.IsNullOrEmpty(bindable.bindingPath))
+                BindPropertyRelative(bindable, null);
+        }
+
+        static void SyncEditableState(VisualElement fieldElement, bool shouldBeEditable)
+        {
+            if (fieldElement.enabledSelf == shouldBeEditable) return;
+            if (shouldBeEditable)
+            {
+                if (fieldElement.GetProperty(k_EnabledOverrideSet) != null)
+                    fieldElement.SetEnabled(true);
+            }
+            else
+            {
+                fieldElement.SetProperty(k_EnabledOverrideSet, fieldElement.enabledSelf);
+                fieldElement.SetEnabled(false);
+            }
+        }
+
+        internal SerializedProperty BindPropertyRelative(IBindable field, SerializedProperty parentProperty)
+        {
+            SerializedProperty prop = null;
+            var visualElement = field as VisualElement;
+            if (parentProperty != null)
+                prop = parentProperty.FindPropertyRelative(field.bindingPath);
+            if (prop == null)
+                prop = serializedObject?.FindProperty(field.bindingPath);
+            if (prop == null || visualElement == null)
+                return prop;
+            SyncEditableState(visualElement, prop.editable);
+            RemoveBinding(field, forceRemove: true);
+            CreateBindingObjectForProperty(visualElement, prop);
+            return prop;
+        }
+
+        void CreateBindingObjectForProperty(VisualElement element, SerializedProperty prop)
+        {
+            switch (prop.propertyType)
+            {
+                case SerializedPropertyType.Boolean:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetBoolPropertyValue, SerializedPropertyHelper.SetBoolPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
+                case SerializedPropertyType.Integer:
+                    if (prop.numericType == SerializedPropertyNumericType.Int64
+                        || prop.numericType == SerializedPropertyNumericType.UInt64
+                        || prop.type == "long"
+                        || prop.type == "ulong")
+                    {
+                        if (element is INotifyValueChanged<long>)
+                            DefaultBind(element, prop, SerializedPropertyHelper.GetLongPropertyValue, SerializedPropertyHelper.SetLongPropertyValue, SerializedPropertyHelper.ValueEquals);
+                        else if (element is INotifyValueChanged<ulong>)
+                            DefaultBind(element, prop, SerializedPropertyHelper.GetULongPropertyValue, SerializedPropertyHelper.SetULongPropertyValue, SerializedPropertyHelper.ValueEquals);
+                        else if (element is INotifyValueChanged<int>)
+                            DefaultBind(element, prop, SerializedPropertyHelper.GetIntPropertyValue, SerializedPropertyHelper.SetIntPropertyValue, SerializedPropertyHelper.ValueEquals);
+                        else if (element is INotifyValueChanged<float>)
+                            DefaultBind(element, prop, SerializedPropertyHelper.GetLongPropertyValueAsFloat, SerializedPropertyHelper.SetFloatPropertyValue, SerializedPropertyHelper.ValueEquals);
+                        else if (element is INotifyValueChanged<string>)
+                            Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectStringConversionBinding<long>");
+                    }
+                    else if (element is INotifyValueChanged<int>)
+                    {
+                        DefaultBind(element, prop, SerializedPropertyHelper.GetIntPropertyValue, SerializedPropertyHelper.SetIntPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    }
+                    else if (element is INotifyValueChanged<uint>)
+                    {
+                        DefaultBind(element, prop, SerializedPropertyHelper.GetUIntPropertyValue, SerializedPropertyHelper.SetUIntPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    }
+                    else if (element is INotifyValueChanged<long>)
+                    {
+                        DefaultBind(element, prop, SerializedPropertyHelper.GetLongPropertyValue, SerializedPropertyHelper.SetLongPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    }
+                    else if (element is INotifyValueChanged<float>)
+                    {
+                        DefaultBind(element, prop, SerializedPropertyHelper.GetIntPropertyValueAsFloat, SerializedPropertyHelper.SetFloatPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    }
+                    else if (element is INotifyValueChanged<string>)
+                    {
+                        Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectStringConversionBinding<int>");
+                    }
+                    break;
+                case SerializedPropertyType.Float:
+                    if (prop.numericType == SerializedPropertyNumericType.Float || prop.type == "float")
+                    {
+                        if (element is INotifyValueChanged<double>)
+                            DefaultBind(element, prop, SerializedPropertyHelper.GetFloatPropertyValueAsDouble, SerializedPropertyHelper.SetFloatPropertyValueFromDouble, SerializedPropertyHelper.ValueEquals);
+                        else
+                            DefaultBind(element, prop, SerializedPropertyHelper.GetFloatPropertyValue, SerializedPropertyHelper.SetFloatPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    }
+                    else if (element is INotifyValueChanged<float>)
+                    {
+                        DefaultBind(element, prop, SerializedPropertyHelper.GetDoublePropertyValueAsFloat, SerializedPropertyHelper.SetDoublePropertyValueFromFloat, SerializedPropertyHelper.ValueEquals);
+                    }
+                    else
+                    {
+                        DefaultBind(element, prop, SerializedPropertyHelper.GetDoublePropertyValue, SerializedPropertyHelper.SetDoublePropertyValue, SerializedPropertyHelper.ValueEquals);
+                    }
+                    break;
+                case SerializedPropertyType.String:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetStringPropertyValue, SerializedPropertyHelper.SetStringPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
+                default:
+                    Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.BindingExtensions.BindProperty ({prop.propertyType})");
+                    break;
+            }
+        }
+
+        void DefaultBind<TValue>(
+            VisualElement element,
+            SerializedProperty prop,
+            Func<SerializedProperty, TValue> propertyReadFunc,
+            Action<SerializedProperty, TValue> propertyWriteFunc,
+            Func<TValue, SerializedProperty, Func<SerializedProperty, TValue>, bool> valueComparerFunc)
+        {
+            if (element is INotifyValueChanged<string> && typeof(TValue) != typeof(string))
+            {
+                Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.Bindings.SerializedObjectStringConversionBinding<{typeof(TValue).Name}>");
+                return;
+            }
+            if (element is INotifyValueChanged<TValue> notifyValueChanged)
+            {
+                SerializedObjectBinding<TValue>.CreateBind(notifyValueChanged, this, prop, propertyReadFunc, propertyWriteFunc, valueComparerFunc);
+                return;
+            }
+            Debug.LogWarning($"Field type {element.GetType().FullName} is not compatible with {prop.type} property \"{prop.propertyPath}\"");
+        }
+
+        void RemoveBinding(IBindable bindable, bool forceRemove)
+        {
+            if (bindable is VisualElement visualElement
+                && visualElement.GetBinding(BindingExtensions.s_SerializedBindingId) is SerializedObjectBindingBase existing
+                && !existing.isReleased
+                && (forceRemove || ReferenceEquals(existing.bindingContext, this)))
+            {
+                existing.Unbind();
+            }
+        }
+
         internal void RegisterBindingObject(SerializedObjectBindingBase b)
         {
             if (!m_RegisteredBindings.Add(b)) return;
             if (b.ResolveProperty())
             {
-                m_ValueTracker.Add(b.boundProperty, b,
-                    (o, p) => (o as SerializedObjectBindingBase)?.OnPropertyValueChanged(p),
-                    o => (o as SerializedObjectBindingBase)?.SyncObjectVersion());
+                m_ValueTracker.Add(b.boundProperty, b, s_DefaultOnPropertyChange, s_OnPropertyUpdate);
                 m_ChangeTracker.AddPropertyTracking(b.boundProperty);
             }
         }
@@ -1138,5 +1307,320 @@ namespace UnityEditor.UIElements.Bindings
             base.OnDeactivated(in context);
             Undo.undoRedoEvent = (Undo.UndoRedoEventCallback)Delegate.Remove(Undo.undoRedoEvent, m_UndoRedoCallback);
         }
+    }
+
+    internal abstract partial class SerializedObjectBindingToBaseField<TValue, TField> : SerializedObjectBindingBase
+        where TField : class, INotifyValueChanged<TValue>
+    {
+        static readonly EqualityComparer<TValue> s_EqualityComparer = EqualityComparer<TValue>.Default;
+
+        readonly EventCallback<ChangeEvent<TValue>> m_FieldValueChanged;
+        readonly EventCallback<BlurEvent> m_OnFieldBlur;
+        bool m_IsUpdating;
+        protected ExpressionEvaluator.Expression m_LastFieldExpression;
+
+        protected override string bindingId => BindingExtensions.s_SerializedBindingId;
+
+        protected TField field
+        {
+            get => m_Field as TField;
+            set
+            {
+                if (m_Field is VisualElement previous)
+                {
+                    previous.UnregisterCallback(m_FieldValueChanged, TrickleDown.TrickleDown);
+                    if (previous is BaseField<TValue> prevBase) prevBase.UnregisterCallback(m_OnFieldBlur);
+                }
+                boundElement = value as IBindable;
+                if (m_Field is VisualElement current)
+                {
+                    current.RegisterCallback(m_FieldValueChanged, TrickleDown.TrickleDown);
+                    if (current is BaseField<TValue> currBase) currBase.RegisterCallback(m_OnFieldBlur);
+                }
+            }
+        }
+
+        protected SerializedObjectBindingToBaseField()
+        {
+            m_FieldValueChanged = FieldValueChanged;
+            m_OnFieldBlur = OnFieldBlur;
+        }
+
+        void OnFieldBlur(BlurEvent evt)
+        {
+            if (field is IMixedValueSupport mixed && boundProperty != null && bindingContext != null && bindingContext.IsValid())
+                mixed.showMixedValue = boundProperty.hasMultipleDifferentValues;
+        }
+
+        void FieldValueChanged(ChangeEvent<TValue> evt)
+        {
+            if (isReleased || m_IsUpdating || !ReferenceEquals(evt.target, m_Field)) return;
+            try
+            {
+                if (m_Field is VisualElement visualElement
+                    && ReferenceEquals(visualElement.GetBinding(BindingExtensions.s_SerializedBindingId), this)
+                    && ResolveProperty())
+                {
+                    if (isFieldAttached)
+                    {
+                        UpdateLastFieldValue();
+                        if (SyncFieldValueToProperty())
+                        {
+                            bindingContext.UpdateRevision();
+                            bindingContext?.ResetUpdate();
+                        }
+                        if (visualElement is IMixedValueSupport mixed)
+                            mixed.showMixedValue = boundProperty.hasMultipleDifferentValues;
+                    }
+                    return;
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (NullReferenceException)
+            {
+            }
+            Unbind();
+        }
+
+        protected override void ResetCachedValues()
+        {
+            UpdateLastFieldValue();
+            UpdateFieldIsAttached();
+        }
+
+        public override void OnPropertyValueChanged(SerializedProperty currentPropertyIterator)
+        {
+            if (isReleased) return;
+            try
+            {
+                m_IsUpdating = true;
+                if (field is VisualElement visualElement && ReferenceEquals(visualElement.GetBinding(bindingId), this))
+                {
+                    SyncPropertyToField(field, currentPropertyIterator);
+                    if (visualElement is IMixedValueSupport mixed)
+                        mixed.showMixedValue = currentPropertyIterator.hasMultipleDifferentValues;
+                    return;
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (NullReferenceException)
+            {
+            }
+            finally
+            {
+                m_IsUpdating = false;
+            }
+            Unbind();
+        }
+
+        protected virtual bool EqualsValue(TValue a, TValue b) => s_EqualityComparer.Equals(a, b);
+
+        protected override void OnFieldAttached()
+        {
+            TValue previousValue = field.value;
+            base.OnFieldAttached();
+            if (boundProperty == null || !(field is VisualElement visualElement)
+                || boundProperty.hasMultipleDifferentValues || !EqualsValue(previousValue, field.value))
+                return;
+            using var evt = ChangeEvent<TValue>.GetPooled(field.value, field.value);
+            evt.elementTarget = visualElement;
+            visualElement.SendEvent(evt);
+        }
+
+        public override void SyncValueWithoutNotify(object value)
+        {
+            if (value is TValue typed) SyncFieldValueToPropertyWithoutNotify(typed);
+        }
+
+        public override BindingResult OnUpdate(in BindingContext context)
+        {
+            if (isReleased) return new BindingResult(BindingStatus.Pending);
+            try
+            {
+                ResetUpdate();
+                if (!IsSynced()) return new BindingResult(BindingStatus.Pending);
+                return default;
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (NullReferenceException)
+            {
+            }
+            Unbind();
+            return new BindingResult(BindingStatus.Pending);
+        }
+
+        protected internal static string GetUndoMessage(SerializedProperty serializedProperty)
+        {
+            string text = "Modified " + serializedProperty.name;
+            var targetObject = serializedProperty.serializedObject?.targetObject;
+            if (targetObject != null && !string.IsNullOrEmpty(targetObject.name))
+                text = text + " in " + targetObject.name;
+            return text;
+        }
+
+        protected abstract void UpdateLastFieldValue();
+        protected abstract bool SyncFieldValueToProperty();
+        protected abstract void SyncPropertyToField(TField c, SerializedProperty p);
+
+        protected void SyncFieldValueToPropertyWithoutNotify(TValue value)
+        {
+            if (field != null && !s_EqualityComparer.Equals(value, field.value))
+                field.SetValueWithoutNotify(value);
+        }
+    }
+
+    internal abstract partial class SerializedObjectBindingPropertyToBaseField<TProperty, TValue>
+        : SerializedObjectBindingToBaseField<TValue, INotifyValueChanged<TValue>>
+    {
+        protected Func<SerializedProperty, TProperty> propGetValue;
+        protected Action<SerializedProperty, TProperty> propSetValue;
+        protected Func<TProperty, SerializedProperty, Func<SerializedProperty, TProperty>, bool> propCompareValues;
+        protected TProperty lastFieldValue;
+
+        protected SerializedObjectBindingPropertyToBaseField() { }
+
+        protected override void SyncPropertyToField(INotifyValueChanged<TValue> c, SerializedProperty p)
+        {
+            if (c == null) throw new ArgumentNullException(nameof(c));
+            lastFieldValue = propGetValue(p);
+            if (p.hasMultipleDifferentValues)
+                AssignValueToFieldWithoutNotify(lastFieldValue);
+            else
+                AssignValueToField(lastFieldValue);
+        }
+
+        protected override bool SyncFieldValueToProperty()
+        {
+            if (boundProperty.hasMultipleDifferentValues || !propCompareValues(lastFieldValue, boundProperty, propGetValue))
+            {
+                propSetValue(boundProperty, lastFieldValue);
+                boundProperty.serializedObject.ApplyModifiedProperties();
+                return true;
+            }
+            return false;
+        }
+
+        protected abstract void AssignValueToField(TProperty lastValue);
+        protected abstract void AssignValueToFieldWithoutNotify(TProperty lastValue);
+
+        public override void OnRelease()
+        {
+            if (isReleased) return;
+            ResetContext();
+            field = null;
+            propGetValue = null;
+            propSetValue = null;
+            propCompareValues = null;
+            ResetCachedValues();
+            isReleased = true;
+        }
+    }
+
+    internal partial class SerializedObjectBinding<TValue> : SerializedObjectBindingPropertyToBaseField<TValue, TValue>
+    {
+        public SerializedObjectBinding() { }
+
+        public static void CreateBind(
+            INotifyValueChanged<TValue> field,
+            SerializedObjectBindingContext context,
+            SerializedProperty property,
+            Func<SerializedProperty, TValue> propGetValue,
+            Action<SerializedProperty, TValue> propSetValue,
+            Func<TValue, SerializedProperty, Func<SerializedProperty, TValue>, bool> propCompareValues)
+        {
+            var binding = new SerializedObjectBinding<TValue> { isReleased = false };
+            (field as VisualElement)?.SetBinding(BindingExtensions.s_SerializedBindingId, binding);
+            binding.SetBinding(field, context, property, propGetValue, propSetValue, propCompareValues);
+        }
+
+        void SetBinding(
+            INotifyValueChanged<TValue> c,
+            SerializedObjectBindingContext context,
+            SerializedProperty property,
+            Func<SerializedProperty, TValue> getValue,
+            Action<SerializedProperty, TValue> setValue,
+            Func<TValue, SerializedProperty, Func<SerializedProperty, TValue>, bool> compareValues)
+        {
+            propGetValue = getValue;
+            propSetValue = setValue;
+            propCompareValues = compareValues;
+            SetContext(context, property);
+            lastFieldValue = c.value;
+            field = c;
+        }
+
+        public override void OnRelease()
+        {
+            if (!isReleased) base.OnRelease();
+        }
+
+        protected override void UpdateLastFieldValue()
+        {
+            if (field != null) lastFieldValue = field.value;
+        }
+
+        protected override void AssignValueToFieldWithoutNotify(TValue lastValue)
+        {
+            if (field == null) return;
+            if (field is BaseField<TValue> baseField)
+            {
+                if (!baseField.showMixedValue || !boundProperty.hasMultipleDifferentValues)
+                    baseField.SetValueWithoutNotify(lastValue);
+            }
+            else
+            {
+                field.SetValueWithoutNotify(lastValue);
+            }
+        }
+
+        protected override void AssignValueToField(TValue lastValue)
+        {
+            if (field == null) return;
+            if (field is BaseField<TValue> baseField)
+                baseField.SetValueWithoutValidation(lastValue);
+            else
+                field.value = lastValue;
+        }
+
+        protected override bool SyncFieldValueToProperty() => base.SyncFieldValueToProperty();
+    }
+
+    internal static partial class SerializedPropertyHelper
+    {
+        public static bool GetBoolPropertyValue(SerializedProperty p) => p.boolValue;
+        public static int GetIntPropertyValue(SerializedProperty p) => p.intValue;
+        public static uint GetUIntPropertyValue(SerializedProperty p) => p.uintValue;
+        public static long GetLongPropertyValue(SerializedProperty p) => p.longValue;
+        public static ulong GetULongPropertyValue(SerializedProperty p) => p.ulongValue;
+        public static float GetFloatPropertyValue(SerializedProperty p) => p.floatValue;
+        public static double GetDoublePropertyValue(SerializedProperty p) => p.doubleValue;
+        public static string GetStringPropertyValue(SerializedProperty p) => p.stringValue;
+        public static float GetIntPropertyValueAsFloat(SerializedProperty p) => p.intValue;
+        public static float GetLongPropertyValueAsFloat(SerializedProperty p) => p.longValue;
+        public static double GetFloatPropertyValueAsDouble(SerializedProperty p) => p.floatValue;
+        public static float GetDoublePropertyValueAsFloat(SerializedProperty p) => (float)p.doubleValue;
+
+        public static void SetBoolPropertyValue(SerializedProperty p, bool v) => p.boolValue = v;
+        public static void SetIntPropertyValue(SerializedProperty p, int v) => p.intValue = v;
+        public static void SetUIntPropertyValue(SerializedProperty p, uint v) => p.uintValue = v;
+        public static void SetLongPropertyValue(SerializedProperty p, long v) => p.longValue = v;
+        public static void SetULongPropertyValue(SerializedProperty p, ulong v) => p.ulongValue = v;
+        public static void SetFloatPropertyValue(SerializedProperty p, float v) => p.floatValue = v;
+        public static void SetDoublePropertyValue(SerializedProperty p, double v) => p.doubleValue = v;
+        public static void SetStringPropertyValue(SerializedProperty p, string v) => p.stringValue = v;
+        public static void SetFloatPropertyValueFromDouble(SerializedProperty p, double v) => p.floatValue = (float)v;
+        public static void SetDoublePropertyValueFromFloat(SerializedProperty p, float v) => p.doubleValue = v;
+
+        public static bool ValueEquals<TValue>(TValue value, SerializedProperty p, Func<SerializedProperty, TValue> propertyReadFunc) =>
+            EqualityComparer<TValue>.Default.Equals(value, propertyReadFunc(p));
+
+        public static bool ValueEquals(string value, SerializedProperty p, Func<SerializedProperty, string> propertyReadFunc) =>
+            string.Equals(value, propertyReadFunc(p), StringComparison.Ordinal);
     }
 }

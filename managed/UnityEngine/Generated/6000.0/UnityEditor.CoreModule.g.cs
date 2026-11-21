@@ -47212,8 +47212,6 @@ namespace UnityEditor.UIElements
     unsafe static partial class BindingExtensions
     {
         [global::Unbound.Stub] public static void Bind(this global::UnityEngine.UIElements.VisualElement element, global::UnityEditor.SerializedObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.Bind"); }
-        [global::Unbound.Stub] public static global::UnityEditor.SerializedProperty BindProperty(this global::UnityEngine.UIElements.IBindable field, global::UnityEditor.SerializedObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty"); return default; }
-        [global::Unbound.Stub] public static void BindProperty(this global::UnityEngine.UIElements.IBindable field, global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty"); }
         [global::Unbound.Stub] internal static void HandleStyleUpdate(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.HandleStyleUpdate"); }
     }
     [global::Unbound.Stub]

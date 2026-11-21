@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Unbound.Runtime;
 using Unity.Properties;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -12,9 +14,11 @@ namespace UnityEngine.Tests
     {
         sealed class TestTarget : ScriptableObject
         {
+            public bool flag = true;
             public int count = 10;
             public int other = 1;
             public string label = "alpha";
+            public Vector3 pos = new Vector3(1, 2, 3);
             public string[] items = new[] { "x", "y" };
         }
 
@@ -349,6 +353,182 @@ namespace UnityEngine.Tests
                 target.other = 42;
                 Tick(panel);
                 Assert.Equal(0, count);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyScalarLifecycleAndUnmeasuredRelease()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var targetA = ScriptableObject.CreateInstance<TestTarget>();
+            var targetB = ScriptableObject.CreateInstance<TestTarget>();
+            targetA.flag = true;
+            targetA.count = 15;
+            targetB.flag = false;
+            targetB.count = 25;
+            using var panel = RuntimePanel.Create(settings);
+            using var soMulti = new SerializedObject(new Object[] { targetA, targetB });
+            try
+            {
+                var toggle = new Toggle();
+                var intField = new IntegerField { bindingPath = "count" };
+                panel.visualTree.Add(toggle);
+                panel.visualTree.Add(intField);
+                int toggleEvts = 0;
+                int intEvts = 0;
+                toggle.RegisterValueChangedCallback(_ => toggleEvts++);
+                intField.RegisterValueChangedCallback(_ => intEvts++);
+
+                toggle.BindProperty(soMulti.FindProperty("flag"));
+                Assert.NotNull(intField.BindProperty(soMulti));
+                Assert.True(toggle.showMixedValue);
+                Assert.True(intField.showMixedValue);
+                Assert.Equal(0, toggleEvts);
+                Assert.Equal(0, intEvts);
+
+                // Writing primary value resolves mixed state across all targets.
+                intField.value = 15;
+                Assert.Equal(15, targetA.count);
+                Assert.Equal(15, targetB.count);
+                Assert.False(intField.showMixedValue);
+                Assert.Equal(1, intEvts);
+
+                // Unrelated edit does not notify.
+                targetA.other = 99;
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(1, intEvts);
+
+                // Unbind stops further sync.
+                intField.Unbind();
+                targetA.count = 77;
+                targetB.count = 77;
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(15, intField.value);
+            }
+            finally
+            {
+                Object.DestroyImmediate(targetA);
+                Object.DestroyImmediate(targetB);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertySoleFieldDetachAndReattachCatchesUp()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                var field = new IntegerField();
+                panel.visualTree.Add(field);
+                field.BindProperty(so.FindProperty("count"));
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(10, field.value);
+
+                // Sole bound field on so: detached edits are ignored until reattach + update.
+                field.RemoveFromHierarchy();
+                target.count = 64;
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(10, field.value);
+
+                panel.visualTree.Add(field);
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(64, field.value);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyDisposedSerializedObjectUnbindsCleanlyOnEdit()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            var so = new SerializedObject(target);
+            try
+            {
+                var field = new IntegerField();
+                panel.visualTree.Add(field);
+                field.BindProperty(so.FindProperty("count"));
+                Assert.True(field.HasBinding(BindingExtensions.s_SerializedBindingId));
+
+                so.Dispose();
+                field.value = 123;
+                Assert.False(field.HasBinding(BindingExtensions.s_SerializedBindingId));
+                Assert.Equal(10, target.count);
+            }
+            finally
+            {
+                so.Dispose();
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyUnsupportedPropertyTypeReportsStubAndIncompatibleFieldWarns()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                // Incompatible scalar field type on bool property logs Unity's warning and stays unbound.
+                var wrongField = new IntegerField();
+                panel.visualTree.Add(wrongField);
+                var warnings = new List<string>();
+                Application.LogCallback cb = (msg, _, type) =>
+                {
+                    if (type == LogType.Warning) warnings.Add(msg);
+                };
+                Application.logMessageReceived += cb;
+                try
+                {
+                    wrongField.BindProperty(so.FindProperty("flag"));
+                }
+                finally
+                {
+                    Application.logMessageReceived -= cb;
+                }
+                Assert.False(wrongField.HasBinding(BindingExtensions.s_SerializedBindingId));
+                Assert.Contains(warnings, w => w.Contains("not compatible") && w.Contains("\"flag\""));
+
+                // Unsupported property type (Vector3) reports explicit Stubs.NotImplemented hit and stays unbound.
+                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (Vector3)";
+                int beforeVecHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
+                var vecField = new IntegerField();
+                panel.visualTree.Add(vecField);
+                vecField.BindProperty(so.FindProperty("pos"));
+                Assert.False(vecField.HasBinding(BindingExtensions.s_SerializedBindingId));
+                Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value > beforeVecHits);
+
+                // Non-string-to-string conversion reports explicit Stubs.NotImplemented hit and stays unbound.
+                const string convStubKey = "UnityEditor.UIElements.Bindings.SerializedObjectStringConversionBinding<int>";
+                int beforeConvHits = Stubs.HitReport().FirstOrDefault(h => h.Key == convStubKey).Value;
+                var intAsText = new TextField();
+                panel.visualTree.Add(intAsText);
+                intAsText.BindProperty(so.FindProperty("count"));
+                Assert.False(intAsText.HasBinding(BindingExtensions.s_SerializedBindingId));
+                Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == convStubKey).Value > beforeConvHits);
             }
             finally
             {
