@@ -1,0 +1,11 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <uie:Toolbar name="bar">
+        <uie:ToolbarButton name="btn" text="Go" />
+        <uie:ToolbarToggle name="tgl" label="Show" value="true" />
+        <uie:ToolbarMenu name="menu" text="File" variant="Popup" />
+        <uie:ToolbarSpacer name="spacer" flex="true" />
+        <uie:ToolbarSearchField name="search" placeholder-text="Find" value="abc" />
+        <uie:ToolbarPopupSearchField name="popup-search" />
+        <uie:ToolbarBreadcrumbs name="crumbs" />
+    </uie:Toolbar>
+</ui:UXML>
