@@ -22,6 +22,15 @@ namespace UnityEngine.Tests
             [Tooltip("plain")] public int described = 4;
         }
 
+        [System.Serializable] public class ThrowingDrawn { public int a = 1; }
+        [System.Serializable] public class GenericDrawn { public int b = 2; }
+
+        public class CustomDrawnSample : ScriptableObject
+        {
+            public ThrowingDrawn throwing = new ThrowingDrawn();
+            public GenericDrawn generic = new GenericDrawn();
+        }
+
         static void Tick(BaseRuntimePanel panel)
         {
             panel.Update();
@@ -103,6 +112,45 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AGameDrawerThatCannotBeCreatedIsReportedNotThrown()
+        {
+            // The test assembly is not a game assembly, so its drawers are put in the drawer table
+            // directly (the table maps a drawn type to its drawer classes).
+            var table = typeof(Editor).Assembly.GetType("UnityEditor.PropertyDrawers")
+                .GetField("s_Drawers", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            var previousTable = table.GetValue(null);
+            table.SetValue(null, new Dictionary<System.Type, List<(System.Type Drawer, bool Children)>>
+            {
+                [typeof(ThrowingDrawn)] = new List<(System.Type, bool)> { (typeof(ThrowingDrawer), false) },
+                [typeof(GenericDrawn)] = new List<(System.Type, bool)> { (typeof(GenericDrawer<>), false) },
+            });
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<CustomDrawnSample>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                int throwingBefore = Hits("UnityEditor.UIElements.PropertyField (drawer ThrowingDrawer)");
+                foreach (var path in new[] { "throwing", "generic" })
+                {
+                    var field = new PropertyField(so.FindProperty(path));
+                    panel.visualTree.Add(field);
+                    field.Bind(so);
+                    Tick(panel);
+                    Tick(panel);
+                    Assert.NotNull(field.Q<Foldout>());
+                }
+                Assert.Equal(throwingBefore + 1, Hits("UnityEditor.UIElements.PropertyField (drawer ThrowingDrawer)"));
+            }
+            finally
+            {
+                table.SetValue(null, previousTable);
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
         public void DrawersAndDecoratorsItDoesNotBuildAreReported()
         {
             const string range = "UnityEditor.UIElements.PropertyField (drawer of RangeAttribute)";
@@ -120,5 +168,16 @@ namespace UnityEngine.Tests
             int totalAfter = Stubs.HitReport().Where(h => h.Key.StartsWith("UnityEditor.UIElements.PropertyField (")).Sum(h => h.Value);
             Assert.Equal(totalBefore + 2, totalAfter);
         }
+    }
+
+    [CustomPropertyDrawer(typeof(PropertyFieldDrawerTests.ThrowingDrawn))]
+    public class ThrowingDrawer : PropertyDrawer
+    {
+        public ThrowingDrawer() => throw new System.InvalidOperationException("drawer constructor");
+    }
+
+    [CustomPropertyDrawer(typeof(PropertyFieldDrawerTests.GenericDrawn))]
+    public class GenericDrawer<T> : PropertyDrawer
+    {
     }
 }
