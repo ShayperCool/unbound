@@ -829,7 +829,6 @@ namespace UnityEditor.UIElements.Bindings
         sealed class TrackedValues
         {
             readonly Dictionary<int, List<TrackedValue>> m_TrackedValues = new Dictionary<int, List<TrackedValue>>();
-            readonly List<TrackedValue> m_NotifyScratch = new List<TrackedValue>();
 
             public void Add(SerializedProperty prop, object cookie, Action<object, SerializedProperty> onChangeCallback, Action<object> onUpdateCallback)
             {
@@ -869,11 +868,19 @@ namespace UnityEditor.UIElements.Bindings
             {
                 int hash = currentProperty.hashCodeForPropertyPath;
                 if (!m_TrackedValues.TryGetValue(hash, out var list)) return;
-                // Snapshot in case a callback unbinds or adds tracking; skip entries removed mid-pass.
-                m_NotifyScratch.Clear();
-                m_NotifyScratch.AddRange(list);
-                for (int i = 0; i < m_NotifyScratch.Count; i++) m_NotifyScratch[i].InvokeOnChangeCallback(currentProperty);
-                m_NotifyScratch.Clear();
+                // Each call iterates its own snapshot: a callback may unbind, add tracking or, by
+                // writing a bound field, notify again before this pass ends. Entries removed
+                // mid-pass are skipped.
+                var snapshot = UnityEngine.Pool.ListPool<TrackedValue>.Get();
+                try
+                {
+                    snapshot.AddRange(list);
+                    for (int i = 0; i < snapshot.Count; i++) snapshot[i].InvokeOnChangeCallback(currentProperty);
+                }
+                finally
+                {
+                    UnityEngine.Pool.ListPool<TrackedValue>.Release(snapshot);
+                }
             }
         }
 

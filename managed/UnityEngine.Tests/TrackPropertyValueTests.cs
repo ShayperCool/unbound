@@ -252,6 +252,48 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ACallbackThatWritesABoundFieldDoesNotCutOffTheOtherCallbacks()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                var el = new VisualElement();
+                var otherField = new IntegerField();
+                panel.visualTree.Add(el);
+                panel.visualTree.Add(otherField);
+                otherField.BindProperty(so.FindProperty("other"));
+                var log = new List<string>();
+                // The first callback's write to a field bound to another property of the same
+                // object notifies that property's trackers while this pass is still running.
+                el.TrackPropertyValue(so.FindProperty("count"), p =>
+                {
+                    log.Add("cb1:" + p.intValue);
+                    otherField.value = p.intValue + 1;
+                });
+                el.TrackPropertyValue(so.FindProperty("count"), p => log.Add("cb2:" + p.intValue));
+                el.TrackPropertyValue(so.FindProperty("other"), p => log.Add("other:" + p.intValue));
+                Tick(panel);
+                Tick(panel);
+
+                target.count = 20;
+                Tick(panel);
+                Tick(panel);
+                Assert.Contains("cb1:20", log);
+                Assert.Contains("cb2:20", log);
+                Assert.Contains("other:21", log);
+                Assert.Equal(21, target.other);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
         public void ShrinkingArrayPastTrackedElementDoesNotThrowAndResumesWhenElementReturns()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
