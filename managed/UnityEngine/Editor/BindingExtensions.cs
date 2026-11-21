@@ -1123,6 +1123,9 @@ namespace UnityEditor.UIElements.Bindings
                 case SerializedPropertyType.String:
                     DefaultBind(element, prop, SerializedPropertyHelper.GetStringPropertyValue, SerializedPropertyHelper.SetStringPropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
+                case SerializedPropertyType.Enum:
+                    CreateEnumBindingObject(element, prop);
+                    break;
                 case SerializedPropertyType.Generic:
                     if (prop.type == "ToggleButtonGroupState")
                         Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty (ToggleButtonGroupState)");
@@ -1132,6 +1135,32 @@ namespace UnityEditor.UIElements.Bindings
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.BindingExtensions.BindProperty ({prop.propertyType})");
                     break;
+            }
+        }
+
+        void CreateEnumBindingObject(VisualElement element, SerializedProperty prop)
+        {
+            if (element is PopupField<string> popup)
+            {
+                SerializedDefaultEnumBinding.CreateBind(popup, this, prop);
+            }
+            else if (element is EnumField enumField)
+            {
+                var enumType = prop.ManagedEnumType;
+                if (enumType != null && enumType.IsDefined(typeof(FlagsAttribute), false))
+                {
+                    Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding (Flags)");
+                    return;
+                }
+                SerializedManagedEnumBinding.CreateBind(enumField, this, prop);
+            }
+            else if (element is INotifyValueChanged<int>)
+            {
+                DefaultBind(element, prop, SerializedPropertyHelper.GetIntPropertyValue, SerializedPropertyHelper.SetIntPropertyValue, SerializedPropertyHelper.ValueEquals);
+            }
+            else
+            {
+                DefaultBind(element, prop, SerializedPropertyHelper.GetEnumPropertyValueAsString, SerializedPropertyHelper.SetEnumPropertyValueFromString, SerializedPropertyHelper.SlowEnumValueEquals);
             }
         }
 
@@ -1632,6 +1661,279 @@ namespace UnityEditor.UIElements.Bindings
         protected override bool SyncFieldValueToProperty() => base.SyncFieldValueToProperty();
     }
 
+    internal partial class SerializedDefaultEnumBinding : SerializedObjectBindingToBaseField<string, PopupField<string>>
+    {
+        const int kDefaultValueIndex = -1;
+
+        int lastFieldValueIndex;
+        List<string> originalChoices;
+        List<int> displayIndexToEnumIndex;
+        List<int> enumIndexToDisplayIndex;
+        int originalIndex;
+
+        public SerializedDefaultEnumBinding() { }
+
+        public static void CreateBind(PopupField<string> field, SerializedObjectBindingContext context, SerializedProperty property)
+        {
+            var binding = new SerializedDefaultEnumBinding { isReleased = false };
+            field.SetBinding(BindingExtensions.s_SerializedBindingId, binding);
+            binding.SetBinding(field, context, property);
+        }
+
+        void SetBinding(PopupField<string> c, SerializedObjectBindingContext context, SerializedProperty property)
+        {
+            property.unsafeMode = true;
+            SetContext(context, property);
+            originalChoices = c.choices;
+            originalIndex = c.index;
+            if (displayIndexToEnumIndex == null) displayIndexToEnumIndex = new List<int>();
+            else displayIndexToEnumIndex.Clear();
+            if (enumIndexToDisplayIndex == null) enumIndexToDisplayIndex = new List<int>();
+            else enumIndexToDisplayIndex.Clear();
+
+            var enumType = property.ManagedEnumType;
+            if (enumType != null)
+            {
+                var visibleData = EnumDataUtility.GetCachedEnumData(enumType, UnityEngine.EnumDataUtility.CachedType.ExcludeObsolete);
+                var allData = EnumDataUtility.GetCachedEnumData(enumType, UnityEngine.EnumDataUtility.CachedType.IncludeAllObsolete);
+                c.choices = new List<string>(visibleData.displayNames);
+                string[] enumNames = property.enumNames;
+
+                var nameToFlag = new Dictionary<string, int>(allData.names.Length, StringComparer.Ordinal);
+                for (int i = 0; i < allData.names.Length; i++)
+                    nameToFlag[allData.names[i]] = allData.flagValues[i];
+
+                for (int i = 0; i < visibleData.names.Length; i++) displayIndexToEnumIndex.Add(kDefaultValueIndex);
+                for (int i = 0; i < enumNames.Length; i++) enumIndexToDisplayIndex.Add(kDefaultValueIndex);
+
+                var flagToFirstEnumIndex = new Dictionary<int, int>(enumNames.Length);
+                for (int j = 0; j < enumNames.Length; j++)
+                {
+                    if (!nameToFlag.TryGetValue(enumNames[j], out int flagVal)) continue;
+                    int displayIdx = Array.IndexOf(visibleData.names, enumNames[j]);
+                    if (displayIdx != -1)
+                    {
+                        if (flagToFirstEnumIndex.TryGetValue(flagVal, out int firstIdx))
+                        {
+                            displayIndexToEnumIndex[displayIdx] = firstIdx;
+                            enumIndexToDisplayIndex[firstIdx] = displayIdx;
+                        }
+                        else
+                        {
+                            flagToFirstEnumIndex[flagVal] = j;
+                            displayIndexToEnumIndex[displayIdx] = j;
+                        }
+                        enumIndexToDisplayIndex[j] = displayIdx;
+                    }
+                    else
+                    {
+                        flagToFirstEnumIndex[flagVal] = j;
+                    }
+                }
+            }
+            else
+            {
+                c.choices = new List<string>(property.enumLocalizedDisplayNames);
+                for (int k = 0; k < c.choices.Count; k++)
+                {
+                    displayIndexToEnumIndex.Add(k);
+                    enumIndexToDisplayIndex.Add(k);
+                }
+            }
+
+            lastFieldValueIndex = c.index;
+            field = c;
+        }
+
+        protected override void SyncPropertyToField(PopupField<string> c, SerializedProperty p)
+        {
+            if (p == null) throw new ArgumentNullException(nameof(p));
+            if (c == null) throw new ArgumentNullException(nameof(c));
+            int enumValueIndex = p.enumValueIndex;
+            int displayIndex = enumValueIndex < 0 || enumValueIndex >= enumIndexToDisplayIndex.Count
+                ? (lastFieldValueIndex = kDefaultValueIndex)
+                : (lastFieldValueIndex = enumIndexToDisplayIndex[enumValueIndex]);
+            if (p.hasMultipleDifferentValues) c.SetIndexWithoutNotify(displayIndex);
+            else c.index = displayIndex;
+        }
+
+        protected override void UpdateLastFieldValue()
+        {
+            lastFieldValueIndex = field == null ? int.MinValue : field.index;
+        }
+
+        protected override bool SyncFieldValueToProperty()
+        {
+            if (lastFieldValueIndex >= 0 && lastFieldValueIndex < displayIndexToEnumIndex.Count
+                && (boundProperty.hasMultipleDifferentValues || boundProperty.enumValueIndex != displayIndexToEnumIndex[lastFieldValueIndex]))
+            {
+                boundProperty.enumValueIndex = displayIndexToEnumIndex[lastFieldValueIndex];
+                boundProperty.serializedObject.ApplyModifiedProperties();
+                return true;
+            }
+            return false;
+        }
+
+        public override void OnRelease()
+        {
+            if (isReleased) return;
+            try
+            {
+                var popupField = field;
+                field = null;
+                if (popupField != null)
+                {
+                    popupField.choices = originalChoices;
+                    popupField.index = originalIndex;
+                }
+            }
+            catch (ArgumentException)
+            {
+            }
+            ResetContext();
+            field = null;
+            lastFieldValueIndex = kDefaultValueIndex;
+            isReleased = true;
+            ResetCachedValues();
+        }
+    }
+
+    internal partial class SerializedManagedEnumBinding : SerializedObjectBindingToBaseField<Enum, BaseField<Enum>>
+    {
+        int lastEnumValue;
+        Type managedType;
+
+        public SerializedManagedEnumBinding() { }
+
+        public static void CreateBind(BaseField<Enum> field, SerializedObjectBindingContext context, SerializedProperty property)
+        {
+            var enumType = property.ManagedEnumType;
+            if (enumType == null)
+            {
+                Debug.LogWarning(field.GetType().FullName + " is not compatible with property \"" + property.propertyPath + "\". Make sure you're binding to a managed enum type");
+                return;
+            }
+            var binding = new SerializedManagedEnumBinding { isReleased = false };
+            field.SetBinding(BindingExtensions.s_SerializedBindingId, binding);
+            binding.SetBinding(field, context, property, enumType);
+        }
+
+        void SetBinding(BaseField<Enum> c, SerializedObjectBindingContext context, SerializedProperty property, Type manageType)
+        {
+            managedType = manageType;
+            property.unsafeMode = true;
+            SetContext(context, property);
+            int enumValueAsInt = property.intValue;
+            Enum enumVal = GetEnumFromSerializedFromInt(manageType, ref enumValueAsInt);
+            if (c is EnumField ef)
+            {
+                if (enumVal != null) ef.Init(enumVal);
+                else { ef.PopulateDataFromType(manageType); ef.SetValueWithoutNotify(null); }
+            }
+            else
+            {
+                throw new InvalidOperationException(c.GetType() + " cannot be bound to a enum");
+            }
+            lastEnumValue = enumValueAsInt;
+            Enum previous = c.value;
+            c.value = enumVal;
+            field = c;
+            if (EqualityComparer<Enum>.Default.Equals(previous, c.value)) return;
+            using var evt = ChangeEvent<Enum>.GetPooled(previous, previous);
+            evt.elementTarget = c;
+            c.SendEvent(evt);
+        }
+
+        static Enum GetEnumFromSerializedFromInt(Type managedType, ref int enumValueAsInt)
+        {
+            var enumData = EnumDataUtility.GetCachedEnumData(managedType);
+            if (enumData.flags) return EnumDataUtility.IntToEnumFlags(managedType, enumValueAsInt);
+            int index = Array.IndexOf(enumData.flagValues, enumValueAsInt);
+            if (index != -1) return enumData.values[index];
+            if (enumData.flagValues.Length != 0)
+            {
+                int minVal = enumData.flagValues[0];
+                int minIdx = 0;
+                for (int i = 1; i < enumData.flagValues.Length; i++)
+                {
+                    if (enumData.flagValues[i] < minVal)
+                    {
+                        minIdx = i;
+                        minVal = enumData.flagValues[i];
+                    }
+                }
+                if (enumValueAsInt <= minVal || (enumValueAsInt == 0 && minVal < 0))
+                {
+                    enumValueAsInt = minVal;
+                    return enumData.values[minIdx];
+                }
+            }
+            Debug.LogWarning("Error: invalid enum value " + enumValueAsInt + " for type " + managedType);
+            return null;
+        }
+
+        protected override void SyncPropertyToField(BaseField<Enum> c, SerializedProperty p)
+        {
+            if (p == null) throw new ArgumentNullException(nameof(p));
+            if (c == null) throw new ArgumentNullException(nameof(c));
+            int enumValueAsInt = p.intValue;
+            Enum enumVal = GetEnumFromSerializedFromInt(managedType, ref enumValueAsInt);
+            if (p.hasMultipleDifferentValues) c.SetValueWithoutNotify(enumVal);
+            else c.value = enumVal;
+            lastEnumValue = enumValueAsInt;
+        }
+
+        protected override void UpdateLastFieldValue()
+        {
+            if (field == null || managedType == null)
+            {
+                lastEnumValue = 0;
+                return;
+            }
+            var enumData = EnumDataUtility.GetCachedEnumData(managedType);
+            Enum current = field.value;
+            if (enumData.flags)
+            {
+                lastEnumValue = EnumDataUtility.EnumFlagsToInt(enumData, current);
+                return;
+            }
+            int index = Array.IndexOf(enumData.values, current);
+            if (index != -1)
+            {
+                lastEnumValue = enumData.flagValues[index];
+                return;
+            }
+            lastEnumValue = 0;
+            Debug.LogWarning("Error: invalid enum value " + current + " for type " + managedType);
+        }
+
+        protected override bool SyncFieldValueToProperty()
+        {
+            if (!boundProperty.hasMultipleDifferentValues && lastEnumValue == boundProperty.intValue)
+                return false;
+            Type underlying = managedType.GetEnumUnderlyingType();
+            if (lastEnumValue < 0 && (underlying == typeof(uint) || underlying == typeof(ushort) || underlying == typeof(byte)))
+                boundProperty.longValue = unchecked((uint)lastEnumValue);
+            else
+                boundProperty.intValue = lastEnumValue;
+            boundProperty.serializedObject.ApplyModifiedProperties();
+            return true;
+        }
+
+        public override void OnRelease()
+        {
+            if (isReleased) return;
+            var baseField = field;
+            field = null;
+            baseField?.SetValueWithoutNotify(null);
+            ResetContext();
+            field = null;
+            managedType = null;
+            isReleased = true;
+            ResetCachedValues();
+        }
+    }
+
     internal static partial class SerializedPropertyHelper
     {
         public static bool GetBoolPropertyValue(SerializedProperty p) => p.boolValue;
@@ -1647,6 +1949,13 @@ namespace UnityEditor.UIElements.Bindings
         public static double GetFloatPropertyValueAsDouble(SerializedProperty p) => p.floatValue;
         public static float GetDoublePropertyValueAsFloat(SerializedProperty p) => (float)p.doubleValue;
 
+        public static string GetEnumPropertyValueAsString(SerializedProperty p)
+        {
+            int idx = p.enumValueIndex;
+            var names = p.enumDisplayNames;
+            return idx >= 0 && idx < names.Length ? names[idx] : string.Empty;
+        }
+
         public static void SetBoolPropertyValue(SerializedProperty p, bool v) => p.boolValue = v;
         public static void SetIntPropertyValue(SerializedProperty p, int v) => p.intValue = v;
         public static void SetUIntPropertyValue(SerializedProperty p, uint v) => p.uintValue = v;
@@ -1658,10 +1967,28 @@ namespace UnityEditor.UIElements.Bindings
         public static void SetFloatPropertyValueFromDouble(SerializedProperty p, double v) => p.floatValue = (float)v;
         public static void SetDoublePropertyValueFromFloat(SerializedProperty p, float v) => p.doubleValue = v;
 
+        public static void SetEnumPropertyValueFromString(SerializedProperty p, string v) =>
+            p.enumValueIndex = FindStringIndex(p.enumDisplayNames, v);
+
+        public static int FindStringIndex(string[] values, string v)
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values[i] == v) return i;
+            }
+            return -1;
+        }
+
         public static bool ValueEquals<TValue>(TValue value, SerializedProperty p, Func<SerializedProperty, TValue> propertyReadFunc) =>
             EqualityComparer<TValue>.Default.Equals(value, propertyReadFunc(p));
 
         public static bool ValueEquals(string value, SerializedProperty p, Func<SerializedProperty, string> propertyReadFunc) =>
-            string.Equals(value, propertyReadFunc(p), StringComparison.Ordinal);
+            p.propertyType == SerializedPropertyType.Enum
+                ? p.enumValueIndex >= 0 && p.enumValueIndex < p.enumDisplayNames.Length
+                  && string.Equals(p.enumDisplayNames[p.enumValueIndex], value, StringComparison.OrdinalIgnoreCase)
+                : string.Equals(value, propertyReadFunc(p), StringComparison.Ordinal);
+
+        public static bool SlowEnumValueEquals(string value, SerializedProperty p, Func<SerializedProperty, string> propertyReadFunc) =>
+            EqualityComparer<string>.Default.Equals(value, propertyReadFunc(p));
     }
 }

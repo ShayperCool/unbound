@@ -297,7 +297,14 @@ namespace UnityEngine
     [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Enum)]
     public sealed partial class InspectorOrderAttribute : PropertyAttribute
     {
-        public InspectorOrderAttribute(InspectorSort inspectorSort = InspectorSort.ByName, InspectorSortDirection sortDirection = InspectorSortDirection.Ascending) { }
+        internal InspectorSort m_inspectorSort { get; private set; }
+        internal InspectorSortDirection m_sortDirection { get; private set; }
+
+        public InspectorOrderAttribute(InspectorSort inspectorSort = InspectorSort.ByName, InspectorSortDirection sortDirection = InspectorSortDirection.Ascending)
+        {
+            m_inspectorSort = inspectorSort;
+            m_sortDirection = sortDirection;
+        }
     }
 
     public enum InspectorSort

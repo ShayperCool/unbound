@@ -1,14 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Unity.Properties;
 using UnityEngine;
 using UnityEngine.Internal;
 using UnityEngine.UIElements;
 
-// Editor UI Toolkit PropertyField for supported scalar SerializedProperty types
-// (bool, int, long, uint, ulong, float, double, string) and SerializedPropertyBindEvent.
-// Documented in Unity 6000.0 Scripting API ("PropertyField", "PropertyField.RegisterValueChangeCallback");
-// matches the Unity 6000.0.71f1 Editor, tests/projects/propertyfield.
+// Editor UI Toolkit PropertyField for supported scalar and ordinary enum SerializedProperty types
+// (bool, int, long, uint, ulong, float, double, string, non-Flags enum) and
+// SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API ("PropertyField",
+// "PropertyField.RegisterValueChangeCallback"); matches the Unity 6000.0.71f1 Editor,
+// tests/projects/propertyfield and tests/projects/enumbinding.
 
 namespace UnityEditor.UIElements
 {
@@ -303,6 +305,37 @@ namespace UnityEditor.UIElements
                     var textField = ConfigureField<TextField, string>(originalField as TextField, property, s_CreateTextField);
                     if (textField != null) textField.maxLength = -1;
                     return textField;
+                case SerializedPropertyType.Enum:
+                {
+                    var enumType = property.ManagedEnumType;
+                    if (enumType != null && enumType.IsDefined(typeof(FlagsAttribute), false))
+                    {
+                        Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField (EnumFlags)");
+                        return null;
+                    }
+                    EnumData? enumData = enumType != null
+                        ? EnumDataUtility.GetCachedEnumData(enumType, excludeObsolete: false)
+                        : (EnumData?)null;
+                    string[] enumDisplayNames = property.enumDisplayNames;
+                    var popupEntries = new List<string>(enumData.HasValue ? enumData.Value.displayNames : enumDisplayNames);
+                    int propertyFieldIndex;
+                    int rawIndex = property.enumValueIndex;
+                    if (rawIndex < 0 || rawIndex >= enumDisplayNames.Length)
+                        propertyFieldIndex = -1;
+                    else
+                        propertyFieldIndex = enumData.HasValue
+                            ? Array.IndexOf(enumData.Value.displayNames, enumDisplayNames[rawIndex])
+                            : rawIndex;
+                    if (originalField is PopupField<string> existingPopup)
+                    {
+                        existingPopup.choices = popupEntries;
+                        existingPopup.index = propertyFieldIndex;
+                    }
+                    return ConfigureField<PopupField<string>, string>(
+                        originalField as PopupField<string>,
+                        property,
+                        () => new PopupField<string>(popupEntries, rawIndex) { index = propertyFieldIndex });
+                }
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField ({property.propertyType})");
                     return null;

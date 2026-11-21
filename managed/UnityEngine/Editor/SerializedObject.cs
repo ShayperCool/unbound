@@ -1044,9 +1044,38 @@ namespace UnityEditor
 
         // ------------------------------------------------------------ enums
 
-        static string[] EnumNames(Type type)
+        internal bool unsafeMode { get; set; }
+
+        internal Type ManagedEnumType
+        {
+            get
+            {
+                var n = N;
+                return n.PropertyType == SerializedPropertyType.Enum && n.ClrType != null && n.ClrType.IsEnum
+                    ? n.ClrType
+                    : null;
+            }
+        }
+
+        static FieldInfo[] EnumFieldsInSerializedOrder(Type type)
         {
             var fields = type.GetFields(BindingFlags.Public | BindingFlags.Static);
+            if (fields.Length > 1)
+            {
+                Array.Sort(fields, (a, b) =>
+                {
+                    int va = unchecked((int)ToLong(a.GetValue(null)));
+                    int vb = unchecked((int)ToLong(b.GetValue(null)));
+                    int cmp = va.CompareTo(vb);
+                    return cmp != 0 ? cmp : string.CompareOrdinal(a.Name, b.Name);
+                });
+            }
+            return fields;
+        }
+
+        static string[] EnumNames(Type type)
+        {
+            var fields = EnumFieldsInSerializedOrder(type);
             var names = new string[fields.Length];
             for (int i = 0; i < fields.Length; i++) names[i] = fields[i].Name;
             return names;
@@ -1054,7 +1083,7 @@ namespace UnityEditor
 
         static long[] EnumValues(Type type)
         {
-            var fields = type.GetFields(BindingFlags.Public | BindingFlags.Static);
+            var fields = EnumFieldsInSerializedOrder(type);
             var values = new long[fields.Length];
             for (int i = 0; i < fields.Length; i++) values[i] = ToLong(fields[i].GetValue(null));
             return values;
@@ -1120,13 +1149,15 @@ namespace UnityEditor
             {
                 var n = N;
                 if (n.PropertyType != SerializedPropertyType.Enum) return Array.Empty<string>();
-                var fields = n.ClrType.GetFields(BindingFlags.Public | BindingFlags.Static);
+                var fields = EnumFieldsInSerializedOrder(n.ClrType);
                 var names = new string[fields.Length];
                 for (int i = 0; i < fields.Length; i++)
                     names[i] = fields[i].GetCustomAttribute<InspectorNameAttribute>(false)?.displayName ?? ObjectNames.NicifyVariableName(fields[i].Name);
                 return names;
             }
         }
+
+        internal string[] enumLocalizedDisplayNames => enumDisplayNames;
 
         // ------------------------------------------------------------ managed references and boxed values
 

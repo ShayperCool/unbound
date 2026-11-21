@@ -9670,14 +9670,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public EnumButtonsDrawer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EnumButtonsDrawer.ctor"); }
     }
     [global::Unbound.Stub]
-    internal unsafe static partial class EnumDataUtility
-    {
-        [global::Unbound.Stub] internal static global::UnityEngine.EnumData GetCachedEnumData(global::System.Type enumType, bool excludeObsolete = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EnumDataUtility.GetCachedEnumData"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.EnumData GetCachedEnumData(global::System.Type enumType, global::UnityEngine.EnumDataUtility.CachedType cachedType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EnumDataUtility.GetCachedEnumData"); return default; }
-        [global::Unbound.Stub] internal static int EnumFlagsToInt(global::UnityEngine.EnumData enumData, global::System.Enum enumValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EnumDataUtility.EnumFlagsToInt"); return default; }
-        [global::Unbound.Stub] internal static global::System.Enum IntToEnumFlags(global::System.Type enumType, int value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EnumDataUtility.IntToEnumFlags"); return default; }
-    }
-    [global::Unbound.Stub]
     internal unsafe static partial class EnumUtility
     {
     }
@@ -22657,7 +22649,6 @@ namespace UnityEditor
         public global::UnityEngine.Object exposedReferenceValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.exposedReferenceValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.exposedReferenceValue"); } }
         internal bool isScript { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isScript"); return default; } }
         internal string localizedDisplayName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.localizedDisplayName"); return default; } }
-        internal string[] enumLocalizedDisplayNames { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.enumLocalizedDisplayNames"); return global::System.Array.Empty<string>(); } }
         internal int hasMultipleDifferentValuesBitwise { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.hasMultipleDifferentValuesBitwise"); return default; } }
         internal int hashCodeForPropertyPathWithoutArrayIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.hashCodeForPropertyPathWithoutArrayIndex"); return default; } }
         internal bool isCandidate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isCandidate"); return default; } }
@@ -22674,7 +22665,6 @@ namespace UnityEditor
         internal uint layerMaskBits { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.layerMaskBits"); return default; } }
         internal bool isValidDisplayNameCache { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isValidDisplayNameCache"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isValidDisplayNameCache"); } }
         internal bool isValidTooltipCache { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isValidTooltipCache"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isValidTooltipCache"); } }
-        internal bool unsafeMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.unsafeMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.unsafeMode"); } }
         [global::System.Flags]
         internal enum VerifyFlags
         {

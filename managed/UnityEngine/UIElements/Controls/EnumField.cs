@@ -154,15 +154,39 @@ namespace UnityEngine.UIElements
             value = null;
         }
 
+        internal void PopulateDataFromType(Type enumType) => SetType(enumType);
+
         void SetType(Type enumType)
         {
             m_EnumType = enumType;
             m_Entries.Clear();
-            foreach (var field in enumType.GetFields(BindingFlags.Public | BindingFlags.Static))
+            var fields = enumType.GetFields(BindingFlags.Public | BindingFlags.Static);
+            try
             {
+                if (fields.Length > 1 && !string.IsNullOrEmpty(fields[0].Module.Assembly.Location))
+                    Array.Sort(fields, (a, b) => a.MetadataToken.CompareTo(b.MetadataToken));
+            }
+            catch
+            {
+            }
+            for (int i = 0; i < fields.Length; i++)
+            {
+                var field = fields[i];
                 var inspectorName = (InspectorNameAttribute)Attribute.GetCustomAttribute(field, typeof(InspectorNameAttribute), false);
                 bool obsolete = field.IsDefined(typeof(ObsoleteAttribute), false);
-                m_Entries.Add(new Entry((Enum)field.GetValue(null), inspectorName != null ? inspectorName.displayName : field.Name, obsolete));
+                string displayName = inspectorName != null
+                    ? inspectorName.displayName
+                    : UnityEditor.ObjectNames.NicifyVariableName(field.Name);
+                m_Entries.Add(new Entry((Enum)field.GetValue(null), displayName, obsolete));
+            }
+            if (Attribute.GetCustomAttribute(enumType, typeof(InspectorOrderAttribute)) is InspectorOrderAttribute order && m_Entries.Count > 1)
+            {
+                if (order.m_inspectorSort == InspectorSort.ByValue)
+                    m_Entries.Sort((a, b) => Comparer<object>.Default.Compare(a.Value, b.Value));
+                else
+                    m_Entries.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
+                if (order.m_sortDirection == InspectorSortDirection.Descending)
+                    m_Entries.Reverse();
             }
         }
 

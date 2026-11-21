@@ -874,16 +874,6 @@ namespace UnityEditor.UIElements.Bindings
         [global::Unbound.Stub] public MultiColumnListViewSerializedObjectBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.MultiColumnListViewSerializedObjectBinding.ctor"); }
     }
     [global::Unbound.Stub]
-    internal unsafe partial class SerializedDefaultEnumBinding : global::UnityEditor.UIElements.Bindings.SerializedObjectBindingToBaseField<string, global::UnityEngine.UIElements.PopupField<string>>
-    {
-        [global::Unbound.Stub] public static void CreateBind(global::UnityEngine.UIElements.PopupField<string> field, global::UnityEditor.UIElements.Bindings.SerializedObjectBindingContext context, global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedDefaultEnumBinding.CreateBind"); }
-        [global::Unbound.Stub] protected override void SyncPropertyToField(global::UnityEngine.UIElements.PopupField<string> c, global::UnityEditor.SerializedProperty p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedDefaultEnumBinding.SyncPropertyToField"); }
-        [global::Unbound.Stub] protected override void UpdateLastFieldValue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedDefaultEnumBinding.UpdateLastFieldValue"); }
-        [global::Unbound.Stub] protected override bool SyncFieldValueToProperty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedDefaultEnumBinding.SyncFieldValueToProperty"); return default; }
-        [global::Unbound.Stub] public override void OnRelease() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedDefaultEnumBinding.OnRelease"); }
-        [global::Unbound.Stub] public SerializedDefaultEnumBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedDefaultEnumBinding.ctor"); }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class SerializedIsExpandedBinding : global::UnityEditor.UIElements.Bindings.SerializedObjectBindingPropertyToBaseField<bool, bool>
     {
         [global::Unbound.Stub] public SerializedIsExpandedBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedIsExpandedBinding.ctor"); }
@@ -893,16 +883,6 @@ namespace UnityEditor.UIElements.Bindings
         [global::Unbound.Stub] protected override void UpdateLastFieldValue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedIsExpandedBinding.UpdateLastFieldValue"); }
         [global::Unbound.Stub] protected override void AssignValueToFieldWithoutNotify(bool lastValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedIsExpandedBinding.AssignValueToFieldWithoutNotify"); }
         [global::Unbound.Stub] protected override void AssignValueToField(bool lastValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedIsExpandedBinding.AssignValueToField"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class SerializedManagedEnumBinding : global::UnityEditor.UIElements.Bindings.SerializedObjectBindingToBaseField<global::System.Enum, global::UnityEngine.UIElements.BaseField<global::System.Enum>>
-    {
-        [global::Unbound.Stub] public static void CreateBind(global::UnityEngine.UIElements.BaseField<global::System.Enum> field, global::UnityEditor.UIElements.Bindings.SerializedObjectBindingContext context, global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding.CreateBind"); }
-        [global::Unbound.Stub] protected override void SyncPropertyToField(global::UnityEngine.UIElements.BaseField<global::System.Enum> c, global::UnityEditor.SerializedProperty p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding.SyncPropertyToField"); }
-        [global::Unbound.Stub] protected override void UpdateLastFieldValue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding.UpdateLastFieldValue"); }
-        [global::Unbound.Stub] protected override bool SyncFieldValueToProperty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding.SyncFieldValueToProperty"); return default; }
-        [global::Unbound.Stub] public override void OnRelease() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding.OnRelease"); }
-        [global::Unbound.Stub] public SerializedManagedEnumBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class SerializedObjectList : global::UnityEngine.UIElements.ISerializedObjectList, global::System.Collections.IList, global::System.Collections.ICollection, global::System.Collections.IEnumerable
@@ -985,7 +965,6 @@ namespace UnityEditor.UIElements.Bindings
         [global::Unbound.Stub] public static char GetCharacterPropertyValue(global::UnityEditor.SerializedProperty p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.GetCharacterPropertyValue"); return default; }
         [global::Unbound.Stub] public static string GetCharacterPropertyValueAsString(global::UnityEditor.SerializedProperty p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.GetCharacterPropertyValueAsString"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.ToggleButtonGroupState GetToggleStatePropertyValue(global::UnityEditor.SerializedProperty p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.GetToggleStatePropertyValue"); return default; }
-        [global::Unbound.Stub] public static string GetEnumPropertyValueAsString(global::UnityEditor.SerializedProperty p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.GetEnumPropertyValueAsString"); return default; }
         [global::Unbound.Stub] public static void SetColorPropertyValue(global::UnityEditor.SerializedProperty p, global::UnityEngine.Color v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.SetColorPropertyValue"); }
         [global::Unbound.Stub] public static void SetObjectRefPropertyValue<T>(global::UnityEditor.SerializedProperty p, T v) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.SetObjectRefPropertyValue"); }
         [global::Unbound.Stub] public static void SetLayerMaskPropertyValue(global::UnityEditor.SerializedProperty p, int v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.SetLayerMaskPropertyValue"); }
@@ -1006,11 +985,8 @@ namespace UnityEditor.UIElements.Bindings
         [global::Unbound.Stub] public static void SetCharacterPropertyValue(global::UnityEditor.SerializedProperty p, char v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.SetCharacterPropertyValue"); }
         [global::Unbound.Stub] public static void SetCharacterPropertyValueFromString(global::UnityEditor.SerializedProperty p, string v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.SetCharacterPropertyValueFromString"); }
         [global::Unbound.Stub] public static void SetToggleStatePropertyValue(global::UnityEditor.SerializedProperty p, global::UnityEngine.UIElements.ToggleButtonGroupState v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.SetToggleStatePropertyValue"); }
-        [global::Unbound.Stub] public static void SetEnumPropertyValueFromString(global::UnityEditor.SerializedProperty p, string v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.SetEnumPropertyValueFromString"); }
-        [global::Unbound.Stub] public static int FindStringIndex(string[] values, string v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.FindStringIndex"); return default; }
         [global::Unbound.Stub] public static bool ValueEquals(global::UnityEngine.AnimationCurve value, global::UnityEditor.SerializedProperty p, global::System.Func<global::UnityEditor.SerializedProperty, global::UnityEngine.AnimationCurve> propertyReadFunc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.ValueEquals"); return default; }
         [global::Unbound.Stub] public static bool ValueEquals(global::UnityEngine.Gradient value, global::UnityEditor.SerializedProperty p, global::System.Func<global::UnityEditor.SerializedProperty, global::UnityEngine.Gradient> propertyReadFunc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.ValueEquals"); return default; }
-        [global::Unbound.Stub] public static bool SlowEnumValueEquals(string value, global::UnityEditor.SerializedProperty p, global::System.Func<global::UnityEditor.SerializedProperty, string> propertyReadFunc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.SlowEnumValueEquals"); return default; }
     }
 }
 namespace UnityEditor.UIElements.Debugger

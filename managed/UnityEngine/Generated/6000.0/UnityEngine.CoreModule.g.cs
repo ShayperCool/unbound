@@ -836,33 +836,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public EnumButtonsAttribute(bool includeObsolete = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.EnumButtonsAttribute.ctor"); }
     }
     [global::Unbound.Stub]
-    internal unsafe partial struct EnumData
-    {
-        [global::Unbound.Stub] public global::System.Enum[] values;
-        [global::Unbound.Stub] public int[] flagValues;
-        [global::Unbound.Stub] public string[] displayNames;
-        [global::Unbound.Stub] public string[] names;
-        [global::Unbound.Stub] public string[] tooltip;
-        [global::Unbound.Stub] public bool flags;
-        [global::Unbound.Stub] public global::System.Type underlyingType;
-        [global::Unbound.Stub] public bool unsigned;
-        [global::Unbound.Stub] public bool serializable;
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class EnumDataUtility
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.EnumData GetCachedEnumData(global::System.Type enumType, global::UnityEngine.EnumDataUtility.CachedType cachedType = (global::UnityEngine.EnumDataUtility.CachedType)1, global::System.Func<string, string> nicifyName = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.EnumDataUtility.GetCachedEnumData"); return default; }
-        [global::Unbound.Stub] public static int EnumFlagsToInt(global::UnityEngine.EnumData enumData, global::System.Enum enumValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.EnumDataUtility.EnumFlagsToInt"); return default; }
-        [global::Unbound.Stub] public static global::System.Enum IntToEnumFlags(global::System.Type enumType, int value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.EnumDataUtility.IntToEnumFlags"); return default; }
-        [global::Unbound.Stub] public static void HandleInspectorOrderAttribute(global::System.Type enumType, ref global::UnityEngine.EnumData enumData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.EnumDataUtility.HandleInspectorOrderAttribute"); }
-        public enum CachedType
-        {
-            ExcludeObsolete = 0,
-            IncludeObsoleteExceptErrors = 1,
-            IncludeAllObsolete = 2,
-        }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class EnumInfo
     {
         [global::Unbound.Stub] public string[] names;
@@ -1031,11 +1004,6 @@ namespace UnityEngine
         void RegisterInternal(global::System.Guid messageId);
         void UnregisterInternal(global::System.Guid messageId);
         bool IsConnected();
-    }
-    unsafe partial class InspectorOrderAttribute
-    {
-        internal global::UnityEngine.InspectorSort m_inspectorSort { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InspectorOrderAttribute.m_inspectorSort"); return default; } }
-        internal global::UnityEngine.InspectorSortDirection m_sortDirection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InspectorOrderAttribute.m_sortDirection"); return default; } }
     }
     public enum IntegrityCheckLevel
     {

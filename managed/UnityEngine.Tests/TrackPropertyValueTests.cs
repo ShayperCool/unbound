@@ -12,6 +12,38 @@ namespace UnityEngine.Tests
 {
     public class TrackPropertyValueTests
     {
+        enum SparseChoice
+        {
+            TenStep = 10,
+            [InspectorName("Mid Twenty Five")]
+            TwentyFive = 25,
+            HundredMax = 100
+        }
+
+        enum SignedChoice
+        {
+            MinusFive = -5,
+            ZeroPoint = 0,
+            PlusForty = 40,
+            [Obsolete("Legacy")]
+            OldChoice = 99
+        }
+
+        enum NonMonotonicAliasChoice
+        {
+            Primary = 50,
+            AliasOfPrimary = 50,
+            LowValue = 5
+        }
+
+        [Flags]
+        enum BitFlagsChoice
+        {
+            None = 0,
+            Read = 1,
+            Write = 2
+        }
+
         [Serializable]
         struct NestedPayload
         {
@@ -28,6 +60,10 @@ namespace UnityEngine.Tests
             public Vector3 pos = new Vector3(1, 2, 3);
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
+            public SparseChoice sparseEnum = SparseChoice.TwentyFive;
+            public SignedChoice signedEnum = SignedChoice.MinusFive;
+            public NonMonotonicAliasChoice aliasEnum = NonMonotonicAliasChoice.Primary;
+            public BitFlagsChoice flagsEnum = BitFlagsChoice.Read;
         }
 
         sealed class OtherTarget : ScriptableObject
@@ -830,6 +866,177 @@ namespace UnityEngine.Tests
                 data.Deserialize(created);
                 Assert.Null(created.label);
                 Assert.Null(created.bindingPath);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void EnumBindingSparseNegativeAndUnmeasuredRelease()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                // Direct EnumField on sparse/nonzero enum: both directions + rebind to another enum type + Unbind.
+                var ef = new EnumField();
+                panel.visualTree.Add(ef);
+                ef.BindProperty(so.FindProperty("sparseEnum"));
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal((Enum)SparseChoice.TwentyFive, ef.value);
+                Assert.Equal("Mid Twenty Five", ef.text);
+
+                ef.value = SparseChoice.HundredMax;
+                Assert.Equal(SparseChoice.HundredMax, target.sparseEnum);
+                target.sparseEnum = SparseChoice.TenStep;
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal((Enum)SparseChoice.TenStep, ef.value);
+                Assert.Equal("Ten Step", ef.text);
+
+                ef.BindProperty(so.FindProperty("signedEnum"));
+                Tick(panel);
+                Assert.Equal((Enum)SignedChoice.MinusFive, ef.value);
+                Assert.Equal("Minus Five", ef.text);
+
+                ef.Unbind();
+                Assert.Null(ef.value);
+                Assert.Equal(string.Empty, ef.text);
+
+                // PropertyField generates PopupField<string> with obsolete entries excluded.
+                var pf = new PropertyField(so.FindProperty("signedEnum"));
+                panel.visualTree.Add(pf);
+                pf.Bind(so);
+                Tick(panel);
+                Tick(panel);
+                var popup = Assert.IsType<PopupField<string>>(pf.hierarchy[0]);
+                Assert.Equal(new[] { "Minus Five", "Zero Point", "Plus Forty" }, popup.choices);
+                Assert.Equal(0, popup.index);
+                Assert.Equal("Minus Five", popup.text);
+                popup.index = 2;
+                Assert.Equal(SignedChoice.PlusForty, target.signedEnum);
+
+                // Direct PopupField<string> restores original choices and index on Unbind.
+                var origChoices = new List<string> { "KeepA", "KeepB" };
+                var directPopup = new PopupField<string>(origChoices, 1) { bindingPath = "sparseEnum" };
+                panel.visualTree.Add(directPopup);
+                directPopup.Bind(so);
+                Tick(panel);
+                Assert.Equal(new[] { "Ten Step", "Mid Twenty Five", "Hundred Max" }, directPopup.choices);
+                Assert.Equal(0, directPopup.index);
+                directPopup.Unbind();
+                Assert.Equal(origChoices, directPopup.choices);
+                Assert.Equal(1, directPopup.index);
+
+                // Non-monotonic / aliased enum: SerializedProperty orders by (int value, ordinal name)
+                // while PropertyField keeps declaration order and maps display indices accurately.
+                var pfAlias = new PropertyField(so.FindProperty("aliasEnum"));
+                panel.visualTree.Add(pfAlias);
+                pfAlias.Bind(so);
+                Tick(panel);
+                var aliasPopup = Assert.IsType<PopupField<string>>(pfAlias.hierarchy[0]);
+                Assert.Equal(new[] { "Primary", "Alias Of Primary", "Low Value" }, aliasPopup.choices);
+                Assert.Equal(0, aliasPopup.index);
+                Assert.Equal("Primary", aliasPopup.value);
+                aliasPopup.index = 2;
+                Assert.Equal(NonMonotonicAliasChoice.LowValue, target.aliasEnum);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void EnumBindingMixedStateAndDisposedSoAreClean()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.sparseEnum = SparseChoice.TenStep;
+            t2.sparseEnum = SparseChoice.HundredMax;
+            using var panel = RuntimePanel.Create(settings);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                var ef = new EnumField();
+                panel.visualTree.Add(ef);
+                ef.BindProperty(soMulti.FindProperty("sparseEnum"));
+                Tick(panel);
+                Tick(panel);
+                Assert.True(ef.showMixedValue);
+                Assert.Equal(BaseField<Enum>.mixedValueString, ef.text);
+
+                // Writing target[0]'s existing value resolves mixed state across both targets.
+                ef.value = SparseChoice.TenStep;
+                Tick(panel);
+                Assert.False(ef.showMixedValue);
+                Assert.Equal("Ten Step", ef.text);
+                Assert.Equal(SparseChoice.TenStep, t1.sparseEnum);
+                Assert.Equal(SparseChoice.TenStep, t2.sparseEnum);
+
+                // Disposing SO cleanly unbinds on tick without throwing.
+                soMulti.Dispose();
+                Tick(panel);
+                Tick(panel);
+                Assert.False(ef.HasBinding(BindingExtensions.s_SerializedBindingId));
+            }
+            finally
+            {
+                soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void EnumBindingFlagsReportStubAndScalarControlsBindEnum()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<TestTarget>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                const string pfFlagsKey = "UnityEditor.UIElements.PropertyField (EnumFlags)";
+                const string efFlagsKey = "UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding (Flags)";
+                int beforePf = Stubs.HitReport().FirstOrDefault(h => h.Key == pfFlagsKey).Value;
+                int beforeEf = Stubs.HitReport().FirstOrDefault(h => h.Key == efFlagsKey).Value;
+
+                var pfFlags = new PropertyField(so.FindProperty("flagsEnum"));
+                var efFlags = new EnumField();
+                panel.visualTree.Add(pfFlags);
+                panel.visualTree.Add(efFlags);
+                pfFlags.Bind(so);
+                efFlags.BindProperty(so.FindProperty("flagsEnum"));
+                Assert.Equal(0, pfFlags.hierarchy.childCount);
+                Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == pfFlagsKey).Value > beforePf);
+                Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == efFlagsKey).Value > beforeEf);
+
+                // IntegerField and TextField bind ordinary enums via int value and display name string.
+                var intField = new IntegerField();
+                var textField = new TextField();
+                panel.visualTree.Add(intField);
+                panel.visualTree.Add(textField);
+                intField.BindProperty(so.FindProperty("sparseEnum"));
+                textField.BindProperty(so.FindProperty("sparseEnum"));
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(25, intField.value);
+                Assert.Equal("Mid Twenty Five", textField.value);
+                intField.value = 100;
+                Assert.Equal(SparseChoice.HundredMax, target.sparseEnum);
+                textField.value = "Ten Step";
+                Assert.Equal(SparseChoice.TenStep, target.sparseEnum);
             }
             finally
             {

@@ -1099,7 +1099,6 @@ namespace UnityEngine.UIElements
     unsafe partial class EnumField
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId textProperty;
-        [global::Unbound.Stub] internal void PopulateDataFromType(global::System.Type enumType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EnumField.PopulateDataFromType"); }
         internal string typeAsString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EnumField.typeAsString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EnumField.typeAsString"); } }
         internal string valueAsString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EnumField.valueAsString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EnumField.valueAsString"); } }
         [global::System.Serializable]
