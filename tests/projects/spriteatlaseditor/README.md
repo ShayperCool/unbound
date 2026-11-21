@@ -12,7 +12,7 @@ toggles, `EditorUtility.IsDirty`/`GetDirtyCount`, `AssetDatabase.SaveAssets`/`Sa
 variant flag and sprite count; also the settings of `new SpriteAtlas()` and the answers for a null
 atlas. Recorded in Play mode, in batch mode, with the Unity 6000.0.71f1 Editor.
 
-Twelve profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
+Fourteen profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
 
 - `v1`: Sprite Packer mode "Sprite Atlas V1 - Always Enabled" with three `.spriteatlas` assets in
   `Assets/Atlases/`: `Main` (a folder, a texture and a sprite of a sheet as packables, included in
@@ -54,6 +54,13 @@ Twelve profiles, each with its own reference under `Reference/unity-6000.0.71f1/
   `packingSettings`).
 - `v2texture`: mode "Sprite Atlas V2 - Enabled" with the corresponding four `.spriteatlasv2` assets
   in `Assets/TextureAtlases/` and their `SpriteAtlasImporter` `.meta` files.
+- `v1platformset`: mode "Sprite Atlas V1 - Always Enabled" with four `.spriteatlas` assets in
+  `Assets/PlatformSetAtlases/`: `Master` (non-default `Android` and `iOS` entries alongside custom
+  `textureSettings` and `packingSettings`), `Variant` (variant of `Master` with its own `Android`
+  entry), `Legacy` (`serializedVersion: 1` `Android`, `Windows Store Apps` and BC7 `PS5` entries)
+  and `Omitted` (absent `platformSettings`, custom `textureSettings` and `packingSettings`).
+- `v2platformset`: mode "Sprite Atlas V2 - Enabled" with the corresponding four `.spriteatlasv2`
+  assets in `Assets/PlatformSetAtlases/` and their `SpriteAtlasImporter` `.meta` files.
 
 The sprites come from tests/projects/spriteatlas (files the Editor authored). The atlases are
 written from that probe's Editor-authored atlas files with other packables and settings. The
@@ -99,8 +106,19 @@ copy) and unconditionally marks the atlas dirty even on identical values on V1, 
 `serializedVersion` when omitted, preserving unrelated `packingSettings`/`platformSettings` and
 `.meta`) on V1 `SaveAssets`/`SaveAssetIfDirty` while leaving V2 files and `.meta` unchanged and
 dirty, and on V2 `ImportAsset(ForceUpdate)` reloads a fresh clean atlas whose texture settings
-revert to its own `.meta` (including for variants); a null atlas throws ArgumentNullException for
-all nine. Not measured: either kind of atlas in the other kind's packer mode.
+revert to its own `.meta` (including for variants); `SetPlatformSettings` normalizes `src.name` in
+place via `TextureImporter.GetTexturePlatformSerializationName` first (so a null `src` throws
+`NullReferenceException` even for a null atlas, and a non-null `src` has its name normalized before
+a null atlas throws `ArgumentNullException`), stores a defensive copy replacing any matching entry
+in place (even when `overridden` is false), appends an absent entry only when `overridden` is true
+or `name == "DefaultTexturePlatform"`, unconditionally marks the atlas dirty even on identical
+values or uninserted non-overridden entries, keeps V1 and V2 variants independent of their master,
+persists `m_EditorData.platformSettings` at `serializedVersion: 4` (inserting after
+`textureSettings` when omitted, preserving unrelated `textureSettings`/`packingSettings` and
+`.meta`) on V1 `SaveAssets`/`SaveAssetIfDirty`, leaves V2 files and `.meta` unchanged and dirty,
+and on V2 `ImportAsset(ForceUpdate)` reloads a fresh clean atlas reverted to its own `.meta`; a
+null atlas throws ArgumentNullException for all ten (with non-null `src` for `SetPlatformSettings`).
+Not measured: either kind of atlas in the other kind's packer mode.
 
 Values compare exactly.
 

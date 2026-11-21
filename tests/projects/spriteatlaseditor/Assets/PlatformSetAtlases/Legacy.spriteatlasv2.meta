@@ -1,0 +1,66 @@
+fileFormatVersion: 2
+guid: 9a1b2c3d4e5f60718293a4b5c6d7ed08
+SpriteAtlasImporter:
+  externalObjects: {}
+  textureSettings:
+    serializedVersion: 2
+    anisoLevel: 3
+    compressionQuality: 82
+    maxTextureSize: 512
+    textureCompression: 3
+    filterMode: 0
+    generateMipMaps: 1
+    readable: 0
+    crunchedCompression: 1
+    sRGB: 1
+  platformSettings:
+  - serializedVersion: 1
+    buildTarget: Android
+    maxTextureSize: 256
+    resizeAlgorithm: 0
+    textureFormat: 36
+    textureCompression: 1
+    compressionQuality: 40
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+  - serializedVersion: 1
+    buildTarget: Windows Store Apps
+    maxTextureSize: 512
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+  - serializedVersion: 1
+    buildTarget: PS5
+    maxTextureSize: 512
+    resizeAlgorithm: 0
+    textureFormat: 25
+    textureCompression: 1
+    compressionQuality: 42
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+  packingSettings:
+    serializedVersion: 2
+    padding: 8
+    blockOffset: 2
+    allowAlphaSplitting: 1
+    enableRotation: 1
+    enableTightPacking: 0
+    enableAlphaDilation: 0
+  secondaryTextureSettings: {}
+  variantMultiplier: 1
+  bindAsDefault: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
