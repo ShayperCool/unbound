@@ -9,8 +9,8 @@ Sprite Packer modes:
 - `v2`: `SpritePackerMode.SpriteAtlasV2` (5) with `.spriteatlasv2` assets
 - `disabled`: `SpritePackerMode.Disabled` (0) with `.spriteatlas` assets
 
-Beside the API answers each profile records a sprite loaded again (its texture imported again) after the
-atlases were packed (`afterPack.lateLoadedSprite`) and the whole `.spriteatlas` the pack wrote after an in-memory
+Beside the API answers each profile records a sprite of a packed atlas asked for again, its texture imported
+again, after the atlases were packed (`afterPack.lateLoadedSprite`) and the whole `.spriteatlas` the pack wrote after an in-memory
 `Add` (`pack.afterInMemoryAdd.written`).
 
 ```

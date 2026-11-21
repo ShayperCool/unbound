@@ -153,13 +153,8 @@ namespace UnityEngine.U2D
             foreach (var atlas in s_Atlases.Values)
                 if (atlas.Master != null && s_Atlases.TryGetValue(atlas.Master, out var master) && !string.IsNullOrEmpty(master.Tag))
                     atlas.Tag = master.Tag;
-            // Sprites bind only to atlases packed for Play mode: one SpriteAtlasUtility packs outside
-            // the Play-mode packing modes leaves loaded sprites on their own textures (matches the
-            // Unity 6000.0.71f1 Editor, tests/projects/spriteatlaspack afterPack.lateLoadedSprite).
-            bool playModePacking = UnityEditor.EditorSettings.IsPlayModeAtlasPackingActive;
             foreach (var atlas in s_Atlases.Values)
             {
-                if (!playModePacking && !s_PlayModePacked.Contains(atlas.Guid)) continue;
                 var target = atlas.IncludeInBuild ? s_BuiltInBySprite : s_ExcludedBySprite;
                 for (int i = 0; i < atlas.Sprites.Count; i++)
                 {
