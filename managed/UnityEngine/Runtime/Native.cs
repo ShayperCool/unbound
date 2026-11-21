@@ -50,6 +50,7 @@ namespace Unbound.Runtime
                 throw new InvalidOperationException($"native API version {api->Version}, managed expects {NativeApi.CurrentVersion}");
             s_Api = *api;
             s_Ready = true;
+            if (s_Api.JobsApi != null) Jobs.JobSystem.Install(s_Api.JobsApi());
             // Scene and prefab instances of ScriptedImporter prefabs expand from documents this writes.
             if (s_Api.SetDocumentSource != null) s_Api.SetDocumentSource(&ImportedPrefabDocuments.Write);
         }

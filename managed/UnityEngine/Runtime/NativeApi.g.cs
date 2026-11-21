@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 91;
+        internal const uint CurrentVersion = 92;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -226,5 +226,7 @@ namespace Unbound.Runtime
         /// in the out buffer.
         /// </summary>
         internal delegate* unmanaged<ulong, byte*, int, byte*, long, ImportedTextureInfo*, NativeBuffer*, int> GenerateTexture;
+        /// <summary>The job system's table (`unbound_jobs::ffi::JobsApi`, managed `JobsApi`).</summary>
+        internal delegate* unmanaged<void*> JobsApi;
     }
 }

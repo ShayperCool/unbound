@@ -102,7 +102,8 @@ use std::ffi::c_void;
 /// 90: a state override's mask bit `ENGINE_STENCIL` writes the engine's stencil bits (its
 /// reference) beside the pass's own reference bits its read mask keeps.
 /// 91: texture flag bit 19 marks Unity's B8G8R8A8 color (`owned::Texture::blue_first`).
-pub const NATIVE_API_VERSION: u32 = 91;
+/// 92: `jobs_api`, the job system (`unbound_jobs::ffi::JobsApi`).
+pub const NATIVE_API_VERSION: u32 = 92;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -385,6 +386,9 @@ pub struct NativeApi {
         *mut ImportedTextureInfo,
         *mut NativeBuffer,
     ) -> i32,
+    // Version 92: the job system.
+    /// The job system's table (`unbound_jobs::ffi::JobsApi`, managed `JobsApi`).
+    pub jobs_api: extern "C" fn() -> *const c_void,
 }
 
 pub fn api() -> NativeApi {
@@ -450,6 +454,7 @@ pub fn api() -> NativeApi {
         set_document_source,
         document_source_write,
         generate_texture,
+        jobs_api,
     }
 }
 
@@ -1465,6 +1470,10 @@ extern "C" fn external_texture(
             1
         }
     }
+}
+
+extern "C" fn jobs_api() -> *const c_void {
+    std::ptr::from_ref(unbound_jobs::ffi::api()).cast()
 }
 
 extern "C" fn audio_set_callback(callback: Option<Callback>) {

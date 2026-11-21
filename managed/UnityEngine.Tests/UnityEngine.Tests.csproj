@@ -35,6 +35,9 @@
     <UnboundNativeFile Condition="$([MSBuild]::IsOSPlatform('OSX'))">libunbound_physx.dylib</UnboundNativeFile>
     <UnboundNativeFile Condition="$([MSBuild]::IsOSPlatform('Linux'))">libunbound_physx.so</UnboundNativeFile>
     <UnboundNativeFile Condition="'$(UnboundNativeFile)' == ''">unbound_physx.dll</UnboundNativeFile>
+    <UnboundJobsFile Condition="$([MSBuild]::IsOSPlatform('OSX'))">libunbound_jobs.dylib</UnboundJobsFile>
+    <UnboundJobsFile Condition="$([MSBuild]::IsOSPlatform('Linux'))">libunbound_jobs.so</UnboundJobsFile>
+    <UnboundJobsFile Condition="'$(UnboundJobsFile)' == ''">unbound_jobs.dll</UnboundJobsFile>
   </PropertyGroup>
   <Target Name="UnboundLocateNativeLibraries" BeforeTargets="AssignTargetPaths">
     <Exec Condition="'$(UnboundNativeDir)' == ''" Command="python3 tools/build.py --cache none --print-env"
@@ -56,8 +59,22 @@
     </PropertyGroup>
     <Error Condition="'$(UnboundNativeLibrary)' == ''"
            Text="UnityEngine.Tests needs the native $(UnboundNativeFile), not found in $(UnboundSearched): build it with `python3 tools/build.py -- build --release --locked -p unbound`, or name its target with CARGO_TARGET_DIR or -p:UnboundNativeDir=&lt;target&gt;/managed." />
+    <!-- The job system (crates/unbound-jobs), whose shared library cargo leaves among the same
+         target's release dependencies: under the build directory tools/build.py sets, or the
+         target's own for a plain cargo build (the newer). -->
+    <PropertyGroup>
+      <UnboundTargetOfNative>$([System.IO.Path]::GetDirectoryName($([System.IO.Path]::GetDirectoryName('$(UnboundNativeLibrary)'))))</UnboundTargetOfNative>
+      <UnboundJobsBuilt>$(UnboundTargetOfNative)/build/release/deps/$(UnboundJobsFile)</UnboundJobsBuilt>
+      <UnboundJobsPlain>$(UnboundTargetOfNative)/release/deps/$(UnboundJobsFile)</UnboundJobsPlain>
+      <UnboundJobsLibrary Condition="Exists('$(UnboundJobsBuilt)')">$(UnboundJobsBuilt)</UnboundJobsLibrary>
+      <UnboundJobsLibrary Condition="Exists('$(UnboundJobsPlain)') and ('$(UnboundJobsLibrary)' == '' or
+          $([System.IO.File]::GetLastWriteTime('$(UnboundJobsPlain)').Ticks) &gt; $([System.IO.File]::GetLastWriteTime('$(UnboundJobsLibrary)').Ticks))">$(UnboundJobsPlain)</UnboundJobsLibrary>
+    </PropertyGroup>
+    <Error Condition="'$(UnboundJobsLibrary)' == ''"
+           Text="UnityEngine.Tests needs the job system's $(UnboundJobsFile), found in neither $(UnboundJobsBuilt) nor $(UnboundJobsPlain): build it with `python3 tools/build.py -- build --release --locked -p unbound`." />
     <ItemGroup>
       <None Include="$(UnboundNativeLibrary)" CopyToOutputDirectory="Always" Link="$(UnboundNativeFile)" />
+      <None Include="$(UnboundJobsLibrary)" CopyToOutputDirectory="Always" Link="$(UnboundJobsFile)" />
     </ItemGroup>
   </Target>
   <ItemGroup>

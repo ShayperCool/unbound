@@ -273,7 +273,8 @@ namespace UnityEngine.Tests
             var command = new ReadCommand { Offset = 0, Size = 8, Buffer = buffer.Bytes };
             var read = AsyncReadManager.Read(m_Path, &command, 1);
             var job = read.JobHandle;
-            Assert.True(JobSystem.RecordOf(job).Finished.Wait(10_000));
+            JobSystem.WaitForExecution(job);
+            Assert.True(JobSystem.HasRun(job));
             read.Dispose();
             Assert.Null(JobSystem.RecordOf(job));
 
@@ -283,7 +284,8 @@ namespace UnityEngine.Tests
             JobHandle.ScheduleBatchedJobs();
             var deferred = AsyncReadManager.ReadDeferred(file, &array, user);
             var deferredJob = deferred.JobHandle;
-            Assert.True(JobSystem.RecordOf(deferredJob).Finished.Wait(10_000));
+            JobSystem.WaitForExecution(deferredJob);
+            Assert.True(JobSystem.HasRun(deferredJob));
             deferred.Dispose();
             Sweep();
             // Syncing the read would sync the caller's job: it waits for the caller.
@@ -300,7 +302,8 @@ namespace UnityEngine.Tests
             var both = JobHandle.CombineDependencies(first, second);
             JobHandle.ScheduleBatchedJobs();
             var close = file.Close(both);
-            Assert.True(JobSystem.RecordOf(close).Finished.Wait(10_000));
+            JobSystem.WaitForExecution(close);
+            Assert.True(JobSystem.HasRun(close));
             Sweep();
             Assert.NotNull(JobSystem.RecordOf(close));
             first.Complete();

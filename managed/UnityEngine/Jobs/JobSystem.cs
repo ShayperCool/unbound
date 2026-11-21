@@ -26,32 +26,40 @@ namespace Unbound.Runtime.Jobs
         public int Size;
     }
 
-    /// <summary>A scheduled job, a combination of dependencies, until it is synced.</summary>
+    /// <summary>A scheduled job, a combination of dependencies, until it is synced. Its native side
+    /// (<see cref="Id"/>, crates/unbound-jobs) runs it; its callbacks get <see cref="Self"/>.</summary>
     internal sealed unsafe class JobRecord
     {
+        /// <summary>The native job's handle (<c>JobHandle.jobGroup</c>), 0 until it is scheduled.</summary>
         public ulong Id;
+        public GCHandle Self;
         public string Name;
         public JobReflection Reflection;
         public byte* Data;
         public IntPtr AdditionalData;
         public IntPtr BufferRangePatchData;
         public JobRecord[] Dependencies = Array.Empty<JobRecord>();
-        public readonly List<JobRecord> Dependents = new List<JobRecord>();
-        public int PendingDependencies;
         /// <summary>The job's ranges (parallel jobs): a JobRanges, then per job index its element
         /// range, then per job index the next batch it will take.</summary>
         public JobRanges* Ranges;
         public int Participants = 1;
-        /// <summary>Per participant: whether a thread took it.</summary>
-        public int[] Claimed = new int[1];
-        public int Remaining;
-        public bool Flushed;
-        public volatile bool Held;
+        bool m_Held;
+        /// <summary>Kept batched over flushes (an engine job preparing its native inputs).</summary>
+        public bool Held
+        {
+            get => m_Held;
+            set
+            {
+                m_Held = value;
+                JobSystem.UpdateHold(this);
+            }
+        }
         public bool Parallel;
         public bool Transform;
-        public volatile bool Done;
+        public bool Done => JobSystem.IsDone(this);
         public bool Synced;
-        public readonly ManualResetEventSlim Finished = new ManualResetEventSlim(false);
+        /// <summary>Preparing it threw: its participants do nothing.</summary>
+        public bool PrepareFailed;
         public readonly List<Safety.Node> Nodes = new List<Safety.Node>();
         public readonly List<Safety.Shadow> Shadows = new List<Safety.Shadow>();
         /// <summary>Containers to deallocate after the job ([DeallocateOnJobCompletion]).</summary>
@@ -71,39 +79,33 @@ namespace Unbound.Runtime.Jobs
 
     /// <summary>
     /// Unity's job system: jobs scheduled from the main thread wait in a batch until
-    /// ScheduleBatchedJobs (or Complete/IsCompleted) flushes it, then run on worker threads in
+    /// ScheduleBatchedJobs (or Complete/IsCompleted) flushes it, then run on the job workers in
     /// dependency order; Complete runs what it waits for on the calling thread when no worker has
-    /// started it. Parallel-for jobs split into batches the participants take and steal. The safety
-    /// system's state of a job is released when it is synced (Complete).
+    /// started it. The scheduling and the workers are native (crates/unbound-jobs, through
+    /// <see cref="JobsApi"/>); this side holds the jobs' data, ranges and safety state. Parallel-for
+    /// jobs split into batches the participants take and steal. The safety system's state of a job
+    /// is released when it is synced (Complete).
     /// </summary>
-    internal static unsafe class JobSystem
+    internal static unsafe partial class JobSystem
     {
         internal delegate void Invoker(Delegate function, IntPtr data, IntPtr additional, IntPtr bufferRangePatchData, IntPtr ranges, int jobIndex);
 
-        static readonly object s_Lock = new object();
         static readonly ConcurrentDictionary<ulong, JobRecord> s_Records = new ConcurrentDictionary<ulong, JobRecord>();
-        static readonly List<JobRecord> s_Batch = new List<JobRecord>();
-        static readonly ConcurrentQueue<(JobRecord Job, int Index)> s_Ready = new ConcurrentQueue<(JobRecord, int)>();
-        static readonly SemaphoreSlim s_Work = new SemaphoreSlim(0);
-        static long s_NextId;
-        static Thread[] s_Workers;
-        static int s_ActiveWorkers;
         static int s_PendingTransformJobs;
 
+        /// <summary>The logical processors (SystemInfo.processorCount), as the workers count them.</summary>
+        internal static int ProcessorCount => Api->ProcessorCount();
+
         /// <summary>Unity's worker count: one per core but the main thread's.</summary>
-        internal static readonly int MaximumWorkers = Math.Max(1, Environment.ProcessorCount - 1);
+        internal static int MaximumWorkers => Api->MaxWorkers();
 
         /// <summary>Thread indices: the main thread (0), the workers, and Unity's four background workers.</summary>
         internal static int ThreadIndexCount => MaximumWorkers + 5;
 
         internal static int ActiveWorkers
         {
-            get => s_ActiveWorkers;
-            set
-            {
-                EnsureWorkers();
-                s_ActiveWorkers = value;
-            }
+            get => Api->WorkerCount();
+            set => Api->SetWorkerCount(value);
         }
 
         [ThreadStatic] static JobRecord t_Executing;
@@ -130,38 +132,6 @@ namespace Unbound.Runtime.Jobs
 
         /// <summary>The temp memory scope of the job executing on this thread.</summary>
         internal static Safety.TempScope CurrentTempScope => t_Executing != null ? t_JobScope : null;
-
-        static void EnsureWorkers()
-        {
-            if (s_Workers != null) return;
-            lock (s_Lock)
-            {
-                if (s_Workers != null) return;
-                s_ActiveWorkers = MaximumWorkers;
-                var workers = new Thread[MaximumWorkers];
-                for (int i = 0; i < workers.Length; i++)
-                {
-                    int index = i + 1;
-                    workers[i] = new Thread(() => WorkerLoop(index)) { IsBackground = true, Name = "Job.Worker " + i };
-                    workers[i].Start();
-                }
-                s_Workers = workers;
-            }
-        }
-
-        static void WorkerLoop(int index)
-        {
-            t_ThreadIndex = index;
-            t_JobScope = new Safety.TempScope();
-            while (true)
-            {
-                // Workers above JobWorkerCount stay idle; the work goes to the others (or to Complete).
-                while (index > Volatile.Read(ref s_ActiveWorkers)) Thread.Sleep(10);
-                s_Work.Wait();
-                // Every item left (some were taken by Complete on another thread meanwhile).
-                while (index <= Volatile.Read(ref s_ActiveWorkers) && s_Ready.TryDequeue(out var item)) Execute(item.Job, item.Index);
-            }
-        }
 
         // ------------------------------------------------------------------ reflection data
 
@@ -269,12 +239,10 @@ namespace Unbound.Runtime.Jobs
             if (dependencies.Count == 0) return default;
             if (dependencies.Count == 1) return dependencies[0].Handle;
             var combined = NewRecord("CombineDependencies", null, dependencies.ToArray());
-            combined.Remaining = 0;
-            lock (s_Lock)
-            {
-                combined.Flushed = true;
-                if (combined.PendingDependencies == 0) FinishLocked(combined);
-            }
+            var ids = new ulong[dependencies.Count];
+            for (int i = 0; i < ids.Length; i++) ids[i] = dependencies[i].Id;
+            fixed (ulong* p = ids) combined.Id = Api->Combine(GCHandle.ToIntPtr(combined.Self), p, ids.Length);
+            s_Records[combined.Id] = combined;
             return combined.Handle;
         }
 
@@ -282,22 +250,21 @@ namespace Unbound.Runtime.Jobs
         {
             var record = new JobRecord
             {
-                Id = (ulong)Interlocked.Increment(ref s_NextId),
                 Name = name,
                 Reflection = reflection,
                 Dependencies = dependencies,
             };
-            lock (s_Lock)
-            {
-                foreach (var dependency in dependencies)
-                {
-                    if (dependency.Done) continue;
-                    record.PendingDependencies++;
-                    dependency.Dependents.Add(record);
-                }
-            }
-            s_Records[record.Id] = record;
+            record.Self = GCHandle.Alloc(record);
             return record;
+        }
+
+        /// <summary>Hands a checked and prepared job to the native batch.</summary>
+        static void Register(JobRecord record)
+        {
+            ulong dependency = record.Dependencies.Length != 0 ? record.Dependencies[0].Id : 0;
+            record.Id = Api->Schedule(GCHandle.ToIntPtr(record.Self), dependency);
+            s_Records[record.Id] = record;
+            if (record.Transform) Interlocked.Increment(ref s_PendingTransformJobs);
         }
 
         // ------------------------------------------------------------------ scheduling
@@ -379,7 +346,7 @@ namespace Unbound.Runtime.Jobs
                     Safety.TypeName(handle.staticSafetyId), container.Path, previous => IsDependency(dependency, previous));
                 if (error != null)
                 {
-                    Discard(record);
+                    record.Self.Free();
                     throw new InvalidOperationException(error);
                 }
             }
@@ -429,29 +396,16 @@ namespace Unbound.Runtime.Jobs
             }
             if (additionalData != null) record.AdditionalData = (IntPtr)additionalData;
 
+            Register(record);
             if (mode == ScheduleMode.Run)
             {
                 // Run executes now on this thread (after its dependencies) and is synced at once.
-                RunNow(record);
+                Api->Wait(record.Id);
                 Sync(record);
                 return default;
             }
-            lock (s_Lock)
-            {
-                s_Batch.Add(record);
-                if (record.Transform) s_PendingTransformJobs++;
-            }
-            if (Trace.JobsOn) Trace.Jobs($"scheduled {record.Name} #{record.Id} ({record.Participants} participants, {record.PendingDependencies} pending dependencies)");
+            if (Trace.JobsOn) Trace.Jobs($"scheduled {record.Name} #{record.Id:x} ({record.Participants} participants)");
             return record.Handle;
-        }
-
-        /// <summary>Undoes a record that failed its checks.</summary>
-        static void Discard(JobRecord record)
-        {
-            lock (s_Lock)
-                foreach (var dependency in record.Dependencies)
-                    dependency.Dependents.Remove(record);
-            s_Records.TryRemove(record.Id, out _);
         }
 
         /// <summary>What PatchBufferMinMaxRanges reads: the count of containers to restrict, then per
@@ -530,8 +484,6 @@ namespace Unbound.Runtime.Jobs
             int n = chunks.Count;
             record.Parallel = kind != Kind.Single;
             record.Participants = n;
-            record.Claimed = new int[n];
-            record.Remaining = n;
             var ranges = (JobRanges*)NativeMemory.AllocZeroed((nuint)(sizeof(JobRanges) + 4 * 3 * n));
             int* startEnd = (int*)(ranges + 1);
             int* cursors = startEnd + 2 * n;
@@ -573,50 +525,61 @@ namespace Unbound.Runtime.Jobs
 
         // ------------------------------------------------------------------ execution
 
+        static readonly object s_BeforeStartLock = new object();
+        /// <summary>Batched jobs with <see cref="JobRecord.BeforeStart"/> work due (held natively until it ran).</summary>
+        static readonly List<JobRecord> s_BeforeStart = new List<JobRecord>();
+
         /// <summary>Makes the batched jobs available to the workers.</summary>
         internal static void Flush()
         {
             RunBatchBeforeStart();
-            List<JobRecord> batch;
-            lock (s_Lock)
-            {
-                if (s_Batch.Count == 0) return;
-                batch = new List<JobRecord>(s_Batch);
-                s_Batch.Clear();
-                if (Trace.JobsOn) Trace.Jobs($"flush {batch.Count} jobs");
-                foreach (var record in batch)
-                {
-                    // Engine jobs can validate ownership before preparing their native inputs.
-                    // A flush during that preparation must leave them queued.
-                    if (record.Held || record.BeforeStart != null) { s_Batch.Add(record); continue; }
-                    record.Flushed = true;
-                    if (record.PendingDependencies == 0) EnqueueLocked(record);
-                }
-            }
+            Api->Flush();
         }
 
         [ThreadStatic] static List<JobRecord> t_BeforeStart;
 
-        /// <summary>The batched jobs' <see cref="JobRecord.BeforeStart"/> work, outside the lock. It
-        /// is main-thread work: a flush from another thread leaves such jobs batched (see Flush). A
-        /// Complete runs it on the completing thread (RunNow); particle jobs, the only users, are
+        /// <summary>The batched jobs' <see cref="JobRecord.BeforeStart"/> work. It is main-thread
+        /// work: a flush from another thread leaves such jobs batched (they are held). A Complete
+        /// runs it on the completing thread (OnPrepare); particle jobs, the only users, are
         /// completed by the main thread.</summary>
         static void RunBatchBeforeStart()
         {
             if (!PlayerLoopDriver.IsMainThread) return;
             var due = t_BeforeStart ??= new List<JobRecord>();
-            lock (s_Lock)
-                foreach (var record in s_Batch)
-                    if (record.BeforeStart != null && !record.Held) due.Add(record);
-            if (due.Count == 0) return;
+            lock (s_BeforeStartLock)
+            {
+                if (s_BeforeStart.Count == 0) return;
+                for (int i = s_BeforeStart.Count - 1; i >= 0; i--)
+                {
+                    var record = s_BeforeStart[i];
+                    if (record.BeforeStart == null) s_BeforeStart.RemoveAt(i);
+                    else if (!record.Held)
+                    {
+                        due.Add(record);
+                        s_BeforeStart.RemoveAt(i);
+                    }
+                }
+            }
             try
             {
-                foreach (var record in due) RunBeforeStart(record);
+                for (int i = due.Count - 1; i >= 0; i--) RunBeforeStart(due[i]);
             }
             finally { due.Clear(); }
         }
 
-        static void RunBeforeStart(JobRecord record) => Interlocked.Exchange(ref record.BeforeStart, null)?.Invoke();
+        static void RunBeforeStart(JobRecord record)
+        {
+            var action = Interlocked.Exchange(ref record.BeforeStart, null);
+            if (action == null) return;
+            try { action(); }
+            finally { UpdateHold(record); }
+        }
+
+        /// <summary>Holds the native job in the batch while it is held or its BeforeStart work is due.</summary>
+        internal static void UpdateHold(JobRecord record)
+        {
+            if (record.Id != 0) Api->SetHeld(record.Id, record.Held || Volatile.Read(ref record.BeforeStart) != null ? 1 : 0);
+        }
 
         /// <summary>Work the main thread does right before the scheduled job starts: when it is flushed
         /// to the workers or run by a Complete. Set on the main thread right after Schedule, before
@@ -624,13 +587,19 @@ namespace Unbound.Runtime.Jobs
         internal static void SetBeforeStart(JobHandle handle, Action action)
         {
             var record = Find(handle);
-            lock (s_Lock)
+            if (record != null)
             {
-                if (record != null && !record.Flushed && !record.Done)
+                lock (s_BeforeStartLock)
                 {
                     record.BeforeStart = action;
-                    return;
+                    if (Api->SetHeld(record.Id, 1) != 0)
+                    {
+                        s_BeforeStart.Add(record);
+                        return;
+                    }
+                    record.BeforeStart = null;
                 }
+                UpdateHold(record);
             }
             action();
         }
@@ -643,12 +612,7 @@ namespace Unbound.Runtime.Jobs
             var record = Find(handle);
             if (record == null) return;
             RunBeforeStart(record);
-            lock (s_Lock)
-            {
-                if (!s_Batch.Remove(record)) return;
-                record.Flushed = true;
-                if (record.PendingDependencies == 0) EnqueueLocked(record);
-            }
+            Api->Start(record.Id);
         }
 
         /// <summary>Before the job's first participant runs (its dependencies done): deferred arrays
@@ -681,26 +645,20 @@ namespace Unbound.Runtime.Jobs
             if (container.MaxOffset >= 0) *(int*)(record.Data + container.MaxOffset) = length - 1;
         }
 
-        static void EnqueueLocked(JobRecord record)
+        /// <summary>Runs participant <paramref name="jobIndex"/> of a job on this thread, whose
+        /// <c>JobsUtility.ThreadIndex</c> is <paramref name="threadIndex"/>.</summary>
+        static void Execute(JobRecord record, int jobIndex, int threadIndex)
         {
-            PrepareToRun(record);
-            EnsureWorkers();
-            for (int j = 0; j < record.Participants; j++) s_Ready.Enqueue((record, j));
-            s_Work.Release(Math.Min(record.Participants, MaximumWorkers));
-        }
-
-        /// <summary>Runs participant <paramref name="jobIndex"/> of a job unless it was taken.</summary>
-        static void Execute(JobRecord record, int jobIndex)
-        {
-            if (Interlocked.Exchange(ref record.Claimed[jobIndex], 1) != 0) return;
-            if (Trace.JobsOn) Trace.Jobs($"run {record.Name} #{record.Id} participant {jobIndex} on thread {Environment.CurrentManagedThreadId}");
+            if (record.PrepareFailed) return;
+            if (Trace.JobsOn) Trace.Jobs($"run {record.Name} #{record.Id:x} participant {jobIndex} on thread {threadIndex}");
             var previous = t_Executing;
             var previousScope = t_JobScope;
             int previousIndex = t_ThreadIndex;
             t_Executing = record;
             t_FreeJobScopes ??= new Stack<Safety.TempScope>();
             t_JobScope = t_FreeJobScopes.TryPop(out var availableScope) ? availableScope : new Safety.TempScope();
-            if (!PlayerLoopDriver.IsMainThread && t_ThreadIndex == 0) t_ThreadIndex = 1;
+            // A thread that is neither a worker nor the main thread runs a job as a worker would.
+            t_ThreadIndex = threadIndex != 0 || PlayerLoopDriver.IsMainThread ? threadIndex : 1;
             byte* data = record.Data;
             byte* copy = null;
             try
@@ -729,63 +687,24 @@ namespace Unbound.Runtime.Jobs
                 t_JobScope = previousScope;
                 t_ThreadIndex = previousIndex;
             }
-            if (Interlocked.Decrement(ref record.Remaining) == 0) Finish(record);
         }
 
+        /// <summary>After the last participant: [DeallocateOnJobCompletion] containers and the
+        /// engine's completion work. Each runs even when another throws.</summary>
         static void Finish(JobRecord record)
         {
-            if (Trace.JobsOn) Trace.Jobs($"finished {record.Name} #{record.Id}");
+            if (Trace.JobsOn) Trace.Jobs($"finished {record.Name} #{record.Id:x}");
             foreach (var (buffer, allocator, safety) in record.Deallocations)
             {
-                UnsafeUtility.FreeTracked((void*)buffer, allocator);
-                AtomicSafetyHandle.Release(safety);
-            }
-            record.OnFinished?.Invoke();
-            lock (s_Lock) FinishLocked(record);
-        }
-
-        static void FinishLocked(JobRecord record)
-        {
-            record.Done = true;
-            record.Finished.Set();
-            foreach (var dependent in record.Dependents)
-            {
-                if (--dependent.PendingDependencies != 0) continue;
-                if (dependent.Reflection == null)
+                try
                 {
-                    // A combination: done when its dependencies are.
-                    FinishLocked(dependent);
+                    UnsafeUtility.FreeTracked((void*)buffer, allocator);
+                    AtomicSafetyHandle.Release(safety);
                 }
-                else if (dependent.Flushed)
-                {
-                    EnqueueLocked(dependent);
-                }
+                catch (Exception e) { Debug.LogException(e); }
             }
-        }
-
-        /// <summary>Runs a job and its unstarted dependencies on this thread; waits for what others run.</summary>
-        static void RunNow(JobRecord record)
-        {
-            lock (s_Lock) s_Batch.Remove(record);
-            foreach (var dependency in record.Dependencies) RunNow(dependency);
-            if (record.Reflection != null)
-            {
-                foreach (var dependency in record.Dependencies) dependency.Finished.Wait();
-                RunBeforeStart(record);
-                lock (s_Lock)
-                {
-                    PrepareToRun(record);
-                    if (record.Participants > 1 && !record.Flushed)
-                    {
-                        // The workers help through the queue while this thread takes participants too.
-                        record.Flushed = true;
-                        s_Batch.Remove(record);
-                        EnqueueLocked(record);
-                    }
-                }
-                for (int j = 0; j < record.Participants; j++) Execute(record, j);
-            }
-            record.Finished.Wait();
+            try { record.OnFinished?.Invoke(); }
+            catch (Exception e) { Debug.LogException(e); }
         }
 
         // ------------------------------------------------------------------ completion
@@ -795,7 +714,7 @@ namespace Unbound.Runtime.Jobs
         internal static void WaitForExecution(JobHandle handle)
         {
             var record = Find(handle);
-            if (record != null && !record.Done) RunNow(record);
+            if (record != null) Api->Wait(record.Id);
         }
 
         internal static void Complete(JobHandle handle)
@@ -804,12 +723,13 @@ namespace Unbound.Runtime.Jobs
             if (record == null) return;
             if (!record.Done)
             {
-                lock (s_Lock) s_Batch.Remove(record);
-                RunNow(record);
+                Api->Wait(record.Id);
                 Flush();
             }
             Sync(record);
         }
+
+        internal static bool IsDone(JobRecord record) => Api->IsDone(record.Id) != 0;
 
         /// <summary>Whether the job has run, without sending out the waiting batch (IsCompleted sends
         /// it): a job still in the batch has not.</summary>
@@ -835,11 +755,10 @@ namespace Unbound.Runtime.Jobs
             if (Trace.JobsOn) Trace.Jobs($"synced {record.Name} #{record.Id}");
             foreach (var dependency in record.Dependencies) Sync(dependency);
             Safety.JobSynced(record);
-            if (record.Transform)
-            {
-                lock (s_Lock) s_PendingTransformJobs--;
-            }
+            if (record.Transform) Interlocked.Decrement(ref s_PendingTransformJobs);
             s_Records.TryRemove(record.Id, out _);
+            Api->Release(record.Id);
+            if (record.Self.IsAllocated) record.Self.Free();
             if (record.Data != null) NativeMemory.AlignedFree(record.Data);
             record.Data = null;
             if (record.Ranges != null) NativeMemory.Free(record.Ranges);

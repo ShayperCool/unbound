@@ -128,7 +128,7 @@ namespace UnityEngine
                 && Unbound.Runtime.MachineIdentity.MacSysctlInteger("hw.tbfrequency") is long timebase and > 0
                 && Unbound.Runtime.MachineIdentity.MacSysctlInteger("kern.clockrate") is long hz and > 0
                 ? (int)(timebase * hz / 1_000_000) : null);
-        public static int processorCount { get { MainThreadCheck.Check("GetProcessorCount"); return Environment.ProcessorCount; } }
+        public static int processorCount { get { MainThreadCheck.Check("GetProcessorCount"); return Unbound.Runtime.Jobs.JobSystem.ProcessorCount; } }
         public static int systemMemorySize { get { MainThreadCheck.Check("GetPhysicalMemoryMB"); return s_MemoryMb.Value; } }
         public static string deviceUniqueIdentifier => s_DeviceId.Value;
         public static string deviceName => Environment.MachineName;
