@@ -682,6 +682,15 @@ namespace UnityEngine.Tilemaps
                 if (CellAt(position)?.Tile == tile && ApplyCell(position, data)) changed.Add(position);
         }
 
+        /// <summary>Lets a changed cell's old tile, then its new tile, ask for refreshes; a tile that
+        /// is both asks once (matches the Unity 6000.0.71f1 Editor, tests/projects/tilemappreview
+        /// 09.previewSameAsActualRefresh).</summary>
+        void RefreshOldAndNew(Vector3Int position, TileBase old, TileBase tile, ITilemap itilemap)
+        {
+            if (old != null) CallTile(() => old.RefreshTile(position, itilemap));
+            if (tile != null && !ReferenceEquals(tile, old)) CallTile(() => tile.RefreshTile(position, itilemap));
+        }
+
         /// <summary>Calls the old and new tiles' RefreshTile for each changed cell and returns the
         /// cells they asked to refresh.</summary>
         RefreshRequests CollectRefreshes(ITilemap itilemap, List<(Vector3Int Position, TileBase Old, TileBase New)> applied)
@@ -692,10 +701,7 @@ namespace UnityEngine.Tilemaps
             try
             {
                 foreach (var (position, old, tile) in applied)
-                {
-                    if (old != null) CallTile(() => old.RefreshTile(position, itilemap));
-                    if (tile != null) CallTile(() => tile.RefreshTile(position, itilemap));
-                }
+                    RefreshOldAndNew(position, old, tile, itilemap);
             }
             finally
             {
@@ -1296,9 +1302,7 @@ namespace UnityEngine.Tilemaps
             bool changed = TryApplyEditorPreviewTile(position, tile, out var oldTile, out var newTile, out bool removed);
             if (changed || removed) m_RenderVersion++;
             if (!changed) return;
-            var itilemap = Itilemap;
-            if (oldTile != null) CallTile(() => oldTile.RefreshTile(position, itilemap));
-            if (newTile != null) CallTile(() => newTile.RefreshTile(position, itilemap));
+            RefreshOldAndNew(position, oldTile, newTile, Itilemap);
         }
 
         /// <summary>Sets a fill's preview tiles: the old and new tiles' RefreshTile collect the cells
@@ -1393,10 +1397,7 @@ namespace UnityEngine.Tilemaps
             if (cleared == null) return;
             var itilemap = Itilemap;
             foreach (var (position, old, now) in cleared)
-            {
-                if (old != null) CallTile(() => old.RefreshTile(position, itilemap));
-                if (now != null) CallTile(() => now.RefreshTile(position, itilemap));
-            }
+                RefreshOldAndNew(position, old, now, itilemap);
         }
 
         /// <summary>A Unity object reference with destroyed objects as null.</summary>

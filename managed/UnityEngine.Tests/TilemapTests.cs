@@ -588,6 +588,33 @@ namespace UnityEngine.Tests
             map.SetEditorPreviewTile(Vector3Int.zero, tile);
             Assert.True(map.HasEditorPreviewTile(Vector3Int.zero));
             Assert.Equal(Color.green, map.GetEditorPreviewColor(Vector3Int.zero));
+
+            // The tile asks for its refresh once, though it is both the old and the new tile.
+            var logged = Tile<CallLogTile>("L");
+            map.SetTile(Vector3Int.right, logged);
+            logged.log.Clear();
+            map.SetEditorPreviewTile(Vector3Int.right, logged);
+            Assert.Equal(new[] { "L.Refresh 1,0", "L.Data 1,0", "L.Data 1,0", "L.StartUp 1,0" }, logged.log);
+        }
+
+        [Fact]
+        public void ADestroyedPreviewTileShowsTheActualTileToNeighbours()
+        {
+            var map = NewTilemap();
+            var actual = Tile<Tile>("Actual");
+            var doomed = ScriptableObject.CreateInstance<Tile>();
+            doomed.color = Color.blue;
+            map.SetTile(Vector3Int.zero, actual);
+            map.SetEditorPreviewTile(Vector3Int.zero, doomed);
+            Object.DestroyImmediate(doomed);
+            var viewer = Tile<RightViewTile>("W");
+            map.SetTile(Vector3Int.left, viewer);
+            viewer.seen.Clear();
+            map.RefreshTile(Vector3Int.left);
+            Assert.Equal(new[] { $"W|Actual|{Color.white}" }, viewer.seen);
+            Assert.False(map.HasEditorPreviewTile(Vector3Int.zero));
+            // The cell keeps the data the destroyed tile gave.
+            Assert.Equal(Color.blue, map.GetEditorPreviewColor(Vector3Int.zero));
         }
     }
 }
