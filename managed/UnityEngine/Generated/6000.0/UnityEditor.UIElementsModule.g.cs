@@ -835,13 +835,7 @@ namespace UnityEditor.UIElements.Bindings
     unsafe static partial class SerializedPropertyHelper
     {
         [global::Unbound.Stub] public static object GetManagedReferenceValue(global::UnityEditor.SerializedProperty p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.GetManagedReferenceValue"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Quaternion GetQuaternionPropertyValue(global::UnityEditor.SerializedProperty p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.GetQuaternionPropertyValue"); return default; }
-        [global::Unbound.Stub] public static char GetCharacterPropertyValue(global::UnityEditor.SerializedProperty p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.GetCharacterPropertyValue"); return default; }
-        [global::Unbound.Stub] public static string GetCharacterPropertyValueAsString(global::UnityEditor.SerializedProperty p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.GetCharacterPropertyValueAsString"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.ToggleButtonGroupState GetToggleStatePropertyValue(global::UnityEditor.SerializedProperty p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.GetToggleStatePropertyValue"); return default; }
-        [global::Unbound.Stub] public static void SetQuaternionPropertyValue(global::UnityEditor.SerializedProperty p, global::UnityEngine.Quaternion v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.SetQuaternionPropertyValue"); }
-        [global::Unbound.Stub] public static void SetCharacterPropertyValue(global::UnityEditor.SerializedProperty p, char v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.SetCharacterPropertyValue"); }
-        [global::Unbound.Stub] public static void SetCharacterPropertyValueFromString(global::UnityEditor.SerializedProperty p, string v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.SetCharacterPropertyValueFromString"); }
         [global::Unbound.Stub] public static void SetToggleStatePropertyValue(global::UnityEditor.SerializedProperty p, global::UnityEngine.UIElements.ToggleButtonGroupState v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedPropertyHelper.SetToggleStatePropertyValue"); }
     }
 }

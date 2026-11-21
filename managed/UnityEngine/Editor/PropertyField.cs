@@ -178,6 +178,7 @@ namespace UnityEditor.UIElements
         static readonly Func<FloatField> s_CreateFloatField = () => new FloatField();
         static readonly Func<DoubleField> s_CreateDoubleField = () => new DoubleField();
         static readonly Func<TextField> s_CreateTextField = () => new TextField();
+        static readonly Func<TextField> s_CreateCharTextField = () => new TextField { maxLength = 1 };
         static readonly Func<ColorField> s_CreateColorField = () => new ColorField();
         static readonly Func<Vector2Field> s_CreateVector2Field = () => new Vector2Field();
         static readonly Func<Vector3Field> s_CreateVector3Field = () => new Vector3Field();
@@ -510,11 +511,12 @@ namespace UnityEditor.UIElements
 
         VisualElement CreateOrUpdateFieldFromProperty(SerializedProperty property, object originalField)
         {
-            if (property.propertyType == SerializedPropertyType.Vector4
-                || (property.propertyType == SerializedPropertyType.Generic
-                    && !property.isArray
-                    && property.type != "ToggleButtonGroupState"
-                    && property.hasVisibleChildren))
+            if (((property.propertyType == SerializedPropertyType.Vector4
+                  || property.propertyType == SerializedPropertyType.Quaternion)
+                 || (property.propertyType == SerializedPropertyType.Generic
+                     && !property.isArray
+                     && property.type != "ToggleButtonGroupState"))
+                && property.hasVisibleChildren)
                 return CreateFoldout(property, originalField);
             TrimChildrenContainerSize(0);
             m_ChildrenContainer = null;
@@ -540,6 +542,14 @@ namespace UnityEditor.UIElements
                     var textField = ConfigureField<TextField, string>(originalField as TextField, property, s_CreateTextField);
                     if (textField != null) textField.maxLength = -1;
                     return textField;
+                case SerializedPropertyType.Character:
+                {
+                    var charField = originalField as TextField;
+                    if (charField != null) charField.maxLength = 1;
+                    return ConfigureField<TextField, string>(charField, property, s_CreateCharTextField);
+                }
+                case SerializedPropertyType.Quaternion:
+                    return null;
                 case SerializedPropertyType.Color:
                     return ConfigureField<ColorField, Color>(originalField as ColorField, property, s_CreateColorField);
                 case SerializedPropertyType.Enum:

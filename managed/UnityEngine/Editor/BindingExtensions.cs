@@ -1216,6 +1216,15 @@ namespace UnityEditor.UIElements.Bindings
                 case SerializedPropertyType.Gradient:
                     DefaultBind(element, prop, SerializedPropertyHelper.GetGradientPropertyValue, SerializedPropertyHelper.SetGradientPropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
+                case SerializedPropertyType.Quaternion:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetQuaternionPropertyValue, SerializedPropertyHelper.SetQuaternionPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
+                case SerializedPropertyType.Character:
+                    if (element is INotifyValueChanged<string>)
+                        DefaultBind(element, prop, SerializedPropertyHelper.GetCharacterPropertyValueAsString, SerializedPropertyHelper.SetCharacterPropertyValueFromString, SerializedPropertyHelper.ValueEquals);
+                    else
+                        DefaultBind(element, prop, SerializedPropertyHelper.GetCharacterPropertyValue, SerializedPropertyHelper.SetCharacterPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
                 case SerializedPropertyType.ObjectReference:
                     if (element is ObjectField objectField)
                         SerializedObjectReferenceBinding.CreateBind(objectField, this, prop);
@@ -2275,6 +2284,9 @@ namespace UnityEditor.UIElements.Bindings
         public static BoundsInt GetBoundsIntPropertyValue(SerializedProperty p) => p.boundsIntValue;
         public static AnimationCurve GetAnimationCurvePropertyValue(SerializedProperty p) => p.animationCurveValue;
         public static Gradient GetGradientPropertyValue(SerializedProperty p) => p.gradientValue;
+        public static Quaternion GetQuaternionPropertyValue(SerializedProperty p) => p.quaternionValue;
+        public static char GetCharacterPropertyValue(SerializedProperty p) => (char)p.intValue;
+        public static string GetCharacterPropertyValueAsString(SerializedProperty p) => new string((char)p.intValue, 1);
         public static Hash128 GetHash128PropertyValue(SerializedProperty p) => p.hash128Value;
         public static int GetLayerMaskPropertyValue(SerializedProperty p) => p.intValue;
         public static uint GetRenderingLayerMaskPropertyValue(SerializedProperty p) => p.uintValue;
@@ -2389,6 +2401,12 @@ namespace UnityEditor.UIElements.Bindings
         public static void SetBoundsIntPropertyValue(SerializedProperty p, BoundsInt v) => p.boundsIntValue = v;
         public static void SetAnimationCurvePropertyValue(SerializedProperty p, AnimationCurve v) => p.animationCurveValue = v;
         public static void SetGradientPropertyValue(SerializedProperty p, Gradient v) => p.gradientValue = v;
+        public static void SetQuaternionPropertyValue(SerializedProperty p, Quaternion v) => p.quaternionValue = v;
+        public static void SetCharacterPropertyValue(SerializedProperty p, char v) => p.intValue = v;
+        public static void SetCharacterPropertyValueFromString(SerializedProperty p, string v)
+        {
+            if (!string.IsNullOrEmpty(v)) p.intValue = v[0];
+        }
         public static void SetHash128PropertyValue(SerializedProperty p, Hash128 v) => p.hash128Value = v;
         public static void SetLayerMaskPropertyValue(SerializedProperty p, int v) => p.intValue = v;
         public static void SetRenderingLayerMaskPropertyValue(SerializedProperty p, uint v) => p.uintValue = v;
@@ -2410,11 +2428,19 @@ namespace UnityEditor.UIElements.Bindings
         public static bool ValueEquals<TValue>(TValue value, SerializedProperty p, Func<SerializedProperty, TValue> propertyReadFunc) =>
             EqualityComparer<TValue>.Default.Equals(value, propertyReadFunc(p));
 
-        public static bool ValueEquals(string value, SerializedProperty p, Func<SerializedProperty, string> propertyReadFunc) =>
-            p.propertyType == SerializedPropertyType.Enum
-                ? p.enumValueIndex >= 0 && p.enumValueIndex < p.enumDisplayNames.Length
-                  && string.Equals(p.enumDisplayNames[p.enumValueIndex], value, StringComparison.OrdinalIgnoreCase)
-                : string.Equals(value, propertyReadFunc(p), StringComparison.Ordinal);
+        public static bool ValueEquals(string value, SerializedProperty p, Func<SerializedProperty, string> propertyReadFunc)
+        {
+            switch (p.propertyType)
+            {
+                case SerializedPropertyType.Enum:
+                    return p.enumValueIndex >= 0 && p.enumValueIndex < p.enumDisplayNames.Length
+                        && string.Equals(p.enumDisplayNames[p.enumValueIndex], value, StringComparison.OrdinalIgnoreCase);
+                case SerializedPropertyType.Character:
+                    return !string.IsNullOrEmpty(value) && value.Length == 1 && GetCharacterPropertyValue(p) == value[0];
+                default:
+                    return string.Equals(value, propertyReadFunc(p), StringComparison.Ordinal);
+            }
+        }
 
         public static bool ValueEquals(AnimationCurve value, SerializedProperty p, Func<SerializedProperty, AnimationCurve> propertyReadFunc) =>
             p.ValueEquals(value);

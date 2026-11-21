@@ -110,6 +110,18 @@ namespace UnityEngine.Tests
             public void SetValueWithoutNotify(RefAsset newValue) => m_Value = newValue;
         }
 
+        sealed class CharBox : BaseField<char>
+        {
+            public CharBox() : base(null, new VisualElement()) { }
+            protected override void UpdateMixedValueContent() { }
+        }
+
+        sealed class QuatBox : BaseField<Quaternion>
+        {
+            public QuatBox() : base(null, new VisualElement()) { }
+            protected override void UpdateMixedValueContent() { }
+        }
+
         sealed class TestTarget : ScriptableObject
         {
             public bool flag = true;
@@ -142,7 +154,9 @@ namespace UnityEngine.Tests
             public LayerMask otherLayerMaskVal = 16;
             public RenderingLayerMask renderingLayerMaskVal = 1u;
             public RenderingLayerMask otherRenderingLayerMaskVal = 4u;
+            public char charVal = 'A';
             public Quaternion quatVal = Quaternion.identity;
+            [SerializeReference] public object managedRef;
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public EmptyInlinePayload emptyPayload;
             public OuterInlinePayload outerPayload = new OuterInlinePayload
@@ -662,12 +676,12 @@ namespace UnityEngine.Tests
                 Assert.False(wrongField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.Contains(warnings, w => w.Contains("not compatible") && w.Contains("\"flag\""));
 
-                // Unsupported property type (Quaternion) reports explicit Stubs.NotImplemented hit and stays unbound.
-                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (Quaternion)";
+                // Unsupported property type (ManagedReference) reports explicit Stubs.NotImplemented hit and stays unbound.
+                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (ManagedReference)";
                 int beforeVecHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
                 var vecField = new IntegerField();
                 panel.visualTree.Add(vecField);
-                vecField.BindProperty(so.FindProperty("quatVal"));
+                vecField.BindProperty(so.FindProperty("managedRef"));
                 Assert.False(vecField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value > beforeVecHits);
 
@@ -951,9 +965,9 @@ namespace UnityEngine.Tests
             using var so = new SerializedObject(target);
             try
             {
-                const string vecStubKey = "UnityEditor.UIElements.PropertyField (Quaternion)";
+                const string vecStubKey = "UnityEditor.UIElements.PropertyField (ManagedReference)";
                 int beforeHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
-                var pf = new PropertyField(so.FindProperty("quatVal"));
+                var pf = new PropertyField(so.FindProperty("managedRef"));
                 panel.visualTree.Add(pf);
                 pf.Bind(so);
                 Assert.Equal(0, pf.hierarchy.childCount);
@@ -3058,6 +3072,149 @@ namespace UnityEngine.Tests
             {
                 soMulti.Dispose();
                 soSingle.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyQuaternionAndCharacterControlsMultiEditReuseAndDisposedCleanupWorkAcrossReleases()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.charVal = 'A';
+            t2.charVal = 'B';
+            t1.quatVal = new Quaternion(0.1f, 0.2f, 0.3f, 0.9f);
+            t2.quatVal = new Quaternion(0.5f, 0.2f, -0.3f, 0.9f);
+            var go = new GameObject("QuatTestHost");
+            go.transform.localRotation = new Quaternion(0f, 0f, 0f, 1f);
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(t1);
+            using var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            using var soTr = new SerializedObject(go.transform);
+            try
+            {
+                var pChar = so.FindProperty("charVal");
+                var pQuat = so.FindProperty("quatVal");
+                Assert.Equal(SerializedPropertyNumericType.Unknown, pChar.numericType);
+                Assert.Equal("Quaternion", pQuat.type);
+                Assert.Equal("Quaternion", soTr.FindProperty("m_LocalRotation").type);
+
+                var pfChar = new PropertyField(pChar);
+                var charBox = new CharBox();
+                panel.visualTree.Add(pfChar);
+                panel.visualTree.Add(charBox);
+                pfChar.Bind(so);
+                charBox.BindProperty(pChar);
+                Tick(panel);
+
+                var tfChar = Assert.IsType<TextField>(pfChar.hierarchy[0]);
+                Assert.Equal(1, tfChar.maxLength);
+                Assert.Equal("A", tfChar.value);
+                Assert.Equal('A', charBox.value);
+
+                tfChar.value = "";
+                Tick(panel);
+                Assert.Equal('A', t1.charVal);
+                Assert.Equal("", tfChar.value);
+
+                tfChar.value = "xy";
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal('x', t1.charVal);
+                Assert.Equal("x", tfChar.value);
+                Assert.Equal('x', charBox.value);
+
+                charBox.value = '\0';
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal('\0', t1.charVal);
+                Assert.Equal("\0", tfChar.value);
+
+                // Quaternion PropertyField Foldout + custom QuatBox + Transform.m_LocalRotation.
+                pQuat.isExpanded = false;
+                var pfQuat = new PropertyField(pQuat);
+                var quatBox = new QuatBox();
+                panel.visualTree.Add(pfQuat);
+                panel.visualTree.Add(quatBox);
+                pfQuat.Bind(so);
+                quatBox.BindProperty(pQuat);
+                Tick(panel);
+
+                var fQuat = Assert.IsType<Foldout>(pfQuat.hierarchy[0]);
+                Assert.False(fQuat.value);
+                Assert.Equal(0, fQuat.contentContainer.childCount);
+                Assert.Equal(t1.quatVal, quatBox.value);
+
+                fQuat.value = true;
+                Tick(panel);
+                Assert.Equal(4, fQuat.contentContainer.childCount);
+                fQuat.Q<FloatField>("unity-input-quatVal.x").value = 0.75f;
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(0.75f, t1.quatVal.x);
+                Assert.Equal(0.75f, quatBox.value.x);
+
+                quatBox.value = new Quaternion(0.25f, -0.25f, 0.5f, 0.75f);
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(new Quaternion(0.25f, -0.25f, 0.5f, 0.75f), t1.quatVal);
+                Assert.Equal(-0.25f, fQuat.Q<FloatField>("unity-input-quatVal.y").value);
+
+                // Multi-object Character & Quaternion + runtime DataBinding coexistence after Dispose.
+                var rt = new RuntimeModel { text = "rt-qc-0" };
+                var pfMultiChar = new PropertyField(soMulti.FindProperty("charVal")) { dataSource = rt };
+                pfMultiChar.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                var pMultiQuat = soMulti.FindProperty("quatVal");
+                pMultiQuat.isExpanded = true;
+                var pfMultiQuat = new PropertyField(pMultiQuat);
+                var qbMulti = new QuatBox();
+                panel.visualTree.Add(pfMultiChar);
+                panel.visualTree.Add(pfMultiQuat);
+                panel.visualTree.Add(qbMulti);
+                pfMultiChar.Bind(soMulti);
+                pfMultiQuat.Bind(soMulti);
+                qbMulti.BindProperty(pMultiQuat);
+                Tick(panel);
+                Tick(panel);
+
+                var tfMultiChar = Assert.IsType<TextField>(pfMultiChar.hierarchy[0]);
+                Assert.True(tfMultiChar.showMixedValue);
+                Assert.True(qbMulti.showMixedValue);
+                Assert.Equal("rt-qc-0", pfMultiChar.tooltip);
+
+                tfMultiChar.value = "K";
+                qbMulti.value = Quaternion.identity;
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal('K', t1.charVal);
+                Assert.Equal('K', t2.charVal);
+                Assert.False(tfMultiChar.showMixedValue);
+                Assert.Equal(Quaternion.identity, t1.quatVal);
+                Assert.Equal(Quaternion.identity, t2.quatVal);
+                Assert.False(qbMulti.showMixedValue);
+
+                soMulti.Dispose();
+                rt.text = "rt-qc-1";
+                Tick(panel);
+                Tick(panel);
+                Assert.False(tfMultiChar.HasBinding(BindingExtensions.s_SerializedBindingId));
+                Assert.False(qbMulti.HasBinding(BindingExtensions.s_SerializedBindingId));
+                Assert.Equal("rt-qc-1", pfMultiChar.tooltip);
+            }
+            finally
+            {
+                soTr.Dispose();
+                soMulti.Dispose();
+                so.Dispose();
+                Object.DestroyImmediate(go);
                 Object.DestroyImmediate(t1);
                 Object.DestroyImmediate(t2);
                 Object.DestroyImmediate(settings);

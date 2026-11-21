@@ -704,7 +704,7 @@ namespace Unbound.Runtime
             {
                 yield return new NativeField
                 {
-                    Name = "m_LocalRotation", Type = typeof(Quaternion), Shape = Shape.Quaternion, TypeName = "Quaternionf",
+                    Name = "m_LocalRotation", Type = typeof(Quaternion), Shape = Shape.Quaternion, TypeName = "Quaternion",
                     Get = o => ((Transform)o).localRotation, Set = (o, v) => ((Transform)o).localRotation = (Quaternion)v,
                 };
                 yield return new NativeField
@@ -896,7 +896,7 @@ namespace Unbound.Runtime
                 case Shape.Vector4: return "Vector4";
                 case Shape.Vector2Int: return "Vector2Int";
                 case Shape.Vector3Int: return "Vector3Int";
-                case Shape.Quaternion: return "Quaternionf";
+                case Shape.Quaternion: return "Quaternion";
                 case Shape.Color: case Shape.Color32: return "Color";
                 case Shape.Rect: return "Rect";
                 case Shape.RectInt: return "RectInt";
@@ -928,7 +928,7 @@ namespace Unbound.Runtime
                 case Shape.SByte: return SerializedPropertyNumericType.Int8;
                 case Shape.Byte: return SerializedPropertyNumericType.UInt8;
                 case Shape.Short: return SerializedPropertyNumericType.Int16;
-                case Shape.UShort: case Shape.Char: return SerializedPropertyNumericType.UInt16;
+                case Shape.UShort: return SerializedPropertyNumericType.UInt16;
                 case Shape.Int: return SerializedPropertyNumericType.Int32;
                 case Shape.UInt: return SerializedPropertyNumericType.UInt32;
                 case Shape.Long: return SerializedPropertyNumericType.Int64;
@@ -1250,6 +1250,13 @@ namespace Unbound.Runtime
                     hash.Add(offset.right);
                     hash.Add(offset.top);
                     hash.Add(offset.bottom);
+                }
+                else if (value is Quaternion quat)
+                {
+                    hash.Add(quat.x);
+                    hash.Add(quat.y);
+                    hash.Add(quat.z);
+                    hash.Add(quat.w);
                 }
                 else if (value != null) hash.Add(value);
                 return;
