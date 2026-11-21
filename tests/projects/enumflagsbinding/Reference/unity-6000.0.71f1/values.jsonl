@@ -1,0 +1,54 @@
+{"k":"eff.basic.initial_zero","v":"BasicFlags(0)|None|0|[None,Read Access,Write Mode,Execute,Read Write,All]|[0,1,2,4,3,-1]|1"}
+{"k":"eff.basic.ui_single","v":"BasicFlags(2)|Write Mode|0|BasicFlags(2)|2|2"}
+{"k":"eff.basic.ui_composite","v":"BasicFlags(3)|Read Write|0|BasicFlags(3)"}
+{"k":"eff.basic.ui_multi_unnamed","v":"BasicFlags(5)|Read Access, Execute|0|BasicFlags(5)|5"}
+{"k":"eff.basic.ui_all_defined","v":"BasicFlags(-1)|All|0|BasicFlags(-1)|-1"}
+{"k":"eff.basic.so_zero","v":"BasicFlags(0)|None|0|BasicFlags(0)"}
+{"k":"eff.basic.so_all","v":"BasicFlags(-1)|All|0|BasicFlags(-1)"}
+{"k":"eff.basic.so_single","v":"BasicFlags(1)|Read Access|0|BasicFlags(1)"}
+{"k":"eff.sparse.initial_zero","v":"SparseFlags(0)|Nothing|0|[Alpha Bit,Gamma Bit,Epsilon Bit]|[1,4,16]"}
+{"k":"eff.sparse.ui_all_defined","v":"SparseFlags(-1)|Everything|0|SparseFlags(-1)|-1"}
+{"k":"eff.sparse.so_undefined_bit","v":"SparseFlags(1)|Alpha Bit|0|1025"}
+{"k":"eff.sparse.ui_undefined_bit","v":"SparseFlags(0)|Nothing|0|0"}
+{"k":"eff.byte.initial","v":"ByteFlags(3)|Flag A, Flag B|0|[Flag A,Flag B,Flag C,All Byte]|[1,2,4,-1]"}
+{"k":"eff.byte.ui_all_defined","v":"ByteFlags(255)|All Byte|0|255|255"}
+{"k":"eff.byte.so_single","v":"ByteFlags(4)|Flag C|0"}
+{"k":"eff.byte.so_zero","v":"ByteFlags(0)|Nothing|0"}
+{"k":"eff.byte.so_255","v":"ByteFlags(255)|All Byte|0"}
+{"k":"eff.signed.initial","v":"SignedHighBitFlags(-2147483648)|Sign Bit|0|[Low Bit,Mid Bit,Sign Bit]|[1,8,-2147483648]"}
+{"k":"eff.signed.ui_multi","v":"SignedHighBitFlags(-2147483647)|Low Bit, Sign Bit|0|-2147483647"}
+{"k":"eff.signed.so_all","v":"SignedHighBitFlags(-1)|Everything|0"}
+{"k":"eff.signed.so_zero","v":"SignedHighBitFlags(0)|Nothing|0"}
+{"k":"eff.detached.beforeAttach","v":"null|Nothing|0"}
+{"k":"eff.detached.afterAttach","v":"BasicFlags(4)|Execute|0"}
+{"k":"eff.detached.afterUiEdit","v":"BasicFlags(3)|Read Write|0|BasicFlags(3)"}
+{"k":"tree.initial","v":"BasicFlags(1)|Read Access|0 || BasicFlags(3)|Read Write|0"}
+{"k":"tree.ui_to_so","v":"BasicFlags(4)|BasicFlags(4)|Execute|0"}
+{"k":"tree.so_to_ui","v":"BasicFlags(-1)|All|0"}
+{"k":"tree.afterUnbind","v":"BasicFlags(0)|None|0 || BasicFlags(0)|None|0"}
+{"k":"eff.rebind.initialA","v":"BasicFlags(1)|Read Access|0"}
+{"k":"eff.rebind.afterB","v":"BasicFlags(4)|Execute|0"}
+{"k":"eff.rebind.editB","v":"BasicFlags(1)|BasicFlags(3)"}
+{"k":"eff.rebind.diffType","v":"SparseFlags(16)|Epsilon Bit|0|[Alpha Bit,Gamma Bit,Epsilon Bit]|[1,4,16]"}
+{"k":"eff.rebind.diffTypeEdit","v":"SparseFlags(4)|SparseFlags(4)|Gamma Bit|0"}
+{"k":"eff.rebind.afterUnbind","v":"SparseFlags(0)|Nothing|0"}
+{"k":"eff.mixed.initial","v":"BasicFlags(1)|—|1|0"}
+{"k":"eff.mixed.uiNew","v":"BasicFlags(3)|Read Write|0|BasicFlags(3),BasicFlags(3)"}
+{"k":"eff.mixed.uiPrimary","v":"BasicFlags(1)|Read Access|0|BasicFlags(1),BasicFlags(1)"}
+{"k":"pf.basic.initial","v":"EnumFlagsField|unity-input-basic|Basic|1111|BasicFlags(2)|Write Mode|0|[None,Read Access,Write Mode,Execute,Read Write,All]|[0,1,2,4,3,-1]|evts=1"}
+{"k":"pf.sparse.initial","v":"EnumFlagsField|unity-input-sparse|Sparse|1111|SparseFlags(4)|Gamma Bit|0|[Alpha Bit,Gamma Bit,Epsilon Bit]|[1,4,16]"}
+{"k":"pf.labeled.initial","v":"EnumFlagsField|unity-input-basic|Custom Flags|1111|BasicFlags(2)|Write Mode|0|[None,Read Access,Write Mode,Execute,Read Write,All]|[0,1,2,4,3,-1]"}
+{"k":"pf.basic.ui_to_so","v":"EnumFlagsField|unity-input-basic|Basic|1111|BasicFlags(3)|Read Write|0|[None,Read Access,Write Mode,Execute,Read Write,All]|[0,1,2,4,3,-1]|BasicFlags(3)|evts=2;3"}
+{"k":"pf.basic.so_to_ui","v":"EnumFlagsField|unity-input-basic|Basic|1111|BasicFlags(-1)|All|0|[None,Read Access,Write Mode,Execute,Read Write,All]|[0,1,2,4,3,-1]|BasicFlags(-1)|evts=2;3;-1"}
+{"k":"pf.labeled.dynamic","v":"EnumFlagsField|unity-input-basic|Updated Flags|1111|BasicFlags(-1)|All|0|[None,Read Access,Write Mode,Execute,Read Write,All]|[0,1,2,4,3,-1]"}
+{"k":"pf.mixed.initial","v":"EnumFlagsField|unity-input-basic|Basic|1111|BasicFlags(1)|—|1|[None,Read Access,Write Mode,Execute,Read Write,All]|[0,1,2,4,3,-1]|evts=0"}
+{"k":"pf.mixed.afterUiEdit","v":"EnumFlagsField|unity-input-basic|Basic|1111|BasicFlags(3)|Read Write|0|[None,Read Access,Write Mode,Execute,Read Write,All]|[0,1,2,4,3,-1]|BasicFlags(3),BasicFlags(3)|evts=3"}
+{"k":"pf.rebind.flagsToFlags","v":"1|EnumFlagsField|unity-input-sparse|Sparse|1111|SparseFlags(4)|Gamma Bit|0|[Alpha Bit,Gamma Bit,Epsilon Bit]|[1,4,16]"}
+{"k":"pf.rebind.flagsToPlain","v":"0|PopupField|unity-input-plain|Plain|1|Second"}
+{"k":"pf.rebind.plainToFlags","v":"0|EnumFlagsField|unity-input-basic|Basic|1111|BasicFlags(4)|Execute|0|[None,Read Access,Write Mode,Execute,Read Write,All]|[0,1,2,4,3,-1]"}
+{"k":"pf.rebind.flagsToScalar","v":"0|IntegerField|unity-input-scalarInt|Scalar Int|77"}
+{"k":"coexist.beforeUnbind","v":"BasicFlags(1)|Read Access|0|rt-flags-tip-0"}
+{"k":"coexist.afterBothUpdate","v":"BasicFlags(4)|Execute|0|rt-flags-tip-1"}
+{"k":"coexist.afterUnbind","v":"BasicFlags(0)|None|0|rt-flags-tip-2"}
+{"k":"logs","v":[]}
+{"k":"complete","v":true}
