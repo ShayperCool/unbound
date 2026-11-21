@@ -78,7 +78,8 @@ namespace UnityEngine
                 var size = this.size;
                 m_Resolution = resolution;
                 m_Heights = new ushort[resolution * resolution];
-                // Overrides are per patch of the old heightmap (Unbound's choice, unmeasured).
+                // "the overriden values get reset when the terrain resolution is changed" (Scripting
+                // API, OverrideMaximumHeightError / OverrideMinMaxPatchHeights).
                 ClearLodOverrides();
                 m_Solid = Filled((resolution - 1) * (resolution - 1));
                 this.size = size;
@@ -336,11 +337,12 @@ namespace UnityEngine
         /// <summary>The overridden lowest and highest heights of each patch; null when not overridden.</summary>
         internal PatchExtents[] ExtentsOverride => m_ExtentsOverride;
 
-        /// <summary>Replaces the patches' height errors the levels of detail are chosen by; one value
-        /// a patch, in GetMaximumHeightError's order, else an error and nothing changes. The getter
-        /// keeps answering the heightmap's own errors, and the override outlives later height
-        /// changes (matches the Unity 6000.0.71f1 Editor, tests/projects/terrainoverrides
-        /// lod.error*).</summary>
+        /// <summary>Replaces the patches' "maximum tessellation height error" (Scripting API) the
+        /// levels of detail are chosen by; one value a patch, in GetMaximumHeightError's order, else
+        /// an error and nothing changes, and the getter keeps answering the heightmap's own errors
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/terrainoverrides lod.error*). As
+        /// the Scripting API says, it lasts through painting and scripted height changes and is reset
+        /// by a resolution change; its effect on drawing is not measured.</summary>
         public void OverrideMaximumHeightError(float[] maxError)
         {
             int given = maxError?.Length ?? 0, count = PatchCount();
@@ -353,11 +355,14 @@ namespace UnityEngine
             m_LodOverrideVersion++;
         }
 
-        /// <summary>Replaces the patches' height ranges culling and the bounds use; one pair a patch,
-        /// in GetPatchMinMaxHeights' order (the sizes in the error count both heights of each), else
-        /// an error and nothing changes. The getter keeps answering the heightmap's own ranges; the
-        /// bounds take the whole heightmap's patch, the last, also after later height changes
-        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/terrainoverrides lod.extents*).</summary>
+        /// <summary>Replaces "the minimum and maximum patch heights for every renderable terrain
+        /// patch" (Scripting API); one pair a patch, in GetPatchMinMaxHeights' order (the sizes in
+        /// the error count both heights of each), else an error and nothing changes. The getter keeps
+        /// answering the heightmap's own ranges; the bounds take the whole heightmap's patch, the
+        /// last, also after later height changes (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/terrainoverrides lod.extents*); a resolution change resets it, as the
+        /// Scripting API says. The patches' culling and level-of-detail ranges use it too
+        /// (Unbound's choice, not measured).</summary>
         public void OverrideMinMaxPatchHeights(PatchExtents[] minMaxHeights)
         {
             int given = minMaxHeights?.Length ?? 0, count = PatchCount();

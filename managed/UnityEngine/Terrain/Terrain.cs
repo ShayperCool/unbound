@@ -1,4 +1,5 @@
 using System;
+using UnityEngine.TerrainUtils;
 using System.Collections.Generic;
 using Unbound.Runtime;
 using UnityEngine.Rendering;
@@ -70,6 +71,9 @@ namespace UnityEngine
         {
             s_Active.Remove(this);
             s_TilesChanged = true;
+            // A terrain that leaves the active set keeps no auto-connect links (Unbound's choice,
+            // unmeasured: the pass only reaches active terrains).
+            if (m_AllowAutoConnect) m_Left = m_Top = m_Right = m_Bottom = null;
             m_Renderer?.OnEngineDisable();
         }
 
@@ -227,7 +231,6 @@ namespace UnityEngine
             m_Top = top;
             m_Right = right;
             m_Bottom = bottom;
-            s_AutoConnected.Remove(this);
         }
 
         /// <summary>Marks the connectivity invalid; the tiles are reconnected when a neighbour is
@@ -237,102 +240,44 @@ namespace UnityEngine
         // ------------------------------------------------------------ auto-connect
         //
         // Documented (6000.0 Scripting API and Manual): tiles that allow auto-connect and share a
-        // grouping ID connect to their adjacent tiles; both tiles must allow it; neighbours lie
-        // left = -X, right = +X, top = +Z, bottom = -Z; SetConnectivityDirty marks the connectivity
-        // invalid after tiles are added or removed. The docs give no adjacency tolerance, size
-        // rule or rebuild time. Unbound's choices (unmeasured): only active terrains with data
-        // take part; a neighbour has the same X/Z size and sits exactly one tile over on one axis
-        // and level on the other (heights ignored), within a ten-thousandth of the tile size; a
-        // side with several candidates stays empty with a warning, given once per tile and side
-        // (the warning would otherwise repeat on every rebuild); the connectivity is also marked
-        // dirty when a terrain is enabled, disabled or destroyed; it is rebuilt lazily, on the
-        // next neighbour read or SetNeighbors call, not on moves or setting changes. The adjacency
-        // is the tile-grid rule of TryGetTileCoord, which TerrainMap.CreateFromPlacement uses too;
-        // TerrainUtility.AutoConnect runs this pass.
+        // grouping ID connect to their adjacent tiles; neighbours lie left = -X, right = +X,
+        // top = +Z, bottom = -Z; SetConnectivityDirty marks the connectivity invalid after tiles are
+        // added or removed. A pass, as Unity's own TerrainUtility.AutoConnect makes it: every
+        // active terrain that allows auto-connect loses its four links, then each grouping ID's
+        // TerrainMap.CreateFromPlacement (the group's terrains that allow auto-connect, on the grid
+        // of the first one placed) gives every tile its four neighbours on that map. Unbound's
+        // choices (unmeasured): the connectivity is also marked dirty when a terrain is enabled,
+        // disabled or destroyed, and a pass runs lazily, on the next neighbour read or SetNeighbors
+        // call.
 
         static bool s_TilesChanged;
-        static readonly List<Terrain> s_AutoConnected = new List<Terrain>();
-        static readonly HashSet<(int tile, string side)> s_WarnedOverlap = new HashSet<(int tile, string side)>();
-        const float k_TileTolerance = 1e-4f;
 
-        /// <summary>Rebuilds the auto-connect links when the connectivity is dirty.</summary>
+        /// <summary>Reconnects the tiles when the connectivity is dirty.</summary>
         internal static void ConnectTiles()
         {
             if (!s_TilesChanged) return;
             s_TilesChanged = false;
-            // Links made by the previous pass go; tiles still taking part get theirs again.
-            foreach (var tile in s_AutoConnected)
-                tile.m_Left = tile.m_Top = tile.m_Right = tile.m_Bottom = null;
-            s_AutoConnected.Clear();
-            var tiles = new List<Terrain>();
-            foreach (var terrain in s_Active)
-                if (terrain.m_AllowAutoConnect && terrain.m_TerrainData != null) tiles.Add(terrain);
-            foreach (var tile in tiles)
+            var active = activeTerrains;
+            foreach (var terrain in active)
+                if (terrain.m_AllowAutoConnect) terrain.m_Left = terrain.m_Top = terrain.m_Right = terrain.m_Bottom = null;
+            var connected = new HashSet<int>();
+            foreach (var terrain in active)
             {
-                tile.m_Left = tile.AdjacentTile(tiles, -1, 0, "left");
-                tile.m_Right = tile.AdjacentTile(tiles, 1, 0, "right");
-                tile.m_Top = tile.AdjacentTile(tiles, 0, 1, "top");
-                tile.m_Bottom = tile.AdjacentTile(tiles, 0, -1, "bottom");
-                s_AutoConnected.Add(tile);
+                if (!terrain.m_AllowAutoConnect || connected.Contains(terrain.m_GroupingID)) continue;
+                int group = terrain.m_GroupingID;
+                var map = TerrainMap.CreateFromPlacement(terrain, other => other.m_GroupingID == group && other.m_AllowAutoConnect);
+                if (map == null) continue;
+                connected.Add(group);
+                foreach (var tile in map.terrainTiles)
+                {
+                    var coord = tile.Key;
+                    var terrainOnTile = tile.Value;
+                    terrainOnTile.m_Left = map.GetTerrain(coord.tileX - 1, coord.tileZ);
+                    terrainOnTile.m_Right = map.GetTerrain(coord.tileX + 1, coord.tileZ);
+                    terrainOnTile.m_Top = map.GetTerrain(coord.tileX, coord.tileZ + 1);
+                    terrainOnTile.m_Bottom = map.GetTerrain(coord.tileX, coord.tileZ - 1);
+                }
             }
-        }
-
-        /// <summary>The tile one step of (<paramref name="stepX"/>, <paramref name="stepZ"/>) tiles
-        /// away in the same group, with the same X/Z size; null when there is none, or when several
-        /// overlapping tiles qualify. The links stay one-sided: each overlapping tile still takes
-        /// this tile as its own neighbour on the opposite side.</summary>
-        Terrain AdjacentTile(List<Terrain> tiles, int stepX, int stepZ, string side)
-        {
-            var size = m_TerrainData.size;
-            var origin = GetPosition();
-            var gridOrigin = new Vector2(origin.x, origin.z);
-            var gridSize = new Vector2(size.x, size.z);
-            Terrain found = null;
-            int count = 0;
-            foreach (var other in tiles)
-            {
-                if (other == this || other.m_GroupingID != m_GroupingID) continue;
-                if (!TryGetTileCoord(other, gridOrigin, gridSize, out int tileX, out int tileZ) || tileX != stepX || tileZ != stepZ) continue;
-                found = other;
-                count++;
-            }
-            if (count <= 1) return found;
-            if (s_WarnedOverlap.Add((GetInstanceID(), side)))
-                Debug.LogWarning($"Unbound: terrain '{name}' has {count} overlapping auto-connect tiles on its {side} (grouping ID {m_GroupingID}); that side is left unconnected.", this);
-            return null;
-        }
-
-        /// <summary>
-        /// The tile-grid rule shared by auto-connect and <c>TerrainMap.CreateFromPlacement</c>
-        /// (Unbound's choice, unmeasured; the docs only say the grid size is "typically" the
-        /// terrain's size.x and size.z): a terrain with data sits on the grid of cells
-        /// <paramref name="gridSize"/> (X, Z) anchored at <paramref name="gridOrigin"/> (X, Z) when
-        /// its X/Z size equals the cell size and its position is a whole number of cells from the
-        /// origin on both axes, each within a ten-thousandth of the cell size. Heights are ignored.
-        /// A cell size that is not positive and finite, or a position that is not finite, places
-        /// nothing.
-        /// </summary>
-        internal static bool TryGetTileCoord(Terrain terrain, Vector2 gridOrigin, Vector2 gridSize, out int tileX, out int tileZ)
-        {
-            tileX = tileZ = 0;
-            var data = terrain.m_TerrainData;
-            if (data == null) return false;
-            if (!(gridSize.x > 0f && gridSize.x < float.PositiveInfinity && gridSize.y > 0f && gridSize.y < float.PositiveInfinity)) return false;
-            float toleranceX = gridSize.x * k_TileTolerance, toleranceZ = gridSize.y * k_TileTolerance;
-            var size = data.size;
-            if (Mathf.Abs(size.x - gridSize.x) > toleranceX || Mathf.Abs(size.z - gridSize.y) > toleranceZ) return false;
-            var position = terrain.GetPosition();
-            float offsetX = position.x - gridOrigin.x, offsetZ = position.z - gridOrigin.y;
-            double cellX = Math.Round((double)offsetX / gridSize.x), cellZ = Math.Round((double)offsetZ / gridSize.y);
-            if (!(Math.Abs(cellX) <= int.MaxValue && Math.Abs(cellZ) <= int.MaxValue)) return false;
-            tileX = (int)cellX;
-            tileZ = (int)cellZ;
-            if (Mathf.Abs(offsetX - tileX * gridSize.x) > toleranceX || Mathf.Abs(offsetZ - tileZ * gridSize.y) > toleranceZ)
-            {
-                tileX = tileZ = 0;
-                return false;
-            }
-            return true;
         }
 
         public Vector3 GetPosition() => transform.position;

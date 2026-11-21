@@ -9,10 +9,11 @@ namespace UnityEngine.Tests
     /// auto-connect and share a grouping ID connect to adjacent tiles, both tiles must allow it,
     /// left/right are -X/+X and top/bottom are +Z/-Z, SetConnectivityDirty marks the connectivity
     /// invalid after tiles are added or removed, and SetNeighbors sets only the tile it is called
-    /// on. The adjacency tolerance, same-size rule, overlap handling, rebuild timing, the
-    /// SetNeighbors/auto-connect interplay and the reaction to enabling or disabling a tile are
-    /// Unbound's choices (unmeasured): the tests marked so check the implementation, not a Unity
-    /// guarantee.
+    /// on. Adjacency, sizes and overlaps follow Unity's own AutoConnect: each grouping ID's
+    /// TerrainMap.CreateFromPlacement gives the neighbours (tests/projects/terrainoverrides measures
+    /// the placement). The rebuild timing, the SetNeighbors/auto-connect interplay and the reaction
+    /// to enabling or disabling a tile are Unbound's choices (unmeasured): the tests marked so check
+    /// the implementation, not a Unity guarantee.
     /// </summary>
     public class TerrainAutoConnectTests
     {
@@ -100,8 +101,7 @@ namespace UnityEngine.Tests
             // Positive control: the tile one step along +Z is the top neighbour.
             Assert.Same(touching, origin.topNeighbor);
             Assert.Same(origin, touching.bottomNeighbor);
-            // A gap, a diagonal and a half-tile offset are not adjacent (Unbound's choice: exact
-            // grid adjacency within a ten-thousandth of the tile size, unmeasured).
+            // A gap, a diagonal and a half-tile offset round to tiles that are not adjacent.
             Assert.Null(origin.rightNeighbor);
             Assert.Null(gap.leftNeighbor);
             Assert.Null(origin.leftNeighbor);
@@ -113,17 +113,17 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void DifferentlySizedTilesDoNotConnect()
+        public void TilesConnectWhereTheirPositionsRoundToWhateverTheirSize()
         {
-            // Unbound's choice (unmeasured): neighbours have the same X/Z size.
+            // The group's grid is the first tile's: a larger tile one grid step over is a neighbour.
             using var tiles = new Tiles();
             var small = tiles.Add("Small", 0f, 0f);
             var large = tiles.Add("Large", k_Size, 0f, size: 2f * k_Size);
             var match = tiles.Add("Match", -k_Size, 0f);
             Terrain.SetConnectivityDirty();
             Assert.Same(match, small.leftNeighbor);
-            Assert.Null(small.rightNeighbor);
-            Assert.Null(large.leftNeighbor);
+            Assert.Same(large, small.rightNeighbor);
+            Assert.Same(small, large.leftNeighbor);
         }
 
         [Fact]
@@ -219,36 +219,29 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void OverlappingCandidatesLeaveTheSideEmptyWithAWarning()
+        public void ATileTwoTerrainsShareKeepsTheFirstSilently()
         {
-            // Unbound's choice (unmeasured): an ambiguous side is not guessed. The warning is an
-            // Unbound diagnostic, so it is read at the logger, not from the game's log callbacks.
             using var tiles = new Tiles();
             var origin = tiles.Add("Origin", 0f, 0f);
-            tiles.Add("First", k_Size, 0f);
-            tiles.Add("Second", k_Size, 0f);
+            var first = tiles.Add("First", k_Size, 0f);
+            var second = tiles.Add("Second", k_Size, 0f);
             var below = tiles.Add("Below", 0f, -k_Size);
             Terrain.SetConnectivityDirty();
             var logger = Debug.unityLogger;
             var handler = logger.logHandler;
-            bool enabled = logger.logEnabled;
-            var filter = logger.filterLogType;
             var capture = new WarningCapture(handler);
             logger.logHandler = capture;
-            logger.logEnabled = true;
-            logger.filterLogType = LogType.Log;
             try
             {
                 Assert.Same(below, origin.bottomNeighbor);
-                Assert.Null(origin.rightNeighbor);
+                Assert.Same(first, origin.rightNeighbor);
+                Assert.Null(second.leftNeighbor);
             }
             finally
             {
                 logger.logHandler = handler;
-                logger.logEnabled = enabled;
-                logger.filterLogType = filter;
             }
-            Assert.Contains(capture.Warnings, w => w.Contains("'Origin'") && w.Contains("overlapping auto-connect tiles on its right"));
+            Assert.Empty(capture.Warnings);
         }
     }
 }

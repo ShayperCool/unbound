@@ -179,7 +179,8 @@ namespace UnityEngine.Tests
             // Documented: "Can return null when no Terrain objects pass the filter."
             Assert.Null(TerrainMap.CreateFromPlacement(origin, terrain => false));
             Assert.Null(TerrainMap.CreateFromPlacement(Vector2.zero, new Vector2(k_Size, k_Size), terrain => false));
-            Assert.Null(TerrainMap.CreateFromConnectedNeighbors(origin, terrain => false));
+            // As Unity's own walk: an origin that fails the filter gives an empty map.
+            Assert.Empty(TerrainMap.CreateFromConnectedNeighbors(origin, terrain => false).terrainTiles);
         }
 
         [Fact]
@@ -258,6 +259,36 @@ namespace UnityEngine.Tests
             Assert.Same(c, map.GetTerrain(0, 1));
             Assert.Same(a, map.GetTerrain(1, 1));
             Assert.Empty(capture.Warnings);
+
+            // The walk follows a terrain each time it takes a tile, until the map holds more
+            // terrains than are active: with one more active terrain, A at (1, 1) leads to B at (2, 1).
+            tiles.Add("Unrelated", 50f * k_Size, 0f, group: 84, autoConnect: false);
+            map = TerrainMap.CreateFromConnectedNeighbors(a);
+            Assert.Equal(5, map.terrainTiles.Count);
+            Assert.Same(b, map.GetTerrain(2, 1));
+        }
+
+        [Fact]
+        public void TheWalkQueuesLeftBottomRightTop()
+        {
+            // A's right B and bottom D both link a terrain to tile (1, -1): D's, queued first, wins.
+            using var tiles = new Tiles();
+            var a = tiles.Add("A", 0f, 0f, group: 85, autoConnect: false);
+            var b = tiles.Add("B", k_Size, 0f, group: 85, autoConnect: false);
+            var d = tiles.Add("D", 0f, -k_Size, group: 85, autoConnect: false);
+            var x = tiles.Add("X", 5f * k_Size, 0f, group: 85, autoConnect: false);
+            var y = tiles.Add("Y", 6f * k_Size, 0f, group: 85, autoConnect: false);
+            a.SetNeighbors(null, null, b, d);
+            b.SetNeighbors(null, null, null, x);
+            d.SetNeighbors(null, null, y, null);
+            var map = TerrainMap.CreateFromConnectedNeighbors(a);
+            Assert.Same(y, map.GetTerrain(1, -1));
+            Assert.DoesNotContain(x, map.terrainTiles.Values);
+
+            // An origin that fails the filter gives an empty map.
+            var empty = TerrainMap.CreateFromConnectedNeighbors(a, _ => false);
+            Assert.NotNull(empty);
+            Assert.Empty(empty.terrainTiles);
         }
 
         [Fact]
@@ -298,14 +329,14 @@ namespace UnityEngine.Tests
             other.SetNeighbors(origin, null, third, null);
 
             // Documented: a null filter applies none, so another group's linked tile is kept.
-            // Unbound's choice (unmeasured): each link is one tile, whatever the positions.
+            // As Unity's own walk: each link is one tile, whatever the positions.
             var map = TerrainMap.CreateFromConnectedNeighbors(origin);
             Assert.NotNull(map);
             Assert.Equal(3, map.terrainTiles.Count);
             Assert.Same(other, map.GetTerrain(1, 0));
             Assert.Same(third, map.GetTerrain(2, 0));
 
-            // Unbound's choice (unmeasured): a terrain that fails the filter is not followed.
+            // As Unity's own walk: a terrain that fails the filter takes no tile and is not followed.
             var filtered = TerrainMap.CreateFromConnectedNeighbors(origin, terrain => terrain.groupingID == 79);
             Assert.NotNull(filtered);
             Assert.Single(filtered.terrainTiles);
@@ -342,25 +373,24 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void OverlapWarningIsGivenOncePerTileAndSide()
+        public void AutoConnectTakesTheNeighboursOfTheGroupsPlacementMap()
         {
-            // Unbound's choice (unmeasured): the overlap warning is an Unbound diagnostic; it is
-            // given once per tile and side, not on every rebuild.
+            // As Unity's own TerrainUtility.AutoConnect: a tile two terrains round to keeps the
+            // first (tests/projects/terrainoverrides map.overlap), silently; an off-grid terrain
+            // rounds to its tile (map.offGrid).
             using var tiles = new Tiles();
             var origin = tiles.Add("Origin", 0f, 0f, group: 83);
-            tiles.Add("First", k_Size, 0f, group: 83);
-            tiles.Add("Second", k_Size, 0f, group: 83);
-            var below = tiles.Add("Below", 0f, -k_Size, group: 83);
+            var first = tiles.Add("First", k_Size, 0f, group: 83);
+            var second = tiles.Add("Second", k_Size, 0f, group: 83);
+            var below = tiles.Add("Below", 0f, -k_Size + 0.3f * k_Size, group: 83);
 
             using var capture = new WarningCapture();
             Terrain.SetConnectivityDirty();
+            Assert.Same(first, origin.rightNeighbor);
+            Assert.Same(origin, first.leftNeighbor);
+            Assert.Null(second.leftNeighbor);
             Assert.Same(below, origin.bottomNeighbor);
-            Assert.Null(origin.rightNeighbor);
-            Terrain.SetConnectivityDirty();
-            Assert.Null(origin.rightNeighbor);
-            Terrain.SetConnectivityDirty();
-            Assert.Null(origin.rightNeighbor);
-            Assert.Single(capture.Warnings, w => w.Contains("'Origin'") && w.Contains("overlapping auto-connect tiles on its right"));
+            Assert.Empty(capture.Warnings);
         }
 
         [Fact]

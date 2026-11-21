@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record and compare what UnityEditor.Events.the terrain LOD overrides and TerrainMap do in Unity 6000.0."""
+"""Record and compare what the terrain level-of-detail overrides and TerrainMap do in Unity 6000.0."""
 import argparse
 from pathlib import Path
 import sys

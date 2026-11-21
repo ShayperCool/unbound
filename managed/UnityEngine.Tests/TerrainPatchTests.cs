@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
@@ -93,6 +94,32 @@ namespace UnityEngine.Tests
                     if (tree.State[level][i] == TerrainRenderer.Drawn) drawn.Add((level, i % side, i / side));
             }
             return drawn;
+        }
+
+        /// <summary>The level-of-detail overrides replace the patches' errors and height ranges, in
+        /// the getters' order and in heights of 0 to 1; a new override rebuilds the patches.</summary>
+        [Fact]
+        public void OverridesReplaceThePatchErrorsAndRanges()
+        {
+            var (terrain, data) = Bumpy(129, 0.3f);
+            var before = terrain.Renderer.PatchesOf(data);
+            int count = data.GetMaximumHeightError().Length;
+            Assert.Equal(1 + 4 + 16 + 64, count);
+            data.OverrideMaximumHeightError(Enumerable.Range(0, count).Select(i => 0.001f * i).ToArray());
+            var tree = terrain.Renderer.PatchesOf(data);
+            Assert.NotSame(before, tree);
+            float height = data.size.y;
+            // Level 0 holds the first 64 values, the root (level 3) the last.
+            Assert.Equal(0.001f * 5 * height, tree.Error[0][5], 4);
+            Assert.Equal(0.001f * (count - 1) * height, tree.Error[3][0], 4);
+
+            data.OverrideMinMaxPatchHeights(Enumerable.Range(0, count).Select(i => new PatchExtents { min = 0.1f, max = 0.2f + 0.001f * i }).ToArray());
+            var ranged = terrain.Renderer.PatchesOf(data);
+            Assert.NotSame(tree, ranged);
+            Assert.Equal(0.1f * height, ranged.Bounds[0][5].min.y, 4);
+            Assert.Equal((0.2f + 0.001f * 5) * height, ranged.Bounds[0][5].max.y, 4);
+            Assert.Equal(0.001f * 5 * height, ranged.Error[0][5], 4);
+            Assert.Same(ranged, terrain.Renderer.PatchesOf(data));
         }
 
         /// <summary>A flat heightmap has no error: one root patch at any distance.</summary>
