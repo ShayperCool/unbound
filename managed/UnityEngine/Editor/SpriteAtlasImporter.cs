@@ -8,9 +8,10 @@ namespace UnityEditor.U2D
 {
     /// <summary>
     /// The importer of a V2 sprite atlas (`.spriteatlasv2`), reading and writing its per-platform
-    /// <see cref="TextureImporterPlatformSettings"/> and <see cref="SpriteAtlasPackingSettings"/>
-    /// in the asset's `.meta` (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor
-    /// v2importerplatform, v2importerplatformset and v2importerpacking).
+    /// <see cref="TextureImporterPlatformSettings"/>, <see cref="SpriteAtlasPackingSettings"/> and
+    /// <see cref="SpriteAtlasTextureSettings"/> in the asset's `.meta` (matches the Unity
+    /// 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v2importerplatform,
+    /// v2importerplatformset, v2importerpacking and v2importertexture).
     /// </summary>
     [HelpURL("https://docs.unity3d.com/6000.0/Documentation/Manual/sprite/atlas/v2/sprite-atlas-v2.html")]
     public sealed partial class SpriteAtlasImporter : AssetImporter
@@ -19,6 +20,8 @@ namespace UnityEditor.U2D
         bool m_PlatformSettingsModified;
         SpriteAtlasPackingSettings m_PackingSettings = SpriteAtlasPackingSettings.Default;
         bool m_PackingSettingsModified;
+        SpriteAtlasTextureSettings m_TextureSettings = SpriteAtlasTextureSettings.Default;
+        bool m_TextureSettingsModified;
 
         public SpriteAtlasImporter() { }
 
@@ -28,6 +31,30 @@ namespace UnityEditor.U2D
             m_PlatformSettingsModified = false;
             m_PackingSettings = SpriteAtlasPackingSettings.Read(body?.Get("packingSettings"));
             m_PackingSettingsModified = false;
+            m_TextureSettings = SpriteAtlasTextureSettings.Read(body?.Get("textureSettings"));
+            m_TextureSettingsModified = false;
+        }
+
+        /// <summary>This importer's own <see cref="SpriteAtlasTextureSettings"/> from its `.meta`
+        /// (defaults when omitted, legacy v1 <c>colorSpace</c> mapped to <c>sRGB</c>, variant
+        /// independent of its master; setting stores all fields verbatim and unconditionally marks
+        /// this importer dirty; matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/spriteatlaseditor v2importertexture).</summary>
+        public SpriteAtlasTextureSettings textureSettings
+        {
+            get
+            {
+                CheckImporterState("get_textureSettings");
+                return m_TextureSettings;
+            }
+            set
+            {
+                CheckImporterState("set_textureSettings");
+                m_TextureSettings = value;
+                m_TextureSettingsModified = true;
+                EditorUtility.SetDirty(this);
+                Changed();
+            }
         }
 
         /// <summary>This importer's own <see cref="SpriteAtlasPackingSettings"/> from its `.meta`
@@ -82,14 +109,22 @@ namespace UnityEditor.U2D
 
         internal override bool WriteCustomMeta(YText section)
         {
-            if (!m_PlatformSettingsModified && !m_PackingSettingsModified) return false;
+            if (!m_PlatformSettingsModified && !m_PackingSettingsModified && !m_TextureSettingsModified) return false;
             int textureIndex = section.Keys.IndexOf("textureSettings");
-            if (textureIndex < 0)
+            if (m_TextureSettingsModified || textureIndex < 0)
             {
-                int afterExternal = section.Keys.IndexOf("externalObjects");
-                textureIndex = afterExternal >= 0 ? afterExternal + 1 : 0;
-                section.Keys.Insert(textureIndex, "textureSettings");
-                section.Values.Insert(textureIndex, SpriteAtlasTextureSettings.Default.ToYText());
+                var textureText = m_TextureSettings.ToYText();
+                if (textureIndex >= 0)
+                {
+                    section.Values[textureIndex] = textureText;
+                }
+                else
+                {
+                    int afterExternal = section.Keys.IndexOf("externalObjects");
+                    textureIndex = afterExternal >= 0 ? afterExternal + 1 : 0;
+                    section.Keys.Insert(textureIndex, "textureSettings");
+                    section.Values.Insert(textureIndex, textureText);
+                }
             }
             int platformIndex = section.Keys.IndexOf("platformSettings");
             if (m_PlatformSettingsModified || platformIndex < 0)
@@ -128,6 +163,7 @@ namespace UnityEditor.U2D
         {
             m_PlatformSettingsModified = false;
             m_PackingSettingsModified = false;
+            m_TextureSettingsModified = false;
             base.ClearModifiedState();
         }
 

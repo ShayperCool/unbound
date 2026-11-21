@@ -2401,6 +2401,213 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SpriteAtlasImporterTextureSettingsReadsWritesDirtiesUpgradesLegacyAndInsertsWhenOmitted()
+        {
+            // Uncreated `new SpriteAtlasImporter()`: throws NullReferenceException on 6000.0 (measured)
+            // and reads/writes defaults under unmeasured families (e.g. 6000.3).
+            var uncreated = new SpriteAtlasImporter();
+            if (Unbound.Runtime.Compat.UncreatedObjectWrappersMeasured)
+            {
+                Assert.Throws<NullReferenceException>(() => _ = uncreated.textureSettings);
+                Assert.Throws<NullReferenceException>(() => uncreated.textureSettings = default);
+            }
+            else
+            {
+                Assert.Equal(2048, uncreated.textureSettings.maxTextureSize);
+                Assert.Equal(1, uncreated.textureSettings.anisoLevel);
+                Assert.True(uncreated.textureSettings.sRGB);
+                uncreated.textureSettings = new SpriteAtlasTextureSettings { anisoLevel = 4, filterMode = FilterMode.Point };
+                Assert.Equal(4, uncreated.textureSettings.anisoLevel);
+                Assert.Equal(FilterMode.Point, uncreated.textureSettings.filterMode);
+            }
+
+            // Master .meta with custom textureSettings, platformSettings, and packingSettings.
+            const string sampleMeta =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7bf02\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  textureSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    anisoLevel: 4\n" +
+                "    compressionQuality: 65\n" +
+                "    maxTextureSize: 1024\n" +
+                "    textureCompression: 2\n" +
+                "    filterMode: 2\n" +
+                "    generateMipMaps: 1\n" +
+                "    readable: 1\n" +
+                "    crunchedCompression: 1\n" +
+                "    sRGB: 0\n" +
+                "  platformSettings:\n" +
+                "  - serializedVersion: 4\n" +
+                "    buildTarget: Android\n" +
+                "    maxTextureSize: 1024\n" +
+                "    resizeAlgorithm: 1\n" +
+                "    textureFormat: 47\n" +
+                "    textureCompression: 3\n" +
+                "    compressionQuality: 60\n" +
+                "    crunchedCompression: 1\n" +
+                "    allowsAlphaSplitting: 1\n" +
+                "    overridden: 1\n" +
+                "    ignorePlatformSupport: 0\n" +
+                "    androidETC2FallbackOverride: 3\n" +
+                "    forceMaximumCompressionQuality_BC6H_BC7: 0\n" +
+                "  packingSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    padding: 8\n" +
+                "    blockOffset: 2\n" +
+                "    allowAlphaSplitting: 0\n" +
+                "    enableRotation: 0\n" +
+                "    enableTightPacking: 1\n" +
+                "    enableAlphaDilation: 1\n" +
+                "  secondaryTextureSettings: {}\n" +
+                "  variantMultiplier: 1\n" +
+                "  bindAsDefault: 1\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+
+            var root = UnityYamlText.ParseTopLevel(sampleMeta);
+            var section = root.Get("SpriteAtlasImporter");
+            var importer = Assert.IsType<SpriteAtlasImporter>(
+                AssetImporter.FromMeta("Assets/Master.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7bf02", "SpriteAtlasImporter", section.ToNode()));
+            Assert.False(EditorUtility.IsDirty(importer));
+            int baseDirty = EditorUtility.GetDirtyCount(importer);
+
+            var initial = importer.textureSettings;
+            Assert.Equal(1024, initial.maxTextureSize);
+            Assert.Equal(4, initial.anisoLevel);
+            Assert.Equal(FilterMode.Trilinear, initial.filterMode);
+            Assert.True(initial.generateMipMaps);
+            Assert.True(initial.readable);
+            Assert.False(initial.sRGB);
+
+            // Same-value repeat unconditionally marks dirty.
+            importer.textureSettings = initial;
+            Assert.True(EditorUtility.IsDirty(importer));
+            Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(importer));
+
+            // Mutating a copy preserves hidden fields and leaves unrelated platformSettings/packingSettings untouched.
+            var copy = initial;
+            copy.anisoLevel = 8;
+            copy.filterMode = FilterMode.Point;
+            copy.sRGB = true;
+            importer.textureSettings = copy;
+            Assert.True(importer.WriteCustomMeta(section));
+            string copyWritten = UnityYamlText.WriteTopLevel(root);
+            Assert.Contains(
+                "  textureSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    anisoLevel: 8\n" +
+                "    compressionQuality: 65\n" +
+                "    maxTextureSize: 1024\n" +
+                "    textureCompression: 2\n" +
+                "    filterMode: 0\n" +
+                "    generateMipMaps: 1\n" +
+                "    readable: 1\n" +
+                "    crunchedCompression: 1\n" +
+                "    sRGB: 1\n",
+                copyWritten);
+            Assert.Contains("    buildTarget: Android\n    maxTextureSize: 1024\n", copyWritten);
+            Assert.Contains("    padding: 8\n    blockOffset: 2\n", copyWritten);
+
+            // Negative anisoLevel, out-of-range filterMode, and default zeroed struct write verbatim.
+            importer.textureSettings = new SpriteAtlasTextureSettings
+            {
+                anisoLevel = -5,
+                filterMode = (FilterMode)99,
+                generateMipMaps = true,
+            };
+            Assert.True(importer.WriteCustomMeta(section));
+            string edgeWritten = UnityYamlText.WriteTopLevel(root);
+            Assert.Contains("    anisoLevel: -5\n    compressionQuality: 0\n    maxTextureSize: 0\n    textureCompression: 0\n    filterMode: 99\n    generateMipMaps: 1\n    readable: 0\n    crunchedCompression: 0\n    sRGB: 0\n", edgeWritten);
+
+            importer.textureSettings = default;
+            Assert.True(importer.WriteCustomMeta(section));
+            string zeroWritten = UnityYamlText.WriteTopLevel(root);
+            Assert.Contains("    anisoLevel: 0\n    compressionQuality: 0\n    maxTextureSize: 0\n    textureCompression: 0\n    filterMode: 0\n    generateMipMaps: 0\n    readable: 0\n    crunchedCompression: 0\n    sRGB: 0\n", zeroWritten);
+
+            // Legacy v1 colorSpace: 1 (linear -> sRGB: false) preserves hidden fields and upgrades to v2.
+            const string legacyMeta =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7bf04\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  textureSettings:\n" +
+                "    serializedVersion: 1\n" +
+                "    anisoLevel: 3\n" +
+                "    compressionQuality: 82\n" +
+                "    maxTextureSize: 512\n" +
+                "    textureCompression: 3\n" +
+                "    filterMode: 0\n" +
+                "    generateMipMaps: 1\n" +
+                "    readable: 0\n" +
+                "    crunchedCompression: 1\n" +
+                "    colorSpace: 1\n" +
+                "  platformSettings: []\n" +
+                "  packingSettings:\n" +
+                "    serializedVersion: 2\n" +
+                "    padding: 4\n" +
+                "    blockOffset: 1\n" +
+                "    allowAlphaSplitting: 0\n" +
+                "    enableRotation: 1\n" +
+                "    enableTightPacking: 1\n" +
+                "    enableAlphaDilation: 0\n" +
+                "  secondaryTextureSettings: {}\n" +
+                "  variantMultiplier: 1\n" +
+                "  bindAsDefault: 1\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+            var legacyRoot = UnityYamlText.ParseTopLevel(legacyMeta);
+            var legacySection = legacyRoot.Get("SpriteAtlasImporter");
+            var legacyImporter = Assert.IsType<SpriteAtlasImporter>(
+                AssetImporter.FromMeta("Assets/Legacy.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7bf04", "SpriteAtlasImporter", legacySection.ToNode()));
+            var ls = legacyImporter.textureSettings;
+            Assert.False(ls.sRGB);
+            Assert.Equal(512, ls.maxTextureSize);
+            ls.anisoLevel = 7;
+            ls.sRGB = true;
+            legacyImporter.textureSettings = ls;
+            Assert.True(legacyImporter.WriteCustomMeta(legacySection));
+            string legacyWritten = UnityYamlText.WriteTopLevel(legacyRoot);
+            Assert.DoesNotContain("colorSpace", legacyWritten);
+            Assert.Contains("    serializedVersion: 2\n    anisoLevel: 7\n    compressionQuality: 82\n    maxTextureSize: 512\n    textureCompression: 3\n    filterMode: 0\n    generateMipMaps: 1\n    readable: 0\n    crunchedCompression: 1\n    sRGB: 1\n", legacyWritten);
+
+            // Control outside probe's exact setup: sparse .meta omitting textureSettings, platformSettings and packingSettings inserts all three in order.
+            const string sparseMeta =
+                "fileFormatVersion: 2\n" +
+                "guid: 9a1b2c3d4e5f60718293a4b5c6d7bf09\n" +
+                "SpriteAtlasImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  secondaryTextureSettings: {}\n" +
+                "  variantMultiplier: 1\n" +
+                "  bindAsDefault: 1\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+            var sparseRoot = UnityYamlText.ParseTopLevel(sparseMeta);
+            var sparseSection = sparseRoot.Get("SpriteAtlasImporter");
+            var sparseImporter = Assert.IsType<SpriteAtlasImporter>(
+                AssetImporter.FromMeta("Assets/Sparse.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7bf09", "SpriteAtlasImporter", sparseSection.ToNode()));
+            var def = sparseImporter.textureSettings;
+            Assert.Equal(2048, def.maxTextureSize);
+            Assert.Equal(1, def.anisoLevel);
+            Assert.Equal(FilterMode.Bilinear, def.filterMode);
+            Assert.True(def.sRGB);
+            def.anisoLevel = 3;
+            def.readable = true;
+            sparseImporter.textureSettings = def;
+            Assert.True(sparseImporter.WriteCustomMeta(sparseSection));
+            string sparseWritten = UnityYamlText.WriteTopLevel(sparseRoot);
+            int posTex = sparseWritten.IndexOf("  textureSettings:\n    serializedVersion: 2\n    anisoLevel: 3\n", StringComparison.Ordinal);
+            int posPlat = sparseWritten.IndexOf("  platformSettings: []\n", StringComparison.Ordinal);
+            int posPack = sparseWritten.IndexOf("  packingSettings:\n", StringComparison.Ordinal);
+            int posSec = sparseWritten.IndexOf("  secondaryTextureSettings: {}\n", StringComparison.Ordinal);
+            Assert.True(posTex > 0 && posTex < posPlat && posPlat < posPack && posPack < posSec);
+        }
+
+        [Fact]
         public void ANullAtlasThrows()
         {
             SpriteAtlas none = null;
