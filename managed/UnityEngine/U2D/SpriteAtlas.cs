@@ -177,6 +177,57 @@ namespace UnityEngine.U2D
             EditorUtility.SetDirty(this);
         }
 
+        /// <summary>Removes all occurrences of each object in <paramref name="objects"/> by
+        /// swapping each matched entry with the last entry (preserving exact object identity,
+        /// including destroyed runtime objects, while ignoring null and unmatched inputs with no
+        /// warnings), marking the atlas dirty once per element plus once after the loop (matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v1remove/v2remove).</summary>
+        internal void RemovePackables(Object[] objects)
+        {
+            bool removed = false;
+            if (objects != null)
+            {
+                for (int i = 0; i < objects.Length; i++)
+                {
+                    var target = objects[i];
+                    if (!ReferenceEquals(target, null))
+                    {
+                        string targetGuid = null;
+                        long targetFileId = 0;
+                        bool hasAssetRef = target != null
+                            && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(target, out targetGuid, out targetFileId)
+                            && !string.IsNullOrEmpty(targetGuid);
+
+                        int j = 0;
+                        while (j < m_Packables.Count)
+                        {
+                            var entry = m_Packables[j];
+                            bool matches = (!ReferenceEquals(entry.Live, null) && ReferenceEquals(entry.Live, target))
+                                || (hasAssetRef
+                                    && !string.IsNullOrEmpty(entry.Reference.Guid)
+                                    && entry.Reference.FileId == targetFileId
+                                    && string.Equals(entry.Reference.Guid, targetGuid, StringComparison.OrdinalIgnoreCase));
+                            if (matches)
+                            {
+                                int last = m_Packables.Count - 1;
+                                m_Packables[j] = m_Packables[last];
+                                m_Packables.RemoveAt(last);
+                                removed = true;
+                            }
+                            else
+                            {
+                                j++;
+                            }
+                        }
+                    }
+                    EditorUtility.SetDirty(this);
+                }
+            }
+            if (removed) m_Sprites = null;
+            m_PackablesModified = true;
+            EditorUtility.SetDirty(this);
+        }
+
         static ObjectRef ResolvePackableRef(Object obj)
         {
             if (obj != null && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out string guid, out long localId) && !string.IsNullOrEmpty(guid))

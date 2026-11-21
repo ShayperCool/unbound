@@ -1214,9 +1214,9 @@ namespace UnityEngine.Tests
                     Assert.Equal(baseDirty + 5, EditorUtility.GetDirtyCount(fresh));
                     Assert.Equal(new[] { "Warning:Attempted to add null object into a Sprite Atlas." }, warnings);
 
-                    // Destroying a previously added runtime packable drops it from GetPackables without throwing.
+                    // Destroying a previously added runtime packable reports null in its GetPackables slot (matches Unity 6000.0.71f1 Editor).
                     Object.DestroyImmediate(texB);
-                    Assert.Equal(new Object[] { texA, spriteA, texA, spriteA }, fresh.GetPackables());
+                    Assert.Equal(new Object[] { texA, spriteA, texA, null, spriteA }, fresh.GetPackables());
                 }
                 finally
                 {
@@ -1328,12 +1328,164 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void RemoveUsesSwapBackOrderHandlesDuplicatesDestroyedAndDirtyCount()
+        {
+            var fresh = new SpriteAtlas();
+            int baseDirty = EditorUtility.GetDirtyCount(fresh);
+
+            var warnings = new List<string>();
+            Application.LogCallback capture = (msg, _, type) =>
+            {
+                if (type == LogType.Warning || type == LogType.Error)
+                    warnings.Add($"{type}:{msg}");
+            };
+            Application.logMessageReceived += capture;
+            try
+            {
+                // Null and empty arrays log nothing, leave packables empty, and mark dirty once each.
+                fresh.Remove(null);
+                Assert.Empty(fresh.GetPackables());
+                Assert.Empty(warnings);
+                Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(fresh));
+
+                fresh.Remove(Array.Empty<Object>());
+                Assert.Empty(fresh.GetPackables());
+                Assert.Empty(warnings);
+                Assert.Equal(baseDirty + 2, EditorUtility.GetDirtyCount(fresh));
+
+                var a = new Texture2D(4, 4) { name = "A" };
+                var b = new Texture2D(4, 4) { name = "B" };
+                var c = Sprite.Create(a, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f));
+                c.name = "C";
+                var d = new Texture2D(2, 2) { name = "D" };
+                var doomed = new Texture2D(2, 2) { name = "Doomed" };
+                var invalidGo = new GameObject("BadGo");
+                try
+                {
+                    // Swap-with-last removal of all duplicates: [A, B, C, B, D, doomed] removing B -> [A, doomed(null), C, D].
+                    fresh.Add(new Object[] { a, b, c, b, d, doomed }); // +1 -> +3
+                    Object.DestroyImmediate(doomed);
+                    fresh.Remove(new Object[] { b }); // 1 item -> +2 -> +5
+                    Assert.Empty(warnings);
+                    Assert.Equal(baseDirty + 5, EditorUtility.GetDirtyCount(fresh));
+                    Assert.Equal(new Object[] { a, null, c, d }, fresh.GetPackables());
+
+                    // Missing, invalid, and null entries log nothing, do not remove destroyed objects, and dirty N + 1 times.
+                    fresh.Remove(new Object[] { b, invalidGo, null }); // 3 items -> +4 -> +9
+                    Assert.Empty(warnings);
+                    Assert.Equal(baseDirty + 9, EditorUtility.GetDirtyCount(fresh));
+                    Assert.Equal(new Object[] { a, null, c, d }, fresh.GetPackables());
+
+                    // Passing the destroyed object reference matches by identity and swaps last element into its slot.
+                    fresh.Remove(new Object[] { doomed }); // 1 item -> +2 -> +11
+                    Assert.Empty(warnings);
+                    Assert.Equal(baseDirty + 11, EditorUtility.GetDirtyCount(fresh));
+                    Assert.Equal(new Object[] { a, d, c }, fresh.GetPackables());
+
+                    // Control outside the probe: trailing consecutive duplicates [B, A, B, B] removing B re-checks swapped-in slots.
+                    var trailing = new SpriteAtlas();
+                    trailing.Add(new Object[] { b, a, b, b });
+                    trailing.Remove(new Object[] { b });
+                    Assert.Equal(new Object[] { a }, trailing.GetPackables());
+                    Object.DestroyImmediate(trailing);
+
+                    // Removing remaining items empties packables.
+                    fresh.Remove(new Object[] { a, c, d }); // 3 items -> +4 -> +15
+                    Assert.Empty(fresh.GetPackables());
+                    Assert.Equal(baseDirty + 15, EditorUtility.GetDirtyCount(fresh));
+                }
+                finally
+                {
+                    Object.DestroyImmediate(invalidGo);
+                    Object.DestroyImmediate(d);
+                    Object.DestroyImmediate(c);
+                    Object.DestroyImmediate(b);
+                    Object.DestroyImmediate(a);
+                }
+            }
+            finally
+            {
+                Application.logMessageReceived -= capture;
+            }
+        }
+
+        [Fact]
+        public void NativeDocumentsWriteUpdatesV1PackablesOnRemoveAndEmptiesToFlowSequence()
+        {
+            const string v1Source =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Sample\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 8\n" +
+                "      blockOffset: 2\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 0\n" +
+                "      enableTightPacking: 1\n" +
+                "      enableAlphaDilation: 1\n" +
+                "    variantMultiplier: 1\n" +
+                "    packables:\n" +
+                "    - {fileID: 21300000, guid: b828055b6a1d50b968e77fc6406e2b5c, type: 3}\n" +
+                "    bindAsDefault: 1\n" +
+                "    isAtlasV2: 0\n" +
+                "  m_IsVariant: 0\n";
+
+            var runtimeTex = new Texture2D(4, 4) { name = "RuntimeTex" };
+            try
+            {
+                // Adding and then removing a runtime object restores exact serialized packables and unrelated settings.
+                var docs = UnityYamlText.Parse(v1Source);
+                var atlas = new SpriteAtlas();
+                atlas.ReadSerialized(TestYaml.DocumentBody(v1Source), null);
+                atlas.Add(new Object[] { runtimeTex });
+                atlas.Remove(new Object[] { runtimeTex });
+                int unlocated = 0;
+                Assert.True(NativeDocuments.Write(docs[0], atlas, null, null, ref unlocated));
+                Assert.Equal(v1Source, UnityYamlText.Write(docs));
+
+                // Removing from a sparse V1 atlas with omitted packables inserts `packables: []` after variantMultiplier.
+                const string v1Omitted =
+                    "%YAML 1.1\n" +
+                    "%TAG !u! tag:unity3d.com,2011:\n" +
+                    "--- !u!687078895 &4343727234628468602\n" +
+                    "SpriteAtlas:\n" +
+                    "  m_Name: Omitted\n" +
+                    "  m_EditorData:\n" +
+                    "    serializedVersion: 2\n" +
+                    "    variantMultiplier: 1\n" +
+                    "    bindAsDefault: 1\n" +
+                    "    isAtlasV2: 0\n" +
+                    "  m_IsVariant: 0\n";
+                var omittedDocs = UnityYamlText.Parse(v1Omitted);
+                var omittedAtlas = new SpriteAtlas();
+                omittedAtlas.ReadSerialized(TestYaml.DocumentBody(v1Omitted), null);
+                omittedAtlas.Remove(new Object[] { runtimeTex });
+                Assert.True(NativeDocuments.Write(omittedDocs[0], omittedAtlas, null, null, ref unlocated));
+                Assert.Equal(
+                    v1Omitted.Replace("    variantMultiplier: 1\n    bindAsDefault: 1\n",
+                        "    variantMultiplier: 1\n    packables: []\n    bindAsDefault: 1\n"),
+                    UnityYamlText.Write(omittedDocs));
+            }
+            finally
+            {
+                Object.DestroyImmediate(runtimeTex);
+            }
+        }
+
+        [Fact]
         public void ANullAtlasThrows()
         {
             SpriteAtlas none = null;
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPackables()).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.Add(Array.Empty<Object>())).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.Add(null)).ParamName);
+            Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.Remove(Array.Empty<Object>())).ParamName);
+            Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.Remove(null)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPackingSettings()).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetPackingSettings(default)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetTextureSettings()).ParamName);

@@ -152,10 +152,12 @@ namespace UnityEditor.U2D
     /// <summary>
     /// The Editor's view of a sprite atlas (V1 `.spriteatlas` and V2 `.spriteatlasv2` alike), as the
     /// Unity 6000.0.71f1 Editor answers it (tests/projects/spriteatlaseditor): its packables in their
-    /// stored order (a folder as its folder asset, a texture, a sprite; a packable whose asset is gone
-    /// is left out; <see cref="Add"/> appends valid packables in order without deduplication), its
-    /// master atlas (a variant's; null otherwise), whether builds include it, and its packing, texture
-    /// and per-platform settings. A null atlas throws ArgumentNullException.
+    /// stored order (a folder as its folder asset, a texture, a sprite; a serialized packable whose
+    /// asset is gone is left out while a live packable destroyed after <see cref="Add"/> reports null;
+    /// <see cref="Add"/> appends valid packables in order without deduplication and
+    /// <see cref="Remove"/> removes all matching entries by swapping with the last entry), its master
+    /// atlas (a variant's; null otherwise), whether builds include it, and its packing, texture and
+    /// per-platform settings. A null atlas throws ArgumentNullException.
     /// </summary>
     public static partial class SpriteAtlasExtensions
     {
@@ -167,7 +169,7 @@ namespace UnityEditor.U2D
             {
                 if (!ReferenceEquals(entry.Live, null))
                 {
-                    if (entry.Live != null) packables.Add(entry.Live);
+                    packables.Add(entry.Live != null ? entry.Live : null);
                     continue;
                 }
                 var packable = entry.Reference;
@@ -186,6 +188,12 @@ namespace UnityEditor.U2D
         {
             if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
             spriteAtlas.AddPackables(objects);
+        }
+
+        public static void Remove(this SpriteAtlas spriteAtlas, Object[] objects)
+        {
+            if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
+            spriteAtlas.RemovePackables(objects);
         }
 
         public static SpriteAtlasPackingSettings GetPackingSettings(this SpriteAtlas spriteAtlas)
