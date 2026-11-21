@@ -36,6 +36,19 @@ struct BindingPlan {
     tex_derived_bases: Vec<Box<str>>,
 }
 
+/// Per-property override metadata precomputed once per compiled program so each draw override
+/// resolves its affected binding mask, direct uniform target, and `_ST`/`_TexelSize` derivation
+/// flag in a single hash lookup.
+#[derive(Clone, Copy, Debug)]
+struct OverrideTarget {
+    /// Bitmask of uniform bindings affected by an override of this property name.
+    binding_mask: u8,
+    /// Index into `Compiled::uniforms` for a direct read non-array uniform (`u32::MAX` if none).
+    direct_uniform: u32,
+    /// True if `<name>_ST` or `<name>_TexelSize` is a read uniform in this program.
+    is_tex_derived_base: bool,
+}
+
 /// How a program's uniforms and cbuffers map onto its uniform bindings.
 struct ProgramBindings {
     bindings: Vec<BindingPlan>,
@@ -43,12 +56,9 @@ struct ProgramBindings {
     uniform_binding: Vec<u8>,
     /// By uniform index: byte offset relative to its binding's start.
     uniform_local_offset: Vec<u32>,
-    /// Maps each read uniform name (and each stripped `_ST` / `_TexelSize` texture base name) to
-    /// the bitmask of bindings it can affect when present in a draw's overrides.
-    override_binding_mask: rustc_hash::FxHashMap<String, u8>,
-    /// All texture property base names that have a read `_ST` or `_TexelSize` uniform in this
-    /// program, so draw overrides outside this set skip `_ST`/`_TexelSize` string concatenation.
-    tex_derived_bases: HashSet<String>,
+    /// Single-lookup override resolution table keyed by read uniform name and by stripped
+    /// `_ST`/`_TexelSize` texture base name.
+    override_targets: rustc_hash::FxHashMap<String, OverrideTarget>,
 }
 
 impl ProgramBindings {
@@ -112,8 +122,8 @@ impl ProgramBindings {
 
         let mut uniform_binding = Vec::with_capacity(program.uniforms.len());
         let mut uniform_local_offset = Vec::with_capacity(program.uniforms.len());
-        let mut override_binding_mask: rustc_hash::FxHashMap<String, u8> = Default::default();
-        let mut tex_derived_bases: HashSet<String> = HashSet::default();
+        let mut override_targets: rustc_hash::FxHashMap<String, OverrideTarget> =
+            Default::default();
         for (i, u) in program.uniforms.iter().enumerate() {
             let k = binding_for(&bindings, u.offset).unwrap_or(0);
             let local = bindings
@@ -122,6 +132,9 @@ impl ProgramBindings {
             uniform_binding.push(k as u8);
             uniform_local_offset.push(local);
             if u.unread {
+                if let Some(entry) = override_targets.get_mut(&u.name) {
+                    entry.direct_uniform = u32::MAX;
+                }
                 continue;
             }
             let bit = if k < MAX_UNIFORM_BINDINGS {
@@ -129,9 +142,20 @@ impl ProgramBindings {
             } else {
                 0
             };
-            if bit != 0 {
-                *override_binding_mask.entry(u.name.clone()).or_insert(0) |= bit;
-            }
+            let direct = if u.count == 1 && u.stride == 0 {
+                i as u32
+            } else {
+                u32::MAX
+            };
+            let entry = override_targets
+                .entry(u.name.clone())
+                .or_insert(OverrideTarget {
+                    binding_mask: 0,
+                    direct_uniform: u32::MAX,
+                    is_tex_derived_base: false,
+                });
+            entry.binding_mask |= bit;
+            entry.direct_uniform = direct;
             if let Some(b) = bindings.get_mut(k) {
                 if u.stride > 0 {
                     b.arrays.push(i as u32);
@@ -172,10 +196,16 @@ impl ProgramBindings {
                     {
                         b.tex_derived_bases.push(base.into());
                     }
-                    tex_derived_bases.insert(base.to_string());
-                    if bit != 0 {
-                        *override_binding_mask.entry(base.to_string()).or_insert(0) |= bit;
-                    }
+                    let base_entry =
+                        override_targets
+                            .entry(base.to_string())
+                            .or_insert(OverrideTarget {
+                                binding_mask: 0,
+                                direct_uniform: u32::MAX,
+                                is_tex_derived_base: false,
+                            });
+                    base_entry.binding_mask |= bit;
+                    base_entry.is_tex_derived_base = true;
                 }
             }
         }
@@ -184,8 +214,7 @@ impl ProgramBindings {
             bindings,
             uniform_binding,
             uniform_local_offset,
-            override_binding_mask,
-            tex_derived_bases,
+            override_targets,
         }
     }
 
@@ -214,6 +243,9 @@ struct ProgramGpu {
     /// target without a depth buffer is drawn with a program that writes the depth.
     depthless: Option<Result<Depthless, String>>,
     uniform_layout: wgpu::BindGroupLayout,
+    /// Cached group-0 bind group keyed by `(self.buffer_gen, draws_gen)` so steady-state frames
+    /// reuse the bind group without recreating it every submission.
+    uniform_group: Option<(u64, u64, wgpu::BindGroup)>,
     pub texture_layout: wgpu::BindGroupLayout,
     /// Group 3: the program's buffers (none without any).
     buffer_layout: Option<wgpu::BindGroupLayout>,
@@ -257,21 +289,12 @@ pub struct ConstantBufferRef<'a> {
     pub bytes: &'a [u8],
 }
 
-/// A program's group-0 bind group this frame.
-pub struct ProgramUniforms {
-    pub group: wgpu::BindGroup,
-}
-
-impl ProgramUniforms {
-    /// The dynamic offsets of a draw whose uniform bindings lie at `bindings` and per-draw
+impl DrawOffsets {
+    /// The dynamic offsets of a draw whose uniform bindings lie at `self` and per-draw
     /// uniform at `draw`, in binding order (the first uniform binding, the per-draw uniform,
     /// the others), and how many there are.
-    pub fn offsets(
-        &self,
-        bindings: &DrawOffsets,
-        draw: u32,
-    ) -> ([u32; MAX_UNIFORM_BINDINGS + 1], usize) {
-        dynamic_offsets(&bindings.offsets[..bindings.count as usize], draw)
+    pub fn dynamic_offsets(&self, draw: u32) -> ([u32; MAX_UNIFORM_BINDINGS + 1], usize) {
+        dynamic_offsets(&self.offsets[..self.count as usize], draw)
     }
 }
 
@@ -491,8 +514,16 @@ pub struct CompiledPrograms {
     data: Vec<u8>,
     used: HashSet<u32>,
     buffer: Option<wgpu::Buffer>,
+    /// Monotonic generation incremented whenever `buffer` is allocated or grown.
+    buffer_gen: u64,
+    /// Last `draws_gen` seen by [`Self::upload`]; when it changes, cached group-0 bind groups are
+    /// cleared so no program keeps a stale reference to a replaced per-draw uniform buffer.
+    last_draws_gen: u64,
     /// A uniform name being built (an override's `_ST` / `_TexelSize`), reused from draw to draw.
     name: String,
+    /// Reusable per-draw scratch of `(override_index, OverrideTarget)` populated in a single pass
+    /// over `DrawValues::overrides`.
+    override_scratch: Vec<(u32, OverrideTarget)>,
     /// Standalone constant buffers already copied into `data` this frame:
     /// `(buffer handle, buffer revision, binding size) -> byte offset in data`.
     shared_constants: HashMap<(u64, u64, u32), u32>,
@@ -656,7 +687,10 @@ impl CompiledPrograms {
             data: Vec::new(),
             used: HashSet::default(),
             buffer: None,
+            buffer_gen: 0,
+            last_draws_gen: 0,
             name: String::new(),
+            override_scratch: Vec::new(),
             shared_constants: HashMap::default(),
             shared_bindings: HashMap::default(),
             camera_cache: None,
@@ -888,6 +922,7 @@ impl CompiledPrograms {
             depthless: None,
             program,
             uniform_layout,
+            uniform_group: None,
             texture_layout,
             buffer_layout,
             layout,
@@ -1063,6 +1098,7 @@ impl CompiledPrograms {
             &mut self.shared_bindings,
             &mut self.empty_slot,
             &mut self.name,
+            &mut self.override_scratch,
         )
     }
 
@@ -1140,19 +1176,21 @@ impl CompiledPrograms {
             .join(" ")
     }
 
-    /// Uploads the frame's uniform blocks; the group-0 bind group of each program used.
+    /// Uploads the frame's uniform blocks and ensures every used program has a cached group-0
+    /// bind group bound to the current uniform and per-draw buffers.
     pub fn upload(
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         draws: &wgpu::Buffer,
+        draws_gen: u64,
         draw_size: u64,
-    ) -> HashMap<u32, ProgramUniforms> {
-        let mut groups = HashMap::default();
+    ) {
         if self.used.is_empty() {
-            return groups;
+            return;
         }
         let bytes = (self.data.len() as u64).max(DRAW_SLOT);
+        let mut invalidated = draws_gen != self.last_draws_gen;
         if self.buffer.as_ref().is_none_or(|b| b.size() < bytes) {
             self.buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("unbound program uniforms"),
@@ -1160,6 +1198,14 @@ impl CompiledPrograms {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }));
+            self.buffer_gen = self.buffer_gen.wrapping_add(1).max(1);
+            invalidated = true;
+        }
+        if invalidated {
+            self.last_draws_gen = draws_gen;
+            for gpu in &mut self.programs {
+                gpu.uniform_group = None;
+            }
         }
         let buffer = self.buffer.as_ref().unwrap();
         if !self.data.is_empty() {
@@ -1172,9 +1218,16 @@ impl CompiledPrograms {
                 size: wgpu::BufferSize::new(size),
             })
         };
+        let buffer_gen = self.buffer_gen;
         let mut entries = Vec::with_capacity(MAX_UNIFORM_BINDINGS + 1);
         for &id in &self.used {
-            let gpu = &self.programs[id as usize];
+            let gpu = &mut self.programs[id as usize];
+            if matches!(
+                &gpu.uniform_group,
+                Some((bg_gen, d_gen, _)) if *bg_gen == buffer_gen && *d_gen == draws_gen
+            ) {
+                continue;
+            }
             let bindings = &gpu.program.uniform_bindings;
             // A program without cbuffers binds a minimal range.
             let first = bindings.first().map_or(16, |b| b.size.max(16));
@@ -1202,9 +1255,16 @@ impl CompiledPrograms {
                 layout: &gpu.uniform_layout,
                 entries: &entries,
             });
-            groups.insert(id, ProgramUniforms { group });
+            gpu.uniform_group = Some((buffer_gen, draws_gen, group));
         }
-        groups
+    }
+
+    /// The cached group-0 uniform bind group of program `id` prepared by [`Self::upload`].
+    pub fn uniform_group(&self, id: u32) -> Option<&wgpu::BindGroup> {
+        self.programs
+            .get(id as usize)
+            .and_then(|gpu| gpu.uniform_group.as_ref())
+            .map(|(_, _, group)| group)
     }
 }
 
@@ -1233,6 +1293,51 @@ fn transpose(m: &Mat) -> Mat {
 }
 
 fn inverse(m: &Mat) -> Mat {
+    // Fast exact 3D affine inverse for standard transform matrices whose bottom row is [0, 0, 0, 1].
+    if m[3] == 0.0 && m[7] == 0.0 && m[11] == 0.0 && m[15] == 1.0 {
+        let c0 = m[5] * m[10] - m[9] * m[6];
+        let c4 = m[8] * m[6] - m[4] * m[10];
+        let c8 = m[4] * m[9] - m[8] * m[5];
+        let det = m[0] * c0 + m[1] * c4 + m[2] * c8;
+        if det.abs() < 1e-20 {
+            return [
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+            ];
+        }
+        let inv_det = 1.0 / det;
+        let i0 = c0 * inv_det;
+        let i4 = c4 * inv_det;
+        let i8 = c8 * inv_det;
+        let i1 = (m[9] * m[2] - m[1] * m[10]) * inv_det;
+        let i5 = (m[0] * m[10] - m[8] * m[2]) * inv_det;
+        let i9 = (m[8] * m[1] - m[0] * m[9]) * inv_det;
+        let i2 = (m[1] * m[6] - m[5] * m[2]) * inv_det;
+        let i6 = (m[4] * m[2] - m[0] * m[6]) * inv_det;
+        let i10 = (m[0] * m[5] - m[4] * m[1]) * inv_det;
+        let (tx, ty, tz) = (m[12], m[13], m[14]);
+        return [
+            i0,
+            i1,
+            i2,
+            0.0,
+            i4,
+            i5,
+            i6,
+            0.0,
+            i8,
+            i9,
+            i10,
+            0.0,
+            -(i0 * tx + i4 * ty + i8 * tz),
+            -(i1 * tx + i5 * ty + i9 * tz),
+            -(i2 * tx + i6 * ty + i10 * tz),
+            1.0,
+        ];
+    }
+    inverse_general(m)
+}
+
+fn inverse_general(m: &Mat) -> Mat {
     let mut inv = [0.0f32; 16];
     inv[0] = m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15]
         + m[9] * m[7] * m[14]
@@ -1918,6 +2023,12 @@ fn write_value_at(u: &unbound_shaders::Uniform, offset: usize, value: &Value, ou
     }
 }
 
+/// Byte size of one uniform binding's `DRAW_SLOT`-aligned allocation in `CompiledPrograms::data`.
+#[inline]
+fn binding_alloc_size(size: u32) -> usize {
+    ((size.max(16) as u64).div_ceil(DRAW_SLOT) * DRAW_SLOT) as usize
+}
+
 /// A program's uniform block as a material fills it (see [`CompiledPrograms::material_block`]).
 fn material_block(
     program: &Compiled,
@@ -1942,9 +2053,12 @@ fn material_block(
             Some(value) => {
                 if let Some(bytes) = binding_bytes.get_mut(k) {
                     if bytes.is_empty() {
-                        bytes.resize(layout.bindings[k].size as usize, 0);
+                        // Pre-pad to `DRAW_SLOT` so draw-time packing copies with one
+                        // `extend_from_slice` instead of zero-filling then overwriting.
+                        bytes.resize(binding_alloc_size(layout.bindings[k].size), 0);
                     }
-                    write_value_at(u, local as usize, &value, bytes);
+                    let size = layout.bindings[k].size as usize;
+                    write_value_at(u, local as usize, &value, &mut bytes[..size]);
                 }
             }
             None => {
@@ -2020,6 +2134,7 @@ fn push_program_uniforms(
     shared_bindings: &mut HashMap<SharedBindingKey, u32>,
     empty_slot: &mut Option<u32>,
     name: &mut String,
+    override_scratch: &mut Vec<(u32, OverrideTarget)>,
 ) -> DrawOffsets {
     use std::hash::{Hash, Hasher};
 
@@ -2034,12 +2149,34 @@ fn push_program_uniforms(
         return DrawOffsets { offsets, count: 0 };
     }
 
-    // Compute bitmask of bindings targeted by any draw override in O(overrides.len()).
+    // Resolve all taken draw overrides against `layout.override_targets` in one pass so later
+    // stages avoid re-hashing every override name.
+    override_scratch.clear();
     let mut override_mask = 0u8;
+    let mut simple_overrides =
+        values.instance.is_none() && !values.instance_empty && values.element.is_none();
+    let mut any_non_tex_derived = false;
     if block.is_some() && !values.overrides.is_empty() {
-        for (property, _) in values.taken_overrides() {
-            if let Some(&mask) = layout.override_binding_mask.get(property.as_str()) {
-                override_mask |= mask;
+        let hidden = values.hidden;
+        for (idx, (property, value)) in values.overrides.iter().enumerate() {
+            if hidden == Some(property.as_str()) {
+                continue;
+            }
+            if let Some(&target) = layout.override_targets.get(property.as_str()) {
+                override_mask |= target.binding_mask;
+                if !matches!(
+                    value,
+                    PropertyValue::Float(_)
+                        | PropertyValue::Int(_)
+                        | PropertyValue::Vector(_)
+                        | PropertyValue::Matrix(_)
+                ) {
+                    simple_overrides = false;
+                }
+                if target.is_tex_derived_base && !matches!(value, PropertyValue::Texture { .. }) {
+                    any_non_tex_derived = true;
+                }
+                override_scratch.push((idx as u32, target));
             }
         }
     }
@@ -2072,7 +2209,7 @@ fn push_program_uniforms(
         } else {
             0
         };
-        let alloc = (bp.size.max(16) as u64).div_ceil(DRAW_SLOT) * DRAW_SLOT;
+        let alloc = binding_alloc_size(bp.size);
 
         // Fast path 1: standalone bound constant buffer (shared across programs by buffer revision).
         if (override_mask & bit) == 0
@@ -2084,9 +2221,11 @@ fn push_program_uniforms(
             let key = (cb.handle, cb.revision, bp.size);
             offsets[k] = *shared_constants.entry(key).or_insert_with(|| {
                 let at = data.len();
-                data.resize(at + alloc as usize, 0);
-                let n = (bp.size as usize).min(cb.bytes.len());
-                data[at..at + n].copy_from_slice(&cb.bytes[..n]);
+                let n = bp.size as usize;
+                data.extend_from_slice(&cb.bytes[..n]);
+                if alloc > n {
+                    data.resize(at + alloc, 0);
+                }
                 at as u32
             });
             continue;
@@ -2143,14 +2282,15 @@ fn push_program_uniforms(
                 continue;
             }
             let at = data.len();
-            data.resize(at + alloc as usize, 0);
-            offsets[k] = at as u32;
             if let Some(src) = block.binding_bytes.get(k)
                 && !src.is_empty()
             {
-                let n = src.len().min(bp.size as usize);
-                data[at..at + n].copy_from_slice(&src[..n]);
+                debug_assert_eq!(src.len(), alloc);
+                data.extend_from_slice(src);
+            } else {
+                data.resize(at + alloc, 0);
             }
+            offsets[k] = at as u32;
             if pending_count < MAX_UNIFORM_BINDINGS {
                 pending_cache[pending_count] = (key, at as u32);
                 pending_count += 1;
@@ -2159,15 +2299,16 @@ fn push_program_uniforms(
         }
 
         let at = data.len();
-        data.resize(at + alloc as usize, 0);
-        offsets[k] = at as u32;
         if let Some(block) = block
             && let Some(src) = block.binding_bytes.get(k)
             && !src.is_empty()
         {
-            let n = src.len().min(bp.size as usize);
-            data[at..at + n].copy_from_slice(&src[..n]);
+            debug_assert_eq!(src.len(), alloc);
+            data.extend_from_slice(src);
+        } else {
+            data.resize(at + alloc, 0);
         }
+        offsets[k] = at as u32;
     }
 
     let binding_range = |k: usize| -> std::ops::Range<usize> {
@@ -2253,16 +2394,11 @@ fn push_program_uniforms(
             // derive from the texture property's name) before the bound constant buffers; each
             // uniform of an override's name, and the `_ST` / `_TexelSize` of a texture override,
             // after them.
-            let mut redo = |data: &mut [u8], property: &str, suffix: &str, texture: bool| {
-                let lookup = if suffix.is_empty() {
-                    property
-                } else {
-                    name.clear();
-                    name.push_str(property);
-                    name.push_str(suffix);
-                    name.as_str()
-                };
-                if let Some(&i) = by_name.get(lookup)
+            let mut redo_suffix = |data: &mut [u8], property: &str, suffix: &str, texture: bool| {
+                name.clear();
+                name.push_str(property);
+                name.push_str(suffix);
+                if let Some(&i) = by_name.get(name.as_str())
                     && !program.uniforms[i as usize].unread
                     && (texture || block.is_dynamic[i as usize])
                 {
@@ -2274,25 +2410,15 @@ fn push_program_uniforms(
                     }
                 }
             };
-            let has_tex_derived = !layout.tex_derived_bases.is_empty();
-            let mut simple_overrides =
-                values.instance.is_none() && !values.instance_empty && values.element.is_none();
-            for (property, value) in values.taken_overrides() {
-                if !matches!(
-                    value,
-                    PropertyValue::Float(_)
-                        | PropertyValue::Int(_)
-                        | PropertyValue::Vector(_)
-                        | PropertyValue::Matrix(_)
-                ) {
-                    simple_overrides = false;
-                }
-                if has_tex_derived
-                    && !matches!(value, PropertyValue::Texture { .. })
-                    && layout.tex_derived_bases.contains(property.as_str())
-                {
-                    for suffix in TEXTURE_SUFFIXES {
-                        redo(data, property, suffix, false);
+            if any_non_tex_derived {
+                for &(idx, target) in override_scratch.iter() {
+                    if target.is_tex_derived_base {
+                        let (property, value) = &values.overrides[idx as usize];
+                        if !matches!(value, PropertyValue::Texture { .. }) {
+                            for suffix in TEXTURE_SUFFIXES {
+                                redo_suffix(data, property, suffix, false);
+                            }
+                        }
                     }
                 }
             }
@@ -2314,23 +2440,24 @@ fn push_program_uniforms(
                     }
                 }
             }
-            if simple_overrides {
-                // Every taken override is a plain scalar/vector/matrix and this draw is not
-                // instanced: forward writes overwrite earlier duplicates identically to
-                // `override_of` without O(N^2) reverse scans.
-                for (property, value) in values.taken_overrides() {
-                    if let Some(&i) = by_name.get(property.as_str()) {
-                        let i = i as usize;
-                        let u = &program.uniforms[i];
-                        if u.unread || u.count != 1 || u.stride > 0 {
+            if !override_scratch.is_empty() {
+                if simple_overrides {
+                    // Every matching taken override is a plain scalar/vector/matrix and this draw
+                    // is not instanced: forward writes overwrite earlier duplicates identically to
+                    // `override_of` without O(N^2) reverse scans or duplicate hash lookups.
+                    for &(idx, target) in override_scratch.iter() {
+                        if target.direct_uniform == u32::MAX {
                             continue;
                         }
+                        let i = target.direct_uniform as usize;
                         let k = layout.uniform_binding[i] as usize;
                         if shared_mask & (1 << k) != 0 {
                             continue;
                         }
+                        let u = &program.uniforms[i];
                         let local = layout.uniform_local_offset[i] as usize;
                         let out = &mut data[binding_range(k)];
+                        let value = &values.overrides[idx as usize].1;
                         let direct = match (plan[i], value) {
                             (Source::Named, PropertyValue::Float(f)) => {
                                 Some(Value::Vector([*f; 4]))
@@ -2369,16 +2496,24 @@ fn push_program_uniforms(
                             write_uniform_at(program, plan, i, local, values, out);
                         }
                     }
-                }
-            } else {
-                for (property, value) in values.taken_overrides() {
-                    redo(data, property, "", true);
-                    if has_tex_derived
-                        && matches!(value, PropertyValue::Texture { .. })
-                        && layout.tex_derived_bases.contains(property.as_str())
-                    {
-                        for suffix in TEXTURE_SUFFIXES {
-                            redo(data, property, suffix, true);
+                } else {
+                    for &(idx, target) in override_scratch.iter() {
+                        if target.direct_uniform != u32::MAX {
+                            let i = target.direct_uniform as usize;
+                            let k = layout.uniform_binding[i] as usize;
+                            if shared_mask & (1 << k) == 0 {
+                                let local = layout.uniform_local_offset[i] as usize;
+                                let out = &mut data[binding_range(k)];
+                                write_uniform_at(program, plan, i, local, values, out);
+                            }
+                        }
+                        if target.is_tex_derived_base {
+                            let (property, value) = &values.overrides[idx as usize];
+                            if matches!(value, PropertyValue::Texture { .. }) {
+                                for suffix in TEXTURE_SUFFIXES {
+                                    redo_suffix(data, property, suffix, true);
+                                }
+                            }
                         }
                     }
                 }
@@ -3060,6 +3195,7 @@ mod tests {
             let mut shared_bindings = HashMap::default();
             let mut empty_slot = None;
             let cam = CachedCamera::compute(1, CameraInput::from_values(&values), &values);
+            let mut override_scratch = Vec::new();
             let draw_offsets = push_program_uniforms(
                 0,
                 program,
@@ -3074,6 +3210,7 @@ mod tests {
                 &mut shared_bindings,
                 &mut empty_slot,
                 &mut String::new(),
+                &mut override_scratch,
             );
             // Each binding's bytes at its place in the program's uniform block.
             let mut over = vec![0u8; size_of_program];
@@ -3114,9 +3251,9 @@ mod tests {
                 .map_or(0, |k| 1u8 << k);
             let reached = values.taken_overrides().any(|(n, _)| {
                 layout
-                    .override_binding_mask
+                    .override_targets
                     .get(n.as_str())
-                    .is_some_and(|mask| mask & bound_bit != 0)
+                    .is_some_and(|target| target.binding_mask & bound_bit != 0)
             });
             if targets_bound || !shares {
                 assert_eq!(shared_constants.len(), 0, "overrides {overrides:?}");
@@ -3602,6 +3739,7 @@ mod tests {
         let mut shared_bindings = HashMap::default();
         let mut empty_slot = None;
         let mut scratch = String::new();
+        let mut override_scratch = Vec::new();
         let cam = CachedCamera::compute(1, CameraInput::from_values(&base), &base);
 
         let cb1 = |name: &str| {
@@ -3630,6 +3768,7 @@ mod tests {
             &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
+            &mut override_scratch,
         );
         let len_after_d1 = data.len();
         let v2 = DrawValues {
@@ -3651,6 +3790,7 @@ mod tests {
             &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
+            &mut override_scratch,
         );
         assert_eq!(
             d1.offsets[1], d2.offsets[1],
@@ -3697,6 +3837,7 @@ mod tests {
             &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
+            &mut override_scratch,
         );
         assert_ne!(d3.offsets[1], d1.offsets[1]);
         assert_eq!(
@@ -3734,6 +3875,7 @@ mod tests {
             &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
+            &mut override_scratch,
         );
         assert_ne!(d4.offsets[1], d1.offsets[1]);
         assert_eq!(
@@ -3776,6 +3918,7 @@ mod tests {
             &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
+            &mut override_scratch,
         );
         assert_eq!(
             &data[d5.offsets[1] as usize..d5.offsets[1] as usize + 64],
@@ -3971,6 +4114,7 @@ mod tests {
         let mut shared_bindings = HashMap::default();
         let mut empty_slot = None;
         let mut scratch = String::new();
+        let mut override_scratch = Vec::new();
         // Pushes a draw; returns its binding offsets after checking each binding's bytes.
         let mut draw = |values: &DrawValues, block: &MaterialBlock| {
             let offsets = push_program_uniforms(
@@ -3987,6 +4131,7 @@ mod tests {
                 &mut shared_bindings,
                 &mut empty_slot,
                 &mut scratch,
+                &mut override_scratch,
             );
             let mut full = vec![0u8; program.uniform_size as usize];
             fill(&program, &plan, values, &mut full);
@@ -4282,6 +4427,7 @@ mod tests {
         let mut shared_bindings = HashMap::default();
         let mut empty_slot = None;
         let mut scratch = String::new();
+        let mut override_scratch = Vec::new();
 
         // Draw 1 (mat_a, model1) populates bindings 0, 1, 2.
         let d1 = push_program_uniforms(
@@ -4298,6 +4444,7 @@ mod tests {
             &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
+            &mut override_scratch,
         );
         let len_after_d1 = data.len();
 
@@ -4321,6 +4468,7 @@ mod tests {
             &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
+            &mut override_scratch,
         );
         assert_ne!(
             d1.offsets[0], d2.offsets[0],
@@ -4375,6 +4523,7 @@ mod tests {
             &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
+            &mut override_scratch,
         );
         assert_ne!(
             d3.offsets[1], d1.offsets[1],
@@ -4418,6 +4567,7 @@ mod tests {
             &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
+            &mut override_scratch,
         );
         assert_ne!(d4.offsets[1], d1.offsets[1]);
         assert_ne!(d4.offsets[2], d1.offsets[2]);
@@ -4445,6 +4595,7 @@ mod tests {
             &mut shared_bindings,
             &mut empty_slot,
             &mut scratch,
+            &mut override_scratch,
         );
         assert_ne!(
             d5.offsets[1], d1.offsets[1],
@@ -4469,6 +4620,220 @@ mod tests {
                     .unwrap()
             ),
             2.5
+        );
+    }
+
+    #[test]
+    fn affine_inverse_matches_general_inverse_and_edge_cases() {
+        let cases: [Mat; 6] = [
+            // Identity
+            [
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+            ],
+            // Non-uniform scale + translation
+            [
+                2.5, 0.0, 0.0, 0.0, 0.0, -0.5, 0.0, 0.0, 0.0, 0.0, 4.0, 0.0, 12.25, -7.5, 3.125,
+                1.0,
+            ],
+            // Rotation + shear + mirrored scale + large translation
+            [
+                0.8, 0.6, -0.1, 0.0, -0.5, 0.7, 0.4, 0.0, 0.25, -0.35, -1.2, 0.0, 1024.5, -512.25,
+                256.75, 1.0,
+            ],
+            // Singular affine matrix (zero scale axis) -> identity
+            [
+                1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 5.0, 6.0, 7.0, 1.0,
+            ],
+            // Perspective projection (non-affine bottom row) -> general fallback
+            [
+                1.5, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, -1.02, -1.0, 0.0, 0.0, -0.2, 0.0,
+            ],
+            // General non-affine matrix with non-zero m[3]/m[7]/m[11]
+            [
+                1.2, 0.1, 0.0, 0.05, -0.2, 0.9, 0.3, -0.02, 0.0, -0.1, 1.1, 0.04, 3.0, -2.0, 1.5,
+                1.3,
+            ],
+        ];
+        for (idx, m) in cases.iter().enumerate() {
+            let fast = inverse(m);
+            let general = inverse_general(m);
+            for (k, (&a, &b)) in fast.iter().zip(general.iter()).enumerate() {
+                let tol = 1e-5 * b.abs().max(1.0);
+                assert!(
+                    (a - b).abs() <= tol,
+                    "case {idx} elem {k}: fast={a} vs general={b}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn prepadded_material_block_and_single_pass_overrides_match_full_fill() {
+        let program = Compiled {
+            vertex: String::new(),
+            fragment: String::new(),
+            vertex_entry: String::new(),
+            fragment_entry: String::new(),
+            uniforms: vec![
+                uniform("_Color", 0, 4, 1),
+                uniform("_Spec", 16, 4, 1),
+                uniform("_MainTex_ST", 32, 4, 1),
+            ],
+            instanced_properties: Vec::new(),
+            mesh_instance_stride: None,
+            mesh_instance_uniform_scaling: false,
+            mesh_instance_max_count: None,
+            uniform_size: 48,
+            uniform_bindings: vec![unbound_shaders::UniformBinding {
+                offset: 0,
+                size: 48,
+            }],
+            textures: Vec::new(),
+            texture_dims: Vec::new(),
+            texture_slots: Vec::new(),
+            texture_aliases: Vec::new(),
+            main_texture: false,
+            buffers: Vec::new(),
+            keywords: Vec::new(),
+            blocks: Vec::new(),
+            extra_vertex_inputs: false,
+            vertex_inputs: true,
+            framebuffer_fetch: 0,
+        };
+        let plan: Vec<Source> = program
+            .uniforms
+            .iter()
+            .map(|u| Source::of(&u.name))
+            .collect();
+        let by_name: rustc_hash::FxHashMap<String, u32> = program
+            .uniforms
+            .iter()
+            .enumerate()
+            .map(|(i, u)| (u.name.clone(), i as u32))
+            .collect();
+        let layout = ProgramBindings::of(&program, &plan);
+        let lab = ShaderLab::default();
+        let mat = Material {
+            shader: String::new(),
+            render_queue: 2000,
+            keywords: Vec::new(),
+            properties: vec![(
+                "_Color".to_string(),
+                PropertyValue::Vector([0.2, 0.3, 0.4, 1.0]),
+            )],
+            index: Default::default(),
+        };
+        let block = material_block(&program, &plan, &layout, &mat, &lab, false);
+        assert_eq!(
+            block.binding_bytes[0].len(),
+            DRAW_SLOT as usize,
+            "non-empty static binding bytes are pre-padded to DRAW_SLOT"
+        );
+        assert!(
+            block.binding_bytes[0][48..].iter().all(|&b| b == 0),
+            "padding past binding size stays zero"
+        );
+
+        let overrides = vec![
+            ("_Unused".to_string(), PropertyValue::Buffer(99)),
+            (
+                "_Color".to_string(),
+                PropertyValue::Vector([1.0, 0.0, 0.0, 1.0]),
+            ),
+            (
+                "_Color".to_string(),
+                PropertyValue::Vector([0.0, 1.0, 0.0, 1.0]),
+            ),
+            (
+                "_Spec".to_string(),
+                PropertyValue::Vector([9.0, 9.0, 9.0, 9.0]),
+            ),
+            (
+                "_MainTex".to_string(),
+                PropertyValue::Texture {
+                    handle: 5,
+                    st: [2.0, 3.0, 0.5, 0.25],
+                },
+            ),
+        ];
+        let globals: Vec<(String, PropertyValue)> = Vec::new();
+        let globals_index = unbound_runtime::render_protocol::owned::NameIndex::default();
+        let size = |_: &str| None;
+        let cb = |_: &str| None;
+        let values = DrawValues {
+            model: [
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+            ],
+            gizmo_draw: false,
+            color: [1.0; 4],
+            sprite_color: [1.0; 4],
+            view: [
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+            ],
+            proj: [
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+            ],
+            gpu_proj: [
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+            ],
+            flipped: false,
+            reversed_z: false,
+            camera_view: [
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+            ],
+            camera_proj: [
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+            ],
+            screen: [640.0, 480.0],
+            time: 1.0,
+            linear: false,
+            material: &mat,
+            overrides: &overrides,
+            hidden: Some("_Spec"),
+            lab: &lab,
+            globals: &globals,
+            globals_index: &globals_index,
+            globals_revision: 1,
+            textures_generation: 1,
+            main_texture_handle: 5,
+            main_alpha_only: false,
+            texture_size: &size,
+            constant_buffer: &cb,
+            instance: None,
+            instance_empty: false,
+            element: None,
+        };
+        let cam = CachedCamera::compute(1, CameraInput::from_values(&values), &values);
+        let mut data = Vec::new();
+        let mut shared_constants = HashMap::default();
+        let mut shared_bindings = HashMap::default();
+        let mut empty_slot = None;
+        let mut scratch = String::new();
+        let mut override_scratch = Vec::new();
+        let d = push_program_uniforms(
+            0,
+            &program,
+            &plan,
+            &by_name,
+            &layout,
+            Some(&block),
+            &values,
+            &cam,
+            &mut data,
+            &mut shared_constants,
+            &mut shared_bindings,
+            &mut empty_slot,
+            &mut scratch,
+            &mut override_scratch,
+        );
+        let mut full = vec![0u8; 48];
+        fill(&program, &plan, &values, &mut full);
+        let at = d.offsets[0] as usize;
+        assert_eq!(&data[at..at + 48], &full[..]);
+        assert!(
+            data[at + 48..at + DRAW_SLOT as usize]
+                .iter()
+                .all(|&b| b == 0)
         );
     }
 

@@ -992,6 +992,8 @@ pub struct UnityRenderer {
     unaligned_count: Option<(wgpu::ComputePipeline, wgpu::BindGroupLayout)>,
     generation: u64,
     draw_buffer: Option<wgpu::Buffer>,
+    /// Monotonic generation incremented whenever `draw_buffer` is allocated or resized.
+    draw_buffer_gen: u64,
     indirect_args: IndirectArgsPool,
     draw_bind_group: Option<wgpu::BindGroup>,
     uniforms: Vec<DrawUniform>,
@@ -1122,6 +1124,7 @@ impl UnityRenderer {
             unaligned_count: None,
             generation: 1,
             draw_buffer: None,
+            draw_buffer_gen: 0,
             indirect_args: IndirectArgsPool::default(),
             draw_bind_group: None,
             uniforms: Vec::new(),
@@ -5805,20 +5808,21 @@ impl UnityRenderer {
                 }],
             }));
             self.draw_buffer = Some(buffer);
+            self.draw_buffer_gen = self.draw_buffer_gen.wrapping_add(1).max(1);
         }
         if !self.uniforms.is_empty() {
-            let mut data = vec![0u8; self.uniforms.len() * DRAW_SLOT as usize];
-            for (i, u) in self.uniforms.iter().enumerate() {
-                let at = i * DRAW_SLOT as usize;
-                data[at..at + size_of::<DrawUniform>()].copy_from_slice(bytemuck::bytes_of(u));
-            }
-            self.queue
-                .write_buffer(self.draw_buffer.as_ref().unwrap(), 0, &data);
+            const _: () = assert!(size_of::<DrawUniform>() == DRAW_SLOT as usize);
+            self.queue.write_buffer(
+                self.draw_buffer.as_ref().unwrap(),
+                0,
+                bytemuck::cast_slice(&self.uniforms),
+            );
         }
-        let programs = self.compiled.upload(
+        self.compiled.upload(
             &device,
             &self.queue,
             self.draw_buffer.as_ref().unwrap(),
+            self.draw_buffer_gen,
             size_of::<DrawUniform>() as u64,
         );
         let draw_bg = self.draw_bind_group.clone().unwrap();
@@ -6160,12 +6164,12 @@ impl UnityRenderer {
                     }
                     PassItem::Draw(d) => {
                         let (id, ref program_offsets) = d.program;
-                        let Some(uniforms) = programs.get(&id) else {
+                        let Some(uniform_group) = self.compiled.uniform_group(id) else {
                             continue;
                         };
                         rp.set_pipeline(&d.pipeline);
-                        let (offsets, count) = uniforms.offsets(program_offsets, d.offset);
-                        rp.set_bind_group(0, &uniforms.group, &offsets[..count]);
+                        let (offsets, count) = program_offsets.dynamic_offsets(d.offset);
+                        rp.set_bind_group(0, uniform_group, &offsets[..count]);
                         rp.set_bind_group(1, &d.material, &[]);
                         rp.set_bind_group(2, &d.texture, &[]);
                         if let Some(buffers) = &d.buffers {
