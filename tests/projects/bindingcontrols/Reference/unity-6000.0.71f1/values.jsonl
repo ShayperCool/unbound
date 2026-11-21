@@ -1,0 +1,11 @@
+{"k":"enum.nonAscending","v":"names=[Alpha,Charlie,Bravo]|display=[Alpha,Charlie,Bravo]|index=1|int=3"}
+{"k":"enum.alias","v":"names=[Mid,Alpha,Zeta]|display=[Mid,Alpha,Zeta]|index=1|int=5"}
+{"k":"enum.highUnsigned","v":"names=[High,Low,Mid]|display=[High,Low,Mid]|index=0|int=-2147483648"}
+{"k":"enum.signed","v":"names=[Neg,Zero,Pos]|display=[Neg,Zero,Pos]|index=0|int=-1"}
+{"k":"enum.shapeName","v":"names=[Matrix4x4,Grid2x3,Size4x,Uv2,Rgba32Bit]|display=[Matrix 4x4,Grid 2x3,Size 4x,Uv 2,Rgba 32 Bit]|index=1|int=1"}
+{"k":"nicify","v":"matrix4x4=Matrix 4x4|grid2x3=Grid 2x3|size4x=Size 4x|m_Value4x4Mat=Value 4x4 Mat|x2y=X 2y|k3D=K3D|_3dModel=3d Model|vector3Int=Vector 3 Int|uv2=Uv 2|rgba32Bit=Rgba 32 Bit|a1x=A 1x|box2x2x2=Box 2x2x2"}
+{"k":"vec4.multi","v":"z7:a=(1,10,7,100)|b=(2,10,7,100)###x6:a=(6,10,7,100)|b=(6,10,7,100)###w7:a=(6,10,7,7)|b=(6,10,7,7)|field=(6,10,7,7)"}
+{"k":"usage.elements","v":"color=alpha=0|hdr=1|gradient=hdr=1|space=Linear"}
+{"k":"usage.events","v":"tint:now=0|frame=1|later=1###plainColor:now=2|frame=2|later=2"}
+{"k":"logs","v":[]}
+{"k":"complete","v":true}

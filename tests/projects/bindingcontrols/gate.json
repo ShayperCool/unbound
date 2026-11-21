@@ -1,0 +1,14 @@
+{
+  "commands": ["python3 tests/projects/bindingcontrols/run.py gate"],
+  "summary": "bindingcontrols: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/SerializedObject.cs",
+    "managed/UnityEngine/Editor/SerializedPropertyTree.cs",
+    "managed/UnityEngine/Editor/ObjectNames.cs",
+    "managed/UnityEngine/Editor/BindingExtensions.cs",
+    "managed/UnityEngine/Editor/PropertyField.cs",
+    "managed/UnityEngine/Editor/ColorField.cs",
+    "managed/UnityEngine/Editor/GradientField.cs",
+    "managed/UnityEngine/UIElements/Controls/CompositeFields.cs"
+  ]
+}
