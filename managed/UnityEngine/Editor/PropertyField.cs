@@ -296,8 +296,12 @@ namespace UnityEditor.UIElements
             Clear();
             if (m_SerializedProperty == null || !m_SerializedProperty.isValid) return;
 
+            // [ColorUsage] and [GradientUsage] give the field Unity's ColorUsageDrawer and
+            // GradientUsageDrawer build; a collection's attribute applies to each element.
+            var declaringField = m_SerializedProperty.UnboundDeclaringField;
+            ReportUnsupportedDrawers(m_SerializedProperty, declaringField);
             if (m_SerializedProperty.propertyType == SerializedPropertyType.Color
-                && m_SerializedProperty.UnboundField?.GetCustomAttribute<ColorUsageAttribute>(false) is ColorUsageAttribute colorUsage)
+                && declaringField?.GetCustomAttribute<ColorUsageAttribute>(false) is ColorUsageAttribute colorUsage)
             {
                 var colorField = new ColorField(label ?? m_SerializedProperty.displayName)
                 {
@@ -313,7 +317,7 @@ namespace UnityEditor.UIElements
             }
 
             if (m_SerializedProperty.propertyType == SerializedPropertyType.Gradient
-                && m_SerializedProperty.UnboundField?.GetCustomAttribute<GradientUsageAttribute>(false) is GradientUsageAttribute gradientUsage)
+                && declaringField?.GetCustomAttribute<GradientUsageAttribute>(false) is GradientUsageAttribute gradientUsage)
             {
                 var gradientField = new GradientField(label ?? m_SerializedProperty.displayName)
                 {
@@ -437,10 +441,57 @@ namespace UnityEditor.UIElements
                 DispatchPropertyChangedEvent();
         }
 
+        // A drawer's element reports its changes a frame later, merged: Unity schedules one
+        // SerializedPropertyChangeEvent per change and sends it only when the last one runs.
+        int m_PropertyChangedCounter;
+
         void OnCustomPropertyFieldValueChanged(EventBase evt)
         {
-            if (ReferenceEquals(evt.target, m_CustomPropertyGUI) && m_SerializedProperty != null && m_SerializedProperty.isValid)
-                DispatchPropertyChangedEvent();
+            m_PropertyChangedCounter++;
+            schedule.Execute(ExecuteAsyncDispatchPropertyChangedEvent);
+        }
+
+        void ExecuteAsyncDispatchPropertyChangedEvent()
+        {
+            m_PropertyChangedCounter--;
+            if (m_PropertyChangedCounter > 0) return;
+            m_PropertyChangedCounter = 0;
+            if (m_SerializedProperty != null && m_SerializedProperty.isValid) DispatchPropertyChangedEvent();
+        }
+
+        // Unity's PropertyField builds the GUI of a property's drawer (its type's
+        // [CustomPropertyDrawer], or a drawer attribute such as [Range], [Min], [Delayed],
+        // [Multiline], [TextArea]) and its decorators ([Header], [Space], custom DecoratorDrawers).
+        // Only [ColorUsage] and [GradientUsage] are built here; the others are reported instead of
+        // being dropped without a word, and the property gets its default field.
+        static void ReportUnsupportedDrawers(SerializedProperty property, FieldInfo field)
+        {
+            bool element = field != null && field != property.UnboundField;
+            bool collection = property.isArray && property.propertyType != SerializedPropertyType.String;
+            if (field != null)
+            {
+                foreach (var attribute in field.GetCustomAttributes<PropertyAttribute>(true))
+                {
+                    if (attribute is ColorUsageAttribute || attribute is GradientUsageAttribute) continue;
+                    bool decorator = attribute is HeaderAttribute || attribute is SpaceAttribute || PropertyDrawers.DecoratorFor(attribute) != null;
+                    bool drawer = attribute is RangeAttribute || attribute is MinAttribute || attribute is DelayedAttribute
+                        || attribute is MultilineAttribute || attribute is TextAreaAttribute
+                        || PropertyDrawers.DrawerFor(property, null, attribute) != null;
+                    if ((decorator && !element) || (drawer && !collection))
+                        Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField ({(decorator ? "decorator" : "drawer")} of {attribute.GetType().Name})");
+                }
+            }
+            if (!collection && PropertyDrawers.DrawerFor(property, field, null) is PropertyDrawer typeDrawer)
+                Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField (drawer {typeDrawer.GetType().Name})");
+            else if (!collection && field != null && typeof(UnityEngine.Events.UnityEventBase).IsAssignableFrom(ElementTypeOf(field.FieldType, element)))
+                Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField (drawer of UnityEvent)");
+        }
+
+        static Type ElementTypeOf(Type type, bool element)
+        {
+            if (!element) return type;
+            if (type.IsArray) return type.GetElementType();
+            return type.IsGenericType ? type.GetGenericArguments()[0] : type;
         }
 
         void DispatchPropertyChangedEvent()
