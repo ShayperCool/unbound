@@ -76,10 +76,12 @@ namespace Unbound.Runtime
             if (importer.UsesDirtyFlagForWrite)
             {
                 bool wasDirty = EditorUtility.IsDirty(importer) || importer.m_SettingsChanged;
-                importer.WriteCustomMeta(section);
                 SetScalar(section, "userData", importer.userData);
                 SetScalar(section, "assetBundleName", importer.assetBundleName?.ToLowerInvariant());
                 SetScalar(section, "assetBundleVariant", importer.assetBundleVariant?.ToLowerInvariant());
+                // An importer written for any change writes its own settings whole.
+                if (wasDirty || UnityYamlText.WriteTopLevel(root) != text.Replace("\r\n", "\n"))
+                    importer.WriteCustomMeta(section);
                 var customWritten = UnityYamlText.WriteTopLevel(root);
                 bool textChanged = customWritten != text.Replace("\r\n", "\n");
                 if (!textChanged && !wasDirty) return false;

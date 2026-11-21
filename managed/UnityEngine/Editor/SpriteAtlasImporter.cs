@@ -18,20 +18,16 @@ namespace UnityEditor.U2D
     public sealed partial class SpriteAtlasImporter : AssetImporter
     {
         SpriteAtlasEditorSettings m_Settings = new SpriteAtlasEditorSettings();
-        /// <summary>A setting changed since the `.meta` was read or written.</summary>
-        bool m_SettingsModified;
 
         public SpriteAtlasImporter() { }
 
         internal override void ReadSettings(YNode body)
         {
             m_Settings = SpriteAtlasEditorSettings.Read(body, prefixed: false);
-            m_SettingsModified = false;
         }
 
         void SettingsChanged()
         {
-            m_SettingsModified = true;
             EditorUtility.SetDirty(this);
             Changed();
         }
@@ -143,19 +139,13 @@ namespace UnityEditor.U2D
 
         internal override bool UsesDirtyFlagForWrite => true;
 
-        /// <summary>Writes the settings into the `.meta` once one changed (the Editor writes the
-        /// whole importer then).</summary>
+        /// <summary>Writes the settings whole into the `.meta` written for a change, as the Editor
+        /// writes the whole importer (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/spriteatlaseditor v2wholewrite Legacy and UserData).</summary>
         internal override bool WriteCustomMeta(YText section)
         {
-            if (!m_SettingsModified) return false;
             m_Settings.Write(section, prefixed: false);
             return true;
-        }
-
-        internal override void ClearModifiedState()
-        {
-            m_SettingsModified = false;
-            base.ClearModifiedState();
         }
 
         /// <summary>Evicts the cached importer, reloads this V2 sprite atlas from disk, and
@@ -163,6 +153,14 @@ namespace UnityEditor.U2D
         /// (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor
         /// v2importerpacking).</summary>
         internal static void ReimportAsset(string path, string guid)
+        {
+            bool outer = SpriteAtlas.s_Reimporting;
+            SpriteAtlas.s_Reimporting = true;
+            try { Reimport(path, guid); }
+            finally { SpriteAtlas.s_Reimporting = outer; }
+        }
+
+        static void Reimport(string path, string guid)
         {
             AssetImporter.Evict(path);
             AssetDatabaseRuntime.Invalidate(guid);

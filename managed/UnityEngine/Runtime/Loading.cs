@@ -1030,7 +1030,10 @@ namespace Unbound.Runtime
                         if (file.MainObject is UnityEngine.U2D.SpriteAtlas atlas)
                         {
                             if (atlas.IsFromImporter)
+                            {
                                 atlas.m_Name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
+                                atlas.Import(guid);
+                            }
                             file.Objects[UnityEngine.U2D.SpriteAtlas.ImportedFileId] = atlas;
                         }
                         break;

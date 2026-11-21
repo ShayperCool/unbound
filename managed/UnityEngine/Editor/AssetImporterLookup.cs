@@ -138,8 +138,8 @@ namespace UnityEditor
         /// <see cref="EditorUtility.IsDirty"/> and <see cref="WriteCustomMeta"/>.</summary>
         internal virtual bool UsesDirtyFlagForWrite => false;
 
-        /// <summary>Writes importer-specific sections into its `.meta` YAML map; returns true when
-        /// it updated <paramref name="section"/>.</summary>
+        /// <summary>Writes importer-specific sections into its `.meta` YAML map when the `.meta` is
+        /// written for a change; returns true when it updated <paramref name="section"/>.</summary>
         internal virtual bool WriteCustomMeta(YText section) => false;
 
         /// <summary>Clears dirty and pending-write tracking after writing `.meta`.</summary>

@@ -2050,8 +2050,8 @@ namespace UnityEngine.Tests
                 Assert.Empty(logs);
 
                 // An out-of-range variantMultiplier on disk loads clamped to [0.1, 1], a variant
-                // dirty (tests/projects/spriteatlaseditor v1wholewrite measures 2 -> 1; 0.02 is the
-                // control below the range).
+                // dirty (tests/projects/spriteatlaseditor v1wholewrite measures 2 -> 1; below the
+                // range, 0.02 here, is unmeasured and follows the same clamp).
                 const string v1OmittedAndOutOfRange =
                     "%YAML 1.1\n" +
                     "%TAG !u! tag:unity3d.com,2011:\n" +
@@ -3439,9 +3439,6 @@ namespace UnityEngine.Tests
             var section = root.Get("SpriteAtlasImporter");
             var importer = Assert.IsType<SpriteAtlasImporter>(
                 AssetImporter.FromMeta("Assets/Legacy.spriteatlasv2", "9a1b2c3d4e5f60718293a4b5c6d7f003", "SpriteAtlasImporter", section.ToNode()));
-            // Unchanged, the importer leaves its `.meta` alone.
-            Assert.False(importer.WriteCustomMeta(section));
-            Assert.Equal(WholeWriteV2Meta, UnityYamlText.WriteTopLevel(root));
             importer.includeInBuild = false;
             Assert.True(importer.WriteCustomMeta(section));
             Assert.Equal(WholeWriteV2Written, UnityYamlText.WriteTopLevel(root));
