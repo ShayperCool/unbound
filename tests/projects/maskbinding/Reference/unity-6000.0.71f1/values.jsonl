@@ -1,0 +1,31 @@
+{"k":"maskfield.defaults","v":"Def Mask|111|[]|null|0|txt=Nothing|m=0"}
+{"k":"maskfield.choices_and_formatting","v":"2|txt=[Beta]|m=0||0|txt=Nothing|m=0||1|txt=[Alpha]|m=0||3|txt=Alpha, Beta|m=0||-1|txt=Everything|m=0||1|txt=[Alpha]|m=0||1|txt=—|m=1||1|txt=—|m=0|ev=2->0|0->1|1->3|3->-1|-1->1"}
+{"k":"layermask.standalone.defaults","v":"My Layers|1111|[Default,TransparentFX,Ignore Raycast,Water,UI]|[1,2,4,16,32]|0|txt=Nothing|m=0"}
+{"k":"layermask.standalone.values","v":"fmtNull=1||1|txt=Default|m=0||16|txt=Water|m=0||17|txt=Default, Water|m=0||-1|txt=Everything|m=0||0|txt=Nothing|m=0||32|txt=—|m=1||32|txt=—|m=0|evc=6"}
+{"k":"rlm.standalone.defaults_before_add","v":"Init RLM|111|[Default]|[1]|4294967295|txt=Everything|m=0|hb=10"}
+{"k":"rlm.standalone.values","v":"[Default,LightLayer1,DecalLayer2]|[1,2,4]|1|txt=Default|m=0|hb=10||0|txt=Nothing|m=0|hb=10||2|txt=LightLayer1|m=0|hb=10||3|txt=Default, LightLayer1|m=0|hb=10||4294967295|txt=Everything|m=0|hb=10||5|txt=Default, DecalLayer2|m=0|hb=10||[Default,LightLayer1,DecalLayer2,Unnamed Layer 6]|64|txt=Unnamed Layer 6|m=0|hb=10||4|txt=—|m=1|hb=10||4|txt=—|m=0|hb=10|evc=7"}
+{"k":"prop.meta","v":"lm=LayerMask/LayerMask/0/1|rlm=RenderingLayerMask/RenderingLayerMask/0/1|lmArr1=LayerMask/16|rlmArr1=RenderingLayerMask/2"}
+{"k":"layermask.direct.zero_initial","v":"0|txt=Nothing|m=0|ev=0->0"}
+{"k":"layermask.direct.initial","v":"1|txt=Default|m=0|ev=0->1"}
+{"k":"layermask.direct.ui_to_so","v":"16|txt=Water|m=0|t=16||-1|txt=Everything|m=0|t=-1||0|txt=Nothing|m=0|t=0|evc=4"}
+{"k":"layermask.direct.so_and_external","v":"32|txt=UI|m=0|evc=5||5|txt=Default, Ignore Raycast|m=0|evc=6"}
+{"k":"layermask.direct.detached","v":"0|txt=Nothing|m=0||16|txt=Water|m=0"}
+{"k":"rlm.direct.initial","v":"1|txt=Default|m=0|hb=10|ev=1->1"}
+{"k":"rlm.direct.ui_to_so","v":"2|txt=LightLayer1|m=0|hb=10|t=2||4294967295|txt=Everything|m=0|hb=10|t=4294967295||128|txt=Unnamed Layer 7|m=0|hb=10|t=128||0|txt=Nothing|m=0|hb=10|t=128|evc=4"}
+{"k":"rlm.direct.so_and_external","v":"4|txt=DecalLayer2|m=0|hb=10|evc=5||5|txt=Default, DecalLayer2|m=0|hb=10|evc=6"}
+{"k":"rlm.direct.detached","v":"1|txt=Default|m=0|hb=10||2|txt=LightLayer1|m=0|hb=10"}
+{"k":"multi.initial","v":"lm=1|txt=—|m=1|ec=0||rlm=1|txt=—|m=1|hb=10|ec=0"}
+{"k":"multi.edits","v":"lm=32|txt=—|m=0|a=32|b=32||rlm=4|txt=DecalLayer2|m=0|hb=10|a=4|b=4###lm=1|txt=—|m=0|a=1|b=1||rlm=1|txt=Default|m=0|hb=10|a=1|b=1###lm=-1|txt=Everything|m=0|a=-1|b=-1||rlm=4294967295|txt=Everything|m=0|hb=10|a=4294967295|b=4294967295"}
+{"k":"tree.initial","v":"lm=1|mf=16|lmi=0|rlm=1|rlmu=2|dlm=32|drlm=2|rl=17|rr=1|la1=16|ra1=2|h=0123456789abcdef1122334455667788|i=42"}
+{"k":"tree.ui_to_so","v":"lm=4|mf=2|lmi=16|rlm=4|rlmu=1|dlm=1|drlm=5|rl=32|rr=2|la1=-1|ra1=4294967295"}
+{"k":"tree.so_to_ui","v":"lm=32|rlm=2|dlm=16|drlm=1|rl=2|rr=4|la1=4|ra1=3"}
+{"k":"pf.initial","v":"LayerMaskField|unity-input-myLayerMask|My Layer Mask|11111|1|txt=Default|m=0|ec=1||RenderingLayerMaskField|unity-input-myRlm|My Rlm|1111|1|txt=Default|m=0|hb=10|ec=1"}
+{"k":"pf.labels","v":"LayerMaskField|unity-input-otherLayerMask|Custom LM|11111|16|txt=Water|m=0||RenderingLayerMaskField|unity-input-otherRlm|Custom RLM|1111|2|txt=LightLayer1|m=0|hb=10###LayerMaskField|unity-input-otherLayerMask|Dynamic LM|11111|16|txt=Water|m=0||RenderingLayerMaskField|unity-input-otherRlm|Dynamic RLM|1111|2|txt=LightLayer1|m=0|hb=10"}
+{"k":"pf.ui_to_so","v":"LayerMaskField|unity-input-myLayerMask|My Layer Mask|11111|32|txt=UI|m=0|t=32|ec=2||RenderingLayerMaskField|unity-input-myRlm|My Rlm|1111|4|txt=DecalLayer2|m=0|hb=10|t=4|ec=2"}
+{"k":"pf.so_to_ui","v":"LayerMaskField|unity-input-myLayerMask|My Layer Mask|11111|4|txt=Ignore Raycast|m=0|ec=3||RenderingLayerMaskField|unity-input-myRlm|My Rlm|1111|2|txt=LightLayer1|m=0|hb=10|ec=3"}
+{"k":"pf.reuse_and_cross_type","v":"1|LayerMaskField|unity-input-otherLayerMask|Other Layer Mask|11111|16|txt=Water|m=0||RenderingLayerMaskField|unity-input-myRlm|My Rlm|1111|2|txt=LightLayer1|m=0|hb=10||1|RenderingLayerMaskField|unity-input-otherRlm|Other Rlm|1111|2|txt=LightLayer1|m=0|hb=10||Hash128Field|unity-input-siblingHash|Sibling Hash|0123456789abcdef1122334455667788||ObjectField|unity-input-siblingRef|Sibling Ref|MaskRefA||IntegerField|unity-input-siblingInt|Sibling Int|42||LayerMaskField|unity-input-myLayerMask|My Layer Mask|11111|4|txt=Ignore Raycast|m=0"}
+{"k":"pf.multi","v":"LayerMaskField|unity-input-multiLayerMask|Multi LM|11111|1|txt=—|m=1||RenderingLayerMaskField|unity-input-multiRlm|Multi RLM|1111|1|txt=—|m=1|hb=10###LayerMaskField|unity-input-multiLayerMask|Multi LM|11111|32|txt=—|m=0|a=32|b=32||RenderingLayerMaskField|unity-input-multiRlm|Multi RLM|1111|4|txt=DecalLayer2|m=0|hb=10|a=4|b=4"}
+{"k":"unbind_rebind","v":"1|txt=Default|m=0|tip=rt-mask-tip-0||1|txt=Default|m=0|hb=10|tip=rt-mask-tip-0###4|txt=Ignore Raycast|m=0|t1=2|tip=rt-lm-1||5|txt=Default, DecalLayer2|m=0|hb=10|t1=2|tip=rt-rlm-1###32|txt=UI|m=0||4|txt=DecalLayer2|m=0|hb=10###2|t1=2||1|t1=2"}
+{"k":"incompatible.fields","v":"0|0"}
+{"k":"logs","v":["Warning:Field type UnityEngine.UIElements.FloatField is not compatible with LayerMask property \"myLayerMask\"","Warning:Field type UnityEngine.UIElements.FloatField is not compatible with RenderingLayerMask property \"myRlm\"","Warning:LayerMaskField doesn't support the formatting of the list items.","Warning:LayerMaskField doesn't support the formatting of the selected value."]}
+{"k":"complete","v":true}

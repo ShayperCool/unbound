@@ -1,0 +1,22 @@
+{
+  "commands": ["python3 tests/projects/maskbinding/run.py gate"],
+  "summary": "maskbinding: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Core/BitOperationUtils.cs",
+    "managed/UnityEngine/Core/LayerMask.cs",
+    "managed/UnityEngine/Graphics/Srp/RenderingLayers.cs",
+    "managed/UnityEngine/Editor/EnumFlagsField.cs",
+    "managed/UnityEngine/Editor/MaskFields.cs",
+    "managed/UnityEngine/Editor/RenderPipelineEditorUtility.cs",
+    "managed/UnityEngine/Editor/TagManager.cs",
+    "managed/UnityEngine/Editor/SerializedObject.cs",
+    "managed/UnityEngine/Editor/SerializedPropertyTree.cs",
+    "managed/UnityEngine/Editor/BindingExtensions.cs",
+    "managed/UnityEngine/Editor/PropertyField.cs",
+    "managed/UnityEngine/UIElements/Binding/",
+    "managed/UnityEngine/UIElements/Controls/BaseField.cs",
+    "managed/UnityEngine/UIElements/Controls/Fields.cs",
+    "managed/UnityEngine/UIElements/Core/Panel.cs",
+    "managed/UnityEngine/UIElements/Core/VisualElement.cs"
+  ]
+}
