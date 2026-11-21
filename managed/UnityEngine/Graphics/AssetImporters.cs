@@ -92,9 +92,8 @@ namespace Unbound.Runtime
             if (scripts != null)
                 foreach (var (fileId, type) in scripts)
                     file.Objects[fileId] = UnityEditor.MonoScript.ForPluginClass(type, info.Guid, fileId);
-            else if (info.Managed)
-                // Measured with plug-ins the Editor loads; which scripts one it does not load lists is not.
-                Debug.LogWarning($"Unbound: {info.Path} is not loaded for the Editor, so its scripts are not listed as its sub-assets (not supported yet).");
+            // Measured with plug-ins the Editor loads; which scripts one it does not load has is not.
+            file.ScriptsUnknown = scripts == null && info.Managed;
             return file;
         }
 

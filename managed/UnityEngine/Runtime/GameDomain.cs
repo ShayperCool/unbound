@@ -209,7 +209,9 @@ namespace Unbound.Runtime
                             assets.Add((fileId, type));
                             s_PluginScriptLocations[type] = (guid, fileId);
                         }
-                        if (!IsScriptClass(type)) continue;
+                        // A nested class's script has no class to resolve to (its file ID can
+                        // equal a top-level class's of the same name).
+                        if (!IsScriptClass(type) || type.IsNested) continue;
                         s_PluginScripts[(guid, PluginScriptFileId(type))] = type;
                     }
                     catch (Exception)

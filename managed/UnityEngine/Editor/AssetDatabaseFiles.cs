@@ -328,8 +328,8 @@ namespace UnityEditor
         /// <summary>A folder path as the project spells it, or null when there is none.</summary>
         static string ProjectFolder(string folder)
         {
-            if (string.Equals(folder, "Assets", StringComparison.OrdinalIgnoreCase)) return "Assets";
-            if (!folder.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase) && !folder.StartsWith("Packages/", StringComparison.OrdinalIgnoreCase)) return null;
+            if (!string.Equals(folder, "Assets", StringComparison.OrdinalIgnoreCase)
+                && !folder.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase) && !folder.StartsWith("Packages/", StringComparison.OrdinalIgnoreCase)) return null;
             _ = Entries;
             if (s_ByPath.TryGetValue(folder, out var entry) && entry.Kind == "folder") return entry.Path;
             return Directory.Exists(FileOf(folder)) ? folder : null;

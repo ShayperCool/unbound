@@ -157,16 +157,28 @@ namespace UnityEditor
             // a scene's, a plug-in's DefaultAsset or SceneAsset) is not among them; a managed
             // plug-in's scripts are (matches the Unity 6000.0.71f1 Editor,
             // tests/projects/defaultasset asset.* and dllScripts.main).
-            return AssetDatabaseRuntime.LoadAll(guid, hierarchy: true).Where(o => !IsPlaceholder(o)).ToArray();
+            var all = AssetDatabaseRuntime.LoadAll(guid, hierarchy: true).Where(o => !IsPlaceholder(o)).ToArray();
+            WarnIfScriptsUnknown(assetPath, guid);
+            return all;
         }
 
         static bool IsPlaceholder(Object o) => o is DefaultAsset || o is SceneAsset;
+
+        static readonly HashSet<string> s_ScriptsUnknownWarned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Says once that a managed plug-in the game domain did not load lists no scripts.</summary>
+        static void WarnIfScriptsUnknown(string assetPath, string guid)
+        {
+            if (AssetDatabaseRuntime.LoadFile(guid) is { ScriptsUnknown: true } && s_ScriptsUnknownWarned.Add(guid))
+                Debug.LogWarning($"Unbound: {assetPath} is not loaded for the Editor, so its scripts are not listed as its sub-assets (not supported yet).");
+        }
 
         public static Object[] LoadAllAssetRepresentationsAtPath(string assetPath)
         {
             var guid = AssetPathToGUID(assetPath);
             if (string.IsNullOrEmpty(guid)) return Array.Empty<Object>();
             var main = AssetDatabaseRuntime.LoadMain(guid, null);
+            WarnIfScriptsUnknown(assetPath, guid);
             return AssetDatabaseRuntime.LoadAll(guid).Where(o => o != main && !AssetDatabaseRuntime.IsTakePreview(o)).ToArray();
         }
 

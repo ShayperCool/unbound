@@ -16,6 +16,8 @@ namespace Unbound.Runtime
         /// <summary>Objects of the source file that are no part of what it imports to (a Visual
         /// Effect Graph's resource and models): references find them, asset listings do not.</summary>
         internal HashSet<Object> SourceObjects;
+        /// <summary>A managed plug-in the game domain did not load: which scripts it has is not known.</summary>
+        internal bool ScriptsUnknown;
         internal readonly List<GameObject> Roots = new List<GameObject>();
         // Scene hierarchy queries use the serialized root list. Activation retains the
         // construction traversal: Unity does not specify relative callbacks across objects.
