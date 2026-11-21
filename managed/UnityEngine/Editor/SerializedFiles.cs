@@ -190,14 +190,37 @@ namespace Unbound.Runtime
                     atlasAsset.WriteYaml(writer);
                     continue;
                 }
+                if (o is Material material)
+                {
+                    var doc = new YTextDocument
+                    {
+                        Header = "--- !u!" + EngineTypes.EngineClassIdOf(typeof(Material)) + " &" + ids[o],
+                        ClassName = "Material",
+                        Body = MaterialTypeTree.NewFileBody(material, r => SceneFiles.FlowValue(writer.ReferenceText(r))),
+                    };
+                    var text = UnityYamlText.Write(new List<YTextDocument> { doc });
+                    sb.Append(text, UnityYamlText.Preamble.Length, text.Length - UnityYamlText.Preamble.Length);
+                    continue;
+                }
+                if (o is PhysicsMaterial physics)
+                {
+                    sb.Append("--- !u!").Append(EngineTypes.EngineClassIdOf(typeof(PhysicsMaterial))).Append(" &").Append(ids[o]).Append('\n');
+                    sb.Append("PhysicsMaterial:\n");
+                    writer.PhysicsMaterialBody(physics);
+                    continue;
+                }
                 if (!SerializedTree.IsScript(o))
-                    throw new NotSupportedException($"Unbound writes script objects only; {o.GetType().Name} '{o.name}' cannot be saved.");
+                    throw new NotSupportedException($"Unbound writes script objects, materials and physics materials only; {o.GetType().Name} '{o.name}' cannot be saved.");
                 sb.Append("--- !u!114 &").Append(ids[o]).Append('\n');
                 sb.Append("MonoBehaviour:\n");
                 writer.ScriptBody(o);
             }
             return sb.ToString();
         }
+
+        /// <summary>Whether <see cref="Write(Object[], Dictionary{Object, long})"/> writes the
+        /// object whole into a new file (not a material variant: unmeasured).</summary>
+        internal static bool WritesNew(Object o) => SerializedTree.IsScript(o) || o is Material { isVariant: false } || o is PhysicsMaterial;
 
         /// <summary>Writes one document's fields. References to objects of the same file are by
         /// <c>ids</c>; to assets in <c>assets</c> (an import's own meshes and materials) by their GUID
@@ -337,12 +360,18 @@ namespace Unbound.Runtime
                 : value.Guid == null ? $"{{fileID: {value.FileId}}}"
                 : $"{{fileID: {value.FileId}, guid: {value.Guid}, type: {value.Type}}}";
 
-            internal void Header(Object o)
+            /// <summary>The fields every object's document starts with: its hide flags and no prefab links.</summary>
+            void ObjectHeader(Object o)
             {
                 Line(1, "m_ObjectHideFlags", ((uint)o.HideFlagsNoThrow).ToString(CultureInfo.InvariantCulture));
                 Line(1, "m_CorrespondingSourceObject", "{fileID: 0}");
                 Line(1, "m_PrefabInstance", "{fileID: 0}");
                 Line(1, "m_PrefabAsset", "{fileID: 0}");
+            }
+
+            internal void Header(Object o)
+            {
+                ObjectHeader(o);
                 Line(1, "m_GameObject", o is Component c ? Reference(c.gameObject) : "{fileID: 0}");
                 Line(1, "m_Enabled", o is Behaviour b && !b.enabled ? "0" : "1");
                 Line(1, "m_EditorHideFlags", "0");
@@ -351,6 +380,23 @@ namespace Unbound.Runtime
                 String("m_Name", o is Component ? "" : o.name);
                 Line(1, "m_EditorClassIdentifier", "");
             }
+
+            /// <summary>A physics material's whole body (matches the Unity 6000.0.71f1 Editor,
+            /// tests/projects/scenesave create-assets Bouncy.physicMaterial).</summary>
+            internal void PhysicsMaterialBody(PhysicsMaterial m)
+            {
+                ObjectHeader(m);
+                String("m_Name", m.name);
+                Int("serializedVersion", PhysicsMaterialSerializedVersion);
+                Float("m_DynamicFriction", m.dynamicFriction);
+                Float("m_StaticFriction", m.staticFriction);
+                Float("m_Bounciness", m.bounciness);
+                Int("m_FrictionCombine", (int)m.frictionCombine);
+                Int("m_BounceCombine", (int)m.bounceCombine);
+            }
+
+            /// <summary>The physics material's serialized version in the release's files.</summary>
+            const int PhysicsMaterialSerializedVersion = 2;
 
             /// <summary>A script object's whole body: the header, its serialized fields (after its
             /// OnBeforeSerialize) and the managed references they hold.</summary>
@@ -819,6 +865,9 @@ namespace Unbound.Runtime
 
             static string Located(Object o)
             {
+                // A built-in shader is an object of the Editor's built-in resource files.
+                if (o is Shader shader && BuiltinShaders.TryGetLocation(shader, out var builtinGuid, out var builtinId))
+                    return $"{{fileID: {builtinId}, guid: {builtinGuid}, type: 0}}";
                 if (AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId))
                 {
                     int kind;

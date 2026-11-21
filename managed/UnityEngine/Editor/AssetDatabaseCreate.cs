@@ -13,15 +13,20 @@ namespace UnityEditor
     /// Assets made from live objects (matches the Unity 6000.0.71f1 Editor in Edit and Play mode,
     /// tests/projects/projectwrites 04.create): CreateAsset writes the file and its <c>.meta</c>
     /// at once (also between StartAssetEditing and StopAssetEditing), the object becomes the
-    /// asset's main object, named after the file, with file id 11400000; AddObjectToAsset adds an
-    /// object under a random 64-bit file id, written into the file by the next SaveAssets, the
+    /// asset's main object, named after the file, with its class's main file id (the class id
+    /// times 100000: 11400000 for a script object, 2100000 for a material); AddObjectToAsset adds
+    /// an object under a random 64-bit file id, written into the file by the next SaveAssets, the
     /// documents in ascending file id order. Unbound writes script objects (ScriptableObject,
-    /// MonoBehaviour) this way; other objects are refused with an error.
+    /// MonoBehaviour), materials and physics materials this way (tests/projects/scenesave
+    /// create-assets); other objects (meshes, animation clips, textures, ...) are refused with an
+    /// error.
     /// </summary>
     public sealed partial class AssetDatabase
     {
-        /// <summary>A ScriptableObject's (or MonoBehaviour's) file id as a main object.</summary>
-        const long MainScriptFileId = 11400000;
+        /// <summary>A main object's file id is its class id times this.</summary>
+        const long MainFileIdPerClassId = 100000;
+
+        static long MainFileId(Object o) => EngineTypes.EngineClassIdOf(o.GetType()) * MainFileIdPerClassId;
 
         public static void CreateAsset(Object asset, string path)
         {
@@ -43,7 +48,7 @@ namespace UnityEditor
                 Refused("AssetDatabase.CreateAsset", path);
                 return;
             }
-            if (!SerializedTree.IsScript(asset))
+            if (!UnityYamlWriter.WritesNew(asset))
             {
                 Debug.LogError($"Unbound does not write {asset.GetType().Name} assets yet: '{path}' is not created.");
                 return;
@@ -52,10 +57,11 @@ namespace UnityEditor
             if (Exists(path)) Remove(path, trash: false);
             asset.name = Path.GetFileNameWithoutExtension(path);
             var created = new CreatedAsset { Path = path, Main = asset };
-            created.Objects[asset] = MainScriptFileId;
+            long mainId = MainFileId(asset);
+            created.Objects[asset] = mainId;
             File.WriteAllText(FileOf(path), created.Text());
-            var guid = ImportOne(path, MainScriptFileId);
-            created.File = AssetDatabaseRuntime.Adopt(guid, path, asset, MainScriptFileId);
+            var guid = ImportOne(path, mainId);
+            created.File = AssetDatabaseRuntime.Adopt(guid, path, asset, mainId);
             s_Created[guid] = created;
         }
 
@@ -81,7 +87,7 @@ namespace UnityEditor
                 Debug.LogError($"Unbound adds objects only to assets it created in this session: '{GetAssetPath(assetObject)}' is left as it is.");
                 return;
             }
-            if (!SerializedTree.IsScript(objectToAdd))
+            if (!UnityYamlWriter.WritesNew(objectToAdd))
             {
                 Debug.LogError($"Unbound does not write {objectToAdd.GetType().Name} objects into assets yet: it is not added to '{created.Path}'.");
                 return;
@@ -125,7 +131,14 @@ namespace UnityEditor
                 }
                 if (only is not null && !created.Objects.ContainsKey(only)) continue;
                 if (!created.Unsaved && !created.Objects.Keys.Any(o => o != null && EditorUtility.IsDirty(o))) continue;
-                SceneFiles.WriteFile(FileOf(created.Path), created.Text());
+                string text;
+                try { text = created.Text(); }
+                catch (NotSupportedException e)
+                {
+                    Debug.LogError($"Unbound: {created.Path} is not saved: {e.Message}");
+                    continue;
+                }
+                SceneFiles.WriteFile(FileOf(created.Path), text);
                 created.Unsaved = false;
                 foreach (var o in created.Objects.Keys) if (o != null) EditorUtility.ClearDirty(o);
             }

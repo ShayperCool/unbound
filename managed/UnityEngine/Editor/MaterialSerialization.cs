@@ -123,6 +123,44 @@ namespace Unbound.Runtime
                 body.Keys.RemoveAt(at);
                 body.Values.RemoveAt(at);
             }
+            SheetsAsFileLists(body);
+            return body;
+        }
+
+        /// <summary>The material's serialized version, the Editor writes first in its document.</summary>
+        const string SerializedVersion = "8";
+
+        /// <summary>The saved property sheet's serialized version.</summary>
+        const string SheetSerializedVersion = "3";
+
+        /// <summary>
+        /// The whole document of a material written into a new file (AssetDatabase.CreateAsset,
+        /// AddObjectToAsset): the file layout of <see cref="FileBody"/> with the fields a new file
+        /// has besides (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
+        /// create-assets: the serialized versions, no parent, no modified properties, no texture
+        /// stacks, locking allowed). A material variant is not written (unmeasured).
+        /// </summary>
+        internal static YText NewFileBody(Material m, Func<Object, YText> reference)
+        {
+            if (m.isVariant) throw new NotSupportedException($"Unbound does not write material variants into new files yet ('{m.name}')");
+            var body = Write(m, reference);
+            SheetsAsFileLists(body);
+            body.Keys.Insert(0, "serializedVersion");
+            body.Values.Insert(0, Scalar(SerializedVersion));
+            int at = body.Keys.IndexOf("m_Shader") + 1;
+            body.Keys.Insert(at, "m_Parent");
+            body.Values.Insert(at, reference(null));
+            body.Keys.Insert(at + 1, "m_ModifiedSerializedProperties");
+            body.Values.Insert(at + 1, Number(0));
+            var saved = body.Get("m_SavedProperties");
+            saved.Keys.Insert(0, "serializedVersion");
+            saved.Values.Insert(0, Scalar(SheetSerializedVersion));
+            return body;
+        }
+
+        /// <summary>The saved property sheet's lists as a file has them: sequences of one-entry maps.</summary>
+        static void SheetsAsFileLists(YText body)
+        {
             var saved = body.Get("m_SavedProperties");
             for (int i = 0; i < saved.Keys.Count; i++)
             {
@@ -136,7 +174,6 @@ namespace Unbound.Runtime
                 }
                 saved.Values[i] = list;
             }
-            return body;
         }
 
         static YText Write(Material m, Func<Object, YText> Ref)

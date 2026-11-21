@@ -697,6 +697,24 @@ namespace Unbound.Runtime
         internal const string ExtraGuid = "0000000000000000f000000000000000";
         internal const string DefaultGuid = "0000000000000000e000000000000000";
 
+        /// <summary>Where a built-in shader is (its resource file's GUID and its file id there, the
+        /// extra resources first); false for a shader that is not the built-in one of its name.</summary>
+        internal static bool TryGetLocation(UnityEngine.Shader shader, out string guid, out long fileId)
+        {
+            guid = null;
+            fileId = 0;
+            if (shader is null || !s_Shaders.TryGetValue(shader.name, out var known) || !ReferenceEquals(known, shader)) return false;
+            foreach (var (table, tableGuid) in new[] { (ExtraNames, ExtraGuid), (DefaultNames, DefaultGuid) })
+                foreach (var pair in table)
+                    if (pair.Value == shader.name)
+                    {
+                        guid = tableGuid;
+                        fileId = pair.Key;
+                        return true;
+                    }
+            return false;
+        }
+
         /// <summary>Whether a name is one of Unity's built-in shaders' (its resources list it).</summary>
         internal static bool IsBuiltin(string name) => ExtraNames.ContainsValue(name) || DefaultNames.ContainsValue(name);
 
