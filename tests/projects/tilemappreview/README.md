@@ -15,6 +15,9 @@ Measures Unity 6000.0.71f1 Editor `Tilemap` editor-preview APIs:
   or more changed cells, with tiles that ask to refresh their neighbours), `RefreshTile` of a cell
   holding both a preview and an actual tile, single preview sets and `ClearAllEditorPreviewTiles`,
   and the order of the cells in `tilemapTileChanged` and `tilemapPositionsChanged`.
+- What a tile's `GetTileData` sees through `ITilemap` (`GetTile`, `GetSprite`, `GetColor`) at its own
+  cell and at a neighbour holding a preview tile over an actual tile (`09.itilemapView`); a preview
+  tile equal to the cell's actual tile, and a replaced preview tile (`09.previewSameAsActualAndReplace`).
 
 ```sh
 python3 tests/projects/tilemappreview/run.py record --label a

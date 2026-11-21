@@ -112,6 +112,23 @@ class NeighbourLogTile : TileBase
     }
 }
 
+/// <summary>A tile that logs, from GetTileData, what the tilemap answers for its own cell and for
+/// the cell to its right.</summary>
+class ViewLogTile : TileBase
+{
+    public Sprite sprite;
+
+    public override void GetTileData(Vector3Int position, ITilemap tilemap, ref TileData tileData)
+    {
+        var right = position + Vector3Int.right;
+        var c = tilemap.GetColor(right);
+        OrderLogTile.Log.Add($"{name}.D({position.x},{position.y})[self={N(tilemap.GetTile(position))},right={N(tilemap.GetTile(right))}/{N(tilemap.GetSprite(right))}/({c.r:0.##},{c.g:0.##},{c.b:0.##})]");
+        tileData.sprite = sprite;
+    }
+
+    static string N(Object o) => o == null ? "null" : o.name;
+}
+
 /// <summary>
 /// Records, in Play mode, what the Unity 6000.0 Editor answers for Tilemap editor-preview APIs:
 /// SetEditorPreviewTile, SetEditorPreviewColor, SetEditorPreviewTransformMatrix,
@@ -660,6 +677,50 @@ static class TilemapPreviewProbe
             string set = Ordered(() => map.SetEditorPreviewTile(new Vector3Int(1, 0, 0), orderNew));
             string clear = Ordered(() => map.SetEditorPreviewTile(new Vector3Int(1, 0, 0), null));
             return $"set=({set})|clear=({clear})";
+        });
+
+        Check("08.refreshOrder.neighbours3Empty", () =>
+        {
+            var map = NewMap("RefreshNeighbours3Empty");
+            return Ordered(() => map.SetTiles(Row(3), Same(neighbourTile, 3)));
+        });
+
+        // 9. What a tile's GetTileData sees through ITilemap at its own cell and at a neighbour
+        // holding a preview tile over an actual tile, when an actual and a preview tile refresh.
+        Check("09.itilemapView", () =>
+        {
+            ViewLogTile View(string name)
+            {
+                var t = ScriptableObject.CreateInstance<ViewLogTile>();
+                t.name = name;
+                t.sprite = spriteB;
+                return t;
+            }
+            var map = NewMap("ItilemapView");
+            map.SetTile(new Vector3Int(1, 0, 0), tileFree);
+            map.SetEditorPreviewTile(new Vector3Int(1, 0, 0), tileLockColor);
+            map.SetTile(new Vector3Int(0, 0, 0), View("A"));
+            string refresh = Ordered(() => map.RefreshTile(new Vector3Int(0, 0, 0)));
+            string previewSet = Ordered(() => map.SetEditorPreviewTile(new Vector3Int(0, 0, 0), View("V")));
+            string actualSet = Ordered(() => map.SetTile(new Vector3Int(0, 0, 0), View("A2")));
+            return $"refresh=({refresh})|previewSet=({previewSet})|actualSet=({actualSet})";
+        });
+
+        // A preview tile equal to the cell's actual tile, and a preview tile replaced by another.
+        Check("09.previewSameAsActualAndReplace", () =>
+        {
+            var map = NewMap("PreviewSame");
+            var p = new Vector3Int(0, 0, 0);
+            map.SetTile(p, tileFree);
+            map.SetEditorPreviewTile(p, tileFree);
+            string same = PreviewCell(map, p);
+            var q = new Vector3Int(1, 0, 0);
+            map.SetEditorPreviewTile(q, tileFree);
+            map.SetEditorPreviewColor(q, new Color(0.5f, 0.5f, 0.5f, 1f));
+            map.SetEditorPreviewTransformMatrix(q, m2);
+            map.SetEditorPreviewTile(q, tilePreview);
+            string replaced = PreviewCell(map, q);
+            return $"same=({same})|replaced=({replaced})";
         });
 
         Tilemap.tilemapTileChanged -= logTiles;
