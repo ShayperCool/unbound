@@ -53,6 +53,11 @@ static class UnityEventToolsProbe
         Case("add.objectArgument", h => UnityEventTools.AddObjectPersistentListener<Object>(h.plain, s_Receiver.TakeObject, s_Other), h => h.plain, h => h.plain.Invoke());
         Case("add.objectTyped", h => UnityEventTools.AddObjectPersistentListener<Transform>(h.plain, s_Receiver.TakeTransform, s_Other.transform), h => h.plain, h => h.plain.Invoke());
         Case("add.objectNull", h => UnityEventTools.AddObjectPersistentListener<Object>(h.plain, s_Receiver.TakeObject, null), h => h.plain, h => h.plain.Invoke());
+        Case("add.objectTypedNull", h => UnityEventTools.AddObjectPersistentListener<Transform>(h.plain, s_Receiver.TakeTransform, null), h => h.plain, h => h.plain.Invoke());
+        Case("add.objectNullCall", h => UnityEventTools.AddObjectPersistentListener<Object>(h.plain, null, s_Other), h => h.plain, h => h.plain.Invoke());
+        Case("add.voidNullCall", h => UnityEventTools.AddVoidPersistentListener(h.plain, null), h => h.plain, h => h.plain.Invoke());
+        Case("add.voidLambda", h => UnityEventTools.AddVoidPersistentListener(h.number, () => EventReceiver.Calls.Add("voidLambda")), h => h.number, h => h.number.Invoke(1));
+        Case("add.intLambda", h => UnityEventTools.AddIntPersistentListener(h.plain, x => EventReceiver.Calls.Add("intLambda" + x), 1), h => h.plain, h => h.plain.Invoke());
         Case("add.two", h =>
         {
             UnityEventTools.AddPersistentListener(h.plain, s_Receiver.Ping);

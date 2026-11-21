@@ -9,7 +9,8 @@ then calls on `EventReceiver` and logs.
 * `add.*`: `AddPersistentListener` for an event without arguments, with one and with two, a static
   method, a lambda, a lambda with a captured variable, null, a destroyed target; `AddVoid…`,
   `AddInt…`, `AddFloat…`, `AddBool…`, `AddString…` (also null) and `AddObject…` (typed and null)
-  listeners; two listeners.
+  listeners; two listeners; a typed object listener with a null argument, null delegates in the
+  void and object modes, and lambdas in the void and int modes.
 * `register.*`: registering over an existing call in the same and another mode, and at an index
   out of range.
 * `remove.*`, `unregister*`: removing by index (also out of range), by delegate (every match, with
