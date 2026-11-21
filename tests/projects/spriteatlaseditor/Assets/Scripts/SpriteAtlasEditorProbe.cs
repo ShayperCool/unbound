@@ -54,10 +54,11 @@ static class SpriteAtlasEditorProbe
                 var variant = AssetDatabase.LoadAssetAtPath<SpriteAtlas>("Assets/WholeWriteAtlases/EarlyVariant.spriteatlasv2");
                 return $"variant=({DescribePacking(variant.GetPackingSettings())})|master=({DescribePacking(master.GetPackingSettings())})";
             });
-        // The legacy V1 file as it stands when Play mode starts, before anything loads it.
-        const string untouched = "Assets/WholeWriteAtlases/Untouched.spriteatlas";
-        if (File.Exists(untouched))
-            Check("Untouched.spriteatlas.atStart", () => "asset=" + File.ReadAllText(untouched));
+        // Each V1 file of the whole-write fixtures as it stands when Play mode starts, before
+        // anything here loads it.
+        if (Directory.Exists("Assets/WholeWriteAtlases"))
+            foreach (var file in Directory.GetFiles("Assets/WholeWriteAtlases", "*.spriteatlas").OrderBy(f => f, StringComparer.Ordinal))
+                Check(Path.GetFileName(file) + ".atStart", () => "asset=" + File.ReadAllText(file));
         var paths = AssetDatabase.FindAssets("t:SpriteAtlas").Select(AssetDatabase.GUIDToAssetPath)
             .Distinct().OrderBy(p => p, StringComparer.Ordinal).ToArray();
         Put("atlases", string.Join("|", paths));

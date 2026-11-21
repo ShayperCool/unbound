@@ -49,6 +49,7 @@ PROFILES = {
     'v2importerinclude': (5, 'ImporterIncludeAtlases', '.spriteatlasv2'),
     'v1wholewrite': (4, 'WholeWriteAtlases', '.spriteatlas'),
     'v2wholewrite': (5, 'WholeWriteAtlases', '.spriteatlasv2'),
+    'v1wholewritedisabled': (0, 'WholeWriteAtlases', '.spriteatlas'),
 }
 ATLAS_FOLDERS = ('Atlases', 'SettingsAtlases', 'PlatformAtlases', 'IncludeAtlases', 'PackingAtlases', 'TextureAtlases', 'PlatformSetAtlases', 'AddAtlases', 'RemoveAtlases', 'VariantScaleAtlases', 'IsVariantAtlases', 'MasterAtlasAtlases', 'ImporterPlatformAtlases', 'ImporterPlatformSetAtlases', 'ImporterPackingAtlases', 'ImporterTextureAtlases', 'ImporterVariantScaleAtlases', 'ImporterIncludeAtlases', 'WholeWriteAtlases')
 

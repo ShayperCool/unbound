@@ -12,7 +12,7 @@ toggles, `EditorUtility.IsDirty`/`GetDirtyCount`, `AssetDatabase.SaveAssets`/`Sa
 variant flag and sprite count; also the settings of `new SpriteAtlas()` and the answers for a null
 atlas. Recorded in Play mode, in batch mode, with the Unity 6000.0.71f1 Editor.
 
-Thirty-two profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
+Thirty-three profiles, each with its own reference under `Reference/unity-6000.0.71f1/`:
 
 - `v1`: Sprite Packer mode "Sprite Atlas V1 - Always Enabled" with three `.spriteatlas` assets in
   `Assets/Atlases/`: `Main` (a folder, a texture and a sprite of a sheet as packables, included in
@@ -314,7 +314,11 @@ importers and loaded `SpriteAtlas` instances independent until reimport, writes 
   `SaveAssetIfDirty` (V1) or `WriteImportSettingsIfDirty` (V2), `Untouched` changes nothing, nor
   does `Current` (the same settings in the current format); each records whether the atlas or
   importer was dirty before and the whole file written.
-  The V1 profile also gives `Scaled` (a variant whose `variantMultiplier` is 2) a master with
+  `LegacyVariant` (a legacy variant of `Current`), `LegacyExcluded` (legacy, not included in
+  builds) and `Packed` (packing `Single.png`, its packed sprites not yet stored) are V1 controls
+  too, and every V1 file is also recorded as it stands when Play mode starts (`*.atStart`).
+  `v1wholewritedisabled` runs the V1 fixtures in mode "Disabled" (0), where entering Play mode
+  packs nothing. The V1 profiles also give `Scaled` (a variant whose `variantMultiplier` is 2) a master with
   `SetMasterAtlas` before saving it, and saves `ScaledAlone` (the same) and
   `ScaledPlain` (not a variant) without it. The V2 profile also loads `LazyVariant` (a variant of `LazyMaster`) and changes the master's
   packing settings in memory before anything asks the variant for its settings, changes
