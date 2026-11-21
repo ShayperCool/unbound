@@ -23,6 +23,14 @@ namespace UnityEngine.Events
         [SerializeField] bool m_BoolArgument;
 
         public Object unityObjectArgument { get => m_ObjectArgument; set => m_ObjectArgument = value; }
+
+        /// <summary>The object argument with the type it names: the object's own type, empty for none
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/unityeventtools add.object*).</summary>
+        internal void SetObjectArgument(Object value)
+        {
+            m_ObjectArgument = value;
+            m_ObjectArgumentAssemblyTypeName = !ReferenceEquals(value, null) ? value.GetType().AssemblyQualifiedName : string.Empty;
+        }
         public string unityObjectArgumentAssemblyTypeName => m_ObjectArgumentAssemblyTypeName;
         public int intArgument { get => m_IntArgument; set => m_IntArgument = value; }
         public float floatArgument { get => m_FloatArgument; set => m_FloatArgument = value; }
@@ -100,6 +108,15 @@ namespace UnityEngine.Events
             m_Mode = mode;
         }
 
+        /// <summary>Forgets the target and method; the mode, argument and state stay (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/unityeventtools unregister).</summary>
+        internal void Unregister()
+        {
+            m_Target = null;
+            m_TargetAssemblyTypeName = string.Empty;
+            m_MethodName = string.Empty;
+        }
+
         /// <summary>A callable for this entry, or null when the target or method is missing.</summary>
         internal Action<object[]> Resolve(UnityEventBase owner)
         {
@@ -109,44 +126,26 @@ namespace UnityEngine.Events
                 && (!Unbound.Runtime.EditorSession.IsPlaying || (m_Target != null && !Application.IsPlaying(m_Target)))) return null;
             var targetType = m_Target != null ? m_Target.GetType() : Unbound.Runtime.TypeResolver.FindByAssemblyQualifiedName(targetAssemblyTypeName);
             if (targetType == null) return null;
-            MethodInfo method;
-            object[] fixedArgs = null;
+            var argType = m_Mode == PersistentListenerMode.Object && !string.IsNullOrEmpty(m_Arguments.unityObjectArgumentAssemblyTypeName)
+                ? Unbound.Runtime.TypeResolver.FindByAssemblyQualifiedName(m_Arguments.unityObjectArgumentAssemblyTypeName) : null;
+            var parameters = UnityEventBase.ParametersOf(m_Mode, owner, argType);
+            if (parameters == null) return null;
+            var method = UnityEventBase.GetValidMethodInfo(targetType, m_MethodName, parameters);
+            object[] fixedArgs;
             switch (m_Mode)
             {
-                case PersistentListenerMode.EventDefined:
-                    method = UnityEventBase.GetValidMethodInfo(targetType, m_MethodName, owner.ArgumentTypes());
-                    break;
-                case PersistentListenerMode.Void:
-                    method = UnityEventBase.GetValidMethodInfo(targetType, m_MethodName, Type.EmptyTypes);
-                    fixedArgs = Array.Empty<object>();
-                    break;
+                case PersistentListenerMode.EventDefined: fixedArgs = null; break;
+                case PersistentListenerMode.Void: fixedArgs = Array.Empty<object>(); break;
                 case PersistentListenerMode.Object:
                 {
-                    var argType = (string.IsNullOrEmpty(m_Arguments.unityObjectArgumentAssemblyTypeName)
-                        ? null : Unbound.Runtime.TypeResolver.FindByAssemblyQualifiedName(m_Arguments.unityObjectArgumentAssemblyTypeName)) ?? typeof(Object);
-                    method = UnityEventBase.GetValidMethodInfo(targetType, m_MethodName, new[] { argType });
                     var arg = m_Arguments.unityObjectArgument;
-                    fixedArgs = new object[] { arg != null && argType.IsInstanceOfType(arg) ? arg : null };
+                    fixedArgs = new object[] { arg != null && parameters[0].IsInstanceOfType(arg) ? arg : null };
                     break;
                 }
-                case PersistentListenerMode.Int:
-                    method = UnityEventBase.GetValidMethodInfo(targetType, m_MethodName, new[] { typeof(int) });
-                    fixedArgs = new object[] { m_Arguments.intArgument };
-                    break;
-                case PersistentListenerMode.Float:
-                    method = UnityEventBase.GetValidMethodInfo(targetType, m_MethodName, new[] { typeof(float) });
-                    fixedArgs = new object[] { m_Arguments.floatArgument };
-                    break;
-                case PersistentListenerMode.String:
-                    method = UnityEventBase.GetValidMethodInfo(targetType, m_MethodName, new[] { typeof(string) });
-                    fixedArgs = new object[] { m_Arguments.stringArgument };
-                    break;
-                case PersistentListenerMode.Bool:
-                    method = UnityEventBase.GetValidMethodInfo(targetType, m_MethodName, new[] { typeof(bool) });
-                    fixedArgs = new object[] { m_Arguments.boolArgument };
-                    break;
-                default:
-                    return null;
+                case PersistentListenerMode.Int: fixedArgs = new object[] { m_Arguments.intArgument }; break;
+                case PersistentListenerMode.Float: fixedArgs = new object[] { m_Arguments.floatArgument }; break;
+                case PersistentListenerMode.String: fixedArgs = new object[] { m_Arguments.stringArgument }; break;
+                default: fixedArgs = new object[] { m_Arguments.boolArgument }; break;
             }
             if (method == null)
             {
@@ -232,23 +231,76 @@ namespace UnityEngine.Events
 
         internal void UaAddPersistentCall(Delegate callback, UnityEventCallState state)
         {
-            var call = new PersistentCall();
-            m_PersistentCalls.AddListener(call);
-            if (callback == null) Debug.LogWarning("Registering a Listener requires an action");
-            else
-            {
-                var method = callback.Method;
-                var target = callback.Target as Object;
-                if (method.DeclaringType == null)
-                    throw new NullReferenceException($"Method '{method.Name}' declaring type is null, global methods are not supported");
-                if (!method.IsStatic && (target == null || target.GetInstanceID() == 0))
-                    throw new ArgumentException($"Could not register callback {method.Name} on {target}. The class {(target == null ? "null" : target.GetType().ToString())} does not derive from UnityEngine.Object");
-                if (FindMethod_Impl(method.Name, method.IsStatic ? method.DeclaringType : target.GetType()) == null)
-                    Debug.LogWarning($"Could not register listener {target}.{method} on {GetType()} the method could not be found.");
-                else call.Register(target, method.DeclaringType, method.Name, PersistentListenerMode.EventDefined);
-            }
-            call.callState = state;
+            int index = m_PersistentCalls.Count;
+            AddPersistentListener();
+            RegisterPersistentListener(index, callback, PersistentListenerMode.EventDefined);
+            m_PersistentCalls.GetListener(index).callState = state;
+        }
+
+        /// <summary>A new, empty persistent call at the end (state RuntimeOnly).</summary>
+        internal void AddPersistentListener()
+        {
+            m_PersistentCalls.AddListener();
             DirtyPersistentCalls();
+        }
+
+        /// <summary>Points the persistent call at <paramref name="index"/> at a delegate's method in a
+        /// mode, if the method takes that mode's parameters: a null delegate is a warning, a method
+        /// with no UnityEngine.Object to call it on an exception, before the index is looked at
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/unityeventtools).</summary>
+        internal bool RegisterPersistentListener(int index, Delegate callback, PersistentListenerMode mode, Type objectArgumentType = null)
+        {
+            if (callback == null)
+            {
+                Debug.LogWarning("Registering a Listener requires an action");
+                return false;
+            }
+            var method = callback.Method;
+            var target = callback.Target as Object;
+            if (method.DeclaringType == null)
+                throw new NullReferenceException($"Method '{method.Name}' declaring type is null, global methods are not supported");
+            if (!method.IsStatic && (target == null || target.GetInstanceID() == 0))
+                throw new ArgumentException($"Could not register callback {method.Name} on {target}. The class {(ReferenceEquals(target, null) ? "null" : target.GetType().ToString())} does not derive from UnityEngine.Object");
+            if (GetValidMethodInfo(method.IsStatic ? method.DeclaringType : target.GetType(), method.Name, ParametersOf(mode, this, objectArgumentType)) == null)
+            {
+                Debug.LogWarning($"Could not register listener {target}.{method} on {GetType()} the method could not be found.");
+                return false;
+            }
+            m_PersistentCalls.GetListener(index).Register(target, method.DeclaringType, method.Name, mode);
+            DirtyPersistentCalls();
+            return true;
+        }
+
+        /// <summary>The persistent call's argument, which the registering mode sets.</summary>
+        internal ArgumentCache PersistentArguments(int index) => m_PersistentCalls.GetListener(index).arguments;
+
+        internal void UnregisterPersistentListener(int index)
+        {
+            m_PersistentCalls.GetListener(index).Unregister();
+            DirtyPersistentCalls();
+        }
+
+        internal void RemovePersistentListener(int index)
+        {
+            m_PersistentCalls.RemoveListener(index);
+            DirtyPersistentCalls();
+        }
+
+        /// <summary>The parameters a persistent call's method takes in a mode: the event's own, none,
+        /// or the one argument; null for an unknown mode.</summary>
+        internal static Type[] ParametersOf(PersistentListenerMode mode, UnityEventBase owner, Type objectArgumentType)
+        {
+            switch (mode)
+            {
+                case PersistentListenerMode.EventDefined: return owner.ArgumentTypes();
+                case PersistentListenerMode.Void: return Type.EmptyTypes;
+                case PersistentListenerMode.Object: return new[] { objectArgumentType ?? typeof(Object) };
+                case PersistentListenerMode.Int: return new[] { typeof(int) };
+                case PersistentListenerMode.Float: return new[] { typeof(float) };
+                case PersistentListenerMode.String: return new[] { typeof(string) };
+                case PersistentListenerMode.Bool: return new[] { typeof(bool) };
+                default: return null;
+            }
         }
 
         internal void RemovePersistentListener(Object target, MethodInfo method)
