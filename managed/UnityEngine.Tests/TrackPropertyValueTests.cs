@@ -78,6 +78,7 @@ namespace UnityEngine.Tests
             public Color hdrTint = new Color(2f, 4f, 0.5f, 0.25f);
             public Color32 tint32 = new Color32(16, 128, 240, 200);
             public Rect rectVal = new Rect(1, 2, 3, 4);
+            public Bounds boundsVal = new Bounds(Vector3.one, Vector3.one * 2f);
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
             public SparseChoice sparseEnum = SparseChoice.TwentyFive;
@@ -583,12 +584,12 @@ namespace UnityEngine.Tests
                 Assert.False(wrongField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.Contains(warnings, w => w.Contains("not compatible") && w.Contains("\"flag\""));
 
-                // Unsupported property type (Rect) reports explicit Stubs.NotImplemented hit and stays unbound.
-                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (Rect)";
+                // Unsupported property type (Bounds) reports explicit Stubs.NotImplemented hit and stays unbound.
+                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (Bounds)";
                 int beforeVecHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
                 var vecField = new IntegerField();
                 panel.visualTree.Add(vecField);
-                vecField.BindProperty(so.FindProperty("rectVal"));
+                vecField.BindProperty(so.FindProperty("boundsVal"));
                 Assert.False(vecField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value > beforeVecHits);
 
@@ -872,9 +873,9 @@ namespace UnityEngine.Tests
             using var so = new SerializedObject(target);
             try
             {
-                const string vecStubKey = "UnityEditor.UIElements.PropertyField (Rect)";
+                const string vecStubKey = "UnityEditor.UIElements.PropertyField (Bounds)";
                 int beforeHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
-                var pf = new PropertyField(so.FindProperty("rectVal"));
+                var pf = new PropertyField(so.FindProperty("boundsVal"));
                 panel.visualTree.Add(pf);
                 pf.Bind(so);
                 Assert.Equal(0, pf.hierarchy.childCount);
@@ -1751,6 +1752,90 @@ namespace UnityEngine.Tests
                 Tick(panel);
                 Assert.Equal(new Color(0.25f, 0.5f, 0.75f, 0.25f), t1.tint);
                 Assert.Equal("rt-color-1", cf.tooltip);
+            }
+            finally
+            {
+                soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyRectMultiEditComponentBindingAndDisposedCleanupWorkAcrossReleases()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.rectVal = new Rect(1f, 10f, -100f, 50f);
+            t2.rectVal = new Rect(2f, 10f, -200f, 50f);
+            using var panel = RuntimePanel.Create(settings);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                var rt = new RuntimeModel { text = "rt-rect-0" };
+                var rf = new RectField { dataSource = rt };
+                rf.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                panel.visualTree.Add(rf);
+                rf.BindProperty(soMulti.FindProperty("rectVal"));
+                Tick(panel);
+
+                var xSub = rf.Q<FloatField>("unity-x-input");
+                var ySub = rf.Q<FloatField>("unity-y-input");
+                var wSub = rf.Q<FloatField>("unity-width-input");
+                var hSub = rf.Q<FloatField>("unity-height-input");
+                Assert.False(rf.showMixedValue);
+                Assert.True(xSub.showMixedValue);
+                Assert.False(ySub.showMixedValue);
+                Assert.True(wSub.showMixedValue);
+                Assert.False(hSub.showMixedValue);
+                Assert.Equal(new Rect(1f, 10f, -100f, 50f), rf.value);
+                Assert.Equal("rt-rect-0", rf.tooltip);
+
+                // Editing a sub-field on RectField writes the whole Rect across targets (matching Unity 6000.0.71f1).
+                xSub.value = 5f;
+                Tick(panel);
+                Assert.Equal(new Rect(5f, 10f, -100f, 50f), t1.rectVal);
+                Assert.Equal(new Rect(5f, 10f, -100f, 50f), t2.rectVal);
+                Assert.False(xSub.showMixedValue);
+                Assert.False(wSub.showMixedValue);
+
+                // PropertyField creates RectField with nicified label and per-component showMixedValue.
+                t1.rectVal = new Rect(10f, 20f, 30f, 40f);
+                t2.rectVal = new Rect(50f, 60f, 70f, 80f);
+                soMulti.Update();
+                var pf = new PropertyField(soMulti.FindProperty("rectVal"));
+                panel.visualTree.Add(pf);
+                pf.Bind(soMulti);
+                Tick(panel);
+                var pfChild = Assert.IsType<RectField>(pf.hierarchy[0]);
+                Assert.Equal("Rect Val", pfChild.label);
+                Assert.True(pfChild.Q<FloatField>("unity-width-input").showMixedValue);
+
+                // Direct FloatField bound to rectVal.width updates only width and preserves x, y, and height on each target.
+                var compW = new FloatField();
+                panel.visualTree.Add(compW);
+                compW.BindProperty(soMulti.FindProperty("rectVal.width"));
+                Tick(panel);
+                Assert.True(compW.showMixedValue);
+                compW.value = 99f;
+                Tick(panel);
+                Assert.Equal(new Rect(10f, 20f, 99f, 40f), t1.rectVal);
+                Assert.Equal(new Rect(50f, 60f, 99f, 80f), t2.rectVal);
+
+                // Disposing SerializedObject unbinds cleanly while runtime DataBinding remains active.
+                soMulti.Dispose();
+                rf.value = new Rect(9f, 8f, 7f, 6f);
+                rt.text = "rt-rect-1";
+                Tick(panel);
+                Assert.Equal(new Rect(10f, 20f, 99f, 40f), t1.rectVal);
+                Assert.Equal("rt-rect-1", rf.tooltip);
             }
             finally
             {

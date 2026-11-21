@@ -866,7 +866,7 @@ namespace Unbound.Runtime
                 case Shape.Vector3Int: return "Vector3Int";
                 case Shape.Quaternion: return "Quaternionf";
                 case Shape.Color: case Shape.Color32: return "Color";
-                case Shape.Rect: return "Rectf";
+                case Shape.Rect: return "Rect";
                 case Shape.RectInt: return "RectInt";
                 case Shape.Bounds: return "AABB";
                 case Shape.BoundsInt: return "BoundsInt";

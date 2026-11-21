@@ -7,8 +7,8 @@ using UnityEngine.UIElements;
 
 // Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
 // BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, Color/Color32,
-// Vector2, Vector3, Vector4, Vector2Int, and Vector3Int fields plus Foldout isExpanded binding),
-// BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
+// Vector2, Vector3, Vector4, Vector2Int, Vector3Int, and Rect fields plus Foldout isExpanded
+// binding), BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
 // BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
 // SerializedObject binding context/updater pipeline that synchronizes fields and polls changes
 // during panel updates. Documented in Unity 6000.0 Scripting API ("BindingExtensions.Bind",
@@ -18,8 +18,8 @@ using UnityEngine.UIElements;
 // Editor, tests/projects/bindtree, tests/projects/bindproperty, tests/projects/enumbinding,
 // tests/projects/enumflagsbinding, tests/projects/colorbinding, tests/projects/vector2binding,
 // tests/projects/vector3binding, tests/projects/vector4binding, tests/projects/vector2intbinding,
-// tests/projects/vector3intbinding, tests/projects/trackpropertyvalue and
-// tests/projects/trackserializedobjectvalue.
+// tests/projects/vector3intbinding, tests/projects/rectbinding, tests/projects/trackpropertyvalue
+// and tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
 {
@@ -1180,6 +1180,9 @@ namespace UnityEditor.UIElements.Bindings
                 case SerializedPropertyType.Vector3Int:
                     DefaultBind(element, prop, SerializedPropertyHelper.GetVector3IntPropertyValue, SerializedPropertyHelper.SetVector3IntPropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
+                case SerializedPropertyType.Rect:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetRectPropertyValue, SerializedPropertyHelper.SetRectPropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
                 case SerializedPropertyType.Generic:
                     if (prop.type == "ToggleButtonGroupState")
                         Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty (ToggleButtonGroupState)");
@@ -2093,6 +2096,7 @@ namespace UnityEditor.UIElements.Bindings
         public static Vector4 GetVector4PropertyValue(SerializedProperty p) => p.vector4Value;
         public static Vector2Int GetVector2IntPropertyValue(SerializedProperty p) => p.vector2IntValue;
         public static Vector3Int GetVector3IntPropertyValue(SerializedProperty p) => p.vector3IntValue;
+        public static Rect GetRectPropertyValue(SerializedProperty p) => p.rectValue;
         public static float GetIntPropertyValueAsFloat(SerializedProperty p) => p.intValue;
         public static float GetLongPropertyValueAsFloat(SerializedProperty p) => p.longValue;
         public static double GetFloatPropertyValueAsDouble(SerializedProperty p) => p.floatValue;
@@ -2197,6 +2201,8 @@ namespace UnityEditor.UIElements.Bindings
                 p.vector3IntValue = v;
             }
         }
+
+        public static void SetRectPropertyValue(SerializedProperty p, Rect v) => p.rectValue = v;
         public static void SetFloatPropertyValueFromDouble(SerializedProperty p, double v) => p.floatValue = (float)v;
         public static void SetDoublePropertyValueFromFloat(SerializedProperty p, float v) => p.doubleValue = v;
 
