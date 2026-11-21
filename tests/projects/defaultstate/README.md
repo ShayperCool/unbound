@@ -814,3 +814,11 @@ inventory alone, before any Unity call); every earlier row is unchanged.
 The Scene view types slice adds `SceneView.CameraMode` and `SceneView.SceneViewState` to the inventory with their 25
 rows, as two Unity 6000.0.71f1 batch Editor captures on macOS write them (plain field and switch values, independent
 of the OS and graphics device); every earlier row is unchanged.
+
+The editor toolbar slice adds 499 rows for 38 newly hand-written types (the UI Toolkit toolbar
+controls with their UXML data, factories and traits, EditorResources, the Button, BaseBoolField
+and Toggle UXML data, and UxmlNamespacePrefixAttribute) from two independent Unity 6000.0.71f1
+macOS Editor captures (batch mode) that agree on them; no existing row changed. ToolbarButton's
+and ToolbarMenu's `TextElement/selection` rows are queued with the text-layout difference of
+Button and Label. The added construction shifts the implementation's event type ids and the two
+text-asset identities, whose debt entries record the new raw values.
