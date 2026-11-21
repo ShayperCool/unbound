@@ -20,6 +20,8 @@ namespace UnityEditor
             public string Guid { get; set; }
             public string Path { get; set; }
             public string Kind { get; set; }
+            /// <summary>The importer the Editor gives the asset by its path.</summary>
+            public string Importer { get; set; }
             public string[] Labels { get; set; }
         }
 
@@ -53,13 +55,15 @@ namespace UnityEditor
 
         internal static void Invalidate() => s_Entries = null;
 
-        /// <summary>The built-in GUID the Editor assigns to the root <c>Assets</c> folder
-        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/defaultasset).</summary>
-        internal const string AssetsRootGuid = "00000000000000001000000000000000";
+        /// <summary>Whether the asset database lists an asset of this GUID.</summary>
+        internal static bool Lists(string guid)
+        {
+            _ = Entries;
+            return guid != null && s_ByGuid.ContainsKey(guid);
+        }
 
         public static string GUIDToAssetPath(string guid)
         {
-            if (string.Equals(guid, AssetsRootGuid, StringComparison.OrdinalIgnoreCase)) return "Assets";
             if (SettingsAssets.ByGuid(guid) is SettingsFile settings) return settings.AssetPath;
             _ = Entries;
             return guid != null && s_ByGuid.TryGetValue(guid, out var e) ? e.Path : DeletedPath(guid);
@@ -81,7 +85,6 @@ namespace UnityEditor
         {
             if (SettingsAssets.AtPath(path) is SettingsFile settings) return settings.Guid;
             var normalized = path?.Replace('\\', '/').TrimEnd('/');
-            if (string.Equals(normalized, "Assets", StringComparison.OrdinalIgnoreCase)) return AssetsRootGuid;
             _ = Entries;
             return normalized != null && s_ByPath.TryGetValue(normalized, out var e) ? e.Guid : "";
         }
@@ -91,9 +94,9 @@ namespace UnityEditor
         public static bool IsValidFolder(string path)
         {
             path = path?.Replace('\\', '/').TrimEnd('/');
-            if (string.Equals(path, "Assets", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(path, "Packages", StringComparison.OrdinalIgnoreCase))
-                return true;
+            // Packages is a folder of the database without being an asset (GetAllAssetPaths does
+            // not list it, as it lists Assets).
+            if (string.Equals(path, "Packages", StringComparison.OrdinalIgnoreCase)) return true;
             _ = Entries;
             return path != null && s_ByPath.TryGetValue(path, out var e) && e.Kind == "folder";
         }
@@ -150,13 +153,14 @@ namespace UnityEditor
             if (SettingsAssets.AtPath(assetPath) is SettingsFile settings) return new[] { settings.Object };
             var guid = AssetPathToGUID(assetPath);
             if (string.IsNullOrEmpty(guid)) return Array.Empty<Object>();
-            // DefaultAsset (folders, unrecognized/StreamingAssets files, plugins) and SceneAsset
-            // load via LoadAssetAtPath/LoadMainAssetAtPath, while LoadAllAssetsAtPath returns an
-            // empty array (matches the Unity 6000.0.71f1 Editor, tests/projects/defaultasset).
-            var main = AssetDatabaseRuntime.LoadMain(guid, null);
-            if (main is DefaultAsset || main is SceneAsset) return Array.Empty<Object>();
-            return AssetDatabaseRuntime.LoadAll(guid, hierarchy: true).ToArray();
+            // The object the Editor stands in for a file without objects of its own (a folder's,
+            // a scene's, a plug-in's DefaultAsset or SceneAsset) is not among them; a managed
+            // plug-in's scripts are (matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/defaultasset asset.* and dllScripts.main).
+            return AssetDatabaseRuntime.LoadAll(guid, hierarchy: true).Where(o => !IsPlaceholder(o)).ToArray();
         }
+
+        static bool IsPlaceholder(Object o) => o is DefaultAsset || o is SceneAsset;
 
         public static Object[] LoadAllAssetRepresentationsAtPath(string assetPath)
         {
@@ -202,16 +206,34 @@ namespace UnityEditor
         /// objects, applied to every asset file's hidden objects).</summary>
         public static bool IsSubAsset(Object obj) => obj != null && obj.IsPersistentAsset && !IsMainAsset(obj) && (obj.hideFlags & HideFlags.HideInHierarchy) == 0;
 
+        /// <summary>Whether the object is stored in a file of the Editor's own format: a project
+        /// settings file or an asset of the NativeFormatImporter, whatever its kind and whether it
+        /// is the main object or not (a prefab, of the PrefabImporter, is not; matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/defaultasset native.*).</summary>
         public static bool IsNativeAsset(Object obj)
         {
-            var path = GetAssetPath(obj);
-            return path.EndsWith(".asset", StringComparison.OrdinalIgnoreCase)
-                || path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase)
-                || path.EndsWith(".mat", StringComparison.OrdinalIgnoreCase);
+            if (ReferenceEquals(obj, null)) throw new ArgumentNullException(nameof(obj));
+            if (SettingsAssets.Of(obj) != null) return true;
+            return ImporterOf(GetAssetPath(obj)) == "NativeFormatImporter";
         }
 
-        public static bool IsForeignAsset(Object obj) =>
-            obj != null && obj.IsPersistentAsset && !IsNativeAsset(obj) && !IsValidFolder(GetAssetPath(obj));
+        /// <summary>Whether the object is an asset imported from a file of another format: any
+        /// asset but a native one and a folder (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/defaultasset native.*).</summary>
+        public static bool IsForeignAsset(Object obj)
+        {
+            if (ReferenceEquals(obj, null)) throw new ArgumentNullException(nameof(obj));
+            if (!obj.IsPersistentAsset || IsNativeAsset(obj)) return false;
+            var path = GetAssetPath(obj);
+            return path.Length > 0 && !IsValidFolder(path);
+        }
+
+        /// <summary>The importer of a listed asset, by its path; null for one the database does not list.</summary>
+        static string ImporterOf(string path)
+        {
+            _ = Entries;
+            return !string.IsNullOrEmpty(path) && s_ByPath.TryGetValue(path, out var e) ? e.Importer : null;
+        }
 
         public static bool TryGetGUIDAndLocalFileIdentifier(Object obj, out string guid, out long localId)
         {
@@ -247,6 +269,9 @@ namespace UnityEditor
             var result = new List<string>();
             foreach (var e in Entries)
             {
+                // The Assets folder is listed, but no search finds it (tests/projects/defaultasset
+                // folder.assetsRoot.listed).
+                if (string.Equals(e.Path, "Assets", StringComparison.OrdinalIgnoreCase)) continue;
                 if (folders != null && !folders.Any(f => e.Path.StartsWith(f, StringComparison.OrdinalIgnoreCase))) continue;
                 var fileName = e.Kind == "folder" ? System.IO.Path.GetFileName(e.Path) : System.IO.Path.GetFileNameWithoutExtension(e.Path);
                 if (names.Any(n => fileName.IndexOf(n, StringComparison.OrdinalIgnoreCase) < 0)) continue;
@@ -426,6 +451,9 @@ namespace UnityEditor
         internal string m_Guid;
         /// <summary>The script's file id in its file: a script file's own, or a built-in script's.</summary>
         internal long m_FileId = ScriptFileId;
+        /// <summary>A plugin DLL's script: the class it stands for, which GetClass answers.</summary>
+        Type m_PluginClass;
+        bool m_FromPlugin;
 
         const long ScriptFileId = 11500000;
 
@@ -441,7 +469,22 @@ namespace UnityEditor
             m_Guid = guid;
         }
 
-        public Type GetClass() => m_Guid != null ? GameDomain.ResolveScript(m_Guid, m_FileId) : null;
+        /// <summary>The script of a class a plugin DLL declares, named after the class.</summary>
+        internal static MonoScript ForPluginClass(Type type, string guid, long fileId)
+        {
+            using (ObjectRegistry.AsAssets())
+                return new MonoScript(Array.Empty<byte>(), type.Name, guid)
+                {
+                    m_FileId = fileId,
+                    m_FromPlugin = true,
+                    // A nested class's script has no class (matches the Unity 6000.0.71f1 Editor,
+                    // tests/projects/defaultasset dllScripts.objects).
+                    m_PluginClass = type.IsNested ? null : type,
+                    IsPersistentAsset = true,
+                };
+        }
+
+        public Type GetClass() => m_FromPlugin ? m_PluginClass : m_Guid != null ? GameDomain.ResolveScript(m_Guid, m_FileId) : null;
 
         public static MonoScript FromMonoBehaviour(MonoBehaviour behaviour) => FromType(behaviour?.GetType());
 
@@ -449,6 +492,8 @@ namespace UnityEditor
 
         internal static MonoScript FromType(Type type)
         {
+            if (GameDomain.TryGetPluginScriptLocation(type, out var pluginGuid, out var fileId))
+                return AssetDatabaseRuntime.Load(pluginGuid, fileId, typeof(MonoScript)) as MonoScript;
             var guid = type != null ? GameDomain.GuidOfScript(type) : null;
             return guid == null ? null : AssetDatabaseRuntime.LoadMain(guid, typeof(MonoScript)) as MonoScript;
         }

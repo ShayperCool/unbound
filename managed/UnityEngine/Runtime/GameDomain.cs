@@ -95,6 +95,9 @@ namespace Unbound.Runtime
         static readonly Dictionary<string, Type> s_ScriptsByGuid = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
         static readonly Dictionary<(string Guid, long FileId), Type> s_PluginScripts = new Dictionary<(string, long), Type>();
         static readonly Dictionary<Type, string> s_GuidByScript = new Dictionary<Type, string>();
+        /// <summary>The classes a plugin DLL has script sub-assets for, by the DLL's GUID.</summary>
+        static readonly Dictionary<string, List<(long FileId, Type Class)>> s_PluginScriptAssets = new Dictionary<string, List<(long, Type)>>(StringComparer.OrdinalIgnoreCase);
+        static readonly Dictionary<Type, (string Guid, long FileId)> s_PluginScriptLocations = new Dictionary<Type, (string, long)>();
         static int s_Generation;
 
         internal static IReadOnlyList<Assembly> Assemblies() => s_Assemblies;
@@ -122,6 +125,8 @@ namespace Unbound.Runtime
             s_SourcePaths.Clear();
             s_ScriptsByGuid.Clear();
             s_PluginScripts.Clear();
+            s_PluginScriptAssets.Clear();
+            s_PluginScriptLocations.Clear();
             s_LegacyScripts.Clear();
             s_GuidByScript.Clear();
             TypeResolver.ClearCache();
@@ -192,18 +197,27 @@ namespace Unbound.Runtime
             var types = SafeTypes(assembly);
             if (info.PluginGuid != null)
             {
+                var guid = info.PluginGuid.ToLowerInvariant();
+                var assets = new List<(long, Type)>();
                 foreach (var type in types)
                 {
                     try
                     {
+                        if (IsPluginScriptAsset(type))
+                        {
+                            var fileId = PluginScriptFileId(type);
+                            assets.Add((fileId, type));
+                            s_PluginScriptLocations[type] = (guid, fileId);
+                        }
                         if (!IsScriptClass(type)) continue;
-                        s_PluginScripts[(info.PluginGuid.ToLowerInvariant(), PluginScriptFileId(type))] = type;
+                        s_PluginScripts[(guid, PluginScriptFileId(type))] = type;
                     }
                     catch (Exception)
                     {
                         // Its base type is not available yet.
                     }
                 }
+                s_PluginScriptAssets[guid] = assets;
                 return;
             }
             var byName = new Dictionary<string, List<Type>>();
@@ -249,6 +263,30 @@ namespace Unbound.Runtime
         /// (behaviours, scriptable objects, importers, editors).</summary>
         static bool IsScriptClass(Type type) =>
             !type.IsAbstract && !type.ContainsGenericParameters && typeof(UnityEngine.Object).IsAssignableFrom(type);
+
+        /// <summary>A class a plugin DLL has a script sub-asset for: every behaviour and scriptable
+        /// object class, abstract, generic and nested ones too, but not other UnityEngine.Object
+        /// classes (matches the Unity 6000.0.71f1 Editor, tests/projects/defaultasset dllScripts).</summary>
+        static bool IsPluginScriptAsset(Type type) =>
+            typeof(MonoBehaviour).IsAssignableFrom(type) || typeof(ScriptableObject).IsAssignableFrom(type);
+
+        /// <summary>The classes a loaded plugin DLL has script sub-assets for, with their file IDs;
+        /// null for a DLL the game domain did not load.</summary>
+        internal static IReadOnlyList<(long FileId, Type Class)> PluginScriptAssets(string pluginGuid) =>
+            pluginGuid != null && s_PluginScriptAssets.TryGetValue(pluginGuid, out var assets) ? assets : null;
+
+        /// <summary>The plugin DLL and file ID of a class's script sub-asset, when a plugin declares it.</summary>
+        internal static bool TryGetPluginScriptLocation(Type type, out string guid, out long fileId)
+        {
+            if (type != null && s_PluginScriptLocations.TryGetValue(type, out var location))
+            {
+                (guid, fileId) = location;
+                return true;
+            }
+            guid = null;
+            fileId = 0;
+            return false;
+        }
 
         /// <summary>The class a serialized `m_Script` reference names.</summary>
         internal static Type ResolveScript(string guid, long fileId)
@@ -324,10 +362,13 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Unity's file id of a class in a DLL: the first four bytes of
-        /// MD4("s\0\0\0" + namespace + name), little endian.</summary>
-        internal static long PluginScriptFileId(Type type)
+        /// MD4("s\0\0\0" + namespace + name), little endian. A nested class counts as one without a namespace (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/defaultasset dllScripts.objects).</summary>
+        internal static long PluginScriptFileId(Type type) => PluginScriptFileId(type.IsNested ? "" : type.Namespace, type.Name);
+
+        internal static long PluginScriptFileId(string ns, string name)
         {
-            var text = "s\0\0\0" + (type.Namespace ?? "") + type.Name;
+            var text = "s\0\0\0" + (ns ?? "") + name;
             var hash = Md4.Hash(Encoding.UTF8.GetBytes(text));
             return BitConverter.ToInt32(hash, 0);
         }

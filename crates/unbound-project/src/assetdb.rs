@@ -26,6 +26,20 @@ pub struct AssetDb {
     pub problems: Vec<String>,
 }
 
+/// The GUID the Editor gives the project's `Assets` folder, which has no `.meta` (matches the
+/// Unity 6000.0.71f1 Editor, tests/projects/defaultasset `folder.assetsRoot.guid`).
+pub const ASSETS_ROOT_GUID: Guid = Guid(0x0000_0000_0000_0000_1000_0000_0000_0000);
+
+/// The path of the project's own assets root.
+pub const ASSETS_ROOT_PATH: &str = "Assets";
+
+impl Asset {
+    /// The project's `Assets` folder itself: listed like a folder, with no `.meta` of its own.
+    pub fn is_assets_root(&self) -> bool {
+        self.guid == ASSETS_ROOT_GUID
+    }
+}
+
 /// A root of the database: a directory and the path Unity gives it.
 pub struct Root<'a> {
     pub dir: &'a Path,
@@ -67,6 +81,17 @@ impl AssetDb {
             })
             .collect();
         let mut db = AssetDb::default();
+        // The `Assets` folder is an asset of its own (GetAllAssetPaths lists it; it loads as a
+        // folder), under a fixed GUID instead of one from a `.meta`.
+        if let Some(root) = roots.iter().find(|r| r.virtual_path == ASSETS_ROOT_PATH) {
+            db.insert(Asset {
+                guid: ASSETS_ROOT_GUID,
+                path: ASSETS_ROOT_PATH.to_string(),
+                file: root.dir.to_path_buf(),
+                is_folder: true,
+                labels: Vec::new(),
+            });
+        }
         for (guid, labels, file, path) in read {
             let Some(guid) = guid else {
                 db.problems.push(format!("{path}: .meta has no guid"));
@@ -324,6 +349,48 @@ mod db_tests {
             gone.iter().map(|a| a.path.as_str()).collect::<Vec<_>>(),
             ["Assets/Gone.txt"]
         );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn the_assets_folder_is_listed_under_its_fixed_guid() {
+        let dir = std::env::temp_dir().join(format!("unbound-assetdb-root-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("Assets/Sub")).unwrap();
+        std::fs::write(
+            dir.join("Assets/Sub.meta"),
+            "fileFormatVersion: 2\nguid: 0000000000000000000000000000abcd\nfolderAsset: yes\n",
+        )
+        .unwrap();
+        let assets = dir.join("Assets");
+        let package = dir.join("Package");
+        std::fs::create_dir_all(&package).unwrap();
+        let db = AssetDb::scan(&[
+            Root {
+                dir: &assets,
+                virtual_path: "Assets".into(),
+            },
+            Root {
+                dir: &package,
+                virtual_path: "Packages/com.probe".into(),
+            },
+        ]);
+        let root = db.by_guid(ASSETS_ROOT_GUID).unwrap();
+        assert!(root.is_assets_root() && root.is_folder && root.file == assets);
+        assert_eq!(root.path, "Assets");
+        // Unity paths compare case-insensitively.
+        assert_eq!(db.by_path("assets").unwrap().guid, ASSETS_ROOT_GUID);
+        assert_eq!(db.by_path("Assets/Sub").unwrap().guid, Guid(0xabcd));
+        // A package's root is no asset of its own.
+        assert!(db.by_path("Packages/com.probe").is_none());
+        assert_eq!(db.len(), 2);
+        // Nothing changed on disk: the root, which has no .meta, is neither new nor gone.
+        let roots = [Root {
+            dir: &assets,
+            virtual_path: "Assets".into(),
+        }];
+        let (changed, gone) = changes(&db, &roots, |_| false);
+        assert!(changed.is_empty() && gone.is_empty());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

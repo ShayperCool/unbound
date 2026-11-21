@@ -150,7 +150,7 @@ impl RuntimeState {
                 Ok(Some((asset, conflict))) => {
                     let mut result = json!({
                         "guid": asset.guid.to_string(),
-                        "kind": if asset.is_folder { "folder" } else { asset_kind(&request.path) },
+                        "kind": listed_kind(&asset),
                         "labels": asset.labels,
                     });
                     if let Some((guid, owner)) = conflict {
@@ -495,9 +495,10 @@ fn resources_keys(path: &str) -> Vec<String> {
 }
 
 /// Top-level `Assets/` trees whose files the Editor imports with `DefaultImporter` as
-/// `DefaultAsset` instead of their extension's importer (matches the Unity 6000.0.71f1 Editor,
-/// `tests/projects/defaultasset`: `Assets/StreamingAssets/`, `Assets/WebGLTemplates/`,
-/// `Assets/WebPlayerTemplates/`; a nested `Assets/Data/StreamingAssets/` is not special).
+/// `DefaultAsset` instead of their extension's importer, the root's name matched in any case
+/// (matches the Unity 6000.0.71f1 Editor, `tests/projects/defaultasset`: `Assets/StreamingAssets/`,
+/// `Assets/WebGLTemplates/`, `Assets/webplayertemplates/`; a nested `Assets/Data/StreamingAssets/`
+/// is not special).
 fn is_special_default_imported_folder(path: &str) -> bool {
     const ROOTS: [&str; 3] = [
         "assets/streamingassets/",
@@ -513,25 +514,21 @@ fn is_special_default_imported_folder(path: &str) -> bool {
     })
 }
 
-/// What the managed side asks about an asset.
+/// What the managed side asks about an asset: how it loads.
 fn asset_kind(path: &str) -> &'static str {
     if is_special_default_imported_folder(path) {
         return "unknown";
     }
-    let name = path.rsplit('/').next().unwrap_or(path);
-    let ext = name
-        .rsplit_once('.')
-        .map(|(_, e)| e.to_ascii_lowercase())
-        .unwrap_or_default();
-    match ext.as_str() {
+    match default_importer(path) {
+        "PluginImporter" => return "plugin",
+        "NativeFormatImporter" => return "yaml",
+        _ => {}
+    }
+    match path_extension(path).as_str() {
         "prefab" => "prefab",
         "unity" => "scene",
-        "asset" | "mat" | "anim" | "controller" | "overridecontroller" | "physicmaterial"
-        | "physicsmaterial2d" | "mask" | "fontsettings" | "guiskin" | "mixer" | "rendertexture"
-        | "flare" | "spriteatlas" | "spriteatlasv2" | "lighting" | "preset" | "brush"
-        | "terrainlayer" | "signal" | "playable" | "shadervariants" | "giparams" | "cubemap" => {
-            "yaml"
-        }
+        // A V2 atlas's SpriteAtlasAsset document loads like a native-format file.
+        "spriteatlasv2" => "yaml",
         "png" | "jpg" | "jpeg" | "tga" | "psd" | "bmp" | "gif" | "tif" | "tiff" | "exr" | "hdr"
         | "iff" | "pict" => "texture",
         "wav" | "mp3" | "ogg" | "aif" | "aiff" | "flac" | "mod" | "it" | "s3m" | "xm" => "audio",
@@ -547,9 +544,16 @@ fn asset_kind(path: &str) -> &'static str {
         "uss" => "uss",
         "tss" => "tss",
         "mp4" | "webm" | "mov" | "m4v" => "video",
-        "dll" => "plugin",
         _ => "unknown",
     }
+}
+
+/// The extension of the last name of an asset path, lowercase; empty for a name without one.
+fn path_extension(path: &str) -> String {
+    let name = path.rsplit('/').next().unwrap_or(path);
+    name.rsplit_once('.')
+        .map(|(_, e)| e.to_ascii_lowercase())
+        .unwrap_or_default()
 }
 
 /// The file id of an asset file's first object: its main object.
@@ -783,12 +787,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let importer = (!asset.is_folder)
                 .then(|| unbound_assets::meta::scripted_importer_of(&asset.file))
                 .flatten();
-            let kind = if asset.is_folder {
-                "folder"
-            } else if importer.is_some() {
+            let kind = if importer.is_some() {
                 "scripted"
             } else {
-                asset_kind(&asset.path)
+                listed_kind(asset)
             };
             let main = if kind == "yaml" {
                 unbound_assets::meta::main_object_file_id(&asset.file)
@@ -809,6 +811,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 "mainFileId": main,
                 "importer": importer.as_ref().map(|(guid, _)| guid),
                 "importerFileId": importer.as_ref().map_or(0, |(_, id)| *id),
+                "managed": kind == "plugin" && unbound_project::plugins::is_managed_assembly(&asset.file),
             })
             .to_string())
         }
@@ -886,7 +889,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                     json!({
                         "guid": a.guid.to_string(),
                         "path": a.path,
-                        "kind": if a.is_folder { "folder" } else { asset_kind(&a.path) },
+                        "kind": listed_kind(a),
+                        "importer": asset_importer(a),
                         "labels": a.labels,
                     })
                 })
@@ -1852,8 +1856,13 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
     let asset = db
         .by_guid(Guid::parse(guid).context("bad guid")?)
         .with_context(|| format!("no asset {guid}"))?;
-    let text = std::fs::read_to_string(format!("{}.meta", asset.file.display()))?;
-    let mut meta = unbound_yaml::parse_value(&text)?;
+    // The Assets folder has no .meta: its importer has the default settings.
+    let mut meta = if asset.is_assets_root() {
+        unbound_yaml::Value::Map(Default::default())
+    } else {
+        let text = std::fs::read_to_string(format!("{}.meta", asset.file.display()))?;
+        unbound_yaml::parse_value(&text)?
+    };
     // The maps of SpeedTree 9 trees: the settings the trees give them, which the Editor saves into
     // their .meta files (the texture import reads the same).
     let tree_textures = s.texture_importer.read().unwrap().tree_textures.clone();
@@ -1871,7 +1880,7 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
         })
         .unwrap_or_else(|| {
             (
-                default_importer(&asset.path).to_string(),
+                asset_importer(asset).to_string(),
                 unbound_yaml::Value::Map(Default::default()),
             )
         });
@@ -1885,7 +1894,10 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
     Ok(unbound_scene::encode_documents(&[doc]))
 }
 
-/// The importer the Editor uses for a file whose .meta names none, by its path and extension.
+/// The importer the Editor uses for a file or folder by its path and extension, what a .meta that
+/// names none gets. Every plug-in kind and native-format kind of the list was measured
+/// (Unity 6000.0.71f1, tests/projects/defaultasset `asset.plugin.*` and `native.*`) except the
+/// native-format `.fontsettings`, `.guiskin`, `.preset`, `.brush`, `.signal` and `.playable`.
 fn default_importer(path: &str) -> &'static str {
     if is_special_default_imported_folder(path) {
         return "DefaultImporter";
@@ -1894,11 +1906,7 @@ fn default_importer(path: &str) -> &'static str {
     if name == "package.json" {
         return "PackageManifestImporter";
     }
-    let ext = name
-        .rsplit_once('.')
-        .map(|(_, e)| e.to_ascii_lowercase())
-        .unwrap_or_default();
-    match ext.as_str() {
+    match path_extension(path).as_str() {
         "txt" | "html" | "htm" | "xml" | "json" | "csv" | "yaml" | "bytes" | "fnt" | "md" => {
             "TextScriptImporter"
         }
@@ -1914,13 +1922,42 @@ fn default_importer(path: &str) -> &'static str {
         }
         "fbx" | "obj" | "dae" | "3ds" | "dxf" | "blend" => "ModelImporter",
         "wav" | "mp3" | "ogg" | "aif" | "aiff" | "mod" | "it" | "s3m" | "xm" => "AudioImporter",
-        "dll" | "so" | "a" | "aar" | "jar" | "bundle" | "framework" => "PluginImporter",
+        // Native and managed libraries, platform sources and archives, and the folders that are
+        // one plug-in each.
+        "dll" | "so" | "a" | "dylib" | "jar" | "aar" | "jslib" | "jspre" | "c" | "cc" | "cpp"
+        | "h" | "m" | "mm" | "java" | "kt" | "swift" | "bundle" | "framework" | "xcframework"
+        | "plugin" | "androidlib" => "PluginImporter",
         "ttf" | "otf" => "TrueTypeFontImporter",
         "spriteatlasv2" => "SpriteAtlasImporter",
-        "mat" | "asset" | "prefab" | "anim" | "controller" | "mask" | "physicmaterial" => {
-            "NativeFormatImporter"
-        }
+        "prefab" => "PrefabImporter",
+        "mat" | "asset" | "anim" | "controller" | "overridecontroller" | "physicmaterial"
+        | "physicsmaterial2d" | "mask" | "fontsettings" | "guiskin" | "mixer" | "rendertexture"
+        | "flare" | "spriteatlas" | "lighting" | "preset" | "brush" | "terrainlayer" | "signal"
+        | "playable" | "shadervariants" | "giparams" | "cubemap" => "NativeFormatImporter",
         _ => "DefaultImporter",
+    }
+}
+
+/// Whether a listed asset is a folder of the database: a folder that is not one plug-in.
+fn is_plain_folder(asset: &unbound_project::assetdb::Asset) -> bool {
+    asset.is_folder && !unbound_assets::new_meta::is_folder_plugin(&asset.file)
+}
+
+/// The importer of a listed asset: a plain folder's is the DefaultImporter.
+fn asset_importer(asset: &unbound_project::assetdb::Asset) -> &'static str {
+    if is_plain_folder(asset) {
+        "DefaultImporter"
+    } else {
+        default_importer(&asset.path)
+    }
+}
+
+/// How a listed asset loads: a plain folder, or by its path (a folder plug-in as a plug-in).
+fn listed_kind(asset: &unbound_project::assetdb::Asset) -> &'static str {
+    if is_plain_folder(asset) {
+        "folder"
+    } else {
+        asset_kind(&asset.path)
     }
 }
 
@@ -2889,6 +2926,56 @@ mod tests {
         assert_eq!(asset_kind("Assets/Sprites/Single.png"), "texture");
         assert_eq!(asset_kind("Assets/Scenes/Probe.unity"), "scene");
         assert_eq!(asset_kind("Assets/Data/ProbeSame.dll"), "plugin");
+        // The special roots match in any case.
+        assert_eq!(
+            asset_kind("Assets/webplayertemplates/Legacy/readme.txt"),
+            "unknown"
+        );
+        assert_eq!(asset_kind("Assets/streamingassets/raw.so"), "unknown");
+    }
+
+    #[test]
+    fn kinds_follow_the_importer_of_the_extension() {
+        // Every plug-in kind loads as a plug-in, every native-format kind as YAML.
+        for path in [
+            "Assets/P/libnative.so",
+            "Assets/P/libmac.dylib",
+            "Assets/P/library.aar",
+            "Assets/P/bridge.jslib",
+            "Assets/P/Source.cpp",
+            "Assets/P/Header.h",
+            "Assets/P/Native.kt",
+            "Assets/P/Native.swift",
+            "Assets/P/native.DLL",
+        ] {
+            assert_eq!(default_importer(path), "PluginImporter", "{path}");
+            assert_eq!(asset_kind(path), "plugin", "{path}");
+        }
+        for path in [
+            "Assets/N/Mixer.mixer",
+            "Assets/N/Sky.cubemap",
+            "Assets/N/Glow.flare",
+            "Assets/N/Settings.lighting",
+            "Assets/N/Atlas.spriteatlas",
+            "Assets/N/Target.renderTexture",
+            "Assets/N/Data.asset",
+        ] {
+            assert_eq!(default_importer(path), "NativeFormatImporter", "{path}");
+            assert_eq!(asset_kind(path), "yaml", "{path}");
+        }
+        // A prefab and a V2 atlas have importers of their own; the atlas still loads as YAML.
+        assert_eq!(default_importer("Assets/N/Thing.prefab"), "PrefabImporter");
+        assert_eq!(asset_kind("Assets/N/Thing.prefab"), "prefab");
+        assert_eq!(
+            default_importer("Assets/N/A.spriteatlasv2"),
+            "SpriteAtlasImporter"
+        );
+        assert_eq!(asset_kind("Assets/N/A.spriteatlasv2"), "yaml");
+        // Kinds the importer table does not list keep their own loaders.
+        assert_eq!(asset_kind("Assets/S/Lib.hlsl"), "shader");
+        assert_eq!(asset_kind("Assets/U/Doc.uxml"), "uxml");
+        assert_eq!(asset_kind("Assets/F/Font.ttc"), "font");
+        assert_eq!(asset_kind("Assets/Scenes/Main.unity"), "scene");
     }
 
     #[test]

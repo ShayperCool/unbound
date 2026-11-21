@@ -1191,7 +1191,7 @@ namespace UnityEngine.Tests
                 var invalidGo = new GameObject("BadGo");
                 var invalidRt = new RenderTexture(4, 4, 0) { name = "BadRt" };
                 var unnamedAtlas = new SpriteAtlas();
-                var nonFolderDefault = DefaultAsset.ForFolder("PlainFile");
+                var nonFolderDefault = DefaultAsset.Create("PlainFile", HideFlags.NotEditable);
                 try
                 {
                     fresh.Add(new Object[] { null, invalidGo, texB, invalidRt, unnamedAtlas, nonFolderDefault, spriteA });

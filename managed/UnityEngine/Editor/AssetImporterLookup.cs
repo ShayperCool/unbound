@@ -84,8 +84,10 @@ namespace UnityEditor
 
         static AssetImporter Create(string path, string guid)
         {
-            if (string.Equals(guid, AssetDatabase.AssetsRootGuid, StringComparison.OrdinalIgnoreCase))
-                return FromMeta(path, guid, "DefaultImporter", new YNode { Kind = YKind.Map, Keys = Array.Empty<string>(), Values = Array.Empty<YNode>() });
+            // A project settings file has no .meta: it is a native-format file of default settings
+            // (tests/projects/defaultasset native.settings).
+            if (SettingsAssets.AtPath(path) != null)
+                return FromMeta(path, guid, "NativeFormatImporter", new YNode { Kind = YKind.Map, Keys = Array.Empty<string>(), Values = Array.Empty<YNode>() });
             var settings = Native.LoadDocuments("meta:" + guid);
             if (settings.Count == 0) return null;
             return FromMeta(path, guid, settings[0].TypeName, settings[0].Body);

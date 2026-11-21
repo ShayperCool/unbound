@@ -9,90 +9,187 @@ using UnityEngine.U2D;
 using Xunit;
 using Object = UnityEngine.Object;
 
+namespace ScriptPlugin
+{
+    /// <summary>Classes named as those of tests/projects/defaultasset's ScriptPlugin.dll.</summary>
+    public class PluginOuter
+    {
+        public class PluginNested : MonoBehaviour { }
+    }
+
+    public class PluginBehaviourForTest : MonoBehaviour { }
+
+    public class PluginGenericForTest<T> : MonoBehaviour { }
+}
+
 namespace UnityEngine.Tests
 {
+    /// <summary>DefaultAsset, the Assets folder and native/foreign assets as the Unity 6000.0.71f1
+    /// Editor has them (tests/projects/defaultasset).</summary>
     public class DefaultAssetTests
     {
+        const string RootGuid = "00000000000000001000000000000000";
+
+        /// <summary>The asset table as the engine lists it: the Assets folder is one of its entries.</summary>
+        const string Table = """
+            [
+              {"guid":"00000000000000001000000000000000","path":"Assets","kind":"folder","importer":"DefaultImporter","labels":[]},
+              {"guid":"11111111111111111111111111111111","path":"Assets/Folder.WithDot","kind":"folder","importer":"DefaultImporter","labels":[]},
+              {"guid":"22222222222222222222222222222222","path":"Assets/Data/Blob.xyz","kind":"unknown","importer":"DefaultImporter","labels":[]},
+              {"guid":"33333333333333333333333333333333","path":"Assets/Data/Probe.dll","kind":"plugin","importer":"PluginImporter","labels":[]},
+              {"guid":"44444444444444444444444444444444","path":"Assets/Scenes/Main.unity","kind":"scene","importer":"DefaultImporter","labels":[]},
+              {"guid":"55555555555555555555555555555555","path":"Assets/Data/Plain.txt","kind":"text","importer":"TextScriptImporter","labels":[]},
+              {"guid":"66666666666666666666666666666666","path":"Assets/StreamingAssets/note.txt","kind":"unknown","importer":"DefaultImporter","labels":[]},
+              {"guid":"77777777777777777777777777777777","path":"Assets/StreamingAssets/SubDir","kind":"folder","importer":"DefaultImporter","labels":[]},
+              {"guid":"88888888888888888888888888888888","path":"Assets/Native/Clip.anim","kind":"yaml","importer":"NativeFormatImporter","labels":[]},
+              {"guid":"99999999999999999999999999999999","path":"Assets/Native/Thing.prefab","kind":"prefab","importer":"PrefabImporter","labels":[]},
+              {"guid":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","path":"Assets/Native/Atlas.spriteatlasv2","kind":"yaml","importer":"SpriteAtlasImporter","labels":[]}
+            ]
+            """;
+
         [Fact]
-        public void DefaultAssetCreateAndForFolderSetPersistentAssetAndHideFlags()
+        public void DefaultAssetsAreNamedAndFlaggedByWhatTheyStandFor()
         {
-            var folder = DefaultAsset.ForFolder("Folder.WithDot");
-            var file = DefaultAsset.Create("Multi.part");
+            var file = DefaultAsset.Create("Multi.part", HideFlags.NotEditable);
             var plugin = DefaultAsset.Create("", HideFlags.None);
             try
             {
                 Assert.Equal(102900000L, DefaultAsset.FileId);
-                Assert.Equal(DefaultAsset.FileId, DefaultAsset.FolderFileId);
-
-                Assert.Equal("Folder.WithDot", folder.name);
-                Assert.True(folder.IsPersistentAsset);
-                Assert.Equal(HideFlags.NotEditable, folder.hideFlags);
-
                 Assert.Equal("Multi.part", file.name);
                 Assert.True(file.IsPersistentAsset);
                 Assert.Equal(HideFlags.NotEditable, file.hideFlags);
-
                 Assert.Equal("", plugin.name);
-                Assert.True(plugin.IsPersistentAsset);
                 Assert.Equal(HideFlags.None, plugin.hideFlags);
+                // The inspector shows no message for any of them (inspector.*).
+                Assert.Equal("", file.message);
+                Assert.False(file.isWarning);
             }
             finally
             {
-                Object.DestroyImmediate(folder);
                 Object.DestroyImmediate(file);
                 Object.DestroyImmediate(plugin);
             }
         }
 
         [Fact]
-        public void AssetsRootFolderResolvesGuidObjectAndImporter()
+        public void TheAssetsFolderIsAListedAssetNoSearchFinds()
         {
-            Assert.Equal(AssetDatabase.AssetsRootGuid, AssetDatabase.AssetPathToGUID("Assets"));
-            Assert.Equal(AssetDatabase.AssetsRootGuid, AssetDatabase.AssetPathToGUID("Assets/"));
-            Assert.Equal("Assets", AssetDatabase.GUIDToAssetPath(AssetDatabase.AssetsRootGuid));
-            Assert.True(AssetDatabase.IsValidFolder("Assets"));
+            AssetDatabase.List(Table);
+            try
+            {
+                Assert.Equal(RootGuid, AssetDatabase.AssetPathToGUID("Assets"));
+                Assert.Equal(RootGuid, AssetDatabase.AssetPathToGUID("assets"));
+                Assert.Equal(RootGuid, AssetDatabase.AssetPathToGUID("Assets/"));
+                Assert.Equal("Assets", AssetDatabase.GUIDToAssetPath(RootGuid));
+                Assert.True(AssetDatabase.IsValidFolder("Assets"));
+                Assert.True(AssetDatabase.IsValidFolder("assets"));
+                // Packages is a folder without being an asset.
+                Assert.True(AssetDatabase.IsValidFolder("Packages"));
+                Assert.Contains("Assets", AssetDatabase.GetAllAssetPaths());
+                Assert.DoesNotContain("Packages", AssetDatabase.GetAllAssetPaths());
+                Assert.DoesNotContain(RootGuid, AssetDatabase.FindAssets("t:Folder"));
+                Assert.DoesNotContain(RootGuid, AssetDatabase.FindAssets("Assets"));
+                Assert.DoesNotContain(RootGuid, AssetDatabase.FindAssets("t:DefaultAsset", new[] { "Assets" }));
+                Assert.Equal(new[] { "Assets/Folder.WithDot" }, AssetDatabase.GetSubFolders("Assets"));
+            }
+            finally
+            {
+                AssetDatabase.Invalidate();
+            }
+        }
 
-            var asObj = AssetDatabase.LoadAssetAtPath<Object>("Assets");
-            var asDefault = AssetDatabase.LoadAssetAtPath<DefaultAsset>("Assets");
-            var asMain = AssetDatabase.LoadMainAssetAtPath("Assets");
-            Assert.NotNull(asObj);
-            Assert.IsType<DefaultAsset>(asObj);
-            Assert.Same(asObj, asDefault);
-            Assert.Same(asObj, asMain);
-            Assert.Equal("Assets", asObj.name);
-            Assert.Equal(HideFlags.NotEditable, asObj.hideFlags);
-            Assert.Equal(typeof(DefaultAsset), AssetDatabase.GetMainAssetTypeAtPath("Assets"));
-            Assert.Empty(AssetDatabase.LoadAllAssetsAtPath("Assets"));
-            Assert.Empty(AssetDatabase.LoadAllAssetRepresentationsAtPath("Assets"));
-            Assert.True(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(asObj, out var guid, out var localId));
-            Assert.Equal(AssetDatabase.AssetsRootGuid, guid);
-            Assert.Equal(DefaultAsset.FileId, localId);
-            Assert.True(AssetDatabase.IsMainAsset(asObj));
-            Assert.False(AssetDatabase.IsSubAsset(asObj));
-            Assert.False(AssetDatabase.IsNativeAsset(asObj));
-            Assert.False(AssetDatabase.IsForeignAsset(asObj));
-            Assert.True(AssetDatabase.Contains(asObj));
-            Assert.Equal("Assets", AssetDatabase.GetAssetPath(asObj));
+        [Fact]
+        public void NativeAssetsAreTheNativeFormatImportersAndForeignAssetsTheOthers()
+        {
+            AssetDatabase.List(Table);
+            var clip = new AnimationClip { name = "Clip" };
+            var clipPart = new AnimationClip { name = "Part" };
+            var prefab = new GameObject("Thing");
+            var atlas = new SpriteAtlas();
+            var folder = DefaultAsset.Create("Folder.WithDot", HideFlags.NotEditable);
+            var blob = DefaultAsset.Create("Blob", HideFlags.NotEditable);
+            var inMemory = new AnimationClip();
+            var adopted = new[] { "88888888888888888888888888888888", "99999999999999999999999999999999", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "11111111111111111111111111111111", "22222222222222222222222222222222" };
+            try
+            {
+                var clipFile = AssetDatabaseRuntime.Adopt(adopted[0], "Assets/Native/Clip.anim", clip, 7400000);
+                // Every object of a native file is native, not only its main one.
+                AssetDatabaseRuntime.AddObject(clipFile, clipPart, 1234);
+                AssetDatabaseRuntime.Adopt(adopted[1], "Assets/Native/Thing.prefab", prefab, 100100000);
+                AssetDatabaseRuntime.Adopt(adopted[2], "Assets/Native/Atlas.spriteatlasv2", atlas, 4343727234628468602);
+                AssetDatabaseRuntime.Adopt(adopted[3], "Assets/Folder.WithDot", folder, DefaultAsset.FileId);
+                AssetDatabaseRuntime.Adopt(adopted[4], "Assets/Data/Blob.xyz", blob, DefaultAsset.FileId);
 
-            var importer = AssetImporter.GetAtPath("Assets");
-            Assert.NotNull(importer);
-            Assert.Equal(typeof(AssetImporter), importer.GetType());
+                Assert.True(AssetDatabase.IsNativeAsset(clip));
+                Assert.False(AssetDatabase.IsForeignAsset(clip));
+                Assert.True(AssetDatabase.IsNativeAsset(clipPart));
+                Assert.False(AssetDatabase.IsForeignAsset(clipPart));
+                // A prefab is of the PrefabImporter and a V2 atlas of its own importer: foreign.
+                Assert.False(AssetDatabase.IsNativeAsset(prefab));
+                Assert.True(AssetDatabase.IsForeignAsset(prefab));
+                Assert.False(AssetDatabase.IsNativeAsset(atlas));
+                Assert.True(AssetDatabase.IsForeignAsset(atlas));
+                // A folder is neither; another DefaultAsset is foreign.
+                Assert.False(AssetDatabase.IsNativeAsset(folder));
+                Assert.False(AssetDatabase.IsForeignAsset(folder));
+                Assert.False(AssetDatabase.IsNativeAsset(blob));
+                Assert.True(AssetDatabase.IsForeignAsset(blob));
+                // Neither for an object that is no asset; null throws.
+                Assert.False(AssetDatabase.IsNativeAsset(inMemory));
+                Assert.False(AssetDatabase.IsForeignAsset(inMemory));
+                Assert.Throws<ArgumentNullException>(() => AssetDatabase.IsNativeAsset(null));
+                Assert.Throws<ArgumentNullException>(() => AssetDatabase.IsForeignAsset(null));
+                // A folder's or file's placeholder is not among its loadable objects; all of a
+                // native file's objects are.
+                Assert.Empty(AssetDatabase.LoadAllAssetsAtPath("Assets/Folder.WithDot"));
+                Assert.Empty(AssetDatabase.LoadAllAssetsAtPath("Assets/Data/Blob.xyz"));
+                Assert.Equal(2, AssetDatabase.LoadAllAssetsAtPath("Assets/Native/Clip.anim").Length);
+            }
+            finally
+            {
+                foreach (var guid in adopted) AssetDatabaseRuntime.Invalidate(guid);
+                foreach (var o in new Object[] { clip, clipPart, prefab, atlas, folder, blob, inMemory })
+                    Object.DestroyImmediate(o);
+                AssetDatabase.Invalidate();
+            }
+        }
+
+        [Fact]
+        public void APluginsScriptsHaveTheirClassesFileIdsAndNoClassWhenNested()
+        {
+            // The file IDs of tests/projects/defaultasset's ScriptPlugin.dll classes in the Editor.
+            Assert.Equal(961872061L, GameDomain.PluginScriptFileId(null, "GlobalPluginBehaviour"));
+            Assert.Equal(-1902389345L, GameDomain.PluginScriptFileId("ScriptPlugin", "PluginData"));
+            Assert.Equal(1594108085L, GameDomain.PluginScriptFileId("ScriptPlugin", "PluginGeneric`1"));
+            Assert.Equal(1553723163L, GameDomain.PluginScriptFileId(typeof(ScriptPlugin.PluginOuter.PluginNested)));
+
+            const string guid = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+            var top = MonoScript.ForPluginClass(typeof(ScriptPlugin.PluginBehaviourForTest), guid, 5);
+            var generic = MonoScript.ForPluginClass(typeof(ScriptPlugin.PluginGenericForTest<>), guid, 6);
+            var nested = MonoScript.ForPluginClass(typeof(ScriptPlugin.PluginOuter.PluginNested), guid, 7);
+            try
+            {
+                Assert.Equal("PluginBehaviourForTest", top.name);
+                Assert.Same(typeof(ScriptPlugin.PluginBehaviourForTest), top.GetClass());
+                Assert.Equal("PluginGenericForTest`1", generic.name);
+                Assert.Same(typeof(ScriptPlugin.PluginGenericForTest<>), generic.GetClass());
+                Assert.Equal("PluginNested", nested.name);
+                Assert.Null(nested.GetClass());
+                Assert.Equal(HideFlags.None, top.hideFlags);
+                Assert.True(top.IsPersistentAsset);
+            }
+            finally
+            {
+                Object.DestroyImmediate(top);
+                Object.DestroyImmediate(generic);
+                Object.DestroyImmediate(nested);
+            }
         }
 
         [Fact]
         public void FindAssetsMatchesDefaultAssetKindsAndDotNamedFolders()
         {
-            AssetDatabase.List("""
-                [
-                  {"guid":"11111111111111111111111111111111","path":"Assets/Folder.WithDot","kind":"folder","labels":[]},
-                  {"guid":"22222222222222222222222222222222","path":"Assets/Data/Blob.xyz","kind":"unknown","labels":[]},
-                  {"guid":"33333333333333333333333333333333","path":"Assets/Data/Probe.dll","kind":"plugin","labels":[]},
-                  {"guid":"44444444444444444444444444444444","path":"Assets/Scenes/Main.unity","kind":"scene","labels":[]},
-                  {"guid":"55555555555555555555555555555555","path":"Assets/Data/Plain.txt","kind":"text","labels":[]},
-                  {"guid":"66666666666666666666666666666666","path":"Assets/StreamingAssets/note.txt","kind":"unknown","labels":[]},
-                  {"guid":"77777777777777777777777777777777","path":"Assets/StreamingAssets/SubDir","kind":"folder","labels":[]}
-                ]
-                """);
+            AssetDatabase.List(Table);
             try
             {
                 string[] Paths(string filter) => AssetDatabase.FindAssets(filter, new[] { "Assets" })
@@ -130,8 +227,9 @@ namespace UnityEngine.Tests
         [Fact]
         public void SpriteAtlasAddAcceptsFolderDefaultAssetAndRejectsNonFolderDefaultAsset()
         {
+            AssetDatabase.List(Table);
             var atlas = new SpriteAtlas();
-            var rootFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>("Assets");
+            var folder = DefaultAsset.Create("Folder.WithDot", HideFlags.NotEditable);
             var nonFolder = DefaultAsset.Create("Blob", HideFlags.NotEditable);
             var warnings = new List<string>();
             Application.LogCallback capture = (msg, _, type) =>
@@ -141,8 +239,9 @@ namespace UnityEngine.Tests
             Application.logMessageReceived += capture;
             try
             {
-                atlas.Add(new Object[] { rootFolder, nonFolder });
-                Assert.Equal(new Object[] { rootFolder }, atlas.GetPackables());
+                AssetDatabaseRuntime.Adopt("11111111111111111111111111111111", "Assets/Folder.WithDot", folder, DefaultAsset.FileId);
+                atlas.Add(new Object[] { folder, nonFolder });
+                Assert.Equal(new Object[] { folder }, atlas.GetPackables());
                 Assert.Equal(new[]
                 {
                     "Attempted to add invalid object into a Sprite Atlas. Blob was a DefaultAsset. Only Folder, Texture and Sprite are valid."
@@ -151,21 +250,11 @@ namespace UnityEngine.Tests
             finally
             {
                 Application.logMessageReceived -= capture;
+                AssetDatabaseRuntime.Invalidate("11111111111111111111111111111111");
+                Object.DestroyImmediate(folder);
                 Object.DestroyImmediate(nonFolder);
                 Object.DestroyImmediate(atlas);
-            }
-        }
-
-        [Fact]
-        public void UnmeasuredReleaseControlPreservesDefaultAssetContracts()
-        {
-            using (TestRelease.Pin(TestRelease.Unmeasured))
-            {
-                var asDefault = AssetDatabase.LoadAssetAtPath<DefaultAsset>("Assets");
-                Assert.NotNull(asDefault);
-                Assert.Equal("Assets", asDefault.name);
-                Assert.Equal(HideFlags.NotEditable, asDefault.hideFlags);
-                Assert.Empty(AssetDatabase.LoadAllAssetsAtPath("Assets"));
+                AssetDatabase.Invalidate();
             }
         }
     }

@@ -6816,11 +6816,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public virtual global::UnityEngine.UIElements.VisualElement CreatePropertyGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DecoratorDrawer.CreatePropertyGUI"); return default; }
         [global::System.Obsolete("CanCacheInspectorGUI has been deprecated and is no longer used.")] [global::Unbound.Stub] public virtual bool CanCacheInspectorGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DecoratorDrawer.CanCacheInspectorGUI"); return default; }
     }
-    unsafe partial class DefaultAsset
-    {
-        internal string message { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DefaultAsset.message"); return default; } }
-        internal bool isWarning { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DefaultAsset.isWarning"); return default; } }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class DefaultAssetInspector : global::UnityEditor.Editor
     {

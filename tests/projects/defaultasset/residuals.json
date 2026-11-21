@@ -1,0 +1,11 @@
+{
+  "A .giparams file's LightmapParameters does not load in Unbound (its class has no implementation), so its main object is null": [
+    "native.giparams"
+  ],
+  "A .mixer file's main object loads as an AudioMixer, not the Editor's AudioMixerController": [
+    "native.mixer"
+  ],
+  "LoadAllAssetsAtPath of a V2 sprite atlas lists objects besides its SpriteAtlas in the Editor that Unbound does not make": [
+    "native.spriteatlasv2"
+  ]
+}

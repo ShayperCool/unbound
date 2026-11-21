@@ -403,7 +403,8 @@ pub(super) fn settings_report(
     imports
         .incomplete
         .extend(db.problems.iter().map(|error| json!({"error": error})));
-    let mut assets: Vec<_> = db.iter().collect();
+    // The Assets folder itself has no .meta to read.
+    let mut assets: Vec<_> = db.iter().filter(|a| !a.is_assets_root()).collect();
     assets.sort_by(|a, b| a.path.cmp(&b.path));
     for asset in assets {
         let file = std::path::PathBuf::from(format!("{}.meta", asset.file.display()));
