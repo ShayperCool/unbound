@@ -298,6 +298,49 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void APerObjectExpressionWhileEditingSeveralObjectsIsReportedNotWrittenToAll()
+        {
+            const string member = "UnityEditor.UIElements.Bindings.SerializedObjectBinding (an expression with per-object variables while editing several objects)";
+            int Hits() => Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t2.count = 20;
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                var field = new IntegerField();
+                panel.visualTree.Add(field);
+                field.BindProperty(so.FindProperty("count"));
+                Tick(panel);
+                Tick(panel);
+
+                // L(a,b) gives each object its own value in Unity; it is reported here, not applied.
+                int before = Hits();
+                field.text = "L(0,10)";
+                field.UpdateValueFromText();
+                Tick(panel);
+                Assert.Equal(before + 1, Hits());
+                Assert.Equal(10, t1.count);
+                Assert.Equal(20, t2.count);
+
+                // A plain value still reaches every object.
+                field.text = "7";
+                field.UpdateValueFromText();
+                Tick(panel);
+                Assert.Equal(7, t1.count);
+                Assert.Equal(7, t2.count);
+            }
+            finally
+            {
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
         public void SwappedOrShiftedStructPartsAreSeenAsChanges()
         {
             var settings = ScriptableObject.CreateInstance<PanelSettings>();

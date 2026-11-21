@@ -1580,6 +1580,7 @@ namespace UnityEditor.UIElements.Bindings
         readonly EventCallback<BlurEvent> m_OnFieldBlur;
         bool m_IsUpdating;
         protected ExpressionEvaluator.Expression m_LastFieldExpression;
+        readonly Action<ExpressionEvaluator.Expression> m_OnExpressionEvaluated;
 
         protected override string bindingId => BindingExtensions.s_SerializedBindingId;
 
@@ -1591,13 +1592,21 @@ namespace UnityEditor.UIElements.Bindings
                 if (m_Field is VisualElement previous)
                 {
                     previous.UnregisterCallback(m_FieldValueChanged, TrickleDown.TrickleDown);
-                    if (previous is BaseField<TValue> prevBase) prevBase.UnregisterCallback(m_OnFieldBlur);
+                    if (previous is BaseField<TValue> prevBase)
+                    {
+                        prevBase.UnregisterCallback(m_OnFieldBlur);
+                        prevBase.expressionEvaluated -= m_OnExpressionEvaluated;
+                    }
                 }
                 boundElement = value as IBindable;
                 if (m_Field is VisualElement current)
                 {
                     current.RegisterCallback(m_FieldValueChanged, TrickleDown.TrickleDown);
-                    if (current is BaseField<TValue> currBase) currBase.RegisterCallback(m_OnFieldBlur);
+                    if (current is BaseField<TValue> currBase)
+                    {
+                        currBase.RegisterCallback(m_OnFieldBlur);
+                        currBase.expressionEvaluated += m_OnExpressionEvaluated;
+                    }
                 }
             }
         }
@@ -1606,6 +1615,19 @@ namespace UnityEditor.UIElements.Bindings
         {
             m_FieldValueChanged = FieldValueChanged;
             m_OnFieldBlur = OnFieldBlur;
+            m_OnExpressionEvaluated = OnExpressionEvaluated;
+        }
+
+        // An expression with per-object variables (L(a,b), R(a,b), +=...) typed while editing several
+        // objects gives each object its own value in Unity, evaluated over every target's current
+        // value. Unbound cannot write different values to the targets of one edit yet: such an
+        // edit is reported and not applied, rather than writing the first target's result to all.
+        void OnExpressionEvaluated(ExpressionEvaluator.Expression expression)
+        {
+            if (boundProperty == null || !boundProperty.serializedObject.isEditingMultipleObjects) return;
+            m_LastFieldExpression = expression;
+            if (expression != null && expression.hasVariables)
+                Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBinding (an expression with per-object variables while editing several objects)");
         }
 
         void OnFieldBlur(BlurEvent evt)
@@ -1617,6 +1639,9 @@ namespace UnityEditor.UIElements.Bindings
         void FieldValueChanged(ChangeEvent<TValue> evt)
         {
             if (isReleased || m_IsUpdating || !ReferenceEquals(evt.target, m_Field)) return;
+            if (m_LastFieldExpression != null && m_LastFieldExpression.hasVariables
+                && boundProperty != null && boundProperty.serializedObject.isEditingMultipleObjects)
+                return;
             try
             {
                 int currentGroup = Undo.GetCurrentGroup();
