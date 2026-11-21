@@ -1137,28 +1137,15 @@ namespace Unbound.Runtime
                     if (target.ClrType == source.ClrType && !target.ReadOnly) SetValue(target, GetValue(source));
                     return;
             }
-            if (source.Kind == SerializedNodeKind.Array)
-            {
-                bool resized = source.Children.Count > 0 && source.Children[0].Children.Count > 0
-                    && source.Children[0].Children[0].Kind == SerializedNodeKind.ArraySize
-                    && source.Children[0].Children[0].Dirty;
-                if (source.Replaced)
-                {
-                    CopyData(target, source);
-                    return;
-                }
-                if (resized) Resize(target, source.ArrayCount);
-            }
-            else if (source.Replaced)
+            if (source.Replaced)
             {
                 CopyData(target, source);
                 return;
             }
+            if (source.Kind == SerializedNodeKind.Array && IsResized(source)) Resize(target, source.ArrayCount);
             for (int i = 0; i < source.Children.Count && i < target.Children.Count; i++)
                 CopyChanged(source.Children[i], target.Children[i]);
         }
-
-        internal static void MarkNodeDirty(SerializedNode node) => MarkDirty(node);
 
         static void MarkDirty(SerializedNode node)
         {
@@ -1346,14 +1333,44 @@ namespace Unbound.Runtime
             {
                 container.Children.RemoveRange(size + 1, count - size);
                 Reindex(container);
-                if (container.Children.Count > 0) MarkDirty(container.Children[0]);
-                else MarkDirty(array);
-                return true;
             }
-            while (array.ArrayCount < size) InsertElement(array, array.ArrayCount);
-            array.Replaced = wasReplaced;
-            if (container.Children.Count > 0) MarkDirty(container.Children[0]);
+            else
+            {
+                while (array.ArrayCount < size) InsertElement(array, array.ArrayCount);
+                array.Replaced = wasReplaced;
+            }
+            MarkResized(array);
             return true;
+        }
+
+        /// <summary>Resizes an array of a multi-object edit. The first target's array changes now; each
+        /// other target's array is resized when the edit is applied (<see cref="CopyChanged"/>),
+        /// keeping its own elements, so the edit counts as a change when only another target's size
+        /// differs.</summary>
+        internal static bool Resize(SerializedNode array, int size, SerializedNode[] otherRoots)
+        {
+            if (Resize(array, size)) return true;
+            if (array.FixedSize || size < 0 || otherRoots == null) return false;
+            foreach (var root in otherRoots)
+            {
+                var other = root == null ? null : Find(root, array.Path);
+                if (other != null && other.Kind == SerializedNodeKind.Array && other.ArrayCount != size)
+                {
+                    MarkResized(array);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // An array's size node, the first child of its container, is dirty when an edit resized it.
+        static void MarkResized(SerializedNode array) => MarkDirty(array.ArrayContainer.Children[0]);
+
+        static bool IsResized(SerializedNode array)
+        {
+            var container = array.ArrayContainer;
+            return container.Children.Count > 0 && container.Children[0].Kind == SerializedNodeKind.ArraySize
+                && container.Children[0].Dirty;
         }
 
         static void Reindex(SerializedNode container)
@@ -1459,35 +1476,19 @@ namespace Unbound.Runtime
                 case SerializedNodeKind.Array:
                 {
                     int count = node.ArrayCount;
-                    if (primary || node.Replaced || !(live is IList list))
-                    {
-                        if (!(live is IList pList) || pList.Count != count) return Build(node, live, primary);
-                        for (int i = 0; i < count; i++)
-                        {
-                            var element = node.Element(i);
-                            if (element.Dirty) pList[i] = ApplyNode(element, pList[i], primary);
-                        }
-                        return pList;
-                    }
+                    if (!(live is IList list) || (primary && list.Count != count)) return Build(node, live, primary);
                     if (list.Count != count)
                     {
-                        IList resized = node.ClrType.IsArray
-                            ? System.Array.CreateInstance(node.ElementType, count)
-                            : (IList)Activator.CreateInstance(node.ClrType, count);
-                        int oldCount = list.Count;
+                        // Another target of a multi-object resize keeps its own elements; what is
+                        // added duplicates its own last element.
+                        IList resized = NewList(node, count);
                         for (int i = 0; i < count; i++)
                         {
-                            object elem;
-                            if (i < oldCount)
-                                elem = list[i];
-                            else if (oldCount > 0)
-                                elem = CopyLeaf(list[oldCount - 1], node.ElementShape);
-                            else
-                                elem = NormalizeLeaf(null, node.ElementType, node.ElementShape);
                             var element = node.Element(i);
-                            if (element.Dirty) elem = ApplyNode(element, elem, primary);
-                            if (node.ClrType.IsArray) resized[i] = elem;
-                            else resized.Add(elem);
+                            object value = i >= list.Count ? DuplicateLastElement(node, list)
+                                : element.Dirty ? ApplyNode(element, list[i], primary) : list[i];
+                            if (node.ClrType.IsArray) resized[i] = value;
+                            else resized.Add(value);
                         }
                         return resized;
                     }
@@ -1535,9 +1536,7 @@ namespace Unbound.Runtime
                 case SerializedNodeKind.Array:
                 {
                     int count = node.ArrayCount;
-                    IList result = node.ClrType.IsArray
-                        ? System.Array.CreateInstance(node.ElementType, count)
-                        : (IList)Activator.CreateInstance(node.ClrType, count);
+                    IList result = NewList(node, count);
                     for (int i = 0; i < count; i++)
                     {
                         var value = Build(node.Element(i), null, primary);
@@ -1550,6 +1549,22 @@ namespace Unbound.Runtime
                     return existing;
             }
         }
+
+        /// <summary>An element added to another target's array: a copy of that target's last
+        /// element made as <see cref="InsertElement"/> duplicates one (its own class instances, a
+        /// managed reference shared), or a default element when the array was empty.</summary>
+        static object DuplicateLastElement(SerializedNode array, IList list)
+        {
+            var last = list.Count > 0 ? list[list.Count - 1] : null;
+            if (array.ElementShape == Shape.ManagedReference) return last;
+            var element = Make(array.ArrayContainer, "data", list.Count, array.ElementType, array.ElementShape, null,
+                               Shape.Unsupported, last, new BuildContext { Zero = last == null }, Nesting(array) + 1);
+            return Build(element, null, primary: false);
+        }
+
+        static IList NewList(SerializedNode array, int count) => array.ClrType.IsArray
+            ? System.Array.CreateInstance(array.ElementType, count)
+            : (IList)Activator.CreateInstance(array.ClrType, count);
 
         static void WriteAll(SerializedNode node, object instance, bool primary)
         {

@@ -624,22 +624,8 @@ namespace UnityEditor
                     Debug.LogError("Property is not an array.");
                     return;
                 }
-                bool resized = SerializedTree.Resize(n, value);
-                if (!resized && m_SerializedObject.isEditingMultipleObjects && value >= 0 && !n.FixedSize && n.ArrayCount == value)
-                {
-                    foreach (var root in m_SerializedObject.OtherRoots())
-                    {
-                        var other = root == null ? null : SerializedTree.Find(root, n.Path);
-                        if (other != null && other.Kind == SerializedNodeKind.Array && other.ArrayCount != value)
-                        {
-                            if (n.ArrayContainer?.Children.Count > 0)
-                                SerializedTree.MarkNodeDirty(n.ArrayContainer.Children[0]);
-                            resized = true;
-                            break;
-                        }
-                    }
-                }
-                if (resized) Changed(structural: true);
+                var otherRoots = m_SerializedObject.isEditingMultipleObjects ? m_SerializedObject.OtherRoots() : null;
+                if (SerializedTree.Resize(n, value, otherRoots)) Changed(structural: true);
             }
         }
 

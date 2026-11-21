@@ -453,6 +453,94 @@ namespace UnityEngine.Tests
             Assert.NotSame(a.items[0], b.items[0]);
         }
 
+        public class ItemListSample : ScriptableObject
+        {
+            public List<ItemData> list = new List<ItemData>();
+        }
+
+        static ItemListSample ItemList(params (string label, int count)[] items)
+        {
+            var sample = Create<ItemListSample>();
+            foreach (var (label, count) in items) sample.list.Add(new ItemData { label = label, count = count });
+            return sample;
+        }
+
+        static void AssertIndependentCopies(IList<ItemData> items, int from, string label, int count)
+        {
+            for (int i = from; i < items.Count; i++)
+            {
+                Assert.NotNull(items[i]);
+                Assert.Equal(label, items[i].label);
+                Assert.Equal(count, items[i].count);
+                for (int j = 0; j < i; j++) Assert.NotSame(items[j], items[i]);
+            }
+        }
+
+        [Fact]
+        public void GrowingAMultiObjectArrayGivesEveryTargetItsOwnNewElements()
+        {
+            // The first target has two items, the second one, the third none; each target's added
+            // elements duplicate its own last element, or are default ones for an empty list, as
+            // the first target's added elements are, and no element is shared.
+            var first = ItemList(("a", 1), ("b", 2));
+            var second = ItemList(("s", 7));
+            var third = ItemList();
+            var emptyAlone = ItemList();
+            var keptFirst = first.list[1];
+            var keptSecond = second.list[0];
+            var serialized = new SerializedObject(new Object[] { first, second, third });
+            var list = serialized.FindProperty("list");
+            Assert.Equal(0, list.arraySize);
+            list.arraySize = 4;
+            serialized.ApplyModifiedProperties();
+            var alone = new SerializedObject(emptyAlone);
+            alone.FindProperty("list").arraySize = 4;
+            alone.ApplyModifiedProperties();
+
+            Assert.Equal(4, first.list.Count);
+            Assert.Same(keptFirst, first.list[1]);
+            AssertIndependentCopies(first.list, 2, "b", 2);
+
+            Assert.Equal(4, second.list.Count);
+            Assert.Same(keptSecond, second.list[0]);
+            AssertIndependentCopies(second.list, 1, "s", 7);
+            second.list[1].count = 70;
+            Assert.Equal(7, second.list[0].count);
+            Assert.Equal(7, second.list[2].count);
+
+            Assert.Equal(4, third.list.Count);
+            Assert.Equal(4, emptyAlone.list.Count);
+            AssertIndependentCopies(third.list, 0, emptyAlone.list[0].label, emptyAlone.list[0].count);
+
+            // The same independent elements with arrays, and when the first target's size already
+            // matches and only the others grow.
+            var a = Create<SerializedSample>();
+            var b = Create<SerializedSample>();
+            a.items = new[] { new ItemData { label = "x", count = 1 }, new ItemData { label = "y", count = 2 } };
+            b.items = new ItemData[0];
+            var arrays = new SerializedObject(new Object[] { a, b });
+            arrays.FindProperty("items").arraySize = 2;
+            arrays.ApplyModifiedProperties();
+            Assert.Equal(new[] { "x", "y" }, new[] { a.items[0].label, a.items[1].label });
+            Assert.Equal(2, b.items.Length);
+            AssertIndependentCopies(b.items, 0, emptyAlone.list[0].label, emptyAlone.list[0].count);
+        }
+
+        [Fact]
+        public void ShrinkingAMultiObjectArrayKeepsEachTargetsRemainingElements()
+        {
+            var first = ItemList(("a", 1), ("b", 2), ("c", 3));
+            var second = ItemList(("s", 7), ("t", 8));
+            var keptFirst = first.list[0];
+            var keptSecond = second.list[0];
+            var serialized = new SerializedObject(new Object[] { first, second });
+            serialized.FindProperty("list").arraySize = 1;
+            serialized.ApplyModifiedProperties();
+            Assert.Same(keptFirst, Assert.Single(first.list));
+            Assert.Same(keptSecond, Assert.Single(second.list));
+            Assert.Equal("s", second.list[0].label);
+        }
+
         [Fact]
         public void BuiltInPropertiesOfComponents()
         {
