@@ -41,9 +41,17 @@ namespace UnityEngine.U2D
             }
         }
 
+        /// <summary>Minimum and maximum variant scale clamped by
+        /// <see cref="SpriteAtlasExtensions.SetVariantScale"/> (matches Unity 6000.0.71f1 Editor,
+        /// tests/projects/spriteatlaseditor v1variantscale/v2variantscale).</summary>
+        internal const float MinVariantScale = 0.1f;
+        internal const float MaxVariantScale = 1f;
+
         readonly List<PackableEntry> m_Packables = new List<PackableEntry>();
         bool m_PackablesModified;
         bool m_IsVariant;
+        float m_VariantScale = 1f;
+        bool m_VariantScaleModified;
         // Editor settings ("Include in Build", packingSettings, textureSettings, platformSettings):
         // a V1 atlas reads them from its editor data; a V2 atlas reads them from its
         // SpriteAtlasImporter .meta when first asked (m_ImporterSettingsRead).
@@ -56,6 +64,7 @@ namespace UnityEngine.U2D
         bool m_PlatformSettingsModified;
         bool m_FromImporter;
         bool m_ImporterSettingsRead = true;
+        ObjectRef m_MasterRef;
         SpriteAtlas m_Master;
         string m_Tag;
         List<Sprite> m_Sprites;
@@ -100,7 +109,11 @@ namespace UnityEngine.U2D
             var packed = SpriteAtlasPacking.PackedSprites(this);
             if (packed != null) return packed;
             if (m_Sprites != null) return m_Sprites;
-            if (m_IsVariant && m_Master != null && !ReferenceEquals(m_Master, this)) return m_Sprites = m_Master.Sprites();
+            if (m_IsVariant)
+            {
+                var master = MasterAtlas;
+                if (master != null && !ReferenceEquals(master, this)) return m_Sprites = master.Sprites();
+            }
             var found = new List<Sprite>();
             foreach (var entry in m_Packables)
             {
@@ -249,8 +262,47 @@ namespace UnityEngine.U2D
             return seq;
         }
 
-        /// <summary>The master atlas of a variant (null for an atlas without one).</summary>
-        internal SpriteAtlas MasterAtlas => m_Master;
+        /// <summary>The master atlas of a variant (null for an atlas without one), re-resolving
+        /// its serialized reference if the master asset was reimported.</summary>
+        internal SpriteAtlas MasterAtlas
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(m_MasterRef.Guid) && m_MasterRef.FileId != 0
+                    && (m_Master == null || !AssetDatabaseRuntime.TryGetLocation(m_Master, out _, out _)))
+                {
+                    var current = AssetDatabaseRuntime.Load(m_MasterRef.Guid, m_MasterRef.FileId, typeof(SpriteAtlas)) as SpriteAtlas;
+                    if (current != null) m_Master = current;
+                }
+                return m_Master;
+            }
+        }
+
+        /// <summary>The variant scale multiplier (default 1 when omitted or on a new atlas).</summary>
+        internal float VariantScale
+        {
+            get
+            {
+                EnsureImporterSettingsRead();
+                return m_VariantScale;
+            }
+        }
+
+        /// <summary>Whether SetVariantScale has updated this atlas's variant scale in memory.</summary>
+        internal bool VariantScaleModified => m_VariantScaleModified;
+
+        /// <summary>Clamps <paramref name="value"/> to [0.1, 1] (leaving NaN unchanged) and
+        /// unconditionally marks the atlas dirty (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/spriteatlaseditor v1variantscale/v2variantscale).</summary>
+        internal void WriteVariantScale(float value)
+        {
+            EnsureImporterSettingsRead();
+            if (value < MinVariantScale) value = MinVariantScale;
+            else if (value > MaxVariantScale) value = MaxVariantScale;
+            m_VariantScale = value;
+            m_VariantScaleModified = true;
+            EditorUtility.SetDirty(this);
+        }
 
         /// <summary>Whether the atlas was imported from a V2 `.spriteatlasv2` asset rather than a
         /// V1 native `.spriteatlas` file.</summary>
@@ -361,8 +413,10 @@ namespace UnityEngine.U2D
                     {
                         var importer = docs[0].Body;
                         m_IncludeInBuild = importer.Bool("bindAsDefault", true);
-                        m_PackingSettings = m_IsVariant && m_Master != null && !ReferenceEquals(m_Master, this) && !m_Master.m_IsVariant
-                            ? m_Master.PackingSettings
+                        m_VariantScale = importer.Float("variantMultiplier", 1f);
+                        var master = MasterAtlas;
+                        m_PackingSettings = m_IsVariant && master != null && !ReferenceEquals(master, this) && !master.m_IsVariant
+                            ? master.PackingSettings
                             : SpriteAtlasPackingSettings.Read(importer.Get("packingSettings"));
                         m_TextureSettings = SpriteAtlasTextureSettings.Read(importer.Get("textureSettings"));
                         m_PlatformSettings = TextureImporterPlatformSettings.ReadList(importer.Get("platformSettings"), prefixed: false);
@@ -382,6 +436,7 @@ namespace UnityEngine.U2D
             foreach (var packable in data?.Get("packables")?.Seq() ?? Array.Empty<YNode>())
                 m_Packables.Add(new PackableEntry(packable.AsRef(), null));
             m_PackablesModified = false;
+            m_VariantScaleModified = false;
             m_FromImporter = body.Get("m_ImporterData") != null;
             m_PackingSettingsModified = false;
             m_TextureSettingsModified = false;
@@ -389,6 +444,7 @@ namespace UnityEngine.U2D
             if (m_FromImporter)
             {
                 m_IncludeInBuild = true;
+                m_VariantScale = 1f;
                 m_PackingSettings = SpriteAtlasPackingSettings.Default;
                 m_TextureSettings = SpriteAtlasTextureSettings.Default;
                 m_PlatformSettings = null;
@@ -397,6 +453,7 @@ namespace UnityEngine.U2D
             else
             {
                 m_IncludeInBuild = data?.Bool("bindAsDefault", true) ?? true;
+                m_VariantScale = data?.Float("variantMultiplier", 1f) ?? 1f;
                 m_PackingSettings = SpriteAtlasPackingSettings.Read(data?.Get("packingSettings"));
                 m_TextureSettings = SpriteAtlasTextureSettings.Read(data?.Get("textureSettings"));
                 m_PlatformSettings = TextureImporterPlatformSettings.ReadList(data?.Get("platformSettings"), prefixed: true);
@@ -405,6 +462,7 @@ namespace UnityEngine.U2D
             m_IsVariant = body.Bool("m_IsVariant");
             m_Tag = body.Str("m_Tag", null);
             var master = body.Ref("m_MasterAtlas");
+            m_MasterRef = master;
             m_Master = master.FileId != 0 ? resolver.Resolve(master, typeof(SpriteAtlas)) as SpriteAtlas : null;
             m_Sprites = null;
             EditorUtility.ClearDirty(this);

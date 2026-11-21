@@ -1478,6 +1478,120 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SetVariantScaleClampsToPointOneThroughOnePreservesNanAndAlwaysDirties()
+        {
+            var fresh = new SpriteAtlas();
+            int baseDirty = EditorUtility.GetDirtyCount(fresh);
+            Assert.Equal(1f, fresh.VariantScale);
+            Assert.False(fresh.VariantScaleModified);
+            Assert.False(fresh.isVariant);
+
+            // Same-value repeat still marks dirty and leaves isVariant untouched.
+            fresh.SetVariantScale(1f);
+            Assert.Equal(1f, fresh.VariantScale);
+            Assert.True(fresh.VariantScaleModified);
+            Assert.False(fresh.isVariant);
+            Assert.Equal(baseDirty + 1, EditorUtility.GetDirtyCount(fresh));
+
+            // Valid values in [0.1, 1] are stored verbatim.
+            fresh.SetVariantScale(0.5f);
+            Assert.Equal(0.5f, fresh.VariantScale);
+            Assert.Equal(baseDirty + 2, EditorUtility.GetDirtyCount(fresh));
+
+            // Lower-bound clamping to 0.1f (including -0f, 0f, negative, below-min, -Infinity).
+            foreach (float low in new[] { -0f, 0f, -5f, 0.05f, float.NegativeInfinity })
+            {
+                fresh.SetVariantScale(low);
+                Assert.Equal(0.1f, fresh.VariantScale);
+            }
+            Assert.Equal(baseDirty + 7, EditorUtility.GetDirtyCount(fresh));
+
+            // Upper-bound clamping to 1f (including >1 and +Infinity).
+            foreach (float high in new[] { 1.0001f, 2.5f, float.PositiveInfinity })
+            {
+                fresh.SetVariantScale(high);
+                Assert.Equal(1f, fresh.VariantScale);
+            }
+            Assert.Equal(baseDirty + 10, EditorUtility.GetDirtyCount(fresh));
+
+            // NaN is preserved verbatim rather than clamped.
+            fresh.SetVariantScale(float.NaN);
+            Assert.True(float.IsNaN(fresh.VariantScale));
+            Assert.Equal(baseDirty + 11, EditorUtility.GetDirtyCount(fresh));
+
+            // Loaded V1 atlas reads variantMultiplier (default 1 when omitted) and writes only when modified.
+            const string v1Source =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Variant\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    packingSettings:\n" +
+                "      serializedVersion: 2\n" +
+                "      padding: 16\n" +
+                "      blockOffset: 3\n" +
+                "      allowAlphaSplitting: 0\n" +
+                "      enableRotation: 0\n" +
+                "      enableTightPacking: 0\n" +
+                "      enableAlphaDilation: 1\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    variantMultiplier: 0.5\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 0\n" +
+                "    isAtlasV2: 0\n" +
+                "  m_IsVariant: 1\n";
+
+            var docs = UnityYamlText.Parse(v1Source);
+            var loaded = new SpriteAtlas();
+            loaded.ReadSerialized(TestYaml.DocumentBody(v1Source), null);
+            Assert.Equal(0.5f, loaded.VariantScale);
+            Assert.False(loaded.VariantScaleModified);
+            Assert.False(EditorUtility.IsDirty(loaded));
+
+            loaded.SetVariantScale(0.75f);
+            Assert.True(EditorUtility.IsDirty(loaded));
+            int unlocated = 0;
+            Assert.True(NativeDocuments.Write(docs[0], loaded, null, null, ref unlocated));
+            Assert.Equal(v1Source.Replace("    variantMultiplier: 0.5\n", "    variantMultiplier: 0.75\n"), UnityYamlText.Write(docs));
+
+            // NaN serializes as `variantMultiplier: NaN`; restoring 0.5 roundtrips exact original bytes.
+            loaded.SetVariantScale(float.NaN);
+            Assert.True(NativeDocuments.Write(docs[0], loaded, null, null, ref unlocated));
+            Assert.Equal(v1Source.Replace("    variantMultiplier: 0.5\n", "    variantMultiplier: NaN\n"), UnityYamlText.Write(docs));
+
+            loaded.SetVariantScale(0.5f);
+            Assert.True(NativeDocuments.Write(docs[0], loaded, null, null, ref unlocated));
+            Assert.Equal(v1Source, UnityYamlText.Write(docs));
+
+            // Omitted variantMultiplier defaults to 1 and inserts right after secondaryTextureSettings when mutated.
+            const string v1Omitted =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!687078895 &4343727234628468602\n" +
+                "SpriteAtlas:\n" +
+                "  m_Name: Omitted\n" +
+                "  m_EditorData:\n" +
+                "    serializedVersion: 2\n" +
+                "    secondaryTextureSettings: {}\n" +
+                "    packables: []\n" +
+                "    bindAsDefault: 0\n" +
+                "    isAtlasV2: 0\n" +
+                "  m_IsVariant: 1\n";
+            var omittedDocs = UnityYamlText.Parse(v1Omitted);
+            var omittedAtlas = new SpriteAtlas();
+            omittedAtlas.ReadSerialized(TestYaml.DocumentBody(v1Omitted), null);
+            Assert.Equal(1f, omittedAtlas.VariantScale);
+            omittedAtlas.SetVariantScale(0.01f);
+            Assert.True(NativeDocuments.Write(omittedDocs[0], omittedAtlas, null, null, ref unlocated));
+            Assert.Equal(
+                v1Omitted.Replace("    secondaryTextureSettings: {}\n    packables: []\n",
+                    "    secondaryTextureSettings: {}\n    variantMultiplier: 0.1\n    packables: []\n"),
+                UnityYamlText.Write(omittedDocs));
+        }
+
+        [Fact]
         public void ANullAtlasThrows()
         {
             SpriteAtlas none = null;
@@ -1486,6 +1600,8 @@ namespace UnityEngine.Tests
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.Add(null)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.Remove(Array.Empty<Object>())).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.Remove(null)).ParamName);
+            Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetVariantScale(0.5f)).ParamName);
+            Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetVariantScale(-1f)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetPackingSettings()).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.SetPackingSettings(default)).ParamName);
             Assert.Equal("spriteAtlas", Assert.Throws<ArgumentNullException>(() => none.GetTextureSettings()).ParamName);

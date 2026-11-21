@@ -1314,6 +1314,29 @@ namespace Unbound.Runtime
                     editorData.Keys.Insert(insertPackingAt, "packingSettings");
                     editorData.Values.Insert(insertPackingAt, atlas.PackingSettings.ToYText());
                 }
+                if (atlas.VariantScaleModified)
+                {
+                    var scaleValue = YText.Scalar(UnityYamlWriter.Writer.Number(atlas.VariantScale));
+                    int scaleIndex = editorData.Keys.IndexOf("variantMultiplier");
+                    if (scaleIndex >= 0)
+                    {
+                        editorData.Values[scaleIndex] = scaleValue;
+                    }
+                    else
+                    {
+                        int afterSecondary = editorData.Keys.IndexOf("secondaryTextureSettings");
+                        int beforePackables = editorData.Keys.IndexOf("packables");
+                        int afterPacking = editorData.Keys.IndexOf("packingSettings");
+                        int beforeBind = editorData.Keys.IndexOf("bindAsDefault");
+                        int insertScaleAt = afterSecondary >= 0 ? afterSecondary + 1
+                            : beforePackables >= 0 ? beforePackables
+                            : afterPacking >= 0 ? afterPacking + 1
+                            : beforeBind >= 0 ? beforeBind
+                            : editorData.Keys.Count;
+                        editorData.Keys.Insert(insertScaleAt, "variantMultiplier");
+                        editorData.Values.Insert(insertScaleAt, scaleValue);
+                    }
+                }
                 if (atlas.PackablesModified)
                 {
                     var packablesText = atlas.ToPackablesYText();

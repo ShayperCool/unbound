@@ -239,6 +239,12 @@ namespace UnityEditor.U2D
             return spriteAtlas.MasterAtlas;
         }
 
+        public static void SetVariantScale(this SpriteAtlas spriteAtlas, float value)
+        {
+            if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
+            spriteAtlas.WriteVariantScale(value);
+        }
+
         public static bool IsIncludeInBuild(this SpriteAtlas spriteAtlas)
         {
             if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
