@@ -7,6 +7,7 @@
     "managed/UnityEngine/Editor/SceneFiles.cs",
     "managed/UnityEngine/Editor/AssetFiles.cs",
     "managed/UnityEngine/Editor/SerializedFiles.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseCreate.cs",
     "managed/UnityEngine/Editor/UnityYamlText.cs",
     "managed/UnityEngine/Editor/EditorSceneManager.cs",
     "managed/UnityEngine/Editor/MaterialSerialization.cs",

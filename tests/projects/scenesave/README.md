@@ -36,6 +36,15 @@ file the run added, changed or removed.
   (SaveAsPrefabAsset of an instance, which makes a variant, and of a prefab's contents to a new
   path, SaveAsPrefabAssetAndConnect), their argument errors, a prefab's contents saved in place;
   EditorSceneManager.ReloadScene of a dirty, a clean, an unsaved and an invalid scene.
+- `create-assets` (Edit Mode, `CreateAssetTests`): assets made of objects created by script with
+  `AssetDatabase.CreateAsset` (materials of two built-in shaders, one edited in every field a file
+  has, with keywords, tags, a disabled pass, a texture and properties its shader does not declare,
+  a copy of a material asset, one saved as `.asset`; a mesh, an animation clip, a physics material
+  and a texture), a material edited and saved by `SaveAssets`, materials added by
+  `AddObjectToAsset` to a material asset and to a ScriptableObject asset; `SaveAsPrefabAssetAndConnect`
+  of a GameObject named otherwise than the file and of one referencing a scene object outside its
+  hierarchy, with the new scene they are in saved. Recorded in the Linux Editor (batch mode, no
+  graphics: two identical captures). The texture `Assets/Textures/Probe.png` is a committed asset.
 - `play-nosave`, `play-save` (Play Mode, `SavePlayTests.NoSave` and `.Save`, each alone): assets
   edited in Play mode, left unsaved or saved by `AssetDatabase.SaveAssets` there; scene saves and
   `MarkSceneDirty` in Play mode.

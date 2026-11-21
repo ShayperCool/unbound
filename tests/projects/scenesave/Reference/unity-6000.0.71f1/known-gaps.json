@@ -5,5 +5,261 @@
     "reference": "written",
     "actual": "lines 212-212: reference ['  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}'], actual ['  m_LocalRotation: {x: 0.40821794, y: -0.23456973, z: 0.10938166, w: 0.8754261}']",
     "reason": "The macOS arm64 Editor rounds the new scene's light rotation Quaternion.Euler(50, -30, 0) to x 0.40821788; the Linux Editor writes 0.40821794, as Unbound does (the Linux-authored scenes of tests/projects hold it). arm64 arithmetic is recorded, not chased; every other line of the file is identical (the comparison lists each differing line)."
+  },
+  {
+    "case": "create-assets",
+    "key": "exit",
+    "reference": 0,
+    "actual": 2,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "clip.file",
+    "reference": [
+      "same as clip.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "clip.main",
+    "reference": [
+      "AnimationClip:Move"
+    ],
+    "actual": [
+      "null"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "clip.meta",
+    "reference": [
+      "same as clip.meta"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "clip.path",
+    "reference": [
+      "Assets/Created/Move.anim"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "clip.result",
+    "reference": [
+      "AnimationClip:Move"
+    ],
+    "actual": [
+      "AnimationClip:"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "mesh.file",
+    "reference": [
+      "same as mesh.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "mesh.main",
+    "reference": [
+      "Mesh:Tri"
+    ],
+    "actual": [
+      "null"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "mesh.meta",
+    "reference": [
+      "same as mesh.meta"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "mesh.path",
+    "reference": [
+      "Assets/Created/Tri.asset"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "mesh.result",
+    "reference": [
+      "Mesh:Tri"
+    ],
+    "actual": [
+      "Mesh:"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "texture.file",
+    "reference": [
+      "same as texture.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "texture.main",
+    "reference": [
+      "Texture2D:Tex"
+    ],
+    "actual": [
+      "null"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "texture.meta",
+    "reference": [
+      "same as texture.meta"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "texture.path",
+    "reference": [
+      "Assets/Created/Tex.asset"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "texture.result",
+    "reference": [
+      "Texture2D:Tex"
+    ],
+    "actual": [
+      "Texture2D:"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "file:Assets/Created/Move.anim",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "file:Assets/Created/Move.anim.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "file:Assets/Created/Tex.asset",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "file:Assets/Created/Tex.asset.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "file:Assets/Created/Tri.asset",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "file:Assets/Created/Tri.asset.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "file:snapshot:clip.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "file:snapshot:clip.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "file:snapshot:mesh.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "file:snapshot:mesh.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "file:snapshot:texture.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "create-assets",
+    "key": "file:snapshot:texture.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
   }
 ]

@@ -9,7 +9,7 @@ compares it with the reference.
 
 Cases: `edit` (Edit Mode SaveEditTests), `play-nosave` and `play-save` (Play Mode SavePlayTests
 NoSave and Save, each alone), `prefab-api` (Edit Mode PrefabApiTests), `prefab-writes` (Edit Mode
-PrefabWriteTests).
+PrefabWriteTests), `create-assets` (Edit Mode CreateAssetTests).
 """
 import argparse
 import json
@@ -33,6 +33,7 @@ CASES = {
     'play-save': ('PlayMode', 'SavePlayTests.Save'),
     'prefab-api': ('EditMode', 'PrefabApiTests.PrefabApi'),
     'prefab-writes': ('EditMode', 'PrefabWriteTests.PrefabWrites'),
+    'create-assets': ('EditMode', 'CreateAssetTests.CreateAssets'),
 }
 SKIPPED = {'Library', 'Logs', 'Temp', 'UserSettings', 'obj', 'run.py', 'README.md', 'Reference',
            'gate.json', 'scenesave_compare.py', 'test_compare.py', '__pycache__'}
