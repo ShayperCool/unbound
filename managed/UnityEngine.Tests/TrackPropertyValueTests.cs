@@ -287,7 +287,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void TrackingWorksOnUnmeasuredReleaseAndPreservesRuntimeDataBindingOnUnbind()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var target = ScriptableObject.CreateInstance<TestTarget>();
             using var panel = RuntimePanel.Create(settings);
@@ -439,7 +438,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void TrackSerializedObjectValueRecoversFromExceptionPreservesRuntimeDataBindingAndWorksOnUnmeasuredRelease()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var targetA = ScriptableObject.CreateInstance<TestTarget>();
             var targetB = ScriptableObject.CreateInstance<TestTarget>();
@@ -531,7 +529,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void BindPropertyScalarLifecycleAndUnmeasuredRelease()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var targetA = ScriptableObject.CreateInstance<TestTarget>();
             var targetB = ScriptableObject.CreateInstance<TestTarget>();
@@ -707,7 +704,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void BindTreeNestedPathsCoexistWithRuntimeDataBindingAndWorkOnUnmeasuredRelease()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var target = ScriptableObject.CreateInstance<TestTarget>();
             using var panel = RuntimePanel.Create(settings);
@@ -879,7 +875,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void PropertyFieldScalarLifecycleDynamicLabelAndUnmeasuredRelease()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var target = ScriptableObject.CreateInstance<TestTarget>();
             using var panel = RuntimePanel.Create(settings);
@@ -994,7 +989,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void EnumBindingSparseNegativeAndUnmeasuredRelease()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var target = ScriptableObject.CreateInstance<TestTarget>();
             using var panel = RuntimePanel.Create(settings);
@@ -1118,7 +1112,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void EnumBindingFlagsAndScalarControlsBindEnum()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var target = ScriptableObject.CreateInstance<TestTarget>();
             using var panel = RuntimePanel.Create(settings);
@@ -1236,7 +1229,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void Vector3BindingComponentsTransformMultiEditAndUnmeasuredRelease()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var target = ScriptableObject.CreateInstance<TestTarget>();
             var goA = new GameObject("VecGoA");
@@ -1369,7 +1361,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void Vector2BindingMixedPerComponentUnmeasuredAndDisposedSo()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
             var t2 = ScriptableObject.CreateInstance<TestTarget>();
@@ -1590,7 +1581,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void BindPropertyVector2IntMultiEditAndDisposedCleanupWorksAcrossReleases()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
             var t2 = ScriptableObject.CreateInstance<TestTarget>();
@@ -1672,7 +1662,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void BindPropertyVector3IntMultiEditAndDisposedCleanupWorksAcrossReleases()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
             var t2 = ScriptableObject.CreateInstance<TestTarget>();
@@ -1767,7 +1756,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void BindPropertyColorAndColorUsageWorkAcrossReleases()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
             var t2 = ScriptableObject.CreateInstance<TestTarget>();
@@ -1860,7 +1848,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void BindPropertyRectMultiEditComponentBindingAndDisposedCleanupWorkAcrossReleases()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
             var t2 = ScriptableObject.CreateInstance<TestTarget>();
@@ -1944,7 +1931,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void BindPropertyRectIntMultiEditComponentBindingAndDisposedCleanupWorkAcrossReleases()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
             var t2 = ScriptableObject.CreateInstance<TestTarget>();
@@ -2028,7 +2014,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void BindPropertyBoundsMultiEditComponentBindingAndDisposedCleanupWorkAcrossReleases()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
             var t2 = ScriptableObject.CreateInstance<TestTarget>();
@@ -2127,7 +2112,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void BindPropertyBoundsIntMultiEditComponentBindingAndDisposedCleanupWorkAcrossReleases()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
             var t2 = ScriptableObject.CreateInstance<TestTarget>();
@@ -2226,7 +2210,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void BindPropertyAnimationCurveCopyIndependenceMixedAndDisposedCleanupWorkAcrossReleases()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
             var t2 = ScriptableObject.CreateInstance<TestTarget>();
@@ -2470,7 +2453,6 @@ namespace UnityEngine.Tests
             t1.transformVal = go.transform;
 
             using var panel = RuntimePanel.Create(settings);
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var soMulti = new SerializedObject(new Object[] { t1, t2 });
             var soSingle = new SerializedObject(t1);
             try
@@ -2607,7 +2589,6 @@ namespace UnityEngine.Tests
             t2.hashVal = hSwapped;
 
             using var panel = RuntimePanel.Create(settings);
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var soMulti = new SerializedObject(new Object[] { t1, t2 });
             var soSingle = new SerializedObject(t1);
             try
@@ -2695,7 +2676,6 @@ namespace UnityEngine.Tests
             t2.renderingLayerMaskVal = 4u;
 
             using var panel = RuntimePanel.Create(settings);
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var soMulti = new SerializedObject(new Object[] { t1, t2 });
             var soSingle = new SerializedObject(t1);
             try
@@ -2845,7 +2825,6 @@ namespace UnityEngine.Tests
             t2.nested = new NestedPayload { score = 99, tag = "n0" };
 
             using var panel = RuntimePanel.Create(settings);
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var soSingle = new SerializedObject(t1);
             var soMulti = new SerializedObject(new Object[] { t1, t2 });
             try
@@ -2963,7 +2942,6 @@ namespace UnityEngine.Tests
             t2.numbers = new[] { 10 };
 
             using var panel = RuntimePanel.Create(settings);
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var soSingle = new SerializedObject(t1);
             var soMulti = new SerializedObject(new Object[] { t1, t2 });
             try
@@ -3084,7 +3062,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void BindPropertyQuaternionAndCharacterControlsMultiEditReuseAndDisposedCleanupWorkAcrossReleases()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
             var t2 = ScriptableObject.CreateInstance<TestTarget>();
@@ -3227,7 +3204,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void BindPropertyToggleButtonGroupStateAttributesMultiEditAndDisposedCleanupWorkAcrossReleases()
         {
-            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
             var t2 = ScriptableObject.CreateInstance<TestTarget>();
