@@ -121,13 +121,10 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId textProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId toggleOnLabelClickProperty;
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<bool>.UxmlSerializedData
+        unsafe partial class UxmlSerializedData
         {
             [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.UxmlSerializedData.Register"); }
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.UxmlSerializedData.ctor"); }
         }
     }
     unsafe partial class BaseCompositeField<TValueType, TField, TFieldValue>
@@ -407,14 +404,10 @@ namespace UnityEngine.UIElements
     unsafe partial class Button
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId iconImageProperty;
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextElement.UxmlSerializedData
+        unsafe partial class UxmlSerializedData
         {
             [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.UxmlSerializedData.CreateInstance"); return default; }
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.UxmlSerializedData.ctor"); }
         }
     }
     [global::Unbound.Stub]
@@ -3372,14 +3365,10 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class Toggle
     {
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseBoolField.UxmlSerializedData
+        unsafe partial class UxmlSerializedData
         {
             [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Toggle.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Toggle.UxmlSerializedData.CreateInstance"); return default; }
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Toggle.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Toggle.UxmlSerializedData.ctor"); }
         }
     }
     unsafe partial class ToggleButtonGroup

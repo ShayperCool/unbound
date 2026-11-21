@@ -1198,6 +1198,11 @@ namespace Unbound.UIElements
             (typeof(TextElement), "triple-click-selects-line", "tripleClickSelectsLine"),
             (typeof(TextElement), "selectLineByTripleClick", "tripleClickSelectsLine"),
             (typeof(TextElement), "select-line-by-triple-click", "tripleClickSelectsLine"),
+            // Properties the editor toolbar controls' UXML data does not declare
+            // (tests/projects/toolbarcontrols `uxml`).
+            (typeof(UnityEditor.UIElements.ToolbarMenu), "variant", null),
+            (typeof(UnityEditor.UIElements.ToolbarSpacer), "flex", null),
+            (typeof(UnityEditor.UIElements.SearchFieldBase<,>), "value", null),
         };
 
         /// <summary>The property an attribute names on <paramref name="type"/>: its entry in

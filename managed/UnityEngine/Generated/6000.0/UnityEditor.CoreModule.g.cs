@@ -30440,8 +30440,7 @@ namespace UnityEditor.Experimental
     {
         [global::Unbound.Stub] public static string GetSessionIdForBuildTarget(global::UnityEditor.BuildTarget target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.BuildPipelineExperimental.GetSessionIdForBuildTarget"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class EditorResources
+    unsafe partial class EditorResources
     {
         [global::Unbound.Stub] public static global::UnityEngine.Object Load(string assetPath, global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.Load"); return default; }
         [global::Unbound.Stub] public static string GetAssetPath(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.GetAssetPath"); return default; }
@@ -30460,7 +30459,6 @@ namespace UnityEditor.Experimental
         [global::Unbound.Stub] internal static global::UnityEditor.StyleSheets.StyleBlock GetStyle(int selectorKey, params global::UnityEditor.StyleSheets.StyleState[] states) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.GetStyle"); return default; }
         [global::Unbound.Stub] internal static void LoadStyles(string ussPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.LoadStyles"); }
         [global::Unbound.Stub] internal static global::UnityEditor.StyleSheets.StyleCatalog LoadCatalog(string[] ussPaths) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.LoadCatalog"); return default; }
-        [global::Unbound.Stub] public EditorResources() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.ctor"); }
         public static int normalSkinIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.normalSkinIndex"); return default; } }
         public static int darkSkinIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.darkSkinIndex"); return default; } }
         public static string lightSkinSourcePath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.lightSkinSourcePath"); return default; } }
@@ -30476,7 +30474,6 @@ namespace UnityEditor.Experimental
         public static string libraryBundlePath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.libraryBundlePath"); return default; } }
         internal static global::UnityEditor.StyleSheets.StyleCatalog styleCatalog { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.styleCatalog"); return default; } }
         internal static global::System.Collections.Generic.IEnumerable<string> supportedFontNames { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.supportedFontNames"); return global::System.Array.Empty<string>(); } }
-        internal static string currentFontName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.currentFontName"); return default; } }
         internal static global::System.Collections.Generic.Dictionary<string, global::UnityEditor.Experimental.FontDef> supportedFonts { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.supportedFonts"); return new global::System.Collections.Generic.Dictionary<string, global::UnityEditor.Experimental.FontDef>(); } }
         public static string dataPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Experimental.EditorResources.dataPath"); return default; } }
     }
@@ -47079,10 +47076,6 @@ namespace UnityEditor.UIElements
     {
         global::UnityEngine.UIElements.VisualElement OnCreateFooter(global::UnityEditor.Editor editor);
     }
-    public unsafe partial interface IToolbarMenuElement
-    {
-        global::UnityEngine.UIElements.DropdownMenu menu { get; }
-    }
     [global::Unbound.Stub]
     public unsafe partial class InspectorElement : global::UnityEngine.UIElements.BindableElement
     {
@@ -47239,41 +47232,6 @@ namespace UnityEditor.UIElements
         }
     }
     [global::Unbound.Stub]
-    public unsafe abstract partial class SearchFieldBase<TextInputType, T> : global::UnityEngine.UIElements.VisualElement, global::UnityEngine.UIElements.INotifyValueChanged<T> where TextInputType : global::UnityEngine.UIElements.TextInputBaseField<T>, new()
-    {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId valueProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId placeholderTextProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string textUssClassName;
-        [global::Unbound.Stub] public static readonly string textInputUssClassName;
-        [global::Unbound.Stub] public static readonly string searchButtonUssClassName;
-        [global::Unbound.Stub] public static readonly string cancelButtonUssClassName;
-        [global::Unbound.Stub] public static readonly string cancelButtonOffVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string popupVariantUssClassName;
-        [global::Unbound.Stub] protected SearchFieldBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SearchFieldBase<TextInputType, T>.ctor"); }
-        protected abstract void ClearTextField();
-        [global::Unbound.Stub] public virtual void SetValueWithoutNotify(T newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SearchFieldBase<TextInputType, T>.SetValueWithoutNotify"); }
-        protected abstract bool FieldIsEmpty(T fieldValue);
-        protected internal TextInputType textInputField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SearchFieldBase<TextInputType, T>.textInputField"); return default; } }
-        protected global::UnityEngine.UIElements.Button searchButton { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SearchFieldBase<TextInputType, T>.searchButton"); return default; } }
-        public T value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SearchFieldBase<TextInputType, T>.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SearchFieldBase<TextInputType, T>.value"); } }
-        public string placeholderText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SearchFieldBase<TextInputType, T>.placeholderText"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SearchFieldBase<TextInputType, T>.placeholderText"); } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SearchFieldBase<TextInputType, T>.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SearchFieldBase<TextInputType, T>.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SearchFieldBase<TextInputType, T>.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.VisualElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SearchFieldBase<TextInputType, T>.UxmlTraits.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class SerializableJsonDictionary : global::UnityEngine.ScriptableObject, global::UnityEngine.ISerializationCallbackReceiver, global::UnityEngine.UIElements.ISerializableJsonDictionary
     {
         [global::Unbound.Stub] public void Set<T>(string key, T value) where T : class { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializableJsonDictionary.Set"); }
@@ -47321,226 +47279,6 @@ namespace UnityEditor.UIElements
         {
             [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.TagField.UxmlTraits.Init"); }
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.TagField.UxmlTraits.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class Toolbar : global::UnityEngine.UIElements.VisualElement
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] internal static void SetToolbarStyleSheet(global::UnityEngine.UIElements.VisualElement ve) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Toolbar.SetToolbarStyleSheet"); }
-        [global::Unbound.Stub] public Toolbar() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Toolbar.ctor"); }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Toolbar.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Toolbar.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.Toolbar>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Toolbar.UxmlFactory.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ToolbarBreadcrumbs : global::UnityEngine.UIElements.VisualElement
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string itemClassName;
-        [global::Unbound.Stub] public static readonly string firstItemClassName;
-        [global::Unbound.Stub] public ToolbarBreadcrumbs() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarBreadcrumbs.ctor"); }
-        [global::Unbound.Stub] public void PushItem(string label, global::System.Action clickedEvent = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarBreadcrumbs.PushItem"); }
-        [global::Unbound.Stub] public void PopItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarBreadcrumbs.PopItem"); }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarBreadcrumbs.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarBreadcrumbs.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.ToolbarBreadcrumbs>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarBreadcrumbs.UxmlFactory.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ToolbarButton : global::UnityEngine.UIElements.Button
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public ToolbarButton(global::System.Action clickEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarButton.ctor"); }
-        [global::Unbound.Stub] public ToolbarButton() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarButton.ctor"); }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.Button.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarButton.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarButton.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.ToolbarButton, global::UnityEditor.UIElements.ToolbarButton.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarButton.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.Button.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarButton.UxmlTraits.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ToolbarMenu : global::UnityEngine.UIElements.TextElement, global::UnityEditor.UIElements.IToolbarMenuElement
-    {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId menuProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId variantProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string popupVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string textUssClassName;
-        [global::Unbound.Stub] public static readonly string arrowUssClassName;
-        [global::Unbound.Stub] public ToolbarMenu() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarMenu.ctor"); }
-        public global::UnityEngine.UIElements.DropdownMenu menu { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarMenu.menu"); return default; } }
-        public override string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarMenu.text"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarMenu.text"); } }
-        public global::UnityEditor.UIElements.ToolbarMenu.Variant variant { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarMenu.variant"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarMenu.variant"); } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextElement.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarMenu.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarMenu.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.ToolbarMenu, global::UnityEditor.UIElements.ToolbarMenu.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarMenu.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.TextElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarMenu.UxmlTraits.ctor"); }
-        }
-        public enum Variant
-        {
-            Default = 0,
-            Popup = 1,
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class ToolbarMenuElementExtensions
-    {
-        [global::Unbound.Stub] public static void ShowMenu(this global::UnityEditor.UIElements.IToolbarMenuElement tbe) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarMenuElementExtensions.ShowMenu"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ToolbarPopupSearchField : global::UnityEditor.UIElements.ToolbarSearchField, global::UnityEditor.UIElements.IToolbarMenuElement
-    {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId menuProperty;
-        [global::Unbound.Stub] public ToolbarPopupSearchField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarPopupSearchField.ctor"); }
-        public global::UnityEngine.UIElements.DropdownMenu menu { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarPopupSearchField.menu"); return default; } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEditor.UIElements.ToolbarSearchField.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarPopupSearchField.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarPopupSearchField.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.ToolbarPopupSearchField, global::UnityEditor.UIElements.ToolbarPopupSearchField.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarPopupSearchField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEditor.UIElements.ToolbarSearchField.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarPopupSearchField.UxmlTraits.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ToolbarSearchField : global::UnityEditor.UIElements.SearchFieldBase<global::UnityEngine.UIElements.TextField, string>
-    {
-        [global::Unbound.Stub] public static readonly string textUssClassName;
-        [global::Unbound.Stub] public static readonly string searchButtonUssClassName;
-        [global::Unbound.Stub] public static readonly string cancelButtonUssClassName;
-        [global::Unbound.Stub] public static readonly string cancelButtonOffVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string popupVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public ToolbarSearchField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSearchField.ctor"); }
-        [global::Unbound.Stub] protected override void ClearTextField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSearchField.ClearTextField"); }
-        [global::Unbound.Stub] protected override bool FieldIsEmpty(string fieldValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSearchField.FieldIsEmpty"); return default; }
-        protected global::UnityEngine.UIElements.Button searchButton { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSearchField.searchButton"); return default; } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEditor.UIElements.SearchFieldBase<global::UnityEngine.UIElements.TextField, string>.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSearchField.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSearchField.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSearchField.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.ToolbarSearchField, global::UnityEditor.UIElements.ToolbarSearchField.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSearchField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEditor.UIElements.SearchFieldBase<global::UnityEngine.UIElements.TextField, string>.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSearchField.UxmlTraits.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ToolbarSpacer : global::UnityEngine.UIElements.VisualElement
-    {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId flexProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::System.Obsolete("The `fixedSpacerVariantUssClassName` style has been deprecated as is it now the default style.")] [global::Unbound.Stub] public static readonly string fixedSpacerVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string flexibleSpacerVariantUssClassName;
-        [global::Unbound.Stub] public ToolbarSpacer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSpacer.ctor"); }
-        public bool flex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSpacer.flex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSpacer.flex"); } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSpacer.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSpacer.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.ToolbarSpacer>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarSpacer.UxmlFactory.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ToolbarToggle : global::UnityEngine.UIElements.Toggle
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public ToolbarToggle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarToggle.ctor"); }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.Toggle.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarToggle.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarToggle.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEditor.UIElements.ToolbarToggle, global::UnityEditor.UIElements.ToolbarToggle.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarToggle.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.Toggle.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ToolbarToggle.UxmlTraits.ctor"); }
         }
     }
     [global::Unbound.Stub]
