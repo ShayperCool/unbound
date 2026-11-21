@@ -984,6 +984,8 @@ namespace UnityEngine.UIElements
         public static readonly string footerRemoveButtonName = ussClassName + "__remove-button";
         static readonly string k_EmptyListStr = "List is empty";
         static readonly string k_SizeFieldLabel = "Size";
+        string m_MaxMultiEditStr;
+        bool m_IsOverMultiEditLimit;
 
         bool m_ShowBoundCollectionSize = true;
         bool m_ShowFoldoutHeader;
@@ -1169,6 +1171,8 @@ namespace UnityEngine.UIElements
 
         internal VisualElement footer => m_Footer ?? m_DrawnFooter;
 
+        internal TextField arraySizeField => m_ArraySizeField;
+
         public new BaseListViewController viewController => base.viewController as BaseListViewController;
 
         internal static readonly BindingId bindingSourceSelectionModeProperty = nameof(bindingSourceSelectionMode);
@@ -1310,11 +1314,10 @@ namespace UnityEngine.UIElements
         }
 
         /// <summary>The size field shows the item count: beside the foldout toggle with a header, else
-        /// first in the list labelled "Size" (only for bound collections, which Unbound does not
-        /// have). Editing it adds or removes items at the end.</summary>
+        /// first in the list labelled "Size" for bound collections. Editing it adds or removes items at the end.</summary>
         internal void SetupArraySizeField()
         {
-            if (!showBoundCollectionSize || !showFoldoutHeader || m_DrawnHeader != null)
+            if (!showBoundCollectionSize || (!showFoldoutHeader && GetProperty("__unity-collection-view-internal-binding") == null) || m_DrawnHeader != null)
             {
                 m_ArraySizeField?.RemoveFromHierarchy();
                 return;
@@ -1329,9 +1332,23 @@ namespace UnityEngine.UIElements
             }
             m_ArraySizeField.EnableInClassList(arraySizeFieldWithFooterUssClassName, showAddRemoveFooter);
             m_ArraySizeField.EnableInClassList(arraySizeFieldWithHeaderUssClassName, showFoldoutHeader);
-            m_ArraySizeField.label = string.Empty;
-            hierarchy.Add(m_ArraySizeField);
+            if (showFoldoutHeader)
+            {
+                m_ArraySizeField.label = string.Empty;
+                hierarchy.Add(m_ArraySizeField);
+            }
+            else
+            {
+                m_ArraySizeField.label = k_SizeFieldLabel;
+                hierarchy.Insert(0, m_ArraySizeField);
+            }
             UpdateArraySizeField();
+        }
+
+        internal void SetOverMaxMultiEditLimit(bool isOverLimit, int maxMultiEditCount)
+        {
+            m_IsOverMultiEditLimit = isOverLimit;
+            m_MaxMultiEditStr = $"This field cannot display arrays with more than {maxMultiEditCount} elements when multiple objects are selected.";
         }
 
         void EnableFooter(bool enabled)
@@ -1375,7 +1392,11 @@ namespace UnityEngine.UIElements
             if (count == 0 && size == viewController.GetItemsMinCount()) return;
             if (size > count) viewController.AddItems(size - count);
             else if (size < count) viewController.RemoveItems(count - size);
-            else if (size == 0) viewController.ClearItems();
+            else if (size == 0)
+            {
+                viewController.ClearItems();
+                m_IsOverMultiEditLimit = false;
+            }
             UpdateListViewLabel();
         }
 
@@ -1385,7 +1406,7 @@ namespace UnityEngine.UIElements
         {
             if (!HasValidDataAndBindings() || m_ArraySizeField == null) return;
             if (!m_ArraySizeField.showMixedValue) m_ArraySizeField.SetValueWithoutNotify(viewController.GetItemsMinCount().ToString());
-            footer?.SetEnabled(true);
+            footer?.SetEnabled(!m_IsOverMultiEditLimit);
         }
 
         /// <summary>"+": the override, else onAdd, else one new item; when the count changed, the new
@@ -1440,7 +1461,7 @@ namespace UnityEngine.UIElements
             bool empty = itemsSource.Count == 0;
             if (empty)
             {
-                if (m_MakeNoneElement != null)
+                if (m_MakeNoneElement != null && !m_IsOverMultiEditLimit)
                 {
                     m_NoneElement ??= m_MakeNoneElement();
                     scrollView.contentViewport.Add(m_NoneElement);
@@ -1450,7 +1471,7 @@ namespace UnityEngine.UIElements
                 else
                 {
                     m_ListViewLabel ??= new Label();
-                    m_ListViewLabel.text = k_EmptyListStr;
+                    m_ListViewLabel.text = m_IsOverMultiEditLimit ? m_MaxMultiEditStr : k_EmptyListStr;
                     scrollView.contentViewport.Add(m_ListViewLabel);
                     m_NoneElement?.RemoveFromHierarchy();
                     m_NoneElement = null;
@@ -1463,8 +1484,8 @@ namespace UnityEngine.UIElements
                 m_ListViewLabel?.RemoveFromHierarchy();
                 m_ListViewLabel = null;
             }
-            m_ListViewLabel?.EnableInClassList(emptyLabelUssClassName, empty);
-            m_ListViewLabel?.EnableInClassList(overMaxMultiEditLimitClassName, false);
+            m_ListViewLabel?.EnableInClassList(emptyLabelUssClassName, empty && !m_IsOverMultiEditLimit);
+            m_ListViewLabel?.EnableInClassList(overMaxMultiEditLimitClassName, empty && m_IsOverMultiEditLimit);
         }
 
         private protected override void CreateVirtualizationController() => CreateVirtualizationController<ReusableListViewItem>();
@@ -1707,8 +1728,108 @@ namespace UnityEngine.UIElements
         protected void RaiseItemIndexChanged(int srcIndex, int dstIndex) => itemIndexChanged?.Invoke(srcIndex, dstIndex);
     }
 
+    internal partial interface ISerializedObjectList : IList, ICollection, IEnumerable
+    {
+        void ApplyChanges();
+        void RemoveAt(int index, int listCount);
+        void Move(int srcIndex, int destIndex);
+        int minArraySize { get; }
+        int arraySize { get; set; }
+    }
+
     public abstract partial class BaseListViewController : CollectionViewController
     {
+        private protected partial class SerializedObjectListControllerImpl
+        {
+            readonly BaseListViewController m_BaseListViewController;
+            readonly Func<ISerializedObjectList> m_SerializedObjectListGetter;
+            readonly List<int> m_ScratchIndices = new List<int>();
+
+            ISerializedObjectList serializedObjectList => m_SerializedObjectListGetter?.Invoke();
+
+            internal SerializedObjectListControllerImpl(BaseListViewController baseListViewController, Func<ISerializedObjectList> serializedObjectListGetter)
+            {
+                m_BaseListViewController = baseListViewController;
+                m_SerializedObjectListGetter = serializedObjectListGetter;
+            }
+
+            public int GetItemsCount() => serializedObjectList?.Count ?? 0;
+
+            internal int GetItemsMinCount() => serializedObjectList?.minArraySize ?? 0;
+
+            public void AddItems(int itemCount)
+            {
+                if (itemCount <= 0 || serializedObjectList == null) return;
+                int itemsCount = GetItemsCount();
+                serializedObjectList.arraySize += itemCount;
+                serializedObjectList.ApplyChanges();
+                m_ScratchIndices.Clear();
+                for (int i = 0; i < itemCount; i++) m_ScratchIndices.Add(itemsCount + i);
+                m_BaseListViewController.RaiseItemsAdded(m_ScratchIndices);
+                m_ScratchIndices.Clear();
+                m_BaseListViewController.RaiseOnSizeChanged();
+            }
+
+            internal void RemoveItems(int itemCount)
+            {
+                if (itemCount <= 0 || serializedObjectList == null) return;
+                int itemsCount = GetItemsCount();
+                serializedObjectList.arraySize -= itemCount;
+                m_ScratchIndices.Clear();
+                for (int i = itemsCount - itemCount; i < itemsCount; i++) m_ScratchIndices.Add(i);
+                m_BaseListViewController.RaiseItemsRemoved(m_ScratchIndices);
+                m_ScratchIndices.Clear();
+                serializedObjectList.ApplyChanges();
+                m_BaseListViewController.RaiseOnSizeChanged();
+            }
+
+            public void RemoveItems(List<int> indices)
+            {
+                if (indices == null || serializedObjectList == null) return;
+                indices.Sort();
+                m_BaseListViewController.RaiseItemsRemoved(indices);
+                int count = serializedObjectList.Count;
+                for (int i = indices.Count - 1; i >= 0; i--)
+                {
+                    serializedObjectList.RemoveAt(indices[i], count);
+                    count--;
+                }
+                serializedObjectList.ApplyChanges();
+                m_BaseListViewController.RaiseOnSizeChanged();
+            }
+
+            public void RemoveItem(int index)
+            {
+                if (serializedObjectList == null) return;
+                m_ScratchIndices.Clear();
+                m_ScratchIndices.Add(index);
+                m_BaseListViewController.RaiseItemsRemoved(m_ScratchIndices);
+                m_ScratchIndices.Clear();
+                serializedObjectList.RemoveAt(index);
+                serializedObjectList.ApplyChanges();
+                m_BaseListViewController.RaiseOnSizeChanged();
+            }
+
+            public void ClearItems()
+            {
+                if (serializedObjectList == null) return;
+                int minCount = GetItemsMinCount();
+                var indices = Enumerable.Range(0, Math.Max(0, minCount - 1));
+                serializedObjectList.arraySize = 0;
+                serializedObjectList.ApplyChanges();
+                m_BaseListViewController.RaiseItemsRemoved(indices);
+                m_BaseListViewController.RaiseOnSizeChanged();
+            }
+
+            public void Move(int srcIndex, int destIndex)
+            {
+                if (srcIndex == destIndex || serializedObjectList == null) return;
+                serializedObjectList.Move(srcIndex, destIndex);
+                serializedObjectList.ApplyChanges();
+                m_BaseListViewController.RaiseItemIndexChanged(srcIndex, destIndex);
+            }
+        }
+
         protected BaseListView baseListView => view as BaseListView;
 
         public event Action itemsSourceSizeChanged;

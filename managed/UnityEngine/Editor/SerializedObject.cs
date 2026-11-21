@@ -342,8 +342,16 @@ namespace UnityEditor
 
         internal int hashCodeForPropertyPath => ComputePathHash(propertyPath);
 
-        internal bool isValid => m_SerializedObject != null && m_SerializedObject.isValid && !m_UnboundAtEnd
-            && (m_UnboundNode != null || SerializedTree.Find(m_SerializedObject.m_UnboundRoot, m_UnboundPath) != null);
+        internal bool isValid
+        {
+            get
+            {
+                if (m_SerializedObject == null || !m_SerializedObject.isValid || m_UnboundAtEnd) return false;
+                if (m_UnboundVersion != m_SerializedObject.m_UnboundTreeVersion)
+                    return SerializedTree.Find(m_SerializedObject.m_UnboundRoot, m_UnboundPath) != null;
+                return m_UnboundNode != null;
+            }
+        }
 
         static int ComputePathHash(string path)
         {
@@ -603,7 +611,7 @@ namespace UnityEditor
             get
             {
                 var n = N;
-                if (n.Kind == SerializedNodeKind.Array) return n.ArrayCount;
+                if (n.Kind == SerializedNodeKind.Array) return m_SerializedObject.isEditingMultipleObjects ? minArraySize : n.ArrayCount;
                 if (n.TypeTree && n.Kind == SerializedNodeKind.ArrayContainer) return n.Children.Count - 1;
                 if (n.PropertyType == SerializedPropertyType.String && n.Kind == SerializedNodeKind.Leaf) return ((string)n.Value).Length;
                 return 0;
@@ -616,7 +624,22 @@ namespace UnityEditor
                     Debug.LogError("Property is not an array.");
                     return;
                 }
-                if (SerializedTree.Resize(n, value)) Changed(structural: true);
+                bool resized = SerializedTree.Resize(n, value);
+                if (!resized && m_SerializedObject.isEditingMultipleObjects && value >= 0 && !n.FixedSize && n.ArrayCount == value)
+                {
+                    foreach (var root in m_SerializedObject.OtherRoots())
+                    {
+                        var other = root == null ? null : SerializedTree.Find(root, n.Path);
+                        if (other != null && other.Kind == SerializedNodeKind.Array && other.ArrayCount != value)
+                        {
+                            if (n.ArrayContainer?.Children.Count > 0)
+                                SerializedTree.MarkNodeDirty(n.ArrayContainer.Children[0]);
+                            resized = true;
+                            break;
+                        }
+                    }
+                }
+                if (resized) Changed(structural: true);
             }
         }
 

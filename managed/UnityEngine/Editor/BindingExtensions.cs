@@ -9,8 +9,8 @@ using UnityEngine.UIElements;
 // Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
 // BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, Color/Color32,
 // Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Rect, RectInt, Bounds, BoundsInt,
-// AnimationCurve, Gradient, ObjectReference, Hash128, LayerMask, and RenderingLayerMask fields
-// plus Foldout isExpanded binding),
+// AnimationCurve, Gradient, ObjectReference, Hash128, LayerMask, RenderingLayerMask, generic
+// inline-foldout, and array/list ListView fields plus Foldout isExpanded binding),
 // BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
 // BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
 // SerializedObject binding context/updater pipeline that synchronizes fields and polls changes
@@ -25,7 +25,8 @@ using UnityEngine.UIElements;
 // tests/projects/vector3intbinding, tests/projects/rectbinding, tests/projects/rectintbinding,
 // tests/projects/boundsbinding, tests/projects/boundsintbinding, tests/projects/curvebinding,
 // tests/projects/gradientbinding, tests/projects/objectbinding, tests/projects/hash128binding,
-// tests/projects/maskbinding, tests/projects/trackpropertyvalue and
+// tests/projects/maskbinding, tests/projects/genericfoldoutbinding,
+// tests/projects/arraylistbinding, tests/projects/trackpropertyvalue and
 // tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
@@ -1107,6 +1108,12 @@ namespace UnityEditor.UIElements.Bindings
                 SerializedObjectBinding<string>.CreateBind(titleLabel, this, prop, s_GetDisplayName, s_NoopSetString, SerializedPropertyHelper.ValueEquals);
                 return;
             }
+            if (element is BaseListView baseListView && BindListView(baseListView, prop))
+            {
+                if (baseListView.headerFoldout != null)
+                    baseListView.headerFoldout.bindingPath = prop.propertyPath;
+                return;
+            }
             switch (prop.propertyType)
             {
                 case SerializedPropertyType.Boolean:
@@ -1227,8 +1234,6 @@ namespace UnityEditor.UIElements.Bindings
                 case SerializedPropertyType.Generic:
                     if (prop.type == "ToggleButtonGroupState")
                         Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty (ToggleButtonGroupState)");
-                    else if (element is BaseListView)
-                        Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding");
                     break;
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.BindingExtensions.BindProperty ({prop.propertyType})");
@@ -1298,6 +1303,22 @@ namespace UnityEditor.UIElements.Bindings
                 return;
             }
             Debug.LogWarning($"Field type {element.GetType().FullName} is not compatible with {prop.type} property \"{prop.propertyPath}\"");
+        }
+
+        bool BindListView(BaseListView baseListView, SerializedProperty prop)
+        {
+            if (prop.propertyType == SerializedPropertyType.Generic)
+            {
+                var arraySizeProp = prop.FindPropertyRelative("Array.size");
+                if (arraySizeProp == null)
+                {
+                    Debug.LogWarning($"Binding ListView failed: can't find array size for property \"{prop.propertyPath}\"");
+                    return false;
+                }
+                return BaseListViewSerializedObjectBinding.CreateBind(baseListView, this, prop);
+            }
+            Debug.LogWarning($"Binding ListView is not supported for {prop.type} properties \"{prop.propertyPath}\"");
+            return false;
         }
 
         void RemoveBinding(IBindable bindable, bool forceRemove)

@@ -798,45 +798,6 @@ namespace UnityEditor.UIElements
 namespace UnityEditor.UIElements.Bindings
 {
     [global::Unbound.Stub]
-    internal unsafe abstract partial class BaseListViewSerializedObjectBinding : global::UnityEditor.UIElements.Bindings.SerializedObjectBindingBase
-    {
-        [global::Unbound.Stub] protected global::UnityEditor.UIElements.Bindings.SerializedObjectList m_DataList;
-        [global::Unbound.Stub] protected global::UnityEngine.UIElements.EventCallback<global::UnityEngine.UIElements.DragUpdatedEvent> m_DragUpdatedCallback;
-        [global::Unbound.Stub] protected global::UnityEngine.UIElements.EventCallback<global::UnityEngine.UIElements.DragPerformEvent> m_DragPerformCallback;
-        [global::Unbound.Stub] protected global::UnityEngine.UIElements.EventCallback<global::UnityEditor.UIElements.SerializedObjectBindEvent> m_SerializedObjectBindEventCallback;
-        [global::Unbound.Stub] protected global::System.Func<global::UnityEngine.UIElements.VisualElement> m_DefaultMakeItem;
-        [global::Unbound.Stub] protected global::System.Action<global::UnityEngine.UIElements.VisualElement, int> m_DefaultBindItem;
-        [global::Unbound.Stub] protected global::System.Action<global::UnityEngine.UIElements.VisualElement, int> m_DefaultUnbindItem;
-        [global::Unbound.Stub] protected BaseListViewSerializedObjectBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding.ctor"); }
-        [global::Unbound.Stub] public override void OnRelease() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding.OnRelease"); }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.BindingResult OnUpdate(in global::UnityEngine.UIElements.BindingContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding.OnUpdate"); return default; }
-        [global::Unbound.Stub] public override void OnPropertyValueChanged(global::UnityEditor.SerializedProperty currentPropertyIterator) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding.OnPropertyValueChanged"); }
-        [global::Unbound.Stub] protected override void ResetCachedValues() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding.ResetCachedValues"); }
-        [global::Unbound.Stub] public static bool CreateBind(global::UnityEngine.UIElements.BaseListView baseListView, global::UnityEditor.UIElements.Bindings.SerializedObjectBindingContext context, global::UnityEditor.SerializedProperty prop) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding.CreateBind"); return default; }
-        [global::Unbound.Stub] protected void BindListViewItem(global::UnityEngine.UIElements.VisualElement ve, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding.BindListViewItem"); }
-        [global::Unbound.Stub] protected void BindListViewItem(global::UnityEngine.UIElements.VisualElement ve, string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding.BindListViewItem"); }
-        protected abstract void SetEditorViewController();
-        protected abstract global::UnityEngine.UIElements.VisualElement MakeItem();
-        protected abstract void SetDefaultCallbacks();
-        protected abstract bool HasDefaultBindItem();
-        protected abstract void ResetCallbacks();
-        protected abstract void PoolRelease();
-        protected override string bindingId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding.bindingId"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class EditorListViewController : global::UnityEngine.UIElements.ListViewController
-    {
-        [global::Unbound.Stub] public EditorListViewController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.EditorListViewController.ctor"); }
-        [global::Unbound.Stub] public override int GetItemsCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.EditorListViewController.GetItemsCount"); return default; }
-        [global::Unbound.Stub] internal override int GetItemsMinCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.EditorListViewController.GetItemsMinCount"); return default; }
-        [global::Unbound.Stub] public override void AddItems(int itemCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.EditorListViewController.AddItems"); }
-        [global::Unbound.Stub] internal override void RemoveItems(int itemCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.EditorListViewController.RemoveItems"); }
-        [global::Unbound.Stub] public override void RemoveItems(global::System.Collections.Generic.List<int> indices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.EditorListViewController.RemoveItems"); }
-        [global::Unbound.Stub] public override void RemoveItem(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.EditorListViewController.RemoveItem"); }
-        [global::Unbound.Stub] public override void ClearItems() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.EditorListViewController.ClearItems"); }
-        [global::Unbound.Stub] public override void Move(int srcIndex, int destIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.EditorListViewController.Move"); }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class EditorMultiColumnListViewController : global::UnityEngine.UIElements.MultiColumnListViewController
     {
         [global::Unbound.Stub] public override int GetItemsCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.EditorMultiColumnListViewController.GetItemsCount"); return default; }
@@ -850,18 +811,6 @@ namespace UnityEditor.UIElements.Bindings
         [global::Unbound.Stub] public EditorMultiColumnListViewController(global::UnityEngine.UIElements.Columns columns, global::UnityEngine.UIElements.SortColumnDescriptions sortDescriptions, global::System.Collections.Generic.List<global::UnityEngine.UIElements.SortColumnDescription> sortedColumns) : base(default(global::UnityEngine.UIElements.Columns), default(global::UnityEngine.UIElements.SortColumnDescriptions), default(global::System.Collections.Generic.List<global::UnityEngine.UIElements.SortColumnDescription>)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.EditorMultiColumnListViewController.ctor"); }
     }
     [global::Unbound.Stub]
-    internal unsafe partial class ListViewSerializedObjectBinding : global::UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding
-    {
-        [global::Unbound.Stub] public ListViewSerializedObjectBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.ListViewSerializedObjectBinding.ctor"); }
-        [global::Unbound.Stub] public static global::UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding GetFromPool() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.ListViewSerializedObjectBinding.GetFromPool"); return default; }
-        [global::Unbound.Stub] protected override void SetEditorViewController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.ListViewSerializedObjectBinding.SetEditorViewController"); }
-        [global::Unbound.Stub] protected override global::UnityEngine.UIElements.VisualElement MakeItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.ListViewSerializedObjectBinding.MakeItem"); return default; }
-        [global::Unbound.Stub] protected override void SetDefaultCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.ListViewSerializedObjectBinding.SetDefaultCallbacks"); }
-        [global::Unbound.Stub] protected override bool HasDefaultBindItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.ListViewSerializedObjectBinding.HasDefaultBindItem"); return default; }
-        [global::Unbound.Stub] protected override void ResetCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.ListViewSerializedObjectBinding.ResetCallbacks"); }
-        [global::Unbound.Stub] protected override void PoolRelease() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.ListViewSerializedObjectBinding.PoolRelease"); }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class MultiColumnListViewSerializedObjectBinding : global::UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding
     {
         [global::Unbound.Stub] public static global::UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding GetFromPool() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.MultiColumnListViewSerializedObjectBinding.GetFromPool"); return default; }
@@ -872,41 +821,6 @@ namespace UnityEditor.UIElements.Bindings
         [global::Unbound.Stub] protected override void ResetCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.MultiColumnListViewSerializedObjectBinding.ResetCallbacks"); }
         [global::Unbound.Stub] protected override void PoolRelease() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.MultiColumnListViewSerializedObjectBinding.PoolRelease"); }
         [global::Unbound.Stub] public MultiColumnListViewSerializedObjectBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.MultiColumnListViewSerializedObjectBinding.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class SerializedObjectList : global::UnityEngine.UIElements.ISerializedObjectList, global::System.Collections.IList, global::System.Collections.ICollection, global::System.Collections.IEnumerable
-    {
-        [global::Unbound.Stub] public SerializedObjectList(global::UnityEditor.SerializedProperty parentProperty) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.ctor"); }
-        [global::Unbound.Stub] public void RefreshProperties() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.RefreshProperties"); }
-        bool global::System.Collections.ICollection.IsSynchronized { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.IsSynchronized"); return default; } }
-        object global::System.Collections.ICollection.SyncRoot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.SyncRoot"); return default; } }
-        [global::Unbound.Stub] public int Add(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.Add"); return default; }
-        [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.Clear"); }
-        [global::Unbound.Stub] public bool Contains(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.Contains"); return default; }
-        [global::Unbound.Stub] public void CopyTo(global::System.Array array, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.CopyTo"); }
-        [global::Unbound.Stub] public global::System.Collections.IEnumerator GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.GetEnumerator"); return default; }
-        [global::Unbound.Stub] public int IndexOf(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.IndexOf"); return default; }
-        [global::Unbound.Stub] public void Move(int srcIndex, int destIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.Move"); }
-        [global::Unbound.Stub] public void ApplyChanges() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.ApplyChanges"); }
-        [global::Unbound.Stub] public void Insert(int index, object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.Insert"); }
-        [global::Unbound.Stub] public void Remove(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.Remove"); }
-        [global::Unbound.Stub] public void RemoveAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.RemoveAt"); }
-        [global::Unbound.Stub] public void RemoveAt(int index, int listCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.RemoveAt"); }
-        public global::UnityEditor.SerializedProperty ArrayProperty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.ArrayProperty"); return default; } }
-        public global::UnityEditor.SerializedProperty ArraySize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.ArraySize"); return default; } }
-        public object this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.this[]"); } }
-        public bool IsReadOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.IsReadOnly"); return default; } }
-        public bool IsFixedSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.IsFixedSize"); return default; } }
-        public int Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.Count"); return default; } }
-        internal bool IsOverMaxMultiEditLimit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.IsOverMaxMultiEditLimit"); return default; } }
-        public int minArraySize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.minArraySize"); return default; } }
-        public int arraySize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.arraySize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectList.arraySize"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class SerializedObjectListReorderableDragAndDropController : global::UnityEngine.UIElements.ListViewReorderableDragAndDropController
-    {
-        [global::Unbound.Stub] public SerializedObjectListReorderableDragAndDropController(global::UnityEngine.UIElements.BaseListView baseListView) : base(default(global::UnityEngine.UIElements.BaseListView)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectListReorderableDragAndDropController.ctor"); }
-        [global::Unbound.Stub] public override void OnDrop(global::UnityEngine.UIElements.IListDragAndDropArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectListReorderableDragAndDropController.OnDrop"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class SerializedObjectStringConversionBinding<TValue> : global::UnityEditor.UIElements.Bindings.SerializedObjectBindingPropertyToBaseField<TValue, string>

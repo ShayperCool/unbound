@@ -156,6 +156,8 @@ namespace UnityEngine.Tests
                 new NamedInlineItem { name = "Scout", power = 3 },
                 new NamedInlineItem { name = "", power = 1 }
             };
+            public int[] numbers = new[] { 10, 20, 30 };
+            public List<string> tags = new List<string> { "a", "b" };
             public string[] items = new[] { "x", "y" };
             public SparseChoice sparseEnum = SparseChoice.TwentyFive;
             public SignedChoice signedEnum = SignedChoice.MinusFive;
@@ -2924,6 +2926,133 @@ namespace UnityEngine.Tests
                 Tick(panel);
                 Assert.Equal(500, t2.nested.score);
                 Assert.Equal("rt-gen-1", pfMulti.tooltip);
+            }
+            finally
+            {
+                soMulti.Dispose();
+                soSingle.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyArrayAndListListViewResizeMultiEditReuseAndDisposedCleanupWorkAcrossReleases()
+        {
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t2.numbers = new[] { 10 };
+
+            using var panel = RuntimePanel.Create(settings);
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var soSingle = new SerializedObject(t1);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                // PropertyField creates ListView for int[] with foldout header, size field, and PropertyField rows.
+                var pNumbers = soSingle.FindProperty("numbers");
+                pNumbers.isExpanded = true;
+                var pf = new PropertyField(pNumbers);
+                pf.style.width = 400f;
+                pf.style.height = 240f;
+                panel.visualTree.Add(pf);
+                pf.Bind(soSingle);
+                Tick(panel);
+                Tick(panel);
+
+                var lv = Assert.IsType<ListView>(pf.hierarchy[0]);
+                Assert.Equal("unity-list-numbers", lv.name);
+                Assert.Equal("Numbers", lv.headerTitle);
+                Assert.Equal(3, lv.itemsSource.Count);
+                Assert.Equal("3", lv.arraySizeField.value);
+                var row0 = lv.GetRootElementForIndex(0).Q<IntegerField>();
+                Assert.Equal(10, row0.value);
+
+                // Element UI->SO edit, external mutation, controller Add/Remove/Move, and size-field resize.
+                row0.value = 111;
+                Tick(panel);
+                Assert.Equal(111, t1.numbers[0]);
+
+                t1.numbers[2] = 333;
+                Tick(panel);
+                Assert.Equal(333, lv.GetRootElementForIndex(2).Q<IntegerField>().value);
+
+                lv.viewController.AddItems(1);
+                Tick(panel);
+                Assert.Equal(new[] { 111, 20, 333, 333 }, t1.numbers);
+                lv.viewController.RemoveItem(1);
+                Tick(panel);
+                Assert.Equal(new[] { 111, 333, 333 }, t1.numbers);
+                lv.viewController.Move(0, 2);
+                Tick(panel);
+                Assert.Equal(new[] { 333, 333, 111 }, t1.numbers);
+
+                lv.arraySizeField.value = "0";
+                Tick(panel);
+                Tick(panel);
+                Assert.Empty(t1.numbers);
+                Assert.Empty(lv.itemsSource);
+                t1.numbers = new[] { 7, 8 };
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(2, lv.itemsSource.Count);
+                Assert.Equal("2", lv.arraySizeField.value);
+                Assert.Equal(7, lv.GetRootElementForIndex(0).Q<IntegerField>().value);
+                Assert.Equal(8, lv.GetRootElementForIndex(1).Q<IntegerField>().value);
+
+                // PropertyField reuses ListView when rebinding int[] -> List<string>.
+                var pTags = soSingle.FindProperty("tags");
+                pTags.isExpanded = true;
+                pf.BindProperty(pTags);
+                Tick(panel);
+                Tick(panel);
+                Assert.Same(lv, pf.hierarchy[0]);
+                Assert.Equal("unity-list-tags", lv.name);
+                Assert.Equal(2, lv.itemsSource.Count);
+                Assert.Equal("b", lv.GetRootElementForIndex(1).Q<TextField>().value);
+
+                // Multi-object different-size array shows mixed size field, preserves each target's own elements on resize,
+                // and coexists with runtime DataBinding after SerializedObject.Dispose().
+                t1.numbers = new[] { 10, 20, 30 };
+                soMulti.Update();
+                var pMulti = soMulti.FindProperty("numbers");
+                pMulti.isExpanded = true;
+                var rt = new RuntimeModel { text = "rt-list-0" };
+                var pfMulti = new PropertyField(pMulti) { dataSource = rt };
+                pfMulti.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                pfMulti.style.width = 400f;
+                pfMulti.style.height = 240f;
+                panel.visualTree.Add(pfMulti);
+                pfMulti.Bind(soMulti);
+                Tick(panel);
+                Tick(panel);
+
+                var lvMulti = Assert.IsType<ListView>(pfMulti.hierarchy[0]);
+                Assert.Equal(1, lvMulti.itemsSource.Count);
+                Assert.True(lvMulti.arraySizeField.showMixedValue);
+                Assert.Equal("1", lvMulti.arraySizeField.value);
+                Assert.Equal("rt-list-0", pfMulti.tooltip);
+
+                lvMulti.arraySizeField.value = "2";
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(new[] { 10, 20 }, t1.numbers);
+                Assert.Equal(new[] { 10, 10 }, t2.numbers);
+                Assert.False(lvMulti.arraySizeField.showMixedValue);
+                Assert.True(lvMulti.GetRootElementForIndex(1).Q<IntegerField>().showMixedValue);
+
+                soMulti.Dispose();
+                rt.text = "rt-list-1";
+                Tick(panel);
+                Tick(panel);
+                Assert.Null(lvMulti.itemsSource);
+                Assert.Equal("rt-list-1", pfMulti.tooltip);
             }
             finally
             {

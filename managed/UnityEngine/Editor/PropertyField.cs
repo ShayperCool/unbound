@@ -10,20 +10,22 @@ using UnityEngine.UIElements;
 // Editor UI Toolkit PropertyField for supported scalar, enum, Color/Color32 (including
 // ColorUsageAttribute), Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Rect, RectInt, Bounds,
 // BoundsInt, AnimationCurve, Gradient (including GradientUsageAttribute), ObjectReference, Hash128,
-// LayerMask, RenderingLayerMask, and non-array Generic inline-foldout SerializedProperty types
-// (bool, int, long, uint, ulong, float, double, string, ordinary and [Flags] enum, Color/Color32,
-// Vector2, Vector3, Vector4 and Generic inline Foldout with lazy child PropertyFields, Vector2Int,
-// Vector3Int, Rect, RectInt, Bounds, BoundsInt, AnimationCurve, Gradient, ObjectReference, Hash128,
-// LayerMask, and RenderingLayerMask) and SerializedPropertyBindEvent. Documented in Unity 6000.0
-// Scripting API ("PropertyField", "PropertyField.RegisterValueChangeCallback",
-// "ColorUsageAttribute", "GradientUsageAttribute"); matches the Unity 6000.0.71f1 Editor,
-// tests/projects/propertyfield, tests/projects/enumbinding, tests/projects/enumflagsbinding,
+// LayerMask, RenderingLayerMask, non-array Generic inline-foldout, and array/list SerializedProperty
+// types (bool, int, long, uint, ulong, float, double, string, ordinary and [Flags] enum,
+// Color/Color32, Vector2, Vector3, Vector4 and Generic inline Foldout with lazy child
+// PropertyFields, ListView for arrays/lists, Vector2Int, Vector3Int, Rect, RectInt, Bounds,
+// BoundsInt, AnimationCurve, Gradient, ObjectReference, Hash128, LayerMask, and
+// RenderingLayerMask), SerializedPropertyBindEvent, and SerializedObjectBindEvent. Documented in
+// Unity 6000.0 Scripting API ("PropertyField", "PropertyField.RegisterValueChangeCallback",
+// "ListView", "ColorUsageAttribute", "GradientUsageAttribute"); matches the Unity 6000.0.71f1
+// Editor, tests/projects/propertyfield, tests/projects/enumbinding, tests/projects/enumflagsbinding,
 // tests/projects/colorbinding, tests/projects/vector2binding, tests/projects/vector3binding,
 // tests/projects/vector4binding, tests/projects/vector2intbinding,
 // tests/projects/vector3intbinding, tests/projects/rectbinding, tests/projects/rectintbinding,
 // tests/projects/boundsbinding, tests/projects/boundsintbinding, tests/projects/curvebinding,
 // tests/projects/gradientbinding, tests/projects/objectbinding, tests/projects/hash128binding,
-// tests/projects/maskbinding, and tests/projects/genericfoldoutbinding.
+// tests/projects/maskbinding, tests/projects/genericfoldoutbinding, and
+// tests/projects/arraylistbinding.
 
 namespace UnityEditor.UIElements
 {
@@ -56,6 +58,37 @@ namespace UnityEditor.UIElements
         }
 
         public SerializedPropertyBindEvent() => LocalInit();
+    }
+
+    [EventCategory(EventCategory.Bind)]
+    internal partial class SerializedObjectBindEvent : EventBase<SerializedObjectBindEvent>
+    {
+        SerializedObject m_BindObject;
+
+        public SerializedObject bindObject => m_BindObject;
+
+        static SerializedObjectBindEvent() => SetCreateFunction(() => new SerializedObjectBindEvent());
+
+        protected override void Init()
+        {
+            base.Init();
+            LocalInit();
+        }
+
+        void LocalInit()
+        {
+            propagation = EventPropagation.None;
+            m_BindObject = null;
+        }
+
+        public static SerializedObjectBindEvent GetPooled(SerializedObject obj)
+        {
+            var evt = EventBase<SerializedObjectBindEvent>.GetPooled();
+            evt.m_BindObject = obj;
+            return evt;
+        }
+
+        public SerializedObjectBindEvent() => LocalInit();
     }
 
     public partial class PropertyField : VisualElement, IBindable
@@ -129,6 +162,7 @@ namespace UnityEditor.UIElements
         internal static readonly string foldoutTitleBoundLabelProperty = "unity-foldout-bound-title";
         internal static readonly string decoratorDrawersContainerClassName = "unity-decorator-drawers-container";
         internal static readonly string listViewBoundFieldProperty = "unity-list-view-property-field-bound";
+        static readonly string listViewNamePrefix = "unity-list-";
 
         public static readonly string ussClassName = "unity-property-field";
         public static readonly string labelUssClassName = ussClassName + "__label";
@@ -159,6 +193,7 @@ namespace UnityEditor.UIElements
         static readonly Func<Hash128Field> s_CreateHash128Field = () => new Hash128Field();
         static readonly Func<LayerMaskField> s_CreateLayerMaskField = () => new LayerMaskField();
         static readonly Func<RenderingLayerMaskField> s_CreateRenderingLayerMaskField = () => new RenderingLayerMaskField();
+        static readonly Func<ListView> s_CreateListView = () => new ListView();
 
         string m_Label;
         SerializedObject m_SerializedObject;
@@ -445,6 +480,34 @@ namespace UnityEditor.UIElements
             field.AddToClassList(BaseField<TValue>.alignedFieldUssClassName);
         }
 
+        VisualElement ConfigureListView(ListView listView, SerializedProperty property, Func<ListView> factory)
+        {
+            if (listView == null)
+            {
+                listView = factory();
+                listView.showBorder = true;
+                listView.selectionType = SelectionType.Multiple;
+                listView.showAddRemoveFooter = true;
+                listView.showBoundCollectionSize = true;
+                listView.showFoldoutHeader = true;
+                listView.virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight;
+                listView.showAlternatingRowBackgrounds = AlternatingRowBackground.None;
+                listView.itemsSourceSizeChanged += DispatchPropertyChangedEvent;
+            }
+            var copy = property.Copy();
+            string listName = listViewNamePrefix + property.propertyPath;
+            listView.headerTitle = string.IsNullOrEmpty(label) ? copy.displayName : label;
+            listView.userData = copy;
+            listView.bindingPath = property.propertyPath;
+            listView.viewDataKey = listName;
+            listView.name = listName;
+            listView.SetProperty(listViewBoundFieldProperty, this);
+            listView.SetProperty(BaseField<string>.serializedPropertyCopyName, copy);
+            var toggle = listView.headerFoldout?.toggle;
+            if (toggle != null) toggle.acceptClicksIfDisabled = true;
+            return listView;
+        }
+
         VisualElement CreateOrUpdateFieldFromProperty(SerializedProperty property, object originalField)
         {
             if (property.propertyType == SerializedPropertyType.Vector4
@@ -561,12 +624,7 @@ namespace UnityEditor.UIElements
                         Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField (ToggleButtonGroupState)");
                         return null;
                     }
-                    if (property.isArray)
-                    {
-                        Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField (Array)");
-                        return null;
-                    }
-                    return null;
+                    return property.isArray ? ConfigureListView(originalField as ListView, property, s_CreateListView) : null;
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField ({property.propertyType})");
                     return null;

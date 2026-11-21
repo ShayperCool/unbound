@@ -162,8 +162,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId onAddProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId allowRemoveProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId onRemoveProperty;
-        [global::Unbound.Stub] internal void SetOverMaxMultiEditLimit(bool isOverLimit, int maxMultiEditCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.SetOverMaxMultiEditLimit"); }
-        internal global::UnityEngine.UIElements.TextField arraySizeField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.arraySizeField"); return default; } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseVerticalCollectionView.UxmlSerializedData
@@ -177,19 +175,6 @@ namespace UnityEngine.UIElements
     {
         internal const string k_NullItemSourceError = "Unable to add or remove items because the source is not defined. Please assign a valid items source.";
         internal const string k_FixedItemSourceError = "Unable to add or remove items because the items source is a fixed size.";
-        [global::Unbound.Stub]
-        private protected unsafe partial class SerializedObjectListControllerImpl
-        {
-            [global::Unbound.Stub] internal SerializedObjectListControllerImpl(global::UnityEngine.UIElements.BaseListViewController baseListViewController, global::System.Func<global::UnityEngine.UIElements.ISerializedObjectList> serializedObjectListGetter) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.SerializedObjectListControllerImpl.ctor"); }
-            [global::Unbound.Stub] public int GetItemsCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.SerializedObjectListControllerImpl.GetItemsCount"); return default; }
-            [global::Unbound.Stub] internal int GetItemsMinCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.SerializedObjectListControllerImpl.GetItemsMinCount"); return default; }
-            [global::Unbound.Stub] public void AddItems(int itemCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.SerializedObjectListControllerImpl.AddItems"); }
-            [global::Unbound.Stub] internal void RemoveItems(int itemCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.SerializedObjectListControllerImpl.RemoveItems"); }
-            [global::Unbound.Stub] public void RemoveItems(global::System.Collections.Generic.List<int> indices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.SerializedObjectListControllerImpl.RemoveItems"); }
-            [global::Unbound.Stub] public void RemoveItem(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.SerializedObjectListControllerImpl.RemoveItem"); }
-            [global::Unbound.Stub] public void ClearItems() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.SerializedObjectListControllerImpl.ClearItems"); }
-            [global::Unbound.Stub] public void Move(int srcIndex, int destIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.SerializedObjectListControllerImpl.Move"); }
-        }
     }
     unsafe partial class BasePopupField<TValueType, TValueChoice>
     {
@@ -1483,14 +1468,6 @@ namespace UnityEngine.UIElements
         bool ContainsKey(string key);
         void OnBeforeSerialize();
         void OnAfterDeserialize();
-    }
-    internal unsafe partial interface ISerializedObjectList : global::System.Collections.IList, global::System.Collections.ICollection, global::System.Collections.IEnumerable
-    {
-        void ApplyChanges();
-        void RemoveAt(int index, int listCount);
-        void Move(int srcIndex, int destIndex);
-        int minArraySize { get; }
-        int arraySize { get; set; }
     }
     internal unsafe partial interface IStyleDataGroup<T>
     {

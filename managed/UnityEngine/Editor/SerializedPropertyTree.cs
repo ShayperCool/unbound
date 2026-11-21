@@ -1128,9 +1128,19 @@ namespace Unbound.Runtime
                     if (target.ClrType == source.ClrType && !target.ReadOnly) SetValue(target, GetValue(source));
                     return;
             }
-            bool resized = source.Kind == SerializedNodeKind.Array && source.Children.Count > 0 && source.Children[0].Children.Count > 0
-                && source.Children[0].Children[0].Kind == SerializedNodeKind.ArraySize && source.Children[0].Children[0].Dirty;
-            if (source.Replaced || resized)
+            if (source.Kind == SerializedNodeKind.Array)
+            {
+                bool resized = source.Children.Count > 0 && source.Children[0].Children.Count > 0
+                    && source.Children[0].Children[0].Kind == SerializedNodeKind.ArraySize
+                    && source.Children[0].Children[0].Dirty;
+                if (source.Replaced)
+                {
+                    CopyData(target, source);
+                    return;
+                }
+                if (resized) Resize(target, source.ArrayCount);
+            }
+            else if (source.Replaced)
             {
                 CopyData(target, source);
                 return;
@@ -1138,6 +1148,8 @@ namespace Unbound.Runtime
             for (int i = 0; i < source.Children.Count && i < target.Children.Count; i++)
                 CopyChanged(source.Children[i], target.Children[i]);
         }
+
+        internal static void MarkNodeDirty(SerializedNode node) => MarkDirty(node);
 
         static void MarkDirty(SerializedNode node)
         {
@@ -1313,14 +1325,18 @@ namespace Unbound.Runtime
             int count = array.ArrayCount;
             if (size == count) return false;
             var container = array.ArrayContainer;
+            bool wasReplaced = array.Replaced;
             if (size < count)
             {
                 container.Children.RemoveRange(size + 1, count - size);
                 Reindex(container);
-                MarkReplaced(array);
+                if (container.Children.Count > 0) MarkDirty(container.Children[0]);
+                else MarkDirty(array);
                 return true;
             }
             while (array.ArrayCount < size) InsertElement(array, array.ArrayCount);
+            array.Replaced = wasReplaced;
+            if (container.Children.Count > 0) MarkDirty(container.Children[0]);
             return true;
         }
 
@@ -1427,7 +1443,38 @@ namespace Unbound.Runtime
                 case SerializedNodeKind.Array:
                 {
                     int count = node.ArrayCount;
-                    if (!(live is IList list) || list.Count != count) return Build(node, live, primary);
+                    if (primary || node.Replaced || !(live is IList list))
+                    {
+                        if (!(live is IList pList) || pList.Count != count) return Build(node, live, primary);
+                        for (int i = 0; i < count; i++)
+                        {
+                            var element = node.Element(i);
+                            if (element.Dirty) pList[i] = ApplyNode(element, pList[i], primary);
+                        }
+                        return pList;
+                    }
+                    if (list.Count != count)
+                    {
+                        IList resized = node.ClrType.IsArray
+                            ? System.Array.CreateInstance(node.ElementType, count)
+                            : (IList)Activator.CreateInstance(node.ClrType, count);
+                        int oldCount = list.Count;
+                        for (int i = 0; i < count; i++)
+                        {
+                            object elem;
+                            if (i < oldCount)
+                                elem = list[i];
+                            else if (oldCount > 0)
+                                elem = CopyLeaf(list[oldCount - 1], node.ElementShape);
+                            else
+                                elem = NormalizeLeaf(null, node.ElementType, node.ElementShape);
+                            var element = node.Element(i);
+                            if (element.Dirty) elem = ApplyNode(element, elem, primary);
+                            if (node.ClrType.IsArray) resized[i] = elem;
+                            else resized.Add(elem);
+                        }
+                        return resized;
+                    }
                     for (int i = 0; i < count; i++)
                     {
                         var element = node.Element(i);

@@ -8813,7 +8813,6 @@ namespace UnityEditor
         [global::System.Obsolete("LookLikeControls and LookLikeInspector modes are deprecated.")] [global::Unbound.Stub] public static void LookLikeInspector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.LookLikeInspector"); }
         [global::Unbound.Stub] internal static void SkinChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.SkinChanged"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Rect DragZoneRect(global::UnityEngine.Rect position, bool hasLabel = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.DragZoneRect"); return default; }
-        [global::Unbound.Stub] internal static void MoveArrayExpandedState(global::UnityEditor.SerializedProperty elements, int oldActiveElement, int newActiveElement) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.MoveArrayExpandedState"); }
         [global::Unbound.Stub] internal static void SetBoldDefaultFont(bool isBold) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.SetBoldDefaultFont"); }
         [global::Unbound.Stub] internal static bool GetBoldDefaultFont() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetBoldDefaultFont"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Event CommandEvent(string commandName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.CommandEvent"); return default; }
@@ -47425,14 +47424,6 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] public void OnBeforeSerialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializableJsonDictionary.OnBeforeSerialize"); }
         [global::Unbound.Stub] public void OnAfterDeserialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializableJsonDictionary.OnAfterDeserialize"); }
         [global::Unbound.Stub] public SerializableJsonDictionary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializableJsonDictionary.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class SerializedObjectBindEvent : global::UnityEngine.UIElements.EventBase<global::UnityEditor.UIElements.SerializedObjectBindEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectBindEvent.Init"); }
-        [global::Unbound.Stub] public static global::UnityEditor.UIElements.SerializedObjectBindEvent GetPooled(global::UnityEditor.SerializedObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectBindEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] public SerializedObjectBindEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectBindEvent.ctor"); }
-        public global::UnityEditor.SerializedObject bindObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.SerializedObjectBindEvent.bindObject"); return default; } }
     }
     [global::Unbound.Stub]
     public unsafe partial class TagField : global::UnityEngine.UIElements.PopupField<string>
