@@ -292,10 +292,7 @@ namespace UnityEditor.UIElements.Bindings
                 if (m_DataList.arraySize != m_ListViewArraySize) UpdateArraySize();
                 return default;
             }
-            catch (NullReferenceException)
-            {
-            }
-            catch (InvalidOperationException)
+            catch (Exception) when (isContextDisposed)
             {
             }
             Unbind();
@@ -309,10 +306,7 @@ namespace UnityEditor.UIElements.Bindings
             {
                 UpdateArraySize();
             }
-            catch (NullReferenceException)
-            {
-            }
-            catch (InvalidOperationException)
+            catch (Exception) when (isContextDisposed)
             {
             }
         }

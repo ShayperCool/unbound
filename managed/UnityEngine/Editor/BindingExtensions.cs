@@ -596,6 +596,11 @@ namespace UnityEditor.UIElements.Bindings
         public PropertyPath dataSourcePath => default;
         protected abstract string bindingId { get; }
 
+        /// <summary>The bound SerializedObject was disposed: the one failure a binding answers by
+        /// unbinding itself (as Unity does for its disposed-object exception). Any other exception
+        /// propagates.</summary>
+        protected bool isContextDisposed => m_BindingContext == null || !m_BindingContext.IsValid();
+
         public SerializedObjectBindingContext bindingContext
         {
             get => m_BindingContext;
@@ -1592,10 +1597,7 @@ namespace UnityEditor.UIElements.Bindings
                     return;
                 }
             }
-            catch (ObjectDisposedException)
-            {
-            }
-            catch (NullReferenceException)
+            catch (Exception) when (isContextDisposed)
             {
             }
             Unbind();
@@ -1620,10 +1622,7 @@ namespace UnityEditor.UIElements.Bindings
                     return;
                 }
             }
-            catch (ObjectDisposedException)
-            {
-            }
-            catch (NullReferenceException)
+            catch (Exception) when (isContextDisposed)
             {
             }
             finally
@@ -1708,10 +1707,7 @@ namespace UnityEditor.UIElements.Bindings
                 if (!IsSynced()) return new BindingResult(BindingStatus.Pending);
                 return default;
             }
-            catch (ObjectDisposedException)
-            {
-            }
-            catch (NullReferenceException)
+            catch (Exception) when (isContextDisposed)
             {
             }
             Unbind();
