@@ -673,10 +673,12 @@ namespace UnityEditor
             var path = SceneFiles.ProjectRelative(assetPath).Replace('\\', '/');
             if (Directory.Exists(Path.Combine(ProjectInfo.ProjectPath, path)))
                 throw new ArgumentException($"Overwriting a folder with an Asset is not allowed: '{assetPath}'");
-            // An asset folder of a package the project does not hold; a folder that is no asset
-            // folder falls through to the next check (Unity's PrefabUtility C#).
+            // An asset folder of a package the project does not hold, its root included (an
+            // immutable folder in the Editor: tests/projects/projectwrites 06.readonly.folder); a
+            // folder that is no asset folder falls through to the next check (Unity's PrefabUtility C#).
             var folder = Path.GetDirectoryName(path)?.Replace('\\', '/');
-            if (!string.IsNullOrEmpty(folder) && AssetDatabase.IsImmutablePackagePath(folder) && AssetDatabase.IsValidFolder(folder))
+            if (!string.IsNullOrEmpty(folder) && AssetDatabase.IsImmutablePackagePath(folder)
+                && (AssetDatabase.IsValidFolder(folder) || UnityEditor.PackageManager.PackageInfo.FindForAssetPath(folder)?.assetPath == folder))
                 throw new ArgumentException($"Saving Prefab to immutable folder is not allowed: '{assetPath}'");
             if (string.IsNullOrEmpty(folder) || !Directory.Exists(Path.Combine(ProjectInfo.ProjectPath, folder)))
                 throw new ArgumentException($"Given path does not exist: '{assetPath}'");

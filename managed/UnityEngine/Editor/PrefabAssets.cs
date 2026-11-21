@@ -507,8 +507,7 @@ namespace Unbound.Runtime
                 // An object of a scene cannot be referenced by an asset.
                 if (!x.IsPersistentAsset && (x is GameObject || x is Component))
                 {
-                    // A destroyed object is none already.
-                    if (x != null) outside?.Invoke(x);
+                    outside?.Invoke(x);
                     return null;
                 }
                 return x;
