@@ -677,6 +677,7 @@ namespace UnityEngine.UIElements
                 child.RemoveFromHierarchy();
                 if (m_Owner.m_Children == s_EmptyChildren) m_Owner.m_Children = new List<VisualElement>();
                 if (m_Owner.m_RequireMeasureFunction) m_Owner.yogaNode.MeasureFunction = null;
+                if (index > m_Owner.m_Children.Count) index = m_Owner.m_Children.Count;
                 m_Owner.m_Children.Insert(index, child);
                 m_Owner.yogaNode.Insert(index, child.yogaNode);
                 child.m_PhysicalParent = m_Owner;

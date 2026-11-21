@@ -6,13 +6,13 @@ using UnityEngine;
 using UnityEngine.Internal;
 using UnityEngine.UIElements;
 
-// Editor UI Toolkit PropertyField for supported scalar, enum, Vector2, and Vector3
+// Editor UI Toolkit PropertyField for supported scalar, enum, Vector2, Vector3, and Vector4
 // SerializedProperty types (bool, int, long, uint, ulong, float, double, string, ordinary and
-// [Flags] enum, Vector2, Vector3) and SerializedPropertyBindEvent. Documented in Unity 6000.0
-// Scripting API ("PropertyField", "PropertyField.RegisterValueChangeCallback"); matches the
-// Unity 6000.0.71f1 Editor, tests/projects/propertyfield, tests/projects/enumbinding,
-// tests/projects/enumflagsbinding, tests/projects/vector2binding, and
-// tests/projects/vector3binding.
+// [Flags] enum, Vector2, Vector3, and Vector4 Foldout with lazy child PropertyFields) and
+// SerializedPropertyBindEvent. Documented in Unity 6000.0 Scripting API ("PropertyField",
+// "PropertyField.RegisterValueChangeCallback"); matches the Unity 6000.0.71f1 Editor,
+// tests/projects/propertyfield, tests/projects/enumbinding, tests/projects/enumflagsbinding,
+// tests/projects/vector2binding, tests/projects/vector3binding, and tests/projects/vector4binding.
 
 namespace UnityEditor.UIElements
 {
@@ -140,6 +140,8 @@ namespace UnityEditor.UIElements
         SerializedObject m_SerializedObject;
         SerializedProperty m_SerializedProperty;
         VisualElement m_ChildField;
+        VisualElement m_ChildrenContainer;
+        List<PropertyField> m_ChildrenProperties;
 
         public IBinding binding { get; set; }
         public string bindingPath { get; set; }
@@ -224,11 +226,104 @@ namespace UnityEditor.UIElements
 
             m_ChildField?.Unbind();
             m_ChildField = null;
+            TrimChildrenContainerSize(0);
+            m_ChildrenContainer = null;
             Clear();
             if (m_SerializedProperty == null || !m_SerializedProperty.isValid) return;
 
             m_ChildField = CreateOrUpdateFieldFromProperty(m_SerializedProperty, null);
             if (m_ChildField != null) hierarchy.Add(m_ChildField);
+        }
+
+        void TrimChildrenContainerSize(int targetSize)
+        {
+            if (m_ChildrenProperties == null) return;
+            while (m_ChildrenProperties.Count > targetSize)
+            {
+                int index = m_ChildrenProperties.Count - 1;
+                var childPf = m_ChildrenProperties[index];
+                childPf.Unbind();
+                childPf.RemoveFromHierarchy();
+                m_ChildrenProperties.RemoveAt(index);
+            }
+        }
+
+        void RefreshChildrenProperties(SerializedProperty property, bool bindNewFields)
+        {
+            if (m_ChildrenContainer == null || property == null) return;
+            var iter = property.Copy();
+            var endProperty = iter.GetEndProperty();
+            int count = 0;
+            m_ChildrenProperties ??= new List<PropertyField>();
+            if (iter.NextVisible(true))
+            {
+                while (!SerializedProperty.EqualContents(iter, endProperty))
+                {
+                    PropertyField childPf;
+                    string propertyPath = iter.propertyPath;
+                    if (count < m_ChildrenProperties.Count)
+                    {
+                        childPf = m_ChildrenProperties[count];
+                        childPf.bindingPath = propertyPath;
+                    }
+                    else
+                    {
+                        childPf = new PropertyField(iter);
+                        m_ChildrenProperties.Add(childPf);
+                        childPf.bindingPath = propertyPath;
+                    }
+                    childPf.name = "unity-property-field-" + propertyPath;
+                    if (bindNewFields) childPf.Bind(iter.serializedObject);
+                    m_ChildrenContainer.Add(childPf);
+                    count++;
+                    if (!iter.NextVisible(false)) break;
+                }
+            }
+            TrimChildrenContainerSize(count);
+        }
+
+        VisualElement CreateFoldout(SerializedProperty property, object originalField)
+        {
+            property = property.Copy();
+            var foldout = originalField as Foldout ?? new Foldout();
+            bool hasExplicitLabel = !string.IsNullOrEmpty(label);
+            foldout.text = hasExplicitLabel ? label : property.displayName;
+            foldout.bindingPath = property.propertyPath;
+            foldout.name = "unity-foldout-" + property.propertyPath;
+            var toggle = foldout.toggle;
+            toggle.acceptClicksIfDisabled = true;
+            var titleLabel = toggle.boolFieldLabelElement;
+            if (titleLabel != null)
+            {
+                if (hasExplicitLabel)
+                {
+                    titleLabel.text = foldout.text;
+                }
+                else
+                {
+                    titleLabel.bindingPath = property.propertyPath;
+                    titleLabel.SetProperty(foldoutTitleBoundLabelProperty, true);
+                }
+            }
+            m_ChildrenContainer = foldout;
+            if (property.isExpanded)
+            {
+                RefreshChildrenProperties(property, bindNewFields: false);
+            }
+            else
+            {
+                foldout.RegisterValueChangedCallback(RefreshOnlyWhenExpanded);
+            }
+            return foldout;
+        }
+
+        void RefreshOnlyWhenExpanded(ChangeEvent<bool> evt)
+        {
+            if (evt.newValue && evt.target is Foldout foldout && ReferenceEquals(evt.target, m_ChildField))
+            {
+                foldout.UnregisterCallback<ChangeEvent<bool>>(RefreshOnlyWhenExpanded);
+                RefreshChildrenProperties(m_SerializedProperty, bindNewFields: true);
+            }
         }
 
         void Rebind()
@@ -287,6 +382,10 @@ namespace UnityEditor.UIElements
 
         VisualElement CreateOrUpdateFieldFromProperty(SerializedProperty property, object originalField)
         {
+            if (property.propertyType == SerializedPropertyType.Vector4)
+                return CreateFoldout(property, originalField);
+            TrimChildrenContainerSize(0);
+            m_ChildrenContainer = null;
             switch (property.propertyType)
             {
                 case SerializedPropertyType.Boolean:

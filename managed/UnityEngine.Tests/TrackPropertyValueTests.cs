@@ -71,6 +71,7 @@ namespace UnityEngine.Tests
             public Vector2 pos2 = new Vector2(4, 5);
             public Vector3 pos = new Vector3(1, 2, 3);
             public Vector4 pos4 = new Vector4(4, 5, 6, 7);
+            public Rect rectVal = new Rect(1, 2, 3, 4);
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public string[] items = new[] { "x", "y" };
             public SparseChoice sparseEnum = SparseChoice.TwentyFive;
@@ -576,12 +577,12 @@ namespace UnityEngine.Tests
                 Assert.False(wrongField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.Contains(warnings, w => w.Contains("not compatible") && w.Contains("\"flag\""));
 
-                // Unsupported property type (Vector4) reports explicit Stubs.NotImplemented hit and stays unbound.
-                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (Vector4)";
+                // Unsupported property type (Rect) reports explicit Stubs.NotImplemented hit and stays unbound.
+                const string vecStubKey = "UnityEditor.UIElements.BindingExtensions.BindProperty (Rect)";
                 int beforeVecHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
                 var vecField = new IntegerField();
                 panel.visualTree.Add(vecField);
-                vecField.BindProperty(so.FindProperty("pos4"));
+                vecField.BindProperty(so.FindProperty("rectVal"));
                 Assert.False(vecField.HasBinding(BindingExtensions.s_SerializedBindingId));
                 Assert.True(Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value > beforeVecHits);
 
@@ -865,9 +866,9 @@ namespace UnityEngine.Tests
             using var so = new SerializedObject(target);
             try
             {
-                const string vecStubKey = "UnityEditor.UIElements.PropertyField (Vector4)";
+                const string vecStubKey = "UnityEditor.UIElements.PropertyField (Rect)";
                 int beforeHits = Stubs.HitReport().FirstOrDefault(h => h.Key == vecStubKey).Value;
-                var pf = new PropertyField(so.FindProperty("pos4"));
+                var pf = new PropertyField(so.FindProperty("rectVal"));
                 panel.visualTree.Add(pf);
                 pf.Bind(so);
                 Assert.Equal(0, pf.hierarchy.childCount);
@@ -1334,6 +1335,150 @@ namespace UnityEngine.Tests
             finally
             {
                 soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void Vector4BindingUnmeasuredPreservesWAndDisposedSo()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.pos4 = new Vector4(1f, 10f, 100f, 1000f);
+            t2.pos4 = new Vector4(2f, 10f, 200f, 2000f);
+            using var panel = RuntimePanel.Create(settings);
+            var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            using var soSingle = new SerializedObject(t1);
+            try
+            {
+                // On unmeasured releases, editing x on mixed Vector4 with z != w preserves both z and w cleanly.
+                var vf = new Vector4Field();
+                panel.visualTree.Add(vf);
+                vf.BindProperty(soMulti.FindProperty("pos4"));
+                Tick(panel);
+                Tick(panel);
+
+                var xSub = vf.Q<FloatField>("unity-x-input");
+                var ySub = vf.Q<FloatField>("unity-y-input");
+                var zSub = vf.Q<FloatField>("unity-z-input");
+                var wSub = vf.Q<FloatField>("unity-w-input");
+                Assert.False(vf.showMixedValue);
+                Assert.True(xSub.showMixedValue);
+                Assert.False(ySub.showMixedValue);
+                Assert.True(zSub.showMixedValue);
+                Assert.True(wSub.showMixedValue);
+
+                xSub.value = 6f;
+                Tick(panel);
+                Assert.Equal(new Vector4(6f, 10f, 100f, 1000f), t1.pos4);
+                Assert.Equal(new Vector4(6f, 10f, 200f, 2000f), t2.pos4);
+                Assert.False(xSub.showMixedValue);
+                Assert.True(zSub.showMixedValue);
+                Assert.True(wSub.showMixedValue);
+
+                // Editing w to equal target[0].z writes w cleanly on unmeasured releases.
+                wSub.value = 100f;
+                Tick(panel);
+                Assert.Equal(new Vector4(6f, 10f, 100f, 100f), t1.pos4);
+                Assert.Equal(new Vector4(6f, 10f, 200f, 100f), t2.pos4);
+                Assert.False(wSub.showMixedValue);
+
+                // NaN tolerance on single-target Vector4Field.
+                var singleField = new Vector4Field();
+                panel.visualTree.Add(singleField);
+                singleField.BindProperty(soSingle.FindProperty("pos4"));
+                Tick(panel);
+                soSingle.FindProperty("pos4").vector4Value = new Vector4(float.NaN, -0f, 3f, 4f);
+                soSingle.ApplyModifiedProperties();
+                Tick(panel);
+                Tick(panel);
+                Assert.True(float.IsNaN(singleField.value.x));
+                Assert.Equal(4f, singleField.value.w);
+
+                // Disposed SO unbinds cleanly without throwing.
+                soMulti.Dispose();
+                Tick(panel);
+                Tick(panel);
+                Assert.False(vf.HasBinding(BindingExtensions.s_SerializedBindingId));
+            }
+            finally
+            {
+                soMulti.Dispose();
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void Vector4BindingMeasured6000_0MultiEditAndPropertyFieldFoldout()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Measured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.pos4 = new Vector4(1f, 10f, 100f, 1000f);
+            t2.pos4 = new Vector4(2f, 10f, 200f, 2000f);
+            using var panel = RuntimePanel.Create(settings);
+            using var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                // PropertyField for Vector4 creates a Foldout bound to isExpanded with lazy x/y/z/w FloatFields.
+                var pf = new PropertyField(soMulti.FindProperty("pos4"), "Bounds Plane");
+                panel.visualTree.Add(pf);
+                pf.Bind(soMulti);
+                Tick(panel);
+                Tick(panel);
+
+                var foldout = Assert.IsType<Foldout>(pf.hierarchy[0]);
+                Assert.False(foldout.value);
+                Assert.Equal("Bounds Plane", foldout.text);
+                Assert.Empty(foldout.Query<PropertyField>().ToList());
+
+                foldout.value = true;
+                Tick(panel);
+                Assert.True(soMulti.FindProperty("pos4").isExpanded);
+                Assert.Equal(4, foldout.Query<PropertyField>().ToList().Count);
+                Assert.True(pf.Q<FloatField>("unity-input-pos4.w").showMixedValue);
+
+                // Editing child PropertyField's x FloatField preserves z and w even when z != w.
+                pf.Q<FloatField>("unity-input-pos4.x").value = 8f;
+                Assert.Equal(new Vector4(8f, 10f, 100f, 1000f), t1.pos4);
+                Assert.Equal(new Vector4(8f, 10f, 200f, 2000f), t2.pos4);
+                Assert.True(pf.Q<FloatField>("unity-input-pos4.w").showMixedValue);
+
+                // Re-adding an existing child to the same parent and rebinding an expanded Foldout PropertyField do not throw.
+                var container = new VisualElement();
+                var childA = new VisualElement { name = "a" };
+                var childB = new VisualElement { name = "b" };
+                container.Add(childA);
+                container.Add(childB);
+                container.Add(childA);
+                Assert.Equal(2, container.childCount);
+                Assert.Same(childB, container[0]);
+                Assert.Same(childA, container[1]);
+
+                pf.label = "Updated Plane";
+                Tick(panel);
+                Assert.Same(foldout, pf.hierarchy[0]);
+                Assert.Equal("Updated Plane", foldout.text);
+                Assert.Equal(4, foldout.Query<PropertyField>().ToList().Count);
+
+                // Direct Vector4Field on 6000.0 matches the measured z-vs-w comparison quirk.
+                var vf = new Vector4Field();
+                panel.visualTree.Add(vf);
+                vf.BindProperty(soMulti.FindProperty("pos4"));
+                Tick(panel);
+                vf.Q<FloatField>("unity-x-input").value = 9f;
+                Assert.Equal(new Vector4(9f, 10f, 100f, 1000f), t1.pos4);
+                Assert.Equal(new Vector4(9f, 10f, 200f, 1000f), t2.pos4);
+            }
+            finally
+            {
                 Object.DestroyImmediate(t1);
                 Object.DestroyImmediate(t2);
                 Object.DestroyImmediate(settings);

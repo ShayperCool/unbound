@@ -6,17 +6,19 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 // Editor UI Toolkit SerializedObject/SerializedProperty binding and tracking:
-// BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, Vector2, and
-// Vector3 fields), BindingExtensions.TrackPropertyValue, BindingExtensions.TrackSerializedObjectValue,
-// BindingExtensions.Unbind, SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the
-// SerializedObject binding context/updater pipeline that synchronizes fields and polls changes
-// during panel updates. Documented in Unity 6000.0 Scripting API ("BindingExtensions.Bind",
+// BindingExtensions.Bind, BindingExtensions.BindProperty (supported scalar, enum, Vector2,
+// Vector3, and Vector4 fields plus Foldout isExpanded binding), BindingExtensions.TrackPropertyValue,
+// BindingExtensions.TrackSerializedObjectValue, BindingExtensions.Unbind,
+// SerializedPropertyChangeEvent, SerializedObjectChangeEvent, and the SerializedObject binding
+// context/updater pipeline that synchronizes fields and polls changes during panel updates.
+// Documented in Unity 6000.0 Scripting API ("BindingExtensions.Bind",
 // "BindingExtensions.BindProperty", "BindingExtensions.TrackPropertyValue",
 // "BindingExtensions.TrackSerializedObjectValue", "BindingExtensions.Unbind",
 // "SerializedPropertyChangeEvent", "SerializedObjectChangeEvent"); matches the Unity 6000.0.71f1
 // Editor, tests/projects/bindtree, tests/projects/bindproperty, tests/projects/enumbinding,
 // tests/projects/enumflagsbinding, tests/projects/vector2binding, tests/projects/vector3binding,
-// tests/projects/trackpropertyvalue and tests/projects/trackserializedobjectvalue.
+// tests/projects/vector4binding, tests/projects/trackpropertyvalue and
+// tests/projects/trackserializedobjectvalue.
 
 namespace UnityEngine.UIElements
 {
@@ -1078,8 +1080,21 @@ namespace UnityEditor.UIElements.Bindings
             return prop;
         }
 
+        static readonly Func<SerializedProperty, string> s_GetDisplayName = p => p.displayName;
+        static readonly Action<SerializedProperty, string> s_NoopSetString = (_, _) => { };
+
         void CreateBindingObjectForProperty(VisualElement element, SerializedProperty prop)
         {
+            if (element is Foldout foldout && prop.hasChildren)
+            {
+                SerializedIsExpandedBinding.CreateBind(foldout, this, prop);
+                return;
+            }
+            if (element is Label titleLabel && titleLabel.GetProperty(PropertyField.foldoutTitleBoundLabelProperty) != null)
+            {
+                SerializedObjectBinding<string>.CreateBind(titleLabel, this, prop, s_GetDisplayName, s_NoopSetString, SerializedPropertyHelper.ValueEquals);
+                return;
+            }
             switch (prop.propertyType)
             {
                 case SerializedPropertyType.Boolean:
@@ -1151,6 +1166,9 @@ namespace UnityEditor.UIElements.Bindings
                     break;
                 case SerializedPropertyType.Vector3:
                     DefaultBind(element, prop, SerializedPropertyHelper.GetVector3PropertyValue, SerializedPropertyHelper.SetVector3PropertyValue, SerializedPropertyHelper.ValueEquals);
+                    break;
+                case SerializedPropertyType.Vector4:
+                    DefaultBind(element, prop, SerializedPropertyHelper.GetVector4PropertyValue, SerializedPropertyHelper.SetVector4PropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
                 case SerializedPropertyType.Generic:
                     if (prop.type == "ToggleButtonGroupState")
@@ -2003,6 +2021,52 @@ namespace UnityEditor.UIElements.Bindings
         }
     }
 
+    internal partial class SerializedIsExpandedBinding : SerializedObjectBindingPropertyToBaseField<bool, bool>
+    {
+        static readonly Func<SerializedProperty, bool> s_GetIsExpanded = p => p.isExpanded;
+        static readonly Action<SerializedProperty, bool> s_SetIsExpanded = (p, v) => p.isExpanded = v;
+
+        public SerializedIsExpandedBinding() { }
+
+        public static void CreateBind(Foldout field, SerializedObjectBindingContext context, SerializedProperty property)
+        {
+            var binding = new SerializedIsExpandedBinding { isReleased = false };
+            field?.SetBinding(BindingExtensions.s_SerializedBindingId, binding);
+            binding.SetBinding(field, context, property);
+        }
+
+        protected void SetBinding(Foldout foldout, SerializedObjectBindingContext context, SerializedProperty property)
+        {
+            property.unsafeMode = true;
+            propGetValue = s_GetIsExpanded;
+            propSetValue = s_SetIsExpanded;
+            propCompareValues = SerializedPropertyHelper.ValueEquals;
+            SetContext(context, property);
+            lastFieldValue = foldout.value;
+            field = foldout;
+        }
+
+        public override void OnRelease()
+        {
+            if (!isReleased) base.OnRelease();
+        }
+
+        protected override void UpdateLastFieldValue()
+        {
+            if (field is Foldout foldout) lastFieldValue = foldout.value;
+        }
+
+        protected override void AssignValueToFieldWithoutNotify(bool lastValue)
+        {
+            if (field is Foldout foldout) foldout.SetValueWithoutNotify(lastValue);
+        }
+
+        protected override void AssignValueToField(bool lastValue)
+        {
+            if (field is Foldout foldout) foldout.value = lastValue;
+        }
+    }
+
     internal static partial class SerializedPropertyHelper
     {
         public static bool GetBoolPropertyValue(SerializedProperty p) => p.boolValue;
@@ -2015,6 +2079,7 @@ namespace UnityEditor.UIElements.Bindings
         public static string GetStringPropertyValue(SerializedProperty p) => p.stringValue;
         public static Vector2 GetVector2PropertyValue(SerializedProperty p) => p.vector2Value;
         public static Vector3 GetVector3PropertyValue(SerializedProperty p) => p.vector3Value;
+        public static Vector4 GetVector4PropertyValue(SerializedProperty p) => p.vector4Value;
         public static float GetIntPropertyValueAsFloat(SerializedProperty p) => p.intValue;
         public static float GetLongPropertyValueAsFloat(SerializedProperty p) => p.longValue;
         public static double GetFloatPropertyValueAsDouble(SerializedProperty p) => p.floatValue;
@@ -2066,6 +2131,22 @@ namespace UnityEditor.UIElements.Bindings
             else
             {
                 p.vector3Value = v;
+            }
+        }
+
+        public static void SetVector4PropertyValue(SerializedProperty p, Vector4 v)
+        {
+            if (p.hasMultipleDifferentValues)
+            {
+                Vector4 current = p.vector4Value;
+                SetFloatComponentIfDifferent(p, "x", current.x, v.x);
+                SetFloatComponentIfDifferent(p, "y", current.y, v.y);
+                SetFloatComponentIfDifferent(p, "z", current.z, v.z);
+                SetFloatComponentIfDifferent(p, "w", Unbound.Runtime.Compat.Vector4MultiEditComparesZToW ? current.z : current.w, v.w);
+            }
+            else
+            {
+                p.vector4Value = v;
             }
         }
         public static void SetFloatPropertyValueFromDouble(SerializedProperty p, double v) => p.floatValue = (float)v;
