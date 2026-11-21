@@ -475,6 +475,7 @@ crates/
   unbound-cache      content-addressed cache
   unbound-assets     importers (textures, meshes, audio)
   unbound-host       CoreCLR hosting and the native interop table
+  unbound-jobs       the job system: Unity job semantics on the Job.Worker rayon pool
   unbound-runtime    the running game: native API, frame loop, render protocol
   unbound-app        the windowed player: Bevy app, input, renderer of the render protocol
   unbound-shaders    Unity shader programs (CG/HLSL) compiled to WGSL for the renderer
