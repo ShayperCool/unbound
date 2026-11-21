@@ -163,6 +163,7 @@ namespace UnityEditor.UIElements
         internal static readonly string decoratorDrawersContainerClassName = "unity-decorator-drawers-container";
         internal static readonly string listViewBoundFieldProperty = "unity-list-view-property-field-bound";
         static readonly string listViewNamePrefix = "unity-list-";
+        static readonly string buttonGroupNamePrefix = "unity-button-group-";
 
         public static readonly string ussClassName = "unity-property-field";
         public static readonly string labelUssClassName = ussClassName + "__label";
@@ -195,6 +196,7 @@ namespace UnityEditor.UIElements
         static readonly Func<LayerMaskField> s_CreateLayerMaskField = () => new LayerMaskField();
         static readonly Func<RenderingLayerMaskField> s_CreateRenderingLayerMaskField = () => new RenderingLayerMaskField();
         static readonly Func<ListView> s_CreateListView = () => new ListView();
+        static readonly Func<ToggleButtonGroup> s_CreateToggleButtonGroup = () => new ToggleButtonGroup();
 
         string m_Label;
         SerializedObject m_SerializedObject;
@@ -509,6 +511,78 @@ namespace UnityEditor.UIElements
             return listView;
         }
 
+        VisualElement ConfigureToggleButtonGroup(ToggleButtonGroup buttonGroup, SerializedProperty property, Func<ToggleButtonGroup> factory)
+        {
+            var propertyCopy = property.Copy();
+            if (buttonGroup == null)
+            {
+                buttonGroup = factory();
+                buttonGroup.AddToClassList(BaseField<bool>.alignedFieldUssClassName);
+                buttonGroup.AddToClassList(ToggleButtonGroup.ussClassName + "--fixed-size");
+                buttonGroup.RegisterValueChangedCallback(OnToggleGroupChanged);
+            }
+            var lengthProperty = propertyCopy.FindPropertyRelative("m_Length");
+            var dataProperty = propertyCopy.FindPropertyRelative("m_Data");
+            int count = lengthProperty.intValue;
+            if (property.UnboundField?.GetCustomAttribute<ToggleButtonGroupStatePropertiesAttribute>(false) is ToggleButtonGroupStatePropertiesAttribute attr)
+            {
+                if (attr.length >= 0)
+                {
+                    count = attr.length;
+                    lengthProperty.intValue = count;
+                    lengthProperty.serializedObject.ApplyModifiedPropertiesWithoutUndo();
+                }
+                buttonGroup.allowEmptySelection = attr.allowEmptySelection;
+                buttonGroup.isMultipleSelection = attr.allowMultipleSelection;
+            }
+            string groupName = buttonGroupNamePrefix + property.propertyPath;
+            string groupLabel = label ?? property.displayName;
+            buttonGroup.userData = propertyCopy;
+            buttonGroup.bindingPath = property.propertyPath;
+            buttonGroup.SetProperty(BaseField<ToggleButtonGroupState>.serializedPropertyCopyName, propertyCopy);
+            buttonGroup.name = groupName;
+            buttonGroup.label = groupLabel;
+            buttonGroup.Q(null, ToggleButtonGroup.buttonGroupClassName).Clear();
+            buttonGroup.TrackPropertyValue(propertyCopy);
+            buttonGroup.TrackPropertyValue(propertyCopy, OnPropertyChanged);
+            buttonGroup.TrackPropertyValue(lengthProperty, OnPropertyChanged);
+            buttonGroup.TrackPropertyValue(dataProperty, OnPropertyChanged);
+            for (int i = 0; i < count; i++)
+                buttonGroup.Add(new Button { text = i.ToString() });
+            return buttonGroup;
+
+            void OnPropertyChanged(SerializedProperty _)
+            {
+                if (!propertyCopy.isValid || !lengthProperty.isValid || !dataProperty.isValid) return;
+                int currentLength = buttonGroup.value.length;
+                int targetLength = lengthProperty.intValue;
+                ulong data = dataProperty.ulongValue;
+                if (data == 0UL && targetLength == 64) targetLength = 0;
+                if (currentLength < targetLength)
+                {
+                    for (int i = currentLength; i < targetLength; i++)
+                        buttonGroup.Add(new Button { text = i.ToString() });
+                }
+                else if (currentLength > targetLength)
+                {
+                    for (int i = targetLength; i < currentLength; i++)
+                    {
+                        var btn = buttonGroup.Query<Button>(null, ToggleButtonGroup.buttonClassName).Last();
+                        if (btn == null) break;
+                        btn.RemoveFromHierarchy();
+                    }
+                }
+                buttonGroup.SetValueWithoutNotify((ToggleButtonGroupState)propertyCopy.structValue);
+            }
+
+            void OnToggleGroupChanged(ChangeEvent<ToggleButtonGroupState> evt)
+            {
+                if (!propertyCopy.isValid) return;
+                propertyCopy.structValue = evt.newValue;
+                propertyCopy.serializedObject.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+
         VisualElement CreateOrUpdateFieldFromProperty(SerializedProperty property, object originalField)
         {
             if (((property.propertyType == SerializedPropertyType.Vector4
@@ -630,10 +704,7 @@ namespace UnityEditor.UIElements
                     return ConfigureField<RenderingLayerMaskField, uint>(originalField as RenderingLayerMaskField, property, s_CreateRenderingLayerMaskField);
                 case SerializedPropertyType.Generic:
                     if (property.type == "ToggleButtonGroupState")
-                    {
-                        Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField (ToggleButtonGroupState)");
-                        return null;
-                    }
+                        return ConfigureToggleButtonGroup(originalField as ToggleButtonGroup, property, s_CreateToggleButtonGroup);
                     return property.isArray ? ConfigureListView(originalField as ListView, property, s_CreateListView) : null;
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField ({property.propertyType})");

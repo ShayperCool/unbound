@@ -931,11 +931,6 @@ namespace UnityEditor.UIElements.Bindings
             }
             if (element.GetBinding(BindingExtensions.s_SerializedBindingId) is SerializedObjectBindingBase binding)
                 binding.Unbind();
-            if (element.GetBinding(BindingExtensions.s_SerializedBindingContextUpdaterId) is SerializedObjectBindingBase updater)
-            {
-                updater.OnRelease();
-                element.ClearBinding(BindingExtensions.s_SerializedBindingContextUpdaterId);
-            }
             int childCount = element.hierarchy.childCount;
             for (int i = 0; i < childCount; i++) Unbind(element.hierarchy[i]);
         }
@@ -1242,7 +1237,7 @@ namespace UnityEditor.UIElements.Bindings
                     break;
                 case SerializedPropertyType.Generic:
                     if (prop.type == "ToggleButtonGroupState")
-                        Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.BindingExtensions.BindProperty (ToggleButtonGroupState)");
+                        DefaultBind(element, prop, SerializedPropertyHelper.GetToggleStatePropertyValue, SerializedPropertyHelper.SetToggleStatePropertyValue, SerializedPropertyHelper.ValueEquals);
                     break;
                 default:
                     Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.BindingExtensions.BindProperty ({prop.propertyType})");
@@ -2287,6 +2282,7 @@ namespace UnityEditor.UIElements.Bindings
         public static Quaternion GetQuaternionPropertyValue(SerializedProperty p) => p.quaternionValue;
         public static char GetCharacterPropertyValue(SerializedProperty p) => (char)p.intValue;
         public static string GetCharacterPropertyValueAsString(SerializedProperty p) => new string((char)p.intValue, 1);
+        public static ToggleButtonGroupState GetToggleStatePropertyValue(SerializedProperty p) => (ToggleButtonGroupState)p.structValue;
         public static Hash128 GetHash128PropertyValue(SerializedProperty p) => p.hash128Value;
         public static int GetLayerMaskPropertyValue(SerializedProperty p) => p.intValue;
         public static uint GetRenderingLayerMaskPropertyValue(SerializedProperty p) => p.uintValue;
@@ -2407,6 +2403,7 @@ namespace UnityEditor.UIElements.Bindings
         {
             if (!string.IsNullOrEmpty(v)) p.intValue = v[0];
         }
+        public static void SetToggleStatePropertyValue(SerializedProperty p, ToggleButtonGroupState v) => p.structValue = v;
         public static void SetHash128PropertyValue(SerializedProperty p, Hash128 v) => p.hash128Value = v;
         public static void SetLayerMaskPropertyValue(SerializedProperty p, int v) => p.intValue = v;
         public static void SetRenderingLayerMaskPropertyValue(SerializedProperty p, uint v) => p.uintValue = v;

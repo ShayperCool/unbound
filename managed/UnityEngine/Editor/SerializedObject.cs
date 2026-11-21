@@ -1327,6 +1327,31 @@ namespace UnityEditor
             }
         }
 
+        internal object structValue
+        {
+            get
+            {
+                var n = N;
+                if (n.Kind == SerializedNodeKind.Array || n.Kind == SerializedNodeKind.ArrayContainer)
+                    throw new InvalidOperationException($"'{n.Path}' is an array so it cannot be read with boxedValue.");
+                if (n.Kind != SerializedNodeKind.Composite)
+                    throw new InvalidOperationException($"structValue is not supported on property '{n.Path}' of type '{n.TypeName}'.");
+                return SerializedTree.Build(n, null, primary: false);
+            }
+            set
+            {
+                var n = N;
+                if (n.Kind == SerializedNodeKind.Array || n.Kind == SerializedNodeKind.ArrayContainer)
+                    throw new InvalidOperationException($"'{n.Path}' is an array so it cannot be set with boxedValue.");
+                if (n.Kind != SerializedNodeKind.Composite)
+                    throw new InvalidOperationException($"structValue is not supported on property '{n.Path}' of type '{n.TypeName}'.");
+                if (value == null || !n.ClrType.IsInstanceOfType(value))
+                    throw new InvalidOperationException($"The input to boxedValue has type '{value?.GetType().FullName?.Replace("+", "/")}', which does not match the expected type '{n.ClrType.FullName?.Replace("+", "/")}'.");
+                SerializedTree.Assign(n, value, callbacks: false);
+                Changed(structural: true);
+            }
+        }
+
         /// <summary>The property's value as an object: primitives, structs, references and copies of
         /// serializable classes and collections.</summary>
         public object boxedValue

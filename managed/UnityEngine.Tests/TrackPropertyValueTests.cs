@@ -156,6 +156,9 @@ namespace UnityEngine.Tests
             public RenderingLayerMask otherRenderingLayerMaskVal = 4u;
             public char charVal = 'A';
             public Quaternion quatVal = Quaternion.identity;
+            public ToggleButtonGroupState toggleGroupVal = new ToggleButtonGroupState(0b101UL, 4);
+            [ToggleButtonGroupStateProperties(allowMultipleSelection: false, allowEmptySelection: false, length: 3)]
+            public ToggleButtonGroupState toggleGroupAttr;
             [SerializeReference] public object managedRef;
             public NestedPayload nested = new NestedPayload { score = 5, tag = "n0" };
             public EmptyInlinePayload emptyPayload;
@@ -3215,6 +3218,98 @@ namespace UnityEngine.Tests
                 soMulti.Dispose();
                 so.Dispose();
                 Object.DestroyImmediate(go);
+                Object.DestroyImmediate(t1);
+                Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
+        public void BindPropertyToggleButtonGroupStateAttributesMultiEditAndDisposedCleanupWorkAcrossReleases()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var t1 = ScriptableObject.CreateInstance<TestTarget>();
+            var t2 = ScriptableObject.CreateInstance<TestTarget>();
+            t2.toggleGroupVal = new ToggleButtonGroupState(0b011UL, 4);
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(t1);
+            using var soMulti = new SerializedObject(new Object[] { t1, t2 });
+            try
+            {
+                var pPlain = so.FindProperty("toggleGroupVal");
+                var pAttr = so.FindProperty("toggleGroupAttr");
+                var pfPlain = new PropertyField(pPlain);
+                var pfAttr = new PropertyField(pAttr);
+                var bgDirect = new ToggleButtonGroup("Direct");
+                for (int i = 0; i < 4; i++) bgDirect.Add(new Button { text = $"D{i}" });
+                panel.visualTree.Add(pfPlain);
+                panel.visualTree.Add(pfAttr);
+                panel.visualTree.Add(bgDirect);
+                pfPlain.Bind(so);
+                pfAttr.Bind(so);
+                bgDirect.BindProperty(pPlain);
+                Tick(panel);
+                Tick(panel);
+
+                var bgPlain = Assert.IsType<ToggleButtonGroup>(pfPlain.hierarchy[0]);
+                Assert.Equal("unity-button-group-toggleGroupVal", bgPlain.name);
+                Assert.True(bgPlain.ClassListContains(ToggleButtonGroup.ussClassName + "--fixed-size"));
+                Assert.Equal(new ToggleButtonGroupState(0b101UL, 4), bgPlain.value);
+                Assert.Equal(new ToggleButtonGroupState(0b101UL, 4), bgDirect.value);
+
+                var bgAttr = Assert.IsType<ToggleButtonGroup>(pfAttr.hierarchy[0]);
+                Assert.False(bgAttr.isMultipleSelection);
+                Assert.False(bgAttr.allowEmptySelection);
+                Assert.Equal(3, t1.toggleGroupAttr.length);
+                Assert.Equal(3, bgAttr.Query<Button>(null, ToggleButtonGroup.buttonClassName).ToList().Count);
+
+                bgPlain.value = new ToggleButtonGroupState(0b0110UL, 4);
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(new ToggleButtonGroupState(0b0110UL, 4), t1.toggleGroupVal);
+                Assert.Equal(new ToggleButtonGroupState(0b0110UL, 4), bgDirect.value);
+
+                t1.toggleGroupVal = new ToggleButtonGroupState(0b1000UL, 4);
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(new ToggleButtonGroupState(0b1000UL, 4), bgPlain.value);
+                Assert.Equal(new ToggleButtonGroupState(0b1000UL, 4), bgDirect.value);
+
+                // Multi-object mixed display, write-through, and runtime DataBinding coexistence after Dispose.
+                var rt = new RuntimeModel { text = "rt-tbg-0" };
+                var bgMulti = new ToggleButtonGroup { dataSource = rt };
+                for (int i = 0; i < 4; i++) bgMulti.Add(new Button { text = $"M{i}" });
+                bgMulti.SetBinding("tooltip", new DataBinding
+                {
+                    dataSourcePath = new PropertyPath(nameof(RuntimeModel.text)),
+                    bindingMode = BindingMode.ToTarget
+                });
+                panel.visualTree.Add(bgMulti);
+                bgMulti.BindProperty(soMulti.FindProperty("toggleGroupVal"));
+                Tick(panel);
+                Tick(panel);
+                Assert.True(bgMulti.showMixedValue);
+                Assert.Equal("rt-tbg-0", bgMulti.tooltip);
+
+                bgMulti.value = new ToggleButtonGroupState(0b1100UL, 4);
+                Tick(panel);
+                Tick(panel);
+                Assert.Equal(new ToggleButtonGroupState(0b1100UL, 4), t1.toggleGroupVal);
+                Assert.Equal(new ToggleButtonGroupState(0b1100UL, 4), t2.toggleGroupVal);
+                Assert.False(bgMulti.showMixedValue);
+
+                soMulti.Dispose();
+                rt.text = "rt-tbg-1";
+                Tick(panel);
+                Tick(panel);
+                Assert.False(bgMulti.HasBinding(BindingExtensions.s_SerializedBindingId));
+                Assert.Equal("rt-tbg-1", bgMulti.tooltip);
+            }
+            finally
+            {
+                soMulti.Dispose();
+                so.Dispose();
                 Object.DestroyImmediate(t1);
                 Object.DestroyImmediate(t2);
                 Object.DestroyImmediate(settings);
