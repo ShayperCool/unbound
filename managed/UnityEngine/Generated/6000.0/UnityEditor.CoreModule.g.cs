@@ -9951,20 +9951,6 @@ namespace UnityEditor
     }
     unsafe partial class FileUtil
     {
-        [global::Unbound.Stub] public static void CopyFileOrDirectory(string source, string dest) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CopyFileOrDirectory"); }
-        [global::Unbound.Stub] public static void CopyFileOrDirectoryFollowSymlinks(string source, string dest) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CopyFileOrDirectoryFollowSymlinks"); }
-        [global::Unbound.Stub] public static void MoveFileOrDirectory(string source, string dest) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.MoveFileOrDirectory"); }
-        [global::Unbound.Stub] public static string GetUniqueTempPathInProject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.GetUniqueTempPathInProject"); return default; }
-        [global::Unbound.Stub] internal static string GetActualPathName(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.GetActualPathName"); return default; }
-        [global::Unbound.Stub] public static string GetProjectRelativePath(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.GetProjectRelativePath"); return default; }
-        [global::Unbound.Stub] internal static string GetLastPathNameComponent(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.GetLastPathNameComponent"); return default; }
-        [global::Unbound.Stub] internal static string DeleteLastPathNameComponent(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.DeleteLastPathNameComponent"); return default; }
-        [global::Unbound.Stub] internal static string GetPathExtension(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.GetPathExtension"); return default; }
-        [global::Unbound.Stub] internal static string GetPathWithoutExtension(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.GetPathWithoutExtension"); return default; }
-        [global::Unbound.Stub] internal static string ResolveSymlinks(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.ResolveSymlinks"); return default; }
-        [global::Unbound.Stub] internal static bool IsSymlink(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.IsSymlink"); return default; }
-        [global::Unbound.Stub] public static void ReplaceFile(string src, string dst) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.ReplaceFile"); }
-        [global::Unbound.Stub] public static void ReplaceDirectory(string src, string dst) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.ReplaceDirectory"); }
         [global::Unbound.Stub] internal static void ReplaceText(string path, params string[] input) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.ReplaceText"); }
         [global::Unbound.Stub] internal static bool ReplaceTextRegex(string path, params string[] input) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.ReplaceTextRegex"); return default; }
         [global::Unbound.Stub] internal static bool AppendTextAfter(string path, string find, string append) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.AppendTextAfter"); return default; }
