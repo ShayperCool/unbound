@@ -25,7 +25,7 @@ namespace UnityEditor
     /// </summary>
     public partial class FileUtil
     {
-        internal const string UnsupportedCopyMember = "FileUtil copy, move or replace onto the project folder, its Library folder, Library/Unbound and what is in it, or a package not embedded in the project's Packages folder and what is in it";
+        internal const string UnsupportedCopyMember = "FileUtil copy, move or replace onto the project folder, its Library folder, Library/Unbound and what is in it, or a package not embedded in the project's Packages folder and what is in it; a move of the Packages folder";
 
         static void CheckSourceAndDestination(string source, string dest)
         {
@@ -64,6 +64,17 @@ namespace UnityEditor
             return landing;
         }
 
+        // Whether a destination is taken: by an entry at the path, or by the project's own entry
+        // that the path names in the view (the view has no link for one made after it was built,
+        // nor for a folder of Packages that is not a package).
+        static bool DestinationTaken(string full)
+        {
+            if (EntryExists(full)) return true;
+            var view = ProjectView.Current();
+            string project = view?.ProjectPathOf(full, out _);
+            return project != null && EntryExists(project);
+        }
+
         // The view's link to a project entry that was just made.
         static void LinkInView(string viewEntry, string landing)
         {
@@ -84,7 +95,7 @@ namespace UnityEditor
         public static void CopyFileOrDirectory(string source, string dest)
         {
             CheckSourceAndDestination(source, dest);
-            if (EntryExists(FullPath(dest))) throw DestinationExists(source, dest);
+            if (DestinationTaken(FullPath(dest))) throw DestinationExists(source, dest);
             if (!Copy(FullPath(source), FullPath(dest)))
                 throw new IOException(string.Format("Failed to Copy File / Directory from '{0}' to '{1}'.", source, dest));
         }
@@ -96,7 +107,7 @@ namespace UnityEditor
         {
             CheckSourceAndDestination(source, dest);
             // The Editor's message says Copy here too.
-            if (EntryExists(FullPath(dest))) throw DestinationExists(source, dest);
+            if (DestinationTaken(FullPath(dest))) throw DestinationExists(source, dest);
             if (!Move(FullPath(source), FullPath(dest)))
                 throw new IOException(string.Format("Failed to Move File / Directory from '{0}' to '{1}'.", source, dest));
         }
@@ -162,6 +173,13 @@ namespace UnityEditor
             source = Landing(source, out string sourceEntry, out bool sourceAllowed);
             dest = Landing(dest, out string destEntry, out bool destAllowed);
             if (!sourceAllowed || !destAllowed || !Directory.Exists(Path.GetDirectoryName(dest))) return false;
+            // The view's Packages folder holds the view's links to the packages: moving the
+            // project's folder from under them is not done.
+            if (sourceEntry != null && sourceEntry != source && !IsLink(sourceEntry))
+            {
+                Stubs.NotImplemented(UnsupportedCopyMember);
+                return false;
+            }
             try
             {
                 // A rename: a link stays a link, whatever it points to.

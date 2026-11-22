@@ -312,6 +312,26 @@ namespace UnityEngine.Tests
                 Assert.Equal("link link", Tree(Path.Combine(view, "Builds")) + " " + Tree(Path.Combine(view, "top.txt")));
                 FileUtil.ReplaceDirectory("Builds_old", "Builds");
                 Assert.Equal("dir[b.txt=file(B)] link", Tree(Path.Combine(project, "Builds")) + " " + Tree(Path.Combine(view, "Builds")));
+                // A project entry the view has no link for is a destination that exists: nothing
+                // is merged into it.
+                Directory.CreateDirectory(Path.Combine(project, "Extra"));
+                File.WriteAllText(Path.Combine(project, "Extra", "kept.txt"), "K");
+                Directory.CreateDirectory(Path.Combine(project, "Packages", "MyPkg"));
+                File.WriteAllText(Path.Combine(project, "Packages", "MyPkg", "package.json"), "P");
+                foreach (string taken in new[] { "Extra", "Packages/MyPkg" })
+                {
+                    Assert.Equal($"Failed to Copy File / Directory from 'Builds_old' to '{taken}': destination path already exists.", Assert.Throws<IOException>(() => FileUtil.CopyFileOrDirectory("Builds_old", taken)).Message);
+                    Assert.EndsWith("destination path already exists.", Assert.Throws<IOException>(() => FileUtil.MoveFileOrDirectory("Builds_old", taken)).Message);
+                }
+                Assert.Equal("dir[kept.txt=file(K)] dir[package.json=file(P)]", Tree(Path.Combine(project, "Extra")) + " " + Tree(Path.Combine(project, "Packages", "MyPkg")));
+                Assert.Equal("dir[b.txt=file(B)]", Tree(Path.Combine(project, "Builds_old")));
+                Assert.Equal(hits, Hits());
+                // The Packages folder is not moved from under the view's links to the packages.
+                Assert.Throws<IOException>(() => FileUtil.MoveFileOrDirectory("Packages", "Packages_old"));
+                Assert.True(File.Exists(manifest));
+                Assert.Equal("none", Tree(Path.Combine(project, "Packages_old")));
+                Assert.Equal(hits + 1, Hits());
+                hits++;
                 // What a script wrote in the view itself stays the view's.
                 File.WriteAllText("scratch.txt", "S");
                 FileUtil.MoveFileOrDirectory("scratch.txt", "Assets/scratch.txt");
