@@ -536,8 +536,14 @@ namespace UnityEngine.UIElements
 
         public static long TimeSinceStartupMs() => s_TimeSinceStartup?.Invoke() ?? (long)(Time.realtimeSinceStartup * 1000f);
 
+        // Read by editor extensions through reflection to update the panel one phase at a time.
+        VisualTreeUpdater m_VisualTreeUpdater;
+
+        internal VisualTreeUpdater visualTreeUpdater => m_VisualTreeUpdater;
+
         public Panel(ScriptableObject ownerObject, ContextType contextType, EventDispatcher dispatcher, InitEditorUpdaterFunction initEditorUpdater = null)
         {
+            m_VisualTreeUpdater = new VisualTreeUpdater(this);
             this.ownerObject = ownerObject;
             m_ContextType = contextType;
             m_Dispatcher = dispatcher;
@@ -716,13 +722,67 @@ namespace UnityEngine.UIElements
 
     internal delegate long TimeMsFunction();
 
+    internal enum VisualTreeUpdatePhase
+    {
+        ViewData = 0,
+        Bindings = 1,
+        DataBinding = 2,
+        Animation = 3,
+        Styles = 4,
+        Layout = 5,
+        TransformClip = 6,
+        Repaint = 7,
+        Count = 8,
+    }
+
     internal delegate void InitEditorUpdaterFunction(BaseVisualElementPanel panel, VisualTreeUpdater visualTreeUpdater);
 
+    /// <summary>A panel's update, one phase at a time, as the Unity 6000.0.71f1 Editor runs it
+    /// (tests/projects/inspectorelement vtu.*): bindings take their pending requests, data
+    /// bindings update, animations and transitions step, styles resolve and the layout is
+    /// computed (with the styles it needs; its geometry events are sent). Unbound keeps no view
+    /// data and computes transforms and clips when they are read, so those phases do nothing;
+    /// the repaint phase is the panel's rendering, reported (the panel renders in its frame).</summary>
     internal sealed partial class VisualTreeUpdater : IDisposable
     {
-        public VisualTreeUpdater(BaseVisualElementPanel panel) { }
+        readonly BaseVisualElementPanel m_Panel;
+
+        public VisualTreeUpdater(BaseVisualElementPanel panel) => m_Panel = panel;
+
         [Unbound.EditorFaithful("this updater holds no updaters of its own to dispose")]
         public void Dispose() { }
+
+        public void UpdateVisualTree()
+        {
+            for (var phase = VisualTreeUpdatePhase.ViewData; phase < VisualTreeUpdatePhase.Count; phase++)
+                UpdateVisualTreePhase(phase);
+        }
+
+        public void UpdateVisualTreePhase(VisualTreeUpdatePhase phase)
+        {
+            switch (phase)
+            {
+                case VisualTreeUpdatePhase.Bindings:
+                    m_Panel.UaProcessPendingBindingRequests();
+                    break;
+                case VisualTreeUpdatePhase.DataBinding:
+                    if (m_Panel is BaseRuntimePanel panel) panel.UaUpdateDataBindingForRepaint();
+                    break;
+                case VisualTreeUpdatePhase.Animation:
+                    m_Panel.uaValueAnimations.Update();
+                    m_Panel.UpdateAnimations();
+                    break;
+                case VisualTreeUpdatePhase.Styles:
+                    m_Panel.ApplyStyles();
+                    break;
+                case VisualTreeUpdatePhase.Layout:
+                    m_Panel.ValidateLayout();
+                    break;
+                case VisualTreeUpdatePhase.Repaint:
+                    Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeUpdater.UpdateVisualTreePhase(Repaint)");
+                    break;
+            }
+        }
     }
 
     internal struct UaPanelClear

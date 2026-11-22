@@ -2181,7 +2181,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal override global::UnityEngine.UIElements.IVisualTreeUpdater GetUpdater(global::UnityEngine.UIElements.VisualTreeUpdatePhase phase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.GetUpdater"); return default; }
         public global::UnityEngine.UIElements.TimerEventScheduler timerEventScheduler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.timerEventScheduler"); return default; } }
         internal override global::UnityEngine.UIElements.IScheduler scheduler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.scheduler"); return default; } }
-        internal global::UnityEngine.UIElements.VisualTreeUpdater visualTreeUpdater { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.visualTreeUpdater"); return default; } }
         internal override global::UnityEngine.UIElements.IStylePropertyAnimationSystem styleAnimationSystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.styleAnimationSystem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.styleAnimationSystem"); } }
         public override global::UnityEngine.UIElements.SavePersistentViewData saveViewData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.saveViewData"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.saveViewData"); } }
         public override global::UnityEngine.UIElements.GetViewDataDictionary getViewDataDictionary { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.getViewDataDictionary"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.getViewDataDictionary"); } }
@@ -5157,23 +5156,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public VisualTreeStyleUpdaterTraversal() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeStyleUpdaterTraversal.ctor"); }
         public global::UnityEngine.UIElements.StyleMatchingContext styleMatchingContext { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeStyleUpdaterTraversal.styleMatchingContext"); return default; } }
     }
-    internal enum VisualTreeUpdatePhase
-    {
-        ViewData = 0,
-        Bindings = 1,
-        DataBinding = 2,
-        Animation = 3,
-        Styles = 4,
-        Layout = 5,
-        TransformClip = 6,
-        Repaint = 7,
-        Count = 8,
-    }
     unsafe partial class VisualTreeUpdater
     {
         [global::Unbound.Stub] public long[] GetUpdatersFrameCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeUpdater.GetUpdatersFrameCount"); return global::System.Array.Empty<long>(); }
-        [global::Unbound.Stub] public void UpdateVisualTree() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeUpdater.UpdateVisualTree"); }
-        [global::Unbound.Stub] public void UpdateVisualTreePhase(global::UnityEngine.UIElements.VisualTreeUpdatePhase phase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeUpdater.UpdateVisualTreePhase"); }
         [global::Unbound.Stub] public void OnVersionChanged(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.VersionChangeType versionChangeType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeUpdater.OnVersionChanged"); }
         [global::Unbound.Stub] public void DirtyStyleSheets() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeUpdater.DirtyStyleSheets"); }
         [global::Unbound.Stub] public void SetUpdater(global::UnityEngine.UIElements.IVisualTreeUpdater updater, global::UnityEngine.UIElements.VisualTreeUpdatePhase phase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeUpdater.SetUpdater"); }
