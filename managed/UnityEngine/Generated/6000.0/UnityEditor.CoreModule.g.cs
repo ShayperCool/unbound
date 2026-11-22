@@ -9950,35 +9950,6 @@ namespace UnityEditor
     }
     unsafe partial class FileUtil
     {
-        [global::Unbound.Stub] internal static void ReplaceText(string path, params string[] input) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.ReplaceText"); }
-        [global::Unbound.Stub] internal static bool ReplaceTextRegex(string path, params string[] input) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.ReplaceTextRegex"); return default; }
-        [global::Unbound.Stub] internal static bool AppendTextAfter(string path, string find, string append) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.AppendTextAfter"); return default; }
-        [global::Unbound.Stub] internal static void CopyDirectoryRecursive(string source, string target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CopyDirectoryRecursive"); }
-        [global::Unbound.Stub] internal static void CopyDirectoryRecursive(string source, string target, bool overwrite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CopyDirectoryRecursive"); }
-        [global::Unbound.Stub] internal static void CopyDirectory(string source, string target, bool overwrite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CopyDirectory"); }
-        [global::Unbound.Stub] internal static void CopyDirectoryRecursive(string source, string target, bool overwrite, bool ignoreMeta) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CopyDirectoryRecursive"); }
-        [global::Unbound.Stub] internal static void CopyDirectoryRecursiveForPostprocess(string source, string target, bool overwrite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CopyDirectoryRecursiveForPostprocess"); }
-        [global::Unbound.Stub] internal static void CopyDirectoryRecursiveFiltered(string source, string target, bool overwrite, string regExExcludeFilter) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CopyDirectoryRecursiveFiltered"); }
-        [global::Unbound.Stub] internal static void CopyDirectoryFiltered(string source, string target, bool overwrite, string regExExcludeFilter, bool recursive) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CopyDirectoryFiltered"); }
-        [global::Unbound.Stub] internal static void CopyDirectoryFiltered(string source, string target, bool overwrite, global::System.Func<string, bool> includeCallback, bool recursive) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CopyDirectoryFiltered"); }
-        [global::Unbound.Stub] internal static void UnityDirectoryDelete(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.UnityDirectoryDelete"); }
-        [global::Unbound.Stub] internal static void UnityDirectoryDelete(string path, bool recursive) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.UnityDirectoryDelete"); }
-        [global::Unbound.Stub] internal static void UnityDirectoryRemoveReadonlyAttribute(string target_dir) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.UnityDirectoryRemoveReadonlyAttribute"); }
-        [global::Unbound.Stub] internal static void MoveFileIfExists(string src, string dst) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.MoveFileIfExists"); }
-        [global::Unbound.Stub] internal static void CopyFileIfExists(string src, string dst, bool overwrite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CopyFileIfExists"); }
-        [global::Unbound.Stub] internal static void UnityFileCopy(string from, string to, bool overwrite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.UnityFileCopy"); }
-        [global::Unbound.Stub] internal static bool ReadFileContentBinary(string assetPath, out byte[] fileContent, out string errorMessage) { fileContent = default; errorMessage = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.ReadFileContentBinary"); return default; }
-        [global::Unbound.Stub] internal static string NiceWinPath(string unityPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.NiceWinPath"); return default; }
-        [global::Unbound.Stub] internal static string UnityGetFileNameWithoutExtension(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.UnityGetFileNameWithoutExtension"); return default; }
-        [global::Unbound.Stub] internal static string UnityGetFileName(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.UnityGetFileName"); return default; }
-        [global::Unbound.Stub] internal static string UnityGetDirectoryName(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.UnityGetDirectoryName"); return default; }
-        [global::Unbound.Stub] internal static void UnityFileCopy(string from, string to) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.UnityFileCopy"); }
-        [global::Unbound.Stub] internal static void CreateOrCleanDirectory(string dir) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CreateOrCleanDirectory"); }
-        [global::Unbound.Stub] internal static string RemovePathPrefix(string fullPath, string prefix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.RemovePathPrefix"); return default; }
-        [global::Unbound.Stub] internal static string CombinePaths(params string[] paths) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CombinePaths"); return default; }
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.List<string> GetAllFilesRecursive(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.GetAllFilesRecursive"); return new global::System.Collections.Generic.List<string>(); }
-        [global::Unbound.Stub] internal static void WalkFilesystemRecursively(string path, global::System.Action<string> fileCallback, global::System.Func<string, bool> directoryCallback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.WalkFilesystemRecursively"); }
-        [global::Unbound.Stub] internal static long GetDirectorySize(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.GetDirectorySize"); return default; }
         [global::Unbound.Stub] internal static bool IsReadOnly(global::UnityEngine.Object asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.IsReadOnly"); return default; }
         [global::Unbound.Stub] internal static bool HasReadOnly(global::System.Collections.Generic.IEnumerable<global::UnityEngine.Object> assets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.HasReadOnly"); return default; }
         [global::Unbound.Stub] internal static bool MakeWritable(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.MakeWritable"); return default; }
