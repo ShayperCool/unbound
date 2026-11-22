@@ -135,6 +135,24 @@ fn landing(path: &Path) -> PathBuf {
     }
 }
 
+/// Whether the volume finds an existing directory under its name in another case.
+fn ignores_case(directory: &Path) -> bool {
+    let Some(name) = directory.file_name().and_then(|n| n.to_str()) else {
+        return false;
+    };
+    let swapped: String = name
+        .chars()
+        .map(|c| {
+            if c.is_uppercase() {
+                c.to_lowercase().next().unwrap_or(c)
+            } else {
+                c.to_uppercase().next().unwrap_or(c)
+            }
+        })
+        .collect();
+    swapped != name && directory.with_file_name(swapped).exists()
+}
+
 /// Whether a directory is in a project's folder, by where both land.
 fn in_project(project_root: &Path, dir: &Path) -> bool {
     landing(dir).starts_with(landing(project_root))
@@ -152,8 +170,18 @@ pub fn refused_project_data(project_root: &Path, dir: &Path) -> Option<String> {
             dir.display()
         ));
     }
+    // Where the volume ignores case, a folder that is not there yet is named in any case.
+    let first = candidate
+        .strip_prefix(&root)
+        .ok()
+        .and_then(|rest| rest.components().next())
+        .map(|part| part.as_os_str().to_string_lossy().into_owned());
     for name in NOT_FOR_PROJECT_DATA {
-        if candidate.starts_with(landing(&root.join(name))) {
+        let same_name = ignores_case(&root)
+            && first
+                .as_deref()
+                .is_some_and(|first| first.eq_ignore_ascii_case(name));
+        if same_name || candidate.starts_with(landing(&root.join(name))) {
             return Some(format!(
                 "{} is in the project's {name}/ folder: Unbound's project data may not be in Assets/, Packages/, ProjectSettings/ or Library/",
                 dir.display()
@@ -212,9 +240,26 @@ fn copy_entry(from: &Path, to: &Path) -> std::io::Result<()> {
 }
 
 /// Moves a file or folder: renamed where both are on one volume, else copied (the source goes
-/// with its directory).
+/// with its directory). The copy is made under another name and renamed into place when it is
+/// whole, so a copy that fails or is cut short never counts as the entry.
 fn move_entry(from: &Path, to: &Path) -> std::io::Result<()> {
-    std::fs::rename(from, to).or_else(|_| copy_entry(from, to))
+    std::fs::rename(from, to).or_else(|_| copy_into_place(from, to))
+}
+
+/// A whole copy at `to`, or none: made beside it under another name and renamed when done.
+fn copy_into_place(from: &Path, to: &Path) -> std::io::Result<()> {
+    let mut partial = to.as_os_str().to_os_string();
+    partial.push(format!(".{}.partial", std::process::id()));
+    let partial = PathBuf::from(partial);
+    let copied = copy_entry(from, &partial).and_then(|()| std::fs::rename(&partial, to));
+    if copied.is_err() {
+        let _ = if partial.is_dir() {
+            std::fs::remove_dir_all(&partial)
+        } else {
+            std::fs::remove_file(&partial)
+        };
+    }
+    copied
 }
 
 /// Makes a project's Unbound directory ready: creates it, in the project with a `.gitignore`
@@ -804,6 +849,9 @@ mod tests {
         if root.join("ASSETS").exists() {
             let other_case = super::unbound_dir_at(&root, Some(Path::new("assets/Data")));
             assert!(super::refused_project_data(&root, &other_case).is_some());
+            // Also a folder that is not there yet (Unity makes Library/ later).
+            let later = super::unbound_dir_at(&root, Some(Path::new("library/Data")));
+            assert!(super::refused_project_data(&root, &later).is_some());
         }
         // In the project by another spelling of its folder: the ignore file is written.
         let spelled = elsewhere.join("project/Build/Data");
@@ -923,11 +971,45 @@ mod tests {
             std::fs::read_link(root.join("to/TestResults/link")).unwrap(),
             Path::new("Editor.log")
         );
-        // A destination whose folder is missing gets neither: the error is the caller's.
+        // A copy that fails midway (a file that cannot be read) leaves no entry and nothing
+        // beside it: what is there afterwards is whole or absent.
+        std::fs::create_dir_all(root.join("broken/a")).unwrap();
+        std::fs::write(root.join("broken/a/first.txt"), "1").unwrap();
+        std::fs::write(root.join("broken/unreadable.txt"), "2").unwrap();
+        std::fs::set_permissions(
+            root.join("broken/unreadable.txt"),
+            std::os::unix::fs::PermissionsExt::from_mode(0o000),
+        )
+        .unwrap();
+        // (Root reads any file: there the copy is whole.)
+        if super::copy_into_place(&root.join("broken"), &root.join("moved")).is_err() {
+            assert!(!root.join("moved").exists());
+            let left: Vec<_> = std::fs::read_dir(&root)
+                .unwrap()
+                .flatten()
+                .map(|entry| entry.file_name())
+                .filter(|name| name.to_string_lossy().contains("partial"))
+                .collect();
+            assert!(left.is_empty(), "{left:?}");
+        } else {
+            assert!(root.join("moved/a/first.txt").is_file());
+        }
+        super::copy_into_place(&root.join("from"), &root.join("whole")).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(root.join("whole/Editor.log")).unwrap(),
+            "log"
+        );
+        // A destination whose folder is missing gets neither copy nor leftovers.
         assert!(
             super::move_entry(&root.join("from/Editor.log"), &root.join("none/Editor.log"))
                 .is_err()
         );
+        assert!(!root.join("none").exists());
+        std::fs::set_permissions(
+            root.join("broken/unreadable.txt"),
+            std::os::unix::fs::PermissionsExt::from_mode(0o644),
+        )
+        .unwrap();
         std::fs::remove_dir_all(&root).unwrap();
     }
 
