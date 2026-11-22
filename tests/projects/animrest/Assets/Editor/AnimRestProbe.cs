@@ -126,6 +126,8 @@ public static class AnimRestProbe
         PropertyModificationProbe();
         GenericBindingsProbe();
         foreach (var step in PlayableCurveProbe()) yield return step;
+        foreach (var step in PlayTimingProbe()) yield return step;
+        PropertyModificationExtraProbe();
     }
 
     // ------------------------------------------------------------------ 1. BlendTree stats
@@ -589,5 +591,170 @@ public static class AnimRestProbe
         graph.Destroy();
         Object.Destroy(go);
         Logs("playablecurve");
+    }
+
+    // ------------------------------------------------------------------ 8. Legacy Animation Play() timing controls
+
+    static IEnumerable<bool> PlayTimingProbe()
+    {
+        float prevCapture = Time.captureDeltaTime;
+        float prevFixed = Time.fixedDeltaTime;
+        Time.captureDeltaTime = 0.03f;
+        Time.fixedDeltaTime = 0.02f;
+
+        var clip = MakeLegacyClip("TimingClip", 2f, "m_LocalPosition.x", 2f);
+        Animation MakeAnim(string name, bool fixedMode)
+        {
+            var go = MakeRig(name);
+            var a = go.AddComponent<Animation>();
+            a.playAutomatically = false;
+            a.cullingType = AnimationCullingType.AlwaysAnimate;
+            a.updateMode = fixedMode ? AnimationUpdateMode.Fixed : AnimationUpdateMode.Normal;
+            a.AddClip(clip, "C");
+            return a;
+        }
+
+        var animUpd = MakeAnim("TimingUpd", false);
+        var animLate = MakeAnim("TimingLate", false);
+        var animCoro = MakeAnim("TimingCoro", false);
+        var animFixUpd = MakeAnim("TimingFixUpd", true);
+        var animFixFix = MakeAnim("TimingFixFix", true);
+
+        var driverGo = new GameObject("PlayTimingDriver");
+        var driver = driverGo.AddComponent<PlayTimingDriver>();
+
+        int phase = 0; // 0=waiting for 0.01 offset, 1..4=recording f0..f3
+        bool fixStarted = false;
+        double t0 = 0, ft0 = 0;
+
+        driver.OnFixed = () =>
+        {
+            if (phase >= 1 && !fixStarted)
+            {
+                fixStarted = true;
+                animFixFix.Play("C");
+            }
+        };
+        driver.OnUpdate = () =>
+        {
+            if (phase == 0)
+            {
+                double diff = Time.timeAsDouble - Time.fixedTimeAsDouble;
+                if (diff >= 0.008 && diff <= 0.012)
+                {
+                    phase = 1;
+                    t0 = Time.timeAsDouble;
+                    ft0 = Time.fixedTimeAsDouble;
+                    Put("playtiming.offset", (float)diff);
+                    animUpd.Play("C");
+                    animFixUpd.Play("C");
+                    driver.ScheduleAfterUpdate();
+                }
+            }
+            else if (phase >= 1 && phase < 4)
+            {
+                phase++;
+            }
+        };
+        driver.OnLate = () =>
+        {
+            if (phase == 1)
+            {
+                animLate.Play("C");
+            }
+            if (phase >= 1 && phase <= 4)
+            {
+                int idx = phase - 1;
+                Put($"playtiming.f{idx}.dt", (float)(Time.timeAsDouble - t0));
+                Put($"playtiming.f{idx}.dft", (float)(Time.fixedTimeAsDouble - ft0));
+                Put($"playtiming.f{idx}.upd", animUpd["C"].time);
+                Put($"playtiming.f{idx}.late", animLate["C"].time);
+                Put($"playtiming.f{idx}.coro", animCoro["C"].time);
+                Put($"playtiming.f{idx}.fixUpd", animFixUpd["C"].time);
+                Put($"playtiming.f{idx}.fixFix", animFixFix["C"].time);
+                if (phase == 4) phase = 5;
+            }
+        };
+        driver.OnEndOfFrame = () =>
+        {
+            animCoro.Play("C");
+        };
+
+        int guard = 0;
+        while (phase < 5 && guard++ < 40) yield return true;
+
+        Object.Destroy(driverGo);
+        Object.Destroy(animUpd.gameObject);
+        Object.Destroy(animLate.gameObject);
+        Object.Destroy(animCoro.gameObject);
+        Object.Destroy(animFixUpd.gameObject);
+        Object.Destroy(animFixFix.gameObject);
+        Time.captureDeltaTime = prevCapture;
+        Time.fixedDeltaTime = prevFixed;
+        Logs("playtiming");
+    }
+
+    // ------------------------------------------------------------------ 9. AddPropertyModification prefab & non-float controls
+
+    static void PropertyModificationExtraProbe()
+    {
+        // A. Non-float (string) property modification
+        var strGo = new GameObject("OrigName");
+        var driver = ScriptableObject.CreateInstance<AnimationModeDriver>();
+        AnimationMode.StartAnimationMode(driver);
+        AnimationMode.AddPropertyModification(
+            EditorCurveBinding.FloatCurve("", typeof(GameObject), "m_Name"),
+            new PropertyModification { target = strGo, propertyPath = "m_Name", value = "RecordedName" },
+            true);
+        Put("propmod.extra.str.animated", AnimationMode.IsPropertyAnimated(strGo, "m_Name"));
+        strGo.name = "ChangedName";
+        AnimationMode.StopAnimationMode(driver);
+        Put("propmod.extra.str.reverted", strGo.name);
+        Object.Destroy(strGo);
+
+        // B. Prefab instance with keepPrefabOverride false vs true
+        const string prefabPath = "Assets/TempPropModPrefab.prefab";
+        var src = new GameObject("TempPropModPrefab");
+        var srcTarget = src.AddComponent<ProbeTarget>();
+        srcTarget.steps = 10;
+        srcTarget.amount = 2f;
+        var prefab = PrefabUtility.SaveAsPrefabAsset(src, prefabPath);
+        Object.DestroyImmediate(src);
+
+        foreach (bool keep in new[] { false, true })
+        {
+            string tag = keep ? "keepTrue" : "keepFalse";
+            var inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            var t = inst.GetComponent<ProbeTarget>();
+            // Give `amount` an existing prefab override; leave `steps` unoverridden.
+            t.amount = 7f;
+            PrefabUtility.RecordPrefabInstancePropertyModifications(t);
+
+            AnimationMode.StartAnimationMode(driver);
+            AnimationMode.AddPropertyModification(
+                EditorCurveBinding.FloatCurve("", typeof(ProbeTarget), "amount"),
+                new PropertyModification { target = t, propertyPath = "amount", value = "3" },
+                keep);
+            AnimationMode.AddPropertyModification(
+                EditorCurveBinding.FloatCurve("", typeof(ProbeTarget), "steps"),
+                new PropertyModification { target = t, propertyPath = "steps", value = "4" },
+                keep);
+            t.amount = 99f;
+            t.steps = 99;
+            Put($"propmod.extra.{tag}.animated",
+                $"amount={AnimationMode.IsPropertyAnimated(t, "amount")} steps={AnimationMode.IsPropertyAnimated(t, "steps")}");
+            AnimationMode.StopAnimationMode(driver);
+
+            var mods = PrefabUtility.GetPropertyModifications(inst) ?? Array.Empty<PropertyModification>();
+            var modSummary = string.Join(";", mods
+                .Where(m => m.propertyPath == "amount" || m.propertyPath == "steps")
+                .OrderBy(m => m.propertyPath, StringComparer.Ordinal)
+                .Select(m => $"{m.propertyPath}={m.value}"));
+            Put($"propmod.extra.{tag}.reverted", $"amount={F(t.amount)} steps={t.steps} mods={modSummary}");
+            Object.DestroyImmediate(inst);
+        }
+
+        AssetDatabase.DeleteAsset(prefabPath);
+        Logs("propmod.extra");
     }
 }

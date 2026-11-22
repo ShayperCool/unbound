@@ -1,0 +1,6 @@
+{
+  "AnimationMode's revert on a prefab instance: the Editor writes the recorded values back and leaves the instance's property modifications as they were (the earlier override amount=7, none for steps); Unbound writes the values through a SerializedObject, which records them as overrides (amount=3, steps=4). Follow-up: revert without prefab override bookkeeping.": [
+    "propmod.extra.keepFalse.reverted",
+    "propmod.extra.keepTrue.reverted"
+  ]
+}

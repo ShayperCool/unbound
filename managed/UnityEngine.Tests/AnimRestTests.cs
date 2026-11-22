@@ -218,6 +218,71 @@ namespace UnityEngine.Tests
             Near.Equal(0.5f, so.normalizedTime, 1e-4f); // layer 1 unaffected: 0.25 + 0.25*1 = 0.5
         }
 
+        /// <summary>A state's first step advances it by the clock time since Play, at most the
+        /// step (tests/projects/animrest playtiming.*): nothing at the time it began, the whole
+        /// step a frame later, and the part between for a fixed-step Animation begun in Update,
+        /// where the frame's time is ahead of the fixed time.</summary>
+        [Fact]
+        public void FirstStepOfAPlayedStateAdvancesByTheClockTimeSincePlay()
+        {
+            double savedTime = Time.s_Time, savedFixed = Time.s_FixedTime;
+            try
+            {
+                var clip = Keep(new AnimationClip { legacy = true, wrapMode = WrapMode.Loop, name = "C" });
+                clip.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 2f, 2f));
+                Animation Make(string name, bool fixedStep)
+                {
+                    var anim = Keep(new GameObject(name)).AddComponent<Animation>();
+                    anim.playAutomatically = false;
+                    anim.cullingType = AnimationCullingType.AlwaysAnimate;
+                    anim.updateMode = fixedStep ? AnimationUpdateMode.Fixed : AnimationUpdateMode.Normal;
+                    anim.AddClip(clip, "C");
+                    return anim;
+                }
+
+                // Frame time 10.01, fixed time 10.00: Play in Update.
+                Time.s_Time = 10.01;
+                Time.s_FixedTime = 10.0;
+                var inUpdate = Make("Update", false);
+                var fixedInUpdate = Make("FixedUpdate", true);
+                var later = Make("Later", false);
+                inUpdate.Play("C");
+                fixedInUpdate.Play("C");
+                later.Play("C");
+
+                // The frame's own update: no time has passed for the frame-stepped state.
+                inUpdate.Step(0.03f);
+                Near.Equal(0f, inUpdate["C"].time, 1e-6f);
+
+                // Fixed steps to 10.02 and 10.04: the first advances by 10.02 - 10.01.
+                Time.s_FixedTime = 10.02;
+                fixedInUpdate.Step(0.02f);
+                Near.Equal(0.01f, fixedInUpdate["C"].time, 1e-5f);
+                Time.s_FixedTime = 10.04;
+                fixedInUpdate.Step(0.02f);
+                Near.Equal(0.03f, fixedInUpdate["C"].time, 1e-5f);
+
+                // The next frame: a state first stepped a frame after Play advances the whole
+                // step, never more than the step even when more time has passed.
+                Time.s_Time = 10.04;
+                inUpdate.Step(0.03f);
+                Near.Equal(0.03f, inUpdate["C"].time, 1e-6f);
+                later.Step(0.03f);
+                Near.Equal(0.03f, later["C"].time, 1e-6f);
+                Time.s_Time = 11.0;
+                var late = Make("Late", false);
+                late.Play("C");
+                Time.s_Time = 12.0;
+                late.Step(0.03f);
+                Near.Equal(0.03f, late["C"].time, 1e-6f);
+            }
+            finally
+            {
+                Time.s_Time = savedTime;
+                Time.s_FixedTime = savedFixed;
+            }
+        }
+
         // ------------------------------------------------------------------ 4. EditorCurves & AnimationMode.GetCurveBindings
 
         [Fact]

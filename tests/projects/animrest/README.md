@@ -11,6 +11,18 @@ Sections (all run in Play mode):
 * `synclayer.*`: `Animation.SyncLayer` with two clips of different lengths, speeds, weights and
   initial times (`Time.captureDeltaTime = 0.125f`), with unsynced control, unsynced layer 1 control,
   disabled state control, and zero-weight control.
+* `playtiming.*`: when a legacy `Animation` state started with `Play` first advances
+  (`Time.captureDeltaTime = 0.03f`, `Time.fixedDeltaTime = 0.02f`, started in a frame whose time
+  is 0.01 ahead of the fixed time): `Play` in `Update`, in `LateUpdate`, in a coroutine resumed
+  after `Update`, and for `AnimationUpdateMode.Fixed` in `Update` and in `FixedUpdate`. Four
+  frames of state times next to the elapsed time and fixed time. A state's first step advances
+  it by the clock time since `Play`: nothing in the step it began in, the whole step a frame
+  later, and 0.01 for the fixed-step state begun in `Update`.
+* `propmod.extra.*`: `AnimationMode.AddPropertyModification` with a string property (recorded,
+  and reverted to the modification's value) and on a prefab instance with and without an
+  existing override, for both `keepPrefabOverride` values: the values are reverted and the
+  instance's property modifications stay as they were before animation mode. Unbound reverts the
+  values but records them as overrides; those two rows are listed in `residuals.json`.
 * `culling.*`: setting obsolete `AnimationCullingType.BasedOnClipBounds` and `BasedOnUserBounds`
   versus `AlwaysAnimate` and `BasedOnRenderers` (getter readback and logs).
 * `modebindings.*`: `AnimationUtility.GetCurveBindings` and internal `AnimationMode.GetCurveBindings`

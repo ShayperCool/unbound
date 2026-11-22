@@ -238,4 +238,41 @@
 {"k":"playablecurve.playing","v":"curve=True plain=False id=True val=0.5"}
 {"k":"playablecurve.afterSwap","v":"curve=True plain=False val=1"}
 {"k":"playablecurve.logs","v":"Warning: Parameter 'Missing' does not exist."}
+{"k":"playtiming.offset","v":0.0100002689}
+{"k":"playtiming.f0.dt","v":0}
+{"k":"playtiming.f0.dft","v":0}
+{"k":"playtiming.f0.upd","v":0}
+{"k":"playtiming.f0.late","v":0}
+{"k":"playtiming.f0.coro","v":0}
+{"k":"playtiming.f0.fixUpd","v":0}
+{"k":"playtiming.f0.fixFix","v":0}
+{"k":"playtiming.f1.dt","v":0.0299999937}
+{"k":"playtiming.f1.dft","v":0.0399999842}
+{"k":"playtiming.f1.upd","v":0.0299999937}
+{"k":"playtiming.f1.late","v":0.0299999937}
+{"k":"playtiming.f1.coro","v":0}
+{"k":"playtiming.f1.fixUpd","v":0.0299997162}
+{"k":"playtiming.f1.fixFix","v":0.0199999921}
+{"k":"playtiming.f2.dt","v":0.0599999875}
+{"k":"playtiming.f2.dft","v":0.05999998}
+{"k":"playtiming.f2.upd","v":0.0599999875}
+{"k":"playtiming.f2.late","v":0.0599999875}
+{"k":"playtiming.f2.coro","v":0.0299999937}
+{"k":"playtiming.f2.fixUpd","v":0.0499997064}
+{"k":"playtiming.f2.fixFix","v":0.0399999842}
+{"k":"playtiming.f3.dt","v":0.0899999812}
+{"k":"playtiming.f3.dft","v":0.0999999642}
+{"k":"playtiming.f3.upd","v":0.0899999812}
+{"k":"playtiming.f3.late","v":0.0899999812}
+{"k":"playtiming.f3.coro","v":0.0599999875}
+{"k":"playtiming.f3.fixUpd","v":0.0899996907}
+{"k":"playtiming.f3.fixFix","v":0.0799999684}
+{"k":"playtiming.logs","v":""}
+{"k":"propmod.extra.str.animated","v":true}
+{"k":"propmod.extra.str.reverted","v":"RecordedName"}
+{"k":"propmod.extra.keepFalse.animated","v":"amount=True steps=True"}
+{"k":"propmod.extra.keepFalse.reverted","v":"amount=3 steps=4 mods=amount=7"}
+{"k":"propmod.extra.keepTrue.animated","v":"amount=True steps=True"}
+{"k":"propmod.extra.keepTrue.reverted","v":"amount=3 steps=4 mods=amount=7"}
+{"k":"propmod.extra.logs","v":""}
 {"k":"complete","v":true}

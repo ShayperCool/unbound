@@ -1018,10 +1018,14 @@ namespace UnityEngine
                 if (!s.m_Enabled || s.m_WaitingInQueue || s.m_Clip == null || !s.m_Clip.m_Legacy) continue;
                 double from = s.m_Time;
                 bool stopped = false;
-                // A state enabled during this frame's own time step (same clock time as Begin)
-                // samples where it starts without advancing; one enabled on an earlier step
-                // (e.g. between frames) advances on the next step (tests/projects/animrest synclayer.*).
-                float stepDelta = s.m_Fresh && now <= s.m_BeginTime ? 0f : deltaTime;
+                // A state's first step advances it by the clock time since it began, at most the
+                // step: nothing when it began at this step's time (Play in Update, or in FixedUpdate
+                // for a fixed-step Animation), the whole step when it began a step earlier (Play in
+                // LateUpdate or after the frame's update), and the part between for a fixed-step
+                // Animation begun in Update, where the frame's time is ahead of the fixed time
+                // (matches the Unity 6000.0.71f1 Editor, tests/projects/animrest synclayer.* and
+                // playtiming.*).
+                float stepDelta = s.m_Fresh ? (float)Math.Clamp(now - s.m_BeginTime, 0.0, deltaTime) : deltaTime;
                 if (advance)
                 {
                     float speed = s.m_HasSyncedSpeed ? s.m_SyncedSpeed : s.m_Speed;
@@ -1220,8 +1224,9 @@ namespace UnityEngine
         internal int m_Layer;
         internal AnimationBlendMode m_BlendMode;
         internal bool m_Removed;
-        /// <summary>Started since the last update: sampled where it starts when updated at the
-        /// same clock time (<see cref="m_BeginTime"/>).</summary>
+        /// <summary>Started since the last update: its first step advances it by the time since
+        /// <see cref="m_BeginTime"/>, the time (Time.time: the fixed time inside FixedUpdate) at
+        /// which it began.</summary>
         internal bool m_Fresh;
         internal double m_BeginTime;
         /// <summary>Started, or its time set, and its time not advanced since: the update that first
@@ -1441,7 +1446,7 @@ namespace UnityEngine
         {
             m_Playing = true;
             m_Fresh = true;
-            m_BeginTime = m_Owner != null && m_Owner.m_AnimatePhysics ? Time.fixedTimeAsDouble : Time.timeAsDouble;
+            m_BeginTime = Time.timeAsDouble;
             m_EventsFromStart = true;
         }
 
