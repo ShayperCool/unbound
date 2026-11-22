@@ -18,7 +18,7 @@ using Object = UnityEngine.Object;
 /// and AnimationMode answers, and the bounds of line and trail renderers.
 /// </summary>
 [InitializeOnLoad]
-public static class AnimatorApiProbe
+public static partial class AnimatorApiProbe
 {
     const string Variable = "ANIMATOR_API_OUT";
     static readonly StringBuilder s_Out = new StringBuilder();
@@ -644,6 +644,14 @@ public static class AnimatorApiProbe
         yield return true;
         foreach (var _ in Bounds()) yield return true;
         Try("extra", Extra);
+        yield return true;
+        Try("stats", ClipStatsLadder);
+        yield return true;
+        Try("typed", TypedCurves);
+        yield return true;
+        Try("modify", Modifications);
+        yield return true;
+        Try("names", DottedNames);
         Logs("end");
     }
 

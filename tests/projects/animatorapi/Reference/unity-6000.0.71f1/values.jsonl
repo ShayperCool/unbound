@@ -593,5 +593,114 @@
 {"k":"extra.loadClip","v":"Spare:ClipModified:|||False|False AnimationClip:Spare"}
 {"k":"extra.allocateClip","v":":ClipModified:|||False|False"}
 {"k":"extra.logs","v":""}
+{"k":"stats.float.k2","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.float.k2late","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.float.k3","v":"size=2656 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.float.k10","v":"size=2852 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.float.two","v":"size=2696 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=2 pptrCurves=0 totalCurves=2 constantCurves=0 denseCurves=0 streamCurves=2"}
+{"k":"stats.float.twoShared","v":"size=2724 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=2 pptrCurves=0 totalCurves=2 constantCurves=0 denseCurves=0 streamCurves=2"}
+{"k":"stats.float.twoDisjoint","v":"size=2712 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=2 pptrCurves=0 totalCurves=2 constantCurves=0 denseCurves=0 streamCurves=2"}
+{"k":"stats.float.twoLengths","v":"size=2704 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=2 pptrCurves=0 totalCurves=2 constantCurves=0 denseCurves=0 streamCurves=2"}
+{"k":"stats.float.dense","v":"size=4280 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.constant.k1","v":"size=2548 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=1 denseCurves=0 streamCurves=0"}
+{"k":"stats.constant.k3","v":"size=2548 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=1 denseCurves=0 streamCurves=0"}
+{"k":"stats.constant.two","v":"size=2560 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=2 pptrCurves=0 totalCurves=2 constantCurves=2 denseCurves=0 streamCurves=0"}
+{"k":"stats.constant.withFloat","v":"size=2640 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=2 pptrCurves=0 totalCurves=2 constantCurves=1 denseCurves=0 streamCurves=1"}
+{"k":"stats.constant.slope.firstIn","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.constant.slope.firstOut","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.constant.slope.lastIn","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.constant.slope.lastOut","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.object.k1","v":"size=2572 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=1 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.object.k2","v":"size=2600 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=1 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.object.k3","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=1 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.object.two","v":"size=2648 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=2 totalCurves=2 constantCurves=0 denseCurves=0 streamCurves=2"}
+{"k":"stats.object.withFloat","v":"size=2684 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=1 totalCurves=2 constantCurves=0 denseCurves=0 streamCurves=2"}
+{"k":"stats.object.withConstant","v":"size=2612 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=1 totalCurves=2 constantCurves=1 denseCurves=0 streamCurves=1"}
+{"k":"stats.euler.y","v":"size=2764 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=1 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=3 constantCurves=0 denseCurves=0 streamCurves=3"}
+{"k":"stats.euler.constant","v":"size=2572 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=1 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=3 constantCurves=3 denseCurves=0 streamCurves=0"}
+{"k":"stats.position.x","v":"size=2764 clips=1 positionCurves=1 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=3 constantCurves=0 denseCurves=0 streamCurves=3"}
+{"k":"stats.position.keysDiffer","v":"size=2832 clips=1 positionCurves=1 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=3 constantCurves=0 denseCurves=0 streamCurves=3"}
+{"k":"stats.position.timesDiffer","v":"size=2900 clips=1 positionCurves=1 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=3 constantCurves=0 denseCurves=0 streamCurves=3"}
+{"k":"stats.position.oneConstant","v":"size=2764 clips=1 positionCurves=1 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=3 constantCurves=0 denseCurves=0 streamCurves=3"}
+{"k":"stats.position.twoPaths","v":"size=2968 clips=1 positionCurves=2 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=6 constantCurves=0 denseCurves=0 streamCurves=6"}
+{"k":"stats.rotation","v":"size=2832 clips=1 positionCurves=0 quaternionCurves=1 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=4 constantCurves=0 denseCurves=0 streamCurves=4"}
+{"k":"stats.scale.x","v":"size=2764 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=1 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=3 constantCurves=0 denseCurves=0 streamCurves=3"}
+{"k":"stats.active","v":"size=2656 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.root","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=1 genericCurves=0 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.event","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.loop","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.legacy","v":"size=0 clips=0 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=0 constantCurves=0 denseCurves=0 streamCurves=0"}
+{"k":"stats.legacyAfter","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.setCurve","v":"size=0 clips=0 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=0 constantCurves=0 denseCurves=0 streamCurves=0"}
+{"k":"stats.setCurve.length","v":"size=0 clips=0 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=0 constantCurves=0 denseCurves=0 streamCurves=0"}
+{"k":"stats.setCurve.events","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.setCurve.settings","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.setCurve.editorCurve","v":"size=2696 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=2 pptrCurves=0 totalCurves=2 constantCurves=0 denseCurves=0 streamCurves=2"}
+{"k":"stats.setCurve.objectCurve","v":"size=2676 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=1 totalCurves=2 constantCurves=0 denseCurves=0 streamCurves=2"}
+{"k":"stats.setCurve.bindings","v":"size=0 clips=0 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=0 constantCurves=0 denseCurves=0 streamCurves=0"}
+{"k":"stats.setCurve.sampled","v":"size=0 clips=0 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=0 constantCurves=0 denseCurves=0 streamCurves=0"}
+{"k":"stats.setCurve.played","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.editorThenSetCurve","v":"size=0 clips=0 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=0 constantCurves=0 denseCurves=0 streamCurves=0"}
+{"k":"stats.cleared","v":"size=0 clips=0 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=0 constantCurves=0 denseCurves=0 streamCurves=0"}
+{"k":"stats.clearedThenEditor","v":"size=2628 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=1 pptrCurves=0 totalCurves=1 constantCurves=0 denseCurves=0 streamCurves=1"}
+{"k":"stats.copy","v":"size=0 clips=0 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=0 constantCurves=0 denseCurves=0 streamCurves=0"}
+{"k":"stats.copyOfSetCurve","v":"size=0 clips=0 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=0 constantCurves=0 denseCurves=0 streamCurves=0"}
+{"k":"stats.asset.legacy","v":"size=0 clips=0 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=0 constantCurves=0 denseCurves=0 streamCurves=0"}
+{"k":"stats.asset.copy","v":"size=0 clips=0 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=0 constantCurves=0 denseCurves=0 streamCurves=0"}
+{"k":"stats.logs","v":"Warning: '.' is not allowed in State name"}
+{"k":"typed.stats","v":"size=3884 clips=1 positionCurves=0 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=9 pptrCurves=17 totalCurves=26 constantCurves=2 denseCurves=0 streamCurves=24"}
+{"k":"typed.bindings","v":"|TypedTarget|f|False|False;|TypedTarget|i|False|False;|TypedTarget|b|False|False;|TypedTarget|mode|False|True;|TypedTarget|color.r|False|False;|TypedTarget|offset.x|False|False;|TypedTarget|mode2|False|True;|TypedTarget|mode3|False|True;|TypedTarget|counted|False|True / |TypedTarget|anyRef|True|True;|TypedTarget|clipRef|True|True;|TypedTarget|motion|True|True;|TypedTarget|material|True|True;|TypedTarget|texture|True|True;|TypedTarget|texture2D|True|True;|TypedTarget|so|True|True;|TypedTarget|data|True|True;|TypedTarget|gameObjectRef|True|True;|TypedTarget|transformRef|True|True;|TypedTarget|component|True|True;|TypedTarget|behaviour|True|True;|TypedTarget|script|True|True;|TypedTarget|probe|True|True;|TypedTarget|mesh|True|True;|TypedTarget|shader|True|True;|MeshRenderer|m_Materials.Array.data[0]|True|True"}
+{"k":"typed.animator.early","v":"f=13.125 i=13 b=True mode=1065353216 mode2=0 mode3=0 counted=3 color=0.15625,0 offset=(0.625,2,3) any=null clip=AnimationClip:Walk motion=AnimationClip:Walk material=Material:M1 texture=Texture2D:T1 texture2D=Texture2D:T1 so=null data=null gameObject=GameObject:A transform=Transform:A component=Transform:A behaviour=Light:A script=null probe=null mesh=Mesh:Mesh1 shader=Shader:Sprites/Default slot=Material:M1"}
+{"k":"typed.mode.early","v":"f=13.125 i=13 b=True mode=1065353216 mode2=1056964608 mode3=1 counted=5 color=0.15625,0 offset=(0.625,2,3) any=null clip=null motion=null material=null texture=null texture2D=null so=null data=null gameObject=null transform=null component=null behaviour=null script=null probe=null mesh=null shader=null slot=null"}
+{"k":"typed.mode.early.animated","v":"f=True i=True mode=True mode2=True counted=True color.r=True color.g=False color=False offset.x=True offset.y=False offset=False anyRef=True clipRef=True material=True label=False slot=True"}
+{"k":"typed.mode.early.stopped","v":"f=1.5 i=2 b=False mode=2 mode2=2 mode3=2 counted=4 color=1,0 offset=(1,2,3) any=null clip=null motion=null material=null texture=null texture2D=null so=null data=null gameObject=null transform=null component=null behaviour=null script=null probe=null mesh=null shader=null slot=null"}
+{"k":"typed.sample.early","v":"f=13.125 i=13 b=True mode=1065353216 mode2=1056964608 mode3=1 counted=5 color=0.15625,0 offset=(0.625,2,3) any=null clip=null motion=null material=null texture=null texture2D=null so=null data=null gameObject=null transform=null component=null behaviour=null script=null probe=null mesh=null shader=null slot=null"}
+{"k":"typed.legacySample.early","v":"f=13.125 i=13 b=True mode=1065353216 mode2=1056964608 mode3=1 counted=5 color=0.15625,0 offset=(0.625,2,3) any=null clip=null motion=null material=null texture=null texture2D=null so=null data=null gameObject=null transform=null component=null behaviour=null script=null probe=null mesh=null shader=null slot=null"}
+{"k":"typed.legacy.early","v":"f=13.125 i=13 b=True mode=1065353216 mode2=1056964608 mode3=1 counted=5 color=0.15625,0 offset=(0.625,2,3) any=null clip=null motion=null material=null texture=null texture2D=null so=null data=null gameObject=null transform=null component=null behaviour=null script=null probe=null mesh=null shader=null slot=null"}
+{"k":"typed.animator.late","v":"f=26.875 i=27 b=True mode=1065353216 mode2=1065353216 mode3=2 counted=7 color=0.84375,0 offset=(3.375,2,3) any=null clip=AnimationClip:Run motion=AnimationClip:Run material=Material:M2 texture=Texture2D:T2 texture2D=Texture2D:T2 so=null data=null gameObject=GameObject:B transform=Transform:B component=ProbeTarget:B behaviour=ProbeTarget:B script=null probe=null mesh=Mesh:Mesh2 shader=Shader:UI/Default slot=Material:M2"}
+{"k":"typed.mode.late","v":"f=26.875 i=27 b=True mode=1065353216 mode2=1065353216 mode3=2 counted=7 color=0.84375,0 offset=(3.375,2,3) any=null clip=null motion=null material=null texture=null texture2D=null so=null data=null gameObject=null transform=null component=null behaviour=null script=null probe=null mesh=null shader=null slot=null"}
+{"k":"typed.mode.late.animated","v":"f=True i=True mode=True mode2=True counted=True color.r=True color.g=False color=False offset.x=True offset.y=False offset=False anyRef=True clipRef=True material=True label=False slot=True"}
+{"k":"typed.mode.late.stopped","v":"f=1.5 i=2 b=False mode=2 mode2=2 mode3=2 counted=4 color=1,0 offset=(1,2,3) any=null clip=null motion=null material=null texture=null texture2D=null so=null data=null gameObject=null transform=null component=null behaviour=null script=null probe=null mesh=null shader=null slot=null"}
+{"k":"typed.sample.late","v":"f=26.875 i=27 b=True mode=1065353216 mode2=1065353216 mode3=2 counted=7 color=0.84375,0 offset=(3.375,2,3) any=null clip=null motion=null material=null texture=null texture2D=null so=null data=null gameObject=null transform=null component=null behaviour=null script=null probe=null mesh=null shader=null slot=null"}
+{"k":"typed.legacySample.late","v":"f=26.875 i=27 b=True mode=1065353216 mode2=1065353216 mode3=2 counted=7 color=0.84375,0 offset=(3.375,2,3) any=null clip=null motion=null material=null texture=null texture2D=null so=null data=null gameObject=null transform=null component=null behaviour=null script=null probe=null mesh=null shader=null slot=null"}
+{"k":"typed.legacy.late","v":"f=26.875 i=27 b=True mode=1065353216 mode2=1065353216 mode3=2 counted=7 color=0.84375,0 offset=(3.375,2,3) any=null clip=null motion=null material=null texture=null texture2D=null so=null data=null gameObject=null transform=null component=null behaviour=null script=null probe=null mesh=null shader=null slot=null"}
+{"k":"typed.logs","v":""}
+{"k":"modify.inherited.drop.before","v":"f=1.5 i=2 b=False label=start mode=2 color=1,0,0 material=null overrides=[]"}
+{"k":"modify.inherited.drop.animated","v":"f=True i=True b=True label=True color.r=True color.g=False color=False mode=True material=True"}
+{"k":"modify.inherited.drop.after","v":"f=1.5 i=2 b=False label=start mode=2 color=1,0,1 material=null overrides=[]"}
+{"k":"modify.inherited.drop.recorded","v":"overrides=[color.b=1]"}
+{"k":"modify.inherited.keep.before","v":"f=1.5 i=2 b=False label=start mode=2 color=1,0,0 material=null overrides=[]"}
+{"k":"modify.inherited.keep.animated","v":"f=True i=True b=True label=True color.r=True color.g=False color=False mode=True material=True"}
+{"k":"modify.inherited.keep.after","v":"f=1.5 i=2 b=False label=start mode=2 color=1,0,1 material=null overrides=[]"}
+{"k":"modify.inherited.keep.recorded","v":"overrides=[color.b=1]"}
+{"k":"modify.overridden.drop.before","v":"f=5 i=6 b=False label=over mode=2 color=1,0,0 material=Material:M3 overrides=[f=5,i=6,label=over,material=@M3]"}
+{"k":"modify.overridden.drop.animated","v":"f=True i=True b=True label=True color.r=True color.g=False color=False mode=True material=True"}
+{"k":"modify.overridden.drop.after","v":"f=5 i=6 b=False label=over mode=2 color=1,0,1 material=Material:M3 overrides=[f=5,i=6,label=over,material=@M3]"}
+{"k":"modify.overridden.drop.recorded","v":"overrides=[color.b=1,f=5,i=6,label=over,material=@M3]"}
+{"k":"modify.overridden.keep.before","v":"f=5 i=6 b=False label=over mode=2 color=1,0,0 material=Material:M3 overrides=[f=5,i=6,label=over,material=@M3]"}
+{"k":"modify.overridden.keep.animated","v":"f=True i=True b=True label=True color.r=True color.g=False color=False mode=True material=True"}
+{"k":"modify.overridden.keep.after","v":"f=5 i=6 b=False label=over mode=2 color=1,0,1 material=Material:M3 overrides=[f=5,i=6,label=over,material=@M3]"}
+{"k":"modify.overridden.keep.recorded","v":"overrides=[color.b=1,f=5,i=6,label=over,material=@M3]"}
+{"k":"modify.plain.animated","v":"f=True i=True label=True nothing=True offset.x=True offset.y=False offset=False m_LocalPosition.x=True m_LocalPosition.y=False m_LocalPosition=True"}
+{"k":"modify.plain.after","v":"f=7 i=0 b=False label=was mode=2 color=1,0,0 material=null offset=(6,8,9) position=(4,2,3)"}
+{"k":"modify.text.animated","v":"m_Color.r=True m_Color.g=False m_Color=False f=True i=True b=True mode=True label=True"}
+{"k":"modify.text.after","v":"f=0 i=0 b=False label= mode=0 color=1,0,0 material=null light=0.5,0,0"}
+{"k":"modify.logs","v":""}
+{"k":"names.state","v":"a_b"}
+{"k":"names.state.logs","v":"Warning: '.' is not allowed in State name"}
+{"k":"names.renamed","v":"c_d"}
+{"k":"names.renamed.logs","v":"Warning: '.' is not allowed in State name"}
+{"k":"names.motion","v":"e_f"}
+{"k":"names.motion.logs","v":"Warning: '.' is not allowed in State name"}
+{"k":"names.machine","v":"g_h"}
+{"k":"names.machine.logs","v":"Warning: '.' is not allowed in State name"}
+{"k":"names.unique","v":"a.b|i.j|k.l"}
+{"k":"names.unique.logs","v":""}
+{"k":"names.layer","v":"m.n|m_n"}
+{"k":"names.layer.logs","v":"Warning: '.' is not allowed in State name"}
+{"k":"names.parameter","v":"o.p"}
+{"k":"names.parameter.logs","v":""}
+{"k":"names.states","v":"a_b,c_d,e_f / g_h"}
+{"k":"names.states.logs","v":""}
 {"k":"end.logs","v":""}
 {"k":"complete","v":true}

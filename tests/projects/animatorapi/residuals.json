@@ -1,13 +1,6 @@
 {
-  "Q629 clip stats size: AnimationClipStats.size is the memory of the Editor's compiled clip, which Unbound does not build; Unbound reports its key data size (counts match)": [
-    "clip.Mixed.stats",
-    "clip.Pose.stats",
-    "clip.Root.stats",
-    "clip.Run.stats",
-    "clip.Walk.stats"
-  ],
-  "Q629 object curve of a script field typed Object: the Editor's AnimationMode sampling leaves it, Unbound's clip sampling binds and sets it; which script object fields Unity binds is unmeasured": [
-    "mode.sampled",
-    "mode.stopped"
+  "Prefab instance overrides: an object of an instance whose overrides were recorded once lists a property changed since at once; the Editor lists it when it is recorded again (PrefabUtility.GetPropertyModifications, outside animation mode too)": [
+    "modify.overridden.drop.after",
+    "modify.overridden.keep.after"
   ]
 }
