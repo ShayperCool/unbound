@@ -191,7 +191,7 @@ pub struct Instance<'a> {
     pub mesh: &'a Mesh,
     /// Its lightmap scale and offset.
     pub scale_offset: [f32; 4],
-    /// Its number in the bake.
+    /// Its place among the lightmap's renderers.
     pub index: i32,
 }
 
@@ -206,10 +206,10 @@ pub struct GBuffer {
     /// Samples per texel along each side (1, 2 or 4).
     pub supersampling: usize,
     /// Per sample (`width` × `supersampling` a row): the point in its renderer's space, and
-    /// the renderer's number ([`EMPTY`] without a surface).
+    /// the renderer's place in the lightmap ([`EMPTY`] without a surface).
     pub positions: Vec<[f32; 4]>,
     /// Per sample: the vertex normals interpolated, in the renderer's space, and the
-    /// renderer's number plus the triangle's in its submesh.
+    /// renderer's place plus the triangle's number in its submesh.
     pub normals: Vec<[f32; 4]>,
     /// Per sample: the triangle's own normal, with the same fourth value.
     pub plane_normals: Vec<[f32; 4]>,

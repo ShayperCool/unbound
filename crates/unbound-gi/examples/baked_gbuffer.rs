@@ -8,7 +8,7 @@
 //! Input (little-endian): u32 width, height, supersampling, meshes; per mesh u32 vertices, then
 //! positions (3 f32 each), normals (3), lightmap UVs brought to 0..1 (2), their scale and offset
 //! (4 f32), u32 submeshes, per submesh u32 triangles and their indices (3 u32 each); then u32
-//! instances, per instance u32 mesh, 4 f32 lightmap scale and offset, i32 number.
+//! instances, per instance u32 mesh, 4 f32 lightmap scale and offset, i32 place in the lightmap.
 use std::path::Path;
 use unbound_gi::baked::gbuffer::{Instance, Mesh, gbuffer};
 

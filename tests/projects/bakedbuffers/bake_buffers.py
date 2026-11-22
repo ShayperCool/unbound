@@ -41,6 +41,7 @@ PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 sys.path.insert(0, str(REPO/'tests'))
 sys.path.insert(0, str(PROBE))
+sys.dont_write_bytecode = True  # nothing is written into the checkout
 import editor_bake  # noqa: E402
 import editor_runner  # noqa: E402
 from probe_paths import editor_path, private_label, project_copy, reference_root, run_root  # noqa: E402
