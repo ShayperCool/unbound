@@ -109,6 +109,12 @@ public partial class NativeGfxVulkanProbe : MonoBehaviour
         callback = NativeGfxVk_Event();
         eventBase = NativeGfxVk_EventBase();
         Value("device", Q(SystemInfo.graphicsDeviceType.ToString()));
+        // Multithreaded rendering's captures (run.py --mt) only: the device's threading mode.
+        if (Environment.GetEnvironmentVariable("NATIVEGFX_MT") == "1")
+        {
+            Value("device.multithreaded", B(SystemInfo.graphicsMultiThreaded));
+            Value("device.threading", Q(SystemInfo.renderingThreadingMode.ToString()));
+        }
         texture = Keep(new Texture2D(8, 8, TextureFormat.RGBA32, false, true) { name = "texture", filterMode = FilterMode.Point });
         texture.SetPixels32(Enumerable.Repeat(new Color32(0, 255, 0, 255), 64).ToArray());
         texture.Apply();

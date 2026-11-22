@@ -218,10 +218,23 @@ receive `IUnityInterfaces` in `UnityPluginLoad`; the Initialize event may be mis
 loaded after the device was created; `UnityRenderingEvent` callbacks run on the render thread.
 Measured here (Editor, OpenGL Core, Direct threading mode): the render thread is the main thread;
 the order of the callbacks against the scripts above; the bound targets; the two Shutdown events
-at exit. Unmeasured: multithreaded rendering, the Metal device, MSAA and HDR camera
+at exit. Unmeasured: multithreaded rendering other than below (`--mt`), the Metal device, MSAA and HDR camera
 intermediates, the Game view of a windowed Editor as the target, the rendering extension
 queries under a render pipeline, with other cameras or with XR, events sent to the queue from
 other threads, a custom player loop.
+
+## Multithreaded rendering (`run.py --mt`)
+
+The Editor with `-force-gfx-mt` (Unity 6000.0.71f1, Linux, batchmode) and Unbound with
+`--force-gfx-mt`. On OpenGL Core the Editor logs `kGfxThreadingModeThreaded is not supported on
+OpenGL Core. Reverting to kGfxThreadingModeDirect instead.` and keeps its direct device: the
+capture (`Reference/unity-6000.0.71f1/opengl-mt.jsonl`) is the OpenGL one row for row, with
+`device.threading` `Direct` and `device.multithreaded` false. On Vulkan it renders on a render
+thread: `device.threading` `MultiThreaded`, `device.multithreaded` true, and every plugin callback
+on a thread other than the main one (`thread=other`), in the order the scripts issued them
+(`Reference/unity-6000.0.71f1/vulkan-mt.jsonl`). What the plugin sees of render textures that
+scripts ask it about outside callbacks (`plugin.allocation.*`, `byId.*.native`) races the render
+thread there and differs between two Editor runs: a Vulkan MT capture leaves those rows out.
 
 ## macOS: the Metal device
 

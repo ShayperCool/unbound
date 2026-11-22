@@ -13,7 +13,15 @@ device, on a private display through VirtualGL; Unbound with --force-glcore) or 
 with -force-vulkan on the GPU-backed display :0, Unbound with --force-vulkan). On Vulkan the
 probe's Vulkan plugin (Plugins/nativegfx_vulkan.c, libNativeGfxVulkan.so, against the system's
 Vulkan headers) and NativeGfxVulkanProbe.cs record the Vulkan plugin interface instead; their
-reference is Reference/unity-<version>/vulkan.jsonl. metal (macOS arm64 only: the macOS Editor's
+reference is Reference/unity-<version>/vulkan.jsonl. --mt records multithreaded rendering on Linux (the Editor with -force-gfx-mt, Unbound with
+--force-gfx-mt) on --device opengl, where the Editor keeps its direct device (its log: the threaded
+mode is not supported on OpenGL Core), or vulkan, where it renders on a render thread: the probe
+records the threading mode, and the plugin its callbacks' threads; references
+Reference/unity-<version>/opengl-mt.jsonl and vulkan-mt.jsonl. A Vulkan MT capture leaves out the
+plugin.allocation.* and byId.*.native rows (what the plugin sees of a render texture asked for from
+a script races the render thread's work: they differ between two Editor runs).
+
+metal (macOS arm64 only: the macOS Editor's
 one device, run directly in batchmode; Unbound's default there) records the Metal plugin interface
 with the probe's Metal plugin (Plugins/nativegfx_metal.m, libNativeGfxMetal.dylib, against the
 system's Metal framework) and NativeGfxMetalProbe.cs; its reference is
@@ -64,6 +72,14 @@ METAL_LIBRARY = 'libNativeGfxMetal.dylib'
 DEVICE = 'opengl'
 STENCIL = False
 WINDOWED = False
+MT = False
+# A Vulkan MT capture's rows without the render-thread races (see the description).
+MT_OUT = 'values.mt.jsonl'
+
+
+def mt_race(key):
+    """A Vulkan MT row that races the render thread (see the description)."""
+    return key.startswith('plugin.allocation.') or (key.startswith('byId.') and key.endswith('.native'))
 
 
 LINUX = sys.platform == 'linux' and platform.machine() in ('x86_64', 'AMD64')
@@ -161,23 +177,35 @@ def assemble(out):
 
 
 def environment(out):
+    mt = {'NATIVEGFX_MT': '1'} if MT else {}
     if DEVICE == 'vulkan':
-        return {'NATIVEGFX_VULKAN_OUT': str(out/OUT), 'NATIVEGFX_STENCIL': '1' if STENCIL else '0'}
+        return {'NATIVEGFX_VULKAN_OUT': str(out/OUT), 'NATIVEGFX_STENCIL': '1' if STENCIL else '0', **mt}
     if DEVICE == 'metal':
         return {'NATIVEGFX_METAL_OUT': str(out/OUT)}
     return {'NATIVEGFX_PROBE_OUT': str(out/SCRIPTS_OUT), 'NATIVEGFX_PLUGIN_LOG': str(out/PLUGIN_LOG),
-            'NATIVEGFX_STENCIL': '1' if STENCIL else '0'}
+            'NATIVEGFX_STENCIL': '1' if STENCIL else '0', **mt}
 
 
 def finish(out):
     """The capture's values.jsonl: assembled from the OpenGL probe's records; written whole by
     the Vulkan and Metal probes."""
-    return (out/OUT).exists() if DEVICE in ('vulkan', 'metal') else assemble(out)
+    done = (out/OUT).exists() if DEVICE in ('vulkan', 'metal') else assemble(out)
+    if done and MT and DEVICE == 'vulkan':
+        lines = (out/OUT).read_text().splitlines(keepends=True)
+        (out/MT_OUT).write_text(''.join(line for line in lines if not mt_race(json.loads(line)['k'])))
+    return done
+
+
+def compared():
+    """The file of a capture that is published and compared."""
+    return MT_OUT if MT and DEVICE == 'vulkan' else OUT
 
 
 def reference():
     if STENCIL:
         return ROOT/'Reference'/f'unity-{unity_version()}'/('vulkan-stencil.jsonl' if DEVICE == 'vulkan' else 'stencil.jsonl')
+    if MT:
+        return ROOT/'Reference'/f'unity-{unity_version()}'/f'{DEVICE}-mt.jsonl'
     if DEVICE == 'opengl':
         return reference_file(ROOT, 'jsonl')
     if WINDOWED:
@@ -224,7 +252,8 @@ def native(label):
     for repeat in (f'{label}-1', f'{label}-2'):
         out = WORK/repeat
         copy_project(out/'project')
-        jobs.append(editor_runner.EditorJob(out/'project', out/'editor.log', out, ['-executeMethod', 'ProbeRunner.Record'],
+        args = ['-executeMethod', 'ProbeRunner.Record', *(['-force-gfx-mt'] if MT else [])]
+        jobs.append(editor_runner.EditorJob(out/'project', out/'editor.log', out, args,
                                             batch=True, graphics=True, env=environment(out), vulkan=DEVICE == 'vulkan',
                                             timeout=900, label='nativegfx-' + repeat))
     # The Vulkan Editors share the display :0: one after the other.
@@ -244,6 +273,8 @@ def engine(label):
     env = dict(os.environ, **environment(out))
     # macOS has one device, Metal (the default); Linux selects the probe's.
     device = [] if MACOS else ['--force-' + ('vulkan' if DEVICE == 'vulkan' else 'glcore')]
+    if MT:
+        device.append('--force-gfx-mt')
     # The Metal plugin records the screen's size: the macOS Editor's batchmode screen is 64x64
     # (Reference/unity-<version>/metal.jsonl, plugin.state.color0.update).
     size = '64x64' if DEVICE == 'metal' else '64x32'
@@ -263,7 +294,7 @@ def publish(labels):
 
     def write(path, first):
         path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(first/OUT, path)
+        shutil.copy2(first/compared(), path)
     fresh.unlink(missing_ok=True)
     if DEVICE == 'metal' and WINDOWED:
         for label in labels:
@@ -272,8 +303,8 @@ def publish(labels):
     elif DEVICE == 'metal':
         code = macos_editor.publish([WORK/label for label in labels], fresh, OUT)
     else:
-        code = editor_runner.publish([WORK/label for label in labels], fresh, lambda d: [OUT], write,
-                                     complete=[editor_runner.jsonl_complete(OUT)], gpu=True)
+        code = editor_runner.publish([WORK/label for label in labels], fresh, lambda d: [compared()], write,
+                                     complete=[editor_runner.jsonl_complete(compared())], gpu=True)
     if code:
         return code
     if target.exists():
@@ -298,15 +329,19 @@ def main():
     parser.add_argument('--device', choices=('opengl', 'vulkan', 'metal'), default='opengl')
     parser.add_argument('--stencil', action='store_true', help='resolved-stencil controls for the selected graphics device')
     parser.add_argument('--windowed', action='store_true', help='native --device metal: the Editor with its windows (Play mode in its Game view)')
+    parser.add_argument('--mt', action='store_true', help='multithreaded rendering (-force-gfx-mt) on Linux OpenGL or Vulkan')
     args = parser.parse_args()
-    global DEVICE, STENCIL, WINDOWED
+    global DEVICE, STENCIL, WINDOWED, MT
     WINDOWED = args.windowed
+    MT = args.mt
     DEVICE = args.device
     STENCIL = args.stencil
     if WINDOWED and DEVICE != 'metal':
         parser.error('--windowed records the macOS Editor (--device metal) only')
     if STENCIL and (not LINUX or DEVICE not in ('opengl', 'vulkan')):
         parser.error('--stencil is measured on Linux OpenGL and Vulkan only')
+    if MT and (not LINUX or DEVICE not in ('opengl', 'vulkan') or STENCIL):
+        parser.error('--mt is measured on Linux OpenGL and Vulkan only (without --stencil)')
     if args.mode in ('native', 'engine') and (not args.label or Path(args.label).name != args.label):
         parser.error('--label must be a single directory name')
     if args.mode == 'native':
@@ -318,7 +353,7 @@ def main():
     if args.mode == 'check':
         require_platform()
         label = time.strftime('check-%Y%m%d-%H%M%S-') + str(os.getpid())
-        return engine(label) or verify(WORK/label/OUT)
+        return engine(label) or verify(WORK/label/compared())
     if not args.candidate:
         parser.error('verify needs --candidate')
     return verify(args.candidate)
