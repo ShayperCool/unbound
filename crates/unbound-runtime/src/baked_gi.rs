@@ -7,6 +7,9 @@ use anyhow::{Context, Result, ensure};
 use base64::Engine;
 use serde_json::{Value as Json, json};
 use std::path::Path;
+use unbound_gi::baked::direct::{self, MixedMode, Receiver};
+use unbound_gi::baked::light::{Kind, Light, Mode};
+use unbound_gi::baked::trace::Scene;
 use unbound_gi::baked::{atlas, gbuffer};
 
 /// The folder the texel buffers of each bake go to, when set: `<folder>/<scene GUID>/`.
@@ -23,6 +26,67 @@ pub struct BakeRequest {
     scene: String,
     meshes: Vec<MeshData>,
     renderers: Vec<Renderer>,
+    /// The scene's lights that take part in the bake (mixed and baked ones).
+    #[serde(default)]
+    lights: Vec<LightData>,
+    /// The Lighting Mode of mixed lights: 0 Baked Indirect, 1 Subtractive, 2 Shadowmask.
+    #[serde(default)]
+    mixed_mode: u8,
+}
+
+/// A light of the bake.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LightData {
+    /// Its name, for the written description.
+    name: String,
+    /// Its file ID in the scene.
+    file_id: i64,
+    /// 0 directional, 1 point, 2 spot.
+    kind: u8,
+    /// 1 mixed, 2 baked.
+    mode: u8,
+    /// Its colour times its intensity, linear, and the same times its Indirect Multiplier.
+    color: [f32; 3],
+    indirect_color: [f32; 3],
+    position: [f32; 3],
+    /// Its rotation (x, y, z, w).
+    rotation: [f32; 4],
+    range: f32,
+    /// Spot Angle, in degrees.
+    spot_angle: f32,
+    casts_shadows: bool,
+}
+
+impl LightData {
+    fn light(&self) -> Result<Light> {
+        let [x, y, z, w] = self.rotation;
+        Ok(Light {
+            kind: match self.kind {
+                0 => Kind::Directional,
+                1 => Kind::Point,
+                2 => Kind::Spot,
+                other => anyhow::bail!("'{}': a light of kind {other}", self.name),
+            },
+            mode: match self.mode {
+                1 => Mode::Mixed,
+                2 => Mode::Baked,
+                other => anyhow::bail!("'{}': a light of mode {other}", self.name),
+            },
+            color: self.color,
+            indirect_color: self.indirect_color,
+            position: self.position,
+            // Its rotation's forward axis.
+            forward: [
+                2.0 * (x * z + w * y),
+                2.0 * (y * z - w * x),
+                1.0 - 2.0 * (x * x + y * y),
+            ],
+            range: self.range,
+            cone_angle: self.spot_angle.to_radians(),
+            casts_shadows: self.casts_shadows,
+        })
+    }
 }
 
 /// A mesh of the bake. Its arrays are little-endian values in base64, so that every float
@@ -59,7 +123,16 @@ struct Renderer {
     /// It contributes to global illumination but is lit by light probes.
     #[serde(default)]
     probe_lit: bool,
+    /// Cast Shadows is not Off, and Receive Shadows.
+    #[serde(default = "yes")]
+    casts_shadows: bool,
+    #[serde(default = "yes")]
+    receives_shadows: bool,
     parameters: Parameters,
+}
+
+fn yes() -> bool {
+    true
 }
 
 #[derive(serde::Deserialize)]
@@ -152,32 +225,12 @@ impl SourceMesh {
     }
 }
 
-/// A unit normal of a renderer in world space: through the inverse transpose of its matrix.
-fn world_normal(m: &[f32; 16], n: [f32; 3]) -> [f32; 3] {
-    let m = |r: usize, c: usize| m[4 * c + r] as f64;
-    let cofactor = |r: usize, c: usize| {
-        let (r1, r2, c1, c2) = ((r + 1) % 3, (r + 2) % 3, (c + 1) % 3, (c + 2) % 3);
-        m(r1, c1) * m(r2, c2) - m(r1, c2) * m(r2, c1)
-    };
-    // The cofactors are the inverse transpose times the determinant, whose sign turns the
-    // normal with a mirroring matrix.
-    let determinant: f64 = (0..3).map(|c| m(0, c) * cofactor(0, c)).sum();
-    let sign = if determinant < 0.0 { -1.0 } else { 1.0 };
-    let v: [f64; 3] =
-        std::array::from_fn(|r| sign * (0..3).map(|c| cofactor(r, c) * n[c] as f64).sum::<f64>());
-    let length = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
-    if length > 0.0 {
-        v.map(|x| (x / length) as f32)
-    } else {
-        n
-    }
-}
-
 /// The files of a bake's texel buffers in `folder`: `buffers.json` (each lightmap's size,
 /// samples per texel side and renderers, by their number in the bake), and per lightmap
 /// `occupancy<N>.u8` (how many of each texel's samples have a surface: none or all of them),
-/// `chartIndex<N>.i32` (each texel's chart) and `normal<N>.f32` (per sample the world normal and
-/// the sample's number, or [`gbuffer::EMPTY`] without a surface).
+/// `chartIndex<N>.i32` (each texel's chart), `normal<N>.f32` (per sample the world normal and
+/// the sample's number, or [`gbuffer::EMPTY`] without a surface) and `irradianceDirect<N>.f32`
+/// (per texel the direct light's red, green and blue and 1, zeros for an unused texel).
 struct Buffers<'a> {
     folder: &'a Path,
     lightmaps: Vec<Json>,
@@ -185,10 +238,11 @@ struct Buffers<'a> {
 
 impl<'a> Buffers<'a> {
     const DESCRIPTION: &'static str = "buffers.json";
-    const PER_LIGHTMAP: [(&'static str, &'static str); 3] = [
+    const PER_LIGHTMAP: [(&'static str, &'static str); 4] = [
         ("occupancy", ".u8"),
         ("chartIndex", ".i32"),
         ("normal", ".f32"),
+        ("irradianceDirect", ".f32"),
     ];
 
     /// Starts a bake's buffers in the folder, without those an earlier bake left there.
@@ -226,11 +280,14 @@ impl<'a> Buffers<'a> {
     }
 
     /// The next lightmap: its texels, and its renderers by their number in the bake.
+    /// The next lightmap: its texels, its renderers by their number in the bake, and its
+    /// texels' direct light.
     fn lightmap(
         &mut self,
         g: &gbuffer::GBuffer,
         members: &[usize],
         renderers: &[&Renderer],
+        lit: &[[f32; 4]],
     ) -> Result<()> {
         let index = self.lightmaps.len();
         self.write(format!("occupancy{index}.u8"), g.occupancy.clone())?;
@@ -238,12 +295,16 @@ impl<'a> Buffers<'a> {
             format!("chartIndex{index}.i32"),
             g.charts.iter().flat_map(|c| c.to_le_bytes()).collect(),
         )?;
+        let matrices: Vec<[[f32; 3]; 3]> = members
+            .iter()
+            .map(|&k| direct::normal_matrix(&renderers[k].local_to_world))
+            .collect();
         let normals = g.normals.iter().zip(&g.positions).flat_map(|(n, p)| {
             let local = [n[0], n[1], n[2]];
             let world = if p[3] < 0.0 {
                 local
             } else {
-                world_normal(&renderers[members[p[3] as usize]].local_to_world, local)
+                direct::world_normal(&matrices[p[3] as usize], local)
             };
             [world[0], world[1], world[2], n[3]]
         });
@@ -251,16 +312,22 @@ impl<'a> Buffers<'a> {
             format!("normal{index}.f32"),
             normals.flat_map(|v| v.to_le_bytes()).collect(),
         )?;
+        self.write(
+            format!("irradianceDirect{index}.f32"),
+            lit.iter().flatten().flat_map(|v| v.to_le_bytes()).collect(),
+        )?;
         self.lightmaps.push(json!({
             "width": g.width, "height": g.height, "supersampling": g.supersampling, "instances": members,
         }));
         Ok(())
     }
 
-    fn finish(self) -> Result<()> {
+    /// Ends the bake's buffers with their description: the lightmaps, and the bake's lights in
+    /// its order.
+    fn finish(self, lights: Json) -> Result<()> {
         self.write(
             Self::DESCRIPTION.into(),
-            serde_json::to_vec_pretty(&json!({ "lightmaps": self.lightmaps }))?,
+            serde_json::to_vec_pretty(&json!({ "lightmaps": self.lightmaps, "lights": lights }))?,
         )
     }
 }
@@ -361,8 +428,35 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 ready[r.mesh] = Some(made);
             }
         }
-        // One lightmap at a time: its texels are written and let go before the next.
+        // The bake's lights in its order (as its renderers: by their file IDs' hashes), and
+        // what stops their light: every renderer of the bake that casts shadows.
+        let mut lights: Vec<&LightData> = request.lights.iter().collect();
+        lights.sort_by_key(|l| atlas::object_key(l.file_id, 0));
+        let baked_lights = lights
+            .iter()
+            .map(|l| l.light())
+            .collect::<Result<Vec<Light>>>()?;
+        let mixed = match request.mixed_mode {
+            0 => MixedMode::IndirectOnly,
+            1 => MixedMode::Subtractive,
+            2 => MixedMode::Shadowmask,
+            other => anyhow::bail!("a Lighting Mode of {other}"),
+        };
         let baked: Vec<&Renderer> = taken.iter().map(|&i| &request.renderers[i]).collect();
+        let scene = Scene::new(baked.iter().filter(|r| r.casts_shadows).flat_map(|r| {
+            let (mesh, m) = (&meshes[r.mesh], r.local_to_world);
+            let world = move |v: u32| -> [f32; 3] {
+                let p = mesh.positions[v as usize];
+                std::array::from_fn(|k| m[k] * p[0] + m[4 + k] * p[1] + m[8 + k] * p[2] + m[12 + k])
+            };
+            let count = mesh.positions.len() as u32;
+            mesh.submeshes
+                .iter()
+                .flatten()
+                .filter(move |t| t.iter().all(|&v| v < count))
+                .map(move |t| t.map(world))
+        }));
+        // One lightmap at a time: its texels are written and let go before the next.
         let folder = folder.join(&request.scene);
         let mut written = Buffers::start(&folder)?;
         for (index, size) in layout.lightmaps.iter().enumerate() {
@@ -378,19 +472,57 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     index: place as i32,
                 })
                 .collect();
+            let receivers: Vec<Receiver> = members
+                .iter()
+                .map(|&k| Receiver {
+                    local_to_world: baked[k].local_to_world,
+                    receives_shadows: baked[k].receives_shadows,
+                })
+                .collect();
             // The renderers of a lightmap share their Lightmap Parameters.
-            let supersampling = members
+            let parameters = members
                 .first()
-                .map_or(1, |&k| instances[k].parameters.supersampling);
+                .map_or(atlas::Parameters::DEFAULT, |&k| instances[k].parameters);
             let g = gbuffer::gbuffer(
                 size[0] as usize,
                 size[1] as usize,
-                supersampling as usize,
+                parameters.supersampling as usize,
                 &placed,
             );
-            written.lightmap(&g, &members, &baked)?;
+            let lit = direct::direct(
+                &g,
+                &receivers,
+                &baked_lights,
+                mixed,
+                &scene,
+                parameters.pushoff,
+            );
+            written.lightmap(&g, &members, &baked, &lit)?;
         }
-        written.finish()?;
+        written.finish(json!(
+            lights
+                .iter()
+                .zip(&baked_lights)
+                .map(|(data, light)| json!({
+                    "name": data.name,
+                    "type": data.kind,
+                    "mode": data.mode,
+                    "color": light.color,
+                    "indirectColor": light.indirect_color,
+                    "position": light.position,
+                    "orientation": data.rotation,
+                    // As the Editor's bake input has them: no range for a directional light, whose
+                    // cone is its cookie's size (1 without one); no cone for a point light.
+                    "range": if light.kind == Kind::Directional { 0.0 } else { light.range },
+                    "coneAngle": match light.kind {
+                        Kind::Directional => 1.0,
+                        Kind::Point => 0.0,
+                        Kind::Spot => light.cone_angle,
+                    },
+                    "castsShadows": light.casts_shadows,
+                }))
+                .collect::<Vec<_>>()
+        ))?;
     }
 
     let mut placements = vec![Json::Null; request.renderers.len()];
@@ -647,6 +779,8 @@ mod tests {
         let m = [
             -1.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
         ];
+        let rows = direct::normal_matrix(&m);
+        let world_normal = |_: &[f32; 16], n: [f32; 3]| direct::world_normal(&rows, n);
         assert_eq!(world_normal(&m, [1.0, 0.0, 0.0]), [-1.0, 0.0, 0.0]);
         assert_eq!(world_normal(&m, [0.0, 1.0, 0.0]), [0.0, 1.0, 0.0]);
         // Unequal scale: the normal leans away from the stretched axis.

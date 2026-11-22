@@ -170,6 +170,56 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>The scene's lights that take part in a bake: enabled mixed and baked lights of
+        /// active GameObjects, made from its file, each with its colour as the bake takes it
+        /// (times its intensity, and times its Indirect Multiplier, linear). Said once per scene
+        /// and left out or simplified: area lights, lights whose intensity multiplies their linear
+        /// colour (GraphicsSettings.lightsUseLinearIntensity; not measured), cookies (ignored),
+        /// soft baked shadows (a Baked Shadow Angle or Radius: baked hard).</summary>
+        static List<object> Lights(LoadedFile file, string path)
+        {
+            var lights = new List<object>();
+            foreach (var pair in file.Objects)
+            {
+                if (!(pair.Value is Light light) || light == null || !light.enabled || !light.gameObject.activeInHierarchy) continue;
+                if (light.lightmapBakeType == LightmapBakeType.Realtime) continue;
+                int kind = light.type == LightType.Directional ? 0 : light.type == LightType.Point ? 1 : light.type == LightType.Spot ? 2 : -1;
+                if (kind < 0)
+                {
+                    Warn("light-type:" + path + pair.Key, $"{path}: '{light.name}' is a {light.type} light, which Unbound's bake (Lightmapping.Bake) does not bake yet.");
+                    continue;
+                }
+                if (UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity)
+                {
+                    Warn("light-linear:" + path, $"{path}: lights whose intensity multiplies their linear colour (GraphicsSettings.lightsUseLinearIntensity) are not baked by Unbound's bake (Lightmapping.Bake) yet.");
+                    continue;
+                }
+                if (light.cookie != null)
+                    Warn("light-cookie:" + path + pair.Key, $"{path}: '{light.name}' has a cookie, which Unbound's bake (Lightmapping.Bake) does not apply yet.");
+                if ((kind == 0 ? light.shadowAngle : light.shadowRadius) > 0f && light.shadows != LightShadows.None)
+                    Warn("light-soft:" + path + pair.Key, $"{path}: '{light.name}' has soft baked shadows (its Baked Shadow {(kind == 0 ? "Angle" : "Radius")}), which Unbound's bake (Lightmapping.Bake) bakes hard yet.");
+                var t = light.transform;
+                Color direct = light.ScaledColor(light.intensity, linear: true), indirect = light.ScaledColor(light.intensity * light.bounceIntensity, linear: true);
+                Vector3 position = t.position;
+                Quaternion rotation = t.rotation;
+                lights.Add(new
+                {
+                    name = HierarchyPath(t),
+                    fileId = pair.Key,
+                    kind,
+                    mode = light.lightmapBakeType == LightmapBakeType.Mixed ? 1 : 2,
+                    color = new[] { direct.r, direct.g, direct.b },
+                    indirectColor = new[] { indirect.r, indirect.g, indirect.b },
+                    position = new[] { position.x, position.y, position.z },
+                    rotation = new[] { rotation.x, rotation.y, rotation.z, rotation.w },
+                    range = light.range,
+                    spotAngle = light.spotAngle,
+                    castsShadows = light.shadows != LightShadows.None,
+                });
+            }
+            return lights;
+        }
+
         /// <summary>An array's values as they are in memory (little-endian), in base64: every float
         /// arrives natively as it is.</summary>
         static string Encoded<T>(T[] values) where T : unmanaged =>
@@ -263,6 +313,8 @@ namespace UnityEngine
                         scaleInLightmap = renderer.scaleInLightmap,
                         lodLevel = levels.TryGetValue(renderer, out var level) ? (int?)level : null,
                         probeLit = renderer.receiveGI != ReceiveGI.Lightmaps,
+                        castsShadows = renderer.shadowCastingMode != UnityEngine.Rendering.ShadowCastingMode.Off,
+                        receivesShadows = renderer.receiveShadows,
                         parameters = new
                         {
                             backFaceTolerance = parameters.BackFaceTolerance,
@@ -292,6 +344,8 @@ namespace UnityEngine
                     scene = guid,
                     meshes,
                     renderers,
+                    lights = Lights(file, path),
+                    mixedMode = (int)settings.mixedBakeMode,
                 };
                 // The request, the bake (a renderer it refuses, named) and the reading of its
                 // answer all fail the scene's layout, said.
