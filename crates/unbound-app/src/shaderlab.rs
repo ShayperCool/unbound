@@ -1702,6 +1702,10 @@ impl Parser<'_> {
 #[derive(Default)]
 pub struct ShaderIndex {
     files: HashMap<String, PathBuf>,
+    /// Generated shaders by their ShaderLab name without their source key (see
+    /// [`generated_base`]): the most recently written file of that name, which answers to the
+    /// name where no project or package shader does (a `Fallback`, `UsePass` or lookup by name).
+    aliases: HashMap<String, (PathBuf, Option<std::time::SystemTime>)>,
     parsed: HashMap<String, Option<ShaderLab>>,
     /// The active render pipeline's tag (empty: built-in): which SubShader shaders run.
     pipeline: String,
@@ -1717,34 +1721,59 @@ pub const GENERATED_SHADERS: &str = "Library/Unbound/GeneratedShaders";
 impl ShaderIndex {
     /// Indexes every `.shader` file below the roots (an earlier root's shader wins a name).
     pub fn scan(roots: &[PathBuf]) -> ShaderIndex {
-        let mut files = HashMap::new();
-        let mut live = Vec::new();
+        let mut index = ShaderIndex::default();
         for root in roots {
-            scan_dir(root, &mut files);
             if root.ends_with(GENERATED_SHADERS) {
-                live.push((root.clone(), modified(root)));
+                index.scan_generated(root);
+                index.live.push((root.clone(), modified(root)));
+            } else {
+                scan_dir(root, &mut index.files);
             }
         }
-        tracing::debug!("indexed {} project shaders", files.len());
-        ShaderIndex {
-            files,
-            parsed: HashMap::new(),
-            pipeline: String::new(),
-            live,
+        tracing::debug!("indexed {} project shaders", index.files.len());
+        index
+    }
+
+    /// Indexes the generated shaders below `dir`: each by the keyed name its file declares, and
+    /// by its plain ShaderLab name the most recently written of that name (unless a project or
+    /// package shader has the name). Files that declare no key were written before keys and are
+    /// passed over: a graph's current source always has a file of its own.
+    fn scan_generated(&mut self, dir: &Path) {
+        let mut found = HashMap::new();
+        scan_dir(dir, &mut found);
+        for (name, path) in found {
+            let Some(base) = generated_base(&name) else {
+                continue;
+            };
+            let written = std::fs::metadata(&path).and_then(|m| m.modified()).ok();
+            let newer = match self.aliases.get(base) {
+                Some((known, when)) => known != &path && written > *when,
+                None => true,
+            };
+            if newer && (!self.files.contains_key(base) || self.aliases.contains_key(base)) {
+                self.files.insert(base.to_string(), path.clone());
+                self.aliases
+                    .insert(base.to_string(), (path.clone(), written));
+                self.parsed.retain(|key, _| Selection::parse(key).0 != base);
+            }
+            self.files.entry(name).or_insert(path);
         }
     }
 
     /// Picks up shaders generated since the last look (a name not found, or found missing).
     fn rescan_live(&mut self) -> bool {
         let mut changed = false;
-        for (root, seen) in &mut self.live {
-            let now = modified(root);
-            if now != *seen {
-                *seen = now;
-                scan_dir(root, &mut self.files);
+        let live = std::mem::take(&mut self.live);
+        let mut kept = Vec::with_capacity(live.len());
+        for (root, seen) in live {
+            let now = modified(&root);
+            if now != seen {
+                self.scan_generated(&root);
                 changed = true;
             }
+            kept.push((root, now));
         }
+        self.live = kept;
         if changed {
             self.parsed.retain(|_, lab| lab.is_some());
         }
@@ -1897,6 +1926,17 @@ fn scan_dir(dir: &Path, files: &mut HashMap<String, PathBuf>) {
     }
 }
 
+/// The ShaderLab name of a generated shader's keyed name (`Name#` and 16 hexadecimal digits of
+/// its source's hash, as the managed side's GeneratedShaders writes it); None for other names.
+pub fn generated_base(name: &str) -> Option<&str> {
+    const KEY: usize = 16;
+    let at = name.len().checked_sub(KEY + 1)?;
+    let (base, key) = name.split_at(at);
+    let digits = key.strip_prefix('#')?;
+    (!base.is_empty() && digits.len() == KEY && digits.bytes().all(|b| b.is_ascii_hexdigit()))
+        .then_some(base)
+}
+
 /// The `Shader "Name"` declaration of a file.
 fn shader_name(text: &str) -> Option<String> {
     let stripped = strip(text);
@@ -2011,6 +2051,62 @@ mod tests {
         assert_eq!(names(&lab), ["B"]);
         let lab = ShaderLab::parse_file_for(only, Path::new(""), "d3d11").unwrap();
         assert_eq!(names(&lab), ["A"]);
+    }
+
+    #[test]
+    fn generated_shaders_answer_to_their_key_and_their_newest_plain_name() {
+        let root =
+            std::env::temp_dir().join(format!("unbound-generated-index-{}", std::process::id()));
+        let generated = root.join(GENERATED_SHADERS);
+        let assets = root.join("Assets");
+        std::fs::create_dir_all(&generated).unwrap();
+        std::fs::create_dir_all(&assets).unwrap();
+        let write = |dir: &Path, file: &str, name: &str| {
+            std::fs::write(
+                dir.join(file),
+                format!("Shader \"{name}\" {{ SubShader {{ Pass {{ Name \"P\" }} }} }}"),
+            )
+            .unwrap();
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        };
+        let a = "Hidden/VFX/Twin/System/Output Particle|Unlit Quad#0123456789abcdef";
+        let b = "Hidden/VFX/Twin/System/Output Particle|Unlit Quad#fedcba9876543210";
+        write(
+            &generated,
+            "old.shader",
+            "Hidden/VFX/Twin/System/Output Particle|Unlit Quad",
+        );
+        write(&generated, "a.shader", a);
+        write(&generated, "b.shader", b);
+        write(
+            &generated,
+            "graph.shader",
+            "Shader Graphs/Mine#00000000000000aa",
+        );
+        write(&assets, "mine.shader", "Shader Graphs/Mine");
+        let mut index = ShaderIndex::scan(&[assets.clone(), generated.clone()]);
+        // Each keyed source answers to its own name, also with a selection after it.
+        assert_eq!(index.files[a], generated.join("a.shader"));
+        assert_eq!(index.files[b], generated.join("b.shader"));
+        assert!(index.get(&format!("{b}|lod=200")).is_some());
+        // The plain name: the newest generated file, not the one written before keys.
+        assert_eq!(
+            index.files["Hidden/VFX/Twin/System/Output Particle|Unlit Quad"],
+            generated.join("b.shader")
+        );
+        // A project shader of the name keeps it.
+        assert_eq!(
+            index.files["Shader Graphs/Mine"],
+            assets.join("mine.shader")
+        );
+        assert_eq!(
+            generated_base(a),
+            Some("Hidden/VFX/Twin/System/Output Particle|Unlit Quad")
+        );
+        assert_eq!(generated_base("Plain"), None);
+        assert_eq!(generated_base("#0123456789abcdef"), None);
+        assert_eq!(generated_base("A#0123456789abcdeg"), None);
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
