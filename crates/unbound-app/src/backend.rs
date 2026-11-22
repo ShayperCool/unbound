@@ -1017,7 +1017,12 @@ SubShader {
         backend.submit(vec![Command::ColorSpace(1)]);
         // The plugin's work starts after what was queued before it has run.
         let mut seen = Vec::new();
+        // On OpenGL Core the plugin context goes through gl_interop::with.
+        let pending = crate::render::gl_interop::PENDING_TESTS
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         backend.plugin_context(&mut || seen = ran(&log));
+        drop(pending);
         assert_eq!(seen, on(&[("commands 1", false)]));
         backend.submit(vec![Command::ColorSpace(2)]);
         backend.flush();
@@ -1057,7 +1062,12 @@ SubShader {
         backend.submit(vec![plugin_event(), Command::ColorSpace(2)]);
         backend.upload(Upload::ReleaseMesh(1));
         let mut seen = Vec::new();
+        // On OpenGL Core the plugin context goes through gl_interop::with.
+        let pending = crate::render::gl_interop::PENDING_TESTS
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         backend.plugin_context(&mut || seen = ran(&log));
+        drop(pending);
         assert_eq!(
             seen,
             on(&[

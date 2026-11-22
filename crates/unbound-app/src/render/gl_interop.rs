@@ -903,10 +903,17 @@ mod linux {
     }
 }
 
+/// Held by the tests that use [`PENDING_FORGETS`] or reach [`with`] (which empties it).
+#[cfg(test)]
+pub(crate) static PENDING_TESTS: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     #[test]
     fn the_context_stays_only_with_the_render_thread() {
+        let _pending = super::PENDING_TESTS
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         // Needs a GPU with EGL; without one there is no context to hand around.
         if super::with(|_| ()).is_err() {
             return;
@@ -953,6 +960,9 @@ mod deferring_tests {
         if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore {
             return;
         }
+        let _pending = PENDING_TESTS
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         const A: u32 = 0xFFFF_FF01;
         const B: u32 = 0xFFFF_FF02;
         let inside = deferring_forgets(|| {
@@ -963,10 +973,14 @@ mod deferring_tests {
         assert_eq!(inside, Some(vec![(A, false), (B, true)]));
         assert_eq!(deferred(), None);
         // This test thread does not run the renderer: the names went on to wait for the next
-        // plugin call (another test's may already have taken them); not left for later tests.
-        PENDING_FORGETS
-            .lock()
-            .unwrap()
-            .retain(|(name, _)| *name != A && *name != B);
+        // plugin call, in order.
+        let mut pending = PENDING_FORGETS.lock().unwrap();
+        let ours: Vec<(u32, bool)> = pending
+            .iter()
+            .copied()
+            .filter(|(name, _)| *name == A || *name == B)
+            .collect();
+        pending.retain(|(name, _)| *name != A && *name != B);
+        assert_eq!(ours, [(A, false), (B, true)]);
     }
 }
