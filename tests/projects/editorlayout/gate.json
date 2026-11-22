@@ -1,0 +1,10 @@
+{
+  "commands": ["python3 tests/projects/editorlayout/run.py gate"],
+  "summary": "editorlayout: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/EditorLayoutGroups.cs",
+    "managed/UnityEngine/Editor/EditorGUIUtility.cs",
+    "managed/UnityEngine/Editor/EditorGUIState.cs",
+    "managed/UnityEngine/IMGUI/GUILayout.cs"
+  ]
+}

@@ -1,0 +1,39 @@
+{"k":"util/pointsPixels/rect","v":[10,20,30,40,10,20,30,40]}
+{"k":"util/pointsPixels/vec","v":[12.5,-7.25,12.5,-7.25]}
+{"k":"util/pingObject","v":[null,0,null,0,null,0,null,0]}
+{"k":"util/loadRequired/relative","v":[null,[],true,"probe-resource-content"]}
+{"k":"util/loadRequired/fullPath","v":[null,[],true,"probe-resource-content"]}
+{"k":"util/loadRequired/missing","v":[null,["Error:Unable to find required resource at NoSuchEditorLayoutResource.txt"],true]}
+{"k":"util/loadRequired/empty","v":["ArgumentException",[],true]}
+{"k":"util/loadRequired/null","v":["NullReferenceException",[],true]}
+{"k":"outsideGui/separator","v":["NullReferenceException"]}
+{"k":"outsideGui/space","v":["NullReferenceException"]}
+{"k":"outsideGui/spaceExpandFalse","v":["NullReferenceException"]}
+{"k":"outsideGui/beginFadeGroup","v":["NullReferenceException"]}
+{"k":"outsideGui/endFadeGroup","v":[null,["Warning:Unexpected call to EndFadeGroup! Make sure to call EndFadeGroup the same number of times as BeginFadeGroup."]]}
+{"k":"outsideGui/beginScrollView","v":["ArgumentException"]}
+{"k":"outsideGui/beginScrollViewStyles","v":["NullReferenceException"]}
+{"k":"outsideGui/endScrollView","v":["ArgumentException"]}
+{"k":"fade/zero/visible","v":[false]}
+{"k":"fade/zero/rects","v":[[0,0,420,10],[0,10,420,0],[0,10,420,20],[0,14,420,10]]}
+{"k":"fade/half/visible","v":[true]}
+{"k":"fade/half/rects","v":[[0,28,420,10],[0,0,420,20]]}
+{"k":"fade/half/restored","v":[true,0.25,0.5,0.75,1]}
+{"k":"fade/one/visible","v":[true]}
+{"k":"fade/one/rects","v":[[0,38,420,20],[0,38,420,20]]}
+{"k":"fade/contextWidthLock","v":[149,149,120]}
+{"k":"fade/scope/visible","v":[false,true,true]}
+{"k":"fade/scope/rects","v":[[0,58,420,0],[0,58,420,10],[0,68,420,20]]}
+{"k":"fade/unmatchedEnd","v":[null,["Warning:Unexpected call to EndFadeGroup! Make sure to call EndFadeGroup the same number of times as BeginFadeGroup."]]}
+{"k":"scroll/overflow","v":[[15,25],[0,0,100,80],[0,0,200,200]]}
+{"k":"scroll/smallClamp","v":[[0,0],[0,80,100,80],[0,0,100,30]]}
+{"k":"scroll/alwaysShow","v":[[16,16],[0,160,100,80],[0,0,100,30]]}
+{"k":"scroll/customBars","v":[[10,12],[0,240,100,80],[0,0,200,200]]}
+{"k":"scroll/styleFallback","v":[[10,12],[0,320,100,80],[0,0,200,200]]}
+{"k":"scroll/fullNone","v":[[10,12],[0,400,100,80],[0,0,200,200]]}
+{"k":"scroll/scope","v":[true,[15,25],[0,480,100,80],[0,0,200,200]]}
+{"k":"space/vertical","v":[[0,0,160,6],[0,6,160,6],[0,12,160,12],[0,24,12,12],[0,36,160,12]]}
+{"k":"space/horizontal/separator","v":[[0,48,73,6],[73,48,87,10]]}
+{"k":"space/horizontal/noExpand","v":[[0,58,12,12],[12,58,148,10]]}
+{"k":"space/horizontal/expand","v":[[0,70,76,12],[76,70,84,10]]}
+{"k":"complete","v":true}
