@@ -237,6 +237,40 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void HandlersTheEditorCallsBeforeOrAfterItsReloadImportAtOnce()
+        {
+            // ExitingEditMode and beforeAssemblyReload come before the Editor's reload, and
+            // afterAssemblyReload after the load: imports asked for there are not deferred
+            // (tests/projects/initializeorder defers only those of the load callbacks).
+            bool enabled = EditorSettings.enterPlayModeOptionsEnabled;
+            var options = EditorSettings.enterPlayModeOptions;
+            var seen = new List<string>();
+            Action<PlayModeStateChange> state = s => seen.Add(s + " " + EditorInitialization.DomainLoading);
+            AssemblyReloadEvents.AssemblyReloadCallback before = () => seen.Add("before " + EditorInitialization.DomainLoading);
+            AssemblyReloadEvents.AssemblyReloadCallback after = () => seen.Add("after " + EditorInitialization.DomainLoading);
+            EditorApplication.playModeStateChanged += state;
+            AssemblyReloadEvents.beforeAssemblyReload += before;
+            AssemblyReloadEvents.afterAssemblyReload += after;
+            bool wasPlaying = Unbound.Runtime.EditorSession.IsPlaying;
+            try
+            {
+                EditorSettings.enterPlayModeOptionsEnabled = false;
+                Unbound.Runtime.EditorSession.IsPlaying = true;
+                EditorInitialization.BeforePlayMode();
+                Assert.Equal(new[] { "ExitingEditMode False", "before False", "after False" }, seen);
+            }
+            finally
+            {
+                Unbound.Runtime.EditorSession.IsPlaying = wasPlaying;
+                EditorApplication.playModeStateChanged -= state;
+                AssemblyReloadEvents.beforeAssemblyReload -= before;
+                AssemblyReloadEvents.afterAssemblyReload -= after;
+                EditorSettings.enterPlayModeOptionsEnabled = enabled;
+                EditorSettings.enterPlayModeOptions = options;
+            }
+        }
+
+        [Fact]
         public void AMessageNamesItsFileAsTheProjectDoes()
         {
             string previous = ProjectInfo.ProjectPath;

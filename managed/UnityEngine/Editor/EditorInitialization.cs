@@ -147,8 +147,8 @@ namespace UnityEditor
             AssetPostprocessing.DomainLoaded(RunDeferredImports());
         }
 
-        /// <summary>While the editor domain's load callbacks run (its initializers,
-        /// [InitializeOnEnterPlayMode], [InitializeOnLoadMethod] and [DidReloadScripts] methods, not
+        /// <summary>While the editor domain's load callbacks run (its initializers, on the reload path
+        /// [InitializeOnEnterPlayMode], [InitializeOnLoadMethod] and [DidReloadScripts] methods; not
         /// ExitingEditMode or beforeAssemblyReload, which the Editor sends before its reload),
         /// imports wait until the load has ended.</summary>
         internal static bool DomainLoading { get; private set; }
