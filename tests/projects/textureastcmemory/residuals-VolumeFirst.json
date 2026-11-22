@@ -1,0 +1,7 @@
+{
+  "The measured OpenGL Core Editor refuses a compressed Texture3D before using the ASTC fallback; Unbound creates it.": [
+    "prelude.volume.status",
+    "prelude.volume.new",
+    "prelude.volume.applied"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/textureastcmemory/run.py gate"
+  ],
+  "summary": "textureastcmemory.*: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Cubemap.cs",
+    "managed/UnityEngine/Graphics/Texture.cs",
+    "managed/UnityEngine/Graphics/Texture2D.cs",
+    "managed/UnityEngine/Graphics/TextureArrays.cs",
+    "managed/UnityEngine/Profiling/MemorySizes.cs",
+    "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs"
+  ]
+}
