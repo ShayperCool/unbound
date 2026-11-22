@@ -56,7 +56,9 @@ namespace UnityEngine
         /// .meta, with the scene's folder's .meta), which the scene then names; baked lightmaps
         /// and the light probes' baked lighting where the scene's Lighting Settings have baked
         /// global illumination on (Q677); the environment lighting from a sky and baked
-        /// reflection probes. Renderers a script added to the scene after it loaded are not
+        /// reflection probes. Of the baked lightmaps Unbound lays out where each renderer would
+        /// go (<see cref="BakedAtlas"/>, written to Library/Unbound/BakedGI; renderers get
+        /// nothing). Renderers a script added to the scene after it loaded are not
         /// baked (named). Several open scenes are baked one by one as they would load (not
         /// measured).
         /// </summary>
@@ -86,6 +88,7 @@ namespace UnityEngine
                     scene.BakedOnOpen = true;
                     NoteBakeParts(file, settings, ScriptBake);
                     SceneLoaded(scene.Handle.Value, default, file, settings, first, bake: true, scriptBake: true);
+                    BakedAtlas.Lay(file, settings);
                     first = false;
                     UnityEditor.SceneManagement.EditorSceneManager.Dirty(scene);
                 }

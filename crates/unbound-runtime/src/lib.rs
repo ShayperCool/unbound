@@ -1,6 +1,7 @@
 //! The native side of a running game: the API the managed engine calls, the game's preparation and
 //! its frame loop. Rendering and windowing live in `unbound-app`.
 pub mod audio;
+pub mod baked_gi;
 pub mod bundles;
 pub mod clipboard;
 pub mod config;

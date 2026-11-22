@@ -33,6 +33,9 @@ namespace UnityEngine
             internal float BounceScale;
             internal Lightmapper Lightmapper;
             internal int LightmapMaxSize;
+            /// <summary>Fixed Lightmap Size (m_LightmapSizeFixed): baked atlases stay at the Max
+            /// Lightmap Size.</summary>
+            internal bool LightmapSizeFixed;
             internal float LightmapResolution;
             internal int LightmapPadding;
             internal LightmapCompression LightmapCompression;
@@ -124,6 +127,8 @@ namespace UnityEngine
 
         /// <summary>The scene's default Lightmap Parameters (none: the built-in Default-Medium).</summary>
         internal Unbound.Runtime.ObjectRef DefaultLightmapParameters => m_State.LightmapParameters;
+
+        internal bool LightmapSizeFixed => m_State.LightmapSizeFixed;
 
         // The limits Unity 6000.0.71f1's setters apply (tests/projects/lightingassets).
         const int k_MinLightmapSize = 32, k_MaxLightmapSize = 4096;
@@ -313,6 +318,7 @@ namespace UnityEngine
             m_State.IndirectScale = body.Float("m_IndirectOutputScale", m_State.IndirectScale);
             m_State.Lightmapper = (Lightmapper)body.Int("m_BakeBackend", (int)m_State.Lightmapper);
             m_State.LightmapMaxSize = body.Int("m_LightmapMaxSize", m_State.LightmapMaxSize);
+            m_State.LightmapSizeFixed = body.Bool("m_LightmapSizeFixed", m_State.LightmapSizeFixed);
             m_State.LightmapResolution = body.Float("m_BakeResolution", m_State.LightmapResolution);
             m_State.LightmapPadding = body.Int("m_Padding", m_State.LightmapPadding);
             m_State.LightmapCompression = (LightmapCompression)body.Int("m_LightmapCompression", (int)m_State.LightmapCompression);

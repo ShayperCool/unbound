@@ -651,6 +651,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: crate::realtime_gi::BakeRequest = serde_json::from_str(request)?;
             Ok(crate::realtime_gi::bake_request(r)?.to_string())
         }
+        "baked-gi-atlas" => {
+            let r: crate::baked_gi::AtlasRequest = serde_json::from_str(request)?;
+            Ok(crate::baked_gi::atlas_request(r)?.to_string())
+        }
         "realtime-gi-release" => {
             #[derive(serde::Deserialize)]
             struct Request {

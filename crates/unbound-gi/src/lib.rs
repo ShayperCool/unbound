@@ -3,6 +3,7 @@
 //! ([`probes`]) at runtime.
 //! See docs/REALTIME_GI.md.
 pub mod auto_charts;
+pub mod baked;
 mod codec;
 pub mod data;
 pub mod directionality;
