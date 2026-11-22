@@ -235,6 +235,19 @@ on a thread other than the main one (`thread=other`), in the order the scripts i
 (`Reference/unity-6000.0.71f1/vulkan-mt.jsonl`). What the plugin sees of render textures that
 scripts ask it about outside callbacks (`plugin.allocation.*`, `byId.*.native`) races the render
 thread there and differs between two Editor runs: a Vulkan MT capture leaves those rows out.
+(That leaves out all 122 such rows, 19 of which differed between the two Editor repeats: the
+probe does not check them in this mode.)
+
+With multithreaded rendering Unbound waits for its render thread where the Editor's documentation
+says the Editor does (the native pointer getters of textures, render textures and buffers) and
+at readbacks. The Editor's render thread also had run the plugin events before some later script
+calls that the documentation does not name (around render texture creation and
+`Graphics.ExecuteCommandBuffer`): the callbacks that then read plugin state the script set
+afterwards are `residuals-vulkan-mt.json`. The camera steps of frame 4 match in every Unbound run so
+far without a documented wait behind them. Unmeasured: plugin load and device events (on the game
+thread, as without `--mt`, whose rows match), the windowed Editor's modes (a windowed
+`--force-gfx-mt` run warns and renders as the batchmode Editor does), Metal, other releases (both
+refused).
 
 ## macOS: the Metal device
 

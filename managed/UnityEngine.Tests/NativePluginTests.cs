@@ -133,6 +133,44 @@ namespace Unbound.Tests
             }
         }
 
+        /// <summary>With multithreaded rendering every native pointer query waits for the render
+        /// thread, also of buffers and of a render texture not created (Unity 6000.0 Scripting
+        /// API: "will synchronize with the rendering thread"); without it none waits.</summary>
+        [Fact]
+        public void NativePointerQueriesWaitForTheRenderThreadWhenMultithreaded()
+        {
+            var device = GraphicsDeviceProfile.Current.Type.ToString();
+            var mode = GraphicsDeviceProfile.CurrentThreadingMode.ToString();
+            var graphics = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 4, 4);
+            var compute = new ComputeBuffer(4, 4);
+            var texture = new RenderTexture(4, 4, 0);
+            try
+            {
+                int Waits(Action query)
+                {
+                    int before = NativePlugins.s_RenderThreadSyncs;
+                    query();
+                    return NativePlugins.s_RenderThreadSyncs - before;
+                }
+                GraphicsDeviceProfile.Select("Vulkan", "MultiThreaded");
+                Assert.Equal(1, Waits(() => graphics.GetNativeBufferPtr()));
+                Assert.Equal(1, Waits(() => compute.GetNativeBufferPtr()));
+                Assert.Equal(1, Waits(() => texture.GetNativeTexturePtr()));
+                Assert.Equal(1, Waits(() => texture.GetNativeDepthBufferPtr()));
+                GraphicsDeviceProfile.Select("Vulkan");
+                Assert.Equal(0, Waits(() => graphics.GetNativeBufferPtr()));
+                Assert.Equal(0, Waits(() => compute.GetNativeBufferPtr()));
+                Assert.Equal(0, Waits(() => texture.GetNativeTexturePtr()));
+            }
+            finally
+            {
+                GraphicsDeviceProfile.Select(device, mode);
+                graphics.Release();
+                compute.Release();
+                Object.DestroyImmediate(texture);
+            }
+        }
+
         [Fact]
         public void GlEventsFindTheActiveRenderTextureBound()
         {

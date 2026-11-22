@@ -5,7 +5,7 @@ use std::sync::OnceLock;
 pub use unbound_compat::{GraphicsDevice, RenderingThreadingMode};
 
 static DEVICE: OnceLock<GraphicsDevice> = OnceLock::new();
-static THREADING: OnceLock<RenderingThreadingMode> = OnceLock::new();
+static FORCED_THREADING: OnceLock<RenderingThreadingMode> = OnceLock::new();
 
 /// Sets the run's device. A device is chosen once: setting another one later is a bug.
 pub fn set(device: GraphicsDevice) {
@@ -22,20 +22,17 @@ pub fn get() -> GraphicsDevice {
         .unwrap_or_else(|| unbound_compat::HostOs::current().default_devices()[0])
 }
 
-/// Sets the run's threading mode (`SystemInfo.renderingThreadingMode`), chosen with the device.
-pub fn set_threading(mode: RenderingThreadingMode) {
-    let current = *THREADING.get_or_init(|| mode);
+/// Sets the threading mode `-force-gfx-mt` gives the run (`unbound_compat::forced_multithreading`).
+pub fn set_forced_threading(mode: RenderingThreadingMode) {
+    let current = *FORCED_THREADING.get_or_init(|| mode);
     assert_eq!(
         current, mode,
         "the rendering threading mode was already chosen"
     );
 }
 
-/// The run's threading mode; where nothing chose one, the device's default
-/// ([`RenderingThreadingMode::default_for`]).
-pub fn threading() -> RenderingThreadingMode {
-    THREADING
-        .get()
-        .copied()
-        .unwrap_or_else(|| RenderingThreadingMode::default_for(get()))
+/// The threading mode `-force-gfx-mt` gave the run; None: the device's own (the managed
+/// GraphicsDeviceProfile's).
+pub fn forced_threading() -> Option<RenderingThreadingMode> {
+    FORCED_THREADING.get().copied()
 }

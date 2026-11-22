@@ -541,8 +541,8 @@ impl<R: Rendering> Backend<R> {
 
     fn multithreaded(&self) -> bool {
         *self.multithreaded.get_or_init(|| {
-            unbound_runtime::graphics_device::threading()
-                == unbound_runtime::graphics_device::RenderingThreadingMode::MultiThreaded
+            unbound_runtime::graphics_device::forced_threading()
+                == Some(unbound_runtime::graphics_device::RenderingThreadingMode::MultiThreaded)
         })
     }
 

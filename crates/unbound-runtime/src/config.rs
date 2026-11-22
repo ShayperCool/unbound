@@ -365,8 +365,10 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         config["playerPrefsPath"] = json!(prefs);
     }
     // Outside the literal above, which is at json!'s recursion limit.
-    // SystemInfo.renderingThreadingMode (chosen with the device).
-    config["renderingThreadingMode"] = json!(crate::graphics_device::threading().name());
+    // SystemInfo.renderingThreadingMode where -force-gfx-mt set it (else the device's own).
+    if let Some(mode) = crate::graphics_device::forced_threading() {
+        config["renderingThreadingMode"] = json!(mode.name());
+    }
     config["codeOptimization"] = json!(options.code_optimization.name());
     // Every group's defines (PlayerSettings.GetScriptingDefineSymbols of any named target).
     config["scriptingDefinesByGroup"] = json!(settings.scripting_defines);

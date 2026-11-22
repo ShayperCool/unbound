@@ -346,7 +346,12 @@ namespace UnityEngine
         [Unbound.EditorFaithful("write-only label for GPU debuggers: nothing a game can observe")]
         public string name { set { } }
 
-        public IntPtr GetNativeBufferPtr() { _ = CheckedStorage; return m_Ptr; }
+        public IntPtr GetNativeBufferPtr()
+        {
+            _ = CheckedStorage;
+            Unbound.Runtime.NativePlugins.SyncWithRenderThread();
+            return m_Ptr;
+        }
 
         public void SetData(Array data) => CheckedStorage.SetData(data, 0, 0, data?.Length ?? 0, GpuBufferStorage.Graphics);
         public void SetData(Array data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) =>
@@ -420,7 +425,11 @@ namespace UnityEngine
         [Unbound.EditorFaithful("write-only label for GPU debuggers: nothing a game can observe")]
         public string name { set { } }
 
-        public IntPtr GetNativeBufferPtr() => m_Ptr;
+        public IntPtr GetNativeBufferPtr()
+        {
+            Unbound.Runtime.NativePlugins.SyncWithRenderThread();
+            return m_Ptr;
+        }
 
         public void SetData(Array data) => m_Storage.SetData(data, 0, 0, data?.Length ?? 0, GpuBufferStorage.Compute);
         public void SetData(Array data, int managedBufferStartIndex, int computeBufferStartIndex, int count) =>

@@ -201,23 +201,34 @@ fn choose_graphics_device(
     })
     .map_err(anyhow::Error::msg)?;
     // `-force-gfx-mt`: what the measured Editor makes of it on this device, else a failure.
-    let threading = if force_gfx_mt {
+    let forced_threading = if force_gfx_mt {
         let (mode, warning) = unbound_compat::forced_multithreading(project.version, device)
             .map_err(anyhow::Error::msg)?;
         if let Some(warning) = warning {
             tracing::warn!("{warning}");
         }
-        mode
+        if windowed {
+            tracing::warn!(
+                "multithreaded rendering is measured for the batchmode Editor: this windowed run \
+                 renders as it does"
+            );
+        }
+        Some(mode)
     } else {
-        unbound_compat::RenderingThreadingMode::default_for(device)
+        None
     };
     unbound_runtime::graphics_device::set(device);
-    unbound_runtime::graphics_device::set_threading(threading);
+    if let Some(mode) = forced_threading {
+        unbound_runtime::graphics_device::set_forced_threading(mode);
+    }
     unbound_app::provide_plugin_interfaces(device);
-    tracing::info!(
-        "graphics device: {device} (rendering threading mode {})",
-        threading.name()
-    );
+    match forced_threading {
+        Some(mode) => tracing::info!(
+            "graphics device: {device} (rendering threading mode {})",
+            mode.name()
+        ),
+        None => tracing::info!("graphics device: {device}"),
+    }
     Ok(device)
 }
 
@@ -1393,7 +1404,10 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
         .iter()
         .rev()
         .find_map(|a| unbound_compat::forced_by_option(a));
-    let force_gfx_mt = options.command_line.iter().any(|a| a == "-force-gfx-mt");
+    let force_gfx_mt = options
+        .command_line
+        .iter()
+        .any(|a| a.trim_start_matches('-') == "force-gfx-mt");
     choose_graphics_device(&project, forced, false, force_gfx_mt)?;
     install_shader_declarations(&project, &args.target);
     let mut game = unbound_runtime::Game::start(&project, &options)?;

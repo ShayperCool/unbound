@@ -190,19 +190,31 @@ namespace Unbound.Runtime
         }
 
         /// <summary>No native pointer (a texture not created): with multithreaded rendering the
-        /// query still waits for the render thread (Unity 6000.0 Texture.GetNativeTexturePtr,
-        /// RenderTexture.GetNativeDepthBufferPtr: "calling this function when using multi-threaded
-        /// rendering will synchronize with the rendering thread"; tests/projects/nativegfx
-        /// vulkan-mt.jsonl device.msaa.*, where the plugin events before such a query have run).</summary>
+        /// query still waits for the render thread (<see cref="SyncWithRenderThread"/>).</summary>
         internal static IntPtr NoPointer()
         {
-            if (GraphicsDeviceProfile.CurrentThreadingMode == UnityEngine.Rendering.RenderingThreadingMode.MultiThreaded && Native.IsReady)
-            {
-                GfxStream.Flush();
-                // Handle 0 names no texture: the renderer only waits.
-                Native.Api.NativeTexture(0, 0);
-            }
+            SyncWithRenderThread();
             return IntPtr.Zero;
+        }
+
+        /// <summary>The waits <see cref="SyncWithRenderThread"/> made (tests).</summary>
+        internal static int s_RenderThreadSyncs;
+
+        /// <summary>A native pointer query with multithreaded rendering: it waits until the
+        /// render thread has run what was issued before (Unity 6000.0 Scripting API
+        /// Texture.GetNativeTexturePtr, RenderTexture.GetNativeDepthBufferPtr,
+        /// GraphicsBuffer.GetNativeBufferPtr, ComputeBuffer.GetNativeBufferPtr: "calling this
+        /// function when using multi-threaded rendering will synchronize with the rendering
+        /// thread"; tests/projects/nativegfx vulkan-mt.jsonl device.msaa.*). The texture
+        /// pointers that the renderer answers wait anyway; nothing else does.</summary>
+        internal static void SyncWithRenderThread()
+        {
+            if (GraphicsDeviceProfile.CurrentThreadingMode != UnityEngine.Rendering.RenderingThreadingMode.MultiThreaded) return;
+            s_RenderThreadSyncs++;
+            if (!Native.IsReady) return;
+            GfxStream.Flush();
+            // Handle 0 names no texture: the renderer only waits for its thread.
+            Native.Api.NativeTexture(0, 0);
         }
 
         /// <summary>A render buffer's native pointer: stable for the render texture (none: the

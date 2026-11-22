@@ -1,5 +1,6 @@
 //! How the Editor's graphics device runs its commands and native plugin callbacks
-//! (`SystemInfo.renderingThreadingMode`), with and without `-force-gfx-mt`.
+//! (`SystemInfo.renderingThreadingMode`) with `-force-gfx-mt` (without it, each device's own
+//! mode: the managed GraphicsDeviceProfile's).
 use crate::{GraphicsDevice, MeasuredFamily, UnityVersion};
 
 /// The `UnityEngine.Rendering.RenderingThreadingMode` values a run can have.
@@ -20,15 +21,6 @@ impl RenderingThreadingMode {
             Self::Direct => "Direct",
             Self::SingleThreaded => "SingleThreaded",
             Self::MultiThreaded => "MultiThreaded",
-        }
-    }
-
-    /// The mode a device has without `-force-gfx-mt` (the batchmode Editor's: Direct on OpenGL
-    /// Core, SingleThreaded on Vulkan and Metal; tests/projects/urp CapsProbe).
-    pub fn default_for(device: GraphicsDevice) -> Self {
-        match device {
-            GraphicsDevice::OpenGLCore => Self::Direct,
-            GraphicsDevice::Vulkan | GraphicsDevice::Metal => Self::SingleThreaded,
         }
     }
 }
@@ -98,21 +90,5 @@ mod tests {
                 assert!(forced_multithreading(version, device).is_err());
             }
         }
-    }
-
-    #[test]
-    fn devices_default_to_the_batchmode_editors_modes() {
-        assert_eq!(
-            RenderingThreadingMode::default_for(GraphicsDevice::OpenGLCore),
-            RenderingThreadingMode::Direct
-        );
-        assert_eq!(
-            RenderingThreadingMode::default_for(GraphicsDevice::Vulkan),
-            RenderingThreadingMode::SingleThreaded
-        );
-        assert_eq!(
-            RenderingThreadingMode::default_for(GraphicsDevice::Metal),
-            RenderingThreadingMode::SingleThreaded
-        );
     }
 }

@@ -1,5 +1,5 @@
 {
- "Multithreaded rendering: a plugin event's callback reads state the script gave the plugin directly afterwards (NativeGfxVk_SetDeviceBuffer of the next render texture) when it runs later on the render thread; the Editor's render thread had run it before (it waits for its render thread at a call in between that its documentation does not name; documented: GetNativeTexturePtr and GetNativeDepthBufferPtr, where Unbound waits as well). Unmeasured which call waits": [
+ "Multithreaded rendering: a plugin event's callback reads state the script gave the plugin directly afterwards (NativeGfxVk_SetDeviceBuffer of the next render texture) when it runs later on the render thread; the Editor's render thread had run it before (it waits for its render thread at a call in between that its documentation does not name; documented: the native pointer getters of textures, render textures and buffers, where Unbound waits as well). Unmeasured which call waits": [
   "plugin.device.msaa.1.24.True.resolve",
   "plugin.device.msaa.1.24.True.resolve.samecolor",
   "plugin.device.msaa.2.0.False.resolve",
