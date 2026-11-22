@@ -21,5 +21,8 @@ python3 tests/projects/textureresizememory/run.py publish first second --device 
 python3 tests/projects/textureresizememory/run.py gate
 ```
 
-Use Vulkan for the second Linux device and Metal on macOS. Publishing requires
-two independent agreeing captures of the selected device and release.
+Use Metal on macOS. Publishing requires two independent agreeing captures of
+the selected device and release. The Metal overhead is 960 bytes in both
+states. The OpenGL Core overhead is 880 bytes before uploading the new image
+and 936 after. Raw Vulkan repeats differed during uploads in the first
+resize sequence. Vulkan and other release families retain earlier accounting.

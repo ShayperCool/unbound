@@ -11,8 +11,8 @@ import value_probe  # noqa: E402
 PROBE = Path(__file__).resolve().parent
 BASE = (PROBE.parent/'formatmapping', ['Assets/Scenes', 'Assets/Scenes.meta', 'Packages', 'ProjectSettings'])
 CAPTURE = 'TEXTURE_RESIZE_MEMORY_OUT'
-DEVICES = ('opengl', 'vulkan', 'metal')
-HOST_DEVICES = ('metal',) if sys.platform == 'darwin' else ('opengl', 'vulkan')
+DEVICES = ('opengl', 'metal')
+HOST_DEVICE = 'metal' if sys.platform == 'darwin' else 'opengl'
 
 
 def directory(label, device):
@@ -44,11 +44,12 @@ def publish(labels, device):
             raise SystemExit(f'{root}: duplicate Editor launch record')
         launches.add(launch)
         rows = value_probe.read_values(values)
-        expected_device = {'opengl': 'OpenGLCore', 'vulkan': 'Vulkan', 'metal': 'Metal'}[device]
+        expected_device = {'opengl': 'OpenGLCore', 'metal': 'Metal'}[device]
         if rows.get('device') != expected_device or rows.get('unity') != unity_version():
             raise SystemExit(f'{root}: expected a {expected_device} Editor capture for {unity_version()}')
     value_probe.METAL = device == 'metal'
-    return value_probe.publish(PROBE, [str(root) for root in roots], device=device)
+    return value_probe.publish(PROBE, [str(root) for root in roots],
+                               profile='opengl' if device == 'opengl' else None)
 
 
 def main():
@@ -58,29 +59,28 @@ def main():
     parser.add_argument('--label', default=None)
     parser.add_argument('--device', choices=DEVICES)
     args = parser.parse_intermixed_args()
-    if args.mode != 'gate' and len(HOST_DEVICES) > 1 and not args.device:
-        parser.error('record and publish require an explicit --device')
-    devices = (args.device,) if args.device else HOST_DEVICES
+    device = args.device or HOST_DEVICE
     if args.mode == 'publish':
-        return publish(args.labels, devices[0])
-    if any(device not in HOST_DEVICES for device in devices):
+        return publish(args.labels, device)
+    if device != HOST_DEVICE:
         parser.error('select a device available on this host')
     if args.labels:
         parser.error('use --label for record and gate')
+    value_probe.METAL = device == 'metal'
     label = private_label() if args.label is None else args.label
-    statuses = []
-    for device in devices:
-        value_probe.METAL = device == 'metal'
-        out = directory(label, device)
-        if out.exists():
-            raise SystemExit(f'{out}: expected a fresh run directory')
-        if args.mode == 'record':
-            value_probe.record(PROBE, 'RecordTextureResizeMemory.Record', CAPTURE, str(out), batch=True,
-                               macos_batch=True, base=BASE, device=device)
-            return 0
-        statuses.append(value_probe.gate(PROBE, CAPTURE, str(out), 0, ['--headless', '12'],
-                                         base=BASE, device=device))
-    return max(statuses)
+    out = directory(label, device)
+    if out.exists():
+        raise SystemExit(f'{out}: expected a fresh run directory')
+    if args.mode == 'record':
+        value_probe.record(PROBE, 'RecordTextureResizeMemory.Record', CAPTURE, str(out), batch=True,
+                           macos_batch=True, base=BASE)
+        return 0
+
+    engine_args = ['--headless', '12']
+    if device == 'opengl':
+        engine_args.append('--force-glcore')
+    return value_probe.gate(PROBE, CAPTURE, str(out), 0, engine_args, base=BASE,
+                            profile='opengl' if device == 'opengl' else None)
 
 
 if __name__ == '__main__':

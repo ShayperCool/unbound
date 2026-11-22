@@ -266,6 +266,7 @@ namespace Unbound.Runtime
             RenderingThreadingMode.Direct, GraphicsFormat.D24_UNorm_S8_UInt,
             BatchBufferTarget.ConstantBuffer, GraphicsCapsTable.OpenGLCore, MachineIdentity.ReadOpenGl, framebufferReadback: true, alpha8Readback: Alpha8ReadbackMode.Unsupported)
         {
+            Texture2DMemoryOverhead = (880, 936),
             MaxTiledPixelStorage = int.MaxValue,
             TiledStorageMeasured = true,
             MaxGraphicsBufferBytes = 2L << 30,
