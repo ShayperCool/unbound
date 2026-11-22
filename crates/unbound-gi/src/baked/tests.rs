@@ -1146,3 +1146,400 @@ mod lighting {
         );
     }
 }
+
+mod bounced {
+    use crate::baked::direct::Receiver;
+    use crate::baked::gbuffer::{self, Instance, Mesh};
+    use crate::baked::indirect::{self, Material, Settings, Surface, Texture, World};
+    use crate::baked::light::{Kind, Light, Mode};
+    use crate::baked::sampling::{self, BLUE_NOISE_BYTES, BlueNoiseSize, Samples, Twister};
+    use crate::baked::trace::{Ray, Scene};
+
+    const IDENTITY: [f32; 16] = [
+        1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+    ];
+
+    #[test]
+    fn a_texel_takes_the_nearest_power_of_two_of_the_samples_asked_for() {
+        let counts = |asked: &[u32], supersampling| -> Vec<u32> {
+            asked
+                .iter()
+                .map(|&n| sampling::sample_count(n, supersampling))
+                .collect()
+        };
+        // Equally near two powers: the upper one.
+        assert_eq!(
+            counts(&[0, 1, 2, 3, 5, 6, 10, 24, 64, 100, 512], 1),
+            [1, 1, 2, 4, 4, 8, 8, 32, 64, 128, 512]
+        );
+        // Never fewer than the samples a texel is rasterized with.
+        assert_eq!(counts(&[1, 3, 10, 64], 2), [4, 4, 8, 64]);
+        assert_eq!(counts(&[1, 10, 64], 4), [16, 16, 64]);
+        let distributions: Vec<usize> = [1, 2, 4, 64, 255, 256, 512]
+            .map(sampling::distribution)
+            .to_vec();
+        assert_eq!(distributions, [0, 1, 2, 6, 7, 8, 8]);
+    }
+
+    #[test]
+    fn the_rotations_generator_is_the_mersenne_twister() {
+        // The generator's known first and 10000th numbers for its usual seed.
+        let mut twister = Twister::new(5489);
+        assert_eq!(twister.draw(), 3_499_211_612);
+        let mut last = 0;
+        for _ in 1..10_000 {
+            last = twister.draw();
+        }
+        assert_eq!(last, 4_123_659_995);
+    }
+
+    #[test]
+    fn the_sobol_sequence_halves_its_first_dimension_and_rotations_repeat() {
+        assert_eq!(Samples::new(&[0; 10]).err(), Some(BlueNoiseSize(10)));
+        let samples = Samples::new(&vec![0; BLUE_NOISE_BYTES]).unwrap();
+        let first: Vec<f32> = (0..8).map(|i| samples.sobol(i, 0)).collect();
+        assert_eq!(first, [0.0, 0.5, 0.25, 0.75, 0.125, 0.625, 0.375, 0.875]);
+        // Every dimension stays in 0..1 and differs from the first.
+        for dimension in [1, 2, 3, 14, 1023] {
+            let values: Vec<f32> = (1..64).map(|i| samples.sobol(i, dimension)).collect();
+            assert!(values.iter().all(|v| (0.0..1.0).contains(v)), "{dimension}");
+            assert_ne!(
+                values,
+                (1..64).map(|i| samples.sobol(i, 0)).collect::<Vec<_>>()
+            );
+        }
+        // A texel has twelve rotations, read in threes from any dimension on; texels repeat
+        // every 512 along a wide lightmap, and by its width along a narrow one.
+        let rotations = samples.rotation(3, 5, 1024, 0);
+        assert!(rotations.iter().all(|r| (0.0..=1.0).contains(r)));
+        assert_eq!(samples.rotation(3, 5, 1024, 12), rotations);
+        assert_eq!(samples.rotation(3 + 512, 5 + 512, 1024, 0), rotations);
+        assert_ne!(samples.rotation(4, 5, 1024, 0), rotations);
+        assert_eq!(samples.rotation(3, 5, 1024, 11)[1], rotations[0]);
+        assert_eq!(
+            samples.rotation(0, 1, 64, 0),
+            samples.rotation(64, 0, 1024, 0)
+        );
+    }
+
+    #[test]
+    fn the_blue_noise_sequence_is_ranked_and_scrambled_per_texel_and_sample_count() {
+        let mut data = vec![0u8; BLUE_NOISE_BYTES];
+        // The sequence: sample 0 has 10 in dimension 1, sample 3 has 20.
+        data[1] = 10;
+        data[1 + 3 * 256] = 20;
+        let tiles = 256 * 256;
+        let tile_values = 8 * 128 * 128;
+        // For 4 samples (the third distribution), texel (2, 1): dimension 1 is ranked by 3
+        // and scrambled by 5. The ranking tiles come first, then the scrambling ones.
+        let place = 2 * tile_values + 1 + (2 + 128) * 8;
+        data[tiles + place] = 3;
+        data[tiles + 9 * tile_values + place] = 5;
+        let samples = Samples::new(&data).unwrap();
+        assert_eq!(samples.blue(0, 1, 2, 1, 2), (0.5 + (20 ^ 5) as f32) / 256.0);
+        // Another texel, and another sample count, read sample 0 as it is.
+        assert_eq!(samples.blue(0, 1, 3, 1, 2), 10.5 / 256.0);
+        assert_eq!(samples.blue(0, 1, 2, 1, 3), 10.5 / 256.0);
+        // The tile repeats every 128 texels, the tiles' dimensions every 8, samples every 256.
+        assert_eq!(
+            samples.blue(256, 1, 2 + 128, 1 + 128, 2),
+            samples.blue(0, 1, 2, 1, 2)
+        );
+        assert_eq!(samples.blue(0, 9, 2, 1, 2), (0.5 + 5.0) / 256.0);
+    }
+
+    #[test]
+    fn directions_follow_the_cosine_around_a_normal() {
+        // The square's centre is the axis; its corners lie on the horizon.
+        assert_eq!(sampling::cosine_direction([0.5, 0.5]), [0.0, 0.0, 1.0]);
+        let corner = sampling::cosine_direction([1.0, 1.0]);
+        assert!(
+            corner[2].abs() < 1e-3
+                && (corner[0] * corner[0] + corner[1] * corner[1] - 1.0).abs() < 1e-6
+        );
+        for normal in [
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, -1.0],
+            [0.6, 0.0, 0.8],
+            [0.0, -1.0, 0.0],
+        ] {
+            let (t, b) = sampling::basis(normal);
+            let dot = |a: [f32; 3], b: [f32; 3]| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+            assert!(
+                dot(t, normal).abs() < 1e-6
+                    && dot(b, normal).abs() < 1e-6
+                    && dot(t, b).abs() < 1e-6
+            );
+            assert!((dot(t, t) - 1.0).abs() < 1e-6 && (dot(b, b) - 1.0).abs() < 1e-6);
+            assert_eq!(sampling::around(normal, [0.5, 0.5]), normal);
+        }
+    }
+
+    #[test]
+    fn a_ray_finds_the_nearest_triangle_its_side_and_its_number() {
+        // Two triangles over the origin, the nearer one given last; one that is not a number
+        // between them keeps its number.
+        let far = [[-1.0, -1.0, 4.0], [3.0, -1.0, 4.0], [-1.0, 3.0, 4.0]];
+        let broken = [[f32::NAN, 0.0, 1.0], [1.0, 0.0, 1.0], [0.0, 1.0, 1.0]];
+        let near = [[-1.0, -1.0, 2.0], [3.0, -1.0, 2.0], [-1.0, 3.0, 2.0]];
+        let scene = Scene::new([far, broken, near]);
+        let up = Ray {
+            origin: [0.0; 3],
+            direction: [0.0, 0.0, 1.0],
+        };
+        let hit = scene.closest(&up, f32::INFINITY).unwrap();
+        assert_eq!((hit.triangle, hit.distance), (2, 2.0));
+        // The corners' cross product points up: a ray going up meets the back.
+        assert!(!hit.front);
+        assert_eq!(hit.weights, [0.25, 0.25]);
+        let down = Ray {
+            origin: [0.0, 0.0, 5.0],
+            direction: [0.0, 0.0, -1.0],
+        };
+        let hit = scene.closest(&down, f32::INFINITY).unwrap();
+        assert_eq!((hit.triangle, hit.distance, hit.front), (0, 1.0, true));
+        // Nothing before the limit, nothing beside the triangles.
+        assert_eq!(scene.closest(&up, 2.0), None);
+        assert_eq!(
+            scene.closest(
+                &Ray {
+                    origin: [5.0, 5.0, 0.0],
+                    direction: [0.0, 0.0, 1.0]
+                },
+                f32::INFINITY
+            ),
+            None
+        );
+        assert_eq!(Scene::new([]).closest(&up, f32::INFINITY), None);
+    }
+
+    /// A unit quad in the plane z = 0 facing +z, filling a lightmap.
+    fn floor() -> Mesh {
+        Mesh::new(
+            vec![
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [1.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0],
+            ],
+            &[[0.0, 0.0, 1.0]; 4],
+            &[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+            &[],
+            vec![vec![[0, 1, 2], [0, 2, 3]]],
+        )
+        .unwrap()
+    }
+
+    /// A wide ceiling at z = 2 whose front faces down (its corners' cross product points down).
+    fn ceiling(material: u32) -> Surface {
+        Surface {
+            material,
+            mirrored: false,
+            double_sided: false,
+            corners: [
+                [-500.0, -500.0, 2.0],
+                [-500.0, 1000.0, 2.0],
+                [1000.0, -500.0, 2.0],
+            ],
+            normals: [[0.0, 0.0, -1.0]; 3],
+            uvs: [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]],
+        }
+    }
+
+    fn sun_from_below() -> Light {
+        Light {
+            kind: Kind::Directional,
+            mode: Mode::Baked,
+            color: [9.0, 9.0, 9.0],
+            indirect_color: [2.0, 1.0, 0.5],
+            position: [0.0; 3],
+            forward: [0.0, 0.0, 1.0],
+            range: 0.0,
+            cone_angle: 1.0,
+            casts_shadows: true,
+        }
+    }
+
+    struct Bake {
+        surfaces: Vec<Surface>,
+        materials: Vec<Material>,
+        lights: Vec<Light>,
+        casters: Vec<[[f32; 3]; 3]>,
+        settings: Settings,
+    }
+
+    impl Bake {
+        fn new(surface: Surface, albedo: [f32; 3], emissive: [f32; 3]) -> Bake {
+            Bake {
+                surfaces: vec![surface],
+                materials: vec![Material {
+                    albedo: Texture::uniform([albedo[0], albedo[1], albedo[2], 1.0]),
+                    emissive: Texture::uniform([emissive[0], emissive[1], emissive[2], 1.0]),
+                }],
+                lights: Vec::new(),
+                casters: Vec::new(),
+                settings: Settings {
+                    samples: 16,
+                    max_bounces: 1,
+                    min_bounces: 1,
+                    pushoff: 0.0001,
+                },
+            }
+        }
+
+        /// The floor's one texel: its light and its validity.
+        fn run(&self) -> ([f32; 4], f32) {
+            let mesh = floor();
+            let instances = [Instance {
+                mesh: &mesh,
+                scale_offset: [1.0, 1.0, 0.0, 0.0],
+                index: 0,
+            }];
+            let g = gbuffer::gbuffer(1, 1, 2, &instances);
+            let receivers = [Receiver {
+                local_to_world: IDENTITY,
+                receives_shadows: true,
+            }];
+            let scene = Scene::new(self.surfaces.iter().map(|s| s.corners));
+            let casters = Scene::new(self.casters.iter().copied());
+            let world = World {
+                scene: &scene,
+                casters: &casters,
+                surfaces: &self.surfaces,
+                materials: &self.materials,
+                lights: &self.lights,
+            };
+            let samples = Samples::new(&vec![0; BLUE_NOISE_BYTES]).unwrap();
+            let lit = indirect::indirect(&g, &receivers, &world, &samples, self.settings);
+            (lit.irradiance[0], lit.validity[0])
+        }
+    }
+
+    fn near(a: [f32; 4], b: [f32; 3]) -> bool {
+        (0..3).all(|k| (a[k] - b[k]).abs() <= 1e-5 * b[k].abs().max(1.0)) && a[3] == 1.0
+    }
+
+    #[test]
+    fn a_texel_takes_what_the_surfaces_its_rays_meet_emit() {
+        // Every ray of the floor meets the glowing ceiling's front: the texel has its emission.
+        let glow = Bake::new(ceiling(0), [0.0; 3], [3.0, 2.0, 1.0]);
+        let (light, validity) = glow.run();
+        assert!(near(light, [3.0, 2.0, 1.0]), "{light:?}");
+        assert_eq!(validity, 0.0);
+        // Nothing above: nothing comes back.
+        let mut empty = Bake::new(ceiling(0), [0.0; 3], [3.0, 2.0, 1.0]);
+        empty.surfaces[0].corners = [[-1.0, -1.0, -5.0], [-1.0, 1.0, -5.0], [1.0, -1.0, -5.0]];
+        assert_eq!(empty.run(), ([0.0, 0.0, 0.0, 1.0], 0.0));
+    }
+
+    #[test]
+    fn a_surface_met_from_behind_gives_nothing_and_counts_against_the_texel() {
+        let mut turned = Bake::new(ceiling(0), [1.0; 3], [3.0, 2.0, 1.0]);
+        turned.surfaces[0].corners.swap(1, 2);
+        assert_eq!(turned.run(), ([0.0, 0.0, 0.0, 1.0], 1.0));
+        // A mirrored renderer's front is the other side.
+        turned.surfaces[0].mirrored = true;
+        let (light, validity) = turned.run();
+        assert!(
+            near(light, [3.0, 2.0, 1.0]) && validity == 0.0,
+            "{light:?} {validity}"
+        );
+        // A double sided material's back is a front.
+        turned.surfaces[0].mirrored = false;
+        turned.surfaces[0].double_sided = true;
+        let (light, validity) = turned.run();
+        assert!(
+            near(light, [3.0, 2.0, 1.0]) && validity == 0.0,
+            "{light:?} {validity}"
+        );
+    }
+
+    #[test]
+    fn a_surface_sends_back_the_lights_indirect_colour_by_its_albedo_unless_shadowed() {
+        let mut lit = Bake::new(ceiling(0), [0.5, 0.25, 1.0], [0.0; 3]);
+        lit.lights.push(sun_from_below());
+        // The sun shines straight up at the ceiling: its indirect colour times the albedo.
+        let (light, _) = lit.run();
+        assert!(near(light, [1.0, 0.25, 0.5]), "{light:?}");
+        // Corner normals at 60 degrees to the light halve it (they are not brought back to
+        // unit length after mixing, which here they keep).
+        lit.surfaces[0].normals = [[0.0, 0.866_025_4, -0.5]; 3];
+        let (light, _) = lit.run();
+        assert!(near(light, [0.5, 0.125, 0.25]), "{light:?}");
+        lit.surfaces[0].normals = [[0.0, 0.0, -0.5]; 3];
+        let (light, _) = lit.run();
+        assert!(near(light, [0.5, 0.125, 0.25]), "{light:?}");
+        // A shadow caster between the sun and the ceiling: nothing; a light that casts no
+        // shadow passes it.
+        lit.surfaces[0].normals = [[0.0, 0.0, -1.0]; 3];
+        lit.casters = vec![[
+            [-900.0, -900.0, 1.0],
+            [-900.0, 2000.0, 1.0],
+            [2000.0, -900.0, 1.0],
+        ]];
+        assert_eq!(lit.run().0, [0.0, 0.0, 0.0, 1.0]);
+        lit.lights[0].casts_shadows = false;
+        assert!(near(lit.run().0, [1.0, 0.25, 0.5]));
+        // Without a bounce nothing is sent out, and nothing counts against the texel.
+        lit.settings.max_bounces = 0;
+        lit.surfaces[0].corners.swap(1, 2);
+        assert_eq!(lit.run(), ([0.0, 0.0, 0.0, 1.0], 0.0));
+    }
+
+    #[test]
+    fn a_path_goes_on_to_further_surfaces_until_max_bounces_or_chance_ends_it() {
+        // A dark ceiling over a glowing floor-level sheet: a path's second surface is the
+        // sheet below (a second surface, met from above).
+        let sheet = Surface {
+            material: 1,
+            mirrored: false,
+            double_sided: false,
+            corners: [
+                [-5000.0, -5000.0, -1.0],
+                [10000.0, -5000.0, -1.0],
+                [-5000.0, 10000.0, -1.0],
+            ],
+            normals: [[0.0, 0.0, 1.0]; 3],
+            uvs: [[0.0; 2]; 3],
+        };
+        let mut two = Bake::new(ceiling(0), [0.5, 0.5, 0.5], [0.0; 3]);
+        two.surfaces.push(sheet);
+        two.materials.push(Material {
+            albedo: Texture::uniform([0.0, 0.0, 0.0, 1.0]),
+            emissive: Texture::uniform([4.0, 2.0, 1.0, 1.0]),
+        });
+        // One bounce: the ceiling alone, which gives nothing.
+        assert_eq!(two.run().0, [0.0, 0.0, 0.0, 1.0]);
+        // Two bounces, chance not asked before the third: the sheet's glow by the ceiling's albedo.
+        two.settings.max_bounces = 2;
+        two.settings.min_bounces = 2;
+        let (light, _) = two.run();
+        assert!(near(light, [2.0, 1.0, 0.5]), "{light:?}");
+        // Chance from the first surface on: the test's sequence numbers are all 0.5 / 256,
+        // below the ceiling's albedo, so every path goes on, weighted by 1 / 0.5.
+        two.settings.min_bounces = 1;
+        let (light, _) = two.run();
+        assert!(near(light, [4.0, 2.0, 1.0]), "{light:?}");
+        // An albedo below the number ends every path at the ceiling.
+        two.materials[0].albedo = Texture::uniform([0.001, 0.001, 0.001, 1.0]);
+        assert_eq!(two.run().0, [0.0, 0.0, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn a_material_is_read_at_the_lightmap_coordinates_of_the_point() {
+        // The ceiling's emission image has two columns; the floor's rays (all one direction
+        // with the test's sequence) meet it where u is small.
+        let mut glow = Bake::new(ceiling(0), [0.0; 3], [0.0; 3]);
+        glow.materials[0].emissive = Texture {
+            width: 2,
+            height: 1,
+            texels: vec![[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0]],
+        };
+        let (left, _) = glow.run();
+        assert!(near(left, [1.0, 0.0, 0.0]), "{left:?}");
+        // The same corners with the coordinates' ends swapped: the other column.
+        glow.surfaces[0].uvs = [[1.0, 0.0], [1.0, 1.0], [0.0, 0.0]];
+        let (right, _) = glow.run();
+        assert!(near(right, [0.0, 1.0, 0.0]), "{right:?}");
+    }
+}
