@@ -35,12 +35,13 @@ namespace UnityEngine
         }
 
         /// <summary>The planes found so far, by voxel and direction (kept for the system's life),
-        /// and the voxel size and simulation space they were stored for: a change of either
-        /// empties the cache (Unbound's choice, unmeasured), as its keys and planes would mean
-        /// other places.</summary>
+        /// and the voxel size, simulation space and collision mode they were stored for: a change
+        /// of any empties the cache (Unbound's choice, unmeasured), as its keys and planes would
+        /// mean other places or other colliders.</summary>
         readonly Dictionary<VoxelKey, CachedPlane> m_PlaneCache = new Dictionary<VoxelKey, CachedPlane>();
         float m_PlaneCacheVoxel;
         ParticleSystemSimulationSpace m_PlaneCacheSpace;
+        ParticleSystemCollisionMode m_PlaneCacheMode;
 
         /// <summary>The queries this frame gives the system; those left in the current update; where
         /// the next pass's window starts; the window of the current pass.</summary>
@@ -111,11 +112,12 @@ namespace UnityEngine
         void BeginRayPass(int start, int end)
         {
             if (!UsesCollisionCache) return;
-            if (m_PlaneCacheVoxel != CacheVoxel || m_PlaneCacheSpace != m_Main.simulationSpace)
+            if (m_PlaneCacheVoxel != CacheVoxel || m_PlaneCacheSpace != m_Main.simulationSpace || m_PlaneCacheMode != m_Collision.mode)
             {
                 m_PlaneCache.Clear();
                 m_PlaneCacheVoxel = CacheVoxel;
                 m_PlaneCacheSpace = m_Main.simulationSpace;
+                m_PlaneCacheMode = m_Collision.mode;
             }
             int offset = m_RayOffset >= start && m_RayOffset < end ? m_RayOffset : start;
             int windowEnd = (int)System.Math.Min((long)offset + m_Rays, end);
@@ -172,8 +174,8 @@ namespace UnityEngine
                 bool found;
                 if (m_Collision.mode == ParticleSystemCollisionMode.Collision2D)
                 {
-                    // The 2D query takes the lengthened movement as the particle's own, also for
-                    // the force it gives a Dynamic body (unmeasured with colliderForce).
+                    // The 2D query takes the lengthened movement as the particle's own; it passes
+                    // Dynamic bodies, so it pushes none.
                     found = Query2D(w0, w0 + direction * (CacheSweepVoxels * voxel), radius, dt, out worldContact, out worldNormal, out var collider2D);
                     collider = collider2D;
                 }
@@ -212,7 +214,7 @@ namespace UnityEngine
             h.other = CollisionReceiver(collider);
             h.colliderId = collider != null ? collider.GetInstanceID() : 0;
             // A 2D body is pushed only by the query that found the plane (Query2D).
-            if (m_Collision.colliderForce != 0f && collider is Collider collider3D)
+            if (m_Collision.colliderForce != 0f && collider != null && collider is Collider collider3D)
                 ApplyColliderForce(collider3D.attachedRigidbody, h.contact, h.normal, h.velocity, h.lookupSize, c);
             return true;
         }

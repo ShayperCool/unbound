@@ -20,13 +20,18 @@ namespace UnityEngine
         /// attached to a Rigidbody (a Rigidbody2D) reports to the body's GameObject, which
         /// GetCollisionEvents then takes (6000.0.71f1, tests/projects/particlecollision
         /// collide/Parent, tests/projects/particlerender collide/world2d/kinematic); the event's
-        /// collider stays the one hit.</summary>
-        internal static GameObject CollisionReceiver(Component hit) => hit switch
+        /// collider stays the one hit. A collider destroyed since a cached plane found it reports to
+        /// nothing.</summary>
+        internal static GameObject CollisionReceiver(Component hit)
         {
-            Collider c => c.attachedRigidbody != null ? c.attachedRigidbody.gameObject : c.gameObject,
-            Collider2D c => c.attachedRigidbody != null ? c.attachedRigidbody.gameObject : c.gameObject,
-            _ => null,
-        };
+            if (hit == null) return null;
+            return hit switch
+            {
+                Collider c => c.attachedRigidbody != null ? c.attachedRigidbody.gameObject : c.gameObject,
+                Collider2D c => c.attachedRigidbody != null ? c.attachedRigidbody.gameObject : c.gameObject,
+                _ => null,
+            };
+        }
 
         /// <summary>Reports a module setting Unbound does not simulate, once per setting.</summary>
         internal static void ReportUnsupported(string what)
@@ -164,7 +169,7 @@ namespace UnityEngine
                 other = CollisionReceiver(hit);
                 colliderId = hit != null ? hit.GetInstanceID() : 0;
                 // A 2D query pushes the bodies it hits itself (see Query2D).
-                if (C.colliderForce != 0f && hit is Collider collider3D)
+                if (C.colliderForce != 0f && hit != null && hit is Collider collider3D)
                     ApplyColliderForce(collider3D.attachedRigidbody, contact, normal, velocity, size, c);
             }
 
@@ -417,8 +422,12 @@ namespace UnityEngine
             contact = normal = default;
             var C = m_Collision;
             var start = new Vector2(w0.x, w0.y);
+            // Medium and Low are "Static Colliders" qualities (6000.0 Manual): their queries pass
+            // Dynamic bodies, which therefore never take a collider force there
+            // (collide/world2d/force_speed_medium).
+            bool dynamicColliders = C.enableDynamicColliders && C.quality == ParticleSystemCollisionQuality.High;
             bool found = Unbound.Runtime.Physics2DParticleQuery.Contact(m_GameObject, start, new Vector2(w1.x, w1.y), radius, C.collidesWith,
-                C.enableDynamicColliders, C.maxCollisionShapes, m_Query2D, out var point, out var impact, out var n, out hit, out bool truncated);
+                dynamicColliders, C.maxCollisionShapes, m_Query2D, out var point, out var impact, out var n, out hit, out bool truncated);
             // Unity takes the first maxCollisionShapes colliders near the whole system; Unbound
             // looks per particle, so it can only tell when a single particle has more.
             if (truncated) ReportUnsupported("2D World collision with more than maxCollisionShapes colliders near a particle");
@@ -434,8 +443,9 @@ namespace UnityEngine
         /// point of the particle's circle nearest the surface where the step met it
         /// (<paramref name="impact"/>, before the push out); the force is multiplied by the
         /// cosine of the angle between the movement and the surface (zero when moving away), by the
-        /// particle's planar speed and by its circle's area, as their flags ask (Unity 6000.0.71f1,
-        /// tests/projects/particlerender collide/world2d/force_*).</summary>
+        /// particle's planar speed and by its circle's area, as their flags ask; a force of zero or
+        /// less pushes nothing (Unity 6000.0.71f1, tests/projects/particlerender
+        /// collide/world2d/force_*).</summary>
         void ApplyColliderForce2D(Rigidbody2D body, Vector2 move, Vector2 impact, Vector2 normal, float radius, float dt)
         {
             if (body == null || body.bodyType != RigidbodyType2D.Dynamic) return;

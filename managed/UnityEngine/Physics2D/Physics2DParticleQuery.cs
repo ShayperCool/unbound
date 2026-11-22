@@ -36,7 +36,8 @@ namespace Unbound.Runtime
     internal static class Physics2DParticleQuery
     {
         /// <summary>The linear slop of the query's time of impact and position correction: Box2D's
-        /// default, whatever Physics2D.defaultContactOffset says.</summary>
+        /// default, whatever Physics2D.defaultContactOffset says (collide/world2d/inside_offset,
+        /// slope_offset).</summary>
         const float LinearSlop = 0.005f;
         /// <summary>A particle's circle must be larger than this to collide.</summary>
         const float MinRadius = 1e-4f;
