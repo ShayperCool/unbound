@@ -11,6 +11,8 @@ public class MadeWaiter : MonoBehaviour
     public string point;
     readonly int[] m_Awake = new int[12], m_Start = new int[12];
     int m_StartFrame = int.MinValue;
+    // Resumes before the probe's first Update, which no frame counts.
+    int m_AwakeBefore, m_StartBefore;
 
     void Awake()
     {
@@ -23,7 +25,7 @@ public class MadeWaiter : MonoBehaviour
         while (true)
         {
             yield return new WaitForEndOfFrame();
-            Count(m_Awake);
+            Count(m_Awake, ref m_AwakeBefore);
         }
     }
 
@@ -33,14 +35,15 @@ public class MadeWaiter : MonoBehaviour
         while (true)
         {
             yield return new WaitForEndOfFrame();
-            Count(m_Start);
+            Count(m_Start, ref m_StartBefore);
         }
     }
 
-    static void Count(int[] frames)
+    static void Count(int[] frames, ref int before)
     {
         int step = StartupProbe.Step;
-        if (step >= 0 && step < frames.Length) frames[step]++;
+        if (step < 0) before++;
+        else if (step < frames.Length) frames[step]++;
     }
 
     public static void Finish()
@@ -48,6 +51,8 @@ public class MadeWaiter : MonoBehaviour
         foreach (var waiter in s_All)
         {
             StartupProbe.Record("made." + waiter.point + ".start.frame", waiter.m_StartFrame == int.MinValue ? -99 : waiter.m_StartFrame - StartupProbe.FirstUpdate);
+            StartupProbe.Record("made." + waiter.point + ".before.awake", waiter.m_AwakeBefore);
+            StartupProbe.Record("made." + waiter.point + ".before.start", waiter.m_StartBefore);
             for (int i = 0; i < 6; i++)
             {
                 StartupProbe.Record("made." + waiter.point + ".frame." + i + ".awake", waiter.m_Awake[i]);

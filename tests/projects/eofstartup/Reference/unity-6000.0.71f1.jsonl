@@ -76,6 +76,8 @@
 {"k":"additive.start.updates","v":1}
 {"k":"additive.awake.posts","v":1}
 {"k":"made.awake.start.frame","v":0}
+{"k":"made.awake.before.awake","v":0}
+{"k":"made.awake.before.start","v":0}
 {"k":"made.awake.frame.0.awake","v":0}
 {"k":"made.awake.frame.0.start","v":0}
 {"k":"made.awake.frame.1.awake","v":1}
@@ -89,6 +91,8 @@
 {"k":"made.awake.frame.5.awake","v":1}
 {"k":"made.awake.frame.5.start","v":1}
 {"k":"made.beforeSceneLoad.start.frame","v":0}
+{"k":"made.beforeSceneLoad.before.awake","v":0}
+{"k":"made.beforeSceneLoad.before.start","v":0}
 {"k":"made.beforeSceneLoad.frame.0.awake","v":0}
 {"k":"made.beforeSceneLoad.frame.0.start","v":0}
 {"k":"made.beforeSceneLoad.frame.1.awake","v":1}
@@ -102,6 +106,8 @@
 {"k":"made.beforeSceneLoad.frame.5.awake","v":1}
 {"k":"made.beforeSceneLoad.frame.5.start","v":1}
 {"k":"made.afterSceneLoad.start.frame","v":0}
+{"k":"made.afterSceneLoad.before.awake","v":0}
+{"k":"made.afterSceneLoad.before.start","v":0}
 {"k":"made.afterSceneLoad.frame.0.awake","v":0}
 {"k":"made.afterSceneLoad.frame.0.start","v":0}
 {"k":"made.afterSceneLoad.frame.1.awake","v":1}
@@ -115,6 +121,8 @@
 {"k":"made.afterSceneLoad.frame.5.awake","v":1}
 {"k":"made.afterSceneLoad.frame.5.start","v":1}
 {"k":"made.start.start.frame","v":0}
+{"k":"made.start.before.awake","v":0}
+{"k":"made.start.before.start","v":0}
 {"k":"made.start.frame.0.awake","v":0}
 {"k":"made.start.frame.0.start","v":0}
 {"k":"made.start.frame.1.awake","v":1}
@@ -128,6 +136,8 @@
 {"k":"made.start.frame.5.awake","v":1}
 {"k":"made.start.frame.5.start","v":1}
 {"k":"made.update0.start.frame","v":0}
+{"k":"made.update0.before.awake","v":0}
+{"k":"made.update0.before.start","v":0}
 {"k":"made.update0.frame.0.awake","v":0}
 {"k":"made.update0.frame.0.start","v":0}
 {"k":"made.update0.frame.1.awake","v":1}
@@ -141,6 +151,8 @@
 {"k":"made.update0.frame.5.awake","v":1}
 {"k":"made.update0.frame.5.start","v":1}
 {"k":"made.update2.start.frame","v":2}
+{"k":"made.update2.before.awake","v":0}
+{"k":"made.update2.before.start","v":0}
 {"k":"made.update2.frame.0.awake","v":0}
 {"k":"made.update2.frame.0.start","v":0}
 {"k":"made.update2.frame.1.awake","v":0}

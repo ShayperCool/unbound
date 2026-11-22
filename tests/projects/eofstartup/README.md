@@ -20,7 +20,8 @@ camera post-render callback; loading a scene does not repeat Play startup.
 Where the waiting object is made does not change this: objects made in BeforeSceneLoad,
 AfterSceneLoad, the probe's Awake, its Start and its first Update each run their Start in frame 0
 and first resume the waits they start in Awake and in a coroutine `Start` at frame 1; one made in
-the Update of frame 2 starts and resumes in frame 2 (`made.<point>.*`). Outside the reference,
+the Update of frame 2 starts and resumes in frame 2 (`made.<point>.*`; `before.*` counts
+resumes before the first Update: none). Outside the reference,
 the same rows came out with `Time.captureFramerate` set at startup and without the runner opening
 and focusing the Game view.
 The counters check every frame through frame 9, so skipping more than startup or
