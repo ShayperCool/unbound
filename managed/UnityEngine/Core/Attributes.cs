@@ -177,7 +177,7 @@ namespace UnityEngine
     public partial class HeaderAttribute : PropertyAttribute
     {
         public readonly string header;
-        public HeaderAttribute(string header) { this.header = header; }
+        public HeaderAttribute(string header) : base(global::Unbound.Runtime.Compat.DefaultConstructorStateMeasured) { this.header = header; }
     }
 
     [global::System.@AttributeUsageAttribute(global::System.AttributeTargets.Field, Inherited = true, AllowMultiple = true)]
