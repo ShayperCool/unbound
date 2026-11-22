@@ -73,7 +73,7 @@ public sealed class ImguiTextPaint : MonoBehaviour
         Draw(m_Right, new Rect(160, 26, 156, 24), "Lower right");
         Draw(m_Tinted, new Rect(160, 50, 156, 16), "Tinted AV To fi");
         Draw(m_Clipped, new Rect(160, 68, 60, 16), "Clipped at the rect");
-        // A project font, regular and in a style it has no face for.
+        // A project font with one face, regular and bold italic.
         Draw(m_Serif, new Rect(98, 70, 60, 18), "Serif gy");
         Draw(m_SerifBold, new Rect(98, 90, 60, 18), "BoldIt");
         bool enabled = GUI.enabled;

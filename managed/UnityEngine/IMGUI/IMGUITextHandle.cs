@@ -67,9 +67,9 @@ namespace UnityEngine
         const float GlyphQuadPadding = 6f;
 
         /// <summary>The fonts no font asset could be made for (instance IDs; 0: no font at all).
-        /// Their text has no size and is not drawn, as in the Editor, which warns with the same
-        /// words (tests/projects/imguiskin calcText/font). The Editor tries again and warns again
-        /// with every text; here a font is tried and reported once.</summary>
+        /// Their text has no size and is not drawn. The Editor tries such a font again with
+        /// every text and logs then, for some texts also with these words (tests/projects/imguiskin
+        /// calcText/font); here a font is tried once and warned about once.</summary>
         static readonly HashSet<int> s_FontsWithoutAsset = new HashSet<int>();
 
         static void WarnNoFontAsset(Font font)
