@@ -26,6 +26,10 @@ namespace UnityEngine
         internal ulong m_NativeHandle;
         internal int m_Width;
         internal int m_Height;
+        /// <summary>CPU blocks of an uninitialized ASTC texture before the measured fallback upload.</summary>
+        internal bool m_AstcMemoryPendingUpload;
+        /// <summary>Software ASTC setup bytes attributed to this texture by the profiler.</summary>
+        internal int m_AstcFallbackBytes;
         FilterMode m_FilterMode = FilterMode.Bilinear;
         TextureWrapMode m_WrapModeU = TextureWrapMode.Repeat;
         TextureWrapMode m_WrapModeV = TextureWrapMode.Repeat;
@@ -59,6 +63,20 @@ namespace UnityEngine
         public virtual bool isReadable => false;
         public virtual GraphicsFormat graphicsFormat => GraphicsFormatOf();
         internal virtual GraphicsFormat GraphicsFormatOf() => GraphicsFormat.R8G8B8A8_SRGB;
+
+        internal void RecordInitialAstcMemory(TextureFormat format, bool createUninitialized)
+        {
+            if (createUninitialized)
+                m_AstcMemoryPendingUpload = MemorySizes.MeasuresAstcFallback(this, format);
+            else
+                MemorySizes.RecordAstcFallback(this, format);
+        }
+
+        internal void RecordUploadedAstcMemory(TextureFormat format)
+        {
+            MemorySizes.RecordAstcFallback(this, format);
+            m_AstcMemoryPendingUpload = false;
+        }
 
         public virtual TextureDimension dimension
         {

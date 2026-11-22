@@ -56,6 +56,9 @@ namespace Unbound.Runtime
         internal bool BgraLdr { get; init; }
         /// <summary>Texture2D allocation overhead before and after Apply, measured by textureresizememory.</summary>
         internal (int CpuOnly, int WithGpu)? Texture2DMemoryOverhead { get; init; }
+        /// <summary>Software ASTC setup bytes for the first decoding format and for each additional
+        /// format, measured by textureastcmemory.</summary>
+        internal (int First, int Additional)? AstcFallbackMemoryOverhead { get; init; }
         /// <summary>What a BatchRendererGroup procedural command of MeshTopology.Quads draws its
         /// vertex ids as, the device having no quad primitive: a triangle list on Vulkan, points on
         /// OpenGL Core (measured, Unity 6000.0.71f1 on the NVIDIA driver: tests/projects/brg
@@ -267,6 +270,7 @@ namespace Unbound.Runtime
             BatchBufferTarget.ConstantBuffer, GraphicsCapsTable.OpenGLCore, MachineIdentity.ReadOpenGl, framebufferReadback: true, alpha8Readback: Alpha8ReadbackMode.Unsupported)
         {
             Texture2DMemoryOverhead = (880, 936),
+            AstcFallbackMemoryOverhead = (3200, 8),
             MaxTiledPixelStorage = int.MaxValue,
             TiledStorageMeasured = true,
             MaxGraphicsBufferBytes = 2L << 30,

@@ -515,6 +515,9 @@ namespace Unbound.Runtime
         /// <summary>First script-created clip memory measured by clipstartupmemory on 6000.0.71f1.
         /// Other releases retain their previous accounting.</summary>
         internal static bool CreatedClipStartupMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
+
+        /// <summary>First-use software ASTC workspace ownership (tests/projects/textureastcmemory).</summary>
+        internal static bool AstcFallbackMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Created text and binary payload allocation accounting, Unity 6000.0.71f1
         /// (tests/projects/textassetmemory).</summary>
         internal static bool TextAssetMemoryMeasured => Family == ReleaseFamily.Unity6000_0;

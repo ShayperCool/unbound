@@ -42,6 +42,7 @@ namespace UnityEngine
             // A cubemap made from a TextureFormat holds linear data (Unity creates it so).
             m_Linear = true;
             Allocate();
+            RecordInitialAstcMemory(format, createUninitialized);
         }
 
         public Cubemap(int width, GraphicsFormat format, TextureCreationFlags flags) : this(width, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
@@ -474,6 +475,7 @@ namespace UnityEngine
                 if (updateMipmaps) Debug.LogError("Rebuilding mipmaps of compressed textures is not supported");
                 if (m_SourceRaw != null) UploadBlocks(blocks);
             }
+            RecordUploadedAstcMemory(format);
             if (makeNoLongerReadable)
             {
                 ReleaseStore();

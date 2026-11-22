@@ -72,7 +72,7 @@ namespace UnityEngine
         public Texture2D(int width, int height, TextureFormat textureFormat, bool mipChain, bool linear, bool createUninitialized)
         {
             ignoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
-            Init(width, height, textureFormat, mipChain ? -1 : 1, linear);
+            Init(width, height, textureFormat, mipChain ? -1 : 1, linear, createUninitialized: createUninitialized);
         }
 
         public Texture2D(int width, int height, GraphicsFormat format, TextureCreationFlags flags)
@@ -123,7 +123,7 @@ namespace UnityEngine
         }
 
         void Init(int width, int height, TextureFormat format, int mipCount, bool linear, bool constructor = true,
-            GraphicsFormat? requestedFormat = null)
+            GraphicsFormat? requestedFormat = null, bool createUninitialized = false)
         {
             CheckMainThreadCreation("SupportsTextureFormatNative");
             if (!SidesValid(width, height)) throw new UnityException("Failed to create texture because of invalid parameters.");
@@ -136,6 +136,7 @@ namespace UnityEngine
                 throw new UnityException("Failed to create texture because of invalid parameters.");
             ReleaseStore();
             m_ResizeMemoryPendingApply = false;
+            m_AstcMemoryPendingUpload = false;
             m_Width = width;
             m_Height = height;
             m_Format = format;
@@ -158,6 +159,7 @@ namespace UnityEngine
             if (BlockFormats.BlockBytes(format) > 0)
             {
                 InitBlocks(format);
+                if (constructor) RecordInitialAstcMemory(format, createUninitialized);
                 return;
             }
             // A new texture is grey (205,205,205,205) until written, as in Unity.
@@ -410,6 +412,7 @@ namespace UnityEngine
             var rawCopy = makeNoLongerReadable && !SourceBlocks ? m_Store ?? EncodeMipChain() : null;
             m_PixelsDirty = true;
             Upload();
+            RecordUploadedAstcMemory(format);
             m_ResizeMemoryPendingApply = false;
             // An asset's pixels applied are an Editor change, saved by SaveAssets, whether it was made
             // this session or read from its file; SetPixel alone does not mark it (matches the Unity
@@ -969,6 +972,7 @@ namespace UnityEngine
             wrapModeV = (TextureWrapMode)info.WrapV;
             anisoLevel = info.AnisoLevel;
             ReadSamplerMetadata();
+            RecordUploadedAstcMemory(format);
         }
 
         /// <summary>
