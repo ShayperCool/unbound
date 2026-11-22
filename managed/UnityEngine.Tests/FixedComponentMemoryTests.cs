@@ -25,5 +25,26 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(owner);
             }
         }
+
+        [Theory]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        public void AComponentAddedToAnAssetOwnerRetainsTheUnmeasuredPath(bool persistent, bool prefab)
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var owner = new GameObject("Asset owner") { IsPersistentAsset = persistent, m_IsPrefabAsset = prefab };
+            try
+            {
+                var collider = owner.AddComponent<BoxCollider>();
+                Assert.False(collider.IsPersistentAsset);
+                Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(collider));
+            }
+            finally
+            {
+                owner.IsPersistentAsset = false;
+                owner.m_IsPrefabAsset = false;
+                Object.DestroyImmediate(owner);
+            }
+        }
     }
 }

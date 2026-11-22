@@ -85,8 +85,8 @@ namespace Unbound.Runtime
                 case AudioClip clip: return clip.m_IsAsset ? null : AudioClipSize(clip);
                 case TextAsset text when Compat.TextAssetMemoryMeasured: return TextAssetSize(text);
                 case GameObject go: return GameObjectHeader + GameObjectPerComponent * go.ProfilerComponentSlots;
-                case Component component when Compat.FixedComponentMemoryMeasured
-                    && component.m_GameObject != null && !component.IsPersistentAsset:
+                case Component component when Compat.FixedComponentMemoryMeasured && !component.IsPersistentAsset
+                    && component.m_GameObject is { IsPersistentAsset: false, m_IsPrefabAsset: false } owner && owner != null:
                     return component switch
                     {
                         BoxCollider => BoxColliderBytes,
