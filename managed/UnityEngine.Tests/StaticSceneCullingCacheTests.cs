@@ -471,5 +471,76 @@ namespace UnityEngine.Tests
             FrameBuilder.EndFrameMotion();
             Assert.Equal(fresh.transform.localToWorldMatrix, fresh.m_PreviousModel);
         }
+
+        [Fact]
+        public void EndFrameMotionFollowsARendererWhoseParentMoved()
+        {
+            var parent = Track(new GameObject("Parent"));
+            var child = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            child.transform.SetParent(parent.transform, false);
+            child.transform.localPosition = new Vector3(0f, 1f, 0f);
+            var renderer = child.GetComponent<MeshRenderer>();
+            FrameBuilder.s_MotionRendered = true;
+            FrameBuilder.EndFrameMotion();
+            FrameBuilder.s_MotionRendered = true;
+            FrameBuilder.EndFrameMotion();
+            parent.transform.position = new Vector3(5f, 0f, 0f);
+            FrameBuilder.s_MotionRendered = true;
+            FrameBuilder.EndFrameMotion();
+            Assert.Equal(child.transform.localToWorldMatrix, renderer.m_PreviousModel);
+        }
+
+        /// <summary>Frames without motion vectors collect no changes (nothing would read them),
+        /// and the next frame with them still updates every renderer.</summary>
+        [Fact]
+        public void FramesWithoutMotionVectorsCollectNoChanges()
+        {
+            var go = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            var renderer = go.GetComponent<MeshRenderer>();
+            FrameBuilder.s_MotionRendered = true;
+            FrameBuilder.EndFrameMotion();
+            FrameBuilder.s_MotionRendered = false;
+            FrameBuilder.EndFrameMotion();
+            go.transform.position = new Vector3(3f, 0f, 0f);
+            var fresh = Track(GameObject.CreatePrimitive(PrimitiveType.Sphere)).GetComponent<MeshRenderer>();
+            Assert.False(go.transform.m_MotionDirty);
+            Assert.False(fresh.m_MotionPending);
+            FrameBuilder.s_MotionRendered = true;
+            FrameBuilder.EndFrameMotion();
+            Assert.Equal(go.transform.localToWorldMatrix, renderer.m_PreviousModel);
+            Assert.Equal(fresh.transform.localToWorldMatrix, fresh.m_PreviousModel);
+        }
+
+        /// <summary>A destroyed shader has no passes, as on a material that still holds it.</summary>
+        [Fact]
+        public void ADestroyedShaderHasNoPassInfo()
+        {
+            var previousShaderCall = ShaderPassInfo.s_CallForTests;
+            Shader shader = null;
+            Material material = null;
+            try
+            {
+                ShaderPassInfo.ResetForTests();
+                ShaderPassInfo.s_CallForTests = name => System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    shader = name, found = true, tags = new Dictionary<string, string>(),
+                    passes = new[] { new { name = "Forward", tags = new Dictionary<string, string> { ["LightMode"] = "UniversalForward" } } },
+                });
+                shader = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/Destroyed\" { SubShader { Pass { Name \"Forward\" } } }");
+                material = new Material(shader);
+                Assert.NotNull(ShaderPassInfo.Of(shader));
+                Assert.Equal(0, material.FindPass("Forward"));
+                Object.DestroyImmediate(shader);
+                Assert.Null(ShaderPassInfo.Of(shader));
+                Assert.Null(shader.PassInfo);
+                Assert.Equal(-1, material.FindPass("Forward"));
+            }
+            finally
+            {
+                ShaderPassInfo.ResetForTests(); ShaderPassInfo.s_CallForTests = previousShaderCall;
+                if (material != null) Object.DestroyImmediate(material);
+                if (shader != null) Object.DestroyImmediate(shader);
+            }
+        }
     }
 }

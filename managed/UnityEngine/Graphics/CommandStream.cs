@@ -224,15 +224,6 @@ namespace Unbound.Runtime
             s_Length += n;
         }
 
-        static byte[] EncodeFramedUtf8(string s)
-        {
-            int n = Encoding.UTF8.GetByteCount(s);
-            var bytes = new byte[4 + n];
-            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(bytes, (uint)n);
-            Encoding.UTF8.GetBytes(s, 0, s.Length, bytes, 4);
-            return bytes;
-        }
-
         static void FramedString(byte[] framed)
         {
             int n = framed.Length;
@@ -737,14 +728,14 @@ namespace Unbound.Runtime
             internal SharedArray Shared;
         }
 
-        static readonly byte[] s_BaseCommandIdFramed = EncodeFramedUtf8("unity_BaseCommandID");
-        static readonly byte[] s_MatrixPreviousMFramed = EncodeFramedUtf8("unity_MatrixPreviousM");
-        static readonly byte[] s_MatrixPreviousMIFramed = EncodeFramedUtf8("unity_MatrixPreviousMI");
-        static readonly byte[] s_MotionVectorsParamsFramed = EncodeFramedUtf8("unity_MotionVectorsParams");
-        static readonly byte[] s_PreviousMFramed = EncodeFramedUtf8("_PreviousM");
-        static readonly byte[] s_HasLastPositionDataFramed = EncodeFramedUtf8("_HasLastPositionData");
-        static readonly byte[] s_ForceNoMotionFramed = EncodeFramedUtf8("_ForceNoMotion");
-        static readonly byte[] s_MotionVectorDepthBiasFramed = EncodeFramedUtf8("_MotionVectorDepthBias");
+        static readonly byte[] s_BaseCommandIdFramed = Shader.FramedUtf8("unity_BaseCommandID");
+        static readonly byte[] s_MatrixPreviousMFramed = Shader.FramedUtf8("unity_MatrixPreviousM");
+        static readonly byte[] s_MatrixPreviousMIFramed = Shader.FramedUtf8("unity_MatrixPreviousMI");
+        static readonly byte[] s_MotionVectorsParamsFramed = Shader.FramedUtf8("unity_MotionVectorsParams");
+        static readonly byte[] s_PreviousMFramed = Shader.FramedUtf8("_PreviousM");
+        static readonly byte[] s_HasLastPositionDataFramed = Shader.FramedUtf8("_HasLastPositionData");
+        static readonly byte[] s_ForceNoMotionFramed = Shader.FramedUtf8("_ForceNoMotion");
+        static readonly byte[] s_MotionVectorDepthBiasFramed = Shader.FramedUtf8("_MotionVectorDepthBias");
 
         static readonly List<PropertyValue> s_Properties = new List<PropertyValue>();
 

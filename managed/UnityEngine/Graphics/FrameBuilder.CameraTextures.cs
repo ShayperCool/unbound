@@ -390,11 +390,36 @@ namespace Unbound.Runtime
             }
         }
 
+        static void ForgetMotionChanges()
+        {
+            System.Threading.Volatile.Write(ref s_MotionSeeded, false);
+            ClearMotionChanges();
+        }
+
+        static void ClearMotionChanges()
+        {
+            for (int i = 0; i < s_MotionPendingRenderers.Count; i++)
+                s_MotionPendingRenderers[i].m_MotionPending = false;
+            s_MotionPendingRenderers.Clear();
+            lock (s_MotionDirtyLock)
+            {
+                for (int i = 0; i < s_MotionDirtyTransforms.Count; i++)
+                    s_MotionDirtyTransforms[i].m_MotionDirty = false;
+                s_MotionDirtyTransforms.Clear();
+            }
+        }
+
         /// <summary>After a frame whose player-loop cameras drew motion vectors, the renderers'
         /// matrices become the previous ones.</summary>
         internal static void EndFrameMotion()
         {
-            if (!s_MotionRendered) return;
+            if (!s_MotionRendered)
+            {
+                // Without motion vectors drawn nothing reads the changes: stop collecting them,
+                // and the next frame that draws them updates every renderer again.
+                if (System.Threading.Volatile.Read(ref s_MotionSeeded) || s_MotionPendingRenderers.Count > 0) ForgetMotionChanges();
+                return;
+            }
             s_MotionRendered = false;
             Transform.SyncJobs();
             if (!System.Threading.Volatile.Read(ref s_MotionSeeded))
@@ -404,15 +429,7 @@ namespace Unbound.Runtime
                     if (!renderer) continue;
                     UpdateMotionRenderer(renderer);
                 }
-                for (int i = 0; i < s_MotionPendingRenderers.Count; i++)
-                    s_MotionPendingRenderers[i].m_MotionPending = false;
-                s_MotionPendingRenderers.Clear();
-                lock (s_MotionDirtyLock)
-                {
-                    for (int i = 0; i < s_MotionDirtyTransforms.Count; i++)
-                        s_MotionDirtyTransforms[i].m_MotionDirty = false;
-                    s_MotionDirtyTransforms.Clear();
-                }
+                ClearMotionChanges();
                 System.Threading.Volatile.Write(ref s_MotionSeeded, true);
                 return;
             }

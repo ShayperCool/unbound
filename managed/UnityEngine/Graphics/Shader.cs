@@ -91,6 +91,8 @@ namespace UnityEngine
         {
             get
             {
+                // A destroyed shader has none (Unity's null, as ShaderPassInfo.Of answered it).
+                if (this == null) return null;
                 int lod = EffectiveLOD;
                 if (m_PassInfoGeneration != Unbound.Runtime.ShaderPassInfo.s_Generation || lod != m_PassInfoLod
                     || (!ReferenceEquals(m_PassInfoPipeline, s_GlobalRenderPipeline) && !string.Equals(m_PassInfoPipeline, s_GlobalRenderPipeline, StringComparison.Ordinal))
@@ -413,10 +415,7 @@ namespace UnityEngine
             {
                 if (s_PropertyIds.TryGetValue(name, out var id)) return id;
                 id = s_PropertyCount;
-                int utf8Len = System.Text.Encoding.UTF8.GetByteCount(name);
-                var framed = new byte[4 + utf8Len];
-                System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(framed, (uint)utf8Len);
-                System.Text.Encoding.UTF8.GetBytes(name, 0, name.Length, framed, 4);
+                var framed = FramedUtf8(name);
                 if (id >= s_PropertyNames.Length)
                 {
                     int newLen = s_PropertyNames.Length * 2;
@@ -445,6 +444,17 @@ namespace UnityEngine
             int count = System.Threading.Volatile.Read(ref s_PropertyCount);
             if ((uint)id >= (uint)count) return null;
             return System.Threading.Volatile.Read(ref s_PropertyNames)[id];
+        }
+
+        /// <summary>A name as the command stream writes a string: its UTF-8 length (u32, little
+        /// endian), then its UTF-8 bytes.</summary>
+        internal static byte[] FramedUtf8(string name)
+        {
+            int length = System.Text.Encoding.UTF8.GetByteCount(name);
+            var framed = new byte[4 + length];
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(framed, (uint)length);
+            System.Text.Encoding.UTF8.GetBytes(name, 0, name.Length, framed, 4);
+            return framed;
         }
 
         /// <summary>Returns the pre-encoded `[u32_le_len][utf8_bytes]` wire representation for a
