@@ -26,6 +26,11 @@ namespace UnityEngine
         // Replaying the converted float instead would truncate it a tick shorter.
         static float s_FixedRequestStep = 0.02f;
         static double s_FixedRequestDuration = double.NaN;
+        /// <summary>deltaTime and unscaledDeltaTime before Play mode's first frame and in it:
+        /// 2822399 of the clock's ticks, one short of 0.02 s, whatever the fixed timestep and the
+        /// time scale are (matches the Unity 6000.0.71f1 Editor, tests/projects/capturestart).</summary>
+        static readonly double PlayStartDelta = new RationalTime(2822399, RationalTime.TicksPerSecond.DefaultTicksPerSecond).ToDouble();
+
         internal static double FixedClockDuration
         {
             get
@@ -267,12 +272,21 @@ namespace UnityEngine
             if (s_CaptureDeltaTime > 0f) unscaled = (float)step;
             if (s_FrameCount == 0)
             {
-                // The first frame steps by the fixed timestep while the clocks stay at 0 (measured:
-                // deltaTime and unscaledDeltaTime 0.0199999921 at time 0, whatever capture rate
-                // Start sets).
-                s_UnscaledDeltaTime = s_FixedDeltaTime;
-                s_DeltaTime = s_FixedDeltaTime * s_TimeScale;
-                s_FrameDeltaTime = FixedClockDuration * s_TimeScale;
+                // The first frame's deltas while the clocks stay at 0 (measured: deltaTime and
+                // unscaledDeltaTime 0.0199999921 at time 0, whatever capture rate Start sets, and
+                // whatever the fixed timestep and time scale: tests/projects/capturestart
+                // fixedBefore, projectFixed). What steps by the frame's delta steps by it too.
+                if (Compat.PlayStartDeltaMeasured)
+                {
+                    s_UnscaledDeltaTime = s_DeltaTime = (float)PlayStartDelta;
+                    s_FrameDeltaTime = PlayStartDelta;
+                }
+                else
+                {
+                    s_UnscaledDeltaTime = s_FixedDeltaTime;
+                    s_DeltaTime = s_FixedDeltaTime * s_TimeScale;
+                    s_FrameDeltaTime = FixedClockDuration * s_TimeScale;
+                }
                 // A capture rate set before the first frame (in Awake) steps the game clock from
                 // that frame on (measured, tests/projects/inputframes: captureFramerate 60 in Awake,
                 // the first frame's time and deltaTime 1/60, its fixed step at 0).
@@ -322,6 +336,15 @@ namespace UnityEngine
         /// <summary>Play mode has run its first fixed step (at fixed time 0).</summary>
         internal static bool s_FixedStarted;
 
+        /// <summary>Play mode starts (a session's own start, or entered from Edit mode): before
+        /// the first frame (the load callbacks, Awake, OnEnable) the deltas already read what
+        /// they read in it (tests/projects/capturestart set.*, at.*).</summary>
+        internal static void PlayStarting()
+        {
+            s_DeltaTime = s_UnscaledDeltaTime = Compat.PlayStartDeltaMeasured ? (float)PlayStartDelta : 0f;
+            s_SmoothDeltaTime = 0f;
+        }
+
         internal static void ResetForPlayMode()
         {
             if (s_FixedClockSource != s_FixedDeltaTime) SetFixedDeltaTime(s_FixedDeltaTime);
@@ -331,7 +354,7 @@ namespace UnityEngine
             s_Time = s_UnscaledTime = s_FixedTime = s_FixedUnscaledTime = 0;
             s_CaptureClockTicks = 0;
             s_CaptureClockTime = 0;
-            s_DeltaTime = s_UnscaledDeltaTime = s_SmoothDeltaTime = 0f;
+            PlayStarting();
             s_FrameDeltaTime = 0;
             s_TimeSinceLevelLoadStart = 0;
             s_FrameCount = 0;

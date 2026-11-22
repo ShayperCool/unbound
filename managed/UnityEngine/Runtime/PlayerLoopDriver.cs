@@ -426,6 +426,7 @@ namespace Unbound.Runtime
             UnityEditor.EditorInitialization.BeforePlayMode();
             // Each Play mode is an analytics session, counted in the project's preferences.
             UnityEngine.Analytics.AnalyticsSessionInfo.BeginPlaySession();
+            UnityEngine.Time.PlayStarting();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.SubsystemRegistration);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterAssembliesLoaded);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSplashScreen);

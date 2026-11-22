@@ -536,6 +536,12 @@ namespace Unbound.Runtime
         /// measured by physics2dadvanced on Unity 6000.0.71f1.</summary>
         internal static bool Physics2DSlideMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>deltaTime and unscaledDeltaTime before Play mode's first frame and in it are
+        /// one constant, whatever the fixed timestep and the time scale (measured for the 6000.0
+        /// family: tests/projects/capturestart); other families keep 0 before the first frame and
+        /// the fixed timestep times the time scale in it.</summary>
+        internal static bool PlayStartDeltaMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>The fixed scheduler uses the same whole-tick time domain as the frame clock,
         /// measured by physics2dadvanced automatic modes on Unity 6000.0.71f1.</summary>
         internal static bool FixedClockTicksMeasured => Family == ReleaseFamily.Unity6000_0;
