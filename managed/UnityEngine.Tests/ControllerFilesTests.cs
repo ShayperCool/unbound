@@ -36,10 +36,9 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(machine); }
         }
 
-        /// <summary>Transitions out of a sub-state machine and a synced layer's motions are written
-        /// in the forms measured (controller-assets basic.saved, layered.saved); transitions out of
-        /// several state machines, whose order is not measured, are refused, also when taken after
-        /// the machine was added to an asset (when the file is written, with the reason).</summary>
+        /// <summary>Transitions out of sub-state machines, by source in the order made, and a synced
+        /// layer's motions and behaviours are written in the forms measured (controller-assets
+        /// basic.saved, layered.saved; animatorapi model.file.C).</summary>
         [Fact]
         public void MachineTransitionsAndSyncedMotions()
         {
@@ -53,10 +52,12 @@ namespace UnityEngine.Tests
                 machine.AddStateMachineTransition(sub, run);
                 Assert.True(UnityYamlWriter.WritesNew(machine));
                 Assert.Contains("  m_StateMachineTransitions:\n  - first: {fileID: 0}\n    second:\n    - {fileID: 0}\n  m_StateMachineBehaviours: []\n", Write(machine, 1));
+                // A second source, its first transition made later: after the first source
+                // (controller-assets basic.saved).
                 var other = machine.AddStateMachine("Other");
                 machine.AddStateMachineTransition(other, run);
-                Assert.False(UnityYamlWriter.WritesNew(machine));
-                Assert.Contains("several state machines", Assert.Throws<System.NotSupportedException>(() => Write(machine, 1)).Message);
+                Assert.Contains("  m_StateMachineTransitions:\n  - first: {fileID: 3}\n    second:\n    - {fileID: 0}\n  - first: {fileID: 4}\n", UnityYamlWriter.Write(new Object[] { machine, sub, other },
+                    new Dictionary<Object, long>(ReferenceEqualityComparer.Instance) { [machine] = 1, [sub] = 3, [other] = 4 }));
 
                 controller.AddLayer("Base Layer");
                 var synced = new AnimatorControllerLayer { name = "Synced", syncedLayerIndex = 0 };

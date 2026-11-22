@@ -107,14 +107,13 @@ namespace UnityEditor
             created.Unsaved = true;
         }
 
-        /// <summary>Whether the object is part of an asset CreateAsset made in this session (one Unbound
-        /// writes whole from its objects).</summary>
-        /// <summary>Why an object of a class Unbound writes cannot be written yet (null otherwise).</summary>
+        /// <summary>Why a clip Unbound writes cannot be written yet (null otherwise).</summary>
         static string Unwritable(Object o) =>
             o is AnimationClip clip ? AnimationClipFiles.Unwritable(clip)
-            : ControllerFiles.Writes(o) ? ControllerFiles.Unwritable(o)
             : null;
 
+        /// <summary>Whether the object is part of an asset CreateAsset made in this session (one Unbound
+        /// writes whole from its objects).</summary>
         internal static bool CreatedThisSession(Object o)
         {
             foreach (var created in s_Created.Values)

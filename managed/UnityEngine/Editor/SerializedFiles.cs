@@ -257,7 +257,7 @@ namespace Unbound.Runtime
         /// object whole into a new file (not a material variant: unmeasured).</summary>
         internal static bool WritesNew(Object o) => SerializedTree.IsScript(o) || o is Material { isVariant: false } || o is PhysicsMaterial
             || o is AnimationClip clip && AnimationClipFiles.Unwritable(clip) == null
-            || ControllerFiles.Writes(o) && ControllerFiles.Unwritable(o) == null
+            || ControllerFiles.Writes(o)
             || o is Texture2D { isReadable: true } && !UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsCompressedFormat(((Texture2D)o).format)
             || o is Mesh { isReadable: true } && ((Mesh)o).m_MeshCompression == UnityEditor.ModelImporterMeshCompression.Off;
 

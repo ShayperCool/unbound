@@ -19,19 +19,6 @@ namespace Unbound.Runtime
         /// <summary>The objects of a controller file Unbound writes.</summary>
         internal static bool Writes(Object o) =>
             o is AnimatorController or AnimatorStateMachine or AnimatorState or AnimatorTransitionBase or BlendTree;
-
-        /// <summary>Why the object cannot be written yet (null when it can): parts of the file whose
-        /// form is not measured.</summary>
-        internal static string Unwritable(Object o)
-        {
-            switch (o)
-            {
-                case AnimatorStateMachine m:
-                    return m.MachineTransitions.Count > 1 ? $"its state machine '{m.name}' has transitions out of several state machines, whose order in a controller file is not measured" : null;
-                default:
-                    return null;
-            }
-        }
     }
 
     internal static partial class UnityYamlWriter
@@ -53,18 +40,9 @@ namespace Unbound.Runtime
                 foreach (var o in objects) SequenceValue(level, Reference(o));
             }
 
-            /// <summary>Refuses, when the file is written, a part its object took after it was made
-            /// an asset's (the caller reports the file as not saved).</summary>
-            static void CheckWritable(Object o)
-            {
-                if (ControllerFiles.Unwritable(o) is string reason)
-                    throw new NotSupportedException($"Unbound does not write this controller yet: {reason}.");
-            }
-
             /// <summary>An AnimatorController's body (class 91).</summary>
             internal void AnimatorControllerBody(AnimatorController c)
             {
-                CheckWritable(c);
                 ObjectHeader(c);
                 String("m_Name", c.name);
                 Int("serializedVersion", 5);
@@ -128,7 +106,6 @@ namespace Unbound.Runtime
             /// <summary>An AnimatorStateMachine's body (class 1107).</summary>
             internal void AnimatorStateMachineBody(AnimatorStateMachine m)
             {
-                CheckWritable(m);
                 Int("serializedVersion", 6);
                 ObjectHeader(m);
                 String("m_Name", m.name);
@@ -161,8 +138,9 @@ namespace Unbound.Runtime
                 if (m.MachineTransitions.Count == 0) Line(1, "m_StateMachineTransitions", "{}");
                 else
                 {
-                    // Transitions out of a sub-state machine, by their source (controller-assets
-                    // basic.saved), in the order made.
+                    // Transitions out of sub-state machines, by their source in the order each source's
+                    // first transition was made, each source's in the order made (controller-assets
+                    // basic.saved).
                     Key("m_StateMachineTransitions", 1);
                     foreach (var (source, transitions) in m.MachineTransitions)
                     {
