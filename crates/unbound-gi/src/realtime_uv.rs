@@ -987,8 +987,9 @@ pub struct Fit {
 /// among those the precompute's rounding allows ([`realtime_uv_choices`]). When several that
 /// differ fit it (charts of one size in each other's blocks), the one that puts the surface
 /// where the system's clusters sample it ([`misfit`]) is taken when it does so clearly better
-/// than the others. When the data cannot tell them apart (a part too small for the system's
-/// clusters: tests/projects/realtimegi RoomSmall, a 6 cm cube with none and 56 ways that fit),
+/// than the others. When the data cannot tell them apart (the system's clusters do not sample
+/// the part's faces apart: tests/projects/realtimegi RoomSmall, a 6 cm cube with no cluster
+/// samples and 56 ways that fit),
 /// the first of them is taken, the arithmetic here's own way when it fits, and [`Fit::ways`]
 /// says how many there were: which the precompute made is then not known, and their lighting
 /// may differ between charts of one size. Fails with the check's error of the first when none

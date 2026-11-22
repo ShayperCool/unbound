@@ -734,8 +734,9 @@ together by the rigid motion that fits them best, measured by the points alone a
 and normals together (a normal's difference counting as that many metres). The layout taken is
 the one whose remaining difference by one measure is at most half any other's and 0.05 m
 smaller, where the other measure does not so take another. Where the data does not tell them
-apart (the system's clusters do not sample the part's faces apart, as for small parts), the first of them is drawn, the arithmetic
-here's own way when it fits, with a warning that names the renderer and the number of ways:
+apart (the system's clusters do not sample the part's faces apart, as for small parts), the
+first of them is drawn, the arithmetic here's own way when it fits, with a warning that names
+the renderer and the number of ways:
 which the precompute made is then not known, and the lighting of its charts of one size may be
 exchanged. Such a layout is made again in each session (not cached), so the warning is given in
 each. `RoomSmall` is the Room so too with a cube of 0.45 turned 25 degrees about Y (117 ways fit
