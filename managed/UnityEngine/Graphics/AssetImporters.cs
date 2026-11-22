@@ -131,11 +131,16 @@ namespace Unbound.Runtime
         /// SubShader's declared tag is not known.</summary>
         static LoadedFile ImportShader(AssetDatabaseRuntime.AssetInfo info)
         {
-            var source = System.IO.File.ReadAllText(info.File);
-            var name = ShaderLab.Name(source) ?? System.IO.Path.GetFileNameWithoutExtension(info.Path);
+            var bytes = System.IO.File.ReadAllBytes(info.File);
+            var source = new System.IO.StreamReader(new System.IO.MemoryStream(bytes), System.Text.Encoding.UTF8, true).ReadToEnd();
+            var declared = ShaderLab.Name(source);
+            var name = declared ?? System.IO.Path.GetFileNameWithoutExtension(info.Path);
             Shader shader;
             using (ObjectRegistry.AsAssets())
                 shader = Shader.Create(name, ShaderLab.Queue(source));
+            // The renderer knows a project shader by its content key: each file draws its own
+            // source when several declare one name (tests/projects/shadernames).
+            if (declared != null) shader.m_SourceKey = Shader.ContentKey(declared, bytes);
             shader.m_Properties.Clear();
             shader.m_Properties.AddRange(ShaderLab.Properties(source));
             ShaderLab.Editors(source, shader);

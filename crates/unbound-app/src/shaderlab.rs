@@ -1740,7 +1740,7 @@ impl ShaderIndex {
     /// passed over: a graph's current source always has a file of its own.
     fn scan_generated(&mut self, dir: &Path) {
         let mut found = HashMap::new();
-        scan_dir(dir, &mut found);
+        scan_files(dir, &mut found, false);
         for (name, path) in found {
             let Some(base) = generated_base(&name) else {
                 continue;
@@ -1833,12 +1833,18 @@ impl ShaderIndex {
     fn load(&self, name: &str) -> Option<ShaderLab> {
         let (base, selection) = Selection::parse(name);
         // Unity still answers to the legacy shaders' old names (`Fallback "VertexLit"`).
+        // A key no file has (a source changed since the scan) falls back to its plain name.
         let path = self
             .files
             .get(base)
+            .or_else(|| generated_base(base).and_then(|plain| self.files.get(plain)))
             .or_else(|| self.files.get(&format!("Legacy Shaders/{base}")))?;
         let text = std::fs::read_to_string(path).ok()?;
         let mut lab = ShaderLab::parse_file(&text, path)?;
+        // Found by its content key: known by that name (what the renderer reports drawing).
+        if lab.name != base && generated_base(base) == Some(lab.name.as_str()) {
+            lab.name = base.to_string();
+        }
         lab.select_with(&self.pipeline, &selection);
         Some(lab)
     }
@@ -1899,7 +1905,14 @@ fn modified(dir: &Path) -> Option<std::time::SystemTime> {
     std::fs::metadata(dir).and_then(|m| m.modified()).ok()
 }
 
+/// Indexes the `.shader` files below `dir` by the name each declares (the first found keeps a
+/// name) and by their content key (see [`content_key`]), which a project shader's material
+/// names it by.
 fn scan_dir(dir: &Path, files: &mut HashMap<String, PathBuf>) {
+    scan_files(dir, files, true);
+}
+
+fn scan_files(dir: &Path, files: &mut HashMap<String, PathBuf>, content_keys: bool) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
@@ -1915,15 +1928,32 @@ fn scan_dir(dir: &Path, files: &mut HashMap<String, PathBuf>) {
             if name.starts_with('.') || name.ends_with('~') {
                 continue;
             }
-            scan_dir(&path, files);
+            scan_files(&path, files, content_keys);
         } else if path.extension().is_some_and(|e| e == "shader")
-            && let Some(name) = std::fs::read_to_string(&path)
-                .ok()
-                .and_then(|t| shader_name(&t))
+            && let Ok(bytes) = std::fs::read(&path)
+            && let Some(name) = shader_name(&String::from_utf8_lossy(&bytes))
         {
+            if content_keys {
+                files
+                    .entry(content_key(&name, &bytes))
+                    .or_insert(path.clone());
+            }
             files.entry(name).or_insert(path);
         }
     }
+}
+
+/// The name a project or package shader file is known by to the renderer: its declared name
+/// joined with the FNV-1a 64-bit hash of its bytes (the managed side's `Shader.ContentKey`), so
+/// files that share a name each draw their own source, as Unity draws each material with its
+/// own shader (tests/projects/shadernames).
+pub fn content_key(name: &str, bytes: &[u8]) -> String {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for &b in bytes {
+        hash ^= u64::from(b);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("{name}#{hash:016x}")
 }
 
 /// The ShaderLab name of a generated shader's keyed name (`Name#` and 16 hexadecimal digits of
@@ -2051,6 +2081,31 @@ mod tests {
         assert_eq!(names(&lab), ["B"]);
         let lab = ShaderLab::parse_file_for(only, Path::new(""), "d3d11").unwrap();
         assert_eq!(names(&lab), ["A"]);
+    }
+
+    #[test]
+    fn project_shaders_of_one_name_answer_to_their_content_keys() {
+        let root =
+            std::env::temp_dir().join(format!("unbound-content-keys-{}", std::process::id()));
+        let (a, b) = (root.join("A"), root.join("B"));
+        std::fs::create_dir_all(&a).unwrap();
+        std::fs::create_dir_all(&b).unwrap();
+        let first = "Shader \"Unbound/Dup\" { SubShader { Pass { Name \"First\" } } }";
+        let second = "Shader \"Unbound/Dup\" { SubShader { Pass { Name \"Second\" } } }";
+        std::fs::write(a.join("Dup.shader"), first).unwrap();
+        std::fs::write(b.join("Dup.shader"), second).unwrap();
+        let mut index = ShaderIndex::scan(std::slice::from_ref(&root));
+        let key = content_key("Unbound/Dup", second.as_bytes());
+        // The known FNV-1a 64 value of the empty input, as the managed side computes it.
+        assert_eq!(content_key("N", b""), "N#cbf29ce484222325");
+        assert_eq!(content_key("N", b"a"), "N#af63dc4c8601ec8c");
+        let lab = index.get(&key).unwrap();
+        assert_eq!(lab.passes[0].name, "Second");
+        assert_eq!(lab.name, key);
+        assert!(index.get(&format!("{key}|lod=100")).is_some());
+        let plain = index.get("Unbound/Dup").unwrap();
+        assert_eq!(plain.name, "Unbound/Dup");
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

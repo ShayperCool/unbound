@@ -2035,10 +2035,14 @@ impl RuntimeState {
         map.get(name).cloned()
     }
 
+    /// The project shader `Shader.Find` answers for a name: of several files declaring it, the
+    /// first by asset path (matches the Unity 6000.0.71f1 Editor, tests/projects/shadernames:
+    /// `Assets/Shaders/A` of A, B, C and Z, whose GUIDs sort otherwise; Assets against Packages
+    /// is not measured).
     fn shader_guid(&self, name: &str) -> Option<Guid> {
         let mut index = self.shaders.write().unwrap();
         if index.is_none() {
-            let mut map = HashMap::new();
+            let mut first: HashMap<String, (String, Guid)> = HashMap::new();
             for asset in self.db().iter() {
                 if !asset.path.ends_with(".shader") {
                     continue;
@@ -2047,10 +2051,20 @@ impl RuntimeState {
                     continue;
                 };
                 if let Some(declared) = declared_shader_name(&text) {
-                    map.insert(declared.to_string(), asset.guid);
+                    match first.get(declared) {
+                        Some((path, _)) if path.as_str() <= asset.path.as_str() => {}
+                        _ => {
+                            first.insert(declared.to_string(), (asset.path.clone(), asset.guid));
+                        }
+                    }
                 }
             }
-            *index = Some(map);
+            *index = Some(
+                first
+                    .into_iter()
+                    .map(|(name, (_, guid))| (name, guid))
+                    .collect(),
+            );
         }
         index.as_ref().and_then(|m| m.get(name).copied())
     }

@@ -67,10 +67,11 @@ namespace UnityEngine
         /// <summary>The LOD the shader's SubShaders are picked under (int.MaxValue: every one).</summary>
         internal int EffectiveLOD => m_MaximumLOD >= 0 ? m_MaximumLOD : s_GlobalMaximumLOD;
 
-        /// <summary>The name a shader an importer generated is known by to the renderer: its
-        /// ShaderLab name with its source's key (see GeneratedShaders), so two generated shaders of
-        /// one name (graphs of one file name in different folders, a graph's earlier versions)
-        /// each draw with their own source; null for others, which the renderer knows by name.</summary>
+        /// <summary>The name the renderer knows the shader by when it has a source file: its
+        /// ShaderLab name with its source's key (an importer's generated shader, see
+        /// GeneratedShaders; a project or package shader file, see <see cref="ContentKey"/>), so
+        /// shaders of one name each draw with their own source; null for others (built-in
+        /// shaders, shaders made from source alone), which the renderer knows by name.</summary>
         internal string m_SourceKey;
 
         /// <summary>The name the renderer finds the shader's source by (see <see cref="m_SourceKey"/>).</summary>
@@ -80,6 +81,20 @@ namespace UnityEngine
         internal const string SourceKeySeparator = "#";
         /// <summary>The length of a source key's hash (hexadecimal digits).</summary>
         internal const int SourceKeyLength = 16;
+
+        /// <summary>The name the renderer knows a project or package shader file by: its declared
+        /// name joined with the FNV-1a 64-bit hash of the file's bytes (the native side's
+        /// `content_key`).</summary>
+        internal static string ContentKey(string name, byte[] bytes)
+        {
+            ulong hash = 0xcbf29ce484222325UL;
+            foreach (byte b in bytes)
+            {
+                hash ^= b;
+                hash *= 0x100000001b3UL;
+            }
+            return name + SourceKeySeparator + hash.ToString("x16", System.Globalization.CultureInfo.InvariantCulture);
+        }
 
         /// <summary>A name the renderer knows a shader by, as scripts and messages show it: without
         /// a generated shader's source key.</summary>
