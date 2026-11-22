@@ -161,13 +161,12 @@ namespace Unbound.Runtime
                 // room; a strip system's particles may be drawn one by one as well.
                 if (task.type != VFXTaskType.ParticleQuadOutput) return $"{task.type} of a strip system's particles is not measured yet";
                 // Through an indirect buffer: strips from a sorted list (what an alpha blended
-                // strip output does by default) are measured.
-                if (Parameter(task, IndirectDrawName) != 0)
-                {
-                    if (SortsForAll(system)) return "its system sorts one list for all its outputs, which is not measured for strips yet";
-                    if (Parameter(task, StripsName) == 0) return "it draws a strip system's particles one by one through an indirect buffer, which is not measured yet";
-                    if (!ReadsSortedList(task)) return "it draws strips through an indirect buffer that is not sorted, which is not measured yet";
-                }
+                // strip output does by default), from the list the system's update makes, and
+                // from each camera's frustum-culled list; the particles as quads from a list
+                // culled in a compute pass (tests/projects/vfxstrips `alpha`, `listed`,
+                // `culled`).
+                if (Parameter(task, IndirectDrawName) != 0 && SortsForAll(system))
+                    return "its system sorts one list for all its outputs, which is not measured for strips yet";
             }
             if (Parameter(task, IndirectDrawName) != 0)
             {

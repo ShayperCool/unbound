@@ -38,6 +38,11 @@ are `Output ParticleStrip Quad` contexts with an `Orient: Face Camera Position` 
   the `stripAlive` attribute: a dead head is kept, not drawn, until the strip it spawned is empty,
   and only then makes room for a new head. `StripTrailsAliveKeep`: the same with strip particles
   that never die, so a dead head is kept for good.
+- `StripListed`: two strips of twelve whose particles live three fifths of a second, drawn by an
+  opaque strip output told to draw through an indirect buffer (`Indirect Draw`, sort off: the
+  list the system's update makes), and each particle as a small red quad from a list culled in
+  a compute pass (`Compute Culling`). `StripCulled`: the same strips culled by each camera's
+  frustum (`Frustum Culling`, sort off), so each camera draws a list of its own.
 - `StripIndex`: four strips of eight; the strip a particle goes into is the initialize
   context's `stripIndex`, an exposed property `Strip` of the effect.
 - `StripBoth`: a strip drawn twice: joined, and each of its particles as a quad of its own.
@@ -73,6 +78,7 @@ capacity and whether it sleeps. `systems/<control>` lists the systems' names.
   frame 30.
 - `wakes`, `wakes first`, `wakes second`, `wakes third`: four effects of `Waking`, the second
   reinitialized at frame 30, the third at frame 31 and the fourth at frame 32.
+- `listed`, `culled`: `StripListed` and `StripCulled`.
 - `trails alive`, `trails alive keep`: `StripTrailsAlive` and `StripTrailsAliveKeep`, images
   every four frames to frame 32, then at 40, 50 and 66. The heads' alive count includes the dead
   heads kept for their strips (room for four, full at frame 70 in both).
@@ -110,9 +116,7 @@ alive` (whose strip particles die) is exact throughout.
 
 ## Not covered
 
-- Strip outputs through an indirect buffer that is not sorted (`Indirect Draw` or culling on
-  an output that does not sort), a strip system's particles one by one through an indirect
-  buffer, lit strip outputs, Shader Graph strip outputs, line strips
+- Lit strip outputs, Shader Graph strip outputs, line strips
   (`Output ParticleStrip Line`), and any output but quads of a strip system's particles: not
   drawn (the effect says so).
 - Additive strips; a sorted strip under a perspective camera or with another sort criterion

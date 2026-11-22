@@ -294,6 +294,30 @@ public static class StripAuthoring
         Output<VFXQuadStripOutput>(index, chosen.Update);
         Save(index);
 
+        // Two strips of twelve drawn from lists that are not sorted. `StripListed`: an opaque
+        // strip output told to draw through an indirect buffer (the list its system's update
+        // makes), and each particle drawn as a quad from a list culled in a compute pass
+        // (`computeCulling`). `StripCulled`: the strips culled by each camera's frustum, their
+        // sort off: each camera draws a list of its own.
+        foreach (var (name, frustum) in new[] { ("StripListed", false), ("StripCulled", true) })
+        {
+            var graph = NewGraph(name);
+            var listed = Strips(graph, 2, 12);
+            ConstantRate(listed.Spawn, 20f);
+            Scatter(listed.Init, 0.2f, new Vector3(0.3f, 0.9f, 0.6f), 0.6f);
+            var strips = Output<VFXQuadStripOutput>(graph, listed.Update);
+            strips.SetSettingValue("sort", VFXAbstractParticleOutput.SortActivationMode.Off);
+            strips.SetSettingValue(frustum ? "frustumCulling" : "indirectDraw", true);
+            if (!frustum)
+            {
+                var culled = Output<VFXPlanarPrimitiveOutput>(graph, listed.Update, false);
+                culled.SetSettingValue("computeCulling", true);
+                Set(culled, "size", 0.1f);
+                SetVector(culled, "color", new Vector3(1f, 0.2f, 0.2f));
+            }
+            Save(graph);
+        }
+
         // A strip drawn twice: as a strip of quads, and each of its particles as a quad.
         var both = NewGraph("StripBoth");
         var twice = Strips(both, 1, 16);

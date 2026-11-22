@@ -107,6 +107,11 @@ public sealed class StripProbe : MonoBehaviour
             // particles die, and strips whose particles never die).
             Draw("trails alive", "StripTrailsAlive", 4, 8, 12, 16, 20, 24, 28, 32, 40, 50, 66);
             Draw("trails alive keep", "StripTrailsAliveKeep", 4, 8, 12, 16, 20, 24, 28, 32, 40, 50, 66);
+            // Strips drawn from lists that are not sorted: through an indirect buffer (with the
+            // particles as quads from a list culled in a compute pass), and culled by the
+            // camera's frustum.
+            Draw("listed", "StripListed", 10, 20, 40, 66);
+            Draw("culled", "StripCulled", 10, 20, 40, 66);
             foreach (var stage in m_Stages)
             {
                 m_Names.Clear();

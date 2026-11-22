@@ -1144,8 +1144,10 @@ namespace UnityEngine.Tests
                 tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.PerOutputSort, buffers = new[] { new VFXMapping("srcBuffer", 2), new VFXMapping("scratchBuffer", -1), new VFXMapping("dstBuffer", 3) } } },
             };
             Assert.Null(VFXOutput.Refusal(sortedStrips, Joined(Indirect(2, 3)), material));
-            Assert.Equal("it draws strips through an indirect buffer that is not sorted, which is not measured yet", VFXOutput.Refusal(sortedStrips, Joined(Indirect(2, 2)), material));
-            Assert.Equal("it draws a strip system's particles one by one through an indirect buffer, which is not measured yet", VFXOutput.Refusal(sortedStrips, Indirect(2, 3), material));
+            // Strips from the list the update makes, and a strip system's particles one by one
+            // from a list, are drawn too (tests/projects/vfxstrips `listed`, `culled`).
+            Assert.Null(VFXOutput.Refusal(sortedStrips, Joined(Indirect(2, 2)), material));
+            Assert.Null(VFXOutput.Refusal(sortedStrips, Indirect(2, 3), material));
             Assert.Equal("ParticleMeshOutput of a strip system's particles is not measured yet", VFXOutput.Refusal(stripSystem, meshes, material));
             Assert.Equal("it draws with a material variant (a graph compiled for editing), which is not measured yet", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, usesMaterialVariant = true }, material));
             var previous = new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, temporaryBuffers = new[] { new VFXMappingTemporary() } };
