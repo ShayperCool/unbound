@@ -62,7 +62,8 @@ namespace UnityEditor
             {
                 // An importer of a script is titled after the script; not done.
                 if (o is MonoImporter) Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.GetInspectorTitle (MonoImporter)");
-                return IsScriptObject(o) ? o.GetType().Name + " (Script)" : o.GetType().Name;
+                // A scripted importer is a script's class.
+                return o is UnityEditor.AssetImporters.ScriptedImporter ? o.GetType().Name + " (Script)" : o.GetType().Name;
             }
             return o.name + " (" + o.GetType().Name + ")";
         }
