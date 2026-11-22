@@ -4487,7 +4487,11 @@ fn check_fitting_layouts(
             data.renderer_st[k],
         )
         .unwrap_or_else(|e| panic!("{scene} {name}: {e:#}"));
-        checked.insert(name.to_string(), out.charts.len());
+        assert_eq!(
+            out.ways, 1,
+            "{scene} {name}: the system's data does not settle its layout"
+        );
+        checked.insert(name.to_string(), out.output.charts.len());
     }
     checked
 }
@@ -4577,4 +4581,123 @@ fn charts_that_rounding_decides_lie_where_the_precompute_put_them() {
     let checked = check_fitting_layouts("RoomRounding", &shape);
     eprintln!("{checked:?}");
     assert_eq!(checked.len(), 7 + 4);
+}
+
+/// A root GameObject's rotation (x, y, z, w) and scale as a probe scene stores them.
+fn scene_transform(scene: &str, name: &str) -> ([f32; 4], [f32; 3]) {
+    let text =
+        std::fs::read_to_string(probe().join(format!("Assets/Scenes/{scene}.unity"))).unwrap();
+    let docs: Vec<&str> = text.split("\n--- ").collect();
+    let object = docs
+        .iter()
+        .find(|d| d.starts_with("!u!1 &") && d.contains(&format!("m_Name: {name}\n")))
+        .unwrap_or_else(|| panic!("{scene}: no {name}"));
+    let id = object[6..].split_whitespace().next().unwrap();
+    let transform = docs
+        .iter()
+        .find(|d| d.starts_with("!u!4 &") && d.contains(&format!("m_GameObject: {{fileID: {id}}}")))
+        .unwrap();
+    let values = |key: &str| -> Vec<f32> {
+        let line = transform
+            .lines()
+            .find(|l| l.trim_start().starts_with(key))
+            .unwrap();
+        let inner = &line[line.find('{').unwrap() + 1..line.rfind('}').unwrap()];
+        inner
+            .split(',')
+            .map(|kv| kv.split(':').nth(1).unwrap().trim().parse().unwrap())
+            .collect()
+    };
+    let (q, s) = (values("m_LocalRotation:"), values("m_LocalScale:"));
+    ([q[0], q[1], q[2], q[3]], [s[0], s[1], s[2]])
+}
+
+/// The instance matrix the managed side gives a root renderer (`RealtimeGI.WorldScale`): its
+/// rotation's inverse times its rotation and scale, in the same single-precision order.
+fn root_instance_matrix(q: [f32; 4], s: [f32; 3]) -> crate::instance::Matrix {
+    let rotation_scaled = |q: [f32; 4], s: [f32; 3]| {
+        let [x, y, z, w] = q;
+        [
+            s[0] * ((z * -2.0 * z + y * -2.0 * y) + 1.0),
+            s[0] * ((z * 2.0 * w + y * 2.0 * x) + 0.0),
+            s[0] * ((z * 2.0 * x + y * -2.0 * w) + 0.0),
+            s[1] * ((x * 2.0 * y + z * -2.0 * w) + 0.0),
+            s[1] * ((x * -2.0 * x + z * -2.0 * z) + 1.0),
+            s[1] * ((x * 2.0 * w + z * 2.0 * y) + 0.0),
+            s[2] * ((y * 2.0 * w + x * 2.0 * z) + 0.0),
+            s[2] * ((y * 2.0 * z + x * -2.0 * w) + 0.0),
+            s[2] * ((y * -2.0 * y + x * -2.0 * x) + 1.0),
+        ]
+    };
+    let (a, b) = (
+        rotation_scaled([-q[0], -q[1], -q[2], q[3]], [1.0; 3]),
+        rotation_scaled(q, s),
+    );
+    let mut o = [0.0f32; 9];
+    for c in 0..3 {
+        for r in 0..3 {
+            o[3 * c + r] = (b[3 * c + 1] * a[3 + r] + b[3 * c + 2] * a[6 + r]) + b[3 * c] * a[r];
+        }
+    }
+    o
+}
+
+#[test]
+fn small_parts_the_systems_data_cannot_settle_take_the_first_way_that_fits() {
+    // RoomSmall: a cube of 0.45 turned 25 degrees about Y (117 ways fit its chart mask; its
+    // faces lie in clusters that sample them alike), a 6 cm cube turned about three axes (56
+    // ways, no cluster samples it) and a 5 cm wedge (one way). The data settles none of the
+    // cubes: the first way that fits is taken, the arithmetic here's own (the Editor's GI cache
+    // has it for the 0.45 cube and the wedge; for the 6 cm cube it has another of the 56).
+    let data = scene_data("RoomSmall");
+    let names = renderer_names("RoomSmall");
+    let mut ways = std::collections::BTreeMap::new();
+    for (k, &(object, _)) in data.renderers.iter().enumerate() {
+        let name = names[&object].as_str();
+        let (positions, normals, uvs, triangles) = match name {
+            "CubeTurned" | "CubeTiny" => (
+                CUBE_POSITIONS.to_vec(),
+                CUBE_NORMALS.to_vec(),
+                CUBE_UV2.to_vec(),
+                CUBE_TRIANGLES.to_vec(),
+            ),
+            "WedgeTiny" => probe_mesh("RoomSmallWedgeTiny"),
+            _ => continue,
+        };
+        let (q, s) = scene_transform("RoomSmall", name);
+        let matrix = root_instance_matrix(q, s);
+        let (positions, normals) = crate::instance::apply(&matrix, &positions, &normals).unwrap();
+        let input = crate::realtime_uv::Input {
+            positions: &positions,
+            uvs: &uvs,
+            triangles: &triangles,
+            pixel_size: 0.5,
+            min_chart_texels: 4,
+            charts: crate::realtime_uv::Charts::Automatic {
+                normals: &normals,
+                params: DEFAULT_LIMITS,
+            },
+        };
+        let system = data
+            .systems
+            .iter()
+            .find(|s| (s.first_renderer..s.first_renderer + s.renderer_count).contains(&k))
+            .unwrap();
+        let fit = crate::realtime_uv::fitting_uvs(
+            &input,
+            system,
+            k - system.first_renderer,
+            data.renderer_st[k],
+        )
+        .unwrap_or_else(|e| panic!("{name}: {e:#}"));
+        // The first way that fits is the arithmetic's own.
+        assert_eq!(
+            fit.output,
+            crate::realtime_uv::realtime_uvs(&input).unwrap(),
+            "{name}"
+        );
+        ways.insert(name.to_string(), fit.ways);
+    }
+    assert_eq!(ways["WedgeTiny"], 1);
+    assert!(ways["CubeTurned"] > 1 && ways["CubeTiny"] > 1, "{ways:?}");
 }

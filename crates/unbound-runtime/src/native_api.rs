@@ -103,7 +103,9 @@ use std::ffi::c_void;
 /// reference) beside the pass's own reference bits its read mask keeps.
 /// 91: texture flag bit 19 marks Unity's B8G8R8A8 color (`owned::Texture::blue_first`).
 /// 92: `jobs_api`, the job system (`unbound_jobs::ffi::JobsApi`).
-pub const NATIVE_API_VERSION: u32 = 92;
+/// 93: `gi_automatic_uvs` answers how many ways of laying the charts out fit the system's layout
+/// that its data cannot tell apart (0 when one was taken by the data).
+pub const NATIVE_API_VERSION: u32 = 93;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -731,8 +733,18 @@ extern "C" fn gi_automatic_uvs(
                 },
             },
         };
-        crate::realtime_gi::realtime_uvs(scene, system as usize, renderer as usize, &input, out)?;
-        Ok(0)
+        let ways = crate::realtime_gi::realtime_uvs(
+            scene,
+            system as usize,
+            renderer as usize,
+            &input,
+            out,
+        )?;
+        Ok(if ways > 1 {
+            ways.min(i32::MAX as usize) as i32
+        } else {
+            0
+        })
     })
 }
 

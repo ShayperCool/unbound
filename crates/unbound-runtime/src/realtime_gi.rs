@@ -761,14 +761,16 @@ const UV_CACHE_VERSION: u32 = 6;
 /// one the system's precomputed layout has; for a system of Unbound's own bake the one its
 /// arithmetic makes, `realtime_uvs`), checked against that layout and cached under
 /// `<project>/Library/Unbound/RealtimeUVs` by a hash of the inputs and of the system. Writes
-/// `2 * vertices` floats into `out`.
+/// `2 * vertices` floats into `out`. Answers how many ways that fit the system's layout its data
+/// could not tell apart (`Fit::ways`; such a layout, the first of them, is not cached, so that
+/// each session says so).
 pub fn realtime_uvs(
     handle: u64,
     system: usize,
     renderer: usize,
     input: &unbound_gi::realtime_uv::Input,
     out: &mut [f32],
-) -> Result<()> {
+) -> Result<usize> {
     ensure!(
         out.len() == 2 * input.positions.len(),
         "{} values for {} vertices",
@@ -821,15 +823,16 @@ pub fn realtime_uvs(
         .project_root
         .join("Library/Unbound/RealtimeUVs")
         .join(format!("{}.bin", key.finalize().to_hex()));
-    let output = cached_or_fresh(
+    let (output, ways) = cached_or_fresh(
         &path,
         input.positions.len(),
         || {
             if own_bake {
                 // Unbound's own precompute laid the system out with its own arithmetic's way.
-                unbound_gi::realtime_uv::realtime_uvs(input)
+                Ok((unbound_gi::realtime_uv::realtime_uvs(input)?, 1))
             } else {
-                unbound_gi::realtime_uv::fitting_uvs(input, &layout, renderer, st)
+                let fit = unbound_gi::realtime_uv::fitting_uvs(input, &layout, renderer, st)?;
+                Ok((fit.output, fit.ways))
             }
         },
         |output| unbound_gi::realtime_uv::check_layout(&layout, st, output),
@@ -837,28 +840,31 @@ pub fn realtime_uvs(
     for (o, uv) in out.chunks_exact_mut(2).zip(&output.uvs) {
         o.copy_from_slice(uv);
     }
-    Ok(())
+    Ok(ways)
 }
 
 /// The cache entry at `path` when it passes `check` (a cached layout is checked again, with its
-/// charts, against this scene's data); else a layout made anew, which must pass it and then
-/// replaces the entry: only a layout that passed the check is cached, and a damaged entry does
+/// charts, against this scene's data); else a layout made anew with the number of ways the data
+/// could not tell apart, which must pass it and then replaces the entry: only a layout that
+/// passed the check and that the data settled (one way) is cached, and a damaged entry does
 /// not outlive its first use.
 fn cached_or_fresh(
     path: &Path,
     vertices: usize,
-    make: impl FnOnce() -> Result<unbound_gi::realtime_uv::Output>,
+    make: impl FnOnce() -> Result<(unbound_gi::realtime_uv::Output, usize)>,
     check: impl Fn(&unbound_gi::realtime_uv::Output) -> Result<()>,
-) -> Result<unbound_gi::realtime_uv::Output> {
+) -> Result<(unbound_gi::realtime_uv::Output, usize)> {
     if let Some(cached) = read_cached(path, vertices).filter(|output| check(output).is_ok()) {
-        return Ok(cached);
+        return Ok((cached, 1));
     }
-    let output = make()?;
+    let (output, ways) = make()?;
     check(&output)?;
-    if let Err(e) = write_cached(path, &output) {
+    if ways <= 1
+        && let Err(e) = write_cached(path, &output)
+    {
         tracing::debug!("caching realtime lightmap UVs in {}: {e:#}", path.display());
     }
-    Ok(output)
+    Ok((output, ways))
 }
 
 fn bytes_of<T: Copy>(items: &[T]) -> &[u8] {
@@ -1923,17 +1929,22 @@ mod tests {
             Ok(())
         };
         let used = cached_or_fresh(&path, 2, || bail!("made anew"), passes).unwrap();
-        assert_eq!(used, output);
+        assert_eq!(used, (output.clone(), 1));
         // One that fails it (a damaged entry) gives way to a layout made anew, which replaces it.
         let mut damaged = output.clone();
         damaged.width = 12;
         write_cached(&path, &damaged).unwrap();
-        let made = cached_or_fresh(&path, 2, || Ok(output.clone()), passes).unwrap();
-        assert_eq!(made, output);
+        let made = cached_or_fresh(&path, 2, || Ok((output.clone(), 1)), passes).unwrap();
+        assert_eq!(made, (output.clone(), 1));
         assert_eq!(read_cached(&path, 2), Some(output.clone()));
+        // A layout the system's data did not settle (two ways) is used and not cached.
+        write_cached(&path, &damaged).unwrap();
+        let unsettled = cached_or_fresh(&path, 2, || Ok((output.clone(), 2)), passes).unwrap();
+        assert_eq!(unsettled, (output.clone(), 2));
+        assert_eq!(read_cached(&path, 2), Some(damaged.clone()));
         // A new layout that fails the check is an error and is not cached.
         write_cached(&path, &damaged).unwrap();
-        let error = cached_or_fresh(&path, 2, || Ok(damaged.clone()), passes).unwrap_err();
+        let error = cached_or_fresh(&path, 2, || Ok((damaged.clone(), 1)), passes).unwrap_err();
         assert!(error.to_string().contains("12 texels wide"), "{error}");
         assert_eq!(read_cached(&path, 2), Some(damaged));
         // Another vertex count or a truncated entry is not used.

@@ -841,6 +841,14 @@ namespace UnityEngine
                         renderer.m_IgnoreNormalsForChartDetection ? 1 : 0, mp, op, &error)
                     : Native.Api.GiRealtimeUvs(scene.Handle, index, r, pp, up, vertices.Length, (uint*)tp, triangles.Length,
                         1f / scale, renderer.m_MinimumChartSize, op, &error);
+            if (status > 0)
+            {
+                // Several ways of laying its charts out fit the system's precomputed layout and
+                // its data does not tell them apart (a part too small for the system's
+                // clusters): the first is drawn.
+                Warn("ways:" + renderer.GetInstanceID(), $"'{renderer.name}': {status} ways of laying out its automatic realtime charts fit the precomputed layout and the data does not tell which the Editor's precompute made (the part is too small for its clusters); one is drawn, so the realtime lighting of its charts may be exchanged.");
+                status = 0;
+            }
             if (status != 0)
             {
                 string message;
