@@ -863,30 +863,21 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void OutputsWhoseShadersShareANameAreNotDrawn()
+        public void OutputsWhoseShadersShareANameAreDrawn()
         {
+            // Each generated shader is known to the renderer by a key of its own source
+            // (GeneratedShadersTests), so outputs of one system named alike are drawn.
             string Source(string name, string body = "") => "Shader \"" + name + "\" { SubShader { Pass { Tags { \"LightMode\"=\"UniversalForwardOnly\" } " + body + "} } }";
             VFXEditorTaskDesc Output(int source) => new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, shaderSourceIndex = source };
-            var systems = new[]
-            {
-                new VFXEditorSystemDesc { name = "A", type = VFXSystemType.Particle, tasks = new[] { Output(0), Output(1), Output(2) } },
-                new VFXEditorSystemDesc { name = "B", type = VFXSystemType.Particle, tasks = new[] { Output(3) } },
-            };
+            var systems = new[] { new VFXEditorSystemDesc { name = "A", type = VFXSystemType.Particle, tasks = new[] { Output(0), Output(1) } } };
             var sources = new[]
             {
                 new VFXShaderSourceDesc { source = Source("Hidden/VFX/G/A/Output Particle|Unlit Quad") },
                 new VFXShaderSourceDesc { source = Source("Hidden/VFX/G/A/Output Particle|Unlit Quad", "Cull Off ") },
-                new VFXShaderSourceDesc { source = Source("Hidden/VFX/G/A/Glow") },
-                new VFXShaderSourceDesc { source = Source("Hidden/VFX/G/B/Output Particle|Unlit Quad") },
             };
             var found = VFXOutput.SourceRefusals(systems, sources);
-            Assert.StartsWith("its shader's name 'Hidden/VFX/G/A/Output Particle|Unlit Quad' is another output's, whose shader differs", found[0][0]);
-            Assert.Equal(found[0][0], found[0][1]);
-            Assert.Null(found[0][2]);
-            Assert.Null(found[1][0]);
-            // Outputs whose shaders are the same source share one program, and are drawn.
-            sources[1] = sources[0];
-            Assert.Null(VFXOutput.SourceRefusals(systems, sources)[0][0]);
+            Assert.Null(found[0][0]);
+            Assert.Null(found[0][1]);
         }
 
         [Fact]
