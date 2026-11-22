@@ -50,7 +50,17 @@ PROFILES = {
     'v1wholewrite': (4, 'WholeWriteAtlases', '.spriteatlas'),
     'v2wholewrite': (5, 'WholeWriteAtlases', '.spriteatlasv2'),
     'v1wholewritedisabled': (0, 'WholeWriteAtlases', '.spriteatlas'),
+    'v1wholewritebuildonly': (3, 'WholeWriteAtlases', '.spriteatlas'),
+    'v1wholewritev2': (5, 'WholeWriteAtlases', '.spriteatlas'),
+    'v1wholewritev2build': (6, 'WholeWriteAtlases', '.spriteatlas'),
+    'v1wholewritecrlf': (4, 'WholeWriteAtlases', '.spriteatlas'),
+    'v1replay': (4, 'WholeWriteAtlases', '.spriteatlas'),
 }
+# Profiles whose kept atlas files are given CRLF line endings before the run.
+CRLF = {'v1wholewritecrlf'}
+# Profiles that enter Play mode twice: the kept atlas files are copied to ReplayOriginals/ (beside
+# Assets), which the probe restores between the entries and records at the second.
+REPLAY = {'v1replay'}
 ATLAS_FOLDERS = ('Atlases', 'SettingsAtlases', 'PlatformAtlases', 'IncludeAtlases', 'PackingAtlases', 'TextureAtlases', 'PlatformSetAtlases', 'AddAtlases', 'RemoveAtlases', 'VariantScaleAtlases', 'IsVariantAtlases', 'MasterAtlasAtlases', 'ImporterPlatformAtlases', 'ImporterPlatformSetAtlases', 'ImporterPackingAtlases', 'ImporterTextureAtlases', 'ImporterVariantScaleAtlases', 'ImporterIncludeAtlases', 'WholeWriteAtlases')
 
 
@@ -73,6 +83,13 @@ def configure(project, profile):
         name = atlas.name[:-len('.meta')] if atlas.name.endswith('.meta') else atlas.name
         if Path(name).suffix != kept:
             atlas.unlink()
+        elif profile in CRLF and atlas.suffix == kept:
+            atlas.write_bytes(atlas.read_bytes().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n'))
+    if profile in REPLAY:
+        originals = project/'ReplayOriginals'
+        originals.mkdir()
+        for atlas in (project/'Assets'/kept_folder).glob('*' + kept):
+            shutil.copyfile(atlas, originals/atlas.name)
 
 
 def main():

@@ -15,11 +15,38 @@ using UnityEngine.U2D;
 /// </summary>
 static class SpriteAtlasEditorProbe
 {
+    // Replay profiles (ReplayOriginals/ beside Assets): the first Play entry only leaves Play mode;
+    // in Edit mode the fixtures get their original files back and Play mode starts again, and the
+    // second entry records.
+    const string ReplayOriginals = "ReplayOriginals";
+    const string ReplayStep = "SpriteAtlasEditorProbe.replayStep";
+
+    [InitializeOnLoadMethod]
+    static void WatchReplay()
+    {
+        if (!Directory.Exists(ReplayOriginals)) return;
+        EditorApplication.playModeStateChanged += state =>
+        {
+            if (state != PlayModeStateChange.EnteredEditMode || SessionState.GetInt(ReplayStep, 0) != 1) return;
+            foreach (var original in Directory.GetFiles(ReplayOriginals))
+                File.Copy(original, Path.Combine("Assets/WholeWriteAtlases", Path.GetFileName(original)), true);
+            AssetDatabase.Refresh();
+            SessionState.SetInt(ReplayStep, 2);
+            EditorApplication.EnterPlaymode();
+        };
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Record()
     {
         var directory = Environment.GetEnvironmentVariable("SPRITE_ATLAS_EDITOR_OUT");
         if (string.IsNullOrEmpty(directory)) return;
+        if (Directory.Exists(ReplayOriginals) && SessionState.GetInt(ReplayStep, 0) == 0)
+        {
+            SessionState.SetInt(ReplayStep, 1);
+            EditorApplication.ExitPlaymode();
+            return;
+        }
         var output = new StringBuilder();
         void Put(string key, string value) => output.Append("{\"k\":").Append(Quote(key))
             .Append(",\"v\":").Append(Quote(value)).Append("}\n");
