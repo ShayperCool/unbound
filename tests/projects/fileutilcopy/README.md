@@ -22,6 +22,14 @@ logs it wrote (`.logs`).
   `GetPathExtension`, `GetPathWithoutExtension`, `IsSymlink`, `ResolveSymlinks` and
   `GetActualPathName`, and `GetProjectRelativePath`, over a list of paths each.
 
+- `internal.*`: the internal directory, file and text helpers (`CopyDirectoryRecursive` and its
+  filtered variants, `CopyDirectory`, `UnityDirectoryDelete`, `CreateOrCleanDirectory`,
+  `UnityDirectoryRemoveReadonlyAttribute`, `UnityFileCopy`, `CopyFileIfExists`, `MoveFileIfExists`,
+  `ReadFileContentBinary`, `ReplaceText`, `ReplaceTextRegex`, `AppendTextAfter`, the `UnityGet*`
+  path calls, `NiceWinPath`, `RemovePathPrefix`, `CombinePaths`, `GetAllFilesRecursive`,
+  `WalkFilesystemRecursively`, `GetDirectorySize`), called by reflection. Their exceptions are the
+  runtime's file calls': the type is recorded, not the class library's wording.
+
 ## Usage
 
 ```bash

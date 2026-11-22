@@ -150,4 +150,112 @@
 {"k":"path.IsSymlink","v":"'Assets/FileUtilCopyScratch/dirlink'>True | 'Assets/FileUtilCopyScratch/a.txt'>False | 'Assets/FileUtilCopyScratch/tree'>False | 'Assets/FileUtilCopyScratch/missing.txt'>False | 'Assets/FileUtilCopyScratch/linked/inner'>True | ''>False"}
 {"k":"path.ResolveSymlinks","v":"'Assets/FileUtilCopyScratch/dirlink'>'<outside>/targetdir' | 'Assets/FileUtilCopyScratch/a.txt'>'Assets/FileUtilCopyScratch/a.txt' | 'Assets/FileUtilCopyScratch/tree'>'Assets/FileUtilCopyScratch/tree' | 'Assets/FileUtilCopyScratch/missing.txt'>'Assets/FileUtilCopyScratch/missing.txt' | 'Assets/FileUtilCopyScratch/linked/inner'>'<outside>/target.txt' | ''>''"}
 {"k":"path.GetActualPathName","v":"'Assets/FileUtilCopyScratch/a.txt'>'Assets/FileUtilCopyScratch/a.txt' | 'Assets/FileUtilCopyScratch/tree/sub/y.txt'>'Assets/FileUtilCopyScratch/tree/sub/y.txt' | 'Assets/FileUtilCopyScratch/missing.txt'>'Assets/FileUtilCopyScratch/missing.txt' | 'Assets/FileUtilCopyScratch/dirlink/k.txt'>'Assets/FileUtilCopyScratch/dirlink/k.txt' | ''>''"}
+{"k":"internal.copyRecursive.result","v":"ok"}
+{"k":"internal.copyRecursive.after","v":"Assets/FileUtilCopyScratch/internal/c1=dir[.git=dir[config=file(G)],.hidden=file(H),noext=file(N),sub=dir[y.txt=file(Y),y.txt.meta=file(n)],x.txt=file(X),x.txt.meta=file(m)]"}
+{"k":"internal.copyRecursive.logs","v":""}
+{"k":"internal.copyRecursive.again.result","v":"System.IO.IOException"}
+{"k":"internal.copyRecursive.again.after","v":"Assets/FileUtilCopyScratch/internal/c1=dir[.git=dir[config=file(G)],.hidden=file(H),noext=file(N),sub=dir[y.txt=file(Y),y.txt.meta=file(n)],x.txt=file(X),x.txt.meta=file(m)]"}
+{"k":"internal.copyRecursive.again.logs","v":""}
+{"k":"internal.copyRecursive.overwrite.result","v":"ok"}
+{"k":"internal.copyRecursive.overwrite.after","v":"Assets/FileUtilCopyScratch/internal/c2=dir[.git=dir[config=file(G)],.hidden=file(H),keep.txt=file(K),noext=file(N),sub=dir[y.txt=file(Y),y.txt.meta=file(n)],x.txt=file(X),x.txt.meta=file(m)]"}
+{"k":"internal.copyRecursive.overwrite.logs","v":""}
+{"k":"internal.copyRecursive.noOverwriteInSubfolder.result","v":"System.IO.IOException"}
+{"k":"internal.copyRecursive.noOverwriteInSubfolder.after","v":"Assets/FileUtilCopyScratch/internal/c2b=dir[.git=dir[config=file(G)],.hidden=file(H),noext=file(N),sub=dir[y.txt=file(old)],x.txt=file(X),x.txt.meta=file(m)]"}
+{"k":"internal.copyRecursive.noOverwriteInSubfolder.logs","v":""}
+{"k":"internal.copyRecursive.ignoreMeta.result","v":"ok"}
+{"k":"internal.copyRecursive.ignoreMeta.after","v":"Assets/FileUtilCopyScratch/internal/c3=dir[.git=dir[config=file(G)],.hidden=file(H),noext=file(N),sub=dir[y.txt=file(Y)],x.txt=file(X)]"}
+{"k":"internal.copyRecursive.ignoreMeta.logs","v":""}
+{"k":"internal.copyForPostprocess.result","v":"ok"}
+{"k":"internal.copyForPostprocess.after","v":"Assets/FileUtilCopyScratch/internal/c4=dir[noext=file(N),sub=dir[y.txt=file(Y)],x.txt=file(X)]"}
+{"k":"internal.copyForPostprocess.logs","v":""}
+{"k":"internal.copyFiltered.result","v":"ok"}
+{"k":"internal.copyFiltered.after","v":"Assets/FileUtilCopyScratch/internal/c5=dir[.git=dir[config=file(G)],.hidden=file(H),x.txt=file(X),x.txt.meta=file(m)]"}
+{"k":"internal.copyFiltered.logs","v":""}
+{"k":"internal.copyFiltered.badPattern.result","v":"ok"}
+{"k":"internal.copyFiltered.badPattern.after","v":"Assets/FileUtilCopyScratch/internal/c6=none"}
+{"k":"internal.copyFiltered.badPattern.logs","v":"Log: CopyDirectoryRecursive: Pattern '(' is not a correct Regular Expression. Not excluding any files."}
+{"k":"internal.copyDirectory.result","v":"ok"}
+{"k":"internal.copyDirectory.after","v":"Assets/FileUtilCopyScratch/internal/c7=dir[.hidden=file(H),noext=file(N),x.txt=file(X),x.txt.meta=file(m)]"}
+{"k":"internal.copyDirectory.logs","v":""}
+{"k":"internal.copyFilteredCallback.result","v":"ok"}
+{"k":"internal.copyFilteredCallback.after","v":"Assets/FileUtilCopyScratch/internal/c8=dir[.git=dir[config=file(G)],.hidden=file(H),noext=file(N),x.txt.meta=file(m)]"}
+{"k":"internal.copyFilteredCallback.logs","v":""}
+{"k":"internal.copyRecursive.emptySource.result","v":"ok"}
+{"k":"internal.copyRecursive.emptySource.after","v":"Assets/FileUtilCopyScratch/internal/c9=none"}
+{"k":"internal.copyRecursive.emptySource.logs","v":""}
+{"k":"internal.copyRecursive.missingSource.result","v":"System.IO.DirectoryNotFoundException"}
+{"k":"internal.copyRecursive.missingSource.after","v":"Assets/FileUtilCopyScratch/internal/c10=none"}
+{"k":"internal.copyRecursive.missingSource.logs","v":""}
+{"k":"internal.directoryDelete.nonEmpty.result","v":"System.IO.IOException"}
+{"k":"internal.directoryDelete.nonEmpty.after","v":"Assets/FileUtilCopyScratch/internal/c1/x.txt=file(X)"}
+{"k":"internal.directoryDelete.nonEmpty.logs","v":""}
+{"k":"internal.directoryDelete.recursive.result","v":"ok"}
+{"k":"internal.directoryDelete.recursive.after","v":"Assets/FileUtilCopyScratch/internal/c1=none"}
+{"k":"internal.directoryDelete.recursive.logs","v":""}
+{"k":"internal.directoryDelete.missing.result","v":"System.IO.DirectoryNotFoundException"}
+{"k":"internal.directoryDelete.missing.after","v":"Assets/FileUtilCopyScratch/internal/c1=none"}
+{"k":"internal.directoryDelete.missing.logs","v":""}
+{"k":"internal.createOrClean.existing.result","v":"ok"}
+{"k":"internal.createOrClean.existing.after","v":"Assets/FileUtilCopyScratch/internal/clean=dir[]"}
+{"k":"internal.createOrClean.existing.logs","v":""}
+{"k":"internal.createOrClean.new.result","v":"ok"}
+{"k":"internal.createOrClean.new.after","v":"Assets/FileUtilCopyScratch/internal/fresh=dir[deep=dir[]]"}
+{"k":"internal.createOrClean.new.logs","v":""}
+{"k":"internal.removeReadonly.result","v":"ok"}
+{"k":"internal.removeReadonly.after","v":"Assets/FileUtilCopyScratch/internal/ro=dir[a.txt=file(A),sub=dir[b.txt=file(B)]]"}
+{"k":"internal.removeReadonly.logs","v":""}
+{"k":"internal.fileCopy.existing.result","v":"System.IO.IOException"}
+{"k":"internal.fileCopy.existing.after","v":"Assets/FileUtilCopyScratch/internal/f2.txt=file(two)"}
+{"k":"internal.fileCopy.existing.logs","v":""}
+{"k":"internal.fileCopy.overwrite.result","v":"ok"}
+{"k":"internal.fileCopy.overwrite.after","v":"Assets/FileUtilCopyScratch/internal/f2.txt=file(one)"}
+{"k":"internal.fileCopy.overwrite.logs","v":""}
+{"k":"internal.fileCopy.new.result","v":"ok"}
+{"k":"internal.fileCopy.new.after","v":"Assets/FileUtilCopyScratch/internal/f3.txt=file(one)"}
+{"k":"internal.fileCopy.new.logs","v":""}
+{"k":"internal.copyIfExists.missing.result","v":"ok"}
+{"k":"internal.copyIfExists.missing.after","v":"Assets/FileUtilCopyScratch/internal/f4.txt=none"}
+{"k":"internal.copyIfExists.missing.logs","v":""}
+{"k":"internal.copyIfExists.existingDestination.result","v":"System.IO.IOException"}
+{"k":"internal.copyIfExists.existingDestination.after","v":"Assets/FileUtilCopyScratch/internal/f3.txt=file(one)"}
+{"k":"internal.copyIfExists.existingDestination.logs","v":""}
+{"k":"internal.copyIfExists.result","v":"ok"}
+{"k":"internal.copyIfExists.after","v":"Assets/FileUtilCopyScratch/internal/f4.txt=file(one)"}
+{"k":"internal.copyIfExists.logs","v":""}
+{"k":"internal.moveIfExists.replaces.result","v":"ok"}
+{"k":"internal.moveIfExists.replaces.after","v":"Assets/FileUtilCopyScratch/internal/mv1.txt=none Assets/FileUtilCopyScratch/internal/mv2.txt=file(new)"}
+{"k":"internal.moveIfExists.replaces.logs","v":""}
+{"k":"internal.moveIfExists.missing.result","v":"ok"}
+{"k":"internal.moveIfExists.missing.after","v":"Assets/FileUtilCopyScratch/internal/mv2.txt=file(new)"}
+{"k":"internal.moveIfExists.missing.logs","v":""}
+{"k":"internal.moveIfExists.ontoDirectory.result","v":"ok"}
+{"k":"internal.moveIfExists.ontoDirectory.after","v":"Assets/FileUtilCopyScratch/internal/mvsrc.txt=none Assets/FileUtilCopyScratch/internal/mvdir=file(S)"}
+{"k":"internal.moveIfExists.ontoDirectory.logs","v":""}
+{"k":"internal.readBinary","v":"True|bytes=3|error=null ; False|bytes=null|error=set"}
+{"k":"internal.replaceText.result","v":"ok"}
+{"k":"internal.replaceText.after","v":"Assets/FileUtilCopyScratch/internal/text.txt=file(A beta\u000aG A\u000a)"}
+{"k":"internal.replaceText.logs","v":""}
+{"k":"internal.replaceText.oddCount.result","v":"System.IndexOutOfRangeException"}
+{"k":"internal.replaceText.oddCount.after","v":"Assets/FileUtilCopyScratch/internal/text.txt=file(A beta\u000aG A\u000a)"}
+{"k":"internal.replaceText.oddCount.logs","v":""}
+{"k":"internal.replaceTextRegex.result","v":"ok"}
+{"k":"internal.replaceTextRegex.after","v":"Assets/FileUtilCopyScratch/internal/text.txt=file(A beta\u000a<G> A\u000a)"}
+{"k":"internal.replaceTextRegex.logs","v":""}
+{"k":"internal.replaceTextRegex.returns","v":"True,False"}
+{"k":"internal.appendTextAfter.result","v":"ok"}
+{"k":"internal.appendTextAfter.after","v":"Assets/FileUtilCopyScratch/internal/text.txt=file(A beta\u000ainserted\u000a<G> A\u000a)"}
+{"k":"internal.appendTextAfter.logs","v":""}
+{"k":"internal.appendTextAfter.returns","v":"True,False"}
+{"k":"internal.appendTextAfter.lineEndings.result","v":"ok"}
+{"k":"internal.appendTextAfter.lineEndings.after","v":"Assets/FileUtilCopyScratch/internal/noNewline.txt=file(one\u000atwo\u000athree\u000a)"}
+{"k":"internal.appendTextAfter.lineEndings.logs","v":""}
+{"k":"internal.UnityGetFileName","v":"'a/b/c.txt'>'c.txt' | 'a//b/c.d.txt'>'c.d.txt' | 'c'>'c' | 'a/b/'>'' | ''>'' | '/x.y'>'x.y' | 'a\\b.txt'>'a\\b.txt' | '.hidden'>'.hidden' | '//a'>'//a' | null>NullReferenceException"}
+{"k":"internal.UnityGetFileNameWithoutExtension","v":"'a/b/c.txt'>'c' | 'a//b/c.d.txt'>'c.d' | 'c'>'c' | 'a/b/'>'' | ''>'' | '/x.y'>'x' | 'a\\b.txt'>'a\\b' | '.hidden'>'' | '//a'>'//a' | null>NullReferenceException"}
+{"k":"internal.UnityGetDirectoryName","v":"'a/b/c.txt'>'a/b' | 'a//b/c.d.txt'>'a//b' | 'c'>'' | 'a/b/'>'a/b' | ''>ArgumentException | '/x.y'>'/' | 'a\\b.txt'>'' | '.hidden'>'' | '//a'>'' | null>NullReferenceException"}
+{"k":"internal.NiceWinPath","v":"'a/b/c.txt'>'a/b/c.txt' | 'a//b/c.d.txt'>'a//b/c.d.txt' | 'c'>'c' | 'a/b/'>'a/b/' | ''>'' | '/x.y'>'/x.y' | 'a\\b.txt'>'a\\b.txt' | '.hidden'>'.hidden' | '//a'>'//a' | null><null>"}
+{"k":"internal.RemovePathPrefix","v":"'/a/b/c'-'/a/b'>'c' | 'a/b/c'-'a/b'>'c' | '/a/b/c'-'/a/x'>'b/c' | '/a/b'-'/a/b'>'' | '/a/b'-'/a/b/c/d'>'' | 'a/b'-''>'a/b' | ''-'a'>'' | '/a/bc'-'/a/b'>'bc' | 'a/b/c'-'x/b'>'a/b/c'"}
+{"k":"internal.CombinePaths","v":"''a/b/c'' | ''a///b'' | ''a'' | '''' | ''/b'' | ''a//c'' | null>''"}
+{"k":"internal.GetAllFilesRecursive","v":"tree/.git/config,tree/.hidden,tree/noext,tree/sub/y.txt,tree/sub/y.txt.meta,tree/x.txt,tree/x.txt.meta"}
+{"k":"internal.WalkFilesystemRecursively","v":"d:tree/.git,d:tree/empty,d:tree/sub,f:tree/.git/config,f:tree/.hidden,f:tree/noext,f:tree/x.txt,f:tree/x.txt.meta"}
+{"k":"internal.GetDirectorySize","v":"7|missing=DirectoryNotFoundException"}
 {"k":"complete","v":true}
