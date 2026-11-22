@@ -149,14 +149,11 @@ namespace UnityEngine.Tests
         [Fact]
         public void EngineTypesWithoutAPublicConstructorAreMadeOrRefusedAsTheEditorDoes()
         {
-            // tests/projects/factoryinstances: textures are made, unnamed; a shader is refused.
-            var texture = ObjectFactory.CreateInstance(typeof(Texture2D));
-            try
-            {
-                Assert.IsType<Texture2D>(texture);
-                Assert.Equal("", texture.name);
-            }
-            finally { Object.DestroyImmediate(texture); }
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            // tests/projects/factoryinstances: a material is made, unnamed; a shader is refused.
+            var material = ObjectFactory.CreateInstance(typeof(Material));
+            try { Assert.Equal("", material.name); }
+            finally { Object.DestroyImmediate(material); }
             var refused = Assert.Throws<ArgumentException>(() => ObjectFactory.CreateInstance(typeof(Shader)));
             Assert.Equal("UnityEngine.Shader constructor is not accessible which prevent this type from being used in ObjectFactory.", refused.Message);
             // A type the release hides the constructor of, although Unbound's is public.
@@ -164,8 +161,19 @@ namespace UnityEngine.Tests
             Assert.Equal("UnityEngine.QualitySettings constructor is not accessible which prevent this type from being used in ObjectFactory.", settings.Message);
             var invalid = Assert.Throws<ArgumentException>(() => ObjectFactory.CreateInstance(typeof(MovieTexture)));
             Assert.Equal("'type' parameter is not a valid UnityEngine.Object type : MovieTexture", invalid.Message);
-            // A type Unbound cannot make yet fails loudly.
+            // Types whose default state Unbound does not give yet fail loudly.
+            Assert.Throws<NotSupportedException>(() => ObjectFactory.CreateInstance(typeof(Texture2D)));
             Assert.Throws<NotSupportedException>(() => ObjectFactory.CreateInstance(typeof(SpeedTreeWindAsset)));
+        }
+
+        [Fact]
+        public void OtherReleasesDecideByUnboundsConstructors()
+        {
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            var settings = ObjectFactory.CreateInstance(typeof(QualitySettings));
+            try { Assert.IsType<QualitySettings>(settings); }
+            finally { Object.DestroyImmediate(settings); }
+            Assert.Throws<ArgumentException>(() => ObjectFactory.CreateInstance(typeof(Shader)));
         }
     }
 }

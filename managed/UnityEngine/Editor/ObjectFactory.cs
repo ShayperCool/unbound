@@ -42,12 +42,13 @@ namespace UnityEditor
                 throw new ArgumentException("'type' parameter is not a valid UnityEngine.Object type : " + type.Name);
             // A type whose parameterless constructor the release hides is refused, an engine type
             // the release declares none for is made (tests/projects/factoryinstances); a script type
-            // that hides its parameterless constructor is refused, as is an engine type Unbound
-            // knows no way to make.
+            // that hides its parameterless constructor is refused. In the measured family any other
+            // engine type has a public one in the release and is made; outside it, an engine type
+            // without a public one is refused (unmeasured).
             bool engine = type.Assembly == typeof(Object).Assembly;
             bool refused = engine
                 ? Unbound.Runtime.Compat.FactoryRefusesEngineType(type)
-                  || (!s_EngineDefaults.Contains(type.FullName) && type.GetConstructor(Type.EmptyTypes) == null)
+                  || (!Unbound.Runtime.Compat.ComponentFactoryEligibilityMeasured && !s_EngineDefaults.Contains(type.FullName) && type.GetConstructor(Type.EmptyTypes) == null)
                 : type.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null;
             if (refused)
                 throw new ArgumentException(type.FullName + " constructor is not accessible which prevent this type from being used in ObjectFactory.");
@@ -64,20 +65,19 @@ namespace UnityEditor
         };
 
         /// <summary>A new object of the type, unnamed: a ScriptableObject through CreateInstance, a
-        /// material with the error shader, an engine type through its parameterless constructor
-        /// (its state is Unbound's default, which for textures differs from the Editor's: recorded
-        /// residuals of tests/projects/factoryinstances). An engine type Unbound has no
-        /// parameterless constructor for (SparseTexture, SpeedTreeWindAsset, Preset) is not
-        /// supported yet and says so.</summary>
+        /// material with the error shader, any other type through its public parameterless
+        /// constructor. The engine types the Editor makes with a default state Unbound does not
+        /// give yet (its empty, readable textures that take Apply; Preset, SpeedTreeWindAsset), and
+        /// an engine type Unbound has no public parameterless constructor for, fail loudly
+        /// (tests/projects/factoryinstances residuals).</summary>
         static Object CreateDefaultInstance(Type type)
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
             Object made;
             if (typeof(ScriptableObject).IsAssignableFrom(type)) made = ScriptableObject.CreateInstance(type);
             else if (type == typeof(Material)) made = new Material(Shader.Find("Hidden/InternalErrorShader"));
-            else if (type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null)
-                made = (Object)Activator.CreateInstance(type, nonPublic: true);
-            else throw new NotSupportedException("Unbound: ObjectFactory.CreateInstance cannot make a default " + type.FullName + " yet");
+            else if (!s_EngineDefaults.Contains(type.FullName) && type.GetConstructor(Type.EmptyTypes) != null) made = (Object)Activator.CreateInstance(type);
+            else throw new NotSupportedException("Unbound: ObjectFactory.CreateInstance cannot make a default " + type.FullName + " as the Editor does yet");
             made.name = "";
             return made;
         }
