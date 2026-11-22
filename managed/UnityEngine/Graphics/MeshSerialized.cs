@@ -183,8 +183,11 @@ namespace UnityEngine
                 {
                     var read = m_SubMeshes[s];
                     read.Bounds = new Bounds(Vec3(box.Get("m_Center")), Vec3(box.Get("m_Extent")) * 2f);
-                    read.FirstVertex = sm.Int("firstVertex");
-                    read.VertexCount = sm.Int("vertexCount");
+                    if (sm.Get("vertexCount") != null)
+                    {
+                        read.FirstVertex = sm.Int("firstVertex");
+                        read.VertexCount = sm.Int("vertexCount");
+                    }
                 }
             }
 
