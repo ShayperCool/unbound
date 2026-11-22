@@ -7,7 +7,9 @@ namespace UnityEngine
 {
     public sealed partial class GameObject : Object
     {
-        internal readonly List<Component> m_Components = new List<Component>(4);
+        internal const int DefaultComponentCapacity = 4;
+        internal readonly List<Component> m_Components;
+        internal bool m_ReportComponentCapacity;
         internal Transform m_Transform;
         /// <summary>Creation order for the existing application callback traversal, independent
         /// of the public instance ID and retained when the source scene is unloaded.</summary>
@@ -27,26 +29,23 @@ namespace UnityEngine
         /// <summary>A GameObject of an asset (a prefab's contents): never awake, never in a scene.</summary>
         internal bool m_IsPrefabAsset;
 
-        public GameObject(string name)
-        {
-            m_Name = name ?? "";
-            Internal_Create(this, null);
-        }
+        public GameObject(string name) : this(name, null) { }
 
-        public GameObject() : this("New Game Object")
-        {
-        }
+        public GameObject() : this("New Game Object") { }
 
         public GameObject(string name, params Type[] components)
+            : this(name, bare: true, componentCapacity: Compat.GameObjectComponentMemoryMeasured ? 1 : DefaultComponentCapacity)
         {
-            m_Name = name ?? "";
             Internal_Create(this, components);
         }
 
         /// <summary>Used by loaders that add the transform themselves.</summary>
-        internal GameObject(string name, bool bare)
+        internal GameObject(string name, bool bare) : this(name, bare, DefaultComponentCapacity) { }
+
+        internal GameObject(string name, bool bare, int componentCapacity)
         {
             m_Name = name ?? "";
+            m_Components = new List<Component>(componentCapacity);
         }
 
         /// <summary>A hidden object the engine keeps for its own work (a capture camera): it is in
@@ -77,6 +76,7 @@ namespace UnityEngine
             // During a Single load's teardown this is the incoming scene, not the active one, and
             // it is set before any component wakes up.
             go.m_Scene = (scene ?? SceneRegistry.DefaultCreationScene()).Handle;
+            go.m_ReportComponentCapacity = scene == null && Compat.GameObjectComponentMemoryMeasured;
             go.AddTransform(typeof(Transform));
             // Its Transform's added-component message is refused inside OnValidate (Unity
             // 6000.0.71f1, tests/projects/gameinterop hier.validate_add).

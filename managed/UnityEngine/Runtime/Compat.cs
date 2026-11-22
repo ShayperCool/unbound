@@ -503,6 +503,8 @@ namespace Unbound.Runtime
         /// <summary>Created text and binary payload allocation accounting, Unity 6000.0.71f1
         /// (tests/projects/textassetmemory).</summary>
         internal static bool TextAssetMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>Component-list allocation for created and cloned GameObjects, measured by gameobjectmemory.</summary>
+        internal static bool GameObjectComponentMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
 
 
         /// <summary>CRT loading, callback delivery and render-cycle scheduling,

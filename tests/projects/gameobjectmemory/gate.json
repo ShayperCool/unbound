@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/gameobjectmemory/run.py gate"
+  ],
+  "summary": "gameobjectmemory: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Core/GameObject.cs",
+    "managed/UnityEngine/Runtime/Instantiation.cs",
+    "managed/UnityEngine/Profiling/MemorySizes.cs"
+  ]
+}

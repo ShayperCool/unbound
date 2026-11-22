@@ -259,8 +259,11 @@ namespace Unbound.Runtime
         static Transform CloneTree(Transform source, Transform parentClone, SceneHandle scene, Dictionary<Object, Object> map, List<(Component, Component)> pairs)
         {
             var sourceGo = source.m_GameObject;
-            var go = new GameObject(sourceGo.m_Name, bare: true)
+            bool measureCapacity = Compat.GameObjectComponentMemoryMeasured && sourceGo.m_ReportComponentCapacity;
+            var go = new GameObject(sourceGo.m_Name, bare: true,
+                componentCapacity: measureCapacity ? sourceGo.m_Components.Count : GameObject.DefaultComponentCapacity)
             {
+                m_ReportComponentCapacity = measureCapacity,
                 m_IsActive = sourceGo.m_IsActive,
                 m_Layer = sourceGo.m_Layer,
                 m_Tag = sourceGo.m_Tag,
@@ -292,6 +295,7 @@ namespace Unbound.Runtime
                 map[c] = clone;
                 pairs.Add((c, clone));
             }
+            if (measureCapacity) go.m_Components.Capacity = go.m_Components.Count;
             if (parentClone != null)
             {
                 transformClone.m_Parent = parentClone;
