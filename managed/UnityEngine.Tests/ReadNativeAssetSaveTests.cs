@@ -134,7 +134,7 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A mesh read from its file holds its file's layout; bone weights set later add the
-        /// skin channels to it, so they are listed and written.</summary>
+        /// skin channels to it, so they are listed.</summary>
         [Fact]
         public void BoneWeightsSetOnAReadMeshAreInItsLayout()
         {
