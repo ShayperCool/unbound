@@ -1124,7 +1124,6 @@ pub fn model_mesh_owned(mesh: &ModelMesh) -> owned::Mesh {
         f32::from(byte) / 255.0_f32
     }
 
-    let n = mesh.positions.len();
     let positions = mesh
         .positions
         .iter()
