@@ -46,6 +46,7 @@ namespace UnityEngine
 
         public Texture2D(int width, int height)
         {
+            ignoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
             if (width == 0 && height == 0)
             {
                 InitEmpty(TextureFormat.RGBA32, false);
@@ -57,24 +58,33 @@ namespace UnityEngine
 
         public Texture2D(int width, int height, TextureFormat textureFormat, bool mipChain, bool linear)
         {
+            ignoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
             Init(width, height, textureFormat, mipChain ? -1 : 1, linear);
         }
 
         public Texture2D(int width, int height, TextureFormat textureFormat, int mipCount, bool linear)
         {
+            ignoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
             Init(width, height, textureFormat, mipCount, linear);
         }
 
         public Texture2D(int width, int height, TextureFormat textureFormat, bool mipChain, bool linear, bool createUninitialized)
         {
+            ignoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
             Init(width, height, textureFormat, mipChain ? -1 : 1, linear);
         }
 
         public Texture2D(int width, int height, GraphicsFormat format, TextureCreationFlags flags)
             : this(width, height, format, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1, flags) { }
 
+        /// <summary>A texture made by script ignores the mipmap limit (Unity's Texture2D C#: its
+        /// constructors without a MipmapLimitDescriptor ask for none; matches the Unity 6000.0.71f1
+        /// Editor's written file, tests/projects/scenesave create-assets, engine-assets).</summary>
+        const bool ScriptTextureIgnoresMipmapLimit = true;
+
         public Texture2D(int width, int height, GraphicsFormat format, int mipCount, TextureCreationFlags flags)
         {
+            ignoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
             // A format the device cannot sample is refused: the texture is left destroyed (== null),
             // as the Editor's (measured for A2B10G10R10_UNormPack32 and integer formats on its
             // OpenGLCore device, tests/projects/textureformats .new).
@@ -384,6 +394,10 @@ namespace UnityEngine
             var rawCopy = makeNoLongerReadable && !SourceBlocks ? m_Store ?? EncodeMipChain() : null;
             m_PixelsDirty = true;
             Upload();
+            // An asset's pixels applied are an Editor change, saved by SaveAssets (matches the Unity
+            // 6000.0.71f1 Editor, tests/projects/scenesave engine-assets alphaEdit: SetPixel then
+            // Apply; whether SetPixel alone dirties it is unmeasured).
+            if (IsPersistentAsset) UnityEditor.EditorUtility.SetDirty(this);
             if (makeNoLongerReadable)
             {
                 RetireStore();
