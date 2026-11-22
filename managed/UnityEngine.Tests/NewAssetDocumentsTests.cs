@@ -140,11 +140,11 @@ namespace UnityEngine.Tests
             Assert.Equal(Reference("engine-assets/snapshots/alpha.file"), Write(alpha, 2800000));
         }
 
-        /// <summary>A mesh or texture read from its file is kept as read when its file is saved:
-        /// Unbound does not read back everything such a file holds (a layout's formats, sampler
-        /// fields), so it writes only those made this session.</summary>
+        /// <summary>A mesh or texture document is kept as read when its file is saved unless its
+        /// object was edited (dirty); an edited one writes its data into the document
+        /// (tests/projects/scenesave native-saves).</summary>
         [Fact]
-        public void MeshAndTextureDocumentsReadFromFilesAreKeptAsRead()
+        public void MeshAndTextureDocumentsReadFromFilesAreKeptAsReadUntilEdited()
         {
             var text = Reference("create-assets/files/Assets/Created/Tri.asset");
             var doc = UnityYamlText.Parse(text)[0];
@@ -157,6 +157,13 @@ namespace UnityEngine.Tests
             Assert.Equal(text, UnityYamlText.Write(new List<YTextDocument> { doc }));
             var texture = Own(new Texture2D(2, 2));
             Assert.False(NativeDocuments.Write(UnityYamlText.Parse(Reference("engine-assets/snapshots/alpha.file"))[0], texture, ids, new AssetDatabaseRuntime.Locations(), ref unlocated));
+
+            EditorUtility.SetDirty(mesh);
+            Assert.True(NativeDocuments.Write(doc, mesh, ids, new AssetDatabaseRuntime.Locations(), ref unlocated));
+            Assert.Contains("m_Center: {x: 1, y: 0.5, z: 0}", UnityYamlText.Write(new List<YTextDocument> { doc }));
+            // A document without the vertex data Unbound reads is kept as read.
+            var bare = UnityYamlText.Parse("%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!43 &4300000\nMesh:\n  m_Name: Tri\n  m_Unread: 7\n")[0];
+            Assert.False(NativeDocuments.Write(bare, mesh, ids, new AssetDatabaseRuntime.Locations(), ref unlocated));
         }
 
         /// <summary>RecalculateBounds as documented for 6000.0 (the mesh and its sub-meshes, from
@@ -201,24 +208,33 @@ namespace UnityEngine.Tests
             Assert.True(Own(new Texture2D(2, 2, UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm, UnityEngine.Experimental.Rendering.TextureCreationFlags.None)).ignoreMipmapLimit);
         }
 
-        /// <summary>Only the edits of mesh and texture assets made this session dirty them (the
-        /// probe's richEdit and alphaEdit rows hold the positive case); a mesh or texture asset read
-        /// from its file, and one that is no asset, are not dirtied by edits or by reading.</summary>
+        /// <summary>The edits of mesh, texture and physics material assets dirty them, whether made
+        /// this session or read from their files; reading does not, SetPixel alone does not, and an
+        /// object that is no asset is not dirtied (tests/projects/scenesave native-saves mesh.dirty,
+        /// texture.dirtySetPixel, texture.dirty, physic.dirty).</summary>
         [Fact]
-        public void EditsOfMeshAndTextureAssetsReadFromFilesDoNotDirtyThem()
+        public void EditsOfAssetsReadFromFilesDirtyThem()
         {
             var mesh = Own(new Mesh());
             mesh.vertices = new[] { Vector3.zero };
             Assert.False(EditorUtility.IsDirty(mesh));
             mesh.IsPersistentAsset = true;
             mesh.ReadSerialized(UnityYamlText.Parse(Reference("create-assets/files/Assets/Created/Tri.asset"))[0].Body.ToNode(), null);
-            mesh.vertices = new[] { Vector3.zero, Vector3.one, Vector3.up };
             Assert.False(EditorUtility.IsDirty(mesh));
+            mesh.vertices = new[] { Vector3.zero, Vector3.one, Vector3.up };
+            Assert.True(EditorUtility.IsDirty(mesh));
             var texture = Own(new Texture2D(2, 2));
             texture.IsPersistentAsset = true;
             texture.SetPixel(0, 0, Color.black);
-            texture.Apply();
             Assert.False(EditorUtility.IsDirty(texture));
+            texture.Apply();
+            Assert.True(EditorUtility.IsDirty(texture));
+            var physics = Own(new PhysicsMaterial());
+            physics.bounciness = 0.5f;
+            Assert.False(EditorUtility.IsDirty(physics));
+            physics.IsPersistentAsset = true;
+            physics.bounciness = 0.9f;
+            Assert.True(EditorUtility.IsDirty(physics));
         }
 
         [Fact]

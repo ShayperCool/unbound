@@ -267,117 +267,20 @@
     "actual": [
       false
     ],
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
-  },
-  {
-    "case": "native-saves",
-    "key": "mesh.dirty",
-    "reference": [
-      true
-    ],
-    "actual": [
-      false
-    ],
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
-  },
-  {
-    "case": "native-saves",
-    "key": "model.dirtyAfter",
-    "reference": [
-      true
-    ],
-    "actual": [
-      false
-    ],
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
-  },
-  {
-    "case": "native-saves",
-    "key": "model.dirtyVertices",
-    "reference": [
-      true
-    ],
-    "actual": [
-      false
-    ],
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
-  },
-  {
-    "case": "native-saves",
-    "key": "physic.dirty",
-    "reference": [
-      true
-    ],
-    "actual": [
-      false
-    ],
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
-  },
-  {
-    "case": "native-saves",
-    "key": "texture.dirty",
-    "reference": [
-      true
-    ],
-    "actual": [
-      false
-    ],
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
-  },
-  {
-    "case": "native-saves",
-    "key": "file:Assets/Native/Alpha.asset",
-    "reference": true,
-    "actual": false,
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
-  },
-  {
-    "case": "native-saves",
-    "key": "file:Assets/Native/Bouncy.physicMaterial",
-    "reference": true,
-    "actual": false,
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
+    "reason": "An animation clip read from its file is not dirtied by its API edits (here SetCurve) nor written by SaveAssets yet: Unbound does not write animation clips (see the engine-assets clip rows). The Editor writes it."
   },
   {
     "case": "native-saves",
     "key": "file:Assets/Native/Move.anim",
     "reference": true,
     "actual": false,
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
-  },
-  {
-    "case": "native-saves",
-    "key": "file:Assets/Native/Tri.asset",
-    "reference": true,
-    "actual": false,
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
+    "reason": "An animation clip read from its file is not dirtied by its API edits (here SetCurve) nor written by SaveAssets yet: Unbound does not write animation clips (see the engine-assets clip rows). The Editor writes it."
   },
   {
     "case": "native-saves",
     "key": "file:snapshot:clip.file",
     "reference": "written",
     "actual": "lines 43-68: reference ['  m_ScaleCurves:', '  - curve:', '      serializedVersion: 2', '      m_Curve:', '      - serializedVersion: 3', '        time: 0', '        value: {x: 1, y: 1, z: 1}', '        inSlope: {x: 0, y: 0, z: 0}', '        outSlope: {x: 0, y: 1, z: 0}', '        tangentMode: 0', '        weightedMode: 0', '        inWeight: {x: 0.33333334, y: 0, z: 0.33333334}', '        outWeight: {x: 0.33333334, y: 0, z: 0.33333334}', '      - serializedVersion: 3', '        time: 1', '        value: {x: 1, y: 2, z: 1}', '        inSlope: {x: 0, y: 1, z: 0}', '        outSlope: {x: 0, y: 0, z: 0}', '        tangentMode: 0', '        weightedMode: 0', '        inWeight: {x: 0.33333334, y: 0, z: 0.33333334}', '        outWeight: {x: 0.33333334, y: 0, z: 0.33333334}', '      m_PreInfinity: 2', '      m_PostInfinity: 2', '      m_RotationOrder: 4', '    path: '], actual ['  m_ScaleCurves: []']; lines 101-101: reference ['  m_HasGenericRootTransform: 1'], actual ['  m_HasGenericRootTransform: 0']",
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
-  },
-  {
-    "case": "native-saves",
-    "key": "file:snapshot:mesh.file",
-    "reference": "written",
-    "actual": "lines 20-21: reference ['      m_Center: {x: 1, y: 1, z: 0}', '      m_Extent: {x: 1, y: 1, z: 0}'], actual ['      m_Center: {x: 0.5, y: 0.5, z: 0}', '      m_Extent: {x: 0.5, y: 0.5, z: 0}']; lines 100-100: reference ['    _typelessdata: 00000000000000000000000000000000000000000000803f000000000000000000000040000000000000000000000000000000000000803f0000803f0000000000000000000000400000000000000000000000000000803f000000000000803f'], actual ['    _typelessdata: 00000000000000000000000000000000000000000000803f00000000000000000000803f000000000000000000000000000000000000803f0000803f00000000000000000000803f0000000000000000000000000000803f000000000000803f']; lines 154-155: reference ['    m_Center: {x: 1, y: 1, z: 0}', '    m_Extent: {x: 1, y: 1, z: 0}'], actual ['    m_Center: {x: 0.5, y: 0.5, z: 0}', '    m_Extent: {x: 0.5, y: 0.5, z: 0}']",
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
-  },
-  {
-    "case": "native-saves",
-    "key": "file:snapshot:physic.file",
-    "reference": "written",
-    "actual": "lines 13-13: reference ['  m_Bounciness: 0.9'], actual ['  m_Bounciness: 0.5']",
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
-  },
-  {
-    "case": "native-saves",
-    "key": "file:snapshot:texture.file",
-    "reference": "written",
-    "actual": "lines 43-43: reference ['  _typelessdata: 00408080'], actual ['  _typelessdata: 004080ff']",
-    "reason": "Native assets read from their files (a mesh, a texture, a physics material, an animation clip) are not dirtied by their API edits nor written by SaveAssets yet: Unbound keeps such documents as read (its readers do not keep everything the files hold). The Editor writes them; an imported model's mesh stays dirty and unwritten, with no message."
+    "reason": "An animation clip read from its file is not dirtied by its API edits (here SetCurve) nor written by SaveAssets yet: Unbound does not write animation clips (see the engine-assets clip rows). The Editor writes it."
   }
 ]

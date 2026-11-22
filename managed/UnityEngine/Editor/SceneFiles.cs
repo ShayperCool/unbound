@@ -1351,8 +1351,53 @@ namespace Unbound.Runtime
                 WriteSpriteAtlas(doc.Body, atlas);
                 return true;
             }
+            // An edited native asset read from its file. Not edited, or a document without the data
+            // Unbound reads (it was not read from it), it is kept as read; so are unreadable,
+            // compressed and block-compressed ones (unmeasured).
+            if (ReadNativeKeys(o) is string[] keys && EditorUtility.IsDirty(o))
+            {
+                if (!UnityYamlWriter.WritesNew(o)) return false;
+                if (o is Mesh && doc.Body.Get("m_VertexData") == null) return false;
+                if (o is Texture2D && doc.Body.Get("_typelessdata") == null) return false;
+                var text = UnityYamlWriter.Write(new[] { o }, new Dictionary<Object, long>(ReferenceEqualityComparer.Instance) { [o] = doc.FileId });
+                var written = UnityYamlText.Parse(text)[0].Body;
+                var kept = YText.Map();
+                foreach (var key in keys)
+                    if (written.Get(key) is YText value) kept.Set(key, value);
+                SceneFiles.Overlay(doc.Body, kept, ref unlocated);
+                return true;
+            }
             return false;
         }
+
+        /// <summary>The keys of a native asset read from its file that SaveAssets writes from the
+        /// object, the rest of its document kept as the file has it: a mesh's geometry, a texture's
+        /// size, format and data, a physics material's values (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/scenesave native-saves; the keys are those its API changes and Unbound
+        /// reads back whole). Null for other types.</summary>
+        static string[] ReadNativeKeys(Object o) => o switch
+        {
+            Mesh => s_MeshKeys,
+            Texture2D => s_Texture2DKeys,
+            PhysicsMaterial => s_PhysicsMaterialKeys,
+            _ => null,
+        };
+
+        static readonly string[] s_MeshKeys =
+        {
+            "m_SubMeshes", "m_Shapes", "m_BindPose", "m_BoneNameHashes", "m_RootBoneNameHash", "m_BonesAABB",
+            "m_IndexFormat", "m_IndexBuffer", "m_VertexData", "m_LocalAABB",
+        };
+
+        static readonly string[] s_Texture2DKeys =
+        {
+            "m_Width", "m_Height", "m_CompleteImageSize", "m_TextureFormat", "m_MipCount", "image data", "_typelessdata",
+        };
+
+        static readonly string[] s_PhysicsMaterialKeys =
+        {
+            "m_DynamicFriction", "m_StaticFriction", "m_Bounciness", "m_FrictionCombine", "m_BounceCombine",
+        };
 
         /// <summary>The keys of a V1 sprite atlas document in the order the Editor writes them.</summary>
         static readonly string[] s_SpriteAtlasKeyOrder =
