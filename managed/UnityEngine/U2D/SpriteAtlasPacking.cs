@@ -564,7 +564,7 @@ namespace UnityEngine.U2D
         }
 
         /// <summary>Whether entering Play mode packs and stores the V1 atlases: only when nothing was
-        /// packed before (<paramref name="earlierAtlases"/>, the atlases an earlier pack holds, null). Once atlases were packed (an earlier
+        /// packed before (<paramref name="earlierAtlases"/>, the V1 atlases an earlier pack holds; null: no earlier pack). Once atlases were packed (an earlier
         /// entry, or SpriteAtlasUtility in Edit mode) an entry stores nothing; atlas files restored
         /// between two entries stay as they are, as in the Unity 6000.0.71f1 Editor
         /// (tests/projects/spriteatlaseditor v1replay). An entry after sprites changed is
