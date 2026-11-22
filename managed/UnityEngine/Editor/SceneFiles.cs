@@ -1041,30 +1041,8 @@ namespace Unbound.Runtime
                     if (list == null) continue;
                     if (state.Rebuild) RebuildModifications(state, list);
                     foreach (var change in state.Changes) SetModification(list, change, state.Data.SourceGuid);
-                    var added = YText.Seq();
-                    foreach (var (sourceGo, component, last) in state.AddedComponents)
-                        added.Items.Add(AddedEntry(modification.Get("m_AddedComponents"), sourceGo, component, last, state, "components"));
-                    // The file's entries for components Unbound did not load (a missing script) stay;
-                    // a loaded one is listed while it is added (one applied to the prefab is the
-                    // prefab's now, tests/projects/scenesave BaseApplied).
-                    foreach (var item in modification.Get("m_AddedComponents")?.Items ?? new List<YText>())
-                    {
-                        long id = ParseFileId(item.Get("addedObject"));
-                        if (!m_Known.Contains(id) && m_Source.ContainsKey(id)) added.Items.Add(item.Clone());
-                    }
-                    if (added.Items.Count == 0) added.Flow = true;
-                    modification.Set("m_AddedComponents", added);
-                    var addedObjects = YText.Seq();
-                    foreach (var (sourceTransform, transform, last) in state.AddedGameObjects)
-                        addedObjects.Items.Add(AddedEntry(modification.Get("m_AddedGameObjects"), sourceTransform, transform, last, state, "GameObjects"));
-                    // The file's entries for GameObjects Unbound did not load stay.
-                    foreach (var item in modification.Get("m_AddedGameObjects")?.Items ?? new List<YText>())
-                    {
-                        long id = ParseFileId(item.Get("addedObject"));
-                        if (!m_Known.Contains(id) && m_Source.ContainsKey(id)) addedObjects.Items.Add(item.Clone());
-                    }
-                    if (addedObjects.Items.Count == 0) addedObjects.Flow = true;
-                    modification.Set("m_AddedGameObjects", addedObjects);
+                    modification.Set("m_AddedComponents", AddedList(state, modification.Get("m_AddedComponents"), state.AddedComponents, "components", false));
+                    modification.Set("m_AddedGameObjects", AddedList(state, modification.Get("m_AddedGameObjects"), state.AddedGameObjects, "GameObjects", true));
                     RemovedComponents(state, modification);
                     m_Out[state.Document.FileId] = state.Document;
                 }
@@ -1102,20 +1080,53 @@ namespace Unbound.Runtime
                 modification.Set("m_RemovedComponents", list);
             }
 
-            /// <summary>An instance's entry for an added object: the file's when it has one (its
-            /// place kept as written), else a new one placed after the prefab's objects (insertIndex
-            /// -1, measured: prefab-nested, Base); a new one placed among them is not measured and
-            /// fails the save.</summary>
-            YText AddedEntry(YText fileList, long target, long added, bool last, InstanceState state, string what)
+            /// <summary>
+            /// An instance's list of added components or GameObjects: the file's entries in their order,
+            /// then one for each newly added object. An entry stays as written for an object Unbound did
+            /// not load, for an object still added with the same target (when listed after the
+            /// prefab's objects, insertIndex -1, it must still come after them) and, for GameObjects,
+            /// for another instance's object still saved (an instance placed under this one's
+            /// object); one for an object applied to the prefab or gone is dropped (tests/projects/
+            /// scenesave BaseApplied). A new object is listed after the prefab's objects (insertIndex
+            /// -1, measured: prefab-nested, Base); an added object moved to another target or among
+            /// the prefab's objects is not measured and fails the save.
+            /// </summary>
+            YText AddedList(InstanceState state, YText fileList, List<(long Target, long Added, bool Last)> current, string what, bool gameObjects)
             {
+                var list = YText.Seq();
+                var now = new Dictionary<long, (long Target, bool Last)>();
+                foreach (var c in current) now[c.Added] = (c.Target, c.Last);
+                var listed = new HashSet<long>();
                 foreach (var item in fileList?.Items ?? new List<YText>())
-                    if (ParseFileId(item.Get("addedObject")) == added && m_Known.Contains(added)) return item.Clone();
-                if (!last) m_Unwritten.Add($"{what} added among a prefab instance's own (their place is not measured)");
-                var entry = YText.Map();
-                entry.Add("targetCorrespondingSourceObject", FlowValue($"{{fileID: {target}, guid: {SourceGuid(state)}, type: 3}}"));
-                entry.Add("insertIndex", Raw("-1"));
-                entry.Add("addedObject", FlowValue("{fileID: " + added + "}"));
-                return entry;
+                {
+                    long id = ParseFileId(item.Get("addedObject"));
+                    if (now.TryGetValue(id, out var added))
+                    {
+                        bool moved = ParseFileId(item.Get("targetCorrespondingSourceObject")) != added.Target
+                            || (item.Get("insertIndex")?.Text == "-1" && !added.Last);
+                        if (moved) m_Unwritten.Add($"{what} added to a prefab instance and moved (their new place is not measured)");
+                        list.Items.Add(item.Clone());
+                        listed.Add(id);
+                    }
+                    else if (!m_Known.Contains(id))
+                    {
+                        if (m_Source.ContainsKey(id)) list.Items.Add(item.Clone());
+                    }
+                    else if (gameObjects && m_KnownObjects.TryGetValue(id, out var o) && o != null && Saved(o) && Link(o) is PrefabLink other && other.Instance != state.Data)
+                        list.Items.Add(item.Clone());
+                }
+                foreach (var c in current)
+                {
+                    if (listed.Contains(c.Added)) continue;
+                    if (!c.Last) m_Unwritten.Add($"{what} added among a prefab instance's own (their place is not measured)");
+                    var entry = YText.Map();
+                    entry.Add("targetCorrespondingSourceObject", FlowValue($"{{fileID: {c.Target}, guid: {SourceGuid(state)}, type: 3}}"));
+                    entry.Add("insertIndex", Raw("-1"));
+                    entry.Add("addedObject", FlowValue("{fileID: " + c.Added + "}"));
+                    list.Items.Add(entry);
+                }
+                list.Flow = list.Items.Count == 0;
+                return list;
             }
 
             static string SourceGuid(InstanceState state) => state.Document.Body.Get("m_SourcePrefab")?.Get("guid")?.Text ?? "";

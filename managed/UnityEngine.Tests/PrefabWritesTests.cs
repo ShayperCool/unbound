@@ -453,6 +453,63 @@ namespace UnityEngine.Tests
             Assert.Equal("{fileID: 202, guid: " + m_Guid + ", type: 3}", removed.Raw);
         }
 
+        sealed class Errors : ILogHandler
+        {
+            internal readonly List<string> Lines = new List<string>();
+            public void LogException(Exception exception, Object context) => Lines.Add(exception.Message);
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) => Lines.Add(string.Format(format, args));
+        }
+
+        /// <summary>A save keeps the file's entry of a GameObject added to an instance (its place:
+        /// insertIndex 0 stays) while it stays where it was; one moved to another of the instance's
+        /// objects, or among the prefab's children with an entry after them, fails the save with
+        /// its reason.</summary>
+        [Fact]
+        public void ASaveKeepsAnAddedObjectsPlaceAndRefusesAMovedOne()
+        {
+            var holder = new GameObject("Holder");
+            m_Made.Add(holder);
+            var instance = Instance();
+            instance.transform.SetParent(holder.transform, false);
+            var added = new GameObject("Added");
+            added.transform.SetParent(instance.transform, false);
+            var target = new SceneFiles.WriteTarget
+            {
+                Path = "Assets/Holder.prefab",
+                FileIds = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance),
+                StrippedIds = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance),
+                Roots = new List<GameObject> { holder },
+            };
+            PrefabLinks.Of(instance).Instance.FileId = 0;
+            var first = SceneFiles.Write(target);
+            Assert.Contains("    - targetCorrespondingSourceObject: {fileID: 101, guid: " + m_Guid + ", type: 3}\n      insertIndex: -1\n", first);
+            var file = Path.Combine(m_Project, "Assets", "Holder.prefab");
+            File.WriteAllText(file, first.Replace("insertIndex: -1", "insertIndex: 0"));
+            var kept = SceneFiles.Write(target);
+            Assert.Contains("      insertIndex: 0\n", kept);
+            Assert.DoesNotContain("insertIndex: -1", kept);
+
+            var errors = new Errors();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = errors;
+            try
+            {
+                added.transform.SetParent(instance.transform.Find("Part"), false);
+                Assert.Null(SceneFiles.Write(target));
+                Assert.Contains(errors.Lines, l => l.Contains("GameObjects added to a prefab instance and moved"));
+                added.transform.SetParent(instance.transform, false);
+                File.WriteAllText(file, first);
+                added.transform.SetSiblingIndex(0);
+                errors.Lines.Clear();
+                Assert.Null(SceneFiles.Write(target));
+                Assert.Contains(errors.Lines, l => l.Contains("GameObjects added to a prefab instance and moved"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
+        }
+
         /// <summary>New prefabs whose instances are not measured are refused or not written: an
         /// instance under another instance's object, an instance whose file lists removed
         /// GameObjects, a GameObject added among an instance's own children.</summary>
@@ -475,7 +532,12 @@ namespace UnityEngine.Tests
             var early = new GameObject("Early");
             early.transform.SetParent(first.transform, false);
             early.transform.SetSiblingIndex(0);
-            Assert.Null(PrefabAssets.NewPrefabText("Assets/Outer.prefab", outer));
+            var errors = new Errors();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = errors;
+            try { Assert.Null(PrefabAssets.NewPrefabText("Assets/Outer.prefab", outer)); }
+            finally { Debug.unityLogger.logHandler = previous; }
+            Assert.Contains(errors.Lines, l => l.Contains("GameObjects added among a prefab instance's own"));
             early.transform.SetSiblingIndex(first.transform.childCount - 1);
             Assert.NotNull(PrefabAssets.NewPrefabText("Assets/Outer.prefab", outer));
         }
