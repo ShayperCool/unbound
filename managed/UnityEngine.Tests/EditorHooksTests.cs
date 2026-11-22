@@ -57,12 +57,13 @@ namespace UnityEngine.Tests
         public void ADelayedCallWaitsForItsDelayAndRunsOnce()
         {
             int runs = 0;
-            var cancel = EditorApplication.CallDelayed(() => runs++, 0.05);
+            // Long enough that a slow first update cannot reach it.
+            var cancel = EditorApplication.CallDelayed(() => runs++, 1.0);
             try
             {
                 EditorApplication.RunEditorCallbacksNow();
                 Assert.Equal(0, runs);
-                System.Threading.Thread.Sleep(80);
+                System.Threading.Thread.Sleep(1100);
                 EditorApplication.RunEditorCallbacksNow();
                 EditorApplication.RunEditorCallbacksNow();
                 Assert.Equal(1, runs);
