@@ -84,6 +84,7 @@ mod init_tracker;
 pub mod instance;
 pub mod limits;
 mod lock;
+pub use lock::{enter_gles_pin_gate, GlesPinGateGuard};
 pub mod pipeline;
 mod pipeline_cache;
 mod pool;

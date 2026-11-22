@@ -10,8 +10,8 @@ The SHA-256 values below identify the published `.crate` archives and are checke
 | wgpu-core | `14c018fce9b6270aa203c2fdd56f3cce996713534bd757e4ea58c8560b121f14` |
 | wgpu-hal | `b6b7fb58561a792bc237628ba0792e332de418fefe145f13b5ed8201e6d52f58` |
 
-`reproduce.py` finishes with `native-vulkan-depth-pass.patch`, then `gl-present-wait.patch`
-and `native-layout-gap-rebind.patch`, after applying
+`reproduce.py` finishes with `native-vulkan-depth-pass.patch`, then `gl-present-wait.patch`,
+`native-layout-gap-rebind.patch` and `gl-context-pin.patch`, after applying
 `native-lod-bias.patch`, `gl-device.patch`,
 `native-mirror-clamp.patch`, `native-depth-state.patch`,
 `native-external-texture.patch`, `native-gl-mirror-clamp.patch`,
@@ -265,3 +265,31 @@ storage buffer with it; OpenGL read it either way, and Metal on the Mac (Apple M
 with the patch. The [Vulkan pipeline layout compatibility
 rules](https://docs.vulkan.org/spec/latest/chapters/descriptorsets.html#descriptorsets-compatibility)
 leave sets after the first incompatible one disturbed.
+
+## Scoped OpenGL EGL context pinning (`gl-context-pin.patch`)
+
+`wgpu-hal/src/gles/egl.rs` makes `AdapterContext.glow` a `parking_lot::ReentrantMutex` with a
+nesting counter (`pin_depth`), adds `AdapterContext::pin() -> AdapterContextPin`, and exposes
+`OwnedAdapterContext` via `wgpu_hal::gles::Device::owned_context()`. While pinned on the owning
+thread, inner `AdapterContext::lock()` calls skip redundant `eglGetCurrentContext` and
+`eglMakeCurrent` bind/unbind pairs; dropping the outermost pin restores any foreign EGL context
+that was current before pinning (or unbinds to none) before releasing the mutex, including on
+panic unwind.
+
+`wgpu/src/api/queue.rs` makes `SUBMISSION` reentrant (`parking_lot::ReentrantMutex` when the
+`parking_lot` feature is enabled, or `SubmissionLock` backed by `std::sync::{Mutex, Condvar}`
+under `cfg(std)`), `wgpu-core/src/lock/{mod.rs,vanilla.rs}` adds `GL_PIN_GATE` (a `RawRwLock`
+with per-thread reader/writer depth tracking and `Send`-safe `SnatchGuard::forget`/`force_unlock_read`
+detach/release, enabled only when a `Backend::Gl` device is created in `Device::new` so Vulkan
+and Metal pay only one relaxed atomic load), and `wgpu/src/api/device.rs` adds
+`wgpu::Device::with_gles_context_pinned`. That helper acquires `SUBMISSION` -> `GL_PIN_GATE`
+(exclusive) -> `OwnedAdapterContext::pin()` and releases in exact reverse order, keeping the lock
+graph strictly acyclic (`SUBMISSION -> GL_PIN_GATE -> wgpu-core locks -> AdapterContext.glow`) so
+concurrent resource creation, `write_buffer`/`write_texture`, `Surface::configure`, and
+`Surface::present` on other threads cannot AB-BA deadlock. On non-EGL backends it is a direct call
+with no overhead.
+
+`crates/unbound-app/src/render/gl_backend_tests.rs`
+(`gles_context_pinning_handles_nesting_foreign_context_unwind_and_concurrency`) verifies nested
+pinning, readback parity, panic-unwind release, concurrent cross-thread submission, and foreign
+EGL context restoration on a real desktop OpenGL device.

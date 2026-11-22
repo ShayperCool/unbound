@@ -1,10 +1,18 @@
 use alloc::{string::String, sync::Arc, vec::Vec};
-use core::{ffi, mem::ManuallyDrop, ptr, time::Duration};
+use core::{
+    ffi,
+    mem::ManuallyDrop,
+    ptr,
+    sync::atomic::{AtomicUsize, Ordering},
+    time::Duration,
+};
 use std::sync::LazyLock;
 
 use glow::HasContext;
 use hashbrown::HashMap;
-use parking_lot::{MappedMutexGuard, Mutex, MutexGuard, RwLock};
+use parking_lot::{
+    MappedReentrantMutexGuard, Mutex, ReentrantMutex, ReentrantMutexGuard, RwLock,
+};
 
 /// The amount of time to wait while trying to obtain a lock to the adapter context
 const CONTEXT_LOCK_TIMEOUT_SECS: u64 = 6;
@@ -194,13 +202,38 @@ impl EglContext {
             .make_current(self.display, None, None, None)
             .unwrap();
     }
+
+    fn lock_current(&self) -> EglContextLock<'_> {
+        let previous = self
+            .instance
+            .get_current_context()
+            .filter(|&context| context != self.raw)
+            .and_then(|context| {
+                Some((
+                    self.instance.get_current_display()?,
+                    self.instance.get_current_surface(khronos_egl::DRAW),
+                    self.instance.get_current_surface(khronos_egl::READ),
+                    context,
+                ))
+            });
+        self.make_current();
+        EglContextLock {
+            instance: &self.instance,
+            display: self.display,
+            previous,
+        }
+    }
 }
 
 /// A wrapper around a [`glow::Context`] and the required EGL context that uses locking to guarantee
 /// exclusive access when shared with multiple threads.
 #[derive(Debug)]
 pub struct AdapterContext {
-    glow: Mutex<ManuallyDrop<glow::Context>>,
+    glow: ReentrantMutex<ManuallyDrop<glow::Context>>,
+    /// Unbound: nesting depth of active [`AdapterContextPin`] guards on the owning thread.
+    /// While non-zero, [`Self::lock`] reuses the already-current EGL context without repeating
+    /// `eglMakeCurrent` bind/unbind calls.
+    pin_depth: AtomicUsize,
     egl: Option<EglContext>,
 }
 
@@ -280,10 +313,25 @@ struct EglContextLock<'a> {
     )>,
 }
 
+impl EglContextLock<'_> {
+    fn release(&mut self) {
+        let result = match self.previous.take() {
+            Some((display, draw, read, context)) => {
+                self.instance
+                    .make_current(display, draw, read, Some(context))
+            }
+            None => self.instance.make_current(self.display, None, None, None),
+        };
+        if let Err(err) = result {
+            log::error!("Failed to make EGL context current: {err:?}");
+        }
+    }
+}
+
 /// A guard containing a lock to an [`AdapterContext`], while the GL context is kept current.
 #[expect(missing_debug_implementations)]
 pub struct AdapterContextLock<'a> {
-    glow: MutexGuard<'a, ManuallyDrop<glow::Context>>,
+    glow: ReentrantMutexGuard<'a, ManuallyDrop<glow::Context>>,
     egl: Option<EglContextLock<'a>>,
 }
 
@@ -297,18 +345,40 @@ impl<'a> core::ops::Deref for AdapterContextLock<'a> {
 
 impl<'a> Drop for AdapterContextLock<'a> {
     fn drop(&mut self) {
-        if let Some(egl) = self.egl.take() {
-            let result = match egl.previous {
-                Some((display, draw, read, context)) => {
-                    egl.instance
-                        .make_current(display, draw, read, Some(context))
-                }
-                None => egl.instance.make_current(egl.display, None, None, None),
-            };
-            if let Err(err) = result {
-                log::error!("Failed to make EGL context current: {err:?}");
-            }
+        if let Some(mut egl) = self.egl.take() {
+            egl.release();
         }
+    }
+}
+
+/// Unbound: keeps the EGL context current on this thread across multiple `wgpu` calls while
+/// holding exclusive access to [`AdapterContext`]. Releases the EGL context before unlocking the
+/// mutex on drop (including unwind).
+#[expect(missing_debug_implementations)]
+pub struct AdapterContextPin<'a> {
+    context: &'a AdapterContext,
+    _glow: ReentrantMutexGuard<'a, ManuallyDrop<glow::Context>>,
+    egl: Option<EglContextLock<'a>>,
+}
+
+impl Drop for AdapterContextPin<'_> {
+    fn drop(&mut self) {
+        self.context.pin_depth.fetch_sub(1, Ordering::Relaxed);
+        if let Some(mut egl) = self.egl.take() {
+            egl.release();
+        }
+    }
+}
+
+/// Unbound: owned handle to the adapter's shared GL context so callers can pin it without holding
+/// a `wgpu_core` HAL snatch guard across submissions.
+#[derive(Clone, Debug)]
+pub struct OwnedAdapterContext(Arc<super::AdapterShared>);
+
+impl OwnedAdapterContext {
+    #[track_caller]
+    pub fn pin(&self) -> AdapterContextPin<'_> {
+        self.0.context.pin()
     }
 }
 
@@ -324,12 +394,35 @@ impl AdapterContext {
     ///
     /// > **Note:** Calling this function **will** still lock the [`glow::Context`] which adds an
     /// > extra safe-guard against accidental concurrent access to the context.
-    pub unsafe fn get_without_egl_lock(&self) -> MappedMutexGuard<'_, glow::Context> {
+    pub unsafe fn get_without_egl_lock(&self) -> MappedReentrantMutexGuard<'_, glow::Context> {
         let guard = self
             .glow
             .try_lock_for(Duration::from_secs(CONTEXT_LOCK_TIMEOUT_SECS))
             .expect("Could not lock adapter context. This is most-likely a deadlock.");
-        MutexGuard::map(guard, |glow| &mut **glow)
+        debug_assert_eq!(self.pin_depth.load(Ordering::Relaxed), 0);
+        ReentrantMutexGuard::map(guard, |glow| &**glow)
+    }
+
+    /// Unbound: pins the EGL context current on the calling thread until the returned guard drops.
+    #[track_caller]
+    pub fn pin(&self) -> AdapterContextPin<'_> {
+        let glow = self
+            .glow
+            .try_lock_for(Duration::from_secs(CONTEXT_LOCK_TIMEOUT_SECS))
+            .expect("Could not lock adapter context. This is most-likely a deadlock.");
+        let egl = if self.pin_depth.load(Ordering::Relaxed) == 0 {
+            self.egl.as_ref().map(|egl| egl.lock_current())
+        } else {
+            None
+        };
+        // Increment only after `make_current()` succeeded so a failure cannot leave `pin_depth`
+        // stuck non-zero.
+        self.pin_depth.fetch_add(1, Ordering::Relaxed);
+        AdapterContextPin {
+            context: self,
+            _glow: glow,
+            egl,
+        }
     }
 
     /// Obtain a lock to the EGL context and get handle to the [`glow::Context`] that can be used to
@@ -343,26 +436,11 @@ impl AdapterContext {
             .try_lock_for(Duration::from_secs(CONTEXT_LOCK_TIMEOUT_SECS))
             .expect("Could not lock adapter context. This is most-likely a deadlock.");
 
-        let egl = self.egl.as_ref().map(|egl| {
-            let previous = egl
-                .instance
-                .get_current_context()
-                .filter(|&context| context != egl.raw)
-                .and_then(|context| {
-                    Some((
-                        egl.instance.get_current_display()?,
-                        egl.instance.get_current_surface(khronos_egl::DRAW),
-                        egl.instance.get_current_surface(khronos_egl::READ),
-                        context,
-                    ))
-                });
-            egl.make_current();
-            EglContextLock {
-                instance: &egl.instance,
-                display: egl.display,
-                previous,
-            }
-        });
+        let egl = if self.pin_depth.load(Ordering::Relaxed) > 0 {
+            None
+        } else {
+            self.egl.as_ref().map(|egl| egl.lock_current())
+        };
 
         AdapterContextLock { glow, egl }
     }
@@ -1098,7 +1176,8 @@ impl crate::Instance for Instance {
         unsafe {
             super::Adapter::expose(
                 AdapterContext {
-                    glow: Mutex::new(gl),
+                    glow: ReentrantMutex::new(gl),
+                    pin_depth: AtomicUsize::new(0),
                     // ERROR: Copying owned reference handles here, be careful to not drop them!
                     egl: Some(inner.egl.clone()),
                 },
@@ -1128,7 +1207,8 @@ impl super::Adapter {
         unsafe {
             Self::expose(
                 AdapterContext {
-                    glow: Mutex::new(ManuallyDrop::new(context)),
+                    glow: ReentrantMutex::new(ManuallyDrop::new(context)),
+                    pin_depth: AtomicUsize::new(0),
                     egl: None,
                 },
                 options,
@@ -1145,6 +1225,11 @@ impl super::Device {
     /// Returns the underlying EGL context.
     pub fn context(&self) -> &AdapterContext {
         &self.shared.context
+    }
+
+    /// Unbound: returns an owned handle to the underlying EGL context for scoped pinning.
+    pub fn owned_context(&self) -> OwnedAdapterContext {
+        OwnedAdapterContext(Arc::clone(&self.shared))
     }
 }
 

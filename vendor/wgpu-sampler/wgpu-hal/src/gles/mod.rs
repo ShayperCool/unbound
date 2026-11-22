@@ -99,7 +99,7 @@ mod queue;
 pub use fence::Fence;
 
 #[cfg(not(any(windows, webgl)))]
-pub use self::egl::{AdapterContext, AdapterContextLock};
+pub use self::egl::{AdapterContext, AdapterContextLock, AdapterContextPin, OwnedAdapterContext};
 #[cfg(not(any(windows, webgl)))]
 pub use self::egl::{Instance, Surface};
 

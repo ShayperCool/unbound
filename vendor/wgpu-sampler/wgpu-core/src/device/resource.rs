@@ -393,6 +393,9 @@ impl Device {
         desc: &DeviceDescriptor,
         instance_flags: wgt::InstanceFlags,
     ) -> Result<Self, DeviceError> {
+        if adapter.backend() == wgt::Backend::Gl {
+            crate::lock::gles_pin::enable();
+        }
         #[cfg(not(feature = "trace"))]
         match &desc.trace {
             wgt::Trace::Off => {}

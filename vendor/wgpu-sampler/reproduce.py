@@ -49,5 +49,7 @@ PATCHES.append('native-vulkan-depth-pass.patch')
 PATCHES.append('gl-present-wait.patch')
 # Binding after pipeline layouts that leave a group out.
 PATCHES.append('native-layout-gap-rebind.patch')
+# Scoped EGL context pinning for multi-call OpenGL render bursts.
+PATCHES.append('gl-context-pin.patch')
 
 if __name__ == '__main__': main()

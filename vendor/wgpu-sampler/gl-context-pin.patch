@@ -1,0 +1,710 @@
+diff --git a/wgpu-core/src/device/resource.rs b/wgpu-core/src/device/resource.rs
+index 52d1c2c64..abe88af9e 100644
+--- a/wgpu-core/src/device/resource.rs
++++ b/wgpu-core/src/device/resource.rs
+@@ -393,6 +393,9 @@ impl Device {
+         desc: &DeviceDescriptor,
+         instance_flags: wgt::InstanceFlags,
+     ) -> Result<Self, DeviceError> {
++        if adapter.backend() == wgt::Backend::Gl {
++            crate::lock::gles_pin::enable();
++        }
+         #[cfg(not(feature = "trace"))]
+         match &desc.trace {
+             wgt::Trace::Off => {}
+diff --git a/wgpu-core/src/lib.rs b/wgpu-core/src/lib.rs
+index 212aeff77..fe0ef99ea 100644
+--- a/wgpu-core/src/lib.rs
++++ b/wgpu-core/src/lib.rs
+@@ -84,6 +84,7 @@ mod init_tracker;
+ pub mod instance;
+ pub mod limits;
+ mod lock;
++pub use lock::{enter_gles_pin_gate, GlesPinGateGuard};
+ pub mod pipeline;
+ mod pipeline_cache;
+ mod pool;
+diff --git a/wgpu-core/src/lock/mod.rs b/wgpu-core/src/lock/mod.rs
+index 2e83f5a35..c61304a94 100644
+--- a/wgpu-core/src/lock/mod.rs
++++ b/wgpu-core/src/lock/mod.rs
+@@ -53,3 +53,164 @@ use observing as chosen;
+ use vanilla as chosen;
+ 
+ pub use chosen::{Mutex, MutexGuard, RankData, RwLock, RwLockReadGuard, RwLockWriteGuard};
++
++/// Unbound: coordinates scoped GLES EGL context pinning (`wgpu::Device::with_gles_context_pinned`)
++/// with `wgpu-core`'s internal locks so the lock order stays strictly acyclic:
++/// `SUBMISSION -> GL_PIN_GATE -> wgpu-core locks -> wgpu-hal AdapterContext`.
++///
++/// While no GLES device exists (e.g. Vulkan / Metal), `GL_PIN_ENABLED` stays `false` and the
++/// reader path is a single relaxed atomic load.
++#[cfg(all(feature = "std", not(any(windows, target_arch = "wasm32"))))]
++pub(crate) mod gles_pin {
++    use core::{
++        cell::Cell,
++        marker::PhantomData,
++        sync::atomic::{AtomicBool, Ordering},
++    };
++    use parking_lot::lock_api::{RawRwLock as _, RawRwLockRecursive as _};
++
++    static GL_PIN_ENABLED: AtomicBool = AtomicBool::new(false);
++    static GL_PIN_GATE: parking_lot::RawRwLock = parking_lot::RawRwLock::INIT;
++
++    std::thread_local! {
++        // (exclusive_writer_depth, shared_reader_depth)
++        static GATE_DEPTH: Cell<(usize, usize)> = const { Cell::new((0, 0)) };
++    }
++
++    pub(crate) fn enable() {
++        GL_PIN_ENABLED.store(true, Ordering::Release);
++    }
++
++    pub(crate) struct CoreGateGuard(bool);
++
++    impl CoreGateGuard {
++        #[inline]
++        pub(crate) fn enter() -> Self {
++            if !GL_PIN_ENABLED.load(Ordering::Relaxed) {
++                return Self(false);
++            }
++            GATE_DEPTH.with(|cell| {
++                let (w, r) = cell.get();
++                if w > 0 {
++                    return Self(false);
++                }
++                if r == 0 {
++                    GL_PIN_GATE.lock_shared();
++                }
++                cell.set((w, r + 1));
++                Self(true)
++            })
++        }
++
++        pub(crate) fn detach(self) -> bool {
++            let active = self.0;
++            core::mem::forget(self);
++            if !active {
++                return false;
++            }
++            GATE_DEPTH.with(|cell| {
++                let (w, r) = cell.get();
++                debug_assert!(r > 0);
++                let next_r = r - 1;
++                cell.set((w, next_r));
++                if next_r > 0 {
++                    GL_PIN_GATE.lock_shared_recursive();
++                }
++            });
++            true
++        }
++    }
++
++    impl Drop for CoreGateGuard {
++        #[inline]
++        fn drop(&mut self) {
++            if self.0 {
++                GATE_DEPTH.with(|cell| {
++                    let (w, r) = cell.get();
++                    debug_assert!(r > 0);
++                    let next_r = r - 1;
++                    cell.set((w, next_r));
++                    if next_r == 0 {
++                        // SAFETY: matched with the `lock_shared()` acquired on `0 -> 1`.
++                        unsafe { GL_PIN_GATE.unlock_shared() };
++                    }
++                });
++            }
++        }
++    }
++
++    pub(crate) unsafe fn release_detached(detached: bool) {
++        if detached {
++            // SAFETY: matched with `detach()` transferring/acquiring one shared count.
++            unsafe { GL_PIN_GATE.unlock_shared() };
++        }
++    }
++
++    /// Exclusive gate guard held while a thread pins the GLES EGL context across `wgpu` calls.
++    #[expect(missing_debug_implementations)]
++    pub struct GlesPinGateGuard {
++        active: bool,
++        _not_send: PhantomData<*const ()>,
++    }
++
++    /// Acquires exclusive access to the `wgpu-core` GLES pin gate (reentrant on the owning thread).
++    pub fn enter_gles_pin_gate() -> GlesPinGateGuard {
++        GL_PIN_ENABLED.store(true, Ordering::Release);
++        GATE_DEPTH.with(|cell| {
++            let (w, r) = cell.get();
++            debug_assert_eq!(
++                r, 0,
++                "cannot pin GLES context while holding a wgpu-core lock"
++            );
++            if w == 0 {
++                GL_PIN_GATE.lock_exclusive();
++            }
++            cell.set((w + 1, r));
++        });
++        GlesPinGateGuard {
++            active: true,
++            _not_send: PhantomData,
++        }
++    }
++
++    impl Drop for GlesPinGateGuard {
++        fn drop(&mut self) {
++            if self.active {
++                GATE_DEPTH.with(|cell| {
++                    let (w, r) = cell.get();
++                    debug_assert!(w > 0);
++                    let next_w = w - 1;
++                    cell.set((next_w, r));
++                    if next_w == 0 {
++                        // SAFETY: matched with `lock_exclusive()` acquired on `0 -> 1`.
++                        unsafe { GL_PIN_GATE.unlock_exclusive() };
++                    }
++                });
++            }
++        }
++    }
++}
++
++#[cfg(not(all(feature = "std", not(any(windows, target_arch = "wasm32")))))]
++pub(crate) mod gles_pin {
++    pub(crate) fn enable() {}
++    pub(crate) struct CoreGateGuard;
++    impl CoreGateGuard {
++        #[inline]
++        pub(crate) fn enter() -> Self {
++            Self
++        }
++        #[inline]
++        pub(crate) fn detach(self) -> bool {
++            false
++        }
++    }
++    pub(crate) unsafe fn release_detached(_detached: bool) {}
++    #[expect(missing_debug_implementations)]
++    pub struct GlesPinGateGuard;
++    pub fn enter_gles_pin_gate() -> GlesPinGateGuard {
++        GlesPinGateGuard
++    }
++}
++
++pub use gles_pin::{enter_gles_pin_gate, GlesPinGateGuard};
+diff --git a/wgpu-core/src/lock/vanilla.rs b/wgpu-core/src/lock/vanilla.rs
+index 969996962..00f9e3264 100644
+--- a/wgpu-core/src/lock/vanilla.rs
++++ b/wgpu-core/src/lock/vanilla.rs
+@@ -5,9 +5,12 @@
+ 
+ use core::{fmt, ops};
+ 
+-use crate::lock::rank::LockRank;
++use crate::lock::{
++    gles_pin::{release_detached, CoreGateGuard},
++    rank::LockRank,
++};
+ 
+-pub struct RankData;
++pub struct RankData(bool);
+ 
+ /// A plain wrapper around [`parking_lot::Mutex`].
+ ///
+@@ -23,8 +26,12 @@ pub struct Mutex<T>(parking_lot::Mutex<T>);
+ 
+ /// A guard produced by locking [`Mutex`].
+ ///
+-/// This is just a wrapper around a [`parking_lot::MutexGuard`].
+-pub struct MutexGuard<'a, T>(parking_lot::MutexGuard<'a, T>);
++/// This is just like a wrapper around a [`parking_lot::MutexGuard`].
++/// Field order ensures the inner mutex unlocks before `_gate` releases the GLES pin gate.
++pub struct MutexGuard<'a, T> {
++    guard: parking_lot::MutexGuard<'a, T>,
++    _gate: CoreGateGuard,
++}
+ 
+ impl<T> Mutex<T> {
+     pub fn new(_rank: LockRank, value: T) -> Mutex<T> {
+@@ -32,7 +39,11 @@ impl<T> Mutex<T> {
+     }
+ 
+     pub fn lock(&self) -> MutexGuard<'_, T> {
+-        MutexGuard(self.0.lock())
++        let _gate = CoreGateGuard::enter();
++        MutexGuard {
++            guard: self.0.lock(),
++            _gate,
++        }
+     }
+ 
+     pub fn into_inner(self) -> T {
+@@ -44,13 +55,13 @@ impl<'a, T> ops::Deref for MutexGuard<'a, T> {
+     type Target = T;
+ 
+     fn deref(&self) -> &Self::Target {
+-        self.0.deref()
++        self.guard.deref()
+     }
+ }
+ 
+ impl<'a, T> ops::DerefMut for MutexGuard<'a, T> {
+     fn deref_mut(&mut self) -> &mut Self::Target {
+-        self.0.deref_mut()
++        self.guard.deref_mut()
+     }
+ }
+ 
+@@ -75,12 +86,18 @@ pub struct RwLock<T>(parking_lot::RwLock<T>);
+ /// A read guard produced by locking [`RwLock`] as a reader.
+ ///
+ /// This is just a wrapper around a [`parking_lot::RwLockReadGuard`].
+-pub struct RwLockReadGuard<'a, T>(parking_lot::RwLockReadGuard<'a, T>);
++pub struct RwLockReadGuard<'a, T> {
++    guard: parking_lot::RwLockReadGuard<'a, T>,
++    _gate: CoreGateGuard,
++}
+ 
+ /// A write guard produced by locking [`RwLock`] as a writer.
+ ///
+ /// This is just a wrapper around a [`parking_lot::RwLockWriteGuard`].
+-pub struct RwLockWriteGuard<'a, T>(parking_lot::RwLockWriteGuard<'a, T>);
++pub struct RwLockWriteGuard<'a, T> {
++    guard: parking_lot::RwLockWriteGuard<'a, T>,
++    _gate: CoreGateGuard,
++}
+ 
+ impl<T> RwLock<T> {
+     pub fn new(_rank: LockRank, value: T) -> RwLock<T> {
+@@ -88,19 +105,28 @@ impl<T> RwLock<T> {
+     }
+ 
+     pub fn read(&self) -> RwLockReadGuard<'_, T> {
+-        RwLockReadGuard(self.0.read())
++        let _gate = CoreGateGuard::enter();
++        RwLockReadGuard {
++            guard: self.0.read(),
++            _gate,
++        }
+     }
+ 
+     pub fn write(&self) -> RwLockWriteGuard<'_, T> {
+-        RwLockWriteGuard(self.0.write())
++        let _gate = CoreGateGuard::enter();
++        RwLockWriteGuard {
++            guard: self.0.write(),
++            _gate,
++        }
+     }
+ 
+     /// Force an read-unlock operation on this lock.
+     ///
+     /// Safety:
+     /// - A read lock must be held which is not held by a guard.
+-    pub unsafe fn force_unlock_read(&self, _data: RankData) {
++    pub unsafe fn force_unlock_read(&self, data: RankData) {
+         unsafe { self.0.force_unlock_read() };
++        unsafe { release_detached(data.0) };
+     }
+ }
+ 
+@@ -110,9 +136,9 @@ impl<'a, T> RwLockReadGuard<'a, T> {
+     // Equivalent to std::mem::forget, but preserves the information about the lock
+     // rank.
+     pub fn forget(this: Self) -> RankData {
+-        core::mem::forget(this.0);
+-
+-        RankData
++        let Self { guard, _gate } = this;
++        core::mem::forget(guard);
++        RankData(_gate.detach())
+     }
+ }
+ 
+@@ -126,7 +152,7 @@ impl<'a, T> ops::Deref for RwLockReadGuard<'a, T> {
+     type Target = T;
+ 
+     fn deref(&self) -> &Self::Target {
+-        self.0.deref()
++        self.guard.deref()
+     }
+ }
+ 
+@@ -134,12 +160,12 @@ impl<'a, T> ops::Deref for RwLockWriteGuard<'a, T> {
+     type Target = T;
+ 
+     fn deref(&self) -> &Self::Target {
+-        self.0.deref()
++        self.guard.deref()
+     }
+ }
+ 
+ impl<'a, T> ops::DerefMut for RwLockWriteGuard<'a, T> {
+     fn deref_mut(&mut self) -> &mut Self::Target {
+-        self.0.deref_mut()
++        self.guard.deref_mut()
+     }
+ }
+diff --git a/wgpu-hal/src/gles/egl.rs b/wgpu-hal/src/gles/egl.rs
+index 2843fc1b7..3fc754430 100644
+--- a/wgpu-hal/src/gles/egl.rs
++++ b/wgpu-hal/src/gles/egl.rs
+@@ -1,10 +1,18 @@
+ use alloc::{string::String, sync::Arc, vec::Vec};
+-use core::{ffi, mem::ManuallyDrop, ptr, time::Duration};
++use core::{
++    ffi,
++    mem::ManuallyDrop,
++    ptr,
++    sync::atomic::{AtomicUsize, Ordering},
++    time::Duration,
++};
+ use std::sync::LazyLock;
+ 
+ use glow::HasContext;
+ use hashbrown::HashMap;
+-use parking_lot::{MappedMutexGuard, Mutex, MutexGuard, RwLock};
++use parking_lot::{
++    MappedReentrantMutexGuard, Mutex, ReentrantMutex, ReentrantMutexGuard, RwLock,
++};
+ 
+ /// The amount of time to wait while trying to obtain a lock to the adapter context
+ const CONTEXT_LOCK_TIMEOUT_SECS: u64 = 6;
+@@ -194,13 +202,38 @@ impl EglContext {
+             .make_current(self.display, None, None, None)
+             .unwrap();
+     }
++
++    fn lock_current(&self) -> EglContextLock<'_> {
++        let previous = self
++            .instance
++            .get_current_context()
++            .filter(|&context| context != self.raw)
++            .and_then(|context| {
++                Some((
++                    self.instance.get_current_display()?,
++                    self.instance.get_current_surface(khronos_egl::DRAW),
++                    self.instance.get_current_surface(khronos_egl::READ),
++                    context,
++                ))
++            });
++        self.make_current();
++        EglContextLock {
++            instance: &self.instance,
++            display: self.display,
++            previous,
++        }
++    }
+ }
+ 
+ /// A wrapper around a [`glow::Context`] and the required EGL context that uses locking to guarantee
+ /// exclusive access when shared with multiple threads.
+ #[derive(Debug)]
+ pub struct AdapterContext {
+-    glow: Mutex<ManuallyDrop<glow::Context>>,
++    glow: ReentrantMutex<ManuallyDrop<glow::Context>>,
++    /// Unbound: nesting depth of active [`AdapterContextPin`] guards on the owning thread.
++    /// While non-zero, [`Self::lock`] reuses the already-current EGL context without repeating
++    /// `eglMakeCurrent` bind/unbind calls.
++    pin_depth: AtomicUsize,
+     egl: Option<EglContext>,
+ }
+ 
+@@ -280,10 +313,25 @@ struct EglContextLock<'a> {
+     )>,
+ }
+ 
++impl EglContextLock<'_> {
++    fn release(&mut self) {
++        let result = match self.previous.take() {
++            Some((display, draw, read, context)) => {
++                self.instance
++                    .make_current(display, draw, read, Some(context))
++            }
++            None => self.instance.make_current(self.display, None, None, None),
++        };
++        if let Err(err) = result {
++            log::error!("Failed to make EGL context current: {err:?}");
++        }
++    }
++}
++
+ /// A guard containing a lock to an [`AdapterContext`], while the GL context is kept current.
+ #[expect(missing_debug_implementations)]
+ pub struct AdapterContextLock<'a> {
+-    glow: MutexGuard<'a, ManuallyDrop<glow::Context>>,
++    glow: ReentrantMutexGuard<'a, ManuallyDrop<glow::Context>>,
+     egl: Option<EglContextLock<'a>>,
+ }
+ 
+@@ -297,21 +345,43 @@ impl<'a> core::ops::Deref for AdapterContextLock<'a> {
+ 
+ impl<'a> Drop for AdapterContextLock<'a> {
+     fn drop(&mut self) {
+-        if let Some(egl) = self.egl.take() {
+-            let result = match egl.previous {
+-                Some((display, draw, read, context)) => {
+-                    egl.instance
+-                        .make_current(display, draw, read, Some(context))
+-                }
+-                None => egl.instance.make_current(egl.display, None, None, None),
+-            };
+-            if let Err(err) = result {
+-                log::error!("Failed to make EGL context current: {err:?}");
+-            }
++        if let Some(mut egl) = self.egl.take() {
++            egl.release();
++        }
++    }
++}
++
++/// Unbound: keeps the EGL context current on this thread across multiple `wgpu` calls while
++/// holding exclusive access to [`AdapterContext`]. Releases the EGL context before unlocking the
++/// mutex on drop (including unwind).
++#[expect(missing_debug_implementations)]
++pub struct AdapterContextPin<'a> {
++    context: &'a AdapterContext,
++    _glow: ReentrantMutexGuard<'a, ManuallyDrop<glow::Context>>,
++    egl: Option<EglContextLock<'a>>,
++}
++
++impl Drop for AdapterContextPin<'_> {
++    fn drop(&mut self) {
++        self.context.pin_depth.fetch_sub(1, Ordering::Relaxed);
++        if let Some(mut egl) = self.egl.take() {
++            egl.release();
+         }
+     }
+ }
+ 
++/// Unbound: owned handle to the adapter's shared GL context so callers can pin it without holding
++/// a `wgpu_core` HAL snatch guard across submissions.
++#[derive(Clone, Debug)]
++pub struct OwnedAdapterContext(Arc<super::AdapterShared>);
++
++impl OwnedAdapterContext {
++    #[track_caller]
++    pub fn pin(&self) -> AdapterContextPin<'_> {
++        self.0.context.pin()
++    }
++}
++
+ impl AdapterContext {
+     /// Get's the [`glow::Context`] without waiting for a lock
+     ///
+@@ -324,12 +394,35 @@ impl AdapterContext {
+     ///
+     /// > **Note:** Calling this function **will** still lock the [`glow::Context`] which adds an
+     /// > extra safe-guard against accidental concurrent access to the context.
+-    pub unsafe fn get_without_egl_lock(&self) -> MappedMutexGuard<'_, glow::Context> {
++    pub unsafe fn get_without_egl_lock(&self) -> MappedReentrantMutexGuard<'_, glow::Context> {
+         let guard = self
+             .glow
+             .try_lock_for(Duration::from_secs(CONTEXT_LOCK_TIMEOUT_SECS))
+             .expect("Could not lock adapter context. This is most-likely a deadlock.");
+-        MutexGuard::map(guard, |glow| &mut **glow)
++        debug_assert_eq!(self.pin_depth.load(Ordering::Relaxed), 0);
++        ReentrantMutexGuard::map(guard, |glow| &**glow)
++    }
++
++    /// Unbound: pins the EGL context current on the calling thread until the returned guard drops.
++    #[track_caller]
++    pub fn pin(&self) -> AdapterContextPin<'_> {
++        let glow = self
++            .glow
++            .try_lock_for(Duration::from_secs(CONTEXT_LOCK_TIMEOUT_SECS))
++            .expect("Could not lock adapter context. This is most-likely a deadlock.");
++        let egl = if self.pin_depth.load(Ordering::Relaxed) == 0 {
++            self.egl.as_ref().map(|egl| egl.lock_current())
++        } else {
++            None
++        };
++        // Increment only after `make_current()` succeeded so a failure cannot leave `pin_depth`
++        // stuck non-zero.
++        self.pin_depth.fetch_add(1, Ordering::Relaxed);
++        AdapterContextPin {
++            context: self,
++            _glow: glow,
++            egl,
++        }
+     }
+ 
+     /// Obtain a lock to the EGL context and get handle to the [`glow::Context`] that can be used to
+@@ -343,26 +436,11 @@ impl AdapterContext {
+             .try_lock_for(Duration::from_secs(CONTEXT_LOCK_TIMEOUT_SECS))
+             .expect("Could not lock adapter context. This is most-likely a deadlock.");
+ 
+-        let egl = self.egl.as_ref().map(|egl| {
+-            let previous = egl
+-                .instance
+-                .get_current_context()
+-                .filter(|&context| context != egl.raw)
+-                .and_then(|context| {
+-                    Some((
+-                        egl.instance.get_current_display()?,
+-                        egl.instance.get_current_surface(khronos_egl::DRAW),
+-                        egl.instance.get_current_surface(khronos_egl::READ),
+-                        context,
+-                    ))
+-                });
+-            egl.make_current();
+-            EglContextLock {
+-                instance: &egl.instance,
+-                display: egl.display,
+-                previous,
+-            }
+-        });
++        let egl = if self.pin_depth.load(Ordering::Relaxed) > 0 {
++            None
++        } else {
++            self.egl.as_ref().map(|egl| egl.lock_current())
++        };
+ 
+         AdapterContextLock { glow, egl }
+     }
+@@ -1098,7 +1176,8 @@ impl crate::Instance for Instance {
+         unsafe {
+             super::Adapter::expose(
+                 AdapterContext {
+-                    glow: Mutex::new(gl),
++                    glow: ReentrantMutex::new(gl),
++                    pin_depth: AtomicUsize::new(0),
+                     // ERROR: Copying owned reference handles here, be careful to not drop them!
+                     egl: Some(inner.egl.clone()),
+                 },
+@@ -1128,7 +1207,8 @@ impl super::Adapter {
+         unsafe {
+             Self::expose(
+                 AdapterContext {
+-                    glow: Mutex::new(ManuallyDrop::new(context)),
++                    glow: ReentrantMutex::new(ManuallyDrop::new(context)),
++                    pin_depth: AtomicUsize::new(0),
+                     egl: None,
+                 },
+                 options,
+@@ -1146,6 +1226,11 @@ impl super::Device {
+     pub fn context(&self) -> &AdapterContext {
+         &self.shared.context
+     }
++
++    /// Unbound: returns an owned handle to the underlying EGL context for scoped pinning.
++    pub fn owned_context(&self) -> OwnedAdapterContext {
++        OwnedAdapterContext(Arc::clone(&self.shared))
++    }
+ }
+ 
+ #[derive(Debug)]
+diff --git a/wgpu-hal/src/gles/mod.rs b/wgpu-hal/src/gles/mod.rs
+index d05488adc..6a2e82fc1 100644
+--- a/wgpu-hal/src/gles/mod.rs
++++ b/wgpu-hal/src/gles/mod.rs
+@@ -99,7 +99,7 @@ mod queue;
+ pub use fence::Fence;
+ 
+ #[cfg(not(any(windows, webgl)))]
+-pub use self::egl::{AdapterContext, AdapterContextLock};
++pub use self::egl::{AdapterContext, AdapterContextLock, AdapterContextPin, OwnedAdapterContext};
+ #[cfg(not(any(windows, webgl)))]
+ pub use self::egl::{Instance, Surface};
+ 
+diff --git a/wgpu/src/api/device.rs b/wgpu/src/api/device.rs
+index e580224e9..85c80c1f2 100644
+--- a/wgpu/src/api/device.rs
++++ b/wgpu/src/api/device.rs
+@@ -787,6 +787,31 @@ impl Device {
+         unsafe { device.context.device_as_hal::<A>(device) }
+     }
+ 
++    /// Unbound: runs `work` with the EGL OpenGL context kept current on this thread for the
++    /// duration of the call, avoiding per-call `eglMakeCurrent` bind/unbind overhead while
++    /// preserving the `SUBMISSION -> AdapterContext` lock order. No-op on non-EGL backends.
++    pub fn with_gles_context_pinned<R>(&self, work: impl FnOnce() -> R) -> R {
++        #[cfg(all(
++            wgpu_core,
++            gles,
++            any(feature = "parking_lot", std),
++            not(any(windows, webgl))
++        ))]
++        {
++            let owned = unsafe {
++                self.as_hal::<hal::api::Gles>()
++                    .map(|dev| dev.owned_context())
++            };
++            if let Some(owned) = owned {
++                let _submission = crate::api::queue::SUBMISSION.lock();
++                let _core_gate = wgc::enter_gles_pin_gate();
++                let _pin = owned.pin();
++                return work();
++            }
++        }
++        work()
++    }
++
+     /// Destroy this device.
+     pub fn destroy(&self) {
+         self.inner.destroy()
+diff --git a/wgpu/src/api/queue.rs b/wgpu/src/api/queue.rs
+index bd2680f92..4d91e64ad 100644
+--- a/wgpu/src/api/queue.rs
++++ b/wgpu/src/api/queue.rs
+@@ -15,8 +15,57 @@ use crate::{api::DeferredCommandBufferActions, *};
+ /// on different threads. Configuring waits for the GPU to finish what was submitted and fails
+ /// when another thread submits meanwhile; on Vulkan it also waits for the device to idle, which
+ /// no submission may overlap. A callback fired by a configuration must not submit.
+-#[cfg(any(feature = "parking_lot", std))]
+-pub(crate) static SUBMISSION: crate::util::Mutex<()> = crate::util::Mutex::new(());
++#[cfg(feature = "parking_lot")]
++pub(crate) static SUBMISSION: parking_lot::ReentrantMutex<()> =
++    parking_lot::ReentrantMutex::new(());
++
++#[cfg(all(not(feature = "parking_lot"), std))]
++pub(crate) struct SubmissionLock {
++    state: std::sync::Mutex<(Option<std::thread::ThreadId>, usize)>,
++    ready: std::sync::Condvar,
++}
++
++#[cfg(all(not(feature = "parking_lot"), std))]
++pub(crate) struct SubmissionGuard<'a>(&'a SubmissionLock);
++
++#[cfg(all(not(feature = "parking_lot"), std))]
++impl SubmissionLock {
++    const fn new() -> Self {
++        Self {
++            state: std::sync::Mutex::new((None, 0)),
++            ready: std::sync::Condvar::new(),
++        }
++    }
++
++    pub(crate) fn lock(&self) -> SubmissionGuard<'_> {
++        let me = std::thread::current().id();
++        let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
++        while let Some(owner) = state.0 {
++            if owner == me {
++                break;
++            }
++            state = self.ready.wait(state).unwrap_or_else(|e| e.into_inner());
++        }
++        state.0 = Some(me);
++        state.1 += 1;
++        SubmissionGuard(self)
++    }
++}
++
++#[cfg(all(not(feature = "parking_lot"), std))]
++impl Drop for SubmissionGuard<'_> {
++    fn drop(&mut self) {
++        let mut state = self.0.state.lock().unwrap_or_else(|e| e.into_inner());
++        state.1 -= 1;
++        if state.1 == 0 {
++            state.0 = None;
++            self.0.ready.notify_one();
++        }
++    }
++}
++
++#[cfg(all(not(feature = "parking_lot"), std))]
++pub(crate) static SUBMISSION: SubmissionLock = SubmissionLock::new();
+ 
+ #[derive(Debug, Clone)]
+ pub struct Queue {

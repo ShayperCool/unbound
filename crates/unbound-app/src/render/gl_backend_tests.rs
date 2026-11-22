@@ -1189,3 +1189,250 @@ fn native_mirror_clamp_follows_opengl_support() {
     let _native = device.create_sampler_with_native_options(&Default::default(), 0.0, [false; 3]);
     assert!(bevy::tasks::block_on(scope.pop()).is_none());
 }
+
+/// Scoped EGL context pinning keeps the GL context current across nested bursts and submissions,
+/// preserves a foreign current EGL context, releases cleanly on panic unwind, and does not
+/// deadlock against concurrent submissions/allocations from another thread.
+#[test]
+fn gles_context_pinning_handles_nesting_foreign_context_unwind_and_concurrency() {
+    use std::sync::Arc;
+
+    let Some((device, queue)) = gl_device() else {
+        return;
+    };
+    let device = Arc::new(device);
+    let queue = Arc::new(queue);
+    let egl = unsafe { khronos_egl::DynamicInstance::<khronos_egl::EGL1_4>::load_required() }
+        .expect("libEGL");
+    let renderer_ctx = unsafe {
+        let hal = device.as_hal::<wgpu::hal::api::Gles>().unwrap();
+        khronos_egl::Context::from_ptr(hal.context().raw_context())
+    };
+    assert_eq!(egl.get_current_context(), None);
+
+    // 1. Nested pinning ACTUALLY keeps the EGL context current across calls and inner drop,
+    //    and buffer/texture work + submit produces exact readback.
+    let target = device.with_gles_context_pinned(|| {
+        assert_eq!(
+            egl.get_current_context(),
+            Some(renderer_ctx),
+            "with_gles_context_pinned must pin the EGL context current"
+        );
+        let target = device.with_gles_context_pinned(|| {
+            assert_eq!(
+                egl.get_current_context(),
+                Some(renderer_ctx),
+                "nested pin must keep the EGL context current"
+            );
+            let target = texture(
+                &device,
+                (4, 4, 1),
+                1,
+                1,
+                wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+                &[],
+            );
+            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: None,
+                size: 64,
+                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+                mapped_at_creation: false,
+            });
+            queue.write_buffer(&buffer, 0, &[42u8; 64]);
+            let mut encoder = device.create_command_encoder(&Default::default());
+            {
+                let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: &target.create_view(&Default::default()),
+                        depth_slice: None,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(wgpu::Color {
+                                r: 0.2,
+                                g: 0.4,
+                                b: 0.6,
+                                a: 1.0,
+                            }),
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })],
+                    ..Default::default()
+                });
+            }
+            queue.submit([encoder.finish()]);
+            assert_eq!(
+                egl.get_current_context(),
+                Some(renderer_ctx),
+                "submit inside pin must not unbind the EGL context"
+            );
+            target
+        });
+        assert_eq!(
+            egl.get_current_context(),
+            Some(renderer_ctx),
+            "dropping inner pin must keep outer pinned EGL context current"
+        );
+        target
+    });
+    assert_eq!(
+        egl.get_current_context(),
+        None,
+        "dropping outermost pin must release the EGL context"
+    );
+    assert_eq!(read(&device, &queue, &target)[0], [51, 102, 153, 255]);
+
+    // 2. Panic unwind inside a pinned burst releases the EGL context so another thread can use it.
+    let dev_panic = Arc::clone(&device);
+    let unwound = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+        dev_panic.with_gles_context_pinned(|| {
+            let _buf = dev_panic.create_buffer(&wgpu::BufferDescriptor {
+                label: None,
+                size: 16,
+                usage: wgpu::BufferUsages::UNIFORM,
+                mapped_at_creation: false,
+            });
+            panic!("intentional unwind inside gles pin");
+        });
+    }));
+    assert!(unwound.is_err());
+    assert_eq!(
+        egl.get_current_context(),
+        None,
+        "panic unwind must release the pinned EGL context"
+    );
+
+    // 3. Another thread immediately locks the device and hammers write_texture/write_buffer/
+    //    create_buffer/submit concurrently with pinned bursts (exercises PendingWrites vs pin).
+    let dev2 = Arc::clone(&device);
+    let q2 = Arc::clone(&queue);
+    let worker = std::thread::spawn(move || {
+        let tex = texture(
+            &dev2,
+            (4, 4, 1),
+            1,
+            1,
+            wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
+            &[],
+        );
+        let pixels = [3u8; 4 * 4 * 4];
+        for _ in 0..32 {
+            let buf = dev2.create_buffer(&wgpu::BufferDescriptor {
+                label: None,
+                size: 32,
+                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::UNIFORM,
+                mapped_at_creation: false,
+            });
+            q2.write_buffer(&buf, 0, &[7u8; 32]);
+            q2.write_texture(
+                tex.as_image_copy(),
+                &pixels,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(16),
+                    rows_per_image: Some(4),
+                },
+                wgpu::Extent3d {
+                    width: 4,
+                    height: 4,
+                    depth_or_array_layers: 1,
+                },
+            );
+            let encoder = dev2.create_command_encoder(&Default::default());
+            q2.submit([encoder.finish()]);
+        }
+    });
+    let main_tex = texture(
+        &device,
+        (4, 4, 1),
+        1,
+        1,
+        wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
+        &[],
+    );
+    let main_pixels = [5u8; 4 * 4 * 4];
+    for _ in 0..32 {
+        device.with_gles_context_pinned(|| {
+            let buf = device.create_buffer(&wgpu::BufferDescriptor {
+                label: None,
+                size: 32,
+                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::UNIFORM,
+                mapped_at_creation: false,
+            });
+            queue.write_buffer(&buf, 0, &[9u8; 32]);
+            queue.write_texture(
+                main_tex.as_image_copy(),
+                &main_pixels,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(16),
+                    rows_per_image: Some(4),
+                },
+                wgpu::Extent3d {
+                    width: 4,
+                    height: 4,
+                    depth_or_array_layers: 1,
+                },
+            );
+            let encoder = device.create_command_encoder(&Default::default());
+            queue.submit([encoder.finish()]);
+        });
+    }
+    worker.join().unwrap();
+
+    // 4. Foreign EGL context current before a pinned burst is restored after it returns.
+    let (display, ours) = unsafe {
+        let hal = device.as_hal::<wgpu::hal::api::Gles>().unwrap();
+        let display = *hal.context().raw_display().unwrap();
+        let renderer = khronos_egl::Context::from_ptr(hal.context().raw_context());
+        let config_id = egl
+            .query_context(display, renderer, khronos_egl::CONFIG_ID)
+            .expect("the context's config");
+        let config = egl
+            .choose_first_config(
+                display,
+                &[khronos_egl::CONFIG_ID, config_id, khronos_egl::NONE],
+            )
+            .unwrap()
+            .unwrap();
+        egl.bind_api(khronos_egl::OPENGL_API).unwrap();
+        let attributes = |robust: bool| {
+            let mut a = vec![
+                khronos_egl::CONTEXT_MAJOR_VERSION,
+                4,
+                khronos_egl::CONTEXT_MINOR_VERSION,
+                5,
+            ];
+            if robust {
+                a.extend([
+                    khronos_egl::CONTEXT_OPENGL_ROBUST_ACCESS,
+                    khronos_egl::TRUE as i32,
+                ]);
+            }
+            a.push(khronos_egl::NONE);
+            a
+        };
+        let ours = egl
+            .create_context(display, config, Some(renderer), &attributes(true))
+            .or_else(|_| egl.create_context(display, config, Some(renderer), &attributes(false)))
+            .expect("a context sharing the backend's");
+        (display, ours)
+    };
+    egl.make_current(display, None, None, Some(ours)).unwrap();
+    device.with_gles_context_pinned(|| {
+        assert_eq!(
+            egl.get_current_context(),
+            Some(renderer_ctx),
+            "pin must switch from foreign context to renderer context"
+        );
+        let _buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: None,
+            size: 16,
+            usage: wgpu::BufferUsages::UNIFORM,
+            mapped_at_creation: false,
+        });
+    });
+    let current = egl.get_current_context();
+    egl.make_current(display, None, None, None).unwrap();
+    egl.destroy_context(display, ours).unwrap();
+    assert_eq!(current, Some(ours));
+}

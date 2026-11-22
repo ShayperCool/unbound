@@ -15,8 +15,57 @@ use crate::{api::DeferredCommandBufferActions, *};
 /// on different threads. Configuring waits for the GPU to finish what was submitted and fails
 /// when another thread submits meanwhile; on Vulkan it also waits for the device to idle, which
 /// no submission may overlap. A callback fired by a configuration must not submit.
-#[cfg(any(feature = "parking_lot", std))]
-pub(crate) static SUBMISSION: crate::util::Mutex<()> = crate::util::Mutex::new(());
+#[cfg(feature = "parking_lot")]
+pub(crate) static SUBMISSION: parking_lot::ReentrantMutex<()> =
+    parking_lot::ReentrantMutex::new(());
+
+#[cfg(all(not(feature = "parking_lot"), std))]
+pub(crate) struct SubmissionLock {
+    state: std::sync::Mutex<(Option<std::thread::ThreadId>, usize)>,
+    ready: std::sync::Condvar,
+}
+
+#[cfg(all(not(feature = "parking_lot"), std))]
+pub(crate) struct SubmissionGuard<'a>(&'a SubmissionLock);
+
+#[cfg(all(not(feature = "parking_lot"), std))]
+impl SubmissionLock {
+    const fn new() -> Self {
+        Self {
+            state: std::sync::Mutex::new((None, 0)),
+            ready: std::sync::Condvar::new(),
+        }
+    }
+
+    pub(crate) fn lock(&self) -> SubmissionGuard<'_> {
+        let me = std::thread::current().id();
+        let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        while let Some(owner) = state.0 {
+            if owner == me {
+                break;
+            }
+            state = self.ready.wait(state).unwrap_or_else(|e| e.into_inner());
+        }
+        state.0 = Some(me);
+        state.1 += 1;
+        SubmissionGuard(self)
+    }
+}
+
+#[cfg(all(not(feature = "parking_lot"), std))]
+impl Drop for SubmissionGuard<'_> {
+    fn drop(&mut self) {
+        let mut state = self.0.state.lock().unwrap_or_else(|e| e.into_inner());
+        state.1 -= 1;
+        if state.1 == 0 {
+            state.0 = None;
+            self.0.ready.notify_one();
+        }
+    }
+}
+
+#[cfg(all(not(feature = "parking_lot"), std))]
+pub(crate) static SUBMISSION: SubmissionLock = SubmissionLock::new();
 
 #[derive(Debug, Clone)]
 pub struct Queue {

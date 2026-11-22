@@ -1065,6 +1065,8 @@ pub struct UnityRenderer {
     /// Whether a comparison binding may read a depth texture's stored depth where the texture's
     /// own state does not compare ([`resources::stored_depth_reads`]).
     stored_depth_reads: bool,
+    /// True when the active backend is desktop OpenGL/EGL (enables scoped EGL context pinning).
+    is_gles: bool,
     /// The Vulkan device's plugin interface (None: plugins see OpenGL Core's, `plugins`).
     #[cfg(target_os = "linux")]
     vulkan_plugins: Option<plugins_vulkan::VulkanPlugins>,
@@ -1250,6 +1252,7 @@ impl UnityRenderer {
         presented: Arc<Mutex<Option<Presented>>>,
         conventions: DeviceConventions,
     ) -> Self {
+        let adapter_info = adapter.get_info();
         let pipelines = Pipelines::new(&device);
         let defaults = resources::default_textures(&device, &queue);
         UnityRenderer {
@@ -1271,7 +1274,8 @@ impl UnityRenderer {
             frames_completed: Default::default(),
             plugin_pass_open: false,
             conventions,
-            stored_depth_reads: resources::stored_depth_reads(&adapter.get_info()),
+            stored_depth_reads: resources::stored_depth_reads(&adapter_info),
+            is_gles: adapter_info.backend == wgpu::Backend::Gl,
             adapter,
             device,
             queue,
@@ -1557,6 +1561,15 @@ impl UnityRenderer {
 
     /// Applies a resource change.
     pub fn apply(&mut self, upload: Upload) {
+        if self.is_gles {
+            let device = self.device.clone();
+            device.with_gles_context_pinned(|| self.apply_inner(upload));
+        } else {
+            self.apply_inner(upload);
+        }
+    }
+
+    fn apply_inner(&mut self, upload: Upload) {
         let device = self.device.clone();
         match upload {
             Upload::UploadMesh(handle, mesh) => {
@@ -3953,11 +3966,16 @@ impl UnityRenderer {
 
     /// Executes commands: plans them, then encodes and queues the work.
     pub fn execute(&mut self, commands: Vec<Command>) {
+        // Bound each GL context-pin burst so long warmup shader compiles still yield regularly
+        // to the presenting thread well below wgpu-hal's context lock timeout.
+        const GL_PIN_BURST: std::time::Duration = std::time::Duration::from_millis(50);
+
         self.uniforms.clear();
         self.compute_bindings.begin();
         self.compiled.begin_frame();
         let time = self.started.elapsed().as_secs_f32();
         let device = self.device.clone();
+        let pin_gles = self.is_gles && !commands.iter().any(|c| matches!(c, Command::Plugin(_)));
         let mut passes: Vec<Op> = Vec::new();
         // Whether the last pass is still open for the current target.
         let mut open = false;
@@ -3969,935 +3987,965 @@ impl UnityRenderer {
         // last instance, from its draw, before the next command (`multiplied_instances`).
         let mut added: Option<(MeshInstanceSlot, Box<commands::Draw>)> = None;
         let mut commands = commands.into_iter();
-        loop {
-            let command = match added.take() {
-                Some((slot, draw)) => {
-                    self.state.mesh_instance = Some(slot);
-                    Command::Draw(draw)
+        let mut run_burst = |deadline: Option<std::time::Instant>| -> bool {
+            loop {
+                if deadline.is_some_and(|until| std::time::Instant::now() >= until) {
+                    return false;
                 }
-                None => match commands.next() {
-                    Some(command) => command,
-                    None => break,
-                },
-            };
-            if !matches!(command, Command::Plugin(_)) {
-                self.plugin_pass_open = false;
-            }
-            match command {
-                Command::BeginFrame {
-                    screen_width,
-                    screen_height,
-                    color_space,
-                    fixed_game_view,
-                } => {
-                    self.screen_size = (screen_width.max(1) as u32, screen_height.max(1) as u32);
-                    self.color_space = color_space.clamp(0, 1);
-                    self.fixed_game_view = fixed_game_view;
-                    self.screen_slot = (self.screen_slot + 1) % self.screens.len();
-                    self.screen_touched = false;
-                    self.frame_number += 1;
-                    self.readback.frame(self.frame_number);
-                    self.compute_bindings.frame(self.frame_number);
-                    let cutoff = self
-                        .frame_number
-                        .saturating_sub(PROGRAM_BINDING_IDLE_FRAMES - 1);
-                    self.program_texture_groups
-                        .retain(|_, (last, _)| *last >= cutoff);
-                    self.program_buffer_groups
-                        .retain(|_, (last, _)| *last >= cutoff);
-                    self.state.target = None;
-                    self.target_handles = (0, 0);
-                    #[cfg(target_os = "macos")]
-                    {
-                        // A frame begins its own encoder over the screen (unmeasured).
-                        self.plugin_target_drawn = false;
-                        self.plugin_redirect = Default::default();
+                let command = match added.take() {
+                    Some((slot, draw)) => {
+                        self.state.mesh_instance = Some(slot);
+                        Command::Draw(draw)
                     }
-                    self.depth_target = None;
-                    self.state.depth_bias = [0.0; 2];
-                    self.state.state_override = None;
-                    open = false;
+                    None => match commands.next() {
+                        Some(command) => command,
+                        None => break,
+                    },
+                };
+                if !matches!(command, Command::Plugin(_)) {
+                    self.plugin_pass_open = false;
                 }
-                Command::ResolveTexture {
-                    texture,
-                    destination,
-                } => {
-                    if texture == destination {
-                        if let Some(depth) = self.native_depth_resolve(texture) {
-                            passes.push(Op::DepthBlit(depth));
+                match command {
+                    Command::BeginFrame {
+                        screen_width,
+                        screen_height,
+                        color_space,
+                        fixed_game_view,
+                    } => {
+                        self.screen_size =
+                            (screen_width.max(1) as u32, screen_height.max(1) as u32);
+                        self.color_space = color_space.clamp(0, 1);
+                        self.fixed_game_view = fixed_game_view;
+                        self.screen_slot = (self.screen_slot + 1) % self.screens.len();
+                        self.screen_touched = false;
+                        self.frame_number += 1;
+                        self.readback.frame(self.frame_number);
+                        self.compute_bindings.frame(self.frame_number);
+                        let cutoff = self
+                            .frame_number
+                            .saturating_sub(PROGRAM_BINDING_IDLE_FRAMES - 1);
+                        self.program_texture_groups
+                            .retain(|_, (last, _)| *last >= cutoff);
+                        self.program_buffer_groups
+                            .retain(|_, (last, _)| *last >= cutoff);
+                        self.state.target = None;
+                        self.target_handles = (0, 0);
+                        #[cfg(target_os = "macos")]
+                        {
+                            // A frame begins its own encoder over the screen (unmeasured).
+                            self.plugin_target_drawn = false;
+                            self.plugin_redirect = Default::default();
                         }
-                        if let Some(copies) = self.resolve_msaa(texture) {
-                            passes.extend(copies.map(Op::Copy));
-                        }
-                    } else if self
-                        .textures
-                        .get(&destination)
-                        .is_none_or(|t| t.samples == 1)
-                        && let Some(copy) = self.plan_copy(
-                            texture,
-                            [0, 0],
-                            [0, 0, -1, -1],
-                            destination,
-                            [0, 0],
-                            [0, 0],
-                            false,
-                        )
-                    {
-                        passes.push(Op::Copy(copy));
+                        self.depth_target = None;
+                        self.state.depth_bias = [0.0; 2];
+                        self.state.state_override = None;
+                        open = false;
                     }
-                    open = false;
-                }
-                Command::GenerateMips { texture } => {
-                    self.process_packed(&mut passes);
-                    if let Some(t) = self.textures.get(&texture) {
-                        if resources::is_integer(t.texture.format()) {
-                            self.warn_once(format!("mips{texture}"), || format!("GenerateMips cannot filter the integer render texture {texture}: skipped"));
-                        } else if t.render_target {
-                            passes.push(Op::Mips(
-                                t.texture.clone(),
-                                t.target_format(self.color_space),
-                                t.layers,
-                            ));
-                        } else {
-                            self.warn_once(format!("mips{texture}"), || {
-                                format!(
-                                    "GenerateMips requires a render target ({texture}); skipped"
-                                )
-                            });
-                        }
-                    }
-                    open = false;
-                }
-                Command::Plugin(call) => {
-                    // The plugin sees everything before it drawn, and draws before what follows.
-                    self.copy_depth(&mut passes, depth_mark);
-                    // A Metal plugin's encoder over the screen is a use of it: the frame's screen
-                    // starts there, as at a pass's first use.
-                    #[cfg(target_os = "macos")]
-                    if self.metal_plugins.is_some()
-                        && !self.screen_touched
-                        && (self.target_handles.0 == 0
-                            || self.plugin_redirect != plugins_metal::Redirect::Target)
-                    {
-                        let target = self.screen_target(self.color_space);
-                        let pass = self.new_pass(target);
-                        passes.push(Op::Pass(pass));
-                    }
-                    self.encode(std::mem::take(&mut passes));
-                    depth_mark = self.encoded_ops;
-                    // Whether the current target's pass was drawing: a plugin event that does not
-                    // care where it runs runs inside it on the Vulkan device.
-                    self.plugin_pass_open |= open;
-                    self.run_plugin(&call);
-                    open = false;
-                    // What the callback drew into a multisampled target's samples reaches the
-                    // resolved image through a pass that draws nothing.
-                    if std::mem::take(&mut self.plugins.drew_into_samples)
-                        && let Some(target) = self.state.target.clone()
-                    {
-                        let next = self.msaa_targets(Some(&target));
-                        self.switch_msaa_targets(next, &mut passes);
-                        self.prepare_framebuffer(&mut passes);
-                        self.mark_msaa_written(&target);
-                        passes.push(Op::Pass(self.new_pass(target)));
-                        open = true;
-                    }
-                }
-                Command::EndFrame => {
-                    // A packed level is packed before its mips are made from it.
-                    self.process_packed(&mut passes);
-                    self.process_mips(&mut passes);
-                    self.copy_depth(&mut passes, depth_mark);
-                    self.depth_target = None;
-                    if !self.screen_touched {
-                        // Nothing drew on the screen: it shows black.
-                        self.switch_msaa_targets(Default::default(), &mut passes);
-                        let target = self.screen_target(self.color_space);
-                        let mut pass = self.new_pass(target);
-                        pass.seed = None;
-                        pass.color_load = wgpu::LoadOp::Clear(wgpu::Color::BLACK);
-                        pass.depth_clear = Some((self.conventions.depth(1.0), 0));
-                        passes.push(Op::Pass(pass));
-                    }
-                    open = false;
-                    end_frame = true;
-                }
-                Command::SetTarget {
-                    color,
-                    depth,
-                    mip,
-                    slice,
-                    extra,
-                } => {
-                    #[cfg(target_os = "macos")]
-                    {
-                        self.plugin_target_drawn = false;
-                        self.plugin_redirect = Default::default();
-                    }
-                    self.copy_depth(&mut passes, depth_mark);
-                    // The texture whose depth buffer is attached (the color's own, or another's:
-                    // a G-buffer's) is copied where shaders sample it when it has a depth copy.
-                    self.depth_target = depth_owner(color, depth)
-                        .filter(|h| self.textures.get(h).is_some_and(|t| t.depth_copy.is_some()));
-                    depth_mark = self.op_position(&passes);
-                    let changed = !self.same_target(color, depth, mip, slice, &extra);
-                    self.framebuffer_dirty |= changed;
-                    self.target_handles = (color, depth);
-                    self.plugins.target = (mip, slice);
-                    self.state.target = self.resolve_target(color, depth, mip, slice);
-                    // Further colors are drawn as the first is stored.
-                    let stand_in = self.screen_stand_in;
-                    if stand_in != 0 && color != stand_in && extra.contains(&stand_in) {
-                        self.warn_once("stand-in-extra".into(), || {
-                            "the screen camera's target is a further color of a target: it is drawn as the first color is stored (unmeasured)".into()
-                        });
-                    }
-                    let size = self
-                        .state
-                        .target
-                        .as_ref()
-                        .map(|t| (t.width, t.height, t.samples));
-                    if let Some((width, height, samples)) = size.filter(|_| !extra.is_empty()) {
-                        let mut further = Vec::new();
-                        for e in &extra {
-                            // Each further color as a target of its own, without depth.
-                            let Some(t) = self.resolve_target(*e, commands::NO_TEXTURE, mip, slice)
-                            else {
-                                continue;
-                            };
-                            if t.width != width || t.height != height || t.samples != samples {
-                                self.warn_once(format!("mrt-size{e}"), || {
-                                    format!("render target {e} differs in size or samples from the first color: not bound")
-                                });
-                                continue;
+                    Command::ResolveTexture {
+                        texture,
+                        destination,
+                    } => {
+                        if texture == destination {
+                            if let Some(depth) = self.native_depth_resolve(texture) {
+                                passes.push(Op::DepthBlit(depth));
                             }
-                            let (Some(color_view), Some(format)) = (t.color, t.format) else {
-                                continue;
-                            };
-                            further.push(ExtraColor {
-                                color: color_view,
-                                depth_slice: t.depth_slice,
-                                resolve: t.resolve,
-                                format,
-                                alpha_one: t.alpha_one,
-                                texture: t.texture,
-                                auto_mips: t.auto_mips,
-                                defer_mips: t.defer_mips,
-                                packed: t.packed,
+                            if let Some(copies) = self.resolve_msaa(texture) {
+                                passes.extend(copies.map(Op::Copy));
+                            }
+                        } else if self
+                            .textures
+                            .get(&destination)
+                            .is_none_or(|t| t.samples == 1)
+                            && let Some(copy) = self.plan_copy(
+                                texture,
+                                [0, 0],
+                                [0, 0, -1, -1],
+                                destination,
+                                [0, 0],
+                                [0, 0],
+                                false,
+                            )
+                        {
+                            passes.push(Op::Copy(copy));
+                        }
+                        open = false;
+                    }
+                    Command::GenerateMips { texture } => {
+                        self.process_packed(&mut passes);
+                        if let Some(t) = self.textures.get(&texture) {
+                            if resources::is_integer(t.texture.format()) {
+                                self.warn_once(format!("mips{texture}"), || format!("GenerateMips cannot filter the integer render texture {texture}: skipped"));
+                            } else if t.render_target {
+                                passes.push(Op::Mips(
+                                    t.texture.clone(),
+                                    t.target_format(self.color_space),
+                                    t.layers,
+                                ));
+                            } else {
+                                self.warn_once(format!("mips{texture}"), || {
+                                    format!(
+                                        "GenerateMips requires a render target ({texture}); skipped"
+                                    )
+                                });
+                            }
+                        }
+                        open = false;
+                    }
+                    Command::Plugin(call) => {
+                        // The plugin sees everything before it drawn, and draws before what follows.
+                        self.copy_depth(&mut passes, depth_mark);
+                        // A Metal plugin's encoder over the screen is a use of it: the frame's screen
+                        // starts there, as at a pass's first use.
+                        #[cfg(target_os = "macos")]
+                        if self.metal_plugins.is_some()
+                            && !self.screen_touched
+                            && (self.target_handles.0 == 0
+                                || self.plugin_redirect != plugins_metal::Redirect::Target)
+                        {
+                            let target = self.screen_target(self.color_space);
+                            let pass = self.new_pass(target);
+                            passes.push(Op::Pass(pass));
+                        }
+                        self.encode(std::mem::take(&mut passes));
+                        depth_mark = self.encoded_ops;
+                        // Whether the current target's pass was drawing: a plugin event that does not
+                        // care where it runs runs inside it on the Vulkan device.
+                        self.plugin_pass_open |= open;
+                        self.run_plugin(&call);
+                        open = false;
+                        // What the callback drew into a multisampled target's samples reaches the
+                        // resolved image through a pass that draws nothing.
+                        if std::mem::take(&mut self.plugins.drew_into_samples)
+                            && let Some(target) = self.state.target.clone()
+                        {
+                            let next = self.msaa_targets(Some(&target));
+                            self.switch_msaa_targets(next, &mut passes);
+                            self.prepare_framebuffer(&mut passes);
+                            self.mark_msaa_written(&target);
+                            passes.push(Op::Pass(self.new_pass(target)));
+                            open = true;
+                        }
+                    }
+                    Command::EndFrame => {
+                        // A packed level is packed before its mips are made from it.
+                        self.process_packed(&mut passes);
+                        self.process_mips(&mut passes);
+                        self.copy_depth(&mut passes, depth_mark);
+                        self.depth_target = None;
+                        if !self.screen_touched {
+                            // Nothing drew on the screen: it shows black.
+                            self.switch_msaa_targets(Default::default(), &mut passes);
+                            let target = self.screen_target(self.color_space);
+                            let mut pass = self.new_pass(target);
+                            pass.seed = None;
+                            pass.color_load = wgpu::LoadOp::Clear(wgpu::Color::BLACK);
+                            pass.depth_clear = Some((self.conventions.depth(1.0), 0));
+                            passes.push(Op::Pass(pass));
+                        }
+                        open = false;
+                        end_frame = true;
+                    }
+                    Command::SetTarget {
+                        color,
+                        depth,
+                        mip,
+                        slice,
+                        extra,
+                    } => {
+                        #[cfg(target_os = "macos")]
+                        {
+                            self.plugin_target_drawn = false;
+                            self.plugin_redirect = Default::default();
+                        }
+                        self.copy_depth(&mut passes, depth_mark);
+                        // The texture whose depth buffer is attached (the color's own, or another's:
+                        // a G-buffer's) is copied where shaders sample it when it has a depth copy.
+                        self.depth_target = depth_owner(color, depth).filter(|h| {
+                            self.textures.get(h).is_some_and(|t| t.depth_copy.is_some())
+                        });
+                        depth_mark = self.op_position(&passes);
+                        let changed = !self.same_target(color, depth, mip, slice, &extra);
+                        self.framebuffer_dirty |= changed;
+                        self.target_handles = (color, depth);
+                        self.plugins.target = (mip, slice);
+                        self.state.target = self.resolve_target(color, depth, mip, slice);
+                        // Further colors are drawn as the first is stored.
+                        let stand_in = self.screen_stand_in;
+                        if stand_in != 0 && color != stand_in && extra.contains(&stand_in) {
+                            self.warn_once("stand-in-extra".into(), || {
+                                "the screen camera's target is a further color of a target: it is drawn as the first color is stored (unmeasured)".into()
                             });
                         }
-                        let target = self.state.target.as_mut().unwrap();
-                        target.extra = further;
+                        let size = self
+                            .state
+                            .target
+                            .as_ref()
+                            .map(|t| (t.width, t.height, t.samples));
+                        if let Some((width, height, samples)) = size.filter(|_| !extra.is_empty()) {
+                            let mut further = Vec::new();
+                            for e in &extra {
+                                // Each further color as a target of its own, without depth.
+                                let Some(t) =
+                                    self.resolve_target(*e, commands::NO_TEXTURE, mip, slice)
+                                else {
+                                    continue;
+                                };
+                                if t.width != width || t.height != height || t.samples != samples {
+                                    self.warn_once(format!("mrt-size{e}"), || {
+                                        format!("render target {e} differs in size or samples from the first color: not bound")
+                                    });
+                                    continue;
+                                }
+                                let (Some(color_view), Some(format)) = (t.color, t.format) else {
+                                    continue;
+                                };
+                                further.push(ExtraColor {
+                                    color: color_view,
+                                    depth_slice: t.depth_slice,
+                                    resolve: t.resolve,
+                                    format,
+                                    alpha_one: t.alpha_one,
+                                    texture: t.texture,
+                                    auto_mips: t.auto_mips,
+                                    defer_mips: t.defer_mips,
+                                    packed: t.packed,
+                                });
+                            }
+                            let target = self.state.target.as_mut().unwrap();
+                            target.extra = further;
+                        }
+                        let next = self.msaa_targets(self.state.target.as_ref());
+                        self.switch_msaa_targets(next, &mut passes);
+                        if let Some(t) = &self.state.target {
+                            self.state.viewport = [0.0, 0.0, t.width as f32, t.height as f32];
+                        }
+                        open = false;
                     }
-                    let next = self.msaa_targets(self.state.target.as_ref());
-                    self.switch_msaa_targets(next, &mut passes);
-                    if let Some(t) = &self.state.target {
-                        self.state.viewport = [0.0, 0.0, t.width as f32, t.height as f32];
+                    Command::Viewport(v) => self.state.viewport = v,
+                    Command::MeshInstance { index, count } => {
+                        self.state.mesh_instance = Some(MeshInstanceSlot {
+                            index,
+                            count,
+                            added: 0,
+                            mirrored: false,
+                        })
                     }
-                    open = false;
-                }
-                Command::Viewport(v) => self.state.viewport = v,
-                Command::MeshInstance { index, count } => {
-                    self.state.mesh_instance = Some(MeshInstanceSlot {
-                        index,
+                    Command::InstanceMultiplier(multiplier) => {
+                        self.state.instance_multiplier = multiplier.max(1)
+                    }
+                    Command::ScreenStandIn(texture) => self.screen_stand_in = texture,
+                    Command::DotsDraw(dots) => self.state.dots = Some(dots),
+                    Command::DrawSetup {
+                        instances,
+                        args,
+                        offset,
+                        indexed,
+                    } => self.state.draw_setup = Some((instances, args, offset, indexed)),
+                    Command::DrawIndices {
+                        buffer,
+                        size,
+                        first,
                         count,
-                        added: 0,
-                        mirrored: false,
-                    })
-                }
-                Command::InstanceMultiplier(multiplier) => {
-                    self.state.instance_multiplier = multiplier.max(1)
-                }
-                Command::ScreenStandIn(texture) => self.screen_stand_in = texture,
-                Command::DotsDraw(dots) => self.state.dots = Some(dots),
-                Command::DrawSetup {
-                    instances,
-                    args,
-                    offset,
-                    indexed,
-                } => self.state.draw_setup = Some((instances, args, offset, indexed)),
-                Command::DrawIndices {
-                    buffer,
-                    size,
-                    first,
-                    count,
-                } => self.state.draw_indices = Some((buffer, size, first, count)),
-                Command::DrawShape {
-                    topology,
-                    base_vertex,
-                    count,
-                } => {
-                    self.state.draw_shape = Some(DrawShape {
-                        topology: shape_topology(topology),
+                    } => self.state.draw_indices = Some((buffer, size, first, count)),
+                    Command::DrawShape {
+                        topology,
                         base_vertex,
                         count,
-                        index16: false,
-                    });
-                }
-                Command::Camera {
-                    view,
-                    projection,
-                    flags,
-                } => {
-                    self.state.view = view;
-                    self.state.projection = projection;
-                    // A scriptable pipeline sets the camera variables itself as it sets its
-                    // matrices: there they follow every matrix change, as before.
-                    if flags & commands::camera::PROPERTIES != 0
-                        || !self.resolver.index.pipeline().is_empty()
-                    {
-                        self.state.camera = Some((view, projection));
+                    } => {
+                        self.state.draw_shape = Some(DrawShape {
+                            topology: shape_topology(topology),
+                            base_vertex,
+                            count,
+                            index16: false,
+                        });
                     }
-                    self.state.overlay = flags & commands::camera::OVERLAY != 0;
-                    self.state.invert_culling = flags & commands::camera::INVERT_CULLING != 0;
-                    self.state.wireframe = flags & commands::camera::WIREFRAME != 0;
-                    self.state.no_srgb_write = flags & commands::camera::NO_SRGB_WRITE != 0;
-                    self.state.gizmo_draw = flags & commands::camera::GIZMO != 0;
-                    if flags & commands::camera::BEGIN != 0 {
-                        self.grabbed.clear();
+                    Command::Camera {
+                        view,
+                        projection,
+                        flags,
+                    } => {
+                        self.state.view = view;
+                        self.state.projection = projection;
+                        // A scriptable pipeline sets the camera variables itself as it sets its
+                        // matrices: there they follow every matrix change, as before.
+                        if flags & commands::camera::PROPERTIES != 0
+                            || !self.resolver.index.pipeline().is_empty()
+                        {
+                            self.state.camera = Some((view, projection));
+                        }
+                        self.state.overlay = flags & commands::camera::OVERLAY != 0;
+                        self.state.invert_culling = flags & commands::camera::INVERT_CULLING != 0;
+                        self.state.wireframe = flags & commands::camera::WIREFRAME != 0;
+                        self.state.no_srgb_write = flags & commands::camera::NO_SRGB_WRITE != 0;
+                        self.state.gizmo_draw = flags & commands::camera::GIZMO != 0;
+                        if flags & commands::camera::BEGIN != 0 {
+                            self.grabbed.clear();
+                        }
                     }
-                }
-                Command::Global(name, value) => {
-                    let globals = Arc::make_mut(&mut self.globals);
-                    match self.globals_index.position(globals, &name) {
-                        Some(i) => {
-                            if !same_property_value(&globals[i].1, &value) {
-                                globals[i].1 = value;
+                    Command::Global(name, value) => {
+                        let globals = Arc::make_mut(&mut self.globals);
+                        match self.globals_index.position(globals, &name) {
+                            Some(i) => {
+                                if !same_property_value(&globals[i].1, &value) {
+                                    globals[i].1 = value;
+                                    self.globals_revision = self.globals_revision.wrapping_add(1);
+                                }
+                            }
+                            None => {
+                                globals.push((name, value));
                                 self.globals_revision = self.globals_revision.wrapping_add(1);
                             }
                         }
-                        None => {
-                            globals.push((name, value));
-                            self.globals_revision = self.globals_revision.wrapping_add(1);
+                    }
+                    Command::RenderPipeline(tag) => {
+                        if self.resolver.set_pipeline(&tag) {
+                            // Materials draw with the SubShader the new pipeline runs.
+                            self.error_program = None;
+                            let handles: Vec<u64> = self.materials.keys().copied().collect();
+                            for handle in handles {
+                                let material = self.materials[&handle].resolved.material.clone();
+                                let resolved = self.resolver.resolve(&material);
+                                self.materials.insert(handle, GpuMaterial::new(resolved));
+                            }
                         }
                     }
-                }
-                Command::RenderPipeline(tag) => {
-                    if self.resolver.set_pipeline(&tag) {
-                        // Materials draw with the SubShader the new pipeline runs.
-                        self.error_program = None;
-                        let handles: Vec<u64> = self.materials.keys().copied().collect();
-                        for handle in handles {
-                            let material = self.materials[&handle].resolved.material.clone();
-                            let resolved = self.resolver.resolve(&material);
-                            self.materials.insert(handle, GpuMaterial::new(resolved));
+                    Command::PassTags(tags) => {
+                        if self.pass_tags != tags {
+                            self.pass_tags = tags;
+                            self.pass_tags_gen = self.pass_tags_gen.wrapping_add(1).max(1);
                         }
                     }
-                }
-                Command::PassTags(tags) => {
-                    if self.pass_tags != tags {
-                        self.pass_tags = tags;
-                        self.pass_tags_gen = self.pass_tags_gen.wrapping_add(1).max(1);
+                    Command::DepthBias { bias, slope } => {
+                        // Toward the far plane in the device's depth direction.
+                        let sign = if self.conventions.reversed_z {
+                            -1.0
+                        } else {
+                            1.0
+                        };
+                        self.state.depth_bias = [bias * sign, slope * sign];
                     }
-                }
-                Command::DepthBias { bias, slope } => {
-                    // Toward the far plane in the device's depth direction.
-                    let sign = if self.conventions.reversed_z {
-                        -1.0
-                    } else {
-                        1.0
-                    };
-                    self.state.depth_bias = [bias * sign, slope * sign];
-                }
-                Command::StateOverride(o) => self.state.state_override = o,
-                Command::ColorSpace(space) => self.color_space = space.clamp(0, 1),
-                Command::Anisotropy {
-                    mode,
-                    forced_min,
-                    global_max,
-                } => {
-                    let anisotropy = [mode, forced_min, global_max];
-                    if anisotropy != self.anisotropy {
-                        self.anisotropy = anisotropy;
-                        // Cached bind groups hold samplers of the old anisotropy levels.
-                        self.program_texture_groups.clear();
-                        for texture in self.textures.values_mut().chain(self.defaults.values_mut())
-                        {
-                            texture.bind_groups = [None, None];
+                    Command::StateOverride(o) => self.state.state_override = o,
+                    Command::ColorSpace(space) => self.color_space = space.clamp(0, 1),
+                    Command::Anisotropy {
+                        mode,
+                        forced_min,
+                        global_max,
+                    } => {
+                        let anisotropy = [mode, forced_min, global_max];
+                        if anisotropy != self.anisotropy {
+                            self.anisotropy = anisotropy;
+                            // Cached bind groups hold samplers of the old anisotropy levels.
+                            self.program_texture_groups.clear();
+                            for texture in
+                                self.textures.values_mut().chain(self.defaults.values_mut())
+                            {
+                                texture.bind_groups = [None, None];
+                            }
+                            self.depth_main_groups.clear();
                         }
-                        self.depth_main_groups.clear();
                     }
-                }
-                Command::Keyword(name, on) => {
-                    let present = self.keywords.iter().position(|k| *k == name);
-                    let changed = match (present, on) {
-                        (None, true) => {
-                            self.keywords.push(name);
-                            true
+                    Command::Keyword(name, on) => {
+                        let present = self.keywords.iter().position(|k| *k == name);
+                        let changed = match (present, on) {
+                            (None, true) => {
+                                self.keywords.push(name);
+                                true
+                            }
+                            (Some(i), false) => {
+                                self.keywords.remove(i);
+                                true
+                            }
+                            _ => false,
+                        };
+                        if changed {
+                            let mut set = self.keywords.clone();
+                            set.sort();
+                            let next = self.keyword_sets.len() as u32 + 1;
+                            self.keyword_set = *self.keyword_sets.entry(set).or_insert(next);
                         }
-                        (Some(i), false) => {
-                            self.keywords.remove(i);
-                            true
+                    }
+                    Command::Clear {
+                        flags,
+                        color,
+                        depth,
+                        stencil,
+                    } => {
+                        let Some(target) = self.state.target.clone() else {
+                            continue;
+                        };
+                        let next = self.msaa_targets(Some(&target));
+                        self.switch_msaa_targets(next, &mut passes);
+                        self.prepare_framebuffer(&mut passes);
+                        if !open {
+                            let pass = self.new_pass(target.clone());
+                            passes.push(Op::Pass(pass));
+                            open = true;
                         }
-                        _ => false,
-                    };
-                    if changed {
-                        let mut set = self.keywords.clone();
-                        set.sort();
-                        let next = self.keyword_sets.len() as u32 + 1;
-                        self.keyword_set = *self.keyword_sets.entry(set).or_insert(next);
-                    }
-                }
-                Command::Clear {
-                    flags,
-                    color,
-                    depth,
-                    stencil,
-                } => {
-                    let Some(target) = self.state.target.clone() else {
-                        continue;
-                    };
-                    let next = self.msaa_targets(Some(&target));
-                    self.switch_msaa_targets(next, &mut passes);
-                    self.prepare_framebuffer(&mut passes);
-                    if !open {
-                        let pass = self.new_pass(target.clone());
-                        passes.push(Op::Pass(pass));
-                        open = true;
-                    }
-                    let clear_color = target.color.is_some() && flags & commands::clear::COLOR != 0;
-                    if clear_color {
-                        self.mark_msaa_written(&target);
-                    }
-                    let color = match target.format {
-                        Some(format) => resources::unorm8_clear(format, color),
-                        None => color,
-                    };
-                    let clear_depth =
-                        flags & (commands::clear::DEPTH | commands::clear::STENCIL) != 0;
-                    let viewport = self.state.viewport;
-                    let full = viewport[0] <= 0.0
-                        && viewport[1] <= 0.0
-                        && viewport[0] + viewport[2] >= target.width as f32
-                        && viewport[1] + viewport[3] >= target.height as f32;
-                    // Integer targets are cleared by a pass's load (the clear pipeline writes
-                    // floats): a whole-target clear after draws starts a pass of its own.
-                    let integer = target.format.is_some_and(resources::is_integer);
-                    if full
-                        && integer
-                        && (clear_color || clear_depth)
-                        && !last_pass(&mut passes).items.is_empty()
-                    {
-                        let pass = self.new_pass(target.clone());
-                        passes.push(Op::Pass(pass));
-                    }
-                    let conventions = self.conventions;
-                    let pass = last_pass(&mut passes);
-                    if full && pass.items.is_empty() {
-                        // Each color's own packing rounds this when the pass begins.
+                        let clear_color =
+                            target.color.is_some() && flags & commands::clear::COLOR != 0;
                         if clear_color {
-                            pass.color_load = wgpu::LoadOp::Clear(wgpu::Color {
-                                r: color[0] as f64,
-                                g: color[1] as f64,
-                                b: color[2] as f64,
-                                a: color[3] as f64,
-                            });
+                            self.mark_msaa_written(&target);
                         }
-                        if clear_depth {
-                            pass.depth_clear = Some((self.conventions.depth(depth), stencil));
+                        let color = match target.format {
+                            Some(format) => resources::unorm8_clear(format, color),
+                            None => color,
+                        };
+                        let clear_depth =
+                            flags & (commands::clear::DEPTH | commands::clear::STENCIL) != 0;
+                        let viewport = self.state.viewport;
+                        let full = viewport[0] <= 0.0
+                            && viewport[1] <= 0.0
+                            && viewport[0] + viewport[2] >= target.width as f32
+                            && viewport[1] + viewport[3] >= target.height as f32;
+                        // Integer targets are cleared by a pass's load (the clear pipeline writes
+                        // floats): a whole-target clear after draws starts a pass of its own.
+                        let integer = target.format.is_some_and(resources::is_integer);
+                        if full
+                            && integer
+                            && (clear_color || clear_depth)
+                            && !last_pass(&mut passes).items.is_empty()
+                        {
+                            let pass = self.new_pass(target.clone());
+                            passes.push(Op::Pass(pass));
                         }
-                    } else if clear_color || clear_depth {
-                        let pipeline = self.pipelines.clear(
-                            &device,
-                            ClearKey {
-                                format: target.format,
-                                extra: target.extra_formats(),
-                                depth: target.depth_format,
-                                samples: target.samples,
-                                color: clear_color,
-                                clear_depth,
-                            },
-                        );
-                        // The clear program writes one color: the first color's packing.
-                        let mut color = packed_clear(
-                            conventions,
-                            target.packed,
-                            level_of(&target.texture),
-                            color,
-                        );
-                        if target.alpha_one {
-                            color[3] = 1.0;
-                        }
-                        let color = if let Some(format) = target.format.filter(|_| integer) {
-                            let c = resources::integer_clear(
-                                format,
-                                wgpu::Color {
+                        let conventions = self.conventions;
+                        let pass = last_pass(&mut passes);
+                        if full && pass.items.is_empty() {
+                            // Each color's own packing rounds this when the pass begins.
+                            if clear_color {
+                                pass.color_load = wgpu::LoadOp::Clear(wgpu::Color {
                                     r: color[0] as f64,
                                     g: color[1] as f64,
                                     b: color[2] as f64,
                                     a: color[3] as f64,
+                                });
+                            }
+                            if clear_depth {
+                                pass.depth_clear = Some((self.conventions.depth(depth), stencil));
+                            }
+                        } else if clear_color || clear_depth {
+                            let pipeline = self.pipelines.clear(
+                                &device,
+                                ClearKey {
+                                    format: target.format,
+                                    extra: target.extra_formats(),
+                                    depth: target.depth_format,
+                                    samples: target.samples,
+                                    color: clear_color,
+                                    clear_depth,
                                 },
                             );
-                            let signed = format.sample_type(None, None)
-                                == Some(wgpu::TextureSampleType::Sint);
-                            [c.r, c.g, c.b, c.a].map(|v| {
-                                f32::from_bits(if signed { v as i32 as u32 } else { v as u32 })
-                            })
-                        } else {
-                            color
-                        };
-                        let offset = self.push_uniform(DrawUniform {
-                            color,
-                            misc: [self.conventions.depth(depth), 0.0, 0.0, 0.0],
-                            ..Zeroable::zeroed()
-                        });
-                        last_pass(&mut passes)
-                            .items
-                            .push(PassItem::Clear(pipeline, offset, viewport));
-                    }
-                    if clear_depth {
-                        if let Some(resolve) =
-                            self.native_depth_resolve(if self.target_handles.1 == 0 {
-                                self.target_handles.0
+                            // The clear program writes one color: the first color's packing.
+                            let mut color = packed_clear(
+                                conventions,
+                                target.packed,
+                                level_of(&target.texture),
+                                color,
+                            );
+                            if target.alpha_one {
+                                color[3] = 1.0;
+                            }
+                            let color = if let Some(format) = target.format.filter(|_| integer) {
+                                let c = resources::integer_clear(
+                                    format,
+                                    wgpu::Color {
+                                        r: color[0] as f64,
+                                        g: color[1] as f64,
+                                        b: color[2] as f64,
+                                        a: color[3] as f64,
+                                    },
+                                );
+                                let signed = format.sample_type(None, None)
+                                    == Some(wgpu::TextureSampleType::Sint);
+                                [c.r, c.g, c.b, c.a].map(|v| {
+                                    f32::from_bits(if signed { v as i32 as u32 } else { v as u32 })
+                                })
                             } else {
-                                self.target_handles.1
-                            })
+                                color
+                            };
+                            let offset = self.push_uniform(DrawUniform {
+                                color,
+                                misc: [self.conventions.depth(depth), 0.0, 0.0, 0.0],
+                                ..Zeroable::zeroed()
+                            });
+                            last_pass(&mut passes)
+                                .items
+                                .push(PassItem::Clear(pipeline, offset, viewport));
+                        }
+                        if clear_depth {
+                            if let Some(resolve) =
+                                self.native_depth_resolve(if self.target_handles.1 == 0 {
+                                    self.target_handles.0
+                                } else {
+                                    self.target_handles.1
+                                })
+                            {
+                                passes.push(Op::DepthBlit(resolve));
+                                open = false;
+                            }
+                        }
+                    }
+                    Command::Draw(mut draw) => {
+                        #[cfg(target_os = "macos")]
                         {
-                            passes.push(Op::DepthBlit(resolve));
+                            self.plugin_target_drawn = true;
+                            self.plugin_redirect = Default::default();
+                        }
+                        if self.sync_mesh_buffers(draw.mesh, &mut passes) {
                             open = false;
                         }
-                    }
-                }
-                Command::Draw(mut draw) => {
-                    #[cfg(target_os = "macos")]
-                    {
-                        self.plugin_target_drawn = true;
-                        self.plugin_redirect = Default::default();
-                    }
-                    if self.sync_mesh_buffers(draw.mesh, &mut passes) {
-                        open = false;
-                    }
-                    let mesh_instance = self.state.mesh_instance.take();
-                    let first_instance = mesh_instance.map_or(0, |m| m.index);
-                    let dots = self.state.dots.take();
-                    // Taken first: a draw's indices and shape never pass to a later draw.
-                    let indices = self.state.draw_indices.take();
-                    let shape = DrawShape {
-                        index16: indices.is_some_and(|i| i.1 != commands::DRAW_INDEX32_SIZE),
-                        ..self.state.draw_shape.take().unwrap_or_default()
-                    };
-                    let Some(target) = self.state.target.clone() else {
-                        if self.target_handles.0 != commands::NO_TEXTURE {
-                            self.warn_once("draw-no-target".into(), || {
-                                "a draw came before any render target was set: skipped".into()
-                            });
+                        let mesh_instance = self.state.mesh_instance.take();
+                        let first_instance = mesh_instance.map_or(0, |m| m.index);
+                        let dots = self.state.dots.take();
+                        // Taken first: a draw's indices and shape never pass to a later draw.
+                        let indices = self.state.draw_indices.take();
+                        let shape = DrawShape {
+                            index16: indices.is_some_and(|i| i.1 != commands::DRAW_INDEX32_SIZE),
+                            ..self.state.draw_shape.take().unwrap_or_default()
+                        };
+                        let Some(target) = self.state.target.clone() else {
+                            if self.target_handles.0 != commands::NO_TEXTURE {
+                                self.warn_once("draw-no-target".into(), || {
+                                    "a draw came before any render target was set: skipped".into()
+                                });
+                            }
+                            continue;
+                        };
+                        let next = self.msaa_targets(Some(&target));
+                        self.switch_msaa_targets(next, &mut passes);
+                        self.prepare_framebuffer(&mut passes);
+                        if !open {
+                            let pass = self.new_pass(target.clone());
+                            passes.push(Op::Pass(pass));
+                            open = true;
                         }
-                        continue;
-                    };
-                    let next = self.msaa_targets(Some(&target));
-                    self.switch_msaa_targets(next, &mut passes);
-                    self.prepare_framebuffer(&mut passes);
-                    if !open {
-                        let pass = self.new_pass(target.clone());
-                        passes.push(Op::Pass(pass));
-                        open = true;
-                    }
-                    self.depth_reads.clear();
-                    self.pre_draw.clear();
-                    self.pre_copies.clear();
-                    let mut planned = std::mem::take(&mut self.planned_scratch);
-                    planned.clear();
-                    let mesh_batch_limits = self.plan_draw(
-                        &draw,
-                        &target,
-                        time,
-                        mesh_instance,
-                        dots.as_ref(),
-                        shape,
-                        &mut planned,
-                    );
-                    if let Some(dots) = &dots {
-                        // One instance per visible instance (an empty command draws nothing); an
-                        // indirect command's count comes from its arguments buffer (DrawSetup).
-                        if dots.indirect == 0 {
-                            if dots.visible.is_empty() {
-                                planned.clear();
+                        self.depth_reads.clear();
+                        self.pre_draw.clear();
+                        self.pre_copies.clear();
+                        let mut planned = std::mem::take(&mut self.planned_scratch);
+                        planned.clear();
+                        let mesh_batch_limits = self.plan_draw(
+                            &draw,
+                            &target,
+                            time,
+                            mesh_instance,
+                            dots.as_ref(),
+                            shape,
+                            &mut planned,
+                        );
+                        if let Some(dots) = &dots {
+                            // One instance per visible instance (an empty command draws nothing); an
+                            // indirect command's count comes from its arguments buffer (DrawSetup).
+                            if dots.indirect == 0 {
+                                if dots.visible.is_empty() {
+                                    planned.clear();
+                                    self.planned_scratch = planned;
+                                    continue;
+                                }
+                                for p in &mut planned {
+                                    if let Planned::Draw(p) = p {
+                                        p.instances = dots.visible.len() as u32;
+                                    }
+                                }
+                            }
+                        }
+                        // Depth elements the draw samples whose copies lag (made just now, or the
+                        // current target's): copied here, between what was drawn and this draw.
+                        let mut reads = std::mem::take(&mut self.depth_reads);
+                        for (texture, now) in reads.drain() {
+                            if let Some(resolve) = self.native_depth_resolve(texture) {
+                                open = false;
+                                passes.push(Op::DepthBlit(resolve));
+                            }
+                            if now {
+                                if let Some(copy) = self.depth_copy_op(texture) {
+                                    open = false;
+                                    passes.push(Op::DepthCopy(copy));
+                                }
+                            }
+                        }
+                        self.depth_reads = reads;
+                        if let Some((instances, args, offset, indexed)) =
+                            self.state.draw_setup.take()
+                        {
+                            let mut buffer = (args != 0)
+                                .then(|| self.buffers.get(&args).map(|b| b.buffer.clone()))
+                                .flatten();
+                            if args != 0 && buffer.is_none() {
+                                self.warn_once(format!("args{args}"), || {
+                                    format!("an indirect draw's arguments buffer {args} does not exist: skipped")
+                                });
                                 self.planned_scratch = planned;
                                 continue;
+                            }
+                            let mut draw_offset = u64::from(offset);
+                            if let Some(source) = buffer.take() {
+                                let size = if indexed { INDIRECT_ARGS_SLOT } else { 16 };
+                                if draw_offset % 4 != 0 || draw_offset + size > source.size() {
+                                    self.warn_once(format!("args-range{args}-{offset}"), || {
+                                        format!("an indirect draw's arguments at byte {offset} of buffer {args} are not 4-byte aligned or lie past its end: skipped")
+                                    });
+                                    self.planned_scratch = planned;
+                                    continue;
+                                }
+                                let (destination, at) = self.indirect_args.slot(&self.device);
+                                // One copy serves the call's passes: zeroed only when none reads
+                                // vertex inputs (whose vertices the first vertex moves).
+                                let zero_first_vertex = self.conventions.vertex_id_from_draw_start
+                                    && planned.iter().all(|p| match p {
+                                        Planned::Draw(d) => {
+                                            !self.compiled.program(d.program.0).vertex_inputs
+                                        }
+                                        _ => true,
+                                    });
+                                let copy = ArgsCopy {
+                                    source,
+                                    source_offset: draw_offset,
+                                    destination: destination.clone(),
+                                    destination_offset: at,
+                                    indexed,
+                                    zero_first_vertex,
+                                };
+                                // Hoisted before the open pass unless a draw in it could have
+                                // written the arguments; then the pass ends here.
+                                match passes.last_mut() {
+                                    Some(Op::Pass(pass)) if open && !pass.writes_buffers => {
+                                        pass.args.push(copy)
+                                    }
+                                    _ => {
+                                        open = false;
+                                        passes.push(Op::IndirectArgs(copy));
+                                    }
+                                }
+                                buffer = Some(destination);
+                                draw_offset = at;
                             }
                             for p in &mut planned {
                                 if let Planned::Draw(p) = p {
-                                    p.instances = dots.visible.len() as u32;
+                                    p.instances = instances.max(1);
+                                    p.indirect = buffer.clone().map(|b| (b, draw_offset, indexed));
                                 }
                             }
                         }
-                    }
-                    // Depth elements the draw samples whose copies lag (made just now, or the
-                    // current target's): copied here, between what was drawn and this draw.
-                    let mut reads = std::mem::take(&mut self.depth_reads);
-                    for (texture, now) in reads.drain() {
-                        if let Some(resolve) = self.native_depth_resolve(texture) {
-                            open = false;
-                            passes.push(Op::DepthBlit(resolve));
-                        }
-                        if now {
-                            if let Some(copy) = self.depth_copy_op(texture) {
-                                open = false;
-                                passes.push(Op::DepthCopy(copy));
-                            }
-                        }
-                    }
-                    self.depth_reads = reads;
-                    if let Some((instances, args, offset, indexed)) = self.state.draw_setup.take() {
-                        let mut buffer = (args != 0)
-                            .then(|| self.buffers.get(&args).map(|b| b.buffer.clone()))
-                            .flatten();
-                        if args != 0 && buffer.is_none() {
-                            self.warn_once(format!("args{args}"), || {
-                                format!("an indirect draw's arguments buffer {args} does not exist: skipped")
-                            });
-                            self.planned_scratch = planned;
-                            continue;
-                        }
-                        let mut draw_offset = u64::from(offset);
-                        if let Some(source) = buffer.take() {
-                            let size = if indexed { INDIRECT_ARGS_SLOT } else { 16 };
-                            if draw_offset % 4 != 0 || draw_offset + size > source.size() {
-                                self.warn_once(format!("args-range{args}-{offset}"), || {
-                                    format!("an indirect draw's arguments at byte {offset} of buffer {args} are not 4-byte aligned or lie past its end: skipped")
-                                });
+                        if let Some((handle, size, first, count)) = indices {
+                            let Some(index) = self.external_indices(
+                                (handle, size, first, count),
+                                shape,
+                                &planned,
+                            ) else {
                                 self.planned_scratch = planned;
                                 continue;
-                            }
-                            let (destination, at) = self.indirect_args.slot(&self.device);
-                            // One copy serves the call's passes: zeroed only when none reads
-                            // vertex inputs (whose vertices the first vertex moves).
-                            let zero_first_vertex = self.conventions.vertex_id_from_draw_start
-                                && planned.iter().all(|p| match p {
-                                    Planned::Draw(d) => {
-                                        !self.compiled.program(d.program.0).vertex_inputs
-                                    }
-                                    _ => true,
-                                });
-                            let copy = ArgsCopy {
-                                source,
-                                source_offset: draw_offset,
-                                destination: destination.clone(),
-                                destination_offset: at,
-                                indexed,
-                                zero_first_vertex,
                             };
-                            // Hoisted before the open pass unless a draw in it could have
-                            // written the arguments; then the pass ends here.
-                            match passes.last_mut() {
-                                Some(Op::Pass(pass)) if open && !pass.writes_buffers => {
-                                    pass.args.push(copy)
-                                }
-                                _ => {
-                                    open = false;
-                                    passes.push(Op::IndirectArgs(copy));
-                                }
-                            }
-                            buffer = Some(destination);
-                            draw_offset = at;
-                        }
-                        for p in &mut planned {
-                            if let Planned::Draw(p) = p {
-                                p.instances = instances.max(1);
-                                p.indirect = buffer.clone().map(|b| (b, draw_offset, indexed));
-                            }
-                        }
-                    }
-                    if let Some((handle, size, first, count)) = indices {
-                        let Some(index) =
-                            self.external_indices((handle, size, first, count), shape, &planned)
-                        else {
-                            self.planned_scratch = planned;
-                            continue;
-                        };
-                        for p in &mut planned {
-                            if let Planned::Draw(p) = p {
-                                p.index = index.clone();
-                                p.index_format = if size == commands::DRAW_INDEX32_SIZE {
-                                    wgpu::IndexFormat::Uint32
-                                } else {
-                                    wgpu::IndexFormat::Uint16
-                                };
-                                p.range = first..first + count;
-                                p.base_vertex = shape.base_vertex;
-                            }
-                        }
-                    }
-                    // Standalone instancing whose multiplied IDs pass a native batch.
-                    let mut past_batch = false;
-                    for item in planned.drain(..) {
-                        match item {
-                            Planned::Draw(mut d) => {
-                                d.first_instance = first_instance;
-                                self.draw_from_first_vertex(&mut d);
-                                if let Some(slot) = mesh_instance
-                                    && slot.added > 0
-                                {
-                                    d.instances = slot.added;
-                                }
-                                // A mesh-instancing call's instances are drawn one by one, the
-                                // multiplier's are added after them (`multiplied_instances`).
-                                if d.indirect.is_none() && mesh_instance.is_none() {
-                                    d.instances =
-                                        d.instances.wrapping_mul(self.state.instance_multiplier);
-                                    d.first_instance = d
-                                        .first_instance
-                                        .wrapping_mul(self.state.instance_multiplier);
-                                }
-                                if let Some(limits) = mesh_batch_limits
-                                    && limits[0] > 0.0
-                                {
-                                    let program = self.compiled.program(d.program.0);
-                                    let Some(stride) = program.mesh_instance_stride else {
-                                        self.warn_once(format!("mesh-instance-layout{}", d.program.0), ||
-                                            "standalone mesh instancing has an unsupported property type: draw skipped".into());
-                                        continue;
+                            for p in &mut planned {
+                                if let Planned::Draw(p) = p {
+                                    p.index = index.clone();
+                                    p.index_format = if size == commands::DRAW_INDEX32_SIZE {
+                                        wgpu::IndexFormat::Uint32
+                                    } else {
+                                        wgpu::IndexFormat::Uint16
                                     };
-                                    let mut capacity = limits
-                                        [usize::from(program.mesh_instance_uniform_scaling)]
-                                        as u32;
-                                    if stride > 0 {
-                                        capacity = capacity.min(limits[2] as u32 / stride);
-                                    }
-                                    if let Some(max) = program.mesh_instance_max_count {
-                                        capacity = capacity.min(max);
-                                    }
-                                    if capacity == 0 {
-                                        self.warn_once(format!("mesh-instance-capacity{}", d.program.0), ||
-                                            "standalone mesh instancing property data exceeds a native batch: draw skipped".into());
-                                        continue;
-                                    }
-                                    if mesh_instance.is_some_and(|slot| {
-                                        slot.count.saturating_mul(self.state.instance_multiplier)
-                                            > capacity
-                                    }) {
-                                        // Checked before any is added (`multiplied_instances`).
-                                        past_batch = true;
-                                    }
-                                    d.first_instance %= capacity;
+                                    p.range = first..first + count;
+                                    p.base_vertex = shape.base_vertex;
                                 }
-                                if !open {
-                                    let pass = self.new_pass(target.clone());
-                                    passes.push(Op::Pass(pass));
-                                    open = true;
-                                }
-                                // The window is copied after what came before the draw: before
-                                // its pass unless a draw in it could have written the buffer;
-                                // then the pass ends here.
-                                if let Some(copy) = d.window.take() {
-                                    match passes.last_mut() {
-                                        Some(Op::Pass(pass)) if !pass.writes_buffers => {
-                                            pass.windows.push(copy)
-                                        }
-                                        _ => {
-                                            passes.push(Op::Window(copy));
-                                            passes.push(Op::Pass(self.new_pass(target.clone())));
-                                        }
-                                    }
-                                }
-                                self.mark_msaa_written(&target);
-                                draws += 1;
-                                let writes = self
-                                    .compiled
-                                    .program(d.program.0)
-                                    .buffers
-                                    .iter()
-                                    .any(|b| !b.read_only);
-                                let pass = last_pass(&mut passes);
-                                pass.writes_buffers |= writes;
-                                pass.items.push(PassItem::Draw(d));
                             }
-                            // A grab ends the pass: the copy reads what is drawn so far, the
-                            // passes after it draw in a pass of their own.
-                            Planned::Grab(copy) => {
-                                open = false;
-                                passes.push(Op::Copy(copy));
+                        }
+                        // Standalone instancing whose multiplied IDs pass a native batch.
+                        let mut past_batch = false;
+                        for item in planned.drain(..) {
+                            match item {
+                                Planned::Draw(mut d) => {
+                                    d.first_instance = first_instance;
+                                    self.draw_from_first_vertex(&mut d);
+                                    if let Some(slot) = mesh_instance
+                                        && slot.added > 0
+                                    {
+                                        d.instances = slot.added;
+                                    }
+                                    // A mesh-instancing call's instances are drawn one by one, the
+                                    // multiplier's are added after them (`multiplied_instances`).
+                                    if d.indirect.is_none() && mesh_instance.is_none() {
+                                        d.instances = d
+                                            .instances
+                                            .wrapping_mul(self.state.instance_multiplier);
+                                        d.first_instance = d
+                                            .first_instance
+                                            .wrapping_mul(self.state.instance_multiplier);
+                                    }
+                                    if let Some(limits) = mesh_batch_limits
+                                        && limits[0] > 0.0
+                                    {
+                                        let program = self.compiled.program(d.program.0);
+                                        let Some(stride) = program.mesh_instance_stride else {
+                                            self.warn_once(format!("mesh-instance-layout{}", d.program.0), ||
+                                                "standalone mesh instancing has an unsupported property type: draw skipped".into());
+                                            continue;
+                                        };
+                                        let mut capacity = limits
+                                            [usize::from(program.mesh_instance_uniform_scaling)]
+                                            as u32;
+                                        if stride > 0 {
+                                            capacity = capacity.min(limits[2] as u32 / stride);
+                                        }
+                                        if let Some(max) = program.mesh_instance_max_count {
+                                            capacity = capacity.min(max);
+                                        }
+                                        if capacity == 0 {
+                                            self.warn_once(format!("mesh-instance-capacity{}", d.program.0), ||
+                                                "standalone mesh instancing property data exceeds a native batch: draw skipped".into());
+                                            continue;
+                                        }
+                                        if mesh_instance.is_some_and(|slot| {
+                                            slot.count
+                                                .saturating_mul(self.state.instance_multiplier)
+                                                > capacity
+                                        }) {
+                                            // Checked before any is added (`multiplied_instances`).
+                                            past_batch = true;
+                                        }
+                                        d.first_instance %= capacity;
+                                    }
+                                    if !open {
+                                        let pass = self.new_pass(target.clone());
+                                        passes.push(Op::Pass(pass));
+                                        open = true;
+                                    }
+                                    // The window is copied after what came before the draw: before
+                                    // its pass unless a draw in it could have written the buffer;
+                                    // then the pass ends here.
+                                    if let Some(copy) = d.window.take() {
+                                        match passes.last_mut() {
+                                            Some(Op::Pass(pass)) if !pass.writes_buffers => {
+                                                pass.windows.push(copy)
+                                            }
+                                            _ => {
+                                                passes.push(Op::Window(copy));
+                                                passes
+                                                    .push(Op::Pass(self.new_pass(target.clone())));
+                                            }
+                                        }
+                                    }
+                                    self.mark_msaa_written(&target);
+                                    draws += 1;
+                                    let writes = self
+                                        .compiled
+                                        .program(d.program.0)
+                                        .buffers
+                                        .iter()
+                                        .any(|b| !b.read_only);
+                                    let pass = last_pass(&mut passes);
+                                    pass.writes_buffers |= writes;
+                                    pass.items.push(PassItem::Draw(d));
+                                }
+                                // A grab ends the pass: the copy reads what is drawn so far, the
+                                // passes after it draw in a pass of their own.
+                                Planned::Grab(copy) => {
+                                    open = false;
+                                    passes.push(Op::Copy(copy));
+                                }
+                                Planned::Convert(copy) => {
+                                    open = false;
+                                    passes.push(Op::DepthCopy(copy));
+                                }
                             }
-                            Planned::Convert(copy) => {
-                                open = false;
+                        }
+                        self.planned_scratch = planned;
+                        if let Some(slot) = mesh_instance
+                            && slot.added == 0
+                            && slot.index + 1 == slot.count
+                            && self.state.instance_multiplier > 1
+                        {
+                            added = self
+                                .multiplied_instances(&mut draw, slot, past_batch)
+                                .map(|slot| (slot, draw));
+                        }
+                    }
+                    Command::MeshBuffers(binding) => self.bind_mesh_buffers(*binding),
+                    Command::CreateBuffer {
+                        handle,
+                        size,
+                        usage,
+                    } => {
+                        // Earlier work in this submission runs first.
+                        self.flush_ops(&mut passes, &mut open);
+                        self.create_buffer(handle, size, usage);
+                    }
+                    Command::BufferData {
+                        handle,
+                        offset,
+                        data,
+                    } => {
+                        self.flush_ops(&mut passes, &mut open);
+                        self.write_buffer(handle, offset, &data);
+                    }
+                    Command::ReleaseBuffer(handle) => {
+                        self.flush_ops(&mut passes, &mut open);
+                        self.release_buffer(handle);
+                    }
+                    Command::Dispatch(d) => {
+                        self.process_packed(&mut passes);
+                        open = false;
+                        self.dispatch_reads_depth_target = false;
+                        let planned = self.plan_dispatch(&d);
+                        for texture in std::mem::take(&mut self.dispatch_fills) {
+                            if let Some(copy) = self.depth_copy_op(texture) {
                                 passes.push(Op::DepthCopy(copy));
                             }
                         }
-                    }
-                    self.planned_scratch = planned;
-                    if let Some(slot) = mesh_instance
-                        && slot.added == 0
-                        && slot.index + 1 == slot.count
-                        && self.state.instance_multiplier > 1
-                    {
-                        added = self
-                            .multiplied_instances(&mut draw, slot, past_batch)
-                            .map(|slot| (slot, draw));
-                    }
-                }
-                Command::MeshBuffers(binding) => self.bind_mesh_buffers(*binding),
-                Command::CreateBuffer {
-                    handle,
-                    size,
-                    usage,
-                } => {
-                    // Earlier work in this submission runs first.
-                    self.flush_ops(&mut passes, &mut open);
-                    self.create_buffer(handle, size, usage);
-                }
-                Command::BufferData {
-                    handle,
-                    offset,
-                    data,
-                } => {
-                    self.flush_ops(&mut passes, &mut open);
-                    self.write_buffer(handle, offset, &data);
-                }
-                Command::ReleaseBuffer(handle) => {
-                    self.flush_ops(&mut passes, &mut open);
-                    self.release_buffer(handle);
-                }
-                Command::Dispatch(d) => {
-                    self.process_packed(&mut passes);
-                    open = false;
-                    self.dispatch_reads_depth_target = false;
-                    let planned = self.plan_dispatch(&d);
-                    for texture in std::mem::take(&mut self.dispatch_fills) {
-                        if let Some(copy) = self.depth_copy_op(texture) {
-                            passes.push(Op::DepthCopy(copy));
+                        if let Some(op) = planned {
+                            // A kernel sampling the depth being drawn reads what was drawn before it.
+                            if self.dispatch_reads_depth_target {
+                                self.copy_depth(&mut passes, depth_mark);
+                                passes.push(op);
+                                depth_mark = self.op_position(&passes);
+                            } else {
+                                passes.push(op);
+                            }
                         }
                     }
-                    if let Some(op) = planned {
-                        // A kernel sampling the depth being drawn reads what was drawn before it.
-                        if self.dispatch_reads_depth_target {
-                            self.copy_depth(&mut passes, depth_mark);
-                            passes.push(op);
-                            depth_mark = self.op_position(&passes);
-                        } else {
-                            passes.push(op);
-                        }
-                    }
-                }
-                Command::CopyBuffer {
-                    source,
-                    source_offset,
-                    destination,
-                    destination_offset,
-                    size,
-                } => {
-                    open = false;
-                    if let Some(copy) = self.plan_buffer_copy(
+                    Command::CopyBuffer {
                         source,
                         source_offset,
                         destination,
                         destination_offset,
                         size,
-                    ) {
-                        if let Some(buffer) = self.buffers.get_mut(&destination) {
-                            buffer.revision = buffer.revision.wrapping_add(1);
-                        }
-                        passes.push(Op::BufferCopy(copy));
-                        if self
-                            .buffers
-                            .get(&destination)
-                            .is_some_and(|b| b.shadow.is_some())
-                        {
-                            // Draw constants are packed from a CPU shadow. Read the completed
-                            // destination so preceding dispatches and copies are reflected too.
-                            self.flush_ops(&mut passes, &mut open);
-                            let bytes = self
-                                .read_buffer(destination, destination_offset, size)
-                                .expect("could not synchronize a copied constant buffer");
-                            let shadow = self
+                    } => {
+                        open = false;
+                        if let Some(copy) = self.plan_buffer_copy(
+                            source,
+                            source_offset,
+                            destination,
+                            destination_offset,
+                            size,
+                        ) {
+                            if let Some(buffer) = self.buffers.get_mut(&destination) {
+                                buffer.revision = buffer.revision.wrapping_add(1);
+                            }
+                            passes.push(Op::BufferCopy(copy));
+                            if self
                                 .buffers
-                                .get_mut(&destination)
-                                .unwrap()
-                                .shadow
-                                .as_mut()
-                                .unwrap();
-                            let start = destination_offset as usize;
-                            shadow[start..start + bytes.len()].copy_from_slice(&bytes);
+                                .get(&destination)
+                                .is_some_and(|b| b.shadow.is_some())
+                            {
+                                // Draw constants are packed from a CPU shadow. Read the completed
+                                // destination so preceding dispatches and copies are reflected too.
+                                self.flush_ops(&mut passes, &mut open);
+                                let bytes = self
+                                    .read_buffer(destination, destination_offset, size)
+                                    .expect("could not synchronize a copied constant buffer");
+                                let shadow = self
+                                    .buffers
+                                    .get_mut(&destination)
+                                    .unwrap()
+                                    .shadow
+                                    .as_mut()
+                                    .unwrap();
+                                let start = destination_offset as usize;
+                                shadow[start..start + bytes.len()].copy_from_slice(&bytes);
+                            }
                         }
                     }
-                }
-                Command::SetCounter { buffer, value } => {
-                    // Earlier work in this submission runs first, as for buffer data.
-                    self.flush_ops(&mut passes, &mut open);
-                    self.set_counter(buffer, value);
-                }
-                Command::CopyCounter {
-                    source,
-                    destination,
-                    offset,
-                } => {
-                    open = false;
-                    if let Some(op) = self.plan_counter_copy(source, destination, offset) {
-                        if let Some(buffer) = self.buffers.get_mut(&destination) {
-                            buffer.revision = buffer.revision.wrapping_add(1);
-                        }
-                        passes.push(op);
+                    Command::SetCounter { buffer, value } => {
+                        // Earlier work in this submission runs first, as for buffer data.
+                        self.flush_ops(&mut passes, &mut open);
+                        self.set_counter(buffer, value);
                     }
-                }
-                Command::CopyTexture {
-                    source,
-                    source_slice,
-                    source_mip,
-                    source_rect,
-                    destination,
-                    destination_slice,
-                    destination_mip,
-                    destination_x,
-                    destination_y,
-                } => {
-                    open = false;
-                    self.process_packed(&mut passes);
-                    if (source == 0 || destination == 0) && !self.screen_touched {
-                        // The frame's screen starts at its first use, a copy too: the slot still
-                        // holds an older frame's image.
-                        let target = self.screen_target(self.color_space);
-                        let pass = self.new_pass(target);
-                        passes.push(Op::Pass(pass));
-                    }
-                    if let Some(copy) = self.plan_copy(
+                    Command::CopyCounter {
                         source,
-                        [source_slice, source_mip],
+                        destination,
+                        offset,
+                    } => {
+                        open = false;
+                        if let Some(op) = self.plan_counter_copy(source, destination, offset) {
+                            if let Some(buffer) = self.buffers.get_mut(&destination) {
+                                buffer.revision = buffer.revision.wrapping_add(1);
+                            }
+                            passes.push(op);
+                        }
+                    }
+                    Command::CopyTexture {
+                        source,
+                        source_slice,
+                        source_mip,
                         source_rect,
                         destination,
-                        [destination_slice, destination_mip],
-                        [destination_x, destination_y],
-                        true,
-                    ) {
-                        passes.push(Op::Copy(copy));
+                        destination_slice,
+                        destination_mip,
+                        destination_x,
+                        destination_y,
+                    } => {
+                        open = false;
+                        self.process_packed(&mut passes);
+                        if (source == 0 || destination == 0) && !self.screen_touched {
+                            // The frame's screen starts at its first use, a copy too: the slot still
+                            // holds an older frame's image.
+                            let target = self.screen_target(self.color_space);
+                            let pass = self.new_pass(target);
+                            passes.push(Op::Pass(pass));
+                        }
+                        if let Some(copy) = self.plan_copy(
+                            source,
+                            [source_slice, source_mip],
+                            source_rect,
+                            destination,
+                            [destination_slice, destination_mip],
+                            [destination_x, destination_y],
+                            true,
+                        ) {
+                            passes.push(Op::Copy(copy));
+                        }
                     }
-                }
-                Command::CopyDepth {
-                    source,
-                    destination,
-                } => {
-                    open = false;
-                    self.copy_depth(&mut passes, depth_mark);
-                    depth_mark = self.op_position(&passes);
-                    if (source == 0 || destination == 0) && !self.screen_touched {
-                        let target = self.screen_target(self.color_space);
-                        let pass = self.new_pass(target);
-                        passes.push(Op::Pass(pass));
-                    }
-                    if let Some(blit) = self.plan_depth_blit(source, destination) {
-                        passes.push(Op::DepthBlit(blit));
-                        // What sampling the destination's depth element reads follows.
-                        if let Some(copy) = self.depth_copy_op(destination) {
-                            passes.push(Op::DepthCopy(copy));
+                    Command::CopyDepth {
+                        source,
+                        destination,
+                    } => {
+                        open = false;
+                        self.copy_depth(&mut passes, depth_mark);
+                        depth_mark = self.op_position(&passes);
+                        if (source == 0 || destination == 0) && !self.screen_touched {
+                            let target = self.screen_target(self.color_space);
+                            let pass = self.new_pass(target);
+                            passes.push(Op::Pass(pass));
+                        }
+                        if let Some(blit) = self.plan_depth_blit(source, destination) {
+                            passes.push(Op::DepthBlit(blit));
+                            // What sampling the destination's depth element reads follows.
+                            if let Some(copy) = self.depth_copy_op(destination) {
+                                passes.push(Op::DepthCopy(copy));
+                            }
                         }
                     }
                 }
             }
-        }
-        if end_frame && trace_render() {
-            self.traced_frames += 1;
-            if self.traced_frames % 60 == 1 {
-                tracing::info!(
-                    "[trace] renderer: frame {} in {} passes, {draws} draws, screen {}x{}",
-                    self.frame_number,
-                    passes.len(),
-                    self.screen_size.0,
-                    self.screen_size.1,
-                );
+            if end_frame && trace_render() {
+                self.traced_frames += 1;
+                if self.traced_frames % 60 == 1 {
+                    tracing::info!(
+                        "[trace] renderer: frame {} in {} passes, {draws} draws, screen {}x{}",
+                        self.frame_number,
+                        passes.len(),
+                        self.screen_size.0,
+                        self.screen_size.1,
+                    );
+                }
             }
+            // A depth-only target still being drawn: read back before the next submission.
+            self.copy_depth(&mut passes, depth_mark);
+            self.process_packed(&mut passes);
+            self.encode(std::mem::take(&mut passes));
+            true
+        };
+        if pin_gles {
+            loop {
+                let deadline = Some(std::time::Instant::now() + GL_PIN_BURST);
+                if device.with_gles_context_pinned(|| run_burst(deadline)) {
+                    break;
+                }
+                std::thread::yield_now();
+            }
+        } else {
+            run_burst(None);
         }
-        // A depth-only target still being drawn: read back before the next submission.
-        self.copy_depth(&mut passes, depth_mark);
-        self.process_packed(&mut passes);
-        self.encode(passes);
+        drop(run_burst);
         // What plugins encoded from scripts this frame runs after its work.
         #[cfg(target_os = "macos")]
         if end_frame && self.metal_plugins.is_some() {

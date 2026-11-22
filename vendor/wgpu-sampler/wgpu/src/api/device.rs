@@ -787,6 +787,31 @@ impl Device {
         unsafe { device.context.device_as_hal::<A>(device) }
     }
 
+    /// Unbound: runs `work` with the EGL OpenGL context kept current on this thread for the
+    /// duration of the call, avoiding per-call `eglMakeCurrent` bind/unbind overhead while
+    /// preserving the `SUBMISSION -> AdapterContext` lock order. No-op on non-EGL backends.
+    pub fn with_gles_context_pinned<R>(&self, work: impl FnOnce() -> R) -> R {
+        #[cfg(all(
+            wgpu_core,
+            gles,
+            any(feature = "parking_lot", std),
+            not(any(windows, webgl))
+        ))]
+        {
+            let owned = unsafe {
+                self.as_hal::<hal::api::Gles>()
+                    .map(|dev| dev.owned_context())
+            };
+            if let Some(owned) = owned {
+                let _submission = crate::api::queue::SUBMISSION.lock();
+                let _core_gate = wgc::enter_gles_pin_gate();
+                let _pin = owned.pin();
+                return work();
+            }
+        }
+        work()
+    }
+
     /// Destroy this device.
     pub fn destroy(&self) {
         self.inner.destroy()
