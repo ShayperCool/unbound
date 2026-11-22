@@ -271,7 +271,7 @@ namespace UnityEngine.AI
         {
             if (m_Crowd == null) return false;
             var target = position - Vector3.up * m_BaseOffset;
-            if (!m_Crowd.corridor.MovePosition(NavMesh.V(target), m_Surface.Query, Filter)) return false;
+            if (!m_Crowd.corridor.MovePosition(NavMesh.V(target), m_Surface.Query, CrowdFilter)) return false;
             m_Crowd.npos = m_Crowd.corridor.GetPos();
             m_NextPosition = AgentSystem.Reported(this);
             if (Compat.NavMeshIdleMoveMeasured && !m_HasDestination)

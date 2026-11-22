@@ -40,6 +40,7 @@ namespace DotRecast.Detour
         protected readonly DtNodePool m_tinyNodePool; //< Pointer to small node pool. 
         protected readonly DtNodePool m_nodePool; //< Pointer to node pool. 
         protected readonly DtNodeQueue m_openList; //< Pointer to open list queue. 
+        readonly Queue<DtNode> m_moveQueue = new Queue<DtNode>();
 
         //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1906,8 +1907,8 @@ namespace DotRecast.Detour
             startNode.total = 0;
             startNode.id = startRef;
             startNode.flags = DtNodeFlags.DT_NODE_CLOSED;
-            LinkedList<DtNode> stack = new LinkedList<DtNode>();
-            stack.AddLast(startNode);
+            m_moveQueue.Clear();
+            m_moveQueue.Enqueue(startNode);
 
             RcVec3f bestPos = new RcVec3f();
             float bestDist = float.MaxValue;
@@ -1923,11 +1924,8 @@ namespace DotRecast.Detour
             const int MAX_NEIS = 8;
             Span<long> neis = stackalloc long[MAX_NEIS];
 
-            while (0 < stack.Count)
+            while (m_moveQueue.TryDequeue(out var curNode))
             {
-                // Pop front.
-                DtNode curNode = stack.First?.Value;
-                stack.RemoveFirst();
 
                 // Get poly and tile.
                 // The API input has been checked already, skip checking internal data.
@@ -2026,12 +2024,14 @@ namespace DotRecast.Detour
                             // Mark as the node as visited and push to queue.
                             neighbourNode.pidx = m_tinyNodePool.GetNodeIdx(curNode);
                             neighbourNode.flags |= DtNodeFlags.DT_NODE_CLOSED;
-                            stack.AddLast(neighbourNode);
+                            m_moveQueue.Enqueue(neighbourNode);
                         }
                     }
                 }
             }
 
+            // A target found early can leave queued nodes behind.
+            m_moveQueue.Clear();
             int n = 0;
             if (bestNode != null)
             {

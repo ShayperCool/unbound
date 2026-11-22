@@ -223,6 +223,29 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void RepeatedPositionQueriesAfterAMoveReuseTheirScratchStorage()
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-6.5f, 0f, 0.2f));
+                AgentSystem.Step();
+                var start = agent.nextPosition;
+                long allocated = 0;
+                for (int repeat = 0; repeat < 3; repeat++)
+                {
+                    for (int i = 0; i < 100; i++)
+                    {
+                        agent.transform.position = start + Vector3.right * (i % 2 == 0 ? 0.2f : -0.2f);
+                        _ = agent.remainingDistance;
+                    }
+                    if (repeat == 1) allocated = GC.GetAllocatedBytesForCurrentThread();
+                }
+                Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - allocated);
+                Assert.Equal(start.x - 0.2f, agent.destination.x, 4);
+            });
+        }
+
+        [Fact]
         public void MovingAnArrivedAgentKeepsItsDestinationAndStalePath()
         {
             NavigationTestRelease.At("6000.0.71f1", () =>
