@@ -358,6 +358,18 @@ that colour delta remains strict and belongs to the existing perceptual-gradient
   (row "Argument exception texts"); one `NullReferenceException` message the runtime raises ends
   with a full stop only in Unbound. No Unity page documents the text. A game that parses it would
   see the difference.
+- **When the render thread has run a plugin's callbacks (multithreaded rendering).** With
+  `-force-gfx-mt` on Vulkan, Unity 6000.0's Scripting API says only that the native pointer getters
+  (`Texture.GetNativeTexturePtr`, `RenderTexture.GetNativeDepthBufferPtr`,
+  `GraphicsBuffer`/`ComputeBuffer.GetNativeBufferPtr`) synchronize with the rendering thread;
+  Unbound waits there and at readbacks. In every Editor capture of tests/projects/nativegfx
+  without the probe's own waits (`run.py --mt`), the Editor's render thread had also run the
+  callbacks issued before `Camera.Render`, `Graphics.ExecuteCommandBuffer`, a render texture's
+  creation and the next frame's scripts by the time those returned or began; Unbound's can run them
+  later (a frame-1 callback ran after frame 2's script set the plugin's next step). Which Editor
+  call waits is unmeasured and undocumented. A plugin that sets state from a script and reads it in
+  a callback issued earlier, without its own synchronization, sees the difference. The probe now
+  waits before it changes such state, so its comparison no longer shows it.
 
 ### Probe and reference repairs
 

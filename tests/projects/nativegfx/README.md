@@ -238,12 +238,17 @@ thread there and differs between two Editor runs: a Vulkan MT capture leaves tho
 (That leaves out all 122 such rows, 19 of which differed between the two Editor repeats: the
 probe does not check them in this mode.)
 
-In this mode, before a script changes or reads what the plugin's callbacks use (its steps, the
-textures and buffers it is given, its records), the probe waits for the render thread with
-`Texture.GetNativeTexturePtr` (which synchronizes with it, per the Scripting API), so the records
-do not depend on how far the render thread lags behind; the Editor's captures are the same with and
-without those waits. Unbound waits for its render thread where the Editor's documentation says the
-Editor does (the native pointer getters of textures, render textures and buffers) and at readbacks.
+In this mode, before the Vulkan probe's script changes or reads what the plugin's callbacks use
+(its steps, the textures and buffers it is given, its records), it waits for the render thread with
+`Texture.GetNativeTexturePtr` (which synchronizes with it, per the Scripting API), or does so right
+after a readback or a native pointer query, which wait as well; so the records do not depend on
+how far the render thread lags behind. The Editor's captures are the same with and without those
+waits: without them its render thread had already run the earlier callbacks at
+`Camera.Render`, `Graphics.ExecuteCommandBuffer`, render texture creation and the next frame, which
+its documentation does not promise. Unbound waits only where the documentation says the Editor does
+(the native pointer getters of textures, render textures and buffers) and at readbacks, so without
+the probe's waits its callbacks can run later (docs/COMPATIBILITY_GAPS.md, "When the render thread
+has run a plugin's callbacks").
 Unmeasured: plugin load and device events (on the game thread, as without `--mt`, whose rows
 match), the windowed Editor's modes (a windowed `--force-gfx-mt` run warns and renders as the
 batchmode Editor does), Metal, other releases (both refused).
