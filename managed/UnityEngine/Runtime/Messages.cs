@@ -10,8 +10,8 @@ namespace Unbound.Runtime
 {
     /// <summary>
     /// The Unity messages a script class implements, found as Unity finds them: by name, on the class
-    /// or any base class below MonoBehaviour, whatever their visibility. Calls go through compiled
-    /// delegates, not reflection.
+    /// or any base class below MonoBehaviour, whatever their visibility. The compiled delegate tail-calls the script when
+    /// possible to preserve its entry frame in stack traces.
     /// </summary>
     internal sealed class ScriptMessages
     {
@@ -102,7 +102,8 @@ namespace Unbound.Runtime
                 var source = Expression.Parameter(typeof(RenderTexture));
                 var destination = Expression.Parameter(typeof(RenderTexture));
                 var call = Expression.Call(Expression.Convert(target, image.DeclaringType), image, source, destination);
-                m.OnRenderImage = Expression.Lambda<Action<MonoBehaviour, RenderTexture, RenderTexture>>(call, target, source, destination).Compile();
+                m.OnRenderImage = Expression.Lambda<Action<MonoBehaviour, RenderTexture, RenderTexture>>(call,
+                    tailCall: true, parameters: new[] { target, source, destination }).Compile();
                 m.OpaqueImageEffect = image.IsDefined(typeof(ImageEffectOpaque), false);
             }
             m.OnApplicationFocus = BoolAction(type, "OnApplicationFocus");
@@ -223,7 +224,7 @@ namespace Unbound.Runtime
             var target = Expression.Parameter(typeof(MonoBehaviour));
             var value = Expression.Parameter(typeof(bool));
             var call = Expression.Call(Expression.Convert(target, method.DeclaringType), method, value);
-            return Expression.Lambda<Action<MonoBehaviour, bool>>(call, target, value).Compile();
+            return Expression.Lambda<Action<MonoBehaviour, bool>>(call, tailCall: true, parameters: new[] { target, value }).Compile();
         }
 
         static T Compile<T>(MethodInfo method, Type returnType) where T : Delegate
@@ -232,7 +233,7 @@ namespace Unbound.Runtime
             Expression call = Expression.Call(Expression.Convert(target, method.DeclaringType), method);
             if (returnType != null && call.Type != returnType)
                 call = Expression.Convert(call, returnType);
-            return Expression.Lambda<T>(call, target).Compile();
+            return Expression.Lambda<T>(call, tailCall: true, parameters: new[] { target }).Compile();
         }
     }
 

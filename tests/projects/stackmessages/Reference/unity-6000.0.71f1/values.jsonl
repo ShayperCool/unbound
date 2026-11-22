@@ -1,0 +1,6 @@
+{"k":"update.bytes","v":"196/196"}
+{"k":"update.text","v":"UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)\nStackMessages:Report (string) (at Assets/Scripts/StackMessages.cs:56)\nStackMessages:Update () (at Assets/Scripts/StackMessages.cs:40)\n"}
+{"k":"late.bytes","v":"204/204"}
+{"k":"late.text","v":"UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)\nStackMessages:Report (string) (at Assets/Scripts/StackMessages.cs:56)\nStackMessagesBase:LateUpdate () (at Assets/Scripts/StackMessages.cs:13)\n"}
+{"k":"update.calls","v":"1"}
+{"k":"complete","v":true}

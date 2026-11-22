@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/stackmessages/run.py gate"
+  ],
+  "summary": "stackmessages: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Runtime/Messages.cs",
+    "managed/UnityEngine/Core/Debug.cs",
+    "managed/UnityEngine/Core/StackTraces.cs",
+    "managed/UnityEngine/Core/ExceptionStackTraces.cs"
+  ]
+}
