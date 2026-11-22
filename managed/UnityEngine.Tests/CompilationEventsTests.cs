@@ -241,7 +241,7 @@ namespace UnityEngine.Tests
         {
             // ExitingEditMode and beforeAssemblyReload come before the Editor's reload, and
             // afterAssemblyReload after the load: imports asked for there are not deferred
-            // (tests/projects/initializeorder defers only those of the load callbacks).
+            // (Unbound's choice; tests/projects/initializeorder measures the load callbacks' only).
             bool enabled = EditorSettings.enterPlayModeOptionsEnabled;
             var options = EditorSettings.enterPlayModeOptions;
             var seen = new List<string>();
