@@ -316,9 +316,12 @@ namespace UnityEditor
         public static bool stripEngineCode { get; set; }
 
         internal static List<(string Guid, long FileId)> s_PreloadedRefs = new List<(string, long)>();
-        static Object[] s_Preloaded;
+        internal static Object[] s_Preloaded;
 
-        /// <summary>The assets PlayerSettings preloads (loaded on first use; changes stay in memory).</summary>
+        /// <summary>The assets PlayerSettings preloads (loaded on first use). A new list is saved into
+        /// ProjectSettings.asset as the Editor saves settings: by SaveAssets and at the Editor's exit
+        /// in Edit mode, as references (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/scenesave settings-writes).</summary>
         public static Object[] GetPreloadedAssets()
         {
             if (s_Preloaded == null)
@@ -331,7 +334,19 @@ namespace UnityEditor
             return (Object[])s_Preloaded.Clone();
         }
 
-        public static void SetPreloadedAssets(Object[] assets) => s_Preloaded = (Object[])(assets ?? Array.Empty<Object>()).Clone();
+        public static void SetPreloadedAssets(Object[] assets)
+        {
+            var preloaded = (Object[])(assets ?? Array.Empty<Object>()).Clone();
+            s_Preloaded = preloaded;
+            SettingsAssets.Edit("ProjectSettings", body =>
+            {
+                var writer = new UnityYamlWriter.Writer(new System.Text.StringBuilder(), new Dictionary<Object, long>());
+                var list = YText.Seq();
+                foreach (var asset in preloaded) list.Items.Add(SceneFiles.FlowValue(writer.ReferenceText(asset)));
+                list.Flow = list.Items.Count == 0;
+                body.Set("preloadedAssets", list);
+            });
+        }
 
         // Defines set in this session, by named target, as given.
         static readonly Dictionary<string, string> s_SetDefines = new Dictionary<string, string>();

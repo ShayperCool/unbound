@@ -6,9 +6,11 @@ using Object = UnityEngine.Object;
 namespace UnityEditor
 {
     /// <summary>The project's build settings as the Editor exposes them: the scene list and the
-    /// config objects packages register (Addressables, Localization, ...). A new scene list is
-    /// saved into EditorBuildSettings.asset as the Editor saves settings (SettingsAssets.Edit);
-    /// config objects stay in memory.</summary>
+    /// config objects packages register (Addressables, Localization, ...). A new scene list and
+    /// added or removed config objects are saved into EditorBuildSettings.asset as the Editor saves
+    /// settings (SettingsAssets.Edit: by SaveAssets and at the Editor's exit in Edit mode; the config
+    /// objects as a map by name in ordinal order, matches the Unity 6000.0.71f1 Editor,
+    /// tests/projects/scenesave settings-writes).</summary>
     public partial class EditorBuildSettings : Object
     {
         static EditorBuildSettingsScene[] s_Scenes = Array.Empty<EditorBuildSettingsScene>();
@@ -71,13 +73,35 @@ namespace UnityEditor
                 throw new Exception($"Config object with name '{name}' already exists.");
             s_ConfigObjects[name] = obj;
             s_ConfigRefs.Remove(name);
+            var reference = SceneFiles.FlowValue(new UnityYamlWriter.Writer(new System.Text.StringBuilder(), new Dictionary<Object, long>()).ReferenceText(obj));
+            EditConfigObjects(map => SettingsAssets.SetInOrdinalOrder(map, name, reference));
         }
 
         public static bool RemoveConfigObject(string name)
         {
             bool removed = s_ConfigObjects.Remove(name);
-            return s_ConfigRefs.Remove(name) || removed;
+            removed = s_ConfigRefs.Remove(name) || removed;
+            if (removed)
+                EditConfigObjects(map =>
+                {
+                    int at = map.Keys.IndexOf(name);
+                    if (at < 0) return;
+                    map.Keys.RemoveAt(at);
+                    map.Values.RemoveAt(at);
+                });
+            return removed;
         }
+
+        /// <summary>The file's config object map changed (a block map, or <c>{}</c> when empty).</summary>
+        static void EditConfigObjects(Action<YText> change) => SettingsAssets.Edit("EditorBuildSettings", body =>
+        {
+            var map = body.Get("m_configObjects");
+            if (map == null || map.Kind != YKind.Map) map = YText.Map();
+            change(map);
+            map.Flow = map.Keys.Count == 0;
+            map.Raw = null;
+            body.Set("m_configObjects", map);
+        });
 
         static Object GetConfigObject(string name)
         {

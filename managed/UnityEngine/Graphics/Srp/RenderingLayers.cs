@@ -84,7 +84,7 @@ namespace UnityEngine
         public static int GetRenderingLayerCount() => s_Names.Length;
 
         /// <summary>The Tags and Layers settings' edits of the rendering layer names
-        /// (RenderPipelineEditorUtility), in memory, with the Editor's errors: at most 32 names,
+        /// (RenderPipelineEditorUtility), with the Editor's errors: at most 32 names,
         /// the first (Default) not renamed or removed, any name (empty, a duplicate) taken; null
         /// is empty (matches the Unity 6000.0.71f1 Editor, tests/projects/graphicsgaps layers.*).</summary>
         internal static bool TryAddName(string name)
@@ -98,7 +98,7 @@ namespace UnityEngine
             Array.Copy(s_Names, names, s_Names.Length);
             names[^1] = name ?? "";
             s_Names = names;
-            UnityEditor.TagManager.onRenderingLayersChanged?.Invoke();
+            NamesChanged();
             return true;
         }
 
@@ -117,8 +117,24 @@ namespace UnityEngine
             var names = (string[])s_Names.Clone();
             names[index] = name ?? "";
             s_Names = names;
-            UnityEditor.TagManager.onRenderingLayersChanged?.Invoke();
+            NamesChanged();
             return true;
+        }
+
+        /// <summary>The names changed: TagManager's callback, and the names saved into
+        /// TagManager.asset as the Editor saves settings (by SaveAssets and at the Editor's exit in
+        /// Edit mode, matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave settings-writes).</summary>
+        static void NamesChanged()
+        {
+            UnityEditor.TagManager.onRenderingLayersChanged?.Invoke();
+            var names = s_Names;
+            Unbound.Runtime.SettingsAssets.Edit("TagManager", body =>
+            {
+                var list = Unbound.Runtime.YText.Seq();
+                foreach (var name in names) list.Items.Add(Unbound.Runtime.YText.Scalar(Unbound.Runtime.UnityYamlWriter.Scalar(name)));
+                list.Flow = list.Items.Count == 0;
+                body.Set("m_RenderingLayers", list);
+            });
         }
 
         internal static bool TryRemoveLastName()
@@ -129,7 +145,7 @@ namespace UnityEngine
                 return false;
             }
             s_Names = s_Names[..^1];
-            UnityEditor.TagManager.onRenderingLayersChanged?.Invoke();
+            NamesChanged();
             return true;
         }
     }

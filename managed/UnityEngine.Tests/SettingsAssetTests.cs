@@ -144,6 +144,85 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>Settings the editor APIs change, saved as the Editor saves them
+        /// (tests/projects/scenesave settings-writes): EditorBuildSettings' config objects,
+        /// PlayerSettings' preloaded assets and the rendering layer names are written by SaveAssets,
+        /// not by the calls, byte for byte as the Editor's snapshots; a removal and a second list
+        /// saved later give the files the Editor left at its exit.</summary>
+        [Fact]
+        public void ConfigObjectsPreloadedAssetsAndRenderingLayersAreSavedAsTheEditorSavesThem()
+        {
+            var probe = Path.Combine(Repo(), "tests", "projects", "scenesave");
+            var reference = Path.Combine(probe, "Reference", "unity-6000.0.71f1", "settings-writes");
+            var project = Path.Combine(Path.GetTempPath(), "unbound-settings-writes-" + System.Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(project, "ProjectSettings"));
+            foreach (var f in Directory.GetFiles(Path.Combine(probe, "ProjectSettings")))
+                System.IO.File.Copy(f, Path.Combine(project, "ProjectSettings", Path.GetFileName(f)));
+            var before = ProjectInfo.ProjectPath;
+            bool playing = EditorSession.IsPlaying;
+            var layers = RenderingLayerMask.s_Names;
+            // The probe's two assets, under their GUIDs and main file ids.
+            var data = ScriptableObject.CreateInstance<NewAssetTestData>();
+            var material = ScriptableObject.CreateInstance<NewAssetTestData>();
+            var dataFile = new LoadedFile { Guid = "cde34b6918c47433aa3d2ee4b841bb9a", Path = "Assets/Data/DataSaved.asset", MainObject = data };
+            dataFile.Objects[11400000] = data;
+            var materialFile = new LoadedFile { Guid = "e681ccc008d4740728e99130df8a5a8c", Path = "Assets/Materials/MatEdit.mat", MainObject = material };
+            materialFile.Objects[2100000] = material;
+            string Text(string path) => System.IO.File.ReadAllText(Path.Combine(project, path));
+            string Snapshot(string name) => System.IO.File.ReadAllText(Path.Combine(reference, "snapshots", name));
+            string Final(string path) => System.IO.File.ReadAllText(Path.Combine(reference, "files", path));
+            ProjectInfo.ProjectPath = project;
+            EditorSession.IsPlaying = false;
+            SettingsAssets.Reset();
+            try
+            {
+                AssetDatabaseRuntime.AddLoaded(dataFile);
+                AssetDatabaseRuntime.AddLoaded(materialFile);
+                EditorBuildSettings.Configure(new EditorBuildSettingsScene[0], new System.Collections.Generic.Dictionary<string, (string, long)>());
+                var original = Text("ProjectSettings/EditorBuildSettings.asset");
+                EditorBuildSettings.AddConfigObject("com.probe.data", data, false);
+                Assert.Equal("Config object with name 'com.probe.data' already exists.",
+                    Assert.Throws<System.Exception>(() => EditorBuildSettings.AddConfigObject("com.probe.data", material, false)).Message);
+                EditorBuildSettings.AddConfigObject("com.probe.data", material, true);
+                EditorBuildSettings.AddConfigObject("com.probe.asset", data, false);
+                Assert.False(EditorBuildSettings.RemoveConfigObject("com.probe.none"));
+                Assert.Equal(original, Text("ProjectSettings/EditorBuildSettings.asset"));
+                AssetDatabase.SaveAssets();
+                Assert.Equal(Snapshot("config.saved.file"), Text("ProjectSettings/EditorBuildSettings.asset"));
+                Assert.True(EditorBuildSettings.RemoveConfigObject("com.probe.asset"));
+
+                PlayerSettings.SetPreloadedAssets(new Object[] { data, material });
+                AssetDatabase.SaveAssets();
+                Assert.Equal(Snapshot("preloaded.saved.file"), Text("ProjectSettings/ProjectSettings.asset"));
+
+                RenderingLayerMask.s_Names = new[] { "Default" };
+                Assert.True(UnityEditor.Rendering.RenderPipelineEditorUtility.TryAddRenderingLayerName("Probe Layer"));
+                Assert.True(UnityEditor.Rendering.RenderPipelineEditorUtility.TrySetRenderingLayerName(1, "Renamed Layer"));
+                AssetDatabase.SaveAssets();
+                Assert.Equal(Snapshot("layers.saved.file"), Text("ProjectSettings/TagManager.asset"));
+
+                // What the Editor's exit wrote: the removal and the second preloaded list.
+                PlayerSettings.SetPreloadedAssets(new Object[] { material });
+                SettingsAssets.SaveOnQuit();
+                Assert.Equal(Final("ProjectSettings/EditorBuildSettings.asset"), Text("ProjectSettings/EditorBuildSettings.asset"));
+                Assert.Equal(Final("ProjectSettings/ProjectSettings.asset"), Text("ProjectSettings/ProjectSettings.asset"));
+            }
+            finally
+            {
+                ProjectInfo.ProjectPath = before;
+                EditorSession.IsPlaying = playing;
+                RenderingLayerMask.s_Names = layers;
+                EditorBuildSettings.Configure(new EditorBuildSettingsScene[0], new System.Collections.Generic.Dictionary<string, (string, long)>());
+                PlayerSettings.s_Preloaded = null;
+                SettingsAssets.Reset();
+                AssetDatabaseRuntime.Invalidate(dataFile.Guid);
+                AssetDatabaseRuntime.Invalidate(materialFile.Guid);
+                Object.DestroyImmediate(data);
+                Object.DestroyImmediate(material);
+                Directory.Delete(project, true);
+            }
+        }
+
         /// <summary>Under 6000.0.71f1, where a wrapper scripts make of a settings class stays
         /// uncreated (defaultstate), the settings objects AssetDatabase loads are live: each of the
         /// probe's UnityEditorInternal.ProjectSettingsBase files loads, is its class's singleton and
