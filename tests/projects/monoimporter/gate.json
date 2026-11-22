@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/monoimporter/run.py gate"],
+  "summary": "monoimporter: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": ["managed/UnityEngine/Editor/EditorMisc.cs", "managed/Unbound.Host/Game.cs", "managed/UnityEngine/Runtime/Messages.cs"]
+}
