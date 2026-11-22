@@ -3,6 +3,8 @@
 {"k":"frames.02","v":"> stick:Stick:0,1:0.25 down Canvas/Stick +11 dt=0.0200 | Button.deselect | Stick.down | Stick.drag | > stick:Stick:0,1:0.25 held +5 dt=0.0200 | > stick:Stick:0,1:0.25 up +13 dt=0.0200 | Stick.up 0.00,1.00"}
 {"k":"frames.03","v":"> swipe:0.3,0.5:0.7,0.5:0.2 down Canvas/SwipeArea +1 dt=0.0200 | SwipeArea.begin | SwipeArea.drag | > swipe:0.3,0.5:0.7,0.5:0.2 up +11 dt=0.0200 | SwipeArea.end right"}
 {"k":"frames.04","v":"> wait:0.1 +6 dt=0.0200 | > end +0 dt=0.0200 | > done 0 +0 dt=0.0200"}
+{"k":"hover.00","v":"HoverParent.enter | HoverChild.enter | HoverChild.exit reentered=False moved=True | HoverParent.exit reentered=True moved=True | HoverParent.enter | HoverChild.enter | HoverChild.exit reentered=False moved=False"}
+{"k":"hover.01","v":"HoverParent.enter | HoverChild.enter | HoverChild.exit reentered=False moved=True | HoverParent.exit reentered=True moved=True | HoverParent.enter | HoverChild.enter | HoverChild.exit reentered=False moved=False"}
 {"k":"step.00","v":"> wait:0.3"}
 {"k":"step.01","v":"> tap:0.2,0.8 down Canvas/Overlay | > tap:0.2,0.8 up"}
 {"k":"step.02","v":"> click:Button down Canvas/Button | Button.select | > click:Button up | Button.click"}

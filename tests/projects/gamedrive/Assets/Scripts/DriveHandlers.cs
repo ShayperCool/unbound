@@ -61,9 +61,37 @@ public class DriveHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
     public void OnPointerExit(PointerEventData e) => DriveProbe.Event(name + ".exit");
 }
 
+/// <summary>Records the hover state passed to handlers on moves and at release.</summary>
+public class DriveHoverState : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+{
+    public void OnPointerEnter(PointerEventData e) => DriveProbe.Event(name + ".enter");
+    public void OnPointerExit(PointerEventData e) =>
+        DriveProbe.Event($"{name}.exit reentered={e.reentered} moved={e.IsPointerMoving()}");
+}
+
 /// <summary>Records an object taking and losing the selection.</summary>
 public class DriveSelect : MonoBehaviour, ISelectHandler, IDeselectHandler
 {
     public void OnSelect(BaseEventData e) => DriveProbe.Event(name + ".select");
     public void OnDeselect(BaseEventData e) => DriveProbe.Event(name + ".deselect");
 }
+
+#if UNITY_EDITOR
+/// <summary>Supplies one scripted touch to the Editor's uGUI input module.</summary>
+public class DriveProbeInputModule : StandaloneInputModule
+{
+    public void Sample(Vector2 position, TouchPhase phase)
+    {
+        var touch = new Touch { fingerId = 0, position = position, phase = phase };
+        var pointer = GetTouchPointerEventData(touch, out bool pressed, out bool released);
+        ProcessTouchPress(pointer, pressed, released);
+        if (released)
+            RemovePointerData(pointer);
+        else
+        {
+            ProcessMove(pointer);
+            ProcessDrag(pointer);
+        }
+    }
+}
+#endif

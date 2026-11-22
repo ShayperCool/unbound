@@ -17,6 +17,11 @@ drawn over everything) and runs two scripts on it:
   on its timeout, code 3). A button's select and deselect are recorded too.
 * `frames.NN`, on the frame clock at 50: a wait, a click, a stick and a swipe; each log line with
   the frames since the one before and the frame's `Time.deltaTime`.
+* `hover.00` feeds touch samples to the Editor's uGUI 2.0 Standalone Input Module. `hover.01`
+  sends the same gestures through the driver. The samples cross from parent to child and back,
+  then leave the group. A second gesture releases on the child. The exit handlers record the
+  reentry flag and whether the pointer moved in that sample. Unbound runs the driver for both
+  rows and compares it with the two Editor sequences.
 
 A row is what the driver logged for the step (`> ...`) and the events the UI recorded between its
 lines, a run of one event (a drag's moves) once. `final` is the UI's state at the end.

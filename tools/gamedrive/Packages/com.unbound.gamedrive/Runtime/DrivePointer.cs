@@ -16,8 +16,8 @@ namespace Unbound.GameDrive
     /// common parent, else the hovered ones get pointer move; a movement past the EventSystem's
     /// drag threshold begins the drag, the press handler gets its up unless it is the drag handler
     /// too, and the drag handler gets the drags;</item>
-    /// <item>release: pointer up, the click when the pointer is over the click handler it pressed
-    /// and nothing was dragged, a drop, the end of the drag, and exit to the first exit handler at
+    /// <item>release: pointer up, a click if it is still eligible and over its original click
+    /// handler, a drop, the end of the drag, and exit to the first exit handler at
     /// or above the entered object.</item>
     /// </list>
     /// The events are sent with ExecuteEvents, so they depend on neither the window's focus, the
@@ -149,6 +149,8 @@ namespace Unbound.GameDrive
         {
             if (m_Data == null) return;
             var data = m_Data;
+            // Up samples the same position as the previous touch sample.
+            data.delta = Vector2.zero;
             // What is under the pointer now decides the click and takes the drop.
             var over = Over(data.position, out var hit);
             data.pointerCurrentRaycast = hit;
@@ -211,7 +213,10 @@ namespace Unbound.GameDrive
                     data.hovered.Remove(t.gameObject);
                 }
             data.pointerEnter = target;
-            for (var t = target.transform; t != null && t != shared; t = t.parent)
+            var entered = target.transform;
+            // A child-to-parent move keeps the parent hovered and marks the return to it.
+            if (entered == shared) data.reentered = true;
+            for (var t = entered; t != null && t != shared; t = t.parent)
             {
                 data.reentered = false;
                 ExecuteEvents.Execute(t.gameObject, data, ExecuteEvents.pointerEnterHandler);

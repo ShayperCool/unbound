@@ -127,6 +127,7 @@ wait:0.1
             Driver.Run(new DriveOptions { Script = FrameScript, Exit = false, Settle = 0.2f, Timeout = 3f, Frames = true, Fps = 50 });
             return;
         }
+        HoverControls();
         var o = new StringBuilder();
         void Put(string key, string value) => o.Append("{\"k\":\"").Append(key).Append("\",\"v\":\"").Append(value.Replace("\\", "\\\\").Replace("\"", "\\\"")).Append("\"}\n");
         foreach (var step in s_Steps) Put(step.Key, string.Join(" | ", step.Value));
@@ -138,6 +139,44 @@ wait:0.1
 #else
         Application.Quit(0);
 #endif
+    }
+
+    static void HoverControls()
+    {
+        // Move from a parent to a child, back to the parent, and then off both.
+        var parent = new Vector2(0.85f * Screen.width, 0.15f * Screen.height);
+        var child = new Vector2(0.91f * Screen.width, parent.y);
+        var outside = new Vector2(0.97f * Screen.width, parent.y);
+        s_Run = "hover";
+        s_Step = 0;
+#if UNITY_EDITOR
+        var module = EventSystem.current.GetComponent<DriveProbeInputModule>();
+        module.Sample(parent, TouchPhase.Began);
+        module.Sample(child, TouchPhase.Moved);
+        module.Sample(parent, TouchPhase.Moved);
+        module.Sample(outside, TouchPhase.Moved);
+        module.Sample(outside, TouchPhase.Ended);
+        module.Sample(parent, TouchPhase.Began);
+        module.Sample(child, TouchPhase.Moved);
+        module.Sample(child, TouchPhase.Ended);
+#else
+        HoverWithDriver(parent, child, outside);
+#endif
+        s_Step = 1;
+        HoverWithDriver(parent, child, outside);
+    }
+
+    static void HoverWithDriver(Vector2 parent, Vector2 child, Vector2 outside)
+    {
+        var pointer = new DrivePointer();
+        if (!pointer.Down(parent)) throw new InvalidOperationException("hover control missed the parent");
+        pointer.Move(child);
+        pointer.Move(parent);
+        pointer.Move(outside);
+        pointer.Up();
+        if (!pointer.Down(parent)) throw new InvalidOperationException("hover control missed the parent");
+        pointer.Move(child);
+        pointer.Up();
     }
 
     // ------------------------------------------------------------------ the UI
@@ -156,7 +195,11 @@ wait:0.1
 
     static DriveProbe Build()
     {
+#if UNITY_EDITOR
+        new GameObject("EventSystem", typeof(EventSystem), typeof(DriveProbeInputModule));
+#else
         new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+#endif
         var canvasObject = new GameObject("Canvas", typeof(Canvas), typeof(GraphicRaycaster));
         var canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -175,6 +218,10 @@ wait:0.1
         group.gameObject.AddComponent<DriveHover>();
         Box("Upper", group, 0f, 0.5f, 1f, 1f, Color.white).gameObject.AddComponent<DriveTap>();
         Box("Lower", group, 0f, 0f, 1f, 0.5f, Color.black).gameObject.AddComponent<DriveTap>();
+
+        var hover = Box("HoverParent", root, 0.83f, 0.08f, 0.93f, 0.22f, Color.blue);
+        hover.gameObject.AddComponent<DriveHoverState>();
+        Box("HoverChild", hover, 0.5f, 0f, 1f, 1f, Color.white).gameObject.AddComponent<DriveHoverState>();
 
         // Two buttons of one name: the one made second is put first among its siblings.
         foreach (var (label, x) in new[] { ("A", 0.4f), ("B", 0.52f) })
