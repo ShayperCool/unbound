@@ -165,48 +165,5 @@
     "reference": "written",
     "actual": "lines 30-31: reference ['        inSlope: {x: 0, y: 0, z: 0, w: -0.13397467}', '        outSlope: {x: 0.6666667, y: 0, z: 0, w: -0.13397467}'], actual ['        inSlope: {x: 0, y: 0, z: 0, w: -0.13397461}', '        outSlope: {x: 0.6666667, y: 0, z: 0, w: -0.13397461}']",
     "reason": "The slope of the key a rotation's w component gets at another component's time (0.25 s on a linear segment of slope -0.13397461): the Editor writes -0.13397467 (4 float steps away), Unbound the segment's slope; position keys added the same way match. How the Editor derives an added rotation key's slope is not reproduced; recorded, not chased."
-  },
-  {
-    "case": "edit",
-    "key": "file:Assets/Scenes/Fresh.unity",
-    "reference": "written",
-    "actual": "lines 212-212: reference ['  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}'], actual ['  m_LocalRotation: {x: 0.40821794, y: -0.23456973, z: 0.10938166, w: 0.8754261}']",
-    "reason": "The slope of the key a rotation's w component gets at another component's time (0.25 s on a linear segment of slope -0.13397461): the Editor writes -0.13397467 (4 float steps away), Unbound the segment's slope; position keys added the same way match. How the Editor derives an added rotation key's slope is not reproduced; recorded, not chased."
-  },
-  {
-    "case": "native-saves",
-    "key": "clip.dirty",
-    "reference": [
-      true
-    ],
-    "actual": [
-      false
-    ],
-    "reason": "The slope of the key a rotation's w component gets at another component's time (0.25 s on a linear segment of slope -0.13397461): the Editor writes -0.13397467 (4 float steps away), Unbound the segment's slope; position keys added the same way match. How the Editor derives an added rotation key's slope is not reproduced; recorded, not chased."
-  },
-  {
-    "case": "native-saves",
-    "key": "file:Assets/Native/Move.anim",
-    "reference": true,
-    "actual": false,
-    "reason": "The slope of the key a rotation's w component gets at another component's time (0.25 s on a linear segment of slope -0.13397461): the Editor writes -0.13397467 (4 float steps away), Unbound the segment's slope; position keys added the same way match. How the Editor derives an added rotation key's slope is not reproduced; recorded, not chased."
-  },
-  {
-    "case": "native-saves",
-    "key": "file:snapshot:clip.file",
-    "reference": "written",
-    "actual": "lines 43-68: reference ['  m_ScaleCurves:', '  - curve:', '      serializedVersion: 2', '      m_Curve:', '      - serializedVersion: 3', '        time: 0', '        value: {x: 1, y: 1, z: 1}', '        inSlope: {x: 0, y: 0, z: 0}', '        outSlope: {x: 0, y: 1, z: 0}', '        tangentMode: 0', '        weightedMode: 0', '        inWeight: {x: 0.33333334, y: 0, z: 0.33333334}', '        outWeight: {x: 0.33333334, y: 0, z: 0.33333334}', '      - serializedVersion: 3', '        time: 1', '        value: {x: 1, y: 2, z: 1}', '        inSlope: {x: 0, y: 1, z: 0}', '        outSlope: {x: 0, y: 0, z: 0}', '        tangentMode: 0', '        weightedMode: 0', '        inWeight: {x: 0.33333334, y: 0, z: 0.33333334}', '        outWeight: {x: 0.33333334, y: 0, z: 0.33333334}', '      m_PreInfinity: 2', '      m_PostInfinity: 2', '      m_RotationOrder: 4', '    path: '], actual ['  m_ScaleCurves: []']; lines 101-101: reference ['  m_HasGenericRootTransform: 1'], actual ['  m_HasGenericRootTransform: 0']",
-    "reason": "The slope of the key a rotation's w component gets at another component's time (0.25 s on a linear segment of slope -0.13397461): the Editor writes -0.13397467 (4 float steps away), Unbound the segment's slope; position keys added the same way match. How the Editor derives an added rotation key's slope is not reproduced; recorded, not chased."
-  },
-  {
-    "case": "prefab-nested",
-    "key": "variant.before.mods",
-    "reference": [
-      "GameObject:Thing|m_Name|Thing|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|0|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null"
-    ],
-    "actual": [
-      "GameObject:Thing|m_Name|Thing|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Transform:Thing|m_LocalPosition.x|5|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|0|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null"
-    ],
-    "reason": "The slope of the key a rotation's w component gets at another component's time (0.25 s on a linear segment of slope -0.13397461): the Editor writes -0.13397467 (4 float steps away), Unbound the segment's slope; position keys added the same way match. How the Editor derives an added rotation key's slope is not reproduced; recorded, not chased."
   }
 ]
