@@ -697,16 +697,22 @@ def gate_fallbacks(run, release):
         if (result := compile_engine(cli, project, compile_log, env)):
             return result
         graph_log = out/'engine.log'
-        engine_graph(cli, project, out/'graph.json', graph_log, env)
-        for log in (compile_log, graph_log):
+        graph = out/'graph.json'
+        engine_graph(cli, project, graph, graph_log, env)
+        # Graph reads established databases but skips fresh metadata import.
+        for log in (compile_log, graph_log) if database_before is not None else (compile_log,):
             if message not in log.read_text(errors='replace'):
                 raise RuntimeError(f'{case}: expected fallback diagnostic in {log}: {message}')
+        plugins = {Path(plugin) for assembly in json.loads(graph.read_text())
+                   for plugin in assembly['plugins'] if Path(plugin).name == 'ProbeDup.dll'}
+        if plugins != {project/'Assets/A/ProbeDup.dll'}:
+            raise RuntimeError(f'{case}: graph changed the prior plugin selection: {plugins}')
         if before != [meta.read_bytes() for meta in metas]:
             raise RuntimeError(f'{case}: fallback altered the plugin metadata')
         if database_before is not None and database_before != database.read_bytes():
             raise RuntimeError(f'{case}: fallback altered the Unity asset database')
         check_snapshot_cleanup(project)
-        print(f'pluginties: {case} falls back in compile and graph with unchanged metadata')
+        print(f'pluginties: {case} preserves selection and metadata')
     return 0
 
 
