@@ -65,7 +65,11 @@ The three-copy controls show that a batch diagnostic names the other
 mutable files before the immutable package. A current-owner diagnostic
 names the established owner.
 
-The gate runs both profiles. The import profile checks that every graph
+The gate also runs the two-copy cases with `Assets` linked to a sibling
+directory. Both Editor repeats for that profile agree in the reference.
+Three-way peer listing order varied in separate linked-root captures.
+
+The import profiles check that every graph
 reference follows the newly assigned GUIDs. The archive keeps the reference
 with the early GUID and loses it with the late GUID. The remaining pairs
 can select either copy on a fresh import. The reference preserves their

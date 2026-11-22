@@ -102,6 +102,16 @@ CONFLICT = re.compile(r"GUID \[([\da-f]{32})\] for asset '([^']+)' conflicts wit
                       r"'([^']+)'(?: \(current owner\))?\s*Assigning a new guid\.")
 
 
+def collision_cases(linked_assets):
+    # The linked-root profile checks the same two-file cases. Three-file
+    # diagnostic peer order varied across fresh linked-root Editor imports.
+    return {case: row for case, row in COLLISION_CASES.items() if not linked_assets or len(row) == 3}
+
+
+def collision_filename(linked_assets):
+    return 'guid-import-linked.json' if linked_assets else 'guid-import.json'
+
+
 def make_tarball(staging, destination):
     destination.parent.mkdir(exist_ok=True, parents=True)
     with destination.open('wb') as file, gzip.GzipFile(fileobj=file, mode='wb', mtime=0) as compressed:
@@ -146,7 +156,7 @@ def compile_copy(project, staging, compiler, reference, case, location, prefix, 
     target.with_suffix('.dll.meta').write_bytes(metadata.encode())
 
 
-def generate(project, release, conflicts=False):
+def generate(project, release, conflicts=False, linked_assets=False):
     probe_paths.project_copy(HERE, project, package_cache=False)
     settings = project/'ProjectSettings'
     settings.mkdir(exist_ok=True)
@@ -170,7 +180,7 @@ def generate(project, release, conflicts=False):
     compiler = csc()
     if conflicts:
         cases = {case: [(location, guid) for location in locations]
-                 for case, (*locations, guid) in COLLISION_CASES.items()}
+                 for case, (*locations, guid) in collision_cases(linked_assets).items()}
     else:
         cases = {case: list(zip(row[:2], row[2:])) for case, row in CASES.items()}
     with ThreadPoolExecutor(max_workers=4) as pool:
@@ -198,13 +208,16 @@ def generate(project, release, conflicts=False):
         (root/(folder+'Control.cs')).write_text('public static class '+folder+'Control {'+body+'}\n')
     write_metas(project/'Assets', project, set())
     write_metas(project/'Packages', project, set())
-    return collision_metadata(project) if conflicts else None
+    if linked_assets:
+        (project/'Assets').rename(project.parent/'external-assets')
+        (project/'Assets').symlink_to('../external-assets', target_is_directory=True)
+    return collision_metadata(project, linked_assets=linked_assets) if conflicts else None
 
 
 GUID_LINE = re.compile(rb'(?m)^guid: ([0-9a-f]{32})')
 
 
-def collision_metadata(project, packages=None):
+def collision_metadata(project, packages=None, linked_assets=False):
     result = {}
     if packages is None:
         package_cache = project/'Library/PackageCache'
@@ -212,7 +225,7 @@ def collision_metadata(project, packages=None):
             name: next(package_cache.glob(name+'@*'), project.parent/staging)
             for name, staging in ((PACKAGE, 'archive'), (REGISTRY, 'registry'))
         }
-    for case, (*locations, _) in COLLISION_CASES.items():
+    for case, (*locations, _) in collision_cases(linked_assets).items():
         filename = DLL_PREFIX+case+'.dll.meta'
         for location in locations:
             if location in packages:
@@ -343,13 +356,13 @@ def read_engine_graph(path, project):
                   if Path(ref).name.startswith(DLL_PREFIX))
 
 
-def record(run, release, conflicts):
+def record(run, release, conflicts, linked_assets):
     jobs = []
     original_metadata = {}
     for repeat in ('native1', 'native2'):
         out = run/repeat
         project = out/'project'
-        original_metadata[project] = generate(project, release, conflicts)
+        original_metadata[project] = generate(project, release, conflicts, linked_assets)
         jobs.append(editor_runner.EditorJob(
             project, out/'editor.log', out, ['-force-glcore', '-quit', '-executeMethod', 'RecordPluginReferences.Record'],
             batch=True, graphics=True, timeout=600, env={'PLUGIN_TIES_OUT': str(out/'graph.tsv')},
@@ -367,9 +380,10 @@ def record(run, release, conflicts):
             lock = json.loads((job.project/'Packages/packages-lock.json').read_text())
             if lock['dependencies'][REGISTRY]['source'] != 'registry':
                 raise RuntimeError('Editor did not resolve the registry package')
-            result = collision_record(original_metadata[job.project], collision_metadata(job.project),
+            result = collision_record(original_metadata[job.project],
+                                      collision_metadata(job.project, linked_assets=linked_assets),
                                       data['graph'], job.log.read_text(errors='replace'))
-            (job.out/'guid-import.json').write_text(json.dumps(result, indent=2)+'\n')
+            (job.out/collision_filename(linked_assets)).write_text(json.dumps(result, indent=2)+'\n')
 
 
 def engine_graph(cli, project, graph, log, env):
@@ -419,16 +433,16 @@ def gate(run, release):
     return 0
 
 
-def gate_conflicts(run, release):
+def gate_conflicts(run, release, linked_assets=False):
     project = run/'project'
-    before = generate(project, release, conflicts=True)
+    before = generate(project, release, conflicts=True, linked_assets=linked_assets)
     cli = engine_cli()
     cache = run/'cache'
     with registry_package(project) as config:
-        return compare_import(run, project, release, before, cli, cache, config)
+        return compare_import(run, project, release, before, cli, cache, config, linked_assets)
 
 
-def compare_import(run, project, release, before, cli, cache, config):
+def compare_import(run, project, release, before, cli, cache, config, linked_assets):
     env = {**os.environ, **config, 'UNBOUND_CACHE': str(cache), 'UNBOUND_LOG': 'info'}
     env.pop('UNBOUND_OFFLINE', None)
     log = run/'compile.log'
@@ -438,14 +452,15 @@ def compare_import(run, project, release, before, cli, cache, config):
     engine_graph(cli, project, graph, run/'engine.log', env)
     archive, = (cache/'packages/tarballs').glob(PACKAGE+'@*')
     packages = {PACKAGE: archive, REGISTRY: cache/'packages'/f'{REGISTRY}@1.0.0'}
-    after = collision_metadata(project, packages)
+    after = collision_metadata(project, packages, linked_assets)
     actual = collision_record(before, after, read_engine_graph(graph, project), log.read_text(errors='replace'))
-    reference = HERE/'Reference'/f'unity-{release}'/'guid-import.json'
-    if not compare(actual, reference, run/'guid-import.json'):
+    filename = collision_filename(linked_assets)
+    reference = HERE/'Reference'/f'unity-{release}'/filename
+    if not compare(actual, reference, run/filename):
         return 1
     if (result := compile_engine(cli, project, run/'recompile.log', env)):
         return result
-    if after != collision_metadata(project, packages):
+    if after != collision_metadata(project, packages, linked_assets):
         raise RuntimeError('compiling again changed the imported metadata')
     print(f"pluginties: {len(actual['metas'])} metadata files and {len(actual['conflicts'])} GUID conflicts match, compile succeeded")
     return 0
@@ -457,9 +472,12 @@ def main():
     parser.add_argument('--release', default=probe_paths.unity_version())
     parser.add_argument('--label', default=f'run-{time.time_ns()}')
     parser.add_argument('--conflicts', action='store_true', help='test duplicate GUID import')
+    parser.add_argument('--linked-assets', action='store_true', help='put the Assets root outside the project')
     args = parser.parse_args()
+    if args.linked_assets and not args.conflicts:
+        parser.error('--linked-assets requires --conflicts')
     run = probe_paths.run_root(HERE, args.label).resolve()
-    filename = 'guid-import.json' if args.conflicts else 'record.json'
+    filename = collision_filename(args.linked_assets) if args.conflicts else 'record.json'
     target = HERE/'Reference'/f'unity-{args.release}'/filename
     if args.mode == 'publish':
         first, second = [(run/repeat/filename).read_bytes() for repeat in ('native1', 'native2')]
@@ -472,11 +490,13 @@ def main():
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     run.mkdir(parents=True)
     if args.mode == 'editor':
-        record(run, args.release, args.conflicts)
+        record(run, args.release, args.conflicts, args.linked_assets)
         return 0
     if args.conflicts:
-        return gate_conflicts(run, args.release)
-    return gate(run, args.release) or gate_conflicts(run/'guid-import', args.release)
+        return gate_conflicts(run, args.release, args.linked_assets)
+    return (gate(run, args.release)
+            or gate_conflicts(run/'guid-import', args.release)
+            or gate_conflicts(run/'linked-assets', args.release, linked_assets=True))
 
 
 if __name__ == '__main__':

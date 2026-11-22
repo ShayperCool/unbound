@@ -18,12 +18,13 @@ use unbound_yaml::Guid;
 /// Contains the outstanding writes of a group, including writes that may already have completed.
 /// Keeping the plan until the last rename lets the next import resume after a permissions error
 /// or interruption, even when the first rename eliminated the duplicate.
-const PENDING: &str = "plugin-guid-import-v3.pending.json";
+const PENDING: &str = "plugin-guid-import-v4.pending.json";
 
 #[derive(Deserialize, Serialize)]
 struct Rewrite {
     asset: String,
-    /// The canonical metadata target, relative to the project so a directory move preserves it.
+    /// The canonical target, relative inside the project and pinned by its absolute path when
+    /// a writable asset root itself points outside the project.
     target: PathBuf,
     old: Guid,
     new: Guid,
@@ -253,7 +254,7 @@ fn plan_group(
             target: entry
                 .meta
                 .strip_prefix(&project.root)
-                .with_context(|| format!("{} has metadata outside the project", entry.plugin.path))?
+                .unwrap_or(&entry.meta)
                 .into(),
             old: guid,
             new,
@@ -281,15 +282,19 @@ fn resume(
                     .then(|| meta_path(&root.dir.join(relative)))
             })
             .with_context(|| format!("{} is no longer a writable project asset", rewrite.asset))?;
-        anyhow::ensure!(
-            rewrite
-                .target
-                .components()
-                .all(|part| matches!(part, std::path::Component::Normal(_))),
-            "invalid saved metadata target for {}",
-            rewrite.asset
-        );
-        let expected = project.join(&rewrite.target);
+        let expected = if rewrite.target.is_absolute() {
+            rewrite.target.clone()
+        } else {
+            anyhow::ensure!(
+                rewrite
+                    .target
+                    .components()
+                    .all(|part| matches!(part, std::path::Component::Normal(_))),
+                "invalid saved metadata target for {}",
+                rewrite.asset
+            );
+            project.join(&rewrite.target)
+        };
         let path = match meta.canonicalize() {
             Ok(path) => path,
             Err(error)
