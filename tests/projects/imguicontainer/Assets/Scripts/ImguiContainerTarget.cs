@@ -12,4 +12,7 @@ public class ImguiContainerTarget : ScriptableObject
     public ImguiDrawn drawn = new ImguiDrawn();
     public ImguiNested nested = new ImguiNested();
     [ImguiTagged] public float ranged = 0.5f;
+    [Space(20)] [ImguiTagged] public float spaced = 0.25f;
+    [Space(20)] public float plainSpaced = 0.75f;
+    [Space(20)] [ImguiTagged] public float spacedImgui = 0.35f;
 }

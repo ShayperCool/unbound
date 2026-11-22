@@ -28,5 +28,12 @@
 {"k":"nested.calls","v":"nested.height:18;nested.gui:Layout:0,0,375,28:Nested"}
 {"k":"ranged","v":"container=True|field=45"}
 {"k":"ranged.calls","v":"tagged.height:18;tagged.gui:Layout:0,0,375,21:Ranged"}
+{"k":"spaced","v":"field=65|children=2|decorators=20|imgui=45"}
+{"k":"spaced.calls","v":"tagged.height:18;tagged.gui:Layout:0,0,375,21:Spaced"}
+{"k":"imgui.spacedOnly","v":"61"}
+{"k":"imgui.spacedOnly.calls","v":"tagged.height:18;tagged.gui:Layout:3,27,375,21:Spaced Imgui"}
+{"k":"imgui.spaced","v":"41"}
+{"k":"imgui.spaced.calls","v":"tagged.height:18;tagged.gui:Layout:0,0,375,21:Spaced"}
+{"k":"imgui.plainSpaced","v":"78"}
 {"k":"logs","v":[]}
 {"k":"complete","v":true}

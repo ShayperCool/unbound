@@ -352,6 +352,52 @@ public class ImguiContainerProbe : MonoBehaviour
         yield return Frames(5);
         Put("ranged", $"container={(ranged.Q<IMGUIContainer>() != null)}|field={F(ranged.layout.height)}");
         Put("ranged.calls", string.Join(";", calls.Distinct()));
+
+        // 8. Decorators: a PropertyField shows them itself, above its drawer's IMGUI; an IMGUI
+        // PropertyField gives them the top of the property's rect.
+        calls.Clear();
+        var spaced = new PropertyField(so.FindProperty("spaced"));
+        m_Root.Add(spaced);
+        spaced.Bind(so);
+        yield return Frames(5);
+        var spacedContainer = spaced.Q<IMGUIContainer>();
+        Put("spaced", $"field={F(spaced.layout.height)}|children={spaced.hierarchy.childCount}|decorators={F(spaced.hierarchy[0].layout.height)}|imgui={(spacedContainer == null ? "" : F(spacedContainer.layout.height))}");
+        Put("spaced.calls", string.Join(";", calls.Distinct()));
+        spaced.RemoveFromHierarchy();
+        // A property no PropertyField has drawn: the drawer's rect is below the decorator.
+        calls.Clear();
+        var drawnOnly = new IMGUIContainer(() =>
+        {
+            so.Update();
+            var rect = EditorGUILayout.GetControlRect(true, EditorGUI.GetPropertyHeight(so.FindProperty("spacedImgui")));
+            rect.x = 3f;
+            rect.y = 7f;
+            EditorGUI.PropertyField(rect, so.FindProperty("spacedImgui"));
+        }) { name = "drawnOnly" };
+        m_Root.Add(drawnOnly);
+        yield return Frames(5);
+        Put("imgui.spacedOnly", F(drawnOnly.layout.height));
+        Put("imgui.spacedOnly.calls", string.Join(";", calls.Distinct()));
+        // The property the PropertyField above drew: its decorator stays left out.
+        calls.Clear();
+        var drawnSpaced = new IMGUIContainer(() =>
+        {
+            so.Update();
+            EditorGUILayout.PropertyField(so.FindProperty("spaced"));
+        }) { name = "drawnSpaced" };
+        m_Root.Add(drawnSpaced);
+        yield return Frames(5);
+        Put("imgui.spaced", F(drawnSpaced.layout.height));
+        Put("imgui.spaced.calls", string.Join(";", calls.Distinct()));
+        var drawnPlain = new IMGUIContainer(() =>
+        {
+            so.Update();
+            EditorGUILayout.PropertyField(so.FindProperty("plainSpaced"));
+            EditorGUILayout.PropertyField(so.FindProperty("plainSpaced"), GUIContent.none);
+        }) { name = "drawnPlain" };
+        m_Root.Add(drawnPlain);
+        yield return Frames(5);
+        Put("imgui.plainSpaced", F(drawnPlain.layout.height));
 #endif
     }
 }

@@ -19,6 +19,10 @@ pixel size, drawn into a target texture):
 - `nested*`, `ranged*`: drawers that measure and draw their own property again
   (`EditorGUI.GetPropertyHeight`, `EditorGUI.PropertyField`, `EditorGUILayout.PropertyField`): they
   get the property's default GUI, for a drawer of the type and for a drawer of an attribute.
+- `spaced*`, `imgui.*`: a property with a decorator: a `PropertyField` shows the decorator itself
+  above its drawer's IMGUI, and `EditorGUILayout.PropertyField` in a container's handler gives it
+  the top of the property's rect, with and without a drawer; a property whose IMGUI a
+  `PropertyField` has drawn keeps its decorator left out of later IMGUI calls (`imgui.spaced`).
 
 ## Usage
 
