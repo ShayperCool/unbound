@@ -1,0 +1,114 @@
+{"k":"UnityEngine.AI.NavMeshAgent","v":"second:null|log:Log:Can't add component 'NavMeshAgent' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.AI.NavMeshObstacle","v":"second:null|log:Log:Can't add component 'NavMeshObstacle' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.AI.OffMeshLink","v":"second:added|log:"}
+{"k":"UnityEngine.AnchoredJoint2D","v":"first:null"}
+{"k":"UnityEngine.Animation","v":"second:null|log:Log:Can't add component 'Animation' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Animations.AimConstraint","v":"second:null|log:Log:Can't add component 'AimConstraint' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Animations.LookAtConstraint","v":"second:null|log:Log:Can't add component 'LookAtConstraint' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Animations.ParentConstraint","v":"second:null|log:Log:Can't add component 'ParentConstraint' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Animations.PositionConstraint","v":"second:null|log:Log:Can't add component 'PositionConstraint' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Animations.RotationConstraint","v":"second:null|log:Log:Can't add component 'RotationConstraint' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Animations.ScaleConstraint","v":"second:null|log:Log:Can't add component 'ScaleConstraint' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Animator","v":"second:null|log:Log:Can't add component 'Animator' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.AreaEffector2D","v":"second:null|log:Log:Can't add component 'AreaEffector2D' to NAME because it conflicts with the existing 'AreaEffector2D' derived component!"}
+{"k":"UnityEngine.ArticulationBody","v":"second:null|log:Log:Can't add component 'ArticulationBody' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.AudioBehaviour","v":"first:null"}
+{"k":"UnityEngine.AudioChorusFilter","v":"first:null"}
+{"k":"UnityEngine.AudioDistortionFilter","v":"first:null"}
+{"k":"UnityEngine.AudioEchoFilter","v":"first:null"}
+{"k":"UnityEngine.AudioHighPassFilter","v":"first:null"}
+{"k":"UnityEngine.AudioListener","v":"second:null|log:Log:Can't add component 'AudioListener' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.AudioLowPassFilter","v":"first:null"}
+{"k":"UnityEngine.AudioReverbFilter","v":"first:null"}
+{"k":"UnityEngine.AudioReverbZone","v":"second:null|log:Log:Can't add component 'AudioReverbZone' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.AudioSource","v":"second:added|log:"}
+{"k":"UnityEngine.Behaviour","v":"first:null"}
+{"k":"UnityEngine.BillboardRenderer","v":"second:null|log:Log:Can't add component 'BillboardRenderer' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.BoxCollider","v":"second:added|log:"}
+{"k":"UnityEngine.BoxCollider2D","v":"second:added|log:"}
+{"k":"UnityEngine.BuoyancyEffector2D","v":"second:null|log:Log:Can't add component 'BuoyancyEffector2D' to NAME because it conflicts with the existing 'BuoyancyEffector2D' derived component!"}
+{"k":"UnityEngine.Camera","v":"second:null|log:Log:Can't add component 'Camera' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Canvas","v":"second:null|log:Log:Can't add component 'Canvas' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.CanvasGroup","v":"second:null|log:Log:Can't add component 'CanvasGroup' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.CanvasRenderer","v":"second:null|log:Log:Can't add component 'CanvasRenderer' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.CapsuleCollider","v":"second:added|log:"}
+{"k":"UnityEngine.CapsuleCollider2D","v":"second:added|log:"}
+{"k":"UnityEngine.CharacterController","v":"second:null|log:Log:Can't add component 'CharacterController' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.CharacterJoint","v":"second:added|log:"}
+{"k":"UnityEngine.CircleCollider2D","v":"second:added|log:"}
+{"k":"UnityEngine.Cloth","v":"second:null|log:Log:Can't add component 'Cloth' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Collider","v":"first:null"}
+{"k":"UnityEngine.Collider2D","v":"first:null"}
+{"k":"UnityEngine.Component","v":"first:null"}
+{"k":"UnityEngine.CompositeCollider2D","v":"second:null|log:Log:Can't add component 'CompositeCollider2D' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.ConfigurableJoint","v":"second:added|log:"}
+{"k":"UnityEngine.ConstantForce","v":"second:null|log:Log:Can't add component 'ConstantForce' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.ConstantForce2D","v":"second:added|log:"}
+{"k":"UnityEngine.CustomCollider2D","v":"second:added|log:"}
+{"k":"UnityEngine.DistanceJoint2D","v":"second:added|log:"}
+{"k":"UnityEngine.EdgeCollider2D","v":"second:added|log:"}
+{"k":"UnityEngine.Effector2D","v":"first:null"}
+{"k":"UnityEngine.FixedJoint","v":"second:added|log:"}
+{"k":"UnityEngine.FixedJoint2D","v":"second:added|log:"}
+{"k":"UnityEngine.FlareLayer","v":"second:null|log:Log:Can't add component 'FlareLayer' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.FrictionJoint2D","v":"second:added|log:"}
+{"k":"UnityEngine.Grid","v":"second:null|log:Log:Can't add component 'Grid' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.GridLayout","v":"first:null"}
+{"k":"UnityEngine.HingeJoint","v":"second:added|log:"}
+{"k":"UnityEngine.HingeJoint2D","v":"second:added|log:"}
+{"k":"UnityEngine.Joint","v":"first:null"}
+{"k":"UnityEngine.Joint2D","v":"first:null"}
+{"k":"UnityEngine.LODGroup","v":"second:null|log:Log:Can't add component 'LODGroup' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.LensFlare","v":"second:null|log:Log:Can't add component 'LensFlare' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Light","v":"second:null|log:Log:Can't add component 'Light' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.LightProbeGroup","v":"second:null|log:Log:Can't add component 'LightProbeGroup' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.LightProbeProxyVolume","v":"second:null|log:Log:Can't add component 'LightProbeProxyVolume' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.LineRenderer","v":"second:null|log:Log:Can't add component 'LineRenderer' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.MeshCollider","v":"second:added|log:"}
+{"k":"UnityEngine.MeshFilter","v":"second:null|log:Log:Can't add component 'MeshFilter' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.MeshRenderer","v":"second:null|log:Log:Can't add component 'MeshRenderer' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.OcclusionArea","v":"second:null|log:Log:Can't add component 'OcclusionArea' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.OcclusionPortal","v":"second:null|log:Log:Can't add component 'OcclusionPortal' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.ParticleSystem","v":"second:null|log:Log:Can't add component 'ParticleSystem' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.ParticleSystemForceField","v":"second:null|log:Log:Can't add component 'ParticleSystemForceField' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.ParticleSystemRenderer","v":"second:null|log:Log:Can't add component 'ParticleSystemRenderer' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.PhysicsUpdateBehaviour2D","v":"first:null"}
+{"k":"UnityEngine.PlatformEffector2D","v":"second:null|log:Log:Can't add component 'PlatformEffector2D' to NAME because it conflicts with the existing 'PlatformEffector2D' derived component!"}
+{"k":"UnityEngine.Playables.PlayableDirector","v":"second:null|log:Log:Can't add component 'PlayableDirector' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.PointEffector2D","v":"second:null|log:Log:Can't add component 'PointEffector2D' to NAME because it conflicts with the existing 'PointEffector2D' derived component!"}
+{"k":"UnityEngine.PolygonCollider2D","v":"second:added|log:"}
+{"k":"UnityEngine.Projector","v":"second:null|log:Log:Can't add component 'Projector' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.ReflectionProbe","v":"second:null|log:Log:Can't add component 'ReflectionProbe' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.RelativeJoint2D","v":"second:added|log:"}
+{"k":"UnityEngine.Renderer","v":"first:null"}
+{"k":"UnityEngine.Rendering.SortingGroup","v":"second:null|log:Log:Can't add component 'SortingGroup' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Rigidbody","v":"second:null|log:Log:Can't add component 'Rigidbody' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Rigidbody2D","v":"second:null|log:Log:Can't add component 'Rigidbody2D' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.SkinnedMeshRenderer","v":"second:null|log:Log:Can't add component 'SkinnedMeshRenderer' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Skybox","v":"second:added|log:"}
+{"k":"UnityEngine.SliderJoint2D","v":"second:added|log:"}
+{"k":"UnityEngine.SphereCollider","v":"second:added|log:"}
+{"k":"UnityEngine.SpringJoint","v":"second:added|log:"}
+{"k":"UnityEngine.SpringJoint2D","v":"second:added|log:"}
+{"k":"UnityEngine.SpriteMask","v":"second:null|log:Log:Can't add component 'SpriteMask' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.SpriteRenderer","v":"second:null|log:Log:Can't add component 'SpriteRenderer' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.StreamingController","v":"second:null|log:Log:Can't add component 'StreamingController' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.SurfaceEffector2D","v":"second:null|log:Log:Can't add component 'SurfaceEffector2D' to NAME because it conflicts with the existing 'SurfaceEffector2D' derived component!"}
+{"k":"UnityEngine.TargetJoint2D","v":"second:added|log:"}
+{"k":"UnityEngine.Terrain","v":"second:null|log:Log:Can't add component 'Terrain' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.TerrainCollider","v":"second:null|log:Log:Can't add component 'TerrainCollider' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.TextMesh","v":"second:null|log:Log:Can't add component 'TextMesh' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Tilemaps.Tilemap","v":"second:null|log:Log:Can't add component 'Tilemap' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Tilemaps.TilemapCollider2D","v":"second:null|log:Log:Can't add component 'TilemapCollider2D' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Tilemaps.TilemapRenderer","v":"second:null|log:Log:Can't add component 'TilemapRenderer' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.TrailRenderer","v":"second:null|log:Log:Can't add component 'TrailRenderer' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Tree","v":"second:null|log:Log:Can't add component 'Tree' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.U2D.SpriteShapeRenderer","v":"second:null|log:Log:Can't add component 'SpriteShapeRenderer' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.UIElements.UIRenderer","v":"second:null|log:Log:Can't add component 'UIRenderer' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.VFX.VFXRenderer","v":"second:null|log:Log:Can't add component 'VFXRenderer' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.VFX.VisualEffect","v":"second:null|log:Log:Can't add component 'VisualEffect' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.Video.VideoPlayer","v":"second:added|log:"}
+{"k":"UnityEngine.WheelCollider","v":"second:null|log:Log:Can't add component 'WheelCollider' to NAME because such a component is already added to the game object!"}
+{"k":"UnityEngine.WheelJoint2D","v":"second:added|log:"}
+{"k":"UnityEngine.WindZone","v":"second:null|log:Log:Can't add component 'WindZone' to NAME because such a component is already added to the game object!"}
+{"k":"complete","v":true}

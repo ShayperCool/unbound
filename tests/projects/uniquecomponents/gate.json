@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/uniquecomponents/run.py gate"],
+  "summary": "uniquecomponents: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": ["managed/UnityEngine/Runtime/Components.cs", "managed/UnityEngine/Runtime/Compat.cs"]
+}
