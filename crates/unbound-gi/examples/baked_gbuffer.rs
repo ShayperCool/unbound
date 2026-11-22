@@ -8,9 +8,18 @@
 //! Input (little-endian): u32 width, height, supersampling, meshes; per mesh u32 vertices, then
 //! positions (3 f32 each), normals (3), lightmap UVs brought to 0..1 (2), their scale and offset
 //! (4 f32), u32 submeshes, per submesh u32 triangles and their indices (3 u32 each); then u32
-//! instances, per instance u32 mesh, 4 f32 lightmap scale and offset, i32 place in the lightmap.
+//! instances, per instance u32 mesh, 4 f32 lightmap scale and offset, i32 place in the lightmap,
+//! 16 f32 local-to-world matrix (column-major), u32 receives shadows. The file may go on with
+//! the scene to light the texels from: u32 shadow casters, per caster u32 mesh and 16 f32
+//! matrix; u32 lights, per light u32 kind (0 directional, 1 point, 2 spot), u32 mode (1 mixed,
+//! 2 baked), 3 f32 colour, 3 f32 position, 3 f32 forward axis, f32 range, f32 cone angle, u32
+//! casts shadows; u32 lighting mode of mixed lights (0 baked indirect, 1 subtractive, 2
+//! shadowmask); f32 pushoff. Then `irradianceDirect.f32` is written too.
 use std::path::Path;
+use unbound_gi::baked::direct::{self, MixedMode, Receiver};
 use unbound_gi::baked::gbuffer::{Instance, Mesh, gbuffer};
+use unbound_gi::baked::light::{Kind, Light, Mode};
+use unbound_gi::baked::trace::Scene;
 
 struct Input<'a>(&'a [u8]);
 
@@ -54,11 +63,19 @@ fn main() {
             }
         })
         .collect();
+    let mut receivers = Vec::new();
     let instances: Vec<Instance> = (0..r.u32())
-        .map(|_| Instance {
-            mesh: &meshes[r.u32() as usize],
-            scale_offset: r.floats(),
-            index: r.u32() as i32,
+        .map(|_| {
+            let instance = Instance {
+                mesh: &meshes[r.u32() as usize],
+                scale_offset: r.floats(),
+                index: r.u32() as i32,
+            };
+            receivers.push(Receiver {
+                local_to_world: r.floats(),
+                receives_shadows: r.u32() != 0,
+            });
+            instance
         })
         .collect();
     let g = gbuffer(width, height, supersampling, &instances);
@@ -82,4 +99,53 @@ fn main() {
     )
     .unwrap();
     std::fs::write(out.join("occupancy.u8"), &g.occupancy).unwrap();
+    if r.0.is_empty() {
+        return;
+    }
+    let mut triangles = Vec::new();
+    for _ in 0..r.u32() {
+        let mesh = &meshes[r.u32() as usize];
+        let m: [f32; 16] = r.floats();
+        let world = |v: u32| -> [f32; 3] {
+            let p = mesh.positions[v as usize];
+            std::array::from_fn(|k| m[k] * p[0] + m[4 + k] * p[1] + m[8 + k] * p[2] + m[12 + k])
+        };
+        triangles.extend(mesh.submeshes.iter().flatten().map(|t| t.map(world)));
+    }
+    let lights: Vec<Light> = (0..r.u32())
+        .map(|_| {
+            let kind = [Kind::Directional, Kind::Point, Kind::Spot][r.u32() as usize];
+            let mode = if r.u32() == 1 {
+                Mode::Mixed
+            } else {
+                Mode::Baked
+            };
+            let color = r.floats();
+            Light {
+                kind,
+                mode,
+                color,
+                indirect_color: color,
+                position: r.floats(),
+                forward: r.floats(),
+                range: r.f32(),
+                cone_angle: r.f32(),
+                casts_shadows: r.u32() != 0,
+            }
+        })
+        .collect();
+    let mixed = [
+        MixedMode::IndirectOnly,
+        MixedMode::Subtractive,
+        MixedMode::Shadowmask,
+    ][r.u32() as usize];
+    let lit = direct::direct(
+        &g,
+        &receivers,
+        &lights,
+        mixed,
+        &Scene::new(triangles),
+        r.f32(),
+    );
+    std::fs::write(out.join("irradianceDirect.f32"), floats(&lit)).unwrap();
 }
