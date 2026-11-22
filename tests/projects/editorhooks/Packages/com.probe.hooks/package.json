@@ -1,0 +1,7 @@
+{
+  "name": "com.probe.hooks",
+  "version": "1.0.0",
+  "displayName": "Probe Hooks",
+  "description": "An embedded package whose paths the probe resolves.",
+  "unity": "6000.0"
+}

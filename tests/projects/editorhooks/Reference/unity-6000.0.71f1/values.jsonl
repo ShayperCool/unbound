@@ -1,0 +1,31 @@
+{"k":"absolute.Assets","v":"\"<Project>/Assets\""}
+{"k":"absolute.Assets/","v":"\"<Project>/Assets/\""}
+{"k":"absolute.Assets/Scripts/EditorHooksProbe.cs","v":"\"<Project>/Assets/Scripts/EditorHooksProbe.cs\""}
+{"k":"absolute.assets/scripts","v":"\"<Project>/assets/scripts\""}
+{"k":"absolute../Assets","v":"\"<Project>/./Assets\""}
+{"k":"absolute.Assets\\Scripts","v":"\"<Project>/Assets\\Scripts\""}
+{"k":"absolute.Packages","v":"\"<Project>/Packages\""}
+{"k":"absolute.Packages/com.probe.hooks","v":"\"<package:com.probe.hooks>\""}
+{"k":"absolute.Packages/com.probe.hooks/Runtime/Hooks.txt","v":"\"<package:com.probe.hooks>/Runtime/Hooks.txt\""}
+{"k":"absolute.Packages/com.unity.modules.audio","v":"\"<package:com.unity.modules.audio>\""}
+{"k":"absolute.Packages/com.missing.package/File.txt","v":"\"<Project>/Packages/com.missing.package/File.txt\""}
+{"k":"absolute.Packages/com.probe.hooks/../com.probe.hooks/Runtime","v":"\"<package:com.probe.hooks>/../com.probe.hooks/Runtime\""}
+{"k":"absolute.Library/ScriptAssemblies","v":"\"<Project>/Library/ScriptAssemblies\""}
+{"k":"absolute.ProjectSettings/ProjectSettings.asset","v":"\"<Project>/ProjectSettings/ProjectSettings.asset\""}
+{"k":"absolute.Temp","v":"\"<Project>/Temp\""}
+{"k":"absolute.Other/File.txt","v":"\"<Project>/Other/File.txt\""}
+{"k":"absolute.../Outside","v":"\"<Project>/../Outside\""}
+{"k":"absolute./tmp/Absolute/File.txt","v":"\"/tmp/Absolute/File.txt\""}
+{"k":"absolute.<empty>","v":"\"<Project>\""}
+{"k":"search.tail","v":"\"<EditorContents>/Managed/UnityEngine\"|\"Library/ScriptAssemblies\""}
+{"k":"search.precompiledFolders","v":"rule=True|android=True"}
+{"k":"frame0","v":"registered"}
+{"k":"frame1","v":"Update,LateUpdate,tick,delayed0,delayed0b,update,delayCall,delayCallFromUpdate"}
+{"k":"frame2","v":"Update,LateUpdate,tick,delayedFromUpdate,update"}
+{"k":"frame3","v":"Update,LateUpdate,tick,update"}
+{"k":"tick.everyFrame","v":"True"}
+{"k":"tick.oncePerFrame","v":"True"}
+{"k":"delayed.long","v":"ran after the delay=True"}
+{"k":"delayed.cancelled","v":"not run"}
+{"k":"delayed.fromThread","v":"main"}
+{"k":"complete","v":true}
