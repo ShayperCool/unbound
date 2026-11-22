@@ -67,6 +67,41 @@ public static class TextureResizeMemory
         UnityEngine.Object.DestroyImmediate(texture);
     }
 
+    static void RejectUnreadable(string key, Func<Texture2D, bool> resize)
+    {
+        var texture = new Texture2D(16, 24, TextureFormat.RGBA32, false, true) { name = "Unreadable texture" };
+        texture.Apply(false, true);
+        Size(key + ".before", texture);
+        var logs = new List<string>();
+        void Capture(string message, string stack, LogType kind) => logs.Add(kind + ": " + message);
+        Application.logMessageReceived += Capture;
+        try { Put(key + ".result", resize(texture).ToString()); }
+        catch (Exception error) { Put(key + ".result", error.GetType().Name + ": " + error.Message); }
+        finally { Application.logMessageReceived -= Capture; }
+        Put(key + ".logs", string.Join("\n", logs));
+        Size(key + ".after", texture);
+        Put(key + ".width", texture.width);
+        Put(key + ".height", texture.height);
+        Put(key + ".format", texture.format);
+        Put(key + ".mips", texture.mipmapCount);
+        Put(key + ".readable", texture.isReadable);
+        UnityEngine.Object.DestroyImmediate(texture);
+    }
+
+    static void ReplaceUnreadableImage()
+    {
+        var source = new Texture2D(8, 12);
+        byte[] png = source.EncodeToPNG();
+        UnityEngine.Object.DestroyImmediate(source);
+        var destination = new Texture2D(16, 24);
+        destination.Apply(false, true);
+        Put("loadImage.unreadable.result", destination.LoadImage(png, false));
+        Put("loadImage.unreadable.width", destination.width);
+        Put("loadImage.unreadable.height", destination.height);
+        Put("loadImage.unreadable.readable", destination.isReadable);
+        UnityEngine.Object.DestroyImmediate(destination);
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Record()
     {
@@ -88,6 +123,12 @@ public static class TextureResizeMemory
         Compress("compress.dxt1", TextureFormat.DXT1);
         ResizeUnreadable("unreadable.textureFormat", t => t.Reinitialize(t.width, t.height, t.format, false));
         ResizeUnreadable("unreadable.graphicsFormat", t => t.Reinitialize(t.width, t.height, t.graphicsFormat, false));
+        RejectUnreadable("rejected.default", t => t.Reinitialize(32, 12));
+        RejectUnreadable("rejected.textureFormat", t => t.Reinitialize(32, 16, TextureFormat.R8, true));
+        RejectUnreadable("rejected.graphicsFormat", t => t.Reinitialize(32, 16, GraphicsFormat.R8_UNorm, true));
+        RejectUnreadable("rejected.invalidTextureFormat", t => t.Reinitialize(0, 16, TextureFormat.R8, true));
+        RejectUnreadable("rejected.invalidGraphicsFormat", t => t.Reinitialize(0, 16, GraphicsFormat.R8_UNorm, true));
+        ReplaceUnreadableImage();
         Rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), Rows);
 #if UNITY_EDITOR
