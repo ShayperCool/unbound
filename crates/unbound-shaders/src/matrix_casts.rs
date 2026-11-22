@@ -10,8 +10,8 @@
 //! a literal (Unity's shader sources cast `0`) are rewritten, also on the continuation lines of
 //! a `#define`; not rewritten: a named integer constant cast to a matrix (none is in Unity's
 //! sources), a cast on the first line of a `#define` or one a macro makes of its arguments
-//! (`ZERO_INITIALIZE(float4x4, m)` through Unity's `name = (type)0;`), and a cast inside a
-//! cast's parentheses.
+//! (`ZERO_INITIALIZE(float4x4, m)` through Unity's `name = (type)0;`), and a cast that
+//! directly opens another cast's parenthesised operand.
 
 use crate::scopes::{Kind, edit, text, tokens};
 
