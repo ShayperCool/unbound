@@ -45,7 +45,6 @@ namespace UnityEngine
         public Rect rect = new Rect(0, 0, 0, 0);
         public int stretchWidth, stretchHeight;
         public bool consideredForMargin = true;
-        internal bool userMaxWidth, userMaxHeight;
         GUIStyle m_Style = GUIStyle.none;
 
         internal static Rect kDummyRect = new Rect(0, 0, 1, 1);
@@ -128,7 +127,7 @@ namespace UnityEngine
                     case GUILayoutOption.Type.maxWidth:
                         maxWidth = (float)option.value;
                         if (minWidth > maxWidth) minWidth = maxWidth;
-                        userMaxWidth = true;
+                        stretchWidth = 0;
                         break;
                     case GUILayoutOption.Type.minHeight:
                         minHeight = (float)option.value;
@@ -137,7 +136,7 @@ namespace UnityEngine
                     case GUILayoutOption.Type.maxHeight:
                         maxHeight = (float)option.value;
                         if (minHeight > maxHeight) minHeight = maxHeight;
-                        userMaxHeight = true;
+                        stretchHeight = 0;
                         break;
                     case GUILayoutOption.Type.stretchWidth:
                         stretchWidth = (int)option.value;
@@ -407,27 +406,24 @@ namespace UnityEngine
             m_ChildMinWidth = childMin;
             m_ChildMaxWidth = childMax;
             m_StretchableCountX = stretch;
-            if (style.fixedWidth != 0f)
+            float pad = containMargins
+                ? Math.Max(leftMargin, style.padding.left) + Math.Max(rightMargin, style.padding.right)
+                : 0f;
+            minWidth = Math.Max(minWidth, childMin + pad);
+            if (maxWidth == 0f)
             {
-                minWidth = maxWidth = style.fixedWidth;
-                return;
-            }
-            if (containMargins)
-            {
-                float padding = Math.Max(leftMargin, style.padding.left) + Math.Max(rightMargin, style.padding.right);
-                minWidth = Math.Max(minWidth, childMin + padding);
-                maxWidth = Math.Max(minWidth, maxWidth == 0f ? childMax + padding : maxWidth);
-                return;
-            }
-            if (!m_UserSpecifiedWidth || minWidth == 0f && maxWidth == 0f)
-            {
-                minWidth = childMin;
-                maxWidth = Math.Max(childMax, childMin);
+                stretchWidth += m_StretchableCountX + (style.stretchWidth ? 1 : 0);
+                maxWidth = childMax + pad;
             }
             else
             {
-                if (minWidth == 0f) minWidth = childMin;
-                if (maxWidth == 0f) maxWidth = Math.Max(childMax, minWidth);
+                stretchWidth = 0;
+            }
+            maxWidth = Math.Max(maxWidth, minWidth);
+            if (style.fixedWidth != 0f)
+            {
+                minWidth = maxWidth = style.fixedWidth;
+                stretchWidth = 0;
             }
         }
 
@@ -443,9 +439,9 @@ namespace UnityEngine
                     float left = Styled ? Math.Max(l, style.padding.left) : l - m_MarginLeft;
                     float right = Styled ? Math.Max(r, style.padding.right) : r - m_MarginRight;
                     float available = width - left - right;
-                    float w = e.stretchWidth != 0 ? available : Math.Min(Math.Max(e.maxWidth, e.minWidth), available);
-                    if (e.stretchWidth != 0 && e.userMaxWidth) w = Math.Min(w, e.maxWidth);
-                    w = Math.Max(w, e.minWidth);
+                    float w = e.stretchWidth != 0
+                        ? available
+                        : Mathf.Clamp(available, e.minWidth, Math.Max(e.minWidth, e.maxWidth));
                     e.SetHorizontal(x + left, w);
                 }
                 return;
@@ -488,8 +484,7 @@ namespace UnityEngine
                 float w = e.minWidth;
                 if (growRange > 0f) w += (e.maxWidth - e.minWidth) / growRange * towardsMax;
                 if (e.stretchWidth != 0 && m_StretchableCountX > 0) w += toStretch * e.stretchWidth / m_StretchableCountX;
-                if (e.userMaxWidth) w = Math.Min(w, Math.Max(e.maxWidth, e.minWidth));
-                e.SetHorizontal(pos, w);
+                e.SetHorizontal(Mathf.Round(pos), Mathf.Round(w));
                 pos += w;
             }
         }
@@ -598,27 +593,24 @@ namespace UnityEngine
             m_ChildMinHeight = childMin;
             m_ChildMaxHeight = childMax;
             m_StretchableCountY = stretch;
-            if (style.fixedHeight != 0f)
+            float pad = containMargins
+                ? Math.Max(topMargin, style.padding.top) + Math.Max(bottomMargin, style.padding.bottom)
+                : 0f;
+            minHeight = Math.Max(minHeight, childMin + pad);
+            if (maxHeight == 0f)
             {
-                minHeight = maxHeight = style.fixedHeight;
-                return;
-            }
-            if (containMargins)
-            {
-                float padding = Math.Max(topMargin, style.padding.top) + Math.Max(bottomMargin, style.padding.bottom);
-                minHeight = Math.Max(minHeight, childMin + padding);
-                maxHeight = Math.Max(minHeight, maxHeight == 0f ? childMax + padding : maxHeight);
-                return;
-            }
-            if (!m_UserSpecifiedHeight || minHeight == 0f && maxHeight == 0f)
-            {
-                minHeight = childMin;
-                maxHeight = Math.Max(childMax, childMin);
+                stretchHeight += m_StretchableCountY + (style.stretchHeight ? 1 : 0);
+                maxHeight = childMax + pad;
             }
             else
             {
-                if (minHeight == 0f) minHeight = childMin;
-                if (maxHeight == 0f) maxHeight = Math.Max(childMax, minHeight);
+                stretchHeight = 0;
+            }
+            maxHeight = Math.Max(maxHeight, minHeight);
+            if (style.fixedHeight != 0f)
+            {
+                minHeight = maxHeight = style.fixedHeight;
+                stretchHeight = 0;
             }
         }
 
@@ -634,9 +626,9 @@ namespace UnityEngine
                     float top = Styled ? Math.Max(t, style.padding.top) : t - m_MarginTop;
                     float bottom = Styled ? Math.Max(b, style.padding.bottom) : b - m_MarginBottom;
                     float available = height - top - bottom;
-                    float h = e.stretchHeight != 0 ? available : Math.Min(Math.Max(e.maxHeight, e.minHeight), available);
-                    if (e.stretchHeight != 0 && e.userMaxHeight) h = Math.Min(h, e.maxHeight);
-                    h = Math.Max(h, e.minHeight);
+                    float h = e.stretchHeight != 0
+                        ? available
+                        : Mathf.Clamp(available, e.minHeight, Math.Max(e.minHeight, e.maxHeight));
                     e.SetVertical(y + top, h);
                 }
                 return;
@@ -679,8 +671,7 @@ namespace UnityEngine
                 float h = e.minHeight;
                 if (growRange > 0f) h += (e.maxHeight - e.minHeight) / growRange * towardsMax;
                 if (e.stretchHeight != 0 && m_StretchableCountY > 0) h += toStretch * e.stretchHeight / m_StretchableCountY;
-                if (e.userMaxHeight) h = Math.Min(h, Math.Max(e.maxHeight, e.minHeight));
-                e.SetVertical(pos, h);
+                e.SetVertical(Mathf.Round(pos), Mathf.Round(h));
                 pos += h;
             }
         }
@@ -954,10 +945,11 @@ namespace UnityEngine
         internal static void Layout()
         {
             var top = current.topLevel;
+            float scale = GUIUtility.pixelsPerPoint;
             top.CalcWidth();
-            top.SetHorizontal(0f, Screen.width);
+            top.SetHorizontal(0f, Mathf.Min(Screen.width / scale, top.maxWidth));
             top.CalcHeight();
-            top.SetVertical(0f, Screen.height);
+            top.SetVertical(0f, Mathf.Min(Screen.height / scale, top.maxHeight));
             LayoutFreeGroup(current.windows);
         }
 
@@ -1022,7 +1014,8 @@ namespace UnityEngine
         internal static GUILayoutGroup BeginLayoutArea(GUIStyle style, Type layoutType)
         {
             GUILayoutGroup g;
-            if (IsLayout)
+            var eventType = Event.current?.type;
+            if (eventType == EventType.Layout || (eventType == EventType.Used && Compat.UsedGUILayoutMeasured))
             {
                 g = CreateGroup(layoutType);
                 g.style = style;
@@ -1096,7 +1089,10 @@ namespace UnityEngine
         public static Rect GetLastRect()
         {
             GUIUtility.CheckOnGUI();
-            return IsLayout ? kDummyRect : current.groups.Peek().GetLast();
+            var eventType = Event.current?.type;
+            if (eventType == EventType.Layout || (eventType == EventType.Used && Compat.UsedGUILayoutMeasured))
+                return kDummyRect;
+            return current.groups.Peek().GetLast();
         }
 
         public static Rect GetAspectRect(float aspect) => DoGetAspectRect(aspect, null);
@@ -1107,11 +1103,13 @@ namespace UnityEngine
         static Rect DoGetAspectRect(float aspect, GUILayoutOption[] options)
         {
             GUIUtility.CheckOnGUI();
-            if (IsLayout)
+            var eventType = Event.current?.type;
+            if (eventType == EventType.Layout)
             {
                 current.groups.Peek().Add(new GUIAspectSizer(aspect, options));
                 return kDummyRect;
             }
+            if (eventType == EventType.Used && Compat.UsedGUILayoutMeasured) return kDummyRect;
             return current.groups.Peek().GetNext().rect;
         }
 

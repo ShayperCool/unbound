@@ -64,11 +64,18 @@ namespace UnityEngine
             set => m_Tooltip = value;
         }
 
-        internal int hash => (m_Text?.GetHashCode() ?? 0) ^ (m_Tooltip?.GetHashCode() ?? 0) ^ (m_Image != null ? m_Image.GetHashCode() : 0);
+        internal int hash => string.IsNullOrEmpty(m_Text) ? 0 : unchecked(m_Text.GetHashCode() * 37);
+
+        internal string textWithWhitespace
+        {
+            get => string.IsNullOrEmpty(m_Text) ? "\u200B" : m_Text + "\u200B";
+            set => m_Text = value;
+        }
 
         internal static GUIContent Temp(string t)
         {
             s_Text.m_Text = t;
+            s_Text.m_Image = null;
             s_Text.m_Tooltip = "";
             return s_Text;
         }
@@ -379,6 +386,11 @@ namespace UnityEngine
 
         internal void DrawPrefixLabel(Rect position, GUIContent content, int controlID)
         {
+            if (content == null)
+            {
+                Debug.LogError("Style.DrawPrefixLabel may not be called with GUIContent that is null.");
+                return;
+            }
             if (!IsRepaint()) return;
             bool focus = GUIUtility.keyboardControl == controlID;
             DrawStyle(position, content, position.Contains(Event.current.mousePosition), false, false, focus, -1, -1, -1);
@@ -569,10 +581,65 @@ namespace UnityEngine
         public float CalcHeight(GUIContent content, float width)
         {
             if (m_FixedHeight != 0f) return m_FixedHeight;
+            if (Compat.ImguiTextCoreCalcHeightMeasured && Native.IsReady)
+                return CalcHeightTextCore(content, width);
             float inner = width - m_Padding.horizontal;
             if (content?.image != null && m_ImagePosition == ImagePosition.ImageLeft) inner -= content.image.width;
             var size = ContentSize(content, m_WordWrap ? Math.Max(1f, inner) : 0f);
             return Mathf.Ceil(size.y + m_Padding.vertical);
+        }
+
+        float CalcHeightTextCore(GUIContent content, float width)
+        {
+            if (content == null) throw new ArgumentNullException(nameof(content));
+            var image = content.image;
+            float imageWidth = 0f;
+            float imageHeight = 0f;
+            if (image != null)
+            {
+                imageWidth = image.width;
+                imageHeight = image.height;
+            }
+
+            const float MeasureMaxHeight = 1000f;
+            float measureWidth = width;
+            if (m_WordWrap && m_ImagePosition == ImagePosition.ImageLeft && image != null)
+            {
+                float iconWidth = UnityEditor.EditorGUIUtility.GetIconSize().x;
+                if (iconWidth != 0f)
+                {
+                    measureWidth -= iconWidth;
+                }
+                else if (imageWidth > 0f && imageHeight > 0f)
+                {
+                    float scale = Mathf.Clamp01(Mathf.Min(width / imageWidth, MeasureMaxHeight / imageHeight));
+                    measureWidth -= Mathf.Floor(imageWidth * scale + 0.5f);
+                }
+            }
+
+            bool hasText = !string.IsNullOrEmpty(content.text);
+            float textHeight = 0f;
+            if (m_ImagePosition != ImagePosition.ImageOnly && hasText)
+            {
+                if (IMGUITextHandle.TryMeasurePreferredSize(this, content.textWithWhitespace, new Rect(0f, 0f, measureWidth, MeasureMaxHeight), out var preferred))
+                    textHeight = preferred.y;
+                else
+                    textHeight = GuiText.Size(content.text, this, m_WordWrap ? Math.Max(1f, measureWidth - m_Padding.horizontal) : 0f).y;
+            }
+
+            float height = m_ImagePosition switch
+            {
+                ImagePosition.ImageLeft => Mathf.Max(textHeight, imageHeight),
+                ImagePosition.ImageAbove => textHeight + imageHeight,
+                ImagePosition.ImageOnly => imageHeight,
+                ImagePosition.TextOnly => textHeight,
+                _ => 0f,
+            };
+
+            if (m_ImagePosition != ImagePosition.ImageOnly && image == null && !hasText)
+                height = lineHeight;
+
+            return height + m_Padding.top + m_Padding.bottom;
         }
 
         /// <summary>The narrowest and widest the content can be: a wrapping style can shrink to its

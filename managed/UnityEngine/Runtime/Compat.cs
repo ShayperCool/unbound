@@ -299,6 +299,11 @@ namespace Unbound.Runtime
         /// in Unity 6000.0.71f1 (tests/projects/imguiskin and editortogglegroup).</summary>
         internal static bool UsedGUILayoutMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>IMGUI wrapped height calculation through TextCore without ceiling rounding,
+        /// measured in tests/projects/editortogglegroup and tests/projects/imguiskin on Unity
+        /// 6000.0.71f1. Other families retain the unmeasured legacy text measurement.</summary>
+        internal static bool ImguiTextCoreCalcHeightMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Explicit GUI texture draws keep their tint alpha inside disabled groups,
         /// measured in tests/projects/editordrawrect on Unity 6000.0.71f1.</summary>
         internal static bool ExplicitGuiTextureAlphaMeasured => Family == ReleaseFamily.Unity6000_0;

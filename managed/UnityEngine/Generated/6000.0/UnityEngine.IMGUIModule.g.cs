@@ -128,7 +128,6 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] internal static string k_ZeroWidthSpace;
         [global::Unbound.Stub] internal void SetTextWithoutNotify(string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.SetTextWithoutNotify"); }
-        internal string textWithWhitespace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.textWithWhitespace"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.textWithWhitespace"); } }
         internal event global::System.Action OnTextChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.OnTextChanged"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
@@ -326,29 +325,10 @@ namespace UnityEngine
         internal static bool textFieldInput { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.textFieldInput"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.textFieldInput"); } }
         internal static bool manualTex2SRGBEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.manualTex2SRGBEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.manualTex2SRGBEnabled"); } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class IMGUITextHandle : global::UnityEngine.TextCore.Text.TextHandle
+    unsafe partial class IMGUITextHandle
     {
-        [global::Unbound.Stub] internal global::System.Collections.Generic.LinkedListNode<global::UnityEngine.IMGUITextHandle.TextHandleTuple> tuple;
-        [global::Unbound.Stub] internal static global::System.Func<global::UnityEngine.Object> GetEditorTextSettings;
-        [global::Unbound.Stub] internal static global::System.Func<int, global::UnityEngine.TextCore.Text.FontAsset, global::UnityEngine.TextCore.Text.FontAsset> GetBlurryFontAssetMapping;
-        [global::Unbound.Stub] internal bool isCachedOnNative;
-        [global::Unbound.Stub] internal static void EmptyCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.EmptyCache"); }
-        [global::Unbound.Stub] internal static void EmptyManagedCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.EmptyManagedCache"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.IMGUITextHandle GetTextHandle(global::UnityEngine.GUIStyle style, global::UnityEngine.Rect position, string content, global::UnityEngine.Color32 textColor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.GetTextHandle"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.IMGUITextHandle GetTextHandle(global::UnityEngine.GUIStyle style, global::UnityEngine.Rect position, string content, global::UnityEngine.Color32 textColor, ref bool isCached) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.GetTextHandle"); return default; }
-        [global::Unbound.Stub] internal static float GetLineHeight(global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.GetLineHeight"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Vector2 GetPreferredSize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.GetPreferredSize"); return default; }
         [global::Unbound.Stub] internal int GetNumCharactersThatFitWithinWidth(float width) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.GetNumCharactersThatFitWithinWidth"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Rect[] GetHyperlinkRects(global::UnityEngine.Rect content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.GetHyperlinkRects"); return global::System.Array.Empty<global::UnityEngine.Rect>(); }
-        [global::Unbound.Stub] public IMGUITextHandle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.ctor"); }
-        [global::Unbound.Stub]
-        internal unsafe partial class TextHandleTuple
-        {
-            [global::Unbound.Stub] public float lastTimeUsed;
-            [global::Unbound.Stub] public int hashCode;
-            [global::Unbound.Stub] public TextHandleTuple(float lastTimeUsed, int hashCode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.TextHandleTuple.ctor"); }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ObjectGUIState : global::System.IDisposable
