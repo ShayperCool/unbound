@@ -18,6 +18,7 @@ mod buffer_parameters;
 mod exponents;
 pub mod fetch;
 mod fit;
+mod matrix_casts;
 mod matrix_swizzles;
 mod opaque_members;
 mod samplers;
@@ -35,7 +36,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 71;
+pub const FORMAT_VERSION: u32 = 72;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -1182,6 +1183,9 @@ impl ShaderCompiler {
             shaderc::EnvVersion::Vulkan1_1 as u32,
         );
         o.set_suppress_warnings();
+        // Before either compile: glslang folds an integer literal cast to a float matrix into
+        // another constant from one compile to the next ([`matrix_casts`]).
+        let source = &matrix_casts::matrix_literal_casts(source);
         let name = file
             .file_name()
             .map_or("shader".into(), |n| n.to_string_lossy().to_string());
