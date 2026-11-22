@@ -82,6 +82,12 @@ public class NavLinksProbe : MonoBehaviour
 
     void Start()
     {
+        if (Environment.GetEnvironmentVariable("NAVLINKS_PROJECTION") == "1")
+        {
+            RecordLinkProjectionControls();
+            return;
+        }
+
         // Every lane's path is found in the first frame (the per-frame A* budget is not what this
         // probe measures).
         NavMesh.pathfindingIterationsPerFrame = 100000;
@@ -101,6 +107,87 @@ public class NavLinksProbe : MonoBehaviour
                 Line(lane.Name, name, 0, "\"onNavMesh\":" + B(agent.isOnNavMesh) + ",\"p\":" + V(agent.transform.position)
                     + ",\"n\":" + V(agent.nextPosition) + ",\"pp\":" + B(agent.pathPending) + ",\"hp\":" + B(agent.hasPath)
                     + ",\"auto\":" + B(agent.autoTraverseOffMeshLink) + Links(lane, agent));
+    }
+
+    void RecordLinkProjectionControls()
+    {
+        const string mid = "endatlink";
+        var left = new Vector3(-2f, 0f, 0f);
+        var right = new Vector3(2f, 0f, 0f);
+        var from = new Vector3(-8f, 0f, 0f);
+        var to = new Vector3(8f, 0f, 0f);
+        var offsetLeft = new Vector3(-2.1f, 0f, 0.17f);
+        var offsetRight = new Vector3(2.168f, 0f, 0.62f);
+        var offsetFrom = new Vector3(-8f, 0f, 0.17f);
+        var offsetTo = new Vector3(8f, 0f, 0.62f);
+        RecordLinkProjection("atDestination", mid, left, right, from, right);
+        RecordLinkProjection("centre", mid, left, right, from, to);
+        RecordLinkProjection("adjacent", "shortafter", left, right, from, to);
+        RecordLinkProjection("offset", mid, offsetLeft, offsetRight, offsetFrom, offsetTo);
+        RecordLinkProjection("snap", mid, new Vector3(-1.2f, 0f, 0.01f), new Vector3(1.2f, 0f, 0.4f),
+            new Vector3(-8f, 0f, 0.01f), new Vector3(8f, 0f, 0.4f));
+        RecordLinkProjection("higher", mid, new Vector3(-2f, 0.3f, 0f), new Vector3(2f, 0.35f, 0f), from, to);
+        RecordLinkProjection("reverse", mid, offsetLeft, offsetRight, offsetTo, offsetFrom);
+        RecordLinkProjection("wide", "wide", left, right, new Vector3(-8f, 0f, 0.3f), offsetTo, 2f);
+        RecordSlopedLinkProjection();
+        Finish(0);
+    }
+
+    void RecordSlopedLinkProjection()
+    {
+        var origin = new Vector3(400f, 0f, 0f);
+        var sources = new List<NavMeshBuildSource>
+        {
+            new NavMeshBuildSource {
+                shape = NavMeshBuildSourceShape.Box,
+                size = new Vector3(6f, 1f, 8f),
+                transform = Matrix4x4.Translate(origin + new Vector3(-5f, -0.5f, 0f)),
+            },
+            new NavMeshBuildSource {
+                shape = NavMeshBuildSourceShape.Box,
+                size = new Vector3(6f, 1f, 8f),
+                transform = Matrix4x4.TRS(origin + new Vector3(5f, -0.5f, 0f),
+                    Quaternion.Euler(0f, 0f, 12f), Vector3.one),
+            },
+        };
+        var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(0), sources,
+            new Bounds(origin, new Vector3(24f, 8f, 16f)), Vector3.zero, Quaternion.identity);
+        var instance = NavMesh.AddNavMeshData(data);
+        var linkStart = new Vector3(-3f, 0f, 0f);
+        var linkEnd = new Vector3(3.25f, -0.1f, 0.25f);
+        RecordLinkProjection("slope", origin, linkStart, linkEnd,
+            new Vector3(-5f, 0f, 0f), new Vector3(6.5f, 0.4f, 0.25f));
+        NavMesh.RemoveNavMeshData(instance);
+        DestroyImmediate(data);
+    }
+
+    void RecordLinkProjection(string sample, string mesh, Vector3 startLink, Vector3 endLink, Vector3 source,
+        Vector3 destination, float width = 0f)
+        => RecordLinkProjection(sample, Lanes.Origin(Lanes.Index(mesh)), startLink, endLink, source, destination, width);
+
+    void RecordLinkProjection(string sample, Vector3 origin, Vector3 startLink, Vector3 endLink, Vector3 source,
+        Vector3 destination, float width = 0f)
+    {
+        var lane = new Lane { Name = "projection." + sample, O = origin };
+        var link = AddLink(lane, startLink, endLink, width: width);
+        var path = new NavMeshPath();
+        bool found = NavMesh.CalculatePath(lane.O + source, lane.O + destination, NavMesh.AllAreas, path);
+        var corners = path.corners;
+        var result = new StringBuilder("\"status\":").Append(Text(path.status.ToString())).Append(",\"found\":").Append(B(found));
+        result.Append(",\"start\":").Append(V(lane.O + startLink));
+        result.Append(",\"end\":").Append(V(lane.O + endLink));
+        result.Append(",\"corners\":[");
+        for (int i = 0; i < corners.Length; i++)
+            result.Append(i == 0 ? "" : ",").Append(V(corners[i]));
+        result.Append("],\"horizontalBits\":[");
+        for (int i = 0; i < corners.Length; i++)
+        {
+            var c = corners[i];
+            result.Append(i == 0 ? "" : ",").Append(Text(BitConverter.SingleToInt32Bits(c.x).ToString("x8", CultureInfo.InvariantCulture)
+                + "/" + BitConverter.SingleToInt32Bits(c.z).ToString("x8", CultureInfo.InvariantCulture)));
+        }
+        Line(lane.Name, "path", 0, result.Append(']').ToString());
+        DestroyImmediate(link.gameObject);
     }
 
     void Setup(Lane lane)

@@ -570,6 +570,10 @@ def recipes(release):
     for name in ('animatoradditive', 'coreapis', 'editorcallbacks', 'humanoid', 'instantiateasync', 'modelclips',
                  'modelroot', 'navlinks'):
         R[name] = guarded(jsonl('values.jsonl'))
+    step = driver('projection.py', 'gate', '--release', '{release}', '--label', '{label}-projection')
+    step.kind = 'compare'
+    step.summary = r'total: records .* failing/missing/extra value\(s\)'
+    R['navlinks'].append(step)
     # Scene-loop companions retain the original callback comparator and its raw failures.
     for profile, flags in (('additive', []), ('single', ['--single-first']), ('forced', ['--force-only']),
                            ('starts', ['--starts-only']), ('queue', ['--queue-only']),

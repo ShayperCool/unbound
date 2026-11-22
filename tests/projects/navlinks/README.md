@@ -351,3 +351,28 @@ and [updatePosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReferen
 document surface constraints and transform coupling. The staleness, placement and
 completed-destination sequences above are measured behavior, rather than additional
 timing guarantees from those pages.
+
+## Point-link endpoint projection
+
+The projection profile measures the corners of paths using point links to
+flat, adjacent, and sloped polygons. It includes a destination at the authored
+link end, fractional offsets, radius snapping, higher endpoints, traversal in
+both directions, and a wide link as a control. The horizontal coordinates are
+also recorded as float bit patterns. A projected end can differ from the
+destination by one float and appear as a separate corner. The sloped control
+distinguishes three-dimensional projection from a height lookup at the
+authored horizontal position.
+
+```
+python3 tests/projects/navlinks/projection.py editor --release 6000.0.71f1 --label L
+python3 tests/projects/navlinks/projection.py publish --release 6000.0.71f1 --label L
+UNBOUND_CLI=.../unbound python3 tests/projects/navlinks/projection.py gate --release 6000.0.71f1
+```
+
+The two independent Editor captures agree in every row. The profile uses the
+existing path comparator and keeps the original broad capture unchanged.
+The Unity 6.0 API describes the ordered corners of a calculated path. Exact
+point-link projection is measured here, including the control with no
+projection change to a wide link.
+[NavMeshPath.corners](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshPath-corners.html),
+[AI Navigation 2.0 NavMesh Link](https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshLink.html).
