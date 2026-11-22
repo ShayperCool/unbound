@@ -504,8 +504,9 @@ namespace UnityEngine
 
         /// <summary>colliderForce: a particle that hits a collider of a Rigidbody pushes it at the
         /// contact, along the particle's velocity, with the force for one physics step; the force
-        /// is multiplied by the cosine of the angle between the velocity and the surface (zero when
-        /// moving away), by the particle's speed and by the volume of the sphere of its collision
+        /// is multiplied by the cosine of the angle between the velocity and the contact normal,
+        /// negated and at least zero (a particle starting inside the body and moving deeper pushes
+        /// nothing: force/rules/angle_inside), by the particle's speed and by the volume of the sphere of its collision
         /// radius, as their flags ask; a force of zero or less pushes nothing (Unity 6000.0.71f1,
         /// tests/projects/particlerender force/*, force/rules/*). Kinematic bodies do not move.</summary>
         void ApplyColliderForce(Rigidbody body, Vector3 contact, Vector3 normal, Vector3 velocity, float radius, in StepContext c)

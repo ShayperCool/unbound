@@ -57,7 +57,7 @@ namespace Unbound.Runtime
             /// <summary>The shapes the system's particles have found in the frame of
             /// <see cref="Frame"/>: Unity takes at most maxCollisionShapes of them for the whole
             /// system, Unbound tells when there are more.</summary>
-            internal readonly HashSet<Fixture> FrameShapes = new HashSet<Fixture>();
+            internal readonly HashSet<(Fixture, int)> FrameShapes = new HashSet<(Fixture, int)>();
             internal int Frame = -1;
 
             public bool QueryCallback(Fixture fixture, int childIndex)
@@ -73,7 +73,7 @@ namespace Unbound.Runtime
                     return false;
                 }
                 Candidates.Add((fixture, childIndex));
-                if (FrameShapes.Add(fixture) && FrameShapes.Count > MaxShapes) Truncated = true;
+                if (FrameShapes.Add((fixture, childIndex)) && FrameShapes.Count > MaxShapes) Truncated = true;
                 return true;
             }
         }
