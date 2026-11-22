@@ -23,7 +23,23 @@ struct Node {
 pub struct Scene {
     /// Each triangle's first corner and its two edges from it.
     triangles: Vec<[[f32; 3]; 3]>,
+    /// Each triangle's number among the triangles the scene was made of.
+    numbers: Vec<u32>,
     nodes: Vec<Node>,
+}
+
+/// Where a ray first meets the scene.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Hit {
+    /// The triangle's number among the triangles the scene was made of.
+    pub triangle: u32,
+    /// How far along the ray, in lengths of its direction.
+    pub distance: f32,
+    /// The point's weights of the triangle's second and third corners.
+    pub weights: [f32; 2],
+    /// Whether the ray meets the side the triangle's corners run clockwise on (the side its
+    /// corners' cross product points to).
+    pub front: bool,
 }
 
 const LEAF_TRIANGLES: usize = 4;
@@ -38,10 +54,12 @@ impl Scene {
     /// A scene of triangles given by their corners in world space. Triangles with a corner that
     /// is not a number are left out.
     pub fn new(corners: impl IntoIterator<Item = [[f32; 3]; 3]>) -> Scene {
-        let corners: Vec<[[f32; 3]; 3]> = corners
+        let (given, corners): (Vec<u32>, Vec<[[f32; 3]; 3]>) = corners
             .into_iter()
-            .filter(|t| t.iter().flatten().all(|v| v.is_finite()))
-            .collect();
+            .enumerate()
+            .filter(|(_, t)| t.iter().flatten().all(|v| v.is_finite()))
+            .map(|(number, t)| (number as u32, t))
+            .unzip();
         let bounds: Vec<([f32; 3], [f32; 3])> = corners
             .iter()
             .map(|t| {
@@ -62,7 +80,11 @@ impl Scene {
                 [t[0], sub(t[1], t[0]), sub(t[2], t[0])]
             })
             .collect();
-        Scene { triangles, nodes }
+        Scene {
+            triangles,
+            numbers: order.iter().map(|&i| given[i as usize]).collect(),
+            nodes,
+        }
     }
 
     pub fn triangle_count(&self) -> usize {
@@ -87,7 +109,10 @@ impl Scene {
             }
             if node.count > 0 {
                 let leaf = &self.triangles[node.first as usize..(node.first + node.count) as usize];
-                if leaf.iter().any(|t| hit(t, ray).is_some_and(|d| d < limit)) {
+                if leaf
+                    .iter()
+                    .any(|t| hit(t, ray).is_some_and(|h| h.distance < limit))
+                {
                     return true;
                 }
             } else {
@@ -99,6 +124,44 @@ impl Scene {
             }
         }
         false
+    }
+
+    /// The nearest triangle the ray crosses after its origin and before `limit` along it.
+    pub fn closest(&self, ray: &Ray, limit: f32) -> Option<Hit> {
+        if self.nodes.is_empty() {
+            return None;
+        }
+        let inverse: [f32; 3] = std::array::from_fn(|k| 1.0 / ray.direction[k]);
+        let mut stack = [0u32; 64];
+        let mut depth = 1;
+        let mut nearest: Option<Hit> = None;
+        let mut limit = limit;
+        while depth > 0 {
+            depth -= 1;
+            let index = stack[depth] as usize;
+            let node = &self.nodes[index];
+            if !crosses(node, ray, &inverse, limit) {
+                continue;
+            }
+            if node.count > 0 {
+                for k in node.first as usize..(node.first + node.count) as usize {
+                    if let Some(found) = hit(&self.triangles[k], ray)
+                        && found.distance < limit
+                    {
+                        limit = found.distance;
+                        nearest = Some(Hit {
+                            triangle: self.numbers[k],
+                            ..found
+                        });
+                    }
+                }
+            } else {
+                stack[depth] = index as u32 + 1;
+                stack[depth + 1] = node.first;
+                depth += 2;
+            }
+        }
+        nearest
     }
 }
 
@@ -176,7 +239,7 @@ fn crosses(node: &Node, ray: &Ray, inverse: &[f32; 3], limit: f32) -> bool {
 /// Where along the ray it crosses the triangle (first corner and two edges), after its origin.
 /// In double precision: with 32-bit products a ray through an edge two triangles share can
 /// miss both.
-fn hit(triangle: &[[f32; 3]; 3], ray: &Ray) -> Option<f32> {
+fn hit(triangle: &[[f32; 3]; 3], ray: &Ray) -> Option<Hit> {
     let wide = |v: [f32; 3]| v.map(f64::from);
     let cross = |a: [f64; 3], b: [f64; 3]| {
         [
@@ -209,5 +272,11 @@ fn hit(triangle: &[[f32; 3]; 3], ray: &Ray) -> Option<f32> {
         return None;
     }
     let distance = dot(e2, q) * inverse;
-    (distance > 0.0).then_some(distance as f32)
+    (distance > 0.0).then_some(Hit {
+        triangle: 0,
+        distance: distance as f32,
+        weights: [u as f32, v as f32],
+        // The corners' cross product is against the ray.
+        front: determinant > 0.0,
+    })
 }
