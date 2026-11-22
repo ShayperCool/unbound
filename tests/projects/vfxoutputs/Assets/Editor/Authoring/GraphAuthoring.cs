@@ -34,6 +34,7 @@ public static class GraphAuthoring
         Primitives();
         Alike();
         Moving();
+        GloballySorted();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -449,6 +450,71 @@ public static class GraphAuthoring
             SetRandom(init, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
             Save(graph);
         }
+    }
+
+    /// <summary>Graphs whose outputs share their sort (README.md, "Shared sorts"): Overlapping's
+    /// thirty alpha-blended quads drawn by a second output too, smaller and white, both sorted
+    /// alike, which the compiler sorts once for the system (a global sort); with a third output
+    /// sorted otherwise, which sorts its own list.</summary>
+    static void GloballySorted()
+    {
+        VFXPlanarPrimitiveOutput Second(VFXGraph graph, VFXPlanarPrimitiveOutput first, string label, float size, Vector3 color)
+        {
+            var output = Make<VFXPlanarPrimitiveOutput>();
+            output.label = label;
+            graph.AddChild(output);
+            ((VFXContext)first.inputContexts.First()).LinkTo(output);
+            output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
+            Set(output, "size", size);
+            SetVector(output, "color", color);
+            return output;
+        }
+
+        var distance = NewGraph("GlobalDistance");
+        var near = Overlapping(distance, 32, 30f, 0.7f, 0.6f);
+        near.label = "Large";
+        near.SetSettingValue("sortMode", VFXSortingUtility.SortCriteria.DistanceToCamera);
+        Second(distance, near, "Small", 0.35f, Vector3.one).SetSettingValue("sortMode", VFXSortingUtility.SortCriteria.DistanceToCamera);
+        Save(distance);
+
+        // One key of each particle's own for both outputs: sorted at each step, not per camera.
+        var keyed = NewGraph("GlobalKeyed");
+        var large = Overlapping(keyed, 32, 30f, 0.7f, 0.6f);
+        large.label = "Large";
+        var small = Second(keyed, large, "Small", 0.35f, Vector3.one);
+        var random = Make<UnityEditor.VFX.Operator.Random>();
+        keyed.AddChild(random);
+        foreach (var output in new[] { large, small })
+        {
+            output.SetSettingValue("sortMode", VFXSortingUtility.SortCriteria.Custom);
+            Link(random.outputSlots[0], Input(output, "sortKey"));
+        }
+        Save(keyed);
+
+        // Youngest in front, as SortYoungest's particles (dead particles' places taken again):
+        // sorted at each step, not per camera, by an attribute.
+        var youngest = NewGraph("GlobalYoungest");
+        var (spawn, init, older) = System(youngest, 64);
+        older.label = "Large";
+        older.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
+        ConstantRate(spawn, 30f);
+        SetRandom(init, "position", new Vector3(-0.6f, -0.6f, -1f), new Vector3(0.6f, 0.6f, 1f));
+        SetRandom(init, "lifetime", 0.3f, 1.5f);
+        Set(init, "size", 0.7f);
+        Set(init, "alpha", 0.6f);
+        SetRandom(init, "color", new Vector3(0f, 0f, 0f), new Vector3(1f, 1f, 1f));
+        older.SetSettingValue("sortMode", VFXSortingUtility.SortCriteria.YoungestInFront);
+        Second(youngest, older, "Small", 0.35f, Vector3.one).SetSettingValue("sortMode", VFXSortingUtility.SortCriteria.YoungestInFront);
+        Save(youngest);
+
+        // Two outputs by distance share a sort; a third, by depth, sorts its own list.
+        var mixed = NewGraph("GlobalMixed");
+        var first = Overlapping(mixed, 32, 30f, 0.7f, 0.6f);
+        first.label = "Large";
+        first.SetSettingValue("sortMode", VFXSortingUtility.SortCriteria.DistanceToCamera);
+        Second(mixed, first, "Small", 0.35f, Vector3.one).SetSettingValue("sortMode", VFXSortingUtility.SortCriteria.DistanceToCamera);
+        Second(mixed, first, "Tiny", 0.15f, new Vector3(0f, 0f, 0f)).SetSettingValue("sortMode", VFXSortingUtility.SortCriteria.CameraDepth);
+        Save(mixed);
     }
 
     /// <summary>The probe scene: a camera that sees none of the stages (the probe builds them).</summary>

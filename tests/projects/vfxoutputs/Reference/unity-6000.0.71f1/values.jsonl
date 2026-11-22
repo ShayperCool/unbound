@@ -25,6 +25,9 @@
 {"k":"draw/SortKeyedMany/f005","v":"alive=20000 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/MovingVectors/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/MovingPlain/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/GlobalDistance/f009","v":"alive=30 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/GlobalKeyed/f009","v":"alive=30 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/GlobalMixed/f009","v":"alive=30 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/UpdateList still/f010","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/UpdateList glow/f010","v":"alive=30 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/UpdateList away/f010","v":"alive=-1 culled=1 awake=1 renderer enabled=1 visible=0"}
@@ -50,6 +53,9 @@
 {"k":"draw/TwinA/f012","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/TwinB/f012","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/AlikeOutputs/f012","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/GlobalDistance/f012","v":"alive=30 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/GlobalKeyed/f012","v":"alive=30 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/GlobalMixed/f012","v":"alive=30 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/UpdateList away/f019","v":"alive=-1 culled=1 awake=1 renderer enabled=1 visible=0"}
 {"k":"draw/ComputeCulled away/f019","v":"alive=-1 culled=1 awake=1 renderer enabled=1 visible=0"}
 {"k":"draw/FrustumCulled away/f019","v":"alive=-1 culled=1 awake=1 renderer enabled=1 visible=0"}
@@ -60,9 +66,11 @@
 {"k":"draw/FrustumCulled dying/f030","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/FrustumCulled away/f030","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/SortYoungest/f030","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/GlobalYoungest/f036","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/UpdateList dying/f045","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/ComputeCulled dying/f045","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/FrustumCulled dying/f045","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/SortYoungest/f045","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/GlobalYoungest/f048","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"capture/graphs imported while playing","v":""}
 {"k": "complete", "v": true}

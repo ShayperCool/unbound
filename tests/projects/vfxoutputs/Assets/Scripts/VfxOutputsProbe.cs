@@ -213,6 +213,14 @@ public sealed class VfxOutputsProbe : MonoBehaviour
             // motion vectors, and the camera's motion vector state.
             foreach (var graph in new[] { "MovingVectors", "MovingPlain" })
                 Blurred(Front(AddStage(graph, graph, 9, 10)));
+            // Outputs that share a sort (the compiler's global sort), seen by two cameras from
+            // different places as the sorted stages are.
+            foreach (var graph in new[] { "GlobalDistance", "GlobalKeyed", "GlobalMixed" })
+            {
+                var shared = Front(AddStage(graph, graph, 9, 12));
+                Eye(shared, "offset", new Vector3(2f, 1.5f, -6f), Vector3.forward);
+            }
+            Front(AddStage("GlobalYoungest", "GlobalYoungest", 36, 48));
         }
     }
 
