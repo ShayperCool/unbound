@@ -22,3 +22,16 @@ python3 tests/projects/componentmemory/run.py gate --release 6000.0.71f1
 
 Publishing requires two independently sealed, identical Editor repeats. Gate runs use private
 project copies and compare every recorded value exactly.
+
+## Light command buffer allocation
+
+The separate light profile records an attached Light using the Built-In Render Pipeline. Its base
+cost is 1176 bytes. Each light event starts its command buffer list with one allocated slot and
+doubles on growth. Each reserved slot adds 12 bytes. Editing or sharing a CommandBuffer leaves
+other object costs separate. Removing a buffer removes all its occurrences at that event and
+retains the allocation. Removing an entire event releases that event's storage immediately.
+A cloned Light begins with empty command buffer lists. The exact allocation sizes come from
+the captures. The Scripting API describes duplicate registrations and their removal. [AddCommandBuffer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Light.AddCommandBuffer.html), [RemoveCommandBuffer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Light.RemoveCommandBuffer.html)
+
+Add `--profile light` to the commands above to record, publish or check this profile. Light memory
+with a scriptable render pipeline and other release families remains unmeasured.
