@@ -316,6 +316,11 @@ def publish(probe, labels, space=None, device=None, *, profile=None):
                                  complete=[editor_runner.jsonl_complete()], gpu=True)
 
 
+def engine_cli():
+    """The Unbound command a run starts: $UNBOUND, else $UNBOUND_CLI, else the checkout's release build."""
+    return os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI') or str(REPO/'target/release/unbound')
+
+
 def gate(probe, variable, label, tolerance, engine_args, authored=None, base=None, space=None, device=None,
          *, configure=None, profile=None):
     # The limits and residuals are read first: a missing Metal counterpart stops before the run.
@@ -332,7 +337,7 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
         set_color_space(project, space)
     capture = out/'engine'
     capture.mkdir(parents=True)
-    cli = os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI') or str(REPO/'target/release/unbound')
+    cli = engine_cli()
     env = {**os.environ, variable: str(capture)}
     with (out/'engine.log').open('w') as log:
         code = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),

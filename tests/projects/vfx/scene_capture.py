@@ -25,6 +25,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -34,6 +35,10 @@ import value_probe  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 SCRIPTS = HERE/'SceneCapture'
+# The self-test's fixtures (copied only into its own runs) and the scene it captures.
+SELF_TEST = 'SelfTest'
+FIXTURES = SCRIPTS/SELF_TEST
+SELF_TEST_SCENE = 'Assets/Scenes/Probe.unity'
 VARIABLE = 'UNBOUND_SCENE_CAPTURE'
 RUNS = 'vfx-scene'
 # Frames the engine may run after the last shot before the script has ended the run.
@@ -50,19 +55,28 @@ def vector(text):
 def settings(args):
     width, height = (int(v) for v in args.size.split('x'))
     frames = sorted({int(v) for v in args.frames.split(',')})
+    if not frames or frames[0] < 1:
+        raise SystemExit('--frames: frame numbers from 1')
     rotations = args.rotation or []
     if not args.target and len(rotations) != len(args.position):
         raise SystemExit('one --rotation per --position, or --target')
+    if args.target:
+        # The camera looks back along its offset: none, or straight up or down, leaves its
+        # roll undecided.
+        for x, y, z in args.position:
+            if x == 0 and z == 0:
+                raise SystemExit(f'--position {x},{y},{z}: an offset from the target needs a horizontal part')
     views = [{'position': dict(zip('xyz', p)), 'rotation': dict(zip('xyz', rotations[i] if i < len(rotations) else (0, 0, 0)))}
              for i, p in enumerate(args.position)]
     return {'target': args.target or '', 'hasTargetNear': args.target_near is not None,
             'targetNear': dict(zip('xyz', args.target_near or (0, 0, 0))), 'views': views,
             'fieldOfView': args.fov, 'width': width, 'height': height, 'deltaTime': args.step, 'frames': frames,
-            'seed': args.seed}
+            'seed': args.seed, 'selfTestThrowAtFrame': getattr(args, 'throw_at', 0)}
 
 
-def prepare(args):
-    """The run's directory with a private copy of the project and the capture's settings."""
+def prepare(args, fixtures=None):
+    """The run's directory with a private copy of the project and the capture's settings
+    (and, for the self-test, its fixtures in the copy)."""
     source = Path(args.project).resolve()
     if probe_paths.checkout_project(source):
         raise SystemExit(f'{source} is inside the checkout: captures are of other projects')
@@ -76,7 +90,9 @@ def prepare(args):
     subprocess.run(['cp', '-a', '--reflink=auto', str(source), str(project)], check=True)
     for transient in ('Temp', 'Logs', 'UserSettings'):
         shutil.rmtree(project/transient, ignore_errors=True)
-    shutil.copytree(SCRIPTS, project/'Assets'/'UnboundSceneCapture')
+    shutil.copytree(SCRIPTS, project/'Assets'/'UnboundSceneCapture', ignore=shutil.ignore_patterns(SELF_TEST))
+    if fixtures:
+        shutil.copytree(fixtures, project/'Assets'/'UnboundSceneCaptureSelfTest')
     capture = out/'capture'
     capture.mkdir()
     shot = settings(args)
@@ -84,13 +100,30 @@ def prepare(args):
     return out, project, capture, shot
 
 
-def editor(args):
-    out, project, capture, _ = prepare(args)
+def run_editor(args, fixtures=None):
+    """One Editor capture: its run directory, capture directory and problem (None when complete)."""
+    out, project, capture, _ = prepare(args, fixtures)
     job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', 'UnboundSceneCaptureRunner.Record'],
                                   batch=False, graphics=True, timeout=args.timeout, label=f'{RUNS}-{args.label}',
                                   env={VARIABLE: str(capture), 'UNBOUND_SCENE_CAPTURE_SCENE': args.scene})
     print(editor_runner.summary(editor_runner.run(job)))
-    problem = editor_runner.result_problem(out, gpu=True) or editor_runner.jsonl_complete()(capture)
+    return out, capture, editor_runner.result_problem(out, gpu=True) or editor_runner.jsonl_complete()(capture)
+
+
+def run_engine(args, fixtures=None):
+    """One Unbound capture: its run directory, capture directory and problem (None when complete)."""
+    out, project, capture, shot = prepare(args, fixtures)
+    frames = max(shot['frames']) + MARGIN_FRAMES
+    with (out/'engine.log').open('w') as log:
+        code = subprocess.run([str(value_probe.LAUNCHER), '--kind', 'engine-gpu', 'timeout', str(args.timeout), value_probe.engine_cli(),
+                               'run', '-p', str(project), '--no-watch', '--scene', args.scene, '--frames', str(frames)],
+                              env={**os.environ, VARIABLE: str(capture)}, stdout=log, stderr=subprocess.STDOUT).returncode
+    problem = editor_runner.jsonl_complete()(capture)
+    return out, capture, problem and f'{problem}; engine exit {code}; log {out}/engine.log'
+
+
+def editor(args):
+    out, capture, problem = run_editor(args)
     if problem:
         raise SystemExit(f'{out}: {problem}')
     print('captured', capture)
@@ -98,31 +131,34 @@ def editor(args):
 
 
 def engine(args):
-    out, project, capture, shot = prepare(args)
-    cli = os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI') or str(value_probe.REPO/'target/release/unbound')
-    frames = max(shot['frames']) + MARGIN_FRAMES
-    with (out/'engine.log').open('w') as log:
-        code = subprocess.run([str(value_probe.LAUNCHER), '--kind', 'engine-gpu', 'timeout', str(args.timeout), cli, 'run',
-                               '-p', str(project), '--no-watch', '--scene', args.scene, '--frames', str(frames)],
-                              env={**os.environ, VARIABLE: str(capture)}, stdout=log, stderr=subprocess.STDOUT).returncode
-    problem = editor_runner.jsonl_complete()(capture)
+    out, capture, problem = run_engine(args)
     if problem:
-        raise SystemExit(f'{out}: {problem}; engine exit {code}; log {out}/engine.log')
-    print('captured', capture, f'(engine exit {code})')
+        raise SystemExit(f'{out}: {problem}')
+    print('captured', capture)
     return 0
+
+
+def frames_of(capture):
+    return {p.name for p in capture.glob('v*-frame-*.png')}
 
 
 def compare(args):
     from PIL import Image, ImageChops
     first = probe_paths.run_root(RUNS, args.a)/'capture'
     second = probe_paths.run_root(RUNS, args.b)/'capture'
-    names = sorted(p.name for p in first.glob('v*-frame-*.png'))
-    if not names:
-        raise SystemExit(f'{first}: no frames')
     worst = 0
+    settings_a, settings_b = (json.loads((c/'capture.json').read_text()) for c in (first, second))
+    for key in sorted(set(settings_a) | set(settings_b)):
+        if settings_a.get(key) != settings_b.get(key):
+            print(f'settings differ: {key}: {settings_a.get(key)!r} in {args.a}, {settings_b.get(key)!r} in {args.b}')
+            worst = 1
+    names = sorted(frames_of(first) | frames_of(second))
+    if not names:
+        raise SystemExit(f'{first}, {second}: no frames')
     for name in names:
-        if not (second/name).exists():
-            print(f'{name}: missing in {args.b}')
+        missing = [label for label, capture in ((args.a, first), (args.b, second)) if not (capture/name).exists()]
+        if missing:
+            print(f'{name}: missing in {", ".join(missing)}')
             worst = 1
             continue
         measured = value_probe.image_difference(first/name, second/name)
@@ -139,6 +175,44 @@ def compare(args):
         sheet.paste(ImageChops.difference(a, b), (a.width*2, 0))
         sheet.save(second.parent/('compare-'+name))
     return worst
+
+
+def selftest(args):
+    """The tool on a copy of this probe's project with SceneCapture/SelfTest's fixtures, in the
+    Editor and in Unbound: a main camera whose script keeps one instance of itself (the copies
+    must keep rendering: two shots of a moving cube differ), and a shot that fails (the run
+    must end at once, incomplete, well before its time limit)."""
+    from PIL import Image, ImageChops
+    stamp = probe_paths.private_label('selftest')
+    source = probe_paths.project_copy(HERE, probe_paths.run_root(RUNS, stamp)/'source')
+    # The probe's own script plays the scene through and ends the run: not in the self-test.
+    shutil.rmtree(source/'Assets'/'Scripts')
+    failures = []
+    sides = {'editor': run_editor, 'engine': run_engine}
+    for side in (args.side,) if args.side != 'both' else ('editor', 'engine'):
+        run = sides[side]
+        base = dict(project=str(source), scene=SELF_TEST_SCENE, position=[[0.0, 0.0, 0.0]], rotation=[[0.0, 0.0, 0.0]],
+                    target='', target_near=None, fov=60.0, size='160x90', step=1/30, seed=-1, timeout=args.timeout)
+        moving = argparse.Namespace(**base, label=f'{stamp}-{side}-moving', frames='5,20', throw_at=0)
+        _, capture, problem = run(moving, FIXTURES)
+        if problem:
+            failures.append(f'{side} moving: {problem}')
+        else:
+            a, b = (Image.open(capture/f'v0-frame-{n:03}.png').convert('RGB') for n in (5, 20))
+            if ImageChops.difference(a, b).getbbox() is None:
+                failures.append(f'{side} moving: frames 5 and 20 are the same image (the copied camera stopped rendering)')
+        started = time.monotonic()
+        failing = argparse.Namespace(**base, label=f'{stamp}-{side}-failing', frames='10', throw_at=3)
+        _, capture, problem = run(failing, FIXTURES)
+        elapsed = time.monotonic() - started
+        if not problem:
+            failures.append(f'{side} failing: the run completed although its shot failed')
+        elif elapsed > args.timeout / 2:
+            failures.append(f'{side} failing: the run took {elapsed:.0f} s of its {args.timeout} s limit to end')
+    for failure in failures:
+        print('FAIL', failure)
+    print('selftest:', 'ok' if not failures else f'{len(failures)} failures', f'(runs {stamp}-*)')
+    return 1 if failures else 0
 
 
 def main():
@@ -162,8 +236,11 @@ def main():
     pair = modes.add_parser('compare')
     pair.add_argument('a')
     pair.add_argument('b')
+    test = modes.add_parser('selftest')
+    test.add_argument('--side', choices=('editor', 'engine', 'both'), default='both')
+    test.add_argument('--timeout', type=int, default=900)
     args = parser.parse_args()
-    return {'editor': editor, 'engine': engine, 'compare': compare}[args.mode](args)
+    return {'editor': editor, 'engine': engine, 'compare': compare, 'selftest': selftest}[args.mode](args)
 
 
 if __name__ == '__main__':

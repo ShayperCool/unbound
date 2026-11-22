@@ -482,25 +482,40 @@ frames at which a count read back from the GPU arrives depend on the device (the
 
 `scene_capture.py` compares effects in real content, which no probe can carry: a scene of another
 project seen by fixed cameras, captured once by the Unity Editor and once by Unbound, frame by
-frame. It is debug tooling, not a gate: nothing of the project is kept in Git, and the run cache
-keeps each run (a private reflink copy of the project, the Editor's Library included so that its
-run need not import the project again, the frames and the logs).
+frame. It is debug tooling, not a gate: nothing of the project is kept in Git. Each run keeps, in
+the run cache, a copy of the project (`cp --reflink=auto`: a reflink copy where the file system
+has them, else a full one, the Editor's Library included so that its run need not import the
+project again; several gigabytes for a large project, removed only with the run), the frames
+and the logs.
 
-    scene_capture.py editor PROJECT Assets/Scenes/S.unity --label ed --target NAME --target-near X,Y,Z \
-        --position 0,4,18 --position=-12,10,-12 --frames 30,60,90 --seed 1
+    scene_capture.py editor PROJECT Assets/Scenes/S.unity --label ed --target NAME \
+        --target-near X,Y,Z --position 0,4,18 --position=-12,10,-12 --frames 30,60,90 --seed 1
     scene_capture.py engine PROJECT Assets/Scenes/S.unity --label ub (the same settings)
     scene_capture.py compare ed ub
+    scene_capture.py selftest
 
 The same script runs in both (`SceneCapture/UnboundSceneCapture.cs`, copied into the copy's
 Assets/, and `SceneCapture/Editor/UnboundSceneCaptureRunner.cs`, which opens the scene and plays it
 once the Editor has settled). For each `--position` a copy of the scene's main camera (its camera
-and render pipeline components only, without scripts or children) renders into a texture: from
-that place looking at the active object `--target` names (of several, the one nearest
-`--target-near`; values.jsonl lists them all), or from that place with its `--rotation`. Time advances by a fixed step (`--step`, Time.captureDeltaTime); the frames named
-are counted from the first frame the scene plays. `--seed` gives every effect of the scene that
-seed and starts it again, so that the two runs draw the same particles; without it, effects that
-reset their seed on play differ from run to run in the Editor as well.
+and render pipeline components only, without scripts or children; made under an inactive object,
+so none of its scripts runs) renders into a texture: from that place looking at the active object
+`--target` names (of several, the one nearest `--target-near`; values.jsonl lists them all), or
+from that place with its `--rotation`. Time advances by a fixed step (`--step`,
+Time.captureDeltaTime); the frames named are counted from the first frame the scene plays.
+`--seed` gives every effect the scene has when it starts playing that seed and starts it again,
+so that the two runs draw the same particles; effects made later, and without it all effects
+that reset their seed on play, differ from run to run in the Editor as well. A run that cannot
+go on (no camera place, a failed shot, scripts that do not compile) ends at once without
+values.jsonl. `compare` names any setting in which the two captures differ and any frame only
+one has.
 
 What the comparison cannot tell apart from an effect's difference: anything else in the frame
-that differs (lighting, other renderers, post-processing), and work that is timed by the frame
-rate rather than the fixed step.
+that differs (lighting, other renderers, post-processing), work that is timed by the frame rate
+rather than the fixed step, and how the project enters play mode in the Editor (with its Enter
+Play Mode Options, for example without reloading the scene, the Editor plays the scene as it
+was opened).
+
+`selftest` runs the tool on a copy of this probe's project (without its probe script) with
+`SceneCapture/SelfTest/`'s fixtures, in both: a main camera whose script keeps one instance of
+itself (its copies must keep rendering: two shots of a moving cube differ) and a shot that fails
+(the run must end at once, incomplete).

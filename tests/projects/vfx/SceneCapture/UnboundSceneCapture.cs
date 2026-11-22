@@ -37,6 +37,8 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         public float deltaTime = 1f / 30f;
         /// <summary>Negative: the effects keep their own seeds.</summary>
         public int seed = -1;
+        /// <summary>For scene_capture.py's self-test only: the frame whose shot fails (0: none).</summary>
+        public int selfTestThrowAtFrame;
         public int[] frames = { 30 };
     }
 
@@ -63,7 +65,16 @@ public sealed class UnboundSceneCapture : MonoBehaviour
     {
         var dir = Environment.GetEnvironmentVariable(Variable);
         if (string.IsNullOrEmpty(dir)) return;
-        var settings = JsonUtility.FromJson<Settings>(File.ReadAllText(Path.Combine(dir, "capture.json")));
+        Settings settings;
+        try
+        {
+            settings = JsonUtility.FromJson<Settings>(File.ReadAllText(Path.Combine(dir, "capture.json")));
+        }
+        catch (Exception e)
+        {
+            Fail(e);
+            return;
+        }
         Time.captureDeltaTime = settings.deltaTime;
         var capture = new GameObject("UnboundSceneCapture").AddComponent<UnboundSceneCapture>();
         DontDestroyOnLoad(capture.gameObject);
@@ -72,7 +83,10 @@ public sealed class UnboundSceneCapture : MonoBehaviour
     }
 
     /// <summary>A copy of the scene's main camera with only its camera and render pipeline
-    /// components (no scripts that would move it, no children), at a view's fixed place.</summary>
+    /// components (no scripts that would move it, no children), at a view's fixed place. The copy
+    /// is made under an inactive object and stripped there, so that none of its scripts ever
+    /// wakes (a camera script that keeps one instance of itself would destroy the copy, or undo
+    /// the original's state when destroyed).</summary>
     Camera MakeCamera(View view, int index)
     {
         var main = Camera.main;
@@ -82,20 +96,25 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         GameObject copy;
         if (main != null)
         {
-            copy = Instantiate(main.gameObject);
+            var holder = new GameObject("UnboundSceneCapture holder");
+            holder.SetActive(false);
+            copy = Instantiate(main.gameObject, holder.transform);
             for (int i = copy.transform.childCount - 1; i >= 0; i--) DestroyImmediate(copy.transform.GetChild(i).gameObject);
             // Scripts first (they may require the components kept), then what is not the
             // camera's or the render pipeline's.
             for (int pass = 0; pass < 2; pass++)
                 foreach (var component in copy.GetComponents<Component>())
                 {
-                    if (component is Transform || component is Camera) continue;
+                    // A missing script's component is null: nothing to remove.
+                    if (component == null || component is Transform || component is Camera) continue;
                     string space = component.GetType().Namespace ?? "";
                     if (space.StartsWith("UnityEngine.Rendering", StringComparison.Ordinal)) continue;
                     if (pass == 0 && !(component is MonoBehaviour)) continue;
                     DestroyImmediate(component);
                 }
             copy.tag = "Untagged";
+            copy.transform.SetParent(null, false);
+            DestroyImmediate(holder);
         }
         else copy = new GameObject("capture camera", typeof(Camera));
         copy.name = "UnboundSceneCapture camera " + index;
@@ -151,32 +170,23 @@ public sealed class UnboundSceneCapture : MonoBehaviour
 
     static string Place(Vector3 p) => p.x.ToString("R") + "," + p.y.ToString("R") + "," + p.z.ToString("R");
 
-    IEnumerator Start()
+    /// <summary>Ends a run that cannot go on: no values.jsonl, so the run reports itself
+    /// incomplete (rather than wait out its time limit).</summary>
+    static void Fail(Exception e)
     {
-        Seed();
+        Debug.LogError(e);
+        Exit(1);
+    }
+
+    /// <summary>The views' colours at the end of this frame, when it is one the settings name.</summary>
+    void Shoot()
+    {
+        if (m_Frame == m_Settings.selfTestThrowAtFrame) throw new InvalidOperationException("UnboundSceneCapture: the self-test's failure at frame " + m_Frame);
+        if (Array.IndexOf(m_Settings.frames, m_Frame) < 0) return;
+        if (m_Shot == null) m_Shot = new Texture2D(m_Settings.width, m_Settings.height, TextureFormat.RGB24, false);
+        var active = RenderTexture.active;
         try
         {
-            m_Cameras = new Camera[m_Settings.views.Length];
-            m_Targets = new RenderTexture[m_Settings.views.Length];
-            for (int i = 0; i < m_Cameras.Length; i++) m_Cameras[i] = MakeCamera(m_Settings.views[i], i);
-        }
-        catch (Exception e)
-        {
-            // No values.jsonl: the run reports it incomplete.
-            Debug.LogError(e);
-            Exit(1);
-            yield break;
-        }
-        int last = 0;
-        foreach (int frame in m_Settings.frames) last = Math.Max(last, frame);
-        var wait = new WaitForEndOfFrame();
-        while (m_Frame < last)
-        {
-            yield return wait;
-            m_Frame++;
-            if (Array.IndexOf(m_Settings.frames, m_Frame) < 0) continue;
-            if (m_Shot == null) m_Shot = new Texture2D(m_Settings.width, m_Settings.height, TextureFormat.RGB24, false);
-            var active = RenderTexture.active;
             for (int i = 0; i < m_Targets.Length; i++)
             {
                 RenderTexture.active = m_Targets[i];
@@ -186,10 +196,54 @@ public sealed class UnboundSceneCapture : MonoBehaviour
                 File.WriteAllBytes(Path.Combine(m_Dir, name), m_Shot.EncodeToPNG());
                 m_Out.Append("{\"k\":\"shot/v").Append(i).Append('/').Append(m_Frame.ToString("000")).Append("\",\"v\":\"").Append(name).Append("\"}\n");
             }
+        }
+        finally
+        {
             RenderTexture.active = active;
         }
-        m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
-        File.WriteAllText(Path.Combine(m_Dir, "values.jsonl"), m_Out.ToString());
+    }
+
+    IEnumerator Start()
+    {
+        try
+        {
+            Seed();
+            m_Cameras = new Camera[m_Settings.views.Length];
+            m_Targets = new RenderTexture[m_Settings.views.Length];
+            for (int i = 0; i < m_Cameras.Length; i++) m_Cameras[i] = MakeCamera(m_Settings.views[i], i);
+        }
+        catch (Exception e)
+        {
+            Fail(e);
+            yield break;
+        }
+        int last = 0;
+        foreach (int frame in m_Settings.frames) last = Math.Max(last, frame);
+        var wait = new WaitForEndOfFrame();
+        while (m_Frame < last)
+        {
+            yield return wait;
+            m_Frame++;
+            try
+            {
+                Shoot();
+            }
+            catch (Exception e)
+            {
+                Fail(e);
+                yield break;
+            }
+        }
+        try
+        {
+            m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
+            File.WriteAllText(Path.Combine(m_Dir, "values.jsonl"), m_Out.ToString());
+        }
+        catch (Exception e)
+        {
+            Fail(e);
+            yield break;
+        }
         Exit(0);
     }
 
