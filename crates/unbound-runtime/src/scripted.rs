@@ -10,6 +10,8 @@ pub enum ScriptedInput {
     Move(f32, f32),
     /// A key or mouse button, as a Unity `KeyCode` (`Mouse0` is the left button), goes down or up.
     Key { code: u16, down: bool },
+    /// Replays a captured host keyboard configuration event.
+    KeyboardConfiguration,
     /// The wheel turns by notches (positive: right, up).
     Scroll(f32, f32),
     /// The pointer moves by an offset in window pixels (right, down), as a relative motion.
@@ -77,6 +79,7 @@ impl ScriptedInput {
 
 /// Parses `FRAME:+KEY,-KEY,...` (`--keys`): presses (`+`) and releases (`-`) of keys and mouse
 /// buttons played in this order within the frame, as when they all happen between two frames.
+/// `!configuration` inserts a captured keyboard configuration notification.
 pub fn parse_keys(entry: &str) -> Result<Vec<(u64, ScriptedInput)>> {
     let (frame, value) = entry
         .split_once(':')
@@ -89,6 +92,9 @@ pub fn parse_keys(entry: &str) -> Result<Vec<(u64, ScriptedInput)>> {
         .split(',')
         .map(|token| {
             let token = token.trim();
+            if token == "!configuration" {
+                return Ok((frame, ScriptedInput::KeyboardConfiguration));
+            }
             let down = match token.chars().next() {
                 Some('+') => true,
                 Some('-') => false,

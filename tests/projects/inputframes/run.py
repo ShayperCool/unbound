@@ -137,6 +137,9 @@ def unbound(work):
     out.parent.mkdir(parents=True, exist_ok=True)
     args = subprocess.run([sys.executable, str(PROBE/'compare.py'), 'args', str(reference)],
                           check=True, capture_output=True, text=True).stdout.split()
+    # The X server sends a core-keyboard configuration notification before the
+    # first XTEST key. The headless replay has no X server or XTEST device.
+    args[:0] = ['--keys', '329:!configuration']
     env = dict(os.environ, INPUTFRAMES_PROBE_OUT=str(out))
     with (work/'unbound'/'unbound.log').open('x') as log:
         result = subprocess.run([str(LAUNCHER), 'timeout', '600', cli, 'run', '-p', str(project), '--headless',

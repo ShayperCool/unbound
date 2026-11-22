@@ -586,6 +586,9 @@ namespace Unbound.Runtime
         /// Screen's resolution choices describe the Editor, while DisplayInfo comes from the OS.</summary>
         internal static bool EditorDisplayMeasured => OperatingSystem.IsLinux() && Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Linux keyboard-map notifications in the 6000.0 Editor (inputframes).</summary>
+        internal static bool KeyboardConfigurationMeasured => OperatingSystem.IsLinux() && Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>macOS Editor display answers measured by macdisplay on 6000.0.71f1: the
         /// usable area (the work area) as the current resolution and the display info's size, at
         /// the host's exact refresh ratio; the resolutions the display modes' sizes at that rate,

@@ -54,6 +54,7 @@ namespace Unbound.Runtime
         internal int Pressed;
         internal int TextStart;
         internal int TextLength;
+        internal bool IsKeyboardConfiguration => Key == -1;
     }
 
     /// <summary>

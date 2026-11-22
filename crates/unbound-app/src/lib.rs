@@ -15,6 +15,14 @@ pub mod render;
 pub mod shaderlab;
 
 mod host_display;
+#[cfg(target_os = "linux")]
+mod host_keyboard;
+
+/// Opens the host keymap before the managed keyboard is discovered.
+pub fn initialize_keyboard() {
+    #[cfg(target_os = "linux")]
+    host_keyboard::initialize();
+}
 
 use anyhow::Result;
 use backend::GpuBackend;
@@ -364,6 +372,8 @@ fn drive(
     }
     driver.text.clear();
     driver.key_events.clear();
+    #[cfg(target_os = "linux")]
+    host_keyboard::configuration_events(&mut driver.key_events);
     // The input method is the window's own; a remote session's viewers type elsewhere.
     // inputplatform measures defaults only: no configured input method is available to
     // establish composition parity. Keep legacy composition explicitly unsupported; committed

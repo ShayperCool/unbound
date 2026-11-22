@@ -32,16 +32,13 @@ exactly and in order within its frame, minus wall-clock fields (event and action
 fixed steps' unscaled time); event times are checked against frames instead. Every missing and
 extra record is printed.
 
-Unbound matches 3785 of the reference's 3786 records, with nothing extra and no time
-problems. The remaining record is a keyboard `DCFG` event immediately before the first
-key state event. The Linux Editor's process-local GDK keymap notification supplies a
-configuration-event route. The supplemental [ConfigurationControl](ConfigurationControl/README.md)
-records that route independently of physical input. Layout and key-name queries alone
-produce no event; each explicit keymap notification produces one event and one
-`ConfigurationChanged` callback. The trigger for the original first-key notification
-remains unmeasured. The engine host has no OS keymap-notification source and the
-keyboard layout query still reports US. A general notification, layout refresh and
-ordering implementation remains a follow-up.
+Two monitored Editor runs associate the keyboard `DCFG` at frame 330 with the
+X server's core keyboard change immediately before its first XTEST key event.
+The replay supplies that host notification explicitly. The windowed backend
+receives X11 keyboard and mapping notifications, refreshes the layout and key
+display names, and queues one configuration event for each notification.
+The [ConfigurationControl](ConfigurationControl/README.md) checks the physical
+key, layout replacement and a remapped key while the layout name stays German.
 
 Two matching captures without delivered keyboard presses cannot establish input
 parity. Publication and replay validate a key-down state witness before using a
@@ -80,6 +77,6 @@ sensitive: a key without an entry there must be a lower-case keysym.
 The Q379 physical-input attempts on the existing GPU display delivered no keyboard
 state events, including attempts with the original driver and a focused Game view.
 Those runs are invalid keyboard controls and were not published. The legacy `editor`
-mode above starts its own X server; it was not used for this follow-up. The supplemental
-configuration runner uses the existing GPU display and does not inject physical keys
-or change the OS keyboard layout.
+mode above starts its own X server. The process-local configuration control runs
+on the NVIDIA display, and its host profile uses a private X server for key events
+and mapping changes.

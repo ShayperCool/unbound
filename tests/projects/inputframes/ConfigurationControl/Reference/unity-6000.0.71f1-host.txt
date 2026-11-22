@@ -1,0 +1,26 @@
+initial.layout=English (US)
+initial.Y=Y
+initial.Z=Z
+initial.events=
+initial.configurations=0
+firstKey.layout=English (US)
+firstKey.Y=Y
+firstKey.Z=Z
+firstKey.events=DCFG,STAT,TEXT,STAT
+firstKey.configurations=1
+nextKey.layout=English (US)
+nextKey.Y=Y
+nextKey.Z=Z
+nextKey.events=STAT,TEXT,STAT
+nextKey.configurations=0
+layoutChange.layout=German
+layoutChange.Y=Z
+layoutChange.Z=Y
+layoutChange.events=DCFG,DCFG,DCFG
+layoutChange.configurations=3
+mappingChange.layout=German
+mappingChange.Y=Y
+mappingChange.Z=Y
+mappingChange.events=DCFG,DCFG,DCFG,DCFG
+mappingChange.configurations=4
+complete

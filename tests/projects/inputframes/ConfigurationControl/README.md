@@ -1,9 +1,7 @@
 # Keyboard configuration cause control
 
-This is a Linux Editor supplement to inputframes, not an engine parity fixture.
-Two independent Unity 6000.0.71f1 Editor runs on the existing NVIDIA display agree
-on all 16 values. The parent 3786-record reference and its strict comparator remain
-unchanged.
+The process-local signal control supplements inputframes. Two independent
+Unity 6000.0.71f1 Editor runs on the NVIDIA display agree on all 16 values.
 
 ```bash
 python3 tests/projects/inputframes/capture_configuration.py editor --release 6000.0.71f1 --label fresh-label
@@ -23,13 +21,34 @@ twice without changing the OS map. Each signal advances both counts by one. This
 establishes a notification route even when the layout text is unchanged; it does
 not reproduce the original first-key trigger or test refreshed key names.
 
-The host currently supplies no OS keymap notifications, and the engine layout
-command still reports US. The follow-up must carry real notifications through the
-host, refresh layout/key names and preserve event ordering. Synthesizing one event
-at the first key, on every metadata query, or only when the layout text differs
-would not implement the measured mechanism.
+## X11 host control
 
-Existing-display physical-key attempts delivered zero keyboard state events and
-are not reference evidence. This supplement has no engine mode because its local
-GDK signal belongs to the Editor process. It does not stand in for the missing
-host integration.
+The host profile starts its own X server. It reads the layout and Y/Z labels,
+delivers two taps through XTEST, loads a German map and remaps one physical
+key with the layout name still German. Two independent Unity 6000.0.71f1
+captures agree on the event sequences, configuration callback counts and
+labels.
+
+```bash
+python3 tests/projects/inputframes/capture_configuration.py editor --host --release 6000.0.71f1 --label fresh-label
+python3 tests/projects/inputframes/capture_configuration.py publish --host --release 6000.0.71f1 --label fresh-label
+python3 tests/projects/inputframes/capture_configuration.py unbound --host --release 6000.0.71f1
+```
+
+The initial English (US) queries produce zero events. The XTEST device's
+first tap generates one configuration event before the key state. The
+next tap generates key and text events. Changing the map to German gives
+three notifications and exchanges Y/Z labels. Remapping the physical Y
+position gives four notifications and changes its label back while the
+layout name stays German. Both captures record one configuration callback
+per event.
+[X Keyboard Extension](https://xorg.freedesktop.org/archive/current/doc/libX11/XKB/xkblib.html),
+[GDK X11 event handling](https://github.com/GNOME/gtk/blob/gtk-3-24/gdk/x11/gdkdisplay-x11.c).
+
+The host delivers queued notifications before the frame's key changes.
+Changes that fall between multiple X11 key reports in one frame, standalone
+group switches, Wayland keyboards and other release families are outside
+this control.
+
+The process-local GDK signal control runs in the Editor. The X11 host
+profile uses actual input on its own display in both engines.

@@ -149,6 +149,17 @@ pub struct KeyEvent {
     pub text_length: i32,
 }
 
+impl KeyEvent {
+    /// A host keymap notification in the input event stream. Negative keys are reserved for
+    /// input metadata and are ignored by the legacy Input Manager.
+    pub const CONFIGURATION_CHANGED: Self = Self {
+        key: -1,
+        pressed: 0,
+        text_start: 0,
+        text_length: 0,
+    };
+}
+
 type StartFn = unsafe extern "system" fn(*const native_api::NativeApi, *const u8, i32) -> i32;
 /// The managed frame may rewrite the input (it maps the window's pixels to the Game view's
 /// rendering pixels before its readers).
@@ -495,6 +506,9 @@ impl Game {
                     self.pointer_window = window_pointer;
                 }
                 ScriptedInput::Focus(focused) => self.focus = Some(focused),
+                ScriptedInput::KeyboardConfiguration => {
+                    events.push(KeyEvent::CONFIGURATION_CHANGED)
+                }
                 ScriptedInput::Key { code, down } => {
                     let (byte, bit) = (code as usize / 8, 1u8 << (code % 8));
                     if down {

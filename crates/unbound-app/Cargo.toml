@@ -35,7 +35,8 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 unbound-assets.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
-x11rb = { version = "0.13", features = ["randr"] }
+x11rb = { version = "0.13", features = ["randr", "xkb"] }
+xkeysym = "0.2"
 # Native plugins' OpenGL context sharing the renderer's Vulkan memory (render/gl_interop.rs).
 wgpu = { version = "30", default-features = false, features = ["vulkan", "gles"] }
 ash = "0.38"

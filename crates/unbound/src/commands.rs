@@ -1529,6 +1529,11 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     )?;
     install_shader_declarations(&project, &args.target);
     unbound_app::initialize_display();
+    if run.headless.is_none()
+        && project.version.measured_family() == Some(unbound_compat::MeasuredFamily::Unity6000_0)
+    {
+        unbound_app::initialize_keyboard();
+    }
     if let Some(frames) = run.headless {
         if !run.snapshots.is_empty() {
             anyhow::bail!("--snapshot needs a window; it cannot be used with --headless");

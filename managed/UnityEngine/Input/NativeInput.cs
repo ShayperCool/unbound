@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using UnityEngine;
 using UnityEngineInternal.Input;
 
@@ -27,6 +28,7 @@ namespace Unbound.Runtime
         // Event types and state formats (FourCCs, as the package reads them).
         const int StateEventType = 0x53544154; // 'STAT'
         const int TextEventType = 0x54455854; // 'TEXT'
+        const int ConfigurationEventType = 0x44434647; // 'DCFG'
         const int KeyboardFormat = 0x4B455953; // 'KEYS'
         const int MouseFormat = 0x4D4F5553; // 'MOUS'
         const int GamepadFormat = 0x47504144; // 'GPAD'
@@ -53,6 +55,9 @@ namespace Unbound.Runtime
 
         static int s_NextDeviceId = KeyboardId + 1;
         static bool s_DevicesReported;
+        static bool s_KeyboardConfigurationRead;
+        static string s_KeyboardLayout;
+        static readonly string[] s_HostKeyNames = new string[127];
         static readonly object s_Lock = new object();
         // Events queued since the last update (any thread), then the buffer an update hands out:
         // the events the last update left in it first, then the newly queued ones.
@@ -215,18 +220,39 @@ namespace Unbound.Runtime
             switch (code)
             {
                 case KeyboardLayoutCommand:
-                    return WriteString((byte*)data, sizeInBytes, KeyboardLayout) ? GenericSuccess : GenericFailure;
+                    EnsureKeyboardConfiguration();
+                    return WriteString((byte*)data, sizeInBytes, s_KeyboardLayout ?? KeyboardLayout) ? GenericSuccess : GenericFailure;
                 case KeyNameCommand:
                 {
                     if (sizeInBytes < 4) return GenericFailure;
                     int key = *(int*)data;
                     if (!KeyNames.TryGet(key, out int scanCode, out string name)) return GenericFailure;
+                    EnsureKeyboardConfiguration();
+                    name = s_HostKeyNames[key] ?? name;
                     *(int*)data = scanCode;
                     return WriteString((byte*)data + 4, sizeInBytes - 4, name) ? GenericSuccess : GenericFailure;
                 }
                 default:
                     return GenericFailure;
             }
+        }
+
+        static void EnsureKeyboardConfiguration()
+        {
+            if (!s_KeyboardConfigurationRead) ReadKeyboardConfiguration();
+        }
+
+        static void ReadKeyboardConfiguration()
+        {
+            if (!Native.IsReady || !Compat.KeyboardConfigurationMeasured) return;
+            s_KeyboardConfigurationRead = true;
+            using var document = JsonDocument.Parse(Native.Call("keyboard-configuration", ""));
+            if (document.RootElement.ValueKind != JsonValueKind.Object) return;
+            s_KeyboardLayout = document.RootElement.GetProperty("layout").GetString();
+            Array.Clear(s_HostKeyNames);
+            foreach (var entry in document.RootElement.GetProperty("names").EnumerateObject())
+                if (int.TryParse(entry.Name, out int key) && (uint)key < s_HostKeyNames.Length)
+                    s_HostKeyNames[key] = entry.Value.GetString();
         }
 
         /// <summary>The mouse answers only the warp command (Input System 1.19
@@ -397,6 +423,15 @@ namespace Unbound.Runtime
             for (int i = 0; i < input->KeyEventCount; i++)
             {
                 var e = input->KeyEvents[i];
+                if (e.IsKeyboardConfiguration)
+                {
+                    if (Compat.KeyboardConfigurationMeasured)
+                    {
+                        ReadKeyboardConfiguration();
+                        QueueKeyboardConfiguration(time);
+                    }
+                    continue;
+                }
                 int button = e.Key - (int)KeyCode.Mouse0;
                 if (button >= 0 && button < 5)
                 {
@@ -461,6 +496,13 @@ namespace Unbound.Runtime
             Header(e, StateEventType, size, KeyboardId, time);
             *(int*)(e + EventHeaderSize) = KeyboardFormat;
             for (int i = 0; i < KeyboardStateSize; i++) e[EventHeaderSize + 4 + i] = s_Keys[i];
+            QueueEvent((IntPtr)e);
+        }
+
+        static void QueueKeyboardConfiguration(double time)
+        {
+            byte* e = stackalloc byte[EventHeaderSize];
+            Header(e, ConfigurationEventType, EventHeaderSize, KeyboardId, time);
             QueueEvent((IntPtr)e);
         }
 

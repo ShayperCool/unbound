@@ -14,6 +14,7 @@ pub mod gamepads;
 pub mod graphics_device;
 pub mod ime;
 pub mod imported_prefabs;
+pub mod keyboard_config;
 pub mod lighting;
 mod models;
 pub mod native_api;

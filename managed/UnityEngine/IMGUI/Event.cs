@@ -460,6 +460,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < input->KeyEventCount; i++)
             {
                 var k = input->KeyEvents[i];
+                if (k.IsKeyboardConfiguration) continue;
                 var key = (KeyCode)k.Key;
                 int button = k.Key - (int)KeyCode.Mouse0;
                 if (button >= 0 && button < 5)
