@@ -590,10 +590,10 @@ namespace UnityEditor
         public static GameObject SaveAsPrefabAsset(GameObject instanceRoot, string assetPath, out bool success)
         {
             success = false;
+            var path = PrefabPath(instanceRoot, assetPath, connect: false);
             // Saving an instance takes its changes into its modifications (scenesave prefab-nested
             // variant.before.mods, variant.after.mods).
-            PrefabRecordTiming.Recorded(instanceRoot == null ? null : PrefabLinks.Of(instanceRoot)?.Instance);
-            var path = PrefabPath(instanceRoot, assetPath, connect: false);
+            PrefabRecordTiming.Recorded(PrefabLinks.Of(instanceRoot)?.Instance);
             var file = PrefabAssets.FileAt(path);
             var contents = PrefabContents.Of(instanceRoot);
             if (file == null)
@@ -813,6 +813,9 @@ namespace UnityEditor
             // The prefab's objects the plain one lacks are made (none is a removed override).
             snapshot.Removed.Clear();
             PrefabInstances.Merge(data, snapshot);
+            // The instance it becomes holds its values as taken (unmeasured: convert.* rows read
+            // the modifications after an update).
+            PrefabRecordTiming.Recorded(data);
             Dirty(plainGameObject, mode);
         }
 

@@ -82,23 +82,49 @@ namespace Unbound.Runtime
             return found;
         }
 
-        /// <summary>Whether an instance's object is compared with its source: a script only once its
-        /// changes were recorded.</summary>
         /// <summary>Whether an object's values count as its instance's overrides: an engine
-        /// component's always, a script's once recorded or, in Edit mode, once an Editor frame has
-        /// passed since its instance was made (tests/projects/scenesave modification-timing
-        /// script.direct, script.frame; edit save.base: a script change in the same frame is not saved).</summary>
+        /// component's always, a script's once recorded or, in Edit mode for an instance
+        /// InstantiatePrefab made in the session, once an Editor update has passed since (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/scenesave modification-timing script.direct,
+        /// script.frame; edit save.base: a script change in the same update is not saved). For an
+        /// instance read from a file the Scripting API says unrecorded changes are lost: its scripts
+        /// count once recorded only (an update's taking of them is unmeasured there).</summary>
         internal static bool Considered(Object o) =>
             o is not MonoBehaviour || PrefabRecords.IsRecorded(o)
-            || !EditorApplication.isPlaying && PrefabLinks.Of(o)?.Instance is PrefabInstanceData data && data.CreatedStamp < PrefabRecordTiming.Boundary;
+            || !EditorApplication.isPlaying && PrefabLinks.Of(o)?.Instance is PrefabInstanceData data
+               && data.InstantiatedStamp >= 0 && data.InstantiatedStamp < PrefabRecordTiming.Boundary;
 
         /// <summary>Whether an instance's modifications have taken a Transform's last change: in
-        /// Edit mode only at the next Editor frame or a record point (modification-timing
-        /// transform.direct, transform.frame, save.*); until then they keep the value recorded before.
-        /// Other engine components' changes are taken at once (their timing is unmeasured).</summary>
+        /// Edit mode only at the next Editor update or a record point (modification-timing
+        /// transform.direct, transform.frame, save.*); until then they hold its pose at the last
+        /// update (or, changed for the first time, the value recorded before). Other engine
+        /// components' changes are taken at once (their timing is unmeasured).</summary>
         static bool Taken(Object o, PrefabInstanceData data) =>
             o is not Transform t || EditorApplication.isPlaying
             || t.m_ChangeStamp < Math.Max(PrefabRecordTiming.TransformsTaken, data.RecordStamp);
+
+        /// <summary>A Transform's pose at the last update put in place for a moment (without a change
+        /// of its own), and its live pose put back after.</summary>
+        readonly struct TakenPose : IDisposable
+        {
+            readonly Transform m_Transform;
+            readonly Transform.LocalPose m_Live;
+            internal bool Applied => m_Transform != null;
+
+            TakenPose(Transform t)
+            {
+                m_Transform = t;
+                m_Live = t.CurrentPose();
+                t.SetPoseQuietly(t.m_TakenPose);
+            }
+
+            internal static TakenPose Of(Transform t) => t.m_HasTakenPose ? new TakenPose(t) : default;
+
+            public void Dispose()
+            {
+                if (m_Transform != null) m_Transform.SetPoseQuietly(m_Live);
+            }
+        }
 
         /// <summary>References to the instance's objects written as the source objects they stand for
         /// (so an instance and its source compare alike).</summary>
@@ -314,7 +340,11 @@ namespace Unbound.Runtime
             var toSource = ToSource(data);
             foreach (var o in ObjectsOf(data))
             {
-                if (!Considered(o) || !Taken(o, data)) continue;
+                if (!Considered(o)) continue;
+                // A Transform changed since its instance last took its changes answers its pose at the
+                // last update, else (changed for the first time) the stored values.
+                using var taken = Taken(o, data) ? default : TakenPose.Of((Transform)o);
+                if (!Taken(o, data) && !taken.Applied) continue;
                 var link = PrefabLinks.Of(o);
                 var source = PrefabLinks.Source(o);
                 if (source == null) continue;

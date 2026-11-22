@@ -26,8 +26,8 @@ namespace UnityEngine.Tests
                 Assert.False(t.m_ChangeStamp < System.Math.Max(PrefabRecordTiming.TransformsTaken, data.RecordStamp));
                 PrefabRecordTiming.SceneSaved();
                 Assert.True(t.m_ChangeStamp < PrefabRecordTiming.TransformsTaken);
-                // A script component is considered once a boundary has passed since its instance was made.
-                Assert.True(data.CreatedStamp < PrefabRecordTiming.TransformsTaken);
+                // An instance read from a file was not made by InstantiatePrefab in the session.
+                Assert.Equal(-1, data.InstantiatedStamp);
 
                 long before = t.m_ChangeStamp;
                 PrefabRecordTiming.FrameBoundary();
@@ -35,6 +35,16 @@ namespace UnityEngine.Tests
                     t.localPosition = new Vector3(3f, 0f, 0f);
                 Assert.Equal(before, t.m_ChangeStamp);
                 Assert.Equal(0, PrefabRecordTiming.Quiet);
+
+                // Changed in two updates in a row: the pose the last update took is the one after the
+                // first update's change.
+                t.localPosition = new Vector3(4f, 0f, 0f);
+                PrefabRecordTiming.FrameBoundary();
+                t.localPosition = new Vector3(5f, 0f, 0f);
+                Assert.True(t.m_HasTakenPose);
+                Assert.Equal(new Vector3(4f, 0f, 0f), t.m_TakenPose.Position);
+                t.localPosition = new Vector3(6f, 0f, 0f);
+                Assert.Equal(new Vector3(4f, 0f, 0f), t.m_TakenPose.Position);
             }
             finally { Object.DestroyImmediate(go); }
         }

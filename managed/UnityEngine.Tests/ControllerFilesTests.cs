@@ -57,8 +57,9 @@ namespace UnityEngine.Tests
                 // sources by instance id (controller-assets basic.saved).
                 var other = machine.AddStateMachine("Other");
                 machine.AddStateMachineTransition(other, run);
-                // A third made before both but given its first transition last: by instance id it
-                // comes after them (not by the order of first transitions).
+                // A third made before both and given its first transition last: last by instance id (the
+                // earlier pair, the later-made one written first, tells instance-id order apart from
+                // the order of first transitions).
                 machine.AddStateMachine(early, Vector3.zero);
                 machine.AddStateMachineTransition(early, run);
                 Assert.Contains("  m_StateMachineTransitions:\n  - first: {fileID: 4}\n    second:\n    - {fileID: 0}\n  - first: {fileID: 3}\n    second:\n    - {fileID: 0}\n  - first: {fileID: 5}\n",

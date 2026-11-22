@@ -126,8 +126,6 @@ namespace Unbound.Runtime
         internal static bool Save(SceneData scene, string path)
         {
             if (!CanSave(scene, path)) return false;
-            // A save takes the instances' Transform changes (scenesave modification-timing save.after).
-            PrefabRecordTiming.SceneSaved();
             path = ProjectRelative(path);
             string text;
             try { text = Write(scene); }
@@ -149,6 +147,8 @@ namespace Unbound.Runtime
                 Debug.LogError($"Unbound: {path} is not saved: {e.Message}");
                 return false;
             }
+            // A save takes the instances' Transform changes (scenesave modification-timing save.after).
+            PrefabRecordTiming.SceneSaved();
             return true;
         }
 
@@ -958,7 +958,8 @@ namespace Unbound.Runtime
             void Modifications(InstanceState state, Object o, PrefabLink link)
             {
                 bool script = o is MonoBehaviour;
-                if (script && !PrefabRecords.IsRecorded(o)) return;
+                // A script's values count as the queries count them (PrefabInstances.Considered).
+                if (script && !PrefabInstances.Considered(o)) return;
                 if (o is Component c && !script && !Writable(c.GetType()) && Enabled(c) == null) return;
                 var source = PrefabLinks.Source(o);
                 if (source == null) return;

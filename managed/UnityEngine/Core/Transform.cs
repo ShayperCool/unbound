@@ -389,11 +389,48 @@ namespace UnityEngine
         /// take it at the next record point: <see cref="Unbound.Runtime.PrefabRecordTiming"/>).</summary>
         internal long m_ChangeStamp;
 
+        /// <summary>The local values a prefab instance's modifications use.</summary>
+        internal struct LocalPose
+        {
+            internal Vector3 Position, Scale, EulerHint;
+            internal Quaternion Rotation;
+        }
+
+        /// <summary>The pose after the last change, and the one the last Editor update took.</summary>
+        internal LocalPose m_PoseAfterChange, m_TakenPose;
+        internal bool m_HasTakenPose;
+
+        internal LocalPose CurrentPose() => new LocalPose
+        {
+            Position = m_LocalPosition, Rotation = m_LocalRotation, Scale = m_LocalScale, EulerHint = m_LocalEulerAnglesHint,
+        };
+
+        /// <summary>Sets the local values without any change notification (read back at once).</summary>
+        internal void SetPoseQuietly(LocalPose pose)
+        {
+            m_LocalPosition = pose.Position;
+            m_LocalRotation = pose.Rotation;
+            m_LocalScale = pose.Scale;
+            m_LocalEulerAnglesHint = pose.EulerHint;
+        }
+
         /// <summary>This transform changed: it and every descendant must recompute their world state.</summary>
         internal void MarkChanged()
         {
             if (s_AnimatedPhysicsStamp != 0) m_AnimatedPhysicsStamp = s_AnimatedPhysicsStamp;
-            if (Unbound.Runtime.PrefabRecordTiming.Quiet == 0) m_ChangeStamp = Unbound.Runtime.PrefabRecordTiming.Stamp;
+            if (Unbound.Runtime.PrefabRecordTiming.Quiet == 0)
+            {
+                // The pose the last update took: the one after the last change before it (none known
+                // for the first change: the stored values stand for it).
+                if (m_ChangeStamp == 0) m_HasTakenPose = false;
+                else if (m_ChangeStamp < Unbound.Runtime.PrefabRecordTiming.TransformsTaken)
+                {
+                    m_TakenPose = m_PoseAfterChange;
+                    m_HasTakenPose = true;
+                }
+                m_ChangeStamp = Unbound.Runtime.PrefabRecordTiming.Stamp;
+            }
+            m_PoseAfterChange = CurrentPose();
             m_HasChanged = true;
             m_Version++;
             m_WorldDirty = true;

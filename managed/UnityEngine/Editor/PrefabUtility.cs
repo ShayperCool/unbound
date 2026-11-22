@@ -237,7 +237,7 @@ namespace UnityEditor
             if (go == null || !go.m_IsPrefabAsset || go.transform.parent != null || GuidOf(go) == null)
                 return scene.HasValue ? Object.Instantiate(asset, scene.Value) : Object.Instantiate(asset, parent);
             var guid = GuidOf(go);
-            var instance = new PrefabInstanceData { SourceGuid = guid };
+            var instance = new PrefabInstanceData { SourceGuid = guid, InstantiatedStamp = PrefabRecordTiming.Stamp };
             void Link(Dictionary<Object, Object> clones)
             {
                 foreach (var pair in clones)

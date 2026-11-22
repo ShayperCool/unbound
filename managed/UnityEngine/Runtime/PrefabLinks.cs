@@ -6,16 +6,15 @@ using Object = UnityEngine.Object;
 
 namespace Unbound.Runtime
 {
-    /// <summary>A PrefabInstance of a loaded file (or one PrefabUtility.InstantiatePrefab made): the
-    /// prefab it instantiates and the properties it modifies.</summary>
     /// <summary>
     /// When an instance's modifications take a change made by script, in Edit mode (matches the
     /// Unity 6000.0.71f1 Editor, tests/projects/scenesave modification-timing): at the next Editor
-    /// frame, a Transform's and a script field's, and at once at a record point
-    /// (RecordPrefabInstancePropertyModifications, Undo.FlushUndoRecordObjects after
-    /// Undo.RecordObject, SerializedObject.ApplyModifiedProperties; a scene save for Transforms
+    /// update, a Transform's (and, for an instance InstantiatePrefab made in the session, a script
+    /// field's), and at once at a record point (RecordPrefabInstancePropertyModifications,
+    /// Undo.FlushUndoRecordObjects after Undo.RecordObject, SerializedObject.ApplyModifiedProperties,
+    /// SaveAsPrefabAsset or ConvertToPrefabInstance of the instance; a scene save for Transforms
     /// only). A stamp orders changes and record points: a Transform remembers the stamp of its last
-    /// change, an instance the stamps it was made and last recorded at.
+    /// change and its pose at the last update, an instance the stamps it was made and last recorded at.
     /// </summary>
     internal static class PrefabRecordTiming
     {
@@ -54,10 +53,13 @@ namespace Unbound.Runtime
         }
     }
 
+    /// <summary>A PrefabInstance of a loaded file (or one PrefabUtility.InstantiatePrefab made): the
+    /// prefab it instantiates and the properties it modifies.</summary>
     internal sealed class PrefabInstanceData
     {
-        /// <summary>The stamp (<see cref="PrefabRecordTiming"/>) the instance was made or read at.</summary>
-        internal readonly long CreatedStamp = PrefabRecordTiming.Stamp;
+        /// <summary>The stamp (<see cref="PrefabRecordTiming"/>) PrefabUtility.InstantiatePrefab made the
+        /// instance at in this session; -1 for one read from a file or made otherwise.</summary>
+        internal long InstantiatedStamp = -1;
         /// <summary>The stamp of the last record point that took the instance's changes.</summary>
         internal long RecordStamp;
         /// <summary>The file id of its PrefabInstance document (0 for an instance no file holds).</summary>
