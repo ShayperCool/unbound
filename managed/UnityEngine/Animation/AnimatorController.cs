@@ -49,7 +49,11 @@ namespace UnityEngine
         /// <summary>The controller is the player form an AssetBundle holds (already compiled).</summary>
         internal bool m_PlayerForm;
 
-        internal void Edited() => m_EditStamp = ControllerEdits.Next();
+        internal void Edited()
+        {
+            m_EditStamp = ControllerEdits.Next();
+            ControllerObjects.Dirty(this);
+        }
 
         /// <summary>The compiled state machines (of the base controller, for an override
         /// controller). An edit of the controller or of an object it plays makes the next read

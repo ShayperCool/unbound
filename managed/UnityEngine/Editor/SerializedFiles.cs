@@ -216,6 +216,20 @@ namespace Unbound.Runtime
                     writer.Texture2DBody(texture);
                     continue;
                 }
+                if (ControllerFiles.Writes(o))
+                {
+                    sb.Append("--- !u!").Append(EngineTypes.EngineClassIdOf(o.GetType())).Append(" &").Append(ids[o]).Append('\n');
+                    sb.Append(o.GetType().Name).Append(":\n");
+                    switch (o)
+                    {
+                        case UnityEditor.Animations.AnimatorController c: writer.AnimatorControllerBody(c); break;
+                        case UnityEditor.Animations.AnimatorStateMachine m: writer.AnimatorStateMachineBody(m); break;
+                        case UnityEditor.Animations.AnimatorState s: writer.AnimatorStateBody(s); break;
+                        case UnityEditor.Animations.AnimatorTransitionBase t: writer.AnimatorTransitionBody(t); break;
+                        case UnityEditor.Animations.BlendTree b: writer.BlendTreeBody(b); break;
+                    }
+                    continue;
+                }
                 if (o is AnimationClip clip)
                 {
                     sb.Append("--- !u!").Append(EngineTypes.EngineClassIdOf(typeof(AnimationClip))).Append(" &").Append(ids[o]).Append('\n');
@@ -243,6 +257,7 @@ namespace Unbound.Runtime
         /// object whole into a new file (not a material variant: unmeasured).</summary>
         internal static bool WritesNew(Object o) => SerializedTree.IsScript(o) || o is Material { isVariant: false } || o is PhysicsMaterial
             || o is AnimationClip clip && AnimationClipFiles.Unwritable(clip) == null
+            || ControllerFiles.Writes(o) && ControllerFiles.Unwritable(o) == null
             || o is Texture2D { isReadable: true } && !UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsCompressedFormat(((Texture2D)o).format)
             || o is Mesh { isReadable: true } && ((Mesh)o).m_MeshCompression == UnityEditor.ModelImporterMeshCompression.Off;
 

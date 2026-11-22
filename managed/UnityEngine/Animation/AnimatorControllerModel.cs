@@ -41,16 +41,27 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Adds an object made for <paramref name="owner"/> to the owner's asset file
-        /// (AssetDatabase.AddObjectToAsset, which Unbound does not implement yet: reported).</summary>
+        /// (AssetDatabase.AddObjectToAsset: written into it by the next SaveAssets, matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/scenesave controller-assets).</summary>
         internal static void AddToAssetOf(Object owner, Object o)
         {
-            var path = AssetDatabase.GetAssetPath(owner);
-            if (path != "") Stubs.NotImplemented("UnityEditor.AssetDatabase.AddObjectToAsset");
+            if (AssetDatabase.GetAssetPath(owner) == "") return;
+            // A controller read from its file is not written yet: reported once, as before.
+            if (AssetDatabase.CreatedThisSession(owner)) AssetDatabase.AddObjectToAsset(o, owner);
+            else Stubs.NotImplemented("UnityEditor.AssetDatabase.AddObjectToAsset");
         }
 
-        /// <summary>Makes an asset of an object at a path (AssetDatabase.CreateAsset, which
-        /// Unbound does not implement yet for controllers: reported; the controller stays in memory).</summary>
-        internal static void CreateAsset(Object o, string path) => Stubs.NotImplemented("UnityEditor.AssetDatabase.CreateAsset");
+        /// <summary>Makes an asset of an object at a path (AssetDatabase.CreateAsset: the controller's
+        /// file is written at once, before its first layer is added: controller-assets basic.created).</summary>
+        internal static void CreateAsset(Object o, string path) => AssetDatabase.CreateAsset(o, path);
+
+        /// <summary>An edit of an object of a controller asset made this session dirties it, so that
+        /// SaveAssets writes the file again (controller-assets basic.editedDirty, basic.saved); a
+        /// controller read from its file is kept as read (its writing is not measured).</summary>
+        internal static void Dirty(Object o)
+        {
+            if (o.IsPersistentAsset && AssetDatabase.CreatedThisSession(o)) EditorUtility.SetDirty(o);
+        }
 
         /// <summary><paramref name="name"/>, else the first of "name 0", "name 1", ... that is free.</summary>
         internal static string Unique(string name, Func<string, bool> taken)
@@ -709,7 +720,11 @@ namespace UnityEditor.Animations
         // from the last one (measured, tests/projects/animatorapi model.states.*).
         static readonly Vector3 k_FirstStatePosition = new Vector3(200, 0, 0), k_NextStateOffset = new Vector3(35, 65, 0);
 
-        internal void Edited() => m_EditStamp = ControllerEdits.Next();
+        internal void Edited()
+        {
+            m_EditStamp = ControllerEdits.Next();
+            ControllerObjects.Dirty(this);
+        }
 
         /// <summary>The machine's states. The first state set becomes the default state when the
         /// machine has none (measured).</summary>
@@ -1215,7 +1230,11 @@ namespace UnityEditor.Animations
         /// (50, 50, 0 for states the API makes, measured).</summary>
         internal Vector3 m_Position = new Vector3(50, 50, 0);
 
-        internal void Edited() => m_EditStamp = ControllerEdits.Next();
+        internal void Edited()
+        {
+            m_EditStamp = ControllerEdits.Next();
+            ControllerObjects.Dirty(this);
+        }
 
         // A state's optional parameters keep their names whether or not they are active; a new
         // state has empty names and none active (Unity 6000.0.71f1, tests/projects/defaultstate).
@@ -1404,7 +1423,11 @@ namespace UnityEditor.Animations
         internal bool CanTransitionToSelf = true;
         internal int m_EditStamp;
 
-        internal void Edited() => m_EditStamp = ControllerEdits.Next();
+        internal void Edited()
+        {
+            m_EditStamp = ControllerEdits.Next();
+            ControllerObjects.Dirty(this);
+        }
 
         public bool solo { get => Solo; set { Solo = value; Edited(); } }
         public bool mute { get => Mute; set { Mute = value; Edited(); } }
@@ -1556,7 +1579,11 @@ namespace UnityEditor.Animations
         /// <summary>The parameter a new tree and a new child of a Direct tree read (measured).</summary>
         const string k_DefaultParameter = "Blend";
 
-        void Edited() => m_EditStamp = ControllerEdits.Next();
+        void Edited()
+        {
+            m_EditStamp = ControllerEdits.Next();
+            ControllerObjects.Dirty(this);
+        }
 
         public string blendParameter { get => Parameter; set { Parameter = value ?? ""; Edited(); } }
         public string blendParameterY { get => ParameterY; set { ParameterY = value ?? ""; Edited(); } }
