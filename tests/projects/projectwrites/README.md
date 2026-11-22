@@ -19,7 +19,8 @@ the file has), and the per-platform entries of the installation's platform modul
 
 The steps: what opening the project wrote (the new `.meta` files, the lock); new files and folders
 and `Refresh`; `ImportAsset` of a new file in a new folder; `CreateFolder` (twice, and in a missing
-folder); `CreateAsset` of a ScriptableObject, `AddObjectToAsset`, `SaveAssets`; `CopyAsset`,
+folder); `CreateAsset` of a ScriptableObject, `AddObjectToAsset`, `SaveAssets`; `RemoveObjectFromAsset`
+(an added object, twice, an object of no asset, null, added back, the main object); `CopyAsset`,
 `MoveAsset` (also into a missing folder and onto an asset), `RenameAsset` (also onto a taken name and
 an extension's), `GenerateUniqueAssetPath` (taken, free, folders, numbered names, other case, a
 missing folder); `DeleteAsset` (an asset, nothing, a folder) and the GUID lookups after it,
@@ -46,6 +47,12 @@ is written when the project has none. Between `StartAssetEditing` and `StopAsset
 waits for the last `StopAssetEditing`, `CreateAsset` does not. `CreateAsset` names the object after
 its file (file id 11400000, the `.meta`'s `mainObjectFileID`); `AddObjectToAsset` gives a random
 64-bit file id and the file is written by `SaveAssets`, documents in ascending file id order.
+`RemoveObjectFromAsset` makes the object one of no asset at once (alive, no path, not dirty) and
+the file loses its document with `SaveAssets`, a reference to it written as none; an object of no
+asset is left alone and null throws; an object added (back) is of the asset at once, dirty, and a
+sub-asset only from the save on; without its main object the asset has none
+(`LoadMainAssetAtPath` null) until the save makes the object left the main one, under its own
+file id and name, with the warning `Main Object Name '<name>' does not match filename '<file>'`.
 Copies, moves and renames name a native asset's main object after its new file; a copy gets a new
 GUID, a move keeps it. `GenerateUniqueAssetPath` keeps a free path, else takes the first free
 `name N` (a name's own ` N` replaced), spells the folder as the project does and gives "" for a
@@ -63,7 +70,7 @@ changes during an import are written too. Settings changed through the API are w
 `SaveAssets` and when the Editor quits in Edit mode, never in Play mode. In Edit mode the lock
 follows a resolved manifest change by the time the Editor quits.
 
-Unbound on macOS, 2026-11-19: 649/668 values, 0 failures and 19 recorded residuals
+Unbound on macOS, 2026-11-22: 715/742 values, 0 failures and 27 recorded residuals
 (`residuals.json`): the lock not written again after an Edit-mode `Client.Resolve`, no
 `.meta` for a file of an extension no importer claims (when the project opens, Unbound cannot tell
 which extensions packages' ScriptedImporters claim), copies and folders refused in a read-only

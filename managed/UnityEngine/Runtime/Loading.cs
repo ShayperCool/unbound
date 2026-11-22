@@ -1468,6 +1468,16 @@ namespace Unbound.Runtime
             o.IsPersistentAsset = true;
         }
 
+        /// <summary>A live object taken out of a loaded asset file again
+        /// (AssetDatabase.RemoveObjectFromAsset): it lives on as an object of no asset.</summary>
+        internal static void RemoveObject(LoadedFile file, Object o, long fileId)
+        {
+            file.Objects.Remove(fileId);
+            s_Objects.Remove((file.Guid, fileId));
+            if (ReferenceEquals(file.MainObject, o)) file.MainObject = null;
+            o.IsPersistentAsset = false;
+        }
+
         /// <summary>Forgets one file so that the next load reads it again (hot reload of content).</summary>
         internal static void Invalidate(string guid)
         {

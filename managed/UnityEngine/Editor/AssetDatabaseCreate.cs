@@ -16,7 +16,8 @@ namespace UnityEditor
     /// asset's main object, named after the file, with its class's main file id (the class id
     /// times 100000: 11400000 for a script object, 2100000 for a material); AddObjectToAsset adds
     /// an object under a random 64-bit file id, written into the file by the next SaveAssets, the
-    /// documents in ascending file id order. Unbound writes script objects (ScriptableObject,
+    /// documents in ascending file id order; RemoveObjectFromAsset takes an object out
+    /// again (14.remove). Unbound writes script objects (ScriptableObject,
     /// MonoBehaviour), materials, physics materials, readable meshes and textures and animation
     /// clips made by script this way (tests/projects/scenesave create-assets, engine-assets,
     /// clip-assets); other objects, and those of these it cannot write yet
@@ -64,9 +65,24 @@ namespace UnityEditor
             long mainId = MainFileId(asset);
             created.Objects[asset] = mainId;
             File.WriteAllText(FileOf(path), created.Text());
-            var guid = ImportOne(path, mainId);
-            created.File = AssetDatabaseRuntime.Adopt(guid, path, asset, mainId);
+            Track(ImportOne(path, mainId), created);
+        }
+
+        /// <summary>A written asset under its GUID: its main object is the file's from here on,
+        /// and the saves keep the file in step with its objects.</summary>
+        static void Track(string guid, CreatedAsset created)
+        {
+            created.File = AssetDatabaseRuntime.Adopt(guid, created.Path, created.Main, created.Objects[created.Main]);
             s_Created[guid] = created;
+        }
+
+        /// <summary>CreateAsset past its checks, file write and import, for a file the database
+        /// lists under this GUID already (the managed tests, which have no importer).</summary>
+        internal static void TrackCreated(string guid, string path, Object asset)
+        {
+            var created = new CreatedAsset { Path = path, Main = asset };
+            created.Objects[asset] = MainFileId(asset);
+            Track(guid, created);
         }
 
         public static void AddObjectToAsset(Object objectToAdd, string path) =>
@@ -104,7 +120,53 @@ namespace UnityEditor
             while (id == 0 || created.Objects.ContainsValue(id));
             created.Objects[objectToAdd] = id;
             AssetDatabaseRuntime.AddObject(created.File, objectToAdd, id);
+            created.Added.Add(objectToAdd);
+            EditorUtility.SetDirty(objectToAdd);
             created.Unsaved = true;
+        }
+
+        /// <summary>Whether the object was added to an asset that has not been saved since: it is
+        /// of the asset at once (path, Contains, LoadAllAssetsAtPath) and dirty, and counts as a
+        /// sub-asset from the save on (tests/projects/projectwrites 14.remove.readded.*).</summary>
+        static bool AddedUnsaved(Object o)
+        {
+            foreach (var created in s_Created.Values)
+                if (created.Added.Contains(o)) return true;
+            return false;
+        }
+
+        /// <summary>Whether the asset's main object was taken out and no save gave it another yet:
+        /// LoadMainAssetAtPath answers null then (tests/projects/projectwrites
+        /// 14.remove.main.mainAsset).</summary>
+        static bool MainTakenOut(string guid) => s_Created.TryGetValue(guid, out var created) && created.MainRemoved;
+
+        /// <summary>Takes an object out of its asset: at once it is an object of no asset, alive
+        /// and unchanged, and the asset's listing is without it; the file loses its document with
+        /// the next SaveAssets, where references to it are written as none. An object that is no
+        /// part of an asset is left alone without a word. The main object can be taken out too:
+        /// the asset then has no main object until the save, which makes the first object left
+        /// the main one and says when its name is not the file's (matches the Unity 6000.0.71f1
+        /// Editor in Edit and Play mode, tests/projects/projectwrites 14.remove). Like
+        /// AddObjectToAsset, for the assets CreateAsset made in this session.</summary>
+        public static void RemoveObjectFromAsset(Object objectToRemove)
+        {
+            if (objectToRemove == null) throw new ArgumentNullException(nameof(objectToRemove));
+            if (!objectToRemove.IsPersistentAsset) return;
+            foreach (var created in s_Created.Values)
+            {
+                if (!created.Objects.TryGetValue(objectToRemove, out long id)) continue;
+                created.Objects.Remove(objectToRemove);
+                created.Added.Remove(objectToRemove);
+                AssetDatabaseRuntime.RemoveObject(created.File, objectToRemove, id);
+                if (ReferenceEquals(created.Main, objectToRemove))
+                {
+                    created.Main = null;
+                    created.MainRemoved = true;
+                }
+                created.Unsaved = true;
+                return;
+            }
+            Debug.LogError($"Unbound removes objects only from assets it created in this session: '{GetAssetPath(objectToRemove)}' is left as it is.");
         }
 
         /// <summary>Why a clip Unbound writes cannot be written yet (null otherwise).</summary>
@@ -130,8 +192,33 @@ namespace UnityEditor
             internal Object Main;
             internal LoadedFile File;
             internal readonly Dictionary<Object, long> Objects = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance);
-            /// <summary>Objects were added since the file was written.</summary>
+            /// <summary>Objects were added or removed since the file was written.</summary>
             internal bool Unsaved;
+            /// <summary>The main object was taken out of the asset (not destroyed): the next save
+            /// gives it another.</summary>
+            internal bool MainRemoved;
+            /// <summary>The objects added since the last save.</summary>
+            internal readonly HashSet<Object> Added = new HashSet<Object>(ReferenceEqualityComparer.Instance);
+
+            /// <summary>After the main object was taken out: the object of the lowest file id left
+            /// becomes the main one, with a warning when its name is not the file's; false, with an
+            /// error, when no object is left (what the Editor writes then, and which of several objects
+            /// left it picks, is not measured).</summary>
+            internal bool NewMain()
+            {
+                var left = Objects.Where(p => p.Key != null).OrderBy(p => p.Value).Select(p => p.Key).FirstOrDefault();
+                if (left == null)
+                {
+                    Debug.LogError($"{Log.DiagnosticPrefix}'{Path}' has no object left; it is not saved.");
+                    return false;
+                }
+                Main = left;
+                File.MainObject = left;
+                MainRemoved = false;
+                var fileName = System.IO.Path.GetFileNameWithoutExtension(Path);
+                if (left.name != fileName) Debug.LogWarning($"Main Object Name '{left.name}' does not match filename '{fileName}'");
+                return true;
+            }
 
             internal string Text() =>
                 UnityYamlWriter.Write(Objects.Where(p => p.Key != null).OrderBy(p => p.Value).Select(p => p.Key).ToArray(), Objects);
@@ -145,7 +232,7 @@ namespace UnityEditor
             foreach (var pair in s_Created.ToList())
             {
                 var created = pair.Value;
-                if (created.Main == null || !System.IO.File.Exists(FileOf(created.Path)))
+                if ((created.Main == null && !created.MainRemoved) || !System.IO.File.Exists(FileOf(created.Path)))
                 {
                     s_Created.Remove(pair.Key);
                     continue;
@@ -159,8 +246,10 @@ namespace UnityEditor
                     Debug.LogError($"Unbound: {created.Path} is not saved: {e.Message}");
                     continue;
                 }
+                if (created.MainRemoved && !created.NewMain()) continue;
                 SceneFiles.WriteFile(FileOf(created.Path), text);
                 created.Unsaved = false;
+                created.Added.Clear();
                 foreach (var o in created.Objects.Keys) if (o != null) EditorUtility.ClearDirty(o);
             }
         }

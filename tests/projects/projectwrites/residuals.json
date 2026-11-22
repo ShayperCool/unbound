@@ -25,5 +25,17 @@
     "play.09.labels.quoted.Assets/Startup/Notes.txt.meta",
     "play.09.labels.quoted.get",
     "play.exit.Assets/Startup/Notes.txt.meta"
+  ],
+  "A newly created object is dirty in the Editor from its creation (EditorUtility.IsDirty); in Unbound an object is dirty from SetDirty or an edit on": [
+    "edit.14.remove.loose.created",
+    "edit.14.remove.loose.before",
+    "edit.14.remove.loose",
+    "play.14.remove.loose.created",
+    "play.14.remove.loose.before",
+    "play.14.remove.loose"
+  ],
+  "After the warning about the new main object's name the Editor lists an `Import Logs` object (ImportLog) among the asset's objects; Unbound keeps no import-log objects": [
+    "edit.14.remove.main.saved.all",
+    "play.14.remove.main.saved.all"
   ]
 }
