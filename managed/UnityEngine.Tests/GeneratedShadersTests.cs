@@ -105,6 +105,15 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AProjectShadersContentKeyIsTheNativeSides()
+        {
+            // FNV-1a 64 of the file's bytes, as crates/unbound-app's content_key computes it.
+            Assert.Equal("N#cbf29ce484222325", Shader.ContentKey("N", Array.Empty<byte>()));
+            Assert.Equal("N#af63dc4c8601ec8c", Shader.ContentKey("N", new[] { (byte)'a' }));
+            Assert.Equal("Unbound/Dup", Shader.ShownName(Shader.ContentKey("Unbound/Dup", new byte[] { 1, 2, 3 })));
+        }
+
+        [Fact]
         public void AShownNameLeavesOutTheKey()
         {
             Assert.Equal("Hidden/VFX/T/S/Output Particle|Unlit Quad", Shader.ShownName("Hidden/VFX/T/S/Output Particle|Unlit Quad#0123456789abcdef"));
