@@ -721,7 +721,7 @@ impl CompiledPrograms {
         let programs = self
             .programs
             .iter()
-            .filter(|p| shader.is_empty() || p.shader == shader);
+            .filter(|p| counted_for(&p.shader, shader));
         programs.fold((0, 0), |(count, pipelines), p| {
             (count + 1, pipelines + p.pipelines.len())
         })
@@ -2649,10 +2649,37 @@ fn write_array_at(
     }
 }
 
+/// Whether a program compiled for the shader `compiled` counts for the shader a diagnostic
+/// query names: every shader for an empty query, else that shader, by the name it was compiled
+/// under or, for a project file known by its content key, by the name the file declares (which
+/// is what a script's `Shader.name` gives).
+fn counted_for(compiled: &str, queried: &str) -> bool {
+    queried.is_empty()
+        || compiled == queried
+        || crate::shaderlab::generated_base(compiled) == Some(queried)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use unbound_shaders::Uniform;
+
+    #[test]
+    fn prepared_counts_answer_to_a_shader_file_by_its_declared_name() {
+        let keyed = "Probe/Warmup#0123456789abcdef";
+        assert!(counted_for(keyed, "Probe/Warmup"));
+        assert!(counted_for(keyed, keyed));
+        assert!(counted_for("Probe/Warmup", "Probe/Warmup"));
+        assert!(counted_for(keyed, ""));
+        // Another shader, another file of the name asked by its own key, or a name that only
+        // starts alike, is not counted.
+        assert!(!counted_for("Probe/Other#0123456789abcdef", "Probe/Warmup"));
+        assert!(!counted_for(keyed, "Probe/Warmup#fedcba9876543210"));
+        assert!(!counted_for(
+            "Probe/WarmupFallback#0123456789abcdef",
+            "Probe/Warmup"
+        ));
+    }
 
     /// The per-draw dynamic offsets in binding order: the first uniform binding, the per-draw
     /// uniform, then the further ones, each at its start in the draw's uniform data.
