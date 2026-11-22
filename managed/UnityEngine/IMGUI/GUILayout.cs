@@ -921,16 +921,20 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>Lays a container's Layout event tree out over the container's size.</summary>
+        /// <summary>Lays a container's Layout event tree out over the container's size; over its
+        /// own content's where the container has none yet (NaN).</summary>
         internal static void LayoutFromContainer(float w, float h)
         {
             var top = current.topLevel;
             top.CalcWidth();
-            top.SetHorizontal(0f, w);
+            top.SetHorizontal(0f, float.IsNaN(w) ? top.maxWidth : w);
             top.CalcHeight();
-            top.SetVertical(0f, h);
+            top.SetVertical(0f, float.IsNaN(h) ? top.maxHeight : h);
             LayoutFreeGroup(current.windows);
         }
+
+        /// <summary>The scope whose windows the GUI pass that starts keeps (a container's own).</summary>
+        internal static void SetOwner(int owner) => s_Owner = owner;
 
         internal static bool HasWindow(int windowID) => s_StoredWindows.ContainsKey(WindowKey(windowID));
 

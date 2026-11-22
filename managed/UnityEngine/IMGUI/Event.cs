@@ -372,6 +372,10 @@ namespace Unbound.Runtime
         static readonly Dictionary<int, (double time, Vector2 at, int count)> s_LastClick = new Dictionary<int, (double, Vector2, int)>();
         static readonly bool[] s_Held = new bool[512];
 
+        /// <summary>Where the GUI last saw the mouse, in GUI space: the corner before any mouse
+        /// input. (Tests place it.)</summary>
+        internal static Vector2 MousePosition { get => s_Mouse; set => s_Mouse = value; }
+
         /// <summary>This frame's input events, in order.</summary>
         internal static IReadOnlyList<Event> Frame => s_Frame;
 

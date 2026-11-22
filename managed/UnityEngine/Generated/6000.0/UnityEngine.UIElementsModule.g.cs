@@ -1389,8 +1389,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId cullingEnabledProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId contextTypeProperty;
         [global::Unbound.Stub] internal bool useOwnerObjectGUIState;
-        [global::Unbound.Stub] internal bool SendEventToIMGUI(global::UnityEngine.UIElements.EventBase evt, bool canAffectFocus = true, bool verifyBounds = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.SendEventToIMGUI"); return default; }
-        [global::Unbound.Stub] internal bool HandleIMGUIEvent(global::UnityEngine.Event e, global::System.Action onGUIHandler, bool canAffectFocus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.HandleIMGUIEvent"); return default; }
         [global::Unbound.Stub] protected virtual void Dispose(bool disposeManaged) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.Dispose"); }
         internal global::UnityEngine.ObjectGUIState guiState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.guiState"); return default; } }
         internal global::UnityEngine.Rect lastWorldClip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.lastWorldClip"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.lastWorldClip"); } }

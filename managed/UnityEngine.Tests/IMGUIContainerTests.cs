@@ -38,6 +38,7 @@ namespace UnityEngine.Tests
                 Panel = RuntimePanel.Create(Settings);
                 GUIUtility.hotControl = 0;
                 GUIUtility.keyboardControl = 0;
+                Unbound.Runtime.GuiEvents.MousePosition = Vector2.zero;
             }
 
             internal void Tick()
@@ -70,6 +71,8 @@ namespace UnityEngine.Tests
             {
                 GUIUtility.hotControl = 0;
                 GUIUtility.keyboardControl = 0;
+                Unbound.Runtime.GuiEvents.MousePosition = Vector2.zero;
+                EditorStyles.Loaded = false;
                 Panel.Dispose();
                 Object.DestroyImmediate(Settings);
                 m_Release.Dispose();
@@ -171,7 +174,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void AMouseEventReachesTheHandlerInItsCoordinatesAfterALayoutPass()
+        public void AMouseEventReachesTheHandlerAfterALayoutPassWithTheMouseWhereTheGUISawIt()
         {
             using var f = new Fixture();
             var spacer = new VisualElement();
@@ -190,7 +193,20 @@ namespace UnityEngine.Tests
             var center = container.worldBound.center;
             Assert.True(center.y > 30f);
 
+            // The GUI has seen no mouse (it is at the corner): the handler gets the event, with the
+            // mouse there and not where the sent event says, so the button does not take it.
             Send(container, MouseDownEvent.GetPooled(new Event { type = EventType.MouseDown, mousePosition = center, button = 0, clickCount = 1 }), out bool stopped);
+            Assert.Equal("Layout,mouseDown", f.Take());
+            Assert.Equal(container.WorldToLocal(Vector2.zero), seen);
+            Assert.False(stopped);
+            Assert.Equal(0, GUIUtility.hotControl);
+            Send(container, MouseUpEvent.GetPooled(new Event { type = EventType.MouseUp, mousePosition = center, button = 0, clickCount = 1 }), out stopped);
+            Assert.Equal("Layout,mouseUp", f.Take());
+            Assert.False(clicked);
+
+            // With the mouse over the button the press is the button's.
+            Unbound.Runtime.GuiEvents.MousePosition = center;
+            Send(container, MouseDownEvent.GetPooled(new Event { type = EventType.MouseDown, mousePosition = center, button = 0, clickCount = 1 }), out stopped);
             Assert.Equal("Layout,mouseDown", f.Take());
             Assert.Equal(container.WorldToLocal(center), seen);
             Assert.True(stopped);
@@ -237,6 +253,7 @@ namespace UnityEngine.Tests
             other.Focus();
             Assert.Same(other, f.Panel.focusController.focusedElement);
             var label = new Vector2(container.worldBound.center.x, container.worldBound.y + 5f);
+            Unbound.Runtime.GuiEvents.MousePosition = label;
             Send(container, MouseDownEvent.GetPooled(new Event { type = EventType.MouseDown, mousePosition = label, clickCount = 1 }), out _);
             Assert.Equal(0, GUIUtility.keyboardControl);
             Assert.Null(f.Panel.focusController.focusedElement);
@@ -244,6 +261,7 @@ namespace UnityEngine.Tests
 
             // A press on the text field: it takes the keyboard and the container the focus.
             var field = new Vector2(container.worldBound.center.x, container.worldBound.yMax - 8f);
+            Unbound.Runtime.GuiEvents.MousePosition = field;
             Send(container, MouseDownEvent.GetPooled(new Event { type = EventType.MouseDown, mousePosition = field, clickCount = 1 }), out _);
             int keyboard = GUIUtility.keyboardControl;
             Assert.NotEqual(0, keyboard);
@@ -314,6 +332,85 @@ namespace UnityEngine.Tests
         }
 
         public class Tagged : PropertyAttribute { }
+
+        public class UiOnly : PropertyAttribute { }
+
+        // A drawer with UI Toolkit GUI only.
+        public class UiOnlyDrawer : PropertyDrawer
+        {
+            public override VisualElement CreatePropertyGUI(SerializedProperty property) => new Label("ui");
+        }
+
+        public class BuiltIn : ScriptableObject
+        {
+            [Header("Stats")] public int headed = 1;
+            [Header("Two\nLines")] public int headedTwice = 1;
+            [TextArea] public string note = "a";
+            [TextArea(2, 5)] public string longNote = "one\ntwo\nthree\nfour";
+            [TextArea(2, 5)] public string shortNote = "";
+            [Space(12f)] public bool flag;
+            public bool plainFlag;
+            public int[] numbers = { 1, 2 };
+            public Vector2 point;
+            [Range(0f, 1f)] public float ratio = 0.5f;
+            [Multiline(3)] public string multi = "m";
+            [UiOnly] public float uiOnly = 1f;
+        }
+
+        // The measured heights are tests/projects/imguicontainer builtin.*.
+        [Fact]
+        public void TheDefaultInspectorsIMGUIDrawsTheEditorsAttributesAndTypesWithoutFailing()
+        {
+            using var logs = new Logs();
+            using var f = new Fixture();
+            using var registered = new PropertyFieldDrawerTests.DrawerTable((typeof(UiOnly), typeof(UiOnlyDrawer)));
+            var target = ScriptableObject.CreateInstance<BuiltIn>();
+            using var so = new SerializedObject(target);
+            var editor = Editor.CreateEditor(target);
+            var heights = new Dictionary<string, float>();
+            var rects = new Dictionary<string, float>();
+            try
+            {
+                // Before any Editor GUI pass a header's height is not there.
+                Assert.Throws<NullReferenceException>(() => EditorGUI.GetPropertyHeight(so.FindProperty("headed")));
+                Assert.Throws<NullReferenceException>(() => EditorGUI.GetPropertyHeight(so.FindProperty("note")));
+                var drawn = f.Add(() => editor.DrawDefaultInspector());
+                var measured = f.Add(() =>
+                {
+                    foreach (var name in new[] { "headed", "note", "longNote", "shortNote", "flag", "plainFlag", "numbers", "ratio", "multi" })
+                    {
+                        var property = so.FindProperty(name);
+                        heights[name] = EditorGUI.GetPropertyHeight(property);
+                        EditorGUILayout.PropertyField(property, true);
+                        if (Event.current.type == EventType.KeyDown) rects[name] = GUILayoutUtility.GetLastRect().height;
+                    }
+                });
+                f.Tick();
+                f.Tick();
+                Send(drawn, KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.A }), out _);
+                Send(measured, KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.A }), out _);
+                Assert.DoesNotContain(logs.Entries, e => e.StartsWith("Exception") || e.Contains("GUI Error"));
+                Assert.True(drawn.layout.height > 200f);
+                Assert.Equal(45f, heights["headed"]);
+                Assert.Equal(66f, heights["note"]);
+                Assert.Equal(51f, heights["shortNote"]);
+                Assert.Equal(30f, heights["flag"]);
+                Assert.Equal(18f, heights["plainFlag"]);
+                Assert.Equal(18f, heights["numbers"]);
+                Assert.Equal(18f, heights["ratio"]);
+                Assert.Equal(62f, heights["multi"]);
+                // Each takes a rect of its height; a checkbox with a decorator too.
+                foreach (var pair in heights) Assert.Equal(pair.Value, rects[pair.Key]);
+                // After an Editor GUI pass the heights are there outside one as well.
+                Assert.Equal(45f, EditorGUI.GetPropertyHeight(so.FindProperty("headed")));
+                Assert.Equal(66f, EditorGUI.GetPropertyHeight(so.FindProperty("note")));
+            }
+            finally
+            {
+                Object.DestroyImmediate(editor);
+                Object.DestroyImmediate(target);
+            }
+        }
 
         public class Nested : ScriptableObject
         {

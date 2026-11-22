@@ -829,6 +829,28 @@ namespace UnityEditor
         // A property's drawers are the ones PropertyField finds (DrawerDispatch: the declaring field,
         // a collection's attributes on its elements, the built-in attributes); the engine's own
         // drawers and decorators are measured here, a game's by its GetHeight/GetPropertyHeight.
+        const float TextAreaLine = 15f;
+
+        // The label's line, the first text line and 15 points for each further one: as many lines
+        // as the text takes in the Editor's text area style, within the attribute's limits. Unbound
+        // has no such style yet: with limits that differ it counts the text's own lines, without
+        // wrapping them. The style is the Editor's: there is none before a GUI pass.
+        static float OfTextArea(SerializedProperty property, TextAreaAttribute area)
+        {
+            if (!EditorStyles.Available) EditorStyles.Require();
+            int lines = area.minLines;
+            if (area.maxLines > area.minLines)
+            {
+                lines = 1;
+                string text = property.propertyType == SerializedPropertyType.String ? property.stringValue : null;
+                if (text != null)
+                    foreach (char c in text)
+                        if (c == '\n') lines++;
+                lines = Mathf.Clamp(lines, area.minLines, area.maxLines);
+            }
+            return Line + Line + (lines - 1) * TextAreaLine;
+        }
+
         internal static float OfDecorator(DecoratorDrawer decorator)
         {
             switch (decorator)
@@ -836,9 +858,15 @@ namespace UnityEditor
                 case SpaceDrawer _:
                     return ((SpaceAttribute)decorator.attribute).height;
                 case HeaderDrawer _:
-                    // The header's style is the Editor's: there is none outside an editor window.
-                    EditorStyles.Require();
-                    return Line * 1.5f + 6f;
+                    // A line and a half, and the bold label's line height for each further line of
+                    // the header. The style is the Editor's: there is none before a GUI pass.
+                    if (!EditorStyles.Available) EditorStyles.Require();
+                    string header = ((HeaderAttribute)decorator.attribute).header;
+                    int lines = 1;
+                    if (header != null)
+                        foreach (char c in header)
+                            if (c == '\n') lines++;
+                    return lines == 1 ? Line * 1.5f : Line * 1.5f + EditorStyles.boldLabel.CalcHeight(new GUIContent(header), 1f) / lines * (lines - 1);
                 default:
                     return decorator.GetHeight();
             }
@@ -865,10 +893,8 @@ namespace UnityEditor
             {
                 case MultilineAttribute multiline:
                     return height + (!EditorGUIUtility.wideMode ? Line : 0f) + Line + (multiline.lines - 1) * 13f;
-                case TextAreaAttribute _:
-                    // Measured from its style: the Editor's text area style.
-                    EditorStyles.Require();
-                    break;
+                case TextAreaAttribute area:
+                    return height + OfTextArea(property, area);
             }
             return height + OfProperty(property, label, includeChildren);
         }
@@ -979,7 +1005,15 @@ namespace UnityEditor
         static GUIStyle s_LightToggle;
         static GUIStyle s_DarkToggle;
 
-        static bool HasInspectorStyles => Compat.InspectorGuiStylesMeasured && Event.current != null;
+        internal static bool HasInspectorStyles => Compat.InspectorGuiStylesMeasured && Event.current != null;
+
+        /// <summary>An Editor GUI pass has run (an Editor-context IMGUIContainer's): from then on
+        /// what the styles decide without their fonts is known outside a GUI pass too
+        /// (tests/projects/imguicontainer builtin.outsideGUI).</summary>
+        internal static bool Loaded;
+
+        /// <summary>Whether the styles are there: inside a GUI pass, or after an Editor one ran.</summary>
+        internal static bool Available => Compat.InspectorGuiStylesMeasured && (Event.current != null || Loaded);
 
         static GUIStyle s_InspectorHorizontalDefaultMargins;
         static GUIStyle s_InspectorDefaultMargins;

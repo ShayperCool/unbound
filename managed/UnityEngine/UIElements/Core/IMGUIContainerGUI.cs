@@ -6,8 +6,9 @@ namespace UnityEngine.UIElements
     /// An IMGUIContainer runs its handler as the Unity 6000.0.71f1 Editor does in a runtime panel
     /// (tests/projects/imguicontainer): a Layout pass measures it when its size is not fixed (and
     /// again once <see cref="MarkDirtyLayout"/> is called), and a UI Toolkit event that carries an
-    /// IMGUI event (a mouse or key event) reaches the handler after a Layout pass, in the
-    /// container's coordinates. A runtime panel sends it no Repaint, so it draws nothing there, and
+    /// IMGUI event (a mouse or key event) reaches the handler after a Layout pass. The handler
+    /// sees the mouse where the GUI last saw it, in the container's coordinates, whatever position
+    /// the sent event carries (mouse.*). A runtime panel sends it no Repaint, so it draws nothing there, and
     /// every panel of Unbound is one. The handler has its own control IDs and layout; the container
     /// takes the panel's focus when one of its controls takes the keyboard.
     /// Not done: Tab does not move between a container's controls (Unbound's IMGUI has no Tab
@@ -92,9 +93,8 @@ namespace UnityEngine.UIElements
             GUI.changed = g.changed;
         }
 
-        void DoOnGUI(Event evt, Vector2 origin, Rect clip, bool isComputingLayout, Rect layoutSize, bool canAffectFocus = true)
+        void DoOnGUI(Event evt, Vector2 origin, Rect clip, bool isComputingLayout, Rect layoutSize, Action handler, bool canAffectFocus = true)
         {
-            var handler = m_OnGUIHandler;
             if (handler == null || panel == null) return;
             var outerEvent = Event.current;
             // Inside another GUI pass (a container measured from an OnGUI) that pass's state is
@@ -102,8 +102,10 @@ namespace UnityEngine.UIElements
             var globals = SaveGlobals();
             float measuredWidth = layoutMeasuredWidth, measuredHeight = layoutMeasuredHeight;
             Event.current = evt;
+            evt.mousePosition = this.WorldToLocal(Unbound.Runtime.GuiEvents.MousePosition);
             var outer = GUIUtility.BeginContainerGUI(Scope, cache, origin, clip, nested: outerEvent != null);
             GUI.enabled = enabledInHierarchy;
+            if (m_ContextType == ContextType.Editor) UnityEditor.EditorStyles.Loaded = true;
             var type = evt.type;
             if (type != EventType.Layout) ApplyFocusEvents();
             bool exited = false;
@@ -126,7 +128,7 @@ namespace UnityEngine.UIElements
                     m_HasFocusableControls = GUIUtility.HasFocusableControls();
                 }
                 bool reportClips = !exited && evt.rawType != EventType.Ignore && evt.rawType != EventType.Used;
-                GUIUtility.EndContainerGUI(outer, new Rect(0f, 0f, Defined(layoutSize.width, cache.topLevel.maxWidth), Defined(layoutSize.height, cache.topLevel.maxHeight)), reportClips);
+                GUIUtility.EndContainerGUI(outer, layoutSize, reportClips);
                 Event.current = outerEvent;
                 RestoreGlobals(globals);
             }
@@ -142,8 +144,6 @@ namespace UnityEngine.UIElements
             }
             if (evt.type == EventType.Used) IncrementVersion(VersionChangeType.Repaint);
         }
-
-        static float Defined(float value, float fallback) => float.IsNaN(value) ? fallback : value;
 
         // Before the handler: a blur takes the keyboard from this container's control, a focus
         // gives it to the first or last one (the direction focus moved in) and tells the panel.
@@ -202,9 +202,11 @@ namespace UnityEngine.UIElements
         static bool WantsEvent(EventType type) =>
             type != EventType.MouseMove && type != EventType.MouseEnterWindow && type != EventType.MouseLeaveWindow;
 
-        internal bool HandleIMGUIEvent(Event e, bool canAffectFocus)
+        internal bool HandleIMGUIEvent(Event e, bool canAffectFocus) => HandleIMGUIEvent(e, m_OnGUIHandler, canAffectFocus);
+
+        internal bool HandleIMGUIEvent(Event e, Action onGUIHandler, bool canAffectFocus)
         {
-            if (e == null || m_OnGUIHandler == null || elementPanel == null || !WantsEvent(e.rawType)) return false;
+            if (e == null || onGUIHandler == null || elementPanel == null || !WantsEvent(e.rawType)) return false;
             m_CachedOrigin = WorldOrigin();
             m_CachedClip = CurrentClip();
             var rawType = e.rawType;
@@ -212,10 +214,10 @@ namespace UnityEngine.UIElements
             {
                 // Each event comes after a Layout pass.
                 e.type = EventType.Layout;
-                DoOnGUI(e, m_CachedOrigin, m_CachedClip, false, layout, canAffectFocus);
+                DoOnGUI(e, m_CachedOrigin, m_CachedClip, false, layout, onGUIHandler, canAffectFocus);
                 e.type = rawType;
             }
-            DoOnGUI(e, m_CachedOrigin, m_CachedClip, false, layout, canAffectFocus);
+            DoOnGUI(e, m_CachedOrigin, m_CachedClip, false, layout, onGUIHandler, canAffectFocus);
             if (m_NewKeyboardFocusControlID > 0)
             {
                 // The controls hear that the keyboard went to another one.
@@ -232,11 +234,11 @@ namespace UnityEngine.UIElements
         // A pointer event reaches IMGUI only from a pen or a touch (not done: Unbound's pointer
         // events carry no IMGUI event); mouse events carry the IMGUI event. A mouse press, release
         // or move counts inside the container's clip, or while it captures the mouse.
-        bool SendEventToIMGUI(EventBase evt)
+        internal bool SendEventToIMGUI(EventBase evt, bool canAffectFocus = true, bool verifyBounds = true)
         {
             if (evt is IPointerEvent) return false;
-            if (IsLocalEvent(evt) && !this.HasMouseCapture() && !CurrentClip().Contains(evt.originalMousePosition)) return false;
-            return HandleIMGUIEvent(evt.imguiEvent, true);
+            if (verifyBounds && IsLocalEvent(evt) && !this.HasMouseCapture() && !CurrentClip().Contains(evt.originalMousePosition)) return false;
+            return HandleIMGUIEvent(evt.imguiEvent, canAffectFocus);
         }
 
         static bool IsLocalEvent(EventBase evt) =>
@@ -299,7 +301,7 @@ namespace UnityEngine.UIElements
                 if (widthMode == MeasureMode.Exactly) size.width = desiredWidth;
                 if (heightMode == MeasureMode.Exactly) size.height = desiredHeight;
                 s_MeasureEvent.type = EventType.Layout;
-                DoOnGUI(s_MeasureEvent, m_CachedOrigin, m_CachedClip, true, size);
+                DoOnGUI(s_MeasureEvent, m_CachedOrigin, m_CachedClip, true, size, m_OnGUIHandler);
                 width = layoutMeasuredWidth;
                 height = layoutMeasuredHeight;
             }

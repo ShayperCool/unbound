@@ -191,6 +191,7 @@ namespace UnityEngine
             s_CurrentIdList = IdListFor(scope);
             s_CurrentIdList.BeginOnGUI();
             GUIClip.BeginContainer(origin, clip);
+            GUILayoutUtility.SetOwner(scope);
             GUILayoutUtility.BeginContainer(cache);
             return outer;
         }
