@@ -1,0 +1,153 @@
+{"k":"copy.file.result","v":"ok"}
+{"k":"copy.file.after","v":"Assets/FileUtilCopyScratch/a.txt=file(A) Assets/FileUtilCopyScratch/b.txt=file(A) Assets/FileUtilCopyScratch/b.txt.meta=none"}
+{"k":"copy.file.logs","v":""}
+{"k":"copy.file.destinationExists.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/a.txt' to 'Assets/FileUtilCopyScratch/b.txt': destination path already exists."}
+{"k":"copy.file.destinationExists.after","v":"Assets/FileUtilCopyScratch/b.txt=file(A)"}
+{"k":"copy.file.destinationExists.logs","v":""}
+{"k":"copy.file.destinationIsDirectory.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/a.txt' to 'Assets/FileUtilCopyScratch/into': destination path already exists."}
+{"k":"copy.file.destinationIsDirectory.after","v":"Assets/FileUtilCopyScratch/into=dir[]"}
+{"k":"copy.file.destinationIsDirectory.logs","v":""}
+{"k":"copy.file.missingParent.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/a.txt' to 'Assets/FileUtilCopyScratch/no/such/c.txt'."}
+{"k":"copy.file.missingParent.after","v":"Assets/FileUtilCopyScratch/no=none"}
+{"k":"copy.file.missingParent.logs","v":""}
+{"k":"copy.file.missingSource.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/missing.txt' to 'Assets/FileUtilCopyScratch/d.txt'."}
+{"k":"copy.file.missingSource.after","v":"Assets/FileUtilCopyScratch/d.txt=none"}
+{"k":"copy.file.missingSource.logs","v":""}
+{"k":"copy.file.same.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/a.txt' to 'Assets/FileUtilCopyScratch/a.txt': destination path already exists."}
+{"k":"copy.file.same.after","v":"Assets/FileUtilCopyScratch/a.txt=file(A)"}
+{"k":"copy.file.same.logs","v":""}
+{"k":"copy.nullSource.result","v":"System.ArgumentNullException: Value cannot be null.\u000aParameter name: source"}
+{"k":"copy.nullSource.after","v":""}
+{"k":"copy.nullSource.logs","v":""}
+{"k":"copy.nullDestination.result","v":"System.ArgumentNullException: Value cannot be null.\u000aParameter name: dest"}
+{"k":"copy.nullDestination.after","v":""}
+{"k":"copy.nullDestination.logs","v":""}
+{"k":"copy.emptySource.result","v":"System.ArgumentException: source\u000aParameter name: The source path cannot be empty."}
+{"k":"copy.emptySource.after","v":""}
+{"k":"copy.emptySource.logs","v":""}
+{"k":"copy.emptyDestination.result","v":"System.ArgumentException: dest\u000aParameter name: The destination path cannot be empty."}
+{"k":"copy.emptyDestination.after","v":""}
+{"k":"copy.emptyDestination.logs","v":""}
+{"k":"copy.file.backslashes.result","v":"ok"}
+{"k":"copy.file.backslashes.after","v":"Assets/FileUtilCopyScratch/back.txt=file(A)"}
+{"k":"copy.file.backslashes.logs","v":""}
+{"k":"copy.file.absolute.result","v":"ok"}
+{"k":"copy.file.absolute.after","v":"<outside>/abs.txt=file(A)"}
+{"k":"copy.file.absolute.logs","v":""}
+{"k":"copy.file.dotDot.result","v":"ok"}
+{"k":"copy.file.dotDot.after","v":"Assets/FileUtilCopyScratch/dots.txt=file(A)"}
+{"k":"copy.file.dotDot.logs","v":""}
+{"k":"copy.file.readOnly.result","v":"ok"}
+{"k":"copy.file.readOnly.after","v":"Assets/FileUtilCopyScratch/ro2.txt=file(R,readonly)"}
+{"k":"copy.file.readOnly.logs","v":""}
+{"k":"copy.tree.result","v":"ok"}
+{"k":"copy.tree.after","v":"Assets/FileUtilCopyScratch/tree2=dir[.hidden=file(H),empty=dir[],sub=dir[y.txt=file(Y)],x.txt=file(X),x.txt.meta=file(m)] Assets/FileUtilCopyScratch/tree2.meta=none"}
+{"k":"copy.tree.logs","v":""}
+{"k":"copy.tree.destinationExists.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/tree' to 'Assets/FileUtilCopyScratch/tree2': destination path already exists."}
+{"k":"copy.tree.destinationExists.after","v":"Assets/FileUtilCopyScratch/tree2=dir[.hidden=file(H),empty=dir[],sub=dir[y.txt=file(Y)],x.txt=file(X),x.txt.meta=file(m)]"}
+{"k":"copy.tree.destinationExists.logs","v":""}
+{"k":"copy.tree.trailingSlashes.result","v":"ok"}
+{"k":"copy.tree.trailingSlashes.after","v":"Assets/FileUtilCopyScratch/tree3=dir[.hidden=file(H),empty=dir[],sub=dir[y.txt=file(Y)],x.txt=file(X),x.txt.meta=file(m)]"}
+{"k":"copy.tree.trailingSlashes.logs","v":""}
+{"k":"copy.tree.missingParent.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/tree' to 'Assets/FileUtilCopyScratch/deep/er/tree'."}
+{"k":"copy.tree.missingParent.after","v":"Assets/FileUtilCopyScratch/deep=none"}
+{"k":"copy.tree.missingParent.logs","v":""}
+{"k":"copy.tree.outside.result","v":"ok"}
+{"k":"copy.tree.outside.after","v":"<outside>/tree=dir[.hidden=file(H),empty=dir[],sub=dir[y.txt=file(Y)],x.txt=file(X),x.txt.meta=file(m)]"}
+{"k":"copy.tree.outside.logs","v":""}
+{"k":"links.made","v":"00"}
+{"k":"links.madeInside","v":"0"}
+{"k":"copy.fileLink.result","v":"ok"}
+{"k":"copy.fileLink.after","v":"Assets/FileUtilCopyScratch/filelink2=file(T)"}
+{"k":"copy.fileLink.logs","v":""}
+{"k":"copy.dirLink.result","v":"ok"}
+{"k":"copy.dirLink.after","v":"Assets/FileUtilCopyScratch/dirlink2=dir[k.txt=file(K)]"}
+{"k":"copy.dirLink.logs","v":""}
+{"k":"copy.treeWithLink.result","v":"ok"}
+{"k":"copy.treeWithLink.after","v":"Assets/FileUtilCopyScratch/linked2=dir[inner=file(T),p.txt=file(P)]"}
+{"k":"copy.treeWithLink.logs","v":""}
+{"k":"follow.fileLink.result","v":"ok"}
+{"k":"follow.fileLink.after","v":"Assets/FileUtilCopyScratch/filelink3=file(T)"}
+{"k":"follow.fileLink.logs","v":""}
+{"k":"follow.dirLink.result","v":"ok"}
+{"k":"follow.dirLink.after","v":"Assets/FileUtilCopyScratch/dirlink3=dir[k.txt=file(K)]"}
+{"k":"follow.dirLink.logs","v":""}
+{"k":"follow.treeWithLink.result","v":"ok"}
+{"k":"follow.treeWithLink.after","v":"Assets/FileUtilCopyScratch/linked3=dir[inner=file(T),p.txt=file(P)]"}
+{"k":"follow.treeWithLink.logs","v":""}
+{"k":"follow.file.result","v":"ok"}
+{"k":"follow.file.after","v":"Assets/FileUtilCopyScratch/followed.txt=file(A)"}
+{"k":"follow.file.logs","v":""}
+{"k":"follow.destinationExists.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/a.txt' to 'Assets/FileUtilCopyScratch/followed.txt': destination path already exists."}
+{"k":"follow.destinationExists.after","v":"Assets/FileUtilCopyScratch/followed.txt=file(A)"}
+{"k":"follow.destinationExists.logs","v":""}
+{"k":"follow.missingSource.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/missing.txt' to 'Assets/FileUtilCopyScratch/f2.txt'."}
+{"k":"follow.missingSource.after","v":"Assets/FileUtilCopyScratch/f2.txt=none"}
+{"k":"follow.missingSource.logs","v":""}
+{"k":"follow.nullSource.result","v":"System.ArgumentNullException: Value cannot be null.\u000aParameter name: source"}
+{"k":"follow.nullSource.after","v":""}
+{"k":"follow.nullSource.logs","v":""}
+{"k":"move.file.result","v":"ok"}
+{"k":"move.file.after","v":"Assets/FileUtilCopyScratch/m.txt=none Assets/FileUtilCopyScratch/m.txt.meta=file(mm) Assets/FileUtilCopyScratch/m2.txt=file(M) Assets/FileUtilCopyScratch/m2.txt.meta=none"}
+{"k":"move.file.logs","v":""}
+{"k":"move.file.destinationExists.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/a.txt' to 'Assets/FileUtilCopyScratch/m2.txt': destination path already exists."}
+{"k":"move.file.destinationExists.after","v":"Assets/FileUtilCopyScratch/a.txt=file(A) Assets/FileUtilCopyScratch/m2.txt=file(M)"}
+{"k":"move.file.destinationExists.logs","v":""}
+{"k":"move.file.missingSource.result","v":"System.IO.IOException: Failed to Move File / Directory from 'Assets/FileUtilCopyScratch/missing.txt' to 'Assets/FileUtilCopyScratch/m3.txt'."}
+{"k":"move.file.missingSource.after","v":"Assets/FileUtilCopyScratch/m3.txt=none"}
+{"k":"move.file.missingSource.logs","v":""}
+{"k":"move.file.missingParent.result","v":"System.IO.IOException: Failed to Move File / Directory from 'Assets/FileUtilCopyScratch/m2.txt' to 'Assets/FileUtilCopyScratch/nope/m4.txt'."}
+{"k":"move.file.missingParent.after","v":"Assets/FileUtilCopyScratch/m2.txt=file(M) Assets/FileUtilCopyScratch/nope=none"}
+{"k":"move.file.missingParent.logs","v":""}
+{"k":"move.file.outside.result","v":"ok"}
+{"k":"move.file.outside.after","v":"Assets/FileUtilCopyScratch/m2.txt=none <outside>/moved.txt=file(M)"}
+{"k":"move.file.outside.logs","v":""}
+{"k":"move.tree.result","v":"ok"}
+{"k":"move.tree.after","v":"Assets/FileUtilCopyScratch/mtree=none Assets/FileUtilCopyScratch/mtree2=dir[sub=dir[y.txt=file(Y)],x.txt=file(X)]"}
+{"k":"move.tree.logs","v":""}
+{"k":"move.tree.destinationExists.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/tree' to 'Assets/FileUtilCopyScratch/mtree2': destination path already exists."}
+{"k":"move.tree.destinationExists.after","v":"Assets/FileUtilCopyScratch/tree=dir[.hidden=file(H),empty=dir[],sub=dir[y.txt=file(Y)],x.txt=file(X),x.txt.meta=file(m)] Assets/FileUtilCopyScratch/mtree2=dir[sub=dir[y.txt=file(Y)],x.txt=file(X)]"}
+{"k":"move.tree.destinationExists.logs","v":""}
+{"k":"move.fileLink.result","v":"ok"}
+{"k":"move.fileLink.after","v":"Assets/FileUtilCopyScratch/filelink=none Assets/FileUtilCopyScratch/filelinkMoved=link <outside>/target.txt=file(T)"}
+{"k":"move.fileLink.logs","v":""}
+{"k":"move.nullSource.result","v":"System.ArgumentNullException: Value cannot be null.\u000aParameter name: source"}
+{"k":"move.nullSource.after","v":""}
+{"k":"move.nullSource.logs","v":""}
+{"k":"move.emptyDestination.result","v":"System.ArgumentException: dest\u000aParameter name: The destination path cannot be empty."}
+{"k":"move.emptyDestination.after","v":""}
+{"k":"move.emptyDestination.logs","v":""}
+{"k":"replaceFile.existing.result","v":"ok"}
+{"k":"replaceFile.existing.after","v":"Assets/FileUtilCopyScratch/r1.txt=file(one) Assets/FileUtilCopyScratch/r2.txt=file(one)"}
+{"k":"replaceFile.existing.logs","v":""}
+{"k":"replaceFile.new.result","v":"ok"}
+{"k":"replaceFile.new.after","v":"Assets/FileUtilCopyScratch/r3.txt=file(one)"}
+{"k":"replaceFile.new.logs","v":""}
+{"k":"replaceFile.missingSource.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/missing.txt' to 'Assets/FileUtilCopyScratch/r2.txt'."}
+{"k":"replaceFile.missingSource.after","v":"Assets/FileUtilCopyScratch/r2.txt=none"}
+{"k":"replaceFile.missingSource.logs","v":""}
+{"k":"replaceFile.destinationIsDirectory.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/r1.txt' to 'Assets/FileUtilCopyScratch/into': destination path already exists."}
+{"k":"replaceFile.destinationIsDirectory.after","v":"Assets/FileUtilCopyScratch/into=dir[]"}
+{"k":"replaceFile.destinationIsDirectory.logs","v":""}
+{"k":"replaceDirectory.existing.result","v":"ok"}
+{"k":"replaceDirectory.existing.after","v":"Assets/FileUtilCopyScratch/d1=dir[x.txt=file(1)] Assets/FileUtilCopyScratch/d2=dir[x.txt=file(1)]"}
+{"k":"replaceDirectory.existing.logs","v":""}
+{"k":"replaceDirectory.new.result","v":"ok"}
+{"k":"replaceDirectory.new.after","v":"Assets/FileUtilCopyScratch/d3=dir[x.txt=file(1)]"}
+{"k":"replaceDirectory.new.logs","v":""}
+{"k":"replaceDirectory.missingSource.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/missing' to 'Assets/FileUtilCopyScratch/d2'."}
+{"k":"replaceDirectory.missingSource.after","v":"Assets/FileUtilCopyScratch/d2=none"}
+{"k":"replaceDirectory.missingSource.logs","v":""}
+{"k":"replaceDirectory.destinationIsFile.result","v":"System.IO.IOException: Failed to Copy File / Directory from 'Assets/FileUtilCopyScratch/d1' to 'Assets/FileUtilCopyScratch/r1.txt': destination path already exists."}
+{"k":"replaceDirectory.destinationIsFile.after","v":"Assets/FileUtilCopyScratch/r1.txt=file(one)"}
+{"k":"replaceDirectory.destinationIsFile.logs","v":""}
+{"k":"temp","v":"folder=Temp/|prefix=UnityTempFile-|tail=32|hex=True|lower=True|unique=True|made=none"}
+{"k":"path.GetLastPathNameComponent","v":"'a/b/c.txt'>'c.txt' | 'a/b/'>'' | 'a/b'>'b' | 'c'>'c' | ''>'' | '/'>'' | '/abs/x.y'>'x.y' | 'a\\b\\c.d.e'>'a\\b\\c.d.e' | '.hidden'>'.hidden' | 'a/.b'>'.b' | 'a.b/c'>'c' | 'a.b/'>'' | 'name.'>'name.' | 'a//b.txt'>'b.txt' | 'x.tar.gz'>'x.tar.gz' | '..'>'..' | 'a/..'>'..' | '/x'>'x' | 'a/b//'>'' | '//'>'' | 'a/b.c/'>'' | null>''"}
+{"k":"path.DeleteLastPathNameComponent","v":"'a/b/c.txt'>'a/b' | 'a/b/'>'a' | 'a/b'>'a' | 'c'>'' | ''>'' | '/'>'' | '/abs/x.y'>'/abs' | 'a\\b\\c.d.e'>'' | '.hidden'>'' | 'a/.b'>'a' | 'a.b/c'>'a.b' | 'a.b/'>'' | 'name.'>'' | 'a//b.txt'>'a' | 'x.tar.gz'>'' | '..'>'' | 'a/..'>'a' | '/x'>'/' | 'a/b//'>'a' | '//'>'' | 'a/b.c/'>'a' | null>''"}
+{"k":"path.GetPathExtension","v":"'a/b/c.txt'>'txt' | 'a/b/'>'' | 'a/b'>'' | 'c'>'' | ''>'' | '/'>'' | '/abs/x.y'>'y' | 'a\\b\\c.d.e'>'e' | '.hidden'>'hidden' | 'a/.b'>'b' | 'a.b/c'>'' | 'a.b/'>'' | 'name.'>'' | 'a//b.txt'>'txt' | 'x.tar.gz'>'gz' | '..'>'' | 'a/..'>'' | '/x'>'' | 'a/b//'>'' | '//'>'' | 'a/b.c/'>'' | null>''"}
+{"k":"path.GetPathWithoutExtension","v":"'a/b/c.txt'>'a/b/c' | 'a/b/'>'a/b/' | 'a/b'>'a/b' | 'c'>'c' | ''>'' | '/'>'/' | '/abs/x.y'>'/abs/x' | 'a\\b\\c.d.e'>'a\\b\\c.d' | '.hidden'>'' | 'a/.b'>'a/' | 'a.b/c'>'a.b/c' | 'a.b/'>'a.b/' | 'name.'>'name' | 'a//b.txt'>'a//b' | 'x.tar.gz'>'x.tar' | '..'>'.' | 'a/..'>'a/.' | '/x'>'/x' | 'a/b//'>'a/b//' | '//'>'//' | 'a/b.c/'>'a/b.c/' | null>''"}
+{"k":"path.GetProjectRelativePath","v":"'<project>/Assets/x.txt'>'Assets/x.txt' | '<project>/Assets'>'Assets' | '<project>'>'' | '<project>/'>'' | '<project>/Assets/../ProjectSettings/y'>'Assets/../ProjectSettings/y' | '<project>\\Assets\\x.txt'>'' | '<outside>/o.txt'>'' | 'Assets/x.txt'>'' | 'x.txt'>'' | ''>'' | '/'>'' | '<project>Other/x.txt'>'' | null>''"}
+{"k":"path.IsSymlink","v":"'Assets/FileUtilCopyScratch/dirlink'>True | 'Assets/FileUtilCopyScratch/a.txt'>False | 'Assets/FileUtilCopyScratch/tree'>False | 'Assets/FileUtilCopyScratch/missing.txt'>False | 'Assets/FileUtilCopyScratch/linked/inner'>True | ''>False"}
+{"k":"path.ResolveSymlinks","v":"'Assets/FileUtilCopyScratch/dirlink'>'<outside>/targetdir' | 'Assets/FileUtilCopyScratch/a.txt'>'Assets/FileUtilCopyScratch/a.txt' | 'Assets/FileUtilCopyScratch/tree'>'Assets/FileUtilCopyScratch/tree' | 'Assets/FileUtilCopyScratch/missing.txt'>'Assets/FileUtilCopyScratch/missing.txt' | 'Assets/FileUtilCopyScratch/linked/inner'>'<outside>/target.txt' | ''>''"}
+{"k":"path.GetActualPathName","v":"'Assets/FileUtilCopyScratch/a.txt'>'Assets/FileUtilCopyScratch/a.txt' | 'Assets/FileUtilCopyScratch/tree/sub/y.txt'>'Assets/FileUtilCopyScratch/tree/sub/y.txt' | 'Assets/FileUtilCopyScratch/missing.txt'>'Assets/FileUtilCopyScratch/missing.txt' | 'Assets/FileUtilCopyScratch/dirlink/k.txt'>'Assets/FileUtilCopyScratch/dirlink/k.txt' | ''>''"}
+{"k":"complete","v":true}
