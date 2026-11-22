@@ -1,0 +1,31 @@
+{"k":"frames.00","v":"> wait:0.5 +0 dt=0.0200"}
+{"k":"frames.01","v":"> click:Button down Canvas/Button +10 dt=0.0200 | Button.select | > click:Button up +1 dt=0.0200 | Button.click"}
+{"k":"frames.02","v":"> stick:Stick:0,1:0.25 down Canvas/Stick +11 dt=0.0200 | Button.deselect | Stick.down | Stick.drag | > stick:Stick:0,1:0.25 held +5 dt=0.0200 | > stick:Stick:0,1:0.25 up +13 dt=0.0200 | Stick.up 0.00,1.00"}
+{"k":"frames.03","v":"> swipe:0.3,0.5:0.7,0.5:0.2 down Canvas/SwipeArea +1 dt=0.0200 | SwipeArea.begin | SwipeArea.drag | > swipe:0.3,0.5:0.7,0.5:0.2 up +11 dt=0.0200 | SwipeArea.end right"}
+{"k":"frames.04","v":"> wait:0.1 +6 dt=0.0200 | > end +0 dt=0.0200 | > done 0 +0 dt=0.0200"}
+{"k":"step.00","v":"> wait:0.3"}
+{"k":"step.01","v":"> tap:0.2,0.8 down Canvas/Overlay | > tap:0.2,0.8 up"}
+{"k":"step.02","v":"> click:Button down Canvas/Button | Button.select | > click:Button up | Button.click"}
+{"k":"step.03","v":"> hide:Overlay | > hidden Canvas/Overlay"}
+{"k":"step.04","v":"> wait:0.3"}
+{"k":"step.05","v":"> tap:0.2,0.8 down Canvas/Button | > tap:0.2,0.8 up | Button.click"}
+{"k":"step.06","v":"> tap:0.5,0.8 down Canvas/TapArea | Button.deselect | TapArea.enter | TapArea.down | > tap:0.5,0.8 up | TapArea.up | TapArea.click | TapArea.exit"}
+{"k":"step.07","v":"> tap:0.95,0.05 down (nothing)"}
+{"k":"step.08","v":"> swipe:0.5,0.8:0.9,0.8:0.2 down Canvas/TapArea | TapArea.enter | TapArea.down | TapArea.exit | > swipe:0.5,0.8:0.9,0.8:0.2 up | TapArea.up"}
+{"k":"step.09","v":"> swipe:0.3,0.5:0.7,0.5:0.2 down Canvas/SwipeArea | SwipeArea.begin | SwipeArea.drag | > swipe:0.3,0.5:0.7,0.5:0.2 up | SwipeArea.end right"}
+{"k":"step.10","v":"> swipe:0.5,0.55:0.5,0.45:0.2 down Canvas/SwipeArea | SwipeArea.begin | SwipeArea.drag | > swipe:0.5,0.55:0.5,0.45:0.2 up | SwipeArea.end down"}
+{"k":"step.11","v":"> stick:Stick:1,0:0.3 down Canvas/Stick | Stick.down | Stick.drag | > stick:Stick:1,0:0.3 held | > stick:Stick:1,0:0.3 up | Stick.up 1.00,0.00"}
+{"k":"step.12","v":"> stick:Stick:-0.5,0.5:0.3 down Canvas/Stick | Stick.down | Stick.drag | > stick:Stick:-0.5,0.5:0.3 held | > stick:Stick:-0.5,0.5:0.3 up | Stick.up -0.50,0.50"}
+{"k":"step.13","v":"> drag:Stick:0,-1:0.2 down Canvas/Stick | Stick.down | Stick.drag | > drag:Stick:0,-1:0.2 up | Stick.up 0.00,-1.00"}
+{"k":"step.14","v":"> swipe:0.45,0.25:0.7,0.25:0.2 down Canvas/Slider | > swipe:0.45,0.25:0.7,0.25:0.2 up"}
+{"k":"step.15","v":"> until:Popup"}
+{"k":"step.16","v":"> click:Popup down Canvas/Popup | > click:Popup up | Popup.click"}
+{"k":"step.17","v":"> gone:Popup"}
+{"k":"step.18","v":"> press:Hold:0.3 down Canvas/Hold | Hold.enter | Hold.down | > press:Hold:0.3 up | Hold.up | Hold.click | Hold.exit"}
+{"k":"step.19","v":"> click:Canvas/Hold down Canvas/Hold | Hold.enter | Hold.down | > click:Canvas/Hold up | Hold.up | Hold.click | Hold.exit"}
+{"k":"step.20","v":"> swipe:0.1,0.55:0.1,0.45:0.2 down Canvas/Group/Upper | Upper.enter | Group.enter | Upper.down | Upper.exit | Lower.enter | > swipe:0.1,0.55:0.1,0.45:0.2 up | Upper.up | Lower.exit | > 2 objects match Twin: the first in the hierarchy is taken, Canvas/Twin"}
+{"k":"step.21","v":"> click:Twin down Canvas/Twin | > click:Twin up | Twin.click B"}
+{"k":"step.22","v":"> dump selectables: Canvas/Button, Canvas/Slider, Canvas/Twin | > dump handlers: Canvas/Group/Lower, Canvas/Group/Upper, Canvas/Hold, Canvas/Stick, Canvas/SwipeArea, Canvas/TapArea"}
+{"k":"step.23","v":"> until:Nothing:0 timeout | > done 3"}
+{"k":"final","v":"button=3 popup=1 slider=0.75 popupActive=False code=3,0 captureFramerate=0"}
+{"k":"complete","v":true}

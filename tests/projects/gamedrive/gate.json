@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/gamedrive/run.py gate"
+  ],
+  "summary": "gamedrive: .*",
+  "engine_paths": [
+    "tools/gamedrive/",
+    "tests/projects/gamedrive/"
+  ]
+}
