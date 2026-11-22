@@ -984,9 +984,9 @@ namespace UnityEngine
         {
             if (!CanCall(nameof(RecalculateBounds))) return;
             EnsureModelLoaded();
-            // Positions in another format than Float32 give no bounds: the mesh's and its
-            // sub-meshes' are none, bounds assigned before included (engine-assets
-            // BoundsHalfAssigned); the sub-meshes keep their vertex ranges.
+            // Positions in another format than Float32 give no bounds: the mesh's are none, bounds
+            // assigned before included (engine-assets BoundsHalfAssigned); the sub-meshes' are none
+            // too (measured only where they already were) and keep their vertex ranges.
             if (!BoundsFromPositions)
             {
                 m_Bounds = default;
