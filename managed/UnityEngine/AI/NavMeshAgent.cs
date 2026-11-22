@@ -415,8 +415,9 @@ namespace UnityEngine.AI
         }
 
         /// <summary>A path is being followed: also the current one while a new one is pending
-        /// (measured: tests/projects/navlinks pendingold, offedge). A path given in the call to a
-        /// standing agent counts from the next agent update (measured: targets, incall).</summary>
+        /// (measured: tests/projects/navlinks pendingold, offedge). A path given by SetDestination
+        /// to a standing agent counts from the next update (targets, incall). SetPath reports the
+        /// assigned route immediately when it has corners (staleAssigned).</summary>
         public bool hasPath => Compat.NavMeshCorridorReportingMeasured ? ReportsPath : FollowingPath && !m_PathFromCall;
 
         /// <summary>The path as reported between updates: corners remain from where the last step
