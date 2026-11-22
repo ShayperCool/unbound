@@ -1,0 +1,17 @@
+{"k":"unity","v":"6000.0.71f1"}
+{"k":"collider.add","v":"288"}
+{"k":"collider.resizedWithMaterial","v":"288"}
+{"k":"collider.triggerWithBody","v":"288"}
+{"k":"collider.disabled","v":"288"}
+{"k":"filter.add","v":"120"}
+{"k":"filter.sharedMesh","v":"120"}
+{"k":"filter.ownedMesh","v":"120"}
+{"k":"filter.cleared","v":"120"}
+{"k":"behaviour.fields","v":"456"}
+{"k":"behaviour.empty","v":"456"}
+{"k":"behaviour.populated","v":"456"}
+{"k":"behaviour.inactive","v":"456"}
+{"k":"clone.collider","v":"288"}
+{"k":"clone.filter","v":"120"}
+{"k":"clone.behaviour","v":"456"}
+{"k":"complete","v":true}
