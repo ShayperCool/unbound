@@ -75,14 +75,15 @@ history, into the screen and into the render texture alike (`stp_post_texture`),
 renderer on the screen (`stp_screen_plain`) matches; Unbound draws the other four views as the
 Editor does and matches the motion there, so `stp_screen`, `stp_post_texture`,
 `stp_debug_reprojection` and the Sensitivity views differ (their limits say how much;
-docs/COMPATIBILITY_GAPS.md, Q546). `stp_veil` is the Editor's image to the last bit: with its
-history STP draws a changing translucent surface as a fine lattice at the render scale's pitch
-(the history of pixels whose colour changes without motion), in the Editor and in Unbound alike.
+docs/COMPATIBILITY_GAPS.md, Q546). `stp_veil` is the Editor's image to the last bit: over the
+quad STP's image has a fine lattice at the render scale's pitch that the Linear upscaler's has
+not (observed; what in STP makes it is not separated here), in the Editor and in Unbound alike.
 The same quad through the renderer with post-processing data (not in the reference: the
 Editor's two captures of it differ in a few pixels) comes out smooth in the OpenGL Core Editor,
-which keeps no history there, and with the lattice in Unbound (mean 4.6/255): the difference a
-large scene's effect mist shows (Q704) is that one. Other devices, GPUs and drivers are
-unmeasured.
+which keeps no history there, and with the lattice in Unbound (mean 4.6/255). A large scene's
+effect mist shows the same (Q704): there the Vulkan Editor draws the lattice as Unbound does and
+the OpenGL Core Editor does not (docs/COMPATIBILITY_GAPS.md has the numbers). Other devices,
+GPUs and drivers are unmeasured.
 
     ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -quit -projectPath <copy of this probe> \
         -executeMethod ProbeRunner.Create -logFile create.log   # once; copy Assets/ back

@@ -16,7 +16,7 @@ Settings: one view per --position X,Y,Z, each with its --rotation X,Y,Z (Euler d
 --position a camera's offset from it, looking at it;
 [--fov F] [--size WxH] [--step SECONDS] [--frames N,N,...] [--seed N: every effect's seed, so
 runs draw alike] [--list-renderers: the renderers of the scene's active objects, which compare
-then tells apart]. compare prints, per frame, the mean and worst max-channel difference and the
+then tells apart] [--vulkan: on the Vulkan device instead of OpenGL Core]. compare prints, per frame, the mean and worst max-channel difference and the
 pixels over 8, and writes the two frames and their difference side by side into B's run
 directory (compare-vK-frame-NNN.png).
 """
@@ -107,6 +107,7 @@ def run_editor(args, fixtures=None):
     out, project, capture, _ = prepare(args, fixtures)
     job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', 'UnboundSceneCaptureRunner.Record'],
                                   batch=False, graphics=True, timeout=args.timeout, label=f'{RUNS}-{args.label}',
+                                  vulkan=bool(getattr(args, 'vulkan', False)),
                                   env={VARIABLE: str(capture), 'UNBOUND_SCENE_CAPTURE_SCENE': args.scene})
     print(editor_runner.summary(editor_runner.run(job)))
     return out, capture, editor_runner.result_problem(out, gpu=True) or editor_runner.jsonl_complete()(capture)
@@ -118,7 +119,8 @@ def run_engine(args, fixtures=None):
     frames = max(shot['frames']) + MARGIN_FRAMES
     with (out/'engine.log').open('w') as log:
         code = subprocess.run([str(value_probe.LAUNCHER), '--kind', 'engine-gpu', 'timeout', str(args.timeout), value_probe.engine_cli(),
-                               'run', '-p', str(project), '--no-watch', '--scene', args.scene, '--frames', str(frames)],
+                               'run', '-p', str(project), '--no-watch', '--scene', args.scene, '--frames', str(frames),
+                               *(['--force-vulkan'] if getattr(args, 'vulkan', False) else [])],
                               env={**os.environ, VARIABLE: str(capture)}, stdout=log, stderr=subprocess.STDOUT).returncode
     problem = editor_runner.jsonl_complete()(capture)
     return out, capture, problem and f'{problem}; engine exit {code}; log {out}/engine.log'
@@ -252,6 +254,7 @@ def main():
         run.add_argument('--seed', type=int, default=-1)
         run.add_argument('--sole-cameras', action='store_true', help='every other camera of the scene turned off')
         run.add_argument('--list-renderers', action='store_true', help="the scene's renderers listed in renderers.txt")
+        run.add_argument('--vulkan', action='store_true', help='the Vulkan device (the Editor on the GPU display :0)')
         run.add_argument('--keep', choices=('effects', 'others'),
                          help="only that kind of renderer under --target's parent is drawn")
         run.add_argument('--timeout', type=int, default=1800)
