@@ -89,6 +89,13 @@ public partial class NavLinksProbe : MonoBehaviour
             return;
         }
 
+        if (Environment.GetEnvironmentVariable("NAVLINKS_WALL_MOVE") == "1")
+        {
+            m_Done = true;
+            StartCoroutine(RecordWallMoveControls());
+            return;
+        }
+
         if (Environment.GetEnvironmentVariable("NAVLINKS_STALE") == "1")
         {
             m_Done = true;

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record or check the NavLinks projection, staleness, and crowd overlap controls."""
+"""Record or check the NavLinks movement, projection, staleness, and overlap controls."""
 import argparse
 import filecmp
 import os
@@ -20,6 +20,7 @@ PROFILES = {
     'projection': ('NAVLINKS_PROJECTION', 'point-projection.jsonl', 20),
     'staleness': ('NAVLINKS_STALE', 'path-staleness.jsonl', 30000),
     'overlap': ('NAVLINKS_OVERLAP', 'crowd-overlap.jsonl', 300),
+    'wallmove': ('NAVLINKS_WALL_MOVE', 'wall-movement.jsonl', 500),
 }
 
 
