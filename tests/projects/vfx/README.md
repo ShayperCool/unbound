@@ -505,8 +505,9 @@ Time.captureDeltaTime); the frames named are counted from the first frame the sc
 `--seed` gives every effect the scene has when it starts playing that seed and starts it again,
 so that the two runs draw the same particles; effects made later, and without it all effects
 that reset their seed on play, differ from run to run in the Editor as well. A run that cannot
-go on (no camera place, a failed shot, scripts that do not compile) ends at once without
-values.jsonl. `compare` names any setting in which the two captures differ and any frame only
+go on (no camera place, a failed shot, scripts that stop compiling while the Editor settles)
+ends at once without values.jsonl; scripts that do not compile when the Editor starts never
+load the runner, and that run waits out its `--timeout`. `compare` names any setting in which the two captures differ and any frame only
 one has.
 
 What the comparison cannot tell apart from an effect's difference: anything else in the frame
