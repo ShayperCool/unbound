@@ -50,7 +50,10 @@ namespace UnityEditor
             }
             if (!UnityYamlWriter.WritesNew(asset))
             {
-                Debug.LogError($"Unbound does not write {asset.GetType().Name} assets yet: '{path}' is not created.");
+                var reason = asset is AnimationClip clip ? AnimationClipFiles.Unwritable(clip) : null;
+                Debug.LogError(reason != null
+                    ? $"Unbound does not write this AnimationClip yet: {reason}; '{path}' is not created."
+                    : $"Unbound does not write {asset.GetType().Name} assets yet: '{path}' is not created.");
                 return;
             }
             // An asset already at the path is replaced.

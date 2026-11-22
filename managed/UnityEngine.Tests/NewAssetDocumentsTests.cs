@@ -240,7 +240,9 @@ namespace UnityEngine.Tests
         [Fact]
         public void ClassesWithoutANewFileWriterAreNotWritten()
         {
-            Assert.False(UnityYamlWriter.WritesNew(Own(new AnimationClip())));
+            var animator = Own(new AnimationClip());
+            animator.SetCurve("", typeof(Animator), "Speed", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+            Assert.False(UnityYamlWriter.WritesNew(animator));
             var unreadable = Own(new Texture2D(2, 2));
             unreadable.Apply(false, true);
             Assert.False(UnityYamlWriter.WritesNew(unreadable));
@@ -249,7 +251,7 @@ namespace UnityEngine.Tests
             Assert.True(UnityYamlWriter.WritesNew(Own(new Texture2D(2, 2))));
             Assert.True(UnityYamlWriter.WritesNew(Own(new Mesh())));
             Assert.True(UnityYamlWriter.WritesNew(Own(ScriptableObject.CreateInstance<NewAssetTestData>())));
-            Assert.Throws<NotSupportedException>(() => Write(Own(new AnimationClip()), 7400000));
+            Assert.Throws<NotSupportedException>(() => Write(Own(new LightingSettings()), 7400000));
         }
     }
 

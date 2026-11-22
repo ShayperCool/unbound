@@ -216,6 +216,13 @@ namespace Unbound.Runtime
                     writer.Texture2DBody(texture);
                     continue;
                 }
+                if (o is AnimationClip clip)
+                {
+                    sb.Append("--- !u!").Append(EngineTypes.EngineClassIdOf(typeof(AnimationClip))).Append(" &").Append(ids[o]).Append('\n');
+                    sb.Append("AnimationClip:\n");
+                    writer.AnimationClipBody(clip);
+                    continue;
+                }
                 if (o is PhysicsMaterial physics)
                 {
                     sb.Append("--- !u!").Append(EngineTypes.EngineClassIdOf(typeof(PhysicsMaterial))).Append(" &").Append(ids[o]).Append('\n');
@@ -235,6 +242,7 @@ namespace Unbound.Runtime
         /// <summary>Whether <see cref="Write(Object[], Dictionary{Object, long})"/> writes the
         /// object whole into a new file (not a material variant: unmeasured).</summary>
         internal static bool WritesNew(Object o) => SerializedTree.IsScript(o) || o is Material { isVariant: false } || o is PhysicsMaterial
+            || o is AnimationClip clip && AnimationClipFiles.Unwritable(clip) == null
             || o is Texture2D { isReadable: true } && !UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsCompressedFormat(((Texture2D)o).format)
             || o is Mesh { isReadable: true } && ((Mesh)o).m_MeshCompression == UnityEditor.ModelImporterMeshCompression.Off;
 
