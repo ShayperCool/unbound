@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using Unbound.Runtime;
 using Xunit;
@@ -20,6 +21,34 @@ namespace UnityEngine.Tests
     {
         public int calls;
         void OnApplicationQuit() => calls++;
+    }
+
+    public class RecordsFunctionPointerMessage : MonoBehaviour
+    {
+        public int enableCalls;
+        public int lateCalls;
+
+        void OnEnable() => enableCalls++;
+
+        unsafe delegate*<void> LateUpdate()
+        {
+            lateCalls++;
+            return null;
+        }
+    }
+
+    public class RecordsConcreteStart : MonoBehaviour
+    {
+        internal sealed class Routine : IEnumerator
+        {
+            public object Current => null;
+            public bool MoveNext() => false;
+            public void Reset() { }
+        }
+
+        internal readonly Routine routine = new Routine();
+
+        Routine Start() => routine;
     }
 
     public class LifecycleTests
@@ -47,6 +76,38 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(active.gameObject);
                 Object.DestroyImmediate(disabled.gameObject);
                 Object.DestroyImmediate(inactive.gameObject);
+            }
+        }
+
+        [Fact]
+        public void AFunctionPointerResultDoesNotBlockScriptMessages()
+        {
+            var go = new GameObject("callback test");
+            try
+            {
+                var script = go.AddComponent<RecordsFunctionPointerMessage>();
+                ScriptMessages.For(script.GetType()).LateUpdate(script);
+                Assert.Equal(1, script.enableCalls);
+                Assert.Equal(1, script.lateCalls);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
+        public void AConcreteEnumeratorSurvivesTheStartReturnAdapter()
+        {
+            var go = new GameObject("coroutine test");
+            try
+            {
+                var script = go.AddComponent<RecordsConcreteStart>();
+                Assert.Same(script.routine, ScriptMessages.For(script.GetType()).StartCoroutine(script));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
             }
         }
 

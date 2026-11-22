@@ -66,6 +66,7 @@ public sealed class StackMessages : StackMessagesBase
 
         if (phase != "late") return;
         Put("update.calls", s_Updates.ToString());
+        Put("start.moves", StackMessageReturns.Moves.ToString());
         Rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(s_Output, "values.jsonl"), Rows);
 #if UNITY_EDITOR

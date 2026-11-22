@@ -9,7 +9,7 @@ public sealed class StackMessageReturns : MonoBehaviour
     sealed class Routine : IEnumerator
     {
         public object Current => null;
-        public bool MoveNext() => false;
+        public bool MoveNext() { Moves++; return false; }
         public void Reset() { }
     }
 
@@ -33,4 +33,6 @@ public sealed class StackMessageReturns : MonoBehaviour
         StackMessages.Report("discard");
         return 41;
     }
+
+    internal static int Moves;
 }

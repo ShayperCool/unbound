@@ -8,6 +8,12 @@ project prefix and on the number of bytes returned and written. The callbacks ar
 managed dispatcher, which would omit their frames. The Update count checks
 that the dispatch still happens exactly once before the capture completes.
 
+The Editor calls the concrete-return Start and leaves its enumerator
+unscheduled. Unbound advances it once. The probe reports this existing
+difference, and the managed test checks that dispatch preserves the returned
+instance. Callbacks returning a function pointer use a direct call and may
+still lose their entry frame to inlining.
+
 The [Unity 6.0 Scripting API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Debug.ExtractStackTraceNoAlloc.html)
 documents the current managed stack, UTF-8 byte count and path cleanup. This
 probe runs release scripts with the optimizing JIT. The project prefix is

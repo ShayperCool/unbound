@@ -229,8 +229,11 @@ namespace Unbound.Runtime
             var receiver = Expression.Convert(parameters[0], method.DeclaringType);
             IEnumerable<Expression> arguments = parameters.Skip(1);
 
+            Type scriptReturnType = method.ReturnType;
             Expression call;
-            if (method.ReturnType == returnType)
+            // The expression delegate factory cannot bind a function-pointer return. The
+            // direct call can discard it and keep this script's other messages available.
+            if (scriptReturnType == returnType || scriptReturnType.IsFunctionPointer)
             {
                 call = Expression.Call(receiver, method, arguments);
             }
@@ -241,7 +244,7 @@ namespace Unbound.Runtime
                 var signature = new Type[parameters.Length + 1];
                 signature[0] = method.DeclaringType;
                 argumentTypes.CopyTo(signature, 1);
-                signature[^1] = method.ReturnType;
+                signature[^1] = scriptReturnType;
                 var callback = method.CreateDelegate(Expression.GetDelegateType(signature));
                 call = Expression.Invoke(Expression.Constant(callback), arguments.Prepend(receiver));
                 if (returnType != typeof(void))

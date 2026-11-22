@@ -1,0 +1,5 @@
+{
+  "Unity calls Start with a declared concrete enumerator return and leaves that enumerator unscheduled in this capture. Unbound schedules Start for any return type assignable to IEnumerator.": [
+    "start.moves"
+  ]
+}
