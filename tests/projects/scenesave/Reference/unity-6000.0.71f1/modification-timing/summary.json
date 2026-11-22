@@ -1,0 +1,9 @@
+{
+  "case": "modification-timing",
+  "exit": 0,
+  "changed": [
+    "Assets/Scenes/Timing.unity",
+    "Assets/Scenes/Timing.unity.meta"
+  ],
+  "removed": []
+}
