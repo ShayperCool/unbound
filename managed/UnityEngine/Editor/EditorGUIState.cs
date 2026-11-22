@@ -453,16 +453,19 @@ namespace UnityEditor
 
         public static void HelpBox(string message, MessageType type, bool wide) => HelpBox(message, type);
 
-        public static void Space()
-        {
-            EditorGUI.RequireGUI();
-            GUILayoutUtility.GetRect(6, 6);
-        }
+        static readonly GUILayoutOption[] s_ExpandWidthTrue = { GUILayout.ExpandWidth(true) };
+        static readonly GUILayoutOption[] s_ExpandWidthFalse = { GUILayout.ExpandWidth(false) };
 
-        public static void Space(float width)
+        public static void Separator() => Space();
+
+        public static void Space() => Space(6f, true);
+
+        public static void Space(float width) => Space(width, true);
+
+        public static void Space(float width, bool expand)
         {
             EditorGUI.RequireGUI();
-            GUILayoutUtility.GetRect(width, width);
+            GUILayoutUtility.GetRect(width, width, expand ? s_ExpandWidthTrue : s_ExpandWidthFalse);
         }
 
         public static Rect BeginHorizontal(params GUILayoutOption[] options) => BeginHorizontal(GUIStyle.none, options);

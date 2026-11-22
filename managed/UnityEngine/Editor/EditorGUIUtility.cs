@@ -23,6 +23,42 @@ namespace UnityEditor
 
         public new static float pixelsPerPoint => GUIUtility.pixelsPerPoint;
 
+        public static Rect PointsToPixels(Rect rect)
+        {
+            float ppp = pixelsPerPoint;
+            rect.x *= ppp;
+            rect.y *= ppp;
+            rect.width *= ppp;
+            rect.height *= ppp;
+            return rect;
+        }
+
+        public static Vector2 PointsToPixels(Vector2 position)
+        {
+            float ppp = pixelsPerPoint;
+            position.x *= ppp;
+            position.y *= ppp;
+            return position;
+        }
+
+        public static Rect PixelsToPoints(Rect rect)
+        {
+            float inv = 1f / pixelsPerPoint;
+            rect.x *= inv;
+            rect.y *= inv;
+            rect.width *= inv;
+            rect.height *= inv;
+            return rect;
+        }
+
+        public static Vector2 PixelsToPoints(Vector2 position)
+        {
+            float inv = 1f / pixelsPerPoint;
+            position.x *= inv;
+            position.y *= inv;
+            return position;
+        }
+
         static readonly Dictionary<string, GUIContent> s_TrContents = new Dictionary<string, GUIContent>();
 
         public static GUIContent TrTextContent(string key, string text, string tooltip, Texture icon)
@@ -78,9 +114,49 @@ namespace UnityEditor
         /// "Assets/Editor Default Resources"; the Editor's own resources ship inside the Editor: null.</summary>
         public static Object Load(string path)
         {
-            if (string.IsNullOrEmpty(path)) return null;
+            if (path == null) throw new System.NullReferenceException("Object reference not set to an instance of an object");
+            if (path.Length == 0) throw new System.ArgumentException("The input asset path cannot be empty.", nameof(path));
             return AssetDatabase.LoadAssetAtPath(path, typeof(Object))
                 ?? AssetDatabase.LoadAssetAtPath("Assets/Editor Default Resources/" + path, typeof(Object));
+        }
+
+        /// <summary>Loads an editor resource via <see cref="Load(string)"/> and logs an error when missing.</summary>
+        public static Object LoadRequired(string path)
+        {
+            var obj = Load(path);
+            if (obj == null) Debug.LogError("Unable to find required resource at " + path);
+            return obj;
+        }
+
+        internal static bool IsBuiltinResource(string path) =>
+            string.Equals(path, "Library/unity default resources", System.StringComparison.OrdinalIgnoreCase)
+            || string.Equals(path, "Resources/unity_builtin_extra", System.StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Pings an object in open hierarchy/project windows (no-op when none are open).</summary>
+        public static void PingObject(Object obj)
+        {
+            if (obj != null) PingObject(obj.GetInstanceID());
+        }
+
+        /// <summary>Pings an instance ID in open hierarchy/project windows (ignores built-in resources).</summary>
+        public static void PingObject(int targetInstanceID)
+        {
+            if (IsBuiltinResource(AssetDatabase.GetAssetPath(targetInstanceID))) return;
+        }
+
+        internal static float CalcContextWidth()
+        {
+            float width = GUIClip.GetTopRect().width;
+            if (width < 1f || width >= 40000f)
+                return s_CurrentViewWidth > 0f ? s_CurrentViewWidth : Screen.width;
+            return width;
+        }
+
+        internal static void LockContextWidth() => s_ContextWidthStack.Push(CalcContextWidth());
+
+        internal static void UnlockContextWidth()
+        {
+            if (s_ContextWidthStack.Count > 0) s_ContextWidthStack.Pop();
         }
 
         /// <summary>The width of the current GUI area: the innermost group's, else the screen's.</summary>
@@ -89,8 +165,7 @@ namespace UnityEditor
             get
             {
                 if (s_ContextWidthStack.Count > 0 && s_ContextWidthStack.Peek() > 0f) return s_ContextWidthStack.Peek();
-                float width = GUIClip.GetTopRect().width;
-                return width < 1f || width >= 40000f ? Screen.width : width;
+                return CalcContextWidth();
             }
         }
 

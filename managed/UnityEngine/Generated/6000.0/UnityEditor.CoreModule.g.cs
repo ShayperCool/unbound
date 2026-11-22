@@ -8256,18 +8256,15 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static global::UnityEngine.Rect FromToRect(global::UnityEngine.Vector2 start, global::UnityEngine.Vector2 end) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIExt.FromToRect"); return default; }
         [global::Unbound.Stub] public EditorGUIExt() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIExt.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class EditorGUIInternal : global::UnityEngine.GUI
+    unsafe partial class EditorGUIInternal
     {
         [global::Unbound.Stub] internal static global::UnityEngine.Rect GetTooltipRect() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIInternal.GetTooltipRect"); return default; }
         [global::Unbound.Stub] internal static string GetMouseTooltip() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIInternal.GetMouseTooltip"); return default; }
         [global::Unbound.Stub] internal static bool DoToggleForward(global::UnityEngine.Rect position, int id, bool value, global::UnityEngine.GUIContent content, global::UnityEngine.GUIStyle style, bool expandWidth = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIInternal.DoToggleForward"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Vector2 DoBeginScrollViewForward(global::UnityEngine.Rect position, global::UnityEngine.Vector2 scrollPosition, global::UnityEngine.Rect viewRect, bool alwaysShowHorizontal, bool alwaysShowVertical, global::UnityEngine.GUIStyle horizontalScrollbar, global::UnityEngine.GUIStyle verticalScrollbar, global::UnityEngine.GUIStyle background) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIInternal.DoBeginScrollViewForward"); return default; }
         [global::Unbound.Stub] internal static void BeginWindowsForward(int skinMode, int editorWindowInstanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIInternal.BeginWindowsForward"); }
         [global::Unbound.Stub] internal static void AssetPopup<T>(global::UnityEditor.SerializedProperty serializedProperty, global::UnityEngine.GUIContent content, string fileExtension) where T : global::UnityEngine.Object, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIInternal.AssetPopup"); }
         [global::Unbound.Stub] internal static void AssetPopup<T>(global::UnityEditor.SerializedProperty serializedProperty, global::UnityEngine.GUIContent content, string fileExtension, string defaultFieldName) where T : global::UnityEngine.Object, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIInternal.AssetPopup"); }
         [global::Unbound.Stub] internal static float ExposureSlider(float value, ref float maxValue, global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIInternal.ExposureSlider"); return default; }
-        [global::Unbound.Stub] public EditorGUIInternal() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIInternal.ctor"); }
         internal static global::UnityEngine.GUIStyle mixedToggleStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIInternal.mixedToggleStyle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIInternal.mixedToggleStyle"); } }
     }
     unsafe partial class EditorGUILayout
@@ -8511,25 +8508,9 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void LayerMaskField(global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.LayerMaskField"); }
         [global::Unbound.Stub] public static void HelpBox(global::UnityEngine.GUIContent content, bool wide = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.HelpBox"); }
         [global::Unbound.Stub] internal static void PrefixLabelInternal(global::UnityEngine.GUIContent label, global::UnityEngine.GUIStyle followingStyle, global::UnityEngine.GUIStyle labelStyle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.PrefixLabelInternal"); }
-        [global::Unbound.Stub] public static void Space(float width, bool expand) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.Space"); }
-        [global::Unbound.Stub] public static void Separator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.Separator"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2 BeginScrollView(global::UnityEngine.Vector2 scrollPosition, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginScrollView"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2 BeginScrollView(global::UnityEngine.Vector2 scrollPosition, bool alwaysShowHorizontal, bool alwaysShowVertical, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginScrollView"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2 BeginScrollView(global::UnityEngine.Vector2 scrollPosition, global::UnityEngine.GUIStyle horizontalScrollbar, global::UnityEngine.GUIStyle verticalScrollbar, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginScrollView"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2 BeginScrollView(global::UnityEngine.Vector2 scrollPosition, global::UnityEngine.GUIStyle style, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginScrollView"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Vector2 BeginScrollView(global::UnityEngine.Vector2 scrollPosition, bool alwaysShowHorizontal, bool alwaysShowVertical, global::UnityEngine.GUIStyle horizontalScrollbar, global::UnityEngine.GUIStyle verticalScrollbar, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginScrollView"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2 BeginScrollView(global::UnityEngine.Vector2 scrollPosition, bool alwaysShowHorizontal, bool alwaysShowVertical, global::UnityEngine.GUIStyle horizontalScrollbar, global::UnityEngine.GUIStyle verticalScrollbar, global::UnityEngine.GUIStyle background, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginScrollView"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Vector2 BeginVerticalScrollView(global::UnityEngine.Vector2 scrollPosition, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginVerticalScrollView"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Vector2 BeginVerticalScrollView(global::UnityEngine.Vector2 scrollPosition, bool alwaysShowVertical, global::UnityEngine.GUIStyle verticalScrollbar, global::UnityEngine.GUIStyle background, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginVerticalScrollView"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Vector2 BeginHorizontalScrollView(global::UnityEngine.Vector2 scrollPosition, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginHorizontalScrollView"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Vector2 BeginHorizontalScrollView(global::UnityEngine.Vector2 scrollPosition, bool alwaysShowHorizontal, global::UnityEngine.GUIStyle horizontalScrollbar, global::UnityEngine.GUIStyle background, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginHorizontalScrollView"); return default; }
-        [global::Unbound.Stub] public static void EndScrollView() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.EndScrollView"); }
-        [global::Unbound.Stub] internal static void EndScrollView(bool handleScrollWheel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.EndScrollView"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Rect GetSliderRect(bool hasLabel, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.GetSliderRect"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Rect GetSliderRect(bool hasLabel, global::UnityEngine.GUIStyle sliderStyle, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.GetSliderRect"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Rect GetToggleRect(bool hasLabel, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.GetToggleRect"); return default; }
-        [global::Unbound.Stub] public static bool BeginFadeGroup(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginFadeGroup"); return default; }
-        [global::Unbound.Stub] public static void EndFadeGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.EndFadeGroup"); }
         [global::Unbound.Stub] public static global::UnityEditor.BuildTargetGroup BeginBuildTargetSelectionGrouping() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginBuildTargetSelectionGrouping"); return default; }
         [global::Unbound.Stub] public static void EndBuildTargetSelectionGrouping() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.EndBuildTargetSelectionGrouping"); }
         [global::Unbound.Stub] internal static int BeginPlatformGrouping(global::UnityEditor.Build.BuildPlatform[] platforms, global::UnityEngine.GUIContent defaultTab) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginPlatformGrouping"); return default; }
@@ -8581,44 +8562,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static bool EditorToolbar<T>(global::UnityEngine.GUIContent content, T selected, global::System.Collections.Generic.IList<T> tools, out T clicked) where T : global::UnityEditor.EditorTools.IEditor { clicked = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.EditorToolbar"); return default; }
         internal static float kLabelFloatMinW { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.kLabelFloatMinW"); return default; } }
         internal static float kLabelFloatMaxW { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.kLabelFloatMaxW"); return default; } }
-        [global::Unbound.Stub]
-        public unsafe partial class ScrollViewScope : global::UnityEngine.GUI.Scope
-        {
-            [global::Unbound.Stub] public ScrollViewScope(global::UnityEngine.Vector2 scrollPosition, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ScrollViewScope.ctor"); }
-            [global::Unbound.Stub] public ScrollViewScope(global::UnityEngine.Vector2 scrollPosition, bool alwaysShowHorizontal, bool alwaysShowVertical, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ScrollViewScope.ctor"); }
-            [global::Unbound.Stub] public ScrollViewScope(global::UnityEngine.Vector2 scrollPosition, global::UnityEngine.GUIStyle horizontalScrollbar, global::UnityEngine.GUIStyle verticalScrollbar, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ScrollViewScope.ctor"); }
-            [global::Unbound.Stub] public ScrollViewScope(global::UnityEngine.Vector2 scrollPosition, global::UnityEngine.GUIStyle style, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ScrollViewScope.ctor"); }
-            [global::Unbound.Stub] public ScrollViewScope(global::UnityEngine.Vector2 scrollPosition, bool alwaysShowHorizontal, bool alwaysShowVertical, global::UnityEngine.GUIStyle horizontalScrollbar, global::UnityEngine.GUIStyle verticalScrollbar, global::UnityEngine.GUIStyle background, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ScrollViewScope.ctor"); }
-            [global::Unbound.Stub] internal ScrollViewScope(global::UnityEngine.Vector2 scrollPosition, bool alwaysShowHorizontal, bool alwaysShowVertical, global::UnityEngine.GUIStyle horizontalScrollbar, global::UnityEngine.GUIStyle verticalScrollbar, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ScrollViewScope.ctor"); }
-            [global::Unbound.Stub] protected override void CloseScope() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ScrollViewScope.CloseScope"); }
-            public global::UnityEngine.Vector2 scrollPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ScrollViewScope.scrollPosition"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ScrollViewScope.scrollPosition"); } }
-            public bool handleScrollWheel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ScrollViewScope.handleScrollWheel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ScrollViewScope.handleScrollWheel"); } }
-        }
-        [global::Unbound.Stub]
-        internal unsafe partial class VerticalScrollViewScope : global::UnityEngine.GUI.Scope
-        {
-            [global::Unbound.Stub] public VerticalScrollViewScope(global::UnityEngine.Vector2 scrollPosition, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.VerticalScrollViewScope.ctor"); }
-            [global::Unbound.Stub] public VerticalScrollViewScope(global::UnityEngine.Vector2 scrollPosition, bool alwaysShowVertical, global::UnityEngine.GUIStyle verticalScrollbar, global::UnityEngine.GUIStyle background, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.VerticalScrollViewScope.ctor"); }
-            [global::Unbound.Stub] protected override void CloseScope() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.VerticalScrollViewScope.CloseScope"); }
-            public global::UnityEngine.Vector2 scrollPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.VerticalScrollViewScope.scrollPosition"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.VerticalScrollViewScope.scrollPosition"); } }
-            public bool handleScrollWheel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.VerticalScrollViewScope.handleScrollWheel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.VerticalScrollViewScope.handleScrollWheel"); } }
-        }
-        [global::Unbound.Stub]
-        internal unsafe partial class HorizontalScrollViewScope : global::UnityEngine.GUI.Scope
-        {
-            [global::Unbound.Stub] public HorizontalScrollViewScope(global::UnityEngine.Vector2 scrollPosition, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.HorizontalScrollViewScope.ctor"); }
-            [global::Unbound.Stub] public HorizontalScrollViewScope(global::UnityEngine.Vector2 scrollPosition, bool alwaysShowHorizontal, global::UnityEngine.GUIStyle horizontalScrollbar, global::UnityEngine.GUIStyle background, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.HorizontalScrollViewScope.ctor"); }
-            [global::Unbound.Stub] protected override void CloseScope() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.HorizontalScrollViewScope.CloseScope"); }
-            public global::UnityEngine.Vector2 scrollPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.HorizontalScrollViewScope.scrollPosition"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.HorizontalScrollViewScope.scrollPosition"); } }
-            public bool handleScrollWheel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.HorizontalScrollViewScope.handleScrollWheel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.HorizontalScrollViewScope.handleScrollWheel"); } }
-        }
-        [global::Unbound.Stub]
-        public unsafe partial class FadeGroupScope : global::UnityEngine.GUI.Scope
-        {
-            [global::Unbound.Stub] public FadeGroupScope(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.FadeGroupScope.ctor"); }
-            [global::Unbound.Stub] protected override void CloseScope() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.FadeGroupScope.CloseScope"); }
-            public bool visible { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.FadeGroupScope.visible"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.FadeGroupScope.visible"); } }
-        }
         [global::System.Obsolete("(UnityUpgradable) -> UnityEditor.HyperLinkClickedEventArgs")]
         [global::Unbound.Stub]
         internal unsafe partial class HyperLinkClickedEventArgs
@@ -8626,13 +8569,6 @@ namespace UnityEditor
             [global::Unbound.Stub] internal HyperLinkClickedEventArgs(global::System.Collections.Generic.Dictionary<string, string> hyperLinkData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.HyperLinkClickedEventArgs.ctor"); }
             [global::System.Obsolete("(UnityUpgradable) -> UnityEditor.HyperLinkClickedEventArgs.hyperLinkData")] public global::System.Collections.Generic.Dictionary<string, string> hyperlinkInfos { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.HyperLinkClickedEventArgs.hyperlinkInfos"); return new global::System.Collections.Generic.Dictionary<string, string>(); } }
         }
-    }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class EditorGUILayoutUtilityInternal : global::UnityEngine.GUILayoutUtility
-    {
-        [global::Unbound.Stub] internal static global::UnityEngine.GUILayoutGroup BeginLayoutArea(global::UnityEngine.GUIStyle style, global::System.Type LayoutType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayoutUtilityInternal.BeginLayoutArea"); return default; }
-        [global::Unbound.Stub] public EditorGUILayoutUtilityInternal() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayoutUtilityInternal.ctor"); }
-        internal static global::UnityEngine.GUILayoutGroup topLevel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayoutUtilityInternal.topLevel"); return default; } }
     }
     unsafe partial class EditorGUIUtility
     {
@@ -8676,10 +8612,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static void SetMainWindowPosition(global::UnityEngine.Rect position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.SetMainWindowPosition"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Rect GetCenteredWindowPosition(global::UnityEngine.Rect parentWindowPosition, global::UnityEngine.Vector2 size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetCenteredWindowPosition"); return default; }
         [global::Unbound.Stub] internal static void RepaintCurrentWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.RepaintCurrentWindow"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Rect PointsToPixels(global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.PointsToPixels"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Rect PixelsToPoints(global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.PixelsToPoints"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2 PointsToPixels(global::UnityEngine.Vector2 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.PointsToPixels"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2 PixelsToPoints(global::UnityEngine.Vector2 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.PixelsToPoints"); return default; }
         [global::Unbound.Stub] public static global::System.Collections.Generic.List<global::UnityEngine.Rect> GetFlowLayoutedRects(global::UnityEngine.Rect rect, global::UnityEngine.GUIStyle style, float horizontalSpacing, float verticalSpacing, global::System.Collections.Generic.List<string> items) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetFlowLayoutedRects"); return new global::System.Collections.Generic.List<global::UnityEngine.Rect>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.Rect DrawEditorHeaderItems(global::UnityEngine.Rect rectangle, global::UnityEngine.Object[] targetObjs, float spacing = 0f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.DrawEditorHeaderItems"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Texture2D FindTexture(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.FindTexture"); return default; }
@@ -8713,9 +8645,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static global::UnityEngine.GUIStyle GetBasicTextureStyle(global::UnityEngine.Texture2D tex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetBasicTextureStyle"); return default; }
         [global::Unbound.Stub] internal static void NotifyLanguageChanged(global::UnityEngine.SystemLanguage newLanguage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.NotifyLanguageChanged"); }
         [global::Unbound.Stub] public static global::UnityEngine.GUISkin GetBuiltinSkin(global::UnityEditor.EditorSkin skin) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetBuiltinSkin"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Object LoadRequired(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.LoadRequired"); return default; }
-        [global::Unbound.Stub] public static void PingObject(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.PingObject"); }
-        [global::Unbound.Stub] public static void PingObject(int targetInstanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.PingObject"); }
         [global::Unbound.Stub] internal static void MoveFocusAndScroll(bool forward) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.MoveFocusAndScroll"); }
         [global::Unbound.Stub] internal static void RefreshScrollPosition() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.RefreshScrollPosition"); }
         [global::Unbound.Stub] internal static void ScrollForTabbing(bool forward) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.ScrollForTabbing"); }
@@ -8723,8 +8652,6 @@ namespace UnityEditor
         [global::System.Obsolete("RenderGameViewCameras is no longer supported.Consider rendering cameras manually.")] [global::Unbound.Stub] public static void RenderGameViewCameras(global::UnityEngine.Rect cameraRect, bool gizmos, bool gui) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.RenderGameViewCameras"); }
         [global::System.Obsolete("RenderGameViewCameras is no longer supported.Consider rendering cameras manually.")] [global::Unbound.Stub] public static void RenderGameViewCameras(global::UnityEngine.Rect cameraRect, global::UnityEngine.Rect statsRect, bool gizmos, bool gui) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.RenderGameViewCameras"); }
         [global::Unbound.Stub] internal static void HandleControlID(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.HandleControlID"); }
-        [global::Unbound.Stub] internal static void LockContextWidth() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.LockContextWidth"); }
-        [global::Unbound.Stub] internal static void UnlockContextWidth() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.UnlockContextWidth"); }
         [global::System.Obsolete("LookLikeControls and LookLikeInspector modes are deprecated.Use EditorGUIUtility.labelWidth and EditorGUIUtility.fieldWidth to control label and field widths.")] [global::Unbound.Stub] public static void LookLikeControls(float _labelWidth, float _fieldWidth) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.LookLikeControls"); }
         [global::System.Obsolete("LookLikeControls and LookLikeInspector modes are deprecated.Use EditorGUIUtility.labelWidth and EditorGUIUtility.fieldWidth to control label and field widths.")] [global::Unbound.Stub] public static void LookLikeControls(float _labelWidth) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.LookLikeControls"); }
         [global::System.Obsolete("LookLikeControls and LookLikeInspector modes are deprecated.Use EditorGUIUtility.labelWidth and EditorGUIUtility.fieldWidth to control label and field widths.")] [global::Unbound.Stub] public static void LookLikeControls() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.LookLikeControls"); }
@@ -10370,15 +10297,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static bool operator >(global::UnityEditor.GUID x, global::UnityEditor.GUID y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUID.op_GreaterThan"); return default; }
         [global::System.Obsolete("Use TryParse instead")] [global::Unbound.Stub] public bool ParseExact(string hex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUID.ParseExact"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.GUID CreateGUIDFromSInt64(long value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUID.CreateGUIDFromSInt64"); return default; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class GUILayoutFadeGroup : global::UnityEngine.GUILayoutGroup
-    {
-        [global::Unbound.Stub] public float fadeValue;
-        [global::Unbound.Stub] public bool wasGUIEnabled;
-        [global::Unbound.Stub] public global::UnityEngine.Color guiColor;
-        [global::Unbound.Stub] public override void CalcHeight() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUILayoutFadeGroup.CalcHeight"); }
-        [global::Unbound.Stub] public GUILayoutFadeGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUILayoutFadeGroup.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class GUILayoutInspectView : global::UnityEditor.BaseInspectView

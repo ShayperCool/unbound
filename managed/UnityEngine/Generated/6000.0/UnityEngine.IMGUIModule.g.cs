@@ -185,7 +185,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static void LayoutFromEditorWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.LayoutFromEditorWindow"); }
         [global::Unbound.Stub] internal static float LayoutFromInspector(float width) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.LayoutFromInspector"); return default; }
         [global::Unbound.Stub] internal static void EndLayoutArea() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.EndLayoutArea"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.GUILayoutGroup DoBeginLayoutArea(global::UnityEngine.GUIStyle style, global::System.Type layoutType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.DoBeginLayoutArea"); return default; }
         internal static int unbalancedgroupscount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.unbalancedgroupscount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.unbalancedgroupscount"); } }
         [global::Unbound.Stub]
         internal unsafe readonly partial struct LayoutCacheState

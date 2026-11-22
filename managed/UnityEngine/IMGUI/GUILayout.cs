@@ -1056,7 +1056,9 @@ namespace UnityEngine
         }
 
         static GUILayoutGroup CreateGroup(Type layoutType) =>
-            layoutType == typeof(GUIScrollGroup) ? new GUIScrollGroup() : layoutType != null && layoutType != typeof(GUILayoutGroup)
+            layoutType == typeof(GUIScrollGroup) ? new GUIScrollGroup()
+            : layoutType == typeof(UnityEditor.GUILayoutFadeGroup) ? new UnityEditor.GUILayoutFadeGroup()
+            : layoutType != null && layoutType != typeof(GUILayoutGroup)
                 ? (GUILayoutGroup)Activator.CreateInstance(layoutType)
                 : new GUILayoutGroup();
 
@@ -1186,7 +1188,9 @@ namespace UnityEngine
         }
 
         /// <summary>The group the next GUILayout element goes in.</summary>
-        internal static GUILayoutGroup topLevel => current.topLevel;
+        internal static GUILayoutGroup DoBeginLayoutArea(GUIStyle style, Type layoutType) => BeginLayoutArea(style, layoutType);
+
+        internal static GUILayoutGroup topLevel => current.groups.Count > 0 ? current.groups.Peek() : current.topLevel;
     }
 
     /// <summary>UnityGUI controls placed by automatic layout.</summary>
@@ -1483,6 +1487,7 @@ namespace UnityEngine
 
         internal static void EndScrollView(bool handleScrollWheel)
         {
+            GUIUtility.CheckOnGUI(requireCurrentEvent: true);
             GUILayoutUtility.EndLayoutGroup();
             GUI.EndScrollView(handleScrollWheel);
         }
