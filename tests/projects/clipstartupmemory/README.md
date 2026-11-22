@@ -2,10 +2,10 @@
 
 Six Unity 6000.0.71f1 profiles cover a one-frame mono PCM clip, stereo callback PCM,
 stereo streaming, audio reset before creation and with the first clip alive, and disabled audio.
-There are 28 values from two agreeing macOS batch-mode Editor runs per profile. The Linux GPU
-Editor reference in `appfacts` independently records 1,028 bytes on first creation and after
-writing sample data. The reset and disabled-audio profiles are measured on macOS. The fixture
-borrows a scene and configuration from `formatmapping`.
+The 28-value reference comes from two independent Linux batch-mode Editor runs per profile on
+an NVIDIA GeForce RTX 4060. Independent macOS batch-mode captures agree on every value. The
+original Linux GPU Editor reference in `appfacts` also records 1,028 bytes on first creation and
+after writing sample data. The fixture borrows a scene and configuration from `formatmapping`.
 
 The first script-created clip reports 88 additional bytes across the three creation modes.
 Reading the audio configuration and loading an imported clip leave that first-creation state
@@ -23,6 +23,7 @@ successful reset. The ownership and byte count are observations of this release.
 [Profiler.GetRuntimeMemorySizeLong](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Profiling.Profiler.GetRuntimeMemorySizeLong.html)
 [AudioClip.Create](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioClip.Create.html)
 [AudioSettings.Reset](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSettings.Reset.html)
+[Unity 6000.0 Audio project settings](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioManager.html)
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1
