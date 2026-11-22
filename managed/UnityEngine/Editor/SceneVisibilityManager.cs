@@ -16,8 +16,8 @@ namespace UnityEditor
     /// object without children has no hidden descendants and only visible ones). Isolation keeps
     /// a hidden set of its own, which starts with everything hidden but the isolated objects and
     /// is dropped on exit, so the earlier visibility comes back. Of the events only showing a scene
-    /// raises visibilityChanged (at once); nothing here raises pickingChanged. Changes are not
-    /// recorded for undo (unmeasured).</para>
+    /// raises visibilityChanged (at once); nothing here raises pickingChanged. Unlike the Editor,
+    /// changes are not recorded for undo.</para>
     /// </summary>
     public partial class SceneVisibilityManager : ScriptableSingleton<SceneVisibilityManager>
     {
@@ -74,7 +74,8 @@ namespace UnityEditor
             if (on) set.Add(gameObject.GetInstanceID());
             else set.Remove(gameObject.GetInstanceID());
             if (!includeDescendants) return;
-            foreach (Transform child in gameObject.transform) Mark(set, child.gameObject, on, true);
+            var transform = gameObject.transform;
+            for (int i = 0; i < transform.childCount; i++) Mark(set, transform.GetChild(i).gameObject, on, true);
         }
 
         static void Set(HashSet<int> set, GameObject[] gameObjects, bool on, bool includeDescendants)
@@ -95,10 +96,12 @@ namespace UnityEditor
         /// <paramref name="inSet"/> false, outside it.</summary>
         static bool AllDescendants(HashSet<int> set, GameObject gameObject, bool inSet)
         {
-            foreach (Transform child in gameObject.transform)
+            var transform = gameObject.transform;
+            for (int i = 0; i < transform.childCount; i++)
             {
-                if (set.Contains(child.gameObject.GetInstanceID()) != inSet) return false;
-                if (!AllDescendants(set, child.gameObject, inSet)) return false;
+                var child = transform.GetChild(i).gameObject;
+                if (set.Contains(child.GetInstanceID()) != inSet) return false;
+                if (!AllDescendants(set, child, inSet)) return false;
             }
             return true;
         }
@@ -106,16 +109,28 @@ namespace UnityEditor
         static bool AnyInSet(HashSet<int> set, GameObject gameObject)
         {
             if (set.Contains(gameObject.GetInstanceID())) return true;
-            foreach (Transform child in gameObject.transform)
-                if (AnyInSet(set, child.gameObject)) return true;
+            var transform = gameObject.transform;
+            for (int i = 0; i < transform.childCount; i++)
+                if (AnyInSet(set, transform.GetChild(i).gameObject)) return true;
             return false;
+        }
+
+        /// <summary>A scene's roots, in a list reused between calls (render pipelines ask every
+        /// Scene view frame).</summary>
+        static readonly List<GameObject> s_Roots = new List<GameObject>();
+
+        static List<GameObject> Roots(Scene scene)
+        {
+            scene.GetRootGameObjects(s_Roots);
+            return s_Roots;
         }
 
         static bool Loaded(Scene scene) => scene.IsValid() && scene.isLoaded;
 
         static void ForScene(HashSet<int> set, Scene scene, bool on)
         {
-            foreach (var root in scene.GetRootGameObjects()) Mark(set, root, on, true);
+            var roots = Roots(scene);
+            for (int i = 0; i < roots.Count; i++) Mark(set, roots[i], on, true);
         }
 
         /// <summary>Whether every root of the scene and all its descendants are in the set (true for
@@ -123,16 +138,18 @@ namespace UnityEditor
         static bool AllRoots(HashSet<int> set, Scene scene)
         {
             if (!Loaded(scene)) return false;
-            foreach (var root in scene.GetRootGameObjects())
-                if (!Holds(set, root, true)) return false;
+            var roots = Roots(scene);
+            for (int i = 0; i < roots.Count; i++)
+                if (!Holds(set, roots[i], true)) return false;
             return true;
         }
 
         static bool AnyInScene(HashSet<int> set, Scene scene)
         {
             if (!Loaded(scene) || set.Count == 0) return false;
-            foreach (var root in scene.GetRootGameObjects())
-                if (AnyInSet(set, root)) return true;
+            var roots = Roots(scene);
+            for (int i = 0; i < roots.Count; i++)
+                if (AnyInSet(set, roots[i])) return true;
             return false;
         }
 
