@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
@@ -37,9 +38,10 @@ namespace UnityEditor
                 throw new ArgumentException("GameObject type must be created using ObjectFactory.CreateGameObject instead : " + type.FullName);
             if (type.IsSubclassOf(typeof(Component)))
                 throw new ArgumentException("Component type must be created using ObjectFactory.AddComponent instead : " + type.FullName);
-            // A script type that hides its constructor is refused; the engine's own types are made by
-            // the engine whatever constructors Unbound gives them.
-            if (type.Assembly != typeof(Object).Assembly
+            // A type that hides its parameterless constructor is refused; Material, which the Editor
+            // makes (tests/projects/objectfactory instance.material), has an internal one only in
+            // Unbound.
+            if (type != typeof(Material)
                 && type.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null)
                 throw new ArgumentException(type.FullName + " constructor is not accessible which prevent this type from being used in ObjectFactory.");
             return CreateDefaultInstance(type);
@@ -67,33 +69,28 @@ namespace UnityEditor
             CheckTypeValidity(type);
             if (!type.IsSubclassOf(typeof(Component)))
                 throw new ArgumentException("Non-Component type must use ObjectFactory.CreateInstance instead : " + type.FullName);
-            var component = AddDefaultComponent(gameObject, type);
-            if (component != null) Undo.RegisterAddedComponent(component);
-            return component;
+            return AddDefaultComponent(gameObject, type);
         }
 
-        /// <summary>Adds the component and those it requires, each taking the GameObject's hide
-        /// flags and raising componentWasAdded; a second component of a kind the GameObject holds
-        /// one of throws.</summary>
+        /// <summary>Adds the component and those it requires, each recorded for undo, taking the
+        /// GameObject's hide flags and raising componentWasAdded. A component the GameObject
+        /// cannot take again throws (the measured texts for one-of-a-kind engine components and
+        /// DisallowMultipleComponent classes; the add's own text for other limits, unmeasured).</summary>
         static Component AddDefaultComponent(GameObject gameObject, Type type)
         {
             if (gameObject == null) throw new ArgumentNullException(nameof(gameObject));
-            var existing = gameObject.GetComponent(type);
-            if (existing != null && (type == typeof(Transform) || Unbound.Runtime.Compat.NativeComponentIsUnique(type)))
-                throw new ArgumentException($"Can't add component '{type.Name}' to {gameObject.name} because such a component is already added to the game object!");
-            for (var t = type; t != null && t != typeof(MonoBehaviour) && t != typeof(Component); t = t.BaseType)
-            {
-                if (t.GetCustomAttribute<DisallowMultipleComponent>(inherit: false) == null) continue;
-                var same = gameObject.GetComponent(t);
-                if (same != null)
-                    throw new ArgumentException($"Can't add '<NULL>' to {gameObject.name} because a '{same.GetType().Name}' is already added to the game object!");
-            }
+            var duplicate = Unbound.Runtime.ComponentFactory.Duplicate(gameObject, type, out var existing);
+            if (duplicate == Unbound.Runtime.ComponentFactory.DuplicateKind.DisallowMultiple)
+                throw new ArgumentException($"Can't add '<NULL>' to {gameObject.name} because a '{existing.GetType().Name}' is already added to the game object!");
+            if (duplicate != Unbound.Runtime.ComponentFactory.DuplicateKind.None)
+                throw new ArgumentException(Unbound.Runtime.ComponentFactory.DuplicateMessage(gameObject, type, duplicate, existing));
             var before = new HashSet<Component>(gameObject.GetComponents<Component>());
             var component = gameObject.AddComponent(type);
             foreach (var added in gameObject.GetComponents<Component>())
             {
                 if (before.Contains(added)) continue;
                 added.hideFlags = gameObject.hideFlags;
+                Undo.RegisterCreatedObjectUndo(added, "Add " + added.GetType().Name);
                 componentWasAdded?.Invoke(added);
             }
             return component;
@@ -102,16 +99,20 @@ namespace UnityEditor
         public static GameObject CreateGameObject(Scene scene, HideFlags hideFlags, string name, params Type[] types)
         {
             if (!scene.IsValid()) throw new ArgumentException("Cannot create a GameObject to a null Scene.");
-            var gameObject = CreateGameObject(name, types);
-            if (gameObject.scene != scene) SceneManager.MoveGameObjectToScene(gameObject, scene);
+            var gameObject = Create(scene, name, types);
+            // The GameObject's flags reach its components (GameObject.hideFlags).
             gameObject.hideFlags = hideFlags;
-            foreach (var component in gameObject.GetComponents<Component>()) component.hideFlags = hideFlags;
             return gameObject;
         }
 
-        public static GameObject CreateGameObject(string name, params Type[] types)
+        public static GameObject CreateGameObject(string name, params Type[] types) => Create(null, name, types);
+
+        /// <summary>A new GameObject (in <paramref name="scene"/> before its components are added,
+        /// else in the active scene) with the components, inactive while they are added.</summary>
+        static GameObject Create(Scene? scene, string name, Type[] types)
         {
             var gameObject = CreateDefaultGameObject(name);
+            if (scene is Scene target && gameObject.scene != target) SceneManager.MoveGameObjectToScene(gameObject, target);
             gameObject.SetActive(false);
             foreach (var type in types) AddComponent(gameObject, type);
             gameObject.SetActive(true);
@@ -141,15 +142,32 @@ namespace UnityEditor
             return gameObject;
         }
 
-        /// <summary>Places a new GameObject: under <paramref name="parent"/> at its position; without
-        /// one where it is (no Scene view gives a placement).</summary>
+        /// <summary>Places a new GameObject as the Editor's create menus do: under
+        /// <paramref name="parent"/> (reparented for undo, at the parent's origin with no rotation
+        /// and unit scale, on the parent's layer, with a RectTransform under a RectTransform
+        /// parent); without a parent where it is (no Scene view gives it a place; in the current
+        /// stage). Its name is then made unique among its siblings, the undo group named after it
+        /// and the object selected.</summary>
         public static void PlaceGameObject(GameObject go, GameObject parent = null)
         {
             if (go is null) throw Unbound.Runtime.MonoExceptions.NullReference();
-            var transform = go.transform;
-            if (parent == null) return;
-            transform.SetParent(parent.transform, false);
-            transform.localPosition = Vector3.zero;
+            if (parent != null)
+            {
+                var transform = go.transform;
+                Undo.SetTransformParent(transform, parent.transform, "Reparenting");
+                transform.localPosition = Vector3.zero;
+                transform.localRotation = Quaternion.identity;
+                transform.localScale = Vector3.one;
+                go.layer = parent.layer;
+                if (parent.GetComponent<RectTransform>() != null) AddComponent<RectTransform>(go);
+            }
+            else
+            {
+                StageUtility.PlaceGameObjectInCurrentStage(go);
+            }
+            GameObjectUtility.EnsureUniqueNameForSibling(go);
+            Undo.SetCurrentGroupName("Create " + go.name);
+            Selection.activeGameObject = go;
         }
     }
 }

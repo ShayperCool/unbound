@@ -8965,8 +8965,6 @@ namespace UnityEditor
         public static bool cacheServerEnableTls { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.cacheServerEnableTls"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.cacheServerEnableTls"); } }
         public static global::UnityEditor.CacheServerValidationMode cacheServerValidationMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.cacheServerValidationMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.cacheServerValidationMode"); } }
         public static int cacheServerDownloadBatchSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.cacheServerDownloadBatchSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.cacheServerDownloadBatchSize"); } }
-        public static int gameObjectNamingDigits { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.gameObjectNamingDigits"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.gameObjectNamingDigits"); } }
-        public static global::UnityEditor.EditorSettings.NamingScheme gameObjectNamingScheme { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.gameObjectNamingScheme"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.gameObjectNamingScheme"); } }
         public static bool assetNamingUsesSpace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.assetNamingUsesSpace"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.assetNamingUsesSpace"); } }
         public static bool referencedClipsExactNaming { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.referencedClipsExactNaming"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.referencedClipsExactNaming"); } }
         internal enum Bc7TextureCompressor
@@ -8974,12 +8972,6 @@ namespace UnityEditor
             Default = 0,
             Ispc = 1,
             Bc7e = 2,
-        }
-        public enum NamingScheme
-        {
-            SpaceParenthesis = 0,
-            Dot = 1,
-            Underscore = 2,
         }
     }
     [global::Unbound.Stub]
@@ -10722,8 +10714,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static void SetStaticEditorFlags(global::UnityEngine.GameObject go, global::UnityEditor.StaticEditorFlags flags) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.SetStaticEditorFlags"); }
         [global::Unbound.Stub] public static bool AreStaticEditorFlagsSet(global::UnityEngine.GameObject go, global::UnityEditor.StaticEditorFlags flags) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.AreStaticEditorFlagsSet"); return default; }
         [global::Unbound.Stub] internal static string GetFirstItemPathAfterGameObjectCreationMenuItems() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.GetFirstItemPathAfterGameObjectCreationMenuItems"); return default; }
-        [global::Unbound.Stub] public static string GetUniqueNameForSibling(global::UnityEngine.Transform parent, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.GetUniqueNameForSibling"); return default; }
-        [global::Unbound.Stub] public static void EnsureUniqueNameForSibling(global::UnityEngine.GameObject self) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.EnsureUniqueNameForSibling"); }
         [global::Unbound.Stub] internal static bool ContainsStatic(global::UnityEngine.GameObject[] objects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.ContainsStatic"); return default; }
         [global::Unbound.Stub] internal static bool ContainsMainStageGameObjects(global::UnityEngine.GameObject[] objects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.ContainsMainStageGameObjects"); return default; }
         [global::Unbound.Stub] internal static bool HasChildren(global::System.Collections.Generic.IEnumerable<global::UnityEngine.GameObject> gameObjects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.HasChildren"); return default; }
