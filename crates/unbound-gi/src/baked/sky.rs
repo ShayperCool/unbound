@@ -95,7 +95,7 @@ impl Importance {
             return Importance::dark();
         }
         let mut shift = Shift::new();
-        let mut draw = |shift: &mut Shift| -> ([f32; 3], [f32; 3]) {
+        let draw = |shift: &mut Shift| -> ([f32; 3], [f32; 3]) {
             let first = shift.next();
             let z = (1.0 - first) - first;
             let radius = (1.0 - z * z).max(0.0).sqrt();
