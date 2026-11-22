@@ -240,7 +240,9 @@ and the draw), the kind Unbound draws:
   the size at first). The block asks the frame's axes (its columns) whether it is flat, and
   then does nothing, and whether its scale is even. At frame 6 the probe makes it flat along
   an axis turned 40 degrees (a column of the frame is zero, no row is), at frame 14 uneven
-  (1.2, 0.3, 1) and moved, at frame 22 even (0.6), turned and moved to a corner.
+  (1.2, 0.3, 1) and moved, at frame 22 even (0.6), turned and moved to a corner. The images are
+  the control: the count the effect answers stays 45 at all four frames in this capture, after
+  quads are gone from the images, and is no rule for when a kill is counted.
 - `over life` (frames 12, 24, 40, 55, 70): twenty a second living a second, their size from
   an exposed curve, their colour from an exposed gradient and their alpha from a curve that
   loops both ways, all sampled by the update kernel from the texture the effect bakes its

@@ -68,7 +68,9 @@ namespace UnityEngine.Tests
                 Op(VFXExpressionOperation.MatrixToAxis, 0, 1),
                 Op(VFXExpressionOperation.MatrixToAxis, 0, 2),
                 Op(VFXExpressionOperation.MatrixToAxis, 0, 3),
-            }, new[] { Constant(0, flat), Constant(1, 0), Constant(2, 1), Constant(3, 2) });
+                Value(VFXValueType.Int32),
+                Op(VFXExpressionOperation.MatrixToAxis, 0, 7),
+            }, new[] { Constant(0, flat), Constant(1, 0), Constant(2, 1), Constant(3, 2), Constant(7, 3) });
             foreach (var op in data.Operations) Assert.True(VFXExpressionEvaluator.Supported(op), op.ToString());
             var values = Evaluated(data);
             Assert.Equal(Vector4.zero, values.GetVector(4, 3));
@@ -76,6 +78,8 @@ namespace UnityEngine.Tests
             Assert.Equal(new Vector4(second.x, second.y, second.z, 0f), values.GetVector(5, 3));
             Assert.Equal(new Vector4(third.x, third.y, third.z, 0f), values.GetVector(6, 3));
             Assert.NotEqual(0f, second.x);
+            // The fourth column is the frame's position (a position on a mesh reads it).
+            Assert.Equal(new Vector4(7f, 8f, 9f, 0f), values.GetVector(8, 3));
         }
 
         [Fact]
