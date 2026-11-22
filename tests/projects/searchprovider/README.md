@@ -18,18 +18,22 @@ the Editor; the probe makes its own providers and contexts.
   the filters and the filter ID; setting the text again, `wantsMore`, `SetFilter`, a disposed
   context, and when providers' `onEnable` and `onDisable` run.
 - `search.*`: `SearchService.GetItems` with `SearchFlags.Synchronous`: which providers are
-  asked with what, the order of the items with and without `SearchFlags.Sorted`, a filtered
-  text, an inactive provider, a provider that throws, items of one ID.
+  asked with what, the order of the items with and without `SearchFlags.Sorted` on the context
+  and on the call, a filtered text, an inactive provider, a provider that throws or has no
+  handler, items of one ID, and (`search.returns.*`) every shape a handler may return.
 
 Not recorded: anything drawn (`ObjectField.DoObjectField`, the Search window and picker), the
 providers the Editor registers itself and the calls that look providers up by ID, asynchronous
-searches and their events, search expressions, an item's named fields, and the session messages
-a context with `SearchFlags.Debug` logs (they carry a running session number).
+searches and their events, search expressions, an item's named fields, a thumbnail without a
+size, and the session messages a context with `SearchFlags.Debug` logs (they carry a running
+session number).
 
 Unity's Scripting API for 6000.0 (`Search.SearchProvider`, `Search.SearchItem`,
 `Search.SearchContext`, `Search.SearchService`,
 docs.unity.com/en-us/engine/6000.0/script-reference/unityeditor/search/searchprovider) describes
-the members; it gives no order for unsorted results, which the probe records as observed.
+the members: a `fetchItems` handler's "return value is an object that can be of type IEnumerable
+or IEnumerator" whose enumeration "should return SearchItems" (`search.returns.*`); it gives no
+order for unsorted results, which the probe records as observed.
 
 ```sh
 python3 tests/projects/searchprovider/run.py record --label a

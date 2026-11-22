@@ -226,6 +226,19 @@ static class SearchProbe
             return "plain=" + (plain == texture) + "|fieldAfterPlain=" + (fieldAfterPlain == null ? "<null>" : "set") + "|cached=" + (cached == texture)
                 + "|fieldAfterCached=" + (fieldAfterCached == null ? "<null>" : "set") + "|again=" + (again == texture) + "|none=" + (none == null ? "<null>" : "set") + "|calls=" + thumbnails;
         });
+        Check("fetch.thumbnailDefaultHandler", () =>
+        {
+            var plain = new SearchProvider("plain");
+            var given = plain.CreateItem(c, "a", "Label", null, texture, null);
+            var bare = plain.CreateItem(c, "a");
+            var fetched = given.GetThumbnail(c);
+            var cached = given.GetThumbnail(c, true);
+            var bareFetched = bare.GetThumbnail(c);
+            var bareCached = bare.GetThumbnail(c, true);
+            return "given=" + (fetched == texture ? "own" : fetched == null ? "<null>" : "other") + "|givenCached=" + (cached == texture ? "own" : cached == null ? "<null>" : "other")
+                + "|handler=" + (plain.fetchThumbnail(given, c) == texture ? "own" : "other") + "|bare=" + (bareFetched == null ? "<null>" : "set") + "|bareCached=" + (bareCached == null ? "<null>" : "set")
+                + "|bareField=" + (bare.thumbnail == null ? "<null>" : "set") + "|sameIcon=" + (bareFetched == bareCached);
+        });
         Check("fetch.preview", () =>
         {
             previews = 0;
@@ -368,6 +381,21 @@ static class SearchProbe
             c.Dispose();
             return "made=" + made + "|removed=" + removed + "|disposed=" + enabled + "/" + disabled + "/" + others;
         });
+        Check("context.copyEnabling", () =>
+        {
+            int enabled = 0, disabled = 0;
+            var p = new SearchProvider("probe") { onEnable = () => enabled++, onDisable = () => disabled++ };
+            var original = SearchService.CreateContext(new[] { p }, "x");
+            var copy = new SearchContext(original);
+            var made = enabled + "/" + disabled;
+            original.Dispose();
+            var one = enabled + "/" + disabled;
+            copy.Dispose();
+            var both = enabled + "/" + disabled;
+            original.SetFilter("probe", false);
+            var after = SearchService.CreateContext(new[] { p }, "y");
+            return "made=" + made + "|originalDisposed=" + one + "|bothDisposed=" + both + "|filteredAfterDispose=" + enabled + "/" + disabled + "|providers=" + original.providers.Count();
+        });
         Check("context.disposed", () =>
         {
             var c = SearchService.CreateContext(make(), "x");
@@ -481,7 +509,84 @@ static class SearchProbe
             using (var c = SearchService.CreateContext(new[] { twice }, "x", SearchFlags.Synchronous))
                 return "items=" + string.Join(",", SearchService.GetItems(c, SearchFlags.Synchronous).Select(i => i.id + ":" + i.label));
         });
+        // What fetchItems may return: each shape gives the same two items, after one added to the list.
+        Func<SearchContext, SearchProvider, SearchItem[]> two = (context, provider) => new[]
+        {
+            provider.CreateItem(context, "r.one", 2, "one", null, null, null), provider.CreateItem(context, "r.two", 1, "two", null, null, null),
+        };
+        var shapes = new Dictionary<string, Func<SearchContext, SearchProvider, object>>
+        {
+            { "array", (c, p) => two(c, p) },
+            { "list", (c, p) => two(c, p).ToList() },
+            { "genericEnumerator", (c, p) => ((IEnumerable<SearchItem>)two(c, p)).GetEnumerator() },
+            { "enumerator", (c, p) => Yielded(two(c, p)) },
+            { "plainEnumerable", (c, p) => new System.Collections.ArrayList(two(c, p)) },
+            { "objects", (c, p) => new object[] { two(c, p)[0], "text", null, 5, two(c, p)[1] } },
+            { "nestedEnumerable", (c, p) => new object[] { two(c, p)[0], new[] { two(c, p)[1] } } },
+            { "nestedEnumerator", (c, p) => Yielded(new object[] { two(c, p)[0], Yielded(new[] { two(c, p)[1] }) }) },
+            { "withNull", (c, p) => new[] { two(c, p)[0], null, two(c, p)[1] } },
+            { "single", (c, p) => two(c, p)[0] },
+            { "text", (c, p) => "text" },
+            { "number", (c, p) => 5 },
+        };
+        foreach (var shape in shapes)
+        {
+            var returns = shape.Value;
+            Step("search.returns." + shape.Key, () =>
+            {
+                var provider = new SearchProvider("shape");
+                provider.fetchItems = (context, items, self) =>
+                {
+                    items.Add(self.CreateItem(context, "r.added", 3, "added", null, null, null));
+                    return returns(context, self);
+                };
+                using (var c = SearchService.CreateContext(new[] { provider }, "x", SearchFlags.Synchronous))
+                    return "items=" + string.Join(",", SearchService.GetItems(c, SearchFlags.Synchronous).Select(i => i == null ? "<null>" : i.id));
+            });
+        }
+        Step("search.nullHandler", () =>
+        {
+            var silent = new SearchProvider("silent") { fetchItems = null };
+            using (var c = SearchService.CreateContext(new[] { silent, make("alpha", 50, false) }, "x", SearchFlags.Synchronous))
+                return "items=" + list(SearchService.GetItems(c, SearchFlags.Synchronous));
+        });
+        // Which flags decide the sorting: the context's, the call's, or both.
+        Func<SearchProvider> unordered = () =>
+        {
+            var p = new SearchProvider("unordered");
+            p.fetchItems = (context, items, self) => new[]
+            {
+                self.CreateItem(context, "u.b", 9, "b", null, null, null), self.CreateItem(context, "u.a", 5, "a", null, null, null),
+                self.CreateItem(context, "u.b", 1, "b again", null, null, null),
+            };
+            return p;
+        };
+        Step("search.sortedContextPlainCall", () =>
+        {
+            using (var c = SearchService.CreateContext(new[] { unordered() }, "x", SearchFlags.Sorted))
+                return "items=" + string.Join(",", SearchService.GetItems(c, SearchFlags.Synchronous).Select(i => i.id + ":" + i.label)) + "|options=" + c.options;
+        });
+        Step("search.sortedContextWantsMore", () =>
+        {
+            using (var c = SearchService.CreateContext(new[] { unordered() }, "x"))
+                return "items=" + string.Join(",", SearchService.GetItems(c, SearchFlags.WantsMore | SearchFlags.Synchronous).Select(i => i.id + ":" + i.label)) + "|options=" + c.options;
+        });
+        Step("search.plainContextSortedCall", () =>
+        {
+            using (var c = SearchService.CreateContext(new[] { unordered() }, "x", SearchFlags.None))
+                return "items=" + string.Join(",", SearchService.GetItems(c, SearchFlags.Sorted).Select(i => i.id + ":" + i.label)) + "|options=" + c.options;
+        });
+        Step("search.plainContextNoneCall", () =>
+        {
+            using (var c = SearchService.CreateContext(new[] { unordered() }, "x", SearchFlags.None))
+                return "items=" + string.Join(",", SearchService.GetItems(c, SearchFlags.None).Select(i => i.id + ":" + i.label)) + "|options=" + c.options;
+        });
         Step("search.registered", () => "probe=" + (SearchService.GetProvider("probe") == null ? "<null>" : "found") + "|null=" + Try(() => SearchService.GetProvider(null) == null ? "<null>" : "found"));
+    }
+
+    static System.Collections.IEnumerator Yielded(System.Collections.IEnumerable items)
+    {
+        foreach (var item in items) yield return item;
     }
 
     static void Step(string key, Func<string> read)

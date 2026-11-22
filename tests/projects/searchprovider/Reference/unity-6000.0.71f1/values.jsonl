@@ -47,6 +47,7 @@
 {"k":"fetch.description.CustomAction","v":"given=\"Given\"|first=\"description1\"|second=\"description1\"|field=\"description1\"|calls=1"}
 {"k":"fetch.descriptionNoFetch","v":"none=<null>|valued=\"12\"|compact=\"Label\"|stripped=\"D\""}
 {"k":"fetch.thumbnail","v":"plain=True|fieldAfterPlain=<null>|cached=True|fieldAfterCached=set|again=True|none=<null>|calls=3"}
+{"k":"fetch.thumbnailDefaultHandler","v":"given=other|givenCached=own|handler=other|bare=set|bareCached=set|bareField=set|sameIcon=True"}
 {"k":"fetch.preview","v":"plain=True|fieldAfterPlain=<null>|cached=True|field=set|again=True|noFetch=<null>|calls=2"}
 {"k":"fetch.object","v":"first=GameObject:Target|second=GameObject:Target|typed=Texture2D:|generic=Texture2D:|wrong=<null>|noHandler=<null>|fresh=<null>|calls=3"}
 {"k":"compare.equals","v":"sameId=True|object=True|case=False|other=False|hash=True|hashIsId=True"}
@@ -85,6 +86,7 @@
 {"k":"context.wantsMore","v":"on=Default, WantsMore|off=Packages|wantsMore=False"}
 {"k":"context.setFilter","v":"probe=True|unknown=False|removed=early,late:False|again=early,late"}
 {"k":"context.setFilterEnabling","v":"made=1/0/1|removed=1/1/102|disposed=1/1/202"}
+{"k":"context.copyEnabling","v":"made=1/0|originalDisposed=1/0|bothDisposed=1/1|filteredAfterDispose=1/1|providers=0"}
 {"k":"context.disposed","v":"text=\"x\"|providers=3|phrase=\"x\"|isEnabled=True|setText=set|options=Default"}
 {"k":"context.enabling","v":"single=1/0|list=1/0|listDisposed=1/0|singleDisposed=1/1"}
 {"k":"search.synchronous","v":"items=alpha.listed(10),alpha.also(-5),beta.z(50),beta.m(49)|asked=alpha:find me:find me,beta:find me:find me|logs=<none>"}
@@ -95,5 +97,22 @@
 {"k":"search.inactive","v":"items=alpha.listed(10),alpha.also(-5),beta.z(50),beta.m(49)|asked=alpha:x:x,beta:x:x|logs=<none>"}
 {"k":"search.throws","v":"items=alpha.listed(10),alpha.also(-5)|asked=alpha:x:x|logs=Exception:InvalidOperationException: probe"}
 {"k":"search.duplicateIds","v":"items=same:one,same:two|logs=<none>"}
+{"k":"search.returns.array","v":"items=r.added,r.one,r.two|logs=<none>"}
+{"k":"search.returns.list","v":"items=r.added,r.one,r.two|logs=<none>"}
+{"k":"search.returns.genericEnumerator","v":"items=r.added,r.one,r.two|logs=<none>"}
+{"k":"search.returns.enumerator","v":"items=r.added,r.one,r.two|logs=<none>"}
+{"k":"search.returns.plainEnumerable","v":"items=r.added,r.one,r.two|logs=<none>"}
+{"k":"search.returns.objects","v":"items=r.added,r.one|logs=Exception:InvalidCastException: Cannot cast \"System.Char\" to type UnityEditor.Search.SearchItem."}
+{"k":"search.returns.nestedEnumerable","v":"items=r.added,r.one,r.two|logs=<none>"}
+{"k":"search.returns.nestedEnumerator","v":"items=r.added,r.one,r.two|logs=<none>"}
+{"k":"search.returns.withNull","v":"items=r.added,r.one,r.two|logs=<none>"}
+{"k":"search.returns.single","v":"items=r.added|logs=Exception:ArgumentException: Parameter itemEnumerator is not an IEnumerable or IEnumerator.\\nParameter name: itemEnumerator"}
+{"k":"search.returns.text","v":"items=r.added|logs=Exception:InvalidCastException: Cannot cast \"System.Char\" to type UnityEditor.Search.SearchItem."}
+{"k":"search.returns.number","v":"items=r.added|logs=Exception:ArgumentException: Parameter itemEnumerator is not an IEnumerable or IEnumerator.\\nParameter name: itemEnumerator"}
+{"k":"search.nullHandler","v":"items=alpha.listed(10),alpha.also(-5)|logs=Exception:NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"search.sortedContextPlainCall","v":"items=u.b:b again,u.a:a|options=Synchronous, Default|logs=<none>"}
+{"k":"search.sortedContextWantsMore","v":"items=u.b:b again,u.a:a|options=Synchronous, Default, WantsMore|logs=<none>"}
+{"k":"search.plainContextSortedCall","v":"items=u.b:b again,u.a:a|options=Default|logs=<none>"}
+{"k":"search.plainContextNoneCall","v":"items=u.b:b,u.a:a,u.b:b again|options=None|logs=<none>"}
 {"k":"search.registered","v":"probe=<null>|null=<null>|logs=<none>"}
 {"k":"complete","v":true}
