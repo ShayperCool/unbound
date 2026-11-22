@@ -38,6 +38,8 @@ public partial class NavLinksProbe
             yield return RecordStaleQuery(local, remoteLink, placement, mode);
         yield return RecordStaleHierarchy(remoteLink);
         yield return RecordStalePathReset(remoteLink, local.O);
+        yield return RecordCloneStaleness(remoteLink, local.O);
+        yield return RecordAreaStaleness(local, remoteLink);
         Finish(0);
     }
 
@@ -244,6 +246,105 @@ public partial class NavLinksProbe
             DestroyImmediate(agent.gameObject);
             yield return null;
         }
+    }
+
+    IEnumerator RecordCloneStaleness(NavMeshLink link, Vector3 origin)
+    {
+        foreach (string mode in new[] { "original", "clone", "cloneSeeded" })
+        {
+            link.activated = true;
+            var root = new GameObject("root");
+            var parent = new GameObject("parent");
+            parent.transform.SetParent(root.transform, false);
+            parent.transform.localPosition = origin + new Vector3(-8f, 0f, -0.3f);
+            var live = mode == "original" ? root : Instantiate(root);
+            var liveParent = live.transform.GetChild(0);
+            if (mode == "cloneSeeded") liveParent.localPosition = liveParent.localPosition;
+            var child = new GameObject("child");
+            child.transform.SetParent(liveParent, false);
+            var agent = child.AddComponent<NavMeshAgent>();
+            agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            for (int i = 0; i < 5; i++) yield return null;
+            CheckWarp(agent, agent.nextPosition);
+            agent.transform.localScale *= 1.1f;
+            for (int i = 0; i < 5; i++) yield return null;
+            var position = agent.transform.position;
+            link.activated = false;
+            bool before = agent.isPathStale;
+            liveParent.localPosition = liveParent.localPosition;
+            _ = agent.nextPosition;
+            Line("staleClone." + mode, "a", 0, "\"before\":" + B(before) + ",\"after\":" + B(agent.isPathStale)
+                + ",\"delta\":" + V(agent.transform.position - position));
+            if (live != root) DestroyImmediate(live);
+            DestroyImmediate(root);
+            yield return null;
+        }
+    }
+
+    IEnumerator RecordAreaStaleness(Lane local, NavMeshLink remoteLink)
+    {
+        foreach (string mode in new[] { "idle", "idleOnMesh", "idleOwner", "stopped", "pending", "pendingWithPath", "immediate", "arrived", "reset", "idleThenPlan" })
+        foreach (string change in new[] { "areaMask", "agentCost", "globalCost" })
+        {
+            remoteLink.activated = true;
+            var lane = new Lane { Name = "staleArea." + mode + "." + change, O = local.O, Link = local.Link };
+            var agent = Agent(lane, "a", new Vector3(-8f, 0f, -0.3f), null, a => {
+                a.speed = 0f;
+                a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            });
+            for (int i = 0; i < 5; i++) yield return null;
+            var here = agent.nextPosition;
+            if (mode == "stopped" || mode == "pendingWithPath" || mode == "reset")
+            {
+                SetTestDestination(agent, here + Vector3.right * 2f);
+                yield return null;
+                if (!agent.hasPath) throw new InvalidOperationException("agent has no test route");
+            }
+            if (mode == "immediate") SetTestDestination(agent, here + Vector3.right * 0.15f);
+            if (mode == "arrived")
+            {
+                SetTestDestination(agent, here);
+                for (int i = 0; i < 5; i++) yield return null;
+                if (agent.hasPath || agent.pathPending) throw new InvalidOperationException("agent did not arrive");
+            }
+            if (mode == "pending" || mode == "pendingWithPath")
+            {
+                SetTestDestination(agent, lane.O + new Vector3(8f, 0f, -0.3f));
+                if (!agent.pathPending) throw new InvalidOperationException("test route is not pending");
+            }
+            if (mode == "reset") agent.ResetPath();
+            float cost = NavMesh.GetAreaCost(4);
+            switch (change)
+            {
+                case "areaMask": agent.areaMask &= ~(1 << 4); break;
+                case "agentCost": agent.SetAreaCost(4, cost + 1f); break;
+                case "globalCost": NavMesh.SetAreaCost(4, cost + 1f); break;
+            }
+            bool translated = mode == "idleOnMesh" || mode == "idleOwner";
+            if (translated) agent.transform.position += Vector3.right * 0.25f;
+            bool afterArea = agent.isPathStale;
+            if (mode == "idleOnMesh") _ = agent.isOnNavMesh;
+            if (mode == "idleOwner") _ = agent.navMeshOwner;
+            Vector3 positionDelta = translated ? agent.destination - here : Vector3.zero;
+            if (mode == "idleThenPlan") SetTestDestination(agent, lane.O + new Vector3(8f, 0f, -0.3f));
+            bool afterRequest = agent.isPathStale;
+            bool hadPath = agent.hasPath;
+            bool wasPending = agent.pathPending;
+            yield return null;
+            bool afterUpdate = agent.isPathStale;
+            remoteLink.activated = false;
+            Line(lane.Name, "a", 0, "\"area\":" + B(afterArea) + ",\"request\":" + B(afterRequest)
+                + ",\"link\":" + B(agent.isPathStale) + ",\"path\":" + B(hadPath) + ",\"pending\":" + B(wasPending)
+                + ",\"update\":" + B(afterUpdate) + ",\"positionDelta\":" + V(positionDelta));
+            DestroyImmediate(agent.gameObject);
+            if (change == "globalCost") NavMesh.SetAreaCost(4, cost);
+            yield return null;
+        }
+    }
+
+    static void SetTestDestination(NavMeshAgent agent, Vector3 goal)
+    {
+        if (!agent.SetDestination(goal)) throw new InvalidOperationException("test destination refused");
     }
 
     static void CheckWarp(NavMeshAgent agent, Vector3 position)
