@@ -212,7 +212,7 @@ struct Node {
     children: Option<usize>,
     rect: [f32; 4],
     filled: bool,
-    /// Which sides of the atlas it touches: 1 and 2 across, 4 and 8 along (see [`insert`]).
+    /// Which sides of the atlas it touches: 1 left, 2 right, 4 bottom, 8 top (see [`insert`]).
     edges: u32,
 }
 
@@ -309,7 +309,7 @@ fn insert(
             }
             first = [x, y, v[0], v[1]];
             second_xy = [x + c, y];
-            (inherit, first_only, second_only) = (1 | 8, 4, 2);
+            (inherit, first_only, second_only) = (4 | 8, 1, 2);
         } else {
             let c = (rh + pad_y).ceil();
             let v = [(nw + x) - x, (c + y) - y];

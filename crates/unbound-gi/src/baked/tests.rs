@@ -183,3 +183,22 @@ fn morton_codes_interleave_tenths_of_a_unit() {
         morton([70000.0 - 65536.0, -65536.0, -65536.0])
     );
 }
+
+#[test]
+fn only_a_leaf_across_the_whole_atlas_scales_a_rectangle_down() {
+    // The first splits the atlas into a 64 × 10 strip (then 40 + 24) and the rest above. The
+    // second, wider than the 24 left of the strip, which does not reach the atlas's left side,
+    // goes above whole (its scale from its height: its UV bounds are square).
+    let layout = layout(
+        &Settings {
+            fixed_size: true,
+            ..settings(64, 0)
+        },
+        &[instance([40.0, 10.0], 0), instance([30.0, 5.0], 1)],
+    )
+    .unwrap();
+    assert_eq!(
+        layout.placements[1].scale_offset,
+        [5.0 / 64.0, 5.0 / 64.0, 0.0, 10.0 / 64.0]
+    );
+}

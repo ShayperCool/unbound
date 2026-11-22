@@ -15,8 +15,8 @@ namespace UnityEngine
     /// nothing (they keep what they had; said once per scene by the bake) and writes the layout
     /// to <c>Library/Unbound/BakedGI/&lt;scene GUID&gt;/atlas.json</c> for the next parts.
     /// <para>The renderers laid out are those the Editor lightmaps: enabled MeshRenderers of
-    /// active GameObjects with Contribute Global Illumination and Receive Global Illumination
-    /// Lightmaps, made from the scene file. A renderer that cannot be laid out (no mesh, a
+    /// active GameObjects with Contribute Global Illumination, Receive Global Illumination
+    /// Lightmaps and a Scale In Lightmap above 0, made from the scene file, in hierarchy order. A renderer that cannot be laid out (no mesh, a
     /// submesh that is not triangles) is left out and named; Lightmap Parameters that cannot be
     /// read, a built-in one other than Default-Medium or one with Limit Lightmap Count leave the
     /// scene without a layout (said once).</para>
@@ -103,6 +103,25 @@ namespace UnityEngine
             return levels;
         }
 
+        /// <summary>The scene's MeshRenderers made from its file in hierarchy order (its roots in
+        /// order, each depth first): the order the Editor numbers them in, which keeps renderers of
+        /// one Morton code and size in it (tests/projects/bakedatlas Ties).</summary>
+        static List<(MeshRenderer Renderer, long FileId)> InHierarchyOrder(LoadedFile file)
+        {
+            var made = new Dictionary<Object, long>();
+            foreach (var pair in file.Objects)
+                if (pair.Value is MeshRenderer) made[pair.Value] = pair.Key;
+            var ordered = new List<(MeshRenderer, long)>();
+            void Visit(Transform t)
+            {
+                if (t.GetComponent<MeshRenderer>() is MeshRenderer r && made.TryGetValue(r, out var id)) ordered.Add((r, id));
+                for (int i = 0; i < t.childCount; i++) Visit(t.GetChild(i));
+            }
+            foreach (var root in (IEnumerable<GameObject>)file.SceneRoots ?? file.Roots)
+                if (root != null) Visit(root.transform);
+            return ordered;
+        }
+
         static string HierarchyPath(Transform t)
         {
             var parts = new List<string>();
@@ -116,17 +135,25 @@ namespace UnityEngine
         internal static void Lay(LoadedFile file, LightingSettings settings)
         {
             settings ??= UnityEditor.Lightmapping.lightingSettingsDefaults;
-            if (!settings.bakedGI || string.IsNullOrEmpty(file.Guid)) return;
+            if (!settings.bakedGI) return;
             string path = file.Path;
+            string guid = string.IsNullOrEmpty(file.Guid) ? UnityEditor.AssetDatabase.AssetPathToGUID(path) : file.Guid;
+            if (string.IsNullOrEmpty(guid))
+            {
+                Warn("guid:" + path, $"{path}: a scene without a GUID; Unbound does not lay out its baked lightmaps (Lightmapping.Bake).");
+                return;
+            }
             var levels = LodLevels(file);
             var renderers = new List<object>();
             var placed = new List<(MeshRenderer renderer, long fileId)>();
             using (Mesh.EngineReads())
             {
-                foreach (var pair in file.Objects)
+                foreach (var (renderer, fileId) in InHierarchyOrder(file))
                 {
-                    if (!(pair.Value is MeshRenderer renderer) || renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
-                    if ((renderer.gameObject.m_StaticEditorFlags & ContributeGI) == 0 || renderer.receiveGI != ReceiveGI.Lightmaps) continue;
+                    if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
+                    // Scale In Lightmap 0: "the object is not lightmapped" (Manual 6000.0, Mesh Renderer).
+                    if ((renderer.gameObject.m_StaticEditorFlags & ContributeGI) == 0 || renderer.receiveGI != ReceiveGI.Lightmaps
+                        || !(renderer.scaleInLightmap > 0f)) continue;
                     var mesh = renderer.GetComponent<MeshFilter>()?.sharedMesh;
                     string left = null;
                     if (mesh == null) left = "it has no mesh";
@@ -135,7 +162,7 @@ namespace UnityEngine
                             if (mesh.GetTopology(sub) != MeshTopology.Triangles) left = $"a submesh of {mesh.GetTopology(sub)} (not supported)";
                     if (left != null)
                     {
-                        Warn("left:" + path + pair.Key, $"{path}: '{renderer.name}' is left out of Unbound's layout of the baked lightmaps (Lightmapping.Bake): {left}.");
+                        Warn("left:" + path + fileId, $"{path}: '{renderer.name}' is left out of Unbound's layout of the baked lightmaps (Lightmapping.Bake): {left}.");
                         continue;
                     }
                     if (!(ParametersOf(renderer.m_LightmapParameters, settings, out var why) is Parameters parameters))
@@ -168,7 +195,7 @@ namespace UnityEngine
                         localToWorld = matrix,
                         scaleInLightmap = renderer.scaleInLightmap,
                         lodLevel = levels.TryGetValue(renderer, out var level) ? (int?)level : null,
-                        scene = file.Guid,
+                        scene = guid,
                         parameters = new
                         {
                             backFaceTolerance = parameters.BackFaceTolerance,
@@ -178,7 +205,7 @@ namespace UnityEngine
                             maxLightmapCount = parameters.MaxLightmapCount,
                         },
                     });
-                    placed.Add((renderer, pair.Key));
+                    placed.Add((renderer, fileId));
                 }
             }
             bool fixedSize = settings.LightmapSizeFixed
@@ -221,7 +248,7 @@ namespace UnityEngine
             }
             try
             {
-                var folder = Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "BakedGI", file.Guid);
+                var folder = Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "BakedGI", guid);
                 Directory.CreateDirectory(folder);
                 File.WriteAllText(Path.Combine(folder, "atlas.json"),
                     JsonSerializer.Serialize(new { scene = path, lightmaps, renderers = entries }, new JsonSerializerOptions { WriteIndented = true }));
