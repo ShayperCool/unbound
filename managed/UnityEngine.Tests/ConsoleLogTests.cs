@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Unbound;
 using Unbound.Runtime;
+using UnityEngine.Experimental.Rendering;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -140,6 +141,36 @@ namespace UnityEngine.Tests
             {
                 Object.DestroyImmediate(fallback);
                 Object.DestroyImmediate(uncompressed);
+            }
+        }
+
+        [Fact]
+        public void Explicit_compressed_format_reports_fallback_in_an_unmeasured_release()
+        {
+            using var releaseScope = TestRelease.Pin(TestRelease.Unmeasured);
+            var device = GraphicsDeviceProfile.Current.Type;
+            var threadingMode = GraphicsDeviceProfile.CurrentThreadingMode;
+            string path = Path.Combine(Logs, "explicit-texture-storage.log");
+            Open(path);
+            Texture2D blockBacked = null, fallback = null;
+            try
+            {
+                GraphicsDeviceProfile.Select("OpenGLCore");
+                blockBacked = new Texture2D(8, 8, GraphicsFormat.RGBA_DXT1_UNorm, TextureCreationFlags.None);
+                fallback = new Texture2D(8, 8, GraphicsFormat.RGBA_DXT3_UNorm, TextureCreationFlags.None);
+                Assert.Equal(TextureFormat.DXT1, blockBacked.format);
+                Assert.Equal(TextureFormat.RGBA32, fallback.format);
+                Assert.Equal(new[]
+                {
+                    "log sentinel",
+                    "Unbound: Texture2D uses uncompressed fallback storage for 'RGBA_DXT3_UNorm'.",
+                }, File.ReadAllLines(path));
+            }
+            finally
+            {
+                Object.DestroyImmediate(fallback);
+                Object.DestroyImmediate(blockBacked);
+                GraphicsDeviceProfile.Select(device.ToString(), threadingMode.ToString());
             }
         }
 
