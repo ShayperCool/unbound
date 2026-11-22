@@ -336,7 +336,9 @@ namespace Unbound.Runtime
         /// declared by its collection's field, so that field's attributes apply to every element.</summary>
         internal static FieldInfo DeclaringFieldOf(SerializedNode node)
         {
-            if (node?.Parent?.Kind == SerializedNodeKind.ArrayContainer) node = node.Parent.Parent;
+            // An array's size has no field of its own.
+            if (node == null || node.Kind == SerializedNodeKind.ArraySize) return null;
+            if (node.Parent?.Kind == SerializedNodeKind.ArrayContainer) node = node.Parent.Parent;
             return FieldOf(node);
         }
 

@@ -138,14 +138,17 @@ namespace UnityEditor
     internal sealed partial class MultilineDrawer : PropertyDrawer
     {
         static readonly string s_InvalidTypeMessage = "Use Multiline with string.";
+        const int kLineHeight = 13;
+        // EditorGUI's single line height.
+        const float kSingleLineHeight = 18f;
 
-        // A text field one line high plus 13 points for each further line.
+        // A text field one line high plus kLineHeight for each further line.
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
         {
             if (property.propertyType != SerializedPropertyType.String) return new Label(s_InvalidTypeMessage);
             int lines = ((MultilineAttribute)attribute).lines;
             var field = new TextField(preferredLabel) { multiline = true, bindingPath = property.propertyPath };
-            field.style.height = 18f + (lines - 1) * 13f;
+            field.style.height = kSingleLineHeight + (lines - 1) * kLineHeight;
             field.AddToClassList(BaseField<string>.alignedFieldUssClassName);
             return field;
         }
@@ -155,16 +158,18 @@ namespace UnityEditor
     internal sealed partial class TextAreaDrawer : PropertyDrawer
     {
         static readonly string s_InvalidTypeMessage = "Use TextAreaDrawer with string.";
+        const int kLineHeight = 15;
+        // The height of a one-line text area.
+        const float kOneLineHeight = 36f;
 
-        // A scrolling text area 36 points high for one line plus 15 for each further line, between
-        // the attribute's minimum and maximum lines.
+        // A scrolling text area kOneLineHeight high for one line plus kLineHeight for each further
+        // line, between the attribute's minimum and maximum lines.
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
         {
             if (property.propertyType != SerializedPropertyType.String) return new Label(s_InvalidTypeMessage);
             var area = (TextAreaAttribute)attribute;
-            const float oneLine = 36f;
-            float min = oneLine + (area.minLines - 1) * 15f;
-            float max = Mathf.Max(min, oneLine + (area.maxLines - 1) * 15f);
+            float min = kOneLineHeight + (area.minLines - 1) * kLineHeight;
+            float max = Mathf.Max(min, kOneLineHeight + (area.maxLines - 1) * kLineHeight);
             var field = new TextField { label = preferredLabel, multiline = true };
             field.style.flexDirection = FlexDirection.Column;
             field.style.whiteSpace = WhiteSpace.Normal;
@@ -209,12 +214,14 @@ namespace UnityEditor
     [CustomPropertyDrawer(typeof(SpaceAttribute))]
     internal sealed partial class SpaceDrawer : DecoratorDrawer
     {
+        public const string spaceDrawerClassName = "unity-space-drawer";
+
         public override float GetHeight() => ((SpaceAttribute)attribute).height;
 
         public override VisualElement CreatePropertyGUI()
         {
             var space = new VisualElement();
-            space.AddToClassList("unity-space-drawer");
+            space.AddToClassList(spaceDrawerClassName);
             space.style.height = GetHeight();
             return space;
         }
@@ -223,10 +230,12 @@ namespace UnityEditor
     [CustomPropertyDrawer(typeof(HeaderAttribute))]
     internal sealed partial class HeaderDrawer : DecoratorDrawer
     {
+        public const string headerLabelClassName = "unity-header-drawer__label";
+
         public override VisualElement CreatePropertyGUI()
         {
             var label = new Label(((HeaderAttribute)attribute).header);
-            label.AddToClassList("unity-header-drawer__label");
+            label.AddToClassList(headerLabelClassName);
             return label;
         }
     }

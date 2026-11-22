@@ -846,46 +846,14 @@ namespace UnityEditor
         }
     }
 
-    /// <summary>Property and decorator drawers, by the [CustomPropertyDrawer] classes the loaded
-    /// assemblies have.</summary>
+    /// <summary>Property and decorator drawers for IMGUI, found as PropertyField finds them
+    /// (<see cref="DrawerDispatch"/>).</summary>
     internal static class PropertyDrawers
     {
-        static Dictionary<Type, List<(Type Drawer, bool Children)>> s_Drawers;
-
-        static Dictionary<Type, List<(Type Drawer, bool Children)>> Drawers
+        static Type Find(Type target, bool decorator, UnityEngine.Object owner = null)
         {
-            get
-            {
-                if (s_Drawers != null) return s_Drawers;
-                var map = new Dictionary<Type, List<(Type, bool)>>();
-                foreach (var type in TypeCache.GetTypesWithAttribute<CustomPropertyDrawer>())
-                {
-                    // The engine's own drawers carry only their UI Toolkit GUI; IMGUI draws those
-                    // attributes itself.
-                    if (type.IsAbstract || !typeof(GUIDrawer).IsAssignableFrom(type) || type.Assembly == typeof(UnityEngine.Object).Assembly) continue;
-                    foreach (var attribute in type.GetCustomAttributes<CustomPropertyDrawer>(false))
-                    {
-                        if (attribute.m_Type == null) continue;
-                        if (!map.TryGetValue(attribute.m_Type, out var list)) map[attribute.m_Type] = list = new List<(Type, bool)>();
-                        list.Add((type, attribute.m_UseForChildren));
-                    }
-                }
-                return s_Drawers = map;
-            }
-        }
-
-        static Type Find(Type target, bool decorator)
-        {
-            for (var t = target; t != null; t = t.BaseType)
-            {
-                if (!Drawers.TryGetValue(t, out var list)) continue;
-                foreach (var (drawer, children) in list)
-                {
-                    if (typeof(DecoratorDrawer).IsAssignableFrom(drawer) != decorator) continue;
-                    if (t == target || children) return drawer;
-                }
-            }
-            return null;
+            var drawer = DrawerDispatch.ImguiDrawerType(target, owner);
+            return drawer != null && typeof(DecoratorDrawer).IsAssignableFrom(drawer) == decorator ? drawer : null;
         }
 
         internal static FieldInfo FieldOf(SerializedProperty property) => property.UnboundField;
@@ -913,14 +881,15 @@ namespace UnityEditor
         /// array's or list's element type), without creating it.</summary>
         internal static Type DrawerTypeFor(SerializedProperty property, FieldInfo field, PropertyAttribute attribute)
         {
-            Type type = attribute != null ? Find(attribute.GetType(), decorator: false) : null;
+            var owner = property.serializedObject.targetObject;
+            Type type = attribute != null ? Find(attribute.GetType(), decorator: false, owner) : null;
             if (type == null && field != null)
             {
                 var fieldType = field.FieldType;
                 if (property.isArray && property.propertyType != SerializedPropertyType.String) fieldType = null;
                 else if (fieldType.IsArray) fieldType = fieldType.GetElementType();
                 else if (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(List<>)) fieldType = fieldType.GetGenericArguments()[0];
-                if (fieldType != null) type = Find(fieldType, decorator: false);
+                if (fieldType != null) type = Find(fieldType, decorator: false, owner);
             }
             return type != null && typeof(PropertyDrawer).IsAssignableFrom(type) ? type : null;
         }

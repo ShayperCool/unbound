@@ -66,7 +66,7 @@ namespace UnityEditor
 
         static Dictionary<Type, DrawerEntry[]> s_Table;
         static int s_TableGeneration = -1;
-        static readonly Dictionary<(Type, Type, bool), Type> s_DrawerForType = new Dictionary<(Type, Type, bool), Type>();
+        static readonly Dictionary<(Type, Type, Type, bool), Type> s_DrawerForType = new Dictionary<(Type, Type, Type, bool), Type>();
         static readonly Dictionary<(int, string, int), DrawerSet> s_Sets = new Dictionary<(int, string, int), DrawerSet>();
         static readonly Regex s_ArrayIndex = new Regex(@"\.Array\.data\[[0-9]+\]", RegexOptions.Compiled);
 
@@ -96,44 +96,49 @@ namespace UnityEditor
             }
         }
 
-        /// <summary>The drawers of a property of a script object; none for a native object or without
-        /// a target. (Unbound has no debug inspector, where the Editor uses no drawers.)</summary>
+        /// <summary>The drawers of a property; none without a target. A native object's properties
+        /// have only the Editor's built-in attributes (a TextMesh's text is [Multiline]). (Unbound
+        /// has no debug inspector, where the Editor uses no drawers.)</summary>
         internal static DrawerSet For(SerializedProperty property)
         {
             if (property == null || !property.isValid) return DrawerSet.Empty;
             var serializedObject = property.serializedObject;
             var target = serializedObject.targetObject;
-            if (target == null || !(target is MonoBehaviour || target is ScriptableObject)) return DrawerSet.Empty;
+            if (target == null) return DrawerSet.Empty;
+            bool script = target is MonoBehaviour || target is ScriptableObject;
+            if (!script && !(target is TextMesh && property.propertyPath == "m_Text")) return DrawerSet.Empty;
             var table = Table;
             int referenceId = property.propertyType == SerializedPropertyType.ObjectReference ? property.objectReferenceInstanceIDValue : 0;
             var key = (target.GetInstanceID(), s_ArrayIndex.Replace(property.propertyPath, ".Array.data[]"), referenceId);
             if (s_Sets.TryGetValue(key, out var set)) return set;
 
             set = new DrawerSet();
-            var field = property.UnboundDeclaringField;
+            var field = script ? property.UnboundDeclaringField : null;
             var drawnType = DrawnType(property, field);
-            var pipelines = PipelinesFor(target);
-            if (field != null)
+            var (pipelines, pipelineOwner) = PipelinesFor(target);
+            IEnumerable<PropertyAttribute> attributes = script
+                ? field?.GetCustomAttributes<PropertyAttribute>(true).OrderBy(a => a.order) // stable in `order`, as the Editor sorts them
+                : new PropertyAttribute[] { new MultilineAttribute() };
+            if (attributes != null)
             {
-                // Stable in `order`, as the Editor sorts them.
-                foreach (var attribute in field.GetCustomAttributes<PropertyAttribute>(true).OrderBy(a => a.order))
+                foreach (var attribute in attributes)
                 {
                     if (attribute is TooltipAttribute || attribute is ContextMenuItemAttribute) continue;
                     bool collection = drawnType != null && IsArrayOrList(drawnType);
                     bool element = property.propertyPath.EndsWith("]", StringComparison.Ordinal);
                     if (!attribute.applyToCollection ? collection : !collection && element) continue;
-                    AddDrawnType(set, property, attribute.GetType(), drawnType, field, attribute, pipelines, table);
+                    AddDrawnType(set, property, attribute.GetType(), drawnType, field, attribute, pipelines, pipelineOwner, table);
                 }
             }
-            if (drawnType != null) AddDrawnType(set, property, drawnType, drawnType, field, null, pipelines, table);
+            if (drawnType != null) AddDrawnType(set, property, drawnType, drawnType, field, null, pipelines, pipelineOwner, table);
             s_Sets[key] = set.PropertyDrawers == null && set.Decorators == null ? DrawerSet.Empty : set;
             return s_Sets[key];
         }
 
         static void AddDrawnType(DrawerSet set, SerializedProperty property, Type drawnType, Type propertyType, FieldInfo field,
-            PropertyAttribute attribute, Type[] pipelines, Dictionary<Type, DrawerEntry[]> table)
+            PropertyAttribute attribute, Type[] pipelines, Type pipelineOwner, Dictionary<Type, DrawerEntry[]> table)
         {
-            var drawerType = DrawerForType(drawnType, pipelines, property.propertyType == SerializedPropertyType.ManagedReference, table);
+            var drawerType = DrawerForType(drawnType, pipelines, pipelineOwner, property.propertyType == SerializedPropertyType.ManagedReference, table);
             if (drawerType == null) return;
             if (typeof(PropertyDrawer).IsAssignableFrom(drawerType))
             {
@@ -171,7 +176,7 @@ namespace UnityEditor
 
         /// <summary>The type a property draws: its field's type, an element's element type, a
         /// managed reference's instance type.</summary>
-        static Type DrawnType(SerializedProperty property, FieldInfo field)
+        internal static Type DrawnType(SerializedProperty property, FieldInfo field)
         {
             if (field == null) return null;
             var type = field.FieldType;
@@ -181,12 +186,24 @@ namespace UnityEditor
             return type;
         }
 
-        static Type[] PipelinesFor(UnityEngine.Object target)
+        // The render pipelines a target's drawers are chosen for: the target type's own
+        // [SupportedOnRenderPipeline] (the type keys the lookup cache), else the active pipeline.
+        static (Type[] pipelines, Type owner) PipelinesFor(UnityEngine.Object target)
         {
-            var own = target.GetType().GetCustomAttribute<SupportedOnRenderPipelineAttribute>()?.renderPipelineTypes;
-            if (own != null) return own;
+            var own = target?.GetType().GetCustomAttribute<SupportedOnRenderPipelineAttribute>()?.renderPipelineTypes;
+            if (own != null) return (own, target.GetType());
             var current = GraphicsSettings.currentRenderPipelineAssetType;
-            return GraphicsSettings.isScriptableRenderPipelineEnabled && current != null ? new[] { current } : null;
+            return (GraphicsSettings.isScriptableRenderPipelineEnabled && current != null ? new[] { current } : null, null);
+        }
+
+        /// <summary>The drawer class IMGUI uses for a drawn type (its attribute's type, or the field's
+        /// type): the same lookup, without the engine's own drawers, whose attributes IMGUI draws
+        /// itself.</summary>
+        internal static Type ImguiDrawerType(Type drawnType, UnityEngine.Object target)
+        {
+            var (pipelines, owner) = PipelinesFor(target);
+            var type = DrawerForType(drawnType, pipelines, owner, false, Table);
+            return type != null && type.Assembly != typeof(UnityEngine.Object).Assembly ? type : null;
         }
 
         internal static bool IsArrayOrList(Type type) =>
@@ -197,10 +214,10 @@ namespace UnityEditor
         // The drawer class of a type: the type's own, else (useForChildren drawers only) a base
         // type's, nearest first, with the interfaces the type adds at each level, the least derived
         // first and by name; a generic type also by its definition.
-        static Type DrawerForType(Type propertyType, Type[] pipelines, bool managedReference, Dictionary<Type, DrawerEntry[]> table)
+        static Type DrawerForType(Type propertyType, Type[] pipelines, Type pipelineOwner, bool managedReference, Dictionary<Type, DrawerEntry[]> table)
         {
             var current = GraphicsSettings.currentRenderPipelineAssetType;
-            var key = (propertyType, current, managedReference);
+            var key = (propertyType, current, pipelineOwner, managedReference);
             if (s_DrawerForType.TryGetValue(key, out var cached)) return cached;
             Type[] interfaces = null;
             bool[] tried = null;

@@ -564,12 +564,8 @@ namespace UnityEditor.UIElements
         // property gets its default field and that is reported.
         static void ReportUnsupportedDrawer(SerializedProperty property)
         {
-            var field = property.UnboundDeclaringField;
-            if (field == null || (property.isArray && property.propertyType != SerializedPropertyType.String)) return;
-            var type = field.FieldType;
-            if (field != property.UnboundField && DrawerDispatch.IsArrayOrList(type))
-                type = type.IsArray ? type.GetElementType() : type.GetGenericArguments()[0];
-            if (typeof(UnityEngine.Events.UnityEventBase).IsAssignableFrom(type))
+            if (DrawerDispatch.DrawnType(property, property.UnboundDeclaringField) is Type type
+                && typeof(UnityEngine.Events.UnityEventBase).IsAssignableFrom(type))
                 Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PropertyField (drawer of UnityEvent)");
         }
 

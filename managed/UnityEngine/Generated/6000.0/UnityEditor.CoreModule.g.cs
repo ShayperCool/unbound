@@ -11783,7 +11783,6 @@ namespace UnityEditor
     }
     unsafe partial class HeaderDrawer
     {
-        public const string headerLabelClassName = "unity-header-drawer__label";
         [global::Unbound.Stub] public override void OnGUI(global::UnityEngine.Rect position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HeaderDrawer.OnGUI"); }
         [global::Unbound.Stub] public override float GetHeight() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HeaderDrawer.GetHeight"); return default; }
     }
@@ -23286,10 +23285,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static void RenderSortingLayerFields(global::UnityEditor.SerializedProperty sortingOrder, global::UnityEditor.SerializedProperty sortingLayer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SortingLayerEditorUtility.RenderSortingLayerFields"); }
         [global::Unbound.Stub] public static void RenderSortingLayerFields(global::UnityEngine.Rect r, global::UnityEditor.SerializedProperty sortingOrder, global::UnityEditor.SerializedProperty sortingLayer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SortingLayerEditorUtility.RenderSortingLayerFields"); }
         [global::Unbound.Stub] public SortingLayerEditorUtility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SortingLayerEditorUtility.ctor"); }
-    }
-    unsafe partial class SpaceDrawer
-    {
-        public const string spaceDrawerClassName = "unity-space-drawer";
     }
     [global::Unbound.Stub]
     internal unsafe partial class SpeedTree8ShaderGUI : global::UnityEditor.ShaderGUI

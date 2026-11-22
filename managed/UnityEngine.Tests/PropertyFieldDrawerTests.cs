@@ -201,6 +201,46 @@ namespace UnityEngine.Tests
             }
         }
 
+        public class SizeSample : ScriptableObject
+        {
+            [Range(0f, 1f)] public List<float> xs = new List<float> { 0.5f };
+            public List<ThrowingDrawn> shapes = new List<ThrowingDrawn> { new ThrowingDrawn() };
+            public GenericDrawn sized = new GenericDrawn();
+        }
+
+        [Fact]
+        public void AnArraysSizeHasNoDrawersAndIMGUIFindsTheSameDrawers()
+        {
+            // The size of an array has no field, so neither its attribute's drawer nor its element
+            // type's drawer applies to it; IMGUI finds a property's drawer as PropertyField does,
+            // here through a generic type definition.
+            using var table = new DrawerTable((typeof(ThrowingDrawn), typeof(ReferencingDrawer)), (typeof(Wrapped<>), typeof(TallDrawer)));
+            var target = ScriptableObject.CreateInstance<SizeSample>();
+            var generic = ScriptableObject.CreateInstance<WrappedSample>();
+            using var so = new SerializedObject(target);
+            using var genericSo = new SerializedObject(generic);
+            try
+            {
+                Assert.Same(DrawerSet.Empty, DrawerDispatch.For(so.FindProperty("xs.Array.size")));
+                Assert.Same(DrawerSet.Empty, DrawerDispatch.For(so.FindProperty("shapes.Array.size")));
+                Assert.IsType<RangeDrawer>(DrawerDispatch.For(so.FindProperty("xs.Array.data[0]")).DrawerAt(0));
+                Assert.IsType<TallDrawer>(DrawerDispatch.For(genericSo.FindProperty("wrapped")).DrawerAt(0));
+                Assert.Equal(77f, EditorGUI.GetPropertyHeight(genericSo.FindProperty("wrapped")));
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(generic);
+            }
+        }
+
+        [System.Serializable] public class Wrapped<T> { public T value; }
+
+        public class WrappedSample : ScriptableObject
+        {
+            public Wrapped<int> wrapped = new Wrapped<int>();
+        }
+
         public class ImguiSample : ScriptableObject
         {
             public ThrowingDrawn imguiOnly = new ThrowingDrawn();
@@ -252,6 +292,11 @@ namespace UnityEngine.Tests
     {
         public Texture2D icon;
         public override VisualElement CreatePropertyGUI(SerializedProperty property) => new Label("referencing");
+    }
+
+    public class TallDrawer : PropertyDrawer
+    {
+        public override float GetPropertyHeight(SerializedProperty property, GUIContent label) => 77f;
     }
 
     public class ImguiOnlyDrawer : PropertyDrawer
