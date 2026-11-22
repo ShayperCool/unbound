@@ -31,6 +31,7 @@ namespace UnityEngine.Tests
             var error = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Hidden/InternalErrorShader\" { SubShader { Pass { } } }");
             var plain = new Material(UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/MissingMaterialPlain\" { SubShader { Pass { } } }"));
             var go = new GameObject("Missing", typeof(MeshFilter), typeof(MeshRenderer));
+            Material.ForgetError();
             try
             {
                 Assert.NotNull(Material.Error);
@@ -52,12 +53,25 @@ namespace UnityEngine.Tests
                 renderer.sharedMaterials = new Material[] { null };
                 Assert.Single(Draws(renderer));
                 Assert.Null(renderer.sharedMaterial);
+                // Drawing such a slot again allocates nothing (it is drawn every frame), nor does
+                // the sorting layer's value each draw asks for.
+                var draws2 = new List<FrameBuilder.DrawItem>(4);
+                var context = new FrameBuilder.CameraContext { Forward = Vector3.forward };
+                renderer.CollectDraws(context, draws2);
+                draws2.Clear();
+                long before = System.GC.GetAllocatedBytesForCurrentThread();
+                renderer.CollectDraws(context, draws2);
+                int value = SortingLayer.GetLayerValueFromID(renderer.sortingLayerID);
+                Assert.Equal(0, System.GC.GetAllocatedBytesForCurrentThread() - before);
+                Assert.Equal(0, value);
+                Assert.Single(draws2);
             }
             finally
             {
                 Object.DestroyImmediate(go);
                 Object.DestroyImmediate(plain);
                 Object.DestroyImmediate(error);
+                Material.ForgetError();
             }
         }
     }

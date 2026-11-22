@@ -1777,8 +1777,14 @@ namespace UnityEngine
 
         public static int GetLayerValueFromID(int id)
         {
-            int defaultIndex = s_Layers.FindIndex(l => l.Id == 0);
-            int index = s_Layers.FindIndex(l => l.Id == id);
+            // Asked for every draw: no delegates.
+            int defaultIndex = -1, index = -1;
+            for (int i = 0; i < s_Layers.Count; i++)
+            {
+                int layer = s_Layers[i].Id;
+                if (layer == 0 && defaultIndex < 0) defaultIndex = i;
+                if (layer == id && index < 0) index = i;
+            }
             return index < 0 ? 0 : index - defaultIndex;
         }
 

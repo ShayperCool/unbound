@@ -12,20 +12,30 @@ namespace UnityEngine
     public partial class Material : Object
     {
         static Material s_Error;
+        static bool s_ErrorSought;
 
         /// <summary>The material a renderer draws a slot without a material with: Unity's error
-        /// shader (magenta, opaque); null while that shader is not available.</summary>
+        /// shader (magenta, opaque). Null where that shader does not exist (a run without the
+        /// renderer's shaders); it is looked for once, as every draw of such a slot asks.</summary>
         internal static Material Error
         {
             get
             {
-                if (s_Error == null)
+                if (s_Error == null && !s_ErrorSought)
                 {
+                    s_ErrorSought = true;
                     var shader = Shader.Find("Hidden/InternalErrorShader");
                     if (shader != null) s_Error = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
                 }
                 return s_Error;
             }
+        }
+
+        /// <summary>Looks for the error shader again (tests that make one).</summary>
+        internal static void ForgetError()
+        {
+            s_Error = null;
+            s_ErrorSought = false;
         }
 
         internal sealed class TextureSlot
