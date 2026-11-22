@@ -247,10 +247,45 @@ namespace UnityEngine.Tests
             finally { Done(ps.gameObject, box); }
         }
 
+        /// <summary>The size factor is the volume of the sphere of the particle's collision radius
+        /// (size .2 at radius scale .5: radius .05), not of its size (force/rules/size_radius,
+        /// size_3d).</summary>
+        [Fact]
+        public void TheSizeFactorIsTheSphereOfTheCollisionRadius()
+        {
+            var (ps, box) = TowardsBox(body: true, kinematic: false, colliderForce: 5f);
+            try
+            {
+                var c = ps.collision; c.multiplyColliderForceByParticleSize = true; c.radiusScale = .5f;
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(5f * 4f * Mathf.PI / 3f * .05f * .05f * .05f, box.GetComponent<Rigidbody>().GetAccumulatedForce().x, 6);
+            }
+            finally { Done(ps.gameObject, box); }
+        }
+
+        /// <summary>With enableDynamicColliders off a collider of any Rigidbody, Kinematic too, is
+        /// passed; a static one is still met (collide/rules/3d/nodyn_*).</summary>
+        [Theory]
+        [InlineData(false, false, true)]
+        [InlineData(true, false, false)]
+        [InlineData(true, true, false)]
+        public void WithoutDynamicCollidersOnlyStaticCollidersAreMet(bool body, bool kinematic, bool met)
+        {
+            var (ps, box) = TowardsBox(body, kinematic, 0f);
+            try
+            {
+                var c = ps.collision; c.enableDynamicColliders = false;
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(met, Assert.Single(Live(ps)).velocity.x < 0f);
+            }
+            finally { Done(ps.gameObject, box); }
+        }
+
         [Theory]
         [InlineData(false, false, 5f)]
         [InlineData(true, true, 5f)]
         [InlineData(true, false, 0f)]
+        [InlineData(true, false, -5f)]
         public void NoBodyMovesWithoutOneTheForcePushes(bool body, bool kinematic, float colliderForce)
         {
             var (ps, box) = TowardsBox(body, kinematic, colliderForce);

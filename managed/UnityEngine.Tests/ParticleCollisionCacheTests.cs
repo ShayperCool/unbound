@@ -139,15 +139,31 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        [InlineData(ParticleSystemCollisionQuality.High, true)]
-        [InlineData(ParticleSystemCollisionQuality.Medium, false)]
-        public void Only2DHighQualityMeetsADynamicBody(ParticleSystemCollisionQuality quality, bool bounces)
+        [InlineData(ParticleSystemCollisionQuality.High, true, false, true)]
+        [InlineData(ParticleSystemCollisionQuality.Medium, true, false, false)]
+        [InlineData(ParticleSystemCollisionQuality.Medium, true, true, true)]
+        [InlineData(ParticleSystemCollisionQuality.High, false, false, true)]
+        [InlineData(ParticleSystemCollisionQuality.Medium, false, false, false)]
+        [InlineData(ParticleSystemCollisionQuality.Medium, false, true, false)]
+        public void OnlyHighQualityMeetsABody(ParticleSystemCollisionQuality quality, bool twoD, bool kinematic, bool bounces)
         {
-            // Medium and Low are the "Static Colliders" qualities (6000.0 Manual; particlerender
-            // collide/world2d/force_speed_medium passes a Dynamic body).
-            var ps = Dropping(quality, twoD: true);
-            var body = (m_Objects[0] as GameObject).AddComponent<Rigidbody2D>();
-            body.gravityScale = 0f;
+            // Medium and Low are the "Static Colliders" qualities (6000.0 Manual): they pass a 2D
+            // Dynamic body and a 3D collider of any Rigidbody (particlerender collide/rules/*,
+            // collide/world2d/force_speed_medium).
+            var ps = Dropping(quality, twoD: twoD);
+            var box = m_Objects[0] as GameObject;
+            if (twoD)
+            {
+                var body = box.AddComponent<Rigidbody2D>();
+                body.gravityScale = 0f;
+                if (kinematic) body.bodyType = RigidbodyType2D.Kinematic;
+            }
+            else
+            {
+                var body = box.AddComponent<Rigidbody>();
+                body.useGravity = false;
+                body.isKinematic = kinematic;
+            }
             ps.Play();
             for (int frame = 0; frame < 6; frame++) Frame();
             Assert.Equal(bounces, Only(ps).velocity.y > 0f);
@@ -256,11 +272,12 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ACachedContactWithAColliderUnderARigidbodyReportsToTheRigidbodysObject()
+        public void ACachedQueryPassesAColliderUnderAKinematicRigidbody()
         {
             const ParticleSystemCollisionQuality quality = ParticleSystemCollisionQuality.Medium;
-            // tests/projects/particlecollision collide/Parent, through the voxel cache: one query a
-            // frame, so the other particles' contacts come from cached planes.
+            // tests/projects/particlecollision collide/Parent through the voxel cache: Medium is a
+            // "Static Colliders" quality, so a collider under a Rigidbody, Kinematic too, is never
+            // met and no event goes to either object (particlerender collide/rules/3d/medium_kinematic).
             QualitySettings.particleRaycastBudget = 1;
             var ps = Dropping(quality, count: 8);
             var box = Object.FindObjectsByType<BoxCollider>(FindObjectsSortMode.None).First(b => b.name == "box");
@@ -279,7 +296,7 @@ namespace UnityEngine.Tests
                 toBody += ps.GetCollisionEvents(body, events);
                 toBox += ps.GetCollisionEvents(box.gameObject, events);
             }
-            Assert.True(toBody > 1, $"{toBody} events reported to the Rigidbody's object");
+            Assert.Equal(0, toBody);
             Assert.Equal(0, toBox);
         }
     }
