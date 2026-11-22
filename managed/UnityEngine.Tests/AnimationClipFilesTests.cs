@@ -107,6 +107,29 @@ namespace UnityEngine.Tests
                 clip.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 1f));
                 AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Light), "m_Intensity"), AnimationCurve.Linear(0f, 0f, 1f, 1f));
                 Assert.Contains("SetEditorCurve", AnimationClipFiles.Unwritable(clip));
+
+                // A RectTransform's scale, a discrete curve other than the measured one in a built
+                // clip, a built legacy clip.
+                var rect = new AnimationClip();
+                var discrete = new AnimationClip();
+                var legacy = new AnimationClip { legacy = true };
+                try
+                {
+                    rect.SetCurve("UI", typeof(RectTransform), "localScale.x", AnimationCurve.Linear(0f, 1f, 1f, 2f));
+                    Assert.Contains("RectTransform", AnimationClipFiles.Unwritable(rect));
+                    AnimationUtility.SetEditorCurve(discrete, EditorCurveBinding.DiscreteCurve("", typeof(SpriteRenderer), "m_SortingLayerID"), AnimationCurve.Constant(0f, 1f, 1f));
+                    Assert.Contains("discrete", AnimationClipFiles.Unwritable(discrete));
+                    legacy.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                    Assert.Null(AnimationClipFiles.Unwritable(legacy));
+                    AnimationUtility.SetAnimationEvents(legacy, new[] { new AnimationEvent { time = 0.5f, functionName = "OnHit" } });
+                    Assert.Contains("legacy", AnimationClipFiles.Unwritable(legacy));
+                }
+                finally
+                {
+                    Object.DestroyImmediate(rect);
+                    Object.DestroyImmediate(discrete);
+                    Object.DestroyImmediate(legacy);
+                }
             }
             finally { Object.DestroyImmediate(clip); }
         }

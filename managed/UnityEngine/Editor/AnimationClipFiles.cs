@@ -94,13 +94,17 @@ namespace Unbound.Runtime
             {
                 if (c.Curve == null) return "it holds a player clip's compiled curves";
                 var type = c.Binding.ResolveType();
-                if (type == null) return $"its curve {c.Binding} names a class Unbound cannot resolve";
+                if (Unnamed(type) is string unnamed) return $"its curve {c.Binding} {unnamed}";
                 if (type == typeof(Animator)) return "it holds Animator curves (humanoid, motion or parameter curves), whose form in a clip file is not measured";
                 if (type == typeof(Transform) && !IsVectorComponent(c, out _, out _)) return $"its Transform curve {c.Binding.Attribute} is not one of a vector property's components";
+                // A RectTransform's position, rotation and scale curves: their form is not measured.
+                if (type != typeof(Transform) && typeof(Transform).IsAssignableFrom(type) && VectorHead(c.Binding.Attribute))
+                    return $"its curve {c.Binding} is a {type.Name}'s Transform vector curve, whose form in a clip file is not measured";
             }
             if (clip.m_HumanAvatar != null || clip.m_HumanTransformPaths != null) return "it is a humanoid clip";
             foreach (var o in clip.m_ObjectCurves)
-                if (o.Binding.ResolveType() == null) return $"its object reference curve {o.Binding} names a class Unbound cannot resolve";
+                if (Unnamed(o.Binding.ResolveType()) is string unnamed) return $"its object reference curve {o.Binding} {unnamed}";
+            if (clip.m_BindingsBuilt && clip.m_Legacy) return "it is a legacy clip an AnimationUtility edit has built, whose file is not measured";
             // Transform vectors set by SetCurve beside editor curves: how they are listed is not
             // measured.
             if (clip.m_EditorCurvesSynced)
@@ -111,7 +115,13 @@ namespace Unbound.Runtime
             foreach (var c in clip.m_Curves)
             {
                 if (IsVectorComponent(c, out _, out _)) continue;
-                if (c.Flags == 1) continue;
+                // A discrete curve has no binding in the measured case (a sprite renderer's sorting
+                // order); others' are not measured.
+                if (c.Flags == 1)
+                {
+                    if (c.Binding.ResolveType() == typeof(SpriteRenderer) && c.Binding.Attribute == "m_SortingOrder") continue;
+                    return $"its discrete curve {c.Binding} has a binding whose form in a clip file is not measured";
+                }
                 if (CustomType(c.Binding.ResolveType(), c.Binding.Attribute) == null)
                     return $"its curve {c.Binding} has a binding whose form in a clip file is not measured";
             }
@@ -119,6 +129,26 @@ namespace Unbound.Runtime
                 if (ObjectBinding(o.Binding.ResolveType(), o.Binding.Attribute) == null)
                     return $"its object reference curve {o.Binding} has a binding whose form in a clip file is not measured";
             return null;
+        }
+
+        /// <summary>Why a curve's class cannot be named in a clip file (null when it can): unresolved,
+        /// without a class id, or a script without its MonoScript.</summary>
+        static string Unnamed(Type type)
+        {
+            if (type == null) return "names a class Unbound cannot resolve";
+            if (typeof(MonoBehaviour).IsAssignableFrom(type))
+                return MonoScript.FromType(type) is MonoScript script && !string.IsNullOrEmpty(script.m_Guid) ? null : "names a script without its script asset";
+            return ClassIdOf(type) < 0 ? "names a class without a class id" : null;
+        }
+
+        static bool VectorHead(string attribute)
+        {
+            int dot = (attribute ?? "").LastIndexOf('.');
+            if (dot < 0) return false;
+            var head = attribute.Substring(0, dot);
+            foreach (var k in VectorKinds)
+                if (k.Head == head) return true;
+            return false;
         }
 
         /// <summary>A float curve's custom binding type in a binding table, by its class and
@@ -152,12 +182,14 @@ namespace Unbound.Runtime
             return null;
         }
 
-        /// <summary>A curve is constant when every key has the same value (a vector's every
-        /// component): such curves come last in a binding table.</summary>
+        /// <summary>A curve is constant when every key has the same value and flat tangents (a
+        /// vector's every component): such curves come last in a binding table (measured with
+        /// AnimationCurve.Constant's keys; a curve of equal values with sloped tangents is
+        /// unmeasured and counts as changing).</summary>
         static bool Constant(Keyframe[] keys)
         {
-            for (int i = 1; i < keys.Length; i++)
-                if (keys[i].value != keys[0].value) return false;
+            for (int i = 0; i < keys.Length; i++)
+                if (keys[i].value != keys[0].value || keys[i].inTangent != 0f || keys[i].outTangent != 0f) return false;
             return true;
         }
 

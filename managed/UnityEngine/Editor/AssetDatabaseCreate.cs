@@ -17,9 +17,10 @@ namespace UnityEditor
     /// times 100000: 11400000 for a script object, 2100000 for a material); AddObjectToAsset adds
     /// an object under a random 64-bit file id, written into the file by the next SaveAssets, the
     /// documents in ascending file id order. Unbound writes script objects (ScriptableObject,
-    /// MonoBehaviour), materials and physics materials this way (tests/projects/scenesave
-    /// create-assets); other objects (meshes, animation clips, textures, ...) are refused with an
-    /// error.
+    /// MonoBehaviour), materials, physics materials, readable meshes and textures and animation
+    /// clips made by script this way (tests/projects/scenesave create-assets, engine-assets,
+    /// clip-assets); other objects, and those of these it cannot write yet
+    /// (<see cref="Unbound.Runtime.UnityYamlWriter.WritesNew"/>), are refused with an error.
     /// </summary>
     public sealed partial class AssetDatabase
     {
