@@ -71,7 +71,7 @@ def settings(args):
     return {'target': args.target or '', 'hasTargetNear': args.target_near is not None,
             'targetNear': dict(zip('xyz', args.target_near or (0, 0, 0))), 'views': views,
             'fieldOfView': args.fov, 'width': width, 'height': height, 'deltaTime': args.step, 'frames': frames,
-            'seed': args.seed, 'selfTestThrowAtFrame': getattr(args, 'throw_at', 0)}
+            'seed': args.seed, 'keep': getattr(args, 'keep', '') or '', 'soleCameras': bool(getattr(args, 'sole_cameras', False)), 'selfTestThrowAtFrame': getattr(args, 'throw_at', 0)}
 
 
 def prepare(args, fixtures=None):
@@ -232,6 +232,9 @@ def main():
         run.add_argument('--step', type=float, default=1/30)
         run.add_argument('--frames', default='30')
         run.add_argument('--seed', type=int, default=-1)
+        run.add_argument('--sole-cameras', action='store_true', help='every other camera of the scene turned off')
+        run.add_argument('--keep', choices=('effects', 'others'),
+                         help="only that kind of renderer under --target's parent is drawn")
         run.add_argument('--timeout', type=int, default=1800)
     pair = modes.add_parser('compare')
     pair.add_argument('a')

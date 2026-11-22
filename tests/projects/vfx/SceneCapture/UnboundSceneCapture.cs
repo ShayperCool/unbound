@@ -37,6 +37,11 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         public float deltaTime = 1f / 30f;
         /// <summary>Negative: the effects keep their own seeds.</summary>
         public int seed = -1;
+        /// <summary>Empty: every renderer; `effects` or `others`: only those under the target's
+        /// parent (<see cref="Keep"/>).</summary>
+        public string keep = "";
+        /// <summary>Every other camera of the scene turned off: only the capture's render.</summary>
+        public bool soleCameras;
         /// <summary>For scene_capture.py's self-test only: the frame whose shot fails (0: none).</summary>
         public int selfTestThrowAtFrame;
         public int[] frames = { 30 };
@@ -54,7 +59,7 @@ public sealed class UnboundSceneCapture : MonoBehaviour
     string m_Dir;
     Settings m_Settings;
     Camera[] m_Cameras;
-    Vector3 m_Target;
+    Transform m_Target;
     RenderTexture[] m_Targets;
     Texture2D m_Shot;
     int m_Frame;
@@ -124,7 +129,8 @@ public sealed class UnboundSceneCapture : MonoBehaviour
             copy.transform.SetPositionAndRotation(view.position, Quaternion.Euler(view.rotation));
         else
         {
-            var at = index == 0 ? (m_Target = Target()) : m_Target;
+            if (index == 0) m_Target = Target();
+            var at = m_Target.position;
             copy.transform.SetPositionAndRotation(at + view.position, Quaternion.LookRotation(-view.position));
         }
         if (m_Settings.fieldOfView > 0f) eye.fieldOfView = m_Settings.fieldOfView;
@@ -149,24 +155,66 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         m_Out.Append("{\"k\":\"seeded\",\"v\":").Append(seeded).Append("}\n");
     }
 
-    /// <summary>The place of the settings' target: of the active objects of its name (sorted by
-    /// place, x then y then z), the one nearest `targetNear`, else the first; every candidate is
-    /// recorded.</summary>
-    Vector3 Target()
+    /// <summary>The settings' target: of the active objects of its name (sorted by place, x then
+    /// y then z), the one nearest `targetNear`, else the first; every candidate is recorded.</summary>
+    Transform Target()
     {
-        var places = new System.Collections.Generic.List<Vector3>();
+        var found = new System.Collections.Generic.List<Transform>();
         foreach (var transform in FindObjectsByType<Transform>(FindObjectsSortMode.None))
-            if (transform.name == m_Settings.target) places.Add(transform.position);
-        places.Sort((a, b) => a.x != b.x ? a.x.CompareTo(b.x) : a.y != b.y ? a.y.CompareTo(b.y) : a.z.CompareTo(b.z));
-        if (places.Count == 0) throw new InvalidOperationException("UnboundSceneCapture: no active object named " + m_Settings.target);
+            if (transform.name == m_Settings.target) found.Add(transform);
+        found.Sort((p, q) =>
+        {
+            Vector3 a = p.position, b = q.position;
+            return a.x != b.x ? a.x.CompareTo(b.x) : a.y != b.y ? a.y.CompareTo(b.y) : a.z.CompareTo(b.z);
+        });
+        if (found.Count == 0) throw new InvalidOperationException("UnboundSceneCapture: no active object named " + m_Settings.target);
         int chosen = 0;
         if (m_Settings.hasTargetNear)
-            for (int i = 1; i < places.Count; i++)
-                if ((places[i] - m_Settings.targetNear).sqrMagnitude < (places[chosen] - m_Settings.targetNear).sqrMagnitude) chosen = i;
-        for (int i = 0; i < places.Count; i++)
-            m_Out.Append("{\"k\":\"target/").Append(i).Append("\",\"v\":\"").Append(Place(places[i])).Append(i == chosen ? " (chosen)" : "").Append("\"}\n");
-        return places[chosen];
+            for (int i = 1; i < found.Count; i++)
+                if ((found[i].position - m_Settings.targetNear).sqrMagnitude < (found[chosen].position - m_Settings.targetNear).sqrMagnitude) chosen = i;
+        for (int i = 0; i < found.Count; i++)
+            m_Out.Append("{\"k\":\"target/").Append(i).Append("\",\"v\":\"").Append(Place(found[i].position)).Append(i == chosen ? " (chosen)" : "").Append("\"}\n");
+        return found[chosen];
     }
+
+    /// <summary>With `keep` set, only the renderers of one kind under the target's parent are
+    /// drawn (`effects`: the effects' renderers; `others`: every other renderer), so that what
+    /// differs can be told apart; every other renderer is turned off. The counts are recorded.</summary>
+    void Keep()
+    {
+        if (string.IsNullOrEmpty(m_Settings.keep)) return;
+        if (m_Target == null) throw new InvalidOperationException("UnboundSceneCapture: keep needs a target");
+        bool effects = m_Settings.keep == "effects";
+        if (!effects && m_Settings.keep != "others") throw new InvalidOperationException("UnboundSceneCapture: keep is effects or others, not " + m_Settings.keep);
+        var scope = m_Target.parent != null ? m_Target.parent : m_Target;
+        int kept = 0, hidden = 0;
+        foreach (var renderer in FindObjectsByType<Renderer>(FindObjectsSortMode.InstanceID))
+        {
+            bool keep = renderer.transform.IsChildOf(scope) && (renderer is UnityEngine.VFX.VFXRenderer) == effects;
+            if (keep) kept++;
+            else
+            {
+                renderer.enabled = false;
+                hidden++;
+            }
+        }
+        m_Out.Append("{\"k\":\"keep\",\"v\":\"").Append(m_Settings.keep).Append(": ").Append(kept).Append(" drawn, ").Append(hidden).Append(" hidden\"}\n");
+    }
+
+    /// <summary>Turns off every camera but the capture's (recorded).</summary>
+    void SoleCameras()
+    {
+        int off = 0;
+        foreach (var camera in FindObjectsByType<Camera>(FindObjectsSortMode.InstanceID))
+            if (Array.IndexOf(m_Cameras, camera) < 0 && camera.enabled)
+            {
+                camera.enabled = false;
+                off++;
+            }
+        m_Out.Append("{\"k\":\"sole cameras\",\"v\":").Append(off).Append("}\n");
+    }
+
+    static string Vec(Vector4 v) => v.x.ToString("R") + "," + v.y.ToString("R") + "," + v.z.ToString("R") + "," + v.w.ToString("R");
 
     static string Place(Vector3 p) => p.x.ToString("R") + "," + p.y.ToString("R") + "," + p.z.ToString("R");
 
@@ -183,6 +231,10 @@ public sealed class UnboundSceneCapture : MonoBehaviour
     {
         if (m_Frame == m_Settings.selfTestThrowAtFrame) throw new InvalidOperationException("UnboundSceneCapture: the self-test's failure at frame " + m_Frame);
         if (Array.IndexOf(m_Settings.frames, m_Frame) < 0) return;
+        // The clocks the frame's shaders read (as the pipeline last set them).
+        string frame = m_Frame.ToString("000");
+        m_Out.Append("{\"k\":\"time/").Append(frame).Append("\",\"v\":\"").Append(Time.time.ToString("R")).Append(' ')
+            .Append(Vec(Shader.GetGlobalVector("_Time"))).Append(' ').Append(Vec(Shader.GetGlobalVector("_TimeParameters"))).Append("\"}\n");
         if (m_Shot == null) m_Shot = new Texture2D(m_Settings.width, m_Settings.height, TextureFormat.RGB24, false);
         var active = RenderTexture.active;
         try
@@ -211,6 +263,8 @@ public sealed class UnboundSceneCapture : MonoBehaviour
             m_Cameras = new Camera[m_Settings.views.Length];
             m_Targets = new RenderTexture[m_Settings.views.Length];
             for (int i = 0; i < m_Cameras.Length; i++) m_Cameras[i] = MakeCamera(m_Settings.views[i], i);
+            Keep();
+            if (m_Settings.soleCameras) SoleCameras();
         }
         catch (Exception e)
         {
