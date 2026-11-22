@@ -243,13 +243,13 @@ namespace UnityEngine.UIElements
             evt is MouseDownEvent || evt is MouseUpEvent || evt is MouseMoveEvent;
 
         [EventInterest(EventInterestOptionsInternal.TriggeredByOS)]
-        [EventInterest(new[] { typeof(NavigationMoveEvent), typeof(NavigationSubmitEvent), typeof(NavigationCancelEvent), typeof(BlurEvent), typeof(FocusEvent), typeof(DetachFromPanelEvent) })]
+        [EventInterest(new[] { typeof(NavigationMoveEvent), typeof(NavigationSubmitEvent), typeof(NavigationCancelEvent), typeof(BlurEvent), typeof(FocusEvent), typeof(DetachFromPanelEvent), typeof(AttachToPanelEvent) })]
         internal override void HandleEventBubbleUpDisabled(EventBase evt) => HandleEventBubbleUp(evt);
 
         // The element's own handling is left out: a click focuses the container only through a
         // control that takes the keyboard, and the container never shows as focused itself.
         [EventInterest(EventInterestOptionsInternal.TriggeredByOS)]
-        [EventInterest(new[] { typeof(NavigationMoveEvent), typeof(NavigationSubmitEvent), typeof(NavigationCancelEvent), typeof(BlurEvent), typeof(FocusEvent), typeof(DetachFromPanelEvent) })]
+        [EventInterest(new[] { typeof(NavigationMoveEvent), typeof(NavigationSubmitEvent), typeof(NavigationCancelEvent), typeof(BlurEvent), typeof(FocusEvent), typeof(DetachFromPanelEvent), typeof(AttachToPanelEvent) })]
         protected override void HandleEventBubbleUp(EventBase evt)
         {
             // Navigation stops here: IMGUI handles the key events itself.
@@ -269,11 +269,24 @@ namespace UnityEngine.UIElements
                 m_FocusChangeDirection = focus.direction;
                 m_IsFocusDelegated = focus.IsFocusDelegated;
             }
-            else if (evt is DetachFromPanelEvent && m_Scope != 0)
+            else if (evt is DetachFromPanelEvent)
             {
-                GUIUtility.ForgetIdList(m_Scope);
+                if (m_Scope != 0) GUIUtility.ForgetIdList(m_Scope);
                 m_Scope = 0;
             }
+            else if (evt is AttachToPanelEvent) SetFoldoutDepthClass();
+        }
+
+        // Inside foldouts the container has the class of its depth (tests/projects/imguicontainer
+        // foldout.*): none outside one, "max" past the foldouts' greatest styled depth.
+        void SetFoldoutDepthClass()
+        {
+            var names = ussFoldoutChildDepthClassNames;
+            for (int i = 0; i < names.Count; i++) RemoveFromClassList(names[i]);
+            int depth = 0;
+            for (var ancestor = parent; ancestor != null; ancestor = ancestor.parent)
+                if (ancestor is Foldout) depth++;
+            if (depth != 0) AddToClassList(names[Mathf.Min(depth, names.Count - 1)]);
         }
 
         // Its size from its IMGUI layout, where the panel leaves it free.

@@ -129,6 +129,32 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void InsideFoldoutsItHasTheClassOfItsDepth()
+        {
+            using var f = new Fixture();
+            var container = f.Add(() => { });
+            Assert.DoesNotContain(container.GetClasses(), c => c.Contains("--depth-"));
+            var outer = new Foldout();
+            var inner = new Foldout();
+            f.Panel.visualTree.Add(outer);
+            outer.Add(inner);
+            inner.Add(container);
+            Assert.Contains("unity-foldout__unity-imgui-container--depth-2", container.GetClasses());
+            VisualElement deepest = inner;
+            for (int i = 0; i < 4; i++)
+            {
+                var next = new Foldout();
+                deepest.Add(next);
+                deepest = next;
+            }
+            deepest.Add(container);
+            Assert.Contains("unity-foldout__unity-imgui-container--depth-max", container.GetClasses());
+            Assert.DoesNotContain("unity-foldout__unity-imgui-container--depth-2", container.GetClasses());
+            f.Panel.visualTree.Add(container);
+            Assert.DoesNotContain(container.GetClasses(), c => c.Contains("--depth-"));
+        }
+
+        [Fact]
         public void AFixedSizeNeedsNoMeasureAndNoHandlerMeasuresNothing()
         {
             using var f = new Fixture();

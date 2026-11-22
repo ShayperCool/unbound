@@ -99,6 +99,18 @@ namespace UnityEngine.UIElements
     {
         public static readonly string ussClassName = "unity-imgui-container";
 
+        internal static readonly string ussFoldoutChildDepthClassName = $"{Foldout.ussClassName}__{ussClassName}--depth-";
+        internal static readonly System.Collections.Generic.List<string> ussFoldoutChildDepthClassNames = FoldoutChildDepthClassNames();
+
+        // One class per depth up to the foldouts' greatest styled depth, then "max".
+        static System.Collections.Generic.List<string> FoldoutChildDepthClassNames()
+        {
+            var names = new System.Collections.Generic.List<string>(Foldout.ussFoldoutMaxDepth + 2);
+            for (int i = 0; i <= Foldout.ussFoldoutMaxDepth; i++) names.Add(ussFoldoutChildDepthClassName + i);
+            names.Add(ussFoldoutChildDepthClassName + "max");
+            return names;
+        }
+
         Action m_OnGUIHandler;
         ContextType m_ContextType;
 
