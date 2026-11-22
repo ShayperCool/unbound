@@ -675,9 +675,8 @@ namespace UnityEngine
         }
 
         /// <summary>A camera's culling (or a light's shadow casters) took it this frame: it becomes
-        /// visible at once, OnBecameVisible inside the culling (measured: tests/projects/messages).</summary>
-        /// <summary>Drawn this frame; returns whether it became visible now (OnBecameVisible was
-        /// sent, and its scripts ran).</summary>
+        /// visible at once, OnBecameVisible inside the culling (measured: tests/projects/messages).
+        /// Returns whether it became visible now (OnBecameVisible was sent, and its scripts ran).</summary>
         internal bool MarkRendered()
         {
             m_RenderedFrame = Time.frameCount;
