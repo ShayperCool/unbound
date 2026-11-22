@@ -140,6 +140,7 @@ namespace Unbound.Runtime
             ComputeShader globalKeys = null;
             var outputs = new List<VFXOutput>();
             var processors = index < data.Processors.Length ? data.Processors[index] : Array.Empty<UnityEngine.Object>();
+            int unsortedList = UnsortedGlobalList(Desc, processors);
             for (int i = 0; i < (Desc.tasks?.Length ?? 0); i++)
             {
                 var task = Desc.tasks[i];
@@ -148,6 +149,8 @@ namespace Unbound.Runtime
                 {
                     string sourceRefusal = index < data.OutputRefusals.Length && i < data.OutputRefusals[index].Length ? data.OutputRefusals[index][i] : null;
                     string refusal = VFXOutput.Refusal(Desc, task, processor, sourceRefusal);
+                    if (refusal == null && unsortedList >= 0 && VFXOutput.Parameter(task, "indirectDraw") != 0 && VFXOutput.Buffer(task, "indirectBuffer") == unsortedList)
+                        refusal = GlobalSortNotImported;
                     if (refusal == null) outputs.Add(new VFXOutput(this, task, (Material)processor));
                     else effect.WarnOutputNotDrawn(Desc.name, refusal);
                     continue;
@@ -532,6 +535,20 @@ namespace Unbound.Runtime
                 foreach (var sort in m_StepSorts) sort.Run(Effect);
             }
             FillEventArguments();
+        }
+
+        /// <summary>Why the outputs that share their system's sort are not drawn when the sort's
+        /// kernel was not imported (the Editor always has it, even one that does not compile).</summary>
+        internal const string GlobalSortNotImported = "its system's global sort has no kernel (not imported), so the list it draws is not sorted";
+
+        /// <summary>The system's list (`indirectBuffer0`) when the system has a global sort whose
+        /// keys kernel was not imported, else -1.</summary>
+        static int UnsortedGlobalList(in VFXEditorSystemDesc system, UnityEngine.Object[] processors)
+        {
+            for (int i = 0; i < (system.tasks?.Length ?? 0); i++)
+                if (system.tasks[i].type == VFXTaskType.GlobalSort && !(i < processors.Length && processors[i] is ComputeShader))
+                    return VFXSpawnerSystem.Value(system.buffers, GlobalListName);
+            return -1;
         }
 
         /// <summary>The system's global sort: each particle's key written from the system's

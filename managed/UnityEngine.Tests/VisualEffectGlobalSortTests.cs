@@ -19,7 +19,9 @@ namespace UnityEngine.Tests
         /// <summary>The counting effect's particles with a global sort (per camera or not) and
         /// one indirect output drawing list <paramref name="drawn"/>; the system's list is
         /// buffer 2, the sort's keys and scratch list buffers 3 and 4.</summary>
-        static (object Sort, object Keys) GlobalSortOf(bool perCamera, int drawn, bool keys = true)
+        static (object Sort, object Keys) GlobalSortOf(bool perCamera, int drawn, bool keys = true) => GlobalSortOf(perCamera, drawn, keys, true, out _);
+
+        static (object Sort, object Keys) GlobalSortOf(bool perCamera, int drawn, bool keys, bool kernel, out string[] warned)
         {
             var shader = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/VfxShared\" { SubShader { Pass { Tags { \"LightMode\"=\"UniversalForwardOnly\" } } } }");
             var asset = Counting(30f);
@@ -47,13 +49,14 @@ namespace UnityEngine.Tests
             asset.m_Data.Processors = new[]
             {
                 Array.Empty<Object>(),
-                new Object[] { ComputeShader.FromFile("Tests/VfxGlobalSortKeys.compute", "VfxGlobalSortKeys", "#pragma kernel CSMain\n"), new Material(shader) },
+                new Object[] { kernel ? ComputeShader.FromFile("Tests/VfxGlobalSortKeys.compute", "VfxGlobalSortKeys", "#pragma kernel CSMain\n") : null, new Material(shader) },
             };
+            using var warnings = new Warnings();
             var effect = Running(asset);
             try
             {
-                using var warnings = new Warnings();
                 Counts(effect, 1);
+                warned = warnings.Messages.ToArray();
                 var particles = effect.SystemAt(1);
                 return (s_GlobalSort.GetValue(particles), s_GlobalKeys.GetValue(particles));
             }
@@ -82,6 +85,20 @@ namespace UnityEngine.Tests
             Assert.Equal((null, null), GlobalSortOf(true, 5));
             // Without its keys the sort is not made (nor is its output: VFXOutput.Refusal).
             Assert.Equal((null, null), GlobalSortOf(true, 2, keys: false));
+        }
+
+        [Fact]
+        public void AGlobalSortWithoutItsKernelSaysSoAndItsOutputIsNotDrawn()
+        {
+            // The Editor always has the kernel (one that does not compile draws nothing,
+            // tests/projects/vfxoutputs `GlobalKeyed`); without it the list would be drawn
+            // unsorted, so the output that draws it is refused, loudly.
+            var (sort, keys) = GlobalSortOf(true, 2, true, false, out var warned);
+            Assert.Equal((null, null), (sort, keys));
+            Assert.Contains(warned, w => w.Contains(VFXParticleSystem.GlobalSortNotImported, StringComparison.Ordinal));
+            // An output of another list of that system is drawn, and says nothing.
+            GlobalSortOf(true, 5, true, false, out warned);
+            Assert.DoesNotContain(warned, w => w.Contains(VFXParticleSystem.GlobalSortNotImported, StringComparison.Ordinal));
         }
     }
 }
