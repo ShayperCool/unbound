@@ -1080,7 +1080,9 @@ precompute (`RealtimeGI.BakeInEditMode`, cached as a bake on open is), sending
 `lightingDataUpdated` once, and keeps the bake for the scene for the session (also when Play
 mode loads it again); it writes no lighting data asset (the Editor's binary format with its
 precomputed data is not made: said once, and `lightingDataAsset` stays null), and the baked
-lightmaps and baked probes of a scene with baked global illumination (Q677), the environment
+lightmaps and baked probes of a scene with baked global illumination (Q677; Unbound lays out
+where its lightmaps would go, `tests/projects/bakedatlas`, and writes the layout to
+`Library/Unbound/BakedGI`), the environment
 lighting from a sky and baked reflection probes are not made (each said once). Renderers a
 script added to the scene after it loaded are not baked (named). The records of the asset and
 the Editor's log are reported, not gated. (`unbound test` runs without a graphics device, where

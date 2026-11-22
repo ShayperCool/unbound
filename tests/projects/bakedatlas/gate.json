@@ -1,0 +1,6 @@
+{
+  "commands": [
+    "python3 tests/projects/bakedatlas/bake_atlas.py check"
+  ],
+  "summary": "bakedatlas: \\d+/\\d+ records match.*"
+}
