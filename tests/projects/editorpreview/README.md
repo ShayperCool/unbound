@@ -17,7 +17,7 @@ Records Unity 6000.0.71f1 object previews and object titles:
   index wraps), and `Cleanup` (it throws).
 - `draw.*`: `DrawPreview` in a key event of an IMGUI container: the calls a preview and an editor
   get for one target (the whole area) and for three (squares of a grid), with the style names, and
-  the error an editor logs when it reads `targets` there (`logs`).
+  the errors an editor logs when it reads `targets` or `serializedObject` there (`logs`).
 - `excluding*`: the height of what `Editor.DrawPropertiesExcluding` draws for several lists of
   names, and for null (an exception is logged, nothing is drawn).
 

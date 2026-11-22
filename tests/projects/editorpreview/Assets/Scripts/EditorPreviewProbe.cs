@@ -33,7 +33,9 @@ public class EditorPreviewTargetEditor : Editor
     public override void OnPreviewGUI(Rect r, GUIStyle background)
     {
         calls.Add($"gui:{Event.current.type}:{r.x},{r.y},{r.width},{r.height}:{(background == null ? "null" : background.name)}:{target.name}:{targets.Length}");
+        if (readSerializedObject) calls.Add("serialized:" + (serializedObject != null));
     }
+    public static bool readSerializedObject;
     public void Excluding(params string[] names) => DrawPropertiesExcluding(serializedObject, names);
 }
 #endif
@@ -240,6 +242,27 @@ public class EditorPreviewProbe : MonoBehaviour
         Put("draw.editors", string.Join(";", EditorPreviewTargetEditor.calls));
         Put("draw.error", drawError);
         Put("draw.after", $"many={many.Index}|three={three.target.name}");
+        // The serialized object read inside a preview of several targets.
+        EditorPreviewTargetEditor.calls.Clear();
+        EditorPreviewTargetEditor.readSerializedObject = true;
+        var again = new IMGUIContainer(() =>
+        {
+            if (Event.current.type == EventType.KeyDown) three.DrawPreview(area);
+        });
+        again.style.width = 400f;
+        again.style.height = 300f;
+        m_Root.Add(again);
+        yield return null;
+        yield return null;
+        using (var evt = KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.A }))
+        {
+            evt.target = again;
+            again.SendEvent(evt);
+        }
+        EditorPreviewTargetEditor.readSerializedObject = false;
+        Put("draw.serialized", string.Join(";", EditorPreviewTargetEditor.calls.Where(c => c.StartsWith("serialized"))));
+        again.RemoveFromHierarchy();
+        container.RemoveFromHierarchy();
         single.Cleanup();
         many.Cleanup();
         preview.Cleanup();
