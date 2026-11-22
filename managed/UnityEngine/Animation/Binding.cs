@@ -283,6 +283,7 @@ namespace Unbound.Runtime
 
         sealed class SampleMap
         {
+            internal AnimationBindings Bindings;
             internal int Epoch = -1;
             internal int Override;
             internal int Count;
@@ -319,8 +320,9 @@ namespace Unbound.Runtime
             if (bindings == null || graph == null || graph.Parameters.Length == 0) return;
             var map = s_Maps.GetValue(player, _ => new SampleMap());
             int version = player.Controller.OverrideVersion;
-            if (map.Epoch != bindings.ClipEpoch || map.Override != version || map.Parameters != graph.Parameters.Length)
+            if (!ReferenceEquals(map.Bindings, bindings) || map.Epoch != bindings.ClipEpoch || map.Override != version || map.Parameters != graph.Parameters.Length)
             {
+                map.Bindings = bindings;
                 map.Epoch = bindings.ClipEpoch;
                 map.Override = version;
                 map.Parameters = graph.Parameters.Length;

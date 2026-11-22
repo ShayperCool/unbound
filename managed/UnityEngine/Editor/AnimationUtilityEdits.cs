@@ -411,14 +411,28 @@ namespace UnityEditor
                 }
                 byte customType = 0;
                 uint propHash;
-                if (b.isPPtrCurve && b.type != null && typeof(Renderer).IsAssignableFrom(b.type) && TryParseMaterialSlot(b.propertyName, out int slotIndex))
+                var prop = b.propertyName ?? "";
+                if (b.isPPtrCurve)
                 {
-                    customType = k_MaterialSlotCustomType;
-                    propHash = (uint)slotIndex;
+                    if (b.type != null && typeof(Renderer).IsAssignableFrom(b.type) && TryParseMaterialSlot(prop, out int slotIndex))
+                    {
+                        customType = k_MaterialSlotCustomType;
+                        propHash = (uint)slotIndex;
+                    }
+                    else if (AnimationClipFiles.ObjectBinding(b.type, prop) is { } objBinding)
+                    {
+                        customType = (byte)objBinding.CustomType;
+                        propHash = objBinding.Attribute;
+                    }
+                    else
+                    {
+                        propHash = HashedBindings.Crc32(prop);
+                    }
                 }
                 else
                 {
-                    propHash = HashedBindings.Crc32(b.propertyName ?? "");
+                    customType = (byte)(AnimationClipFiles.CustomType(b.type, prop) ?? 0);
+                    propHash = b.type != null ? AnimationClipFiles.Attribute(b.type, prop) : HashedBindings.Crc32(prop);
                 }
                 var flags = Flags.kNone;
                 if (b.isPPtrCurve) flags |= Flags.kPPtr | Flags.kDiscrete;

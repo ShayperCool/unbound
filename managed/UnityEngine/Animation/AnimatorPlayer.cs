@@ -255,6 +255,10 @@ namespace Unbound.Runtime
             Bindings.Owner ??= m_Animator;
             m_PosedFloats = -1;
             m_PosedObjects = -1;
+            m_MotionMasks.Clear();
+            m_NullMotionMask = default;
+            Array.Clear(m_LayerChannels);
+            Array.Clear(m_LayerMasks);
             foreach (var layer in Layers)
             {
                 layer.Last = Array.Empty<float>();

@@ -960,8 +960,9 @@ namespace UnityEngine
         /// the update runs (see there for the unmeasured choices). The Manual's "Cull based on the
         /// default animation pose" and Animation.localBounds are not used: visibility is the
         /// renderers' own, as their last culling left it (unmeasured).</para>
-        /// <para>The obsolete BasedOnClipBounds and BasedOnUserBounds are reported once and animate
-        /// as AlwaysAnimate (as before this culling existed).</para>
+        /// <para>The obsolete BasedOnClipBounds and BasedOnUserBounds are coerced to
+        /// BasedOnRenderers on assignment and deserialization (<see cref="NormalizeCullingType"/>;
+        /// tests/projects/animrest <c>culling.*</c>).</para>
         /// </summary>
         bool Culled() => m_CullingType == AnimationCullingType.BasedOnRenderers && !Animator.AnyRendererVisible(m_GameObject);
 

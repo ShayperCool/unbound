@@ -860,13 +860,28 @@ namespace UnityEngine
                     float slope = b > a ? (values[k][b] - values[k][a]) / (keys[k][b].time - keys[k][a].time) : 0f;
                     rebuilt[i] = new Keyframe(keys[k][i].time, values[k][i], slope, slope);
                 }
-                m_Curves[group[k]] = new ClipCurve
+                var replacement = new ClipCurve
                 {
                     Binding = c.Binding,
                     Curve = new AnimationCurve(rebuilt) { preWrapMode = c.Curve.preWrapMode, postWrapMode = c.Curve.postWrapMode },
+                    Flags = c.Flags,
                     QuaternionStart = c.QuaternionStart,
                     EulerStart = c.EulerStart,
                 };
+                m_Curves[group[k]] = replacement;
+                if (m_EditorCurves != null)
+                {
+                    var type = c.Binding.ResolveType();
+                    for (int e = 0; e < m_EditorCurves.Count; e++)
+                    {
+                        var ec = m_EditorCurves[e];
+                        if (ec.Binding.Path == c.Binding.Path && ec.Binding.Attribute == c.Binding.Attribute && ec.Binding.Matches(type))
+                        {
+                            m_EditorCurves[e] = replacement;
+                            break;
+                        }
+                    }
+                }
             }
             changed = true;
             return null;

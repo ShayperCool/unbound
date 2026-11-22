@@ -264,6 +264,32 @@ namespace UnityEngine.Tests
             Assert.Throws<ArgumentNullException>(() => AnimationMode.GetCurveBindings(null));
         }
 
+        [Fact]
+        public void EnsureQuaternionContinuityUpdatesEditorCurvesSeenByGetEditorCurve()
+        {
+            var clip = Keep(new AnimationClip { name = "QuatEditor" });
+            float h = 30f * Mathf.Deg2Rad;
+            var q1 = new Quaternion(0f, 0f, MathF.Sin(h), MathF.Cos(h));
+            // Store key 1 in the opposite hemisphere via SetEditorCurve.
+            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalRotation.x"),
+                new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, -q1.x)));
+            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalRotation.y"),
+                new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, -q1.y)));
+            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalRotation.z"),
+                new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, -q1.z)));
+            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalRotation.w"),
+                new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, -q1.w)));
+
+            clip.EnsureQuaternionContinuity();
+
+            var zCurve = AnimationUtility.GetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalRotation.z"));
+            var wCurve = AnimationUtility.GetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalRotation.w"));
+            Assert.NotNull(zCurve);
+            Assert.NotNull(wCurve);
+            Near.Equal(q1.z, zCurve[1].value, 1e-5f);
+            Near.Equal(q1.w, wCurve[1].value, 1e-5f);
+        }
+
         // ------------------------------------------------------------------ 5. PropertyModification & AddPropertyModification
 
         [Fact]
@@ -400,9 +426,15 @@ namespace UnityEngine.Tests
                 EditorCurveBinding.PPtrCurve("Child", typeof(MeshRenderer), "m_Materials.Array.data[2]"),
                 EditorCurveBinding.FloatCurve("", typeof(Animator), "Speed"),
                 new EditorCurveBinding { path = "EmptyType", type = null, propertyName = "prop" },
+                EditorCurveBinding.PPtrCurve("Child", typeof(SpriteRenderer), "m_Sprite"),
+                EditorCurveBinding.FloatCurve("Child", typeof(MeshRenderer), "material._Color.r"),
+                EditorCurveBinding.FloatCurve("Body", typeof(SkinnedMeshRenderer), "blendShape.Smile"),
+                EditorCurveBinding.FloatCurve("UI", typeof(RectTransform), "m_AnchoredPosition.x"),
+                EditorCurveBinding.FloatCurve("", typeof(Camera), "field of view"),
+                EditorCurveBinding.FloatCurve("", typeof(Light), "m_Range"),
             };
             var generic = AnimationUtility.EditorCurveBindingsToGenericBindings(bindings);
-            Assert.Equal(5, generic.Length); // Transform skipped
+            Assert.Equal(11, generic.Length); // Transform skipped
 
             // GameObject m_IsActive
             Assert.Equal(1, generic[0].typeID);
@@ -431,6 +463,21 @@ namespace UnityEngine.Tests
             // Null type handled cleanly without throwing
             Assert.Equal(0, generic[4].typeID);
             Assert.Equal(0, generic[4].scriptInstanceID);
+
+            // Shared customType / attribute encodings (measured in scenesave clip-assets)
+            Assert.Equal(23, generic[5].customTypeID);
+            Assert.Equal(0u, generic[5].propertyNameHash);
+            Assert.True(generic[5].isObjectReference);
+
+            Assert.Equal(22, generic[6].customTypeID);
+            Assert.Equal(AnimationClipFiles.MaterialAttribute("_Color.r"), generic[6].propertyNameHash);
+
+            Assert.Equal(20, generic[7].customTypeID);
+            Assert.Equal(HashedBindings.Crc32("Smile"), generic[7].propertyNameHash);
+
+            Assert.Equal(28, generic[8].customTypeID);
+            Assert.Equal(37, generic[9].customTypeID);
+            Assert.Equal(25, generic[10].customTypeID);
         }
 
         // ------------------------------------------------------------------ 7. PlayableCurve after controller swap
@@ -486,6 +533,72 @@ namespace UnityEngine.Tests
             g.Evaluate(0.1f);
             Assert.True(playable.IsParameterControlledByCurve("CurveParam"));
             Near.Equal(1.5f, playable.GetFloat("CurveParam"), 1e-4f);
+        }
+
+        [Fact]
+        public void PlayableRebindRefreshesParameterMapAndMasksWhenControllerSwapShiftsChannelIndices()
+        {
+            // Playable controller: drives CurveParam from 0 -> 5 over 1s and TestBehaviour.amount -> 9.
+            var playableCtrl = Keep(new AnimatorController { name = "PlayableCtrl" });
+            playableCtrl.AddLayer("Base Layer");
+            playableCtrl.AddParameter("CurveParam", AnimatorControllerParameterType.Float);
+            var pClip = Keep(new AnimationClip { name = "PClip" });
+            pClip.SetCurve("", typeof(Animator), "CurveParam", AnimationCurve.Linear(0f, 0f, 1f, 5f));
+            pClip.SetCurve("", typeof(TestBehaviour), "amount", AnimationCurve.Constant(0f, 1f, 9f));
+            playableCtrl.AddMotion(pClip);
+
+            // Initial own controller (1 clip, 1 float channel: steps=42) -> ClipEpoch = 2 after playable binds.
+            var ctrlA = Keep(new AnimatorController { name = "CtrlA" });
+            ctrlA.AddLayer("Base Layer");
+            var clipA = Keep(new AnimationClip { name = "ClipA" });
+            clipA.SetCurve("", typeof(TestBehaviour), "steps", AnimationCurve.Constant(0f, 1f, 42f));
+            ctrlA.AddMotion(clipA);
+
+            // Swapped own controller (1 clip, 3 float channels: localPosition=77) -> same ClipEpoch = 2,
+            // but CurveParam's channel index shifts from 1 to 3!
+            var ctrlB = Keep(new AnimatorController { name = "CtrlB" });
+            ctrlB.AddLayer("Base Layer");
+            var clipB = Keep(new AnimationClip { name = "ClipB" });
+            clipB.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Constant(0f, 1f, 77f));
+            ctrlB.AddMotion(clipB);
+
+            // Second swap: same channel count as ctrlA (1 float channel: flag=1) in a different order.
+            var ctrlC = Keep(new AnimatorController { name = "CtrlC" });
+            ctrlC.AddLayer("Base Layer");
+            var clipC = Keep(new AnimationClip { name = "ClipC" });
+            clipC.SetCurve("", typeof(TestBehaviour), "flag", AnimationCurve.Constant(0f, 1f, 1f));
+            ctrlC.AddMotion(clipC);
+
+            var go = Keep(new GameObject("ShiftRig"));
+            var behaviour = go.AddComponent<TestBehaviour>();
+            var animator = go.AddComponent<Animator>();
+            animator.runtimeAnimatorController = ctrlA;
+
+            var g = Graph("ShiftGraph");
+            g.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            var playable = AnimatorControllerPlayable.Create(g, playableCtrl);
+            var output = AnimationPlayableOutput.Create(g, "Out", animator);
+            output.SetSourcePlayable(playable);
+
+            g.Play();
+            g.Evaluate(0.1f);
+            Near.Equal(0.5f, playable.GetFloat("CurveParam"), 1e-4f);
+            Near.Equal(9f, behaviour.amount, 1e-4f);
+
+            // Swap to ctrlB (same ClipEpoch, shifted channel index): must read CurveParam (1.0), not 77!
+            animator.runtimeAnimatorController = ctrlB;
+            g.Evaluate(0.1f);
+            Assert.True(playable.IsParameterControlledByCurve("CurveParam"));
+            Near.Equal(1.0f, playable.GetFloat("CurveParam"), 1e-4f);
+            Near.Equal(9f, behaviour.amount, 1e-4f);
+
+            // Swap to ctrlC (same channel count as ctrlA, different property order): masks/channels must refresh.
+            behaviour.amount = -1f;
+            animator.runtimeAnimatorController = ctrlC;
+            g.Evaluate(0.1f);
+            Assert.True(playable.IsParameterControlledByCurve("CurveParam"));
+            Near.Equal(1.5f, playable.GetFloat("CurveParam"), 1e-4f);
+            Near.Equal(9f, behaviour.amount, 1e-4f);
         }
     }
 }

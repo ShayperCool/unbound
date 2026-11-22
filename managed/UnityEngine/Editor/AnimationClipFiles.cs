@@ -266,14 +266,13 @@ namespace Unbound.Runtime
             return false;
         }
 
-        /// <summary>The class id a curve names its class by: a script's MonoBehaviour's, the
-        /// GameObject's 1.</summary>
-        internal static int ClassIdOf(Type type) =>
-            typeof(MonoBehaviour).IsAssignableFrom(type) ? EngineTypes.MonoBehaviourId
-            : type == typeof(GameObject) ? GameObjectClassId
-            : EngineTypes.EngineClassIdOf(type);
-
-        const int GameObjectClassId = 1;
+        /// <summary>The class id a curve names its class by (shared with <see cref="ClassIds.IdOf"/>,
+        /// returning -1 when unknown so <see cref="Unnamed"/> can reject it).</summary>
+        internal static int ClassIdOf(Type type)
+        {
+            int id = ClassIds.IdOf(type);
+            return id > 0 ? id : -1;
+        }
 
         /// <summary>A float curve's binding attribute: a blend shape's by its name's CRC32
         /// (tests/projects/scenesave clip-assets Editor.anim), a material property's by
