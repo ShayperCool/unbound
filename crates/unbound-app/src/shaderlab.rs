@@ -1780,13 +1780,23 @@ impl ShaderIndex {
         changed
     }
 
+    /// The number of shader names indexed (keys a shader is also known by not counted).
     pub fn len(&self) -> usize {
-        self.files.len()
+        self.files
+            .keys()
+            .filter(|n| generated_base(n).is_none())
+            .count()
     }
 
-    /// Every indexed shader's name, sorted.
+    /// Every indexed shader's name, sorted, without the keys shaders are also known by (each
+    /// shader once).
     pub fn names(&self) -> Vec<String> {
-        let mut names: Vec<String> = self.files.keys().cloned().collect();
+        let mut names: Vec<String> = self
+            .files
+            .keys()
+            .filter(|n| generated_base(n).is_none())
+            .cloned()
+            .collect();
         names.sort();
         names
     }
@@ -1839,7 +1849,8 @@ impl ShaderIndex {
             .get(base)
             .or_else(|| generated_base(base).and_then(|plain| self.files.get(plain)))
             .or_else(|| self.files.get(&format!("Legacy Shaders/{base}")))?;
-        let text = std::fs::read_to_string(path).ok()?;
+        // Read as the scan reads it: bytes that are not UTF-8 (in comments) do not hide it.
+        let text = String::from_utf8_lossy(&std::fs::read(path).ok()?).into_owned();
         let mut lab = ShaderLab::parse_file(&text, path)?;
         // Found by its content key: known by that name (what the renderer reports drawing).
         if lab.name != base && generated_base(base) == Some(lab.name.as_str()) {
@@ -1916,7 +1927,11 @@ fn scan_files(dir: &Path, files: &mut HashMap<String, PathBuf>, content_keys: bo
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
-    for entry in entries.flatten() {
+    // In name order: of files that declare one name, the first by path keeps the plain name
+    // (deterministic; which one Unity takes there is not measured).
+    let mut entries: Vec<_> = entries.flatten().collect();
+    entries.sort_by_key(|e| e.file_name());
+    for entry in entries {
         let path = entry.path();
         let Ok(kind) = entry.file_type() else {
             continue;
@@ -2094,7 +2109,14 @@ mod tests {
         let second = "Shader \"Unbound/Dup\" { SubShader { Pass { Name \"Second\" } } }";
         std::fs::write(a.join("Dup.shader"), first).unwrap();
         std::fs::write(b.join("Dup.shader"), second).unwrap();
+        // A file whose comment is not UTF-8 is found by its key and loads.
+        let latin = b"// caf\xe9\nShader \"Unbound/Latin\" { SubShader { Pass { Name \"L\" } } }";
+        std::fs::write(a.join("Latin.shader"), latin).unwrap();
         let mut index = ShaderIndex::scan(std::slice::from_ref(&root));
+        let latin_key = content_key("Unbound/Latin", latin);
+        assert_eq!(index.get(&latin_key).unwrap().passes[0].name, "L");
+        // Keys are not listed as names of their own; the first file by path keeps the name.
+        assert_eq!(index.names(), ["Unbound/Dup", "Unbound/Latin"]);
         let key = content_key("Unbound/Dup", second.as_bytes());
         // The known FNV-1a 64 value of the empty input, as the managed side computes it.
         assert_eq!(content_key("N", b""), "N#cbf29ce484222325");
@@ -2105,6 +2127,7 @@ mod tests {
         assert!(index.get(&format!("{key}|lod=100")).is_some());
         let plain = index.get("Unbound/Dup").unwrap();
         assert_eq!(plain.name, "Unbound/Dup");
+        assert_eq!(plain.passes[0].name, "First");
         let _ = std::fs::remove_dir_all(&root);
     }
 
