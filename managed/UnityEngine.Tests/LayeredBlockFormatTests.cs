@@ -209,6 +209,55 @@ namespace Unbound.Tests
             }
         }
 
+        /// <summary>A Texture3D asset of serialized version 2 keeps a TextureFormat in
+        /// <c>m_Format</c> and no colour space (the Visual Effect Graph package's
+        /// <c>SignedDistanceField</c>, RHalf, and <c>vectorfield</c>, RGBA32): its pixels are read
+        /// in that format, linear (tests/projects/texturearrays `AssetVolumeLegacy*`). The same
+        /// number in a version 3 asset, or in a body without a version, is a GraphicsFormat;
+        /// an older Texture2DArray is read as before and warned of.</summary>
+        [Fact]
+        public void OlderTexture3DAssetsKeepATextureFormat()
+        {
+            var volume = new Texture3D(2, 2, 2, TextureFormat.RGBA32, false) { name = "volume" };
+            var array = new Texture2DArray(2, 2, 2, TextureFormat.RGBA32, false) { name = "array" };
+            var capture = new Capture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = capture;
+            try
+            {
+                YNode Body(int format, string version, int bytes)
+                {
+                    var fields = new List<(string, YNode)> { ("m_Format", YNode.MakeScalar(format.ToString())), ("image data", YNode.MakeScalar(new string('3', 2 * bytes))) };
+                    if (version != null) fields.Insert(0, ("serializedVersion", YNode.MakeScalar(version)));
+                    return YNode.MakeMap(fields.ToArray());
+                }
+                var half = LayeredTextures.Read(volume, Body((int)TextureFormat.RHalf, "2", 2 * 2 * 2 * 2), 2, 2);
+                Assert.Equal(TextureFormat.RHalf, half.Format);
+                Assert.False(half.Srgb);
+                Assert.Equal(16, half.Data.Length);
+                var rgba = LayeredTextures.Read(volume, Body((int)TextureFormat.RGBA32, "2", 2 * 2 * 2 * 4), 2, 2);
+                Assert.Equal(TextureFormat.RGBA32, rgba.Format);
+                Assert.False(rgba.Srgb);
+                // 4 as a GraphicsFormat: R8G8B8A8_SRGB.
+                foreach (var current in new[] { "3", "4", null })
+                {
+                    var read = LayeredTextures.Read(volume, Body(4, current, 2 * 2 * 2 * 4), 2, 2);
+                    Assert.Equal(TextureFormat.RGBA32, read.Format);
+                    Assert.True(read.Srgb);
+                }
+                Assert.Empty(capture.Messages);
+                var older = LayeredTextures.Read(array, Body(4, "2", 2 * 2 * 2 * 4), 2, 2);
+                Assert.True(older.Srgb);
+                Assert.Contains(capture.Messages, m => m.Contains("'array' is an asset of an older form (serializedVersion 2)"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                Object.DestroyImmediate(volume);
+                Object.DestroyImmediate(array);
+            }
+        }
+
         /// <summary>A serialized PVRTC array of such a size is read as Unbound reads formats it
         /// keeps nothing of (warned, no pixels); a readable size keeps its blocks.</summary>
         [Fact]

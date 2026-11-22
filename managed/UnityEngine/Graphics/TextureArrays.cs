@@ -533,6 +533,20 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>The first serialized version of a Texture3D asset whose <c>m_Format</c> is a
+        /// GraphicsFormat (with <c>m_ColorSpace</c> beside it); version 2 keeps a TextureFormat
+        /// there (the Visual Effect Graph package's <c>SignedDistanceField</c> and
+        /// <c>vectorfield</c> textures). Texture2DArray and CubemapArray assets of the release
+        /// are at version 3 too; their older forms are not measured.</summary>
+        const int k_FirstGraphicsFormatVersion = 3;
+
+        /// <summary>Whether the asset's <c>m_Format</c> is a TextureFormat: a Texture3D written
+        /// before <see cref="k_FirstGraphicsFormatVersion"/>. A body without a version (a binary
+        /// asset's) is of the release's form.</summary>
+        static bool StoresTextureFormat(Texture texture, YNode body) =>
+            texture is Texture3D && body.Get("serializedVersion") is YNode version
+            && version.AsInt(k_FirstGraphicsFormatVersion) < k_FirstGraphicsFormatVersion;
+
         /// <summary>The fields a Texture3D, Texture2DArray or CubemapArray asset keeps: its
         /// GraphicsFormat (<c>m_Format</c>), colour space (1 sRGB), mips, readability, sampler and
         /// pixels (the YAML form's <c>_typelessdata</c>, a binary file's <c>image data</c>).</summary>
@@ -540,15 +554,31 @@ namespace UnityEngine
         /// cube array's faces are square: its asset has no height).</param>
         internal static Serialized Read(Texture texture, YNode body, int width, int height)
         {
-            var graphics = (GraphicsFormat)body.Int("m_Format");
-            // The stored bytes follow the GraphicsFormat. B8G8R8A8 bytes are BGRA32's
-            // (tests/projects/texturepixels), not ARGB32's, which the table also maps to it.
-            var format = graphics switch
+            if (texture is not Texture3D && body.Get("serializedVersion") is YNode version && version.AsInt(k_FirstGraphicsFormatVersion) < k_FirstGraphicsFormatVersion)
+                Debug.LogWarning($"Unbound: {texture.GetType().Name} '{texture.name}' is an asset of an older form (serializedVersion {version.AsInt(0)}), whose format field is not measured: it is read as a GraphicsFormat.");
+            GraphicsFormat graphics;
+            TextureFormat format;
+            bool srgb;
+            if (StoresTextureFormat(texture, body))
             {
-                GraphicsFormat.B8G8R8A8_UNorm or GraphicsFormat.B8G8R8A8_SRGB => TextureFormat.BGRA32,
-                _ => GraphicsFormatUtility.StoredTextureFormat(graphics),
-            };
-            bool srgb = body.Int("m_ColorSpace") == 1 || GraphicsFormatUtility.IsSRGBFormat(graphics);
+                // An older Texture3D asset keeps a TextureFormat and no colour space: its
+                // pixels are linear (tests/projects/texturearrays `AssetVolumeLegacy*`).
+                format = (TextureFormat)body.Int("m_Format");
+                srgb = false;
+                graphics = GraphicsFormatUtility.GetGraphicsFormat(format, false);
+            }
+            else
+            {
+                graphics = (GraphicsFormat)body.Int("m_Format");
+                // The stored bytes follow the GraphicsFormat. B8G8R8A8 bytes are BGRA32's
+                // (tests/projects/texturepixels), not ARGB32's, which the table also maps to it.
+                format = graphics switch
+                {
+                    GraphicsFormat.B8G8R8A8_UNorm or GraphicsFormat.B8G8R8A8_SRGB => TextureFormat.BGRA32,
+                    _ => GraphicsFormatUtility.StoredTextureFormat(graphics),
+                };
+                srgb = body.Int("m_ColorSpace") == 1 || GraphicsFormatUtility.IsSRGBFormat(graphics);
+            }
             var settings = body.Get("m_TextureSettings");
             if (settings != null)
                 texture.SetSamplerQuietly((FilterMode)settings.Int("m_FilterMode", 1), (TextureWrapMode)settings.Int("m_WrapU"),

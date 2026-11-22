@@ -17,6 +17,10 @@ readability). Every imported case is stored as RGBA32 (platform overrides, uncom
 compression hides nothing. `ProbeRunner.Create` applies the cases and makes the `.asset` textures
 (RGBA32 with and without mips, sRGB and linear, RGBAHalf, R8, unreadable) with deterministic
 pixels, the sampling materials and the scene.
+`Assets/Textures/AssetVolumeLegacyRgba32.asset` and `AssetVolumeLegacyHalf.asset` are written by
+hand in the older form of a Texture3D asset (serialized version 2, as the Visual Effect Graph
+package's `SignedDistanceField` and `vectorfield` textures are): `m_Format` holds a TextureFormat
+(RGBA32, RHalf) and there is no colour space. `ProbeRunner.Create` keeps them as they are.
 
 Profiles: Gamma and Linear projects on the Standalone target, and a gamma project on the Android
 target. Editors run on the GPU (private Xvfb, VirtualGL) through the shared heavy-job launcher;
