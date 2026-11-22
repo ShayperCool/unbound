@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/missingmaterial/run.py gate"
+  ],
+  "summary": "missingmaterial: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "managed/UnityEngine/Graphics/Material.cs",
+    "managed/UnityEngine/Graphics/Renderer.cs",
+    "crates/unbound-app/src/materials.rs",
+    "managed/UnityEngine/Particles/ParticleSystemRenderer.cs"
+  ]
+}

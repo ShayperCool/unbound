@@ -1,0 +1,26 @@
+{
+ "urp_scene.png": {
+  "mean": 0.0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's image to the last bit, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "urp_depth.png": {
+  "mean": 0.0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's image to the last bit, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "builtin_scene.png": {
+  "mean": 0.0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's image to the last bit, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "builtin_depth.png": {
+  "mean": 0.0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's image to the last bit, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ }
+}
