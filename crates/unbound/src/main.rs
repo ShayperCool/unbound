@@ -165,6 +165,11 @@ enum Command {
         /// Run on the OpenGL Core graphics device, as the Editor's `-force-glcore` does.
         #[arg(long)]
         force_glcore: bool,
+        /// Run with multithreaded rendering, as the Editor's `-force-gfx-mt` does: measured on
+        /// Linux for Unity 6000.0 (OpenGL Core keeps its direct device, Vulkan renders on a render
+        /// thread); refused where it is not measured.
+        #[arg(long)]
+        force_gfx_mt: bool,
     },
     /// Compile the project's script assemblies.
     Compile {
@@ -362,6 +367,7 @@ fn main() -> anyhow::Result<()> {
             remote_transport,
             force_vulkan,
             force_glcore,
+            force_gfx_mt,
         } => exit_after(commands::run(
             &project,
             commands::RunArgs {
@@ -398,6 +404,7 @@ fn main() -> anyhow::Result<()> {
                 } else {
                     None
                 },
+                force_gfx_mt,
             },
         )),
         Command::Facades { project } => commands::facades(&project),

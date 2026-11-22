@@ -8,6 +8,7 @@ mod profile;
 mod shader_keywords;
 mod sort;
 mod texture;
+mod threading;
 mod version;
 
 pub use audio::AudioOutputRules;
@@ -19,6 +20,7 @@ pub use profile::{CompileMode, Feature, InputHandling, Profile, ProfileData};
 pub use shader_keywords::ShaderKeywordRules;
 pub use sort::EditorSort;
 pub use texture::TextureCompressionRules;
+pub use threading::{RenderingThreadingMode, forced_multithreading};
 pub use unbound_graphics::{
     Conventions, DeviceRequest, GraphicsDevice, HostOs, candidates, forced_by_option,
     parse_api_list, select as select_device,

@@ -1,9 +1,11 @@
-//! The run's graphics device (see `unbound_compat::GraphicsDevice`): chosen once at startup,
-//! before the game, the shader compiler or the renderer starts, and read by all of them.
+//! The run's graphics device (see `unbound_compat::GraphicsDevice`) and its threading mode:
+//! chosen once at startup, before the game, the shader compiler or the renderer starts, and read
+//! by all of them.
 use std::sync::OnceLock;
-pub use unbound_compat::GraphicsDevice;
+pub use unbound_compat::{GraphicsDevice, RenderingThreadingMode};
 
 static DEVICE: OnceLock<GraphicsDevice> = OnceLock::new();
+static THREADING: OnceLock<RenderingThreadingMode> = OnceLock::new();
 
 /// Sets the run's device. A device is chosen once: setting another one later is a bug.
 pub fn set(device: GraphicsDevice) {
@@ -18,4 +20,22 @@ pub fn get() -> GraphicsDevice {
         .get()
         .copied()
         .unwrap_or_else(|| unbound_compat::HostOs::current().default_devices()[0])
+}
+
+/// Sets the run's threading mode (`SystemInfo.renderingThreadingMode`), chosen with the device.
+pub fn set_threading(mode: RenderingThreadingMode) {
+    let current = *THREADING.get_or_init(|| mode);
+    assert_eq!(
+        current, mode,
+        "the rendering threading mode was already chosen"
+    );
+}
+
+/// The run's threading mode; where nothing chose one, the device's default
+/// ([`RenderingThreadingMode::default_for`]).
+pub fn threading() -> RenderingThreadingMode {
+    THREADING
+        .get()
+        .copied()
+        .unwrap_or_else(|| RenderingThreadingMode::default_for(get()))
 }

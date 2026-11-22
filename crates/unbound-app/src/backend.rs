@@ -210,7 +210,8 @@ impl<R: Rendering> Worker<R> {
                     commands,
                     end_frames,
                 } => {
-                    renderer.execute(commands);
+                    // Plugin callbacks among them (multithreaded rendering) log after the batch.
+                    unbound_runtime::plugin_api::while_rendering(|| renderer.execute(commands));
                     worker_queue.complete_frames(end_frames);
                 }
                 RenderMsg::Call(op) => op(&mut renderer),
@@ -348,6 +349,11 @@ struct Backend<R: Rendering> {
     /// Held while the first switch to `direct` waits for the queue, so that every caller that
     /// sees the switch starts after that wait.
     going_direct: Mutex<()>,
+    /// Multithreaded rendering (`SystemInfo.renderingThreadingMode` MultiThreaded: Vulkan with
+    /// `-force-gfx-mt`): plugin callbacks run on the render thread in the order they were
+    /// issued, and nothing moves to the game thread (`direct` stays off); a native pointer waits
+    /// for the render thread. Read from the run's mode at the first need.
+    multithreaded: std::sync::OnceLock<bool>,
 }
 
 impl<R: Rendering> Default for Backend<R> {
@@ -356,6 +362,7 @@ impl<R: Rendering> Default for Backend<R> {
             inner: Mutex::new(Inner::default()),
             direct: Default::default(),
             going_direct: Mutex::new(()),
+            multithreaded: std::sync::OnceLock::new(),
         }
     }
 }
@@ -461,8 +468,9 @@ impl<R: Rendering> Backend<R> {
     /// A command batch: queued for the render thread, or run on the caller once direct (a batch
     /// with a plugin event makes it direct first).
     fn submit(&self, commands: Vec<Command>) {
-        // A plugin event, also one waiting for the device: the plugin works with it from now on.
-        if commands.iter().any(|c| matches!(c, Command::Plugin(_))) {
+        // A plugin event, also one waiting for the device: the plugin works with it from now on
+        // (multithreaded: on the render thread, as the batch's other commands).
+        if !self.multithreaded() && commands.iter().any(|c| matches!(c, Command::Plugin(_))) {
             self.go_direct();
         }
         let worker = {
@@ -492,14 +500,23 @@ impl<R: Rendering> Backend<R> {
     /// direct from now on. None without a renderer or when it stopped.
     fn lend<T>(&self, op: impl FnOnce(&mut R) -> T) -> Option<T> {
         let worker = self.worker()?;
-        self.go_direct();
+        // Multithreaded, a native pointer only waits for the render thread (Unity 6000.0
+        // Texture.GetNativeTexturePtr: "will synchronize with the rendering thread").
+        if !self.multithreaded() {
+            self.go_direct();
+        }
         worker.with_renderer_on_caller(op)
     }
 
     /// A plugin loading, queried or shutting down: rendering runs on the game thread from now
     /// on, and on OpenGL Core the work runs with the plugins' context current.
     fn plugin_context(&self, work: &mut dyn FnMut()) {
-        self.go_direct();
+        if self.multithreaded() {
+            // The callbacks already issued run before the plugin's own work.
+            self.flush();
+        } else {
+            self.go_direct();
+        }
         // Only OpenGL Core has a context of the plugins' to make current (the other devices'
         // plugins use the device's own interface): the work alone elsewhere.
         if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore {
@@ -520,6 +537,13 @@ impl<R: Rendering> Backend<R> {
 
     fn is_direct(&self) -> bool {
         self.direct.load(std::sync::atomic::Ordering::Acquire)
+    }
+
+    fn multithreaded(&self) -> bool {
+        *self.multithreaded.get_or_init(|| {
+            unbound_runtime::graphics_device::threading()
+                == unbound_runtime::graphics_device::RenderingThreadingMode::MultiThreaded
+        })
     }
 
     /// Runs everything on the calling game thread from now on (see `direct`), once what was
@@ -1013,6 +1037,46 @@ SubShader {
         assert_eq!(
             ran(&log),
             on(&[("commands 1", true), ("upload", true), ("commands 2", true)])
+        );
+    }
+
+    /// Multithreaded rendering: plugin events run on the render thread with the batches around
+    /// them, in order, and neither a native pointer nor a plugin context moves rendering to the
+    /// caller (a native pointer runs on the caller after what was queued).
+    #[test]
+    fn multithreaded_rendering_keeps_plugin_work_on_the_render_thread() {
+        let log = Log::default();
+        let backend = Backend::default();
+        backend.multithreaded.set(true).unwrap();
+        backend.install(Recorder(Arc::clone(&log)));
+        backend.submit(vec![Command::ColorSpace(1)]);
+        backend.submit(vec![plugin_event(), Command::ColorSpace(2)]);
+        backend.upload(Upload::ReleaseMesh(1));
+        let mut seen = Vec::new();
+        backend.plugin_context(&mut || seen = ran(&log));
+        assert_eq!(
+            seen,
+            on(&[
+                ("commands 1", false),
+                ("commands 2", false),
+                ("upload", false)
+            ])
+        );
+        assert_eq!(
+            backend.lend(|r| r.execute(vec![Command::ColorSpace(3)])),
+            Some(())
+        );
+        backend.submit(vec![Command::ColorSpace(4)]);
+        backend.flush();
+        assert_eq!(
+            ran(&log),
+            on(&[
+                ("commands 1", false),
+                ("commands 2", false),
+                ("upload", false),
+                ("commands 3", true),
+                ("commands 4", false),
+            ])
         );
     }
 

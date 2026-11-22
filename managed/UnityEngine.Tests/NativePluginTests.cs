@@ -104,6 +104,35 @@ namespace Unbound.Tests
             Assert.Equal(0, commands.CommandCount);
         }
 
+        /// <summary>The device's own threading mode, or the one the host chose for -force-gfx-mt:
+        /// graphicsMultiThreaded with MultiThreaded alone (Unity 6000.0.71f1,
+        /// tests/projects/nativegfx opengl-mt.jsonl and vulkan-mt.jsonl).</summary>
+        [Fact]
+        public void TheThreadingModeIsTheDevicesOrTheHostsChoice()
+        {
+            var device = GraphicsDeviceProfile.Current.Type.ToString();
+            var mode = GraphicsDeviceProfile.CurrentThreadingMode.ToString();
+            try
+            {
+                GraphicsDeviceProfile.Select("OpenGLCore");
+                Assert.Equal(RenderingThreadingMode.Direct, SystemInfo.renderingThreadingMode);
+                Assert.False(SystemInfo.graphicsMultiThreaded);
+                GraphicsDeviceProfile.Select("Vulkan", "");
+                Assert.Equal(RenderingThreadingMode.SingleThreaded, SystemInfo.renderingThreadingMode);
+                Assert.False(SystemInfo.graphicsMultiThreaded);
+                GraphicsDeviceProfile.Select("Vulkan", "MultiThreaded");
+                Assert.Equal(RenderingThreadingMode.MultiThreaded, SystemInfo.renderingThreadingMode);
+                Assert.True(SystemInfo.graphicsMultiThreaded);
+                GraphicsDeviceProfile.Select("OpenGLCore", "Direct");
+                Assert.Equal(RenderingThreadingMode.Direct, SystemInfo.renderingThreadingMode);
+                Assert.Throws<ArgumentException>(() => GraphicsDeviceProfile.Select("Vulkan", "Threaded"));
+            }
+            finally
+            {
+                GraphicsDeviceProfile.Select(device, mode);
+            }
+        }
+
         [Fact]
         public void GlEventsFindTheActiveRenderTextureBound()
         {

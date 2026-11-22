@@ -414,11 +414,31 @@ namespace Unbound.Runtime
         /// <summary>The run's device: OpenGL Core until the host says (tests, tools).</summary>
         internal static GraphicsDeviceProfile Current { get; private set; } = OpenGLCore;
 
-        /// <summary>Selects the device the host chose (GraphicsDeviceType's name).</summary>
-        internal static void Select(string name)
+        /// <summary>The run's <see cref="RenderingThreadingMode"/>: the device's own
+        /// (<see cref="ThreadingMode"/>), or the one the host chose for <c>-force-gfx-mt</c>.</summary>
+        internal static RenderingThreadingMode CurrentThreadingMode { get; private set; } = RenderingThreadingMode.Direct;
+
+        /// <summary>Selects the device the host chose (GraphicsDeviceType's name) with its own
+        /// threading mode.</summary>
+        internal static void Select(string name) => Select(name, null);
+
+        /// <summary>Selects the device and the threading mode the host chose (a
+        /// RenderingThreadingMode name; none: the device's own). The host decides the mode
+        /// (unbound_compat::forced_multithreading); a name it does not give is a bug.</summary>
+        internal static void Select(string name, string threading)
         {
+            var profile = Named(name);
+            var mode = threading switch
+            {
+                null or "" => profile.ThreadingMode,
+                "Direct" => RenderingThreadingMode.Direct,
+                "SingleThreaded" => RenderingThreadingMode.SingleThreaded,
+                "MultiThreaded" => RenderingThreadingMode.MultiThreaded,
+                _ => throw new System.ArgumentException($"no rendering threading mode is named '{threading}'", nameof(threading)),
+            };
             var previous = Current;
-            Current = Named(name);
+            Current = profile;
+            CurrentThreadingMode = mode;
             UnityEngine.Shader.SetDeviceKeywords(previous.CapabilityKeywords, Current.CapabilityKeywords);
         }
 

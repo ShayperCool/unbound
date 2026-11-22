@@ -182,6 +182,7 @@ fn choose_graphics_device(
     project: &Project,
     forced: Option<unbound_compat::GraphicsDevice>,
     windowed: bool,
+    force_gfx_mt: bool,
 ) -> Result<unbound_compat::GraphicsDevice> {
     let request = project.settings.device_request(forced);
     let os = unbound_compat::HostOs::current();
@@ -199,9 +200,24 @@ fn choose_graphics_device(
         starts
     })
     .map_err(anyhow::Error::msg)?;
+    // `-force-gfx-mt`: what the measured Editor makes of it on this device, else a failure.
+    let threading = if force_gfx_mt {
+        let (mode, warning) = unbound_compat::forced_multithreading(project.version, device)
+            .map_err(anyhow::Error::msg)?;
+        if let Some(warning) = warning {
+            tracing::warn!("{warning}");
+        }
+        mode
+    } else {
+        unbound_compat::RenderingThreadingMode::default_for(device)
+    };
     unbound_runtime::graphics_device::set(device);
+    unbound_runtime::graphics_device::set_threading(threading);
     unbound_app::provide_plugin_interfaces(device);
-    tracing::info!("graphics device: {device}");
+    tracing::info!(
+        "graphics device: {device} (rendering threading mode {})",
+        threading.name()
+    );
     Ok(device)
 }
 
@@ -1238,6 +1254,8 @@ pub struct RunArgs {
     pub remote_transport: String,
     /// The graphics device `--force-vulkan` / `--force-glcore` asks for.
     pub forced_device: Option<unbound_compat::GraphicsDevice>,
+    /// `--force-gfx-mt`: multithreaded rendering, as the Editor's `-force-gfx-mt` asks for it.
+    pub force_gfx_mt: bool,
 }
 
 fn parse_taps(taps: &[String]) -> Result<Vec<(u64, f32, f32)>> {
@@ -1375,7 +1393,8 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
         .iter()
         .rev()
         .find_map(|a| unbound_compat::forced_by_option(a));
-    choose_graphics_device(&project, forced, false)?;
+    let force_gfx_mt = options.command_line.iter().any(|a| a == "-force-gfx-mt");
+    choose_graphics_device(&project, forced, false, force_gfx_mt)?;
     install_shader_declarations(&project, &args.target);
     let mut game = unbound_runtime::Game::start(&project, &options)?;
     game.run_headless(u32::MAX, width, height);
@@ -1488,7 +1507,12 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         persistent_data_path: run.persistent_data_path.clone(),
         screen: Some((width, height)),
     };
-    choose_graphics_device(&project, run.forced_device, run.headless.is_none())?;
+    choose_graphics_device(
+        &project,
+        run.forced_device,
+        run.headless.is_none(),
+        run.force_gfx_mt,
+    )?;
     install_shader_declarations(&project, &args.target);
     unbound_app::initialize_display();
     if let Some(frames) = run.headless {

@@ -242,8 +242,8 @@ namespace UnityEngine
         public static string graphicsDeviceVersion => Gpu?.Version ?? (Device.Type == GraphicsDeviceType.Vulkan ? "Vulkan 1.1.0 (Unbound)" : "OpenGL 4.5.0 (Unbound)");
         [Unbound.EditorFaithful("the Editor's OpenGLCore 4.5 device is shader level 5.0")]
         public static int graphicsShaderLevel => 50;
-        [Unbound.EditorFaithful("measured renderingThreadingMode is Direct (tests/projects/urp CapsProbe): no render thread")]
-        public static bool graphicsMultiThreaded => false;
+        [Unbound.EditorFaithful("true with the MultiThreaded mode alone (Unity 6000.0.71f1: tests/projects/nativegfx opengl-mt.jsonl, vulkan-mt.jsonl device.multithreaded)")]
+        public static bool graphicsMultiThreaded => Unbound.Runtime.GraphicsDeviceProfile.CurrentThreadingMode == RenderingThreadingMode.MultiThreaded;
         [Unbound.EditorFaithful("measured on the three devices (Metal: true, the GPU's own; tests/projects/urp device-metal.jsonl)")]
         public static bool hasHiddenSurfaceRemovalOnGPU => Device.HiddenSurfaceRemovalOnGPU;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
@@ -422,8 +422,8 @@ namespace UnityEngine
         public static int supportedRandomWriteTargetCount => 8;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool supportsAsyncCompute => false;
-        [Unbound.EditorFaithful("measured on both devices: tests/projects/urp CapsProbe")]
-        public static RenderingThreadingMode renderingThreadingMode => Device.ThreadingMode;
+        [Unbound.EditorFaithful("measured on both devices: tests/projects/urp CapsProbe; with -force-gfx-mt: tests/projects/nativegfx opengl-mt.jsonl, vulkan-mt.jsonl device.threading")]
+        public static RenderingThreadingMode renderingThreadingMode => Unbound.Runtime.GraphicsDeviceProfile.CurrentThreadingMode;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool hasMipMaxLevel => true;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
