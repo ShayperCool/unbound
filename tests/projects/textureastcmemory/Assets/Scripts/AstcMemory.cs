@@ -49,14 +49,17 @@ public static class AstcMemory
             Put("prelude.import.samples", SystemInfo.IsFormatSupported(imported.graphicsFormat, GraphicsFormatUsage.Sample));
             Size("prelude.import", imported);
         }
-        if (profile == "ArrayFirst")
+        if (profile is "ArrayFirst" or "ArrayBeforeApply")
         {
             TryPrelude("array", () =>
             {
                 var array = new Texture2DArray(8, 8, 2, TextureFormat.ASTC_4x4, false, true);
                 Size("prelude.array.new", array);
-                array.Apply(false, false);
-                Size("prelude.array.applied", array);
+                if (profile == "ArrayFirst")
+                {
+                    array.Apply(false, false);
+                    Size("prelude.array.applied", array);
+                }
                 Object.DestroyImmediate(array);
             });
         }
@@ -78,6 +81,26 @@ public static class AstcMemory
             cube.Apply(false, false);
             Size("prelude.cube.applied", cube);
             Object.DestroyImmediate(cube);
+        }
+        if (profile == "CubeUninitialized")
+        {
+            var cube = new Cubemap(8, TextureFormat.ASTC_4x4, false, true);
+            Size("prelude.cube.new", cube);
+            var warm = Create("prelude.texture", TextureFormat.ASTC_4x4, 8, 8, false, true);
+            cube.Apply(false, false);
+            Size("prelude.cube.applied", cube);
+            Object.DestroyImmediate(cube);
+            Object.DestroyImmediate(warm);
+        }
+        if (profile == "ArrayUninitialized")
+        {
+            var array = new Texture2DArray(8, 8, 2, TextureFormat.ASTC_4x4, false, true, true);
+            Size("prelude.array.new", array);
+            var warm = Create("prelude.texture", TextureFormat.ASTC_4x4, 8, 8, false, true);
+            array.Apply(false, false);
+            Size("prelude.array.applied", array);
+            Object.DestroyImmediate(array);
+            Object.DestroyImmediate(warm);
         }
         if (profile == "ResizeFirst")
         {

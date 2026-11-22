@@ -14,7 +14,8 @@ PROBE = Path(__file__).resolve().parent
 BASE = (PROBE.parent/'formatmapping', ['Assets/Scenes', 'Assets/Scenes.meta', 'Packages', 'ProjectSettings'])
 CAPTURE = 'ASTC_MEMORY_OUT'
 PROFILES = ('Ordinary', 'Wide', 'CubeFirst', 'ResizeFirst', 'UninitializedFirst', 'CloneFirst',
-            'ArrayFirst', 'VolumeFirst', 'HdrFirst', 'UninitializedApplyFirst', 'ImportFirst')
+            'ArrayFirst', 'VolumeFirst', 'HdrFirst', 'UninitializedApplyFirst', 'ImportFirst',
+            'ArrayBeforeApply', 'CubeUninitialized', 'ArrayUninitialized')
 
 
 def include_astc_import(project):
