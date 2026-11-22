@@ -13,6 +13,7 @@ namespace UnityEngine
     [global::UnityEngine.@ExcludeFromPresetAttribute] [global::UnityEngine.@HelpURLAttribute("texture-type-default")] public sealed partial class Texture2D : Texture
     {
         internal TextureFormat m_Format = TextureFormat.RGBA32;
+        internal bool m_ResizeMemoryPendingApply;
         internal int m_MipCount = 1;
         /// <summary>Mip levels of the renderer's copy, kept for sampler-only updates.</summary>
         int m_GpuMipCount = 1;
@@ -134,6 +135,7 @@ namespace UnityEngine
             if (!blockSized)
                 throw new UnityException("Failed to create texture because of invalid parameters.");
             ReleaseStore();
+            m_ResizeMemoryPendingApply = false;
             m_Width = width;
             m_Height = height;
             m_Format = format;
@@ -408,6 +410,7 @@ namespace UnityEngine
             var rawCopy = makeNoLongerReadable && !SourceBlocks ? m_Store ?? EncodeMipChain() : null;
             m_PixelsDirty = true;
             Upload();
+            m_ResizeMemoryPendingApply = false;
             // An asset's pixels applied are an Editor change, saved by SaveAssets, whether it was made
             // this session or read from its file; SetPixel alone does not mark it (matches the Unity
             // 6000.0.71f1 Editor, tests/projects/scenesave engine-assets alphaEdit, native-saves
@@ -454,8 +457,7 @@ namespace UnityEngine
             // A block format refuses sides that are not block-sized, leaving the texture as it was
             // (tests/projects/texturecompression reinit.odd).
             if (!BlockSized(format, width, height)) return false;
-            Init(width, height, format, hasMipMap ? -1 : 1, m_Linear, constructor: false);
-            return true;
+            return ReinitializeImage(width, height, format, hasMipMap, m_Linear);
         }
 
         public bool Reinitialize(int width, int height, GraphicsFormat format, bool hasMipMap)
@@ -464,7 +466,13 @@ namespace UnityEngine
             if (!SidesValid(width, height)) return false;
             var textureFormat = TextureFormatOf(format);
             if (!BlockSized(textureFormat, width, height)) return false;
-            Init(width, height, textureFormat, hasMipMap ? -1 : 1, !GraphicsFormatUtility.IsSRGBFormat(format), constructor: false);
+            return ReinitializeImage(width, height, textureFormat, hasMipMap, !GraphicsFormatUtility.IsSRGBFormat(format));
+        }
+
+        bool ReinitializeImage(int width, int height, TextureFormat format, bool hasMipMap, bool linear)
+        {
+            Init(width, height, format, hasMipMap ? -1 : 1, linear, constructor: false);
+            m_ResizeMemoryPendingApply = true;
             return true;
         }
 

@@ -54,6 +54,8 @@ namespace Unbound.Runtime
         /// <summary>SystemInfo.GetGraphicsFormat(DefaultFormat.LDR) and the Default render
         /// texture format are B8G8R8A8 (Metal), else R8G8B8A8.</summary>
         internal bool BgraLdr { get; init; }
+        /// <summary>Texture2D allocation overhead before and after Apply, measured by textureresizememory.</summary>
+        internal (int CpuOnly, int WithGpu)? Texture2DMemoryOverhead { get; init; }
         /// <summary>What a BatchRendererGroup procedural command of MeshTopology.Quads draws its
         /// vertex ids as, the device having no quad primitive: a triangle list on Vulkan, points on
         /// OpenGL Core (measured, Unity 6000.0.71f1 on the NVIDIA driver: tests/projects/brg
@@ -319,6 +321,7 @@ namespace Unbound.Runtime
             BatchBufferTarget.RawBuffer, GraphicsCapsTable.Metal, MetalIdentity.Read, framebufferReadback: false)
         {
             BgraLdr = true,
+            Texture2DMemoryOverhead = (960, 960),
             MaxMsaaSamples = 4,
             DepthFetchInRenderPass = false,
             MaxTexture3DSize = 2048,

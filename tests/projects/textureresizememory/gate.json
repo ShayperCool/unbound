@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/textureresizememory/run.py gate"
+  ],
+  "summary": "textureresizememory.*: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Texture2D.cs",
+    "managed/UnityEngine/Profiling/MemorySizes.cs",
+    "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs"
+  ]
+}

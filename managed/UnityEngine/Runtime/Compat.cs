@@ -234,6 +234,8 @@ namespace Unbound.Runtime
         /// <summary>Runtime compressed channel formats and readback controls measured by
         /// tests/projects/texturecompression on 6000.0.71f1. Other releases keep their previous formats.</summary>
         internal static bool RuntimeTextureCompressionMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>Texture2D residency before Apply after a resize, measured by textureresizememory.</summary>
+        internal static bool TextureResizeMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Texture2D constructor block alignment measured by texturecreationerrors.
         /// Other release families keep their previous unmeasured constructor behavior.</summary>
         internal static bool TextureBlockSizeDiagnosticsMeasured => Family == ReleaseFamily.Unity6000_0;

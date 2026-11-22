@@ -39,7 +39,7 @@ namespace Unbound.Runtime
         {
             switch (o)
             {
-                case Texture2D t: return Texture2DHeader + Both(t.width, t.height, 1, false, t.mipmapCount, t.format, 1);
+                case Texture2D t: return Texture2DSize(t);
                 case Texture2DArray t: return Texture2DArrayHeader + Both(t.width, t.height, t.depth, false, t.mipmapCount, t.format, 1);
                 case Texture3D t: return Texture3DHeader + Both(t.width, t.height, t.depth, true, t.mipmapCount, t.format, 1);
                 case Cubemap t: return CubemapHeader + Both(t.width, t.height, 1, false, t.mipmapCount, t.format, 6);
@@ -50,6 +50,17 @@ namespace Unbound.Runtime
                 case GameObject go: return GameObjectHeader + GameObjectPerComponent * go.GetComponentCount();
                 default: return null;
             }
+        }
+
+        static long Texture2DSize(Texture2D texture)
+        {
+            if (!Compat.TextureResizeMemoryMeasured || texture.IsPersistentAsset || texture.width <= 0
+                || GraphicsDeviceProfile.Current.Texture2DMemoryOverhead is not { } overhead)
+                return Texture2DHeader + Both(texture.width, texture.height, 1, false, texture.mipmapCount, texture.format, 1);
+
+            if (texture.m_ResizeMemoryPendingApply)
+                return overhead.CpuOnly + Chain(texture.width, texture.height, 1, false, texture.mipmapCount, texture.format, gpu: false, faces: 1);
+            return overhead.WithGpu + Both(texture.width, texture.height, 1, false, texture.mipmapCount, texture.format, 1);
         }
 
         static long TextAssetSize(TextAsset text)
