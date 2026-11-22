@@ -77,7 +77,8 @@ identical metadata. A private loopback registry serves the synthetic package.
 
 Unbound performs the measured repair before startup indexing and compilation
 on the 6000.0 family. An interrupted repair resumes from the project cache,
-including after a project directory move.
+including after a project directory move. A changed metadata link stops the
+pending write so the original target can be restored.
 Graph inspection reads the current metadata and reports unresolved ties.
 Quoted GUIDs use a different metadata rewrite in Unity. Unbound reports
 that case and preserves the prior compile behavior. Unmeasured groups with
