@@ -241,7 +241,10 @@ sealed partial class StubBuilder
         var impl = ctx.Impl?.GetTypeMembers(nested.Name, nested.Arity).FirstOrDefault();
         if (impl == null)
         {
-            if (ctx.Impl != null && ctx.ImplNames.ContainsKey(nested.Name))
+            // Types of another arity may share the name (C#: BaseSlider<T>.UxmlTraits beside
+            // UxmlTraits<U>); any other member of that name keeps the type from being generated.
+            if (ctx.Impl != null && ctx.ImplNames.TryGetValue(nested.Name, out var named)
+                && named.Any(m => m is not INamedTypeSymbol type || type.Arity == nested.Arity))
             {
                 Report.Conflicts.Add($"{Display(nested)}: the hand-written {ctx.Id} has a member of that name; type not generated");
                 return;

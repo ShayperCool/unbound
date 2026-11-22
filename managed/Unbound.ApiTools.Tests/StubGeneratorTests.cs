@@ -75,6 +75,7 @@ public class StubGeneratorTests
             public class Outer { public class Inner { public int v; } protected class Guarded {} private class Private {} }
             public unsafe struct Buffer { public fixed byte data[4]; public int* pointer; }
             public ref struct Span2 { public int length; }
+            public class Slider<T> { public class Traits { } public class Traits<U> { } }
         }
         """;
 
@@ -99,6 +100,7 @@ public class StubGeneratorTests
             public partial class Object { public string name { get; set; } }
             public partial class Component : Object { }
             public partial struct Vector3 { public float x, y; }
+            public partial class Slider<T> { public partial class Traits<U> { } }
         }
         """;
 
@@ -174,7 +176,9 @@ public class StubGeneratorTests
             Assert.Empty(report.Errors);
             Assert.Empty(report.Conflicts);
             Assert.Contains(report.Modules, m => m.Name == "UnityEngine.PhysicsModule" && m.NewTypes == 3);
-            Assert.Equal(3, report.ExtendedTypes); // Object, Component and Vector3 got members
+            // Object, Component, Vector3 and Slider<T> (its Traits beside the hand-written Traits<U>)
+            // got members.
+            Assert.Equal(4, report.ExtendedTypes);
             var files = Directory.GetFiles(output, "*.g.cs").OrderBy(f => f, StringComparer.Ordinal).ToList();
 
             // The stubs and the hand-written sources compile together.
@@ -229,6 +233,7 @@ public class StubGeneratorTests
                 Assert.NotNull(assembly.GetType("UnityEngine.Outer+Guarded"));
                 Assert.Null(assembly.GetType("UnityEngine.Outer+Private"));
                 Assert.True(assembly.GetType("UnityEngine.Span2")!.IsByRefLike);
+                Assert.NotNull(assembly.GetType("UnityEngine.Slider`1+Traits"));
 
                 // A stub body records the call and returns a default.
                 var pool = assembly.GetType("UnityEngine.Pool`1")!.MakeGenericType(typeof(object));
