@@ -29,8 +29,6 @@ pub enum MeshError {
     NoUvs,
     /// A lightmap UV that is infinite or not a number.
     UvNotFinite,
-    /// A triangle naming a vertex the mesh does not have.
-    IndexOutOfRange,
 }
 
 impl std::fmt::Display for MeshError {
@@ -40,7 +38,6 @@ impl std::fmt::Display for MeshError {
             MeshError::NoNormals => "it has no normals",
             MeshError::NoUvs => "it has no UVs",
             MeshError::UvNotFinite => "a lightmap UV of it is infinite or not a number",
-            MeshError::IndexOutOfRange => "a triangle of it names a vertex it does not have",
         })
     }
 }
@@ -71,7 +68,9 @@ pub fn uv_scale_offset(bounds: [f32; 4]) -> [f32; 4] {
 
 impl Mesh {
     /// A mesh for the bake: its normals at unit length and its lightmap UVs (`uv2`, else `uv`)
-    /// brought to 0..1 over their bounds.
+    /// brought to 0..1 over their bounds. A triangle naming a vertex the mesh does not have is
+    /// left out, as the layout leaves it out of the mesh's area (what the Editor's bake makes of
+    /// one is not measured: its meshes cannot have them).
     pub fn new(
         positions: Vec<[f32; 3]>,
         normals: &[[f32; 3]],
@@ -93,14 +92,15 @@ impl Mesh {
         if source.iter().flatten().any(|v| !v.is_finite()) {
             return Err(MeshError::UvNotFinite);
         }
-        if submeshes
-            .iter()
-            .flatten()
-            .flatten()
-            .any(|&i| i as usize >= count)
-        {
-            return Err(MeshError::IndexOutOfRange);
-        }
+        let submeshes = submeshes
+            .into_iter()
+            .map(|triangles| {
+                triangles
+                    .into_iter()
+                    .filter(|t| t.iter().all(|&i| (i as usize) < count))
+                    .collect()
+            })
+            .collect();
         let so = uv_scale_offset(super::atlas::uv_bounds(source));
         Ok(Mesh {
             positions,

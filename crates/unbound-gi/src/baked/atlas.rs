@@ -29,7 +29,8 @@ pub struct Settings {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Parameters {
     pub back_face_tolerance: f32,
-    pub anti_aliasing_samples: i32,
+    /// Samples per texel along each side ([`Parameters::supersampling_of`]).
+    pub supersampling: i32,
     pub pushoff: f32,
     pub baked_lightmap_tag: i32,
     /// Max Lightmap Count where Limit Lightmap Count is on, else 0.
@@ -40,17 +41,29 @@ impl Parameters {
     /// Default-Medium's (a new Lightmap Parameters asset's too).
     pub const DEFAULT: Parameters = Parameters {
         back_face_tolerance: 0.9,
-        anti_aliasing_samples: 2,
+        supersampling: 2,
         pushoff: 0.0001,
         baked_lightmap_tag: -1,
         max_lightmap_count: 0,
     };
 
+    /// How many samples a texel gets along each side for Lightmap Parameters' Anti-aliasing
+    /// Samples: 1 for one sample, 2 below four and 4 from four on (tests/projects/bakedbuffers
+    /// `Samples`: 1, 3, 4, 5, 8, 9, 16 and 256; tests/projects/bakedatlas `Tags`: 2). Values
+    /// below 1 are not measured and taken as 1.
+    pub fn supersampling_of(anti_aliasing_samples: i32) -> i32 {
+        match anti_aliasing_samples {
+            i32::MIN..=1 => 1,
+            2..=3 => 2,
+            _ => 4,
+        }
+    }
+
     /// What the atlases group by: the 128-bit hash of the fields in their order.
     pub fn hash(&self) -> (u64, u64) {
         let mut bytes = [0u8; 20];
         bytes[0..4].copy_from_slice(&self.back_face_tolerance.to_le_bytes());
-        bytes[4..8].copy_from_slice(&self.anti_aliasing_samples.to_le_bytes());
+        bytes[4..8].copy_from_slice(&self.supersampling.to_le_bytes());
         bytes[8..12].copy_from_slice(&self.pushoff.to_le_bytes());
         bytes[12..16].copy_from_slice(&self.baked_lightmap_tag.to_le_bytes());
         bytes[16..20].copy_from_slice(&self.max_lightmap_count.to_le_bytes());
@@ -425,6 +438,16 @@ fn reduce(padding: f32, rects: &[[f32; 2]], size: [i32; 2]) -> Option<([i32; 2],
         (w, h) = (half[0], half[1]);
     }
     best
+}
+
+/// What the Editor orders the renderers of a bake by, ascending: the 128-bit hash of a scene
+/// object's identifier, its file ID in the scene and its prefab instance's (0 for an object
+/// that is not of a prefab instance; tests/projects/bakedbuffers, the instances' order).
+pub fn object_key(file_id: i64, prefab_instance: i64) -> (u64, u64) {
+    let mut bytes = [0u8; 16];
+    bytes[..8].copy_from_slice(&file_id.to_le_bytes());
+    bytes[8..].copy_from_slice(&prefab_instance.to_le_bytes());
+    spooky::hash128_short(&bytes, (0, 0))
 }
 
 fn compare(a: &Instance, ha: (u64, u64), b: &Instance, hb: (u64, u64)) -> std::cmp::Ordering {
