@@ -61,31 +61,56 @@ namespace Unbound.Runtime
         internal static UnityEngine.GameObject Create(UnityEngine.PrimitiveType type)
         {
             if (Factory != null) return Factory(type);
-            var (name, fileId) = type switch
-            {
-                UnityEngine.PrimitiveType.Sphere => ("Sphere", 10207L),
-                UnityEngine.PrimitiveType.Capsule => ("Capsule", 10208L),
-                UnityEngine.PrimitiveType.Cylinder => ("Cylinder", 10206L),
-                UnityEngine.PrimitiveType.Plane => ("Plane", 10209L),
-                UnityEngine.PrimitiveType.Quad => ("Quad", 10210L),
-                _ => ("Cube", 10202L),
-            };
-            var go = new UnityEngine.GameObject(name);
-            var mesh = BuiltinShaders.Resolve(BuiltinShaders.DefaultGuid, fileId) as UnityEngine.Mesh ?? UnityEngine.BuiltinMeshes.Create(name);
+            var go = new UnityEngine.GameObject(NameOf(type));
+            var mesh = MeshOf(type);
             go.AddComponent<UnityEngine.MeshFilter>().sharedMesh = mesh;
-            var renderer = go.AddComponent<UnityEngine.MeshRenderer>();
-            renderer.sharedMaterial = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline?.defaultMaterial
-                ?? BuiltinShaders.Resolve(BuiltinShaders.ExtraGuid, 10303) as UnityEngine.Material;
+            go.AddComponent<UnityEngine.MeshRenderer>().sharedMaterial = DefaultMaterial();
+            AddCollider(go, type, mesh, go.AddComponent);
+            return go;
+        }
+
+        internal static string NameOf(UnityEngine.PrimitiveType type) => type switch
+        {
+            UnityEngine.PrimitiveType.Sphere => "Sphere",
+            UnityEngine.PrimitiveType.Capsule => "Capsule",
+            UnityEngine.PrimitiveType.Cylinder => "Cylinder",
+            UnityEngine.PrimitiveType.Plane => "Plane",
+            UnityEngine.PrimitiveType.Quad => "Quad",
+            _ => "Cube",
+        };
+
+        /// <summary>The primitive's built-in mesh.</summary>
+        internal static UnityEngine.Mesh MeshOf(UnityEngine.PrimitiveType type)
+        {
+            long fileId = type switch
+            {
+                UnityEngine.PrimitiveType.Sphere => 10207L,
+                UnityEngine.PrimitiveType.Capsule => 10208L,
+                UnityEngine.PrimitiveType.Cylinder => 10206L,
+                UnityEngine.PrimitiveType.Plane => 10209L,
+                UnityEngine.PrimitiveType.Quad => 10210L,
+                _ => 10202L,
+            };
+            return BuiltinShaders.Resolve(BuiltinShaders.DefaultGuid, fileId) as UnityEngine.Mesh ?? UnityEngine.BuiltinMeshes.Create(NameOf(type));
+        }
+
+        /// <summary>The active pipeline's default material, else Default-Material.</summary>
+        internal static UnityEngine.Material DefaultMaterial() =>
+            UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline?.defaultMaterial
+            ?? BuiltinShaders.Resolve(BuiltinShaders.ExtraGuid, 10303) as UnityEngine.Material;
+
+        /// <summary>Adds the shape's collider through <paramref name="add"/>, fitted to the mesh.</summary>
+        internal static void AddCollider(UnityEngine.GameObject go, UnityEngine.PrimitiveType type, UnityEngine.Mesh mesh, Func<Type, UnityEngine.Component> add)
+        {
             switch (type)
             {
-                case UnityEngine.PrimitiveType.Sphere: go.AddComponent<UnityEngine.SphereCollider>(); break;
-                case UnityEngine.PrimitiveType.Capsule: go.AddComponent<UnityEngine.CapsuleCollider>().height = 2f; break;
-                case UnityEngine.PrimitiveType.Cylinder: go.AddComponent<UnityEngine.CapsuleCollider>().height = 2f; break;
+                case UnityEngine.PrimitiveType.Sphere: add(typeof(UnityEngine.SphereCollider)); break;
+                case UnityEngine.PrimitiveType.Capsule:
+                case UnityEngine.PrimitiveType.Cylinder: ((UnityEngine.CapsuleCollider)add(typeof(UnityEngine.CapsuleCollider))).height = 2f; break;
                 case UnityEngine.PrimitiveType.Plane:
-                case UnityEngine.PrimitiveType.Quad: go.AddComponent<UnityEngine.MeshCollider>().sharedMesh = mesh; break;
-                default: go.AddComponent<UnityEngine.BoxCollider>(); break;
+                case UnityEngine.PrimitiveType.Quad: ((UnityEngine.MeshCollider)add(typeof(UnityEngine.MeshCollider))).sharedMesh = mesh; break;
+                default: add(typeof(UnityEngine.BoxCollider)); break;
             }
-            return go;
         }
     }
 }

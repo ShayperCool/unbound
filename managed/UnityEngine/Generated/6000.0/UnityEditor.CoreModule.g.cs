@@ -16213,20 +16213,10 @@ namespace UnityEditor
     {
         [global::Unbound.Stub] public static T DeepClone<T>(T source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectCopier.DeepClone"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class ObjectFactory
+    unsafe static partial class ObjectFactory
     {
         [global::Unbound.Stub] internal static void SmartResetObjectToDefault(global::UnityEngine.Object target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectFactory.SmartResetObjectToDefault"); }
         [global::Unbound.Stub] internal static void FinalizeObjectAndAwake(global::UnityEngine.Object target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectFactory.FinalizeObjectAndAwake"); }
-        [global::Unbound.Stub] public static T CreateInstance<T>() where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectFactory.CreateInstance"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Object CreateInstance(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectFactory.CreateInstance"); return default; }
-        [global::Unbound.Stub] public static T AddComponent<T>(global::UnityEngine.GameObject gameObject) where T : global::UnityEngine.Component { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectFactory.AddComponent"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Component AddComponent(global::UnityEngine.GameObject gameObject, global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectFactory.AddComponent"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.GameObject CreateGameObject(global::UnityEngine.SceneManagement.Scene scene, global::UnityEngine.HideFlags hideFlags, string name, params global::System.Type[] types) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectFactory.CreateGameObject"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.GameObject CreateGameObject(string name, params global::System.Type[] types) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectFactory.CreateGameObject"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.GameObject CreatePrimitive(global::UnityEngine.PrimitiveType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectFactory.CreatePrimitive"); return default; }
-        [global::Unbound.Stub] public static void PlaceGameObject(global::UnityEngine.GameObject go, global::UnityEngine.GameObject parent = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectFactory.PlaceGameObject"); }
-        public static event global::System.Action<global::UnityEngine.Component> componentWasAdded { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectFactory.componentWasAdded"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ObjectInfo
