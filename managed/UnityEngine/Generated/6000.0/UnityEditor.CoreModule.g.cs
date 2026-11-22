@@ -8615,7 +8615,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static global::UnityEngine.Texture2D GetHelpIcon(global::UnityEditor.MessageType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetHelpIcon"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIStyle GetBasicTextureStyle(global::UnityEngine.Texture2D tex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetBasicTextureStyle"); return default; }
         [global::Unbound.Stub] internal static void NotifyLanguageChanged(global::UnityEngine.SystemLanguage newLanguage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.NotifyLanguageChanged"); }
-        [global::Unbound.Stub] public static global::UnityEngine.GUISkin GetBuiltinSkin(global::UnityEditor.EditorSkin skin) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetBuiltinSkin"); return default; }
         [global::Unbound.Stub] internal static void MoveFocusAndScroll(bool forward) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.MoveFocusAndScroll"); }
         [global::Unbound.Stub] internal static void RefreshScrollPosition() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.RefreshScrollPosition"); }
         [global::Unbound.Stub] internal static void ScrollForTabbing(bool forward) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.ScrollForTabbing"); }
@@ -8883,12 +8882,6 @@ namespace UnityEditor
             [global::Unbound.Stub] public PopupElement(string id, string content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettingsInspector.PopupElement.ctor"); }
         }
     }
-    public enum EditorSkin
-    {
-        Game = 0,
-        Inspector = 1,
-        Scene = 2,
-    }
     [global::Unbound.Stub]
     public unsafe static partial class EditorSnapSettings
     {
@@ -9021,10 +9014,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static readonly string s_DarkEditorTextStyleSheetPath;
         [global::Unbound.Stub] internal static readonly string s_LightEditorTextStyleSheetPath;
         [global::Unbound.Stub] public static global::UnityEngine.TextCore.Text.FontAsset GetBlurryFontAssetMapping(int pointSize, global::UnityEngine.TextCore.Text.FontAsset ft) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorTextSettings.GetBlurryFontAssetMapping"); return default; }
-        [global::Unbound.Stub] internal static void SetCurrentEditorSharpness(float sharpness) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorTextSettings.SetCurrentEditorSharpness"); }
-        [global::Unbound.Stub] internal override float GetEditorTextSharpness() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorTextSettings.GetEditorTextSharpness"); return default; }
-        [global::Unbound.Stub] internal override global::UnityEngine.Font GetEditorFont() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorTextSettings.GetEditorFont"); return default; }
-        [global::Unbound.Stub] internal override global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> GetFallbackFontAssets(int textPixelSize = -1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorTextSettings.GetFallbackFontAssets"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset>(); }
         [global::Unbound.Stub] internal static void UpdateLocalizationFontAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorTextSettings.UpdateLocalizationFontAsset"); }
         [global::Unbound.Stub] internal static void UpdateDefaultTextStyleSheet() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorTextSettings.UpdateDefaultTextStyleSheet"); }
     }

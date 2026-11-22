@@ -452,9 +452,17 @@ namespace UnityEngine
 
         internal static GUISkin GetDefaultSkin() => BuiltinGuiSkin.Skin;
 
-        internal static GUISkin GetDefaultSkin(int skinMode) => BuiltinGuiSkin.Skin;
+        internal static GUISkin GetDefaultSkin(int skinMode) => GetBuiltinSkin(skinMode);
 
-        internal static GUISkin GetBuiltinSkin(int skin) => BuiltinGuiSkin.Skin;
+        /// <summary>The built-in skins by index: the game's, then the Editor's light and dark
+        /// ones (EditorGUIUtility.GetBuiltinSkin's Game, Inspector and Scene; matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/editorskin skin/*/name).</summary>
+        internal static GUISkin GetBuiltinSkin(int skin) => skin switch
+        {
+            1 => EditorGuiSkins.Light,
+            2 => EditorGuiSkins.Dark,
+            _ => BuiltinGuiSkin.Skin,
+        };
 
         /// <summary>Starts an OnGUI call: default skin and colors, the screen as the only clip,
         /// the behaviour's control IDs and its layout.</summary>

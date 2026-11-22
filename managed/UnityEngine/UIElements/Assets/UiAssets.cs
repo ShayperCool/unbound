@@ -331,10 +331,15 @@ namespace Unbound.UIElements
             return bytes;
         }
 
+        /// <summary>The formats the Editor's own textures are stored in (uncompressed and the
+        /// block formats its skins' backgrounds use), which load from their raw data.</summary>
+        static readonly TextureFormat[] s_EditorTextureFormats =
+            { TextureFormat.RGBA32, TextureFormat.ARGB32, TextureFormat.Alpha8, TextureFormat.RGB24, TextureFormat.DXT5 };
+
         static Texture2D ReadTexture(JsonElement f)
         {
             int format = Int(f, "m_TextureFormat");
-            if (format != (int)TextureFormat.RGBA32 && format != (int)TextureFormat.ARGB32 && format != (int)TextureFormat.Alpha8)
+            if (Array.IndexOf(s_EditorTextureFormats, (TextureFormat)format) < 0)
                 throw new NotSupportedException($"texture format {format}");
             int w = Int(f, "m_Width"), h = Int(f, "m_Height");
             Texture2D texture;
@@ -364,8 +369,42 @@ namespace Unbound.UIElements
             var type = EngineScripts.Resolve(script.TryGetProperty("guid", out var g) ? g.GetString() : null, fileId);
             if (type == typeof(ThemeStyleSheet) || type == typeof(StyleSheet)) return ReadStyleSheet(f, type);
             if (type == typeof(VisualTreeAsset)) return ReadVisualTreeAsset(f);
+            if (type == typeof(GUISkin)) return ReadGuiSkin(f);
             return null;
         }
+
+        /// <summary>A GUI skin of the Editor's resources: its styles as serialized, its textures
+        /// and fonts from the same resources.</summary>
+        static GUISkin ReadGuiSkin(JsonElement f)
+        {
+            GUISkin skin;
+            using (ObjectRegistry.AsAssets())
+            {
+                skin = ScriptableObject.CreateInstance<GUISkin>();
+                new YamlReader(new EditorResourceReferences()).ReadScriptObject(skin, YNode.FromJson(f));
+            }
+            skin.name = Str(f, "m_Name") ?? "";
+            skin.hideFlags = HideFlags.HideAndDontSave;
+            skin.IsPersistentAsset = true;
+            skin.Apply();
+            return skin;
+        }
+
+        /// <summary>References of an Editor resource: objects of the Editor's resources by their
+        /// path id, other built-in objects as every reference resolves them.</summary>
+        sealed class EditorResourceReferences : IReferenceResolver
+        {
+            public Object Resolve(ObjectRef reference, Type expected)
+            {
+                if (reference.Guid == null || reference.FileId == 0) return null;
+                if (string.Equals(reference.Guid, EditorResourcesGuid, StringComparison.OrdinalIgnoreCase))
+                    return LoadObject(reference.FileId);
+                return BuiltinShaders.Resolve(reference.Guid, reference.FileId);
+            }
+        }
+
+        /// <summary>The GUID references into `unity editor resources` use.</summary>
+        internal const string EditorResourcesGuid = "0000000000000000d000000000000000";
 
         /// <summary>
         /// A UXML document of the Editor's resources from its serialized form: its elements

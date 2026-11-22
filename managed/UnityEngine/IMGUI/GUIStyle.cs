@@ -173,6 +173,14 @@ namespace UnityEngine
             get => m_TextColor;
             set => m_TextColor = value;
         }
+
+        /// <summary>Drops the background and the first scaled background, as the Editor does
+        /// for a style it draws from its style catalog.</summary>
+        internal void ClearBackgrounds()
+        {
+            m_Background = null;
+            if (m_ScaledBackgrounds.Length >= 1) m_ScaledBackgrounds[0] = null;
+        }
     }
 
     /// <summary>
@@ -563,6 +571,13 @@ namespace UnityEngine
             yield return m_ScrollView;
         }
 
+        /// <summary>The skin's own styles, then its custom ones.</summary>
+        internal IEnumerable<GUIStyle> AllStyles()
+        {
+            foreach (var style in Builtins()) yield return style;
+            foreach (var style in m_CustomStyles ?? Array.Empty<GUIStyle>()) yield return style;
+        }
+
         void BuildStyleCache()
         {
             m_Styles = new Dictionary<string, GUIStyle>(StringComparer.OrdinalIgnoreCase);
@@ -632,6 +647,89 @@ namespace UnityEngine
 namespace Unbound.Runtime
 {
     using UnityEngine;
+
+    /// <summary>
+    /// The Editor's own GUI skins, LightSkin and DarkSkin of `unity editor resources`: what
+    /// EditorGUIUtility.GetBuiltinSkin answers for Inspector and Scene and what Editor GUI is
+    /// drawn with. The skin of the Editor's current theme has the Editor's font, the other none
+    /// (matches the Unity 6000.0.71f1 Editor with the dark theme, tests/projects/editorskin).
+    /// </summary>
+    internal static class EditorGuiSkins
+    {
+        const string LightPath = "Builtin Skins/Generated/Skins/LightSkin.guiskin";
+        const string DarkPath = "Builtin Skins/Generated/Skins/DarkSkin.guiskin";
+        static GUISkin s_Light, s_Dark;
+
+        internal static GUISkin Light => s_Light != null ? s_Light : s_Light = Load(LightPath, "LightSkin", dark: false);
+
+        internal static GUISkin Dark => s_Dark != null ? s_Dark : s_Dark = Load(DarkPath, "DarkSkin", dark: true);
+
+        /// <summary>The skin of the Editor's theme.</summary>
+        internal static GUISkin Current => UnityEditor.EditorGUIUtility.isProSkin ? Dark : Light;
+
+        const string EditorFontPath = "Fonts/Inter/Inter-Regular.ttf";
+        static Font s_EditorFont;
+
+        /// <summary>The Editor's UI font: Inter Regular of the Editor's resources, at 12
+        /// (tests/projects/editorskin skin/Scene/font). Null when the resources lack it.</summary>
+        internal static Font EditorFont =>
+            s_EditorFont != null ? s_EditorFont : s_EditorFont = Unbound.UIElements.UiResources.EditorLoad(EditorFontPath) as Font;
+
+        /// <summary>The style sheets of the Editor's style catalog for a theme, in the order
+        /// they are merged (the Editor's default font and language).</summary>
+        static string[] CatalogSheets(bool dark) => new[]
+        {
+            "StyleSheets/Extensions/base/common.uss",
+            "UIPackageResources/StyleSheets/Default/Variables/Public/common.uss",
+            "StyleSheets/Northstar/common.uss",
+            "StyleSheets/Extensions/fonts/inter.uss",
+            dark ? "StyleSheets/Extensions/base/dark.uss" : "StyleSheets/Extensions/base/light.uss",
+            dark ? "UIPackageResources/StyleSheets/Default/Northstar/Palette/dark.uss" : "UIPackageResources/StyleSheets/Default/Northstar/Palette/light.uss",
+        };
+
+        static EditorStyleCatalog s_Catalog;
+
+        /// <summary>The style catalog of the Editor's theme.</summary>
+        internal static EditorStyleCatalog Catalog
+        {
+            get
+            {
+                if (s_Catalog != null) return s_Catalog;
+                var sheets = new List<UnityEngine.UIElements.StyleSheet>();
+                foreach (string path in CatalogSheets(UnityEditor.EditorGUIUtility.isProSkin))
+                {
+                    var sheet = Unbound.UIElements.UiResources.EditorLoad(path) as UnityEngine.UIElements.StyleSheet;
+                    if (sheet == null) Debug.Log("Could not load " + path);
+                    else if (!sheets.Contains(sheet)) sheets.Add(sheet);
+                }
+                return s_Catalog = EditorStyleCatalog.Build(sheets);
+            }
+        }
+
+        static GUISkin Load(string path, string name, bool dark)
+        {
+            var skin = Unbound.UIElements.UiResources.EditorLoad(path) as GUISkin;
+            if (skin != null)
+            {
+                // The skin of the Editor's theme has the Editor's font and the style catalog's
+                // values; the other one stays as stored.
+                if (dark == UnityEditor.EditorGUIUtility.isProSkin)
+                {
+                    skin.font = EditorFont;
+                    Catalog.ApplyTo(skin);
+                }
+                return skin;
+            }
+            Debug.LogError($"Unbound: the Editor's GUI skin {name} ({path} of unity editor resources) is not available; Editor GUI is drawn with default styles without backgrounds.");
+            using (ObjectRegistry.AsAssets())
+                skin = ScriptableObject.CreateInstance<GUISkin>();
+            skin.name = name;
+            skin.hideFlags = HideFlags.HideAndDontSave;
+            skin.IsPersistentAsset = true;
+            skin.Apply();
+            return skin;
+        }
+    }
 
     /// <summary>
     /// The skin GUI.skin starts as in Play mode: Unity's own GameSkin, read from the install's

@@ -3,6 +3,14 @@ using UnityEngine;
 
 namespace UnityEditor
 {
+    /// <summary>The built-in GUI skins EditorGUIUtility.GetBuiltinSkin names.</summary>
+    public enum EditorSkin
+    {
+        Game = 0,
+        Inspector = 1,
+        Scene = 2,
+    }
+
     /// <summary>
     /// Editor GUI sizing. The private fields keep Unity's names: inspector plugins (Odin) read and
     /// write them by reflection.
@@ -20,6 +28,11 @@ namespace UnityEditor
         /// <summary>The dark (Pro) skin is the Editor's: the user's choice in its preferences
         /// (<c>UserSkin</c>), dark when never chosen.</summary>
         public static bool isProSkin => EditorPrefs.GetInt("UserSkin", 1) == 1;
+
+        /// <summary>A built-in skin: the game's, the Editor's light one (Inspector) or its dark
+        /// one (Scene), whatever the Editor's own theme is (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/editorskin).</summary>
+        public static GUISkin GetBuiltinSkin(EditorSkin skin) => GUIUtility.GetBuiltinSkin((int)skin);
 
         public new static float pixelsPerPoint => GUIUtility.pixelsPerPoint;
 
