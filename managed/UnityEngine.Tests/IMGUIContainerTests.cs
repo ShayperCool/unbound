@@ -362,7 +362,8 @@ namespace UnityEngine.Tests
             Assert.Same(own ?? gameSkin, before);
             Assert.Same(own ?? gameSkin, after);
             Assert.Equal(0, modeAfter);
-            // After the game's pass its skin is still the one it had: the default, or its own.
+            // After the game's pass its skin is still the one it had: the default, or its own
+            // (Unbound's own choice: what GUI.skin is between passes is not measured).
             Assert.Equal(0, GUIUtility.s_SkinMode);
             Assert.Same(own ?? gameSkin, GUI.skin);
             GUI.skin = null;
