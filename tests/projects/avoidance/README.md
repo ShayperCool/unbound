@@ -74,3 +74,14 @@ not resolve them. No corner is inserted, snapping distance changed or velocity
 sample preferred to fit these records. The separate navpath post-avoidance
 control remains at 17 differing values. The measurements use the existing Linux
 6000.0.71f1 references; new diagnostic Editor runs used the NVIDIA RTX 4060 only.
+
+Q595, Unity 6000.0.71f1: an agent's corridor after a move that leaves its first polygons
+(`corners`). The move along the surface and the merge with the corridor are Detour's; then the
+first of the polygons put before the corridor's common one, from the agent's own on, that borders a
+polygon further along is joined to the furthest such polygon, and the polygons between are left
+out. An agent that steps off a tile corner into the tile beside its path's first polygons walks on
+instead of steering back to the corner. This takes `near` (2 configurations) and `speeds` (1) to
+match; `corners` matches but for 9 listed records (`residuals.json`): three agents moved along a
+45-degree line through a tile corner, within about 1e-6 m of the vertex, where Unity drops the
+corner from the third frame and Unbound keeps it. Other releases keep Detour's merge alone
+through Compat, unmeasured there.

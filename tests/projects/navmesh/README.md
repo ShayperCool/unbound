@@ -203,3 +203,10 @@ whose x coordinate is 42.6666679 in the reference and 50 in Unbound; position,
 velocity, desired velocity and next position match. This leaves corner or corridor
 reporting open and does not justify changing avoidance weights. Their twelve raw
 capture files are byte-identical before and after both Q462 corrections.
+
+Q595: after a move that leaves the corridor's first polygons, Unity joins the polygon the agent
+reached to the furthest corridor polygon it borders (tests/projects/avoidance `corners`). With
+that join the corridor diagnostic matches in all seven frame scenarios (six differed without it),
+the blocked agent matches from frame 191 to 231 (61 -> 19 of 253 values; it differs again from
+frame 232 with an extra corner), and the avoidance configurations named above match. The default
+rerun's differing frame scenarios stay at 212 (41 of them differ in fewer values).
