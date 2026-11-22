@@ -868,15 +868,6 @@ namespace UnityEditor.Search
         [global::Unbound.Stub] public static global::UnityEditor.Search.QueryBuilder Create(in string expression) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ExpressionBlock.Create"); return default; }
     }
     internal unsafe delegate global::UnityEditor.Search.SearchPreview FetchPreviewCallback(global::UnityEditor.Search.SearchItem item, global::UnityEditor.Search.SearchContext context, global::UnityEditor.Search.FetchPreviewOptions options, global::UnityEngine.Vector2 size);
-    [global::System.Flags]
-    public enum FetchPreviewOptions
-    {
-        None = 0,
-        Preview2D = 1,
-        Preview3D = 2,
-        Normal = 1024,
-        Large = 2048,
-    }
     internal enum FilePattern
     {
         Extension = 0,
@@ -4306,27 +4297,12 @@ namespace UnityEditor.Search
         [global::Unbound.Stub] public static global::UnityEditor.StaticEditorFlags FilterObjectStaticStates(global::UnityEngine.GameObject go) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SceneSelectors.FilterObjectStaticStates"); return default; }
         [global::Unbound.Stub] public SceneSelectors() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SceneSelectors.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class SearchAction
+    unsafe partial class SearchAction
     {
-        [global::Unbound.Stub] public bool closeWindowAfterExecution;
-        [global::Unbound.Stub] internal string providerId;
-        [global::Unbound.Stub] public global::UnityEngine.GUIContent content;
-        [global::Unbound.Stub] public global::System.Func<global::System.Collections.Generic.IReadOnlyCollection<global::UnityEditor.Search.SearchItem>, bool> enabled;
-        [global::Unbound.Stub] public global::System.Action<global::UnityEditor.Search.SearchItem[]> execute;
-        [global::Unbound.Stub] public global::System.Action<global::UnityEditor.Search.SearchItem> handler;
-        [global::Unbound.Stub] public SearchAction(string providerId, string id, global::UnityEngine.GUIContent content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchAction.ctor"); }
-        [global::Unbound.Stub] public SearchAction(string providerId, string id, global::UnityEngine.GUIContent content, global::System.Action<global::UnityEditor.Search.SearchItem[]> handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchAction.ctor"); }
-        [global::Unbound.Stub] public SearchAction(string providerId, string id, global::UnityEngine.GUIContent content, global::System.Action<global::UnityEditor.Search.SearchItem> handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchAction.ctor"); }
-        [global::Unbound.Stub] public SearchAction(string providerId, string name, global::UnityEngine.Texture2D icon, string tooltip, global::System.Action<global::UnityEditor.Search.SearchItem[]> handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchAction.ctor"); }
-        [global::Unbound.Stub] public SearchAction(string providerId, string name, global::UnityEngine.Texture2D icon, string tooltip, global::System.Action<global::UnityEditor.Search.SearchItem> handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchAction.ctor"); }
         [global::Unbound.Stub] internal SearchAction(string providerId, string name, global::UnityEngine.Texture2D icon, string tooltip, global::System.Action<global::UnityEditor.Search.SearchItem> handler, global::System.Func<global::System.Collections.Generic.IReadOnlyCollection<global::UnityEditor.Search.SearchItem>, bool> enabledHandler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchAction.ctor"); }
         [global::Unbound.Stub] internal SearchAction(string name, string label, global::System.Action<global::UnityEditor.Search.SearchItem> execute) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchAction.ctor"); }
         [global::Unbound.Stub] internal SearchAction(string name, string label, global::System.Action<global::UnityEditor.Search.SearchItem[]> execute) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchAction.ctor"); }
         [global::Unbound.Stub] internal SearchAction(string name, string label, global::System.Action<global::UnityEditor.Search.SearchItem> execute, global::System.Func<global::UnityEditor.Search.SearchItem, bool> enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchAction.ctor"); }
-        [global::Unbound.Stub] public SearchAction(string providerId, string name, global::UnityEngine.Texture2D icon = null, string tooltip = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchAction.ctor"); }
-        public string id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchAction.id"); return default; } }
-        public string displayName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchAction.displayName"); return default; } }
     }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)64)]
     [global::Unbound.Stub]
@@ -4736,24 +4712,14 @@ namespace UnityEditor.Search
         [global::Unbound.Stub] public static void Save(in global::UnityEditor.Search.SearchColumn column) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchColumnSettings.Save"); }
         [global::Unbound.Stub] public static void Clear(global::System.Collections.Generic.IEnumerable<string> selectors) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchColumnSettings.Clear"); }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class SearchContext : global::System.IDisposable, global::UnityEngine.ISerializationCallbackReceiver
+    unsafe partial class SearchContext
     {
         [global::Unbound.Stub] internal int sessionId;
         [global::Unbound.Stub] internal SearchContext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.ctor"); }
-        [global::Unbound.Stub] internal SearchContext(global::UnityEditor.Search.SearchProvider provider) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.ctor"); }
         [global::Unbound.Stub] internal SearchContext(global::UnityEditor.Search.SearchProvider provider, global::UnityEditor.Search.RuntimeSearchContext runtimeContext) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.ctor"); }
-        [global::Unbound.Stub] public SearchContext(global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchProvider> providers, string searchText, global::UnityEditor.Search.SearchFlags options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.ctor"); }
         [global::Unbound.Stub] internal SearchContext(global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchProvider> providers, string searchText, global::UnityEditor.Search.SearchFlags options, global::UnityEditor.Search.RuntimeSearchContext runtimeContext) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.ctor"); }
-        [global::Unbound.Stub] public SearchContext(global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchProvider> providers, string searchText) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.ctor"); }
         [global::Unbound.Stub] internal SearchContext(global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchProvider> providers, string searchText, global::UnityEditor.Search.RuntimeSearchContext runtimeContext) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.ctor"); }
-        [global::Unbound.Stub] public SearchContext(global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchProvider> providers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.ctor"); }
         [global::Unbound.Stub] internal SearchContext(global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchProvider> providers, global::UnityEditor.Search.RuntimeSearchContext runtimeContext) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.ctor"); }
-        [global::Unbound.Stub] public SearchContext(global::UnityEditor.Search.SearchContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.ctor"); }
-        [global::Unbound.Stub] public void SetFilter(string providerId, bool isEnabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.SetFilter"); }
-        [global::Unbound.Stub] public bool IsEnabled(string providerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.IsEnabled"); return default; }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.Dispose"); }
         [global::Unbound.Stub] internal global::System.Collections.Generic.IList<global::UnityEditor.Search.SearchProvider> GetProviders() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.GetProviders"); return global::System.Array.Empty<global::UnityEditor.Search.SearchProvider>(); }
         [global::Unbound.Stub] internal void AddProvider(global::UnityEditor.Search.SearchProvider provider) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.AddProvider"); }
         [global::Unbound.Stub] internal void RemoveProvider(global::UnityEditor.Search.SearchProvider provider) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.RemoveProvider"); }
@@ -4769,36 +4735,22 @@ namespace UnityEditor.Search
         [global::Unbound.Stub] internal global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchQueryError> GetErrorsByProvider(string providerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.GetErrorsByProvider"); return global::System.Array.Empty<global::UnityEditor.Search.SearchQueryError>(); }
         [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.ToString"); return default; }
         [global::Unbound.Stub] internal bool Tick() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.Tick"); return default; }
-        [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnBeforeSerialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.OnBeforeSerialize"); }
-        [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnAfterDeserialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.OnAfterDeserialize"); }
         internal global::UnityEditor.Search.RuntimeSearchContext runtimeContext { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.runtimeContext"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.runtimeContext"); } }
         public int progressId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.progressId"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.progressId"); } }
-        public string searchQuery { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchQuery"); return default; } }
         internal string rawSearchQuery { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.rawSearchQuery"); return default; } }
         internal global::UnityEditor.Search.QueryMarker[] markers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.markers"); return global::System.Array.Empty<global::UnityEditor.Search.QueryMarker>(); } }
-        public int searchQueryOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchQueryOffset"); return default; } }
-        public string[] searchWords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchWords"); return global::System.Array.Empty<string>(); } }
-        public string searchPhrase { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchPhrase"); return default; } }
-        public string[] textFilters { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.textFilters"); return global::System.Array.Empty<string>(); } }
         [global::System.Obsolete("This property will be removed in the next version.")] public global::UnityEditor.EditorWindow focusedWindow { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.focusedWindow"); return default; } }
-        public global::UnityEditor.Search.SearchFlags options { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.options"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.options"); } }
-        public bool wantsMore { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.wantsMore"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.wantsMore"); } }
         internal bool showPackages { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.showPackages"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.showPackages"); } }
         internal bool noIndexing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.noIndexing"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.noIndexing"); } }
         internal bool debug { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.debug"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.debug"); } }
-        public bool empty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.empty"); return default; } }
-        public string searchText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchText"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchText"); } }
-        public global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchProvider> providers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.providers"); return global::System.Array.Empty<global::UnityEditor.Search.SearchProvider>(); } }
         internal double searchElapsedTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchElapsedTime"); return default; } }
         internal long searchStartTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchStartTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchStartTime"); } }
         internal long searchFinishTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchFinishTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchFinishTime"); } }
         internal global::System.Type filterType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.filterType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.filterType"); } }
         internal global::UnityEditor.Search.MultiProviderAsyncSearchSession sessions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.sessions"); return default; } }
         internal object userData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.userData"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.userData"); } }
-        public bool searchInProgress { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchInProgress"); return default; } }
         public global::UnityEditor.Search.SearchSelection selection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.selection"); return default; } }
         public global::UnityEditor.Search.ISearchView searchView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchView"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.searchView"); } }
-        public string filterId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.filterId"); return default; } }
         internal bool useExplicitProvidersAsNormalProviders { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.useExplicitProvidersAsNormalProviders"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.useExplicitProvidersAsNormalProviders"); } }
         public event global::System.Action<global::UnityEditor.Search.SearchContext, global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchItem>> asyncItemReceived { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.asyncItemReceived"); } [global::Unbound.Stub] remove { } }
         public event global::System.Action<global::UnityEditor.Search.SearchContext> sessionStarted { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchContext.sessionStarted"); } [global::Unbound.Stub] remove { } }
@@ -5598,35 +5550,6 @@ namespace UnityEditor.Search
             public int endIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchFieldElement.VisualMessage.endIndex"); return default; } }
         }
     }
-    [global::System.Flags]
-    public enum SearchFlags
-    {
-        None = 0,
-        Synchronous = 1,
-        Sorted = 2,
-        FirstBatchAsync = 4,
-        WantsMore = 8,
-        Debug = 16,
-        NoIndexing = 32,
-        Expression = 64,
-        QueryString = 128,
-        Packages = 256,
-        Default = 2,
-        AllProvidersAvailable = 4194304,
-        UseSessionSettings = 8388608,
-        ShowErrorsWithResults = 16777216,
-        [global::System.Obsolete("Not used anymore")] SaveFilters = 33554432,
-        ReuseExistingWindow = 67108864,
-        Multiselect = 134217728,
-        Dockable = 268435456,
-        FocusContext = 536870912,
-        HidePanels = 1073741824,
-        GeneralSearchWindow = -2147483648,
-        OpenDefault = -1744830464,
-        OpenGlobal = -1677721600,
-        OpenContextual = 939524096,
-        OpenPicker = 536870912,
-    }
     [global::Unbound.Stub]
     internal unsafe static partial class SearchFlagsExtensions
     {
@@ -5903,37 +5826,11 @@ namespace UnityEditor.Search
     {
         [global::Unbound.Stub] public SearchIndexerQueryFactory(global::UnityEditor.Search.SearchQueryEvaluator<global::UnityEditor.Search.SearchResult>.EvalHandler handler) : base(default(global::UnityEditor.Search.SearchQueryEvaluator<global::UnityEditor.Search.SearchResult>.EvalHandler)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchIndexerQueryFactory.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class SearchItem : global::System.IEquatable<global::UnityEditor.Search.SearchItem>, global::System.IComparable<global::UnityEditor.Search.SearchItem>, global::System.IComparable
+    unsafe partial class SearchItem
     {
-        [global::Unbound.Stub] public readonly string id;
-        [global::Unbound.Stub] public int score;
-        [global::Unbound.Stub] public string label;
-        [global::Unbound.Stub] public string description;
-        [global::Unbound.Stub] public global::UnityEditor.Search.SearchItemOptions options;
-        [global::Unbound.Stub] public global::UnityEngine.Texture2D thumbnail;
-        [global::Unbound.Stub] public global::UnityEngine.Texture2D preview;
-        [global::Unbound.Stub] public object data;
-        [global::Unbound.Stub] public global::UnityEditor.Search.SearchProvider provider;
-        [global::Unbound.Stub] public global::UnityEditor.Search.SearchContext context;
-        [global::System.Obsolete("Use SearchItem.clear instead.")] [global::Unbound.Stub] public static readonly global::UnityEditor.Search.SearchItem none;
         [global::Unbound.Stub] internal static readonly global::UnityEditor.Search.SearchItem.Comparer DefaultComparer;
-        [global::Unbound.Stub] public SearchItem(string _id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.ctor"); }
-        [global::Unbound.Stub] public string GetLabel(global::UnityEditor.Search.SearchContext context, bool stripHTML = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.GetLabel"); return default; }
-        [global::Unbound.Stub] public string GetDescription(global::UnityEditor.Search.SearchContext context, bool stripHTML = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.GetDescription"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Texture2D GetThumbnail(global::UnityEditor.Search.SearchContext context, bool cacheThumbnail = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.GetThumbnail"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Texture2D GetPreview(global::UnityEditor.Search.SearchContext context, global::UnityEngine.Vector2 size, global::UnityEditor.Search.FetchPreviewOptions options = (global::UnityEditor.Search.FetchPreviewOptions)1024, bool cacheThumbnail = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.GetPreview"); return default; }
-        [global::Unbound.Stub] public int CompareTo(global::UnityEditor.Search.SearchItem other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.CompareTo"); return default; }
         [global::Unbound.Stub] internal int CompareTo(global::UnityEditor.Search.SearchItem other, global::UnityEditor.Search.SearchItemSorting sortBy) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.CompareTo"); return default; }
-        [global::Unbound.Stub] public int CompareTo(object other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.CompareTo"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.Equals"); return default; }
         [global::Unbound.Stub] internal int GetInstanceId() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.GetInstanceId"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.GetHashCode"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEditor.Search.SearchItem other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.Equals"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.ToString"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Object ToObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.ToObject"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Object ToObject(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.ToObject"); return default; }
-        [global::Unbound.Stub] public T ToObject<T>() where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.ToObject"); return default; }
         [global::Unbound.Stub] internal global::System.Type ToType(global::System.Type constraintedType = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.ToType"); return default; }
         [global::Unbound.Stub] internal static bool Insert(global::System.Collections.Generic.IList<global::UnityEditor.Search.SearchItem> list, global::UnityEditor.Search.SearchItem item, global::System.Collections.Generic.IComparer<global::UnityEditor.Search.SearchItem> comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.Insert"); return default; }
         [global::Unbound.Stub] internal static bool Insert(global::System.Collections.Generic.IList<global::UnityEditor.Search.SearchItem> list, global::UnityEditor.Search.SearchItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.Insert"); return default; }
@@ -5947,10 +5844,7 @@ namespace UnityEditor.Search
         [global::Unbound.Stub] public int GetFieldCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.GetFieldCount"); return default; }
         [global::Unbound.Stub] public string[] GetFieldNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.GetFieldNames"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchField> GetFields() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.GetFields"); return global::System.Array.Empty<global::UnityEditor.Search.SearchField>(); }
-        public object value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.value"); } }
-        public static global::UnityEditor.Search.SearchItem clear { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.clear"); return default; } }
         internal ulong key { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.key"); return default; } }
-        public object this[string p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItem.this[]"); return default; } }
         [global::Unbound.Stub]
         internal unsafe readonly partial struct Comparer : global::System.Collections.Generic.IComparer<global::UnityEditor.Search.SearchItem>
         {
@@ -5975,19 +5869,6 @@ namespace UnityEditor.Search
         [global::Unbound.Stub] internal static void InvalidateIMGUILayouts(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItemEditorElement.InvalidateIMGUILayouts"); }
         public global::UnityEditor.Editor editor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItemEditorElement.editor"); return default; } }
         public global::UnityEditor.UIElements.InspectorElement inspectorElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchItemEditorElement.inspectorElement"); return default; } }
-    }
-    [global::System.Flags]
-    public enum SearchItemOptions
-    {
-        None = 0,
-        Ellipsis = 1,
-        RightToLeft = 2,
-        Highlight = 4,
-        FuzzyHighlight = 8,
-        Compacted = 16,
-        AlwaysRefresh = 32,
-        FullDescription = 64,
-        CustomAction = 128,
     }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)64)]
     [global::Unbound.Stub]
@@ -6330,64 +6211,23 @@ namespace UnityEditor.Search
         public static global::System.Collections.Generic.List<global::UnityEditor.Search.SearchPropositionProvider> providers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchPropositionsProviderAttribute.providers"); return new global::System.Collections.Generic.List<global::UnityEditor.Search.SearchPropositionProvider>(); } }
     }
     internal unsafe delegate global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchProposition> SearchPropositionsProviderHandler(global::UnityEditor.Search.SearchContext context, global::UnityEditor.Search.SearchPropositionOptions options);
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class SearchProvider : global::UnityEngine.ISerializationCallbackReceiver
+    unsafe partial class SearchProvider
     {
         [global::Unbound.Stub] internal static int sessionCounter;
         [global::Unbound.Stub] internal double fetchTime;
         [global::Unbound.Stub] internal double loadTime;
         [global::Unbound.Stub] internal double enableTime;
-        [global::Unbound.Stub] internal int m_EnableLockCounter;
-        [global::Unbound.Stub] internal global::UnityEditor.Search.SearchContext defaultContext;
-        [global::Unbound.Stub] public int priority;
-        [global::Unbound.Stub] public bool active;
-        [global::Unbound.Stub] public string filterId;
-        [global::Unbound.Stub] public bool isExplicitProvider;
         [global::Unbound.Stub] internal bool supportsSyncViewSearch;
-        [global::Unbound.Stub] public bool showDetails;
-        [global::Unbound.Stub] public global::UnityEditor.Search.ShowDetailsOptions showDetailsOptions;
-        [global::Unbound.Stub] public global::System.Func<global::UnityEditor.Search.SearchContext, global::System.Collections.Generic.List<global::UnityEditor.Search.SearchItem>, global::UnityEditor.Search.SearchProvider, object> fetchItems;
-        [global::Unbound.Stub] public global::System.Func<global::UnityEditor.Search.SearchItem, global::UnityEditor.Search.SearchContext, string> fetchLabel;
-        [global::Unbound.Stub] public global::System.Func<global::UnityEditor.Search.SearchItem, global::UnityEditor.Search.SearchContext, string> fetchDescription;
-        [global::Unbound.Stub] public global::System.Func<global::UnityEditor.Search.SearchItem, global::UnityEditor.Search.SearchContext, global::UnityEngine.Texture2D> fetchThumbnail;
-        [global::Unbound.Stub] public global::System.Func<global::UnityEditor.Search.SearchItem, global::UnityEditor.Search.SearchContext, global::UnityEngine.Vector2, global::UnityEditor.Search.FetchPreviewOptions, global::UnityEngine.Texture2D> fetchPreview;
         [global::Unbound.Stub] public global::System.Func<global::UnityEditor.Search.SearchContext, global::UnityEditor.Search.SearchPropositionOptions, global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchProposition>> fetchPropositions;
         [global::Unbound.Stub] public global::System.Func<global::UnityEditor.Search.SearchContext, global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchItem>, global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchColumn>> fetchColumns;
-        [global::Unbound.Stub] public global::System.Action<global::UnityEditor.Search.SearchItem, global::UnityEditor.Search.SearchContext> startDrag;
-        [global::Unbound.Stub] public global::System.Action<global::UnityEditor.Search.SearchItem, global::UnityEditor.Search.SearchContext> trackSelection;
-        [global::Unbound.Stub] public global::System.Func<global::UnityEditor.Search.SearchItem, global::System.Type, global::UnityEngine.Object> toObject;
-        [global::Unbound.Stub] public global::System.Action onEnable;
-        [global::Unbound.Stub] public global::System.Action onDisable;
-        [global::Unbound.Stub] public global::System.Func<bool> isEnabledForContextualSearch;
-        [global::Unbound.Stub] public SearchProvider(string id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.ctor"); }
-        [global::Unbound.Stub] public SearchProvider(string id, string displayName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.ctor"); }
-        [global::Unbound.Stub] public SearchProvider(string id, global::System.Func<global::UnityEditor.Search.SearchContext, global::System.Collections.Generic.List<global::UnityEditor.Search.SearchItem>, global::UnityEditor.Search.SearchProvider, object> fetchItemsHandler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.ctor"); }
-        [global::Unbound.Stub] public SearchProvider(string id, global::System.Func<global::UnityEditor.Search.SearchContext, global::UnityEditor.Search.SearchProvider, object> fetchItemsHandler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.ctor"); }
-        [global::Unbound.Stub] public SearchProvider(string id, string displayName, global::System.Func<global::UnityEditor.Search.SearchContext, global::UnityEditor.Search.SearchProvider, object> fetchItemsHandler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.ctor"); }
-        [global::Unbound.Stub] public SearchProvider(string id, string displayName, global::System.Func<global::UnityEditor.Search.SearchContext, global::System.Collections.Generic.List<global::UnityEditor.Search.SearchItem>, global::UnityEditor.Search.SearchProvider, object> fetchItemsHandler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.ctor"); }
         [global::Unbound.Stub] internal SearchProvider(string id, string displayName, global::UnityEditor.Search.SearchProvider templateProvider, int groupPriority) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.ctor"); }
-        [global::Unbound.Stub] public global::UnityEditor.Search.SearchItem CreateItem(global::UnityEditor.Search.SearchContext context, string id, int score, string label, string description, global::UnityEngine.Texture2D thumbnail, object data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.CreateItem"); return default; }
-        [global::System.Obsolete("Use CreateItem which take a SearchContext")] [global::Unbound.Stub] public global::UnityEditor.Search.SearchItem CreateItem(string id, int score, string label, string description, global::UnityEngine.Texture2D thumbnail, object data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.CreateItem"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.Search.SearchItem CreateItem(global::UnityEditor.Search.SearchContext context, string id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.CreateItem"); return default; }
-        [global::System.Obsolete("Use CreateItem which take a SearchContext")] [global::Unbound.Stub] public global::UnityEditor.Search.SearchItem CreateItem(string id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.CreateItem"); return default; }
-        [global::System.Obsolete("Use CreateItem which take a SearchContext")] [global::Unbound.Stub] public global::UnityEditor.Search.SearchItem CreateItem(string id, string label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.CreateItem"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.Search.SearchItem CreateItem(string id, string label, string description, global::UnityEngine.Texture2D thumbnail, object data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.CreateItem"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.Search.SearchItem CreateItem(global::UnityEditor.Search.SearchContext context, string id, string label, string description, global::UnityEngine.Texture2D thumbnail, object data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.CreateItem"); return default; }
         [global::Unbound.Stub] internal void RecordFetchTime(double t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.RecordFetchTime"); }
         [global::Unbound.Stub] internal void OnEnable(double enableTimeMs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.OnEnable"); }
         [global::Unbound.Stub] internal void OnDisable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.OnDisable"); }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.ToString"); return default; }
-        [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnBeforeSerialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.OnBeforeSerialize"); }
-        [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnAfterDeserialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.OnAfterDeserialize"); }
         internal global::System.Func<global::UnityEditor.Search.SearchContext, global::UnityEditor.Search.SearchTable> tableConfig { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.tableConfig"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.tableConfig"); } }
         internal global::System.Func<global::UnityEditor.Search.SearchItem, global::System.Type, global::System.Type> toType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.toType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.toType"); } }
         internal global::System.Func<global::UnityEditor.Search.SearchItem, ulong> toKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.toKey"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.toKey"); } }
         internal global::System.Func<global::UnityEditor.Search.SearchItem, int> toInstanceId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.toInstanceId"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.toInstanceId"); } }
-        public string id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.id"); return default; } }
-        public string type { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.type"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.type"); } }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.name"); return default; } }
-        public global::System.Collections.Generic.List<global::UnityEditor.Search.SearchAction> actions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.actions"); return new global::System.Collections.Generic.List<global::UnityEditor.Search.SearchAction>(); } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProvider.actions"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class SearchProviderSettings : global::UnityEditor.Search.BaseDictionarySettings
@@ -6893,8 +6733,7 @@ namespace UnityEditor.Search
     internal unsafe delegate object SearchSelectorHandler(global::UnityEditor.Search.SearchSelectorArgs args);
     internal unsafe delegate object SearchSelectorHandler1(global::UnityEditor.Search.SearchItem item);
     internal unsafe delegate string SearchSelectorHandler2(global::UnityEditor.Search.SearchItem item);
-    [global::Unbound.Stub]
-    public unsafe static partial class SearchService
+    unsafe static partial class SearchService
     {
         [global::Unbound.Stub] internal static void SetupSearchFirstUse() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.SetupSearchFirstUse"); }
         [global::Unbound.Stub] public static global::UnityEditor.Search.SearchProvider GetProvider(string providerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.GetProvider"); return default; }
@@ -6909,9 +6748,7 @@ namespace UnityEditor.Search
         [global::Unbound.Stub] internal static global::UnityEditor.Search.AdvancedObjectSelector GetObjectSelector(string selectorId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.GetObjectSelector"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.Search.SearchContext CreateContext(global::System.Collections.Generic.IEnumerable<string> providerIds, string searchText = "", global::UnityEditor.Search.SearchFlags flags = (global::UnityEditor.Search.SearchFlags)2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.CreateContext"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.Search.SearchContext CreateContext(global::UnityEditor.Search.RuntimeSearchContext runtimeContext, global::System.Collections.Generic.IEnumerable<string> providerIds, string searchText = "", global::UnityEditor.Search.SearchFlags flags = (global::UnityEditor.Search.SearchFlags)2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.CreateContext"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.Search.SearchContext CreateContext(global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchProvider> providers, string searchText = "", global::UnityEditor.Search.SearchFlags flags = (global::UnityEditor.Search.SearchFlags)2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.CreateContext"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.Search.SearchContext CreateContext(global::UnityEditor.Search.RuntimeSearchContext runtimeContext, global::System.Collections.Generic.IEnumerable<global::UnityEditor.Search.SearchProvider> providers, string searchText = "", global::UnityEditor.Search.SearchFlags flags = (global::UnityEditor.Search.SearchFlags)2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.CreateContext"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.Search.SearchContext CreateContext(global::UnityEditor.Search.SearchProvider provider, string searchText = "") { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.CreateContext"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.Search.SearchContext CreateContext(global::UnityEditor.Search.RuntimeSearchContext runtimeContext, global::UnityEditor.Search.SearchProvider provider, string searchText = "") { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.CreateContext"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.Search.SearchContext CreateContext(string providerId, string searchText = "", global::UnityEditor.Search.SearchFlags flags = (global::UnityEditor.Search.SearchFlags)2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.CreateContext"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.Search.SearchContext CreateContext(global::UnityEditor.Search.RuntimeSearchContext runtimeContext, string providerId, string searchText = "", global::UnityEditor.Search.SearchFlags flags = (global::UnityEditor.Search.SearchFlags)2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.CreateContext"); return default; }
@@ -6919,7 +6756,6 @@ namespace UnityEditor.Search
         [global::Unbound.Stub] internal static global::UnityEditor.Search.SearchContext CreateContext(global::UnityEditor.Search.RuntimeSearchContext runtimeContext, string searchText, global::UnityEditor.Search.SearchFlags flags) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.CreateContext"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.Search.SearchContext CreateContext(string searchText) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.CreateContext"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.Search.SearchContext CreateContext(global::UnityEditor.Search.RuntimeSearchContext runtimeContext, string searchText) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.CreateContext"); return default; }
-        [global::Unbound.Stub] public static global::System.Collections.Generic.List<global::UnityEditor.Search.SearchItem> GetItems(global::UnityEditor.Search.SearchContext context, global::UnityEditor.Search.SearchFlags options = (global::UnityEditor.Search.SearchFlags)2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.GetItems"); return new global::System.Collections.Generic.List<global::UnityEditor.Search.SearchItem>(); }
         [global::Unbound.Stub] public static global::UnityEditor.Search.ISearchList Request(global::UnityEditor.Search.SearchContext context, global::UnityEditor.Search.SearchFlags options = (global::UnityEditor.Search.SearchFlags)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.Request"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.Search.ISearchList Request(string searchText, global::UnityEditor.Search.SearchFlags options = (global::UnityEditor.Search.SearchFlags)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.Request"); return default; }
         [global::Unbound.Stub] public static void Request(string searchText, global::System.Action<global::UnityEditor.Search.SearchContext, global::System.Collections.Generic.IList<global::UnityEditor.Search.SearchItem>> onSearchCompleted, global::UnityEditor.Search.SearchFlags options = (global::UnityEditor.Search.SearchFlags)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchService.Request"); }
@@ -7819,19 +7655,6 @@ namespace UnityEditor.Search
     internal unsafe static partial class SerializedPropertyExtension
     {
         [global::Unbound.Stub] public static global::System.Type GetManagedType(this global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SerializedPropertyExtension.GetManagedType"); return default; }
-    }
-    [global::System.Flags]
-    public enum ShowDetailsOptions
-    {
-        None = 0,
-        Preview = 1,
-        Inspector = 2,
-        Actions = 4,
-        Description = 8,
-        ListView = 16,
-        DefaultGroup = 32,
-        InspectorWithoutHeader = 64,
-        Default = 13,
     }
     [global::Unbound.Stub]
     internal unsafe partial class SortByDescriptionComparer : global::UnityEditor.Search.BaseSearchListComparer

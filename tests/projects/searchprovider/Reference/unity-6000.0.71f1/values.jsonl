@@ -10,6 +10,14 @@
 {"k":"provider.defaultFetchItems","v":"result=<null>|added=0"}
 {"k":"provider.defaultFetchLabel","v":"\"L\"|\"i\"|\"\""}
 {"k":"provider.defaultFetchThumbnail","v":"set"}
+{"k":"action.content","v":"id=\"my_action\"|displayName=\"Tip\"|text=\"Text\"|tooltip=\"Tip\"|image=<null>|close=True|handler=<null>|execute=<null>|enabled=True"}
+{"k":"action.nullContent","v":"id=\"my_action\"|displayName=throws NullReferenceException|text=<null>|tooltip=<null>|image=<null>|close=True|handler=<null>|execute=<null>|enabled=True"}
+{"k":"action.contentItem","v":"id=\"my_action\"|displayName=\"Tip\"|text=\"Text\"|tooltip=\"Tip\"|image=<null>|close=True|handler=set|execute=<null>|enabled=True"}
+{"k":"action.contentItems","v":"id=\"my_action\"|displayName=\"Tip\"|text=\"Text\"|tooltip=\"Tip\"|image=<null>|close=True|handler=<null>|execute=set|enabled=True"}
+{"k":"action.name","v":"id=\"my_action\"|displayName=\"my_action\"|text=\"My Action\"|tooltip=\"my_action\"|image=<null>|close=True|handler=<null>|execute=<null>|enabled=True"}
+{"k":"action.nameIconTip","v":"id=\"openThing\"|displayName=\"Opens it\"|text=\"Open Thing\"|tooltip=\"Opens it\"|image=set|close=True|handler=<null>|execute=<null>|enabled=True"}
+{"k":"action.nameItem","v":"id=\"my_action\"|displayName=\"my_action\"|text=\"My Action\"|tooltip=\"my_action\"|image=set|close=True|handler=set|execute=<null>|enabled=True"}
+{"k":"action.nameItems","v":"id=\"my_action\"|displayName=\"Tip\"|text=\"My Action\"|tooltip=\"Tip\"|image=<null>|close=True|handler=<null>|execute=set|enabled=True"}
 {"k":"item.new","v":"id=\"fresh\"|score=0|label=<null>|description=<null>|options=None|thumbnail=<null>|preview=<null>|data=<null>|provider=\"default\"|context=<null>|value=fresh|toString=\"[0] fresh\"|providerName=\"Default\"|providerPriority=-2147483648|providerActions=1"}
 {"k":"item.newNullId","v":"id=<null>|score=0|label=<null>|description=<null>|options=None|thumbnail=<null>|preview=<null>|data=<null>|provider=\"default\"|context=<null>|value=<null>|toString=\"[0] \""}
 {"k":"item.create.id","v":"id=\"a\"|score=0|label=<null>|description=<null>|options=Ellipsis, Highlight|thumbnail=<null>|preview=<null>|data=<null>|provider=own|context=own|value=a|toString=\"[0] a\""}
@@ -76,6 +84,7 @@
 {"k":"context.setText","v":"filtered:text=\"probe: second Third\"|query=\"second Third\"|offset=7|words=[\"second\",\"third\"]|phrase=\"second third\"|filters=[]|options=Default|wantsMore=False|empty=False|filterId=\"probe:\"|providers=[probe]|inProgress=False|plain:text=\"plain\"|query=\"plain\"|offset=0|words=[\"plain\"]|phrase=\"second third\"|filters=[]|options=Default|wantsMore=False|empty=False|filterId=<null>|providers=[early,probe,late]|inProgress=False"}
 {"k":"context.wantsMore","v":"on=Default, WantsMore|off=Packages|wantsMore=False"}
 {"k":"context.setFilter","v":"probe=True|unknown=False|removed=early,late:False|again=early,late"}
+{"k":"context.setFilterEnabling","v":"made=1/0/1|removed=1/1/102|disposed=1/1/202"}
 {"k":"context.disposed","v":"text=\"x\"|providers=3|phrase=\"x\"|isEnabled=True|setText=set|options=Default"}
 {"k":"context.enabling","v":"single=1/0|list=1/0|listDisposed=1/0|singleDisposed=1/1"}
 {"k":"search.synchronous","v":"items=alpha.listed(10),alpha.also(-5),beta.z(50),beta.m(49)|asked=alpha:find me:find me,beta:find me:find me|logs=<none>"}

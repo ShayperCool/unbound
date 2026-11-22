@@ -10,7 +10,7 @@ sys.path.insert(0, str(PROBE.parents[1]))
 import value_probe  # noqa: E402
 
 BASE = [(PROBE.parent/'imguiskin', ('Assets/Scenes', 'Assets/Editor')),
-        (PROBE.parent/'analyticssession', ('Packages', 'ProjectSettings'))]
+        (PROBE.parent/'analyticssession', ('ProjectSettings',))]
 VARIABLE = 'SEARCH_PROVIDER_OUT'
 
 

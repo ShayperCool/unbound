@@ -28,6 +28,7 @@ static class SearchProbe
         Application.logMessageReceived += (condition, stackTrace, type) => s_Logs.Add(type + ":" + condition.Replace("\n", "\\n"));
 
         Providers();
+        Actions();
         Items();
         Fetching();
         Comparing();
@@ -80,6 +81,26 @@ static class SearchProbe
             var texture = p.fetchThumbnail(new SearchItem("i"), null);
             return texture == null ? "<null>" : "set";
         });
+    }
+
+    static string Action(SearchAction a) => string.Join("|", new[]
+    {
+        "id=" + Text(a.id), "displayName=" + Try(() => Text(a.displayName)), "text=" + Text(a.content?.text), "tooltip=" + Text(a.content?.tooltip),
+        "image=" + (a.content?.image == null ? "<null>" : "set"), "close=" + a.closeWindowAfterExecution, "handler=" + Set(a.handler), "execute=" + Set(a.execute),
+        "enabled=" + (a.enabled == null ? "<null>" : a.enabled(new SearchItem[0]).ToString()),
+    });
+
+    static void Actions()
+    {
+        var texture = new Texture2D(4, 4);
+        Check("action.content", () => Action(new SearchAction("probe", "my_action", new GUIContent("Text", "Tip"))));
+        Check("action.nullContent", () => Action(new SearchAction("probe", "my_action", (GUIContent)null)));
+        Check("action.contentItem", () => Action(new SearchAction("probe", "my_action", new GUIContent("Text", "Tip"), (SearchItem item) => { })));
+        Check("action.contentItems", () => Action(new SearchAction("probe", "my_action", new GUIContent("Text", "Tip"), (SearchItem[] items) => { })));
+        Check("action.name", () => Action(new SearchAction("probe", "my_action")));
+        Check("action.nameIconTip", () => Action(new SearchAction("probe", "openThing", texture, "Opens it")));
+        Check("action.nameItem", () => Action(new SearchAction("probe", "my_action", texture, null, (SearchItem item) => { })));
+        Check("action.nameItems", () => Action(new SearchAction("probe", "my_action", null, "Tip", (SearchItem[] items) => { })));
     }
 
     static string Item(SearchItem i, SearchProvider p, SearchContext c) => i == null ? "<null>" : string.Join("|", new[]
@@ -334,6 +355,18 @@ static class SearchProbe
             c.SetFilter("unknown", true);
             c.SetFilter("unknown", false);
             return before + "|removed=" + removed + "|again=" + string.Join(",", c.providers.Select(p => p.id));
+        });
+        Check("context.setFilterEnabling", () =>
+        {
+            int enabled = 0, disabled = 0, others = 0;
+            var p = new SearchProvider("probe") { onEnable = () => enabled++, onDisable = () => disabled++ };
+            var q = new SearchProvider("other") { onEnable = () => others++, onDisable = () => others += 100 };
+            var c = SearchService.CreateContext(new[] { p, q }, "x");
+            var made = enabled + "/" + disabled + "/" + others;
+            c.SetFilter("probe", false);
+            var removed = enabled + "/" + disabled + "/" + others;
+            c.Dispose();
+            return "made=" + made + "|removed=" + removed + "|disposed=" + enabled + "/" + disabled + "/" + others;
         });
         Check("context.disposed", () =>
         {
