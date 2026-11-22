@@ -5,7 +5,8 @@
 //! flight). Synchronous readbacks and queries flush in order on the render thread. Native plugin
 //! callbacks and native-texture interop borrow the renderer onto the game thread in FIFO order so
 //! plugin thread identity, OpenGL context ownership and log deferral are as before; once a native
-//! rendering plugin is loaded, every command batch runs that way (see [`GpuBackend`]). A panic on
+//! plugin works with the device, every upload and command batch runs that way (see
+//! [`GpuBackend`]). A panic on
 //! the render thread stops the process. Calls made before the renderer exists wait in order until
 //! [`GpuBackend::install`]; shader queries before then are answered by the backend's own resolver.
 use crate::materials::Resolver;
@@ -31,47 +32,66 @@ enum Pending {
     Warmup(ShaderWarmupRequest),
 }
 
-enum RenderMsg {
+/// What the render thread drives: the renderer (a stand-in in tests).
+trait Rendering: Send + 'static {
+    fn apply(&mut self, upload: Upload);
+    fn execute(&mut self, commands: Vec<Command>);
+}
+
+impl Rendering for UnityRenderer {
+    fn apply(&mut self, upload: Upload) {
+        UnityRenderer::apply(self, upload);
+    }
+
+    fn execute(&mut self, commands: Vec<Command>) {
+        UnityRenderer::execute(self, commands);
+    }
+}
+
+enum RenderMsg<R> {
     Upload(Upload),
     Commands {
         commands: Vec<Command>,
         end_frames: usize,
     },
-    Call(Box<dyn FnOnce(&mut UnityRenderer) + Send>),
+    Call(Box<dyn FnOnce(&mut R) + Send>),
     /// Temporarily lends `UnityRenderer` to the caller thread (in strict FIFO order after all
     /// prior messages finish) so native plugin callbacks and GL interop calls run on the game
     /// thread with Unity's exact thread identity and OpenGL context ownership.
     Lend {
-        take_tx: SyncSender<UnityRenderer>,
-        return_rx: Receiver<UnityRenderer>,
+        take_tx: SyncSender<R>,
+        return_rx: Receiver<R>,
     },
     Flush(SyncSender<()>),
     Shutdown(SyncSender<()>),
 }
 
-#[derive(Default)]
-struct QueueState {
-    items: VecDeque<RenderMsg>,
+struct QueueState<R> {
+    items: VecDeque<RenderMsg<R>>,
     in_flight_frames: usize,
     closed: bool,
 }
 
-struct RenderQueue {
-    state: Mutex<QueueState>,
+struct RenderQueue<R> {
+    state: Mutex<QueueState<R>>,
     has_work: Condvar,
     frame_slot: Condvar,
 }
 
-impl RenderQueue {
+impl<R> RenderQueue<R> {
     fn new() -> Arc<Self> {
         Arc::new(Self {
-            state: Mutex::new(QueueState::default()),
+            state: Mutex::new(QueueState {
+                items: VecDeque::new(),
+                in_flight_frames: 0,
+                closed: false,
+            }),
             has_work: Condvar::new(),
             frame_slot: Condvar::new(),
         })
     }
 
-    fn push(&self, msg: RenderMsg) -> bool {
+    fn push(&self, msg: RenderMsg<R>) -> bool {
         let mut q = self.state.lock().unwrap_or_else(|e| e.into_inner());
         if q.closed {
             return false;
@@ -109,7 +129,7 @@ impl RenderQueue {
         self.frame_slot.notify_all();
     }
 
-    fn pop(&self) -> Option<RenderMsg> {
+    fn pop(&self) -> Option<RenderMsg<R>> {
         let mut q = self.state.lock().unwrap_or_else(|e| e.into_inner());
         loop {
             if let Some(msg) = q.items.pop_front() {
@@ -134,21 +154,21 @@ impl RenderQueue {
 
 /// Ensures the render queue is closed and waiting callers unblock even if the render thread
 /// unwinds on a panic.
-struct CloseOnDrop(Arc<RenderQueue>);
+struct CloseOnDrop<R>(Arc<RenderQueue<R>>);
 
-impl Drop for CloseOnDrop {
+impl<R> Drop for CloseOnDrop<R> {
     fn drop(&mut self) {
         self.0.close();
     }
 }
 
-struct Worker {
-    queue: Arc<RenderQueue>,
+struct Worker<R = UnityRenderer> {
+    queue: Arc<RenderQueue<R>>,
     join: Mutex<Option<JoinHandle<()>>>,
 }
 
-impl Worker {
-    fn spawn(renderer: UnityRenderer) -> Arc<Self> {
+impl<R: Rendering> Worker<R> {
+    fn spawn(renderer: R) -> Arc<Self> {
         let queue = RenderQueue::new();
         let worker_queue = Arc::clone(&queue);
         let handle = std::thread::Builder::new()
@@ -177,7 +197,7 @@ impl Worker {
     }
 
     /// The render thread's loop: the queue's messages in order until it closes or shuts down.
-    fn serve(worker_queue: &RenderQueue, mut renderer: UnityRenderer) {
+    fn serve(worker_queue: &RenderQueue<R>, mut renderer: R) {
         while let Some(msg) = worker_queue.pop() {
             match msg {
                 RenderMsg::Upload(u) => renderer.apply(u),
@@ -212,10 +232,7 @@ impl Worker {
         drop(renderer);
     }
 
-    fn call<R: Send + 'static>(
-        &self,
-        op: impl FnOnce(&mut UnityRenderer) -> R + Send + 'static,
-    ) -> Option<R> {
+    fn call<T: Send + 'static>(&self, op: impl FnOnce(&mut R) -> T + Send + 'static) -> Option<T> {
         let (tx, rx) = mpsc::sync_channel(1);
         if !self.queue.push(RenderMsg::Call(Box::new(move |r| {
             let _ = tx.send(op(r));
@@ -228,18 +245,18 @@ impl Worker {
     /// Runs `op` on the caller thread after every previously queued upload and command has
     /// completed on the render thread, then returns `UnityRenderer` to the render thread (even
     /// if `op` unwinds).
-    fn with_renderer_on_caller<R>(&self, op: impl FnOnce(&mut UnityRenderer) -> R) -> Option<R> {
+    fn with_renderer_on_caller<T>(&self, op: impl FnOnce(&mut R) -> T) -> Option<T> {
         let (take_tx, take_rx) = mpsc::sync_channel(1);
         let (return_tx, return_rx) = mpsc::sync_channel(1);
         if !self.queue.push(RenderMsg::Lend { take_tx, return_rx }) {
             return None;
         }
         let renderer = take_rx.recv().ok()?;
-        struct ReturnOnDrop {
-            renderer: Option<UnityRenderer>,
-            return_tx: SyncSender<UnityRenderer>,
+        struct ReturnOnDrop<R> {
+            renderer: Option<R>,
+            return_tx: SyncSender<R>,
         }
-        impl Drop for ReturnOnDrop {
+        impl<R> Drop for ReturnOnDrop<R> {
             fn drop(&mut self) {
                 if let Some(renderer) = self.renderer.take() {
                     let _ = self.return_tx.send(renderer);
@@ -303,11 +320,12 @@ impl Inner {
 #[derive(Default)]
 pub struct GpuBackend {
     inner: Mutex<Inner>,
-    /// A native rendering plugin is loaded: command batches run on the game thread from then on
-    /// (the renderer lent to it, in order), as they did before the render thread, because a
-    /// plugin's own device work from scripts (OpenGL calls on its context, Vulkan queue submits,
-    /// Metal encoders outside callbacks) is ordered with Unity's rendering on that thread.
-    plugins: std::sync::atomic::AtomicBool,
+    /// A native plugin works with the device (it loaded, a plugin event was issued, or a native
+    /// texture pointer was handed out): from then on uploads and command batches run on the
+    /// calling game thread (the renderer lent to it, in order), as they did before the render
+    /// thread, so a plugin's own device work from scripts (OpenGL calls on its context, Vulkan
+    /// queue submits, Metal encoders outside callbacks) is ordered with Unity's rendering.
+    direct: std::sync::atomic::AtomicBool,
 }
 
 impl Drop for GpuBackend {
@@ -388,9 +406,25 @@ impl GpuBackend {
             Some(worker) => {
                 let worker = Arc::clone(worker);
                 drop(inner);
-                worker.queue.push(RenderMsg::Upload(upload));
+                if self.is_direct() {
+                    let _ = worker.with_renderer_on_caller(|r| r.apply(upload));
+                } else {
+                    worker.queue.push(RenderMsg::Upload(upload));
+                }
             }
             None => inner.pending.push(Pending::Upload(upload)),
+        }
+    }
+
+    fn is_direct(&self) -> bool {
+        self.direct.load(std::sync::atomic::Ordering::Acquire)
+    }
+
+    /// Runs everything on the calling game thread from now on (see `direct`), once what was
+    /// queued before has finished.
+    fn go_direct(&self) {
+        if !self.direct.swap(true, std::sync::atomic::Ordering::AcqRel) {
+            self.flush();
         }
     }
 }
@@ -441,8 +475,10 @@ impl RenderBackend for GpuBackend {
                 }
             }
         };
-        let has_plugin = commands.iter().any(|c| matches!(c, Command::Plugin(_)));
-        if has_plugin || self.plugins.load(std::sync::atomic::Ordering::Relaxed) {
+        if commands.iter().any(|c| matches!(c, Command::Plugin(_))) {
+            self.go_direct();
+        }
+        if self.is_direct() {
             unbound_runtime::plugin_api::while_rendering(|| {
                 let _ = worker.with_renderer_on_caller(|r| r.execute(commands));
             });
@@ -553,9 +589,8 @@ impl RenderBackend for GpuBackend {
     }
 
     fn with_plugin_context(&self, work: &mut dyn FnMut()) {
-        // A plugin is loading, queried or shutting down: rendering runs synchronously from now on.
-        self.plugins
-            .store(true, std::sync::atomic::Ordering::Relaxed);
+        // A plugin is loading, queried or shutting down: rendering runs on the game thread from now on.
+        self.go_direct();
         // Only OpenGL Core has a context of the plugins' to make current (the other devices'
         // plugins use the device's own interface): the work alone elsewhere.
         if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore {
@@ -578,6 +613,8 @@ impl RenderBackend for GpuBackend {
         let Some(worker) = self.inner.lock().unwrap().worker.clone() else {
             return 0;
         };
+        // A native pointer is for a plugin's own device work.
+        self.go_direct();
         worker
             .with_renderer_on_caller(|r| r.native_texture(texture, depth))
             .unwrap_or(0)
@@ -588,6 +625,7 @@ impl RenderBackend for GpuBackend {
         let Some(worker) = self.inner.lock().unwrap().worker.clone() else {
             return 0;
         };
+        self.go_direct();
         worker
             .with_renderer_on_caller(|r| r.metal_render_buffer_texture(texture, image))
             .unwrap_or(0)
@@ -606,6 +644,7 @@ impl RenderBackend for GpuBackend {
             .worker
             .clone()
             .ok_or_else(|| "the renderer is not up yet".to_string())?;
+        self.go_direct();
         worker
             .with_renderer_on_caller(|r| r.external_texture(texture, native, info))
             .ok_or_else(|| "the renderer has stopped".to_string())?
@@ -717,7 +756,7 @@ SubShader {
         use std::sync::atomic::{AtomicBool, Ordering};
         use std::time::Duration;
 
-        let queue = RenderQueue::new();
+        let queue = RenderQueue::<UnityRenderer>::new();
         // Frame 1 Enqueues immediately (0 -> 1 in flight) and mid-frame chunks do not block.
         assert!(queue.push_commands(vec![Command::ColorSpace(1)], 0));
         assert!(queue.push_commands(vec![Command::EndFrame], 1));
@@ -757,7 +796,7 @@ SubShader {
     fn render_queue_close_unblocks_waiting_end_frame_and_lend_waiter() {
         use std::time::Duration;
 
-        let queue = RenderQueue::new();
+        let queue = RenderQueue::<UnityRenderer>::new();
         // Queue a lend request and an in-flight frame, then close (simulating worker unwind).
         let (take_tx, take_rx) = mpsc::sync_channel(1);
         let (_return_tx, return_rx) = mpsc::sync_channel(1);
@@ -780,5 +819,86 @@ SubShader {
             take_tx: take_tx2,
             return_rx: return_rx2,
         }));
+    }
+
+    /// A stand-in renderer: what ran, in order, and on which thread; `ColorSpace(99)` panics.
+    struct Recorder(Arc<Mutex<Vec<(String, std::thread::ThreadId)>>>);
+
+    impl Rendering for Recorder {
+        fn apply(&mut self, _upload: Upload) {
+            self.0
+                .lock()
+                .unwrap()
+                .push(("upload".into(), std::thread::current().id()));
+        }
+
+        fn execute(&mut self, commands: Vec<Command>) {
+            for command in commands {
+                if let Command::ColorSpace(n) = command {
+                    assert_ne!(n, 99, "test panic on the render thread");
+                    self.0
+                        .lock()
+                        .unwrap()
+                        .push((format!("commands {n}"), std::thread::current().id()));
+                }
+            }
+        }
+    }
+
+    /// A lent renderer runs the caller's work on the calling thread, after everything queued
+    /// before it ran on the render thread, and goes back to the render thread afterwards.
+    #[test]
+    fn a_lent_renderer_runs_on_the_caller_after_what_was_queued() {
+        let log = Arc::new(Mutex::new(Vec::new()));
+        let worker = Worker::spawn(Recorder(Arc::clone(&log)));
+        assert!(worker.queue.push(RenderMsg::Upload(Upload::ReleaseMesh(1))));
+        assert!(worker.queue.push_commands(vec![Command::ColorSpace(1)], 0));
+        let caller = std::thread::current().id();
+        worker
+            .with_renderer_on_caller(|r| r.execute(vec![Command::ColorSpace(2)]))
+            .unwrap();
+        assert!(worker.queue.push_commands(vec![Command::ColorSpace(3)], 0));
+        worker.flush();
+        let log = log.lock().unwrap().clone();
+        let names: Vec<&str> = log.iter().map(|(name, _)| name.as_str()).collect();
+        assert_eq!(names, ["upload", "commands 1", "commands 2", "commands 3"]);
+        assert_ne!(log[0].1, caller);
+        assert_eq!(log[2].1, caller);
+        assert_eq!(log[3].1, log[0].1);
+        worker.shutdown();
+    }
+
+    /// A panic on the render thread stops the process (it would otherwise go on without
+    /// rendering). Run as a child process that must die.
+    #[test]
+    fn a_render_thread_panic_aborts_the_process() {
+        const CHILD: &str = "UNBOUND_RENDER_PANIC_CHILD";
+        if std::env::var_os(CHILD).is_some() {
+            let worker = Worker::spawn(Recorder(Arc::new(Mutex::new(Vec::new()))));
+            worker.queue.push_commands(vec![Command::ColorSpace(99)], 0);
+            worker.flush();
+            // Not reached: the process aborts before the flush returns.
+            std::process::exit(0);
+        }
+        let status = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "backend::tests::a_render_thread_panic_aborts_the_process",
+                "--nocapture",
+            ])
+            .env(CHILD, "1")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .unwrap();
+        assert!(
+            !status.success(),
+            "the child process went on after the panic"
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            assert_eq!(status.signal(), Some(6), "{status:?}");
+        }
     }
 }
