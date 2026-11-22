@@ -585,7 +585,7 @@ namespace UnityEngine
             if (ps.m_Count == 0 || m_RenderMode == ParticleSystemRenderMode.None) return;
             // Without a material the particles draw with the error material (measured: magenta).
             var material = m_Materials.Length > 0 ? m_Materials[0] : null;
-            if (material == null) material = ErrorMaterial;
+            if (material == null) material = Material.Error;
             if (material == null) return;
             // A renderer list that leaves the draw out gets no geometry built for it (the system
             // still requests its streams, as building them would).
@@ -636,20 +636,7 @@ namespace UnityEngine
                     ps.m_NoiseSumEnabled = true;
         }
 
-        static Material s_ErrorMaterial;
 
-        static Material ErrorMaterial
-        {
-            get
-            {
-                if (s_ErrorMaterial == null)
-                {
-                    var shader = Shader.Find("Hidden/InternalErrorShader");
-                    if (shader != null) s_ErrorMaterial = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
-                }
-                return s_ErrorMaterial;
-            }
-        }
 
         readonly Geometry m_TrailGeometry = new Geometry();
         readonly Dictionary<Camera, Mesh> m_TrailMeshes = new Dictionary<Camera, Mesh>();

@@ -11,6 +11,23 @@ namespace UnityEngine
     [ClassId(21)]
     public partial class Material : Object
     {
+        static Material s_Error;
+
+        /// <summary>The material a renderer draws a slot without a material with: Unity's error
+        /// shader (magenta, opaque); null while that shader is not available.</summary>
+        internal static Material Error
+        {
+            get
+            {
+                if (s_Error == null)
+                {
+                    var shader = Shader.Find("Hidden/InternalErrorShader");
+                    if (shader != null) s_Error = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+                }
+                return s_Error;
+            }
+        }
+
         internal sealed class TextureSlot
         {
             internal Texture Texture;
