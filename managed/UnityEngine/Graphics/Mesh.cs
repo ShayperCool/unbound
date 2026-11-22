@@ -887,7 +887,8 @@ namespace UnityEngine
             s.BaseVertex = baseVertex;
             // The sub-mesh's bounds are measured with calculateBounds, its range always; the mesh's
             // bounds stay as they are (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
-            // mesh-bounds setTriangles*, setIndices*, boundsAssignedTriangles).
+            // mesh-bounds setTriangles*, setIndices*, boundsAssignedTriangles), although the Scripting
+            // API page of SetTriangles says calculateBounds calculates the mesh's bounding box.
             s.Measure(m_Vertices, BoundsFromPositions, keepBounds: !calculateBounds);
             // The index buffer is the submeshes' indices again.
             m_IndexBuffer = null;
