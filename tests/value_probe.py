@@ -280,7 +280,7 @@ RECORD_TIMEOUT = 900
 
 
 def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None, macos_batch=False, space=None, device=None,
-           *, configure=None):
+           *, configure=None, editor_args=()):
     if sys.platform == 'darwin' and not (METAL or (macos_batch and batch)):
         raise SystemExit(f'{probe.name} records only with the Linux GPU Editor')
     out = run_root(probe, label)
@@ -292,7 +292,7 @@ def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=N
     capture = out/'capture'
     capture.mkdir(parents=True)
     # On macOS arm64 editor_runner runs the macOS Editor, which draws with Metal.
-    job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', method], batch=batch,
+    job = editor_runner.EditorJob(project, out/'editor.log', out, [*editor_args, '-executeMethod', method], batch=batch,
         graphics=True, env={variable: str(capture)}, timeout=timeout, label=probe.name+'-'+label,
         vulkan=device == 'vulkan')
     print(editor_runner.summary(editor_runner.run(job)))

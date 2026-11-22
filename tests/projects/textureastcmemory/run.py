@@ -3,6 +3,7 @@
 import argparse
 import os
 from pathlib import Path
+import shutil
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -13,7 +14,15 @@ PROBE = Path(__file__).resolve().parent
 BASE = (PROBE.parent/'formatmapping', ['Assets/Scenes', 'Assets/Scenes.meta', 'Packages', 'ProjectSettings'])
 CAPTURE = 'ASTC_MEMORY_OUT'
 PROFILES = ('Ordinary', 'Wide', 'CubeFirst', 'ResizeFirst', 'UninitializedFirst', 'CloneFirst',
-            'ArrayFirst', 'VolumeFirst', 'HdrFirst')
+            'ArrayFirst', 'VolumeFirst', 'HdrFirst', 'UninitializedApplyFirst', 'ImportFirst')
+
+
+def include_astc_import(project):
+    source = PROBE.parent/'texturecompression'/'Assets'/'Textures'/'OddASTC6NoMips.png'
+    resources = project/'Assets'/'Resources'
+    resources.mkdir()
+    for suffix in ('', '.meta'):
+        shutil.copyfile(str(source) + suffix, resources/('WorkspaceInput.png' + suffix))
 
 
 def directory(label, profile):
@@ -49,12 +58,19 @@ def main():
     out = directory(label, args.profile)
     if out.exists():
         raise SystemExit(f'{out}: expected a fresh run directory')
+    android = args.profile == 'ImportFirst'
+    configure = include_astc_import if android else None
     if args.mode == 'record':
-        value_probe.record(PROBE, 'RecordAstcMemory.Record', CAPTURE, str(out), batch=True, base=BASE)
+        editor_args = ('-buildTarget', 'Android') if android else ()
+        value_probe.record(PROBE, 'RecordAstcMemory.Record', CAPTURE, str(out), batch=True, base=BASE,
+                           configure=configure, editor_args=editor_args)
         value_probe.seal_value_capture(out)
         return 0
-    return value_probe.gate(PROBE, CAPTURE, str(out), 0, ['--headless', '12', '--force-glcore'],
-                            base=BASE, profile=args.profile)
+    engine_args = ['--headless', '12', '--force-glcore']
+    if android:
+        engine_args += ['--target', 'Android']
+    return value_probe.gate(PROBE, CAPTURE, str(out), 0, engine_args,
+                            base=BASE, profile=args.profile, configure=configure)
 
 
 if __name__ == '__main__':

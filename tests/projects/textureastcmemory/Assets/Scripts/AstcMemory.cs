@@ -42,6 +42,13 @@ public static class AstcMemory
         Put("unity", Application.unityVersion);
         Put("device", SystemInfo.graphicsDeviceType);
         Put("profile", profile);
+        if (profile == "ImportFirst")
+        {
+            var imported = Resources.Load<Texture2D>("WorkspaceInput");
+            Put("prelude.import.format", (int)imported.format);
+            Put("prelude.import.samples", SystemInfo.IsFormatSupported(imported.graphicsFormat, GraphicsFormatUsage.Sample));
+            Size("prelude.import", imported);
+        }
         if (profile == "ArrayFirst")
         {
             TryPrelude("array", () =>
@@ -91,6 +98,14 @@ public static class AstcMemory
             Size("prelude.createdFirst.applied", firstCreated);
             Object.DestroyImmediate(firstCreated);
             Object.DestroyImmediate(firstRead);
+        }
+        if (profile == "UninitializedApplyFirst")
+        {
+            var uninitialized = new Texture2D(8, 8, TextureFormat.ASTC_4x4, false, true, true);
+            Size("prelude.uninitialized.new", uninitialized);
+            uninitialized.Apply(false, false);
+            Size("prelude.uninitialized.applied", uninitialized);
+            Object.DestroyImmediate(uninitialized);
         }
         if (profile == "HdrFirst")
         {
