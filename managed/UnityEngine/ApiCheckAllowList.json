@@ -677,5 +677,12 @@
     "Type": "UnityEngine.Rendering.SupportedOnRenderPipelineAttribute",
     "Message": "UnityEngine/Editor/CustomEditorAttributes.cs Initialize: type.GetCustomAttribute<SupportedOnRenderPipelineAttribute>(false): inherit is False, reference AttributeUsage is True",
     "Reason": "Custom-editor registration reads pipeline restrictions declared on the selected inspector class. tests/projects/editorapi registry.pipelineAttributeNotInherited contrasts a restricted base inspector with its independently registered derived inspector under the built-in pipeline."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "lookup",
+    "Type": "UnityEngine.AddComponentMenu",
+    "Message": "UnityEngine/Editor/ObjectNames.cs TryGetMenuTitle: Attribute.GetCustomAttribute(type, typeof(AddComponentMenu), false): inherit is False, reference AttributeUsage is True",
+    "Reason": "An object's Inspector title uses the menu path declared on its own class. tests/projects/editorpreview names.derivedMenu: a class derived from one with a menu path is titled by its own name."
   }
 ]

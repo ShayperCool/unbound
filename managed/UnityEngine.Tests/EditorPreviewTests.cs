@@ -24,6 +24,9 @@ namespace UnityEngine.Tests
         [AddComponentMenu("Tests/Fancy Name")]
         public class MenuBehaviour : MonoBehaviour { }
 
+        // A menu path is the class's own: a derived class has none.
+        public class DerivedMenuBehaviour : MenuBehaviour { }
+
         [AddComponentMenu("Tests/Trailing/")]
         public class TrailingBehaviour : MonoBehaviour { }
 
@@ -256,6 +259,7 @@ namespace UnityEngine.Tests
                 Assert.Equal("Plain Behaviour (Script)", ObjectNames.GetInspectorTitle(go.AddComponent<PlainBehaviour>()));
                 Assert.Equal("Fancy Name", ObjectNames.GetInspectorTitle(go.AddComponent<MenuBehaviour>()));
                 Assert.Equal("Trailing Behaviour (Script)", ObjectNames.GetInspectorTitle(go.AddComponent<TrailingBehaviour>()));
+                Assert.Equal("Derived Menu Behaviour (Script)", ObjectNames.GetInspectorTitle(go.AddComponent<DerivedMenuBehaviour>()));
 #pragma warning disable 618
                 Assert.Equal("Old Behaviour (Script) (Deprecated)", ObjectNames.GetInspectorTitle(go.AddComponent<OldBehaviour>()));
                 Assert.Equal("Some Name", ObjectNames.MangleVariableName("m_someName"));

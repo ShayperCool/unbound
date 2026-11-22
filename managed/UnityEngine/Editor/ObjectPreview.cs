@@ -73,8 +73,10 @@ namespace UnityEditor
 
         public virtual Object target => m_Targets[m_ReferenceTargetIndex];
 
+        [Unbound.EditorFaithful("Unity's base implementation: a preview has no GUI until a subclass draws one")]
         public virtual bool HasPreviewGUI() => false;
 
+        [Unbound.EditorFaithful("Unity's base implementation: no UI Toolkit preview")]
         public virtual VisualElement CreatePreview(VisualElement inspectorPreviewWindow) => null;
 
         public virtual GUIContent GetPreviewTitle() => new GUIContent { text = PreviewTitle(m_Targets, target) };
@@ -95,12 +97,15 @@ namespace UnityEditor
 
         public virtual void OnInteractivePreviewGUI(Rect r, GUIStyle background) => OnPreviewGUI(r, background);
 
+        [Unbound.EditorFaithful("Unity's base implementation: no preview settings")]
         public virtual void OnPreviewSettings() { }
 
+        [Unbound.EditorFaithful("Unity's base implementation: no info line")]
         public virtual string GetInfoString() => "";
 
         public void DrawPreview(Rect previewArea) => DrawPreview(this, previewArea, m_Targets);
 
+        [Unbound.EditorFaithful("Unity's base implementation: a preview keeps no instances")]
         public virtual void ReloadPreviewInstances() { }
 
         // The Editor skin's preview styles; without that skin, empty styles of their names.
@@ -210,7 +215,8 @@ namespace UnityEditor
         static float RatioDistance(float x, float y) => Mathf.Max(x / y, y / x);
     }
 
-    public partial class Editor : IPreviewable
+    // The Editor's interfaces (IPreviewable, IToolModeOwner) are on the generated part of the class.
+    public partial class Editor
     {
         // The preview an editor without one of its own answers with.
         internal IPreviewable m_DummyPreview;
@@ -251,6 +257,7 @@ namespace UnityEditor
 
         public virtual GUIContent GetPreviewTitle() => preview.GetPreviewTitle();
 
+        [Unbound.EditorFaithful("Unity's base implementation: an editor draws no thumbnail of its own")]
         public virtual Texture2D RenderStaticPreview(string assetPath, Object[] subAssets, int width, int height) => null;
 
         public virtual void OnPreviewGUI(Rect r, GUIStyle background) => preview.OnPreviewGUI(r, background);
@@ -261,7 +268,7 @@ namespace UnityEditor
 
         public virtual string GetInfoString() => preview.GetInfoString();
 
-        public virtual void DrawPreview(Rect previewArea) => ObjectPreview.DrawPreview(this, previewArea, targets);
+        public virtual void DrawPreview(Rect previewArea) => ObjectPreview.DrawPreview((IPreviewable)(object)this, previewArea, targets);
 
         public virtual void ReloadPreviewInstances() => preview.ReloadPreviewInstances();
 

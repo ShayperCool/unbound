@@ -7187,7 +7187,7 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void DrawHint(global::UnityEngine.Rect hintTriggerRect, global::UnityEngine.Vector2 mousePosition, global::UnityEditorInternal.InternalEditorUtility.AssetReference assetReference) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DynamicHintUtility.DrawHint"); }
         [global::Unbound.Stub] public static string GetFieldPathInClass(object field) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DynamicHintUtility.GetFieldPathInClass"); return default; }
     }
-    unsafe partial class Editor : global::UnityEditor.IToolModeOwner
+    unsafe partial class Editor : global::UnityEditor.IPreviewable, global::UnityEditor.IToolModeOwner
     {
         [global::Unbound.Stub] internal global::UnityEditor.SerializedProperty m_EnabledProperty;
         [global::Unbound.Stub] internal static float kLineHeight;
