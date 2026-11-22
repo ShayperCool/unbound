@@ -159,6 +159,13 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(texture); }
             var refused = Assert.Throws<ArgumentException>(() => ObjectFactory.CreateInstance(typeof(Shader)));
             Assert.Equal("UnityEngine.Shader constructor is not accessible which prevent this type from being used in ObjectFactory.", refused.Message);
+            // A type the release hides the constructor of, although Unbound's is public.
+            var settings = Assert.Throws<ArgumentException>(() => ObjectFactory.CreateInstance(typeof(QualitySettings)));
+            Assert.Equal("UnityEngine.QualitySettings constructor is not accessible which prevent this type from being used in ObjectFactory.", settings.Message);
+            var invalid = Assert.Throws<ArgumentException>(() => ObjectFactory.CreateInstance(typeof(MovieTexture)));
+            Assert.Equal("'type' parameter is not a valid UnityEngine.Object type : MovieTexture", invalid.Message);
+            // A type Unbound cannot make yet fails loudly.
+            Assert.Throws<NotSupportedException>(() => ObjectFactory.CreateInstance(typeof(SpeedTreeWindAsset)));
         }
     }
 }

@@ -188,6 +188,34 @@ namespace Unbound.Runtime
             "UnityEngine.WindZone"
         };
 
+        /// <summary>Engine object types whose parameterless constructor the release hides:
+        /// ObjectFactory.CreateInstance refuses them (Unity 6000.0.71f1, tests/projects/factoryinstances);
+        /// other releases decide by Unbound's constructors (unmeasured).</summary>
+        internal static bool FactoryRefusesEngineType(Type type) => ComponentFactoryEligibilityMeasured
+            && type.FullName != null && s_FactoryHiddenConstructors.Contains(type.FullName);
+
+        /// <summary>Engine types whose native class the release no longer has: ObjectFactory says
+        /// they are not valid object types (Unity 6000.0.71f1, tests/projects/factoryinstances).</summary>
+        internal static bool FactoryInvalidEngineType(Type type) => ComponentFactoryEligibilityMeasured
+            && (type.FullName == "UnityEngine.MovieTexture" || type.FullName == "UnityEngine.ProceduralMaterial" || type.FullName == "UnityEngine.ProceduralTexture");
+
+        static readonly System.Collections.Generic.HashSet<string> s_FactoryHiddenConstructors = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal)
+        {
+            "UnityEditor.Animations.AnimatorTransitionBase", "UnityEditor.BrokenPrefabAsset",
+            "UnityEditor.Build.Reporting.BuildReport", "UnityEditor.DefaultAsset",
+            "UnityEditor.EditorBuildSettings", "UnityEditor.EditorSettings", "UnityEditor.EditorUserBuildSettings",
+            "UnityEditor.EditorUserSettings", "UnityEditor.LightingDataAsset", "UnityEditor.PlayerSettings",
+            "UnityEditor.SceneAsset", "UnityEditor.VersionControlSettings",
+            "UnityEditorInternal.AssemblyDefinitionAsset", "UnityEditorInternal.AssemblyDefinitionReferenceAsset",
+            "UnityEditorInternal.PackageManifest", "UnityEngine.AssetBundle", "UnityEngine.AssetBundleManifest",
+            "UnityEngine.Audio.AudioMixerGroup", "UnityEngine.Audio.AudioMixerSnapshot", "UnityEngine.AudioClip",
+            "UnityEngine.Avatar", "UnityEngine.ComputeShader", "UnityEngine.LightProbes",
+            "UnityEngine.LightmapSettings", "UnityEngine.Motion", "UnityEngine.QualitySettings",
+            "UnityEngine.RenderSettings", "UnityEngine.RenderTexture", "UnityEngine.Rendering.GraphicsSettings",
+            "UnityEngine.Rendering.RayTracingShader", "UnityEngine.Shader", "UnityEngine.Sprite",
+            "UnityEngine.Texture", "UnityEngine.Video.VideoClip"
+        };
+
         /// <summary>Runtime compressed channel formats and readback controls measured by
         /// tests/projects/texturecompression on 6000.0.71f1. Other releases keep their previous formats.</summary>
         internal static bool RuntimeTextureCompressionMeasured => Family == ReleaseFamily.Unity6000_0;
