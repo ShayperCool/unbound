@@ -6,27 +6,39 @@ using Object = UnityEngine.Object;
 
 namespace UnityEditor
 {
+    /// <summary>An importer's settings at one moment: its section of the .meta as it stands in
+    /// memory, the user data and bundle names, and a scripted importer's own fields.</summary>
+    sealed class ImporterSettingsCopy
+    {
+        internal YNode Tree;
+        internal string TreeText, UserData, BundleName, BundleVariant, Fields;
+
+        internal bool Same(ImporterSettingsCopy other) =>
+            TreeText == other.TreeText && UserData == other.UserData && BundleName == other.BundleName
+            && BundleVariant == other.BundleVariant && Fields == other.Fields;
+    }
+
     public partial class AssetImporter
     {
-        /// <summary>The importer's settings as one text: its section of the .meta as it stands in
-        /// memory, the user data and bundle names, and a scripted importer's own fields.</summary>
-        internal string CaptureSettings() =>
-            MetaSettings.ToJson(m_Settings) + "\n" + userData + "\n" + assetBundleName + "\n" + assetBundleVariant + "\n"
-            + (this is AssetImporters.ScriptedImporter ? JsonUtility.FieldsToJson(this) : "");
-
-        /// <summary>What <see cref="RestoreSettings"/> needs besides the text: the section itself.</summary>
-        internal YNode CaptureSettingsTree() => m_Settings == null ? null : MetaSettings.Clone(m_Settings);
-
-        /// <summary>The settings as <see cref="CaptureSettings"/> and <see cref="CaptureSettingsTree"/>
-        /// took them, put back; the importer is no longer dirty.</summary>
-        internal void RestoreSettings(string captured, YNode tree)
+        internal ImporterSettingsCopy CopySettings() => new ImporterSettingsCopy
         {
-            var parts = captured.Split('\n', 5);
-            m_Settings = tree == null ? null : MetaSettings.Clone(tree);
-            userData = parts[1];
-            assetBundleName = parts[2];
-            assetBundleVariant = parts[3];
-            if (this is AssetImporters.ScriptedImporter && parts[4].Length > 0) JsonUtility.FieldsFromJson(parts[4], this);
+            Tree = MetaSettings.Clone(m_Settings),
+            TreeText = m_Settings == null ? "" : MetaSettings.ToJson(m_Settings),
+            UserData = m_UserData,
+            BundleName = m_AssetBundleName,
+            BundleVariant = m_AssetBundleVariant,
+            Fields = this is AssetImporters.ScriptedImporter ? JsonUtility.FieldsToJson(this) : "",
+        };
+
+        /// <summary>The copied settings put back, without writing anything; the importer is no
+        /// longer dirty.</summary>
+        internal void RestoreSettings(ImporterSettingsCopy copy)
+        {
+            m_Settings = MetaSettings.Clone(copy.Tree);
+            m_UserData = copy.UserData;
+            m_AssetBundleName = copy.BundleName;
+            m_AssetBundleVariant = copy.BundleVariant;
+            if (copy.Fields.Length > 0) JsonUtility.FieldsFromJson(copy.Fields, this);
             ClearModifiedState();
         }
     }
@@ -46,8 +58,7 @@ namespace UnityEditor.AssetImporters
         sealed class Saved
         {
             internal readonly List<AssetImporterEditor> Editors = new List<AssetImporterEditor>();
-            internal string Settings;
-            internal YNode Tree;
+            internal ImporterSettingsCopy Settings;
             internal Object Extra;
             internal string ExtraState;
         }
@@ -92,11 +103,7 @@ namespace UnityEditor.AssetImporters
                 saved = new Saved();
                 s_Saved[target.GetInstanceID()] = saved;
             }
-            if (target is AssetImporter importer)
-            {
-                saved.Settings = importer.CaptureSettings();
-                saved.Tree = importer.CaptureSettingsTree();
-            }
+            if (target is AssetImporter importer) saved.Settings = importer.CopySettings();
             saved.ExtraState = StateOf(saved.Extra);
             return saved;
         }
@@ -106,7 +113,7 @@ namespace UnityEditor.AssetImporters
         internal static bool IsEqual(Object target)
         {
             if (!s_Saved.TryGetValue(target.GetInstanceID(), out var saved)) return false;
-            if (target is AssetImporter importer && importer.CaptureSettings() != saved.Settings) return false;
+            if (target is AssetImporter importer && !importer.CopySettings().Same(saved.Settings)) return false;
             return StateOf(saved.Extra) == saved.ExtraState;
         }
 
@@ -115,7 +122,7 @@ namespace UnityEditor.AssetImporters
         internal static void Revert(Object target)
         {
             if (!s_Saved.TryGetValue(target.GetInstanceID(), out var saved)) return;
-            if (target is AssetImporter importer && saved.Settings != null) importer.RestoreSettings(saved.Settings, saved.Tree);
+            if (target is AssetImporter importer && saved.Settings != null) importer.RestoreSettings(saved.Settings);
             if (saved.Extra != null && saved.ExtraState != null) EditorJsonUtility.FromJsonOverwrite(saved.ExtraState, saved.Extra);
             Changed(saved);
         }
@@ -267,7 +274,7 @@ namespace UnityEditor.AssetImporters
             }
             m_TargetsInstanceID = held;
             saveChangesMessage = targets.Length == 1
-                ? $"Unapplied import settings for '{((AssetImporter)target).assetPath}'"
+                ? $"Unapplied import settings for '{(target as AssetImporter)?.assetPath}'"
                 : $"Unapplied import settings for '{targets.Length}' files";
             m_OnEnableCalled = true;
         }
