@@ -2,6 +2,8 @@
 //! Progressive lightmappers make of a scene, starting with the layout of its lightmaps
 //! ([`atlas`]).
 pub mod atlas;
+pub mod gbuffer;
+pub mod raster;
 mod spooky;
 
 #[cfg(test)]
