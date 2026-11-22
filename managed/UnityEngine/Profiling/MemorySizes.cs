@@ -34,6 +34,7 @@ namespace Unbound.Runtime
         const long GameObjectHeader = 240, GameObjectPerComponent = 24;
         // The attached component itself, measured by tests/projects/componentmemory on Unity 6000.0.71f1.
         const long BoxColliderBytes = 288, MeshFilterBytes = 120, MonoBehaviourBytes = 456;
+        const long LightBytes = 1176, LightCommandBufferSlotBytes = 12;
         // Unity 6000.0.71f1, tests/projects/textassetmemory: byte storage changes past 31 bytes.
         const long TextAssetHeader = 160, TextAssetInlineBytes = 31;
         static readonly object s_AstcFallbackLock = new();
@@ -85,13 +86,15 @@ namespace Unbound.Runtime
                 case AudioClip clip: return clip.m_IsAsset ? null : AudioClipSize(clip);
                 case TextAsset text when Compat.TextAssetMemoryMeasured: return TextAssetSize(text);
                 case GameObject go: return GameObjectHeader + GameObjectPerComponent * go.ProfilerComponentSlots;
-                case Component component when Compat.FixedComponentMemoryMeasured && !component.IsPersistentAsset
+                case Component component when !component.IsPersistentAsset
                     && component.m_GameObject is { IsPersistentAsset: false, m_IsPrefabAsset: false } owner && owner != null:
                     return component switch
                     {
-                        BoxCollider => BoxColliderBytes,
-                        MeshFilter => MeshFilterBytes,
-                        MonoBehaviour => MonoBehaviourBytes,
+                        BoxCollider when Compat.FixedComponentMemoryMeasured => BoxColliderBytes,
+                        MeshFilter when Compat.FixedComponentMemoryMeasured => MeshFilterBytes,
+                        MonoBehaviour when Compat.FixedComponentMemoryMeasured => MonoBehaviourBytes,
+                        Light light when Compat.LightCommandBufferMemoryMeasured && GraphicsSettings.currentRenderPipeline == null
+                            => LightBytes + light.ProfilerCommandBufferSlots * LightCommandBufferSlotBytes,
                         _ => null,
                     };
                 default: return null;
