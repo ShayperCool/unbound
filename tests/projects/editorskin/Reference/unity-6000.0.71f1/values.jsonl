@@ -1354,6 +1354,16 @@
 {"k":"font/RobotoMono-Regular/atlas","v":["SDFAA",9,"DynamicOS",true]}
 {"k":"font/RobotoMono-Regular/weights","v":[[null,null],[null,null],[null,null],[null,null],[null,"Roboto Mono Italic"],[null,null],[null,null],["Roboto Mono Bold","Roboto Mono Bold Italic"],[null,null],[null,null]]}
 {"k":"font/RobotoMono-Regular/featureRecords","v":[0,0,0,0]}
+{"k":"font/RobotoMono-Bold/font","v":["RobotoMono-Bold",16,true,21,["Roboto Mono"]]}
+{"k":"font/RobotoMono-Bold/lineHeight/Normal","v":21}
+{"k":"font/RobotoMono-Bold/widths/Normal","v":[19.21,9.61,9.61,19.21,9.61,9.61,105.64]}
+{"k":"font/RobotoMono-Bold/lineHeight/Bold","v":21}
+{"k":"font/RobotoMono-Bold/widths/Bold","v":[19.21,9.61,9.61,19.21,9.61,9.61,105.64]}
+{"k":"font/RobotoMono-Bold/sharesAssetOfFont","v":8}
+{"k":"font/RobotoMono-Bold/face","v":["Roboto Mono","Regular",90,94.30664,-24.3896484,118.696289]}
+{"k":"font/RobotoMono-Bold/atlas","v":["SDFAA",9,"DynamicOS",true]}
+{"k":"font/RobotoMono-Bold/weights","v":[[null,null],[null,null],[null,null],[null,null],[null,"Roboto Mono Italic"],[null,null],[null,null],["Roboto Mono Bold","Roboto Mono Bold Italic"],[null,null],[null,null]]}
+{"k":"font/RobotoMono-Bold/featureRecords","v":[0,0,0,0]}
 {"k":"osAsset/Liberation Sans/face","v":["Liberation Sans","Regular","DynamicOS"]}
 {"k":"osAsset/Liberation Sans/added","v":[true,""]}
 {"k":"osAsset/Liberation Sans/featureRecords","v":[64,0,1724,0]}

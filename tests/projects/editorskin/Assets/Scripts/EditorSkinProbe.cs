@@ -114,6 +114,7 @@ public sealed class EditorSkinProbe : MonoBehaviour
         "Fonts/System/System Normal.ttf", "Fonts/System/System Big.ttf", "Fonts/System/System Small.ttf",
         "Fonts/System/System Warning.ttf", "Fonts/System/System Normal Bold.ttf", "Fonts/System/System Small Bold.ttf",
         "Fonts/Inter/Inter-Regular.ttf", "Fonts/Inter/Inter-SemiBold.ttf", "Fonts/RobotoMono/RobotoMono-Regular.ttf",
+        "Fonts/RobotoMono/RobotoMono-Bold.ttf",
     };
 
     static readonly string[] s_Texts = { "Te", "T", "e", "AV", "A", "V", "Sample Text" };

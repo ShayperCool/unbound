@@ -51,7 +51,7 @@ compare within 1e-6.
 - Font feature records of OS font assets (31 rows): the Editor takes the pair adjustment and
   mark records of some OS faces and none of others; Unbound gives no OS font asset any, so text
   with a kerning pair is wider in the Editor's system fonts.
-- The atlas population mode of the Inter and Roboto Mono family assets (2 rows): `DynamicOS` in
+- The atlas population mode of the Inter and Roboto Mono family assets (3 rows): `DynamicOS` in
   the Editor, `Dynamic` in Unbound, which makes them of the fonts of the Editor's resources.
 
 ## Reference

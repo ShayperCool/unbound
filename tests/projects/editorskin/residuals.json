@@ -34,6 +34,7 @@
   ],
   "The font assets of the Inter and Roboto Mono families: the Editor makes them as OS font assets (atlas population mode DynamicOS, the fonts being known to its font engine by family name); Unbound makes them of the fonts of the Editor's resources (Dynamic). Faces, weight tables, line heights and widths match.": [
     "font/Inter-Regular/atlas",
-    "font/RobotoMono-Regular/atlas"
+    "font/RobotoMono-Regular/atlas",
+    "font/RobotoMono-Bold/atlas"
   ]
 }

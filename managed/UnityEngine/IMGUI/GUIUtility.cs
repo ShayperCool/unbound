@@ -213,7 +213,8 @@ namespace UnityEngine
             finally
             {
                 ResetAfterGUI();
-                // Outside a pass the game's skin is the default again.
+                // Outside a pass the game's skin is the default again (what GUI.skin is between
+                // passes after an Editor one is not measured).
                 if (!outer.Saved && s_SkinMode != 0) SetSkin(0);
                 outer.Restore();
             }
