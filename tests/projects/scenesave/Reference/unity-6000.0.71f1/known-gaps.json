@@ -651,5 +651,19 @@
     "reference": true,
     "actual": false,
     "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/BoundsStale.asset",
+    "reference": "written",
+    "actual": "lines 154-155: reference ['    m_Center: {x: 0.5, y: 0.5, z: 0}', '    m_Extent: {x: 0.5, y: 0.5, z: 0}'], actual ['    m_Center: {x: 2, y: 2, z: 0}', '    m_Extent: {x: 2, y: 2, z: 0}']",
+    "reason": "Mesh.vertices: the Editor leaves the mesh's bounds as they were when the vertices change (same vertex count, measured here), Unbound recalculates them from the new vertices. The setter's bounds update is runtime behaviour (culling) of every procedural mesh, left for its own task; the written mesh is otherwise the Editor's."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:boundsStale.file",
+    "reference": "written",
+    "actual": "lines 154-155: reference ['    m_Center: {x: 0.5, y: 0.5, z: 0}', '    m_Extent: {x: 0.5, y: 0.5, z: 0}'], actual ['    m_Center: {x: 2, y: 2, z: 0}', '    m_Extent: {x: 2, y: 2, z: 0}']",
+    "reason": "Mesh.vertices: the Editor leaves the mesh's bounds as they were when the vertices change (same vertex count, measured here), Unbound recalculates them from the new vertices. The setter's bounds update is runtime behaviour (culling) of every procedural mesh, left for its own task; the written mesh is otherwise the Editor's."
   }
 ]

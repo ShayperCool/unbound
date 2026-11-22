@@ -157,6 +157,37 @@ public class EngineAssetTests
         bounded.RecalculateBounds();
         Create("keepBounds", bounded, Folder + "/KeepBounds.asset");
 
+        // Bounds after the vertices move: without and with RecalculateBounds; a half-position
+        // mesh with bounds assigned, then recalculated; a bone no vertex weighs.
+        var stale = Triangle();
+        stale.vertices = new[] { Vector3.zero, Vector3.right * 4f, Vector3.up * 4f };
+        Create("boundsStale", stale, Folder + "/BoundsStale.asset");
+        var recalculated = Triangle();
+        recalculated.vertices = new[] { Vector3.zero, Vector3.right * 4f, Vector3.up * 4f };
+        recalculated.RecalculateBounds();
+        Create("boundsRecalculated", recalculated, Folder + "/BoundsRecalculated.asset");
+        var assigned = new Mesh();
+        assigned.SetVertexBufferParams(3, new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float16, 4, 0));
+        using (var positions = new NativeArray<HalfPosition>(new[]
+        {
+            new HalfPosition { x = Half(0f), y = Half(0f), z = Half(0f), w = Half(1f) },
+            new HalfPosition { x = Half(2f), y = Half(0f), z = Half(0f), w = Half(1f) },
+            new HalfPosition { x = Half(0f), y = Half(2f), z = Half(0f), w = Half(1f) },
+        }, Allocator.Temp))
+            assigned.SetVertexBufferData(positions, 0, 0, 3, 0);
+        assigned.SetIndexBufferParams(3, IndexFormat.UInt16);
+        using (var indices = new NativeArray<ushort>(new ushort[] { 0, 1, 2 }, Allocator.Temp))
+            assigned.SetIndexBufferData(indices, 0, 0, 3);
+        assigned.subMeshCount = 1;
+        assigned.SetSubMesh(0, new SubMeshDescriptor(0, 3, MeshTopology.Triangles));
+        assigned.bounds = new Bounds(new Vector3(1f, 1f, 0f), new Vector3(2f, 2f, 0f));
+        assigned.RecalculateBounds();
+        Create("boundsHalfAssigned", assigned, Folder + "/BoundsHalfAssigned.asset");
+        var boneless = Triangle();
+        boneless.boneWeights = new[] { new BoneWeight { boneIndex0 = 0, weight0 = 1f }, new BoneWeight { boneIndex0 = 1, weight0 = 1f }, new BoneWeight { boneIndex0 = 0, weight0 = 1f } };
+        boneless.bindposes = new[] { Matrix4x4.identity, Matrix4x4.identity, Matrix4x4.Translate(new Vector3(5f, 5f, 5f)) };
+        Create("boneless", boneless, Folder + "/Boneless.asset");
+
         var matA = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/MatEdit.mat");
         var matB = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/MatQuit.mat");
         var clip = new AnimationClip { frameRate = 30f, wrapMode = WrapMode.Loop };
