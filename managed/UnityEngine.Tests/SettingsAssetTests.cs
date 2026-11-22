@@ -164,6 +164,8 @@ namespace UnityEngine.Tests
             // The probe's two assets, under their GUIDs and main file ids.
             var data = ScriptableObject.CreateInstance<NewAssetTestData>();
             var material = ScriptableObject.CreateInstance<NewAssetTestData>();
+            data.IsPersistentAsset = true;
+            material.IsPersistentAsset = true;
             var dataFile = new LoadedFile { Guid = "cde34b6918c47433aa3d2ee4b841bb9a", Path = "Assets/Data/DataSaved.asset", MainObject = data };
             dataFile.Objects[11400000] = data;
             var materialFile = new LoadedFile { Guid = "e681ccc008d4740728e99130df8a5a8c", Path = "Assets/Materials/MatEdit.mat", MainObject = material };
@@ -186,6 +188,13 @@ namespace UnityEngine.Tests
                 EditorBuildSettings.AddConfigObject("com.probe.data", material, true);
                 EditorBuildSettings.AddConfigObject("com.probe.asset", data, false);
                 Assert.False(EditorBuildSettings.RemoveConfigObject("com.probe.none"));
+                var transient = ScriptableObject.CreateInstance<NewAssetTestData>();
+                Assert.Equal("Cannot add non-persisted config object with name 'com.probe.transient'.",
+                    Assert.Throws<System.Exception>(() => EditorBuildSettings.AddConfigObject("com.probe.transient", transient, true)).Message);
+                Object.DestroyImmediate(transient);
+                Assert.Equal("Cannot add null config object with name 'com.probe.null'.",
+                    Assert.Throws<System.Exception>(() => EditorBuildSettings.AddConfigObject("com.probe.null", null, true)).Message);
+                Assert.Equal(new[] { "com.probe.asset", "com.probe.data" }, EditorBuildSettings.GetConfigObjectNames());
                 Assert.Equal(original, Text("ProjectSettings/EditorBuildSettings.asset"));
                 AssetDatabase.SaveAssets();
                 Assert.Equal(Snapshot("config.saved.file"), Text("ProjectSettings/EditorBuildSettings.asset"));
@@ -196,6 +205,12 @@ namespace UnityEngine.Tests
                 Assert.Equal(Snapshot("preloaded.saved.file"), Text("ProjectSettings/ProjectSettings.asset"));
 
                 RenderingLayerMask.s_Names = new[] { "Default" };
+                // A removed name is saved the same way (control outside the probe: add, remove, save).
+                Assert.True(UnityEditor.Rendering.RenderPipelineEditorUtility.TryAddRenderingLayerName("Gone"));
+                Assert.True(UnityEditor.Rendering.RenderPipelineEditorUtility.TryRemoveLastRenderingLayerName());
+                AssetDatabase.SaveAssets();
+                Assert.Contains("  m_RenderingLayers:\n  - Default\n", Text("ProjectSettings/TagManager.asset"));
+                Assert.DoesNotContain("Gone", Text("ProjectSettings/TagManager.asset"));
                 Assert.True(UnityEditor.Rendering.RenderPipelineEditorUtility.TryAddRenderingLayerName("Probe Layer"));
                 Assert.True(UnityEditor.Rendering.RenderPipelineEditorUtility.TrySetRenderingLayerName(1, "Renamed Layer"));
                 AssetDatabase.SaveAssets();

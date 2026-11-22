@@ -68,7 +68,11 @@ namespace UnityEditor
         public static void AddConfigObject(string name, Object obj, bool overwrite)
         {
             if (string.IsNullOrEmpty(name)) throw new ArgumentException("name cannot be null or empty");
-            if (obj == null) throw new ArgumentNullException(nameof(obj));
+            // Null and objects that are no assets are refused, nothing changed (matches the Unity
+            // 6000.0.71f1 Editor, tests/projects/scenesave settings-writes config.null, config.notPersisted).
+            if (obj == null) throw new Exception($"Cannot add null config object with name '{name}'.");
+            if (!obj.IsPersistentAsset || !AssetDatabaseRuntime.TryGetLocation(obj, out _, out _))
+                throw new Exception($"Cannot add non-persisted config object with name '{name}'.");
             if (!overwrite && GetConfigObject(name) != null)
                 throw new Exception($"Config object with name '{name}' already exists.");
             s_ConfigObjects[name] = obj;
