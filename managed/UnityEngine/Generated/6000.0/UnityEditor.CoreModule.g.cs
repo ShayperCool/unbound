@@ -5787,12 +5787,9 @@ namespace UnityEditor
         [global::Unbound.Stub] public override void OnInspectorGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ColorPresetLibraryEditor.OnInspectorGUI"); }
         [global::Unbound.Stub] public ColorPresetLibraryEditor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ColorPresetLibraryEditor.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class ColorUsageDrawer : global::UnityEditor.PropertyDrawer
+    unsafe partial class ColorUsageDrawer
     {
         [global::Unbound.Stub] public override void OnGUI(global::UnityEngine.Rect position, global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ColorUsageDrawer.OnGUI"); }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.VisualElement CreatePropertyGUI(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ColorUsageDrawer.CreatePropertyGUI"); return default; }
-        [global::Unbound.Stub] public ColorUsageDrawer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ColorUsageDrawer.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ColumnView
@@ -6813,7 +6810,6 @@ namespace UnityEditor
     }
     unsafe partial class DecoratorDrawer
     {
-        [global::Unbound.Stub] public virtual global::UnityEngine.UIElements.VisualElement CreatePropertyGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DecoratorDrawer.CreatePropertyGUI"); return default; }
         [global::System.Obsolete("CanCacheInspectorGUI has been deprecated and is no longer used.")] [global::Unbound.Stub] public virtual bool CanCacheInspectorGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DecoratorDrawer.CanCacheInspectorGUI"); return default; }
     }
     [global::Unbound.Stub]
@@ -6871,12 +6867,9 @@ namespace UnityEditor
         [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DelayedCallback.Clear"); }
         [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DelayedCallback.Reset"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class DelayedDrawer : global::UnityEditor.PropertyDrawer
+    unsafe partial class DelayedDrawer
     {
         [global::Unbound.Stub] public override void OnGUI(global::UnityEngine.Rect position, global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DelayedDrawer.OnGUI"); }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.VisualElement CreatePropertyGUI(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DelayedDrawer.CreatePropertyGUI"); return default; }
-        [global::Unbound.Stub] public DelayedDrawer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DelayedDrawer.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class Delayer
@@ -11152,12 +11145,9 @@ namespace UnityEditor
         [global::Unbound.Stub] public override void OnInspectorGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GradientPresetLibraryEditor.OnInspectorGUI"); }
         [global::Unbound.Stub] public GradientPresetLibraryEditor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GradientPresetLibraryEditor.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class GradientUsageDrawer : global::UnityEditor.PropertyDrawer
+    unsafe partial class GradientUsageDrawer
     {
         [global::Unbound.Stub] public override void OnGUI(global::UnityEngine.Rect position, global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GradientUsageDrawer.OnGUI"); }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.VisualElement CreatePropertyGUI(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GradientUsageDrawer.CreatePropertyGUI"); return default; }
-        [global::Unbound.Stub] public GradientUsageDrawer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GradientUsageDrawer.ctor"); }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -11791,14 +11781,11 @@ namespace UnityEditor
             public static global::UnityEditor.Handles.TransformHandleParam Default { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.TransformHandleParam.Default"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.TransformHandleParam.Default"); } }
         }
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class HeaderDrawer : global::UnityEditor.DecoratorDrawer
+    unsafe partial class HeaderDrawer
     {
         public const string headerLabelClassName = "unity-header-drawer__label";
         [global::Unbound.Stub] public override void OnGUI(global::UnityEngine.Rect position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HeaderDrawer.OnGUI"); }
         [global::Unbound.Stub] public override float GetHeight() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HeaderDrawer.GetHeight"); return default; }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.VisualElement CreatePropertyGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HeaderDrawer.CreatePropertyGUI"); return default; }
-        [global::Unbound.Stub] public HeaderDrawer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HeaderDrawer.ctor"); }
     }
     [global::Unbound.Stub]
     public unsafe partial class Help
@@ -15374,13 +15361,10 @@ namespace UnityEditor
         [global::Unbound.Stub] public void OnGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MetroCreateTestCertificateWindow.OnGUI"); }
         [global::Unbound.Stub] public MetroCreateTestCertificateWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MetroCreateTestCertificateWindow.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class MinDrawer : global::UnityEditor.PropertyDrawer
+    unsafe partial class MinDrawer
     {
         [global::Unbound.Stub] public override float GetPropertyHeight(global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MinDrawer.GetPropertyHeight"); return default; }
         [global::Unbound.Stub] public override void OnGUI(global::UnityEngine.Rect position, global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MinDrawer.OnGUI"); }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.VisualElement CreatePropertyGUI(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MinDrawer.CreatePropertyGUI"); return default; }
-        [global::Unbound.Stub] public MinDrawer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MinDrawer.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class MinMaxCurveEditorWindow : global::UnityEditor.EditorWindow
@@ -16133,13 +16117,10 @@ namespace UnityEditor
         public bool linearTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MovieImporter.linearTexture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MovieImporter.linearTexture"); } }
         public float duration { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MovieImporter.duration"); return default; } }
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class MultilineDrawer : global::UnityEditor.PropertyDrawer
+    unsafe partial class MultilineDrawer
     {
         [global::Unbound.Stub] public override void OnGUI(global::UnityEngine.Rect position, global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MultilineDrawer.OnGUI"); }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.VisualElement CreatePropertyGUI(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MultilineDrawer.CreatePropertyGUI"); return default; }
         [global::Unbound.Stub] public override float GetPropertyHeight(global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MultilineDrawer.GetPropertyHeight"); return default; }
-        [global::Unbound.Stub] public MultilineDrawer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MultilineDrawer.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class MuscleClipQualityInfo
@@ -20139,7 +20120,6 @@ namespace UnityEditor
     unsafe partial class PropertyDrawer
     {
         [global::Unbound.Stub] internal void OnGUISafe(global::UnityEngine.Rect position, global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PropertyDrawer.OnGUISafe"); }
-        [global::Unbound.Stub] public virtual global::UnityEngine.UIElements.VisualElement CreatePropertyGUI(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PropertyDrawer.CreatePropertyGUI"); return default; }
         [global::Unbound.Stub] internal float GetPropertyHeightSafe(global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PropertyDrawer.GetPropertyHeightSafe"); return default; }
         [global::System.Obsolete("CanCacheInspectorGUI has been deprecated and is no longer used.")] [global::Unbound.Stub] public virtual bool CanCacheInspectorGUI(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PropertyDrawer.CanCacheInspectorGUI"); return default; }
     }
@@ -20490,12 +20470,9 @@ namespace UnityEditor
         [global::Unbound.Stub] public static global::UnityEngine.Vector3[] GetEquivalentEulerAngles(global::UnityEngine.Quaternion quat) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.QuaternionCurveTangentCalculation.GetEquivalentEulerAngles"); return global::System.Array.Empty<global::UnityEngine.Vector3>(); }
         [global::Unbound.Stub] public static global::UnityEngine.Vector3 GetEulerFromQuaternion(global::UnityEngine.Quaternion q, global::UnityEngine.Vector3 refEuler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.QuaternionCurveTangentCalculation.GetEulerFromQuaternion"); return default; }
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class RangeDrawer : global::UnityEditor.PropertyDrawer
+    unsafe partial class RangeDrawer
     {
         [global::Unbound.Stub] public override void OnGUI(global::UnityEngine.Rect position, global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RangeDrawer.OnGUI"); }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.VisualElement CreatePropertyGUI(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RangeDrawer.CreatePropertyGUI"); return default; }
-        [global::Unbound.Stub] public RangeDrawer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RangeDrawer.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class RayTracingShaderInspector : global::UnityEditor.Editor
@@ -23310,13 +23287,9 @@ namespace UnityEditor
         [global::Unbound.Stub] public static void RenderSortingLayerFields(global::UnityEngine.Rect r, global::UnityEditor.SerializedProperty sortingOrder, global::UnityEditor.SerializedProperty sortingLayer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SortingLayerEditorUtility.RenderSortingLayerFields"); }
         [global::Unbound.Stub] public SortingLayerEditorUtility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SortingLayerEditorUtility.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class SpaceDrawer : global::UnityEditor.DecoratorDrawer
+    unsafe partial class SpaceDrawer
     {
         public const string spaceDrawerClassName = "unity-space-drawer";
-        [global::Unbound.Stub] public override float GetHeight() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpaceDrawer.GetHeight"); return default; }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.VisualElement CreatePropertyGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpaceDrawer.CreatePropertyGUI"); return default; }
-        [global::Unbound.Stub] public SpaceDrawer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpaceDrawer.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class SpeedTree8ShaderGUI : global::UnityEditor.ShaderGUI
@@ -24096,13 +24069,10 @@ namespace UnityEditor
         [global::Unbound.Stub] public int[] indices;
         [global::Unbound.Stub] public global::UnityEngine.Vector3[] positions;
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class TextAreaDrawer : global::UnityEditor.PropertyDrawer
+    unsafe partial class TextAreaDrawer
     {
         [global::Unbound.Stub] public override void OnGUI(global::UnityEngine.Rect position, global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextAreaDrawer.OnGUI"); }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.VisualElement CreatePropertyGUI(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextAreaDrawer.CreatePropertyGUI"); return default; }
         [global::Unbound.Stub] public override float GetPropertyHeight(global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextAreaDrawer.GetPropertyHeight"); return default; }
-        [global::Unbound.Stub] public TextAreaDrawer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextAreaDrawer.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class TextAssetInspector : global::UnityEditor.Editor

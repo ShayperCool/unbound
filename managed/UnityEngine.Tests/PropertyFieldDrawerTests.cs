@@ -8,8 +8,9 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
-    /// <summary>PropertyField and the drawers of a property's attributes: the ones it builds
-    /// ([ColorUsage], [GradientUsage]), their change events, and the ones it reports.</summary>
+    /// <summary>PropertyField and a property's drawers (tests/projects/drawerdispatch records the
+    /// Editor's): built-in and usage drawers, their change events, drawers that cannot be created,
+    /// and what is reported instead of drawn.</summary>
     public class PropertyFieldDrawerTests
     {
         public class DrawerSample : ScriptableObject
@@ -111,65 +112,151 @@ namespace UnityEngine.Tests
             Assert.True(f.Field("counted").Q<IntegerField>().labelElement.displayTooltipWhenElided);
         }
 
-        [Fact]
-        public void AGameDrawerThatCannotBeCreatedIsReportedNotThrown()
+        // The test assembly is not a game assembly, so its drawers go into the dispatch table
+        // directly, for the duration of a test.
+        sealed class DrawerTable : System.IDisposable
         {
-            // The test assembly is not a game assembly, so its drawers are put in the drawer table
-            // directly (the table maps a drawn type to its drawer classes).
-            var table = typeof(Editor).Assembly.GetType("UnityEditor.PropertyDrawers")
-                .GetField("s_Drawers", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
-            var previousTable = table.GetValue(null);
-            table.SetValue(null, new Dictionary<System.Type, List<(System.Type Drawer, bool Children)>>
+            static readonly System.Reflection.FieldInfo s_Table = typeof(Editor).Assembly.GetType("UnityEditor.DrawerDispatch")
+                .GetField("s_Table", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            static readonly System.Reflection.FieldInfo s_Generation = typeof(Editor).Assembly.GetType("UnityEditor.DrawerDispatch")
+                .GetField("s_TableGeneration", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+
+            internal DrawerTable(params (System.Type drawn, System.Type drawer)[] drawers)
             {
-                [typeof(ThrowingDrawn)] = new List<(System.Type, bool)> { (typeof(ThrowingDrawer), false) },
-                [typeof(GenericDrawn)] = new List<(System.Type, bool)> { (typeof(GenericDrawer<>), false) },
-            });
+                s_Table.SetValue(null, null);
+                s_Generation.SetValue(null, -1);
+                // Built from the loaded drawers, then the test's are added.
+                var built = typeof(Editor).Assembly.GetType("UnityEditor.DrawerDispatch")
+                    .GetProperty("Table", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).GetValue(null);
+                var entryType = typeof(Editor).Assembly.GetType("UnityEditor.DrawerDispatch+DrawerEntry");
+                var dictionary = (System.Collections.IDictionary)built;
+                foreach (var (drawn, drawer) in drawers)
+                {
+                    var entries = System.Array.CreateInstance(entryType, 1);
+                    entries.SetValue(System.Activator.CreateInstance(entryType, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+                        null, new object[] { drawer, null, false }, null), 0);
+                    dictionary[drawn] = entries;
+                }
+            }
+
+            public void Dispose()
+            {
+                s_Table.SetValue(null, null);
+                s_Generation.SetValue(null, -1);
+            }
+        }
+
+        [Fact]
+        public void ADrawerThatCannotBeCreatedFailsTheBindAsInTheEditor()
+        {
+            // The Editor creates a drawer with Activator.CreateInstance while the PropertyField
+            // handles its bind event, which nothing catches: a throwing constructor, or an open
+            // generic drawer class, fails the Bind call.
+            using var table = new DrawerTable((typeof(ThrowingDrawn), typeof(ThrowingDrawer)), (typeof(GenericDrawn), typeof(GenericDrawer<>)));
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var target = ScriptableObject.CreateInstance<CustomDrawnSample>();
             using var panel = RuntimePanel.Create(settings);
             using var so = new SerializedObject(target);
             try
             {
-                int throwingBefore = Hits("UnityEditor.UIElements.PropertyField (drawer ThrowingDrawer)");
-                int genericBefore = Hits("UnityEditor.UIElements.PropertyField (drawer GenericDrawer`1)");
-                foreach (var path in new[] { "throwing", "generic" })
-                {
-                    var field = new PropertyField(so.FindProperty(path));
-                    panel.visualTree.Add(field);
-                    field.Bind(so);
-                    Tick(panel);
-                    Tick(panel);
-                    Assert.NotNull(field.Q<Foldout>());
-                }
-                Assert.Equal(throwingBefore + 1, Hits("UnityEditor.UIElements.PropertyField (drawer ThrowingDrawer)"));
-                Assert.Equal(genericBefore + 1, Hits("UnityEditor.UIElements.PropertyField (drawer GenericDrawer`1)"));
+                var throwing = new PropertyField(so.FindProperty("throwing"));
+                panel.visualTree.Add(throwing);
+                var error = Assert.ThrowsAny<System.Exception>(() => throwing.Bind(so));
+                Assert.Equal("drawer constructor", error.GetBaseException().Message);
+                var generic = new PropertyField(so.FindProperty("generic"));
+                panel.visualTree.Add(generic);
+                Assert.ThrowsAny<System.ArgumentException>(() => generic.Bind(so));
             }
             finally
             {
-                table.SetValue(null, previousTable);
                 Object.DestroyImmediate(target);
                 Object.DestroyImmediate(settings);
             }
         }
 
         [Fact]
-        public void DrawersAndDecoratorsItDoesNotBuildAreReported()
+        public void ADrawerWithObjectFieldsIsReportedForItsDefaultReferences()
         {
-            const string range = "UnityEditor.UIElements.PropertyField (drawer of RangeAttribute)";
-            const string header = "UnityEditor.UIElements.PropertyField (decorator of HeaderAttribute)";
-            using var f = new Fixture();
-            int rangeBefore = Hits(range), headerBefore = Hits(header);
-            int totalBefore = Stubs.HitReport().Where(h => h.Key.StartsWith("UnityEditor.UIElements.PropertyField (")).Sum(h => h.Value);
-            Assert.NotNull(f.Field("ratio").Q<FloatField>());
-            Assert.Equal(rangeBefore + 1, Hits(range));
-            Assert.NotNull(f.Field("counted").Q<IntegerField>());
-            Assert.Equal(headerBefore + 1, Hits(header));
-            // A tooltip has no drawer; the usage attributes have theirs.
-            f.Field("described");
-            f.Field("tint");
-            int totalAfter = Stubs.HitReport().Where(h => h.Key.StartsWith("UnityEditor.UIElements.PropertyField (")).Sum(h => h.Value);
-            Assert.Equal(totalBefore + 2, totalAfter);
+            // The Editor fills such fields from the drawer script's default references.
+            const string member = "UnityEditor.PropertyDrawer (default references of ReferencingDrawer)";
+            using var table = new DrawerTable((typeof(ThrowingDrawn), typeof(ReferencingDrawer)));
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<CustomDrawnSample>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                int before = Hits(member);
+                var field = new PropertyField(so.FindProperty("throwing"));
+                panel.visualTree.Add(field);
+                field.Bind(so);
+                Tick(panel);
+                Assert.Equal(before + 1, Hits(member));
+                Assert.Equal("referencing", field.Q<Label>().text);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
         }
+
+        public class ImguiSample : ScriptableObject
+        {
+            public ThrowingDrawn imguiOnly = new ThrowingDrawn();
+            public UnityEngine.Events.UnityEvent onClick = new UnityEngine.Events.UnityEvent();
+        }
+
+        [Fact]
+        public void BuiltInDrawersAreBuiltAndWhatIsNotDrawnIsReported()
+        {
+            using var f = new Fixture();
+            Assert.NotNull(f.Field("ratio").Q<Slider>());
+            var counted = f.Field("counted");
+            Assert.Equal("Section", counted.Q<Label>(null, "unity-header-drawer__label").text);
+
+            // A drawer with only IMGUI gets the Editor's IMGUI container, which Unbound does not
+            // draw: that is reported. A UnityEvent, whose Editor drawer Unbound lacks, too.
+            using var table = new DrawerTable((typeof(ThrowingDrawn), typeof(ImguiOnlyDrawer)));
+            var settings = ScriptableObject.CreateInstance<PanelSettings>();
+            var target = ScriptableObject.CreateInstance<ImguiSample>();
+            using var panel = RuntimePanel.Create(settings);
+            using var so = new SerializedObject(target);
+            try
+            {
+                const string imgui = "UnityEditor.UIElements.PropertyField (IMGUI of ImguiOnlyDrawer)";
+                const string unityEvent = "UnityEditor.UIElements.PropertyField (drawer of UnityEvent)";
+                int imguiBefore = Hits(imgui), eventBefore = Hits(unityEvent);
+                var imguiField = new PropertyField(so.FindProperty("imguiOnly"));
+                var eventField = new PropertyField(so.FindProperty("onClick"));
+                panel.visualTree.Add(imguiField);
+                panel.visualTree.Add(eventField);
+                imguiField.Bind(so);
+                eventField.Bind(so);
+                Tick(panel);
+                Tick(panel);
+                Assert.IsType<IMGUIContainer>(imguiField.hierarchy[0]);
+                Assert.True(imguiField.ClassListContains("unity-property-field__imgui-container-property"));
+                Assert.Equal(imguiBefore + 1, Hits(imgui));
+                Assert.Equal(eventBefore + 1, Hits(unityEvent));
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(settings);
+            }
+        }
+    }
+
+    public class ReferencingDrawer : PropertyDrawer
+    {
+        public Texture2D icon;
+        public override VisualElement CreatePropertyGUI(SerializedProperty property) => new Label("referencing");
+    }
+
+    public class ImguiOnlyDrawer : PropertyDrawer
+    {
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) { }
     }
 
     [CustomPropertyDrawer(typeof(PropertyFieldDrawerTests.ThrowingDrawn))]

@@ -860,7 +860,9 @@ namespace UnityEditor
                 var map = new Dictionary<Type, List<(Type, bool)>>();
                 foreach (var type in TypeCache.GetTypesWithAttribute<CustomPropertyDrawer>())
                 {
-                    if (type.IsAbstract || !typeof(GUIDrawer).IsAssignableFrom(type)) continue;
+                    // The engine's own drawers carry only their UI Toolkit GUI; IMGUI draws those
+                    // attributes itself.
+                    if (type.IsAbstract || !typeof(GUIDrawer).IsAssignableFrom(type) || type.Assembly == typeof(UnityEngine.Object).Assembly) continue;
                     foreach (var attribute in type.GetCustomAttributes<CustomPropertyDrawer>(false))
                     {
                         if (attribute.m_Type == null) continue;
@@ -896,8 +898,6 @@ namespace UnityEditor
             drawer.m_Attribute = attribute;
             return drawer;
         }
-
-        internal static bool HasDecorator(PropertyAttribute attribute) => Find(attribute.GetType(), decorator: true) != null;
 
         internal static PropertyDrawer DrawerFor(SerializedProperty property, FieldInfo field, PropertyAttribute attribute)
         {

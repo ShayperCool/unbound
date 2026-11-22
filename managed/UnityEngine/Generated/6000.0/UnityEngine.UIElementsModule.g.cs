@@ -1384,7 +1384,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId cullingEnabledProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId contextTypeProperty;
         [global::Unbound.Stub] internal bool useOwnerObjectGUIState;
-        [global::Unbound.Stub] public static readonly string ussClassName;
         [global::Unbound.Stub] internal static readonly string ussFoldoutChildDepthClassName;
         [global::Unbound.Stub] internal static readonly global::System.Collections.Generic.List<string> ussFoldoutChildDepthClassNames;
         [global::Unbound.Stub] public void MarkDirtyLayout() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.MarkDirtyLayout"); }
