@@ -276,8 +276,8 @@ namespace UnityEditor
         static float? Read(Object target, string path) =>
             target is GameObject go ? path == "m_IsActive" ? go.activeSelf ? 1f : 0f : null : AnimationUtility.SerializedValue(target, path);
 
-        /// <summary>Writes a recorded number back: a GameObject's active state, else the
-        /// serialized property.</summary>
+        /// <summary>Writes a recorded value back: a GameObject's active state or (from a
+        /// modification's text) its name, else the serialized property.</summary>
         static void Write(Object target, string path, float value, bool isText, string text)
         {
             if (target is GameObject go)
