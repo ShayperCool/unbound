@@ -7,22 +7,27 @@ using Unbound.Runtime;
 namespace UnityEngine
 {
     /// <summary>
-    /// The first part of Unbound's own baker of baked lightmaps (Q677): where a bake in Edit mode
+    /// The first parts of Unbound's own baker of baked lightmaps (Q677): where a bake in Edit mode
     /// (Lightmapping.Bake) puts each renderer of a scene whose Lighting Settings have Baked Global
     /// Illumination on, laid out natively as the Unity 6000.0.71f1 Editor lays out its baked
     /// lightmaps (tests/projects/bakedatlas): which lightmap, its lightmap scale and offset, and
     /// each lightmap's size. The bake does not make the lightmaps yet, so it gives renderers
     /// nothing (they keep what they had; said once per scene by the bake) and writes the layout
-    /// to <c>Library/Unbound/BakedGI/&lt;scene GUID&gt;/atlas.json</c> for the next parts.
-    /// <para>The renderers laid out are those the Editor lays out: enabled MeshRenderers of
-    /// active GameObjects with Contribute Global Illumination, made from the scene file. Those lit
+    /// to <c>Library/Unbound/BakedGI/&lt;scene GUID&gt;/atlas.json</c> for the next parts, the
+    /// renderers in the order the Editor's bake numbers them. The native side also rasterizes
+    /// each lightmap's texels as the Editor does (tests/projects/bakedbuffers), so far only to
+    /// write them out where <c>UNBOUND_BAKED_GI_BUFFERS</c> names a folder.
+    /// <para>The renderers laid out are those the Editor bakes: enabled MeshRenderers of
+    /// active GameObjects with Contribute Global Illumination, made from the scene file, whose
+    /// meshes have normals (the others are left out, said as the Editor says it). Those lit
     /// by light probes (Receive Global Illumination) go after the others into atlases of their own
     /// that are no lightmaps. A renderer that cannot be laid out (no mesh, a
     /// submesh that is not triangles) is left out and named; Lightmap Parameters that cannot be
     /// read, a built-in one other than Default-Medium or one with Limit Lightmap Count, and a
-    /// lightmapped Terrain, and lightmap UVs that span no area (a mesh without UVs) leave the scene
-    /// without a layout (said once). A renderer with Scale In Lightmap 0 takes its place in the
-    /// layout without a lightmap (index 0xFFFE). A layout an earlier bake wrote is removed first.</para>
+    /// lightmapped Terrain, and lightmap UVs that span no area (a mesh without UVs) or are not
+    /// numbers leave the scene without a layout (said once). A renderer with Scale In Lightmap 0
+    /// takes its place in the layout without a lightmap (index 0xFFFE). A layout an earlier bake
+    /// wrote is removed first.</para>
     /// </summary>
     internal static class BakedAtlas
     {
@@ -106,17 +111,46 @@ namespace UnityEngine
             return levels;
         }
 
-        /// <summary>The scene's MeshRenderers made from its file, the highest file ID first: the
-        /// order the Editor numbers them in, which keeps renderers of one Morton code and size in
-        /// it (tests/projects/bakedatlas Ties: not the hierarchy's order; renderers of prefab
-        /// instances are not measured).</summary>
-        static List<(MeshRenderer Renderer, long FileId)> InEditorOrder(LoadedFile file)
+        /// <summary>The scene's MeshRenderers made from its file, by their file IDs (the bake puts
+        /// them in the Editor's order natively).</summary>
+        static List<(MeshRenderer Renderer, long FileId)> FromFile(LoadedFile file)
         {
-            var ordered = new List<(MeshRenderer, long)>();
+            var found = new List<(MeshRenderer, long)>();
             foreach (var pair in file.Objects)
-                if (pair.Value is MeshRenderer r) ordered.Add((r, pair.Key));
-            ordered.Sort((a, b) => b.Item2.CompareTo(a.Item2));
-            return ordered;
+                if (pair.Value is MeshRenderer r) found.Add((r, pair.Key));
+            found.Sort((a, b) => a.Item2.CompareTo(b.Item2));
+            return found;
+        }
+
+        /// <summary>Reads the native bake's answer for the renderers sent (their paths and file IDs
+        /// in the order sent): the lightmaps' sizes into <paramref name="lightmaps"/>, and the
+        /// bake's renderers in its order, each with its lightmap and scale and offset. A mesh
+        /// without normals is left out of the bake, which is said as the Editor says it, once a
+        /// bake (tests/projects/bakedbuffers Bare).</summary>
+        internal static List<object> Read(string answer, IReadOnlyList<(string Path, long FileId)> sent, List<int[]> lightmaps)
+        {
+            var root = JsonDocument.Parse(answer).RootElement;
+            if (root.GetProperty("invalidNormals").GetBoolean())
+                Debug.LogWarning("Some meshes have invalid normals and will be ignored by the Global Illumination system.");
+            foreach (var size in root.GetProperty("lightmaps").EnumerateArray())
+                lightmaps.Add(new[] { size[0].GetInt32(), size[1].GetInt32() });
+            var placements = root.GetProperty("placements");
+            if (placements.GetArrayLength() != sent.Count) throw new InvalidOperationException($"{placements.GetArrayLength()} placements for {sent.Count} renderers");
+            var entries = new List<object>();
+            foreach (var which in root.GetProperty("order").EnumerateArray())
+            {
+                var (path, fileId) = sent[which.GetInt32()];
+                var p = placements[which.GetInt32()];
+                var st = p.GetProperty("scaleOffset");
+                entries.Add(new
+                {
+                    path,
+                    fileId,
+                    lightmap = p.GetProperty("lightmap").GetInt32(),
+                    scaleOffset = new[] { st[0].GetSingle(), st[1].GetSingle(), st[2].GetSingle(), st[3].GetSingle() },
+                });
+            }
+            return entries;
         }
 
         static string LayoutPath(string guid) => Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "BakedGI", guid, "atlas.json");
@@ -135,6 +169,11 @@ namespace UnityEngine
                 Warn("forget:" + path, $"{path}: Unbound could not remove the layout of an earlier bake of its baked lightmaps: {e.Message}");
             }
         }
+
+        /// <summary>An array's values as they are in memory (little-endian), in base64: every float
+        /// arrives natively as it is.</summary>
+        static string Encoded<T>(T[] values) where T : unmanaged =>
+            Convert.ToBase64String(System.Runtime.InteropServices.MemoryMarshal.AsBytes(new ReadOnlySpan<T>(values ?? Array.Empty<T>())));
 
         static string HierarchyPath(Transform t)
         {
@@ -165,9 +204,11 @@ namespace UnityEngine
             var levels = LodLevels(file);
             var renderers = new List<object>();
             var placed = new List<(MeshRenderer renderer, long fileId)>();
+            var meshes = new List<object>();
+            var meshIndex = new Dictionary<Mesh, int>();
             using (Mesh.EngineReads())
             {
-                foreach (var (renderer, fileId) in InEditorOrder(file))
+                foreach (var (renderer, fileId) in FromFile(file))
                 {
                     if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
                     // A renderer with Scale In Lightmap 0, and one lit by light probes (in atlases of
@@ -195,18 +236,19 @@ namespace UnityEngine
                         Warn("parameters:" + path, $"{path}: '{renderer.name}' has {why}; Unbound does not lay out its baked lightmaps (Lightmapping.Bake).");
                         return;
                     }
-                    var vertices = mesh.vertices;
-                    var uvSource = mesh.uv2;
-                    if (uvSource.Length != vertices.Length) uvSource = mesh.uv;
-                    var positions = new float[3 * vertices.Length];
-                    for (int v = 0; v < vertices.Length; v++)
+                    if (!meshIndex.TryGetValue(mesh, out int index))
                     {
-                        positions[3 * v] = vertices[v].x; positions[3 * v + 1] = vertices[v].y; positions[3 * v + 2] = vertices[v].z;
-                    }
-                    var uvs = new float[2 * uvSource.Length];
-                    for (int v = 0; v < uvSource.Length; v++)
-                    {
-                        uvs[2 * v] = uvSource[v].x; uvs[2 * v + 1] = uvSource[v].y;
+                        meshIndex[mesh] = index = meshes.Count;
+                        var submeshes = new string[mesh.subMeshCount];
+                        for (int sub = 0; sub < submeshes.Length; sub++) submeshes[sub] = Encoded<int>(mesh.GetTriangles(sub));
+                        meshes.Add(new
+                        {
+                            positions = Encoded<Vector3>(mesh.vertices),
+                            normals = Encoded<Vector3>(mesh.normals),
+                            uv = Encoded<Vector2>(mesh.uv),
+                            uv2 = Encoded<Vector2>(mesh.uv2),
+                            submeshes,
+                        });
                     }
                     var m = renderer.transform.localToWorldMatrix;
                     var matrix = new float[16];
@@ -215,13 +257,11 @@ namespace UnityEngine
                     renderers.Add(new
                     {
                         name = renderer.name,
-                        positions,
-                        triangles = mesh.triangles,
-                        uvs,
+                        fileId,
+                        mesh = index,
                         localToWorld = matrix,
                         scaleInLightmap = renderer.scaleInLightmap,
                         lodLevel = levels.TryGetValue(renderer, out var level) ? (int?)level : null,
-                        scene = guid,
                         probeLit = renderer.receiveGI != ReceiveGI.Lightmaps,
                         parameters = new
                         {
@@ -240,7 +280,7 @@ namespace UnityEngine
                 || UnityEditor.PackageManager.PackageInfo.FindForPackageName("com.unity.entities.graphics") != null
                 || UnityEditor.PackageManager.PackageInfo.FindForPackageName("com.unity.rendering.hybrid") != null;
             var lightmaps = new List<int[]>();
-            var entries = new List<object>();
+            List<object> entries;
             try
             {
                 var request = new
@@ -249,27 +289,15 @@ namespace UnityEngine
                     padding = settings.lightmapPadding,
                     resolution = settings.lightmapResolution,
                     fixedSize,
+                    scene = guid,
+                    meshes,
                     renderers,
                 };
-                // The request (a vertex that is not a number cannot be sent), the layout (a
-                // renderer it refuses, named) and its reading all fail the scene's layout, said.
-                var root = JsonDocument.Parse(Native.Call("baked-gi-atlas", JsonSerializer.Serialize(request))).RootElement;
-                foreach (var size in root.GetProperty("lightmaps").EnumerateArray())
-                    lightmaps.Add(new[] { size[0].GetInt32(), size[1].GetInt32() });
-                int k = 0;
-                foreach (var p in root.GetProperty("placements").EnumerateArray())
-                {
-                    var st = p.GetProperty("scaleOffset");
-                    var (renderer, fileId) = placed[k++];
-                    entries.Add(new
-                    {
-                        path = HierarchyPath(renderer.transform),
-                        fileId,
-                        lightmap = p.GetProperty("lightmap").GetInt32(),
-                        scaleOffset = new[] { st[0].GetSingle(), st[1].GetSingle(), st[2].GetSingle(), st[3].GetSingle() },
-                    });
-                }
-                if (k != placed.Count) throw new InvalidOperationException($"{k} placements for {placed.Count} renderers");
+                // The request, the bake (a renderer it refuses, named) and the reading of its
+                // answer all fail the scene's layout, said.
+                var paths = new List<(string, long)>();
+                foreach (var (renderer, fileId) in placed) paths.Add((HierarchyPath(renderer.transform), fileId));
+                entries = Read(Native.Call("baked-gi-bake", JsonSerializer.Serialize(request)), paths, lightmaps);
             }
             catch (Exception e)
             {
