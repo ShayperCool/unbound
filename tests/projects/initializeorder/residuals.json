@@ -1,0 +1,5 @@
+{
+  "Unbound keeps no post-processed artifacts: it replays an asset's postprocessors when it first loads the asset in a session (here the sprite the settings asset references, loaded in a static constructor; during the domain load the replay waits until the load has ended), where the Editor ran them when it imported the asset and a load imports nothing": [
+    "loaded.postprocess"
+  ]
+}

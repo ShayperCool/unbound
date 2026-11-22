@@ -1,0 +1,11 @@
+{
+    "name": "Aa.Dependent.Editor",
+    "references": [
+        "Zz.Base.Editor",
+        "Zz.Probe.InitOrder.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "autoReferenced": true
+}

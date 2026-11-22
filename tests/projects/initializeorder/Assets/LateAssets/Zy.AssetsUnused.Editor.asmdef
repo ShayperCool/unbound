@@ -1,0 +1,6 @@
+{
+    "name": "Zy.AssetsUnused.Editor",
+    "references": ["Zz.Probe.InitOrder.Editor"],
+    "includePlatforms": ["Editor"],
+    "autoReferenced": true
+}

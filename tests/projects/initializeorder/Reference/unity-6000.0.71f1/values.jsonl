@@ -1,0 +1,5 @@
+{"k":"order.initializers","v":"package.ctor,base.ctor,dependent.ctor,aaUnused.ctor,abPackage.ctor,game.ctor,zyAssets.ctor,zzUnused.ctor"}
+{"k":"game.duringLoad","v":"game.ctor packageReady=True,game.findAssets n=1,game.load sprite=Loaded,game.importReturned,zyAssets.ctor,zzUnused.ctor,game.loadMethodImportReturned,game.didReloadImportReturned"}
+{"k":"game.afterLoad","v":"afterAssemblyReload,postprocessSprites Forced.png packageReady=True,postprocessSprites Method.png packageReady=True,postprocessSprites Reload.png packageReady=True,postprocessAllAssets imported=Forced.png;Method.png;Reload.png reload=True,firstUpdate,update60"}
+{"k":"loaded.postprocess","v":""}
+{"k":"complete","v":true}

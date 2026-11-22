@@ -1,0 +1,7 @@
+{
+  "name": "com.probe.initorder",
+  "version": "1.0.0",
+  "displayName": "Probe Init Order",
+  "description": "An embedded package with an editor initializer and a sprite postprocessor.",
+  "unity": "6000.0"
+}
