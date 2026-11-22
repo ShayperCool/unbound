@@ -61,6 +61,9 @@ CRLF = {'v1wholewritecrlf'}
 # Profiles that enter Play mode twice: the kept atlas files are copied to ReplayOriginals/ (beside
 # Assets), which the probe restores between the entries and records at the second.
 REPLAY = {'v1replay'}
+# Profiles recorded in the Editor only: Unbound's `unbound run` starts in Play mode and ends when it
+# leaves it, so a session that leaves Play mode and enters it again cannot run there yet.
+EDITOR_ONLY = {'v1replay': 'an Unbound run ends when it leaves Play mode, so it cannot enter it again'}
 ATLAS_FOLDERS = ('Atlases', 'SettingsAtlases', 'PlatformAtlases', 'IncludeAtlases', 'PackingAtlases', 'TextureAtlases', 'PlatformSetAtlases', 'AddAtlases', 'RemoveAtlases', 'VariantScaleAtlases', 'IsVariantAtlases', 'MasterAtlasAtlases', 'ImporterPlatformAtlases', 'ImporterPlatformSetAtlases', 'ImporterPackingAtlases', 'ImporterTextureAtlases', 'ImporterVariantScaleAtlases', 'ImporterIncludeAtlases', 'WholeWriteAtlases')
 
 
@@ -113,6 +116,8 @@ def main():
                                base=BASE, macos_batch=True, configure=setup)
         elif args.mode == 'publish':
             codes.append(value_probe.publish(PROBE, [f'{name}-{profile}' for name in args.labels], profile=profile))
+        elif profile in EDITOR_ONLY:
+            print(f'spriteatlaseditor {profile}: Editor reference only, not run in Unbound: {EDITOR_ONLY[profile]}')
         else:
             codes.append(value_probe.gate(PROBE, VARIABLE, label, 0, ['--headless', '120'],
                                           base=BASE, configure=setup, profile=profile))
