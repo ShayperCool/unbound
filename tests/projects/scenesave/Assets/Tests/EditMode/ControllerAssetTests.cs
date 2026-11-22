@@ -50,6 +50,9 @@ public class ControllerAssetTests
         var land = fall.AddExitTransition();
         land.AddCondition(AnimatorConditionMode.If, 0f, "Grounded");
         root.AddEntryTransition(run).AddCondition(AnimatorConditionMode.Equals, 2f, "Count");
+        var leave = root.AddStateMachineTransition(air, run);
+        leave.AddCondition(AnimatorConditionMode.IfNot, 0f, "Grounded");
+        root.AddStateMachineExitTransition(air);
         ProbeLog.Snapshot("basic.edited", Folder + "/Basic.controller");
         ProbeLog.Row("basic.editedDirty", EditorUtility.IsDirty(basic));
         AssetDatabase.SaveAssets();
@@ -67,6 +70,11 @@ public class ControllerAssetTests
         layers[1].blendingMode = AnimatorLayerBlendingMode.Additive;
         layered.layers = layers;
         layers[1].stateMachine.AddState("Wave").motion = walk;
+        var synced = new AnimatorControllerLayer { name = "Synced", syncedLayerIndex = 0, defaultWeight = 1f };
+        layered.AddLayer(synced);
+        var syncedLayers = layered.layers;
+        syncedLayers[2].SetOverrideMotion(tree, walk);
+        layered.layers = syncedLayers;
         AssetDatabase.SaveAssets();
         ProbeLog.Snapshot("layered.saved", Folder + "/Layered.controller");
         ProbeLog.Row("layered.tree", tree.name + ":" + blend.name);
