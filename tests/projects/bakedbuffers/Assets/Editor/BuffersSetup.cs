@@ -591,6 +591,50 @@ public static class BuffersSetup
         Save(scene, "SpareEmpty");
     }
 
+    /// <summary>Point and spot lights spread over a ground of 120 m with a pillar of 70 m: the
+    /// light grid has several regions along each axis, and the paths' three bounces test fewer
+    /// lights at each. (The boxes stand a little above the ground and off whole coordinates, so
+    /// that no sample of a texel lies on one of their faces.)</summary>
+    static void Spread()
+    {
+        var scene = NewScene("Spread", 0.5f, 128);
+        var settings = Lightmapping.lightingSettings;
+        settings.directSampleCount = 16;
+        settings.indirectSampleCount = 16;
+        settings.maxBounces = 3;
+        settings.minBounces = 3;
+        RenderSettings.skybox = null;
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = Color.black;
+        With(Prim(PrimitiveType.Plane, "Ground", Vector3.zero, Vector3.zero, new Vector3(12f, 1f, 12f)), Mat("BounceGrey", new Color(0.5f, 0.5f, 0.5f)));
+        With(Prim(PrimitiveType.Cube, "Pillar", new Vector3(50.13f, 35.07f, -49.91f), Vector3.zero, new Vector3(2f, 70f, 2f)), Mat("BounceWhite", Color.white));
+        With(Prim(PrimitiveType.Cube, "Block", new Vector3(-25.17f, 2.03f, -20.11f), new Vector3(0f, 30f, 0f), new Vector3(6f, 4f, 6f)), Mat("BounceRed", new Color(0.9f, 0.1f, 0.1f)));
+        With(Prim(PrimitiveType.Cube, "Wall", new Vector3(15.07f, 3.02f, 25.13f), Vector3.zero, new Vector3(20f, 6f, 1f)), Mat("BounceBlue", new Color(0.2f, 0.3f, 0.9f)));
+        With(Prim(PrimitiveType.Cube, "Crate", new Vector3(-5.09f, 1.53f, 5.14f), new Vector3(0f, 10f, 0f), new Vector3(3f, 3f, 3f)), Mat("BounceWhite", Color.white));
+        NewLight("P1", LightType.Point, new Vector3(-45.3f, 3f, -44.7f), Vector3.zero, Color.white, 3f).range = 20f;
+        NewLight("P2", LightType.Point, new Vector3(-20.2f, 4f, -39.6f), Vector3.zero, new Color(1f, 0.8f, 0.5f), 2f).range = 15f;
+        NewLight("P3", LightType.Point, new Vector3(5.1f, 2f, -30.3f), Vector3.zero, new Color(0.5f, 1f, 0.6f), 4f).range = 25f;
+        NewLight("P4", LightType.Point, new Vector3(30.4f, 3f, -9.8f), Vector3.zero, new Color(0.6f, 0.7f, 1f), 1.5f).range = 12f;
+        NewLight("P5", LightType.Point, new Vector3(44.6f, 5f, 40.2f), Vector3.zero, Color.white, 6f).range = 30f;
+        NewLight("P6", LightType.Point, new Vector3(-39.9f, 2f, 30.1f), Vector3.zero, new Color(1f, 0.4f, 0.4f), 2.5f).range = 18f;
+        NewLight("P7", LightType.Point, new Vector3(0.3f, 3f, 0.2f), Vector3.zero, new Color(0.9f, 0.9f, 0.6f), 1f).range = 10f;
+        NewLight("P8", LightType.Point, new Vector3(20.1f, 2f, 19.7f), Vector3.zero, new Color(0.7f, 1f, 1f), 2f).range = 8f;
+        NewLight("High", LightType.Point, new Vector3(49.7f, 60f, -45.2f), Vector3.zero, new Color(1f, 0.9f, 0.7f), 8f).range = 30f;
+        var down = NewLight("Down", LightType.Spot, new Vector3(-30.2f, 8f, 0.3f), new Vector3(90f, 0f, 0f), Color.white, 5f);
+        down.range = 20f;
+        down.spotAngle = 50f;
+        var side = NewLight("Side", LightType.Spot, new Vector3(35.3f, 6f, -34.8f), new Vector3(10f, 45f, 0f), new Color(1f, 0.7f, 0.3f), 8f);
+        side.range = 40f;
+        side.spotAngle = 30f;
+        var wide = NewLight("Wide", LightType.Spot, new Vector3(0.2f, 10f, 39.7f), new Vector3(60f, 180f, 0f), new Color(0.5f, 0.6f, 1f), 4f);
+        wide.range = 25f;
+        wide.spotAngle = 90f;
+        var along = NewLight("Along", LightType.Spot, new Vector3(-10.1f, 3f, -9.9f), new Vector3(0f, 90f, 0f), Color.white, 6f);
+        along.range = 35f;
+        along.spotAngle = 20f;
+        Save(scene, "Spread");
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -603,7 +647,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));

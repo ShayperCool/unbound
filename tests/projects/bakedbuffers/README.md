@@ -62,7 +62,13 @@ a ground, a cube and a sphere, and lights with hard shadows:
   degrees, a light without shadows, one inside the sphere (off its centre: with a light at the
   centre the Editor lets a few rays through the sphere's mesh, along its edges, which Unbound
   does not), and lights that are disabled, on an inactive GameObject or out of everything's
-  reach.
+  reach. Seven of its lights reach the scene's one region of the light grid: a path's surface
+  tests four of them, picked by their power and evenly (three at the second surface, ...).
+- `Spread` (0.5, 128): nine point and four spot lights (cones of 20 to 90 degrees, down,
+  sideways and along the ground) over a ground of 120 m with a pillar of 70 m: the light grid
+  has five by two by five regions, each listing the lights whose range reaches it (a spot
+  light's where it reaches in front of the light, its cone not tested); 16 indirect samples,
+  three bounces without the chance of stopping (four, three and two lights tested).
 - `ModeIndirect`, `ModeSubtractive`, `ModeShadowmask`: a mixed sun and a mixed spot, a baked
   bulb and a realtime spot, in each Lighting Mode. Mixed lights' direct light is in the lightmap
   in Subtractive mode alone; the realtime light is not of the bake.
@@ -183,9 +189,9 @@ likewise.
 `residuals.json` names the known differences, each with the exact text the comparison gives it
 (another text, or none, fails the run):
 
-- `Lamps` indirect light: several point and spot lights reach a surface; the Editor seems to
-  take at most four of them there (fewer at later bounces), picked by their power, Unbound all
-  of them. Whether both give the same light on average is not measured.
+- `Spread`'s indirect light: 14 texels, mostly around the crate in the middle region of the
+  light grid, differ as if a path's surface had picked another of its region's lights; the
+  Editor's own bake input replayed gives the same differences. Not traced.
 - One texel of `Roof`'s indirect light and one of `Glow`'s validity: a single ray that meets a
   triangle exactly on its edge falls on the other side of it than in the Editor.
 - `Shapes`' sky light: one sky ray of some texels is stopped by a renderer of a less detailed
