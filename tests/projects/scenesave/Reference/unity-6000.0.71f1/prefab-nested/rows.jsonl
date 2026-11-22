@@ -1,0 +1,38 @@
+{"key": "outer.result", "value": "GameObject:Outer"}
+{"key": "outer.isInstance", "value": false}
+{"key": "outer.nestedSource", "value": "Assets/Prefabs/Thing.prefab"}
+{"key": "outer.nested.mods", "value": "GameObject:Thing|m_Name|Thing|null; Holder:Thing|count|7|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Transform:Thing|m_LocalPosition.x|1|null; Transform:Thing|m_LocalPosition.y|2|null; Transform:Thing|m_LocalPosition.z|3|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null"}
+{"key": "outer.nested.added", "value": "SphereCollider:Thing"}
+{"key": "outer.nested.removed", "value": ""}
+{"key": "outer.nested.addedObjects", "value": "GameObject:Extra"}
+{"key": "outer.prefab", "value": "2c3f8799c907a18818c5ff01171e4766f2e19f699f0b6631faf689b70c69cc80"}
+{"key": "outer.asset", "value": "Outer[NotAPrefab|False|Transform], Thing[NotAPrefab|True|Transform+Holder+SphereCollider], Part[NotAPrefab|False|Transform+BoxCollider], Extra[NotAPrefab|False|Transform]"}
+{"key": "outer.assetType", "value": "Regular"}
+{"key": "connect.result", "value": "GameObject:OuterConnected"}
+{"key": "connect.isRoot", "value": true}
+{"key": "connect.innerSource", "value": "Assets/Prefabs/Thing.prefab"}
+{"key": "connect.mods", "value": "GameObject:OuterConnected|m_Name|OuterConnected|null; Transform:OuterConnected|m_LocalEulerAnglesHint.x|0|null; Transform:OuterConnected|m_LocalEulerAnglesHint.y|0|null; Transform:OuterConnected|m_LocalEulerAnglesHint.z|0|null; Transform:OuterConnected|m_LocalPosition.x|0|null; Transform:OuterConnected|m_LocalPosition.y|0|null; Transform:OuterConnected|m_LocalPosition.z|0|null; Transform:OuterConnected|m_LocalRotation.w|1|null; Transform:OuterConnected|m_LocalRotation.x|0|null; Transform:OuterConnected|m_LocalRotation.y|0|null; Transform:OuterConnected|m_LocalRotation.z|0|null"}
+{"key": "connect.added", "value": ""}
+{"key": "connect.removed", "value": ""}
+{"key": "connect.addedObjects", "value": ""}
+{"key": "connect.tree", "value": "OuterConnected[Connected|True|Transform], Thing[Connected|True|Transform+Holder], Part[Connected|False|Transform+BoxCollider]"}
+{"key": "connect.prefab", "value": "36588247235c6ba0b0e5faefedf3c0ec890e4cabb2cf95e59a15f8bf86b6ba5a"}
+{"key": "variant.before.mods", "value": "GameObject:Thing|m_Name|Thing|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|0|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null"}
+{"key": "variant.before.added", "value": "SphereCollider:Thing"}
+{"key": "variant.before.removed", "value": "BoxCollider:Part"}
+{"key": "variant.before.addedObjects", "value": "GameObject:AddedChild"}
+{"key": "variant.result", "value": "GameObject:RichVariant|True"}
+{"key": "variant.instanceSource", "value": "Assets/Prefabs/Thing.prefab"}
+{"key": "variant.after.mods", "value": "GameObject:Thing|m_Name|Thing|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Transform:Thing|m_LocalPosition.x|5|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|0|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null"}
+{"key": "variant.after.added", "value": "SphereCollider:Thing"}
+{"key": "variant.after.removed", "value": "BoxCollider:Part"}
+{"key": "variant.after.addedObjects", "value": "GameObject:AddedChild"}
+{"key": "variant.prefab", "value": "8e01934844e93fe51191358207959f87c48ee53337e8ffeb08b31f8a5a5f07f7"}
+{"key": "variant.type", "value": "Variant"}
+{"key": "variant.asset", "value": "RichVariant[NotAPrefab|True|Transform+Holder+SphereCollider], Part[NotAPrefab|False|Transform], AddedChild[NotAPrefab|False|Transform+Holder]"}
+{"key": "variant2.result", "value": "GameObject:VariantOfVariant"}
+{"key": "variant2.prefab", "value": "9e458b3a8ca107827aebdb59e01e32d769e1c2c16b77d42d92effef22a089893"}
+{"key": "variant2.type", "value": "Variant"}
+{"key": "variant2.base", "value": "Assets/Prefabs/VariantOfVariant.prefab"}
+{"key": "scene.result", "value": true}
+{"key": "scene.file", "value": "12da9d820c9da5cfc14c9c37b4be6cf02fea5dab8910a3e9f2ffdca9ebe2995c"}

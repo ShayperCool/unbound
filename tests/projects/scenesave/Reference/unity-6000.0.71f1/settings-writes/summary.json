@@ -1,0 +1,10 @@
+{
+  "case": "settings-writes",
+  "exit": 0,
+  "changed": [
+    "ProjectSettings/EditorBuildSettings.asset",
+    "ProjectSettings/ProjectSettings.asset",
+    "ProjectSettings/TagManager.asset"
+  ],
+  "removed": []
+}

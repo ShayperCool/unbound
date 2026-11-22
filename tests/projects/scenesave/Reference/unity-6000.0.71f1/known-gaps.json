@@ -261,5 +261,1195 @@
     "reference": true,
     "actual": false,
     "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2). Materials, physics materials and script objects match."
+  },
+  {
+    "case": "engine-assets",
+    "key": "exit",
+    "reference": 0,
+    "actual": 2,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "alpha.file",
+    "reference": [
+      "same as alpha.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "alpha.meta",
+    "reference": [
+      "same as alpha.meta"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "alpha.path",
+    "reference": [
+      "Assets/Engine/Alpha.asset"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "alpha.result",
+    "reference": [
+      "Texture2D:Alpha"
+    ],
+    "actual": [
+      "Texture2D:"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "alphaEdit.dirty",
+    "reference": [
+      true
+    ],
+    "actual": [
+      false
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "alphaEdit.file",
+    "reference": [
+      "same as alphaEdit.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "clip.file",
+    "reference": [
+      "same as clip.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "clip.meta",
+    "reference": [
+      "same as clip.meta"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "clip.path",
+    "reference": [
+      "Assets/Engine/Rich.anim"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "clip.result",
+    "reference": [
+      "AnimationClip:Rich"
+    ],
+    "actual": [
+      "AnimationClip:"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "custom.file",
+    "reference": [
+      "same as custom.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "custom.meta",
+    "reference": [
+      "same as custom.meta"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "custom.path",
+    "reference": [
+      "Assets/Engine/Custom.asset"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "custom.result",
+    "reference": [
+      "Mesh:Custom"
+    ],
+    "actual": [
+      "Mesh:"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "legacy.file",
+    "reference": [
+      "same as legacy.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "legacy.meta",
+    "reference": [
+      "same as legacy.meta"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "legacy.path",
+    "reference": [
+      "Assets/Engine/Legacy.anim"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "legacy.result",
+    "reference": [
+      "AnimationClip:Legacy"
+    ],
+    "actual": [
+      "AnimationClip:"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "linear.file",
+    "reference": [
+      "same as linear.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "linear.meta",
+    "reference": [
+      "same as linear.meta"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "linear.path",
+    "reference": [
+      "Assets/Engine/Linear.asset"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "linear.result",
+    "reference": [
+      "Texture2D:Linear"
+    ],
+    "actual": [
+      "Texture2D:"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "lines.file",
+    "reference": [
+      "same as lines.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "lines.meta",
+    "reference": [
+      "same as lines.meta"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "lines.path",
+    "reference": [
+      "Assets/Engine/Lines.asset"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "lines.result",
+    "reference": [
+      "Mesh:Lines"
+    ],
+    "actual": [
+      "Mesh:"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "mipped.file",
+    "reference": [
+      "same as mipped.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "mipped.meta",
+    "reference": [
+      "same as mipped.meta"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "mipped.path",
+    "reference": [
+      "Assets/Engine/Mipped.asset"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "mipped.result",
+    "reference": [
+      "Texture2D:Mipped"
+    ],
+    "actual": [
+      "Texture2D:"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "rich.file",
+    "reference": [
+      "same as rich.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "rich.meta",
+    "reference": [
+      "same as rich.meta"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "rich.path",
+    "reference": [
+      "Assets/Engine/Rich.asset"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "rich.result",
+    "reference": [
+      "Mesh:Rich"
+    ],
+    "actual": [
+      "Mesh:"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "richEdit.dirty",
+    "reference": [
+      true
+    ],
+    "actual": [
+      false
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "richEdit.file",
+    "reference": [
+      "same as richEdit.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "shaped.file",
+    "reference": [
+      "same as shaped.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "shaped.meta",
+    "reference": [
+      "same as shaped.meta"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "shaped.path",
+    "reference": [
+      "Assets/Engine/Shaped.asset"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "shaped.result",
+    "reference": [
+      "Mesh:Shaped"
+    ],
+    "actual": [
+      "Mesh:"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "skinned.file",
+    "reference": [
+      "same as skinned.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "skinned.meta",
+    "reference": [
+      "same as skinned.meta"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "skinned.path",
+    "reference": [
+      "Assets/Engine/Skinned.asset"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "skinned.result",
+    "reference": [
+      "Mesh:Skinned"
+    ],
+    "actual": [
+      "Mesh:"
+    ],
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Alpha.asset",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Alpha.asset.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Custom.asset",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Custom.asset.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Legacy.anim",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Legacy.anim.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Linear.asset",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Linear.asset.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Lines.asset",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Lines.asset.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Mipped.asset",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Mipped.asset.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Rich.anim",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Rich.anim.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Rich.asset",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Rich.asset.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Shaped.asset",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Shaped.asset.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Skinned.asset",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:Assets/Engine/Skinned.asset.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:alpha.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:alpha.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:alphaEdit.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:clip.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:clip.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:custom.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:custom.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:legacy.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:legacy.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:linear.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:linear.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:lines.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:lines.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:mipped.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:mipped.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:rich.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:rich.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:richEdit.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:shaped.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:shaped.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:skinned.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "engine-assets",
+    "key": "file:snapshot:skinned.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not write meshes, animation clips and textures made by script into new assets yet: AssetDatabase.CreateAsset of a Mesh, an AnimationClip or a Texture2D logs an error and writes nothing (so the test, failing on the logged error, exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "exit",
+    "reference": 0,
+    "actual": 2,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "connect.added",
+    "reference": [
+      ""
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "connect.addedObjects",
+    "reference": [
+      ""
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "connect.isRoot",
+    "reference": [
+      true
+    ],
+    "actual": [
+      false
+    ],
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "connect.mods",
+    "reference": [
+      "GameObject:OuterConnected|m_Name|OuterConnected|null; Transform:OuterConnected|m_LocalEulerAnglesHint.x|0|null; Transform:OuterConnected|m_LocalEulerAnglesHint.y|0|null; Transform:OuterConnected|m_LocalEulerAnglesHint.z|0|null; Transform:OuterConnected|m_LocalPosition.x|0|null; Transform:OuterConnected|m_LocalPosition.y|0|null; Transform:OuterConnected|m_LocalPosition.z|0|null; Transform:OuterConnected|m_LocalRotation.w|1|null; Transform:OuterConnected|m_LocalRotation.x|0|null; Transform:OuterConnected|m_LocalRotation.y|0|null; Transform:OuterConnected|m_LocalRotation.z|0|null"
+    ],
+    "actual": [
+      "null"
+    ],
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "connect.prefab",
+    "reference": [
+      "same as connect.prefab"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "connect.removed",
+    "reference": [
+      ""
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "connect.result",
+    "reference": [
+      "GameObject:OuterConnected"
+    ],
+    "actual": [
+      "throws NotSupportedException: Unbound does not make new prefabs holding prefab instances yet (Thing in Assets/Prefabs/OuterConnected.prefab)"
+    ],
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "connect.tree",
+    "reference": [
+      "OuterConnected[Connected|True|Transform], Thing[Connected|True|Transform+Holder], Part[Connected|False|Transform+BoxCollider]"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "outer.asset",
+    "reference": [
+      "Outer[NotAPrefab|False|Transform], Thing[NotAPrefab|True|Transform+Holder+SphereCollider], Part[NotAPrefab|False|Transform+BoxCollider], Extra[NotAPrefab|False|Transform]"
+    ],
+    "actual": [
+      "null"
+    ],
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "outer.assetType",
+    "reference": [
+      "Regular"
+    ],
+    "actual": [
+      "NotAPrefab"
+    ],
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "outer.prefab",
+    "reference": [
+      "same as outer.prefab"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "outer.result",
+    "reference": [
+      "GameObject:Outer"
+    ],
+    "actual": [
+      "throws NotSupportedException: Unbound does not make new prefabs holding prefab instances yet (Thing in Assets/Prefabs/Outer.prefab)"
+    ],
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "scene.file",
+    "reference": [
+      "same as scene.file"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "scene.result",
+    "reference": [
+      true
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant.after.added",
+    "reference": [
+      "SphereCollider:Thing"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant.after.addedObjects",
+    "reference": [
+      "GameObject:AddedChild"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant.after.mods",
+    "reference": [
+      "GameObject:Thing|m_Name|Thing|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Transform:Thing|m_LocalPosition.x|5|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|0|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant.after.removed",
+    "reference": [
+      "BoxCollider:Part"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant.asset",
+    "reference": [
+      "RichVariant[NotAPrefab|True|Transform+Holder+SphereCollider], Part[NotAPrefab|False|Transform], AddedChild[NotAPrefab|False|Transform+Holder]"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant.before.added",
+    "reference": [
+      "SphereCollider:Thing"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant.before.addedObjects",
+    "reference": [
+      "GameObject:AddedChild"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant.before.mods",
+    "reference": [
+      "GameObject:Thing|m_Name|Thing|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|0|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant.before.removed",
+    "reference": [
+      "BoxCollider:Part"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant.instanceSource",
+    "reference": [
+      "Assets/Prefabs/Thing.prefab"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant.prefab",
+    "reference": [
+      "same as variant.prefab"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant.result",
+    "reference": [
+      "GameObject:RichVariant|True"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant.type",
+    "reference": [
+      "Variant"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant2.base",
+    "reference": [
+      "Assets/Prefabs/VariantOfVariant.prefab"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant2.prefab",
+    "reference": [
+      "same as variant2.prefab"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant2.result",
+    "reference": [
+      "GameObject:VariantOfVariant"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "variant2.type",
+    "reference": [
+      "Variant"
+    ],
+    "actual": null,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:Assets/Prefabs/Nested.unity",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:Assets/Prefabs/Nested.unity.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:Assets/Prefabs/Outer.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:Assets/Prefabs/Outer.prefab.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:Assets/Prefabs/OuterConnected.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:Assets/Prefabs/OuterConnected.prefab.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:Assets/Prefabs/RichVariant.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:Assets/Prefabs/RichVariant.prefab.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:Assets/Prefabs/VariantOfVariant.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:Assets/Prefabs/VariantOfVariant.prefab.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:snapshot:connect.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:snapshot:outer.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:snapshot:scene.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:snapshot:variant.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
+  },
+  {
+    "case": "prefab-nested",
+    "key": "file:snapshot:variant2.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Unbound does not make new prefabs holding prefab instances, or variants of instances with added or removed objects, yet: SaveAsPrefabAsset and SaveAsPrefabAssetAndConnect refuse them with NotSupportedException (so the test stops and exits 2)."
   }
 ]

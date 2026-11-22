@@ -1,0 +1,17 @@
+{
+  "case": "prefab-nested",
+  "exit": 0,
+  "changed": [
+    "Assets/Prefabs/Nested.unity",
+    "Assets/Prefabs/Nested.unity.meta",
+    "Assets/Prefabs/Outer.prefab",
+    "Assets/Prefabs/Outer.prefab.meta",
+    "Assets/Prefabs/OuterConnected.prefab",
+    "Assets/Prefabs/OuterConnected.prefab.meta",
+    "Assets/Prefabs/RichVariant.prefab",
+    "Assets/Prefabs/RichVariant.prefab.meta",
+    "Assets/Prefabs/VariantOfVariant.prefab",
+    "Assets/Prefabs/VariantOfVariant.prefab.meta"
+  ],
+  "removed": []
+}

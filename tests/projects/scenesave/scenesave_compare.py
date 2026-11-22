@@ -10,7 +10,9 @@ its file ids) is mapped onto the reference's asset at the same path, and the mod
 instance of such an asset, in the order of its random target ids, are ordered by the mapped ids. The mapped file must then equal the reference byte for byte, and each
 file's documents must be in the Editor's order: a scene's by ascending file id; a prefab's by
 GameObject, the GameObjects by ascending file id, each followed by its components in its
-m_Component order (and any other documents after them, by file id). A row holding a
+m_Component order, then its PrefabInstance documents by file id, then the other documents by file
+id, a stripped GameObject followed by the documents on it (prefab-nested Outer.prefab and
+RichVariant.prefab in two captures whose random ids order them differently). A row holding a
 file hash is compared by which hashes of the run are equal, not by the value.
 
 Every difference is reported. Those named exactly (case, key, reference and actual value) in the
@@ -124,6 +126,7 @@ def map_ids(reference, actual):
 
 
 COMPONENT = re.compile(r'^  - component: \{fileID: (-?\d+)\}$', re.M)
+OWNER = re.compile(r'^  m_GameObject: \{fileID: (-?\d+)\}$', re.M)
 
 
 def ordered(docs, prefab):
@@ -140,7 +143,18 @@ def ordered(docs, prefab):
             if c is not None and c[1] not in placed:
                 out.append(c)
                 placed.add(c[1])
-    out.extend(sorted((d for d in docs if d[1] not in placed), key=lambda d: d[1]))
+    out.extend(sorted((d for d in docs if d[0] == 1001 and d[1] not in placed), key=lambda d: d[1]))
+    placed.update(d[1] for d in docs if d[0] == 1001)
+    stripped_gos = {d[1] for d in docs if d[0] == 1 and d[2]}
+    on_stripped = {}
+    for d in docs:
+        m = OWNER.search(d[3])
+        if d[1] not in placed and m and int(m.group(1)) in stripped_gos:
+            on_stripped.setdefault(int(m.group(1)), []).append(d)
+    attached = {d[1] for group in on_stripped.values() for d in group}
+    for d in sorted((d for d in docs if d[1] not in placed and d[1] not in attached), key=lambda d: d[1]):
+        out.append(d)
+        out.extend(sorted(on_stripped.get(d[1], []), key=lambda c: c[1]))
     return out
 
 

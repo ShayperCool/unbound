@@ -45,6 +45,20 @@ file the run added, changed or removed.
   of a GameObject named otherwise than the file and of one referencing a scene object outside its
   hierarchy, with the new scene they are in saved. Recorded in the Linux Editor (batch mode, no
   graphics: two identical captures). The texture `Assets/Textures/Probe.png` is a committed asset.
+- `engine-assets` (Edit Mode, `EngineAssetTests`): meshes (every common channel, two submeshes and
+  32-bit indices; blend shapes; bone weights and bind poses; a two-stream half-float layout;
+  lines), animation clips (rotation, scale, script, GameObject and object reference curves, an
+  event, clip settings; a legacy clip) and textures (mipmaps and sampler settings, a linear float
+  format, Alpha8) made assets by `CreateAsset`, then a mesh and a texture changed and saved.
+- `prefab-nested` (Edit Mode, `NestedPrefabTests`): a new prefab holding an instance with
+  overrides, an added component and an added GameObject; `SaveAsPrefabAssetAndConnect` of a
+  hierarchy holding an instance; a variant of an instance with an added component, an added
+  GameObject and a removed component, and a variant of that variant; their scene saved.
+- `settings-writes` (Edit Mode, `SettingsWriteTests`): `EditorBuildSettings` config objects,
+  `PlayerSettings.SetPreloadedAssets`, rendering layer names and tags and layers through the
+  TagManager's SerializedObject: each file right after the calls, after `SaveAssets` and at exit.
+  The last three cases were recorded in the Linux Editor (batch mode, no graphics: two identical
+  captures each).
 - `play-nosave`, `play-save` (Play Mode, `SavePlayTests.NoSave` and `.Save`, each alone): assets
   edited in Play mode, left unsaved or saved by `AssetDatabase.SaveAssets` there; scene saves and
   `MarkSceneDirty` in Play mode.

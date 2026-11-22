@@ -1,0 +1,28 @@
+{
+  "case": "engine-assets",
+  "exit": 0,
+  "changed": [
+    "Assets/Engine/Alpha.asset",
+    "Assets/Engine/Alpha.asset.meta",
+    "Assets/Engine/Custom.asset",
+    "Assets/Engine/Custom.asset.meta",
+    "Assets/Engine/Legacy.anim",
+    "Assets/Engine/Legacy.anim.meta",
+    "Assets/Engine/Linear.asset",
+    "Assets/Engine/Linear.asset.meta",
+    "Assets/Engine/Lines.asset",
+    "Assets/Engine/Lines.asset.meta",
+    "Assets/Engine/Mipped.asset",
+    "Assets/Engine/Mipped.asset.meta",
+    "Assets/Engine/Rich.anim",
+    "Assets/Engine/Rich.anim.meta",
+    "Assets/Engine/Rich.asset",
+    "Assets/Engine/Rich.asset.meta",
+    "Assets/Engine/Shaped.asset",
+    "Assets/Engine/Shaped.asset.meta",
+    "Assets/Engine/Skinned.asset",
+    "Assets/Engine/Skinned.asset.meta",
+    "Assets/Engine.meta"
+  ],
+  "removed": []
+}

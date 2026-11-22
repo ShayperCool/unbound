@@ -1,0 +1,30 @@
+{"key": "config.add", "value": "done"}
+{"key": "config.add.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
+{"key": "config.addAgain", "value": "throws Exception: Config object with name 'com.probe.data' already exists."}
+{"key": "config.addAgain.value", "value": "ProbeData:DataSaved"}
+{"key": "config.overwrite", "value": "done"}
+{"key": "config.overwrite.value", "value": "Material:MatEdit"}
+{"key": "config.names", "value": "com.probe.asset,com.probe.data"}
+{"key": "config.removeMissing", "value": false}
+{"key": "config.beforeSave.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
+{"key": "config.saved.file", "value": "754918cc780b0de9f63f27d1848ef2a25ff1610b2ab3519fe0252f15c9c177cd"}
+{"key": "config.remove", "value": true}
+{"key": "preloaded.value", "value": "ProbeData:DataSaved,Material:MatEdit"}
+{"key": "preloaded.set.file", "value": "fc658c9643c1ee2d028312acc71dee3ad2e067aa0b47aa80358bb1b718d59b82"}
+{"key": "preloaded.saved.file", "value": "52d125eda1084aa8d232044413d17e164f4482d47f68f97d3ad5d74e252efa43"}
+{"key": "layers.add", "value": true}
+{"key": "layers.add.file", "value": "da4b5eefc927f8b91bcf9e56a186d2b852f49d9cbe91d466638d26c79d6a83ce"}
+{"key": "layers.set", "value": true}
+{"key": "layers.log", "value": "Log: \nIgnoreFailingMessages:true"}
+{"key": "layers.log", "value": "Error: Index 0 is reserved for Default Layer and it can't be edited."}
+{"key": "layers.setReserved", "value": false}
+{"key": "layers.log", "value": "Error: Out of range index for Rendering Layers: 9. Use index between 0 and 2"}
+{"key": "layers.setOutside", "value": false}
+{"key": "layers.log", "value": "Log: \nIgnoreFailingMessages:false"}
+{"key": "layers.names", "value": "Default,Renamed Layer"}
+{"key": "layers.beforeSave.file", "value": "da4b5eefc927f8b91bcf9e56a186d2b852f49d9cbe91d466638d26c79d6a83ce"}
+{"key": "layers.saved.file", "value": "186fd2ccd2c3d27659dce2a6d71b0545f1fb305546241018359dc90909c16ff1"}
+{"key": "tags.applied", "value": true}
+{"key": "tags.value", "value": "Untagged,Respawn,Finish,EditorOnly,MainCamera,Player,GameController,ProbeTag"}
+{"key": "tags.layer", "value": 8}
+{"key": "tags.apply.file", "value": "186fd2ccd2c3d27659dce2a6d71b0545f1fb305546241018359dc90909c16ff1"}
