@@ -24,8 +24,8 @@ from build_assets import csc, meta_text, write_metas
 
 PACKAGE = 'com.example.archive'
 DLL_PREFIX = 'ProbeTie'
-# Each row places two copies. GUID text compares in the opposite direction to
-# path in *Second cases. WordBoundary isolates the order within the first word.
+# Each row places two copies. *Second controls compare against path order.
+# LowNibble and GuidWord controls separate textual and byte ordering.
 CASES = {
     'EmbeddedFirst': ('Assets/A', 'Packages/com.example.first', '1e', 'ee'),
     'EmbeddedSecond': ('Assets/A', 'Packages/com.example.first', 'ef', '1f'),
@@ -36,14 +36,25 @@ CASES = {
     'PackagesFirst': ('Packages/com.example.first', 'Packages/com.example.second', '16', 'e9'),
     'PackagesSecond': ('Packages/com.example.first', 'Packages/com.example.second', 'e8', '17'),
     'WordBoundary': ('Assets/A', 'Assets/B', '18000000ef', '19ffffff1f'),
+    'FirstByte': ('Assets/A', 'Assets/B', '120000ee', '13000011'),
+    'LowNibbleFirst': ('Assets/A', 'Assets/B', '31', '22'),
+    'LowNibbleSecond': ('Assets/A', 'Assets/B', '22', '31'),
+    'GuidWord2': ('Assets/A', 'Assets/B', '500000007fffffff', '5000000080000000'),
+    'GuidWord3': ('Assets/A', 'Assets/B', '500000007000008080000000', '50000000700000807fffffff'),
+    'GuidWord4': ('Assets/A', 'Assets/B', '5000000070000080700000807fffffff', '50000000700000807000008080000000'),
     'PackageNewer': ('Assets/A', PACKAGE, '1a', 'e7'),
     'AssetsNewer': ('Assets/A', PACKAGE, 'e6', '1b'),
     'PackageExcluded': ('Assets/A', PACKAGE, 'e5', '1c'),
     'AssetsExcluded': ('Assets/A', PACKAGE, '1d', 'e4'),
     'VersionTie': ('Assets/A', 'Assets/B', '1e', 'ef'),
+    'MixedVersionTie': ('Assets/A', 'Assets/B', '1e', 'ef'),
     'ExplicitPackage': ('Assets/A', PACKAGE, 'e5', '1a'),
     'ExplicitAssets': ('Assets/A', PACKAGE, '1b', 'e4'),
     'BothExplicit': ('Assets/A', PACKAGE, 'e3', '1c'),
+    'BothExplicitAssets': ('Assets/A', 'Assets/B', '7f', '80'),
+    'BothExplicitEmbedded': ('Assets/A', 'Packages/com.example.first', '7f', '80'),
+    'BothExplicitPackages': ('Packages/com.example.first', 'Packages/com.example.second', '7f', '80'),
+    'BothExplicitArchive': ('Assets/A', PACKAGE, '7f', '80'),
 }
 LEGACY_IMPORTER = """PluginImporter:
   serializedVersion: 2
@@ -84,7 +95,9 @@ def compile_copy(project, staging, compiler, reference, case, location, prefix, 
     target.parent.mkdir(parents=True, exist_ok=True)
     # The compiler embeds the output filename as the assembly name.
     defines = []
-    if (case, index) in (('PackageNewer', 1), ('AssetsNewer', 0), ('VersionTie', 1), ('VersionTie', 2)):
+    if (case, index) in (('PackageNewer', 1), ('AssetsNewer', 0)) or (
+        case in ('VersionTie', 'MixedVersionTie') and index > 0
+    ):
         defines.append('-define:VERSION_TWO')
     if index:
         defines.append('-define:PACKAGE_API')
@@ -98,7 +111,8 @@ def compile_copy(project, staging, compiler, reference, case, location, prefix, 
         guid = '70000000000000000000000000000000'
     allowed = (case, index) not in (('AssetsExcluded', 0), ('PackageExcluded', 1))
     importer = LEGACY_IMPORTER.replace('ANY', str(int(allowed)))
-    if case == 'BothExplicit' or (case, index) in (('ExplicitPackage', 1), ('ExplicitAssets', 0)):
+    explicit = (('ExplicitPackage', 1), ('ExplicitAssets', 0), ('MixedVersionTie', 1))
+    if case.startswith('BothExplicit') or (case, index) in explicit:
         importer += '  isExplicitlyReferenced: 1\n'
     target.with_suffix('.dll.meta').write_text(meta_text(target, target.name, guid, importer))
 
@@ -126,8 +140,8 @@ def generate(project, release, conflicts=False):
         tasks = [pool.submit(compile_copy, project, archive, compiler, reference, case, location, prefix, i, conflicts)
                  for case, row in CASES.items()
                  for i, (location, prefix) in enumerate(zip(row[:2], row[2:]))]
-        tasks.append(pool.submit(compile_copy, project, archive, compiler, reference,
-                                 'VersionTie', PACKAGE, '21', 2, conflicts))
+        tasks.extend(pool.submit(compile_copy, project, archive, compiler, reference, case, PACKAGE, '21', 2, conflicts)
+                     for case in ('VersionTie', 'MixedVersionTie'))
         for task in tasks:
             task.result()
     make_tarball(archive, project/'Packages/LocalPackages/com.example.archive-1.0.0.tgz')
@@ -184,7 +198,8 @@ def record(run, release, conflicts):
             project, out/'editor.log', out, ['-force-glcore', '-quit', '-executeMethod', 'RecordPluginReferences.Record'],
             batch=True, graphics=True, timeout=600, env={'PLUGIN_TIES_OUT': str(out/'graph.tsv')},
         ))
-    for job, result in zip(jobs, editor_runner.run_parallel(jobs)):
+    for job in jobs:
+        result = editor_runner.run(job)
         if result['exit_code'] != 0 or result['forced_exit'] or not result['renderer_ok'] or not result['shutdown_logged']:
             raise RuntimeError(f'Editor did not exit normally: {job.out}')
         data = {'graph': read_editor_graph(job.out/'graph.tsv', job.project),

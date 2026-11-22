@@ -22,6 +22,18 @@
     ],
     [
       "Assembly-CSharp",
+      "Assets/A/ProbeTieFirstByte.dll"
+    ],
+    [
+      "Assembly-CSharp",
+      "Assets/A/ProbeTieGuidWord3.dll"
+    ],
+    [
+      "Assembly-CSharp",
+      "Assets/A/ProbeTieLowNibbleFirst.dll"
+    ],
+    [
+      "Assembly-CSharp",
       "Assets/A/ProbeTiePackageExcluded.dll"
     ],
     [
@@ -34,6 +46,18 @@
     ],
     [
       "Assembly-CSharp",
+      "Assets/B/ProbeTieGuidWord2.dll"
+    ],
+    [
+      "Assembly-CSharp",
+      "Assets/B/ProbeTieGuidWord4.dll"
+    ],
+    [
+      "Assembly-CSharp",
+      "Assets/B/ProbeTieLowNibbleSecond.dll"
+    ],
+    [
+      "Assembly-CSharp",
       "Packages/com.example.archive/ProbeTieArchiveSecond.dll"
     ],
     [
@@ -43,6 +67,10 @@
     [
       "Assembly-CSharp",
       "Packages/com.example.archive/ProbeTieExplicitAssets.dll"
+    ],
+    [
+      "Assembly-CSharp",
+      "Packages/com.example.archive/ProbeTieMixedVersionTie.dll"
     ],
     [
       "Assembly-CSharp",
@@ -86,6 +114,18 @@
     ],
     [
       "Assembly-CSharp-Editor",
+      "Assets/A/ProbeTieFirstByte.dll"
+    ],
+    [
+      "Assembly-CSharp-Editor",
+      "Assets/A/ProbeTieGuidWord3.dll"
+    ],
+    [
+      "Assembly-CSharp-Editor",
+      "Assets/A/ProbeTieLowNibbleFirst.dll"
+    ],
+    [
+      "Assembly-CSharp-Editor",
       "Assets/A/ProbeTiePackageExcluded.dll"
     ],
     [
@@ -98,6 +138,18 @@
     ],
     [
       "Assembly-CSharp-Editor",
+      "Assets/B/ProbeTieGuidWord2.dll"
+    ],
+    [
+      "Assembly-CSharp-Editor",
+      "Assets/B/ProbeTieGuidWord4.dll"
+    ],
+    [
+      "Assembly-CSharp-Editor",
+      "Assets/B/ProbeTieLowNibbleSecond.dll"
+    ],
+    [
+      "Assembly-CSharp-Editor",
       "Packages/com.example.archive/ProbeTieArchiveSecond.dll"
     ],
     [
@@ -107,6 +159,10 @@
     [
       "Assembly-CSharp-Editor",
       "Packages/com.example.archive/ProbeTieExplicitAssets.dll"
+    ],
+    [
+      "Assembly-CSharp-Editor",
+      "Packages/com.example.archive/ProbeTieMixedVersionTie.dll"
     ],
     [
       "Assembly-CSharp-Editor",
@@ -150,6 +206,18 @@
     ],
     [
       "Probe.Automatic",
+      "Assets/A/ProbeTieFirstByte.dll"
+    ],
+    [
+      "Probe.Automatic",
+      "Assets/A/ProbeTieGuidWord3.dll"
+    ],
+    [
+      "Probe.Automatic",
+      "Assets/A/ProbeTieLowNibbleFirst.dll"
+    ],
+    [
+      "Probe.Automatic",
       "Assets/A/ProbeTiePackageExcluded.dll"
     ],
     [
@@ -162,6 +230,18 @@
     ],
     [
       "Probe.Automatic",
+      "Assets/B/ProbeTieGuidWord2.dll"
+    ],
+    [
+      "Probe.Automatic",
+      "Assets/B/ProbeTieGuidWord4.dll"
+    ],
+    [
+      "Probe.Automatic",
+      "Assets/B/ProbeTieLowNibbleSecond.dll"
+    ],
+    [
+      "Probe.Automatic",
       "Packages/com.example.archive/ProbeTieArchiveSecond.dll"
     ],
     [
@@ -171,6 +251,10 @@
     [
       "Probe.Automatic",
       "Packages/com.example.archive/ProbeTieExplicitAssets.dll"
+    ],
+    [
+      "Probe.Automatic",
+      "Packages/com.example.archive/ProbeTieMixedVersionTie.dll"
     ],
     [
       "Probe.Automatic",
@@ -218,6 +302,18 @@
     ],
     [
       "Probe.Explicit",
+      "Assets/A/ProbeTieFirstByte.dll"
+    ],
+    [
+      "Probe.Explicit",
+      "Assets/A/ProbeTieGuidWord3.dll"
+    ],
+    [
+      "Probe.Explicit",
+      "Assets/A/ProbeTieLowNibbleFirst.dll"
+    ],
+    [
+      "Probe.Explicit",
       "Assets/A/ProbeTiePackageExcluded.dll"
     ],
     [
@@ -230,6 +326,22 @@
     ],
     [
       "Probe.Explicit",
+      "Assets/B/ProbeTieBothExplicitAssets.dll"
+    ],
+    [
+      "Probe.Explicit",
+      "Assets/B/ProbeTieGuidWord2.dll"
+    ],
+    [
+      "Probe.Explicit",
+      "Assets/B/ProbeTieGuidWord4.dll"
+    ],
+    [
+      "Probe.Explicit",
+      "Assets/B/ProbeTieLowNibbleSecond.dll"
+    ],
+    [
+      "Probe.Explicit",
       "Packages/com.example.archive/ProbeTieArchiveSecond.dll"
     ],
     [
@@ -238,7 +350,15 @@
     ],
     [
       "Probe.Explicit",
+      "Packages/com.example.archive/ProbeTieBothExplicitArchive.dll"
+    ],
+    [
+      "Probe.Explicit",
       "Packages/com.example.archive/ProbeTieExplicitAssets.dll"
+    ],
+    [
+      "Probe.Explicit",
+      "Packages/com.example.archive/ProbeTieMixedVersionTie.dll"
     ],
     [
       "Probe.Explicit",
@@ -250,11 +370,19 @@
     ],
     [
       "Probe.Explicit",
+      "Packages/com.example.first/ProbeTieBothExplicitEmbedded.dll"
+    ],
+    [
+      "Probe.Explicit",
       "Packages/com.example.first/ProbeTieEmbeddedSecond.dll"
     ],
     [
       "Probe.Explicit",
       "Packages/com.example.first/ProbeTiePackagesFirst.dll"
+    ],
+    [
+      "Probe.Explicit",
+      "Packages/com.example.second/ProbeTieBothExplicitPackages.dll"
     ],
     [
       "Probe.Explicit",
@@ -266,6 +394,11 @@
       "ProbeTieAssetsNewer.dll",
       "Assets/A/ProbeTieAssetsNewer.dll, AssemblyName=ProbeTieAssetsNewer, Version=2.0.0.0, Culture=neutral",
       "Packages/com.example.archive/ProbeTieAssetsNewer.dll, AssemblyName=ProbeTieAssetsNewer, Version=1.0.0.0, Culture=neutral"
+    ],
+    [
+      "ProbeTieMixedVersionTie.dll",
+      "Packages/com.example.archive/ProbeTieMixedVersionTie.dll, AssemblyName=ProbeTieMixedVersionTie, Version=2.0.0.0, Culture=neutral",
+      "Assets/A/ProbeTieMixedVersionTie.dll, AssemblyName=ProbeTieMixedVersionTie, Version=1.0.0.0, Culture=neutral"
     ],
     [
       "ProbeTiePackageNewer.dll",

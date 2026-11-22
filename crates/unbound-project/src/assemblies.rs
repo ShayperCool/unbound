@@ -655,10 +655,9 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
 /// one (the Editor logs those of a lower version), and of several with one file name the first
 /// is taken. Copies of one assembly under different file names are all referenced (the Editor
 /// then fails with CS1704, as the compile here does). The initial Editor graph in
-/// tests/projects/pluginties prefers auto-referenced copies and then the lowest asset GUID
-/// among those copies, when file name, assembly name and version match. Copies that all
-/// require explicit references keep path order. Missing or shared GUIDs among auto-referenced
-/// copies retain path order with a diagnostic, since the Editor can allocate new GUIDs on import. Returns the plugins and each lower version with the
+/// tests/projects/pluginties prefers auto-referenced copies, then orders asset GUIDs within
+/// that reference mode when file name, assembly name and version match. Missing or shared GUIDs
+/// retain path order with a diagnostic, since the Editor can allocate new GUIDs on import. Returns the plugins and each lower version with the
 /// copy selected over it.
 fn one_per_file_name<'p>(
     candidates: impl Iterator<Item = &'p Plugin>,
@@ -693,6 +692,7 @@ fn one_per_file_name<'p>(
         }
     }
     let mut file_slots = HashMap::new();
+    let mut equal_versions: HashMap<usize, Vec<&Plugin>> = HashMap::new();
     let mut plugins: Vec<&Plugin> = Vec::new();
     for plugin in first.into_iter().chain(later) {
         match file_slots.entry(plugin.file_name()) {
@@ -701,38 +701,78 @@ fn one_per_file_name<'p>(
                 plugins.push(plugin);
             }
             Entry::Occupied(entry) => {
-                let selected = &mut plugins[*entry.get()];
-                if !measured_plugin_ties
-                    || plugin.identity.is_none()
-                    || plugin.identity != selected.identity
+                let slot = *entry.get();
+                if measured_plugin_ties
+                    && plugin.identity.is_some()
+                    && plugin.identity == plugins[slot].identity
                 {
-                    continue;
-                }
-                match (plugin.explicitly_referenced, selected.explicitly_referenced) {
-                    (false, true) => *selected = plugin,
-                    (true, _) => {}
-                    (false, false) => match (plugin.guid, selected.guid) {
-                        (Some(candidate), Some(current)) if candidate < current => {
-                            *selected = plugin;
-                        }
-                        (Some(candidate), Some(current)) if candidate != current => {}
-                        _ => unresolved_tie(selected, plugin),
-                    },
+                    equal_versions.entry(slot).or_default().push(plugin);
                 }
             }
         }
     }
     if measured_plugin_ties {
+        for (slot, selected) in plugins.iter_mut().enumerate() {
+            if let Some(tied) = equal_versions.remove(&slot) {
+                *selected = select_equal_version(*selected, tied, &mut unresolved_tie);
+            }
+        }
         for (used, _) in &mut lower {
             let selected = plugins[file_slots[used.file_name()]];
-            if selected.identity == used.identity
-                && selected.explicitly_referenced == used.explicitly_referenced
-            {
+            if selected.identity == used.identity {
                 *used = selected;
             }
         }
     }
     (plugins, lower)
+}
+
+/// Give automatic references priority and keep path order if any GUID in the preferred mode
+/// is unresolved.
+fn select_equal_version<'p>(
+    first: &'p Plugin,
+    tied: Vec<&'p Plugin>,
+    unresolved_tie: &mut impl FnMut(&Plugin, &Plugin),
+) -> &'p Plugin {
+    let has_automatic =
+        !first.explicitly_referenced || tied.iter().any(|plugin| !plugin.explicitly_referenced);
+    let mut preferred = std::iter::once(first)
+        .chain(tied)
+        .filter(|plugin| !has_automatic || !plugin.explicitly_referenced);
+    let fallback = preferred
+        .next()
+        .expect("a reference mode has at least one copy");
+    let Some(second) = preferred.next() else {
+        return fallback;
+    };
+    let mut owners = HashMap::new();
+    let mut lowest = fallback;
+    let mut lowest_order = None;
+    let mut ambiguous = false;
+    for candidate in [fallback, second].into_iter().chain(preferred) {
+        let Some(guid) = candidate.guid else {
+            let other = if std::ptr::eq(candidate, fallback) {
+                second
+            } else {
+                fallback
+            };
+            unresolved_tie(other, candidate);
+            ambiguous = true;
+            continue;
+        };
+        if let Some(owner) = owners.insert(guid, candidate) {
+            unresolved_tie(owner, candidate);
+            ambiguous = true;
+        }
+        // Each textual pair spells the low hex digit before the high one
+        // for the ordering measured by tests/projects/pluginties.
+        let order = guid.0.to_be_bytes().map(|byte| byte.rotate_left(4));
+        if lowest_order.is_none_or(|current| order < current) {
+            lowest = candidate;
+            lowest_order = Some(order);
+        }
+    }
+    if ambiguous { fallback } else { lowest }
 }
 
 #[cfg(test)]
@@ -762,6 +802,25 @@ mod plugin_tie_tests {
         assert_eq!(selected[0].path, asset.path);
         let (selected, _) = one_per_file_name(candidates.into_iter(), true, |_, _| unreachable!());
         assert_eq!(selected[0].path, package.path);
+    }
+
+    #[test]
+    fn plugin_tie_keeps_path_order_when_any_eligible_copy_has_an_unresolved_guid() {
+        let ambiguous = "20000000000000000000000000000000";
+        let first = plugin("Assets/A/Plugin.dll", ambiguous);
+        let lower = plugin("Assets/B/Plugin.dll", "10000000000000000000000000000000");
+        for last in [
+            plugin("Assets/C/Plugin.dll", ambiguous),
+            plugin("Assets/C/Plugin.dll", "00000000000000000000000000000000"),
+        ] {
+            let mut diagnosed = Vec::new();
+            let (selected, _) =
+                one_per_file_name([&first, &lower, &last].into_iter(), true, |kept, other| {
+                    diagnosed.push((kept.path.clone(), other.path.clone()));
+                });
+            assert_eq!(diagnosed, [(first.path.clone(), last.path.clone())]);
+            assert_eq!(selected[0].path, first.path);
+        }
     }
 
     #[test]

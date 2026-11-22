@@ -34,25 +34,25 @@ the complete record and compiles the project, including the Editor assembly.
 
 ## Observations
 
-- Reversing which candidate has the lower asset GUID reverses the winner
-  with both DLLs enabled and eligible for the same references. It holds for
-  two Assets paths, two embedded packages, and Assets versus an embedded
-  package or a local package archive. Equal versions give no duplicate-version
-  diagnostic.
+- For DLLs eligible for the same references, the earlier asset GUID wins.
+  Compare GUID bytes from left to right, reading the low hex digit first in
+  each printed pair. Controls reverse the selected copy in two Assets paths,
+  two embedded packages, and Assets versus an embedded package or archive.
+  Additional controls distinguish byte order from numeric text order in all
+  four GUID words. Equal versions give no duplicate-version diagnostic.
 - Platform eligibility precedes selection. The higher eligible version wins
   in either directory; the duplicate-version diagnostic names that copy.
-  The three-copy case ties for the higher version and checks that the
-  diagnostic names the selected one.
+  The three-copy cases tie for the higher version and check that the
+  diagnostic names the selected one, with either matching or mixed reference modes.
 - With equal versions the automatic copy precedes an explicit-only copy.
   When both require explicit references, only the overridden asmdef includes
-  the DLL. It chose the first path in this fixture even though the other
-  path had the lower GUID. Other explicit-only layouts remain unmeasured.
+  the DLL. It uses the same GUID ordering as the automatic references.
 
 Pass `--conflicts` to record a diagnostic pair with one shared GUID on a
 mutable Assets DLL and an immutable package DLL. The Editor reassigns the
 Assets metadata GUID. Independent fresh imports with shared GUIDs can pick
 different copies. The diagnostic mode retains each capture separately.
-Unbound reports missing or shared GUIDs for auto-referenced equal-version
-candidates and retains the previous path order. Incremental Editor
+Unbound reports missing or shared GUIDs among equal-version copies in the
+preferred reference mode and retains path order across that group. Incremental Editor
 import history, built Player compilation and other release families remain
 unmeasured by the gate.
