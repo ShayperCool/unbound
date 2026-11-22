@@ -200,7 +200,7 @@ namespace UnityEngine.TextCore.Text
             int key = font.GetHashCode();
             if (m_FontLookup.TryGetValue(key, out var cached)) return cached;
             if (TextGenerator.IsExecutingJob) return null;
-            var fontAsset = FontAssetFactory.ConvertFontToFontAsset(font);
+            var fontAsset = MakeFontAsset(font);
             if (fontAsset != null)
             {
                 m_FontReferences.Add(new FontReferenceMap(font, fontAsset));
@@ -208,6 +208,10 @@ namespace UnityEngine.TextCore.Text
             }
             return fontAsset;
         }
+
+        /// <summary>The font asset of a font the settings have none for yet: one made of the
+        /// font. The Editor's settings answer for the Editor's own fonts with family assets.</summary>
+        private protected virtual FontAsset MakeFontAsset(Font font) => FontAssetFactory.ConvertFontToFontAsset(font);
 
         static List<FontAsset> GetOSFontAssetList() => FontAsset.CreateFontAssetOSFallbackList(Font.GetOSFallbacks());
 

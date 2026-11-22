@@ -25,7 +25,6 @@ namespace UnityEditor
                 {
                     s_DefaultTextSettings = ScriptableObject.CreateInstance<EditorTextSettings>();
                     s_DefaultTextSettings.hideFlags = HideFlags.HideAndDontSave;
-                    s_DefaultTextSettings.RegisterSystemFonts();
                 }
                 return s_DefaultTextSettings;
             }
@@ -34,58 +33,94 @@ namespace UnityEditor
         /// <summary>The OS font family the Editor's system fonts are drawn with on Linux.</summary>
         const string LinuxSystemFontFamily = "Liberation Sans";
 
-        static readonly string[] s_SystemFonts =
+        /// <summary>A family of the Editor's own fonts: the fonts whose text is made with the
+        /// family's asset, and the faces of the asset (regular, then the bold, italic and bold
+        /// italic ones of its weight table). A face is a font of the Editor's resources by
+        /// path, or a style of the OS family.</summary>
+        sealed class Family
         {
-            "Fonts/System/System Normal.ttf", "Fonts/System/System Big.ttf",
-            "Fonts/System/System Small.ttf", "Fonts/System/System Warning.ttf",
-        };
-
-        static readonly string[] s_SystemBoldFonts = { "Fonts/System/System Normal Bold.ttf", "Fonts/System/System Small Bold.ttf" };
-
-        /// <summary>
-        /// The Editor's system fonts (`Fonts/System/*` of its resources, which older styles of
-        /// its skins still name) are references to OS fonts and carry no glyphs: their text is
-        /// that of the OS family's font assets, the regular one with the family's bold and
-        /// italic faces, the bold fonts with the bold face (matches the Unity 6000.0.71f1 Editor
-        /// on Linux, tests/projects/editorskin custom/PreButtonBlue and custom/NotificationText).
-        /// Not measured on macOS, where the fonts keep the assets made of their own data.
-        /// </summary>
-        void RegisterSystemFonts()
-        {
-            if (!System.OperatingSystem.IsLinux()) return;
-            var regular = OsFontAsset("Regular");
-            if (regular != null)
-            {
-                var bold = OsFontAsset("Bold");
-                if (bold != null) regular.fontWeightTable[7].regularTypeface = bold;
-                var italic = OsFontAsset("Italic");
-                if (italic != null) regular.fontWeightTable[4].italicTypeface = italic;
-                var boldItalic = OsFontAsset("Bold Italic");
-                if (boldItalic != null) regular.fontWeightTable[7].italicTypeface = boldItalic;
-                Register(regular, s_SystemFonts);
-            }
-            Register(OsFontAsset("Bold"), s_SystemBoldFonts);
+            internal string[] Fonts;
+            internal string Regular, Bold, Italic, BoldItalic;
+            internal bool Os;
+            internal FontAsset Asset;
+            internal bool Made;
         }
 
-        static FontAsset OsFontAsset(string style)
+        /// <summary>
+        /// The font families of the Editor (matches the Unity 6000.0.71f1 Editor on Linux,
+        /// tests/projects/editorskin font/*). The fonts under Fonts/System of its resources, which
+        /// older styles of its skins still name, are references to OS fonts and carry no glyphs:
+        /// the regular ones are drawn with the OS family (bold and italic text with its bold and
+        /// italic faces), the bold ones with its bold face. Inter-Regular, the Editor's UI font,
+        /// has the Inter faces for its styles, bold text being Semi Bold. Every Roboto Mono font,
+        /// the bold and italic ones too, is drawn with the regular face's family asset.
+        /// On macOS the system fonts' OS family is not measured: they keep the asset made of
+        /// their own data.
+        /// </summary>
+        static readonly Family[] s_Families =
         {
-            var asset = FontAsset.CreateFontAssetInternal(LinuxSystemFontFamily, style, 90);
+            new Family
+            {
+                Fonts = new[] { "System Normal", "System Big", "System Small", "System Warning" },
+                Os = true, Regular = "Regular", Bold = "Bold", Italic = "Italic", BoldItalic = "Bold Italic",
+            },
+            new Family { Fonts = new[] { "System Normal Bold", "System Small Bold" }, Os = true, Regular = "Bold" },
+            new Family
+            {
+                Fonts = new[] { "Inter-Regular" },
+                Regular = "Fonts/Inter/Inter-Regular.ttf", Bold = "Fonts/Inter/Inter-SemiBold.ttf",
+                Italic = "Fonts/Inter/Inter-Italic.ttf", BoldItalic = "Fonts/Inter/Inter-SemiBoldItalic.ttf",
+            },
+            new Family
+            {
+                Fonts = new[] { "RobotoMono-Regular", "RobotoMono-Bold", "RobotoMono-Italic", "RobotoMono-BoldItalic" },
+                Regular = "Fonts/RobotoMono/RobotoMono-Regular.ttf", Bold = "Fonts/RobotoMono/RobotoMono-Bold.ttf",
+                Italic = "Fonts/RobotoMono/RobotoMono-Italic.ttf", BoldItalic = "Fonts/RobotoMono/RobotoMono-BoldItalic.ttf",
+            },
+        };
+
+        /// <summary>The slots of a font asset's weight table for the regular (400) and bold (700) weights.</summary>
+        const int RegularWeight = 4, BoldWeight = 7;
+
+        private protected override FontAsset MakeFontAsset(Font font)
+        {
+            if (font.m_UaEditorResourceId != 0)
+                foreach (var family in s_Families)
+                {
+                    if (System.Array.IndexOf(family.Fonts, font.name) < 0) continue;
+                    var asset = FamilyAsset(family);
+                    if (asset != null) return asset;
+                    break;
+                }
+            return base.MakeFontAsset(font);
+        }
+
+        static FontAsset FamilyAsset(Family family)
+        {
+            if (family.Made) return family.Asset;
+            family.Made = true;
+            if (family.Os && !System.OperatingSystem.IsLinux()) return null;
+            var regular = Face(family, family.Regular);
+            if (regular == null) return null;
+            var bold = Face(family, family.Bold);
+            if (bold != null) regular.fontWeightTable[BoldWeight].regularTypeface = bold;
+            var italic = Face(family, family.Italic);
+            if (italic != null) regular.fontWeightTable[RegularWeight].italicTypeface = italic;
+            var boldItalic = Face(family, family.BoldItalic);
+            if (boldItalic != null) regular.fontWeightTable[BoldWeight].italicTypeface = boldItalic;
+            return family.Asset = regular;
+        }
+
+        static FontAsset Face(Family family, string face)
+        {
+            if (face == null) return null;
+            if (!family.Os)
+                return FontAssetFactory.ConvertFontToFontAsset(Unbound.UIElements.UiResources.EditorLoad(face) as Font);
+            var asset = FontAsset.CreateFontAssetInternal(LinuxSystemFontFamily, face, 90);
             if (asset == null) return null;
             asset.InternalDynamicOS = true;
             FontAssetFactory.SetupFontAssetSettings(asset);
             return asset;
-        }
-
-        void Register(FontAsset asset, string[] paths)
-        {
-            if (asset == null) return;
-            foreach (string path in paths)
-            {
-                var font = Unbound.UIElements.UiResources.EditorLoad(path) as Font;
-                if (font == null || m_FontReferences.Exists(r => r.font == font)) continue;
-                m_FontReferences.Add(new FontReferenceMap(font, asset));
-                m_FontLookup?.TryAdd(font.GetHashCode(), asset);
-            }
         }
 
         static float s_CurrentEditorSharpness;
