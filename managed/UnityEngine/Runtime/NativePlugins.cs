@@ -197,7 +197,7 @@ namespace Unbound.Runtime
             return IntPtr.Zero;
         }
 
-        /// <summary>The waits <see cref="SyncWithRenderThread"/> made (tests).</summary>
+        /// <summary>The waits <see cref="SyncWithRenderThread"/> was asked for (tests).</summary>
         internal static int s_RenderThreadSyncs;
 
         /// <summary>A native pointer query with multithreaded rendering: it waits until the
