@@ -84,9 +84,10 @@ namespace Unbound.Runtime
             // A base class the object already has a component of (measured for Component,
             // Behaviour and Transform), or a second engine component of a kind an object holds
             // one of (tests/projects/uniquecomponents); other classes keep their earlier diagnostics.
-            if (Duplicate(go, type, out var already) == DuplicateKind.AlreadyAdded)
+            var duplicate = Duplicate(go, type, out var existing);
+            if (duplicate == DuplicateKind.AlreadyAdded)
             {
-                Log.Engine(LogType.Log, DuplicateMessage(go, type, DuplicateKind.AlreadyAdded, already), go);
+                Log.Engine(LogType.Log, DuplicateMessage(go, type, DuplicateKind.AlreadyAdded, existing), go);
                 return null;
             }
             if (type.IsAbstract || type.IsInterface || type.ContainsGenericParameters || Compat.NativeComponentIsAbstract(type))
@@ -112,7 +113,6 @@ namespace Unbound.Runtime
                 Debug.LogError("A GameObject can only contain one 'Transform' component.", go);
                 return null;
             }
-            var duplicate = Duplicate(go, type, out var existing);
             if (duplicate != DuplicateKind.None)
             {
                 string message = DuplicateMessage(go, type, duplicate, existing);
@@ -185,7 +185,7 @@ namespace Unbound.Runtime
 
         /// <summary>Why the object cannot take another component of the type: none; one of a kind
         /// already there (Component, Behaviour and Transform bases, and the engine types an object
-        /// holds one of: measured family); a 2D effector; a DisallowMultipleComponent class; another
+        /// holds one of, a second RectTransform: measured family); a 2D effector; a DisallowMultipleComponent class; another
         /// engine limit (ConstantForce, audio filters).</summary>
         internal enum DuplicateKind { None, AlreadyAdded, Effector, DisallowMultiple, OtherLimit }
 
@@ -194,7 +194,8 @@ namespace Unbound.Runtime
         {
             existing = null;
             if (Compat.ComponentFactoryEligibilityMeasured
-                && (type == typeof(Component) || type == typeof(Behaviour) || type == typeof(Transform) || Compat.NativeComponentIsUnique(type)))
+                && (type == typeof(Component) || type == typeof(Behaviour) || type == typeof(Transform) || type == typeof(RectTransform)
+                    || Compat.NativeComponentIsUnique(type)))
             {
                 existing = go.FindComponent(type);
                 if (existing != null) return DuplicateKind.AlreadyAdded;

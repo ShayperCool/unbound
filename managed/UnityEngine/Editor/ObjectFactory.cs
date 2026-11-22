@@ -99,20 +99,23 @@ namespace UnityEditor
         public static GameObject CreateGameObject(Scene scene, HideFlags hideFlags, string name, params Type[] types)
         {
             if (!scene.IsValid()) throw new ArgumentException("Cannot create a GameObject to a null Scene.");
-            var gameObject = Create(scene, name, types);
-            // The GameObject's flags reach its components (GameObject.hideFlags).
-            gameObject.hideFlags = hideFlags;
-            return gameObject;
+            return Create(scene, hideFlags, name, types);
         }
 
-        public static GameObject CreateGameObject(string name, params Type[] types) => Create(null, name, types);
+        public static GameObject CreateGameObject(string name, params Type[] types) => Create(null, HideFlags.None, name, types);
 
-        /// <summary>A new GameObject (in <paramref name="scene"/> before its components are added,
-        /// else in the active scene) with the components, inactive while they are added.</summary>
-        static GameObject Create(Scene? scene, string name, Type[] types)
+        /// <summary>A new GameObject (in <paramref name="scene"/>, else in the active scene) with
+        /// its hide flags set before the components are added, so each takes them, and the
+        /// components added while it is inactive.</summary>
+        static GameObject Create(Scene? scene, HideFlags hideFlags, string name, Type[] types)
         {
             var gameObject = CreateDefaultGameObject(name);
             if (scene is Scene target && gameObject.scene != target) SceneManager.MoveGameObjectToScene(gameObject, target);
+            if (hideFlags != HideFlags.None)
+            {
+                gameObject.hideFlags = hideFlags;
+                gameObject.transform.hideFlags = hideFlags;
+            }
             gameObject.SetActive(false);
             foreach (var type in types) AddComponent(gameObject, type);
             gameObject.SetActive(true);

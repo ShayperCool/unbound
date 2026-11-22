@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using Unbound.Runtime;
@@ -561,6 +562,32 @@ namespace UnityEditor
         {
             get => SettingsAssets.Value("EditorSettings", "m_ProjectGenerationRootNamespace");
             set => SettingsAssets.Edit("EditorSettings", body => body.Set("m_ProjectGenerationRootNamespace", YText.Scalar(UnityYamlWriter.Scalar(value ?? ""))));
+        }
+
+        public enum NamingScheme
+        {
+            SpaceParenthesis = 0,
+            Dot = 1,
+            Underscore = 2,
+        }
+
+        /// <summary>The project's naming scheme for duplicated GameObjects (EditorSettings.asset
+        /// m_GameObjectNamingScheme; SpaceParenthesis without one), saved there as the Editor saves
+        /// settings.</summary>
+        public static NamingScheme gameObjectNamingScheme
+        {
+            get => int.TryParse(SettingsAssets.Value("EditorSettings", "m_GameObjectNamingScheme"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+                ? (NamingScheme)value : NamingScheme.SpaceParenthesis;
+            set => SettingsAssets.Edit("EditorSettings", body => body.Set("m_GameObjectNamingScheme", YText.Scalar(((int)value).ToString(CultureInfo.InvariantCulture))));
+        }
+
+        /// <summary>The digits of the number (EditorSettings.asset m_GameObjectNamingDigits; 1
+        /// without one).</summary>
+        public static int gameObjectNamingDigits
+        {
+            get => int.TryParse(SettingsAssets.Value("EditorSettings", "m_GameObjectNamingDigits"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+                ? value : 1;
+            set => SettingsAssets.Edit("EditorSettings", body => body.Set("m_GameObjectNamingDigits", YText.Scalar(value.ToString(CultureInfo.InvariantCulture))));
         }
 
         static volatile bool s_Loaded;

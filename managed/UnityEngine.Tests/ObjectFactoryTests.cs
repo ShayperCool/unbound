@@ -91,5 +91,56 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(go); }
         }
+
+        [Fact]
+        public void SiblingNamesTakeTheLowestFreeNumberFromTheirOwn()
+        {
+            var made = new List<GameObject>();
+            GameObject Make(string name) { var go = new GameObject(name); made.Add(go); return go; }
+            try
+            {
+                Make("Gap"); Make("Gap (2)"); Make("Item (5)"); Make("Big (99999999999)");
+                // tests/projects/objectfactory unique.*: a gap is filled, a numbered name counts on.
+                Assert.Equal("Gap (1)", GameObjectUtility.GetUniqueNameForSibling(null, "Gap"));
+                Assert.Equal("Item (6)", GameObjectUtility.GetUniqueNameForSibling(null, "Item (5)"));
+                Assert.Equal("Fresh", GameObjectUtility.GetUniqueNameForSibling(null, "Fresh"));
+                // A number too long to read is part of the name.
+                Assert.Equal("Big (99999999999) (1)", GameObjectUtility.GetUniqueNameForSibling(null, "Big (99999999999)"));
+                // An object does not clash with itself.
+                var solo = Make("Solo");
+                GameObjectUtility.EnsureUniqueNameForSibling(solo);
+                Assert.Equal("Solo", solo.name);
+                var parent = Make("Parent of children");
+                var first = Make("Child"); first.transform.SetParent(parent.transform, false);
+                var second = Make("Child"); second.transform.SetParent(parent.transform, false);
+                GameObjectUtility.EnsureUniqueNameForSibling(second);
+                Assert.Equal("Child (1)", second.name);
+            }
+            finally
+            {
+                foreach (var go in made) if (go != null) Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
+        public void PlacingUnderAUiParentTakesItsLayerAndARectTransformAndResetsTheTransform()
+        {
+            var parent = new GameObject("UiParent", typeof(RectTransform)) { layer = 5 };
+            try
+            {
+                var child = ObjectFactory.CreateGameObject("UiChild");
+                child.transform.localScale = new Vector3(2, 3, 4);
+                ObjectFactory.PlaceGameObject(child, parent);
+                Assert.Same(parent.transform, child.transform.parent);
+                Assert.IsType<RectTransform>(child.transform);
+                Assert.Equal(5, child.layer);
+                Assert.Equal(Vector3.one, child.transform.localScale);
+                Assert.Same(child, Selection.activeGameObject);
+                // A second RectTransform is one too many (objectfactory placed.rectTwice).
+                var twice = ObjectFactory.CreateGameObject("UiTwice", typeof(RectTransform));
+                Assert.Throws<ArgumentException>(() => ObjectFactory.PlaceGameObject(twice, parent));
+            }
+            finally { Object.DestroyImmediate(parent); }
+        }
     }
 }

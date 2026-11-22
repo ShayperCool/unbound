@@ -181,10 +181,10 @@ namespace UnityEngine.Tests
             var go = Make("Lists");
             go.GetComponentsInChildren<Transform>(false, null);
             go.GetComponentsInParent<Transform>(false, null);
-            // Classes the "already added" refusal was not measured for keep their earlier answer.
+            // A second RectTransform is "already added" (tests/projects/objectfactory addComponent.rectTwice).
             var rect = Make("Rect");
             rect.AddComponent<RectTransform>();
-            Assert.Equal(new[] { "Error: A GameObject can only contain one 'Transform' component." },
+            Assert.Equal(new[] { "Log: Can't add component 'RectTransform' to Rect because such a component is already added to the game object!" },
                 Logs(() => Assert.Null(rect.AddComponent<RectTransform>())));
         }
 
