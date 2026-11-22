@@ -378,3 +378,38 @@ point-link projection is measured here, including the control with no
 projection change to a wide link.
 [NavMeshPath.corners](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshPath-corners.html),
 [AI Navigation 2.0 NavMesh Link](https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshLink.html).
+
+## Coupled agent queries and staleness
+
+Unity 6000.0.71f1 takes in a pending coupled transform before reading
+`nextPosition` or `remainingDistance`, and before `CalculatePath`,
+`FindClosestEdge`, `Raycast` and `SamplePathPosition`. The staleness
+profile isolates each call on its own standing agent. Status, ownership
+and path-data reads preserve a pending move. An unrelated link change
+marks both standing and active paths stale. A synchronizing query can
+then refresh a standing corridor while an active route keeps the flag.
+
+An equal-position Warp or re-enable can leave the placement pending for
+many updates. An effective pose change consumes it in the AI update.
+The controls cover real and repeated transform writes, moves that return
+to the initial pose within one frame, reparenting at equal world
+coordinates, and RectTransform layout changes. They also cover position
+coupling, valid and rejected goals, and ResetPath after both a standing
+and a moving agent. A goal can be accepted without movement.
+
+```
+python3 tests/projects/navlinks/projection.py editor --profile staleness --release 6000.0.71f1 --label L
+python3 tests/projects/navlinks/projection.py publish --profile staleness --release 6000.0.71f1 --label L
+UNBOUND_CLI=.../unbound python3 tests/projects/navlinks/projection.py gate --profile staleness --release 6000.0.71f1
+```
+
+Two independent Editor runs agree on all 2,819 values. Both frame-130
+stale values now match in the original profile. The remaining 172 values
+come from `crosstile` and `areamask`.
+
+Unity documents link changes and position coupling. The exact timing of
+these query side effects is measured for the 6000.0 family. Idle area-mask
+and per-agent cost changes are a separate open case.
+[isPathStale](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/ispathstale),
+[nextPosition](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/nextposition),
+[updatePosition](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/updateposition).

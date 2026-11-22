@@ -155,7 +155,7 @@ namespace Unbound.Runtime
                 SetWorldPose(rect, ct.position + ct.forward * distance, ct.rotation, unit);
             }
             var after = (rect.m_AnchorMin, rect.m_AnchorMax, rect.m_Pivot, rect.m_SizeDelta, rect.m_LocalRotation, rect.m_LocalScale, rect.m_LocalPosition, rect.m_AnchoredPosition);
-            if (!before.Equals(after)) rect.MarkChanged();
+            if (!before.Equals(after)) rect.MarkChanged(layoutChanged: true);
             // A root update also releases the driver of canvases which have become nested.
             foreach (var nested in s_Canvases.ToArray())
                 if (nested != canvas && nested.rootCanvas == canvas) ReleaseNestedDriver(nested);

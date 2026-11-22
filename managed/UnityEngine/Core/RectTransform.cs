@@ -60,7 +60,7 @@ namespace UnityEngine
         public Vector2 anchoredPosition
         {
             get { MainThreadCheck.Check("get_anchoredPosition"); return m_AnchoredPosition; }
-            set { MainThreadCheck.Check("set_anchoredPosition"); if (m_AnchoredPosition != value) { m_AnchoredPosition = value; MarkChanged(); } }
+            set { MainThreadCheck.Check("set_anchoredPosition"); if (m_AnchoredPosition != value) { m_AnchoredPosition = value; MarkChanged(layoutChanged: true); } }
         }
 
         public Vector3 anchoredPosition3D
@@ -68,9 +68,11 @@ namespace UnityEngine
             get => new Vector3(m_AnchoredPosition.x, m_AnchoredPosition.y, m_LocalPosition.z);
             set
             {
-                m_AnchoredPosition = new Vector2(value.x, value.y);
+                var position = new Vector2(value.x, value.y);
+                bool layoutChanged = !position.Equals(m_AnchoredPosition);
+                m_AnchoredPosition = position;
                 m_LocalPosition.z = value.z;
-                MarkChanged();
+                MarkChanged(layoutChanged);
             }
         }
 
@@ -94,7 +96,7 @@ namespace UnityEngine
                 var offset = value - (m_AnchoredPosition - Vector2.Scale(m_SizeDelta, m_Pivot));
                 m_SizeDelta -= offset;
                 m_AnchoredPosition += Vector2.Scale(offset, Vector2.one - m_Pivot);
-                DimensionsChanged();
+                DimensionsChanged(!offset.Equals(Vector2.zero));
             }
         }
 
@@ -106,7 +108,7 @@ namespace UnityEngine
                 var offset = value - (m_AnchoredPosition + Vector2.Scale(m_SizeDelta, Vector2.one - m_Pivot));
                 m_SizeDelta += offset;
                 m_AnchoredPosition += Vector2.Scale(offset, m_Pivot);
-                DimensionsChanged();
+                DimensionsChanged(!offset.Equals(Vector2.zero));
             }
         }
 
@@ -144,9 +146,11 @@ namespace UnityEngine
         internal override void SetLocalPosition(Vector3 value)
         {
             var reference = AnchorReference();
-            m_AnchoredPosition = new Vector2(value.x - reference.x, value.y - reference.y);
+            var position = new Vector2(value.x - reference.x, value.y - reference.y);
+            bool layoutChanged = !position.Equals(m_AnchoredPosition);
+            m_AnchoredPosition = position;
             m_LocalPosition = value;
-            MarkChanged();
+            MarkChanged(layoutChanged);
         }
 
         public void ForceUpdateRectTransforms() => EnsureWorld();
@@ -186,15 +190,17 @@ namespace UnityEngine
             var max = m_AnchorMax;
             min[axis] = anchorValue;
             max[axis] = anchorValue;
-            m_AnchorMin = min;
-            m_AnchorMax = max;
             var sd = m_SizeDelta;
             sd[axis] = size;
-            m_SizeDelta = sd;
             var pos = m_AnchoredPosition;
             pos[axis] = end ? -inset - size * (1f - m_Pivot[axis]) : inset + size * m_Pivot[axis];
+            bool layoutChanged = !m_AnchorMin.Equals(min) || !m_AnchorMax.Equals(max)
+                || !m_SizeDelta.Equals(sd) || !m_AnchoredPosition.Equals(pos);
+            m_AnchorMin = min;
+            m_AnchorMax = max;
+            m_SizeDelta = sd;
             m_AnchoredPosition = pos;
-            DimensionsChanged();
+            DimensionsChanged(layoutChanged);
         }
 
         public void SetSizeWithCurrentAnchors(Axis axis, float size)
@@ -208,9 +214,9 @@ namespace UnityEngine
         internal static void SendReapplyDrivenProperties(RectTransform driven) => reapplyDrivenProperties?.Invoke(driven);
 
         /// <summary>The rect may have changed: move dependents and tell the scripts whose rect did.</summary>
-        void DimensionsChanged()
+        void DimensionsChanged(bool layoutChanged = true)
         {
-            MarkChanged();
+            MarkChanged(layoutChanged);
         }
 
         bool m_SkipActivationReapply;

@@ -67,6 +67,10 @@ namespace UnityEngine.AI
         internal bool m_StepWalking;
         /// <summary>A newly placed agent must take in its transform once, even when equal.</summary>
         internal bool m_PlacementMovePending;
+        // Placement requests a transform sync. The request persists until the agent update
+        // takes an actual pose change, even when placement left the transform where it was.
+        bool m_PathPlacementSync;
+        int m_PathPoseVersion;
 
         public NavMeshAgent() { }
 
@@ -124,6 +128,11 @@ namespace UnityEngine.AI
                 // simulation is brought up to date while the transform is still detached.
                 AgentSystem.Sync(this);
                 m_UpdatePosition = value;
+                if (Compat.NavMeshAgentQuerySyncMeasured)
+                {
+                    m_PathPlacementSync = false;
+                    m_PathPoseVersion = transform.m_PoseVersion;
+                }
                 if (value) AgentSystem.DeferTransform(this);
             }
         }
@@ -234,7 +243,7 @@ namespace UnityEngine.AI
         {
             get
             {
-                AgentSystem.Sync(this);
+                AgentSystem.Sync(this, followTransform: false);
                 return m_OnNavMesh;
             }
         }
@@ -385,6 +394,7 @@ namespace UnityEngine.AI
         /// (measured: tests/projects/navlinks resetmid; see AgentSystem.LandOffLink).</summary>
         public void ResetPath()
         {
+            AgentSystem.SyncQuery(this);
             ForgetPath();
             if (m_Crowd != null)
             {
@@ -456,6 +466,27 @@ namespace UnityEngine.AI
             m_PathStaleVersion = NavWorld.PathStaleVersion;
         }
 
+        /// <summary>A position query can bring the standing corridor up to the current world
+        /// version while its placement or a transform change is pending. Actual surface moves
+        /// renew the corridor through <see cref="MoveAlongSurface"/>.</summary>
+        internal void SyncStandingPath()
+        {
+            if (Compat.NavMeshAgentQuerySyncMeasured && m_Crowd != null && m_UpdatePosition && !m_HasDestination
+                && m_PathStaleVersion != NavWorld.PathStaleVersion
+                && (m_PathPlacementSync || m_PathPoseVersion != transform.m_PoseVersion))
+                m_PathStaleVersion = NavWorld.PathStaleVersion;
+        }
+
+        /// <summary>Agent updates take in transform changes, including their own simulation
+        /// movement. Exact placement stays pending while the pose revision is the same.</summary>
+        internal void ObservePathPose()
+        {
+            if (!Compat.NavMeshAgentQuerySyncMeasured || m_Crowd == null || !m_UpdatePosition) return;
+            int version = transform.m_PoseVersion;
+            if (version != m_PathPoseVersion) m_PathPlacementSync = false;
+            m_PathPoseVersion = version;
+        }
+
         /// <summary>Whether the agent's path is stale (its own change, the NavMesh's version), to
         /// keep it over a replan that is not a new path (<see cref="RestoreStaleness"/>).</summary>
         internal (bool Own, int Version) Staleness => (m_OwnPathStale, m_PathStaleVersion);
@@ -479,6 +510,7 @@ namespace UnityEngine.AI
         {
             get
             {
+                AgentSystem.SyncQuery(this);
                 if (m_Crowd == null && Disabled) return float.PositiveInfinity;
                 // While a new path is pending, the current one's (measured).
                 if (m_Crowd == null || m_Crowd.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID) return 0f;
@@ -542,7 +574,7 @@ namespace UnityEngine.AI
         {
             get
             {
-                AgentSystem.Sync(this);
+                AgentSystem.Sync(this, followTransform: false);
                 if (m_Crowd == null || !m_OnNavMesh) return null;
                 if (isOnOffMeshLink) return m_LinkId != 0 ? NavMesh.InternalGetLinkOwner(m_LinkId) : null;
                 int data = NavWorld.DataOfPoly(m_Surface, m_Crowd.corridor.GetFirstPoly());
@@ -567,6 +599,7 @@ namespace UnityEngine.AI
             // synchronization follows it along the connected surface (navbaked warp.sync).
             m_WrittenPosition = m_NextPosition + Vector3.up * m_BaseOffset;
             m_PlacementMovePending = Compat.NavMeshIdleMoveMeasured;
+            m_PathPlacementSync = Compat.NavMeshAgentQuerySyncMeasured && m_UpdatePosition;
             return true;
         }
 
@@ -590,12 +623,23 @@ namespace UnityEngine.AI
             if (m_UpdatePosition) AgentSystem.WriteTransform(this);
         }
 
-        public bool FindClosestEdge(out NavMeshHit hit) => NavMesh.FindClosestEdge(m_NextPosition, out hit, Filter, m_AgentTypeID);
+        public bool FindClosestEdge(out NavMeshHit hit)
+        {
+            AgentSystem.SyncQuery(this);
+            return NavMesh.FindClosestEdge(m_NextPosition, out hit, Filter, m_AgentTypeID);
+        }
 
-        public bool Raycast(Vector3 targetPosition, out NavMeshHit hit) => NavMesh.Raycast(m_NextPosition, targetPosition, out hit, Filter, m_AgentTypeID);
+        public bool Raycast(Vector3 targetPosition, out NavMeshHit hit)
+        {
+            AgentSystem.SyncQuery(this);
+            return NavMesh.Raycast(m_NextPosition, targetPosition, out hit, Filter, m_AgentTypeID);
+        }
 
-        public bool CalculatePath(Vector3 targetPosition, NavMeshPath path) =>
-            NavMesh.CalculatePath(m_NextPosition, targetPosition, Filter, m_AgentTypeID, path);
+        public bool CalculatePath(Vector3 targetPosition, NavMeshPath path)
+        {
+            if (path != null) AgentSystem.SyncQuery(this);
+            return NavMesh.CalculatePath(m_NextPosition, targetPosition, Filter, m_AgentTypeID, path);
+        }
 
         /// <summary>Where the agent's path starts: its place on the NavMesh (its corridor's position),
         /// also over a height mesh, where the agent stands at the mesh's height (measured:
@@ -604,6 +648,7 @@ namespace UnityEngine.AI
 
         public bool SamplePathPosition(int areaMask, float maxDistance, out NavMeshHit hit)
         {
+            AgentSystem.SyncQuery(this);
             hit = default;
             hit.position = m_NextPosition;
             if (m_Crowd == null) return false;
@@ -803,6 +848,8 @@ namespace UnityEngine.AI
             ForgetPath();
             AgentSystem.Add(this);
             m_PlacementMovePending = Compat.NavMeshIdleMoveMeasured && m_Crowd != null;
+            m_PathPlacementSync = Compat.NavMeshAgentQuerySyncMeasured && m_Crowd != null && m_UpdatePosition;
+            if (m_PathPlacementSync) m_PathPoseVersion = transform.m_PoseVersion;
         }
 
         internal override void OnEngineDisable()
@@ -908,7 +955,9 @@ namespace Unbound.Runtime
                 if (agent.m_Crowd == null || !agent.updatePosition) continue;
                 FollowTransform(agent);
                 // Written when the agent stands elsewhere than it last wrote (or found) its transform.
-                if ((agent.m_NextPosition + Vector3.up * agent.baseOffset - agent.WrittenPosition).sqrMagnitude > 0f) WriteTransform(agent);
+                if ((agent.m_NextPosition + Vector3.up * agent.baseOffset - agent.WrittenPosition).sqrMagnitude > 0f)
+                    WriteTransform(agent);
+                agent.ObservePathPose();
             }
         }
 
@@ -1505,15 +1554,28 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>Before the agent's state is read or changed: placed again when its NavMesh changed
-        /// since it was placed, and moved with its transform moved by script (measured: nextPosition
-        /// follows such a move at once).</summary>
-        internal static void Sync(NavMeshAgent agent)
+        /// <summary>Refreshes placement on the current NavMesh. Synchronizing API calls take in
+        /// transform changes. Status and owner reads report the last simulated placement (Unity
+        /// 6000.0.71f1, tests/projects/navlinks staleQueries.*).</summary>
+        internal static void Sync(NavMeshAgent agent, bool followTransform = true)
         {
             SyncWorld();
             if (agent.m_Crowd == null && s_Agents.Contains(agent) && agent.WorldVersion != NavWorld.Changes)
                 Place(agent, agent.transform.position - Vector3.up * agent.baseOffset);
+            if (followTransform || !Compat.NavMeshAgentQuerySyncMeasured) SyncPosition(agent);
+        }
+
+        // These calls synchronize position on the bound corridor. NavMesh data changes are
+        // taken in when the world is synchronized, usually at the next agent update.
+        internal static void SyncQuery(NavMeshAgent agent)
+        {
+            if (Compat.NavMeshAgentQuerySyncMeasured) SyncPosition(agent);
+        }
+
+        static void SyncPosition(NavMeshAgent agent)
+        {
             FollowTransform(agent);
+            agent.SyncStandingPath();
         }
 
         internal static bool Place(NavMeshAgent agent, Vector3 position)
@@ -1758,6 +1820,7 @@ namespace Unbound.Runtime
                 agent.m_PathFromCall = false;
                 if (!agent.HasDestination) agent.CatchUpStaleness();
                 FollowTransform(agent);
+                agent.ObservePathPose();
                 if (agent.m_Crowd != null)
                 {
                     CrowdOf(agent.m_Surface).UpdateAgentParameters(agent.m_Crowd, Params(agent));
@@ -1817,6 +1880,7 @@ namespace Unbound.Runtime
                 if (agent.updatePosition && !agent.m_NextPosition.Equals(previous)) WriteTransform(agent);
                 if (Compat.NavMeshOrientationMeasured && agent.updateUpAxis) AlignUpAxis(agent);
                 if (agent.updateRotation) Rotate(agent, dt);
+                agent.ObservePathPose();
             }
         }
 

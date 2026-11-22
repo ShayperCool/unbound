@@ -312,6 +312,10 @@ namespace Unbound.Runtime
         /// retain the previous, unmeasured corridor and staleness until the next update.</summary>
         internal static bool NavMeshIdleMoveMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Queries that use the agent position synchronize coupled transforms first.
+        /// This can refresh a standing corridor's staleness (navlinks, Unity 6000.0.71f1).</summary>
+        internal static bool NavMeshAgentQuerySyncMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Enabling an agent starts its reported velocity at zero, measured by
         /// tests/projects/navlinks on 6000.0.71f1. Other releases retain the previous,
         /// unmeasured velocity report until the next update.</summary>

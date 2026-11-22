@@ -201,6 +201,28 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void StatusReadsLeaveThePosePendingUntilAQueryUsesTheAgentPosition()
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-6.5f, 0f, 0.2f));
+                AgentSystem.Step();
+                var start = agent.nextPosition;
+                NavMesh.SetLinkActive(m_Link, false);
+                agent.transform.position = start + Vector3.right * 0.25f;
+
+                Assert.True(agent.isOnNavMesh);
+                _ = agent.navMeshOwner;
+                Assert.Equal(start, agent.destination);
+                Assert.True(agent.isPathStale);
+
+                Assert.Equal(0f, agent.remainingDistance);
+                Assert.InRange(agent.destination.x, start.x + 0.2499f, start.x + 0.2501f);
+                Assert.False(agent.isPathStale);
+            });
+        }
+
+        [Fact]
         public void MovingAnArrivedAgentKeepsItsDestinationAndStalePath()
         {
             NavigationTestRelease.At("6000.0.71f1", () =>

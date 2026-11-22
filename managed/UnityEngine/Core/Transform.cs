@@ -25,6 +25,10 @@ namespace UnityEngine
         bool m_HasChanged = true;
         /// <summary>Bumped on every change of this transform or a parent: lets consumers see changes.</summary>
         internal int m_Version;
+        /// <summary>The number of effective local or inherited pose changes. Reassigning the
+        /// current pose still marks the transform changed publicly, without advancing this count.</summary>
+        internal int m_PoseVersion;
+        Transform m_PoseParent;
 
         /// <summary>While an Animator with animatePhysics writes its pose: the stamp of that write
         /// (<see cref="Unbound.Runtime.AnimatedPhysicsWrites"/>); 0 otherwise.</summary>
@@ -402,7 +406,8 @@ namespace UnityEngine
         }
 
         /// <summary>The pose after the last change, and the one the last Editor update took.</summary>
-        internal LocalPose m_PoseAfterChange, m_TakenPose;
+        internal LocalPose m_PoseAfterChange = new LocalPose { Rotation = Quaternion.identity, Scale = Vector3.one };
+        internal LocalPose m_TakenPose;
         internal bool m_HasTakenPose;
 
         internal LocalPose CurrentPose() => new LocalPose
@@ -420,7 +425,7 @@ namespace UnityEngine
         }
 
         /// <summary>This transform changed: it and every descendant must recompute their world state.</summary>
-        internal void MarkChanged()
+        internal void MarkChanged(bool layoutChanged = false)
         {
             if (s_AnimatedPhysicsStamp != 0) m_AnimatedPhysicsStamp = s_AnimatedPhysicsStamp;
             if (Unbound.Runtime.PrefabRecordTiming.Quiet == 0)
@@ -435,26 +440,34 @@ namespace UnityEngine
                 }
                 m_ChangeStamp = Unbound.Runtime.PrefabRecordTiming.Stamp;
             }
-            m_PoseAfterChange = CurrentPose();
+            var pose = CurrentPose();
+            bool poseChanged = layoutChanged || !ReferenceEquals(m_PoseParent, m_Parent)
+                || !pose.Position.Equals(m_PoseAfterChange.Position)
+                || !pose.Rotation.Equals(m_PoseAfterChange.Rotation)
+                || !pose.Scale.Equals(m_PoseAfterChange.Scale);
+            m_PoseParent = m_Parent;
+            m_PoseAfterChange = pose;
+            if (poseChanged) m_PoseVersion++;
             m_HasChanged = true;
             m_Version++;
             m_WorldDirty = true;
             ObjectDispatch.TransformChanged(this);
             FrameBuilder.MarkMotionTransformDirty(this);
             for (int i = 0; i < m_Children.Count; i++)
-                m_Children[i].MarkParentChanged();
+                m_Children[i].MarkParentChanged(poseChanged);
             OnLocalChanged();
         }
 
-        void MarkParentChanged()
+        void MarkParentChanged(bool poseChanged)
         {
+            if (poseChanged) m_PoseVersion++;
             m_HasChanged = true;
             m_Version++;
             m_WorldDirty = true;
             ObjectDispatch.TransformChanged(this);
             FrameBuilder.MarkMotionTransformDirty(this);
             for (int i = 0; i < m_Children.Count; i++)
-                m_Children[i].MarkParentChanged();
+                m_Children[i].MarkParentChanged(poseChanged);
             // Dimension listeners can read world matrices on this branch's descendants.
             OnParentChanged();
         }
@@ -775,10 +788,11 @@ namespace UnityEngine
         /// <summary>Re-parents without the checks and messages of SetParent (loaders and clones).</summary>
         internal void SetParentRaw(Transform parent)
         {
+            bool parentChanged = !ReferenceEquals(m_Parent, parent);
             m_Parent?.m_Children.Remove(this);
-            m_Parent = parent;
+            m_Parent = m_PoseParent = parent;
             parent?.m_Children.Add(this);
-            MarkParentChanged();
+            MarkParentChanged(parentChanged);
         }
 
         /// <summary>Computes and applies local values that keep the world pose under a new parent.</summary>
