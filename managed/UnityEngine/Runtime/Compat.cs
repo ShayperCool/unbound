@@ -267,6 +267,8 @@ namespace Unbound.Runtime
         /// the furthest corridor polygon it borders, measured by tests/projects/avoidance `corners`
         /// on 6000.0.71f1. Other releases retain Detour's merge alone, unmeasured.</summary>
         internal static bool NavMeshCorridorJoinMeasured => Family == ReleaseFamily.Unity6000_0;
+        // Retain the surviving ground route when carving opens part of a running corridor.
+        internal static bool NavMeshCarvingCorridorMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Stopping distance selects planned speed before braking, measured by
         /// tests/projects/navlinks on 6000.0.71f1. Other releases retain their previous,

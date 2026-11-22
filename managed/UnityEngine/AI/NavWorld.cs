@@ -82,6 +82,7 @@ namespace Unbound.Runtime
         /// <summary>Bumped when tiles are cut again in place (carving): the polygons of those tiles
         /// are new, every other polygon reference stays valid.</summary>
         internal static int TileVersion;
+        internal static bool OnlyRemovedCarving { get; private set; }
         /// <summary>Changes on every change of the meshes (a rebuild or tiles cut again).</summary>
         internal static int Changes => Version + TileVersion;
         /// <summary>Bumped by the NavMesh changes that make every agent's path stale
@@ -381,7 +382,7 @@ namespace Unbound.Runtime
         /// <summary>Carving holes changed: the tiles the changed holes (their outlines before and
         /// after) reach are cut again and replaced in their meshes, the others are kept with their
         /// polygon references. A NavMesh waiting for a rebuild is rebuilt whole instead.</summary>
-        internal static void HolesChanged(IReadOnlyList<NavMeshCarving.Footprint> changed)
+        internal static void HolesChanged(IReadOnlyList<NavMeshCarving.Footprint> changed, bool onlyRemoved)
         {
             if (s_Dirty)
             {
@@ -442,7 +443,11 @@ namespace Unbound.Runtime
                     MapLinks(surface, added, true);
                 }
             }
-            if (replaced) TileVersion++;
+            if (replaced)
+            {
+                OnlyRemovedCarving = onlyRemoved;
+                TileVersion++;
+            }
         }
 
         /// <summary>The ends bound to nothing that may bind again, by agent type: an end (of a link

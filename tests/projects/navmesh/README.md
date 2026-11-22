@@ -231,3 +231,9 @@ API documents carving's effect on the mesh and pathfinding. The running
 corridor through this edit is an observation from these controls.
 [NavMeshObstacle.carving](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshobstacle/carving),
 [AI Navigation manual](https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshObstacle.html).
+
+When removing a hole replaces the agent's current polygons, Unbound reconnects
+the affected prefix to the surviving ground route. This closes the 19 later
+blocked-agent differences in the broad capture, so all 253 of its values match.
+The new control covers a complete ground path. Partial paths, off-mesh routes
+and edits that also add or move holes keep the existing replan.

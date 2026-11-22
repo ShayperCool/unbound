@@ -416,6 +416,7 @@ namespace Unbound.Runtime
             if (s_Carves.Count == 0 && s_Obstacles.Count == 0) return;
             s_Changed.Clear();
             s_Gone.Clear();
+            bool onlyRemoved = true;
             foreach (var pair in s_Carves)
             {
                 var c = pair.Value;
@@ -424,7 +425,11 @@ namespace Unbound.Runtime
                     if (!ReferenceEquals(c.Applied, c.Next))
                     {
                         if (c.Applied != null) s_Changed.Add(c.Applied);
-                        if (c.Next != null) s_Changed.Add(c.Next);
+                        if (c.Next != null)
+                        {
+                            s_Changed.Add(c.Next);
+                            onlyRemoved = false;
+                        }
                     }
                     c.Applied = c.Next;
                     c.Pending = false;
@@ -440,9 +445,8 @@ namespace Unbound.Runtime
                 // Cut in order of their centres' x, then z, then y, the larger first at the same
                 // place (Unity's order: holes overlapping in one polygon split it accordingly).
                 s_Holes.Sort(s_HoleOrder);
-                // Cut now, only the tiles the changed holes reach, so the agents replan in this
-                // frame's update (measured).
-                NavWorld.HolesChanged(s_Changed);
+                // Cut the affected tiles so agents see the changed mesh in this frame's update.
+                NavWorld.HolesChanged(s_Changed, onlyRemoved);
             }
         }
 

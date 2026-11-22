@@ -879,6 +879,7 @@ namespace Unbound.Runtime
         static readonly Dictionary<NavWorld.Surface, DtCrowd> s_Crowds = new Dictionary<NavWorld.Surface, DtCrowd>();
         static int s_CrowdVersion = -1;
         static int s_TileVersion = -1;
+        static readonly Dictionary<long, int> s_CarvingTail = new Dictionary<long, int>(DtCrowdConst.MAX_PATH_RESULT);
         static bool s_Registered;
 
         static void EnsureRegistered()
@@ -1174,6 +1175,8 @@ namespace Unbound.Runtime
         /// their corridors.</summary>
         static void RejoinTouched()
         {
+            bool repairCarvedPath = Compat.NavMeshCarvingCorridorMeasured && NavWorld.OnlyRemovedCarving
+                && s_TileVersion + 1 == NavWorld.TileVersion;
             s_TileVersion = NavWorld.TileVersion;
             for (int i = 0; i < s_Agents.Count; i++)
             {
@@ -1182,7 +1185,7 @@ namespace Unbound.Runtime
                 if (Touched(agent))
                 {
                     if (agent.m_Surface != null && s_Crowds.TryGetValue(agent.m_Surface, out var crowd)) crowd.RemoveAgent(agent.m_Crowd);
-                    Rejoin(agent);
+                    Rejoin(agent, repairCarvedPath);
                 }
                 else if (agent.pathPending && s_Searches.ContainsKey(agent)) RestartRequest(agent);
             }
@@ -1202,7 +1205,7 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The agent placed again on the NavMesh after its polygons changed.</summary>
-        static void Rejoin(NavMeshAgent agent)
+        static void Rejoin(NavMeshAgent agent, bool repairCarvedPath = false)
         {
             // An agent still being placed (the first of a new NavMesh) is placed by its caller.
             if (agent.m_Crowd == null) return;
@@ -1279,7 +1282,8 @@ namespace Unbound.Runtime
             if (agent.pathPending) RestartRequest(agent);
             else if (following)
             {
-                PlanAgain(agent, partialEnd);
+                if (!repairCarvedPath || !TryPreserveCarvingRoute(agent, moving))
+                    PlanAgain(agent, partialEnd);
                 // Keep waiting only while the rebuilt route still approaches a connection.
                 // Disabling that connection can replace it with a partial walking route
                 // (Unity 6000.0.71f1, tests/projects/navlinks waitrebuild controls).
@@ -1292,6 +1296,61 @@ namespace Unbound.Runtime
                 PlanAgain(agent);
                 agent.SetArrived(true);
             }
+        }
+
+        /// <summary>Removing a hole can replace the polygons under an agent while its route
+        /// ahead remains valid (Unity 6000.0.71f1, tests/projects/navmesh carving-route).
+        /// Reconnect from the new polygon under the agent to the surviving ground corridor.</summary>
+        static bool TryPreserveCarvingRoute(NavMeshAgent agent, DtCrowdAgent moving)
+        {
+            if (moving.partial || moving.waitingForConnection) return false;
+            var surface = agent.m_Surface;
+            var mesh = surface.Mesh;
+            var path = moving.corridor.GetPath().Slice(0, moving.corridor.GetPathCount());
+            var tail = path.Length;
+            while (tail > 0 && mesh.IsValidPolyRef(path[tail - 1])) tail--;
+            if (tail == 0 || tail == path.Length) return false;
+
+            var filter = agent.CrowdFilter;
+            s_CarvingTail.Clear();
+            for (int i = tail; i < path.Length; i++)
+            {
+                long polyRef = path[i];
+                mesh.GetTileAndPolyByRefUnsafe(polyRef, out var tile, out var poly);
+                if (poly.GetPolyType() != DtPolyTypes.DT_POLYTYPE_GROUND || !filter.PassFilter(polyRef, tile, poly))
+                    return false;
+                s_CarvingTail.TryAdd(polyRef, i);
+            }
+
+            var ag = agent.m_Crowd;
+            var start = ag.corridor.GetPos();
+            var joinRef = path[tail];
+            var query = surface.Query;
+            if (query.ClosestPointOnPoly(joinRef, start, out var join, out _).Failed()) return false;
+
+            Span<long> repaired = stackalloc long[DtCrowdConst.MAX_PATH_RESULT];
+            if (query.FindPath(ag.corridor.GetFirstPoly(), joinRef, start, join, filter,
+                    repaired, out int count, repaired.Length).Failed() || count == 0 || repaired[count - 1] != joinRef)
+                return false;
+            for (int i = 0; i < count; i++)
+            {
+                long polyRef = repaired[i];
+                // The bridge can enter the old route before reaching its requested join.
+                // Keep the route from the first common polygon to avoid a loop.
+                if (s_CarvingTail.TryGetValue(polyRef, out int oldIndex))
+                {
+                    int length = i + path.Length - oldIndex;
+                    if (length > repaired.Length) return false;
+                    path.Slice(oldIndex).CopyTo(repaired.Slice(i));
+                    var stale = agent.Staleness;
+                    Follow(agent, repaired, length, moving.corridor.GetTarget(), NavMeshPathStatus.PathComplete);
+                    agent.RestoreStaleness(stale);
+                    return true;
+                }
+                mesh.GetTileAndPolyByRefUnsafe(polyRef, out _, out var poly);
+                if (poly.GetPolyType() != DtPolyTypes.DT_POLYTYPE_GROUND) return false;
+            }
+            return false;
         }
 
         /// <summary>A request again on the rebuilt NavMesh. A search that was under way starts again
