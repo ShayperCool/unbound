@@ -29,31 +29,41 @@ namespace UnityEngine
         public float bounciness
         {
             get => m_Bounciness;
-            set { if (PhysicsMaterialValues.Set3D(this, nameof(bounciness), value, 1f, ref m_Bounciness)) m_ChangeVersion++; }
+            set { if (PhysicsMaterialValues.Set3D(this, nameof(bounciness), value, 1f, ref m_Bounciness)) Edited(); }
         }
 
         public float dynamicFriction
         {
             get => m_DynamicFriction;
-            set { if (PhysicsMaterialValues.Set3D(this, nameof(dynamicFriction), value, PhysicsMaterialValues.MaxFriction3D, ref m_DynamicFriction)) m_ChangeVersion++; }
+            set { if (PhysicsMaterialValues.Set3D(this, nameof(dynamicFriction), value, PhysicsMaterialValues.MaxFriction3D, ref m_DynamicFriction)) Edited(); }
         }
 
         public float staticFriction
         {
             get => m_StaticFriction;
-            set { if (PhysicsMaterialValues.Set3D(this, nameof(staticFriction), value, PhysicsMaterialValues.MaxFriction3D, ref m_StaticFriction)) m_ChangeVersion++; }
+            set { if (PhysicsMaterialValues.Set3D(this, nameof(staticFriction), value, PhysicsMaterialValues.MaxFriction3D, ref m_StaticFriction)) Edited(); }
         }
 
         public PhysicsMaterialCombine frictionCombine
         {
             get => m_FrictionCombine;
-            set { m_FrictionCombine = value; m_ChangeVersion++; }
+            set { m_FrictionCombine = value; Edited(); }
         }
 
         public PhysicsMaterialCombine bounceCombine
         {
             get => m_BounceCombine;
-            set { m_BounceCombine = value; m_ChangeVersion++; }
+            set { m_BounceCombine = value; Edited(); }
+        }
+
+        /// <summary>A value set through the API: the bodies using the material take it, and an
+        /// asset's edit is an Editor change saved by SaveAssets (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/scenesave native-saves physic.dirty: bounciness set on a material
+        /// read from its file; the other setters unmeasured, the same).</summary>
+        void Edited()
+        {
+            m_ChangeVersion++;
+            if (IsPersistentAsset) UnityEditor.EditorUtility.SetDirty(this);
         }
 
         internal void CopyValues(PhysicsMaterial s)

@@ -197,11 +197,11 @@ namespace UnityEngine
             m_Dirty = true; m_GraphicsBuffersDirty = true;
             m_GraphicsVerticesDirty |= vertices; m_GraphicsDirtyIndices |= indices;
             if (!m_LoadingModel) ObjectDispatch.Changed(this);
-            // An edit of an asset made this session is an Editor change, saved by SaveAssets (matches
-            // the Unity 6000.0.71f1 Editor, tests/projects/scenesave engine-assets richEdit: vertices
-            // set by script). A mesh read from its file is not written back (its file keeps what
-            // Unbound does not read), so its edits are not marked.
-            if (IsPersistentAsset && !m_Reading && UnityEditor.AssetDatabase.CreatedThisSession(this)) UnityEditor.EditorUtility.SetDirty(this);
+            // An edit of an asset is an Editor change, saved by SaveAssets: of one made this session,
+            // of one read from its file and of a model's mesh (matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/scenesave engine-assets richEdit, native-saves mesh.dirty,
+            // model.dirtyVertices). Reading the mesh or loading a model's geometry is no edit.
+            if (IsPersistentAsset && !m_Reading && !m_LoadingModel) UnityEditor.EditorUtility.SetDirty(this);
         }
 
         public bool isReadable => m_IsReadable;

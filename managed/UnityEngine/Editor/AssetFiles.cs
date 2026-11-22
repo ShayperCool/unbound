@@ -74,10 +74,14 @@ namespace Unbound.Runtime
             if (info.Kind != "yaml")
             {
                 // An imported asset's objects come from its source file, which the Editor does not
-                // write back; a prefab's are written by prefab saves.
+                // write back: they stay dirty, with no message (matches the Unity 6000.0.71f1 Editor,
+                // tests/projects/scenesave native-saves model.dirtyAfter, a model's mesh). A prefab's
+                // are written by prefab saves.
                 if (info.Kind == "prefab")
+                {
                     Debug.LogWarning($"Unbound: {info.Path} is not saved: Unbound does not write prefab assets from AssetDatabase.SaveAssets yet.");
-                foreach (var o in dirty) EditorUtility.ClearDirty(o);
+                    foreach (var o in dirty) EditorUtility.ClearDirty(o);
+                }
                 return;
             }
             var docs = TextDocuments(File.ReadAllText(info.File), loaded.Objects, dirty);

@@ -394,11 +394,11 @@ namespace UnityEngine
             var rawCopy = makeNoLongerReadable && !SourceBlocks ? m_Store ?? EncodeMipChain() : null;
             m_PixelsDirty = true;
             Upload();
-            // An asset made this session with its pixels applied is an Editor change, saved by
-            // SaveAssets (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave engine-assets
-            // alphaEdit: SetPixel then Apply; whether SetPixel alone dirties it is unmeasured). A
-            // texture read from its file is not written back, so its pixels are not marked.
-            if (IsPersistentAsset && UnityEditor.AssetDatabase.CreatedThisSession(this)) UnityEditor.EditorUtility.SetDirty(this);
+            // An asset's pixels applied are an Editor change, saved by SaveAssets, whether it was made
+            // this session or read from its file; SetPixel alone does not mark it (matches the Unity
+            // 6000.0.71f1 Editor, tests/projects/scenesave engine-assets alphaEdit, native-saves
+            // texture.dirtySetPixel, texture.dirty).
+            if (IsPersistentAsset) UnityEditor.EditorUtility.SetDirty(this);
             if (makeNoLongerReadable)
             {
                 RetireStore();
