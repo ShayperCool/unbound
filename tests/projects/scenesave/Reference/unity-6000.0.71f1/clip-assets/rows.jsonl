@@ -46,6 +46,12 @@
 {"key": "common.length", "value": "1"}
 {"key": "common.genericRoot", "value": false}
 {"key": "common.file", "value": "a8bcd8bed9f9ed4c6a5fc35caedfe51cfd837de2d2299acb6eb5dbf12735257e"}
+{"key": "materials.result", "value": "Materials"}
+{"key": "materials.bindings", "value": "|MeshRenderer|material._Color.g; |MeshRenderer|material._Color.b; |MeshRenderer|material._Color.a; |MeshRenderer|material._Glossiness; |MeshRenderer|material._MainTex_ST.x; |MeshRenderer|material._MainTex_ST.y; |MeshRenderer|material._MainTex_ST.z; |MeshRenderer|material._MainTex_ST.w; |MeshRenderer|material._EmissionColor.r"}
+{"key": "materials.objectBindings", "value": ""}
+{"key": "materials.length", "value": "1"}
+{"key": "materials.genericRoot", "value": false}
+{"key": "materials.file", "value": "14f13f712a3031154042e209286827047025bbba518488262cd6e970ea44dce5"}
 {"key": "empty.result", "value": "Empty"}
 {"key": "empty.bindings", "value": ""}
 {"key": "empty.objectBindings", "value": ""}

@@ -74,7 +74,7 @@ file the run added, changed or removed.
   `CreateAsset`, each with another set of curves: kinds set out of order on several paths, constant
   and changing curves, vector components with other key times or missing, Euler angles, material,
   blend shape, sorting order and other classes' curves, object reference curves, curves set through
-  `AnimationUtility.SetEditorCurve`, clip settings or events set after `SetCurve`, an empty clip;
+  `AnimationUtility.SetEditorCurve`, material properties, clip settings or events set after `SetCurve`, an empty clip;
   each with the curve bindings `AnimationUtility` lists. Recorded in the Linux Editor (batch mode,
   no graphics: two identical captures).
 - `play-nosave`, `play-save` (Play Mode, `SavePlayTests.NoSave` and `.Save`, each alone): assets

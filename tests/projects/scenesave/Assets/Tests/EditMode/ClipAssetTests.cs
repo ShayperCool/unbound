@@ -128,6 +128,20 @@ public class ClipAssetTests
             new[] { new ObjectReferenceKeyframe { time = 0f, value = null }, new ObjectReferenceKeyframe { time = 0.5f, value = null } });
         Create("common", common, Folder + "/Common.anim");
 
+        // Material properties: a color's components, a float, a vector's components, built by an
+        // editor curve.
+        var materials = new AnimationClip();
+        materials.SetCurve("", typeof(MeshRenderer), "material._Color.g", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+        materials.SetCurve("", typeof(MeshRenderer), "material._Color.b", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+        materials.SetCurve("", typeof(MeshRenderer), "material._Color.a", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+        materials.SetCurve("", typeof(MeshRenderer), "material._Glossiness", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+        materials.SetCurve("", typeof(MeshRenderer), "material._MainTex_ST.x", AnimationCurve.Linear(0f, 1f, 1f, 2f));
+        materials.SetCurve("", typeof(MeshRenderer), "material._MainTex_ST.y", AnimationCurve.Linear(0f, 1f, 1f, 2f));
+        materials.SetCurve("", typeof(MeshRenderer), "material._MainTex_ST.z", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+        materials.SetCurve("", typeof(MeshRenderer), "material._MainTex_ST.w", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+        AnimationUtility.SetEditorCurve(materials, EditorCurveBinding.FloatCurve("", typeof(MeshRenderer), "material._EmissionColor.r"), AnimationCurve.Linear(0f, 0f, 1f, 1f));
+        Create("materials", materials, Folder + "/Materials.anim");
+
         var empty = new AnimationClip();
         Create("empty", empty, Folder + "/Empty.anim");
     }
