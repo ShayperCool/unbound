@@ -47,7 +47,8 @@ file the run added, changed or removed.
   graphics: two identical captures). The texture `Assets/Textures/Probe.png` is a committed asset.
 - `engine-assets` (Edit Mode, `EngineAssetTests`): meshes (every common channel, two submeshes and
   32-bit indices; blend shapes; bone weights and bind poses; a two-stream half-float layout;
-  lines), animation clips (rotation, scale, script, GameObject and object reference curves, an
+  lines; meshes that differ in one trait each, showing which keep their vertex and index data),
+  animation clips (rotation, scale, script, GameObject and object reference curves, an
   event, clip settings; a legacy clip) and textures (mipmaps and sampler settings, a linear float
   format, Alpha8) made assets by `CreateAsset`, then a mesh and a texture changed and saved.
 - `prefab-nested` (Edit Mode, `NestedPrefabTests`): a new prefab holding an instance with

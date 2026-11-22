@@ -108,6 +108,55 @@ public class EngineAssetTests
         lines.SetIndices(new[] { 0, 1, 1, 2 }, MeshTopology.Lines, 0);
         Create("lines", lines, Folder + "/Lines.asset");
 
+        // One trait of the rich mesh each, to tell which keeps the vertex and index data.
+        Mesh Triangle()
+        {
+            var m = new Mesh();
+            m.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+            m.triangles = new[] { 0, 1, 2 };
+            return m;
+        }
+        var wide = new Mesh { indexFormat = IndexFormat.UInt32 };
+        wide.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+        wide.triangles = new[] { 0, 1, 2 };
+        Create("keepWide", wide, Folder + "/KeepWide.asset");
+        var two = Triangle();
+        two.subMeshCount = 2;
+        two.SetTriangles(new[] { 0, 1, 2 }, 1);
+        Create("keepTwo", two, Folder + "/KeepTwo.asset");
+        var set = new Mesh();
+        set.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+        set.SetTriangles(new[] { 0, 1, 2 }, 0);
+        Create("keepSet", set, Folder + "/KeepSet.asset");
+        var colored = Triangle();
+        colored.colors32 = new[] { new Color32(255, 0, 0, 255), new Color32(0, 255, 0, 255), new Color32(0, 0, 255, 255) };
+        Create("keepColors", colored, Folder + "/KeepColors.asset");
+        var tangent = Triangle();
+        tangent.tangents = Enumerable.Repeat(new Vector4(1f, 0f, 0f, 1f), 3).ToArray();
+        Create("keepTangents", tangent, Folder + "/KeepTangents.asset");
+        var uv4 = Triangle();
+        uv4.SetUVs(1, new List<Vector4> { Vector4.zero, Vector4.one, Vector4.one });
+        Create("keepUv4", uv4, Folder + "/KeepUv4.asset");
+        var narrow = new Mesh { indexFormat = IndexFormat.UInt16 };
+        narrow.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+        narrow.triangles = new[] { 0, 1, 2 };
+        Create("keepNarrow", narrow, Folder + "/KeepNarrow.asset");
+        var wideParams = new Mesh();
+        wideParams.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+        wideParams.SetIndexBufferParams(3, IndexFormat.UInt32);
+        wideParams.SetIndexBufferData(new[] { 0, 1, 2 }, 0, 0, 3);
+        wideParams.subMeshCount = 1;
+        wideParams.SetSubMesh(0, new SubMeshDescriptor(0, 3, MeshTopology.Triangles));
+        Create("keepWideParams", wideParams, Folder + "/KeepWideParams.asset");
+        var cleared = Triangle();
+        cleared.Clear();
+        cleared.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+        cleared.triangles = new[] { 0, 1, 2 };
+        Create("keepCleared", cleared, Folder + "/KeepCleared.asset");
+        var bounded = Triangle();
+        bounded.RecalculateBounds();
+        Create("keepBounds", bounded, Folder + "/KeepBounds.asset");
+
         var matA = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/MatEdit.mat");
         var matB = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/MatQuit.mat");
         var clip = new AnimationClip { frameRate = 30f, wrapMode = WrapMode.Loop };
