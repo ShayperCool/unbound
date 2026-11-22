@@ -168,8 +168,43 @@
 {"k":"ASTC_6x6.linear.new.7x4","v":"7x4 | app=[] logger=[]"}
 {"k":"ASTC_6x6.linear.new.30x18","v":"30x18 | app=[] logger=[]"}
 {"k":"ASTC_6x6.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"EAC_R_SIGNED.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R_SIGNED.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R_SIGNED.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R_SIGNED.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R_SIGNED.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"EAC_R_SIGNED.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R_SIGNED.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R_SIGNED.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R_SIGNED.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R_SIGNED.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"EAC_RG_SIGNED.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG_SIGNED.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG_SIGNED.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG_SIGNED.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG_SIGNED.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"EAC_RG_SIGNED.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG_SIGNED.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG_SIGNED.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG_SIGNED.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG_SIGNED.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
 {"k":"side.zero","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Texture must have width greater than 0.] logger=[]"}
 {"k":"RGBA32.new.7x4","v":"7x4 | app=[] logger=[]"}
 {"k":"RGBA_DXT1_UNorm.new","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
 {"k":"RGBA_DXT1_SRGB.new","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"RGBA_DXT3_UNorm.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT3|BC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"RGBA_DXT3_UNorm.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT3|BC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"RGBA_DXT3_UNorm.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"RGBA_DXT3_SRGB.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT3|BC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"RGBA_DXT3_SRGB.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT3|BC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"RGBA_DXT3_SRGB.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"R_EAC_SNorm.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"R_EAC_SNorm.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"R_EAC_SNorm.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"RG_EAC_SNorm.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"RG_EAC_SNorm.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC SNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"RG_EAC_SNorm.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"R_BC4_SNorm.new.4x7","v":"null | app=[Error: Texture creation failed. 'R_BC4_SNorm' is not supported for Sample usage on this platform. Use 'SystemInfo.IsFormatSupported' C# API to check format support.] logger=[Error: Texture creation failed. 'R_BC4_SNorm' is not supported for Sample usage on this platform. Use 'SystemInfo.IsFormatSupported' C# API to check format support.]"}
+{"k":"R_BC4_SNorm.new.7x4","v":"null | app=[Error: Texture creation failed. 'R_BC4_SNorm' is not supported for Sample usage on this platform. Use 'SystemInfo.IsFormatSupported' C# API to check format support.] logger=[Error: Texture creation failed. 'R_BC4_SNorm' is not supported for Sample usage on this platform. Use 'SystemInfo.IsFormatSupported' C# API to check format support.]"}
+{"k":"R_BC4_SNorm.new.8x8","v":"null | app=[Error: Texture creation failed. 'R_BC4_SNorm' is not supported for Sample usage on this platform. Use 'SystemInfo.IsFormatSupported' C# API to check format support.] logger=[Error: Texture creation failed. 'R_BC4_SNorm' is not supported for Sample usage on this platform. Use 'SystemInfo.IsFormatSupported' C# API to check format support.]"}
 {"k":"complete","v":true}

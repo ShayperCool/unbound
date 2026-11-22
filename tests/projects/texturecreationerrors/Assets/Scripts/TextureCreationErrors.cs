@@ -75,7 +75,8 @@ public static class TextureCreationErrors
                 TextureFormat.DXT5Crunched, TextureFormat.BC4, TextureFormat.BC5, TextureFormat.BC6H,
                 TextureFormat.BC7, TextureFormat.ETC_RGB4, TextureFormat.ETC2_RGB, TextureFormat.ETC2_RGBA1,
                 TextureFormat.ETC2_RGBA8, TextureFormat.ETC_RGB4Crunched, TextureFormat.ETC2_RGBA8Crunched,
-                TextureFormat.EAC_R, TextureFormat.EAC_RG, TextureFormat.ASTC_6x6 };
+                TextureFormat.EAC_R, TextureFormat.EAC_RG, TextureFormat.ASTC_6x6,
+                TextureFormat.EAC_R_SIGNED, TextureFormat.EAC_RG_SIGNED };
             foreach (var format in formats)
                 foreach (bool linear in new[] { false, true })
                 {
@@ -89,6 +90,11 @@ public static class TextureCreationErrors
             Case("RGBA32.new.7x4", () => DestroyAndDescribe(new Texture2D(7, 4, TextureFormat.RGBA32, false)));
             foreach (var format in new[] { GraphicsFormat.RGBA_DXT1_UNorm, GraphicsFormat.RGBA_DXT1_SRGB })
                 Case(format + ".new", () => DestroyAndDescribe(new Texture2D(4, 7, format, TextureCreationFlags.None)));
+            foreach (var format in new[] { GraphicsFormat.RGBA_DXT3_UNorm, GraphicsFormat.RGBA_DXT3_SRGB,
+                GraphicsFormat.R_EAC_SNorm, GraphicsFormat.RG_EAC_SNorm, GraphicsFormat.R_BC4_SNorm })
+                foreach (var (width, height) in new[] { (4, 7), (7, 4), (8, 8) })
+                    Case(format + ".new." + width + "x" + height, () => DestroyAndDescribe(
+                        new Texture2D(width, height, format, TextureCreationFlags.None)));
         }
         finally
         {

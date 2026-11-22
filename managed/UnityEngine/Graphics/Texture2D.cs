@@ -94,7 +94,8 @@ namespace UnityEngine
                 MarkDestroyed();
                 return;
             }
-            Init(width, height, TextureFormatOf(format), mipCount, !GraphicsFormatUtility.IsSRGBFormat(format));
+            Init(width, height, TextureFormatOf(format), mipCount, !GraphicsFormatUtility.IsSRGBFormat(format),
+                requestedFormat: format);
         }
 
         public Texture2D(int width, int height, DefaultFormat format, TextureCreationFlags flags)
@@ -120,17 +121,18 @@ namespace UnityEngine
             return false;
         }
 
-        void Init(int width, int height, TextureFormat format, int mipCount, bool linear, bool constructor = true)
+        void Init(int width, int height, TextureFormat format, int mipCount, bool linear, bool constructor = true,
+            GraphicsFormat? requestedFormat = null)
         {
             CheckMainThreadCreation("SupportsTextureFormatNative");
             if (!SidesValid(width, height)) throw new UnityException("Failed to create texture because of invalid parameters.");
             // Block formats need block-sized sides (checked before anything changes).
-            bool measuredCreation = constructor && Compat.TextureBlockSizeDiagnosticsMeasured;
-            if (!BlockSized(format, width, height, checkPunchthrough: measuredCreation))
-            {
-                if (measuredCreation) LogBlockCreationError(format, linear);
+            bool measuredConstructor = constructor && Compat.TextureBlockSizeDiagnosticsMeasured;
+            bool blockSized = measuredConstructor
+                ? ConstructorBlockSized(width, height, format, linear, requestedFormat)
+                : BlockSized(format, width, height);
+            if (!blockSized)
                 throw new UnityException("Failed to create texture because of invalid parameters.");
-            }
             ReleaseStore();
             m_Width = width;
             m_Height = height;
@@ -171,6 +173,13 @@ namespace UnityEngine
                 for (int i = 0; i < m_Pixels.Length; i++) m_Pixels[i] = new Color32(205, 205, 205, 205);
             }
             m_PixelsDirty = true;
+            if (measuredConstructor && (format == TextureFormat.ETC2_RGBA1 || BlockFormats.IsSignedEac(format)
+                || requestedFormat is GraphicsFormat.RGBA_DXT3_UNorm or GraphicsFormat.RGBA_DXT3_SRGB))
+            {
+                string requested = requestedFormat?.ToString() ?? format.ToString();
+                Log.Engine(LogType.Warning, $"{Log.DiagnosticPrefix}Texture2D uses uncompressed fallback storage for '{requested}'.",
+                    null);
+            }
         }
 
         /// <summary>The texture <c>ScreenCapture.CaptureScreenshotAsTexture</c> returns for a size

@@ -219,6 +219,38 @@ namespace UnityEngine.Experimental.Rendering
         public static uint GetAlphaComponentCount(GraphicsFormat format) => Of(format).AlphaComponents;
         public static uint GetComponentCount(GraphicsFormat format) => Of(format).Components;
         public static string GetFormatString(GraphicsFormat format) => Of(format).Name ?? format.ToString();
+
+        /// <summary>Compressed format names recorded in texture creation diagnostics
+        /// (tests/projects/texturecreationerrors and tests/projects/nativegfx).</summary>
+        internal static string CompressedDisplayName(GraphicsFormat format)
+        {
+            string name = GetLinearFormat(format) switch
+            {
+                GraphicsFormat.RGBA_DXT1_UNorm => "RGB Compressed DXT1|BC1",
+                GraphicsFormat.RGBA_DXT3_UNorm => "RGBA Compressed DXT3|BC2",
+                GraphicsFormat.RGBA_DXT5_UNorm => "RGBA Compressed DXT5|BC3",
+                GraphicsFormat.R_BC4_UNorm => "R Compressed BC4",
+                GraphicsFormat.RG_BC5_UNorm => "RG Compressed BC5",
+                GraphicsFormat.RGB_BC6H_UFloat => "RGB Compressed BC6H",
+                GraphicsFormat.RGBA_BC7_UNorm => "RGBA Compressed BC7",
+                GraphicsFormat.RGB_ETC_UNorm => "RGB Compressed ETC",
+                GraphicsFormat.RGB_ETC2_UNorm => "RGB Compressed ETC2",
+                GraphicsFormat.RGB_A1_ETC2_UNorm => "RGBA Compressed ETC2 punchthrough",
+                GraphicsFormat.RGBA_ETC2_UNorm => "RGBA Compressed ETC2",
+                GraphicsFormat.R_EAC_UNorm or GraphicsFormat.R_EAC_SNorm => "R Compressed EAC",
+                GraphicsFormat.RG_EAC_UNorm or GraphicsFormat.RG_EAC_SNorm => "RG Compressed EAC",
+                _ => null,
+            };
+            if (name == null) return null;
+            return name + (format switch
+            {
+                GraphicsFormat.RGB_BC6H_UFloat => " UFloat",
+                _ when IsSRGBFormat(format) => " sRGB",
+                _ when IsSignedFormat(format) => " SNorm",
+                _ => " UNorm",
+            });
+        }
+
         public static uint GetBlockSize(GraphicsFormat format) => Of(format).BlockSize;
         public static uint GetBlockWidth(GraphicsFormat format) => Of(format).BlockWidth;
         public static uint GetBlockHeight(GraphicsFormat format) => Of(format).BlockHeight;
