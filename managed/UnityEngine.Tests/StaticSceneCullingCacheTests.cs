@@ -325,6 +325,107 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ReflectionProbeCacheOutlivesAFrameWithTheSameProbes()
+        {
+            var probe = Track(new GameObject("Probe")).AddComponent<ReflectionProbe>();
+            probe.mode = ReflectionProbeMode.Baked;
+            probe.size = new Vector3(10f, 10f, 10f);
+            var cube = new Cubemap(4, TextureFormat.RGBA32, false);
+            probe.bakedTexture = cube;
+            var renderer = Track(GameObject.CreatePrimitive(PrimitiveType.Cube)).GetComponent<MeshRenderer>();
+            try
+            {
+                ReflectionProbe.BeginFrame();
+                var first = ReflectionProbe.Apply(renderer, null, srp: true);
+                ReflectionProbe.BeginFrame();
+                Assert.Same(first, ReflectionProbe.Apply(renderer, null, srp: true));
+                // Another texture of the same probe: new values, whatever the objects' hash codes.
+                var other = new Cubemap(4, TextureFormat.RGBA32, false);
+                try
+                {
+                    probe.bakedTexture = other;
+                    Assert.Same(other, ReflectionProbe.Apply(renderer, null, srp: true)[Shader.PropertyToID("unity_SpecCube0")]);
+                }
+                finally { probe.bakedTexture = cube; Object.DestroyImmediate(other); }
+            }
+            finally { Object.DestroyImmediate(cube); }
+        }
+
+        sealed class BrightenProbeOnVisible : MonoBehaviour
+        {
+            public ReflectionProbe Probe;
+            void OnBecameVisible() => Probe.intensity = 3f;
+        }
+
+        /// <summary>A shadow caster list's collection runs OnBecameVisible scripts: a probe change
+        /// one makes reaches the list's draws, also of a renderer whose probe values were cached
+        /// before the list.</summary>
+        [Fact]
+        public void ProbeChangesMadeWhileAListCollectsReachItsDraws()
+        {
+            var previousShaderCall = ShaderPassInfo.s_CallForTests;
+            var sources = FrameBuilder.Sources.ToArray();
+            var camera = Track(new GameObject("Camera")).AddComponent<Camera>();
+            var light = Track(new GameObject("Light")).AddComponent<Light>();
+            light.type = LightType.Directional;
+            var probe = Track(new GameObject("Probe")).AddComponent<ReflectionProbe>();
+            probe.mode = ReflectionProbeMode.Baked;
+            probe.size = new Vector3(10f, 10f, 10f);
+            probe.intensity = 1f;
+            var cube = new Cubemap(4, TextureFormat.RGBA32, false);
+            probe.bakedTexture = cube;
+            var mesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right }, triangles = new[] { 0, 1, 2 } };
+            mesh.RecalculateBounds();
+            Shader shader = null;
+            Material material = null;
+            var data = new CullingData { Camera = camera };
+            try
+            {
+                ShaderPassInfo.ResetForTests();
+                ShaderPassInfo.s_CallForTests = name => System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    shader = name, found = true, tags = new Dictionary<string, string>(),
+                    passes = new[] { new { name = "ShadowCaster", tags = new Dictionary<string, string> { ["LightMode"] = "ShadowCaster" } } },
+                });
+                shader = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/ProbeList\" { SubShader { Pass { Tags { \"LightMode\"=\"ShadowCaster\" } } } }");
+                material = new Material(shader) { renderQueue = 2000 };
+                MeshRenderer Caster(string name)
+                {
+                    var go = Track(new GameObject(name));
+                    go.AddComponent<MeshFilter>().sharedMesh = mesh;
+                    var r = go.AddComponent<MeshRenderer>();
+                    r.sharedMaterial = material;
+                    data.Renderers.Add(r);
+                    return r;
+                }
+                var brightener = Caster("Brightener");
+                brightener.gameObject.AddComponent<BrightenProbeOnVisible>().Probe = probe;
+                var cached = Caster("Cached");
+                int hdr = Shader.PropertyToID("unity_SpecCube0_HDR");
+                float before = ((Vector4)ReflectionProbe.Apply(cached, null, srp: true)[hdr]).x;
+                data.Lights = new NativeArray<VisibleLight>(1, Allocator.Temp);
+                data.Lights[0] = new VisibleLight(light, default, false, false, false);
+                data.ShadowSplits.Add(default);
+                data.ShadowLights.Add(new LightShadowCasterCullingInfo { splitRange = new RangeInt(0, 1) });
+                var tags = new List<ShaderTagId> { new ShaderTagId("ShadowCaster") };
+                FrameBuilder.Sources.Clear();
+                FrameBuilder.DrawRendererList(data, new DrawingSettings(tags[0], new SortingSettings(camera)), new FilteringSettings(RenderQueueRange.all),
+                    tags, shadows: ShadowObjectsFilter.AllObjects, shadowLight: 0, shadowSplit: 0);
+                Assert.Equal(3f, probe.intensity);
+                Assert.Equal(before * 3f, ((Vector4)cached.m_ReflectionCache.Values[1]).x, 4);
+            }
+            finally
+            {
+                data.Dispose();
+                FrameBuilder.Sources.Clear(); FrameBuilder.Sources.AddRange(sources);
+                ShaderPassInfo.ResetForTests(); ShaderPassInfo.s_CallForTests = previousShaderCall;
+                Object.DestroyImmediate(mesh); Object.DestroyImmediate(cube);
+                if (material != null) Object.DestroyImmediate(material);
+                if (shader != null) Object.DestroyImmediate(shader);
+            }
+        }
+
+        [Fact]
         public void ShaderPropertyFramedUtf8MatchesWireFormatForAsciiAndMultibyte()
         {
             foreach (var name in new[] { "_MainTex", "unity_SpecCube0_HDR", "_Slice4_日本語_Prop" })

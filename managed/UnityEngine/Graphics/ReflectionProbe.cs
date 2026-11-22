@@ -129,7 +129,6 @@ namespace UnityEngine
                 probe.m_Drawn = probe.Live;
                 probe.m_HasDrawn = true;
             }
-            s_ProbeGeneration++;
         }
 
         /// <summary>How shaders decode the texture, scaled by the intensity (measured: 0.9 for an
@@ -268,9 +267,34 @@ namespace UnityEngine
         static readonly int[] s_SlotKeys = { s_Cube0, s_Hdr0, s_Min0, s_Max0, s_Pos0, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1 };
         static readonly List<ReflectionProbeBlendInfo> s_Blend = new List<ReflectionProbeBlendInfo>();
 
-        static long s_ProbeGeneration = 1;
+        /// <summary>What the draws' probe values read besides a renderer's bounds and usage, per
+        /// enabled probe in order: what <see cref="Closest"/> and <see cref="Set"/> take of it.</summary>
+        struct ProbeState
+        {
+            internal ReflectionProbe Probe;
+            internal bool Alive;
+            internal ReflectionProbeMode Mode;
+            internal bool Pending;
+            internal Texture Texture;
+            internal Vector4 Decode;
+            internal Placement Placement;
+
+            internal bool Same(in ProbeState other) =>
+                ReferenceEquals(Probe, other.Probe) && Alive == other.Alive && Mode == other.Mode && Pending == other.Pending
+                && ReferenceEquals(Texture, other.Texture) && FloatBits.Same(Decode, other.Decode)
+                && FloatBits.Same(Placement.Position, other.Placement.Position) && FloatBits.Same(Placement.Offset, other.Placement.Offset)
+                && FloatBits.Same(Placement.Size, other.Placement.Size) && Placement.Importance == other.Placement.Importance
+                && FloatBits.Same(Placement.BlendDistance, other.Placement.BlendDistance) && Placement.BoxProjection == other.Placement.BoxProjection;
+        }
+
+        /// <summary>The probe state the renderers' cached values were made from (with the default
+        /// reflection), compared value by value (floats by their bits, objects by reference): a
+        /// cached value serves only the exact inputs it was made from.</summary>
+        static List<ProbeState> s_Snapshot = new List<ProbeState>();
+        static List<ProbeState> s_SnapshotScratch = new List<ProbeState>();
+        static Texture s_SnapshotDefault;
+        static Vector4 s_SnapshotDefaultDecode;
         static long s_SnapshotVersion = 1;
-        static ulong s_LastSnapshotHash;
         static bool s_HasSnapshot;
         static bool s_SnapshotPinned;
 
@@ -281,8 +305,9 @@ namespace UnityEngine
             public void Dispose() => s_SnapshotPinned = m_Previous;
         }
 
-        /// <summary>Refreshes the probe-state snapshot once for a renderer list or camera pass so
-        /// static renderers can reuse their cached probe properties without rescanning probes.</summary>
+        /// <summary>Takes the probe state once for a run of draws during which no script runs (a
+        /// renderer list's draws), so that its renderers reuse their cached probe values without
+        /// reading every probe again for each draw.</summary>
         internal static SnapshotScope PinSnapshot()
         {
             bool prev = s_SnapshotPinned;
@@ -291,52 +316,43 @@ namespace UnityEngine
             return new SnapshotScope(prev);
         }
 
-        static void Mix(ref ulong h, ulong v)
-        {
-            h ^= v;
-            h *= 1099511628211UL;
-        }
-
-        static void MixFloat(ref ulong h, float v) => Mix(ref h, (uint)BitConverter.SingleToInt32Bits(v));
-
         static void RefreshSnapshot()
         {
             if (s_Enabled.Count == 0) return;
-            ulong h = 14695981039346656037UL;
-            Mix(ref h, (ulong)s_ProbeGeneration);
-            Mix(ref h, (ulong)s_Enabled.Count);
+            var states = s_SnapshotScratch;
+            states.Clear();
             int frame = Time.frameCount;
-            for (int i = 0; i < s_Enabled.Count; i++)
+            foreach (var probe in s_Enabled)
             {
-                var probe = s_Enabled[i];
-                bool alive = probe;
-                Mix(ref h, alive ? 1UL : 0UL);
-                if (!alive) continue;
-                Mix(ref h, (ulong)(uint)System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(probe));
-                Mix(ref h, (ulong)(int)probe.m_Mode);
-                bool pending = probe.m_Mode == ReflectionProbeMode.Custom && probe.m_CustomFrame >= frame;
-                Mix(ref h, pending ? 1UL : 0UL);
-                var tex = pending ? Black : probe.texture;
-                Mix(ref h, tex != null ? (ulong)(uint)System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(tex) : 0UL);
-                MixFloat(ref h, probe.m_Intensity);
-                var pl = probe.Drawn;
-                MixFloat(ref h, pl.Position.x); MixFloat(ref h, pl.Position.y); MixFloat(ref h, pl.Position.z);
-                MixFloat(ref h, pl.Offset.x); MixFloat(ref h, pl.Offset.y); MixFloat(ref h, pl.Offset.z);
-                MixFloat(ref h, pl.Size.x); MixFloat(ref h, pl.Size.y); MixFloat(ref h, pl.Size.z);
-                Mix(ref h, (ulong)(uint)pl.Importance);
-                MixFloat(ref h, pl.BlendDistance);
-                Mix(ref h, pl.BoxProjection ? 1UL : 0UL);
+                if (!probe)
+                {
+                    states.Add(new ProbeState { Probe = probe });
+                    continue;
+                }
+                states.Add(new ProbeState
+                {
+                    Probe = probe,
+                    Alive = true,
+                    Mode = probe.m_Mode,
+                    Pending = probe.m_Mode == ReflectionProbeMode.Custom && probe.m_CustomFrame >= frame,
+                    Texture = probe.texture,
+                    Decode = probe.textureHDRDecodeValues,
+                    Placement = probe.Drawn,
+                });
             }
-            var defTex = defaultTexture;
-            Mix(ref h, defTex != null ? (ulong)(uint)System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(defTex) : 0UL);
-            var defHdr = defaultTextureHDRDecodeValues;
-            MixFloat(ref h, defHdr.x); MixFloat(ref h, defHdr.y); MixFloat(ref h, defHdr.z); MixFloat(ref h, defHdr.w);
-            if (!s_HasSnapshot || h != s_LastSnapshotHash)
-            {
-                s_HasSnapshot = true;
-                s_LastSnapshotHash = h;
-                s_SnapshotVersion++;
-            }
+            var defaultTex = defaultTexture;
+            var defaultDecode = defaultTextureHDRDecodeValues;
+            bool same = s_HasSnapshot && states.Count == s_Snapshot.Count && ReferenceEquals(defaultTex, s_SnapshotDefault)
+                && FloatBits.Same(defaultDecode, s_SnapshotDefaultDecode);
+            for (int i = 0; same && i < states.Count; i++)
+                same = states[i].Same(s_Snapshot[i]);
+            if (same) return;
+            s_SnapshotScratch = s_Snapshot;
+            s_Snapshot = states;
+            s_SnapshotDefault = defaultTex;
+            s_SnapshotDefaultDecode = defaultDecode;
+            s_HasSnapshot = true;
+            s_SnapshotVersion++;
         }
 
         /// <summary>Cached reflection probe property values for one renderer, reused while the
@@ -491,7 +507,6 @@ namespace UnityEngine
         internal override void OnEngineEnable()
         {
             if (!s_Enabled.Contains(this)) s_Enabled.Add(this);
-            s_ProbeGeneration++;
             if (m_Mode == ReflectionProbeMode.Realtime && m_RefreshMode == ReflectionProbeRefreshMode.OnAwake && !m_Awoken)
             {
                 m_Awoken = true;
@@ -502,7 +517,6 @@ namespace UnityEngine
         internal override void OnEngineDisable()
         {
             s_Enabled.Remove(this);
-            s_ProbeGeneration++;
             m_HasDrawn = false;
         }
 

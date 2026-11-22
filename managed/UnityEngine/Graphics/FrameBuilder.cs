@@ -931,7 +931,6 @@ namespace Unbound.Runtime
             foreach (var tag in passNames) s_PassTagScratch.Add(tag.name);
             s_ListPassMatch.Clear();
             s_ListPassMatchActive = true;
-            using var probeSnapshot = ReflectionProbe.PinSnapshot();
             try
             {
             s_CollectingList = range;
@@ -1041,6 +1040,9 @@ namespace Unbound.Runtime
             bool lightmaps = (drawing.perObjectData & PerObjectData.Lightmaps) != 0;
             bool probes = (drawing.perObjectData & PerObjectData.LightProbe) != 0;
             bool proxyVolumes = (drawing.perObjectData & PerObjectData.LightProbeProxyVolume) != 0;
+            // The probe state for the draws, taken after the collection: scripts run while it
+            // collects (OnBecameVisible of the shadow casters), none while it draws.
+            using var probeSnapshot = ReflectionProbe.PinSnapshot();
             // Per-tag state blocks: switched between draws as their materials' tags change.
             int block = -1;
             for (int i = 0; i < count; i++)
