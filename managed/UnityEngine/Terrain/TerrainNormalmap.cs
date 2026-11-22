@@ -12,13 +12,16 @@ namespace UnityEngine
     /// heightmap's normal at that sample: the Sobel gradient of the heights (weights 1, 2, 1 across,
     /// edges clamped) in world units (the terrain's height over its cell size on each axis), the
     /// normal (-dx, 1, -dz) normalized, stored as n * 0.5 + 0.5 in 8 bits (R x, G up, B z, alpha
-    /// one). Height changes reach it when the terrain is next rendered, not when they are made.
+    /// one). Height changes reach it at the next camera render (measured with one that did not
+    /// show the terrain; Unbound refreshes it as cameras collect the terrain's draws, which they
+    /// do whether it is on screen or not), not when they are made.
     /// The Editor draws it on its GPU: one value in about seven is one 8-bit step from this rule
     /// (the probe compares within that step). The other devices and releases are unmeasured.
     /// A map first read after its heights changed holds the heights from before (as of instancing
     /// turned on, or the last render), so it is made when instancing is turned on, and on enable
-    /// for a terrain loaded with instancing on (unmeasured). Reading it from a destroyed terrain
-    /// throws.
+    /// for a terrain loaded with instancing on (unmeasured); an instanced terrain that had no
+    /// TerrainData then, or was loaded inactive, makes it at the first read or render (unmeasured).
+    /// Reading it from a destroyed terrain throws.
     /// </summary>
     public sealed partial class Terrain
     {

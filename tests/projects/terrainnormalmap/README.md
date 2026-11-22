@@ -23,7 +23,8 @@ Measured in the Unity 6000.0.71f1 Editor (Linux, OpenGL Core, NVIDIA; two identi
   axis, the normal (-dx, 1, -dz) normalized and stored as n · 0.5 + 0.5 in 8 bits (the 10-bit
   values are 8-bit ones widened: 103 is 413), red along x, green up, blue along z, alpha one. The
   Editor computes it on its GPU: about one value in eight is one 8-bit step from this rule.
-* A height change reaches the texture at the next render of the terrain (the same texture; only
+* A height change reaches the texture at the next camera render (measured with one that did not
+  show the terrain: `firstread.rendered.again`; the same texture; only
   the changed samples and their neighbours change), not when it is made; a texture read for the
   first time after a change holds the heights from before it.
 
@@ -31,8 +32,8 @@ Unbound makes the texture on the CPU by that rule and copies it in (its mip leve
 first) when instancing is turned on, and refreshes the whole of it at a render after the heights
 changed; every value matches within the step. Unmeasured: other graphics devices, a terrain loaded
 with instancing on (Unbound makes the texture when it is enabled), a terrain disabled, its
-TerrainData replaced or its heightmap resolution changed while instanced (Unbound makes a new
-texture at the next render), holes.
+TerrainData replaced or its heightmap resolution changed while instanced (Unbound refills the
+texture at the next render, a new one when the resolution changed), holes.
 
     python3 tests/projects/terrainnormalmap/run.py record --label A   # Editor capture (GPU)
     python3 tests/projects/terrainnormalmap/run.py record --label B
