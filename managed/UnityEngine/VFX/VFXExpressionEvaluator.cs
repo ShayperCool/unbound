@@ -49,11 +49,7 @@ namespace Unbound.Runtime
         {
             switch (op)
             {
-                // No control records these yet: a matrix's axis is made by blocks of
-                // initialize and update contexts only (collision shapes, a position on a mesh),
-                // whose values no control reads; no operator of the package makes a texture's
-                // format.
-                case VFXExpressionOperation.MatrixToAxis:
+                // No operator of the package makes a texture's format.
                 case VFXExpressionOperation.TextureFormat:
                 // The graph compiler refuses the Voronoi noise outside a kernel ("not valid on
                 // the CPU", tests/projects/vfx README, "Noise"): no compiled graph evaluates it.
@@ -300,6 +296,13 @@ namespace Unbound.Runtime
                     {
                         int index = unchecked((int)w[p1]);
                         for (int k = 0; k < 4; k++) w[at + k] = w[p0 + index * 4 + k];
+                        break;
+                    }
+                    case VFXExpressionOperation.MatrixToAxis:
+                    {
+                        // A column of the matrix without its last row.
+                        int index = unchecked((int)w[p1]);
+                        for (int k = 0; k < 3; k++) w[at + k] = w[p0 + index * 4 + k];
                         break;
                     }
                     case VFXExpressionOperation.ExtractPositionFromMatrix:

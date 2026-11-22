@@ -56,6 +56,29 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AMatrixsAxisIsAColumnWithoutItsLastRow()
+        {
+            // A frame flat along an axis that is turned: its first column is zero, no row is.
+            var flat = Matrix4x4.TRS(new Vector3(7f, 8f, 9f), Quaternion.Euler(0f, 0f, 40f), new Vector3(0f, 2f, 3f));
+            flat.m30 = 0.25f;
+            flat.m31 = 0.5f;
+            var data = Data(new[]
+            {
+                Value(VFXValueType.Matrix4x4), Value(VFXValueType.Int32), Value(VFXValueType.Int32), Value(VFXValueType.Int32),
+                Op(VFXExpressionOperation.MatrixToAxis, 0, 1),
+                Op(VFXExpressionOperation.MatrixToAxis, 0, 2),
+                Op(VFXExpressionOperation.MatrixToAxis, 0, 3),
+            }, new[] { Constant(0, flat), Constant(1, 0), Constant(2, 1), Constant(3, 2) });
+            foreach (var op in data.Operations) Assert.True(VFXExpressionEvaluator.Supported(op), op.ToString());
+            var values = Evaluated(data);
+            Assert.Equal(Vector4.zero, values.GetVector(4, 3));
+            Vector4 second = flat.GetColumn(1), third = flat.GetColumn(2);
+            Assert.Equal(new Vector4(second.x, second.y, second.z, 0f), values.GetVector(5, 3));
+            Assert.Equal(new Vector4(third.x, third.y, third.z, 0f), values.GetVector(6, 3));
+            Assert.NotEqual(0f, second.x);
+        }
+
+        [Fact]
         public void AFramesPositionAnglesAndScaleComeFromItsAffinePart()
         {
             var frame = Matrix4x4.TRS(new Vector3(1f, 2f, 3f), Quaternion.Euler(30f, -120f, 200f), new Vector3(2f, 0.5f, 3f));

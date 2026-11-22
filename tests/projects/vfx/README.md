@@ -34,7 +34,7 @@ own models; its assembly carries the name of one of the package's friend assembl
   `SimRatePrewarm`, `SimBurst`, `SimRandom`, `SimLoop`, `SimLoopRandom`, `SimKill`, `SimKeep`:
   `SimExpressions`, `SimTexture`, `SimChain`: the simulation controls' graphs (below), kept in
   `Assets/SimGraphs` apart from the graphs the import rows list.
-- `DrawOpaque`, `DrawAdditive`, `DrawMany`, `DrawTextured`, `DrawOverLife`, `DrawHdr`
+- `DrawOpaque`, `DrawAdditive`, `DrawMany`, `DrawTextured`, `DrawCylinder`, `DrawCollide`, `DrawOverLife`, `DrawHdr`
   (`Assets/DrawGraphs`): the drawing controls' graphs (below).
 - `CamValues`, `CamDepth`, `SoftAdditive` (`Assets/CameraGraphs`): the camera controls' graphs
   (below).
@@ -232,6 +232,15 @@ and the draw), the kind Unbound draws:
   (`Assets/Objects/ImageC.png`, whose four quarters differ: a texture drawn turned or mirrored
   would show).
 
+- `cylinder` (frame 5): forty-eight opaque quads placed by Position Shape in a cone whose two
+  radii are the same constant, a cylinder: the block's program then holds, in the branch it does
+  not take, a quotient of constants over zero.
+- `collide` (frames 4, 12, 20, 28): forty-eight opaque quads that stay where they are, killed
+  inside the sphere of a Collision Shape block whose frame is the exposed property `Ball` (half
+  the size at first). The block asks the frame's axes (its columns) whether it is flat, and
+  then does nothing, and whether its scale is even. At frame 6 the probe makes it flat along
+  an axis turned 40 degrees (a column of the frame is zero, no row is), at frame 14 uneven
+  (1.2, 0.3, 1) and moved, at frame 22 even (0.6), turned and moved to a corner.
 - `over life` (frames 12, 24, 40, 55, 70): twenty a second living a second, their size from
   an exposed curve, their colour from an exposed gradient and their alpha from a curve that
   loops both ways, all sampled by the update kernel from the texture the effect bakes its
@@ -471,8 +480,7 @@ of the simulation controls), drawn through an indirect buffer, and triangles and
 controlled by `tests/projects/vfxoutputs`; lit outputs, outputs that draw meshes and their
 shadows by `tests/projects/vfxlit`; strips by `tests/projects/vfxstrips`; GPU events by
 `tests/projects/vfxevents`; Shader Graph outputs and the 2D renderer by `tests/projects/vfxlit`.
-Motion vectors, bounds computed on the GPU. Expression operations without a control: a matrix's axis
-(made only by blocks of initialize and update contexts: collision shapes, a position on a mesh), a
+Motion vectors, bounds computed on the GPU. Expression operations without a control: a
 texture's format (no operator makes it), and the ones the runtime does not do yet:
 a skinned mesh renderer's mesh, vertices and root bone. Not measured of noise: the sign of a NaN, and a
 compiled graph whose noise reads a count of octaves, a persistence or a lacunarity outside what the

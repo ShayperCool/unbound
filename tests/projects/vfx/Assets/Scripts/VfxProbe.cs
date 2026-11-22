@@ -148,6 +148,14 @@ public sealed class VfxProbe : MonoBehaviour
     readonly List<Stage> m_Stages = new List<Stage>();
     Texture2D m_Shot;
 
+    /// <summary>Gives the sphere of the `collide` control its frame.</summary>
+    static void SetBall(VisualEffect effect, Vector3 position, Vector3 angles, Vector3 scale)
+    {
+        effect.SetVector3("Ball_position", position);
+        effect.SetVector3("Ball_angles", angles);
+        effect.SetVector3("Ball_scale", scale);
+    }
+
     void Draw(string key, string graph, params int[] frames)
     {
         var origin = new Vector3(1000f + 100f * m_Stages.Count, 0f, 0f);
@@ -181,6 +189,11 @@ public sealed class VfxProbe : MonoBehaviour
         Draw("hdr", "DrawHdr", 40);
         // Curves that loop after their last key only, sampled just below their end.
         Draw("loop end", "DrawLoopEnd", 20);
+        // A cone of two equal radii.
+        Draw("cylinder", "DrawCylinder", 5);
+        // Killed inside a sphere whose frame changes: flat from frame 6, uneven from frame 14,
+        // even and elsewhere from frame 22.
+        Draw("collide", "DrawCollide", 4, 12, 20, 28);
     }
 
 
@@ -948,6 +961,14 @@ public sealed class VfxProbe : MonoBehaviour
             if (m_Frame == 25) stage.Effect.SetAnimationCurve("Size", new AnimationCurve(new Keyframe(0f, 0.3f), new Keyframe(1f, 0.02f)));
             if (m_Frame == 45) stage.Effect.SetAnimationCurve("Size", new AnimationCurve(new Keyframe(0.5f, 0.25f)));
             if (m_Frame == 60) stage.Effect.SetAnimationCurve("Size", new AnimationCurve(new Keyframe(-0.37f, 0.05f), new Keyframe(1.3f, 0.4f)));
+        }
+        foreach (var stage in m_Stages)
+        {
+            if (stage.Key != "collide") continue;
+            // Flat along an axis that is turned: a column of the frame is zero, no row is.
+            if (m_Frame == 6) SetBall(stage.Effect, Vector3.zero, new Vector3(0f, 0f, 40f), new Vector3(0f, 1f, 1f));
+            if (m_Frame == 14) SetBall(stage.Effect, new Vector3(-0.2f, 0.1f, 0f), new Vector3(0f, 0f, 40f), new Vector3(1.2f, 0.3f, 1f));
+            if (m_Frame == 22) SetBall(stage.Effect, new Vector3(0.9f, 0.9f, 0f), new Vector3(20f, 0f, 0f), new Vector3(0.6f, 0.6f, 0.6f));
         }
         if (m_Bundled != null && (m_Frame == 3 || m_Frame == 20))
             Rec("bundle/effect/f" + m_Frame.ToString("000"), "culled=" + (m_Bundled.culled ? 1 : 0) + " awake=" + (m_Bundled.HasAnySystemAwake() ? 1 : 0) + " renderer " + RendererState(m_Bundled));

@@ -1380,7 +1380,42 @@ public static class GraphAuthoring
         Set(texturedInit, "size", 0.6f);
         Input(texturedOutput, "mainTexture").value = Object<Texture2D>("ImageC");
         Save(textured);
+
+        // Forty-eight quads in a cylinder: a cone whose two radii are the same constant, for
+        // which the block's program divides by zero in the branch it does not take.
+        var (cylinder, cylinderSpawn, cylinderInit, _) = Quads("DrawCylinder", 64, VFXAbstractRenderedOutput.BlendMode.Opaque);
+        Burst(cylinderSpawn, false, 48f, 0f);
+        var place = Make<PositionShape>();
+        cylinderInit.AddChild(place);
+        place.SetSettingValue("shape", PositionShapeBase.Type.Cone);
+        var cone = Part(Input(place, "arcCone"), "cone");
+        Part(cone, "baseRadius").value = 0.9f;
+        Part(cone, "topRadius").value = 0.9f;
+        Part(cone, "height").value = 1f;
+        Set(cylinderInit, "size", 0.15f);
+        SetRandom(cylinderInit, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
+        Save(cylinder);
+
+        // Forty-eight quads that stay where they are, killed inside a sphere whose frame is an
+        // exposed property: the block asks the frame's axes whether it is flat or even.
+        var graph = NewGraph("DrawCollide", DrawFolder);
+        var (collideSpawn, collideInit, collideUpdate, collideOutput) = System(graph, 64);
+        collideOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        Burst(collideSpawn, false, 48f, 0f);
+        SetRandom(collideInit, "position", new Vector3(-1.3f, -1.3f, -0.2f), new Vector3(1.3f, 1.3f, 0.2f));
+        Set(collideInit, "size", 0.15f);
+        SetRandom(collideInit, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
+        var collide = Make<CollisionShape>();
+        collideUpdate.AddChild(collide);
+        collide.SetSettingValue("shape", CollisionShapeBase.Type.Sphere);
+        collide.SetSettingValue("behavior", CollisionBase.Behavior.Kill);
+        var ball = Parameter(graph, typeof(UnityEditor.VFX.Transform), "Ball", new UnityEditor.VFX.Transform { position = Vector3.zero, angles = Vector3.zero, scale = new Vector3(0.5f, 0.5f, 0.5f) });
+        Link(ball.outputSlots[0], Part(Input(collide, "sphere"), "transform"));
+        Save(graph);
     }
+
+    /// <summary>A part of a slot by its name.</summary>
+    static VFXSlot Part(VFXSlot slot, string name) => slot.children.First(s => s.name == name);
 
     /// <summary>Spawn contexts wired to each other: the first's burst starts the second, a
     /// third's burst stops it.</summary>

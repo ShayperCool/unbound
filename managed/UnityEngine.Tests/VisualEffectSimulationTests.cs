@@ -309,9 +309,9 @@ namespace UnityEngine.Tests
         {
             var plain = Data(new[] { Value(VFXValueType.Float), Op(VFXExpressionOperation.Sin, 0, -1, -1, 1) }, new[] { Constant(0, 1f) });
             Assert.Null(VisualEffect.Unsupported(plain));
-            var axis = Data(new[] { Value(VFXValueType.Matrix4x4), Value(VFXValueType.Int32), Op(VFXExpressionOperation.MatrixToAxis, 0, 1) },
-                new[] { Constant(0, Matrix4x4.identity), Constant(1, 0) });
-            Assert.Equal("the expression operation MatrixToAxis", VisualEffect.Unsupported(axis));
+            var voronoi = Data(new[] { Value(VFXValueType.Float2), Value(VFXValueType.Float3), Op(VFXExpressionOperation.VoroNoise2D, 0, 1) },
+                new[] { Constant(0, new Vector2(1f, 2f)), Constant(1, new Vector3(1f, 0.5f, 0.5f)) });
+            Assert.Equal("the expression operation VoroNoise2D", VisualEffect.Unsupported(voronoi));
             // A bake has a place among the sheet's own expressions only.
             var baked = Data(new[] { Value(VFXValueType.Curve), Op(VFXExpressionOperation.BakeCurve, 0) }, new[] { Constant(0, new AnimationCurve()) });
             Assert.Null(VisualEffect.Unsupported(baked));
