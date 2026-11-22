@@ -22,12 +22,96 @@ namespace UnityEngine
     {
         static int s_HotControl;
         static int s_KeyboardControl;
-        static int s_Scope;
-        static int s_Count;
+        static int s_NextControlId = 100;
         static long s_LastPermanentControlId;
         static string s_CopyBuffer = "";
         static readonly Dictionary<int, object> s_StateObjects = new Dictionary<int, object>();
-        static readonly HashSet<int> s_KeyboardFocusableControls = new HashSet<int>();
+        static readonly Dictionary<int, ControlIdList> s_IdLists = new Dictionary<int, ControlIdList>();
+        static ControlIdList s_CurrentIdList = new ControlIdList();
+
+        sealed class ControlIdList
+        {
+            struct Entry
+            {
+                public int Hint;
+                public int Id;
+                public bool Focusable;
+                public Rect Rect;
+            }
+
+            readonly List<Entry> m_Entries = new List<Entry>();
+            int m_SearchIndex;
+
+            public int SearchIndex => m_SearchIndex;
+
+            public void SetSearchIndex(int index)
+            {
+                if (index >= 0 && index <= m_Entries.Count)
+                    m_SearchIndex = index;
+            }
+
+            public void BeginOnGUI() => m_SearchIndex = 0;
+
+            public int GetNext(int hint, FocusType focus, Rect rect)
+            {
+                var currentEvent = Event.current;
+                var eventType = currentEvent != null ? currentEvent.type : EventType.Ignore;
+                if (eventType == EventType.Used) return -1;
+
+                bool focusable = focus == FocusType.Keyboard || (int)focus > (int)FocusType.Passive;
+                int id = FindOrAllocate(hint, focusable);
+                if (eventType != EventType.Layout && focus != FocusType.Passive && m_SearchIndex > 0)
+                {
+                    var updated = m_Entries[m_SearchIndex - 1];
+                    updated.Rect = rect;
+                    m_Entries[m_SearchIndex - 1] = updated;
+                }
+                return id;
+            }
+
+            int FindOrAllocate(int hint, bool focusable)
+            {
+                for (int i = m_SearchIndex; i < m_Entries.Count; i++)
+                {
+                    if (m_Entries[i].Hint == hint)
+                    {
+                        m_SearchIndex = i + 1;
+                        return m_Entries[i].Id;
+                    }
+                }
+                int id = AllocateId();
+                m_Entries.Add(new Entry { Hint = hint, Id = id, Focusable = focusable, Rect = Rect.zero });
+                m_SearchIndex = m_Entries.Count;
+                return id;
+            }
+
+            public bool CanHaveKeyboardFocus(int id)
+            {
+                for (int i = 0; i < m_Entries.Count; i++)
+                    if (m_Entries[i].Id == id) return m_Entries[i].Focusable;
+                return false;
+            }
+        }
+
+        static int AllocateId()
+        {
+            int id = unchecked(++s_NextControlId);
+            if (id <= 0) id = s_NextControlId = 1;
+            return id;
+        }
+
+        static ControlIdList IdListFor(int scope)
+        {
+            if (!s_IdLists.TryGetValue(scope, out var list))
+                s_IdLists[scope] = list = new ControlIdList();
+            return list;
+        }
+
+        internal static void ResetControlIdListsForTests()
+        {
+            s_IdLists.Clear();
+            s_CurrentIdList = new ControlIdList();
+        }
 
         internal static bool guiIsExiting { get; set; }
 
@@ -169,47 +253,51 @@ namespace UnityEngine
 
         internal static float pixelsPerPoint { get; set; } = 1f;
 
-        /// <summary>The next ID of the current scope: an OnGUI call, or a window inside it.</summary>
-        static int NextId(FocusType focus)
-        {
-            int id = unchecked((s_Scope * 397) ^ (++s_Count * 7919)) & 0x7FFFFFFF;
-            if (id == 0) id = 1;
-            if (focus == FocusType.Keyboard && Event.current != null) s_KeyboardFocusableControls.Add(id);
-            UnityEditor.EditorGUIControls.CompletePendingPrefixLabel(id);
-            return id;
-        }
-
         /// <summary>Runs <paramref name="body"/> with control IDs of their own (a window's
         /// controls keep their IDs whenever the window runs).</summary>
         internal static void WithScope(int scope, Action body)
         {
-            int savedScope = s_Scope, savedCount = s_Count;
-            s_Scope = scope;
-            s_Count = 0;
+            var savedList = s_CurrentIdList;
+            s_CurrentIdList = IdListFor(scope);
+            s_CurrentIdList.BeginOnGUI();
             try
             {
                 body();
             }
             finally
             {
-                s_Scope = savedScope;
-                s_Count = savedCount;
+                s_CurrentIdList = savedList;
             }
         }
 
-        public static int GetControlID(FocusType focus) => NextId(focus);
+        public static int GetControlID(FocusType focus) => GetControlID(0, focus, Rect.zero);
 
-        public static int GetControlID(GUIContent contents, FocusType focus) => NextId(focus);
+        public static int GetControlID(GUIContent contents, FocusType focus) =>
+            GetControlID(contents != null ? contents.hash : 0, focus, Rect.zero);
 
-        public static int GetControlID(FocusType focus, Rect position) => NextId(focus);
+        public static int GetControlID(FocusType focus, Rect position) => GetControlID(0, focus, position);
 
-        public static int GetControlID(GUIContent contents, FocusType focus, Rect position) => NextId(focus);
+        public static int GetControlID(GUIContent contents, FocusType focus, Rect position) =>
+            GetControlID(contents != null ? contents.hash : 0, focus, position);
 
-        public static int GetControlID(int hint, FocusType focus) => NextId(focus);
+        public static int GetControlID(int hint, FocusType focus) => GetControlID(hint, focus, Rect.zero);
 
-        public static int GetControlID(int hint, FocusType focusType, Rect rect) => NextId(focusType);
+        public static int GetControlID(int hint, FocusType focusType, Rect rect)
+        {
+            int id = s_CurrentIdList.GetNext(hint, focusType, rect);
+            if (id != -1)
+            {
+                GUI.ApplyNextControlName(id);
+                UnityEditor.EditorGUIControls.CompletePendingPrefixLabel(id);
+            }
+            return id;
+        }
 
-        internal static bool CanHaveKeyboardFocus(int id) => s_KeyboardFocusableControls.Contains(id);
+        internal static bool CanHaveKeyboardFocus(int id) => s_CurrentIdList.CanHaveKeyboardFocus(id);
+
+        internal static int GetSearchIndexOfControlIDList() => s_CurrentIdList.SearchIndex;
+
+        internal static void SetSearchIndexOfControlIDList(int index) => s_CurrentIdList.SetSearchIndex(index);
 
         // Scoped controls use positive IDs. Permanent controls keep a distinct ID across
         // GUI passes and do not advance the current pass's control sequence.
@@ -268,9 +356,8 @@ namespace UnityEngine
         {
             ResetGlobalState();
             guiIsExiting = false;
-            s_Scope = instanceID;
-            s_Count = 0;
-            s_KeyboardFocusableControls.Clear();
+            s_CurrentIdList = IdListFor(instanceID);
+            s_CurrentIdList.BeginOnGUI();
             GUIClip.Begin(new Rect(0, 0, Screen.width, Screen.height));
             if (useGUILayout != 0) GUILayoutUtility.Begin(instanceID);
         }

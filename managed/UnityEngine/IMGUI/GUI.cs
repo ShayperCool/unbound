@@ -84,6 +84,7 @@ namespace UnityEngine
         static readonly Dictionary<int, string> s_NamesByControlId = new Dictionary<int, string>();
         static readonly Stack<ScrollViewState> s_ScrollViews = new Stack<ScrollViewState>();
 
+        static readonly int s_BoxHint = "Box".GetHashCode();
         static readonly int s_ButtonHint = "Button".GetHashCode();
         static readonly int s_RepeatButtonHint = "repeatButton".GetHashCode();
         static readonly int s_ToggleHint = "Toggle".GetHashCode();
@@ -91,8 +92,6 @@ namespace UnityEngine
         static readonly int s_SliderHint = "Slider".GetHashCode();
         static readonly int s_BeginGroupHint = "BeginGroup".GetHashCode();
         static readonly int s_ScrollviewHint = "scrollView".GetHashCode();
-        static readonly int s_TextFieldHint = "TextField".GetHashCode();
-        static readonly int s_PasswordFieldHint = "PasswordField".GetHashCode();
         static readonly int s_DragWindowHint = "DragWindow".GetHashCode();
         static float s_RepeatButtonTime;
 
@@ -164,20 +163,17 @@ namespace UnityEngine
 
         public static void SetNextControlName(string name) => s_NextControlName = name;
 
-        internal static int NamedId(int id)
+        internal static void ApplyNextControlName(int id)
         {
-            if (s_NextControlName != null)
-            {
-                string name = s_NextControlName;
-                if (s_ControlNames.TryGetValue(name, out int oldId) && oldId != id)
-                    s_NamesByControlId.Remove(oldId);
-                if (s_NamesByControlId.TryGetValue(id, out string oldName) && oldName != name)
-                    s_ControlNames.Remove(oldName);
-                s_ControlNames[name] = id;
-                s_NamesByControlId[id] = name;
-                s_NextControlName = null;
-            }
-            return id;
+            if (s_NextControlName == null) return;
+            string name = s_NextControlName;
+            if (s_ControlNames.TryGetValue(name, out int oldId) && oldId != id)
+                s_NamesByControlId.Remove(oldId);
+            if (s_NamesByControlId.TryGetValue(id, out string oldName) && oldName != name)
+                s_ControlNames.Remove(oldName);
+            s_ControlNames[name] = id;
+            s_NamesByControlId[id] = name;
+            s_NextControlName = null;
         }
 
         public static string GetNameOfFocusedControl() =>
@@ -221,7 +217,7 @@ namespace UnityEngine
         public static void Box(Rect position, GUIContent content, GUIStyle style)
         {
             GUIUtility.CheckOnGUI();
-            int id = GUIUtility.GetControlID(s_BeginGroupHint, FocusType.Passive);
+            int id = GUIUtility.GetControlID(s_BoxHint, FocusType.Passive);
             if (Current.type != EventType.Repaint) return;
             style.Draw(position, content, id);
             Hover(position, content);
@@ -376,7 +372,7 @@ namespace UnityEngine
         public static bool Button(Rect position, GUIContent content, GUIStyle style)
         {
             GUIUtility.CheckOnGUI();
-            int id = NamedId(GUIUtility.GetControlID(s_ButtonHint, FocusType.Passive, position));
+            int id = GUIUtility.GetControlID(s_ButtonHint, FocusType.Passive, position);
             return Button(position, id, content, style);
         }
 
@@ -447,7 +443,7 @@ namespace UnityEngine
         static bool DoRepeatButton(Rect position, GUIContent content, GUIStyle style, FocusType focusType)
         {
             GUIUtility.CheckOnGUI();
-            int id = NamedId(GUIUtility.GetControlID(s_RepeatButtonHint, focusType, position));
+            int id = GUIUtility.GetControlID(s_RepeatButtonHint, focusType, position);
             var e = Current;
             switch (e.GetTypeForControl(id))
             {
@@ -482,7 +478,7 @@ namespace UnityEngine
         public static bool Toggle(Rect position, bool value, GUIContent content, GUIStyle style)
         {
             GUIUtility.CheckOnGUI();
-            return DoToggle(position, NamedId(GUIUtility.GetControlID(s_ToggleHint, FocusType.Passive, position)), value, content, style);
+            return DoToggle(position, GUIUtility.GetControlID(s_ToggleHint, FocusType.Passive, position), value, content, style);
         }
 
         public static bool Toggle(Rect position, int id, bool value, GUIContent content, GUIStyle style)
@@ -555,7 +551,7 @@ namespace UnityEngine
                 Debug.LogWarning("You are trying to create a SelectionGrid with zero or less elements to be displayed in the horizontal direction. Set xCount to a positive value.");
                 return selected;
             }
-            int id = NamedId(GUIUtility.GetControlID(s_ButtonGridHint, FocusType.Passive, position));
+            int id = GUIUtility.GetControlID(s_ButtonGridHint, FocusType.Passive, position);
             var rects = GridRects(position, count, xCount, style, contents, buttonSize);
             var e = Current;
             switch (e.GetTypeForControl(id))
@@ -616,7 +612,7 @@ namespace UnityEngine
         {
             GUIUtility.CheckOnGUI();
             var content = new GUIContent(text);
-            DoTextField(position, NamedId(GUIUtility.GetControlID(s_TextFieldHint, FocusType.Keyboard, position)), content, false, maxLength, style);
+            DoTextField(position, GUIUtility.GetControlID(FocusType.Keyboard, position), content, false, maxLength, style);
             return content.text;
         }
 
@@ -628,7 +624,7 @@ namespace UnityEngine
         {
             GUIUtility.CheckOnGUI();
             var content = new GUIContent(text);
-            DoTextField(position, NamedId(GUIUtility.GetControlID(s_TextFieldHint, FocusType.Keyboard, position)), content, true, maxLength, style);
+            DoTextField(position, GUIUtility.GetControlID(FocusType.Keyboard, position), content, true, maxLength, style);
             return content.text;
         }
 
@@ -640,7 +636,7 @@ namespace UnityEngine
         {
             GUIUtility.CheckOnGUI();
             var content = new GUIContent(password);
-            DoTextField(position, NamedId(GUIUtility.GetControlID(s_PasswordFieldHint, FocusType.Keyboard, position)), content, false, maxLength, style, null, maskChar);
+            DoTextField(position, GUIUtility.GetControlID(FocusType.Keyboard, position), content, false, maxLength, style, null, maskChar);
             return content.text;
         }
 
@@ -803,7 +799,7 @@ namespace UnityEngine
         public static float Slider(Rect position, float value, float size, float start, float end, GUIStyle slider, GUIStyle thumb, bool horiz, int id, GUIStyle thumbExtent = null)
         {
             GUIUtility.CheckOnGUI();
-            if (id == 0) id = NamedId(GUIUtility.GetControlID(s_SliderHint, FocusType.Passive, position));
+            if (id == 0) id = GUIUtility.GetControlID(s_SliderHint, FocusType.Passive, position);
             var e = Current;
             var track = slider.padding.Remove(position);
             float trackLength = horiz ? track.width : track.height;

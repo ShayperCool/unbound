@@ -194,13 +194,13 @@ namespace UnityEditor
             if (Event.current == null) throw new NullReferenceException("Object reference not set to an instance of an object");
         }
 
-        public static int IntField(Rect position, int value) { RequireGUI(); return EditorGUIControls.IntField(position, null, value); }
+        public static int IntField(Rect position, int value) { RequireGUI(); return EditorGUIControls.IntField(position, GUIContent.none, value); }
         public static int IntField(Rect position, string label, int value) { RequireGUI(); return EditorGUIControls.IntField(position, new GUIContent(label), value); }
         public static int IntField(Rect position, GUIContent label, int value) { RequireGUI(); return EditorGUIControls.IntField(position, label, value); }
-        public static string TextField(Rect position, string text) { RequireGUI(); return EditorGUIControls.TextField(position, null, text); }
+        public static string TextField(Rect position, string text) { RequireGUI(); return EditorGUIControls.TextField(position, GUIContent.none, text); }
         public static string TextField(Rect position, string label, string text) { RequireGUI(); return EditorGUIControls.TextField(position, new GUIContent(label), text); }
         public static string TextField(Rect position, GUIContent label, string text) { RequireGUI(); return EditorGUIControls.TextField(position, label, text); }
-        public static bool Toggle(Rect position, bool value) { RequireGUI(); return EditorGUIControls.Toggle(position, null, value); }
+        public static bool Toggle(Rect position, bool value) { RequireGUI(); return EditorGUIControls.Toggle(position, GUIContent.none, value); }
         public static bool Toggle(Rect position, string label, bool value) { RequireGUI(); return EditorGUIControls.Toggle(position, new GUIContent(label), value); }
         public static bool Toggle(Rect position, GUIContent label, bool value) { RequireGUI(); return EditorGUIControls.Toggle(position, label, value); }
         public static bool ToggleLeft(Rect position, string label, bool value) =>
@@ -339,21 +339,21 @@ namespace UnityEditor
             return GUILayoutUtility.GetRect(0, EditorGUIUtility.singleLineHeight, options);
         }
 
-        public static int IntField(int value, params GUILayoutOption[] options) => EditorGUIControls.IntField(Line(options), null, value);
+        public static int IntField(int value, params GUILayoutOption[] options) => EditorGUIControls.IntField(Line(options), GUIContent.none, value);
         public static int IntField(string label, int value, params GUILayoutOption[] options) => EditorGUIControls.IntField(Line(options), new GUIContent(label), value);
         public static int IntField(GUIContent label, int value, params GUILayoutOption[] options) => EditorGUIControls.IntField(Line(options), label, value);
-        public static float FloatField(float value, params GUILayoutOption[] options) => EditorGUIControls.FloatField(Line(options), null, value);
+        public static float FloatField(float value, params GUILayoutOption[] options) => EditorGUIControls.FloatField(Line(options), GUIContent.none, value);
         public static float FloatField(string label, float value, params GUILayoutOption[] options) => EditorGUIControls.FloatField(Line(options), new GUIContent(label), value);
         public static float FloatField(GUIContent label, float value, params GUILayoutOption[] options) => EditorGUIControls.FloatField(Line(options), label, value);
-        public static string TextField(string text, params GUILayoutOption[] options) => EditorGUIControls.TextField(Line(options), null, text);
+        public static string TextField(string text, params GUILayoutOption[] options) => EditorGUIControls.TextField(Line(options), GUIContent.none, text);
         public static string TextField(string label, string text, params GUILayoutOption[] options) => EditorGUIControls.TextField(Line(options), new GUIContent(label), text);
         public static string TextField(GUIContent label, string text, params GUILayoutOption[] options) => EditorGUIControls.TextField(Line(options), label, text);
-        public static bool Toggle(bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), null, value);
+        public static bool Toggle(bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), GUIContent.none, value);
         public static bool Toggle(string label, bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), new GUIContent(label), value);
         public static bool Toggle(GUIContent label, bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), label, value);
-        public static int Popup(int selectedIndex, string[] displayedOptions, params GUILayoutOption[] options) => EditorGUIControls.Popup(Line(options), null, selectedIndex, displayedOptions);
+        public static int Popup(int selectedIndex, string[] displayedOptions, params GUILayoutOption[] options) => EditorGUIControls.Popup(Line(options), GUIContent.none, selectedIndex, displayedOptions);
         public static int Popup(string label, int selectedIndex, string[] displayedOptions, params GUILayoutOption[] options) => EditorGUIControls.Popup(Line(options), new GUIContent(label), selectedIndex, displayedOptions);
-        public static Enum EnumPopup(Enum selected, params GUILayoutOption[] options) => EditorGUIControls.EnumPopup(Line(options), null, selected);
+        public static Enum EnumPopup(Enum selected, params GUILayoutOption[] options) => EditorGUIControls.EnumPopup(Line(options), GUIContent.none, selected);
         public static Enum EnumPopup(string label, Enum selected, params GUILayoutOption[] options) => EditorGUIControls.EnumPopup(Line(options), new GUIContent(label), selected);
         public static Enum EnumPopup(GUIContent label, Enum selected, params GUILayoutOption[] options) => EditorGUIControls.EnumPopup(Line(options), label, selected);
         public static bool Foldout(bool foldout, string content) => EditorGUIControls.Foldout(Line(null), foldout, new GUIContent(content));
@@ -364,7 +364,7 @@ namespace UnityEditor
         public static bool PropertyField(SerializedProperty property, GUIContent label, params GUILayoutOption[] options) => EditorGUIControls.Property(Line(options), property, label);
         public static bool PropertyField(SerializedProperty property, bool includeChildren, params GUILayoutOption[] options) => EditorGUIControls.Property(Line(options), property, null);
         public static bool PropertyField(SerializedProperty property, GUIContent label, bool includeChildren, params GUILayoutOption[] options) => EditorGUIControls.Property(Line(options), property, label);
-        public static Object ObjectField(Object obj, Type objType, bool allowSceneObjects, params GUILayoutOption[] options) => EditorGUIControls.ObjectField(Line(options), null, obj, objType);
+        public static Object ObjectField(Object obj, Type objType, bool allowSceneObjects, params GUILayoutOption[] options) => EditorGUIControls.ObjectField(Line(options), GUIContent.none, obj, objType);
         public static Object ObjectField(string label, Object obj, Type objType, bool allowSceneObjects, params GUILayoutOption[] options) => EditorGUIControls.ObjectField(Line(options), new GUIContent(label), obj, objType);
         public static Object ObjectField(GUIContent label, Object obj, Type objType, bool allowSceneObjects, params GUILayoutOption[] options) => EditorGUIControls.ObjectField(Line(options), label, obj, objType);
         public static Rect GetControlRect(params GUILayoutOption[] options) => GetControlRect(true, options);
@@ -565,6 +565,7 @@ namespace UnityEditor
     {
         // Space between a prefix label and its field in tests/projects/editortogglegroup.
         const float PrefixLabelGap = 2f;
+        static readonly int s_ToggleHash = "s_ToggleHash".GetHashCode();
         static GUIStyle s_MixedLeftToggle;
         static GUIContent s_PendingPrefixContent;
         static GUIStyle s_PendingPrefixStyle;
@@ -579,7 +580,7 @@ namespace UnityEditor
         }
 
         internal static bool HasLabelContent(GUIContent label) =>
-            label != null && (!string.IsNullOrEmpty(label.text) || label.image != null);
+            label == null || label.text != string.Empty || label.image != null;
 
         internal static Rect PrefixLabel(Rect position, GUIContent label)
         {
@@ -603,7 +604,7 @@ namespace UnityEditor
 
         internal static void HandlePrefixLabel(Rect labelPosition, GUIContent label, int id, GUIStyle style)
         {
-            if (id != 0)
+            if (id != 0 || label == null)
             {
                 DrawPrefixLabel(labelPosition, label, id, style);
                 return;
@@ -665,7 +666,7 @@ namespace UnityEditor
         {
             var current = Event.current;
             var type = current.type;
-            int id = GUI.NamedId(GUIUtility.GetControlID(FocusType.Keyboard, position));
+            int id = GUIUtility.GetControlID(s_ToggleHash, FocusType.Keyboard, position);
             var toggleStyle = EditorStyles.toggle;
             var togglePosition = EditorGUI.IndentedRect(position);
             var labelPosition = togglePosition;
@@ -1095,6 +1096,12 @@ namespace UnityEditor
             if (Compat.EditorKeyFocusRequiresGUI) CheckOnGUI(requireCurrentEvent: true);
             return Event.current != null && Application.isFocused;
         }
+
+        internal static new bool CanHaveKeyboardFocus(int id) => GUIUtility.CanHaveKeyboardFocus(id);
+
+        internal static new int GetSearchIndexOfControlIDList() => GUIUtility.GetSearchIndexOfControlIDList();
+
+        internal static new void SetSearchIndexOfControlIDList(int index) => GUIUtility.SetSearchIndexOfControlIDList(index);
 
         [Unbound.EditorFaithful("measured: tests/projects/editorui EditorGUIUtility.singleLineHeight")]
         public static float singleLineHeight => 18f;
