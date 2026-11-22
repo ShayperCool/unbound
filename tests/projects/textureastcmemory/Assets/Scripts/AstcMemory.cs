@@ -42,6 +42,28 @@ public static class AstcMemory
         Put("unity", Application.unityVersion);
         Put("device", SystemInfo.graphicsDeviceType);
         Put("profile", profile);
+        if (profile == "ArrayFirst")
+        {
+            TryPrelude("array", () =>
+            {
+                var array = new Texture2DArray(8, 8, 2, TextureFormat.ASTC_4x4, false, true);
+                Size("prelude.array.new", array);
+                array.Apply(false, false);
+                Size("prelude.array.applied", array);
+                Object.DestroyImmediate(array);
+            });
+        }
+        if (profile == "VolumeFirst")
+        {
+            TryPrelude("volume", () =>
+            {
+                var volume = new Texture3D(8, 8, 4, TextureFormat.ASTC_4x4, false);
+                Size("prelude.volume.new", volume);
+                volume.Apply(false, false);
+                Size("prelude.volume.applied", volume);
+                Object.DestroyImmediate(volume);
+            });
+        }
         if (profile == "CubeFirst")
         {
             var cube = new Cubemap(8, TextureFormat.ASTC_4x4, false);
@@ -69,6 +91,14 @@ public static class AstcMemory
             Size("prelude.createdFirst.applied", firstCreated);
             Object.DestroyImmediate(firstCreated);
             Object.DestroyImmediate(firstRead);
+        }
+        if (profile == "HdrFirst")
+        {
+            TryPrelude("hdr", () =>
+            {
+                var hdr = Create("prelude.hdr", TextureFormat.ASTC_HDR_4x4, 8, 8, false, true);
+                Object.DestroyImmediate(hdr);
+            });
         }
         var format = profile == "Wide" ? TextureFormat.ASTC_8x8 : TextureFormat.ASTC_4x4;
         int width = profile == "Wide" ? 77 : 13;
@@ -98,5 +128,18 @@ public static class AstcMemory
 #else
         Application.Quit(0);
 #endif
+    }
+
+    static void TryPrelude(string kind, Action measure)
+    {
+        try
+        {
+            measure();
+            Put("prelude." + kind + ".status", "made");
+        }
+        catch (UnityException)
+        {
+            Put("prelude." + kind + ".status", "UnityException");
+        }
     }
 }

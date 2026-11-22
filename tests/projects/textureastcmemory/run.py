@@ -12,7 +12,8 @@ import value_probe  # noqa: E402
 PROBE = Path(__file__).resolve().parent
 BASE = (PROBE.parent/'formatmapping', ['Assets/Scenes', 'Assets/Scenes.meta', 'Packages', 'ProjectSettings'])
 CAPTURE = 'ASTC_MEMORY_OUT'
-PROFILES = ('Ordinary', 'Wide', 'CubeFirst', 'ResizeFirst', 'UninitializedFirst', 'CloneFirst')
+PROFILES = ('Ordinary', 'Wide', 'CubeFirst', 'ResizeFirst', 'UninitializedFirst', 'CloneFirst',
+            'ArrayFirst', 'VolumeFirst', 'HdrFirst')
 
 
 def directory(label, profile):
