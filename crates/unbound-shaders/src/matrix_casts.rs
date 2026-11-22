@@ -7,8 +7,11 @@
 //! bits as a float, partly from storage the integer never set. The result is another constant
 //! from one compile to the next (not a number, infinity, or a wrong value): a kernel of a
 //! Visual Effect Graph sample failed to compile in some runs ("Float literal is NaN"). Casts of
-//! a literal (Unity's shader sources cast `0`) are rewritten; a named integer constant cast to a
-//! matrix is not (none is in Unity's sources), nor a cast inside a `#define` (not tokenized).
+//! a literal (Unity's shader sources cast `0`) are rewritten, also on the continuation lines of
+//! a `#define`; not rewritten: a named integer constant cast to a matrix (none is in Unity's
+//! sources), a cast on the first line of a `#define` or one a macro makes of its arguments
+//! (`ZERO_INITIALIZE(float4x4, m)` through Unity's `name = (type)0;`), and a cast inside a
+//! cast's parentheses.
 
 use crate::scopes::{Kind, edit, text, tokens};
 
