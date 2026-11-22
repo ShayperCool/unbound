@@ -7,6 +7,7 @@ pub mod atlas;
 pub mod direct;
 pub mod gbuffer;
 pub mod indirect;
+pub mod levels;
 pub mod light;
 pub mod raster;
 pub mod sampling;

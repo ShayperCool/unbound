@@ -1,7 +1,8 @@
 //! `baked-gi-bake`: Unbound's bake of a scene's baked lightmaps for the renderers, meshes and
 //! lights the managed side sends: the layout of the lightmaps (unbound_gi::baked::atlas) and,
-//! of each lightmap, its texels (unbound_gi::baked::gbuffer) and their direct light
-//! (unbound_gi::baked::direct). The lightmaps themselves are not made yet; the texels and their
+//! of each lightmap, its texels (unbound_gi::baked::gbuffer), their direct light
+//! (unbound_gi::baked::direct) and, with the renderers' materials, their indirect light
+//! (unbound_gi::baked::indirect). The lightmaps themselves are not made yet; the texels and their
 //! light are written out only where `UNBOUND_BAKED_GI_BUFFERS` names a folder
 //! (tests/projects/bakedbuffers).
 use anyhow::{Context, Result, ensure};
@@ -9,9 +10,11 @@ use base64::Engine;
 use serde_json::{Value as Json, json};
 use std::path::Path;
 use unbound_gi::baked::direct::{self, MixedMode, Receiver};
+use unbound_gi::baked::indirect::{self, Material, Surface, Texture, World};
 use unbound_gi::baked::light::{Kind, Light, Mode};
+use unbound_gi::baked::sampling::Samples;
 use unbound_gi::baked::trace::Scene;
-use unbound_gi::baked::{atlas, gbuffer};
+use unbound_gi::baked::{atlas, gbuffer, levels};
 
 /// The folder the texel buffers of each bake go to, when set: `<folder>/<scene GUID>/`.
 pub const BUFFERS_VARIABLE: &str = "UNBOUND_BAKED_GI_BUFFERS";
@@ -33,6 +36,108 @@ pub struct BakeRequest {
     /// The Lighting Mode of mixed lights: 0 Baked Indirect, 1 Subtractive, 2 Shadowmask.
     #[serde(default)]
     mixed_mode: u8,
+    /// Only the layout is asked for (the sizes of the renderers' material images come with it).
+    #[serde(default)]
+    layout_only: bool,
+    /// What the indirect light is baked with; without it only the direct light is.
+    #[serde(default)]
+    indirect: Option<IndirectData>,
+}
+
+/// The settings and materials of the bake's indirect light.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct IndirectData {
+    /// Indirect Samples, Max Bounces and Min Bounces of the Lighting Settings.
+    samples: u32,
+    max_bounces: u32,
+    min_bounces: u32,
+    /// The blue noise data of the Unity installation (`Resources/GI/SamplingData/bluenoisedata`).
+    blue_noise: String,
+    /// Each renderer's material images, in the renderers' order.
+    materials: Vec<MaterialData>,
+}
+
+/// A renderer's albedo and emission over its lightmap UVs' bounds, drawn by its materials' meta
+/// passes at the size the layout gave, and each submesh's Double Sided Global Illumination.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MaterialData {
+    albedo: ImageData,
+    emissive: ImageData,
+    #[serde(default)]
+    double_sided: Vec<bool>,
+}
+
+/// An image: rows from the bottom (the first row is the lowest lightmap coordinate), base64.
+/// Albedo is four bytes a texel (sRGB levels and coverage), emission four 32-bit floats.
+#[derive(serde::Deserialize)]
+struct ImageData {
+    width: usize,
+    height: usize,
+    data: String,
+}
+
+impl ImageData {
+    fn bytes(&self, what: &str, renderer: &str, texel: usize) -> Result<Vec<u8>> {
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(&self.data)
+            .with_context(|| format!("'{renderer}': its {what} image"))?;
+        ensure!(
+            self.width > 0 && self.height > 0 && bytes.len() == self.width * self.height * texel,
+            "'{renderer}': its {what} image of {} x {} has {} bytes",
+            self.width,
+            self.height,
+            bytes.len()
+        );
+        Ok(bytes)
+    }
+
+    /// The image as the bake reads it; one texel where all its texels are the same.
+    fn texture(&self, texels: Vec<[f32; 4]>) -> Texture {
+        if texels.iter().all(|t| t.map(f32::to_bits) == texels[0].map(f32::to_bits)) {
+            Texture::uniform(texels[0])
+        } else {
+            Texture {
+                width: self.width,
+                height: self.height,
+                texels,
+            }
+        }
+    }
+
+    /// An albedo image: each level's linear value ([`levels::albedo`]), and 1 or 0 for a texel
+    /// that is drawn or not.
+    fn albedo(&self, renderer: &str) -> Result<Texture> {
+        let bytes = self.bytes("albedo", renderer, 4)?;
+        Ok(self.texture(
+            bytes
+                .chunks_exact(4)
+                .map(|t| {
+                    [
+                        levels::albedo(t[0]),
+                        levels::albedo(t[1]),
+                        levels::albedo(t[2]),
+                        t[3] as f32 / 255.0,
+                    ]
+                })
+                .collect(),
+        ))
+    }
+
+    fn emissive(&self, renderer: &str) -> Result<Texture> {
+        let bytes = self.bytes("emission", renderer, 16)?;
+        Ok(self.texture(
+            bytes
+                .chunks_exact(16)
+                .map(|t| {
+                    std::array::from_fn(|k| {
+                        f32::from_le_bytes([t[4 * k], t[4 * k + 1], t[4 * k + 2], t[4 * k + 3]])
+                    })
+                })
+                .collect(),
+        ))
+    }
 }
 
 /// A light of the bake.
@@ -230,8 +335,10 @@ impl SourceMesh {
 /// samples per texel side and renderers, by their number in the bake), and per lightmap
 /// `occupancy<N>.u8` (how many of each texel's samples have a surface: none or all of them),
 /// `chartIndex<N>.i32` (each texel's chart), `normal<N>.f32` (per sample the world normal and
-/// the sample's number, or [`gbuffer::EMPTY`] without a surface) and `irradianceDirect<N>.f32`
-/// (per texel the direct light's red, green and blue and 1, zeros for an unused texel).
+/// the sample's number, or [`gbuffer::EMPTY`] without a surface), `irradianceDirect<N>.f32`
+/// (per texel the direct light's red, green and blue and 1, zeros for an unused texel) and,
+/// where the indirect light is baked, `irradianceIndirect<N>.f32` (the same of the indirect
+/// light) and `validity<N>.f32` (per texel the part of its rays that met a back face).
 struct Buffers<'a> {
     folder: &'a Path,
     lightmaps: Vec<Json>,
@@ -239,11 +346,13 @@ struct Buffers<'a> {
 
 impl<'a> Buffers<'a> {
     const DESCRIPTION: &'static str = "buffers.json";
-    const PER_LIGHTMAP: [(&'static str, &'static str); 4] = [
+    const PER_LIGHTMAP: [(&'static str, &'static str); 6] = [
         ("occupancy", ".u8"),
         ("chartIndex", ".i32"),
         ("normal", ".f32"),
         ("irradianceDirect", ".f32"),
+        ("irradianceIndirect", ".f32"),
+        ("validity", ".f32"),
     ];
 
     /// Starts a bake's buffers in the folder, without those an earlier bake left there.
@@ -280,14 +389,15 @@ impl<'a> Buffers<'a> {
         std::fs::write(&path, bytes).with_context(|| format!("writing {}", path.display()))
     }
 
-    /// The next lightmap: its texels, its renderers by their number in the bake, and its
-    /// texels' direct light.
+    /// The next lightmap: its texels, its renderers by their number in the bake, its texels'
+    /// direct light and, where it is baked, their indirect light.
     fn lightmap(
         &mut self,
         g: &gbuffer::GBuffer,
         members: &[usize],
         renderers: &[&Renderer],
         lit: &[[f32; 4]],
+        bounced: Option<&indirect::Indirect>,
     ) -> Result<()> {
         let index = self.lightmaps.len();
         self.write(format!("occupancy{index}.u8"), g.occupancy.clone())?;
@@ -316,6 +426,21 @@ impl<'a> Buffers<'a> {
             format!("irradianceDirect{index}.f32"),
             lit.iter().flatten().flat_map(|v| v.to_le_bytes()).collect(),
         )?;
+        if let Some(bounced) = bounced {
+            self.write(
+                format!("irradianceIndirect{index}.f32"),
+                bounced
+                    .irradiance
+                    .iter()
+                    .flatten()
+                    .flat_map(|v| v.to_le_bytes())
+                    .collect(),
+            )?;
+            self.write(
+                format!("validity{index}.f32"),
+                bounced.validity.iter().flat_map(|v| v.to_le_bytes()).collect(),
+            )?;
+        }
         self.lightmaps.push(json!({
             "width": g.width, "height": g.height, "supersampling": g.supersampling, "instances": members,
         }));
@@ -323,19 +448,57 @@ impl<'a> Buffers<'a> {
     }
 
     /// Ends the bake's buffers with their description: the lightmaps, the Lighting Mode of
-    /// mixed lights and the bake's lights in its order.
-    fn finish(self, mixed_mode: u8, lights: Json) -> Result<()> {
+    /// mixed lights, the bake's lights in its order and, where the indirect light is baked, its
+    /// settings and each renderer's material images as the bake read them.
+    fn finish(self, mixed_mode: u8, lights: Json, indirect: Json) -> Result<()> {
         self.write(
             Self::DESCRIPTION.into(),
-            serde_json::to_vec_pretty(
-                &json!({ "lightmaps": self.lightmaps, "mixedMode": mixed_mode, "lights": lights }),
-            )?,
+            serde_json::to_vec_pretty(&json!({
+                "lightmaps": self.lightmaps, "mixedMode": mixed_mode, "lights": lights, "indirect": indirect,
+            }))?,
         )
     }
 }
 
+/// What the indirect light of a bake is made with.
+struct Bounce {
+    samples: Samples,
+    surfaces: Vec<Surface>,
+    materials: Vec<Material>,
+    scene: Scene,
+    /// Indirect Samples, Max Bounces, Min Bounces.
+    settings: (u32, u32, u32),
+}
+
+/// An image for the buffers' description: its size and its texels' four numbers, rows from the
+/// first.
+fn described_image(image: &Texture) -> Json {
+    json!({ "width": image.width, "height": image.height, "texels": image.texels })
+}
+
+/// The size of a renderer's material images: the whole texels of its rectangle in its
+/// lightmap, at least one each way (tests/projects/bakedbuffers materials). A renderer
+/// without a lightmap takes its rectangle as the layout sized it (not measured where the layout
+/// shrinks rectangles to fit).
+fn image_size(instance: &atlas::Instance, placement: &atlas::Placement, layout: &atlas::Layout) -> [usize; 2] {
+    let rectangle = match layout.lightmaps.get(placement.lightmap as usize) {
+        Some(size) if placement.lightmap != atlas::NO_LIGHTMAP => [
+            instance.uv_bounds[2] * placement.scale_offset[0] * size[0] as f32,
+            instance.uv_bounds[3] * placement.scale_offset[1] * size[1] as f32,
+        ],
+        _ => instance.rect,
+    };
+    // A side that is a whole number of texels but for rounding keeps them all.
+    rectangle.map(|side| ((side + IMAGE_SIDE_SLACK).floor().max(1.0)) as usize)
+}
+
+/// How far below a whole number of texels a rectangle's side may be computed and still count
+/// as that many.
+const IMAGE_SIDE_SLACK: f32 = 1e-3;
+
 /// The bake: each lightmap's size, each renderer's lightmap and scale and offset in the order
-/// sent (`null` for a renderer the bake leaves out, with `invalidNormals` set: one whose mesh
+/// sent, with the size of its material images and what brings its lightmap UVs to their 0..1
+/// (`null` for a renderer the bake leaves out, with `invalidNormals` set: one whose mesh
 /// has no normals), and `order`, the bake's renderers by their place in the request in the
 /// order the Editor numbers them ([`atlas::object_key`]; renderers of prefab instances are not
 /// measured and take their own file ID).
@@ -411,13 +574,23 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
         })
         .collect::<Result<Vec<_>>>()?;
     let layout = atlas::layout(&settings, &instances)?;
+    if let Some(data) = &request.indirect {
+        ensure!(
+            data.materials.len() == request.renderers.len(),
+            "{} material images for {} renderers",
+            data.materials.len(),
+            request.renderers.len()
+        );
+    }
 
-    if let Some(folder) = buffers {
-        // Each lightmap's renderers in the bake's order, their meshes made ready once.
+    if let Some(folder) = buffers.filter(|_| !request.layout_only) {
+        // Each lightmap's renderers in the bake's order, their meshes made ready once. The
+        // indirect light's rays meet every renderer of the bake, with or without a lightmap.
         let mut ready: Vec<Option<gbuffer::Mesh>> = meshes.iter().map(|_| None).collect();
         for (&i, placement) in taken.iter().zip(&layout.placements) {
             let r = &request.renderers[i];
-            if placement.lightmap != atlas::NO_LIGHTMAP && ready[r.mesh].is_none() {
+            let wanted = placement.lightmap != atlas::NO_LIGHTMAP || request.indirect.is_some();
+            if wanted && ready[r.mesh].is_none() {
                 let mesh = &meshes[r.mesh];
                 let made = gbuffer::Mesh::new(
                     mesh.positions.clone(),
@@ -455,6 +628,54 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 .filter(move |t| t.iter().all(|&v| v < count))
                 .map(move |t| t.map(world))
         }));
+        // What the indirect light's paths run through: every triangle of the bake's renderers,
+        // with its renderer's material images.
+        let bounce = request
+            .indirect
+            .as_ref()
+            .map(|data| -> Result<Bounce> {
+                let blue_noise = std::fs::read(&data.blue_noise).with_context(|| {
+                    format!("reading the blue noise data {} of the Unity installation", data.blue_noise)
+                })?;
+                let samples = Samples::new(&blue_noise).map_err(|size| {
+                    anyhow::anyhow!("the blue noise data {} has {} bytes", data.blue_noise, size.0)
+                })?;
+                let mut surfaces = Vec::new();
+                let mut materials = Vec::new();
+                for (&i, r) in taken.iter().zip(&baked) {
+                    let mesh = ready[r.mesh].as_ref().expect("made above");
+                    let images = &data.materials[i];
+                    let m = &r.local_to_world;
+                    let rows = direct::normal_matrix(m);
+                    let determinant = m[0] * (m[5] * m[10] - m[6] * m[9])
+                        - m[4] * (m[1] * m[10] - m[2] * m[9])
+                        + m[8] * (m[1] * m[6] - m[2] * m[5]);
+                    for (submesh, triangles) in mesh.submeshes.iter().enumerate() {
+                        let double_sided = images.double_sided.get(submesh).copied().unwrap_or(false);
+                        surfaces.extend(triangles.iter().map(|t| Surface {
+                            material: materials.len() as u32,
+                            mirrored: determinant < 0.0,
+                            double_sided,
+                            corners: t.map(|v| direct::point(m, mesh.positions[v as usize])),
+                            normals: t.map(|v| direct::world_normal(&rows, mesh.normals[v as usize])),
+                            uvs: t.map(|v| mesh.uvs[v as usize]),
+                        }));
+                    }
+                    materials.push(Material {
+                        albedo: images.albedo.albedo(&r.name)?,
+                        emissive: images.emissive.emissive(&r.name)?,
+                    });
+                }
+                let scene = Scene::new(surfaces.iter().map(|s| s.corners));
+                Ok(Bounce {
+                    samples,
+                    surfaces,
+                    materials,
+                    scene,
+                    settings: (data.samples, data.max_bounces, data.min_bounces),
+                })
+            })
+            .transpose()?;
         // One lightmap at a time: its texels are written and let go before the next.
         let folder = folder.join(&request.scene);
         let mut written = Buffers::start(&folder)?;
@@ -496,8 +717,37 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 &scene,
                 parameters.pushoff,
             );
-            written.lightmap(&g, &members, &baked, &lit)?;
+            let bounced = bounce.as_ref().map(|b| {
+                indirect::indirect(
+                    &g,
+                    &receivers,
+                    &World {
+                        scene: &b.scene,
+                        casters: &scene,
+                        surfaces: &b.surfaces,
+                        materials: &b.materials,
+                        lights: &baked_lights,
+                    },
+                    &b.samples,
+                    indirect::Settings {
+                        samples: b.settings.0,
+                        max_bounces: b.settings.1,
+                        min_bounces: b.settings.2,
+                        pushoff: parameters.pushoff,
+                    },
+                )
+            });
+            written.lightmap(&g, &members, &baked, &lit, bounced.as_ref())?;
         }
+        let described = bounce.as_ref().map_or(Json::Null, |b| {
+            json!({
+                "samples": b.settings.0, "maxBounces": b.settings.1, "minBounces": b.settings.2,
+                // Each renderer's images in the bake's order, as the bake reads them.
+                "materials": b.materials.iter().map(|m| json!({
+                    "albedo": described_image(&m.albedo), "emissive": described_image(&m.emissive),
+                })).collect::<Vec<_>>(),
+            })
+        });
         written.finish(
             request.mixed_mode,
             json!(
@@ -524,18 +774,23 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     }))
                     .collect::<Vec<_>>()
             ),
+            described,
         )?;
     }
 
     let mut placements = vec![Json::Null; request.renderers.len()];
-    for (&i, p) in taken.iter().zip(&layout.placements) {
+    for ((&i, p), instance) in taken.iter().zip(&layout.placements).zip(&instances) {
         // One with Scale In Lightmap 0 is packed like any other, without a lightmap of its own.
         let lightmap = if request.renderers[i].scale_in_lightmap > 0.0 {
             p.lightmap
         } else {
             atlas::NO_LIGHTMAP
         };
-        placements[i] = json!({ "lightmap": lightmap, "scaleOffset": p.scale_offset });
+        placements[i] = json!({
+            "lightmap": lightmap, "scaleOffset": p.scale_offset,
+            "image": image_size(instance, p, &layout),
+            "imageScaleOffset": gbuffer::uv_scale_offset(instance.uv_bounds),
+        });
     }
     Ok(json!({
         "lightmaps": layout.lightmaps,
