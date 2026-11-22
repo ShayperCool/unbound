@@ -1,0 +1,42 @@
+{
+ "mixedMode": 0,
+ "lights": [
+  {
+   "color": [
+    11.211579322814941,
+    8.892016410827637,
+    5.115433216094971
+   ],
+   "indirectColor": [
+    11.211579322814941,
+    8.892016410827637,
+    5.115433216094971
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    1.0130000114440918,
+    2.0169999599456787,
+    -0.9909999966621399
+   ],
+   "range": 8.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Bulb"
+  }
+ ]
+}

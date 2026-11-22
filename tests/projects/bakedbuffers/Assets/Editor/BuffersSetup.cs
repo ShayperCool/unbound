@@ -328,6 +328,161 @@ public static class BuffersSetup
         Save(scene, name);
     }
 
+    /// <summary>A Standard material asset of a scene (its name starts with the scene's).</summary>
+    static Material Mat(string name, Color color, Action<Material> more = null)
+    {
+        string path = $"{Folder}/{name}.mat";
+        var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (existing != null) return existing;
+        var material = new Material(Shader.Find("Standard")) { name = name, color = color };
+        more?.Invoke(material);
+        AssetDatabase.CreateAsset(material, path);
+        return material;
+    }
+
+    /// <summary>A texture asset of a scene, its texels given by column and row.</summary>
+    static Texture2D Tex(string name, int width, int height, FilterMode filter, Func<int, int, Color32> texel)
+    {
+        var texture = new Texture2D(width, height, TextureFormat.RGBA32, false, false) { name = name, filterMode = filter, wrapMode = TextureWrapMode.Repeat };
+        var texels = new Color32[width * height];
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++) texels[y * width + x] = texel(x, y);
+        texture.SetPixels32(texels);
+        texture.Apply();
+        AssetDatabase.CreateAsset(texture, $"{Folder}/{name}.asset");
+        return texture;
+    }
+
+    static GameObject With(GameObject go, Material material)
+    {
+        go.GetComponent<MeshRenderer>().sharedMaterial = material;
+        return go;
+    }
+
+    static void Emit(Material material, Color color, MaterialGlobalIlluminationFlags flags, Texture2D map = null)
+    {
+        material.EnableKeyword("_EMISSION");
+        material.SetColor("_EmissionColor", color);
+        if (map != null) material.SetTexture("_EmissionMap", map);
+        material.globalIlluminationFlags = flags;
+    }
+
+    /// <summary>A scene for indirect light: no sky and no ambient light, a grey ground, a white
+    /// cube, a blue sphere and a red wall, with the Indirect Samples and bounces given.</summary>
+    static Scene Coloured(string name, int samples, int maxBounces, int minBounces = 2)
+    {
+        var scene = NewScene(name, 4f, 128);
+        var settings = Lightmapping.lightingSettings;
+        settings.directSampleCount = 16;
+        settings.indirectSampleCount = samples;
+        settings.maxBounces = maxBounces;
+        settings.minBounces = minBounces;
+        RenderSettings.skybox = null;
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = Color.black;
+        With(Prim(PrimitiveType.Plane, "Ground", Vector3.zero, Vector3.zero, Vector3.one), Mat("BounceGrey", new Color(0.5f, 0.5f, 0.5f)));
+        With(Prim(PrimitiveType.Cube, "Cube", new Vector3(0f, 0.5f, 0f), new Vector3(0f, 20f, 0f), Vector3.one), Mat("BounceWhite", Color.white));
+        With(Prim(PrimitiveType.Sphere, "Sphere", new Vector3(2f, 0.5f, 1f), Vector3.zero, Vector3.one), Mat("BounceBlue", new Color(0.2f, 0.3f, 0.9f)));
+        With(Prim(PrimitiveType.Cube, "Wall", new Vector3(-2.5f, 1f, 0f), Vector3.zero, new Vector3(0.2f, 2f, 4f)), Mat("BounceRed", new Color(0.9f, 0.1f, 0.1f)));
+        return scene;
+    }
+
+    static void WhiteSun() =>
+        NewLight("Sun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), Color.white, 2f).bounceIntensity = 1.5f;
+
+    /// <summary>A sun over the coloured scene: one bounce of 64 samples; four bounces, ended by
+    /// chance from the second on; two bounces of 512 samples, ended by chance from the first on;
+    /// 10 samples asked for; and one bounce of a point light's.</summary>
+    static void Bounces()
+    {
+        var scene = Coloured("Bounce", 64, 1);
+        WhiteSun();
+        Save(scene, "Bounce");
+        scene = Coloured("BounceFar", 64, 4);
+        WhiteSun();
+        Save(scene, "BounceFar");
+        scene = Coloured("BounceMany", 512, 2, 1);
+        WhiteSun();
+        Save(scene, "BounceMany");
+        scene = Coloured("BounceFew", 10, 1);
+        WhiteSun();
+        Save(scene, "BounceFew");
+        scene = Coloured("BouncePoint", 64, 2);
+        // (Off whole coordinates, so that no ray to it runs along an edge of a mesh.)
+        NewLight("Bulb", LightType.Point, new Vector3(1.013f, 2.017f, -0.991f), Vector3.zero, new Color(1f, 0.9f, 0.7f), 3f).range = 8f;
+        Save(scene, "BouncePoint");
+    }
+
+    /// <summary>Emission alone lights the coloured scene: a lamp facing down with an emission
+    /// map, and panels whose materials are flagged for baked emission, for realtime emission
+    /// alone, and as black.</summary>
+    static void Glow()
+    {
+        var scene = Coloured("Glow", 64, 2);
+        var dots = Tex("GlowDots", 4, 4, FilterMode.Bilinear, (x, y) => new Color32((byte)(x * 85), (byte)(y * 85), 128, 255));
+        var lamp = Mat("GlowLamp", Color.black, m => Emit(m, new Color(1f, 0.8f, 0.4f) * 3f, MaterialGlobalIlluminationFlags.BakedEmissive, dots));
+        With(Prim(PrimitiveType.Quad, "Lamp", new Vector3(0f, 2.5f, 0f), new Vector3(-90f, 0f, 0f), new Vector3(2f, 2f, 1f)), lamp);
+        var baked = Mat("GlowBaked", new Color(0.3f, 0.3f, 0.3f), m => Emit(m, new Color(0.5f, 0.25f, 0.1f), MaterialGlobalIlluminationFlags.BakedEmissive));
+        With(Prim(PrimitiveType.Quad, "Baked", new Vector3(3f, 1f, -3f), new Vector3(0f, 180f, 0f), Vector3.one), baked);
+        var realtime = Mat("GlowRealtime", Color.grey, m => Emit(m, new Color(0.2f, 1f, 0.3f) * 2f, MaterialGlobalIlluminationFlags.RealtimeEmissive));
+        With(Prim(PrimitiveType.Quad, "Realtime", new Vector3(-3f, 1f, -3f), new Vector3(0f, 180f, 0f), Vector3.one), realtime);
+        var black = Mat("GlowBlack", Color.grey, m => Emit(m, new Color(1f, 0.2f, 1f) * 2f, MaterialGlobalIlluminationFlags.EmissiveIsBlack));
+        With(Prim(PrimitiveType.Quad, "Black", new Vector3(0f, 1f, -3.5f), new Vector3(0f, 180f, 0f), Vector3.one), black);
+        var none = Mat("GlowNone", Color.grey, m => Emit(m, new Color(0.3f, 0.3f, 1f) * 2f, MaterialGlobalIlluminationFlags.None));
+        With(Prim(PrimitiveType.Quad, "None", new Vector3(1.5f, 1f, -3.5f), new Vector3(0f, 180f, 0f), Vector3.one), none);
+        Save(scene, "Glow");
+    }
+
+    /// <summary>Surfaces met from behind: a roof whose back faces the ground under the sun, one
+    /// with Double Sided Global Illumination beside it, and a mirrored cube.</summary>
+    static void Roof()
+    {
+        var scene = Coloured("Roof", 64, 1);
+        WhiteSun();
+        With(Prim(PrimitiveType.Quad, "Roof", new Vector3(1f, 0.6f, -2.5f), new Vector3(90f, 0f, 0f), new Vector3(2f, 2f, 1f)), Mat("BounceWhite", Color.white));
+        var both = Mat("RoofBoth", new Color(0.9f, 0.9f, 0.2f), m => m.doubleSidedGI = true);
+        With(Prim(PrimitiveType.Quad, "Both", new Vector3(-1f, 0.6f, 3f), new Vector3(90f, 0f, 0f), new Vector3(2f, 2f, 1f)), both);
+        With(Prim(PrimitiveType.Cube, "Mirrored", new Vector3(3.5f, 0.5f, -1f), new Vector3(0f, 30f, 0f), new Vector3(-1f, 1f, 1f)), Mat("BounceRed", new Color(0.9f, 0.1f, 0.1f)));
+        Save(scene, "Roof");
+    }
+
+    /// <summary>Materials with textures, and Albedo Boost 2: a rough ground with a grey ramp,
+    /// a cube with a tiled checker, a metal sphere and a smooth wall, under the sun.</summary>
+    static void Textured()
+    {
+        var scene = NewScene("Textured", 4f, 128);
+        var settings = Lightmapping.lightingSettings;
+        settings.directSampleCount = 16;
+        settings.indirectSampleCount = 64;
+        settings.maxBounces = 2;
+        settings.albedoBoost = 2f;
+        RenderSettings.skybox = null;
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = Color.black;
+        var ramp = Tex("TexturedRamp", 64, 1, FilterMode.Point, (x, y) => new Color32((byte)(x * 4), (byte)(255 - x * 4), (byte)(x * 2), 255));
+        var checker = Tex("TexturedChecker", 8, 8, FilterMode.Point, (x, y) => ((x + y) & 1) == 0 ? new Color32(230, 40, 40, 255) : new Color32(40, 200, 60, 255));
+        With(Prim(PrimitiveType.Plane, "Ground", Vector3.zero, Vector3.zero, Vector3.one), Mat("TexturedRampMat", Color.white, m => { m.mainTexture = ramp; m.SetFloat("_Glossiness", 0f); }));
+        With(Prim(PrimitiveType.Cube, "Cube", new Vector3(0f, 0.5f, 0f), new Vector3(0f, 20f, 0f), Vector3.one), Mat("TexturedCheckerMat", Color.white, m => { m.mainTexture = checker; m.mainTextureScale = new Vector2(2f, 2f); }));
+        With(Prim(PrimitiveType.Sphere, "Sphere", new Vector3(2f, 0.5f, 1f), Vector3.zero, Vector3.one), Mat("TexturedMetal", new Color(0.8f, 0.6f, 0.2f), m => { m.SetFloat("_Metallic", 1f); m.SetFloat("_Glossiness", 0.8f); }));
+        With(Prim(PrimitiveType.Cube, "Wall", new Vector3(-2.5f, 1f, 0f), Vector3.zero, new Vector3(0.2f, 2f, 4f)), Mat("TexturedSmooth", new Color(0.5f, 0.5f, 0.5f), m => m.SetFloat("_Glossiness", 1f)));
+        WhiteSun();
+        Save(scene, "Textured");
+    }
+
+    /// <summary>A strip whose albedo runs through every 8-bit level, 300 texels long: the
+    /// linear value the bake takes for each level.</summary>
+    static void Levels()
+    {
+        var scene = NewScene("Levels", 300f, 512);
+        RenderSettings.skybox = null;
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = Color.black;
+        var ramp = Tex("LevelsRamp", 256, 1, FilterMode.Point, (x, y) => new Color32((byte)x, (byte)(255 - x), (byte)((x * 7) & 255), 255));
+        ramp.wrapMode = TextureWrapMode.Clamp;
+        With(Prim(PrimitiveType.Quad, "Strip", Vector3.zero, new Vector3(90f, 0f, 0f), new Vector3(1f, 0.02f, 1f)), Mat("LevelsMat", Color.white, m => m.mainTexture = ramp));
+        Save(scene, "Levels");
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -339,6 +494,7 @@ public static class BuffersSetup
                 ("ModeIndirect", () => Modes("ModeIndirect", MixedLightingMode.IndirectOnly)),
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
+                ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));

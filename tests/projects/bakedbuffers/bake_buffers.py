@@ -59,14 +59,26 @@ NORMAL_TOLERANCE = 1e-5
 # A sample without a surface has this as its fourth value.
 EMPTY = -1.0e6
 UNBOUND_NOTE = 'Unbound'
-BUFFERS = ('occupancy{}.r2d', 'chartIndex{}.int', 'normal{}.r2d', 'irradianceDirect{}.r2d')
+BUFFERS = ('occupancy{}.r2d', 'chartIndex{}.int', 'normal{}.r2d', 'irradianceDirect{}.r2d', 'irradianceIndirect{}.r2d',
+           'validity{}.r2d')
 # The direct light of a texel is compared within this, times its value where that is above 1.
 # The Editor's and Unbound's 32-bit arithmetic differ in their last bits, which a narrow spot
 # cone's falloff multiplies (a 20 degree cone: by about 65 before its table's slope); the worst
 # seen is 2.5e-5 (`Lamps`).
 DIRECT_TOLERANCE = 1e-4
+# The indirect light of a texel, likewise: its rays are the Editor's, their sums differ in the
+# last bits, and a ray that just meets or misses an edge can fall on the other side (the worst
+# seen with the Editor's own materials is 3e-4, one texel in thousands).
+INDIRECT_TOLERANCE = 1e-3
+# The part of a texel's rays that met a back face: counts over the texel's samples.
+VALIDITY_TOLERANCE = 1e-6
+# A texel of a material image: albedo is one of 253 values, emission a half float.
+MATERIAL_TOLERANCE = 1e-6
 # Two Editor bakes of one scene give a texel's light within this (see `repeats`).
 REPEAT_TOLERANCE = 2e-6
+# And its indirect light, a sum of many more values (up to 512 samples of several bounces
+# here), within this: the worst seen between two captures is 3e-6 (`BounceMany`).
+INDIRECT_REPEAT_TOLERANCE = 1e-5
 # Of a bake input's light: what Unbound's bake takes of it, the numbers within this (relative).
 LIGHT_FIELDS = ('type', 'mode', 'color', 'indirectColor', 'position', 'orientation', 'range', 'coneAngle', 'castsShadows')
 LIGHT_TOLERANCE = 2e-6
@@ -132,6 +144,18 @@ def digest(folder, log):
     return out
 
 
+def materials_digest(folder):
+    """Each instance's albedo and emission images as a scene's bake input has them (rows from
+    the first, four numbers a texel), in the bake's order."""
+    if not (folder/'bakeInput.bin').is_file():
+        return []
+    bake = editor_bake.read_bake_input(folder/'bakeInput.bin')
+    def image(t):
+        texels = [v for texel in t['data'] for v in (texel if isinstance(texel, (tuple, list)) else (texel,))]
+        return {'width': t['width'], 'height': t['height'], 'texels': texels}
+    return [{'albedo': image(bake['albedo'][index]), 'emissive': image(bake['emissive'][index])} for index in bake['instanceTextures']]
+
+
 def lights_digest(folder):
     """A scene's lights as its bake input has them, by their names, and its Lighting Mode."""
     if not (folder/'bakeInput.bin').is_file():
@@ -165,6 +189,7 @@ def native(label):
         scene_digest = digest(out/'raw'/scene, log.get(scene, 'not baked'))
         (target/'scene.json').write_text(json.dumps(scene_digest, indent=1) + '\n')
         (target/'lights.json').write_text(json.dumps(lights_digest(out/'raw'/scene), indent=1) + '\n')
+        (target/'materials.json').write_text(json.dumps(materials_digest(out/'raw'/scene), separators=(',', ':')) + '\n')
         for index in range(len(scene_digest['lightmaps'])):
             for name in BUFFERS:
                 shutil.copy2(out/'raw'/scene/'lightmapRequest0'/name.format(index), target/name.format(index))
@@ -178,7 +203,8 @@ def tree(root):
 def repeats(name, first, other):
     """Whether two captures' file is the same result: byte for byte, but for a buffer of light,
     which the Editor sums in an order that varies from bake to bake (the same used texels, and
-    values within REPEAT_TOLERANCE, times the value where that is above 1)."""
+    values within REPEAT_TOLERANCE, or INDIRECT_REPEAT_TOLERANCE for the indirect light, times
+    the value where that is above 1)."""
     if first == other:
         return True
     if not first or not other or not Path(name).name.startswith('irradiance'):
@@ -186,7 +212,8 @@ def repeats(name, first, other):
     a, b = editor_bake.parse_r2d(first), editor_bake.parse_r2d(other)
     if a[:3] != b[:3]:
         return False
-    return all(x == y if k % 4 == 3 else abs(x - y) <= REPEAT_TOLERANCE * max(1.0, abs(x)) for k, (x, y) in enumerate(zip(a[3], b[3])))
+    tolerance = INDIRECT_REPEAT_TOLERANCE if Path(name).name.startswith('irradianceIndirect') else REPEAT_TOLERANCE
+    return all(x == y if k % 4 == 3 else abs(x - y) <= tolerance * max(1.0, abs(x)) for k, (x, y) in enumerate(zip(a[3], b[3])))
 
 
 def publish(labels):
@@ -231,8 +258,16 @@ def expected(root):
             if (width, height, channels) != (lightmap['width'], lightmap['height'], 4):
                 raise ValueError(f'{folder}: irradianceDirect{index} of {width}x{height}')
             lightmap['direct'] = direct
+            for part, name in (('indirect', 'irradianceIndirect'), ('validity', 'validity')):
+                width, height, channels, values = editor_bake.read_r2d(folder/f'{name}{index}.r2d')
+                if (width, height, channels) != (lightmap['width'], lightmap['height'], 4):
+                    raise ValueError(f'{folder}: {name}{index} of {width}x{height}')
+                lightmap[part] = values
+            # The first of a texel's four validity numbers is the part of its rays.
+            lightmap['validity'] = lightmap['validity'][0::4]
         entry['baked'] = 'Success' in entry['bake']
         entry['lights'] = json.loads((folder/'lights.json').read_text())
+        entry['materials'] = json.loads((folder/'materials.json').read_text())
         out[scene] = entry
     return out
 
@@ -255,7 +290,8 @@ def actual(out):
     result = {}
     for scene in scenes():
         guid = guid_of(project, scene)
-        entry = {'bake': log.get(scene, 'not baked'), 'messages': [], 'instances': [], 'lightmaps': [], 'lights': {'mixedMode': None, 'lights': []}}
+        entry = {'bake': log.get(scene, 'not baked'), 'messages': [], 'instances': [], 'lightmaps': [], 'lights': {'mixedMode': None, 'lights': []},
+                 'materials': []}
         entry['baked'] = entry['bake'] == 'bake True'
         if (out/'raw'/scene/'messages.txt').is_file():
             # Unbound's own notes of what its bake does not make yet are not the Editor's messages.
@@ -266,11 +302,16 @@ def actual(out):
             entry['instances'] = [r['path'] for r in json.loads(layout.read_text())['renderers']]
             description = json.loads((dump/'buffers.json').read_text())
             entry['lights'] = {'mixedMode': description['mixedMode'], 'lights': description['lights']}
+            flat = lambda image: {'width': image['width'], 'height': image['height'], 'texels': [v for texel in image['texels'] for v in texel]}  # noqa: E731
+            entry['materials'] = [{'albedo': flat(m['albedo']), 'emissive': flat(m['emissive'])}
+                                  for m in (description.get('indirect') or {}).get('materials', [])]
             for index, lightmap in enumerate(description['lightmaps']):
                 lightmap['occupancy'] = [int(v > 0) for v in (dump/f'occupancy{index}.u8').read_bytes()]
                 lightmap['charts'] = list(numbers(dump/f'chartIndex{index}.i32', 'i'))
                 lightmap['normals'] = numbers(dump/f'normal{index}.f32', 'f')
                 lightmap['direct'] = numbers(dump/f'irradianceDirect{index}.f32', 'f')
+                for part, name in (('indirect', 'irradianceIndirect'), ('validity', 'validity')):
+                    lightmap[part] = numbers(dump/f'{name}{index}.f32', 'f') if (dump/f'{name}{index}.f32').is_file() else None
                 entry['lightmaps'].append(lightmap)
         result[scene] = entry
     return result
@@ -284,8 +325,9 @@ def engine(label):
     (out/'raw').mkdir()
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = dict(os.environ, BAKED_BUFFERS_OUT=str(out/'raw'), BAKED_BUFFERS_AUTO='1', UNBOUND_BAKED_GI_BUFFERS=str(out/'buffers'))
+    # With a graphics device: the bake draws its renderers' material images.
     command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '1200', cli, 'test', '-p', str(project),
-               '--platform', 'EditMode']
+               '--platform', 'EditMode', '--graphics']
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print('engine exit', code, 'log', out/'engine.log')
@@ -336,8 +378,10 @@ def light_difference(got, want):
     return '; '.join(problems) or None
 
 
-def direct_difference(got, want):
+def direct_difference(got, want, tolerance=DIRECT_TOLERANCE):
     """Used texels exactly (the fourth value), their light within the tolerance."""
+    if got is None:
+        return 'not baked'
     if len(got) != len(want):
         return f'{len(got) // 4} texels, expected {len(want) // 4}'
     used = off = 0
@@ -347,20 +391,58 @@ def direct_difference(got, want):
         for c in range(3):
             error = abs(got[k + c] - want[k + c]) / max(1.0, abs(want[k + c]))
             worst = max(worst, error)
-            off += not error <= DIRECT_TOLERANCE
+            off += not error <= tolerance
     if used or off:
-        return f'{used} texels differ in being used, {off} values in their light (worst {worst:.3g}, tolerance {DIRECT_TOLERANCE:g})'
+        return f'{used} texels differ in being used, {off} values in their light (worst {worst:.3g}, tolerance {tolerance:g})'
     return None
+
+
+def validity_difference(got, want):
+    if got is None:
+        return 'not baked'
+    if len(got) != len(want):
+        return f'{len(got)} texels, expected {len(want)}'
+    off = [k for k in range(len(want)) if not abs(got[k] - want[k]) <= VALIDITY_TOLERANCE]
+    return f'{len(off)} of {len(want)} texels differ, first at {off[:6]}' if off else None
+
+
+def material_difference(got, want):
+    """Each instance's albedo and emission images: their sizes, and their texels within the tolerance."""
+    if len(got) != len(want):
+        return f'{len(got)} instances with material images, expected {len(want)}'
+    problems = []
+    for index, (mine, theirs) in enumerate(zip(got, want)):
+        for part in ('albedo', 'emissive'):
+            a, e = mine[part], theirs[part]
+            if (a['width'], a['height']) != (e['width'], e['height']):
+                problems.append(f"instance {index} {part} {a['width']}x{a['height']}, expected {e['width']}x{e['height']}")
+                continue
+            errors = [abs(x - y) / max(1.0, abs(y)) for x, y in zip(a['texels'], e['texels'])]
+            off = sum(not error <= MATERIAL_TOLERANCE for error in errors)
+            if off:
+                problems.append(f"instance {index} {part} {e['width']}x{e['height']}: {off} of {len(errors)} values differ (worst {max(errors):.3g})")
+    return '; '.join(problems) if problems else None
+
+
+def residuals():
+    """{record: (reason, problem)} of residuals.json next to this file (`{reason: {record:
+    problem}}`): known differences, each with the exact text the comparison gives it. They are
+    reported with every run; one that no longer differs, or differs otherwise, fails the run
+    until its entry is corrected."""
+    path = PROBE/'residuals.json'
+    listed = json.loads(path.read_text()) if path.is_file() else {}
+    return {key: (reason, problem) for reason, entries in listed.items() for key, problem in entries.items()}
 
 
 def compare(label):
     want, got = expected(reference_root(PROBE)), actual(WORK/label)
+    known = residuals()
     records = []
 
     def record(key, problem):
         records.append((key, problem))
         if problem:
-            print('FAIL', key, problem)
+            print('KNOWN' if key in known and known[key][1] == problem else 'FAIL', key, problem)
 
     def same(key, a, b):
         record(key, None if a == b else f'expected {b!r} actual {a!r}')
@@ -378,7 +460,7 @@ def compare(label):
             key = f'{scene}.lightmap{index}.'
             mine = a['lightmaps'][index] if index < len(a['lightmaps']) else None
             if mine is None or (mine['width'], mine['height'], mine['supersampling']) != (lightmap['width'], lightmap['height'], lightmap['supersampling']):
-                for part in ('instances', 'occupancy', 'charts', 'normals', 'direct'):
+                for part in ('instances', 'occupancy', 'charts', 'normals', 'direct', 'indirect', 'validity'):
                     record(key + part, 'no such lightmap of that size')
                 continue
             names = lambda entry, m: [entry['instances'][i] for i in m['instances']]  # noqa: E731
@@ -387,8 +469,18 @@ def compare(label):
             record(key + 'charts', differing(mine['charts'], lightmap['charts']))
             record(key + 'normals', normal_difference(mine['normals'], lightmap['normals']))
             record(key + 'direct', direct_difference(mine['direct'], lightmap['direct']))
-    failed = sum(problem is not None for _, problem in records)
-    print(f'bakedbuffers: {len(records) - failed}/{len(records)} records match; {failed} differ')
+            record(key + 'indirect', direct_difference(mine['indirect'], lightmap['indirect'], INDIRECT_TOLERANCE))
+            record(key + 'validity', validity_difference(mine['validity'], lightmap['validity']))
+        record(scene + '.materials', material_difference(a['materials'], e['materials']))
+    keys = {key for key, _ in records}
+    for key in sorted(set(known) - keys):
+        print('FAIL', key, 'a residual of no record')
+    changed = [key for key, problem in records if key in known and problem != known[key][1]]
+    for key in changed:
+        print('FAIL', key, f'the residual is listed as: {known[key][1]} (correct or remove it in residuals.json)')
+    residual = sum(key in known and problem == known[key][1] for key, problem in records)
+    failed = sum(problem is not None and key not in known for key, problem in records) + len(changed) + len(set(known) - keys)
+    print(f'bakedbuffers: {len(records) - failed - residual}/{len(records)} records match; {failed} differ, {residual} known residuals')
     return int(failed != 0)
 
 
