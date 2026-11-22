@@ -15,7 +15,7 @@ using UnityEngine.AI;
 /// frame by frame at a fixed 0.02 s step (paths, avoidance, an off-mesh link, a carving obstacle).
 /// <c>NAVMESH_PROBE_ONLY</c> limits the run to scenarios whose name starts with it.
 /// </summary>
-public class NavProbe : MonoBehaviour
+public partial class NavProbe : MonoBehaviour
 {
     const int Frames = 250;
     static string Only => Environment.GetEnvironmentVariable("NAVMESH_PROBE_ONLY") ?? "";
@@ -61,6 +61,12 @@ public class NavProbe : MonoBehaviour
     void Start()
     {
         Time.captureDeltaTime = 0.02f;
+        if (Environment.GetEnvironmentVariable("NAVMESH_PROBE_SURFACE_HEIGHT") == "1")
+        {
+            m_Done = true;
+            StartCoroutine(MeasureSurfaceHeights());
+            return;
+        }
         Scenario("settings", Settings);
         Scenario("baked", () => Triangulation("baked"));
         Scenario("sample", Sample);
