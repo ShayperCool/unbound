@@ -2,6 +2,7 @@
 """Record Texture2D memory before and after reinitialization on each graphics device."""
 import argparse
 import hashlib
+import json
 from pathlib import Path
 import sys
 
@@ -15,6 +16,13 @@ CAPTURE = 'TEXTURE_RESIZE_MEMORY_OUT'
 DEVICES = ('opengl', 'metal')
 HOST_DEVICE = 'metal' if sys.platform == 'darwin' else 'opengl'
 CAPTURE_SEAL = 'capture.sha256'
+
+
+def include_image_conversion(project):
+    manifest = project/'Packages/manifest.json'
+    settings = json.loads(manifest.read_text())
+    settings['dependencies']['com.unity.modules.imageconversion'] = '1.0.0'
+    manifest.write_text(json.dumps(settings, indent=2) + '\n')
 
 
 def directory(label, device):
@@ -86,7 +94,7 @@ def main():
         raise SystemExit(f'{out}: expected a fresh run directory')
     if args.mode == 'record':
         value_probe.record(PROBE, 'RecordTextureResizeMemory.Record', CAPTURE, str(out), batch=True,
-                           macos_batch=True, base=BASE)
+                           macos_batch=True, base=BASE, configure=include_image_conversion)
         with (out/CAPTURE_SEAL).open('x') as seal:
             seal.write('\n'.join(capture_fingerprints(out, device)) + '\n')
         return 0
@@ -94,7 +102,7 @@ def main():
     engine_args = ['--headless', '12']
     if device == 'opengl':
         engine_args.append('--force-glcore')
-    return value_probe.gate(PROBE, CAPTURE, str(out), 0, engine_args, base=BASE,
+    return value_probe.gate(PROBE, CAPTURE, str(out), 0, engine_args, base=BASE, configure=include_image_conversion,
                             profile='opengl' if device == 'opengl' else None)
 
 
