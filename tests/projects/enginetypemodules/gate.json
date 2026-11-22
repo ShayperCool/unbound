@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/enginetypemodules/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ; \\d+ listed residuals",
+  "engine_paths": [
+    "managed/UnityEngine/UnityEngine.csproj",
+    "managed/Unbound.ApiTools/FacadeGenerator.cs",
+    "managed/UnityEngine/Runtime/GameDomain.cs"
+  ]
+}

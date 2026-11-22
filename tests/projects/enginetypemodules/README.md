@@ -14,8 +14,12 @@ device.
 - `event.argument.*`: the type name a UnityEvent stores (as JsonUtility writes it) for an object
   argument of an engine component or a script object: the umbrella name, not the module.
 
-A type Unbound does not implement answers `<null>`; the comparison lists such rows as missing (API
-coverage) and fails on every other difference.
+`residuals.json` lists the known differences by reason; each is printed and counted, and every other
+difference fails. Unbound keeps the engine API in one assembly (docs/COMPATIBILITY_GAPS.md, Q694): a
+type Unity keeps in another module names `UnityEngine.CoreModule` (3391 rows), and a type of another
+module named with the core module resolves (3 rows). Six compiler-generated fixed-buffer types of
+private fields are not declared. Unity's `UnityEngine.dll` defines its own obsolete `ADBannerView` and
+`ADInterstitialAd` without their nested types, which `Type.GetType` through `UnityEngine` finds (16 rows).
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1

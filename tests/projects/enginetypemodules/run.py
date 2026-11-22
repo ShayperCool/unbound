@@ -7,8 +7,9 @@ answers, `engine` Unbound's, `check` runs Unbound and compares with the referenc
 reflected type names, so they do not depend on the OS or the graphics device; the reference was
 recorded with the macOS Editor in batch mode (on Linux `native` uses the shared GPU Editor runner).
 
-A type Unbound does not implement answers `<null>`: such rows are listed as missing (API coverage,
-the gap report's subject) and every other differing row fails."""
+residuals.json ({reason: [key, ...]}) lists known differences: each is printed and counted and does
+not fail the comparison; a listed row that matches is reported. Every other differing row fails.
+The other API coverage is api-check's subject: a type Unbound does not implement answers `<null>`."""
 import argparse
 import json
 import os
@@ -124,20 +125,29 @@ def rows(path):
     return result
 
 
+def residuals():
+    """{key: reason} of residuals.json ({reason: [key, ...]})."""
+    path = ROOT/'residuals.json'
+    return {key: reason for reason, keys in (json.loads(path.read_text()) if path.exists() else {}).items() for key in keys}
+
+
 def compare(candidate):
     expected, actual = rows(reference_file(ROOT, 'jsonl')), rows(candidate)
-    failed = missing = 0
+    known = residuals()
+    failed = listed = 0
     for key in sorted(expected.keys() | actual.keys()):
         if key in expected and key in actual and expected[key] == actual[key]:
+            if key in known:
+                print('LISTED BUT MATCHING', key)
             continue
-        if key.startswith('type.') and actual.get(key) == '<null>' and expected.get(key) != '<null>':
-            print('MISSING', key, 'expected', repr(expected.get(key)))
-            missing += 1
+        if key in known:
+            listed += 1
+            print('RESIDUAL', key, 'expected', repr(expected.get(key)), 'actual', repr(actual.get(key)), '--', known[key])
             continue
         print('FAIL', key, 'expected', repr(expected.get(key)), 'actual', repr(actual.get(key)))
         failed += 1
     matched = sum(key in actual and actual[key] == value for key, value in expected.items())
-    print(f'{matched}/{len(expected)} records match; {failed} differ; {missing} types missing in Unbound')
+    print(f'{matched}/{len(expected)} records match; {failed} differ; {listed} listed residuals')
     return int(failed != 0)
 
 
