@@ -13,7 +13,8 @@ script in both).
 
 Settings: one view per --position X,Y,Z, each with its --rotation X,Y,Z (Euler degrees), or
 --target NAME (an active object; of several, the one nearest --target-near X,Y,Z) with each
---position a camera's offset from it, looking at it;
+--position a camera's offset from it, looking at it, or --each-effect (one view per effect of the
+scene, each from the one --position as an offset from that effect);
 [--fov F] [--size WxH] [--step SECONDS] [--frames N,N,...] [--seed N: every effect's seed, so
 runs draw alike] [--list-renderers: the renderers of the scene's active objects, which compare
 then tells apart] [--vulkan: on the Vulkan device instead of OpenGL Core]. compare prints, per frame, the mean and worst max-channel difference and the
@@ -59,9 +60,12 @@ def settings(args):
     if not frames or frames[0] < 1:
         raise SystemExit('--frames: frame numbers from 1')
     rotations = args.rotation or []
-    if not args.target and len(rotations) != len(args.position):
+    each = bool(getattr(args, 'each_effect', False))
+    if each and (args.target or rotations or len(args.position) != 1):
+        raise SystemExit('--each-effect: one --position (the offset from each effect), no --rotation or --target')
+    if not each and not args.target and len(rotations) != len(args.position):
         raise SystemExit('one --rotation per --position, or --target')
-    if args.target:
+    if args.target or each:
         # The camera looks back along its offset: none, or straight up or down, leaves its
         # roll undecided.
         for x, y, z in args.position:
@@ -73,7 +77,7 @@ def settings(args):
             'targetNear': dict(zip('xyz', args.target_near or (0, 0, 0))), 'views': views,
             'fieldOfView': args.fov, 'width': width, 'height': height, 'deltaTime': args.step, 'frames': frames,
             'seed': args.seed, 'keep': getattr(args, 'keep', '') or '', 'soleCameras': bool(getattr(args, 'sole_cameras', False)),
-            'listRenderers': bool(getattr(args, 'list_renderers', False)), 'selfTestThrowAtFrame': getattr(args, 'throw_at', 0)}
+            'listRenderers': bool(getattr(args, 'list_renderers', False)), 'eachEffect': each, 'selfTestThrowAtFrame': getattr(args, 'throw_at', 0)}
 
 
 def prepare(args, fixtures=None):
@@ -155,6 +159,20 @@ def compare(args):
     for key in sorted(set(settings_a) | set(settings_b)):
         if settings_a.get(key) != settings_b.get(key):
             print(f'settings differ: {key}: {settings_a.get(key)!r} in {args.a}, {settings_b.get(key)!r} in {args.b}')
+            worst = 1
+    # The effects' rows (alive counts per system at each shot) that differ.
+    def effect_rows(capture):
+        rows = {}
+        for line in (capture/'values.jsonl').read_text().splitlines():
+            row = json.loads(line)
+            if row.get('k', '').startswith('effect/'):
+                rows[row['k']] = row['v']
+        return rows
+    rows_a, rows_b = effect_rows(first), effect_rows(second)
+    for key in sorted(rows_a.keys() | rows_b.keys()):
+        if rows_a.get(key) != rows_b.get(key):
+            print(f'{key}: {args.a}: {rows_a.get(key)}')
+            print(f'{key}: {args.b}: {rows_b.get(key)}')
             worst = 1
     lists = [capture/'renderers.txt' for capture in (first, second)]
     if all(path.is_file() for path in lists):
@@ -254,6 +272,8 @@ def main():
         run.add_argument('--seed', type=int, default=-1)
         run.add_argument('--sole-cameras', action='store_true', help='every other camera of the scene turned off')
         run.add_argument('--list-renderers', action='store_true', help="the scene's renderers listed in renderers.txt")
+        run.add_argument('--each-effect', action='store_true',
+                         help='one view per effect of the scene, from --position as an offset from it, looking at it')
         run.add_argument('--vulkan', action='store_true', help='the Vulkan device (the Editor on the GPU display :0)')
         run.add_argument('--keep', choices=('effects', 'others'),
                          help="only that kind of renderer under --target's parent is drawn")

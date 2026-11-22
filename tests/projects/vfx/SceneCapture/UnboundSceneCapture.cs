@@ -46,6 +46,9 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         public bool soleCameras;
         /// <summary>The scene's renderers listed in `renderers.txt` beside the shots (<see cref="ListRenderers"/>).</summary>
         public bool listRenderers;
+        /// <summary>One view per effect of the scene instead of the views given: each from the
+        /// first view's position as an offset from the effect, looking at it (<see cref="EachEffect"/>).</summary>
+        public bool eachEffect;
         /// <summary>For scene_capture.py's self-test only: the frame whose shot fails (0: none).</summary>
         public int selfTestThrowAtFrame;
         public int[] frames = { 30 };
@@ -224,6 +227,62 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         m_Out.Append("{\"k\":\"renderers\",\"v\":").Append(lines.Count).Append("}\n");
     }
 
+    /// <summary>One row per effect at a shot: its alive particles, and each of its systems'
+    /// alive count, capacity and sleeping state (as the effect last read them back), in the
+    /// order of the effects' names and places.</summary>
+    void Effects()
+    {
+        var effects = new System.Collections.Generic.List<UnityEngine.VFX.VisualEffect>(FindObjectsByType<UnityEngine.VFX.VisualEffect>(FindObjectsSortMode.None));
+        if (effects.Count > 64) return;
+        effects.Sort((a, b) =>
+        {
+            int order = string.CompareOrdinal(a.name, b.name);
+            if (order != 0) return order;
+            Vector3 p = a.transform.position, q = b.transform.position;
+            return p.x != q.x ? p.x.CompareTo(q.x) : p.y != q.y ? p.y.CompareTo(q.y) : p.z.CompareTo(q.z);
+        });
+        var names = new System.Collections.Generic.List<string>();
+        for (int i = 0; i < effects.Count; i++)
+        {
+            var effect = effects[i];
+            m_Out.Append("{\"k\":\"effect/").Append(m_Frame.ToString("000")).Append('/').Append(i).Append("\",\"v\":\"").Append(effect.name)
+                .Append(" alive=").Append(effect.aliveParticleCount).Append(effect.culled ? " culled" : "");
+            names.Clear();
+            effect.GetParticleSystemNames(names);
+            foreach (var name in names)
+            {
+                var info = effect.GetParticleSystemInfo(name);
+                m_Out.Append(' ').Append(name).Append(':').Append(info.aliveCount).Append('/').Append(info.capacity).Append(info.sleeping ? "s" : "");
+            }
+            m_Out.Append("\"}\n");
+        }
+    }
+
+    /// <summary>Replaces the views by one per active effect, in the order of the effects' names
+    /// and places, and records which view is which effect's.</summary>
+    void EachEffect()
+    {
+        var effects = new System.Collections.Generic.List<UnityEngine.VFX.VisualEffect>(FindObjectsByType<UnityEngine.VFX.VisualEffect>(FindObjectsSortMode.None));
+        effects.Sort((a, b) =>
+        {
+            int order = string.CompareOrdinal(a.name, b.name);
+            if (order != 0) return order;
+            Vector3 p = a.transform.position, q = b.transform.position;
+            return p.x != q.x ? p.x.CompareTo(q.x) : p.y != q.y ? p.y.CompareTo(q.y) : p.z.CompareTo(q.z);
+        });
+        if (effects.Count == 0) throw new InvalidOperationException("UnboundSceneCapture: the scene has no active effect");
+        var offset = m_Settings.views[0].position;
+        var rotation = Quaternion.LookRotation(-offset).eulerAngles;
+        m_Settings.target = "";
+        m_Settings.views = new View[effects.Count];
+        for (int i = 0; i < effects.Count; i++)
+        {
+            var at = effects[i].transform.position;
+            m_Settings.views[i] = new View { position = at + offset, rotation = rotation };
+            m_Out.Append("{\"k\":\"view/").Append(i).Append("\",\"v\":\"").Append(effects[i].name).Append(" at ").Append(Place(at)).Append("\"}\n");
+        }
+    }
+
     /// <summary>Turns off every camera but the capture's (recorded).</summary>
     void SoleCameras()
     {
@@ -254,6 +313,7 @@ public sealed class UnboundSceneCapture : MonoBehaviour
     {
         if (m_Frame == m_Settings.selfTestThrowAtFrame) throw new InvalidOperationException("UnboundSceneCapture: the self-test's failure at frame " + m_Frame);
         if (Array.IndexOf(m_Settings.frames, m_Frame) < 0) return;
+        Effects();
         // The clocks the frame's shaders read (as the pipeline last set them).
         string frame = m_Frame.ToString("000");
         m_Out.Append("{\"k\":\"time/").Append(frame).Append("\",\"v\":\"").Append(Time.time.ToString("R")).Append(' ')
@@ -284,6 +344,7 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         try
         {
             Seed();
+            if (m_Settings.eachEffect) EachEffect();
             m_Cameras = new Camera[m_Settings.views.Length];
             m_Targets = new RenderTexture[m_Settings.views.Length];
             for (int i = 0; i < m_Cameras.Length; i++) m_Cameras[i] = MakeCamera(m_Settings.views[i], i);
