@@ -240,23 +240,8 @@ namespace UnityEngine
 
         /// <summary>As the Editor in Play mode: the URL, whatever it is (empty for null), goes to the
         /// desktop's opener, <c>xdg-open</c> on Linux, <c>open</c> on macOS, without a message
-        /// (measured: tests/projects/appfacts). <c>UNBOUND_OPEN_URL</c> names another program, so
-        /// tests never start a browser.</summary>
-        public static void OpenURL(string url)
-        {
-            string opener = Environment.GetEnvironmentVariable("UNBOUND_OPEN_URL");
-            if (string.IsNullOrEmpty(opener)) opener = OperatingSystem.IsMacOS() ? "open" : "xdg-open";
-            try
-            {
-                var start = new System.Diagnostics.ProcessStartInfo(opener) { UseShellExecute = false };
-                start.ArgumentList.Add(url ?? "");
-                System.Diagnostics.Process.Start(start)?.Dispose();
-            }
-            catch (Exception e)
-            {
-                Native.Log((int)LogType.Warning, $"{Unbound.Runtime.Log.DiagnosticPrefix}Application.OpenURL could not run {opener}: {e.Message}");
-            }
-        }
+        /// (measured: tests/projects/appfacts; <see cref="DesktopOpener"/>).</summary>
+        public static void OpenURL(string url) => DesktopOpener.Open(url ?? "", "Application.OpenURL");
 
         public static bool CanStreamedLevelBeLoaded(int levelIndex) => levelIndex >= 0 && levelIndex < ProjectInfo.BuildScenes.Count;
 

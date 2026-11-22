@@ -1,0 +1,7 @@
+{
+  "A .giparams file's LightmapParameters does not load in Unbound (its class has no implementation), so the probe has no object to open or ask about": [
+    "open.asset:Assets/Native/Params.giparams",
+    "can.none:Assets/Native/Params.giparams",
+    "can.validate:Assets/Native/Params.giparams"
+  ]
+}

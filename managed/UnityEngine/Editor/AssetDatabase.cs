@@ -243,7 +243,7 @@ namespace UnityEditor
         }
 
         /// <summary>The importer of a listed asset, by its path; null for one the database does not list.</summary>
-        static string ImporterOf(string path)
+        internal static string ImporterOf(string path)
         {
             _ = Entries;
             return !string.IsNullOrEmpty(path) && s_ByPath.TryGetValue(path, out var e) ? e.Importer : null;
