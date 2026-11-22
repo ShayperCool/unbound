@@ -174,11 +174,56 @@ namespace Unbound.Tests
 
                 // Sticky error state: non-Success code is never overwritten and skips the syscall.
                 err = new Baselib_ErrorState { code = Baselib_ErrorCode.InvalidArgument };
+                var skipped = Baselib_Memory_AllocatePages(page, 1UL, 1UL, Baselib_Memory_PageState.ReadWrite, &err);
+                Assert.Equal(IntPtr.Zero, skipped.ptr);
+                Assert.Equal(0UL, skipped.pageCount);
+                Assert.Equal(Baselib_ErrorCode.InvalidArgument, err.code);
                 Baselib_Memory_SetPageState(valid.ptr, 123UL, 1UL, Baselib_Memory_PageState.ReadWrite, &err);
                 Assert.Equal(Baselib_ErrorCode.InvalidArgument, err.code);
                 Baselib_Memory_SetPageState(valid.ptr, page, 1UL, Baselib_Memory_PageState.Reserved, &err);
                 Assert.Equal(Baselib_ErrorCode.InvalidArgument, err.code);
+                Baselib_Memory_ReleasePages(valid, &err);
+                Assert.Equal(Baselib_ErrorCode.InvalidArgument, err.code);
                 if (OperatingSystem.IsLinux()) Assert.Equal("rw-p", LinuxVmaPerms(valid.ptr));
+                *(byte*)valid.ptr = 0x5A;
+                Assert.Equal((byte)0x5A, *(byte*)valid.ptr);
+
+                // Syscall failure paths: capture POSIX errno via LibraryImport SetLastError.
+                err = default;
+                ulong hugePages = ((ulong)long.MaxValue / page) / 2UL;
+                var oom = Baselib_Memory_AllocatePages(page, hugePages, 1UL, Baselib_Memory_PageState.ReadWrite, &err);
+                Assert.Equal(IntPtr.Zero, oom.ptr);
+                Assert.Equal(Baselib_ErrorCode.OutOfMemory, err.code);
+                Assert.Equal(Baselib_ErrorState_NativeErrorCodeType.PlatformDefined, err.nativeErrorCodeType);
+                Assert.Equal(12UL, err.nativeErrorCode); // ENOMEM
+
+                err = default;
+                Baselib_Memory_SetPageState(valid.ptr + 1, page, 1UL, Baselib_Memory_PageState.ReadOnly, &err);
+                Assert.Equal(Baselib_ErrorCode.InvalidAddressRange, err.code);
+                Assert.Equal(Baselib_ErrorState_NativeErrorCodeType.PlatformDefined, err.nativeErrorCodeType);
+                Assert.Equal(22UL, err.nativeErrorCode); // EINVAL (mprotect)
+
+                err = default;
+                Baselib_Memory_SetPageState(valid.ptr + 1, page, 1UL, Baselib_Memory_PageState.Reserved, &err);
+                Assert.Equal(Baselib_ErrorCode.InvalidAddressRange, err.code);
+                Assert.Equal(Baselib_ErrorState_NativeErrorCodeType.PlatformDefined, err.nativeErrorCodeType);
+                Assert.Equal(22UL, err.nativeErrorCode); // EINVAL (madvise)
+
+                if (OperatingSystem.IsLinux())
+                {
+                    // Address 0x1000 is below mmap_min_addr on Linux and never mapped: mprotect fails with ENOMEM.
+                    err = default;
+                    Baselib_Memory_SetPageState((IntPtr)page, page, 1UL, Baselib_Memory_PageState.ReadOnly, &err);
+                    Assert.Equal(Baselib_ErrorCode.InvalidAddressRange, err.code);
+                    Assert.Equal(Baselib_ErrorState_NativeErrorCodeType.PlatformDefined, err.nativeErrorCodeType);
+                    Assert.Equal(12UL, err.nativeErrorCode); // ENOMEM
+                }
+
+                err = default;
+                Baselib_Memory_ReleasePages(new Baselib_Memory_PageAllocation { ptr = valid.ptr + 1, pageSize = page, pageCount = 1UL }, &err);
+                Assert.Equal(Baselib_ErrorCode.InvalidAddressRange, err.code);
+                Assert.Equal(Baselib_ErrorState_NativeErrorCodeType.PlatformDefined, err.nativeErrorCodeType);
+                Assert.Equal(22UL, err.nativeErrorCode); // EINVAL (munmap)
 
                 err = default;
                 Baselib_Memory_ReleasePages(new Baselib_Memory_PageAllocation { ptr = valid.ptr, pageSize = 123UL, pageCount = 1UL }, &err);

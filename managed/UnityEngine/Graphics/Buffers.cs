@@ -282,7 +282,7 @@ namespace UnityEngine
             : this(target, (target & (Target.Vertex | Target.Index)) == target ? UsageFlags.LockBufferForWrite : UsageFlags.None, count, stride) { }
 
         /// <summary>The release's checks and messages (tests/projects/srpmembers create.*, usage.*). The
-        /// size limit is checked where SystemInfo.maxGraphicsBufferSize is measured (Metal).</summary>
+        /// size limit is checked where SystemInfo.maxGraphicsBufferSize is measured (Metal, OpenGL Core and Vulkan).</summary>
         public GraphicsBuffer(Target target, UsageFlags usageFlags, int count, int stride)
         {
             const Target ComputeTargets = Target.Structured | Target.Raw | Target.Append | Target.Counter | Target.IndirectArguments;

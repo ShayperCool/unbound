@@ -15,7 +15,8 @@ namespace Unbound.Tests
     /// and height while its images take the scaled size (rounded up), existing ones remade when
     /// next used; a camera drawing into one has a scaled pixelRect and scaledPixelWidth but an
     /// unscaled pixelWidth; ReadPixels past the scaled images is refused, inside them reads zeros.
-    /// The Linux Editor's devices do not scale. A stand-in native side keeps the uploaded packets.</summary>
+    /// On Linux, OpenGL Core does not scale while Vulkan scales with 20-step 0.05 quantization.
+    /// A stand-in native side keeps the uploaded packets.</summary>
     public unsafe class DynamicResolutionTests : IDisposable
     {
         const BindingFlags PrivateStatic = BindingFlags.NonPublic | BindingFlags.Static;

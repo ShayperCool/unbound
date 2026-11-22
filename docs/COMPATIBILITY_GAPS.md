@@ -481,7 +481,7 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       and `GraphicsSettings` asset values, `Time.captureDeltaTimeRational`, serialized component
       values (`AudioReverbFilter`/`AudioChorusFilter`/`AudioReverbZone`, physical camera,
       `ArticulationBody`), the
-      the remaining stubbed `SystemInfo` caps (Q636 now answers `maxGraphicsBufferSize` as 2 GiB on
+      remaining stubbed `SystemInfo` caps (Q636 now answers `maxGraphicsBufferSize` as 2 GiB on
       OpenGL Core and Vulkan, `GetTiledRenderTargetStorageSize` on Vulkan, and
       `supportsDynamicResolution` / `ScalableBufferManager` 20-step quantization on Vulkan from
       `tests/projects/corecaps`, plus the other device limits from `tests/projects/urp`

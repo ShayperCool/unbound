@@ -91,7 +91,7 @@ namespace Unbound.Runtime.Baselib
 
     /// <summary>Virtual memory page allocation and protection backed by POSIX mmap/munmap/mprotect/madvise,
     /// matching the Unity 6000.0.71f1 Linux Editor (tests/projects/corecaps <c>baselib.*</c>).</summary>
-    internal static unsafe class BaselibMemory
+    internal static unsafe partial class BaselibMemory
     {
         const int PROT_NONE = 0, PROT_READ = 1, PROT_WRITE = 2, PROT_EXEC = 4;
         const int MAP_PRIVATE = 0x02;
@@ -101,29 +101,17 @@ namespace Unbound.Runtime.Baselib
         const int ENOMEM = 12, EACCES = 13, EINVAL = 22;
         static readonly IntPtr MAP_FAILED = (IntPtr)(-1);
 
-        [DllImport("libc", EntryPoint = "mmap")]
-        static extern IntPtr Mmap(IntPtr addr, nuint length, int prot, int flags, int fd, nint offset);
+        [LibraryImport("libc", EntryPoint = "mmap", SetLastError = true)]
+        private static partial IntPtr Mmap(IntPtr addr, nuint length, int prot, int flags, int fd, nint offset);
 
-        [DllImport("libc", EntryPoint = "munmap")]
-        static extern int Munmap(IntPtr addr, nuint length);
+        [LibraryImport("libc", EntryPoint = "munmap", SetLastError = true)]
+        private static partial int Munmap(IntPtr addr, nuint length);
 
-        [DllImport("libc", EntryPoint = "mprotect")]
-        static extern int Mprotect(IntPtr addr, nuint length, int prot);
+        [LibraryImport("libc", EntryPoint = "mprotect", SetLastError = true)]
+        private static partial int Mprotect(IntPtr addr, nuint length, int prot);
 
-        [DllImport("libc", EntryPoint = "madvise")]
-        static extern int Madvise(IntPtr addr, nuint length, int advice);
-
-        [DllImport("libc", EntryPoint = "__errno_location")]
-        static extern int* LinuxErrnoLocation();
-
-        [DllImport("libc", EntryPoint = "__error")]
-        static extern int* MacErrnoLocation();
-
-        static int LastErrno()
-        {
-            int* p = OperatingSystem.IsMacOS() ? MacErrnoLocation() : LinuxErrnoLocation();
-            return p != null ? *p : 0;
-        }
+        [LibraryImport("libc", EntryPoint = "madvise", SetLastError = true)]
+        private static partial int Madvise(IntPtr addr, nuint length, int advice);
 
         static int MapAnonymousFlag => OperatingSystem.IsMacOS() ? MAP_ANON_MACOS : MAP_ANONYMOUS_LINUX;
 
@@ -221,7 +209,7 @@ namespace Unbound.Runtime.Baselib
             IntPtr mapped = Mmap(IntPtr.Zero, (nuint)mapSize, prot | (int)extPageState, MAP_PRIVATE | MapAnonymousFlag, -1, 0);
             if (mapped == MAP_FAILED)
             {
-                int errno = LastErrno();
+                int errno = Marshal.GetLastPInvokeError();
                 var code = errno switch
                 {
                     ENOMEM => Baselib_ErrorCode.OutOfMemory,
@@ -264,14 +252,14 @@ namespace Unbound.Runtime.Baselib
             {
                 if (Madvise(address, (nuint)size, MADV_DONTNEED) != 0)
                 {
-                    int errno = LastErrno();
+                    int errno = Marshal.GetLastPInvokeError();
                     BaselibErrors.Set(error, MapProtectionError(errno), errno);
                     return;
                 }
             }
             if (Mprotect(address, (nuint)size, prot | (int)extPageState) != 0)
             {
-                int errno = LastErrno();
+                int errno = Marshal.GetLastPInvokeError();
                 BaselibErrors.Set(error, MapProtectionError(errno), errno);
             }
         }
@@ -292,7 +280,7 @@ namespace Unbound.Runtime.Baselib
             }
             if (Munmap(allocation.ptr, (nuint)size) != 0)
             {
-                int errno = LastErrno();
+                int errno = Marshal.GetLastPInvokeError();
                 BaselibErrors.Set(error, errno == EINVAL ? Baselib_ErrorCode.InvalidAddressRange : Baselib_ErrorCode.UnexpectedError, errno);
             }
         }
