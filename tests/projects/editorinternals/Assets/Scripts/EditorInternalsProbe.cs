@@ -14,6 +14,10 @@ namespace EditorInternalsProbe
 
     public class ExpandedAsset : ScriptableObject { }
 
+    public class OtherBehaviour : MonoBehaviour { }
+
+    public class OtherAsset : ScriptableObject { }
+
     /// <summary>
     /// InternalEditorUtility members that editor scripts use: whether a script reload is requested,
     /// repainting, the Inspector's expanded state of objects, and the layer masks of the layer
@@ -90,6 +94,21 @@ namespace EditorInternalsProbe
             InternalEditorUtility.SetIsInspectorExpanded(asset2, true);
             Put("expanded.again", string.Join("|", new (string, UnityEngine.Object)[] { ("transform", go.transform), ("transform2", go2.transform), ("material", material), ("material2", material2), ("asset", asset), ("asset2", asset2), ("camera", objects[2].Item2) }
                 .Select(o => o.Item1 + "=" + Try(() => InternalEditorUtility.GetIsInspectorExpanded(o.Item2)))));
+            // Scripts: whether another script's objects follow one script's state. At this point
+            // ExpandedBehaviour is collapsed and ExpandedAsset expanded again.
+            var otherBehaviour = go2.AddComponent<OtherBehaviour>();
+            var otherAsset = ScriptableObject.CreateInstance<OtherAsset>();
+            Func<string> scripts = () => "behaviour=" + Try(() => InternalEditorUtility.GetIsInspectorExpanded(objects[4].Item2)) + "|otherBehaviour=" + Try(() => InternalEditorUtility.GetIsInspectorExpanded(otherBehaviour))
+                + "|asset=" + Try(() => InternalEditorUtility.GetIsInspectorExpanded(asset)) + "|otherAsset=" + Try(() => InternalEditorUtility.GetIsInspectorExpanded(otherAsset));
+            Put("expanded.scripts", scripts());
+            InternalEditorUtility.SetIsInspectorExpanded(otherBehaviour, true);
+            Put("expanded.scripts.otherBehaviourExpanded", scripts());
+            InternalEditorUtility.SetIsInspectorExpanded(otherAsset, false);
+            Put("expanded.scripts.otherAssetCollapsed", scripts());
+            InternalEditorUtility.SetIsInspectorExpanded(objects[4].Item2, true);
+            InternalEditorUtility.SetIsInspectorExpanded(otherBehaviour, false);
+            Put("expanded.scripts.swapped", scripts());
+
             // A new object made after its type was collapsed, and a destroyed one.
             var go3 = new GameObject("Expanded3");
             Put("expanded.newAfter", "gameObject=" + Try(() => InternalEditorUtility.GetIsInspectorExpanded(go3)) + "|transform=" + Try(() => InternalEditorUtility.GetIsInspectorExpanded(go3.transform)) + "|camera=" + Try(() => InternalEditorUtility.GetIsInspectorExpanded(go3.AddComponent<Camera>())) + "|asset=" + Try(() => InternalEditorUtility.GetIsInspectorExpanded(ScriptableObject.CreateInstance<ExpandedAsset>())));

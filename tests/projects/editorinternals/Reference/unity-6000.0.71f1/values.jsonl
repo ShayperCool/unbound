@@ -5,6 +5,10 @@
 {"k":"expanded.collapsed","v":"gameObject=False|transform=False|camera=False|light=False|behaviour=False|material=False|asset=False|texture=False"}
 {"k":"expanded.collapsed.others","v":"gameObject2=False|transform2=False|camera2=False|behaviour2=False|material2=False|asset2=False|otherType=True"}
 {"k":"expanded.again","v":"transform=True|transform2=True|material=False|material2=True|asset=True|asset2=True|camera=False"}
+{"k":"expanded.scripts","v":"behaviour=False|otherBehaviour=True|asset=True|otherAsset=True"}
+{"k":"expanded.scripts.otherBehaviourExpanded","v":"behaviour=False|otherBehaviour=True|asset=True|otherAsset=True"}
+{"k":"expanded.scripts.otherAssetCollapsed","v":"behaviour=False|otherBehaviour=True|asset=True|otherAsset=False"}
+{"k":"expanded.scripts.swapped","v":"behaviour=True|otherBehaviour=False|asset=True|otherAsset=False"}
 {"k":"expanded.newAfter","v":"gameObject=False|transform=True|camera=False|asset=True"}
 {"k":"expanded.destroyed","v":"False|set=ok"}
 {"k":"layers.named","v":"Default,TransparentFX,Ignore Raycast,Water,UI"}

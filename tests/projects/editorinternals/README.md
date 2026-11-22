@@ -8,7 +8,9 @@ Records Unity 6000.0.71f1 `InternalEditorUtility` members that editor scripts us
   components, a script component, a ScriptableObject, a texture (expanded) and a material
   (collapsed); null and a destroyed object; after collapsing each object, the other objects of the
   same types (collapsed with them, also ones made afterwards, except another material) and an
-  object of another type; expanding one object of a type again.
+  object of another type; expanding one object of a type again; `expanded.scripts.*`: a second
+  MonoBehaviour and a second ScriptableObject class, each changed while the first is in the other
+  state (each script class has its own state).
 - `layers.*`: the named layers, `ConcatenatedLayersMaskToLayerMask` (bit n is the n-th named layer;
   bits past the last one name nothing) and `LayerMaskToConcatenatedLayersMask` (a layer without a
   name counts as the named layer before it) over lists of masks.

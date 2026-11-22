@@ -32,6 +32,8 @@ namespace UnityEngine.Tests
 
         public class CollapsibleAsset : ScriptableObject { }
 
+        public class OtherCollapsibleAsset : ScriptableObject { }
+
         [Fact]
         public void TheExpandedStateIsOneForATypeAndAMaterialsOwn()
         {
@@ -66,6 +68,26 @@ namespace UnityEngine.Tests
                 Assert.True(InternalEditorUtility.GetIsInspectorExpanded(go.transform));
                 InternalEditorUtility.SetIsInspectorExpanded(behaviour2, true);
                 Assert.True(InternalEditorUtility.GetIsInspectorExpanded(behaviour));
+
+                // Each script class has its own state, both ways (the probe's expanded.scripts.*).
+                var otherAsset = ScriptableObject.CreateInstance<OtherCollapsibleAsset>();
+                try
+                {
+                    Assert.True(InternalEditorUtility.GetIsInspectorExpanded(otherAsset));
+                    InternalEditorUtility.SetIsInspectorExpanded(asset, true);
+                    InternalEditorUtility.SetIsInspectorExpanded(otherAsset, false);
+                    Assert.True(InternalEditorUtility.GetIsInspectorExpanded(asset));
+                    Assert.False(InternalEditorUtility.GetIsInspectorExpanded(otherAsset));
+                    InternalEditorUtility.SetIsInspectorExpanded(other, false);
+                    Assert.True(InternalEditorUtility.GetIsInspectorExpanded(behaviour));
+                    Assert.False(InternalEditorUtility.GetIsInspectorExpanded(other));
+                }
+                finally
+                {
+                    InternalEditorUtility.SetIsInspectorExpanded(otherAsset, true);
+                    InternalEditorUtility.SetIsInspectorExpanded(other, true);
+                    Object.DestroyImmediate(otherAsset);
+                }
 
                 // A material's state is its own.
                 InternalEditorUtility.SetIsInspectorExpanded(material2, true);
