@@ -37,7 +37,7 @@ pub fn bakes_direct(light: &Light, mixed: MixedMode) -> bool {
 }
 
 /// A point through a column-major matrix.
-fn point(m: &[f32; 16], p: [f32; 3]) -> [f32; 3] {
+pub fn point(m: &[f32; 16], p: [f32; 3]) -> [f32; 3] {
     std::array::from_fn(|r| m[r] * p[0] + m[4 + r] * p[1] + m[8 + r] * p[2] + m[12 + r])
 }
 

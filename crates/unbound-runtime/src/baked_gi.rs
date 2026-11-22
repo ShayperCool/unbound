@@ -1,7 +1,8 @@
-//! `baked-gi-bake`: Unbound's bake of a scene's baked lightmaps for the renderers and meshes the
-//! managed side sends: the layout of the lightmaps (unbound_gi::baked::atlas) and, of each
-//! lightmap, its texels before lighting (unbound_gi::baked::gbuffer). The lightmaps are not lit
-//! yet; the texel buffers are written out only where `UNBOUND_BAKED_GI_BUFFERS` names a folder
+//! `baked-gi-bake`: Unbound's bake of a scene's baked lightmaps for the renderers, meshes and
+//! lights the managed side sends: the layout of the lightmaps (unbound_gi::baked::atlas) and,
+//! of each lightmap, its texels (unbound_gi::baked::gbuffer) and their direct light
+//! (unbound_gi::baked::direct). The lightmaps themselves are not made yet; the texels and their
+//! light are written out only where `UNBOUND_BAKED_GI_BUFFERS` names a folder
 //! (tests/projects/bakedbuffers).
 use anyhow::{Context, Result, ensure};
 use base64::Engine;
@@ -445,10 +446,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
         let baked: Vec<&Renderer> = taken.iter().map(|&i| &request.renderers[i]).collect();
         let scene = Scene::new(baked.iter().filter(|r| r.casts_shadows).flat_map(|r| {
             let (mesh, m) = (&meshes[r.mesh], r.local_to_world);
-            let world = move |v: u32| -> [f32; 3] {
-                let p = mesh.positions[v as usize];
-                std::array::from_fn(|k| m[k] * p[0] + m[4 + k] * p[1] + m[8 + k] * p[2] + m[12 + k])
-            };
+            let world = move |v: u32| direct::point(&m, mesh.positions[v as usize]);
             let count = mesh.positions.len() as u32;
             mesh.submeshes
                 .iter()
@@ -770,6 +768,98 @@ mod tests {
         let description: Json =
             serde_json::from_slice(&std::fs::read(scene.join("buffers.json")).unwrap()).unwrap();
         assert_eq!(description["lightmaps"], json!([]));
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    fn light(name: &str, file_id: i64, kind: u8, mode: u8) -> Json {
+        json!({
+            "name": name, "fileId": file_id, "kind": kind, "mode": mode,
+            "color": [2.0, 1.0, 0.5], "indirectColor": [4.0, 2.0, 1.0],
+            // Unturned: it shines along +z, onto the quad that faces -z.
+            "position": [0.5, 0.5, -3.0], "rotation": [0, 0, 0, 1],
+            "range": 10.0, "spotAngle": 60.0, "castsShadows": true,
+        })
+    }
+
+    #[test]
+    fn the_bakes_lights_and_each_lightmaps_direct_light_are_written() {
+        let folder =
+            std::env::temp_dir().join(format!("unbound-baked-gi-lights-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&folder);
+        let scene = folder.join("10000000200000003000000040000000");
+        let bake_with = |lights: Vec<Json>, mixed: u8| {
+            let mut r = serde_json::to_value(json!({
+                "maxSize": 64, "padding": 2, "resolution": 10.0, "fixedSize": true,
+                "scene": "10000000200000003000000040000000", "meshes": [quad_mesh(&UNIT, &BACK)],
+                "renderers": [renderer("lit", 1, 0, 1.0, 0.0)], "lights": lights, "mixedMode": mixed,
+            }))
+            .unwrap();
+            r["renderers"][0]["receivesShadows"] = json!(false);
+            bake(serde_json::from_value(r).unwrap(), Some(&folder)).map(|_| {
+                let direct = std::fs::read(scene.join("irradianceDirect0.f32")).unwrap();
+                let texel: Vec<f32> = direct[..16]
+                    .chunks_exact(4)
+                    .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+                    .collect();
+                let description: Json =
+                    serde_json::from_slice(&std::fs::read(scene.join("buffers.json")).unwrap())
+                        .unwrap();
+                (texel, direct.len(), description["lights"].clone())
+            })
+        };
+        // A baked sun and a mixed one (Baked Indirect: its direct light is not baked), in the
+        // bake's order: by the hashes of their file IDs (two of tests/projects/bakedbuffers).
+        let (texel, length, lights) = bake_with(
+            vec![
+                light("mixed", 244122856, 0, 1),
+                light("baked", 879057353, 0, 2),
+            ],
+            0,
+        )
+        .unwrap();
+        assert_eq!((texel, length), (vec![2.0, 1.0, 0.5, 1.0], 64 * 64 * 16));
+        assert_eq!(lights[0]["name"], json!("baked"));
+        assert_eq!(
+            (
+                &lights[1]["name"],
+                &lights[1]["mode"],
+                &lights[1]["indirectColor"]
+            ),
+            (&json!("mixed"), &json!(1), &json!([4.0, 2.0, 1.0]))
+        );
+        // A directional light is described without a range and with a cone of 1.
+        assert_eq!(
+            (
+                &lights[0]["range"],
+                &lights[0]["coneAngle"],
+                &lights[0]["type"]
+            ),
+            (&json!(0.0), &json!(1.0), &json!(0))
+        );
+        // Subtractive: both suns' direct light.
+        assert_eq!(
+            bake_with(vec![light("mixed", 1, 0, 1), light("baked", 2, 0, 2)], 1)
+                .unwrap()
+                .0,
+            [4.0, 2.0, 1.0, 1.0]
+        );
+        // A point light is described with its range and no cone, a spot light with its cone
+        // in radians.
+        let lights = bake_with(vec![light("spot", 1, 2, 2)], 2).unwrap().2;
+        assert_eq!(lights[0]["range"], json!(10.0));
+        assert!(
+            (lights[0]["coneAngle"].as_f64().unwrap() - std::f64::consts::FRAC_PI_3).abs() < 1e-6
+        );
+        assert_eq!(
+            bake_with(vec![light("bulb", 1, 1, 2)], 2).unwrap().2[0]["coneAngle"],
+            json!(0.0)
+        );
+        // No lights: no light. Kinds, modes and Lighting Modes that are none of the bake's
+        // are refused.
+        assert_eq!(bake_with(vec![], 0).unwrap().0, [0.0, 0.0, 0.0, 1.0]);
+        assert!(bake_with(vec![light("area", 1, 3, 2)], 0).is_err());
+        assert!(bake_with(vec![light("realtime", 1, 0, 0)], 0).is_err());
+        assert!(bake_with(vec![], 3).is_err());
         let _ = std::fs::remove_dir_all(&folder);
     }
 

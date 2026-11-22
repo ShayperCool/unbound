@@ -1082,8 +1082,9 @@ mode loads it again); it writes no lighting data asset (the Editor's binary form
 precomputed data is not made: said once, and `lightingDataAsset` stays null), and the baked
 lightmaps and baked probes of a scene with baked global illumination (Q677; Unbound lays out
 where its lightmaps would go, `tests/projects/bakedatlas`, and writes the layout to
-`Library/Unbound/BakedGI`; it can rasterize each lightmap's texels as the Editor does,
-`tests/projects/bakedbuffers`, but does not light them yet), the environment
+`Library/Unbound/BakedGI`; it can rasterize each lightmap's texels and gather their direct
+light as the Editor does, `tests/projects/bakedbuffers`, but does not make the lightmaps yet),
+the environment
 lighting from a sky and baked reflection probes are not made (each said once). Renderers a
 script added to the scene after it loaded are not baked (named). The records of the asset and
 the Editor's log are reported, not gated. (`unbound test` runs without a graphics device, where

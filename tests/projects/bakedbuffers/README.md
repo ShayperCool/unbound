@@ -1,15 +1,21 @@
 # Baked lightmap buffers probe
 
 Unity 6000.0.71f1, built-in render pipeline, Progressive CPU lightmapper. What a bake in Edit
-mode knows of each baked lightmap before it lights it: which texels are used, the chart of each,
-the surface normal at each of a texel's samples, and the order the bake gives its renderers.
+mode makes of each baked lightmap before it puts the lightmap together: which texels are used,
+the chart of each, the surface normal at each of a texel's samples, the order the bake gives its
+renderers and its lights, and the light its lights send straight to each texel.
 Unity documentation (6000.0):
 [Lightmapping.Bake](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Lightmapping.Bake.html),
 [Lightmap Parameters](https://docs.unity3d.com/6000.0/Documentation/Manual/class-LightmapParameters.html)
 (Anti-aliasing Samples: "the number of times to supersample a texel to reduce aliasing"; the
 ranges the page gives for 2× and 4× are not the release's, see `Samples` below),
 [Lightmap UVs](https://docs.unity3d.com/6000.0/Documentation/Manual/LightingGiUvs.html) (charts),
-[Mesh Renderer](https://docs.unity3d.com/6000.0/Documentation/Manual/class-MeshRenderer.html).
+[Mesh Renderer](https://docs.unity3d.com/6000.0/Documentation/Manual/class-MeshRenderer.html),
+[Light Mode](https://docs.unity3d.com/6000.0/Documentation/Manual/LightModes-introduction.html)
+and [Lighting Mode](https://docs.unity3d.com/6000.0/Documentation/Manual/lighting-mode.html)
+(Baked lights: "Unity bakes direct lighting and indirect lighting from Baked Lights into
+lightmaps"; Mixed lights: their direct light is baked in Subtractive mode and stays realtime in
+Baked Indirect and Shadowmask), [Light](https://docs.unity3d.com/6000.0/Documentation/Manual/class-Light.html).
 The documentation gives no rule for the texels a chart covers or for the charts' numbers: what
 is compared here is the release's observed result.
 
@@ -38,6 +44,22 @@ padding 2):
   (a warning, once a bake; `Lightmapping.Bake` says the same and leaves its renderer without a
   lightmap).
 
+The lit scenes have no sky and no ambient light, 16 Direct Samples (a power of two not below a
+texel's samples, with which the Editor weighs a texel's samples equally), a ground, a cube and a
+sphere, and lights with hard shadows:
+
+- `Sun` (4, 128): a coloured baked directional light (intensity 2, Indirect Multiplier 3) over
+  renderers with Cast Shadows Off and Shadows Only, with Receive Shadows off, lit by light probes
+  (it casts its shadow), mirrored, and with Scale In Lightmap 0.
+- `Lamps`: baked point and spot lights: ranges that end on the ground, cones of 20, 60 and 170
+  degrees, a light without shadows, one inside the sphere (off its centre: with a light at the
+  centre the Editor lets a few rays through the sphere's mesh, along its edges, which Unbound
+  does not), and lights that are disabled, on an inactive GameObject or out of everything's
+  reach.
+- `ModeIndirect`, `ModeSubtractive`, `ModeShadowmask`: a mixed sun and a mixed spot, a baked
+  bulb and a realtime spot, in each Lighting Mode. Mixed lights' direct light is in the lightmap
+  in Subtractive mode alone; the realtime light is not of the bake.
+
 ## Capture and comparison
 
 `Assets/Editor/BuffersRecord.cs` opens each scene and bakes it. In the Editor
@@ -49,17 +71,23 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
 32-bit float RGBA, rows from the first row of the lightmap). The reference keeps per scene
 (`Reference/unity-6000.0.71f1/<scene>/`):
 
+- `lights.json`, the bake input's lights by their names in its order (each field as the Editor
+  serializes it) and its Lighting Mode;
 - `scene.json`, a digest of the bake input and requests (`editor_bake.py` reads them): the
   bake's result, what the Editor logged while it made the input, the instances in the bake's
   order, and each lightmap's size, samples per texel side and instances;
 - `occupancy<N>.r2d` (1 in every channel of a used texel), `chartIndex<N>.int` (each texel's
   chart, -1 for none) and `normal<N>.r2d` (per sample, at the lightmap's size times its samples
   per side: the interpolated world normal, and the instance's place in the lightmap plus the
-  triangle's number in its submesh; (0, 0, 0, -1000000) without a surface) as the Editor wrote
-  them.
+  triangle's number in its submesh; (0, 0, 0, -1000000) without a surface) and
+  `irradianceDirect<N>.r2d` (per texel the direct light's red, green and blue, and 1 for a used
+  texel) as the Editor wrote them.
 
-Two captures whose reference folders are byte-identical make the reference
-(`bake_buffers.py publish`).
+Two captures make the reference (`bake_buffers.py publish`): their files byte-identical, but for
+the buffers of light, which the Editor sums in an order that varies from bake to bake (repeats
+differ in the last bits, up to 4e-7 here): those have the same used texels and values within
+2e-6 (times the value above 1), and the first capture's is kept. Publishing adds what is new and
+refuses to change what the reference has.
 
 Unbound's bake (`Lightmapping.Bake`, `bake_buffers.py engine`) writes the same buffers of its own
 where `UNBOUND_BAKED_GI_BUFFERS` says and its layout to
@@ -67,14 +95,27 @@ where `UNBOUND_BAKED_GI_BUFFERS` says and its layout to
 bake's result, the logged messages (of Unbound's, those that are not its own notes of what its
 bake does not make yet), the instances and their order, the lightmaps' sizes, samples and
 instances, which texels are used, every texel's chart, which samples have a surface and each
-sample's number. The normals are unit vectors compared within 1e-5 per component (the Editor
-turns them into world space in an order of operations Unbound does not repeat).
+sample's number, the lights and their order, each light's kind and mode and whether it casts
+shadows. The normals are unit vectors compared within 1e-5 per component (the Editor turns them
+into world space in an order of operations Unbound does not repeat). Of each light the numbers
+Unbound's bake takes (colour, indirect colour, position, orientation, range, cone angle) are
+compared within 2e-6 relative. A texel's direct light is compared within 1e-4 (times the value
+above 1): last-bit differences of 32-bit arithmetic are multiplied by a narrow spot cone's falloff
+(the worst here is 2.5e-5, in `Lamps`); the used texels are compared exactly.
 
 `bake_buffers.py replay <capture>` is a development check of the rasterizer alone: it feeds a
 capture's own bake input (kept in the run folder, not in Git) to the
 `cargo run -p unbound-gi --example baked_gbuffer` tool and compares its texels with the capture's.
 
-Not measured: the points and the triangles' own normals the texels' samples stand for (the
+Not baked by Unbound yet (said, each once per scene): area lights, light cookies, soft baked
+shadows (a Baked Shadow Angle or Radius: baked hard), lights whose intensity multiplies their
+linear colour (GraphicsSettings.lightsUseLinearIntensity), the levels of LOD Groups (their
+renderers take and stop light like any other; the Editor's rays tell the levels apart). Not done
+and not said: materials that let light through stop it.
+
+Not measured: Direct Samples that are no power of two or fewer than a texel's samples (the Editor
+then weighs the samples unequally at random; Unbound's mean is what it approaches), gamma colour
+space projects, light colour temperatures, the points and the triangles' own normals the texels' samples stand for (the
 Editor writes neither; Unbound derives them with the interpolated normals, for the bake's
 lighting to come), several open scenes, renderers of prefab instances (their order in the bake),
 Anti-aliasing Samples below 1, meshes with UVs that are not numbers or with other vertex formats

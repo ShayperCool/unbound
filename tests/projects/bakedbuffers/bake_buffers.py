@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""The buffers of baked lightmaps before lighting: which texels of each lightmap are used, the
-chart of each and the surface normal at each of its samples, after a bake in Edit mode.
+"""The buffers of baked lightmaps before they are put together: which texels of each lightmap are
+used, the chart of each, the surface normal at each of its samples and the direct light of each,
+and the bake's lights, after a bake in Edit mode.
 
     bake_buffers.py create [--scene S,..]  # authoring: the Editor makes Assets/Scenes (BuffersSetup.Create), or adds scenes
     bake_buffers.py native --label L    # an Editor capture (batch mode on the GPU runner)
-    bake_buffers.py publish L1 L2       # two byte-identical captures -> Reference/unity-<version>/ (what is there stays
+    bake_buffers.py publish L1 L2       # two agreeing captures -> Reference/unity-<version>/ (what is there stays
                                         # and must be the captures' too; what is new is added)
     bake_buffers.py engine --label L    # Unbound (unbound test, Edit mode)
     bake_buffers.py compare --label L   # an engine run's buffers against the reference
@@ -14,19 +15,22 @@ chart of each and the surface normal at each of its samples, after a bake in Edi
 
 `Assets/Editor/BuffersRecord.cs` opens each scene of Assets/Scenes and bakes it. In the Editor the
 bake goes through its `UnityEditor.LightBaking` API, which writes the scene's bake input and
-lightmap requests and each lightmap's unprocessed buffers; the reference keeps, per scene, a
-digest of the first two (`scene.json`: the instances in the bake's order, each lightmap's size,
-samples per texel side and instances) and the buffers `occupancy<N>.r2d`, `chartIndex<N>.int` and
-`normal<N>.r2d` as the Editor wrote them. Unbound's bake (Lightmapping.Bake) writes the same
-buffers of its own where UNBOUND_BAKED_GI_BUFFERS says, and its layout to
+lightmap requests and each lightmap's unprocessed buffers; the reference keeps, per scene, digests
+of the first two (`scene.json`: the instances in the bake's order, each lightmap's size, samples
+per texel side and instances; `lights.json`: the lights in the bake's order and the Lighting Mode)
+and the buffers `occupancy<N>.r2d`, `chartIndex<N>.int`, `normal<N>.r2d` and
+`irradianceDirect<N>.r2d` as the Editor wrote them. Unbound's bake (Lightmapping.Bake) writes the
+same buffers of its own where UNBOUND_BAKED_GI_BUFFERS says, and its layout to
 Library/Unbound/BakedGI/<scene GUID>/atlas.json.
 
 Compared exactly: the instances and their order, the lightmaps' sizes, samples and instances, which
 texels are used, every texel's chart, which samples have a surface and the number the bake gives
-each (its instance's place in the lightmap plus its triangle's in its submesh). Normals are unit
-vectors compared within NORMAL_TOLERANCE per component. What is logged while the bake's input is
-made is compared too (the Editor's messages while it extracts the bake input; of Unbound's during
-Lightmapping.Bake, those that are not its own notes of what its bake does not make yet)."""
+each (its instance's place in the lightmap plus its triangle's in its submesh), the lights and
+their order. Normals are unit vectors compared within NORMAL_TOLERANCE per component, a light's
+numbers within LIGHT_TOLERANCE, a texel's direct light within DIRECT_TOLERANCE. What is logged
+while the bake's input is made is compared too (the Editor's messages while it extracts the bake
+input; of Unbound's during Lightmapping.Bake, those that are not its own notes of what its bake
+does not make yet)."""
 import argparse
 from array import array
 import json

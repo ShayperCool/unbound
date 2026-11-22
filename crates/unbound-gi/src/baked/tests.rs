@@ -681,3 +681,432 @@ mod texels {
         assert_eq!(coarse.occupancy, [1; 16]);
     }
 }
+
+mod lighting {
+    use crate::baked::direct::{self, MixedMode, Receiver};
+    use crate::baked::gbuffer::{self, Instance, Mesh};
+    use crate::baked::light::{FAR, Kind, Light, Mode, Tables};
+    use crate::baked::trace::{Ray, Scene};
+
+    const IDENTITY: [f32; 16] = [
+        1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+    ];
+
+    fn ray(origin: [f32; 3], direction: [f32; 3]) -> Ray {
+        Ray { origin, direction }
+    }
+
+    /// A unit square in the plane z = `z`, as two triangles sharing a diagonal.
+    fn square(z: f32) -> [[[f32; 3]; 3]; 2] {
+        let (a, b, c, d) = ([0.0, 0.0, z], [1.0, 0.0, z], [1.0, 1.0, z], [0.0, 1.0, z]);
+        [[a, b, c], [a, c, d]]
+    }
+
+    #[test]
+    fn a_ray_is_stopped_by_what_lies_before_its_limit() {
+        let scene = Scene::new(square(1.0));
+        let up = [0.0, 0.0, 1.0];
+        assert!(scene.occluded(&ray([0.25, 0.5, 0.0], up), 10.0));
+        // Either side of a triangle stops it.
+        assert!(scene.occluded(&ray([0.25, 0.5, 2.0], [0.0, 0.0, -1.0]), 10.0));
+        // Not what lies at or beyond the limit, behind the origin, or beside the ray.
+        assert!(!scene.occluded(&ray([0.25, 0.5, 0.0], up), 1.0));
+        assert!(!scene.occluded(&ray([0.25, 0.5, 0.0], up), 0.5));
+        assert!(!scene.occluded(&ray([0.25, 0.5, 1.5], up), 10.0));
+        assert!(!scene.occluded(&ray([1.5, 0.5, 0.0], up), 10.0));
+        // A ray that starts on a triangle is not stopped by it.
+        assert!(!scene.occluded(&ray([0.25, 0.5, 1.0], up), 10.0));
+        // Along the plane: not stopped.
+        assert!(!scene.occluded(&ray([-1.0, 0.5, 1.0], [1.0, 0.0, 0.0]), 10.0));
+        // The limit is in lengths of the direction.
+        assert!(scene.occluded(&ray([0.25, 0.5, 0.0], [0.0, 0.0, 0.5]), 3.0));
+        assert!(!scene.occluded(&ray([0.25, 0.5, 0.0], [0.0, 0.0, 0.5]), 1.5));
+    }
+
+    #[test]
+    fn a_ray_through_a_shared_edge_is_stopped() {
+        // Rays through the squares' diagonals, from points and in directions whose products
+        // do not come out exact in 32 bits.
+        let scene = Scene::new(square(1.0).into_iter().chain(square(3.7)));
+        for k in 0..200 {
+            let t = 0.003 + k as f32 * 0.004_97;
+            let direction = [0.1 + 0.001 * k as f32, -0.07, 0.93];
+            let through = [t, t, 1.0];
+            let origin: [f32; 3] = std::array::from_fn(|c| through[c] - direction[c] * 0.731);
+            assert!(scene.occluded(&ray(origin, direction), 100.0), "{k}");
+        }
+    }
+
+    #[test]
+    fn many_triangles_stop_the_rays_a_search_of_all_of_them_finds() {
+        // A fixed scatter of small triangles and of rays.
+        let mut state = 12345u32;
+        let mut next = move || {
+            state = state.wrapping_mul(1664525).wrapping_add(1013904223);
+            (state >> 8) as f32 / 16777216.0
+        };
+        let triangles: Vec<[[f32; 3]; 3]> = (0..500)
+            .map(|_| {
+                let p = [next() * 10.0, next() * 10.0, next() * 10.0];
+                std::array::from_fn(|_| std::array::from_fn(|c| p[c] + next() * 0.8 - 0.4))
+            })
+            .collect();
+        let scene = Scene::new(triangles.iter().copied());
+        assert_eq!(scene.triangle_count(), 500);
+        let mut stopped = 0;
+        for _ in 0..400 {
+            let r = ray(
+                [next() * 10.0, next() * 10.0, next() * 10.0],
+                [next() - 0.5, next() - 0.5, next() - 0.5],
+            );
+            let alone = triangles
+                .iter()
+                .any(|t| Scene::new([*t]).occluded(&r, 30.0));
+            assert_eq!(scene.occluded(&r, 30.0), alone);
+            stopped += alone as u32;
+        }
+        assert!(stopped > 20 && stopped < 380, "{stopped}");
+        // No triangles, and triangles that are not numbers: nothing stops a ray.
+        assert!(!Scene::new([]).occluded(&ray([0.0; 3], [0.0, 0.0, 1.0]), FAR));
+        let broken = Scene::new([[[f32::NAN, 0.0, 1.0], [1.0, 0.0, 1.0], [0.0, 1.0, 1.0]]]);
+        assert_eq!(broken.triangle_count(), 0);
+    }
+
+    fn light(kind: Kind) -> Light {
+        Light {
+            kind,
+            mode: Mode::Baked,
+            color: [2.0, 1.0, 0.5],
+            indirect_color: [2.0, 1.0, 0.5],
+            position: [0.0, 0.0, 4.0],
+            forward: [0.0, 0.0, -1.0],
+            range: 10.0,
+            cone_angle: 60f32.to_radians(),
+            casts_shadows: true,
+        }
+    }
+
+    fn near(a: f32, b: f32) -> bool {
+        (a - b).abs() <= 1e-4 * b.abs().max(1.0)
+    }
+
+    #[test]
+    fn a_directional_light_gives_its_colour_by_the_surfaces_facing() {
+        let tables = Tables::new();
+        let sun = light(Kind::Directional);
+        let straight = sun
+            .arriving(&tables, sun.color, [5.0, 5.0, 0.0], [0.0, 0.0, 1.0])
+            .unwrap();
+        assert_eq!(
+            (straight.color, straight.direction, straight.distance),
+            ([2.0, 1.0, 0.5], [0.0, 0.0, 1.0], FAR)
+        );
+        let tilted = sun
+            .arriving(&tables, sun.color, [0.0; 3], [0.0, 0.6, 0.8])
+            .unwrap();
+        assert!(near(tilted.color[0], 1.6) && near(tilted.color[2], 0.4));
+        // Facing away, edge on, or with a normal that is not a number: nothing.
+        assert!(
+            sun.arriving(&tables, sun.color, [0.0; 3], [0.0, 0.0, -1.0])
+                .is_none()
+        );
+        assert!(
+            sun.arriving(&tables, sun.color, [0.0; 3], [1.0, 0.0, 0.0])
+                .is_none()
+        );
+        assert!(
+            sun.arriving(&tables, sun.color, [0.0; 3], [f32::NAN, 0.0, 0.0])
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn a_point_light_fades_with_distance_to_nothing_at_its_range() {
+        let tables = Tables::new();
+        let bulb = light(Kind::Point);
+        let up = [0.0, 0.0, 1.0];
+        let at = |distance: f32| {
+            bulb.arriving(&tables, [1.0; 3], [0.0, 0.0, 4.0 - distance], up)
+                .map(|a| a.color[0])
+        };
+        // The built-in pipeline's falloff: 1 / (1 + 25 d²) of the distance over the range,
+        // faded to nothing between 0.8 and 1. It is read from a table of 1024 samples laid
+        // out over 1023 steps, which puts it a little beyond the distance asked for.
+        let about = |a: f32, b: f32, within: f32| (a - b).abs() <= within * b;
+        assert!(about(at(1.0).unwrap(), 1.0 / 1.25, 3e-3));
+        assert!(about(at(5.0).unwrap(), 1.0 / 7.25, 3e-3));
+        // (Steeper where it fades.)
+        assert!(about(
+            at(9.0).unwrap(),
+            1.0 / 21.25 * (1.0 - (0.81 - 0.64) / 0.36),
+            2e-2
+        ));
+        assert!(at(1.0).unwrap() < 1.0 / 1.25 && at(5.0).unwrap() < 1.0 / 7.25);
+        assert!(at(9.999).unwrap() < 1e-4);
+        assert!(at(10.0).is_none() && at(12.0).is_none());
+        // At the light: its whole colour, whatever the surface faces.
+        let here = bulb
+            .arriving(&tables, bulb.color, bulb.position, [0.0, 0.0, -1.0])
+            .unwrap();
+        assert_eq!((here.color, here.distance), (bulb.color, 0.0));
+        // Its direction and distance are to the light; below the surface it gives nothing.
+        let beside = bulb
+            .arriving(&tables, [1.0; 3], [3.0, 0.0, 0.0], up)
+            .unwrap();
+        assert!(
+            near(beside.distance, 5.0)
+                && near(beside.direction[0], -0.6)
+                && near(beside.direction[2], 0.8)
+        );
+        assert!(
+            bulb.arriving(&tables, [1.0; 3], [0.0, 0.0, 5.0], up)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn a_spot_light_ends_at_its_cone() {
+        let tables = Tables::new();
+        let spot = light(Kind::Spot);
+        let up = [0.0, 0.0, 1.0];
+        // Lit from 4 above: at `x` from the axis the direction is atan(x / 4) off it.
+        let at = |x: f32| {
+            spot.arriving(&tables, [1.0; 3], [x, 0.0, 0.0], up)
+                .map(|a| a.color[0])
+        };
+        let point = |x: f32| {
+            light(Kind::Point)
+                .arriving(&tables, [1.0; 3], [x, 0.0, 0.0], up)
+                .unwrap()
+                .color[0]
+        };
+        // On the axis and well inside the cone: the point light's value.
+        assert!(near(at(0.0).unwrap(), point(0.0)));
+        assert!(near(at(0.5).unwrap(), point(0.5)));
+        // Towards the edge (30 degrees: 2.309 from the axis) it fades; beyond it, nothing.
+        let (inner, outer) = (
+            at(2.0).unwrap() / point(2.0),
+            at(2.28).unwrap() / point(2.28),
+        );
+        assert!(
+            inner < 0.9 && outer < inner && outer > 0.0 && outer < 0.1,
+            "{inner} {outer}"
+        );
+        assert!(at(2.32).is_none() && at(8.0).is_none());
+        // Behind the spot: nothing.
+        assert!(
+            spot.arriving(&tables, [1.0; 3], [0.0, 0.0, 5.0], [0.0, 0.0, -1.0])
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn mixed_lights_bake_their_direct_light_only_in_subtractive_mode() {
+        let (mut baked, mut mixed) = (light(Kind::Point), light(Kind::Point));
+        baked.mode = Mode::Baked;
+        mixed.mode = Mode::Mixed;
+        for mode in [
+            MixedMode::IndirectOnly,
+            MixedMode::Subtractive,
+            MixedMode::Shadowmask,
+        ] {
+            assert!(direct::bakes_direct(&baked, mode));
+            assert_eq!(
+                direct::bakes_direct(&mixed, mode),
+                mode == MixedMode::Subtractive
+            );
+        }
+    }
+
+    /// A unit quad in the plane z = 0 facing +z, filling a lightmap.
+    fn floor() -> Mesh {
+        Mesh::new(
+            vec![
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [1.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0],
+            ],
+            &[[0.0, 0.0, 1.0]; 4],
+            &[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+            &[],
+            vec![vec![[0, 1, 2], [0, 2, 3]]],
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn texels_take_the_mean_light_of_their_samples_unless_shadowed() {
+        let mesh = floor();
+        let instances = [Instance {
+            mesh: &mesh,
+            scale_offset: [1.0, 1.0, 0.0, 0.0],
+            index: 0,
+        }];
+        let g = gbuffer::gbuffer(4, 4, 2, &instances);
+        let mut sun = light(Kind::Directional);
+        sun.forward = [0.0, -0.6, -0.8];
+        // A roof over the half x < 0.5, high enough that the slanted light still meets it.
+        let roof = Scene::new([
+            [[0.0, -2.0, 1.0], [0.5, -2.0, 1.0], [0.5, 4.0, 1.0]],
+            [[0.0, -2.0, 1.0], [0.5, 4.0, 1.0], [0.0, 4.0, 1.0]],
+        ]);
+        let lit = |receives: bool, casts: bool, mode: Mode, mixed: MixedMode, scene: &Scene| {
+            let mut sun = sun;
+            sun.casts_shadows = casts;
+            sun.mode = mode;
+            let receivers = [Receiver {
+                local_to_world: IDENTITY,
+                receives_shadows: receives,
+            }];
+            direct::direct(&g, &receivers, &[sun], mixed, scene, 0.0001)
+        };
+        let open = lit(
+            true,
+            true,
+            Mode::Baked,
+            MixedMode::IndirectOnly,
+            &Scene::new([]),
+        );
+        assert!(
+            open.iter()
+                .all(|t| near(t[0], 1.6) && near(t[1], 0.8) && near(t[2], 0.4) && t[3] == 1.0)
+        );
+        let roofed = lit(true, true, Mode::Baked, MixedMode::IndirectOnly, &roof);
+        for (texel, value) in roofed.iter().enumerate() {
+            let shadowed = texel % 4 < 2;
+            assert!(
+                if shadowed {
+                    value[0] == 0.0
+                } else {
+                    near(value[0], 1.6)
+                },
+                "{texel}: {value:?}"
+            );
+            assert_eq!(value[3], 1.0);
+        }
+        // A renderer that receives no shadows and a light that casts none are lit under the roof.
+        assert_eq!(
+            lit(false, true, Mode::Baked, MixedMode::IndirectOnly, &roof),
+            open
+        );
+        assert_eq!(
+            lit(true, false, Mode::Baked, MixedMode::IndirectOnly, &roof),
+            open
+        );
+        // A mixed light's direct light is baked in Subtractive mode alone.
+        assert!(
+            lit(true, true, Mode::Mixed, MixedMode::IndirectOnly, &roof)
+                .iter()
+                .all(|t| t[..3] == [0.0; 3] && t[3] == 1.0)
+        );
+        assert_eq!(
+            lit(true, true, Mode::Mixed, MixedMode::Subtractive, &roof),
+            roofed
+        );
+        // The edge of the roof's shadow within a texel: the mean of its samples.
+        let edge = Scene::new([
+            [[0.0, -2.0, 1.0], [0.375, -2.0, 1.0], [0.375, 4.0, 1.0]],
+            [[0.0, -2.0, 1.0], [0.375, 4.0, 1.0], [0.0, 4.0, 1.0]],
+        ]);
+        let half = lit(true, true, Mode::Baked, MixedMode::IndirectOnly, &edge);
+        assert!(
+            near(half[1][0], 0.8) && half[0][0] == 0.0 && near(half[2][0], 1.6),
+            "{:?}",
+            &half[..4]
+        );
+        // A sample's rays start pushed off its triangle: what lies nearer than that does not
+        // shadow it.
+        let film = Scene::new(square(0.00005));
+        let receivers = [Receiver {
+            local_to_world: IDENTITY,
+            receives_shadows: true,
+        }];
+        let above = direct::direct(
+            &g,
+            &receivers,
+            &[sun],
+            MixedMode::IndirectOnly,
+            &film,
+            0.0001,
+        );
+        let below = direct::direct(&g, &receivers, &[sun], MixedMode::IndirectOnly, &film, 0.0);
+        assert!(above.iter().all(|t| near(t[0], 1.6)) && below.iter().all(|t| t[0] == 0.0));
+        // An unused texel has nothing, not even its fourth value.
+        let small = [Instance {
+            mesh: &mesh,
+            scale_offset: [0.5, 0.5, 0.0, 0.0],
+            index: 0,
+        }];
+        let partial = gbuffer::gbuffer(4, 4, 2, &small);
+        let receivers = [Receiver {
+            local_to_world: IDENTITY,
+            receives_shadows: true,
+        }];
+        let values = direct::direct(
+            &partial,
+            &receivers,
+            &[sun],
+            MixedMode::IndirectOnly,
+            &Scene::new([]),
+            0.0001,
+        );
+        assert_eq!(values[3], [0.0; 4]);
+        assert!(near(values[0][0], 1.6));
+    }
+
+    #[test]
+    fn a_renderers_matrix_places_its_samples_and_turns_their_normals() {
+        // The floor turned to face +x (its normal +z goes to +x) and moved: lit by a light
+        // along -x, and not by one along -z.
+        let mesh = floor();
+        let instances = [Instance {
+            mesh: &mesh,
+            scale_offset: [1.0, 1.0, 0.0, 0.0],
+            index: 0,
+        }];
+        let g = gbuffer::gbuffer(2, 2, 1, &instances);
+        let turned = [
+            0.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 5.0, 0.0, 0.0, 1.0,
+        ];
+        let receivers = [Receiver {
+            local_to_world: turned,
+            receives_shadows: true,
+        }];
+        let mut along_x = light(Kind::Directional);
+        along_x.forward = [-1.0, 0.0, 0.0];
+        let lit = direct::direct(
+            &g,
+            &receivers,
+            &[along_x, light(Kind::Directional)],
+            MixedMode::IndirectOnly,
+            &Scene::new([]),
+            0.0001,
+        );
+        assert!(lit.iter().all(|t| near(t[0], 2.0)));
+        // A wall just in front of where the matrix puts it shadows it.
+        let wall = Scene::new([[[5.5, -9.0, -9.0], [5.5, 9.0, -9.0], [5.5, 0.0, 9.0]]]);
+        let shadowed = direct::direct(
+            &g,
+            &receivers,
+            &[along_x],
+            MixedMode::IndirectOnly,
+            &wall,
+            0.0001,
+        );
+        assert!(shadowed.iter().all(|t| t[0] == 0.0 && t[3] == 1.0));
+        // Mirrored, its normal turns with it: the matrix's rows for normals carry the sign.
+        let mirrored = [
+            -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+        ];
+        let rows = direct::normal_matrix(&mirrored);
+        assert_eq!(
+            direct::world_normal(&rows, [1.0, 0.0, 0.0]),
+            [-1.0, 0.0, 0.0]
+        );
+        assert_eq!(
+            direct::world_normal(&rows, [0.0, 0.0, 1.0]),
+            [0.0, 0.0, 1.0]
+        );
+    }
+}

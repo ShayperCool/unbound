@@ -106,10 +106,7 @@ fn main() {
     for _ in 0..r.u32() {
         let mesh = &meshes[r.u32() as usize];
         let m: [f32; 16] = r.floats();
-        let world = |v: u32| -> [f32; 3] {
-            let p = mesh.positions[v as usize];
-            std::array::from_fn(|k| m[k] * p[0] + m[4 + k] * p[1] + m[8 + k] * p[2] + m[12 + k])
-        };
+        let world = |v: u32| direct::point(&m, mesh.positions[v as usize]);
         triangles.extend(mesh.submeshes.iter().flatten().map(|t| t.map(world)));
     }
     let lights: Vec<Light> = (0..r.u32())

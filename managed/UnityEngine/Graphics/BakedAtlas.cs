@@ -15,7 +15,8 @@ namespace UnityEngine
     /// nothing (they keep what they had; said once per scene by the bake) and writes the layout
     /// to <c>Library/Unbound/BakedGI/&lt;scene GUID&gt;/atlas.json</c> for the next parts, the
     /// renderers in the order the Editor's bake numbers them. The native side also rasterizes
-    /// each lightmap's texels as the Editor does (tests/projects/bakedbuffers), so far only to
+    /// each lightmap's texels and gathers the direct light of the scene's baked lights
+    /// (<see cref="Lights"/>) as the Editor does (tests/projects/bakedbuffers), so far only to
     /// write them out where <c>UNBOUND_BAKED_GI_BUFFERS</c> names a folder.
     /// <para>The renderers laid out are those the Editor bakes: enabled MeshRenderers of
     /// active GameObjects with Contribute Global Illumination, made from the scene file, whose
@@ -176,7 +177,7 @@ namespace UnityEngine
         /// and left out or simplified: area lights, lights whose intensity multiplies their linear
         /// colour (GraphicsSettings.lightsUseLinearIntensity; not measured), cookies (ignored),
         /// soft baked shadows (a Baked Shadow Angle or Radius: baked hard).</summary>
-        static List<object> Lights(LoadedFile file, string path)
+        internal static List<object> Lights(LoadedFile file, string path)
         {
             var lights = new List<object>();
             foreach (var pair in file.Objects)
@@ -328,6 +329,12 @@ namespace UnityEngine
                 }
             }
             if (renderers.Count == 0) return;
+            foreach (var (renderer, _) in placed)
+                if (levels.ContainsKey(renderer))
+                {
+                    Warn("lod:" + path, $"{path}: '{renderer.name}' is of a LOD Group; Unbound's bake (Lightmapping.Bake) does not tell the levels of LOD Groups apart yet (their renderers take and stop light like any other).");
+                    break;
+                }
             bool fixedSize = settings.LightmapSizeFixed
                 || UnityEditor.PackageManager.PackageInfo.FindForPackageName("com.unity.entities.graphics") != null
                 || UnityEditor.PackageManager.PackageInfo.FindForPackageName("com.unity.rendering.hybrid") != null;
