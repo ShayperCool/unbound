@@ -366,6 +366,9 @@ namespace Unbound.Runtime
                 internal bool Rebuild;
                 internal readonly List<(long Target, string Path, YText Value, YText Reference)> Changes = new List<(long, string, YText, YText)>();
                 internal readonly List<(long SourceGameObject, long Added)> AddedComponents = new List<(long, long)>();
+                /// <summary>GameObjects added under the instance's objects: the source Transform of
+                /// their parent and their Transform's id.</summary>
+                internal readonly List<(long SourceTransform, long Added)> AddedGameObjects = new List<(long, long)>();
             }
 
             internal SceneWriter(WriteTarget target)
@@ -427,8 +430,9 @@ namespace Unbound.Runtime
             }
 
             /// <summary>A prefab's documents in the Editor's order: its GameObjects by file id, each
-            /// followed by its components in its component order, then the rest by file id
-            /// (tests/projects/scenesave).</summary>
+            /// followed by its components in its component order, then its PrefabInstance documents
+            /// by file id, then the rest by file id, a stripped GameObject followed by the documents
+            /// on it (tests/projects/scenesave, prefab-nested Outer.prefab, RichVariant.prefab).</summary>
             static List<YTextDocument> PrefabOrder(IEnumerable<YTextDocument> written)
             {
                 var byId = new SortedDictionary<long, YTextDocument>();
@@ -447,7 +451,25 @@ namespace Unbound.Runtime
                     }
                 }
                 foreach (var d in byId.Values)
-                    if (placed.Add(d.FileId)) ordered.Add(d);
+                    if (d.ClassId == EngineTypes.PrefabInstanceId && placed.Add(d.FileId)) ordered.Add(d);
+                var onStripped = new Dictionary<long, List<YTextDocument>>();
+                foreach (var d in byId.Values)
+                {
+                    if (placed.Contains(d.FileId)) continue;
+                    long owner = ParseFileId(d.Body.Get("m_GameObject"));
+                    if (owner != 0 && byId.TryGetValue(owner, out var go) && go.ClassId == EngineTypes.GameObjectId && go.Stripped())
+                    {
+                        if (!onStripped.TryGetValue(owner, out var list)) onStripped[owner] = list = new List<YTextDocument>();
+                        list.Add(d);
+                        placed.Add(d.FileId);
+                    }
+                }
+                foreach (var d in byId.Values)
+                {
+                    if (!placed.Add(d.FileId)) continue;
+                    ordered.Add(d);
+                    if (onStripped.TryGetValue(d.FileId, out var on)) ordered.AddRange(on);
+                }
                 return ordered;
             }
 
@@ -659,10 +681,17 @@ namespace Unbound.Runtime
                         var componentLink = Link(c);
                         if (componentLink == null)
                         {
-                            if (m_Ids[c] < 0) m_Ids[c] = After(InstanceFileId(link.Instance));
+                            if (m_Ids[c] < 0) m_Ids[c] = InstanceObjectId(link);
                         }
                         else if (m_Referenced.Contains(c)) Stand(c, componentLink);
                     }
+                    // A GameObject added under the object hangs from the stand-in of its Transform.
+                    for (int i = 0; i < t.childCount; i++)
+                        if (Saved(t.GetChild(i).gameObject) && Link(t.GetChild(i).gameObject) == null && Link(t) is PrefabLink transformLink)
+                        {
+                            Stand(t, transformLink);
+                            break;
+                        }
                 }
                 for (int i = 0; i < t.childCount; i++)
                     if (Saved(t.GetChild(i).gameObject)) InstanceIds(t.GetChild(i));
@@ -672,12 +701,17 @@ namespace Unbound.Runtime
             void Stand(Object o, PrefabLink link)
             {
                 long id = FileStripped(link);
-                if (id == 0 && !m_Target.StrippedIds.TryGetValue(o, out id)) id = After(InstanceFileId(link.Instance));
+                if (id == 0 && !m_Target.StrippedIds.TryGetValue(o, out id)) id = InstanceObjectId(link);
                 m_Target.StrippedIds[o] = id;
                 m_Used.Add(id);
                 m_Ids[o] = id;
                 m_Stands.Add(o);
             }
+
+            /// <summary>A new id for an instance's stand-in or added component: in a scene the ids after
+            /// the PrefabInstance's (tests/projects/scenesave Base), in a prefab a random one each
+            /// (prefab-nested Outer.prefab).</summary>
+            long InstanceObjectId(PrefabLink link) => m_Target.Prefab ? NewIds(0) : After(InstanceFileId(link.Instance));
 
             /// <summary>The instance objects that have stripped documents this save.</summary>
             readonly HashSet<Object> m_Stands = new HashSet<Object>(ReferenceEqualityComparer.Instance);
@@ -747,8 +781,11 @@ namespace Unbound.Runtime
                 {
                     var child = t.GetChild(i);
                     if (!Saved(child.gameObject)) continue;
-                    if (link != null && Link(child.gameObject) == null)
-                        m_Unwritten.Add("GameObjects added to prefab instances");
+                    // A GameObject added under an instance's object: listed by the instance under its
+                    // parent's source Transform (matches the Unity 6000.0.71f1 Editor,
+                    // tests/projects/scenesave prefab-nested Outer.prefab, RichVariant.prefab).
+                    if (link != null && Link(child.gameObject) == null && Link(t) is PrefabLink transformLink && Instance(link.Instance, go) is InstanceState owner)
+                        owner.AddedGameObjects.Add((transformLink.SourceFileId, m_Ids[child]));
                     WriteHierarchy(child);
                 }
             }
@@ -792,7 +829,9 @@ namespace Unbound.Runtime
                     m_Unwritten.Add($"new {className} components");
                     return;
                 }
-                body.Set("m_GameObject", FlowValue("{fileID: " + m_Ids[go].ToString(System.Globalization.CultureInfo.InvariantCulture) + "}"));
+                // An instance's GameObject gets its stand-in's id after the first pass.
+                long goId = m_Ids.TryGetValue(go, out var known) ? known : 0;
+                body.Set("m_GameObject", FlowValue("{fileID: " + goId.ToString(System.Globalization.CultureInfo.InvariantCulture) + "}"));
                 if (Enabled(c) is bool enabled && body.Get("m_Enabled") != null) body.Set("m_Enabled", Raw(enabled ? "1" : "0"));
                 if (Writable(type)) Overlay(body, Written(c.WriteSerialized), ref m_UnlocatedCount);
                 else if (HasFields(body))
@@ -937,16 +976,10 @@ namespace Unbound.Runtime
 
             void AddedComponent(InstanceState state, Component c, GameObject go, PrefabLink goLink)
             {
-                long id = m_Ids[c];
-                state.AddedComponents.Add((goLink.SourceFileId, id));
-                if (c is MonoBehaviour)
-                {
-                    var written = Resolve(Written(w => w.ScriptBody(c)), Base(id, MonoBehaviourId, null), ref m_UnlocatedCount);
-                    written.Set("m_GameObject", FlowValue("{fileID: " + m_Ids[go] + "}"));
-                    Document(c, id, MonoBehaviourId, "MonoBehaviour", written);
-                    return;
-                }
-                m_Unwritten.Add($"{c.GetType().Name} components added to prefab instances");
+                state.AddedComponents.Add((goLink.SourceFileId, m_Ids[c]));
+                // Written as any component, on the stand-in of its GameObject (engine components:
+                // prefab-nested Outer.prefab, RichVariant.prefab).
+                WriteComponent(c, go);
             }
 
             /// <summary>The stripped document standing for an instance's object: the file's, else a
@@ -1010,6 +1043,17 @@ namespace Unbound.Runtime
                     }
                     if (added.Items.Count == 0) added.Flow = true;
                     modification.Set("m_AddedComponents", added);
+                    var addedObjects = YText.Seq();
+                    foreach (var (sourceTransform, transform) in state.AddedGameObjects)
+                    {
+                        var entry = YText.Map();
+                        entry.Add("targetCorrespondingSourceObject", FlowValue($"{{fileID: {sourceTransform}, guid: {SourceGuid(state)}, type: 3}}"));
+                        entry.Add("insertIndex", Raw("-1"));
+                        entry.Add("addedObject", FlowValue("{fileID: " + transform + "}"));
+                        addedObjects.Items.Add(entry);
+                    }
+                    if (addedObjects.Items.Count == 0) addedObjects.Flow = true;
+                    modification.Set("m_AddedGameObjects", addedObjects);
                     RemovedComponents(state, modification);
                     m_Out[state.Document.FileId] = state.Document;
                 }
