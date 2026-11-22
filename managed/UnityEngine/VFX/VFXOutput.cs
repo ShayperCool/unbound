@@ -62,10 +62,6 @@ namespace Unbound.Runtime
         /// <summary>The texture the generated programs sample curves and gradients from.</summary>
         internal const string BakedTextureName = "bakedTexture";
         static readonly int s_BakedTexture = Shader.PropertyToID(BakedTextureName);
-        /// <summary>The camera's views as an output's programs read them (where a particle's
-        /// last frame lies in its temporary buffer): one view in all, one drawn at once, from the
-        /// first, as a camera without XR has (the bits of unsigned integers).</summary>
-        static readonly int s_CameraXRSettings = Shader.PropertyToID("cameraXRSettings");
 
         readonly VFXParticleSystem m_System;
         readonly VFXEditorTaskDesc m_Task;
@@ -89,11 +85,8 @@ namespace Unbound.Runtime
             m_Task = task;
             m_Material = material;
             m_Temporary = new VFXTemporaryBindings(task);
-            if (m_Temporary.Count != 0)
-            {
-                float oneBits = BitConverter.Int32BitsToSingle(1);
-                m_Block.SetVector(s_CameraXRSettings, new Vector4(oneBits, oneBits, 0f, 0f));
-            }
+            // Where a particle's last frame lies in its temporary buffer.
+            if (m_Temporary.Count != 0) m_Block.SetVector(VFXParticleSystem.CameraXRSettings, VFXParticleSystem.OneView);
             int count = task.buffers?.Length ?? 0;
             m_BufferNames = new int[count];
             m_Bound = new GraphicsBuffer[count];
@@ -129,6 +122,9 @@ namespace Unbound.Runtime
 
         /// <summary>Whether the output draws through an indirect buffer.</summary>
         internal bool Indirect => m_Indirect;
+
+        /// <summary>The temporary buffers the output reads (its particles' last frames).</summary>
+        internal VFXTemporaryBindings Temporary => m_Temporary;
 
         /// <summary>The system whose particles the output draws.</summary>
         internal VFXParticleSystem System => m_System;

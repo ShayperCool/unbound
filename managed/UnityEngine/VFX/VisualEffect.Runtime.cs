@@ -272,11 +272,8 @@ namespace UnityEngine.VFX
             if (!m_Temporary.TryGetValue((desc, key), out var ring))
             {
                 var d = temporary[desc];
-                uint length = Math.Max(d.frameCount, 1u);
-                ring = new TemporaryRing { Buffers = new GraphicsBuffer[length] };
-                var target = d.desc.target == GraphicsBuffer.Target.Raw ? GraphicsBuffer.Target.Raw : GraphicsBuffer.Target.Structured;
-                int count = (int)Math.Max(d.desc.size, 1u), stride = (int)Math.Max(d.desc.stride, sizeof(uint));
-                for (int i = 0; i < ring.Buffers.Length; i++) ring.Buffers[i] = new GraphicsBuffer(target, count, stride);
+                ring = new TemporaryRing { Buffers = new GraphicsBuffer[Math.Max(d.frameCount, 1u)] };
+                for (int i = 0; i < ring.Buffers.Length; i++) ring.Buffers[i] = NewBuffer(d.desc, 1);
                 m_Temporary[(desc, key)] = ring;
             }
             ring.LastFrame = frame;
@@ -284,15 +281,22 @@ namespace UnityEngine.VFX
             return ring.Buffers[(frame - pastFrame + n) % n];
         }
 
+        /// <summary>How many frames a camera's temporary buffers are kept unused (at least as
+        /// many as they keep): Unbound's own, which no image shows, as a camera that skipped a
+        /// frame finds no particle's frame before in them either way. It spares a camera that
+        /// renders every few frames making its buffers anew each time. Not measured.</summary>
+        internal const uint UnusedCameraFrames = 60;
+
         /// <summary>Releases the per-camera temporary buffers not asked for in more frames than
-        /// they keep (a camera that stopped seeing the effect).</summary>
+        /// <see cref="UnusedCameraFrames"/> and than they keep (a camera that stopped seeing the
+        /// effect).</summary>
         internal void ExpireTemporaryBuffers()
         {
             if (m_Temporary.Count == 0) return;
             uint frame = VFXManager.Frame;
             m_TemporaryExpired.Clear();
             foreach (var entry in m_Temporary)
-                if (entry.Key.Key != 0 && frame - entry.Value.LastFrame > (uint)entry.Value.Buffers.Length) m_TemporaryExpired.Add(entry.Key);
+                if (entry.Key.Key != 0 && frame - entry.Value.LastFrame > Math.Max(UnusedCameraFrames, (uint)entry.Value.Buffers.Length)) m_TemporaryExpired.Add(entry.Key);
             foreach (var key in m_TemporaryExpired)
             {
                 foreach (var buffer in m_Temporary[key].Buffers) buffer?.Release();
@@ -313,11 +317,17 @@ namespace UnityEngine.VFX
         {
             var buffer = m_GpuBuffers[index];
             if (buffer != null && buffer.count >= minCount) return buffer;
-            var desc = m_Data.GpuBuffers[index];
-            int count = Math.Max(Math.Max((int)desc.size, minCount), 1);
             buffer?.Release();
+            return m_GpuBuffers[index] = NewBuffer(m_Data.GpuBuffers[index], minCount);
+        }
+
+        /// <summary>A buffer of an asset's descriptor: raw or structured, of at least
+        /// <paramref name="minCount"/> elements of at least one word.</summary>
+        static GraphicsBuffer NewBuffer(in VFXGPUBufferDesc desc, int minCount)
+        {
+            int count = Math.Max(Math.Max((int)desc.size, minCount), 1);
             var target = desc.target == GraphicsBuffer.Target.Raw ? GraphicsBuffer.Target.Raw : GraphicsBuffer.Target.Structured;
-            return m_GpuBuffers[index] = new GraphicsBuffer(target, count, (int)Math.Max(desc.stride, sizeof(uint)));
+            return new GraphicsBuffer(target, count, (int)Math.Max(desc.stride, sizeof(uint)));
         }
 
         /// <summary>The effect's system of an index of the asset's, null when it has none.</summary>

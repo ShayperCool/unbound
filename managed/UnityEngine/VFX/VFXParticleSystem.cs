@@ -186,21 +186,30 @@ namespace Unbound.Runtime
             m_CameraSorts = cameraSorts.ToArray();
         }
 
-        /// <summary>The kernels whose list an output draws, those that make no list when
-        /// <paramref name="unlisted"/>, and those that keep an output's last frames (its motion
-        /// vectors' temporary buffers); the others are released, and their lists taken out of
-        /// <paramref name="lists"/>.</summary>
+        /// <summary>The kernels whose list an output draws, and of those that make no list,
+        /// all when <paramref name="unlisted"/>, else those that keep the last frames a drawn
+        /// output reads (its motion vectors' temporary buffers); the others are released, and
+        /// their lists taken out of <paramref name="lists"/>.</summary>
         Kernel[] KeepDrawn(List<Kernel> kernels, bool unlisted, List<int> lists)
         {
             var kept = new List<Kernel>(kernels.Count);
             foreach (var kernel in kernels)
-                if (kernel.KeepsFrames || (kernel.List < 0 ? unlisted : Drawn(kernel.List))) kept.Add(kernel);
+                if (kernel.List < 0 ? unlisted || FramesDrawn(kernel.Temporary) : Drawn(kernel.List)) kept.Add(kernel);
                 else
                 {
                     kernel.Release();
                     lists?.Remove(kernel.List);
                 }
             return kept.ToArray();
+        }
+
+        /// <summary>Whether an output that is drawn reads a temporary buffer of
+        /// <paramref name="written"/>'s.</summary>
+        bool FramesDrawn(VFXTemporaryBindings written)
+        {
+            foreach (var output in m_Outputs)
+                if (output.Temporary.Shares(written)) return true;
+            return false;
         }
 
         /// <summary>Whether an output draws the list of buffer <paramref name="list"/>.</summary>
@@ -214,6 +223,12 @@ namespace Unbound.Runtime
         /// <summary>How the compiler names the system's buffers of lists of particles to draw
         /// (`indirectBuffer0`, `indirectBuffer0_a`, ...), and those it makes for each camera.</summary>
         const string IndirectListName = "indirectBuffer", PerCameraSuffix = "PerCamera";
+
+        /// <summary>A camera's views as the generated programs read them
+        /// (`cameraXRSettings`): one view in all, one drawn at once, from the first, as a camera
+        /// without XR has (the bits of unsigned integers).</summary>
+        internal static readonly int CameraXRSettings = Shader.PropertyToID("cameraXRSettings");
+        internal static readonly Vector4 OneView = new Vector4(BitConverter.Int32BitsToSingle(1), BitConverter.Int32BitsToSingle(1), 0f, 0f);
 
         /// <summary>How an event's attributes map into the source buffer: by name, from the
         /// event attribute layout every spawner shares to the layout the kernels read.</summary>
@@ -677,15 +692,17 @@ namespace Unbound.Runtime
             static readonly int s_InstancingConstants = Shader.PropertyToID("instancingConstants");
             static readonly int s_InstancingBufferOffsets = Shader.PropertyToID("instancingBufferOffsets");
             static readonly int s_BakedTexture = Shader.PropertyToID(VFXOutput.BakedTextureName);
-            static readonly int s_CameraXRSettings = Shader.PropertyToID("cameraXRSettings");
             /// <summary>The camera values the generated output-update kernels read for a camera
             /// (its position and its view, as the pipeline sets them for the camera's draws).</summary>
             static readonly int s_WorldSpaceCameraPos = Shader.PropertyToID("_WorldSpaceCameraPos");
             static readonly int s_MatrixV = Shader.PropertyToID("unity_MatrixV");
-            /// <summary>The camera's view-projection without jitter, which the output-update
-            /// kernels of outputs with motion vectors place particles' vertices with (URP's
-            /// `_NonJitteredViewProjMatrix`, as the pipeline sets it for the camera's motion
-            /// vectors: tests/projects/vfxoutputs `MovingVectors`).</summary>
+            /// <summary>The view-projection without jitter the output-update kernels of outputs
+            /// with motion vectors place particles' vertices with (URP's
+            /// `_NonJitteredViewProjMatrix`): the camera's own, which the still cameras of
+            /// tests/projects/vfxoutputs `MovingVectors` cannot tell from another frame's or
+            /// camera's (URP sets the global in its motion vectors pass, after the effects'
+            /// camera commands: what a moving camera or a second one reads is not
+            /// measured).</summary>
             static readonly int s_NonJitteredViewProjection = Shader.PropertyToID("_NonJitteredViewProjMatrix");
             /// <summary>Boxes of the camera values, changed in place for each camera.</summary>
             object m_CameraPosition, m_CameraView, m_CameraViewProjection;
@@ -705,8 +722,8 @@ namespace Unbound.Runtime
             /// <summary>The camera a per-camera kernel last ran for (its temporary buffers').</summary>
             int m_CameraKey;
 
-            /// <summary>Whether the kernel writes temporary buffers (an output's last frames).</summary>
-            internal bool KeepsFrames => m_Temporary.Count > 0;
+            /// <summary>The temporary buffers the kernel writes (an output's last frames).</summary>
+            internal VFXTemporaryBindings Temporary => m_Temporary;
             /// <summary>The buffer of the list of particles to draw an output-update kernel
             /// makes (its first, `outputBuffer0`); -1 for another kernel.</summary>
             internal readonly int List = -1;
@@ -739,9 +756,7 @@ namespace Unbound.Runtime
                 // kernels read them, the bits of unsigned integers.
                 float one = BitConverter.Int32BitsToSingle(1);
                 m_Shader.SetVector(s_InstancingConstants, new Vector4(one, one, one, 0f));
-                // A camera's views as an output-update kernel reads them: one view in all, one
-                // drawn at once, from the first (what a camera without XR has).
-                m_Shader.SetVector(s_CameraXRSettings, new Vector4(one, one, 0f, 0f));
+                m_Shader.SetVector(CameraXRSettings, OneView);
             }
 
             /// <summary>Gives the kernel a buffer of its system's under <paramref name="name"/>

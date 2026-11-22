@@ -38,6 +38,15 @@ namespace UnityEngine.VFX
 
         internal int Count { get; }
 
+        /// <summary>Whether the two name a buffer of one descriptor (one task writes what the
+        /// other reads).</summary>
+        internal bool Shares(VFXTemporaryBindings other)
+        {
+            foreach (int desc in m_Descs)
+                if (Array.IndexOf(other.m_Descs, desc) >= 0) return true;
+            return false;
+        }
+
         /// <summary>The key of a camera's own temporary buffers.</summary>
         internal static int CameraKey(Camera camera) => camera != null ? camera.GetInstanceID() : 0;
 
