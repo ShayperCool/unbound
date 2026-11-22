@@ -236,13 +236,15 @@ namespace DotRecast.Detour
             float cc = toC.Dot2D(toC);
             float bb = toB.Dot2D(toB);
             float cb = toC.Dot2D(toB);
-            float scale = cc * bb;
-            float determinant = scale - cb * cb;
-            // Near collinearity can round the difference of the two products to either
-            // sign. Use the cross-product calculation when the difference is within
-            // eight single-precision spacings at one, scaled to the size of the products.
-            const float CancellationLimit = 8f / (1 << 23);
-            if (!(determinant > scale * CancellationLimit))
+            float determinant = cc * bb - cb * cb;
+            // The Gram matrix's inverse amplifies rounding in the dot products.
+            // Compare the determinant with the squared largest diagonal to bound that
+            // amplification. Keep the cross-product calculation when an error of eight
+            // float spacings could grow beyond the tolerance on the normalized weights.
+            const float FloatSpacingAtOne = 1f / (1 << 23);
+            const float WeightErrorLimit = 8f * FloatSpacingAtOne / BarycentricTolerance;
+            float longestSquared = MathF.Max(cc, bb);
+            if (!(determinant > longestSquared * longestSquared * WeightErrorLimit))
                 return ClosestHeightPointTriangle(p, a, b, c, out height);
 
             float pc = offset.Dot2D(toC);

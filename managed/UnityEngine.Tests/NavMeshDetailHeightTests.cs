@@ -35,17 +35,21 @@ namespace UnityEngine.Tests
             Assert.Equal(queryX / 4f, height);
         }
 
-        [Fact]
-        public void ThinDetailTriangleKeepsItsHeightWhenDotProductsLosePrecision()
+        [Theory]
+        [InlineData(3.77734375f, 3.78125f, 11.33203125f, 11.34377f)]
+        [InlineData(8f, 1f, 24f, 3.025f)]
+        public void ThinDetailTriangleKeepsItsHeightWhenDotProductsLosePrecision(
+            float bx, float bz, float cx, float cz)
         {
             var a = RcVec3f.Zero;
-            var b = new RcVec3f(3.77734375f, 3.77734375f / 4f, 3.78125f);
-            var c = new RcVec3f(11.33203125f, 11.33203125f / 4f, 11.34377f);
+            var b = new RcVec3f(bx, bx / 4f, bz);
+            var c = new RcVec3f(cx, cx / 4f, cz);
             var point = (b + c) * 0.25f;
 
             Assert.True(DtUtils.ClosestHeightPointTriangle(point, a, b, c, out float previous));
             Assert.True(DtUtils.DotProductTriangleHeight(point, a, b, c, out float height));
             Assert.Equal(previous, height);
+            Assert.InRange(height, point.Y - 0.00001f, point.Y + 0.00001f);
         }
     }
 }
