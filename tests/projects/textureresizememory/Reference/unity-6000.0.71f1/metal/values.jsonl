@@ -51,4 +51,53 @@
 {"k":"unreadable.textureFormat.after","v":"4032"}
 {"k":"unreadable.graphicsFormat.before","v":"4032"}
 {"k":"unreadable.graphicsFormat.after","v":"4032"}
+{"k":"rejected.default.before","v":"4032"}
+{"k":"rejected.default.result","v":"UnityException: Texture 'Unreadable texture' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
+{"k":"rejected.default.logs","v":""}
+{"k":"rejected.default.after","v":"4032"}
+{"k":"rejected.default.width","v":"16"}
+{"k":"rejected.default.height","v":"24"}
+{"k":"rejected.default.format","v":"RGBA32"}
+{"k":"rejected.default.mips","v":"1"}
+{"k":"rejected.default.readable","v":"False"}
+{"k":"rejected.textureFormat.before","v":"4032"}
+{"k":"rejected.textureFormat.result","v":"False"}
+{"k":"rejected.textureFormat.logs","v":"Error: Texture is not readable."}
+{"k":"rejected.textureFormat.after","v":"4032"}
+{"k":"rejected.textureFormat.width","v":"16"}
+{"k":"rejected.textureFormat.height","v":"24"}
+{"k":"rejected.textureFormat.format","v":"RGBA32"}
+{"k":"rejected.textureFormat.mips","v":"1"}
+{"k":"rejected.textureFormat.readable","v":"False"}
+{"k":"rejected.graphicsFormat.before","v":"4032"}
+{"k":"rejected.graphicsFormat.result","v":"UnityException: Texture 'Unreadable texture' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
+{"k":"rejected.graphicsFormat.logs","v":""}
+{"k":"rejected.graphicsFormat.after","v":"4032"}
+{"k":"rejected.graphicsFormat.width","v":"16"}
+{"k":"rejected.graphicsFormat.height","v":"24"}
+{"k":"rejected.graphicsFormat.format","v":"RGBA32"}
+{"k":"rejected.graphicsFormat.mips","v":"1"}
+{"k":"rejected.graphicsFormat.readable","v":"False"}
+{"k":"rejected.invalidTextureFormat.before","v":"4032"}
+{"k":"rejected.invalidTextureFormat.result","v":"False"}
+{"k":"rejected.invalidTextureFormat.logs","v":"Error: Texture is not readable."}
+{"k":"rejected.invalidTextureFormat.after","v":"4032"}
+{"k":"rejected.invalidTextureFormat.width","v":"16"}
+{"k":"rejected.invalidTextureFormat.height","v":"24"}
+{"k":"rejected.invalidTextureFormat.format","v":"RGBA32"}
+{"k":"rejected.invalidTextureFormat.mips","v":"1"}
+{"k":"rejected.invalidTextureFormat.readable","v":"False"}
+{"k":"rejected.invalidGraphicsFormat.before","v":"4032"}
+{"k":"rejected.invalidGraphicsFormat.result","v":"UnityException: Texture 'Unreadable texture' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
+{"k":"rejected.invalidGraphicsFormat.logs","v":""}
+{"k":"rejected.invalidGraphicsFormat.after","v":"4032"}
+{"k":"rejected.invalidGraphicsFormat.width","v":"16"}
+{"k":"rejected.invalidGraphicsFormat.height","v":"24"}
+{"k":"rejected.invalidGraphicsFormat.format","v":"RGBA32"}
+{"k":"rejected.invalidGraphicsFormat.mips","v":"1"}
+{"k":"rejected.invalidGraphicsFormat.readable","v":"False"}
+{"k":"loadImage.unreadable.result","v":"True"}
+{"k":"loadImage.unreadable.width","v":"8"}
+{"k":"loadImage.unreadable.height","v":"12"}
+{"k":"loadImage.unreadable.readable","v":"False"}
 {"k":"complete","v":true}
