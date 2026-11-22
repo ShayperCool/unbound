@@ -56,6 +56,11 @@ it was rendered in.
 - `stp_post_texture`, `stp_screen_plain`: controls that separate the renderer from the target:
   the second renderer into the render texture, the first renderer to the screen.
 
+- `stp_veil`, `linear_veil`: a still camera and, two units in front of it, a translucent quad
+  (URP Unlit, alpha blended, no depth write, no motion vectors) whose noise texture scrolls
+  every frame, at render scale 0.8: a surface that changes with no depth or motion of its own,
+  as an effect's mist does, through STP with its history and through the Linear upscaler.
+
 Values compare exactly; `image_limits.json` holds each image's measured limits.
 
 Measured in the Unity 6000.0.71f1 Editor (Linux, OpenGL Core, NVIDIA driver; two identical
@@ -70,7 +75,14 @@ history, into the screen and into the render texture alike (`stp_post_texture`),
 renderer on the screen (`stp_screen_plain`) matches; Unbound draws the other four views as the
 Editor does and matches the motion there, so `stp_screen`, `stp_post_texture`,
 `stp_debug_reprojection` and the Sensitivity views differ (their limits say how much;
-docs/COMPATIBILITY_GAPS.md, Q546). Other devices, GPUs and drivers are unmeasured.
+docs/COMPATIBILITY_GAPS.md, Q546). `stp_veil` is the Editor's image to the last bit: with its
+history STP draws a changing translucent surface as a fine lattice at the render scale's pitch
+(the history of pixels whose colour changes without motion), in the Editor and in Unbound alike.
+The same quad through the renderer with post-processing data (not in the reference: the
+Editor's two captures of it differ in a few pixels) comes out smooth in the OpenGL Core Editor,
+which keeps no history there, and with the lattice in Unbound (mean 4.6/255): the difference a
+large scene's effect mist shows (Q704) is that one. Other devices, GPUs and drivers are
+unmeasured.
 
     ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -quit -projectPath <copy of this probe> \
         -executeMethod ProbeRunner.Create -logFile create.log   # once; copy Assets/ back

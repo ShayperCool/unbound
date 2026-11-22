@@ -24,4 +24,6 @@
 {"k":"stp_debug_sensitivity_static.frame","v":593}
 {"k":"stp_post_texture.frame","v":617}
 {"k":"stp_screen_plain.frame","v":642}
+{"k":"stp_veil.frame","v":666}
+{"k":"linear_veil.frame","v":691}
 {"k":"complete","v":true}

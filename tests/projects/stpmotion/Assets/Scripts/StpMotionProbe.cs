@@ -87,6 +87,46 @@ public class StpMotionProbe : MonoBehaviour
         };
         Action noDebugView = () => { rendering.fullScreenDebugMode = DebugFullScreenMode.None; viewIndex.SetValue(rendering, 0); fromScreen(); };
 
+        // A translucent quad in front of the scene whose noise texture scrolls every frame: a
+        // surface that changes with no depth and no motion vectors of its own, as an effect's
+        // mist does.
+        GameObject veil = null;
+        Texture2D veilNoise = null;
+        Action<int> scroll = null;
+        Action veiled = () =>
+        {
+            veilNoise = NoiseTexture();
+            var material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 0f);
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
+            material.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_ZWrite", 0f);
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.SetShaderPassEnabled("DepthOnly", false);
+            material.SetShaderPassEnabled("ShadowCaster", false);
+            material.SetShaderPassEnabled("MotionVectors", false);
+            material.renderQueue = (int)RenderQueue.Transparent;
+            material.SetTexture("_BaseMap", veilNoise);
+            material.SetColor("_BaseColor", new Color(1f, 1f, 1f, 0.6f));
+            veil = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            Destroy(veil.GetComponent<Collider>());
+            veil.transform.SetPositionAndRotation(homePosition + homeRotation * new Vector3(0f, 0f, 2f), homeRotation);
+            veil.transform.localScale = new Vector3(1.6f, 1.2f, 1f);
+            veil.GetComponent<MeshRenderer>().sharedMaterial = material;
+            scroll = frame => material.SetTextureOffset("_BaseMap", new Vector2(0.013f, 0.007f) * (frame + 1));
+        };
+        Action unveiled = () =>
+        {
+            scroll = null;
+            Destroy(veil.GetComponent<MeshRenderer>().sharedMaterial);
+            Destroy(veil);
+            Destroy(veilNoise);
+        };
+
         var pan = new Vector3(0.023f, 0f, 0f);
         var drift = new Vector3(0.023f, 0.004f, 0.011f);
         var forward = new Vector3(0.01f, 0f, 0.006f);
@@ -120,6 +160,10 @@ public class StpMotionProbe : MonoBehaviour
             // first renderer to the screen.
             ("stp_post_texture", 0.5f, UpscalingFilterSelection.STP, drift, 0.11f, () => data.SetRenderer(1), () => data.SetRenderer(0)),
             ("stp_screen_plain", 0.5f, UpscalingFilterSelection.STP, drift, 0.11f, () => camera.targetTexture = null, toSmall),
+            // The scrolling translucent quad with a still camera: STP with its history, and the
+            // Linear upscaler as a control.
+            ("stp_veil", 0.8f, UpscalingFilterSelection.STP, Vector3.zero, 0f, veiled, unveiled),
+            ("linear_veil", 0.8f, UpscalingFilterSelection.Linear, Vector3.zero, 0f, veiled, unveiled),
         };
         foreach (var s in scenarios)
         {
@@ -134,6 +178,7 @@ public class StpMotionProbe : MonoBehaviour
             {
                 camera.transform.position += s.step;
                 camera.transform.rotation = Quaternion.Euler(0f, s.yaw, 0f) * camera.transform.rotation;
+                scroll?.Invoke(i);
                 // The screen is read at the end of the frame that rendered it.
                 if (onScreen && i == Frames - 1) yield return new WaitForEndOfFrame();
                 else yield return null;
