@@ -15,6 +15,7 @@ namespace UnityEngine.Tests
             public string title = "t";
             public List<int> numbers = new List<int> { 5, 6 };
             public int maxSpeed = 1;
+            public Vector3 offset = new Vector3(1f, 2f, 3f);
             [SerializeField] int m_Level = 2;
             public int level => m_Level;
         }
@@ -187,6 +188,34 @@ namespace UnityEngine.Tests
                 so.ApplyModifiedProperties();
                 Undo.FlushUndoRecordObjects();
                 Assert.Equal("Modified Title in Alpha", Undo.GetCurrentGroupName());
+
+                // A value with parts the object holds already.
+                Undo.IncrementCurrentGroup();
+                so.Update();
+                a.offset = new Vector3(1f, 9f, 3f);
+                so.FindProperty("offset").vector3Value = new Vector3(1f, 9f, 3f);
+                so.FindProperty("title").stringValue = "y";
+                so.ApplyModifiedProperties();
+                Undo.FlushUndoRecordObjects();
+                Assert.Equal("Modified Title in Alpha", Undo.GetCurrentGroupName());
+
+                // Several targets: the first holds the value, the second does not.
+                var b = Make("Beta");
+                try
+                {
+                    a.count = 3;
+                    b.count = 4;
+                    Undo.IncrementCurrentGroup();
+                    var multi = new SerializedObject(new Object[] { a, b });
+                    multi.FindProperty("count").intValue = 3;
+                    multi.ApplyModifiedProperties();
+                    Undo.FlushUndoRecordObjects();
+                    Assert.Equal("Modified Count in 2 Objects", Undo.GetCurrentGroupName());
+                    Assert.Equal(3, b.count);
+                    Undo.PerformUndo();
+                    Assert.Equal(4, b.count);
+                }
+                finally { Object.DestroyImmediate(b); }
             }
             finally
             {

@@ -134,7 +134,7 @@ namespace UnityEditor
             if (recordUndo)
             {
                 var changes = Changes(out var befores);
-                Undo.RecordApply(m_Targets, befores, ChangedPaths(), UndoName(changes));
+                Undo.RecordApply(m_Targets, befores, ChangedPaths(), UndoName(befores));
                 if (Undo.postprocessModifications != null) Undo.QueueModifications(Modifications(changes));
             }
             for (int i = 0; i < m_Targets.Length; i++)
@@ -191,15 +191,13 @@ namespace UnityEditor
         {
             public readonly Object Target;
             public readonly string Path;
-            public readonly bool Existed;
             public readonly object Before;
             public readonly object After;
 
-            public Change(Object target, string path, bool existed, object before, object after)
+            public Change(Object target, string path, object before, object after)
             {
                 Target = target;
                 Path = path;
-                Existed = existed;
                 Before = before;
                 After = after;
             }
@@ -227,7 +225,7 @@ namespace UnityEditor
                 foreach (var node in changed)
                 {
                     var old = SerializedTree.Find(before, node.Path);
-                    list.Add(new Change(target, node.Path, old != null, old == null ? null : SerializedTree.GetValue(old), SerializedTree.GetValue(node)));
+                    list.Add(new Change(target, node.Path, old == null ? null : SerializedTree.GetValue(old), SerializedTree.GetValue(node)));
                 }
             }
             return list;
@@ -288,7 +286,7 @@ namespace UnityEditor
         /// Objects"). A property is a value that changed (an array's size counts, the elements it
         /// adds or removes do not), or an array an element edit replaced, named as the Editor names
         /// it (measured: tests/projects/serializedundo).</summary>
-        string UndoName(List<Change> changes)
+        string UndoName(SerializedNode[] befores)
         {
             Object first = null;
             int targets = 0;
@@ -298,29 +296,39 @@ namespace UnityEditor
                 first ??= target;
                 targets++;
             }
-            var changedValues = new HashSet<string>();
-            foreach (var change in changes)
-                if (ReferenceEquals(change.Target, first) && change.Existed && !Equals(change.Before, change.After)) changedValues.Add(change.Path);
+            // A value set changed when some target held it and held another value.
+            bool Changed(SerializedNode node)
+            {
+                var value = SerializedTree.GetValue(node);
+                for (int i = 0; i < befores.Length; i++)
+                {
+                    var old = befores[i] == null ? null : SerializedTree.Find(befores[i], node.Path);
+                    if (old != null && !SerializedTree.ValueEquals(SerializedTree.GetValue(old), value)) return true;
+                }
+                return false;
+            }
             string path = null;
             int count = 0;
+            void Count(string edited)
+            {
+                path = edited;
+                count++;
+            }
             void Walk(SerializedNode node)
             {
                 if (!node.Dirty && !node.Replaced) return;
-                // An element edit or a value assigned whole (a composite, an array) is one property;
-                // a value set counts when it changed.
-                if (node.Parent != null && node.Replaced && (node.EditPath != null || node.Children.Count > 0))
+                if (node.Parent != null && node.Replaced)
                 {
-                    path = node.EditPath ?? node.Path;
-                    count++;
+                    // An element edit, or a composite, array or reference assigned whole, is one
+                    // property; a value set (with its parts) counts when it changed.
+                    if (node.EditPath != null) Count(node.EditPath);
+                    else if (node.Kind == SerializedNodeKind.Composite || node.Kind == SerializedNodeKind.Array || node.Kind == SerializedNodeKind.ManagedReference) Count(node.Path);
+                    else if (Changed(node)) Count(node.Path);
                     return;
                 }
                 if (node.Children.Count == 0)
                 {
-                    if (changedValues.Contains(node.Path))
-                    {
-                        path = node.Path;
-                        count++;
-                    }
+                    if (Changed(node)) Count(node.Path);
                     return;
                 }
                 foreach (var child in node.Children) Walk(child);
