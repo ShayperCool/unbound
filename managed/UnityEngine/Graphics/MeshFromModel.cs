@@ -129,6 +129,8 @@ namespace UnityEngine
             bool wasGfxIndicesDirty = m_GraphicsDirtyIndices;
             bool wasReadable = m_IsReadable;
             int prevPositionsVersion = m_PositionsVersion;
+            // Loading the arrays changes no state a script sees: bounds a script set stay.
+            var bounds = m_Bounds;
             m_DeferredModel = false;
             m_IsReadable = true;
             foreach (var s in m_SubMeshes) s.DeferredIndexCount = 0;
@@ -150,6 +152,7 @@ namespace UnityEngine
                 m_GraphicsVerticesDirty = wasGfxVertsDirty;
                 m_GraphicsDirtyIndices = wasGfxIndicesDirty;
                 m_PositionsVersion = prevPositionsVersion;
+                m_Bounds = bounds;
                 m_LoadingModel = false;
             }
         }
