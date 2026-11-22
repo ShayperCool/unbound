@@ -120,7 +120,6 @@ namespace UnityEngine
                 var inner = m_Padding.Remove(new Rect(0f, 0f, constraints.x, constraints.y));
                 text = TextSize(content, inner.size);
             }
-            // The image counts whenever the content has one, even for a style that shows text only.
             var shown = ShownImage(content);
             var image = SizeOf(shown);
 
@@ -149,7 +148,8 @@ namespace UnityEngine
                     size = Vector2.zero;
                     break;
             }
-            // Content with neither an image nor text is one line high.
+            // Content with neither an image nor text is one line high (the content's image counts
+            // here even where the style does not show it).
             if (m_ImagePosition != ImagePosition.ImageOnly && content.image == null && !HasText(content))
                 size.y = lineHeight;
             return new Vector2(
@@ -193,7 +193,7 @@ namespace UnityEngine
         public float CalcHeight(GUIContent content, float width)
         {
             if (m_FixedHeight != 0f) return m_FixedHeight;
-            if (content == null) throw new ArgumentNullException(nameof(content));
+            content ??= GUIContent.none;
             var shown = content.image;
             var image = SizeOf(shown);
             if (WrapsBesideImage(shown)) width -= WrapImageWidth(image, width, WrapMeasureHeight);

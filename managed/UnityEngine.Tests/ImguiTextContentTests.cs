@@ -32,25 +32,42 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void TextWithoutAFontIsReportedOnceAndHasNoSize()
+        public void TextOfAFontWithoutAFontAssetIsWarnedAboutOncePerFontAndHasNoSize()
         {
             Assert.False(Native.IsReady);
             using var log = new Captured();
             IMGUITextHandle.ResetForTests();
-            var style = new GUIStyle { name = "probe", padding = new RectOffset(3, 4, 1, 2) };
-            var size = style.CalcSize(new GUIContent("Some text"));
-            Assert.Equal(new Vector2(7f, 3f), size);
-            // (The font's own loading reports what it lacks as well.)
-            string[] Reports() => log.Entries.FindAll(e => e.StartsWith("Error:Unbound: IMGUI text cannot be generated")).ToArray();
-            var error = Assert.Single(Reports());
-            Assert.Contains("'probe'", error);
-            // The same failure is not reported again, by this style or another.
-            int entries = log.Entries.Count;
-            style.CalcHeight(new GUIContent("Some text"), 50f);
-            style.CalcMinMaxWidth(new GUIContent("Some text"), out _, out _);
-            new GUIStyle().CalcSize(new GUIContent("Other"));
-            Assert.Single(Reports());
-            Assert.Equal(entries, log.Entries.Count);
+            const string Warning = "Warning:Can't Generate Mesh, No Font Asset has been assigned.";
+            int Warnings() => log.Entries.FindAll(e => e == Warning).Count;
+            var first = new Font("First Font Without A Face");
+            var second = new Font("Second Font Without A Face");
+            try
+            {
+                var style = new GUIStyle { font = first, padding = new RectOffset(3, 4, 1, 2) };
+                Assert.Equal(new Vector2(7f, 3f), style.CalcSize(new GUIContent("Some text")));
+                Assert.Equal(0f, style.lineHeight);
+                Assert.Equal(1, Warnings());
+                // The font is not tried again: nothing more is logged for it, whatever asks.
+                int entries = log.Entries.Count;
+                Assert.Equal(3f, style.CalcHeight(new GUIContent("Some text"), 50f));
+                style.CalcMinMaxWidth(new GUIContent("Some text"), out float min, out float max);
+                Assert.Equal((7f, 7f), (min, max));
+                new GUIStyle { font = first }.CalcSize(new GUIContent("Other"));
+                Assert.Equal(entries, log.Entries.Count);
+                // Another font is warned about in its turn, and the first stays quiet between them.
+                new GUIStyle { font = second }.CalcSize(new GUIContent("Other"));
+                Assert.Equal(2, Warnings());
+                entries = log.Entries.Count;
+                style.CalcSize(new GUIContent("Some text"));
+                new GUIStyle { font = second }.CalcSize(new GUIContent("Other"));
+                Assert.Equal(entries, log.Entries.Count);
+            }
+            finally
+            {
+                IMGUITextHandle.ResetForTests();
+                Object.DestroyImmediate(first);
+                Object.DestroyImmediate(second);
+            }
         }
 
         [Fact]
@@ -206,13 +223,13 @@ namespace UnityEngine.Tests
             new GUIStyle { padding = padding, fixedWidth = 45f }.CalcMinMaxWidth(content, out min, out max);
             Assert.Equal((45f, 45f), (min, max));
 
-            // Null content measures as empty content; a height of null content is an error as before.
+            // Null content measures as content without text or image.
             Assert.Equal(new Vector2(7f, 3f), new GUIStyle { padding = padding }.CalcSize(null));
             new GUIStyle { padding = padding }.CalcMinMaxWidth(null, out min, out max);
             Assert.Equal((7f, 7f), (min, max));
             Assert.Equal(new GUIStyle().GetCursorPixelPosition(new Rect(5f, 6f, 50f, 20f), GUIContent.none, 0), new GUIStyle().GetCursorPixelPosition(new Rect(5f, 6f, 50f, 20f), null, 0));
             Assert.Equal(0, new GUIStyle().GetCursorStringIndex(new Rect(5f, 6f, 50f, 20f), null, new Vector2(9f, 9f)));
-            Assert.Throws<ArgumentNullException>(() => new GUIStyle().CalcHeight(null, 10f));
+            Assert.Equal(new GUIStyle { padding = padding }.CalcHeight(GUIContent.none, 10f), new GUIStyle { padding = padding }.CalcHeight(null, 10f));
             Assert.Equal(34f, new GUIStyle { fixedHeight = 34f }.CalcHeight(null, 10f));
         }
 
