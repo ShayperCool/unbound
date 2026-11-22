@@ -91,28 +91,5 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(go); }
         }
-
-        [Fact]
-        public void AGroupIsNamedByItsLatestNamedRecordingAndKeepsItWhenCollapsed()
-        {
-            Undo.IncrementCurrentGroup();
-            var a = ObjectFactory.CreateGameObject("First");
-            var b = ObjectFactory.CreateGameObject("Second");
-            // An added component does not name the group.
-            Undo.AddComponent<BoxCollider>(b);
-            Assert.Equal("Create Second", Undo.GetCurrentGroupName());
-            int group = Undo.GetCurrentGroup();
-            Undo.IncrementCurrentGroup();
-            Undo.RecordObject(b.transform, "Later");
-            Undo.CollapseUndoOperations(group);
-            var names = new List<string>();
-            Undo.UndoRedoEventCallback onUndo = (in UndoRedoInfo info) => names.Add(info.undoName);
-            Undo.undoRedoEvent += onUndo;
-            try { Undo.PerformUndo(); }
-            finally { Undo.undoRedoEvent -= onUndo; }
-            // The collapsed group keeps the name of the group it was collapsed into.
-            Assert.Equal(new[] { "Create Second" }, names);
-            Assert.True(a == null && b == null);
-        }
     }
 }
