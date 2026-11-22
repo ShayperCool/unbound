@@ -22,6 +22,10 @@ drawn over everything) and runs two scripts on it:
   then leave the group. A second gesture releases on the child. The exit handlers record the
   reentry flag and whether the pointer moved in that sample. Unbound runs the driver for both
   rows and compares it with the two Editor sequences.
+* `controls.00` checks a wait longer than the target timeout, target replacement during settling,
+  deselection after an empty tap, immediate overlay hiding, a rotated stick and a world-space
+  event camera. It also checks consecutive runs writing to the same log, a rejected nonfinite
+  timeout and duration, and a tap with no EventSystem.
 
 A row is what the driver logged for the step (`> ...`) and the events the UI recorded between its
 lines, a run of one event (a drag's moves) once. `final` is the UI's state at the end.
@@ -38,3 +42,14 @@ UNBOUND=<unbound> python3 tests/projects/gamedrive/run.py gate
 
 Values compare exactly. Nothing recorded depends on how long a frame or the run took: the
 wall-clock run records no times and no frame counts, and the frame-clock run counts frames only.
+
+The separate `check_shots.py` check runs the package's normal entry point with a rendering
+window. It verifies two consecutive PNG captures, replacement of a previous file and an
+immediate `quit:7`. The check reads the PNG header and end marker without comparing pixels.
+Use `check_shots.py editor` for Unity and `check_shots.py gate` for Unbound.
+
+The Unity 6000.0 scripting API specifies the camera used to convert screen positions into a
+rectangle's coordinates. During a pointer callback, `pressEventCamera` supplies it for a click.
+The separate screenshot API writes a PNG and replaces a file of the same name.
+[RectTransformUtility](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RectTransformUtility.ScreenPointToLocalPointInRectangle.html)
+[ScreenCapture](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ScreenCapture.CaptureScreenshot.html)

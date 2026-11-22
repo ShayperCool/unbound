@@ -1,0 +1,154 @@
+using System;
+using System.Collections;
+using System.IO;
+using Unbound.GameDrive;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+/// <summary>Exercises sequences that cross step boundaries and checks the public run lifecycle.</summary>
+public sealed class DriveDriverControls
+{
+    readonly Transform m_Canvas;
+    readonly string m_Output;
+    GameObject m_Original, m_Replacement;
+    int m_SwapFrame = -1;
+
+    public DriveDriverControls(Transform canvas, string output)
+    {
+        m_Canvas = canvas;
+        m_Output = Path.Combine(output, "driver");
+    }
+
+    public IEnumerator Record(Action finished)
+    {
+        Build();
+        try
+        {
+            var invalid = Driver.Run(new DriveOptions { Timeout = float.NaN, Exit = false });
+            UnityEngine.Object.DestroyImmediate(invalid.gameObject);
+            DriveProbe.Control("invalid timeout accepted");
+        }
+        catch (ArgumentOutOfRangeException error)
+        {
+            DriveProbe.Control("invalid timeout rejected: " + error.ParamName);
+        }
+
+        const string script = "wait:0.2;log:swap;click:Replace;click:Button;tap:0.95,0.05;log:empty;" +
+                              "hide:ControlOverlay;tap:0.35,0.06;drag:Rotated:1,0:0.1;drag:CameraTarget:1,0:0.1";
+        var code = 0;
+        var done = false;
+        var swapAt = int.MaxValue;
+
+        void Logged(string line)
+        {
+            if (line == "step 1 log:swap") swapAt = Time.frameCount + 1;
+            if (line == "step 5 log:empty")
+                DriveProbe.Control("selection empty=" + (EventSystem.current.currentSelectedGameObject == null));
+        }
+
+        void Completed(int exitCode)
+        {
+            switch (code++)
+            {
+                case 0:
+                    DriveProbe.Control("sequence exit " + exitCode);
+                    // Both runs open the same drive.log. The first must close it before Finished.
+                    Restart("swipe:0.2,0.8:0.7,0.8:Infinity");
+                    break;
+                case 1:
+                    DriveProbe.Control("invalid duration exit " + exitCode);
+                    EventSystem.current.gameObject.SetActive(false);
+                    Restart("tap:0.2,0.8");
+                    break;
+                default:
+                    DriveProbe.Control("missing EventSystem exit " + exitCode);
+                    done = true;
+                    break;
+            }
+        }
+
+        void Restart(string next)
+        {
+            try { Driver.Run(Options(next)); }
+            catch (Exception error)
+            {
+                DriveProbe.Control("restart failed: " + error.GetType().Name);
+                done = true;
+            }
+        }
+
+        Driver.Finished += Completed;
+        Driver.Logged += Logged;
+        try
+        {
+            Driver.Run(Options(script));
+            while (!done)
+            {
+                if (m_SwapFrame < 0 && Time.frameCount >= swapAt)
+                {
+                    m_SwapFrame = Time.frameCount;
+                    m_Original.SetActive(false);
+                    m_Replacement.SetActive(true);
+                }
+                yield return null;
+            }
+        }
+        finally
+        {
+            Driver.Finished -= Completed;
+            Driver.Logged -= Logged;
+        }
+        finished();
+    }
+
+    DriveOptions Options(string script) => new DriveOptions
+    {
+        Out = m_Output, Script = script, Frames = true, Fps = 50, Settle = 0.08f, Timeout = 0.15f, Exit = false,
+    };
+
+    void Build()
+    {
+        m_Original = DriveProbe.Box("Replace", m_Canvas, 0.3f, 0.12f, 0.4f, 0.18f, Color.red).gameObject;
+        m_Original.AddComponent<Button>().onClick.AddListener(() => DriveProbe.Control("original clicked"));
+        m_Replacement = DriveProbe.Box("Replace", m_Canvas, 0.3f, 0.12f, 0.4f, 0.18f, Color.green).gameObject;
+        m_Replacement.AddComponent<Button>().onClick.AddListener(() => DriveProbe.Control("replacement age " + (Time.frameCount - m_SwapFrame)));
+        m_Replacement.SetActive(false);
+        DriveProbe.Box("ControlTap", m_Canvas, 0.32f, 0.02f, 0.38f, 0.10f, Color.green).gameObject
+            .AddComponent<Button>().onClick.AddListener(() => DriveProbe.Control("uncovered click"));
+        DriveProbe.Box("ControlOverlay", m_Canvas, 0.32f, 0.02f, 0.38f, 0.10f, Color.red);
+
+        var rotated = DriveProbe.Box("Rotated", m_Canvas, 0.7f, 0.08f, 0.7f, 0.08f, Color.blue);
+        rotated.sizeDelta = new Vector2(80f, 80f);
+        rotated.localRotation = Quaternion.Euler(0f, 0f, 45f);
+        rotated.gameObject.AddComponent<DriveGestureResult>();
+
+        var camera = new GameObject("InputCamera", typeof(Camera)).GetComponent<Camera>();
+        camera.enabled = false;
+        camera.orthographic = true;
+        camera.orthographicSize = 3f;
+        camera.transform.position = new Vector3(0f, 0f, -10f);
+        var world = new GameObject("WorldControls", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+        ((RectTransform)world.transform).sizeDelta = new Vector2(2f, 2f);
+        world.transform.position = new Vector3(1f, -1f, 0f);
+        var canvas = world.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+        canvas.worldCamera = camera;
+        DriveProbe.Box("CameraTarget", world.transform, 0f, 0f, 1f, 1f, Color.blue)
+            .gameObject.AddComponent<DriveGestureResult>();
+    }
+}
+
+public sealed class DriveGestureResult : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
+{
+    public void OnPointerDown(PointerEventData e) { }
+
+    public void OnDrag(PointerEventData e) { }
+
+    public void OnPointerUp(PointerEventData e)
+    {
+        var camera = e.pressEventCamera;
+        var dx = e.position.x - e.pressPosition.x;
+        DriveProbe.Control($"{name} camera={(camera != null ? camera.name : "none")} dragged={e.dragging} fortyPixels={Mathf.Abs(dx - 40f) < 0.1f}");
+    }
+}

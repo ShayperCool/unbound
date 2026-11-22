@@ -14,15 +14,17 @@ GAMEDRIVE_OUT=<dir> GAMEDRIVE_SCRIPT_FILE=<steps.txt> GAMEDRIVE_SCENE=Assets/Sce
 GAMEDRIVE_OUT=<dir> GAMEDRIVE_SCRIPT_FILE=<steps.txt> unbound run -p <copy> --size 960x540 --no-watch
 ```
 
-The Editor or Unbound process exits with code 0 when the script finishes, the code supplied by
-a `quit` step, 3 when a step times out, or 4 when parsing or executing a step throws.
+The final `done CODE` line records 0 when the script finishes, the code supplied by a `quit`
+step, 3 when a target or screenshot times out, or 4 when a step fails. The
+Editor also returns that status. Use `drive.log` for the script result in Unbound. Its windowed
+runner returns status 0 on a normal shutdown. Startup errors go to the engine or Editor log.
 
 | Variable | Meaning |
 |---|---|
 | `GAMEDRIVE_OUT` | the directory of `drive.log` and the screenshots; the driver starts only when it is set |
 | `GAMEDRIVE_SCRIPT`, `GAMEDRIVE_SCRIPT_FILE` | the steps, separated by `;` or line ends (`#` starts a comment line) |
 | `GAMEDRIVE_CLOCK` | `frames`: count time in frames of 1/`GAMEDRIVE_FPS` s (default 60) and set `Time.captureFramerate`; otherwise the wall clock |
-| `GAMEDRIVE_TIMEOUT` | seconds a step may wait for its target (120) |
+| `GAMEDRIVE_TIMEOUT` | seconds a step may wait for a target or screenshot (120) |
 | `GAMEDRIVE_SETTLE` | seconds a target must have been ready before a step acts on it (0.5) |
 | `GAMEDRIVE_SEED` | `UnityEngine.Random`'s seed at the start |
 | `GAMEDRIVE_SCENE`, `GAMEDRIVE_SIZE` | Editor only: the scene to open and the Game view's size |
@@ -45,8 +47,8 @@ screen from its bottom left.
 | `swipe:X1,Y1:X2,Y2[:SECONDS]` | presses at the first point, moves to the second over the time (0.2) and releases. A miss at the first point behaves like a tap miss |
 | `stick:TARGET:DX,DY[:SECONDS]` | presses the target's centre, pushes it by DX,DY within a tenth of a second, holds for the time (0.5) and releases. DX,DY are in halves of the target's smaller side: `1,0` is its right edge |
 | `drag:TARGET:DX,DY[:SECONDS]` | the same movement over the time, released at once |
-| `shot:NAME` | writes `NAME.png` with `ScreenCapture.CaptureScreenshot` |
-| `hide:TARGET` | keeps the object inactive from now on (an overlay that covers the screen) |
+| `shot:NAME` | captures `NAME.png` with `ScreenCapture.CaptureScreenshot` before advancing the script. Requires a rendering Game view |
+| `hide:TARGET` | deactivates the object immediately and keeps it inactive if it reappears |
 | `dump` | logs what could be pressed now |
 | `seed:N`, `log:TEXT`, `quit[:CODE]` | sets the random seed; writes a line; ends the run |
 

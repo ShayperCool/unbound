@@ -1,6 +1,7 @@
 {
   "commands": [
-    "python3 tests/projects/gamedrive/run.py gate"
+    "python3 tests/projects/gamedrive/run.py gate",
+    "python3 tests/projects/gamedrive/check_shots.py gate"
   ],
   "summary": "gamedrive: .*",
   "engine_paths": [

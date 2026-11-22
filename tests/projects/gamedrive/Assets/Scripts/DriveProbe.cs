@@ -62,17 +62,18 @@ wait:0.1
     static int s_ButtonClicks, s_PopupClicks;
     static Slider s_Slider;
     static GameObject s_Popup;
+    static DriveProbe s_Probe;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Begin()
     {
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(Variable))) return;
-        var probe = Build();
+        s_Probe = Build();
         Driver.Logged += Logged;
         Driver.Finished += Finished;
         // The last step waits for an object that never comes: the run ends on the timeout.
         Driver.Run(new DriveOptions { Script = Script, Exit = false, Settle = 0.2f, Timeout = 3f });
-        probe.StartCoroutine(probe.ShowPopup());
+        s_Probe.StartCoroutine(s_Probe.ShowPopup());
     }
 
     IEnumerator ShowPopup()
@@ -127,11 +128,20 @@ wait:0.1
             Driver.Run(new DriveOptions { Script = FrameScript, Exit = false, Settle = 0.2f, Timeout = 3f, Frames = true, Fps = 50 });
             return;
         }
+        Driver.Finished -= Finished;
+        Driver.Logged -= Logged;
+        string final = $"button={s_ButtonClicks} popup={s_PopupClicks} slider={F2(s_Slider.value)} popupActive={s_Popup.activeSelf} code={s_FirstCode},{code} captureFramerate={Time.captureFramerate}";
         HoverControls();
+        var controls = new DriveDriverControls(s_Probe.transform, Environment.GetEnvironmentVariable(Variable));
+        s_Probe.StartCoroutine(controls.Record(() => Write(final)));
+    }
+
+    static void Write(string final)
+    {
         var o = new StringBuilder();
         void Put(string key, string value) => o.Append("{\"k\":\"").Append(key).Append("\",\"v\":\"").Append(value.Replace("\\", "\\\\").Replace("\"", "\\\"")).Append("\"}\n");
         foreach (var step in s_Steps) Put(step.Key, string.Join(" | ", step.Value));
-        Put("final", $"button={s_ButtonClicks} popup={s_PopupClicks} slider={F2(s_Slider.value)} popupActive={s_Popup.activeSelf} code={s_FirstCode},{code} captureFramerate={Time.captureFramerate}");
+        Put("final", final);
         o.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(Environment.GetEnvironmentVariable(Variable), "values.jsonl"), o.ToString());
 #if UNITY_EDITOR
@@ -139,6 +149,13 @@ wait:0.1
 #else
         Application.Quit(0);
 #endif
+    }
+
+    internal static void Control(string value)
+    {
+        s_Run = "controls";
+        s_Step = 0;
+        Add(value);
     }
 
     static void HoverControls()
@@ -181,7 +198,7 @@ wait:0.1
 
     // ------------------------------------------------------------------ the UI
 
-    static RectTransform Box(string name, Transform parent, float x0, float y0, float x1, float y1, Color color)
+    internal static RectTransform Box(string name, Transform parent, float x0, float y0, float x1, float y1, Color color)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(Image));
         var rect = (RectTransform)go.transform;

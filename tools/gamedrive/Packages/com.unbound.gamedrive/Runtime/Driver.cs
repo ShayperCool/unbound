@@ -21,7 +21,7 @@ namespace Unbound.GameDrive
         /// Time.captureFramerate set to Fps (GAMEDRIVE_CLOCK=frames, GAMEDRIVE_FPS).</summary>
         public bool Frames;
         public int Fps = 60;
-        /// <summary>Seconds a step may wait for its target before the run ends with code 3 (GAMEDRIVE_TIMEOUT).</summary>
+        /// <summary>Seconds to wait for a target or screenshot before exiting with code 3 (GAMEDRIVE_TIMEOUT).</summary>
         public float Timeout = 120f;
         /// <summary>Seconds a target must stay ready before a step acts on it (GAMEDRIVE_SETTLE).</summary>
         public float Settle = 0.5f;
@@ -40,8 +40,8 @@ namespace Unbound.GameDrive
             if (!string.IsNullOrEmpty(file)) options.Script = File.ReadAllText(file);
             options.Frames = Get("GAMEDRIVE_CLOCK") == "frames";
             if (int.TryParse(Get("GAMEDRIVE_FPS"), out int fps) && fps > 0) options.Fps = fps;
-            if (float.TryParse(Get("GAMEDRIVE_TIMEOUT"), NumberStyles.Float, CultureInfo.InvariantCulture, out float timeout)) options.Timeout = timeout;
-            if (float.TryParse(Get("GAMEDRIVE_SETTLE"), NumberStyles.Float, CultureInfo.InvariantCulture, out float settle)) options.Settle = settle;
+            if (Get("GAMEDRIVE_TIMEOUT") is string timeout) options.Timeout = float.Parse(timeout, CultureInfo.InvariantCulture);
+            if (Get("GAMEDRIVE_SETTLE") is string settle) options.Settle = float.Parse(settle, CultureInfo.InvariantCulture);
             if (int.TryParse(Get("GAMEDRIVE_SEED"), out int seed)) options.Seed = seed;
             return options;
         }
@@ -59,7 +59,7 @@ namespace Unbound.GameDrive
     {
         /// <summary>Every line the driver logs, without its time and frame.</summary>
         public static event Action<string> Logged;
-        /// <summary>The script ended: 0, a quit step's code, or 3 after a timeout.</summary>
+        /// <summary>The script ended: 0, a quit step's code, 3 after a timeout, or 4 after an error.</summary>
         public static event Action<int> Finished;
 
         DriveOptions m_Options;
@@ -68,26 +68,41 @@ namespace Unbound.GameDrive
         readonly List<string> m_Hidden = new List<string>();
         readonly DrivePointer m_Pointer = new DrivePointer();
         int m_Index, m_Phase, m_CaptureFramerate;
-        bool m_Began, m_Done;
+        bool m_Began, m_Done, m_DownHit, m_ChangedCaptureFramerate;
         double m_StepStart, m_ReadySince = -1.0, m_PhaseStart;
         double m_NextHide;
+        string m_Label, m_Screenshot;
+        GameObject m_ReadyTarget;
+        float m_Duration;
         Vector2 m_From, m_To;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Boot()
         {
-            var options = DriveOptions.FromEnvironment();
-            if (options != null) Run(options);
+            try
+            {
+                var options = DriveOptions.FromEnvironment();
+                if (options != null) Run(options);
+            }
+            catch (Exception error)
+            {
+                Debug.LogException(error);
+                ExitProcess(4);
+            }
         }
 
         /// <summary>Starts driving with these options (what GAMEDRIVE_OUT does at startup).</summary>
         public static Driver Run(DriveOptions options)
         {
             if (options == null) throw new ArgumentNullException(nameof(options));
+            if (!Finite(options.Timeout) || options.Timeout < 0f) throw new ArgumentOutOfRangeException(nameof(options.Timeout));
+            if (!Finite(options.Settle) || options.Settle < 0f) throw new ArgumentOutOfRangeException(nameof(options.Settle));
+            if (options.Frames && options.Fps <= 0) throw new ArgumentOutOfRangeException(nameof(options.Fps));
             var go = new GameObject("Unbound.GameDrive") { hideFlags = HideFlags.HideInHierarchy };
             DontDestroyOnLoad(go);
             var driver = go.AddComponent<Driver>();
-            driver.Begin(options);
+            try { driver.Begin(options); }
+            catch { Destroy(go); throw; }
             return driver;
         }
 
@@ -105,15 +120,31 @@ namespace Unbound.GameDrive
                 if (step.Length > 0 && step[0] != '#') m_Steps.Add(step.Split(':').Select(p => p.Trim()).ToArray());
             }
             m_CaptureFramerate = Time.captureFramerate;
-            if (options.Frames) Time.captureFramerate = options.Fps;
+            if (options.Frames)
+            {
+                Time.captureFramerate = options.Fps;
+                m_ChangedCaptureFramerate = true;
+            }
             if (options.Seed is int seed) UnityEngine.Random.InitState(seed);
             Application.logMessageReceived += GameLog;
             SceneManager.sceneLoaded += SceneLoaded;
             Log($"start {m_Steps.Count} steps clock {(options.Frames ? "frames@" + options.Fps : "real")} screen {Screen.width}x{Screen.height}");
         }
 
-        void OnDestroy()
+        void OnDestroy() => ReleaseResources();
+
+        void RestoreCaptureFramerate()
         {
+            if (m_ChangedCaptureFramerate)
+            {
+                Time.captureFramerate = m_CaptureFramerate;
+                m_ChangedCaptureFramerate = false;
+            }
+        }
+
+        void ReleaseResources()
+        {
+            RestoreCaptureFramerate();
             Application.logMessageReceived -= GameLog;
             SceneManager.sceneLoaded -= SceneLoaded;
             m_Log?.Dispose();
@@ -157,22 +188,24 @@ namespace Unbound.GameDrive
                     m_Phase = 0;
                     m_StepStart = Now;
                     m_ReadySince = -1.0;
+                    m_ReadyTarget = null;
+                    m_Label = string.Join(":", step);
                 }
                 bool sentInput;
                 bool finished;
                 try { finished = Step(step, out sentInput); }
                 catch (Exception e)
                 {
-                    Log($"step {m_Index} {string.Join(":", step)} failed: {e.GetType().Name}: {e.Message}");
+                    Log($"step {m_Index} {m_Label} failed: {e.GetType().Name}: {e.Message}");
                     Finish(4);
                     return;
                 }
                 if (m_Done) return;
                 if (!finished)
                 {
-                    if (m_Phase == 0 && Since(m_StepStart) > m_Options.Timeout)
+                    if (step[0] != "wait" && (m_Phase == 0 || step[0] == "shot") && Since(m_StepStart) > m_Options.Timeout)
                     {
-                        Log($"step {m_Index} {string.Join(":", step)} timeout");
+                        Log($"step {m_Index} {m_Label} timeout");
                         Finish(3);
                     }
                     return;
@@ -190,10 +223,16 @@ namespace Unbound.GameDrive
             if (m_Done) return;
             m_Done = true;
             if (m_Pointer.Pressed) m_Pointer.Up();
-            if (m_Options.Frames) Time.captureFramerate = m_CaptureFramerate;
+            RestoreCaptureFramerate();
             Log($"done {code}");
+            ReleaseResources();
+            Destroy(gameObject);
             Finished?.Invoke(code);
-            if (!m_Options.Exit) return;
+            if (m_Options.Exit) ExitProcess(code);
+        }
+
+        static void ExitProcess(int code)
+        {
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.Exit(code);
 #else
@@ -203,7 +242,14 @@ namespace Unbound.GameDrive
 
         // ------------------------------------------------------------------ steps
 
-        static float Number(string text) => float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
+        static bool Finite(float number) => !float.IsNaN(number) && !float.IsInfinity(number);
+
+        static float Number(string text)
+        {
+            float value = float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
+            if (!Finite(value)) throw new FormatException("expected a finite number");
+            return value;
+        }
 
         /// <summary>"X,Y" as fractions of the screen from its bottom left, in pixels.</summary>
         static Vector2 ScreenPoint(string text)
@@ -223,7 +269,7 @@ namespace Unbound.GameDrive
         bool Step(string[] s, out bool sentInput)
         {
             sentInput = false;
-            string label = string.Join(":", s);
+            string label = m_Label;
             switch (s[0])
             {
                 case "wait":
@@ -231,7 +277,7 @@ namespace Unbound.GameDrive
                     Log($"step {m_Index} {label}");
                     return true;
                 case "until":
-                    if (!Ready(FindActive(s[1]) != null, s.Length > 2 ? Number(s[2]) : m_Options.Settle)) return false;
+                    if (!Ready(FindActive(s[1]), s.Length > 2 ? Number(s[2]) : m_Options.Settle)) return false;
                     Log($"step {m_Index} {label}");
                     return true;
                 case "gone":
@@ -249,11 +295,10 @@ namespace Unbound.GameDrive
                     m_Hidden.Add(s[1]);
                     m_NextHide = 0.0;
                     Log($"step {m_Index} {label}");
+                    Hide();
                     return true;
                 case "shot":
-                    if (!string.IsNullOrEmpty(m_Options.Out)) ScreenCapture.CaptureScreenshot(Path.Combine(m_Options.Out, s[1] + ".png"));
-                    Log($"step {m_Index} {label}");
-                    return true;
+                    return Shot(s[1]);
                 case "dump":
                     Dump();
                     return true;
@@ -277,16 +322,36 @@ namespace Unbound.GameDrive
             }
         }
 
-        /// <summary>Whether a condition has held for <paramref name="seconds"/> without a break.</summary>
-        bool Ready(bool condition, float seconds)
+        /// <summary>Whether the same target has been ready for <paramref name="seconds"/>.</summary>
+        bool Ready(GameObject target, float seconds)
         {
-            if (!condition)
+            if (!ReferenceEquals(target, m_ReadyTarget))
             {
-                m_ReadySince = -1.0;
+                m_ReadyTarget = target;
+                m_ReadySince = Now;
+            }
+            return target != null && Since(m_ReadySince) >= seconds;
+        }
+
+        bool Shot(string name)
+        {
+            if (m_Phase == 0)
+            {
+                if (string.IsNullOrEmpty(m_Options.Out)) throw new InvalidOperationException("no screenshot output directory");
+                if (name.Length == 0 || Path.GetFileName(name) != name) throw new FormatException("expected a screenshot file name");
+                // A fresh path lets an earlier run's file remain in place while this capture is pending.
+                m_Screenshot = Path.Combine(m_Options.Out, $".gamedrive-{Guid.NewGuid():N}.png");
+                ScreenCapture.CaptureScreenshot(m_Screenshot);
+                Log($"step {m_Index} {m_Label}");
+                m_Phase = 1;
                 return false;
             }
-            if (m_ReadySince < 0.0) m_ReadySince = Now;
-            return Since(m_ReadySince) >= seconds;
+            if (!File.Exists(m_Screenshot)) return false;
+            string destination = Path.Combine(m_Options.Out, name + ".png");
+            if (File.Exists(destination)) File.Replace(m_Screenshot, destination, null);
+            else File.Move(m_Screenshot, destination);
+            m_Screenshot = null;
+            return true;
         }
 
         /// <summary>click:TARGET and press:TARGET:SECONDS: a press on the target itself at its
@@ -297,7 +362,7 @@ namespace Unbound.GameDrive
             if (m_Phase == 0)
             {
                 var target = FindPressable(s[1]);
-                if (!Ready(target != null, m_Options.Settle)) return false;
+                if (!Ready(target, m_Options.Settle)) return false;
                 Vector2 at = ScreenCentre(target, out _);
                 Log($"step {m_Index} {label} down {PathOf(target.transform)}");
                 if (!m_Pointer.Down(at, target)) throw new InvalidOperationException("no EventSystem to press with");
@@ -324,9 +389,7 @@ namespace Unbound.GameDrive
             if (m_Phase == 0)
             {
                 var at = ScreenPoint(s[1]);
-                var under = DrivePointer.ObjectAt(at, out _);
-                Log($"step {m_Index} {label} down {(under != null ? PathOf(under.transform) : "(nothing)")}");
-                if (!m_Pointer.Down(at)) return true;
+                if (!DownAt(at)) return true;
                 m_Phase = 1;
                 return false;
             }
@@ -344,17 +407,15 @@ namespace Unbound.GameDrive
             {
                 m_From = ScreenPoint(s[1]);
                 m_To = ScreenPoint(s[2]);
-                var under = DrivePointer.ObjectAt(m_From, out _);
-                Log($"step {m_Index} {label} down {(under != null ? PathOf(under.transform) : "(nothing)")}");
-                if (!m_Pointer.Down(m_From)) return true;
+                m_Duration = s.Length > 3 ? Number(s[3]) : 0.2f;
+                if (!DownAt(m_From)) return true;
                 m_Phase = 1;
                 m_PhaseStart = Now;
                 return false;
             }
             if (m_Phase == 1)
             {
-                float duration = s.Length > 3 ? Number(s[3]) : 0.2f;
-                float t = duration > 0f ? Mathf.Clamp01(Since(m_PhaseStart) / duration) : 1f;
+                float t = m_Duration > 0f ? Mathf.Clamp01(Since(m_PhaseStart) / m_Duration) : 1f;
                 m_Pointer.Move(Vector2.Lerp(m_From, m_To, t));
                 if (t >= 1f) m_Phase = 2;
                 return false;
@@ -362,6 +423,20 @@ namespace Unbound.GameDrive
             Log($"step {m_Index} {label} up");
             m_Pointer.Up();
             return true;
+        }
+
+        bool DownAt(Vector2 position)
+        {
+            if (!m_Pointer.Down(position, beforeDispatch: LogPointerDown))
+                throw new InvalidOperationException("no EventSystem to press with");
+            if (!m_DownHit) m_Pointer.Up();
+            return m_DownHit;
+        }
+
+        void LogPointerDown(GameObject hit)
+        {
+            m_DownHit = hit != null;
+            Log($"step {m_Index} {m_Label} down {(m_DownHit ? PathOf(hit.transform) : "(nothing)")}");
         }
 
         /// <summary>stick:TARGET:DX,DY:SECONDS: a press on the target's centre, moved by DX,DY (in
@@ -375,7 +450,7 @@ namespace Unbound.GameDrive
             if (m_Phase == 0)
             {
                 var target = FindPressable(s[1]);
-                if (!Ready(target != null, m_Options.Settle)) return false;
+                if (!Ready(target, m_Options.Settle)) return false;
                 m_From = ScreenCentre(target, out float radius);
                 m_To = m_From + Pair(s[2]) * radius;
                 Log($"step {m_Index} {label} down {PathOf(target.transform)}");
@@ -413,84 +488,87 @@ namespace Unbound.GameDrive
 
         static string PathOf(Transform t) => t.parent == null ? t.name : PathOf(t.parent) + "/" + t.name;
 
-        static bool Named(Transform t, string name) =>
-            t.name == name || (name.IndexOf('/') >= 0 ? ("/" + PathOf(t)).EndsWith("/" + name, StringComparison.Ordinal) : false);
-
-        /// <summary>An active object by its name, or by the end of its path when the name has a
-        /// '/'; of several, the first in hierarchy order (<see cref="First"/>).</summary>
-        GameObject FindActive(string name)
+        static bool Named(Transform transform, string name, bool isPath)
         {
-            s_Matches.Clear();
-            foreach (var t in FindObjectsByType<Transform>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-                if (Named(t, name)) s_Matches.Add(t.gameObject);
-            return First(name);
-        }
-
-        /// <summary>The object a press on a name goes to: an interactable Selectable, else an
-        /// object with an enabled component that handles pointer downs, clicks or drags and no
-        /// Selectable that is not interactable; of several, the first in hierarchy order.</summary>
-        GameObject FindPressable(string name)
-        {
-            s_Matches.Clear();
-            foreach (var behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            if (!isPath) return transform.name == name;
+            int end = name.Length;
+            for (var t = transform; t != null; t = t.parent)
             {
-                if (!behaviour.isActiveAndEnabled || !Named(behaviour.transform, name) || s_Matches.Contains(behaviour.gameObject)) continue;
-                if (!(behaviour is Selectable || behaviour is IPointerDownHandler || behaviour is IPointerClickHandler || behaviour is IDragHandler)) continue;
-                var selectable = behaviour.GetComponent<Selectable>();
-                if (selectable != null && !(selectable.isActiveAndEnabled && selectable.IsInteractable())) continue;
-                s_Matches.Add(behaviour.gameObject);
+                string part = t.name;
+                int start = Math.Max(0, end - part.Length);
+                int offset = part.Length - (end - start);
+                if (offset > 0 && part[offset - 1] != '/') return false;
+                if (string.CompareOrdinal(name, start, part, offset, end - start) != 0) return false;
+                if (start == 0) return true;
+                if (name[start - 1] != '/') return false;
+                end = start - 1;
             }
-            return First(name);
+            return false;
         }
 
-        static readonly List<GameObject> s_Matches = new List<GameObject>();
+        readonly List<GameObject> m_Roots = new List<GameObject>();
+        readonly Stack<Transform> m_Descendants = new Stack<Transform>();
+        readonly List<MonoBehaviour> m_Behaviours = new List<MonoBehaviour>();
         readonly HashSet<string> m_Ambiguous = new HashSet<string>(StringComparer.Ordinal);
 
-        /// <summary>The first of the matches in hierarchy order: by scene (the loaded scenes in
-        /// their order, then the objects kept across loads), then by place among the roots and
-        /// among the siblings at each level, a parent before its children. The engine's own
-        /// order of finding objects is not the same everywhere; this one is. Several matches are
-        /// logged once per name.</summary>
-        GameObject First(string name)
+        GameObject FindActive(string name) => FindTarget(name, pressable: false);
+
+        GameObject FindPressable(string name) => FindTarget(name, pressable: true);
+
+        /// <summary>Visits loaded scenes in order, then the objects kept across scene loads.
+        /// Within a scene, visits each branch in sibling order, with each parent before its children.</summary>
+        GameObject FindTarget(string name, bool pressable)
         {
-            if (s_Matches.Count == 0) return null;
-            GameObject first = s_Matches[0];
-            for (int i = 1; i < s_Matches.Count; i++)
-                if (Before(s_Matches[i].transform, first.transform)) first = s_Matches[i];
-            if (s_Matches.Count > 1 && m_Ambiguous.Add(name))
+            GameObject first = null;
+            int matches = 0;
+            bool isPath = name.IndexOf('/') >= 0;
+            var persistentScene = gameObject.scene;
+            bool scannedPersistent = false;
+            for (int i = 0; i < SceneManager.sceneCount; i++)
             {
-                Log($"{s_Matches.Count} objects match {name}: the first in the hierarchy is taken, {PathOf(first.transform)}");
+                var scene = SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded) continue;
+                ScanScene(scene, name, isPath, pressable, ref first, ref matches);
+                scannedPersistent |= scene == persistentScene;
             }
+            if (!scannedPersistent && persistentScene.IsValid() && persistentScene.isLoaded)
+                ScanScene(persistentScene, name, isPath, pressable, ref first, ref matches);
+            if (matches > 1 && m_Ambiguous.Add(name))
+                Log($"{matches} objects match {name}: the first in the hierarchy is taken, {PathOf(first.transform)}");
             return first;
         }
 
-        static int SceneOrder(Transform t)
+        void ScanScene(Scene scene, string name, bool isPath, bool pressable, ref GameObject first, ref int matches)
         {
-            var scene = t.gameObject.scene;
-            for (int i = 0; i < SceneManager.sceneCount; i++)
-                if (SceneManager.GetSceneAt(i) == scene) return i;
-            return SceneManager.sceneCount;
+            scene.GetRootGameObjects(m_Roots);
+            for (int i = m_Roots.Count - 1; i >= 0; i--) m_Descendants.Push(m_Roots[i].transform);
+            m_Roots.Clear();
+            while (m_Descendants.Count > 0)
+            {
+                var t = m_Descendants.Pop();
+                if (!t.gameObject.activeSelf) continue;
+                for (int i = t.childCount - 1; i >= 0; i--) m_Descendants.Push(t.GetChild(i));
+                if (!Named(t, name, isPath)) continue;
+                if (pressable ? !IsPressable(t.gameObject) : (t.hideFlags & HideFlags.DontSave) != 0) continue;
+                if (matches++ == 0) first = t.gameObject;
+            }
         }
 
-        static readonly List<int> s_PlaceA = new List<int>(), s_PlaceB = new List<int>();
-
-        /// <summary>An object's place: its scene's order, then the sibling index of each transform
-        /// from its root down to it.</summary>
-        static void Place(Transform t, List<int> place)
+        bool IsPressable(GameObject target)
         {
-            place.Clear();
-            for (var u = t; u != null; u = u.parent) place.Add(u.GetSiblingIndex());
-            place.Add(SceneOrder(t));
-            place.Reverse();
-        }
-
-        static bool Before(Transform a, Transform b)
-        {
-            Place(a, s_PlaceA);
-            Place(b, s_PlaceB);
-            for (int i = 0; i < s_PlaceA.Count && i < s_PlaceB.Count; i++)
-                if (s_PlaceA[i] != s_PlaceB[i]) return s_PlaceA[i] < s_PlaceB[i];
-            return s_PlaceA.Count < s_PlaceB.Count;
+            var selectable = target.GetComponent<Selectable>();
+            if (selectable != null && !(selectable.isActiveAndEnabled && selectable.IsInteractable())) return false;
+            target.GetComponents(m_Behaviours);
+            bool hasHandler = false;
+            foreach (var behaviour in m_Behaviours)
+                if (behaviour != null && behaviour.isActiveAndEnabled && (behaviour.hideFlags & HideFlags.DontSave) == 0
+                    && (behaviour is Selectable || behaviour is IPointerDownHandler || behaviour is IPointerClickHandler || behaviour is IDragHandler))
+                {
+                    hasHandler = true;
+                    break;
+                }
+            m_Behaviours.Clear();
+            return hasHandler;
         }
 
         /// <summary>The screen position of an object's centre, and half its smaller side in
@@ -500,14 +578,15 @@ namespace Unbound.GameDrive
             radius = 1f;
             if (target.transform is RectTransform rect)
             {
-                var canvas = target.GetComponentInParent<Canvas>();
-                var camera = canvas != null && canvas.rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.rootCanvas.worldCamera : null;
+                var raycaster = DrivePointer.RaycasterFor(target);
+                var camera = raycaster != null ? raycaster.eventCamera : null;
                 var corners = new Vector3[4];
                 rect.GetWorldCorners(corners);
-                Vector2 low = RectTransformUtility.WorldToScreenPoint(camera, corners[0]);
-                Vector2 high = RectTransformUtility.WorldToScreenPoint(camera, corners[2]);
-                radius = Mathf.Min(Mathf.Abs(high.x - low.x), Mathf.Abs(high.y - low.y)) * 0.5f;
-                return (low + high) * 0.5f;
+                Vector2 corner = RectTransformUtility.WorldToScreenPoint(camera, corners[0]);
+                Vector2 left = RectTransformUtility.WorldToScreenPoint(camera, corners[1]) - corner;
+                Vector2 bottom = RectTransformUtility.WorldToScreenPoint(camera, corners[3]) - corner;
+                radius = Mathf.Min(left.magnitude, bottom.magnitude) * 0.5f;
+                return RectTransformUtility.WorldToScreenPoint(camera, rect.TransformPoint(rect.rect.center));
             }
             var main = Camera.main;
             return main != null ? (Vector2)main.WorldToScreenPoint(target.transform.position) : new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);

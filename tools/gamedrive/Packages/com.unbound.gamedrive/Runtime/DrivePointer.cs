@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace Unbound.GameDrive
 {
@@ -27,58 +28,50 @@ namespace Unbound.GameDrive
     /// </summary>
     public sealed class DrivePointer
     {
-        static readonly List<RaycastResult> s_Hits = new List<RaycastResult>();
-
+        readonly List<RaycastResult> m_Hits = new List<RaycastResult>();
         PointerEventData m_Data;
         GameObject m_Forced;
+        GraphicRaycaster m_ForcedRaycaster;
 
         public bool Pressed => m_Data != null;
 
-        /// <summary>The topmost UI object at a screen position (pixels from the bottom left), or null.</summary>
-        public static GameObject ObjectAt(Vector2 position, out RaycastResult hit)
+        internal static GraphicRaycaster RaycasterFor(GameObject target) => target.GetComponentInParent<GraphicRaycaster>();
+
+        /// <summary>Finds what is under the pointer, using the same event data throughout the touch.</summary>
+        RaycastResult Raycast(EventSystem system, PointerEventData data)
         {
-            hit = default;
-            var system = EventSystem.current;
-            if (system == null) return null;
-            var data = new PointerEventData(system) { position = position };
-            s_Hits.Clear();
-            system.RaycastAll(data, s_Hits);
-            foreach (var h in s_Hits)
-                if (h.gameObject != null)
+            if (system == null) return default;
+            m_Hits.Clear();
+            system.RaycastAll(data, m_Hits);
+            var result = default(RaycastResult);
+            foreach (var hit in m_Hits)
+                if (hit.gameObject != null)
                 {
-                    hit = h;
-                    return h.gameObject;
+                    result = hit;
+                    break;
                 }
-            return null;
+            m_Hits.Clear();
+            return result;
         }
 
         /// <summary>The object under the pointer now: the forced target, else what a raycast finds.</summary>
-        GameObject Over(Vector2 position, out RaycastResult hit)
+        RaycastResult Over(EventSystem system, PointerEventData data)
         {
             if (m_Forced != null)
-            {
-                hit = new RaycastResult { gameObject = m_Forced, screenPosition = position };
-                return m_Forced;
-            }
-            var over = ObjectAt(position, out hit);
-            if (over == null) hit = new RaycastResult { screenPosition = position };
-            return over;
+                return new RaycastResult { gameObject = m_Forced, module = m_ForcedRaycaster, screenPosition = data.position };
+            return Raycast(system, data);
         }
 
         /// <summary>Presses at a screen position. With <paramref name="target"/> the press goes to
-        /// that object whatever is drawn over it; else to the object under the pointer. False when
-        /// there is no EventSystem or nothing to press.</summary>
-        public bool Down(Vector2 position, GameObject target = null)
+        /// that object whatever is drawn over it; else to the object under the pointer. The
+        /// optional callback reports the hit before dispatch. An empty hit can clear selection.
+        /// Returns false without an EventSystem or while another press is active.</summary>
+        public bool Down(Vector2 position, GameObject target = null, System.Action<GameObject> beforeDispatch = null)
         {
             var system = EventSystem.current;
             if (system == null || m_Data != null) return false;
             m_Forced = target;
-            var over = Over(position, out var hit);
-            if (over == null)
-            {
-                m_Forced = null;
-                return false;
-            }
+            m_ForcedRaycaster = target != null ? RaycasterFor(target) : null;
             m_Data = new PointerEventData(system)
             {
                 pointerId = 0,
@@ -89,9 +82,12 @@ namespace Unbound.GameDrive
                 eligibleForClick = true,
                 dragging = false,
                 useDragThreshold = true,
-                pointerCurrentRaycast = hit,
-                pointerPressRaycast = hit,
             };
+            var hit = Over(system, m_Data);
+            var over = hit.gameObject;
+            m_Data.pointerCurrentRaycast = hit;
+            m_Data.pointerPressRaycast = hit;
+            beforeDispatch?.Invoke(over);
             // A press elsewhere takes the selection away; a Selectable selects itself on its press.
             var selectable = ExecuteEvents.GetEventHandler<ISelectHandler>(over);
             if (selectable != system.currentSelectedGameObject) system.SetSelectedGameObject(null, m_Data);
@@ -114,9 +110,9 @@ namespace Unbound.GameDrive
             if (m_Data == null) return;
             m_Data.delta = position - m_Data.position;
             m_Data.position = position;
-            var over = Over(position, out var hit);
+            var hit = Over(EventSystem.current, m_Data);
             m_Data.pointerCurrentRaycast = hit;
-            ExitAndEnter(over);
+            ExitAndEnter(hit.gameObject);
             // A pointer that did not move drags nothing.
             if (m_Data.delta.sqrMagnitude <= 0f || m_Data.pointerDrag == null) return;
             if (!m_Data.dragging)
@@ -152,7 +148,8 @@ namespace Unbound.GameDrive
             // Up samples the same position as the previous touch sample.
             data.delta = Vector2.zero;
             // What is under the pointer now decides the click and takes the drop.
-            var over = Over(data.position, out var hit);
+            var hit = Over(EventSystem.current, data);
+            var over = hit.gameObject;
             data.pointerCurrentRaycast = hit;
             ExecuteEvents.Execute(data.pointerPress, data, ExecuteEvents.pointerUpHandler);
             var clicked = over != null ? ExecuteEvents.GetEventHandler<IPointerClickHandler>(over) : null;
@@ -172,6 +169,7 @@ namespace Unbound.GameDrive
             data.pointerEnter = null;
             m_Data = null;
             m_Forced = null;
+            m_ForcedRaycaster = null;
         }
 
         /// <summary>The pointer is over <paramref name="target"/> now (null: over nothing): the
