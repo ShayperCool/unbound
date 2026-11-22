@@ -40,6 +40,7 @@ own models; its assembly carries the name of one of the package's friend assembl
   (below).
 - `OutEvents` (`Assets/EventGraphs`): the output event controls' graph (below).
 - `OpsValues` (`Assets/OpGraphs`): the operation controls' graph (below).
+- `OpsNoise` (`Assets/OpGraphs`): the noise controls' graph (below).
 - `OpsEvent` (`Assets/OpGraphs`): the graph of the controls of event attributes read in a spawn
   context (below).
 - `OpsMesh` (`Assets/OpGraphs`), `DrawMesh`, `DrawMeshSurface` (`Assets/DrawGraphs`): the mesh
@@ -347,6 +348,31 @@ destroyed while it is set at frame 12; the buffer is released while it is set at
 none at frame 11, another of five elements at frame 13 and one of nine released before it is set at
 frame 15. The rows are written at frame 20.
 
+## Noise
+
+`noise/api/<function>/<call>` is the noise the graph compiler folds over constants
+(`UnityEditor.VFX.VFXExpressionNoise`, listed by `noise/api/functions`): value, Perlin and cellular
+noise over one, two and three coordinates with their derivatives, the curl of each over two and
+three, and the Voronoi noise, each called 140 times with a fixed sequence of arguments
+(`arguments = result`, floats as bits): coordinates within 8, within 300 and within 5000, then
+coordinates at and around what the lattices repeat over (71 cells, 69 over three coordinates),
+huge, tiny, infinite and absent; every fifth call has a frequency, a count of octaves (zero among
+them), a persistence and a lacunarity of its own, negative ones among them. A NaN is written
+`nan`: its sign is not compared.
+
+`OpsNoise` has a spawn context with a block written as a script (`Assets/Callbacks/NoiseInputs.cs`)
+whose inputs are fed by the package's noise operators over exposed properties;
+`noise/<update>/*` is what it read when the context played and in its first sixteen updates. Per
+noise (the tens digit: 0 value, 1 Perlin, 2 cellular): the noise over one coordinate and its
+derivative (`f?0`, `f?1`), over two (`f?2`, `w?0`) and over three (`f?3`, `v?0`), the curl over two
+and three (`w?1`, `v?1`). The Voronoi noise is not among them: the compiler refuses a graph that
+reads it in a spawn context ("not valid" on the CPU), and the folded one is a NaN whatever it is
+given. From frame 3, one step a frame for fourteen
+frames, the probe gives the effect other coordinates and settings: cells at the lattices' period,
+far coordinates, a negative frequency, roughness and lacunarity, a lacunarity of zero, no octaves,
+a negative count and twelve of them, and huge, infinite and absent coordinates. The rows are
+written at frame 20.
+
 ## Mesh operations
 
 `OpsMesh` has a spawn context with a block written as a script (`Assets/Callbacks/MeshInputs.cs`)
@@ -444,7 +470,7 @@ shadows by `tests/projects/vfxlit`; strips by `tests/projects/vfxstrips`; GPU ev
 Motion vectors, bounds computed on the GPU. Expression operations without a control: a matrix's axis
 (made only by blocks of initialize and update contexts: collision shapes, a position on a mesh), a
 texture's format (no operator makes it), and the ones the runtime does not do yet:
-noise, and a skinned mesh renderer's mesh, vertices and root bone. Not measured of meshes: no mesh, and a mesh without the
+a skinned mesh renderer's mesh, vertices and root bone. Not measured of noise: the sign of a NaN. Not measured of meshes: no mesh, and a mesh without the
 channel a program reads, read by a program (Unbound gives them zeros, as for a mesh without
 read/write access); a copy whose data was given up read by a program (taken to read as
 `MeshLocked`); a mesh without read/write access whose buffers a script gave a target for compute

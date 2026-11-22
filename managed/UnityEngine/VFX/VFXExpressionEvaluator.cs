@@ -55,6 +55,9 @@ namespace Unbound.Runtime
                 // format.
                 case VFXExpressionOperation.MatrixToAxis:
                 case VFXExpressionOperation.TextureFormat:
+                // The graph compiler refuses the Voronoi noise outside a kernel ("not valid on
+                // the CPU", tests/projects/vfx README, "Noise"): no compiled graph evaluates it.
+                case VFXExpressionOperation.VoroNoise2D:
                 // A skinned mesh renderer's mesh, vertices and root bone are not done yet.
                 case VFXExpressionOperation.VertexBufferFromSkinnedMeshRenderer:
                 case VFXExpressionOperation.MeshFromSkinnedMeshRenderer:
@@ -74,7 +77,6 @@ namespace Unbound.Runtime
                 case VFXExpressionOperation.TextureDepth:
                     return true;
             }
-            if (op >= VFXExpressionOperation.ValueNoise1D && op <= VFXExpressionOperation.VoroNoise2D) return false;
             return op >= VFXExpressionOperation.None && op <= VFXExpressionOperation.SpawnerStateLoopCount;
         }
 
@@ -137,6 +139,11 @@ namespace Unbound.Runtime
                         break;
                     case VFXExpressionOperation.ExtractComponent:
                         w[at] = w[p0 + operands[d + 2]];
+                        break;
+
+                    case >= VFXExpressionOperation.ValueNoise1D and <= VFXExpressionOperation.CellularCurlNoise3D:
+                        // A coordinate, (frequency, persistence, lacunarity) and a count of octaves.
+                        VFXNoise.Evaluate(op, w, at, p0, p1, (int)w[offsets[operands[d + 2]]]);
                         break;
 
                     case VFXExpressionOperation.DeltaTime: w[at] = Bits(state.DeltaTime); break;

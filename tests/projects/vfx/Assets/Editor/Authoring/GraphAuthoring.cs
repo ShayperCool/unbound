@@ -48,6 +48,7 @@ public static class GraphAuthoring
         Operations();
         Meshes();
         MeshOperations();
+        NoiseOperations();
         DrawnFromMeshes();
         EventReadings();
         AssetDatabase.SaveAssets();
@@ -447,6 +448,63 @@ public static class GraphAuthoring
         wide.RecalculateBounds();
         AssetDatabase.CreateAsset(wide, ObjectFolder + "/MeshWide.asset");
         AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>The noise controls' graph (README.md, "Noise"): a spawn context whose script
+    /// block reads each noise operator of the package (value, Perlin and cellular noise over one,
+    /// two and three coordinates, their curl over two and three), all over exposed properties.
+    /// The Voronoi noise has no place in it: the compiler refuses a graph that reads it in a
+    /// spawn context ("not valid" on the CPU).</summary>
+    static void NoiseOperations()
+    {
+        var graph = NewGraph("OpsNoise", OperationFolder);
+        var (spawn, _, _, _) = System(graph, 8);
+        ConstantRate(spawn, 1f);
+        var block = Make<VFXSpawnerCustomWrapper>();
+        block.SetSettingValue("m_customType", new SerializableType(typeof(NoiseInputs)));
+        spawn.AddChild(block);
+        VFXSlot Exposed(Type type, string name, object value) => Parameter(graph, type, name, value).outputSlots[0];
+        void To(VFXSlot from, string input) => Link(from, Input(block, input));
+        var coordinates = new[]
+        {
+            Exposed(typeof(float), "Line", 0.37f), Exposed(typeof(Vector2), "Plane", new Vector2(1.25f, -2.6f)),
+            Exposed(typeof(Vector3), "Point", new Vector3(-0.8f, 3.1f, 5.45f)),
+        };
+        var tuning = new[]
+        {
+            ("frequency", Exposed(typeof(float), "Frequency", 1.5f)), ("octaves", Exposed(typeof(int), "Octaves", 3)),
+            ("roughness", Exposed(typeof(float), "Roughness", 0.5f)), ("lacunarity", Exposed(typeof(float), "Lacunarity", 2f)),
+        };
+        T Tuned<T>(NoiseBase.NoiseType type, object dimensions, VFXSlot coordinate) where T : NoiseBase
+        {
+            var op = Make<T>();
+            graph.AddChild(op);
+            op.SetSettingValue("type", type);
+            op.SetSettingValue("dimensions", dimensions);
+            Link(coordinate, Input(op, "coordinate"));
+            foreach (var (name, slot) in tuning) Link(slot, Input(op, name));
+            return op;
+        }
+        foreach (NoiseBase.NoiseType type in Enum.GetValues(typeof(NoiseBase.NoiseType)))
+        {
+            int kind = (int)type;
+            // The noise and its derivatives over one, two and three coordinates.
+            var shapes = new (Noise.DimensionCount Count, string Noise, string Derivatives)[]
+            {
+                (Noise.DimensionCount.One, "f" + kind + "0", "f" + kind + "1"), (Noise.DimensionCount.Two, "f" + kind + "2", "w" + kind + "0"),
+                (Noise.DimensionCount.Three, "f" + kind + "3", "v" + kind + "0"),
+            };
+            for (int shape = 0; shape < shapes.Length; shape++)
+            {
+                var noise = Tuned<Noise>(type, shapes[shape].Count, coordinates[shape]);
+                To(noise.outputSlots[0], shapes[shape].Noise);
+                To(noise.outputSlots[1], shapes[shape].Derivatives);
+            }
+            To(Tuned<CurlNoise>(type, CurlNoise.DimensionCount.Two, coordinates[1]).outputSlots[0], "w" + kind + "1");
+            To(Tuned<CurlNoise>(type, CurlNoise.DimensionCount.Three, coordinates[2]).outputSlots[0], "v" + kind + "1");
+        }
+        graph.GetResource().cullingFlags = VFXCullingFlags.CullNone;
+        Save(graph);
     }
 
     /// <summary>The mesh controls' graph (README.md, "Mesh operations"): a spawn context whose

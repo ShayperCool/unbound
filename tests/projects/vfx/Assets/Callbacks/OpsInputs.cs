@@ -45,6 +45,7 @@ public class OpsInputs : VFXSpawnerCallbacks
         if (input.FieldType == typeof(uint)) return values.GetUInt(name).ToString();
         if (input.FieldType == typeof(float)) return F(values.GetFloat(name));
         if (input.FieldType == typeof(bool)) return values.GetBool(name) ? "true" : "false";
+        if (input.FieldType == typeof(Vector2)) { var w = values.GetVector2(name); return F(w.x) + "," + F(w.y); }
         if (input.FieldType == typeof(Vector3)) { var v = values.GetVector3(name); return F(v.x) + "," + F(v.y) + "," + F(v.z); }
         if (input.FieldType == typeof(Vector4)) { var q = values.GetVector4(name); return F(q.x) + "," + F(q.y) + "," + F(q.z) + "," + F(q.w); }
         var m = values.GetMatrix4x4(name);

@@ -94,6 +94,7 @@ public sealed class VfxProbe : MonoBehaviour
             SpawnerStates(m_Running[0].Effect);
             AffineInverse();
             BeginMeshOperations();
+            BeginNoise();
             m_EventReads = Effect("event reads", "Assets/OpGraphs/OpsEvent.vfx", new Vector3(0f, 10f, 0f));
         }
         catch (Exception e)
@@ -572,6 +573,134 @@ public sealed class VfxProbe : MonoBehaviour
         if (m_OperationsTarget != null) m_OperationsTarget.Release();
     }
 
+    // ------------------------------------------------------------------------------ noise
+
+    VisualEffect m_Noise;
+
+    /// <summary>A float's bits, or <c>nan</c> for any NaN (the sign of one is not compared).</summary>
+    static string N(float f) => float.IsNaN(f) ? "nan" : F(f);
+
+    static string NoiseText(object o) => o switch
+    {
+        float f => N(f),
+        int i => i.ToString(CultureInfo.InvariantCulture),
+        Vector2 a => N(a.x) + "," + N(a.y),
+        Vector3 b => N(b.x) + "," + N(b.y) + "," + N(b.z),
+        Vector4 c => N(c.x) + "," + N(c.y) + "," + N(c.z) + "," + N(c.w),
+        _ => o.ToString(),
+    };
+
+    /// <summary>Coordinates at and around what the noises' lattices repeat over, huge, tiny,
+    /// infinite and absent.</summary>
+    static readonly float[] k_NoiseEdges =
+    {
+        0f, 1f, -1f, 0.5f, -0.5f, 70f, 70.5f, 71f, 68f, 68.5f, 69f, 142f, -71f, -69f, 1e6f, -1e6f, 1e9f, 3.0000002f, 2.9999998f,
+        float.NaN, float.PositiveInfinity, 1e-30f, -1e-30f,
+    };
+
+    const int NoiseCalls = 140, NoiseNear = 60, NoiseFar = 90, NoiseFarthest = 110;
+
+    /// <summary>The noise controls (README.md, "Noise"). The noise the graph compiler folds
+    /// over constants, called for a fixed sequence of coordinates and settings: near, far and
+    /// farthest coordinates, then the edges; every fifth call with a frequency, a count of
+    /// octaves, a persistence and a lacunarity of its own (negative and zero among them). And an
+    /// effect of OpsNoise whose script block reads what the noise operators give.</summary>
+    void BeginNoise()
+    {
+        var type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("UnityEditor.VFX.VFXExpressionNoise")).FirstOrDefault(t => t != null);
+        var methods = type == null ? new MethodInfo[0] : type.GetMethods(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public)
+            .Where(m => m.Name.StartsWith("Generate") && !m.Name.EndsWith("_Injected")).OrderBy(m => m.Name, StringComparer.Ordinal).ToArray();
+        Rec("noise/api/functions", string.Join(" ", methods.Select(m => m.ReturnType.Name + ":" + m.Name + "(" + string.Join(",", m.GetParameters().Select(p => p.ParameterType.Name + " " + p.Name)) + ")")));
+        uint seed = 12345;
+        float Next(float range)
+        {
+            seed = seed * 1664525u + 1013904223u;
+            return ((seed >> 8) / 16777216f * 2f - 1f) * range;
+        }
+        foreach (var method in methods)
+        {
+            var parameters = method.GetParameters();
+            for (int n = 0; n < NoiseCalls; n++)
+            {
+                float range = n < NoiseNear ? 8f : n < NoiseFar ? 300f : 5000f;
+                bool edges = n >= NoiseFarthest, plain = n % 5 != 0;
+                float Coordinate() => edges ? k_NoiseEdges[(int)(Mathf.Abs(Next(1f)) * k_NoiseEdges.Length) % k_NoiseEdges.Length] : Next(range);
+                var args = new object[parameters.Length];
+                for (int k = 0; k < args.Length; k++)
+                {
+                    var kind = parameters[k].ParameterType;
+                    string name = parameters[k].Name;
+                    if (k == 0) args[k] = kind == typeof(float) ? Coordinate() : kind == typeof(Vector2) ? new Vector2(Coordinate(), Coordinate()) : (object)new Vector3(Coordinate(), Coordinate(), Coordinate());
+                    else if (kind == typeof(int)) args[k] = plain ? (n % 97 == 3 ? -1 : 1) : (int)(Mathf.Abs(Next(1f)) * 6f);
+                    else if (name == "frequency") args[k] = plain ? 1f : Next(3f);
+                    else if (name == "persistence") args[k] = plain ? 0.5f : Next(1.5f);
+                    else if (name == "lacunarity") args[k] = plain ? 2f : Next(3f);
+                    // The Voronoi noise's warp and smoothness: within zero to one, at their ends and past them.
+                    else if (name == "smoothness") args[k] = new[] { 0f, 1f, 2f, 0.5f, -1f, 0.25f, 0.9f }[n % 7];
+                    else args[k] = n % 3 == 0 ? Next(2f) : Mathf.Abs(Next(1f));
+                }
+                string result;
+                try { result = NoiseText(method.Invoke(null, args)); }
+                catch (Exception e) { result = "throws " + (e.InnerException ?? e).GetType().Name; }
+                Rec("noise/api/" + method.Name + "/" + n.ToString("000"), string.Join(" ", args.Select(NoiseText)) + " = " + result);
+            }
+        }
+        m_Noise = Effect("noise", "Assets/OpGraphs/OpsNoise.vfx", new Vector3(0f, 12f, 0f));
+    }
+
+    /// <summary>What the effect of the noise controls is given, one step a frame from frame 3:
+    /// a coordinate on a line, in a plane and in space, a frequency, a count of octaves, a
+    /// roughness (the persistence) and a lacunarity.</summary>
+    static readonly (float Line, Vector2 Plane, Vector3 Point, float Frequency, int Octaves, float Roughness, float Lacunarity)[] k_NoiseSteps =
+    {
+        (-3.3331528f, new Vector2(2.1938133f, -2.454937f), new Vector3(-7.822835f, -3.9788828f, -1.3851948f), 1f, 1, 0.5f, 2f),
+        (7.9678164f, new Vector2(-2.4826965f, 6.8431616f), new Vector3(1.1180258f, -5.0225363f, -4.881197f), 1f, 1, 0.5f, 2f),
+        (0.25f, new Vector2(0.75f, 0.125f), new Vector3(0.5f, 0.5f, 0.5f), 2.5f, 4, 0.5f, 2f),
+        (0f, new Vector2(0f, 0f), new Vector3(0f, 0f, 0f), 1f, 8, 0.75f, 1.9f),
+        // The lattices repeat over 71 cells (one and two coordinates) and over 69 (three).
+        (70.5f, new Vector2(70.5f, -0.5f), new Vector3(68.5f, 68.25f, -68.75f), 1f, 2, 0.5f, 2f),
+        (71f, new Vector2(142f, -71f), new Vector3(69f, -69f, 138f), 1f, 1, 0.5f, 2f),
+        (-1234.567f, new Vector2(4321.5f, -987.25f), new Vector3(2500.75f, -3999.5f, 123.456f), 0.37f, 3, 0.3f, 2.7f),
+        // A negative frequency, roughness and lacunarity; a lacunarity of zero.
+        (3.7f, new Vector2(-1.3f, 4.4f), new Vector3(2.2f, 0.6f, -5.1f), -1.7f, 5, -0.6f, -1.3f),
+        (3.7f, new Vector2(-1.3f, 4.4f), new Vector3(2.2f, 0.6f, -5.1f), 1.2f, 4, 1f, 0f),
+        // No octaves and a negative count: nothing summed.
+        (3.7f, new Vector2(-1.3f, 4.4f), new Vector3(2.2f, 0.6f, -5.1f), 1f, 0, 0.5f, 2f),
+        (3.7f, new Vector2(-1.3f, 4.4f), new Vector3(2.2f, 0.6f, -5.1f), 1f, -2, 0.5f, 2f),
+        // More octaves than the operators' sliders allow.
+        (3.7f, new Vector2(-1.3f, 4.4f), new Vector3(2.2f, 0.6f, -5.1f), 1f, 12, 0.5f, 2f),
+        // Huge, infinite and absent coordinates.
+        (1e9f, new Vector2(1e6f, -1e9f), new Vector3(1e9f, 3f, -1e6f), 1f, 1, 0.5f, 2f),
+        (float.PositiveInfinity, new Vector2(float.NaN, 1f), new Vector3(1f, float.NegativeInfinity, 2f), 1f, 1, 0.5f, 2f),
+    };
+
+    void NoiseFrame()
+    {
+        int step = m_Frame - 3;
+        if (step >= 0 && step < k_NoiseSteps.Length)
+        {
+            var given = k_NoiseSteps[step];
+            m_Noise.SetFloat("Line", given.Line);
+            m_Noise.SetVector2("Plane", given.Plane);
+            m_Noise.SetVector3("Point", given.Point);
+            m_Noise.SetFloat("Frequency", given.Frequency);
+            m_Noise.SetInt("Octaves", given.Octaves);
+            m_Noise.SetFloat("Roughness", given.Roughness);
+            m_Noise.SetFloat("Lacunarity", given.Lacunarity);
+        }
+        if (m_Frame != 20) return;
+        foreach (var line in OpsInputs.Logs.TryGetValue("noise", out var log) ? log : new List<string>())
+        {
+            var parts = line.Split(' ');
+            foreach (var part in parts)
+                if (part.Contains("=")) Rec("noise/" + parts[0] + "/" + part.Substring(0, part.IndexOf('=')), NoiseBits(part.Substring(part.IndexOf('=') + 1)));
+        }
+        Rec("noise/lines", OpsInputs.Logs.TryGetValue("noise", out var all) ? all.Count : -1);
+    }
+
+    /// <summary>The floats of a row of the script block, each NaN written <c>nan</c>.</summary>
+    static string NoiseBits(string row) => string.Join(",", row.Split(',').Select(bits => N(BitConverter.ToSingle(BitConverter.GetBytes(Convert.ToInt32(bits, 16)), 0))));
+
     // ------------------------------------------------------------------ mesh operations
 
     VisualEffect m_MeshOperations;
@@ -848,6 +977,7 @@ public sealed class VfxProbe : MonoBehaviour
             OutputEventFrame();
             OperationFrame();
             MeshOperationFrame();
+            NoiseFrame();
             EventReadFrame();
             Simulate();
             if (m_Frame < k_LastFrame) return;
