@@ -106,16 +106,15 @@ fn order(lights: &[Light]) -> Vec<usize> {
     indices
 }
 
-/// A light's power for picking it: its colour's luminance by how much of the sphere it lights
-/// (a point light all of it, a spot light by its cone).
-fn power(light: &Light, half_cell_diagonal: f32) -> f32 {
+/// A point or spot light's power for picking it: its colour's luminance by how much of the
+/// sphere it lights (a point light all of it, a spot light by its cone). (Directional lights
+/// are in no region: they are never picked.)
+fn power(light: &Light) -> f32 {
     let luminance = power_luminance(light.color);
     match light.kind {
         Kind::Spot => luminance * ((light.cone_angle * 0.5).cos().acos() * 4.0),
         Kind::Point => luminance * (4.0 * std::f32::consts::PI),
-        Kind::Directional => {
-            luminance * (std::f32::consts::PI * half_cell_diagonal * half_cell_diagonal)
-        }
+        Kind::Directional => 0.0,
     }
 }
 
@@ -200,8 +199,7 @@ impl Grid {
         });
         let cell: [f32; 3] =
             std::array::from_fn(|k| (bounds.max[k] - bounds.min[k]) / dims[k] as f32);
-        let half_diagonal = dot(cell, cell).sqrt() * 0.5;
-        let power: Vec<f32> = lights.iter().map(|l| power(l, half_diagonal)).collect();
+        let power: Vec<f32> = lights.iter().map(power).collect();
         let ordered = order(lights);
         let directional = ordered
             .iter()
