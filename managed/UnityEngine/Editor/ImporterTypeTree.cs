@@ -35,33 +35,42 @@ namespace Unbound.Runtime
             m_Tree = tree;
         }
 
-        /// <summary>The tree target of an importer whose class's tree the release has (Unity 6000.0's
-        /// TextureImporter), else null (its SerializedObject reflects over the managed object).</summary>
+        /// <summary>The tree target of an importer whose class's tree is measured (Unity 6000.0's
+        /// TextureImporter), else null (its SerializedObject reflects over the managed object). A
+        /// family without measured trees keeps that reflection for every importer, and says so
+        /// once per importer class the measured table would have answered.</summary>
         internal static ITypeTreeTarget Of(AssetImporter importer)
         {
             if (importer?.m_Settings == null || importer.m_Settings.Kind != YKind.Map || string.IsNullOrEmpty(importer.m_SettingsType)) return null;
-            return Trees.TryGetValue(importer.m_SettingsType, out var tree) ? new ImporterTypeTree(importer, tree) : null;
+            if (!MeasuredTrees.TryGetValue(importer.m_SettingsType, out var tree)) return null;
+            if (!Compat.ImporterTypeTreesMeasured)
+            {
+                Stubs.NotImplemented(UnmeasuredNotice(importer.m_SettingsType));
+                return null;
+            }
+            return new ImporterTypeTree(importer, tree);
         }
 
-        static Dictionary<string, TypeTreeNode[]> s_Trees;
+        internal static string UnmeasuredNotice(string importerType) =>
+            "SerializedObject: the serialized properties of " + importerType + " for this Unity release";
 
-        static Dictionary<string, TypeTreeNode[]> Trees
+        static Dictionary<string, TypeTreeNode[]> s_MeasuredTrees;
+
+        /// <summary>The importer type trees of the measured release, whatever release runs.</summary>
+        static Dictionary<string, TypeTreeNode[]> MeasuredTrees
         {
             get
             {
-                if (s_Trees != null) return s_Trees;
+                if (s_MeasuredTrees != null) return s_MeasuredTrees;
                 var trees = new Dictionary<string, TypeTreeNode[]>(StringComparer.Ordinal);
-                if (Compat.Family == ReleaseFamily.Unity6000_0)
+                using var stream = typeof(ImporterTypeTree).Assembly.GetManifestResourceStream("Unbound.importer-types-6000.0.json");
+                if (stream != null)
                 {
-                    using var stream = typeof(ImporterTypeTree).Assembly.GetManifestResourceStream("Unbound.importer-types-6000.0.json");
-                    if (stream != null)
-                    {
-                        using var doc = JsonDocument.Parse(stream);
-                        foreach (var p in doc.RootElement.EnumerateObject())
-                            trees[p.Name] = p.Value.GetProperty("tree").EnumerateArray().Select(TypeTreeNode.Read).ToArray();
-                    }
+                    using var doc = JsonDocument.Parse(stream);
+                    foreach (var p in doc.RootElement.EnumerateObject())
+                        trees[p.Name] = p.Value.GetProperty("tree").EnumerateArray().Select(TypeTreeNode.Read).ToArray();
                 }
-                return s_Trees = trees;
+                return s_MeasuredTrees = trees;
             }
         }
 

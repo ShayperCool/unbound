@@ -32,11 +32,40 @@ namespace UnityEngine.Tests
         static TextureImporter Sheet() => (TextureImporter)AssetImporter.FromMeta("Assets/Sheet.png", "9123456789abcdef0123456789abcdef", "TextureImporter",
             TestYaml.DocumentBody(SheetMeta));
 
+        /// <summary>Importer type trees are measured for 6000.0 only: under another family a
+        /// SerializedObject of an importer has none of their properties, and that is recorded as not
+        /// implemented instead of passing silently; back under the measured family the same importer
+        /// class reads its tree again. An importer class without a measured tree reflects in every
+        /// family and is not reported.</summary>
+        [Fact]
+        public void AnotherFamilysImporterPropertiesAreUnmeasuredAndSaid()
+        {
+            static int Said(string type) => Unbound.Runtime.Stubs.HitReport()
+                .Where(h => h.Key == Unbound.Runtime.ImporterTypeTree.UnmeasuredNotice(type)).Select(h => h.Value).SingleOrDefault();
+            using (TestRelease.Pin(TestRelease.Unmeasured))
+            {
+                int before = Said("TextureImporter");
+                Assert.Null(new SerializedObject(Sheet()).FindProperty("m_SpritePixelsToUnits"));
+                Assert.Equal(before + 1, Said("TextureImporter"));
+                var other = AssetImporter.FromMeta("Assets/Other.bin", "a123456789abcdef0123456789abcdef", "DefaultImporter", TestYaml.DocumentBody("DefaultImporter:\n  externalObjects: {}\n  userData: \n"));
+                new SerializedObject(other);
+                Assert.Equal(0, Said("DefaultImporter"));
+            }
+            using (TestRelease.Pin(TestRelease.Measured))
+            {
+                int before = Said("TextureImporter");
+                Assert.NotNull(new SerializedObject(Sheet()).FindProperty("m_SpritePixelsToUnits"));
+                Assert.Equal(before, Said("TextureImporter"));
+            }
+        }
+
         /// <summary>Red before the importer's tree: the SerializedObject reflected over the managed
         /// importer and had no m_SpriteSheet (the 2D sprite data provider threw).</summary>
         [Fact]
         public void TheSpriteSheetAndGroupedFieldsReadUnderTheTreesNames()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var so = new SerializedObject(Sheet());
             var sprites = so.FindProperty("m_SpriteSheet.m_Sprites");
             Assert.NotNull(sprites);
@@ -60,6 +89,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnAppliedEditGoesBackUnderTheMetasNames()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var importer = Sheet();
             var so = new SerializedObject(importer);
             so.FindProperty("m_SpriteSheet.m_Sprites.Array.data[1].m_Name").stringValue = "renamed";
