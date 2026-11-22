@@ -515,7 +515,7 @@ namespace Unbound.Runtime
             (long)XxHash64(System.Text.Encoding.UTF8.GetBytes("Type:" + NativeClassName(obj) + "->" + identifier + "0"));
 
         /// <summary>The native class name: scripts' objects are MonoBehaviours to the serializer.</summary>
-        static string NativeClassName(Object obj) => IsScriptObject(obj) ? "MonoBehaviour" : obj.GetType().Name;
+        static string NativeClassName(Object obj) => UnityEditor.ObjectNames.GetClassName(obj);
 
         /// <summary>
         /// The file id of an object added under <paramref name="identifier"/> when the asset's .meta
@@ -571,7 +571,7 @@ namespace Unbound.Runtime
         /// <summary>Legacy file ids are <c>classID * 100000</c> (+2 for each further object of the class).</summary>
         internal const long LegacyClassStride = 100000;
 
-        static bool IsScriptObject(Object obj) => obj is MonoBehaviour || obj is ScriptableObject;
+        static bool IsScriptObject(Object obj) => UnityEditor.ObjectNames.IsScriptObject(obj);
 
         static bool IsOfClass(Object obj, int classId)
         {

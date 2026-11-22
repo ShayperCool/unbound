@@ -24,7 +24,7 @@ namespace UnityEditor
 
         public Object target
         {
-            get => m_Targets.Length > 0 ? m_Targets[0] : null;
+            get => m_Targets.Length > 0 ? m_Targets[referenceTargetIndex] : null;
             set
             {
                 m_Targets = new[] { value };
@@ -32,7 +32,15 @@ namespace UnityEditor
             }
         }
 
-        public Object[] targets => m_Targets;
+        public Object[] targets
+        {
+            get
+            {
+                if (!m_AllowMultiObjectAccess)
+                    Debug.LogError("The targets array should not be used inside OnSceneGUI or OnPreviewGUI. Use the single target property instead.");
+                return m_Targets;
+            }
+        }
 
         public SerializedObject serializedObject => m_SerializedObject ??= m_Targets.Length > 0 && m_Targets.All(t => t != null) ? new SerializedObject(m_Targets, m_Context) : null;
 

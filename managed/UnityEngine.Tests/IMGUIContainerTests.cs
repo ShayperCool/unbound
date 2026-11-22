@@ -11,7 +11,7 @@ namespace UnityEngine.Tests
     /// following its controls, and a container run from inside another GUI pass.</summary>
     public class IMGUIContainerTests
     {
-        sealed class Logs : ILogHandler, IDisposable
+        internal sealed class Logs : ILogHandler, IDisposable
         {
             internal readonly List<string> Entries = new List<string>();
             readonly ILogHandler m_Previous = Debug.unityLogger.logHandler;
@@ -26,7 +26,7 @@ namespace UnityEngine.Tests
             public void Dispose() => Debug.unityLogger.logHandler = m_Previous;
         }
 
-        sealed class Fixture : IDisposable
+        internal sealed class Fixture : IDisposable
         {
             internal readonly PanelSettings Settings = ScriptableObject.CreateInstance<PanelSettings>();
             internal readonly BaseRuntimePanel Panel;
@@ -81,7 +81,7 @@ namespace UnityEngine.Tests
             }
         }
 
-        static void Send<T>(IMGUIContainer target, T evt, out bool stopped) where T : EventBase<T>, new()
+        internal static void Send<T>(IMGUIContainer target, T evt, out bool stopped) where T : EventBase<T>, new()
         {
             using (evt)
             {
