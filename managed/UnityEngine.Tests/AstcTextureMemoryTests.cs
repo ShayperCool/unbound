@@ -175,15 +175,25 @@ namespace UnityEngine.Tests
             }
         }
 
-        [Fact]
-        public void InitializedUncompressedCloneCanOwnTheFirstAstcSetup()
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void UncompressedRuntimeCloneCanOwnTheFirstAstcSetup(bool resizeSource, bool applySource)
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
             var source = new Texture2D(8, 8, TextureFormat.RGBA32, false, true);
             Texture2D copy = null;
             try
             {
+                if (resizeSource)
+                {
+                    Assert.True(source.Reinitialize(12, 8, TextureFormat.RGBA32, false));
+                    if (applySource) source.Apply(false, false);
+                    Assert.Equal(applySource ? 1704 : 1264, Profiler.GetRuntimeMemorySizeLong(source));
+                }
                 copy = Object.Instantiate(source);
+                if (resizeSource) Assert.Equal(1704, Profiler.GetRuntimeMemorySizeLong(copy));
                 Assert.True(copy.Reinitialize(8, 8, TextureFormat.ASTC_4x4, false));
                 Assert.Equal(944, Profiler.GetRuntimeMemorySizeLong(copy));
                 copy.Apply(false, false);

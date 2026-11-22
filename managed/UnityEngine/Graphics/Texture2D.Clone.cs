@@ -15,6 +15,10 @@ namespace UnityEngine
             if (m_Pixels == null && m_Hdr == null && m_AssetGuid != null)
                 FetchImportedPixels();
 
+            // A clone uploads its ordinary source snapshot even before the source's Apply.
+            // The accounting for clones of pending ASTC storage is unmeasured.
+            bool pendingAstcStorage = m_AstcMemoryPendingUpload
+                || (m_ResizeMemoryPendingApply && BlockFormats.IsAstc(m_Format));
             var copy = new Texture2D
             {
                 m_Width = m_Width,
@@ -23,7 +27,7 @@ namespace UnityEngine
                 m_MipCount = m_MipCount,
                 m_GpuMipCount = m_GpuMipCount,
                 m_ScriptTextureStorage = m_ScriptTextureStorage && !IsPersistentAsset && !IsExternalTexture
-                    && !m_ResizeMemoryPendingApply && !m_AstcMemoryPendingUpload,
+                    && !pendingAstcStorage,
                 m_IsReadable = m_IsReadable,
                 m_Linear = m_Linear,
                 m_UsageMode = m_UsageMode,
