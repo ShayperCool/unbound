@@ -32,6 +32,12 @@ are `Output ParticleStrip Quad` contexts with an `Orient: Face Camera Position` 
 - `StripTrails`: three particles that move, each spawning twenty a second by a GPU event into
   a system of four strips of sixteen: a particle goes into the strip numbered as the particle
   that spawned it. `StripTrailsKeep`: the same with strips of twelve whose particles never die.
+- `StripTrailsAlive`: heads that die (six a second into room for four, living two fifths of a
+  second), each spawning twenty particles a second by a GPU event into a system of four strips of
+  twelve whose particles live half a second. A system whose particles die and spawn strips gets
+  the `stripAlive` attribute: a dead head is kept, not drawn, until the strip it spawned is empty,
+  and only then makes room for a new head. `StripTrailsAliveKeep`: the same with strip particles
+  that never die, so a dead head is kept for good.
 - `StripIndex`: four strips of eight; the strip a particle goes into is the initialize
   context's `stripIndex`, an exposed property `Strip` of the effect.
 - `StripBoth`: a strip drawn twice: joined, and each of its particles as a quad of its own.
@@ -67,6 +73,9 @@ capacity and whether it sleeps. `systems/<control>` lists the systems' names.
   frame 30.
 - `wakes`, `wakes first`, `wakes second`, `wakes third`: four effects of `Waking`, the second
   reinitialized at frame 30, the third at frame 31 and the fourth at frame 32.
+- `trails alive`, `trails alive keep`: `StripTrailsAlive` and `StripTrailsAliveKeep`, images
+  every four frames to frame 32, then at 40, 50 and 66. The heads' alive count includes the dead
+  heads kept for their strips (room for four, full at frame 70 in both).
 
 What the rows show of alive counts. A strip system whose particles die answers the count its
 kernels keep, read back from the GPU like the count of any system that kills particles; one
@@ -92,7 +101,11 @@ Row 1 is not recorded (the first frame's end of frame: `tests/projects/vfx/READM
 ## Image limits
 
 Every image is the Editor's pixel for pixel on the machine both ran on (an NVIDIA driver, the
-Linux Editor on OpenGL Core).
+Linux Editor on OpenGL Core), except `trails alive keep` from frame 8 to frame 28: while its heads
+live, the Editor draws each strip one segment shorter at its newest end (a few pixels where the
+strip meets its head; `image_limits.json`). From frame 32, when no head is alive, the images are
+the Editor's, and `trails alive` (whose strip particles die) is exact throughout. Cause not
+resolved.
 
 ## Not covered
 
@@ -105,8 +118,9 @@ Linux Editor on OpenGL Core).
   than the default; two strips of one sorted output that cross.
 - A batch in which an effect wakes in every frame for longer than three frames (as measured,
   its counts would not be asked while that lasts).
-- A particle kept alive as long as the strip it spawned (`stripAlive`): the effect is not
-  simulated and says so.
+- `stripAlive` with several strip systems spawned from one system (the graph compiler reads
+  the first), with sleeping or culled effects, and the cause of `trails alive keep`'s short
+  strips.
 - The strip tiling mode `Custom`; `Orient` modes other than `Face Camera Position` on a
   strip; a perspective camera.
 - `stripIndex` computed for each particle (linked to an attribute); the attributes

@@ -24,6 +24,8 @@
 {"k":"systems/keep two","v":"System, System (1) | particle: System (1)"}
 {"k":"systems/paused","v":"System, System (1), System (3) | particle: System (1), System (3)"}
 {"k":"systems/wakes third","v":"System, System (1) | particle: System (1)"}
+{"k":"systems/trails alive","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/trails alive keep","v":"System, System (1), System (3) | particle: System (1), System (3)"}
 {"k":"sim/single/f002","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
 {"k":"sim/keep/f002","v":"alive=0 culled=0 awake=0 | System (1): alive=0 capacity=12 sleeping=1"}
 {"k":"sim/trails/f002","v":"alive=2 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
@@ -50,6 +52,8 @@
 {"k":"sim/keep two/f002","v":"alive=0 culled=0 awake=0 | System (1): alive=0 capacity=12 sleeping=1"}
 {"k":"sim/paused/f002","v":"alive=2 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f002","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f002","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=4 sleeping=1 | System (3): alive=0 capacity=48 sleeping=1"}
+{"k":"sim/trails alive keep/f002","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=4 sleeping=1 | System (3): alive=0 capacity=48 sleeping=1"}
 {"k":"sim/single/f003","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
 {"k":"sim/keep/f003","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=12 sleeping=0"}
 {"k":"sim/trails/f003","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -76,6 +80,8 @@
 {"k":"sim/keep two/f003","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=12 sleeping=0"}
 {"k":"sim/paused/f003","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f003","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f003","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=4 sleeping=1 | System (3): alive=0 capacity=48 sleeping=1"}
+{"k":"sim/trails alive keep/f003","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=4 sleeping=1 | System (3): alive=0 capacity=48 sleeping=1"}
 {"k":"sim/single/f004","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f004","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=12 sleeping=0"}
 {"k":"sim/trails/f004","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -102,6 +108,8 @@
 {"k":"sim/keep two/f004","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=12 sleeping=0"}
 {"k":"sim/paused/f004","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f004","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f004","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=4 sleeping=1 | System (3): alive=0 capacity=48 sleeping=1"}
+{"k":"sim/trails alive keep/f004","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=4 sleeping=1 | System (3): alive=0 capacity=48 sleeping=1"}
 {"k":"sim/single/f005","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f005","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=12 sleeping=0"}
 {"k":"sim/trails/f005","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -128,6 +136,8 @@
 {"k":"sim/keep two/f005","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=12 sleeping=0"}
 {"k":"sim/paused/f005","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f005","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f005","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=4 sleeping=0 | System (3): alive=0 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f005","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=4 sleeping=0 | System (3): alive=0 capacity=48 sleeping=0"}
 {"k":"sim/single/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=12 sleeping=0"}
 {"k":"sim/trails/f006","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -154,6 +164,8 @@
 {"k":"sim/keep two/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=12 sleeping=0"}
 {"k":"sim/paused/f006","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f006","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=4 sleeping=0 | System (3): alive=0 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f006","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=4 sleeping=0 | System (3): alive=0 capacity=48 sleeping=0"}
 {"k":"sim/single/f007","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f007","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=12 sleeping=0"}
 {"k":"sim/trails/f007","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -180,6 +192,8 @@
 {"k":"sim/keep two/f007","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=12 sleeping=0"}
 {"k":"sim/paused/f007","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f007","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f007","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f007","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f008","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f008","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=12 sleeping=0"}
 {"k":"sim/trails/f008","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -206,6 +220,8 @@
 {"k":"sim/keep two/f008","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=12 sleeping=0"}
 {"k":"sim/paused/f008","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f008","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f008","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f008","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f010","v":"alive=3 culled=0 awake=1 | System (1): alive=3 capacity=12 sleeping=0"}
 {"k":"sim/trails/f010","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -232,6 +248,8 @@
 {"k":"sim/keep two/f010","v":"alive=3 culled=0 awake=1 | System (1): alive=3 capacity=12 sleeping=0"}
 {"k":"sim/paused/f010","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f020","v":"alive=6 culled=0 awake=1 | System (1): alive=6 capacity=12 sleeping=0"}
 {"k":"sim/trails/f020","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -258,6 +276,8 @@
 {"k":"sim/keep two/f020","v":"alive=6 culled=0 awake=1 | System (1): alive=6 capacity=12 sleeping=0"}
 {"k":"sim/paused/f020","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f030","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=12 sleeping=0"}
 {"k":"sim/trails/f030","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -284,6 +304,8 @@
 {"k":"sim/keep two/f030","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=12 sleeping=0"}
 {"k":"sim/paused/f030","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f031","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=12 sleeping=0"}
 {"k":"sim/trails/f031","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -310,6 +332,8 @@
 {"k":"sim/keep two/f031","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=12 sleeping=0"}
 {"k":"sim/paused/f031","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f032","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=12 sleeping=0"}
 {"k":"sim/trails/f032","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -336,6 +360,8 @@
 {"k":"sim/keep two/f032","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=12 sleeping=0"}
 {"k":"sim/paused/f032","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f032","v":"alive=-1 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1"}
+{"k":"sim/trails alive/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f033","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f033","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=12 sleeping=0"}
 {"k":"sim/trails/f033","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -362,6 +388,8 @@
 {"k":"sim/keep two/f033","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=12 sleeping=0"}
 {"k":"sim/paused/f033","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f033","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f033","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f033","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f034","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f034","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=12 sleeping=0"}
 {"k":"sim/trails/f034","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -388,6 +416,8 @@
 {"k":"sim/keep two/f034","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=12 sleeping=0"}
 {"k":"sim/paused/f034","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f034","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f034","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f034","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f035","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f035","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=12 sleeping=0"}
 {"k":"sim/trails/f035","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -414,6 +444,8 @@
 {"k":"sim/keep two/f035","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=12 sleeping=0"}
 {"k":"sim/paused/f035","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f035","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f035","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f035","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f036","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f036","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f036","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -440,6 +472,8 @@
 {"k":"sim/keep two/f036","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f036","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f036","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f036","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f036","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f037","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f037","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f037","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -466,6 +500,8 @@
 {"k":"sim/keep two/f037","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f037","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f037","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f037","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f037","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f040","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f040","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f040","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -492,6 +528,8 @@
 {"k":"sim/keep two/f040","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f040","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f040","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f040","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f040","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f045","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f045","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f045","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -518,6 +556,8 @@
 {"k":"sim/keep two/f045","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f045","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f045","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f045","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f045","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f050","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f050","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f050","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -544,6 +584,8 @@
 {"k":"sim/keep two/f050","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f050","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f050","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f050","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f050","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f054","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f054","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f054","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -570,6 +612,8 @@
 {"k":"sim/keep two/f054","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f054","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f054","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f054","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f054","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f055","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f055","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f055","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -596,6 +640,8 @@
 {"k":"sim/keep two/f055","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f055","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f055","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f055","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f055","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f056","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f056","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f056","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -622,6 +668,8 @@
 {"k":"sim/keep two/f056","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f056","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f056","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f056","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f056","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f057","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f057","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f057","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -648,6 +696,8 @@
 {"k":"sim/keep two/f057","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f057","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f057","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f057","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f057","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f058","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f058","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f058","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -674,6 +724,8 @@
 {"k":"sim/keep two/f058","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f058","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f058","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f058","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f058","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f060","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f060","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f060","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -700,6 +752,8 @@
 {"k":"sim/keep two/f060","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f060","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f060","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f060","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f060","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f062","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f062","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f062","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -726,6 +780,8 @@
 {"k":"sim/keep two/f062","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f062","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f062","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f062","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f062","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f063","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f063","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f063","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
@@ -752,6 +808,8 @@
 {"k":"sim/keep two/f063","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f063","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f063","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f063","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f063","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f064","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f064","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f064","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
@@ -778,6 +836,8 @@
 {"k":"sim/keep two/f064","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f064","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f064","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f064","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f064","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f065","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f065","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f065","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
@@ -804,6 +864,8 @@
 {"k":"sim/keep two/f065","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f065","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f065","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f065","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f065","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f066","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f066","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f066","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
@@ -830,6 +892,8 @@
 {"k":"sim/keep two/f066","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f066","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f066","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f066","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f066","v":"alive=2 culled=0 awake=1 | System (1): alive=1 capacity=4 sleeping=0 | System (3): alive=1 capacity=48 sleeping=0"}
 {"k":"sim/single/f070","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f070","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f070","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
@@ -856,5 +920,7 @@
 {"k":"sim/keep two/f070","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/paused/f070","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
 {"k":"sim/wakes third/f070","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/trails alive/f070","v":"alive=16 culled=0 awake=1 | System (1): alive=4 capacity=4 sleeping=0 | System (3): alive=12 capacity=48 sleeping=0"}
+{"k":"sim/trails alive keep/f070","v":"alive=36 culled=0 awake=1 | System (1): alive=4 capacity=4 sleeping=0 | System (3): alive=32 capacity=48 sleeping=0"}
 {"k":"capture/graphs imported while playing","v":""}
 {"k": "complete", "v": true}

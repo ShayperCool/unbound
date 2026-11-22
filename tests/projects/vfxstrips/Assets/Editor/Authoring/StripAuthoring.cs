@@ -164,13 +164,22 @@ public static class StripAuthoring
     }
 
     /// <summary>Particles that move across the view, each spawning into a system of strips.</summary>
-    static TriggerEvent Heads(VFXGraph graph, float rate)
+    /// <summary>Particles in room for four that move, each triggering <paramref name="rate"/>
+    /// GPU events a second: three at once that never die, or, given a
+    /// <paramref name="lifetime"/>, <paramref name="spawnRate"/> a second that live that
+    /// long.</summary>
+    static TriggerEvent Heads(VFXGraph graph, float rate, float spawnRate = 0f, float lifetime = 0f)
     {
         var heads = System<VFXPlanarPrimitiveOutput>(graph, 4);
         heads.Output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
         Set(heads.Init, "size", 0.2f);
         SetVector(heads.Init, "color", new Vector3(0.6f, 1f, 0.6f));
-        Burst(heads.Spawn, 3f);
+        if (lifetime > 0f)
+        {
+            ConstantRate(heads.Spawn, spawnRate);
+            Set(heads.Init, "lifetime", lifetime);
+        }
+        else Burst(heads.Spawn, 3f);
         SetRandom(heads.Init, "position", new Vector3(-1.2f, -1.2f, 0f), new Vector3(-0.8f, 1.2f, 0f));
         SetRandom(heads.Init, "velocity", new Vector3(1f, -0.5f, 0f), new Vector3(1.5f, 0.5f, 0f));
         return Trigger(heads.Update, TriggerEvent.Mode.OverTime, rate);
@@ -260,6 +269,22 @@ public static class StripAuthoring
         SetVector(stay.Init, "color", new Vector3(1f, 0.8f, 0.3f));
         Output<VFXQuadStripOutput>(trailsKeep, stay.Update);
         Save(trailsKeep);
+
+        // Heads that die (two fifths of a second, six a second into room for four), each drawing
+        // a strip behind it: a dead head is kept, not drawn, until the strip it spawned is empty
+        // (the `stripAlive` attribute); its place is free for a new head after that. The
+        // strips' particles die after half a second, and in `StripTrailsAliveKeep` never.
+        foreach (var (name, dying) in new[] { ("StripTrailsAlive", true), ("StripTrailsAliveKeep", false) })
+        {
+            var graph = NewGraph(name);
+            var tail = Trails(graph, Heads(graph, 20f, 6f, 0.4f), 4, 12);
+            Inherit(tail.Init, "position");
+            if (dying) Set(tail.Init, "lifetime", 0.5f);
+            Set(tail.Init, "size", 0.1f);
+            SetVector(tail.Init, "color", new Vector3(0.4f, 0.7f, 1f));
+            Output<VFXQuadStripOutput>(graph, tail.Update);
+            Save(graph);
+        }
 
         // Four strips of eight; the strip a particle goes into is a property of the effect.
         var index = NewGraph("StripIndex");

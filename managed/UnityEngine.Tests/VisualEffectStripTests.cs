@@ -50,9 +50,9 @@ namespace UnityEngine.Tests
             without.Systems[1].values = Array.Empty<VFXMapping>();
             Assert.Equal("the strip system 'Strips' without its strips' buffer or sizes", VisualEffect.Unsupported(without));
             // A system whose particles are kept until the strips they spawned are empty reads
-            // those strips' buffer: not measured.
+            // those strips' buffer: run (tests/projects/vfxstrips `trails alive`).
             var attached = Strips(30f, VFXSystemFlag.SystemHasKill, new[] { new VFXMapping("attachedStripDataBuffer", 0) }).m_Data;
-            Assert.Equal("the system 'Strips' whose particles live as long as the strips they spawn, which is not measured yet", VisualEffect.Unsupported(attached));
+            Assert.Null(VisualEffect.Unsupported(attached));
         }
 
         [Fact]

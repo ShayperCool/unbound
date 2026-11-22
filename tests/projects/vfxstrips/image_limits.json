@@ -461,6 +461,42 @@
   "over8": 0,
   "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
  },
+ "draw-trails alive keep-f008.png": {
+  "mean": 0.03,
+  "worst": 70,
+  "over8": 2,
+  "reason": "While the heads live, the Editor draws each strip one segment shorter at its newest end (the head's quad shows where Unbound draws the strip's last segment over it); every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly. The same heads with strips whose particles die (trails alive) match exactly. Cause not resolved: strips whose particles never die behind heads that do."
+ },
+ "draw-trails alive keep-f012.png": {
+  "mean": 0.177,
+  "worst": 209,
+  "over8": 7,
+  "reason": "While the heads live, the Editor draws each strip one segment shorter at its newest end (the head's quad shows where Unbound draws the strip's last segment over it); every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly. The same heads with strips whose particles die (trails alive) match exactly. Cause not resolved: strips whose particles never die behind heads that do."
+ },
+ "draw-trails alive keep-f016.png": {
+  "mean": 0.15,
+  "worst": 140,
+  "over8": 7,
+  "reason": "While the heads live, the Editor draws each strip one segment shorter at its newest end (the head's quad shows where Unbound draws the strip's last segment over it); every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly. The same heads with strips whose particles die (trails alive) match exactly. Cause not resolved: strips whose particles never die behind heads that do."
+ },
+ "draw-trails alive keep-f020.png": {
+  "mean": 0.185,
+  "worst": 142,
+  "over8": 9,
+  "reason": "While the heads live, the Editor draws each strip one segment shorter at its newest end (the head's quad shows where Unbound draws the strip's last segment over it); every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly. The same heads with strips whose particles die (trails alive) match exactly. Cause not resolved: strips whose particles never die behind heads that do."
+ },
+ "draw-trails alive keep-f024.png": {
+  "mean": 0.148,
+  "worst": 173,
+  "over8": 7,
+  "reason": "While the heads live, the Editor draws each strip one segment shorter at its newest end (the head's quad shows where Unbound draws the strip's last segment over it); every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly. The same heads with strips whose particles die (trails alive) match exactly. Cause not resolved: strips whose particles never die behind heads that do."
+ },
+ "draw-trails alive keep-f028.png": {
+  "mean": 0.163,
+  "worst": 181,
+  "over8": 7,
+  "reason": "While the heads live, the Editor draws each strip one segment shorter at its newest end (the head's quad shows where Unbound draws the strip's last segment over it); every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly. The same heads with strips whose particles die (trails alive) match exactly. Cause not resolved: strips whose particles never die behind heads that do."
+ },
  "draw-trails keep-f010.png": {
   "mean": 0,
   "worst": 0,

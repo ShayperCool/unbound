@@ -103,6 +103,10 @@ public sealed class StripProbe : MonoBehaviour
             // A fourth effect of the graph whose effects wake one frame after the other,
             // started over at frame 32.
             m_WakesThird = Draw("wakes third", "Waking", 20, 40);
+            // Heads that die, each kept until the strip it spawned is empty (strips whose
+            // particles die, and strips whose particles never die).
+            Draw("trails alive", "StripTrailsAlive", 4, 8, 12, 16, 20, 24, 28, 32, 40, 50, 66);
+            Draw("trails alive keep", "StripTrailsAliveKeep", 4, 8, 12, 16, 20, 24, 28, 32, 40, 50, 66);
             foreach (var stage in m_Stages)
             {
                 m_Names.Clear();

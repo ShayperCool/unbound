@@ -42,17 +42,16 @@ namespace Unbound.Runtime
         GraphicsBuffer m_StripBound, m_StripIndirectionBound;
         uint[] m_NoStrips;
 
-        /// <summary>The buffer a system's kernel reads of the strips its particles spawned,
-        /// to keep a particle until its strip is empty (the `stripAlive` attribute).</summary>
-        const string AttachedStripDataName = "attachedStripDataBuffer";
-
         /// <summary>Why a system's strips are not run, null when they are (or it has none): a
-        /// strip system as the graph compiler writes it has the strips' buffer and sizes; a
-        /// particle kept until the strip it spawned is empty is not measured.</summary>
+        /// strip system as the graph compiler writes it has the strips' buffer and sizes. A
+        /// system whose particles die and spawn strips by GPU events keeps a dead particle (not
+        /// drawn) until the package's strip kernel finds the strip it spawned empty: its update
+        /// kernel reads that strip system's buffer (`attachedStripDataBuffer`, bound as its
+        /// task names it), and its alive count includes such particles (tests/projects/vfxstrips
+        /// `trails alive`; a strip whose particles never die is never found empty, `trails alive
+        /// keep`).</summary>
         internal static string StripRefusal(in UnityEditor.VFX.VFXEditorSystemDesc system)
         {
-            foreach (var task in system.tasks ?? Array.Empty<UnityEditor.VFX.VFXEditorTaskDesc>())
-                if (Value(task.buffers, AttachedStripDataName) >= 0) return $"the system '{system.name}' whose particles live as long as the strips they spawn, which is not measured yet";
             if ((system.flags & UnityEngine.VFX.VFXSystemFlag.SystemHasStrips) == 0) return null;
             if (Value(system.buffers, StripDataName) < 0 || Value(system.values, StripCountName) <= 0 || Value(system.values, ParticlePerStripName) <= 0)
                 return $"the strip system '{system.name}' without its strips' buffer or sizes";
