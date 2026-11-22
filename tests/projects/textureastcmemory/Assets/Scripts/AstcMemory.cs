@@ -150,11 +150,23 @@ public static class AstcMemory
             Size("prelude.uninitialized.applied", uninitialized);
             Object.DestroyImmediate(uninitialized);
         }
-        if (profile == "HdrFirst")
+        if (profile is "HdrFirst" or "HdrCloneFirst")
         {
             TryPrelude("hdr", () =>
             {
                 var hdr = Create("prelude.hdr", TextureFormat.ASTC_HDR_4x4, 8, 8, false, true);
+                if (profile == "HdrCloneFirst")
+                {
+                    var clone = Object.Instantiate(hdr);
+                    Put("prelude.clone.format", (int)clone.format);
+                    Size("prelude.clone.new", clone);
+                    Put("prelude.clone.resize.result", clone.Reinitialize(8, 8, TextureFormat.ASTC_5x5, false));
+                    Size("prelude.clone.resize", clone);
+                    clone.Apply(false, false);
+                    Size("prelude.clone.applied", clone);
+                    Size("prelude.hdr.afterClone", hdr);
+                    Object.DestroyImmediate(clone);
+                }
                 Object.DestroyImmediate(hdr);
             });
         }
