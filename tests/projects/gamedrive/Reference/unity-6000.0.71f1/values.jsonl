@@ -1,4 +1,5 @@
 {"k":"controls.00","v":"invalid timeout rejected: Timeout | replacement age 6 | Button.select | Button.click | Button.deselect | selection empty=True | uncovered click | Rotated camera=none dragged=True fortyPixels=True | CameraTarget camera=InputCamera dragged=True fortyPixels=False | sequence exit 0 | invalid duration exit 4 | missing EventSystem exit 4"}
+{"k":"controls.01","v":"finished run received warning=False"}
 {"k":"frames.00","v":"> wait:0.5 +0 dt=0.0200"}
 {"k":"frames.01","v":"> click:Button down Canvas/Button +10 dt=0.0200 | Button.select | > click:Button up +1 dt=0.0200 | Button.click"}
 {"k":"frames.02","v":"> stick:Stick:0,1:0.25 down Canvas/Stick +11 dt=0.0200 | Button.deselect | Stick.down | Stick.drag | > stick:Stick:0,1:0.25 held +5 dt=0.0200 | > stick:Stick:0,1:0.25 up +13 dt=0.0200 | Stick.up 0.00,1.00"}

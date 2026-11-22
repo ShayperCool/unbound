@@ -53,6 +53,10 @@ public sealed class DriveDriverControls
             {
                 case 0:
                     DriveProbe.Control("sequence exit " + exitCode);
+                    const string marker = "warning after Finished";
+                    Debug.LogWarning(marker);
+                    bool received = File.ReadAllText(Path.Combine(m_Output, "drive.log")).Contains(marker);
+                    DriveProbe.Control("finished run received warning=" + received, step: 1);
                     // Both runs open the same drive.log. The first must close it before Finished.
                     Restart("swipe:0.2,0.8:0.7,0.8:Infinity");
                     break;

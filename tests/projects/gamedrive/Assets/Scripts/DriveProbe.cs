@@ -151,10 +151,10 @@ wait:0.1
 #endif
     }
 
-    internal static void Control(string value)
+    internal static void Control(string value, int step = 0)
     {
         s_Run = "controls";
-        s_Step = 0;
+        s_Step = step;
         Add(value);
     }
 

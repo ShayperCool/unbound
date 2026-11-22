@@ -26,6 +26,8 @@ drawn over everything) and runs two scripts on it:
   deselection after an empty tap, immediate overlay hiding, a rotated stick and a world-space
   event camera. It also checks consecutive runs writing to the same log, a rejected nonfinite
   timeout and duration, and a tap with no EventSystem.
+* `controls.01` checks that a warning issued by a `Finished` subscriber stays out of the completed
+  run's log.
 
 A row is what the driver logged for the step (`> ...`) and the events the UI recorded between its
 lines, a run of one event (a drag's moves) once. `final` is the UI's state at the end.

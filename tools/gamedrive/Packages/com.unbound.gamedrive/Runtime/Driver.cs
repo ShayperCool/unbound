@@ -546,11 +546,13 @@ namespace Unbound.GameDrive
             while (m_Descendants.Count > 0)
             {
                 var t = m_Descendants.Pop();
-                if (!t.gameObject.activeSelf) continue;
+                var target = t.gameObject;
+                if (!target.activeSelf) continue;
                 for (int i = t.childCount - 1; i >= 0; i--) m_Descendants.Push(t.GetChild(i));
+                if ((target.hideFlags & HideFlags.DontSave) == HideFlags.DontSave) continue;
                 if (!Named(t, name, isPath)) continue;
-                if (pressable ? !IsPressable(t.gameObject) : (t.hideFlags & HideFlags.DontSave) != 0) continue;
-                if (matches++ == 0) first = t.gameObject;
+                if (pressable && !IsPressable(target)) continue;
+                if (matches++ == 0) first = target;
             }
         }
 
@@ -561,7 +563,7 @@ namespace Unbound.GameDrive
             target.GetComponents(m_Behaviours);
             bool hasHandler = false;
             foreach (var behaviour in m_Behaviours)
-                if (behaviour != null && behaviour.isActiveAndEnabled && (behaviour.hideFlags & HideFlags.DontSave) == 0
+                if (behaviour != null && behaviour.isActiveAndEnabled
                     && (behaviour is Selectable || behaviour is IPointerDownHandler || behaviour is IPointerClickHandler || behaviour is IDragHandler))
                 {
                     hasHandler = true;
