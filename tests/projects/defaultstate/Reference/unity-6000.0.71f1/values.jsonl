@@ -1272,6 +1272,11 @@
 {"key":"UnityEditor.SceneVisibilityManager/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:0"}
 {"key":"UnityEditor.SceneVisibilityManager/Property/UnityEngine.Object/name","status":"value","value":"string:"}
 {"key":"UnityEditor.ScriptableSingleton`1/@factory","status":"excluded","value":"open-generic"}
+{"key":"UnityEditor.Search.SearchAction/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.Search.SearchContext/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.Search.SearchItem/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.Search.SearchProvider/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.Search.SearchService/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.SearchableEditorWindow/@factory","status":"value","value":"scriptable"}
 {"key":"UnityEditor.SearchableEditorWindow/Property/UnityEditor.EditorWindow/antiAlias","status":"value","value":"1"}
 {"key":"UnityEditor.SearchableEditorWindow/Property/UnityEditor.EditorWindow/autoRepaintOnSceneChange","status":"value","value":"false"}

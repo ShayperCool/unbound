@@ -2284,6 +2284,36 @@
       "type": "UnityEditor.ScriptableSingleton`1"
     },
     {
+      "category": "class",
+      "module": "UnityEditor.QuickSearchModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.Search.SearchAction"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.QuickSearchModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.Search.SearchContext"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.QuickSearchModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.Search.SearchItem"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.QuickSearchModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.Search.SearchProvider"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.QuickSearchModule",
+      "status": "static",
+      "type": "UnityEditor.Search.SearchService"
+    },
+    {
       "category": "scriptable",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",

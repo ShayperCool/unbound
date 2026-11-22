@@ -859,3 +859,7 @@ The importer editor slice adds the abstract `AssetImporters.AssetImporterEditor`
 (9 rows) to the inventory, as two Unity 6000.0.71f1 batch Editor captures on macOS write them; every earlier row is
 unchanged. Its `serializedObject`, `target` and `targets` rows read as those of every editor made without targets and
 are queued in `debt.json` beside `Editor`'s.
+
+The search slice adds `Search.SearchAction`, `SearchContext`, `SearchItem`, `SearchProvider` (none with a public parameterless
+constructor) and the static `SearchService` to the inventory, as two Unity 6000.0.71f1 batch Editor captures on macOS write
+their rows; every earlier row is unchanged.
