@@ -24,6 +24,8 @@
     <Compile Include="../../tests/projects/appfacts/Assets/Scripts/AppFactsUrlRecording.cs" Link="AppFactsUrlRecording.cs" />
     <None Include="../../tests/projects/spriteassets/Authored/unity-6000.0.71f1/sprites/Assets/Resources/*.asset" Link="SpriteFixtures/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../tests/projects/spriteassets/Authored/unity-6000.0.71f1/sprites/Assets/Resources/Layouts/*.asset" Link="SpriteFixtures/Layouts/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Written by crates/unbound-runtime's model mesh test (UNBOUND_BLESS=1). -->
+    <None Update="Fixtures/model-mesh-upload.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- The native library the engine calls, from the explicit directory; without one, the newer of

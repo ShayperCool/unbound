@@ -172,6 +172,109 @@ namespace UnityEngine.Tests
             Assert.False(deferred.isReadable);
         }
 
+        static readonly System.Reflection.FieldInfo s_NativeApi = typeof(Native).GetField("s_Api", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        static readonly System.Reflection.FieldInfo s_NativeReady = typeof(Native).GetField("s_Ready", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        static Dictionary<string, object> s_Uploaded;
+
+        [UnmanagedCallersOnly]
+        static unsafe void CaptureUpload(ulong handle, MeshPacket* p)
+        {
+            int n = p->VertexCount;
+            float[][] Vectors3(Vector3* v) => v == null ? Array.Empty<float[]>() : Enumerable(n, i => new[] { v[i].x, v[i].y, v[i].z });
+            float[][] Vectors4(Vector4* v) => v == null ? Array.Empty<float[]>() : Enumerable(n, i => new[] { v[i].x, v[i].y, v[i].z, v[i].w });
+            var uvs = new[] { p->Uv0, p->Uv1, p->Uv2, p->Uv3, p->Uv4, p->Uv5, p->Uv6, p->Uv7 };
+            var uv = new float[8][][];
+            for (int c = 0; c < 8; c++) uv[c] = Vectors4(uvs[c]);
+            s_Uploaded = new Dictionary<string, object>
+            {
+                ["positions"] = Vectors3(p->Positions),
+                ["normals"] = Vectors3(p->Normals),
+                ["tangents"] = Vectors4(p->Tangents),
+                ["colors"] = Vectors4(p->Colors),
+                ["uv"] = uv,
+                ["indices"] = Enumerable(p->IndexCount, i => p->Indices[i]),
+                ["submeshes"] = Enumerable(p->SubmeshCount, i => new[] { p->Submeshes[i].IndexStart, p->Submeshes[i].IndexCount, p->Submeshes[i].Topology, p->Submeshes[i].BaseVertex }),
+            };
+        }
+
+        static T[] Enumerable<T>(int count, Func<int, T> item)
+        {
+            var items = new T[count];
+            for (int i = 0; i < count; i++) items[i] = item(i);
+            return items;
+        }
+
+        /// <summary>The same nesting and the same 32-bit values (the fixture keeps each float's
+        /// exact value).</summary>
+        static void SameValues(string path, JsonElement expected, JsonElement actual)
+        {
+            if (expected.ValueKind == JsonValueKind.Array)
+            {
+                Assert.True(actual.ValueKind == JsonValueKind.Array, path);
+                Assert.True(expected.GetArrayLength() == actual.GetArrayLength(), $"{path}: {expected.GetArrayLength()} items, {actual.GetArrayLength()} uploaded");
+                int i = 0;
+                foreach (var (e, a) in System.Linq.Enumerable.Zip(expected.EnumerateArray(), actual.EnumerateArray()))
+                    SameValues($"{path}[{i++}]", e, a);
+                return;
+            }
+            Assert.True((float)expected.GetDouble() == (float)actual.GetDouble(), $"{path}: {expected.GetDouble()} expected, {actual.GetDouble()} uploaded");
+        }
+
+        [UnmanagedCallersOnly]
+        static void NoRelease(ulong handle) { }
+
+        [UnmanagedCallersOnly]
+        static unsafe void NoSubmit(byte* commands, long length) { }
+
+        /// <summary>An imported mesh's arrays filled as an eager (readable) imported mesh fills
+        /// them upload what the native converter uploads for a deferred one: both read the same
+        /// imported mesh, kept in Fixtures/model-mesh-upload.json by the native converter's test
+        /// (crates/unbound-runtime models.rs `model_mesh_upload_fixture_is_current`).</summary>
+        [Fact]
+        public unsafe void AnEagerImportedMeshUploadsWhatTheNativeConverterUploads()
+        {
+            var fixture = JsonDocument.Parse(System.IO.File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "Fixtures", "model-mesh-upload.json"))).RootElement;
+            object previousApi = s_NativeApi.GetValue(null), previousReady = s_NativeReady.GetValue(null);
+            var api = new NativeApi { Version = NativeApi.CurrentVersion, UploadMesh = &CaptureUpload, ReleaseMesh = &NoRelease, SubmitCommands = &NoSubmit };
+            Native.Initialize(&api);
+            var mesh = new Mesh { name = "Prop" };
+            try
+            {
+                s_Uploaded = null;
+                mesh.FillFromModel(fixture.GetProperty("mesh"));
+                mesh.Sync();
+                Assert.NotNull(s_Uploaded);
+                var expected = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(fixture.GetProperty("upload").GetRawText());
+                Assert.Equal(expected.Count, s_Uploaded.Count);
+                foreach (var (key, value) in expected)
+                    SameValues(key, value, JsonSerializer.SerializeToElement(s_Uploaded[key]));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(mesh);
+                s_NativeApi.SetValue(null, previousApi);
+                s_NativeReady.SetValue(null, previousReady);
+            }
+        }
+
+        /// <summary>Bounds a script sets on a deferred mesh stay when its arrays load (a copy
+        /// loads them): loading changes nothing a script sees.</summary>
+        [Fact]
+        public void BoundsSetOnADeferredMeshSurviveLoadingItsArrays()
+        {
+            var json = SampleJson();
+            using var hooks = WithHooks((g, i) => json, (h, g, i) => true);
+            var deferred = new Mesh { name = "DeferredProp" };
+            deferred.ReadSerialized(DeferredBody(), null);
+            var custom = new Bounds(new Vector3(1, 2, 3), new Vector3(40, 50, 60));
+            deferred.bounds = custom;
+            var copy = UnityEngine.Object.Instantiate(deferred);
+            Assert.False(deferred.m_DeferredModel);
+            Assert.Equal(custom, deferred.bounds);
+            Assert.Equal(custom, copy.bounds);
+            UnityEngine.Object.DestroyImmediate(copy);
+        }
+
         [Fact]
         public void PlayModeRefusedScriptReadsDoNotHydrateDeferredMesh()
         {

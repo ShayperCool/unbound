@@ -1064,23 +1064,27 @@ fn submesh_measure(
     any.then(|| (min_v, max_v - min_v + 1, lo, hi))
 }
 
-fn append_deferred_mesh_meta(body: &mut Vec<(&str, Value)>, mesh: &ModelMesh) {
+/// Whether an imported mesh's vertex channel is one the mesh has: as long as its positions (a
+/// channel of another length is not uploaded, as the managed fill leaves it out).
+fn kept_channel<T>(channel: &[T], mesh: &ModelMesh) -> bool {
     let n = mesh.positions.len();
+    n > 0 && channel.len() == n
+}
+
+fn append_deferred_mesh_meta(body: &mut Vec<(&str, Value)>, mesh: &ModelMesh) {
     let mut channels: u32 = 0;
-    if n > 0 {
-        if mesh.normals.len() == n {
-            channels |= 1 << 0;
-        }
-        if mesh.tangents.len() == n {
-            channels |= 1 << 1;
-        }
-        if mesh.colors.len() == n {
-            channels |= 1 << 2;
-        }
-        for (ch, uv) in mesh.uvs.iter().take(8).enumerate() {
-            if uv.len() == n {
-                channels |= 1 << (3 + ch);
-            }
+    if kept_channel(&mesh.normals, mesh) {
+        channels |= 1 << 0;
+    }
+    if kept_channel(&mesh.tangents, mesh) {
+        channels |= 1 << 1;
+    }
+    if kept_channel(&mesh.colors, mesh) {
+        channels |= 1 << 2;
+    }
+    for (ch, uv) in mesh.uvs.iter().take(8).enumerate() {
+        if kept_channel(uv, mesh) {
+            channels |= 1 << (3 + ch);
         }
     }
     let submeshes: Vec<Value> = mesh
@@ -1098,7 +1102,7 @@ fn append_deferred_mesh_meta(body: &mut Vec<(&str, Value)>, mesh: &ModelMesh) {
         })
         .collect();
     body.push(("m_UnboundDeferred", scalar(1)));
-    body.push(("m_UnboundVertexCount", scalar(n)));
+    body.push(("m_UnboundVertexCount", scalar(mesh.positions.len())));
     body.push(("m_UnboundChannels", scalar(channels)));
     body.push(("m_UnboundBoundsMin", vec3(mesh.bounds_min)));
     body.push(("m_UnboundBoundsMax", vec3(mesh.bounds_max)));
@@ -1126,7 +1130,7 @@ pub fn model_mesh_owned(mesh: &ModelMesh) -> owned::Mesh {
         .iter()
         .map(|&[x, y, z]| Vector3 { x, y, z })
         .collect();
-    let normals = if n > 0 && mesh.normals.len() == n {
+    let normals = if kept_channel(&mesh.normals, mesh) {
         mesh.normals
             .iter()
             .map(|&[x, y, z]| Vector3 { x, y, z })
@@ -1134,7 +1138,7 @@ pub fn model_mesh_owned(mesh: &ModelMesh) -> owned::Mesh {
     } else {
         Vec::new()
     };
-    let tangents = if n > 0 && mesh.tangents.len() == n {
+    let tangents = if kept_channel(&mesh.tangents, mesh) {
         mesh.tangents
             .iter()
             .map(|&[x, y, z, w]| Vector4 { x, y, z, w })
@@ -1142,7 +1146,7 @@ pub fn model_mesh_owned(mesh: &ModelMesh) -> owned::Mesh {
     } else {
         Vec::new()
     };
-    let colors = if n > 0 && mesh.colors.len() == n {
+    let colors = if kept_channel(&mesh.colors, mesh) {
         mesh.colors
             .iter()
             .map(|&[r, g, b, a]| Vector4 {
@@ -1156,7 +1160,7 @@ pub fn model_mesh_owned(mesh: &ModelMesh) -> owned::Mesh {
         Vec::new()
     };
     let uv = std::array::from_fn(|ch| {
-        if n > 0 && mesh.uvs.get(ch).is_some_and(|u| u.len() == n) {
+        if mesh.uvs.get(ch).is_some_and(|u| kept_channel(u, mesh)) {
             mesh.uvs[ch]
                 .iter()
                 .map(|&[x, y]| Vector4 {
@@ -1551,6 +1555,91 @@ mod tests {
                 .body
                 .get("m_UnboundDeferred")
                 .is_none()
+        );
+    }
+
+    /// The imported mesh both converters see, and what the native one uploads: the managed tests
+    /// fill a Mesh from `mesh` (as an imported mesh loads) and check its upload packet against
+    /// `upload` (UnityEngine.Tests `DeferredModelMeshTests`), so the two cannot drift apart.
+    /// Inputs past the ordinary: colors out of range, a half step and NaN, tangents and a UV
+    /// channel shorter than the vertices (dropped), two submeshes.
+    /// `UNBOUND_BLESS=1 cargo test -p unbound-runtime model_mesh_upload` rewrites the fixture.
+    #[test]
+    fn model_mesh_upload_fixture_is_current() {
+        use unbound_assets::meta::FileIdSource;
+        use unbound_assets::model::{FileId, ModelMesh};
+        let mesh = ModelMesh {
+            name: "Prop".to_string(),
+            file_id: FileId {
+                id: 4300000,
+                source: FileIdSource::Fixed,
+            },
+            positions: vec![
+                [0.0, 0.0, 0.0],
+                [1.0, 2.0, 0.0],
+                [-1.0, 0.5, 3.0],
+                [2.0, -1.0, 1.0],
+            ],
+            normals: vec![
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0],
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+            ],
+            tangents: vec![[1.0, 0.0, 0.0, -1.0]; 3],
+            uvs: vec![
+                vec![[0.0, 0.0], [0.5, 1.0], [1.0, 0.0], [0.25, 0.75]],
+                vec![[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]],
+                vec![[0.9, 0.8], [0.7, 0.6], [0.5, 0.4], [0.3, 0.2]],
+            ],
+            colors: vec![
+                [1.0, 0.5, -0.2, 1.5],
+                [0.0, 1.0 / 510.0, f32::NAN, 1.0],
+                [0.25, 0.75, 0.5, 1.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ],
+            submeshes: vec![vec![0, 1, 2], vec![1, 2, 3, 0, 1, 3]],
+            bone_weights: Vec::new(),
+            bind_poses: Vec::new(),
+            bounds_min: [-1.0, -1.0, 0.0],
+            bounds_max: [2.0, 2.0, 3.0],
+            blend_shapes: Vec::new(),
+        };
+        let owned = super::model_mesh_owned(&mesh);
+        let v3 = |v: &[crate::render_protocol::Vector3]| {
+            v.iter().map(|p| vec![p.x, p.y, p.z]).collect::<Vec<_>>()
+        };
+        let v4 = |v: &[crate::render_protocol::Vector4]| {
+            v.iter()
+                .map(|p| vec![p.x, p.y, p.z, p.w])
+                .collect::<Vec<_>>()
+        };
+        let fixture = serde_json::json!({
+            "mesh": super::mesh_json(&mesh),
+            "upload": {
+                "positions": v3(&owned.positions),
+                "normals": v3(&owned.normals),
+                "tangents": v4(&owned.tangents),
+                "colors": v4(&owned.colors),
+                "uv": owned.uv.iter().map(|uv| v4(uv)).collect::<Vec<_>>(),
+                "indices": owned.indices,
+                "submeshes": owned.submeshes.iter().map(|s| {
+                    vec![s.index_start, s.index_count, s.topology, s.base_vertex]
+                }).collect::<Vec<_>>(),
+            },
+        });
+        let text = serde_json::to_string_pretty(&fixture).unwrap() + "\n";
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../managed/UnityEngine.Tests/Fixtures/model-mesh-upload.json");
+        if std::env::var_os("UNBOUND_BLESS").is_some() {
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, &text).unwrap();
+        }
+        let committed = std::fs::read_to_string(&path).unwrap_or_default();
+        assert!(
+            committed == text,
+            "{} is stale: run `UNBOUND_BLESS=1 cargo test -p unbound-runtime model_mesh_upload`",
+            path.display()
         );
     }
 }
