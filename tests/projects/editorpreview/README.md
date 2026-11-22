@@ -9,7 +9,7 @@ Records Unity 6000.0.71f1 object previews and object titles:
 - `attribute`: the type a `CustomPreviewAttribute` keeps.
 - `names.*`: `ObjectNames.GetInspectorTitle` (with and without several objects), `GetClassName` and
   the internal `GetTypeName` of a GameObject, components (with an `[AddComponentMenu]` path, an
-  empty one, one that ends with a slash, an obsolete class, a `MeshFilter` without and with a
+  empty one, one that ends with a slash, a class derived from one with a path, an obsolete class, a `MeshFilter` without and with a
   mesh), a ScriptableObject, a material, a texture, a mesh, null and destroyed objects; the
   obsolete `MangleVariableName` and `GetPropertyEditorTitle`.
 - `editor.*`: an `Editor`'s preview members for one and several targets and for the generic

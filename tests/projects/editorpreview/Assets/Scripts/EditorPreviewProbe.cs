@@ -167,7 +167,7 @@ public class EditorPreviewProbe : MonoBehaviour
             ("gameObject", go), ("transform", go.transform), ("light", go.AddComponent<Light>()), ("camera", go.AddComponent<Camera>()),
             ("sprite", new GameObject("Sprite").AddComponent<SpriteRenderer>()), ("line", go.AddComponent<LineRenderer>()), ("meshFilter", filter),
             ("behaviour", go.AddComponent<EditorPreviewBehaviour>()), ("menu", go.AddComponent<EditorPreviewMenuBehaviour>()),
-            ("hidden", go.AddComponent<EditorPreviewHiddenBehaviour>()), ("trailing", go.AddComponent<EditorPreviewTrailingBehaviour>()),
+            ("derivedMenu", go.AddComponent<EditorPreviewDerivedMenuBehaviour>()), ("hidden", go.AddComponent<EditorPreviewHiddenBehaviour>()), ("trailing", go.AddComponent<EditorPreviewTrailingBehaviour>()),
             ("old", go.AddComponent<EditorPreviewOldBehaviour>()), ("scriptable", a), ("material", materials[0]),
             ("texture", new Texture2D(2, 2) { name = "Tex" }), ("mesh", new Mesh { name = "myMesh" }), ("null", null),
         };
@@ -175,7 +175,7 @@ public class EditorPreviewProbe : MonoBehaviour
         var typeName = typeof(ObjectNames).GetMethod("GetTypeName", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
         foreach (var (key, obj) in objects)
             Put("names." + key, $"title={Try(() => ObjectNames.GetInspectorTitle(obj))}|multi={Try(() => ObjectNames.GetInspectorTitle(obj, true))}|class={Try(() => ObjectNames.GetClassName(obj))}|type={Try(() => typeName.Invoke(null, new object[] { obj }))}");
-        filter.sharedMesh = (Mesh)objects[15].Item2;
+        filter.sharedMesh = (Mesh)objects[16].Item2;
         Put("names.meshFilter.mesh", $"title={Try(() => ObjectNames.GetInspectorTitle(filter))}|multi={Try(() => ObjectNames.GetInspectorTitle(filter, true))}");
         var destroyed = ScriptableObject.CreateInstance<EditorPreviewTarget>();
         DestroyImmediate(destroyed);

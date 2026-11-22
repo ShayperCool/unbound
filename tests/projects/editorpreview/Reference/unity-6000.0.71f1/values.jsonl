@@ -15,6 +15,7 @@
 {"k":"names.meshFilter","v":"title='[none] (Mesh Filter)'|multi='Mesh Filter'|class='MeshFilter'|type='MeshFilter'"}
 {"k":"names.behaviour","v":"title='Editor Preview Behaviour (Script)'|multi='Editor Preview Behaviour (Script)'|class='MonoBehaviour'|type='EditorPreviewBehaviour'"}
 {"k":"names.menu","v":"title='Fancy Name'|multi='Fancy Name'|class='MonoBehaviour'|type='EditorPreviewMenuBehaviour'"}
+{"k":"names.derivedMenu","v":"title='Editor Preview Derived Menu Behaviour (Script)'|multi='Editor Preview Derived Menu Behaviour (Script)'|class='MonoBehaviour'|type='EditorPreviewDerivedMenuBehaviour'"}
 {"k":"names.hidden","v":"title='Editor Preview Hidden Behaviour (Script)'|multi='Editor Preview Hidden Behaviour (Script)'|class='MonoBehaviour'|type='EditorPreviewHiddenBehaviour'"}
 {"k":"names.trailing","v":"title='Editor Preview Trailing Behaviour (Script)'|multi='Editor Preview Trailing Behaviour (Script)'|class='MonoBehaviour'|type='EditorPreviewTrailingBehaviour'"}
 {"k":"names.old","v":"title='Editor Preview Old Behaviour (Script) (Deprecated)'|multi='Editor Preview Old Behaviour (Script) (Deprecated)'|class='MonoBehaviour'|type='EditorPreviewOldBehaviour'"}
