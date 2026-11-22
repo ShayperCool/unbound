@@ -1,0 +1,37 @@
+{
+ "Multithreaded rendering: a plugin event's callback reads state the script gave the plugin directly afterwards (NativeGfxVk_SetDeviceBuffer of the next render texture) when it runs later on the render thread; the Editor's render thread had run it before (it waits for its render thread at a call in between that its documentation does not name; documented: GetNativeTexturePtr and GetNativeDepthBufferPtr, where Unbound waits as well). Unmeasured which call waits": [
+  "plugin.device.msaa.1.24.True.resolve",
+  "plugin.device.msaa.1.24.True.resolve.samecolor",
+  "plugin.device.msaa.2.0.False.resolve",
+  "plugin.device.msaa.2.0.False.resolve.samecolor",
+  "plugin.device.msaa.2.0.True.resolve",
+  "plugin.device.msaa.2.0.True.resolve.samecolor",
+  "plugin.device.msaa.2.16.False.resolve",
+  "plugin.device.msaa.2.16.False.resolve.samecolor",
+  "plugin.device.msaa.2.16.True.resolve",
+  "plugin.device.msaa.2.16.True.resolve.samecolor",
+  "plugin.device.msaa.2.24.False.resolve",
+  "plugin.device.msaa.2.24.False.resolve.samecolor",
+  "plugin.device.msaa.2.24.True.resolve",
+  "plugin.device.msaa.2.24.True.resolve.samecolor",
+  "plugin.device.msaa.4.0.False.resolve",
+  "plugin.device.msaa.4.0.False.resolve.samecolor",
+  "plugin.device.msaa.4.0.True.resolve",
+  "plugin.device.msaa.4.0.True.resolve.samecolor",
+  "plugin.device.msaa.4.16.False.resolve",
+  "plugin.device.msaa.4.16.False.resolve.samecolor",
+  "plugin.device.msaa.4.16.True.resolve",
+  "plugin.device.msaa.4.16.True.resolve.samecolor",
+  "plugin.device.msaa.4.24.False.resolve",
+  "plugin.device.msaa.4.24.False.resolve.samecolor"
+ ],
+ "Multithreaded rendering: the camera2 and ExecuteCommandBuffer callbacks run on the render thread after the script set the plugin's next step (NativeGfxVk_Step), so their records take the later step's name; the Editor's render thread ran them first (where it waits is not documented). Unmeasured which call waits": [
+  "plugin.dontcare.camera2",
+  "plugin.dontcare.camera2.2",
+  "plugin.dontcare.camera2.3",
+  "plugin.dontcare.execute",
+  "plugin.outside.state.camera2",
+  "plugin.outside.state.camera2.2",
+  "plugin.outside.state.execute"
+ ]
+}

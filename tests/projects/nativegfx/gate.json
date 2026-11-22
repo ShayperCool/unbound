@@ -3,7 +3,9 @@
   "python3 tests/projects/nativegfx/run.py check",
   "python3 tests/projects/nativegfx/run.py check --device vulkan",
   "python3 tests/projects/nativegfx/run.py check --stencil",
-  "python3 tests/projects/nativegfx/run.py check --device vulkan --stencil"
+  "python3 tests/projects/nativegfx/run.py check --device vulkan --stencil",
+  "python3 tests/projects/nativegfx/run.py check --mt",
+  "python3 tests/projects/nativegfx/run.py check --device vulkan --mt"
  ],
  "summary": "\\d+/\\d+ records match.*"
 }
