@@ -159,43 +159,47 @@ namespace UnityEngine.Animations
         }
 
         /// <summary>Whether a curve controls the parameter (documented, 6000.0: true if the
-        /// parameter is controlled by a curve, false otherwise). True when a curve of one of this
-        /// playable's own clips (its controller's, after overrides) drives this float parameter of
-        /// the playable, whether or not the Animator's own controller has a parameter of that name,
-        /// or has a controller at all; such a curve then drives the playable's parameter with the
-        /// playable's own layered sample, each time the playable is evaluated, before the graph mixes
-        /// it (PlayableParameters.Sample). Curves of other playables' clips, or of the Animator's own
-        /// controller, do not make it true. Unbound's choices (unmeasured): the name must be a
-        /// float parameter of this playable's controller (clip curves drive float parameters only);
-        /// an invalid playable, one not yet played by an animation output, and an unknown parameter
-        /// answer false without a warning, as the Animator's query does; the Animator's own
-        /// controller graph (Animator.playableGraph) answers as Animator.IsParameterControlledByCurve
-        /// does. A playable played before the Animator's own player was replaced (a controller
-        /// swap, a disable that drops its state) answers from the bindings it was played with,
-        /// which the Animator no longer animates through: reported once as not honoured.</summary>
+        /// parameter is controlled by a curve, false otherwise). Logs the missing-parameter warning
+        /// when the parameter does not exist, returns false before the playable has been bound/
+        /// evaluated on an Animator, and remains true when the Animator swaps its own controller
+        /// while the graph is alive (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/animrest <c>playablecurve.*</c>).</summary>
         public bool IsParameterControlledByCurve(string name)
         {
-            var player = Player;
-            return ControlledByCurve(player, player?.ParameterIndex(name) ?? -1);
+            var kind = PlayableGraphData.Get(m_Handle)?.Kind as ControllerKind;
+            var player = kind?.State;
+            if (player == null) return false;
+            int index = player.ParameterIndex(name);
+            if (index < 0)
+            {
+                Debug.LogWarning(AnimatorErrors.MissingParameter(name));
+                return false;
+            }
+            return ControlledByCurve(kind, player, index);
         }
 
         public bool IsParameterControlledByCurve(int id)
         {
-            var player = Player;
-            return ControlledByCurve(player, player?.ParameterIndex(id) ?? -1);
+            var kind = PlayableGraphData.Get(m_Handle)?.Kind as ControllerKind;
+            var player = kind?.State;
+            if (player == null) return false;
+            int index = player.ParameterIndex(id);
+            if (index < 0)
+            {
+                Debug.LogWarning(AnimatorErrors.MissingParameter(AnimatorErrors.HashLabel(id)));
+                return false;
+            }
+            return ControlledByCurve(kind, player, index);
         }
 
-        static bool ControlledByCurve(AnimatorPlayer player, int index)
+        static bool ControlledByCurve(ControllerKind kind, AnimatorPlayer player, int index)
         {
-            if (player == null || index < 0) return false;
             var p = player.Graph.Parameters[index];
             if (p.Type != AnimatorControllerParameterType.Float) return false;
             var animator = player.Bindings.Root != null ? player.Bindings.Root.GetComponent<Animator>() : null;
             if (animator == null) return false;
             if (player.Attached) return player.Bindings.AnimatesParameter(animator, p.Name);
-            if (!animator.StreamsThrough(player.Bindings))
-                Unbound.Runtime.Stubs.Ignored("AnimatorControllerPlayable.IsParameterControlledByCurve",
-                    "answers from the bindings the playable was first played with after the Animator's own player was replaced; its curves no longer drive its parameters there");
+            if (!kind.Bound) return false;
             return player.Bindings.FeedsParameter(player, animator, p.Name);
         }
 

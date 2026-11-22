@@ -726,6 +726,10 @@ namespace Unbound.Runtime.Playables
         internal RuntimeAnimatorController Controller;
         internal AnimatorPlayer Player;
         internal PlayableNode Node;
+        /// <summary>Whether this playable has been bound/evaluated by an animation output on its
+        /// target Animator (IsParameterControlledByCurve answers false before first evaluation;
+        /// tests/projects/animrest <c>playablecurve.beforePlay</c>).</summary>
+        internal bool Bound;
         AnimatorPlayer m_Detached;
 
         /// <summary>What the playable's own API reads and sets: the player made for the Animator of
@@ -782,12 +786,21 @@ namespace Unbound.Runtime.Playables
             EnsurePlayer()?.StepLayers(info.deltaTime * info.effectiveSpeed);
         }
 
-        internal override void Bind(AnimationEvaluation e, PlayableNode node) => EnsurePlayer(e.Animator);
+        internal override void Bind(AnimationEvaluation e, PlayableNode node)
+        {
+            var player = EnsurePlayer(e.Animator);
+            if (player == null) return;
+            if (!ReferenceEquals(player.Bindings, e.Bindings)) player.Rebind(e.Bindings);
+            Bound = true;
+        }
 
         internal override void Evaluate(AnimationEvaluation e, PlayableNode node, int viaPort, float weight, AnimStream into)
         {
             var player = EnsurePlayer(e.Animator);
-            if (player == null || player.Bindings != e.Bindings || e.ReferencePose) return;
+            if (player == null) return;
+            if (!ReferenceEquals(player.Bindings, e.Bindings)) player.Rebind(e.Bindings);
+            Bound = true;
+            if (e.ReferencePose) return;
             player.EvaluateInto(into.Values, into.Animated, into.Objects, into.ObjectAnimated);
             if (player.FootIK()) into.FootIK = true;
             if (e.Animator.Human is { } human) Humanoid(e, player, human, weight, into);

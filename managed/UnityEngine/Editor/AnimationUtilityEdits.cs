@@ -260,11 +260,165 @@ namespace UnityEditor
             return false;
         }
 
-        static FieldInfo ScriptField(Type type, string name)
+        internal static FieldInfo ScriptField(Type type, string name)
         {
+            if (type == null || string.IsNullOrEmpty(name)) return null;
             foreach (var member in SerializationRules.Members(type))
                 if (member.Name == name) return member.Field;
             return null;
+        }
+
+        /// <summary>Whether <paramref name="propertyName"/> on <paramref name="type"/> is a
+        /// discrete integer curve (an enum or a <see cref="DiscreteEvaluationAttribute"/> int field
+        /// of a MonoBehaviour).</summary>
+        internal static bool IsDiscreteField(Type type, string propertyName)
+        {
+            if (type == null || !typeof(MonoBehaviour).IsAssignableFrom(type) || string.IsNullOrEmpty(propertyName)) return false;
+            var field = ScriptField(type, propertyName);
+            if (field == null) return false;
+            return field.FieldType.IsEnum || (field.FieldType == typeof(int) && field.IsDefined(typeof(DiscreteEvaluationAttribute), true));
+        }
+
+        const string k_MaterialSlotPrefix = "m_Materials.Array.data[";
+        const byte k_MaterialSlotCustomType = 21;
+
+        internal static bool TryParseMaterialSlot(string propertyName, out int index)
+        {
+            index = -1;
+            return propertyName != null
+                && propertyName.StartsWith(k_MaterialSlotPrefix, StringComparison.Ordinal)
+                && propertyName.EndsWith("]", StringComparison.Ordinal)
+                && int.TryParse(propertyName.AsSpan(k_MaterialSlotPrefix.Length, propertyName.Length - k_MaterialSlotPrefix.Length - 1), out index)
+                && index >= 0;
+        }
+
+        /// <summary>Converts a <see cref="PropertyModification"/> relative to
+        /// <paramref name="gameObject"/> into an <see cref="EditorCurveBinding"/> and returns its
+        /// value type, or null if not animatable (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/animatorapi <c>util.fromModification.*</c>,
+        /// tests/projects/animrest <c>propmod.conv.*</c>).</summary>
+        public static Type PropertyModificationToEditorCurveBinding(PropertyModification modification, GameObject gameObject, out EditorCurveBinding binding)
+        {
+            if (gameObject == null) throw new ArgumentNullException(nameof(gameObject));
+            binding = new EditorCurveBinding { path = "", type = typeof(Object), propertyName = "" };
+            if (modification == null || modification.target == null) return null;
+            Transform targetTransform;
+            if (modification.target is GameObject targetGo) targetTransform = targetGo.transform;
+            else if (modification.target is Component targetComp) targetTransform = targetComp.transform;
+            else return null;
+            if (targetTransform == null) return null;
+            bool underRoot = false;
+            for (var t = targetTransform; t != null; t = t.parent)
+                if (ReferenceEquals(t, gameObject.transform)) { underRoot = true; break; }
+            if (!underRoot) return null;
+            var path = CalculateTransformPath(targetTransform, gameObject.transform);
+            var targetType = modification.target.GetType();
+            binding = new EditorCurveBinding { path = path, type = targetType, propertyName = "" };
+            var prop = modification.propertyPath;
+            if (string.IsNullOrEmpty(prop)) return null;
+
+            if (modification.target is GameObject)
+            {
+                if (prop == "m_IsActive")
+                {
+                    binding = EditorCurveBinding.FloatCurve(path, typeof(GameObject), "m_IsActive");
+                    return typeof(bool);
+                }
+                return null;
+            }
+            if (modification.target is Transform)
+            {
+                int dot = prop.LastIndexOf('.');
+                if (dot > 0 && dot + 2 == prop.Length)
+                {
+                    var head = prop.Substring(0, dot);
+                    char axis = prop[dot + 1];
+                    bool ok = (head == "m_LocalPosition" || head == "m_LocalScale") && (axis == 'x' || axis == 'y' || axis == 'z')
+                        || head == "m_LocalRotation" && (axis == 'x' || axis == 'y' || axis == 'z' || axis == 'w');
+                    if (ok)
+                    {
+                        binding = EditorCurveBinding.FloatCurve(path, targetType, prop);
+                        return typeof(float);
+                    }
+                }
+                return null;
+            }
+            if (modification.target is Renderer && TryParseMaterialSlot(prop, out _))
+            {
+                binding = EditorCurveBinding.PPtrCurve(path, targetType, prop);
+                return typeof(Material);
+            }
+            if (modification.target is SpriteRenderer && prop == "m_Sprite")
+            {
+                binding = EditorCurveBinding.PPtrCurve(path, targetType, prop);
+                return typeof(Sprite);
+            }
+            using var so = new SerializedObject(modification.target);
+            var sp = so.FindProperty(prop);
+            if (sp == null) return null;
+            switch (sp.propertyType)
+            {
+                case SerializedPropertyType.Float:
+                    binding = EditorCurveBinding.FloatCurve(path, targetType, prop);
+                    return typeof(float);
+                case SerializedPropertyType.Boolean:
+                    binding = EditorCurveBinding.FloatCurve(path, targetType, prop);
+                    return typeof(bool);
+                case SerializedPropertyType.Enum:
+                    binding = EditorCurveBinding.DiscreteCurve(path, targetType, prop);
+                    return typeof(int);
+                case SerializedPropertyType.Integer:
+                    binding = IsDiscreteField(targetType, prop)
+                        ? EditorCurveBinding.DiscreteCurve(path, targetType, prop)
+                        : EditorCurveBinding.FloatCurve(path, targetType, prop);
+                    return typeof(int);
+                case SerializedPropertyType.ObjectReference:
+                    if (modification.target is MonoBehaviour) return null;
+                    binding = EditorCurveBinding.PPtrCurve(path, targetType, prop);
+                    return typeof(Object);
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>Converts editor curve bindings to compiled <see cref="GenericBinding"/> entries
+        /// (skipping <see cref="Transform"/> bindings; matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/animatorapi <c>util.generic</c>, tests/projects/animrest <c>generic.*</c>).</summary>
+        public static GenericBinding[] EditorCurveBindingsToGenericBindings(EditorCurveBinding[] editorCurveBindings)
+        {
+            if (editorCurveBindings == null || editorCurveBindings.Length == 0)
+                return Array.Empty<GenericBinding>();
+            var list = new List<GenericBinding>(editorCurveBindings.Length);
+            for (int i = 0; i < editorCurveBindings.Length; i++)
+            {
+                var b = editorCurveBindings[i];
+                if (b.type == typeof(Transform)) continue;
+                uint pathHash = HashedBindings.Crc32(b.path ?? "");
+                int typeId = ClassIds.IdOf(b.type);
+                int scriptId = 0;
+                if (b.type != null && typeof(MonoBehaviour).IsAssignableFrom(b.type))
+                {
+                    var script = MonoScript.FromType(b.type);
+                    if (script != null) scriptId = script.GetInstanceID();
+                }
+                byte customType = 0;
+                uint propHash;
+                if (b.isPPtrCurve && b.type != null && typeof(Renderer).IsAssignableFrom(b.type) && TryParseMaterialSlot(b.propertyName, out int slotIndex))
+                {
+                    customType = k_MaterialSlotCustomType;
+                    propHash = (uint)slotIndex;
+                }
+                else
+                {
+                    propHash = HashedBindings.Crc32(b.propertyName ?? "");
+                }
+                var flags = Flags.kNone;
+                if (b.isPPtrCurve) flags |= Flags.kPPtr | Flags.kDiscrete;
+                else if (b.isDiscreteCurve || IsDiscreteField(b.type, b.propertyName)) flags |= Flags.kDiscrete;
+                if (b.isSerializeReferenceCurve) flags |= Flags.kSerializeReference;
+                list.Add(new GenericBinding(pathHash, propHash, scriptId, typeId, customType, flags));
+            }
+            return list.ToArray();
         }
 
         /// <summary>An object curve binding's current value on an engine component: a renderer's

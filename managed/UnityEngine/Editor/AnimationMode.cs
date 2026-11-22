@@ -37,6 +37,8 @@ namespace UnityEditor
             internal Object Target;
             internal string Path;
             internal float Value;
+            internal bool IsObject;
+            internal Object ObjectValue;
         }
 
         static readonly List<Recorded> s_Recorded = new List<Recorded>();
@@ -82,7 +84,11 @@ namespace UnityEditor
             foreach (var r in s_Recorded)
             {
                 if (r.Target == null) continue;
-                if (r.Target is Transform t)
+                if (r.IsObject)
+                {
+                    WriteObject(r.Target, r.Path, r.ObjectValue);
+                }
+                else if (r.Target is Transform t)
                 {
                     if (!transforms.Contains(t)) transforms.Add(t);
                 }
@@ -128,6 +134,113 @@ namespace UnityEditor
             Record(AnimationUtility.GetAnimatedObject(gameObject, binding), binding.propertyName);
         }
 
+        /// <summary>Registers a property modification to revert when animation mode stops (first
+        /// registration for a target/property wins; throws outside animation mode or on null
+        /// modification/target; matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/animatorapi <c>mode.*</c>, tests/projects/animrest <c>propmod.add.*</c>).</summary>
+        public static void AddPropertyModification(EditorCurveBinding binding, PropertyModification modification, bool keepPrefabOverride)
+        {
+            if (!InAnimationMode())
+                throw new InvalidOperationException("AnimationMode.AddPropertyModification may only be called in animation mode.  See AnimationMode.StartAnimationMode.");
+            if (modification == null || modification.target == null)
+                throw new NullReferenceException();
+            var path = modification.propertyPath ?? "";
+            if (IsRecorded(modification.target, path)) return;
+            if (binding.isPPtrCurve || modification.objectReference != null)
+            {
+                s_Recorded.Add(new Recorded { Target = modification.target, Path = path, IsObject = true, ObjectValue = modification.objectReference });
+                return;
+            }
+            if (TryParseModificationFloat(modification.value, out float parsed))
+            {
+                s_Recorded.Add(new Recorded { Target = modification.target, Path = path, Value = parsed });
+            }
+            else if (Read(modification.target, path) is float current)
+            {
+                s_Recorded.Add(new Recorded { Target = modification.target, Path = path, Value = current });
+            }
+        }
+
+        static bool TryParseModificationFloat(string text, out float value)
+        {
+            value = 0f;
+            if (string.IsNullOrEmpty(text)) return false;
+            if (float.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out value)) return true;
+            if (string.Equals(text, "true", StringComparison.OrdinalIgnoreCase)) { value = 1f; return true; }
+            if (string.Equals(text, "false", StringComparison.OrdinalIgnoreCase)) { value = 0f; return true; }
+            return false;
+        }
+
+        /// <summary>The bindings animation mode records for a clip: non-Transform float curves,
+        /// object curves, then expanded Transform rotation (+ Euler hint when authored as Euler),
+        /// position, and scale bindings per unique animated path in ordinal order (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/animrest <c>modebindings.mode.*</c>).</summary>
+        internal static EditorCurveBinding[] GetCurveBindings(AnimationClip clip)
+        {
+            if (clip == null) throw new ArgumentNullException(nameof(clip));
+            var result = new List<EditorCurveBinding>();
+            var rotPaths = new SortedSet<string>(StringComparer.Ordinal);
+            var eulerPaths = new HashSet<string>(StringComparer.Ordinal);
+            var posPaths = new SortedSet<string>(StringComparer.Ordinal);
+            var scalePaths = new SortedSet<string>(StringComparer.Ordinal);
+            foreach (var b in AnimationUtility.GetCurveBindings(clip))
+            {
+                if (b.type == typeof(Transform) && b.propertyName != null)
+                {
+                    var p = b.path ?? "";
+                    if (b.propertyName.StartsWith("localEulerAngles", StringComparison.Ordinal))
+                    {
+                        rotPaths.Add(p);
+                        eulerPaths.Add(p);
+                        continue;
+                    }
+                    if (b.propertyName.StartsWith("m_LocalRotation.", StringComparison.Ordinal))
+                    {
+                        rotPaths.Add(p);
+                        continue;
+                    }
+                    if (b.propertyName.StartsWith("m_LocalPosition.", StringComparison.Ordinal))
+                    {
+                        posPaths.Add(p);
+                        continue;
+                    }
+                    if (b.propertyName.StartsWith("m_LocalScale.", StringComparison.Ordinal))
+                    {
+                        scalePaths.Add(p);
+                        continue;
+                    }
+                }
+                result.Add(b);
+            }
+            result.AddRange(AnimationUtility.GetObjectReferenceCurveBindings(clip));
+            foreach (var p in rotPaths)
+            {
+                result.Add(EditorCurveBinding.FloatCurve(p, typeof(Transform), "m_LocalRotation.x"));
+                result.Add(EditorCurveBinding.FloatCurve(p, typeof(Transform), "m_LocalRotation.y"));
+                result.Add(EditorCurveBinding.FloatCurve(p, typeof(Transform), "m_LocalRotation.z"));
+                result.Add(EditorCurveBinding.FloatCurve(p, typeof(Transform), "m_LocalRotation.w"));
+                if (eulerPaths.Contains(p))
+                {
+                    result.Add(EditorCurveBinding.FloatCurve(p, typeof(Transform), "m_LocalEulerAnglesHint.x"));
+                    result.Add(EditorCurveBinding.FloatCurve(p, typeof(Transform), "m_LocalEulerAnglesHint.y"));
+                    result.Add(EditorCurveBinding.FloatCurve(p, typeof(Transform), "m_LocalEulerAnglesHint.z"));
+                }
+            }
+            foreach (var p in posPaths)
+            {
+                result.Add(EditorCurveBinding.FloatCurve(p, typeof(Transform), "m_LocalPosition.x"));
+                result.Add(EditorCurveBinding.FloatCurve(p, typeof(Transform), "m_LocalPosition.y"));
+                result.Add(EditorCurveBinding.FloatCurve(p, typeof(Transform), "m_LocalPosition.z"));
+            }
+            foreach (var p in scalePaths)
+            {
+                result.Add(EditorCurveBinding.FloatCurve(p, typeof(Transform), "m_LocalScale.x"));
+                result.Add(EditorCurveBinding.FloatCurve(p, typeof(Transform), "m_LocalScale.y"));
+                result.Add(EditorCurveBinding.FloatCurve(p, typeof(Transform), "m_LocalScale.z"));
+            }
+            return result.ToArray();
+        }
+
         static void Record(Object target, string path)
         {
             if (target == null || path == null || IsRecorded(target, path)) return;
@@ -170,6 +283,33 @@ namespace UnityEditor
                 default: return;
             }
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>Writes a recorded object reference back to the target.</summary>
+        static void WriteObject(Object target, string path, Object value)
+        {
+            if (target is Renderer renderer && AnimationUtility.TryParseMaterialSlot(path, out int index))
+            {
+                var mats = renderer.sharedMaterials;
+                if (index >= 0 && index < mats.Length)
+                {
+                    mats[index] = value as Material;
+                    renderer.sharedMaterials = mats;
+                }
+                return;
+            }
+            if (target is SpriteRenderer sprite && path == "m_Sprite")
+            {
+                sprite.sprite = value as Sprite;
+                return;
+            }
+            using var so = new SerializedObject(target);
+            var p = so.FindProperty(path);
+            if (p != null && p.propertyType == SerializedPropertyType.ObjectReference)
+            {
+                p.objectReferenceValue = value;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
         }
 
         /// <summary>A transform's recorded components written back together: its position, scale

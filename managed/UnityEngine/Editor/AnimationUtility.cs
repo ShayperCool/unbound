@@ -78,20 +78,31 @@ namespace UnityEditor
     /// and values a binding names (measured, tests/projects/editorui).</summary>
     public partial class AnimationUtility
     {
-        static EditorCurveBinding BindingOf(ClipCurve c) =>
-            EditorCurveBinding.FloatCurve(c.Binding.Path, c.Binding.ResolveType(), c.Binding.Attribute);
+        static EditorCurveBinding BindingOf(ClipCurve c)
+        {
+            var type = c.Binding.ResolveType();
+            bool discrete = (c.Flags & 1) != 0 || IsDiscreteField(type, c.Binding.Attribute);
+            return discrete
+                ? EditorCurveBinding.DiscreteCurve(c.Binding.Path, type, c.Binding.Attribute)
+                : EditorCurveBinding.FloatCurve(c.Binding.Path, type, c.Binding.Attribute);
+        }
 
-        /// <summary>The float curves' bindings, by path; within a path a Transform's rotation
-        /// comes before its Euler angles, position and scale, then the clip's other curves in
-        /// its order (Unity 6000.0.71f1, tests/projects/editorui GetCurveBindings and
-        /// tests/projects/animatorapi clip.Run.bindings).</summary>
+        static List<ClipCurve> SortedRuntimeCurves(AnimationClip clip) =>
+            clip.CurvesAsImported().Select((c, i) => (c, i)).OrderBy(p => p.c.Binding.Path, StringComparer.Ordinal)
+                .ThenBy(p => CurveKindOrder(p.c.Binding)).ThenBy(p => p.i)
+                .Select(p => p.c).ToList();
+
+        /// <summary>The float curves' bindings: the clip's authored editor curves in their own
+        /// order when present (<c>m_EditorCurves</c> or <see cref="SetEditorCurve"/>), else the
+        /// imported runtime curves sorted by path and Transform kind (Unity 6000.0.71f1,
+        /// tests/projects/editorui, tests/projects/animatorapi <c>clip.*.bindings</c>,
+        /// tests/projects/animrest <c>modebindings.*</c>).</summary>
         public static EditorCurveBinding[] GetCurveBindings(AnimationClip clip)
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
-            // A Humanoid model's clip has its muscle curves, played or not, and as imported.
-            return clip.CurvesAsImported().Select((c, i) => (c, i)).OrderBy(p => p.c.Binding.Path, StringComparer.Ordinal)
-                .ThenBy(p => CurveKindOrder(p.c.Binding)).ThenBy(p => p.i)
-                .Select(p => BindingOf(p.c)).ToArray();
+            if (clip.m_EditorCurves != null)
+                return clip.m_EditorCurves.Select(BindingOf).ToArray();
+            return SortedRuntimeCurves(clip).Select(BindingOf).ToArray();
         }
 
         /// <summary>Where a curve's kind sorts within its path: a Transform's rotation, Euler
@@ -112,6 +123,13 @@ namespace UnityEditor
 
         static ClipCurve Find(AnimationClip clip, EditorCurveBinding binding)
         {
+            if (clip.m_EditorCurves != null)
+            {
+                var path = binding.path ?? "";
+                foreach (var c in clip.m_EditorCurves)
+                    if (c.Binding.Path == path && c.Binding.Attribute == binding.propertyName && c.Binding.Matches(binding.type))
+                        return c;
+            }
             return clip.CurveAsImported(binding.path ?? "", binding.propertyName, binding.type);
         }
 
@@ -127,7 +145,7 @@ namespace UnityEditor
 
         /// <summary>Sets a binding's curve (a null curve removes it), one component at a time, also of
         /// a Transform vector property (matches the Unity 6000.0.71f1 Editor, tests/projects/editorui
-        /// ClipLength.*SetEditorCurve*).</summary>
+        /// ClipLength.*SetEditorCurve*, tests/projects/animrest <c>modebindings.*</c>).</summary>
         public static void SetEditorCurve(AnimationClip clip, EditorCurveBinding binding, AnimationCurve curve)
         {
             SetEditorCurveNoSync(clip, binding, curve);
@@ -137,13 +155,28 @@ namespace UnityEditor
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             clip.RestoreImportedCurves();
-            clip.m_Curves.RemoveAll(c => c.Binding.Path == (binding.path ?? "") && c.Binding.Attribute == binding.propertyName && c.Binding.Matches(binding.type));
+            clip.m_EditorCurves ??= SortedRuntimeCurves(clip);
+            var path = binding.path ?? "";
+            clip.m_Curves.RemoveAll(c => c.Binding.Path == path && c.Binding.Attribute == binding.propertyName && c.Binding.Matches(binding.type));
+            int existingEditor = clip.m_EditorCurves.FindIndex(c => c.Binding.Path == path && c.Binding.Attribute == binding.propertyName && c.Binding.Matches(binding.type));
             if (curve != null)
             {
                 var copy = new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
                 // Its file's flags: 1 for a discrete curve, else 16 (tests/projects/scenesave clip-assets
                 // Editor.anim).
-                clip.m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(binding.path ?? "", binding.propertyName, binding.type), Curve = copy, Flags = binding.isDiscreteCurve ? 1 : 16 });
+                var entry = new ClipCurve
+                {
+                    Binding = CurveBinding.ForClipCurve(path, binding.propertyName, binding.type),
+                    Curve = copy,
+                    Flags = binding.isDiscreteCurve ? 1 : 16,
+                };
+                clip.m_Curves.Add(entry);
+                if (existingEditor >= 0) clip.m_EditorCurves[existingEditor] = entry;
+                else clip.m_EditorCurves.Add(entry);
+            }
+            else if (existingEditor >= 0)
+            {
+                clip.m_EditorCurves.RemoveAt(existingEditor);
             }
             clip.m_BindingsBuilt = true;
             clip.m_EditorCurvesSynced = true;

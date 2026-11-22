@@ -83,11 +83,21 @@ namespace UnityEngine
         }
 
         /// <summary>Applied by the player loop's update (<see cref="Step"/>): BasedOnRenderers
-        /// skips it while no renderer of the hierarchy is visible (see <see cref="Culled"/>).</summary>
+        /// skips it while no renderer of the hierarchy is visible (see <see cref="Culled"/>).
+        /// Obsolete BasedOnClipBounds and BasedOnUserBounds coerce to BasedOnRenderers (matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/animrest <c>culling.*</c>).</summary>
         public AnimationCullingType cullingType
         {
             get => m_CullingType;
-            set => m_CullingType = value;
+            set => m_CullingType = NormalizeCullingType(value);
+        }
+
+        static AnimationCullingType NormalizeCullingType(AnimationCullingType value)
+        {
+#pragma warning disable CS0618
+            return value == AnimationCullingType.BasedOnClipBounds || value == AnimationCullingType.BasedOnUserBounds
+                ? AnimationCullingType.BasedOnRenderers : value;
+#pragma warning restore CS0618
         }
 
         public Bounds localBounds
@@ -790,63 +800,57 @@ namespace UnityEngine
         }
 
         /// <summary>
-        /// Synchronizes the playback speed of all animations in the layer: Unbound's reading of the
-        /// method's purpose. The 6000.0 Scripting API has no page for Animation.SyncLayer and
-        /// nothing measures it, so all of the behaviour below is unmeasured.
-        /// <para>Unbound's choices (unmeasured hypotheses): the layer stays synchronized from the
-        /// call on, for states that join it later too (there is no call that undoes it), and a
-        /// layer without states is no different until states play in it. Each update, the enabled
-        /// states of the layer (not waiting in a queue) advance by one shared normalized speed: the
-        /// weighted mean of their normalizedSpeed (speed / length), weighted by their weights
-        /// before this update's fades. A state of weight 0 contributes nothing to the mean but
-        /// advances by it; a state of length 0 contributes nothing and keeps its own speed. Their
-        /// normalized times keep their offsets (they are not aligned), and their speed and
-        /// normalizedSpeed properties keep their values; a Once state ends by the direction it
-        /// advances in. Without any weight in the layer its states advance by their own speeds. A
-        /// queued state waiting for a state of the layer to complete still estimates the time left
-        /// by that state's own speed. A state started this update (sampled where it starts, it does
-        /// not advance yet) still contributes its weight and normalizedSpeed to the mean.</para>
-        /// <para>Since none of this is documented or measured, every call is reported (counted,
-        /// the first in the process logged once) as having unmeasured semantics; the behaviour is
-        /// the hypothesis above, unchanged by the notice.</para>
+        /// Synchronizes all enabled states in <paramref name="layer"/> on each update: when their
+        /// clamped weights sum above <see cref="AnimationState.WeightEpsilon"/>, their normalized
+        /// times and normalized advance speeds are set to the weight-averaged normalized time and
+        /// normalized speed of the layer's enabled states while each state's own <c>speed</c>
+        /// property stays unchanged (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/animrest <c>synclayer.*</c>).
         /// </summary>
         public void SyncLayer(int layer)
         {
-            Unbound.Runtime.Stubs.Ignored("Animation.SyncLayer",
-                "has unmeasured semantics (no 6000.0 Scripting API page, no measurement): Unbound advances the layer's states by the weighted mean of their normalized speeds, an unsupported hypothesis that may differ from Unity");
             (m_SyncedLayers ??= new HashSet<int>()).Add(layer);
         }
 
         HashSet<int> m_SyncedLayers;
 
-        /// <summary>The shared normalized speed of each synchronized layer with weight in it (see
-        /// <see cref="SyncLayer"/>); null when no layer is synchronized.</summary>
-        Dictionary<int, float> SyncedNormalizedSpeeds(List<AnimationState> states)
+        /// <summary>Applies layer time and speed synchronization before states advance in an
+        /// update (zero-allocation hot path; see <see cref="SyncLayer"/>).</summary>
+        void SyncLayerTimes(List<AnimationState> states)
         {
-            if (m_SyncedLayers == null) return null;
-            var sums = new Dictionary<int, (double Speed, double Weight)>();
-            foreach (var s in states)
+            for (int i = 0; i < states.Count; i++) states[i].m_HasSyncedSpeed = false;
+            if (m_SyncedLayers == null) return;
+            foreach (int layer in m_SyncedLayers)
             {
-                if (!m_SyncedLayers.Contains(s.m_Layer) || !Advances(s) || !(s.m_Weight > 0f)) continue;
-                float length = s.length;
-                if (!(length > 0f)) continue;
-                sums.TryGetValue(s.m_Layer, out var sum);
-                sums[s.m_Layer] = (sum.Speed + (double)s.m_Weight * s.m_Speed / length, sum.Weight + s.m_Weight);
+                float speedSum = 0f, timeSum = 0f, weightSum = 0f;
+                for (int i = 0; i < states.Count; i++)
+                {
+                    var s = states[i];
+                    if (s.m_Layer != layer || !Advances(s)) continue;
+                    float length = s.length;
+                    if (!(length > 0f)) continue;
+                    float w = s.m_Weight > 0f ? s.m_Weight : 0f;
+                    speedSum += w * (s.m_Speed / length);
+                    timeSum += w * (float)(s.m_Time / length);
+                    weightSum += w;
+                }
+                if (!(weightSum > AnimationState.WeightEpsilon)) continue;
+                float avgNormSpeed = speedSum / weightSum;
+                float avgNormTime = timeSum / weightSum;
+                for (int i = 0; i < states.Count; i++)
+                {
+                    var s = states[i];
+                    if (s.m_Layer != layer || !Advances(s)) continue;
+                    float length = s.length;
+                    if (!(length > 0f)) continue;
+                    s.m_SyncedSpeed = avgNormSpeed * length;
+                    s.m_HasSyncedSpeed = true;
+                    s.m_Time = avgNormTime * length;
+                }
             }
-            var speeds = new Dictionary<int, float>();
-            foreach (var (layer, sum) in sums) speeds[layer] = (float)(sum.Speed / sum.Weight);
-            return speeds;
         }
 
         static bool Advances(AnimationState s) => s.m_Enabled && !s.m_WaitingInQueue && s.m_Clip != null && s.m_Clip.m_Legacy;
-
-        /// <summary>The speed (seconds of the clip per second) a state advances by this update.</summary>
-        static float AdvanceSpeed(AnimationState s, Dictionary<int, float> synced)
-        {
-            if (synced == null || !synced.TryGetValue(s.m_Layer, out var normalized)) return s.m_Speed;
-            float length = s.length;
-            return length > 0f ? normalized * length : s.m_Speed;
-        }
 
         // ------------------------------------------------------------------ engine side
 
@@ -959,18 +963,7 @@ namespace UnityEngine
         /// <para>The obsolete BasedOnClipBounds and BasedOnUserBounds are reported once and animate
         /// as AlwaysAnimate (as before this culling existed).</para>
         /// </summary>
-        bool Culled()
-        {
-            switch (m_CullingType)
-            {
-                case AnimationCullingType.BasedOnRenderers:
-                    return !Animator.AnyRendererVisible(m_GameObject);
-                default:
-                    Unbound.Runtime.Stubs.Ignored("Animation.cullingType BasedOnClipBounds/BasedOnUserBounds",
-                        "(obsolete) is not honoured: the Animation always animates");
-                    return false;
-            }
-        }
+        bool Culled() => m_CullingType == AnimationCullingType.BasedOnRenderers && !Animator.AnyRendererVisible(m_GameObject);
 
         bool m_Evaluating;
 
@@ -981,7 +974,7 @@ namespace UnityEngine
             m_Evaluating = true;
             try
             {
-                EvaluateCore(deltaTime, advance);
+                EvaluateCore(deltaTime, advance, m_AnimatePhysics ? Time.fixedTimeAsDouble : Time.timeAsDouble);
             }
             finally
             {
@@ -1010,30 +1003,32 @@ namespace UnityEngine
         /// 6000.0.71f1 Editor, tests/projects/animpartial legacy.crossfade, legacy.once).</summary>
         const float StoppedSampleWeight = 1.001e-4f;
 
-        void EvaluateCore(float deltaTime, bool advance)
+        void EvaluateCore(float deltaTime, bool advance, double now)
         {
             var states = States;
             if (advance) UpdateQueue();
             m_Bindings ??= new AnimationBindings(m_GameObject);
 
             m_Playing.Clear();
-            var synced = advance ? SyncedNormalizedSpeeds(states) : null;
+            if (advance) SyncLayerTimes(states);
             for (int i = 0; i < states.Count; i++)
             {
                 var s = states[i];
                 if (!s.m_Enabled || s.m_WaitingInQueue || s.m_Clip == null || !s.m_Clip.m_Legacy) continue;
                 double from = s.m_Time;
                 bool stopped = false;
+                // A state enabled during this frame's own time step (same clock time as Begin)
+                // samples where it starts without advancing; one enabled on an earlier step
+                // (e.g. between frames) advances on the next step (tests/projects/animrest synclayer.*).
+                float stepDelta = s.m_Fresh && now <= s.m_BeginTime ? 0f : deltaTime;
                 if (advance)
                 {
-                    // A state enabled since the last update is sampled where it starts: neither
-                    // its time nor its fade moves in that update (measured).
-                    float delta = s.m_Fresh ? 0f : deltaTime;
-                    s.m_Time += delta * AdvanceSpeed(s, synced);
+                    float speed = s.m_HasSyncedSpeed ? s.m_SyncedSpeed : s.m_Speed;
+                    s.m_Time += stepDelta * speed;
                 }
                 double to = s.m_Time;
                 float sampleTime = s.SampleTime();
-                if (advance) stopped = s.UpdateFade(s.m_Fresh ? 0f : deltaTime);
+                if (advance) stopped = s.UpdateFade(stepDelta);
                 m_Playing.Add(new Playing
                 {
                     State = s, From = from, To = to, Stopped = stopped,
@@ -1171,7 +1166,7 @@ namespace UnityEngine
             m_WrapMode = (WrapMode)body.Int("m_WrapMode");
             m_PlayAutomatically = body.Bool("m_PlayAutomatically", true);
             m_AnimatePhysics = body.Bool("m_AnimatePhysics") || body.Int("m_UpdateMode") == (int)AnimationUpdateMode.Fixed;
-            m_CullingType = (AnimationCullingType)body.Int("m_CullingType");
+            m_CullingType = NormalizeCullingType((AnimationCullingType)body.Int("m_CullingType"));
             var bounds = body.Get("m_UserAABB");
             if (bounds != null) m_UserBounds = new Bounds(bounds.Vector3("m_Center"), bounds.Vector3("m_Extent") * 2f);
         }
@@ -1219,12 +1214,15 @@ namespace UnityEngine
         internal WrapMode m_WrapMode;
         internal double m_Time;
         internal float m_Speed = 1f;
+        internal float m_SyncedSpeed = 1f;
+        internal bool m_HasSyncedSpeed;
         internal int m_Layer;
         internal AnimationBlendMode m_BlendMode;
         internal bool m_Removed;
-        /// <summary>Started since the last update: sampled where it starts, neither its time nor its
-        /// fade moves.</summary>
+        /// <summary>Started since the last update: sampled where it starts when updated at the
+        /// same clock time (<see cref="m_BeginTime"/>).</summary>
         internal bool m_Fresh;
+        internal double m_BeginTime;
         /// <summary>Started, or its time set, and its time not advanced since: the update that first
         /// advances it fires the events at the time it starts from too.</summary>
         internal bool m_EventsFromStart;
@@ -1442,6 +1440,7 @@ namespace UnityEngine
         {
             m_Playing = true;
             m_Fresh = true;
+            m_BeginTime = m_Owner != null && m_Owner.m_AnimatePhysics ? Time.fixedTimeAsDouble : Time.timeAsDouble;
             m_EventsFromStart = true;
         }
 

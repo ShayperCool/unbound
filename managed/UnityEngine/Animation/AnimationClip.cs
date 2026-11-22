@@ -70,6 +70,10 @@ namespace UnityEngine
     public sealed partial class AnimationClip : Motion
     {
         internal List<ClipCurve> m_Curves = new List<ClipCurve>();
+        /// <summary>Authored editor curves in their own order (e.g. a single Euler axis from
+        /// <c>m_EditorCurves</c> or <c>AnimationUtility.SetEditorCurve</c>). Null when the clip has
+        /// no separate editor curve list.</summary>
+        internal List<ClipCurve> m_EditorCurves;
         internal List<ClipObjectCurve> m_ObjectCurves = new List<ClipObjectCurve>();
         internal List<AnimationEvent> m_Events = new List<AnimationEvent>();
         /// <summary>Whether AnimationUtility.SetEditorCurve has been used on the clip: its file then
@@ -469,6 +473,7 @@ namespace UnityEngine
                 m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(relativePath, attribute, type), Curve = copy });
                 if (axes != null) KeyVectorTogether(relativePath, head, attribute, axes, type);
             }
+            m_EditorCurves = null;
             m_Version++;
             if (eulerRemoval) m_KeptSettingsRange = (m_Version, keptStart, keptStop);
         }
@@ -870,6 +875,7 @@ namespace UnityEngine
         public void ClearCurves()
         {
             m_Curves.Clear();
+            m_EditorCurves = null;
             m_ObjectCurves.Clear();
             m_Version++;
         }
@@ -898,6 +904,7 @@ namespace UnityEngine
             var clip = new AnimationClip(copy: true)
             {
                 m_Curves = new List<ClipCurve>(m_Curves),
+                m_EditorCurves = m_EditorCurves != null ? new List<ClipCurve>(m_EditorCurves) : null,
                 m_ObjectCurves = new List<ClipObjectCurve>(m_ObjectCurves),
                 m_EditorCurvesSynced = m_EditorCurvesSynced,
                 m_BindingsBuilt = m_BindingsBuilt,
@@ -1295,6 +1302,19 @@ namespace Unbound.Runtime
             }
             return EngineTypes.ForClassId(classId, $"class {classId}");
         }
+
+        internal static int IdOf(Type type)
+        {
+            if (type == null) return 0;
+            if (type == typeof(GameObject)) return 1;
+            if (type == typeof(Component)) return 2;
+            if (type == typeof(Transform)) return 4;
+            if (type == typeof(Behaviour)) return 8;
+            if (type == typeof(Renderer)) return 25;
+            if (type == typeof(RectTransform)) return 224;
+            int id = EngineTypes.EngineClassIdOf(type);
+            return id > 0 ? id : 0;
+        }
     }
 
     /// <summary>Reads an AnimationClip document.</summary>
@@ -1321,6 +1341,7 @@ namespace Unbound.Runtime
             if (bounds != null) clip.m_Bounds = new Bounds(bounds.Vector3("m_Center"), bounds.Vector3("m_Extent") * 2f);
 
             clip.m_Curves.Clear();
+            clip.m_EditorCurves = null;
             clip.m_ObjectCurves.Clear();
             foreach (var item in Items(body, "m_PositionCurves"))
                 AddVectorCurves(clip, item, "m_LocalPosition", s_Xyz, quaternion: false);
@@ -1338,8 +1359,23 @@ namespace Unbound.Runtime
                 {
                     Binding = BindingOf(item, item.Str("attribute")),
                     Curve = BuiltinReaders.AnimationCurve(curveNode),
+                    Flags = item.Int("flags"),
                 });
             }
+            var editorItems = Items(body, "m_EditorCurves");
+            List<ClipCurve> editorCurves = null;
+            foreach (var item in editorItems)
+            {
+                var curveNode = item.Get("curve");
+                if (curveNode == null) continue;
+                (editorCurves ??= new List<ClipCurve>()).Add(new ClipCurve
+                {
+                    Binding = BindingOf(item, item.Str("attribute")),
+                    Curve = BuiltinReaders.AnimationCurve(curveNode),
+                    Flags = item.Int("flags"),
+                });
+            }
+            if (editorCurves != null && editorCurves.Count > 0) clip.m_EditorCurves = editorCurves;
             foreach (var item in Items(body, "m_PPtrCurves"))
             {
                 var keys = item.Get("curve")?.Seq() ?? Array.Empty<YNode>();

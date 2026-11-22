@@ -116,7 +116,7 @@ namespace Unbound.Runtime
         readonly Animator m_Animator;
         internal readonly RuntimeAnimatorController Controller;
         internal readonly ControllerGraph Graph;
-        internal readonly AnimationBindings Bindings;
+        internal AnimationBindings Bindings;
         internal readonly float[] Floats;
         internal readonly int[] Ints;
         internal readonly bool[] Bools;
@@ -243,6 +243,24 @@ namespace Unbound.Runtime
                 var clip = Controller.MapClip(original);
                 if (clip != null && !clip.m_Legacy) Bindings.Bind(clip);
             }
+        }
+
+        /// <summary>Rebinds this player to <paramref name="bindings"/> when the target Animator's
+        /// bindings were replaced (e.g. a runtimeAnimatorController swap while a PlayableGraph
+        /// remains attached; tests/projects/animrest <c>playablecurve.afterSwap</c>).</summary>
+        internal void Rebind(AnimationBindings bindings)
+        {
+            if (bindings == null || ReferenceEquals(Bindings, bindings)) return;
+            Bindings = bindings;
+            Bindings.Owner ??= m_Animator;
+            m_PosedFloats = -1;
+            m_PosedObjects = -1;
+            foreach (var layer in Layers)
+            {
+                layer.Last = Array.Empty<float>();
+                layer.Held = Array.Empty<bool>();
+            }
+            if (m_Animator != null) BindClips();
         }
 
         // ------------------------------------------------------------------ parameters

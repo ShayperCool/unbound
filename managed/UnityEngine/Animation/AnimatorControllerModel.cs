@@ -1721,9 +1721,42 @@ namespace UnityEditor.Animations
                 foreach (var child in tree.Children)
                 {
                     if (child.motion is BlendTree nested && nested != null) Clips(nested, seen, ref sum, ref count);
-                    else if (child.motion is AnimationClip clip && clip != null)
+                    else if (child.motion is AnimationClip clip && clip != null && !clip.legacy)
                     {
                         sum += clip.averageDuration;
+                        count++;
+                    }
+                }
+            }
+        }
+
+        /// <summary>The unweighted arithmetic mean of averageSpeed, averageAngularSpeed and
+        /// apparentSpeed across all flattened non-legacy clips in the tree (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/animrest <c>blendtree.*</c>).</summary>
+        internal override (Vector3 Speed, float AngularSpeed, float ApparentSpeed) GetMotionStats()
+        {
+            var speedSum = Vector3.zero;
+            float angularSum = 0f, apparentSum = 0f;
+            int count = 0;
+            Accumulate(this, new HashSet<BlendTree>(), ref speedSum, ref angularSum, ref apparentSum, ref count);
+            if (count == 0) return (Vector3.zero, 0f, 0f);
+            float inv = 1f / count;
+            return (new Vector3(speedSum.x * inv, speedSum.y * inv, speedSum.z * inv), angularSum * inv, apparentSum * inv);
+
+            static void Accumulate(BlendTree tree, HashSet<BlendTree> seen, ref Vector3 speedSum,
+                ref float angularSum, ref float apparentSum, ref int count)
+            {
+                if (!seen.Add(tree)) return;
+                foreach (var child in tree.Children)
+                {
+                    if (child.motion is BlendTree nested && nested != null)
+                        Accumulate(nested, seen, ref speedSum, ref angularSum, ref apparentSum, ref count);
+                    else if (child.motion is AnimationClip clip && clip != null && !clip.legacy)
+                    {
+                        var (s, ang, app) = clip.GetMotionStats();
+                        speedSum += s;
+                        angularSum += ang;
+                        apparentSum += app;
                         count++;
                     }
                 }
