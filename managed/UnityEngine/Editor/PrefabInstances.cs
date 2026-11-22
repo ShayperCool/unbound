@@ -104,11 +104,34 @@ namespace Unbound.Runtime
             o is not Transform t || t is RectTransform || EditorApplication.isPlaying
             || t.m_ChangeStamp < Math.Max(PrefabRecordTiming.TransformsTaken, data.RecordStamp);
 
+        /// <summary>How many times a record walked an instance's objects (a test bounds it: one walk
+        /// per distinct instance of a flush or an apply).</summary>
+        internal static int Walks;
+
+        /// <summary>Instances queued to be recorded once each (an Undo flush's or a multi-target
+        /// apply's objects).</summary>
+        static readonly HashSet<PrefabInstanceData> s_Pending = new HashSet<PrefabInstanceData>(ReferenceEqualityComparer.Instance);
+
+        /// <summary>Queues the instance of an object for <see cref="RecordPending"/>.</summary>
+        internal static void QueueRecord(Object o)
+        {
+            if (PrefabLinks.Of(o)?.Instance is PrefabInstanceData data) s_Pending.Add(data);
+        }
+
+        /// <summary>Records each queued instance once.</summary>
+        internal static void RecordPending()
+        {
+            if (s_Pending.Count == 0) return;
+            foreach (var data in s_Pending) Record(data);
+            s_Pending.Clear();
+        }
+
         /// <summary>A record point: the instance takes its changes now, each of its Transforms'
         /// pose too (a later change in the same update answers the recorded pose).</summary>
         internal static void Record(PrefabInstanceData data)
         {
             if (data == null) return;
+            Walks++;
             PrefabRecordTiming.Recorded(data);
             foreach (var o in ObjectsOf(data))
                 if (o is Transform t)

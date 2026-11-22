@@ -173,13 +173,14 @@ namespace UnityEditor
                 {
                     if (target == null) continue;
                     EditorUtility.SetDirty(target);
-                    if (Unbound.Runtime.PrefabLinks.Of(target) is Unbound.Runtime.PrefabLink link)
+                    if (Unbound.Runtime.PrefabLinks.Of(target) != null)
                     {
                         Unbound.Runtime.PrefabRecords.Record(target);
-                        Unbound.Runtime.PrefabInstances.Record(link.Instance);
+                        Unbound.Runtime.PrefabInstances.QueueRecord(target);
                     }
                     if (recordUndo) ObjectChangeEvents.NoteProperties(target);
                 }
+            Unbound.Runtime.PrefabInstances.RecordPending();
             foreach (var target in m_Targets)
             {
                 if (target == null || !SerializedTree.IsScript(target)) continue;

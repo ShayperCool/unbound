@@ -117,6 +117,29 @@ namespace UnityEngine.Tests
             finally { EditorSession.IsPlaying = playing; }
         }
 
+        /// <summary>An Undo flush of several objects of one instance, and an apply of a SerializedObject
+        /// over several of them, record the instance once (one walk of its objects, not one per object).</summary>
+        [Fact]
+        public void AFlushAndAnApplyRecordEachInstanceOnce()
+        {
+            var instance = Instance();
+            var root = instance.transform;
+            var part = instance.transform.Find("Part");
+            var targets = new Object[] { root, part, instance, part.gameObject };
+            Undo.RecordObjects(targets, "Move");
+            root.localPosition = new Vector3(1f, 0f, 0f);
+            part.localPosition = new Vector3(0f, 1f, 0f);
+            int before = PrefabInstances.Walks;
+            Undo.FlushUndoRecordObjects();
+            Assert.Equal(before + 1, PrefabInstances.Walks);
+
+            var so = new SerializedObject(new Object[] { root, part });
+            so.FindProperty("m_LocalPosition.z").floatValue = 2f;
+            before = PrefabInstances.Walks;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            Assert.Equal(before + 1, PrefabInstances.Walks);
+        }
+
         void TakeAtTheNextUpdateOrARecord()
         {
             var instance = Instance();

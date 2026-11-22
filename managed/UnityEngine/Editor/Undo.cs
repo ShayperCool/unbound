@@ -120,8 +120,9 @@ namespace UnityEditor
             {
                 state.DirtyIfChanged();
                 // A recorded object's prefab instance takes its changes (scenesave modification-timing undo.flushed).
-                Unbound.Runtime.PrefabInstances.Record(Unbound.Runtime.PrefabLinks.Of(state.Target)?.Instance);
+                Unbound.Runtime.PrefabInstances.QueueRecord(state.Target);
             }
+            Unbound.Runtime.PrefabInstances.RecordPending();
             s_Unflushed.Clear();
             if (s_Recorded.Count == 0) return;
             var recorded = s_Recorded.ToArray();
