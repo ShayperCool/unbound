@@ -202,3 +202,31 @@ fn only_a_leaf_across_the_whole_atlas_scales_a_rectangle_down() {
         [5.0 / 64.0, 5.0 / 64.0, 0.0, 10.0 / 64.0]
     );
 }
+
+#[test]
+fn lightmap_parameter_groups_go_in_the_order_of_their_hashes() {
+    // tests/projects/bakedatlas Tags: the Editor's lightmaps of each group, in order.
+    let d = Parameters::DEFAULT;
+    let groups = [
+        Parameters {
+            anti_aliasing_samples: 4,
+            ..d
+        },
+        Parameters {
+            baked_lightmap_tag: 1,
+            ..d
+        },
+        d,
+        Parameters {
+            back_face_tolerance: 0.5,
+            ..d
+        },
+        Parameters { pushoff: 0.01, ..d },
+        Parameters {
+            baked_lightmap_tag: 2,
+            ..d
+        },
+    ];
+    let hashes: Vec<(u64, u64)> = groups.iter().map(Parameters::hash).collect();
+    assert!(hashes.windows(2).all(|w| w[0] < w[1]), "{hashes:x?}");
+}

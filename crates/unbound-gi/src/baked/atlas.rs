@@ -37,10 +37,10 @@ pub struct Parameters {
 }
 
 impl Parameters {
-    /// Default-Medium (and every built-in Lightmap Parameters asset's baked fields).
+    /// Default-Medium's (a new Lightmap Parameters asset's too).
     pub const DEFAULT: Parameters = Parameters {
         back_face_tolerance: 0.9,
-        anti_aliasing_samples: 8,
+        anti_aliasing_samples: 2,
         pushoff: 0.0001,
         baked_lightmap_tag: -1,
         max_lightmap_count: 0,

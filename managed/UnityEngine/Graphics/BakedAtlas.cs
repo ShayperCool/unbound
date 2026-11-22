@@ -16,7 +16,7 @@ namespace UnityEngine
     /// to <c>Library/Unbound/BakedGI/&lt;scene GUID&gt;/atlas.json</c> for the next parts.
     /// <para>The renderers laid out are those the Editor lightmaps: enabled MeshRenderers of
     /// active GameObjects with Contribute Global Illumination, Receive Global Illumination
-    /// Lightmaps and a Scale In Lightmap above 0, made from the scene file, in hierarchy order. A renderer that cannot be laid out (no mesh, a
+    /// Lightmaps and a Scale In Lightmap above 0, made from the scene file. A renderer that cannot be laid out (no mesh, a
     /// submesh that is not triangles) is left out and named; Lightmap Parameters that cannot be
     /// read, a built-in one other than Default-Medium or one with Limit Lightmap Count leave the
     /// scene without a layout (said once).</para>
@@ -42,7 +42,7 @@ namespace UnityEngine
 
             internal static Parameters DefaultMedium => new Parameters
             {
-                BackFaceTolerance = 0.9f, AntiAliasingSamples = 8, Pushoff = 0.0001f, BakedLightmapTag = -1, MaxLightmapCount = 0,
+                BackFaceTolerance = 0.9f, AntiAliasingSamples = 2, Pushoff = 0.0001f, BakedLightmapTag = -1, MaxLightmapCount = 0,
             };
         }
 
@@ -73,7 +73,7 @@ namespace UnityEngine
                         read = new Parameters
                         {
                             BackFaceTolerance = b.Float("backFaceTolerance", 0.9f),
-                            AntiAliasingSamples = b.Int("antiAliasingSamples", 8),
+                            AntiAliasingSamples = b.Int("antiAliasingSamples", 2),
                             Pushoff = b.Float("pushoff", 0.0001f),
                             BakedLightmapTag = b.Int("bakedLightmapTag", -1),
                             MaxLightmapCount = b.Int("limitLightmapCount", 0) != 0 ? b.Int("maxLightmapCount", 1) : 0,
@@ -103,22 +103,16 @@ namespace UnityEngine
             return levels;
         }
 
-        /// <summary>The scene's MeshRenderers made from its file in hierarchy order (its roots in
-        /// order, each depth first): the order the Editor numbers them in, which keeps renderers of
-        /// one Morton code and size in it (tests/projects/bakedatlas Ties).</summary>
-        static List<(MeshRenderer Renderer, long FileId)> InHierarchyOrder(LoadedFile file)
+        /// <summary>The scene's MeshRenderers made from its file, the highest file ID first: the
+        /// order the Editor numbers them in, which keeps renderers of one Morton code and size in
+        /// it (tests/projects/bakedatlas Ties: not the hierarchy's order; renderers of prefab
+        /// instances are not measured).</summary>
+        static List<(MeshRenderer Renderer, long FileId)> InEditorOrder(LoadedFile file)
         {
-            var made = new Dictionary<Object, long>();
-            foreach (var pair in file.Objects)
-                if (pair.Value is MeshRenderer) made[pair.Value] = pair.Key;
             var ordered = new List<(MeshRenderer, long)>();
-            void Visit(Transform t)
-            {
-                if (t.GetComponent<MeshRenderer>() is MeshRenderer r && made.TryGetValue(r, out var id)) ordered.Add((r, id));
-                for (int i = 0; i < t.childCount; i++) Visit(t.GetChild(i));
-            }
-            foreach (var root in (IEnumerable<GameObject>)file.SceneRoots ?? file.Roots)
-                if (root != null) Visit(root.transform);
+            foreach (var pair in file.Objects)
+                if (pair.Value is MeshRenderer r) ordered.Add((r, pair.Key));
+            ordered.Sort((a, b) => b.Item2.CompareTo(a.Item2));
             return ordered;
         }
 
@@ -148,7 +142,7 @@ namespace UnityEngine
             var placed = new List<(MeshRenderer renderer, long fileId)>();
             using (Mesh.EngineReads())
             {
-                foreach (var (renderer, fileId) in InHierarchyOrder(file))
+                foreach (var (renderer, fileId) in InEditorOrder(file))
                 {
                     if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
                     // Scale In Lightmap 0: "the object is not lightmapped" (Manual 6000.0, Mesh Renderer).
