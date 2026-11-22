@@ -55,7 +55,9 @@ namespace UnityEngine
             internal Bounds Bounds;
             internal int FirstVertex, VertexCount;
 
-            internal void Measure(Vector3[] vertices)
+            /// <summary>The submesh's vertex range and bounds; <paramref name="bounds"/> false: the
+            /// bounds are none (positions in a format bounds are not computed from).</summary>
+            internal void Measure(Vector3[] vertices, bool bounds = true)
             {
                 if (Indices.Length == 0)
                 {
@@ -80,7 +82,7 @@ namespace UnityEngine
                     FirstVertex = VertexCount = 0;
                     return;
                 }
-                Bounds = BoundsOf(lo, hi);
+                Bounds = bounds ? BoundsOf(lo, hi) : default;
                 FirstVertex = min;
                 VertexCount = max - min + 1;
             }
@@ -191,6 +193,9 @@ namespace UnityEngine
             m_Dirty = true; m_GraphicsBuffersDirty = true;
             m_GraphicsVerticesDirty |= vertices; m_GraphicsDirtyIndices |= indices;
             if (!m_LoadingModel) ObjectDispatch.Changed(this);
+            // An asset's edit is an Editor change, saved by SaveAssets (matches the Unity 6000.0.71f1
+            // Editor, tests/projects/scenesave engine-assets richEdit: vertices set by script).
+            if (IsPersistentAsset && !m_Reading) UnityEditor.EditorUtility.SetDirty(this);
         }
 
         public bool isReadable => m_IsReadable;
@@ -864,7 +869,7 @@ namespace UnityEngine
             s.Indices = (int[])indices.Clone();
             s.Topology = topology;
             s.BaseVertex = baseVertex;
-            s.Measure(m_Vertices);
+            s.Measure(m_Vertices, BoundsFromPositions);
             // The index buffer is the submeshes' indices again.
             m_IndexBuffer = null;
             foreach (var other in m_SubMeshes) other.IndexStart = -1;
@@ -978,12 +983,47 @@ namespace UnityEngine
             if (!CanCall(nameof(RecalculateBounds))) return;
             EnsureModelLoaded();
             UpdateBounds();
+            if (!BoundsFromPositions || m_Vertices.Length == 0) return;
+            // The sub-meshes' bounds too (documented), and the mesh's take each blend shape frame
+            // at its full weight (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
+            // engine-assets Shaped, Rich).
+            foreach (var s in m_SubMeshes) s.Measure(m_Vertices);
+            if (m_BlendShapes.Count == 0) return;
+            var min = m_Bounds.min;
+            var max = m_Bounds.max;
+            foreach (var channel in m_BlendShapes)
+                foreach (var frame in channel.Frames)
+                    for (int v = 0; v < m_Vertices.Length && v < frame.Vertices.Length; v++)
+                    {
+                        var p = m_Vertices[v] + frame.Vertices[v];
+                        min = Vector3.Min(min, p);
+                        max = Vector3.Max(max, p);
+                    }
+            m_Bounds = BoundsOf(min, max);
         }
 
-        /// <summary>The bounds made again from the vertices: RecalculateBounds without its check, for
-        /// the engine's own writes (the deformed copies of meshes scripts cannot read among them).</summary>
+        /// <summary>Whether bounds are computed from the positions: only from Float32 ones (Mesh.
+        /// RecalculateBounds, 6000.0: "Unity can only recalculate the bounding volume for Meshes that
+        /// use the default VertexAttributeFormat.Float32 vertex position format"; tests/projects/
+        /// scenesave engine-assets Custom: half positions leave the mesh's and the sub-mesh's bounds
+        /// zero, the sub-mesh's vertex range is still measured).</summary>
+        internal bool BoundsFromPositions
+        {
+            get
+            {
+                if (m_Layout != null)
+                    foreach (var d in m_Layout)
+                        if (d.attribute == VertexAttribute.Position) return d.format == VertexAttributeFormat.Float32;
+                return true;
+            }
+        }
+
+        /// <summary>The mesh's bounds made again from the vertices alone: for the engine's own writes
+        /// (the deformed copies of meshes scripts cannot read among them, meshes it builds each
+        /// frame), without RecalculateBounds' check, sub-meshes and blend shapes.</summary>
         internal void UpdateBounds()
         {
+            if (!BoundsFromPositions) return;
             if (m_Vertices.Length == 0)
             {
                 m_Bounds = default;

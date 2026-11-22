@@ -31,7 +31,7 @@ namespace UnityEngine
                 var vertices = m_PreparedMesh.m_Vertices;
                 for (int i = 0; i < vertices.Length; i++)
                     vertices[i] = canvasFromRenderer.MultiplyPoint3x4(m_Mesh.m_Vertices[i]);
-                m_PreparedMesh.RecalculateBounds();
+                m_PreparedMesh.UpdateBounds();
                 m_PreparedCanvasFromRenderer = canvasFromRenderer;
             }
             m_PreparedVersion = m_MeshVersion;

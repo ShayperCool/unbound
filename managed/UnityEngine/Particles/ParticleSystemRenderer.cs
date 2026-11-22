@@ -1636,7 +1636,7 @@ namespace UnityEngine
                 WriteStreamAttributes(mesh, transform, identity, length, streaming);
                 mesh.WriteStreamedTriangles(Indices, IndexCount, Index32, streaming);
                 // A draw mesh's bounds are not used (its draw is culled by the particles').
-                if (!streaming) mesh.RecalculateBounds();
+                if (!streaming) mesh.UpdateBounds();
                 mesh.FinishStreamedWrite(n, IndexCount, streaming);
             }
         }

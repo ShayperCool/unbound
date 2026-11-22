@@ -424,7 +424,7 @@ namespace UnityEngine
                         mesh.SetColors(builder.Colors);
                         mesh.SetUVs(0, builder.Uvs);
                         mesh.SetTriangles(builder.Indices, 0);
-                        mesh.RecalculateBounds();
+                        mesh.UpdateBounds();
                         var renderer = (DetailRenderer)ComponentFactory.Create(typeof(DetailRenderer), terrain.gameObject);
                         renderer.hideFlags = HideFlags.HideAndDontSave;
                         renderer.m_Materials = new[] { material };

@@ -245,7 +245,7 @@ namespace UnityEngine
                 mesh.normals = m_Normals.ToArray();
                 mesh.uv = m_Uvs.ToArray();
                 mesh.triangles = m_Triangles.ToArray();
-                mesh.RecalculateBounds();
+                mesh.UpdateBounds();
                 mesh.RecalculateTangents();
                 return mesh;
             }

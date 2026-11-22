@@ -1231,7 +1231,7 @@ namespace UnityEngine
                     m_FlippedMesh.m_Tangents[i].y *= y;
                     m_FlippedMesh.m_Tangents[i].w *= x * y;
                 }
-            m_FlippedMesh.RecalculateBounds();
+            m_FlippedMesh.UpdateBounds();
             m_FlippedKey = key;
             return m_FlippedMesh;
         }

@@ -38,7 +38,17 @@ namespace UnityEngine
         internal static Func<ulong, string, int, bool> UploadDeferredModelMesh = (handle, guid, index) =>
             Native.UploadModelMesh(handle, guid, index);
 
+        /// <summary>The mesh is being read from its file: its changes are no edits.</summary>
+        bool m_Reading;
+
         internal void ReadSerialized(YNode body, IReferenceResolver resolver)
+        {
+            m_Reading = true;
+            try { ReadSerializedData(body); }
+            finally { m_Reading = false; }
+        }
+
+        void ReadSerializedData(YNode body)
         {
             if (body.Get("m_UnboundBonePaths") is YNode bones)
             {
@@ -330,7 +340,7 @@ namespace UnityEngine
                 b.SetMinMax(Element(min), Element(max));
                 bounds = b;
             }
-            else RecalculateBounds();
+            else UpdateBounds();
         }
 
         static Vector3 Element(JsonElement v) => new Vector3(v[0].GetSingle(), v[1].GetSingle(), v[2].GetSingle());

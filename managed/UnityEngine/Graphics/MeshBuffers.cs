@@ -544,7 +544,7 @@ namespace UnityEngine
                         throw new ArgumentException($"SubMesh {index} indices are out of bounds; mesh vertex count is {m_Vertices.Length}");
             // The submesh's bounds and vertex range, unless the descriptor's are to be taken; the
             // mesh's bounds stay (measured: tests/projects/graphics meshLayout).
-            if ((flags & MeshUpdateFlags.DontRecalculateBounds) == 0) s.Measure(m_Vertices);
+            if ((flags & MeshUpdateFlags.DontRecalculateBounds) == 0) s.Measure(m_Vertices, BoundsFromPositions);
             else
             {
                 s.Bounds = desc.bounds;
