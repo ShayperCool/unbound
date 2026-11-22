@@ -207,7 +207,7 @@ namespace Unbound.Runtime
                 var queue = Tag(sub.Tags, "Queue");
                 if (queue == null || ShaderLab.QueueValue(queue) != null) continue;
                 reported ??= new HashSet<string>(StringComparer.Ordinal);
-                if (reported.Add(queue)) Debug.LogError(ShaderLab.UndefinedQueueMessage(name, queue));
+                if (reported.Add(queue)) Debug.LogError(ShaderLab.UndefinedQueueMessage(UnityEngine.Shader.ShownName(name), queue));
             }
         }
 

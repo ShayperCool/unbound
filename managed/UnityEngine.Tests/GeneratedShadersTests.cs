@@ -26,6 +26,8 @@ namespace UnityEngine.Tests
 
         public void Dispose()
         {
+            ShaderPassInfo.ResetForTests();
+            Shader.globalMaximumLOD = int.MaxValue;
             ProjectInfo.ProjectPath = m_Previous;
             try { Directory.Delete(m_Project, true); } catch (IOException) { }
         }
@@ -62,6 +64,55 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AGeneratedShaderHiddenByTheMaximumLodIsAskedForByItsKey()
+        {
+            // Its SubShaders all above the maximum LOD: hidden (not drawn), which the renderer
+            // tells for the name it knows the shader by.
+            var shader = ShaderUtil.CreateShaderAsset(new AssetImportContext("Assets/A/Twin.vfx"), Source(""), false);
+            try
+            {
+                var asked = new System.Collections.Generic.List<string>();
+                ShaderPassInfo.s_CallForTests = name =>
+                {
+                    asked.Add(name);
+                    bool found = name == shader.SourceName;
+                    return System.Text.Json.JsonSerializer.Serialize(new { shader = name, found, tags = new System.Collections.Generic.Dictionary<string, string>(), passes = Array.Empty<object>() });
+                };
+                Shader.globalMaximumLOD = 200;
+                Assert.True(shader.IsLodHidden);
+                Assert.Contains(shader.SourceName, asked);
+            }
+            finally { Object.DestroyImmediate(shader); }
+        }
+
+        [Fact]
+        public void AGeneratedSourceWithoutADeclarationOrContextIsWritten()
+        {
+            // No Shader declaration: no key, known by its (empty) name as before.
+            var plain = ShaderUtil.CreateShaderAsset(new AssetImportContext("Assets/A/Odd.vfx"), "SubShader { Pass { } }", false);
+            // No import context: the asset path is empty, the key is still made.
+            var bare = ShaderUtil.CreateShaderAsset(null, Source(""), false);
+            try
+            {
+                Assert.Null(plain.m_SourceKey);
+                Assert.StartsWith(bare.name + "#", bare.DrawnName);
+            }
+            finally
+            {
+                Object.DestroyImmediate(plain);
+                Object.DestroyImmediate(bare);
+            }
+        }
+
+        [Fact]
+        public void AShownNameLeavesOutTheKey()
+        {
+            Assert.Equal("Hidden/VFX/T/S/Output Particle|Unlit Quad", Shader.ShownName("Hidden/VFX/T/S/Output Particle|Unlit Quad#0123456789abcdef"));
+            Assert.Equal("A#0123456789abcdeg", Shader.ShownName("A#0123456789abcdeg"));
+            Assert.Equal("Plain", Shader.ShownName("Plain"));
+        }
+
+        [Fact]
         public void AShaderMadeFromSourceAloneIsKnownByItsName()
         {
             var shader = ShaderUtil.CreateShaderAsset(Source(""), false);
@@ -76,10 +127,24 @@ namespace UnityEngine.Tests
             var shader = ShaderUtil.CreateShaderAsset(context, Source("Blend One One"), false);
             try
             {
-                string before = shader.DrawnName;
-                ShaderUtil.UpdateShaderAsset(context, shader, Source("ZWrite Off"), false);
-                Assert.NotEqual(before, shader.DrawnName);
-                Assert.StartsWith(shader.name + "#", shader.DrawnName);
+                var material = new Material(shader);
+                var sent = typeof(Material).GetProperty("m_SentShader", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+                try
+                {
+                    material.Sync();
+                    string before = shader.DrawnName;
+                    Assert.Equal(before, (string)sent.GetValue(material));
+                    ShaderUtil.UpdateShaderAsset(context, shader, Source("ZWrite Off"), false);
+                    Assert.NotEqual(before, shader.DrawnName);
+                    Assert.StartsWith(shader.name + "#", shader.DrawnName);
+                    // A material sends the new name with its next sync.
+                    material.Sync();
+                    Assert.Equal(shader.DrawnName, (string)sent.GetValue(material));
+                    // Updated without a generated file: known by its name only.
+                    ShaderUtil.UpdateShaderAsset(shader, Source("Cull Off"), false);
+                    Assert.Equal(shader.name, shader.DrawnName);
+                }
+                finally { Object.DestroyImmediate(material); }
             }
             finally { Object.DestroyImmediate(shader); }
         }

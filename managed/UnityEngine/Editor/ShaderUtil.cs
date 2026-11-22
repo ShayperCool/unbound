@@ -46,7 +46,18 @@ namespace UnityEditor
             if (source == null) throw new System.ArgumentNullException(nameof(source));
             shader.m_Name = ShaderLab.Name(source) ?? shader.m_Name;
             shader.m_RenderQueue = ShaderLab.Queue(source);
+            // Without a generated file the renderer knows the new source by its name only.
+            SetSourceKey(shader, null);
             Fill(shader, source);
+        }
+
+        /// <summary>Gives a shader the name the renderer knows it by; materials that sent the
+        /// earlier one send the new one.</summary>
+        static void SetSourceKey(Shader shader, string key)
+        {
+            if (shader.m_SourceKey == key) return;
+            shader.m_SourceKey = key;
+            Shader.SourceKeysChanged();
         }
 
         public static void UpdateShaderAsset(AssetImportContext context, Shader shader, string source, bool compileInitialShaderVariants)
@@ -54,7 +65,7 @@ namespace UnityEditor
             string key = null;
             if (source != null) GeneratedShaders.Write(context?.assetPath ?? "", source, ".shader", out key);
             UpdateShaderAsset(shader, source, compileInitialShaderVariants);
-            if (shader != null && source != null) shader.m_SourceKey = key;
+            SetSourceKey(shader, key);
         }
 
         static void Fill(Shader shader, string source)
@@ -208,9 +219,6 @@ namespace Unbound.Runtime
         /// what they hold never reads an older file (2: ShaderLab files declare their key).</summary>
         const string FormatVersion = "2";
 
-        /// <summary>What joins a generated shader's ShaderLab name and its source's hash in the
-        /// name its file declares (see <see cref="Write(string, string, string, out string)"/>).</summary>
-        const string KeySeparator = "#";
 
         internal static string Write(string assetPath, string source, string extension) => Write(assetPath, source, extension, out _);
 
@@ -229,7 +237,7 @@ namespace Unbound.Runtime
             key = null;
             if (extension == ".shader" && ShaderLab.Name(text) is string name)
             {
-                key = name + KeySeparator + hash.Substring(0, 16);
+                key = name + Shader.SourceKeySeparator + hash.Substring(0, Shader.SourceKeyLength);
                 text = ShaderLab.Renamed(text, key);
             }
             var dir = Path.Combine(UnityEngine.ProjectInfo.ProjectPath, "Library", "Unbound", "GeneratedShaders");

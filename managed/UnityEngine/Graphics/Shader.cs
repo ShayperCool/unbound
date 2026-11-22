@@ -76,6 +76,27 @@ namespace UnityEngine
         /// <summary>The name the renderer finds the shader's source by (see <see cref="m_SourceKey"/>).</summary>
         internal string SourceName => m_SourceKey ?? m_Name;
 
+        /// <summary>What joins a generated shader's ShaderLab name and its source's key.</summary>
+        internal const string SourceKeySeparator = "#";
+        /// <summary>The length of a source key's hash (hexadecimal digits).</summary>
+        internal const int SourceKeyLength = 16;
+
+        /// <summary>A name the renderer knows a shader by, as scripts and messages show it: without
+        /// a generated shader's source key.</summary>
+        internal static string ShownName(string sourceName)
+        {
+            if (sourceName == null) return null;
+            int at = sourceName.Length - SourceKeyLength - SourceKeySeparator.Length;
+            if (at < 0 || string.CompareOrdinal(sourceName, at, SourceKeySeparator, 0, SourceKeySeparator.Length) != 0) return sourceName;
+            for (int i = at + SourceKeySeparator.Length; i < sourceName.Length; i++)
+                if (!Uri.IsHexDigit(sourceName[i])) return sourceName;
+            return sourceName.Substring(0, at);
+        }
+
+        /// <summary>A shader's source key changed (its importer updated it): materials send the
+        /// name the renderer knows it by again.</summary>
+        internal static void SourceKeysChanged() => s_LodEpoch++;
+
         /// <summary>The name the renderer knows the shader by: with the maximum LOD when one
         /// applies (<c>Name|lod=N</c>: the first SubShader whose LOD is at most N, SubShaders
         /// without one being LOD 0, else the fallback's under the same limit).</summary>
@@ -126,7 +147,7 @@ namespace UnityEngine
                 if (EffectiveLOD == int.MaxValue) return false;
                 var drawn = Unbound.Runtime.ShaderPassInfo.Of(this);
                 if (drawn == null || drawn.Found) return false;
-                var plain = Unbound.Runtime.ShaderPassInfo.OfName(m_Name);
+                var plain = Unbound.Runtime.ShaderPassInfo.OfName(SourceName);
                 return plain != null && plain.Found;
             }
         }
