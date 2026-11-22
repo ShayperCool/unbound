@@ -220,7 +220,7 @@ namespace Unbound.Runtime
             GfxStream.Restore(saved);
         }
 
-        /// <summary>Whether a draw has object motion (a mesh renderer, or a skinned mesh renderer
+        /// <summary>Whether a draw has object motion (a mesh renderer, an effect's renderer, or a skinned mesh renderer
         /// without active cloth, not a draw set up by a script, whose motion is not the camera's),
         /// with its previous matrix and whether it moved since the matrices were last kept
         /// (<see cref="EndFrameMotion"/>) or forces no motion. A renderer is taken to be still the
@@ -235,15 +235,17 @@ namespace Unbound.Runtime
         {
             previous = default;
             moving = forceNoMotion = false;
-            if (item.Setup.HasValue) return false;
             var renderer = item.Renderer;
+            // A draw a script set up has no object motion; an effect's draws are set up as its
+            // outputs ask (instances, indirect arguments) and have.
+            if (item.Setup.HasValue && renderer is not UnityEngine.VFX.VFXRenderer) return false;
             var skin = renderer as SkinnedMeshRenderer;
             if (skin != null)
             {
                 var cloth = skin.GetComponent<Cloth>();
                 if (cloth != null && cloth.enabled && cloth.m_Active) return false;
             }
-            else if (renderer is not MeshRenderer) return false;
+            else if (renderer is not MeshRenderer && renderer is not UnityEngine.VFX.VFXRenderer) return false;
             var mode = renderer.motionVectorGenerationMode;
             if (mode == MotionVectorGenerationMode.Camera) return false;
             // A skin's object motion is drawn in this skinning pass: its buffers alternate (with
@@ -263,7 +265,10 @@ namespace Unbound.Runtime
                 MarkMotionRendererPending(renderer);
             }
             forceNoMotion = mode == MotionVectorGenerationMode.ForceNoMotion;
-            moving = forceNoMotion || renderer.m_PreviousModel != model;
+            // An effect's particles move by themselves: its outputs' motion vector passes read
+            // each particle's last frame, so an effect at rest still draws them (Unity
+            // 6000.0.71f1, tests/projects/vfxoutputs `MovingVectors`).
+            moving = forceNoMotion || renderer.m_PreviousModel != model || renderer is UnityEngine.VFX.VFXRenderer;
             previous = boned ? renderer.m_PreviousModel * model.inverseDoublePrecision * item.Model : renderer.m_PreviousModel;
             return true;
         }

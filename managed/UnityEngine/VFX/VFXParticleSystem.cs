@@ -186,14 +186,15 @@ namespace Unbound.Runtime
             m_CameraSorts = cameraSorts.ToArray();
         }
 
-        /// <summary>The kernels whose list an output draws, and those that make no list when
-        /// <paramref name="unlisted"/>; the others are released, and their lists taken out of
+        /// <summary>The kernels whose list an output draws, those that make no list when
+        /// <paramref name="unlisted"/>, and those that keep an output's last frames (its motion
+        /// vectors' temporary buffers); the others are released, and their lists taken out of
         /// <paramref name="lists"/>.</summary>
         Kernel[] KeepDrawn(List<Kernel> kernels, bool unlisted, List<int> lists)
         {
             var kept = new List<Kernel>(kernels.Count);
             foreach (var kernel in kernels)
-                if (kernel.List < 0 ? unlisted : Drawn(kernel.List)) kept.Add(kernel);
+                if (kernel.KeepsFrames || (kernel.List < 0 ? unlisted : Drawn(kernel.List))) kept.Add(kernel);
                 else
                 {
                     kernel.Release();
@@ -551,7 +552,7 @@ namespace Unbound.Runtime
             // The order is made once, with the systems (kept by the first of them).
             var order = systems[0].m_EffectOutputs ??= DrawOrder(systems);
             foreach (var system in systems)
-                if (system.DrawnParticles != 0 && system.m_HasIndirect && system.m_HasRenderer) system.PrepareCamera(camera);
+                if (system.DrawnParticles != 0 && (system.m_HasIndirect || system.m_PerCamera.Length != 0) && system.m_HasRenderer) system.PrepareCamera(camera);
             foreach (var output in order)
             {
                 var system = output.System;
@@ -681,8 +682,13 @@ namespace Unbound.Runtime
             /// (its position and its view, as the pipeline sets them for the camera's draws).</summary>
             static readonly int s_WorldSpaceCameraPos = Shader.PropertyToID("_WorldSpaceCameraPos");
             static readonly int s_MatrixV = Shader.PropertyToID("unity_MatrixV");
+            /// <summary>The camera's view-projection without jitter, which the output-update
+            /// kernels of outputs with motion vectors place particles' vertices with (URP's
+            /// `_NonJitteredViewProjMatrix`, as the pipeline sets it for the camera's motion
+            /// vectors: tests/projects/vfxoutputs `MovingVectors`).</summary>
+            static readonly int s_NonJitteredViewProjection = Shader.PropertyToID("_NonJitteredViewProjMatrix");
             /// <summary>Boxes of the camera values, changed in place for each camera.</summary>
-            object m_CameraPosition, m_CameraView;
+            object m_CameraPosition, m_CameraView, m_CameraViewProjection;
             const string FirstListName = "outputBuffer0";
 
             readonly VFXParticleSystem m_System;
@@ -695,6 +701,12 @@ namespace Unbound.Runtime
             /// <summary>The textures and graphics buffers the kernel reads: values of the
             /// effect, bound by name (again only once the value is another object).</summary>
             readonly VFXTaskObjects m_Objects;
+            readonly VFXTemporaryBindings m_Temporary;
+            /// <summary>The camera a per-camera kernel last ran for (its temporary buffers').</summary>
+            int m_CameraKey;
+
+            /// <summary>Whether the kernel writes temporary buffers (an output's last frames).</summary>
+            internal bool KeepsFrames => m_Temporary.Count > 0;
             /// <summary>The buffer of the list of particles to draw an output-update kernel
             /// makes (its first, `outputBuffer0`); -1 for another kernel.</summary>
             internal readonly int List = -1;
@@ -722,6 +734,7 @@ namespace Unbound.Runtime
                     if (task.buffers[i].name == FirstListName) List = task.buffers[i].index;
                 }
                 m_Objects = new VFXTaskObjects(system.Effect.Data, task);
+                m_Temporary = new VFXTemporaryBindings(task);
                 // One instance, active, in a batch of one, at offset zero: the counts as the
                 // kernels read them, the bits of unsigned integers.
                 float one = BitConverter.Int32BitsToSingle(1);
@@ -809,6 +822,8 @@ namespace Unbound.Runtime
                     m_Bound[i] = buffer;
                     m_Shader.SetBuffer(m_Kernel, m_BufferNames[i], buffer);
                 }
+                for (int i = 0; i < m_Temporary.Count; i++)
+                    if (m_Temporary.Changed(effect, m_CameraKey, i, out int name, out var temporary)) m_Shader.SetBuffer(m_Kernel, name, temporary);
                 if (m_SystemBuffer < 0) return;
                 var ofSystem = effect.GpuBuffer(m_SystemBuffer, 0);
                 if (ReferenceEquals(ofSystem, m_SystemBufferBound)) return;
@@ -819,15 +834,19 @@ namespace Unbound.Runtime
             /// <summary>The camera a per-camera kernel runs for.</summary>
             internal void SetCamera(FrameBuilder.CameraContext camera)
             {
+                m_CameraKey = VFXTemporaryBindings.CameraKey(camera.Camera);
                 if (m_CameraPosition == null)
                 {
                     m_CameraPosition = Vector4.zero;
                     m_CameraView = Matrix4x4.identity;
+                    m_CameraViewProjection = Matrix4x4.identity;
+                    m_Shader.SetBoxed(s_NonJitteredViewProjection, m_CameraViewProjection);
                     m_Shader.SetBoxed(s_WorldSpaceCameraPos, m_CameraPosition);
                     m_Shader.SetBoxed(s_MatrixV, m_CameraView);
                 }
                 System.Runtime.CompilerServices.Unsafe.Unbox<Vector4>(m_CameraPosition) = camera.Position;
                 System.Runtime.CompilerServices.Unsafe.Unbox<Matrix4x4>(m_CameraView) = camera.View;
+                System.Runtime.CompilerServices.Unsafe.Unbox<Matrix4x4>(m_CameraViewProjection) = GL.GetGPUProjectionMatrix(camera.Projection, true) * camera.View;
             }
 
             internal void Release() => UnityEngine.Object.Destroy(m_Shader);

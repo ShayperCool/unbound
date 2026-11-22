@@ -211,6 +211,7 @@ namespace UnityEngine.VFX
         {
             foreach (var system in m_Systems) system.Release();
             foreach (var buffer in m_GpuBuffers) buffer?.Release();
+            ReleaseTemporaryBuffers();
             m_State.Baked?.Release();
             m_State.Baked = null;
             m_Systems = Array.Empty<VFXSystem>();
@@ -246,6 +247,68 @@ namespace UnityEngine.VFX
 
         /// <summary>A GPU buffer of the asset's compiled graph, made when first used and made
         /// anew (its contents lost) when more elements are asked for than it has.</summary>
+        /// <summary>A ring of an asset's temporary buffer: one buffer per frame it keeps, and the
+        /// frame it was last asked for.</summary>
+        sealed class TemporaryRing
+        {
+            internal GraphicsBuffer[] Buffers;
+            internal uint LastFrame;
+        }
+
+        /// <summary>The temporary buffers (an output's last frames: motion vectors), by the
+        /// asset's descriptor and a key (0, or a camera's for a buffer kept per camera).</summary>
+        readonly Dictionary<(int Desc, int Key), TemporaryRing> m_Temporary = new Dictionary<(int, int), TemporaryRing>();
+        readonly List<(int, int)> m_TemporaryExpired = new List<(int, int)>();
+
+        /// <summary>The temporary buffer a task reads or writes for a mapping: of the asset's
+        /// descriptor <paramref name="desc"/> and <paramref name="key"/>, a ring of its frame count
+        /// of buffers (made on first use, not cleared), the one of the frame
+        /// <paramref name="pastFrame"/> frames back, by the frame index effects see
+        /// (<see cref="VFXManager.Frame"/>). Matches the Unity 6000.0.71f1 Editor's motion vectors,
+        /// tests/projects/vfxoutputs `MovingVectors`.</summary>
+        internal GraphicsBuffer TemporaryBuffer(int desc, int key, uint pastFrame)
+        {
+            var temporary = m_Data.TemporaryBuffers;
+            if (desc < 0 || desc >= temporary.Length) return null;
+            uint frame = VFXManager.Frame;
+            if (!m_Temporary.TryGetValue((desc, key), out var ring))
+            {
+                var d = temporary[desc];
+                uint length = Math.Max(d.frameCount, 1u);
+                ring = new TemporaryRing { Buffers = new GraphicsBuffer[length] };
+                var target = d.desc.target == GraphicsBuffer.Target.Raw ? GraphicsBuffer.Target.Raw : GraphicsBuffer.Target.Structured;
+                int count = (int)Math.Max(d.desc.size, 1u), stride = (int)Math.Max(d.desc.stride, sizeof(uint));
+                for (int i = 0; i < ring.Buffers.Length; i++) ring.Buffers[i] = new GraphicsBuffer(target, count, stride);
+                m_Temporary[(desc, key)] = ring;
+            }
+            ring.LastFrame = frame;
+            uint n = (uint)ring.Buffers.Length;
+            return ring.Buffers[(frame - pastFrame + n) % n];
+        }
+
+        /// <summary>Releases the per-camera temporary buffers not asked for in more frames than
+        /// they keep (a camera that stopped seeing the effect).</summary>
+        internal void ExpireTemporaryBuffers()
+        {
+            if (m_Temporary.Count == 0) return;
+            uint frame = VFXManager.Frame;
+            m_TemporaryExpired.Clear();
+            foreach (var entry in m_Temporary)
+                if (entry.Key.Key != 0 && frame - entry.Value.LastFrame > (uint)entry.Value.Buffers.Length) m_TemporaryExpired.Add(entry.Key);
+            foreach (var key in m_TemporaryExpired)
+            {
+                foreach (var buffer in m_Temporary[key].Buffers) buffer?.Release();
+                m_Temporary.Remove(key);
+            }
+        }
+
+        void ReleaseTemporaryBuffers()
+        {
+            foreach (var ring in m_Temporary.Values)
+                foreach (var buffer in ring.Buffers) buffer?.Release();
+            m_Temporary.Clear();
+        }
+
         internal GraphicsBuffer GpuBuffer(int index, int minCount)
         {
             var buffer = m_GpuBuffers[index];
@@ -534,6 +597,7 @@ namespace UnityEngine.VFX
         internal void UpdateEffect(in VFXManager.FrameTime time)
         {
             if (m_Systems.Length == 0) return;
+            ExpireTemporaryBuffers();
             UpdateTime(m_Asset.m_Settings.UpdateMode, time, out uint steps, out float unscaledDelta);
             float delta = unscaledDelta * m_PlayRate;
             if (delta <= MinDeltaTime || (m_Pause && !m_AdvanceOneFrame)) delta = 0f;

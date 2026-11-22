@@ -1126,7 +1126,9 @@ namespace UnityEngine.Tests
             Assert.Equal("ParticleMeshOutput of a strip system's particles is not measured yet", VFXOutput.Refusal(stripSystem, meshes, material));
             Assert.Equal("it draws with a material variant (a graph compiled for editing), which is not measured yet", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, usesMaterialVariant = true }, material));
             var previous = new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, temporaryBuffers = new[] { new VFXMappingTemporary() } };
-            Assert.StartsWith("it keeps buffers of the frame before (motion vectors)", VFXOutput.Refusal(system, previous, material));
+            // An output that keeps its particles' last frames (motion vectors) is drawn
+            // (tests/projects/vfxoutputs `MovingVectors`).
+            Assert.Null(VFXOutput.Refusal(system, previous, material));
             // What the generated shader says of itself: an unlit output's passes are drawn...
             const string unlit = "Shader \"Hidden/VFX/G/S/Output Particle|Unlit Quad\" { SubShader { Pass { Tags { \"LightMode\"=\"SceneSelectionPass\" } }\n"
                 + "Pass { Tags { \"LightMode\"=\"Picking\" } } Pass { Tags { \"LightMode\"=\"DepthOnly\" } } Pass { Tags { \"LightMode\" = \"DepthNormalsOnly\" } }\n"
@@ -1142,8 +1144,10 @@ namespace UnityEngine.Tests
                 + "Pass { Tags { \"LightMode\"=\"DepthNormals\" } } Pass { Tags { \"LightMode\"=\"UniversalGBuffer\" } }\n"
                 + "Pass { Tags { \"LightMode\"=\"UniversalForward\"} HLSLPROGRAM\n#define URP_LIT 1\n#define USE_SOFT_PARTICLE 0\nENDHLSL } Pass { Tags { \"LightMode\"=\"ShadowCaster\" } } } }";
             Assert.Null(VFXOutput.SourceRefusal(lit));
-            Assert.Equal("its pass 'MotionVectors' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"ShadowCaster\"", "\"MotionVectors\"")));
-            Assert.Equal("its pass 'MotionVectors' is not drawn yet", VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"MotionVectors\"")));
+            // An output's motion vectors pass is drawn (tests/projects/vfxoutputs `MovingVectors`).
+            Assert.Null(VFXOutput.SourceRefusal(unlit.Replace("\"ShadowCaster\"", "\"MotionVectors\"")));
+            Assert.Null(VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"MotionVectors\"")));
+            Assert.Equal("its pass 'DBufferProjectorVFX' is not drawn yet", VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"DBufferProjectorVFX\"")));
             Assert.Equal("its pass 'DBufferProjectorVFX' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"DepthOnly\"", "\"DBufferProjectorVFX\"")));
             // A Shader Graph output of a 2D sprite graph: its sprite and normals passes are drawn
             // by the 2D renderer, its forward pass by the others.
@@ -1170,18 +1174,18 @@ namespace UnityEngine.Tests
             };
             var sources = new[]
             {
-                new VFXShaderSourceDesc { compute = true, source = "Tags { \"LightMode\"=\"MotionVectors\" }" },
+                new VFXShaderSourceDesc { compute = true, source = "Tags { \"LightMode\"=\"DBufferProjectorVFX\" }" },
                 new VFXShaderSourceDesc { source = unlit },
                 // Another output of the system, named apart (outputs named alike are not drawn).
-                new VFXShaderSourceDesc { source = unlit.Replace("\"ShadowCaster\"", "\"MotionVectors\"").Replace("/Output Particle|Unlit Quad", "/Output Particle MV|Unlit Quad") },
+                new VFXShaderSourceDesc { source = unlit.Replace("\"ShadowCaster\"", "\"DBufferProjectorVFX\"").Replace("/Output Particle|Unlit Quad", "/Output Particle Decal|Unlit Quad") },
             };
             var found = VFXOutput.SourceRefusals(compiled, sources);
             Assert.Empty(found[0]);
-            const string Moving = "its pass 'MotionVectors' is not drawn yet";
-            Assert.Equal(new[] { null, null, Moving, null, null }, found[1]);
+            const string Projected = "its pass 'DBufferProjectorVFX' is not drawn yet";
+            Assert.Equal(new[] { null, null, Projected, null, null }, found[1]);
             // The reason found in the source is the output's when nothing of its task refuses first.
-            Assert.Equal(Moving, VFXOutput.Refusal(system, quads, material, Moving));
-            Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(system, Indirect(2, 3), material, Moving));
+            Assert.Equal(Projected, VFXOutput.Refusal(system, quads, material, Projected));
+            Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(system, Indirect(2, 3), material, Projected));
             // A lit output through an indirect buffer that is not sorted is drawn as an unlit one is.
             VFXEditorTaskDesc From(VFXEditorTaskDesc task, int sourceIndex)
             {

@@ -62,12 +62,17 @@ namespace Unbound.Runtime
         /// <summary>The texture the generated programs sample curves and gradients from.</summary>
         internal const string BakedTextureName = "bakedTexture";
         static readonly int s_BakedTexture = Shader.PropertyToID(BakedTextureName);
+        /// <summary>The camera's views as an output's programs read them (where a particle's
+        /// last frame lies in its temporary buffer): one view in all, one drawn at once, from the
+        /// first, as a camera without XR has (the bits of unsigned integers).</summary>
+        static readonly int s_CameraXRSettings = Shader.PropertyToID("cameraXRSettings");
 
         readonly VFXParticleSystem m_System;
         readonly VFXEditorTaskDesc m_Task;
         readonly Material m_Material;
         readonly MaterialPropertyBlock m_Block = new MaterialPropertyBlock();
         readonly int[] m_BufferNames;
+        readonly VFXTemporaryBindings m_Temporary;
         readonly GraphicsBuffer[] m_Bound;
         readonly VFXTaskObjects m_Objects;
         Texture2D m_Baked;
@@ -83,6 +88,12 @@ namespace Unbound.Runtime
             m_System = system;
             m_Task = task;
             m_Material = material;
+            m_Temporary = new VFXTemporaryBindings(task);
+            if (m_Temporary.Count != 0)
+            {
+                float oneBits = BitConverter.Int32BitsToSingle(1);
+                m_Block.SetVector(s_CameraXRSettings, new Vector4(oneBits, oneBits, 0f, 0f));
+            }
             int count = task.buffers?.Length ?? 0;
             m_BufferNames = new int[count];
             m_Bound = new GraphicsBuffer[count];
@@ -169,8 +180,6 @@ namespace Unbound.Runtime
             // The graph compiler gives a Shader Graph output a material variant only when it
             // compiles a graph for editing; an imported graph's output draws with its material.
             if (task.usesMaterialVariant) return "it draws with a material variant (a graph compiled for editing), which is not measured yet";
-            // An output with motion vectors keeps each particle's last frame in buffers of its own.
-            if (task.temporaryBuffers != null && task.temporaryBuffers.Length != 0) return "it keeps buffers of the frame before (motion vectors), which is not done yet";
             if (sourceRefusal != null) return sourceRefusal;
             if (!(processor is Material)) return "its shader was not imported";
             if (task.type == VFXTaskType.ParticleMeshOutput) return MeshRefusal(task);
@@ -184,11 +193,13 @@ namespace Unbound.Runtime
         /// depth alone, and not measured: the depth passes of an opaque output (a depth
         /// prepass, the depth and normals textures). Through the 2D renderer, measured: the
         /// sprite pass and the normals pass of a light that lights by normals, of Shader Graph
-        /// outputs lit by 2D lights and unlit (tests/projects/vfxlit, `sprite*`). The selection
+        /// outputs lit by 2D lights and unlit (tests/projects/vfxlit, `sprite*`). The motion
+        /// vectors pass, measured for an opaque unlit quad output (tests/projects/vfxoutputs
+        /// `MovingVectors`); a lit output's is admitted with it, not measured. The selection
         /// and picking passes are the Editor's own.</summary>
         static readonly string[] s_DrawnPasses =
         {
-            "UniversalForwardOnly", "UniversalForward", "UniversalGBuffer", "DepthOnly", "DepthNormals", "DepthNormalsOnly", "ShadowCaster", "SceneSelectionPass", "Picking", "Universal2D", "NormalsRendering",
+            "UniversalForwardOnly", "UniversalForward", "UniversalGBuffer", "DepthOnly", "DepthNormals", "DepthNormalsOnly", "ShadowCaster", "SceneSelectionPass", "Picking", "Universal2D", "NormalsRendering", "MotionVectors",
         };
 
         /// <summary>The define the graph compiler writes into the shader of an output that the
@@ -345,6 +356,9 @@ namespace Unbound.Runtime
                 m_Bound[i] = buffer;
                 m_Block.SetBuffer(m_BufferNames[i], buffer);
             }
+            int cameraKey = VFXTemporaryBindings.CameraKey(camera.Camera);
+            for (int i = 0; i < m_Temporary.Count; i++)
+                if (m_Temporary.Changed(effect, cameraKey, i, out int temporaryName, out var temporary)) m_Block.SetBuffer(temporaryName, temporary);
             var baked = effect.BakedTexture;
             if (!ReferenceEquals(baked, m_Baked) && baked != null) m_Block.SetTexture(s_BakedTexture, m_Baked = baked);
             var values = effect.Values;
