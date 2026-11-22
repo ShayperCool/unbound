@@ -483,6 +483,73 @@ public static class BuffersSetup
         Save(scene, "Levels");
     }
 
+    /// <summary>A scene lit by its sky alone: the coloured scene's renderers and one more that
+    /// casts no shadow, with the Environment Samples, bounces and environment importance
+    /// sampling given; <paramref name="sky"/> sets the ambient source.</summary>
+    static void SkyScene(string name, int samples, int maxBounces, bool picked, Action sky)
+    {
+        var scene = Coloured(name, 64, maxBounces);
+        var settings = Lightmapping.lightingSettings;
+        settings.environmentSampleCount = samples;
+        settings.environmentImportanceSampling = picked;
+        sky();
+        With(Prim(PrimitiveType.Cube, "NoCast", new Vector3(-0.5f, 1.8f, 2.5f), Vector3.zero, new Vector3(2f, 0.2f, 2f)), Mat("BounceWhite", Color.white))
+            .GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        Save(scene, name);
+    }
+
+    static void FlatSky()
+    {
+        RenderSettings.skybox = null;
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = new Color(0.4f, 0.6f, 0.9f);
+    }
+
+    static void GradientSky()
+    {
+        RenderSettings.skybox = null;
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+        RenderSettings.ambientSkyColor = new Color(0.3f, 0.5f, 1f);
+        RenderSettings.ambientEquatorColor = new Color(0.6f, 0.5f, 0.4f);
+        RenderSettings.ambientGroundColor = new Color(0.1f, 0.2f, 0.05f);
+    }
+
+    static void DrawnSky(string name, float intensity)
+    {
+        var material = new Material(Shader.Find("Skybox/Procedural")) { name = name };
+        AssetDatabase.CreateAsset(material, $"{Folder}/{name}.mat");
+        RenderSettings.skybox = material;
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
+        RenderSettings.ambientIntensity = intensity;
+    }
+
+    /// <summary>Skies: an ambient colour, with and without directions picked by brightness; a
+    /// gradient with 8 samples; a drawn sky (the procedural skybox), plain and at intensity 2.5
+    /// with picked directions; and one whose paths never bounce (no sky light at all).</summary>
+    static void Skies()
+    {
+        SkyScene("Sky", 64, 2, false, FlatSky);
+        SkyScene("SkyPicked", 64, 2, true, FlatSky);
+        SkyScene("SkyGradient", 8, 2, true, GradientSky);
+        SkyScene("SkyDrawn", 64, 2, false, () => DrawnSky("SkyDrawnBox", 1f));
+        SkyScene("SkyDrawnPicked", 512, 3, true, () => DrawnSky("SkyDrawnPickedBox", 2.5f));
+        SkyScene("SkyNoBounce", 64, 0, false, FlatSky);
+    }
+
+    /// <summary>A sun and a sky over the coloured scene and a roof of two submeshes with one
+    /// material: its second submesh, a quad beside the first, has none.</summary>
+    static void Spare()
+    {
+        var scene = Coloured("Spare", 64, 2);
+        Lightmapping.lightingSettings.environmentSampleCount = 64;
+        FlatSky();
+        WhiteSun();
+        var corners = new[] { P(-1, 0, -1), P(-1, 0, 1), P(0, 0, 1), P(0, 0, -1), P(0.2f, 0, -1), P(0.2f, 0, 1), P(1.2f, 0, 1), P(1.2f, 0, -1) };
+        var uvs = new[] { U(0, 0), U(0, 1), U(0.45f, 1), U(0.45f, 0), U(0.55f, 0), U(0.55f, 1), U(1, 1), U(1, 0) };
+        WithMesh("Roof", MeshAsset("Spare", "Roof", corners, new[] { new[] { 0, 1, 2, 0, 2, 3 }, new[] { 4, 5, 6, 4, 6, 7 } }, uvs), P(0.3f, 1.7f, 2.2f), Vector3.zero);
+        Save(scene, "Spare");
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -494,7 +561,7 @@ public static class BuffersSetup
                 ("ModeIndirect", () => Modes("ModeIndirect", MixedLightingMode.IndirectOnly)),
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
-                ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels),
+                ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));

@@ -81,6 +81,25 @@ The scenes of indirect light have no sky and no ambient light either, materials 
   get (0 to 252: albedo is capped at 0.97): the linear value of each
   (`crates/unbound-gi/src/baked/levels.rs`).
 
+The scenes of the sky's light are the coloured scene without a sun, with a slab that casts no
+shadow (it stops the sky's light like any renderer) and 64 Indirect Samples:
+
+- `Sky`, `SkyPicked`: an ambient colour, 64 Environment Samples, two bounces; without and with
+  the Lighting Settings' environment importance sampling (directions picked by the sky's
+  brightness).
+- `SkyGradient`: the three colours of a gradient, 8 samples, picked directions.
+- `SkyDrawn`, `SkyDrawnPicked`: the procedural skybox (`Assets/Scenes/SkyDrawn*.mat`) at
+  ambient intensity 1 with 64 samples, and at 2.5 with 512 samples, three bounces and picked
+  directions.
+- `SkyNoBounce`: Max Bounces 0: no ray is sent, to the sky either.
+- `Spare`: a sun and an ambient colour over the coloured scene and a roof of two submeshes with
+  one material: the submesh without a material is in the lightmap, and no ray meets it (it
+  casts no shadow, bounces nothing, counts in no validity and lets the sky through).
+
+The scenes above them have the default sky (`Bare`, `Charts`, `Samples`, `Shapes`: the default
+skybox, with the default Lighting Settings' picked directions) or none (a black sky: one picked
+direction that brings nothing).
+
 ## Capture and comparison
 
 `Assets/Editor/BuffersRecord.cs` opens each scene and bakes it. In the Editor
@@ -103,7 +122,14 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
   triangle's number in its submesh; (0, 0, 0, -1000000) without a surface) and
   `irradianceDirect<N>.r2d` (per texel the direct light's red, green and blue, and 1 for a used
   texel), `irradianceIndirect<N>.r2d` (the same of the indirect light) and `validity<N>.r2d`
-  (per texel the part of its rays that met a back face first) as the Editor wrote them;
+  (per texel the part of its rays that met a back face first) and
+  `irradianceEnvironment<N>.r2d` (per texel the light its samples take straight from the sky)
+  as the Editor wrote them;
+- `sky.json`, the bake input's sky: the side of its six faces, their colour when all texels
+  are the same, else the faces in `sky.f32.z` (zlib of 32-bit float RGB, faces towards +x, -x,
+  +y, -y, +z, -z, rows as a cube map stores them); the number of directions picked by its
+  brightness and its summed brightness; `skyDirections.f32` has the picked directions and
+  their light (3 + 3 floats each);
 - `materials.json`, each instance's albedo and emission images as the bake input has them
   (size and texels, rows from the first), in the bake's order.
 
@@ -111,7 +137,8 @@ Two captures make the reference (`bake_buffers.py publish`): their files byte-id
 the buffers of light, which the Editor sums in an order that varies from bake to bake (repeats
 differ in the last bits, up to 4e-7 here): those have the same used texels and values within
 2e-6 (times the value above 1), the indirect light's within 1e-5 (sums of up to 512 samples of
-several bounces: 3e-6 is the worst seen, in `BounceMany`), and the first capture's is kept.
+several bounces: 3e-6 is the worst seen, in `BounceMany`) and so the sky's light, and the
+first capture's is kept.
 Publishing adds what is new and refuses to change what the reference has.
 
 Unbound's bake (`Lightmapping.Bake`, `bake_buffers.py engine`: `unbound test --graphics`, a
@@ -130,7 +157,13 @@ above 1): last-bit differences of 32-bit arithmetic are multiplied by a narrow s
 (the worst here is 2.5e-5, in `Lamps`); the used texels are compared exactly. A texel's indirect
 light is compared within 1e-3 likewise (Unbound sends the Editor's rays; with the Editor's own
 bake input the worst texel is within 3e-4), its validity within 1e-6 (a count over its rays),
-and every texel of every instance's material images within 1e-6, with the images' sizes.
+and every texel of every instance's material images within 1e-6, with the images' sizes. The
+sky's light on a texel is compared as its indirect light is. The sky's faces are compared
+within 1e-4 (times the value above 1): a drawn sky's come from the graphics device, which rounds
+a triangle's interpolated colours its own way, and the ambient intensity multiplies their
+gamma-encoded values (the worst seen is 1.8e-5 at intensity 1 and 4.8e-5 at 2.5); the number of
+picked directions exactly, each direction, its light and the summed brightness within 1e-4
+likewise.
 
 `residuals.json` names the known differences, each with the exact text the comparison gives it
 (another text, or none, fails the run):
@@ -140,19 +173,36 @@ and every texel of every instance's material images within 1e-6, with the images
   of them. Whether both give the same light on average is not measured.
 - One texel of `Roof`'s indirect light and one of `Glow`'s validity: a single ray that meets a
   triangle exactly on its edge falls on the other side of it than in the Editor.
+- `Shapes`' sky light: one sky ray of some texels is stopped by a renderer of a less detailed
+  LOD level, which the Editor's rays pass (the levels of LOD Groups are not told apart yet).
+- One value of one texel of `SkyGradient`'s indirect light: what one path's sky direction
+  reading the neighbouring face of the sky would give (the faces differ in colour); the
+  Editor's own bake input replayed gives the same difference.
 
 `bake_buffers.py replay <capture>` is a development check of the baker's core alone: it feeds a
 capture's own bake input (kept in the run folder, not in Git: meshes, placements, shadow casters,
 lights, Lighting Mode and pushoff) to the `cargo run -p unbound-gi --example baked_gbuffer` tool
 and compares its used texels, charts, samples and direct light with the capture's.
 
-Not baked by Unbound yet: the environment's light, ambient occlusion, directionality and the
+The sky Unbound's bake takes is the ambient source as `RenderSettings` has it at the bake: an
+ambient colour or gradient as six faces of one colour each (the gradient's sky colour up, its
+ground colour down, its equator colour on the four sides), a skybox drawn into six faces of
+128 texels a side on the sky mesh (an octahedron split three times and twice more towards the
+horizon: the procedural sky computes its colours per vertex, so the mesh shows), its
+gamma-encoded values times the ambient intensity.
+
+Not baked by Unbound yet: ambient occlusion, directionality and the
 shadowmask; without a graphics device, the indirect light (said). Not baked (said, each once per
 scene): area lights, light cookies, soft baked
 shadows (a Baked Shadow Angle or Radius: baked hard), lights whose intensity multiplies their
 linear colour (GraphicsSettings.lightsUseLinearIntensity), the levels of LOD Groups (their
 renderers take and stop light like any other; the Editor's rays tell the levels apart). Not done
 and not said: materials that let light through stop it.
+
+Not measured, of the sky's light: a skybox other than the procedural one (a cube map, six
+images, a panorama: drawn the same way), an ambient source that is not the scene's sky
+(`RenderSettings.customReflectionTexture` plays no part), a sky brighter in one place than
+100000 draws find (the last draw is taken), gamma colour space projects.
 
 Not measured, of the indirect light: materials that let light through (they stop it), LOD
 Groups, a material flagged both emissive and black, shaders without a meta pass (said; the

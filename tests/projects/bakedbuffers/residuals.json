@@ -5,5 +5,11 @@
   "One ray of one texel meets a triangle exactly on its edge and falls on the other side of it than in the Editor (Unbound tests a ray against a triangle in double precision; replaying the Editor's own bake input gives the same single difference). Not chased: no rule of the bake differs.": {
     "Roof.lightmap0.indirect": "0 texels differ in being used, 1 values in their light (worst 0.0428, tolerance 0.001)",
     "Glow.lightmap0.validity": "1 of 4096 texels differ, first at [2508]"
+  },
+  "Renderers of a LOD Group: the Editor's rays tell the group's levels apart (here one sky ray per texel is stopped by a less detailed level's renderer in Unbound and by nothing in the Editor); Unbound's bake does not yet and says so when it bakes (its renderers take and stop light like any other). Follow-up: the levels' rule, measured with lights and bounces.": {
+    "Shapes.lightmap0.environment": "0 texels differ in being used, 99 values in their light (worst 0.101, tolerance 0.001)"
+  },
+  "One value of one texel under the gradient sky, whose faces differ in colour: the difference is what one path's sky direction would give if it read the neighbouring face (the red between the sky's and the equator's colour by the red wall's albedo, over the texel's 64 samples). Replaying the Editor's own bake input, sky and picked directions gives the same single difference. Not chased: no rule of the bake is known to differ.": {
+    "SkyGradient.lightmap0.indirect": "0 texels differ in being used, 1 values in their light (worst 0.0041, tolerance 0.001)"
   }
 }

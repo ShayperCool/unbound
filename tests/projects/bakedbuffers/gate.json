@@ -9,6 +9,7 @@
     "managed/UnityEngine/Graphics/BakedAtlas.cs",
     "managed/UnityEngine/Graphics/GIMaterialImages.cs",
     "managed/UnityEngine/Graphics/RealtimeGIBake.cs",
+    "managed/UnityEngine/Graphics/RealtimeGIEnvironment.cs",
     "managed/UnityEngine/Graphics/LightingSettings.cs"
   ]
 }

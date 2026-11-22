@@ -41,6 +41,7 @@ import shutil
 import struct
 import subprocess
 import sys
+import zlib
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -60,7 +61,7 @@ NORMAL_TOLERANCE = 1e-5
 EMPTY = -1.0e6
 UNBOUND_NOTE = 'Unbound'
 BUFFERS = ('occupancy{}.r2d', 'chartIndex{}.int', 'normal{}.r2d', 'irradianceDirect{}.r2d', 'irradianceIndirect{}.r2d',
-           'validity{}.r2d')
+           'irradianceEnvironment{}.r2d', 'validity{}.r2d')
 # The direct light of a texel is compared within this, times its value where that is above 1.
 # The Editor's and Unbound's 32-bit arithmetic differ in their last bits, which a narrow spot
 # cone's falloff multiplies (a 20 degree cone: by about 65 before its table's slope); the worst
@@ -70,6 +71,13 @@ DIRECT_TOLERANCE = 1e-4
 # last bits, and a ray that just meets or misses an edge can fall on the other side (the worst
 # seen with the Editor's own materials is 3e-4, one texel in thousands).
 INDIRECT_TOLERANCE = 1e-3
+# A texel of the sky's faces, and a number of the directions picked by its brightness (a unit
+# vector, or light of the order of the sky's summed brightness). A drawn sky's faces come from
+# the graphics device, which rounds a triangle's interpolated colours its own way, and the
+# ambient intensity then multiplies their gamma-encoded values: the worst seen is 1.8e-5 at
+# intensity 1 and 4.8e-5 at 2.5 (`SkyDrawnPicked`).
+SKY_TOLERANCE = 1e-4
+PICK_TOLERANCE = 1e-4
 # The part of a texel's rays that met a back face: counts over the texel's samples.
 VALIDITY_TOLERANCE = 1e-6
 # A texel of a material image: albedo is one of 253 values, emission a half float.
@@ -156,6 +164,29 @@ def materials_digest(folder):
     return [{'albedo': image(bake['albedo'][index]), 'emissive': image(bake['emissive'][index])} for index in bake['instanceTextures']]
 
 
+def sky_digest(folder, target):
+    """A scene's sky as its bake input has it: the side of its six faces, their texels (one
+    colour where they all have it, else three floats a texel in `sky.f32.z`, deflated), and
+    the directions picked by its brightness with their light (`skyDirections.f32`: six floats
+    each) and its summed brightness."""
+    if not (folder/'bakeInput.bin').is_file():
+        return None
+    e = editor_bake.read_bake_input(folder/'bakeInput.bin')['environment']
+    flat = [v for texel in e['cube'] for v in (texel if isinstance(texel, (tuple, list)) else (texel,))]
+    rgb = array('f', [flat[k] for k in range(len(flat)) if k % 4 != 3])
+    out = {'side': e['cubeResolution'], 'directions': e['importanceSampleCount'], 'brightness': e['importanceIntegratedMetric']}
+    if all(rgb[k] == rgb[k % 3] for k in range(len(rgb))):
+        out['color'] = list(rgb[:3])
+    else:
+        (target/'sky.f32.z').write_bytes(zlib.compress(rgb.tobytes(), 9))
+    if out['directions']:
+        values = lambda name: [v for item in e[name] for v in (item if isinstance(item, (tuple, list)) else (item,))]  # noqa: E731
+        directions, light = values('importanceDirections'), values('importanceWeightedIntensities')
+        both = array('f', [v for k in range(out['directions']) for v in directions[4 * k:4 * k + 3] + light[4 * k:4 * k + 3]])
+        (target/'skyDirections.f32').write_bytes(both.tobytes())
+    return out
+
+
 def lights_digest(folder):
     """A scene's lights as its bake input has them, by their names, and its Lighting Mode."""
     if not (folder/'bakeInput.bin').is_file():
@@ -190,6 +221,7 @@ def native(label):
         (target/'scene.json').write_text(json.dumps(scene_digest, indent=1) + '\n')
         (target/'lights.json').write_text(json.dumps(lights_digest(out/'raw'/scene), indent=1) + '\n')
         (target/'materials.json').write_text(json.dumps(materials_digest(out/'raw'/scene), separators=(',', ':')) + '\n')
+        (target/'sky.json').write_text(json.dumps(sky_digest(out/'raw'/scene, target), indent=1) + '\n')
         for index in range(len(scene_digest['lightmaps'])):
             for name in BUFFERS:
                 shutil.copy2(out/'raw'/scene/'lightmapRequest0'/name.format(index), target/name.format(index))
@@ -212,7 +244,8 @@ def repeats(name, first, other):
     a, b = editor_bake.parse_r2d(first), editor_bake.parse_r2d(other)
     if a[:3] != b[:3]:
         return False
-    tolerance = INDIRECT_REPEAT_TOLERANCE if Path(name).name.startswith('irradianceIndirect') else REPEAT_TOLERANCE
+    summed = Path(name).name.startswith(('irradianceIndirect', 'irradianceEnvironment'))
+    tolerance = INDIRECT_REPEAT_TOLERANCE if summed else REPEAT_TOLERANCE
     return all(x == y if k % 4 == 3 else abs(x - y) <= tolerance * max(1.0, abs(x)) for k, (x, y) in enumerate(zip(a[3], b[3])))
 
 
@@ -258,7 +291,7 @@ def expected(root):
             if (width, height, channels) != (lightmap['width'], lightmap['height'], 4):
                 raise ValueError(f'{folder}: irradianceDirect{index} of {width}x{height}')
             lightmap['direct'] = direct
-            for part, name in (('indirect', 'irradianceIndirect'), ('validity', 'validity')):
+            for part, name in (('indirect', 'irradianceIndirect'), ('environment', 'irradianceEnvironment'), ('validity', 'validity')):
                 width, height, channels, values = editor_bake.read_r2d(folder/f'{name}{index}.r2d')
                 if (width, height, channels) != (lightmap['width'], lightmap['height'], 4):
                     raise ValueError(f'{folder}: {name}{index} of {width}x{height}')
@@ -268,6 +301,10 @@ def expected(root):
         entry['baked'] = 'Success' in entry['bake']
         entry['lights'] = json.loads((folder/'lights.json').read_text())
         entry['materials'] = json.loads((folder/'materials.json').read_text())
+        entry['sky'] = json.loads((folder/'sky.json').read_text())
+        if entry['sky'] is not None:
+            entry['sky']['faces'] = numbers_of(zlib.decompress((folder/'sky.f32.z').read_bytes())) if (folder/'sky.f32.z').is_file() else None
+            entry['sky']['picked'] = numbers(folder/'skyDirections.f32', 'f') if (folder/'skyDirections.f32').is_file() else None
         out[scene] = entry
     return out
 
@@ -275,6 +312,12 @@ def expected(root):
 def guid_of(project, scene):
     meta = (project/'Assets/Scenes'/(scene + '.unity.meta')).read_text()
     return re.search(r'(?m)^guid: ([0-9a-f]{32})$', meta).group(1)
+
+
+def numbers_of(data):
+    values = array('f')
+    values.frombytes(data)
+    return values
 
 
 def numbers(path, code):
@@ -291,7 +334,7 @@ def actual(out):
     for scene in scenes():
         guid = guid_of(project, scene)
         entry = {'bake': log.get(scene, 'not baked'), 'messages': [], 'instances': [], 'lightmaps': [], 'lights': {'mixedMode': None, 'lights': []},
-                 'materials': []}
+                 'materials': [], 'sky': None}
         entry['baked'] = entry['bake'] == 'bake True'
         if (out/'raw'/scene/'messages.txt').is_file():
             # Unbound's own notes of what its bake does not make yet are not the Editor's messages.
@@ -305,12 +348,17 @@ def actual(out):
             flat = lambda image: {'width': image['width'], 'height': image['height'], 'texels': [v for texel in image['texels'] for v in texel]}  # noqa: E731
             entry['materials'] = [{'albedo': flat(m['albedo']), 'emissive': flat(m['emissive'])}
                                   for m in (description.get('indirect') or {}).get('materials', [])]
+            sky = (description.get('indirect') or {}).get('sky')
+            if sky is not None:
+                sky['faces'] = numbers(dump/'sky.f32', 'f')
+                sky['picked'] = numbers(dump/'skyDirections.f32', 'f') if (dump/'skyDirections.f32').is_file() else None
+            entry['sky'] = sky
             for index, lightmap in enumerate(description['lightmaps']):
                 lightmap['occupancy'] = [int(v > 0) for v in (dump/f'occupancy{index}.u8').read_bytes()]
                 lightmap['charts'] = list(numbers(dump/f'chartIndex{index}.i32', 'i'))
                 lightmap['normals'] = numbers(dump/f'normal{index}.f32', 'f')
                 lightmap['direct'] = numbers(dump/f'irradianceDirect{index}.f32', 'f')
-                for part, name in (('indirect', 'irradianceIndirect'), ('validity', 'validity')):
+                for part, name in (('indirect', 'irradianceIndirect'), ('environment', 'irradianceEnvironment'), ('validity', 'validity')):
                     lightmap[part] = numbers(dump/f'{name}{index}.f32', 'f') if (dump/f'{name}{index}.f32').is_file() else None
                 entry['lightmaps'].append(lightmap)
         result[scene] = entry
@@ -424,6 +472,35 @@ def material_difference(got, want):
     return '; '.join(problems) if problems else None
 
 
+def sky_difference(got, want):
+    """The sky's faces within SKY_TOLERANCE (times the value above 1), and the directions
+    picked by its brightness, their light and its summed brightness within PICK_TOLERANCE."""
+    if want is None:
+        return None
+    if got is None:
+        return 'no sky'
+    if got['side'] != want['side']:
+        return f"faces of {got['side']}, expected {want['side']}"
+    problems = []
+    faces = want['faces'] if want['faces'] is not None else want['color'] * (len(got['faces']) // 3)
+    if len(got['faces']) != len(faces):
+        return f"{len(got['faces'])} face values, expected {len(faces)}"
+    errors = [abs(x - y) / max(1.0, abs(y)) for x, y in zip(got['faces'], faces)]
+    off = sum(not error <= SKY_TOLERANCE for error in errors)
+    if off:
+        problems.append(f'{off} of {len(errors)} face values differ (worst {max(errors):.3g}, tolerance {SKY_TOLERANCE:g})')
+    if got['directions'] != want['directions']:
+        problems.append(f"{got['directions']} picked directions, expected {want['directions']}")
+    elif want['directions']:
+        errors = [abs(x - y) / max(1.0, abs(y)) for x, y in zip(got['picked'], want['picked'])]
+        off = sum(not error <= PICK_TOLERANCE for error in errors)
+        if off or len(got['picked']) != len(want['picked']):
+            problems.append(f'{off} of {len(errors)} values of the picked directions and their light differ (worst {max(errors):.3g})')
+        if not abs(got['brightness'] - want['brightness']) <= PICK_TOLERANCE * max(1.0, abs(want['brightness'])):
+            problems.append(f"summed brightness {got['brightness']!r}, expected {want['brightness']!r}")
+    return '; '.join(problems) if problems else None
+
+
 def residuals():
     """{record: (reason, problem)} of residuals.json next to this file (`{reason: {record:
     problem}}`): known differences, each with the exact text the comparison gives it. They are
@@ -460,7 +537,7 @@ def compare(label):
             key = f'{scene}.lightmap{index}.'
             mine = a['lightmaps'][index] if index < len(a['lightmaps']) else None
             if mine is None or (mine['width'], mine['height'], mine['supersampling']) != (lightmap['width'], lightmap['height'], lightmap['supersampling']):
-                for part in ('instances', 'occupancy', 'charts', 'normals', 'direct', 'indirect', 'validity'):
+                for part in ('instances', 'occupancy', 'charts', 'normals', 'direct', 'indirect', 'environment', 'validity'):
                     record(key + part, 'no such lightmap of that size')
                 continue
             names = lambda entry, m: [entry['instances'][i] for i in m['instances']]  # noqa: E731
@@ -470,8 +547,10 @@ def compare(label):
             record(key + 'normals', normal_difference(mine['normals'], lightmap['normals']))
             record(key + 'direct', direct_difference(mine['direct'], lightmap['direct']))
             record(key + 'indirect', direct_difference(mine['indirect'], lightmap['indirect'], INDIRECT_TOLERANCE))
+            record(key + 'environment', direct_difference(mine['environment'], lightmap['environment'], INDIRECT_TOLERANCE))
             record(key + 'validity', validity_difference(mine['validity'], lightmap['validity']))
         record(scene + '.materials', material_difference(a['materials'], e['materials']))
+        record(scene + '.sky', sky_difference(a['sky'], e['sky']))
     keys = {key for key, _ in records}
     for key in sorted(set(known) - keys):
         print('FAIL', key, 'a residual of no record')
@@ -530,6 +609,8 @@ def replay(label):
             data += struct.pack('<I', len(casters))
             for caster in casters:
                 data += struct.pack('<I16f', caster['mesh'], *caster['transform'])
+                # A submesh without a material stops no ray.
+                data += struct.pack(f"<I{len(caster['materials'])}I", len(caster['materials']), *(int(m >= 0) for m in caster['materials']))
             data += struct.pack('<I', len(bake['lights']))
             for light in bake['lights']:
                 data += struct.pack('<II3f3f3fffI', light['type'], light['mode'], *light['color'], *light['position'],
