@@ -44,6 +44,16 @@ no compilation. The documented contracts: [RequestScriptCompilation](https://doc
 (the defines of a named build target); the probe's Android round and unchanged round are the
 controls where the call must not recompile.
 
+Each round's `internal` row records the Editor compilation's own `assemblyCompilationFinished`
+(internal; package editor code such as Burst's loader subscribes to it through
+`EditorCompilationInterface.Instance`), which the probe subscribes to after CompilationPipeline's
+events: for each compiled assembly its output path, `HasCompileErrors`, whether its defines hold
+`PROBE_DEFINE`, how many messages came with it and the event logged just before it. Measured: it
+follows the pipeline's assemblyCompilationFinished of the same assembly, with the same messages;
+`HasCompileErrors` is true for the compiled assembly of the failed round and false otherwise; the
+defines are those the assembly was compiled with (round 6's new define). Rounds that compile
+nothing raise none.
+
 Unbound raises the compilation events from its hot reload's recompilation, an assembly whose
 changed inputs matched an earlier output of its compile cache (an edit undone) counting as compiled
 with the warnings stored beside that output. Its one editor domain load, as Play mode starts, runs

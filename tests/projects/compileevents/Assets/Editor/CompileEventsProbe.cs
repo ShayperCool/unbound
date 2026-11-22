@@ -45,10 +45,35 @@ public static class CompileEventsProbe
 #pragma warning restore 618
         CompilationPipeline.assemblyCompilationFinished += (a, m) => Log("assemblyCompilationFinished " + a + " " + Messages(m));
         CompilationPipeline.assemblyCompilationNotRequired += a => Log("notRequired " + a);
+        SubscribeInternalFinished();
         AssemblyReloadEvents.beforeAssemblyReload += () => Log("beforeAssemblyReload");
         AssemblyReloadEvents.afterAssemblyReload += () => Log("afterAssemblyReload");
         EditorApplication.playModeStateChanged += state => Log("playMode " + state);
         EditorApplication.update += Tick;
+    }
+
+    /// <summary>Subscribes to the Editor compilation's own assemblyCompilationFinished (internal;
+    /// package editor code such as Burst's loader uses it for the assembly's compile errors and
+    /// defines), after CompilationPipeline's events.</summary>
+    static void SubscribeInternalFinished()
+    {
+        const BindingFlags Any = BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        var compilation = typeof(CompilationPipeline).Assembly.GetType("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface")
+            .GetProperty("Instance", Any).GetValue(null);
+        var finished = compilation.GetType().GetEvent("assemblyCompilationFinished", Any);
+        var handler = Delegate.CreateDelegate(finished.EventHandlerType, typeof(CompileEventsProbe).GetMethod(nameof(InternalFinished), Any));
+        finished.GetAddMethod(true).Invoke(compilation, new object[] { handler });
+    }
+
+    /// <summary>Logs the internal event: the assembly's output path, whether it has compile errors,
+    /// whether its defines hold the probe's define, and how many messages came with it.</summary>
+    static void InternalFinished(object assembly, CompilerMessage[] messages)
+    {
+        const BindingFlags Any = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        object Read(string name) => assembly.GetType().GetProperty(name, Any).GetValue(assembly);
+        var defines = (string[])Read("Defines") ?? new string[0];
+        Log("internalFinished " + Read("FullPath") + " errors=" + Read("HasCompileErrors") + " probeDefine=" + defines.Contains("PROBE_DEFINE")
+            + " messages=" + (messages == null ? "null" : messages.Length.ToString()));
     }
 
     [InitializeOnEnterPlayMode]
@@ -155,9 +180,21 @@ public static class CompileEventsProbe
     /// <summary>An event's name, with its argument for Play mode's events.</summary>
     static string Token(string line) => IsPlayModeEvent(line) ? line.Replace(' ', ':') : line.Split(' ')[0];
 
+    /// <summary>The event logged before an internal event: its name, ":same" when it was about the
+    /// same assembly.</summary>
+    static string Before(string previous, string line)
+    {
+        var words = previous.Split(' ');
+        return words[0] + (words.Length > 1 && words[1] == line.Split(' ')[1] ? ":same" : "");
+    }
+
+    static bool IsInternal(string line) => line.StartsWith("internalFinished ", StringComparison.Ordinal);
+
     static void Finish()
     {
-        var lines = File.ReadAllLines(EventLog);
+        var all = File.ReadAllLines(EventLog);
+        // The rows of CompilationPipeline's events leave the internal event out; it has its own row.
+        var lines = all.Where(l => !IsInternal(l)).ToArray();
         var rows = new StringBuilder();
         void Put(string key, string value) =>
             rows.Append("{\"k\":\"").Append(key).Append("\",\"v\":\"").Append(value.Replace("\\", "\\\\").Replace("\"", "\\\"")).Append("\"}\n");
@@ -193,6 +230,13 @@ public static class CompileEventsProbe
             var contexts = events.Where(e => e.StartsWith("compilation", StringComparison.Ordinal)).Select(e => e.Split(' ')[1]).ToArray();
             Put(k + "contexts", string.Join(",", contexts.Select(c => c.Split('#')[0]).Distinct()));
             Put(k + "contextShared", (contexts.Length == 2 && contexts[0] == contexts[1]).ToString());
+            // The internal event of each compiled assembly, with the event logged just before it.
+            int allBegin = Array.IndexOf(all, "round " + round), allEnd = Array.IndexOf(all, "round " + (round + 1));
+            if (allEnd < 0) allEnd = all.Length;
+            var internals = new List<string>();
+            for (int i = allBegin + 1; allBegin >= 0 && i < allEnd; i++)
+                if (IsInternal(all[i])) internals.Add(all[i].Substring("internalFinished ".Length) + " after=" + Before(all[i - 1], all[i]));
+            Put(k + "internal", string.Join(" || ", internals.OrderBy(e => e, StringComparer.Ordinal)));
         }
         rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(Out, "values.jsonl"), rows.ToString());
