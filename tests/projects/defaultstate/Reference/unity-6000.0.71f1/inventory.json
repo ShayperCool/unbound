@@ -2026,6 +2026,12 @@
       "type": "UnityEditor.PrefabUtility"
     },
     {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.PrefabUtility+EditPrefabContentsScope"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",

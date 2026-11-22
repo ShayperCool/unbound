@@ -845,3 +845,6 @@ The object factory slice adds the static `ObjectFactory` (excluded) to the inven
 
 The asset opening slice adds `Callbacks.OnOpenAssetAttribute` (its `class` factory row and `TypeId`) to the
 inventory, as two Unity 6000.0.71f1 batch Editor captures on macOS write them; every earlier row is unchanged.
+
+The prefab contents slice adds the struct `PrefabUtility.EditPrefabContentsScope` to the inventory, as two
+Unity 6000.0.71f1 batch Editor captures on macOS write its rows; every earlier row is unchanged.

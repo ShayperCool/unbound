@@ -1082,6 +1082,9 @@
 {"key":"UnityEditor.PluginImporter/Property/UnityEngine.Object/hideFlags","status":"getter-threw","value":"System.NullReferenceException"}
 {"key":"UnityEditor.PluginImporter/Property/UnityEngine.Object/name","status":"getter-threw","value":"System.NullReferenceException"}
 {"key":"UnityEditor.PrefabUtility/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.PrefabUtility+EditPrefabContentsScope/@factory","status":"value","value":"struct"}
+{"key":"UnityEditor.PrefabUtility+EditPrefabContentsScope/Field/UnityEditor.PrefabUtility+EditPrefabContentsScope/assetPath","status":"value","value":"null"}
+{"key":"UnityEditor.PrefabUtility+EditPrefabContentsScope/Field/UnityEditor.PrefabUtility+EditPrefabContentsScope/prefabContentsRoot","status":"value","value":"null"}
 {"key":"UnityEditor.PreferenceItem/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.Progress/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.ProjectWindowCallback.EndNameEditAction/@factory","status":"excluded","value":"abstract"}
