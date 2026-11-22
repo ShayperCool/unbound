@@ -1,5 +1,5 @@
 {
-  "The Editor makes these engine types with a default state Unbound does not give yet (empty, readable textures that take Apply, with graphics format 88 for Texture2D and Cubemap, a readable R8G8B8A8_UNorm custom render texture; a Preset; a SpeedTreeWindAsset), so Unbound fails loudly with NotSupportedException and records no state": [
+  "The Editor makes these engine types with a default state Unbound does not give yet (empty, readable textures, which take Apply, with graphics format 88 for Texture2D and Cubemap; an empty, readable SparseTexture of format None; a readable R8G8B8A8_UNorm custom render texture; a Preset; a SpeedTreeWindAsset), so Unbound fails loudly with NotSupportedException and records no state": [
     "UnityEditor.Presets.Preset",
     "UnityEngine.SparseTexture",
     "UnityEngine.SpeedTreeWindAsset",
