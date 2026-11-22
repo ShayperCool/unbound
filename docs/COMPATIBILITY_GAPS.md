@@ -361,7 +361,7 @@ that colour delta remains strict and belongs to the existing perceptual-gradient
 - **When the render thread has run a plugin's callbacks (multithreaded rendering).** With
   `-force-gfx-mt` on Vulkan, Unity 6000.0's Scripting API says only that the native pointer getters
   (`Texture.GetNativeTexturePtr`, `RenderTexture.GetNativeDepthBufferPtr`,
-  `GraphicsBuffer`/`ComputeBuffer.GetNativeBufferPtr`, `Mesh.GetNativeVertexBufferPtr`; Unbound
+  `GraphicsBuffer`/`ComputeBuffer.GetNativeBufferPtr`, `Mesh.GetNativeVertexBufferPtr`/`GetNativeIndexBufferPtr`; Unbound
   does not implement the Mesh ones) synchronize with the rendering thread; Unbound waits at the
   others and at readbacks. In every Editor capture of tests/projects/nativegfx recorded before the
   probe waited for the render thread itself (`run.py --mt` captures of 2026-11-22), the callbacks
