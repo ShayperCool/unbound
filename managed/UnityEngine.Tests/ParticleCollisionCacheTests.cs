@@ -298,6 +298,38 @@ namespace UnityEngine.Tests
             }
             Assert.Equal(0, toBody);
             Assert.Equal(0, toBox);
+            // The particles went on through the box (its top at y 0).
+            var particles = new ParticleSystem.Particle[8];
+            Assert.Equal(8, ps.GetParticles(particles));
+            Assert.All(particles, p => Assert.True(p.velocity.y < 0f && p.position.y < -0.5f, $"at {p.position.y} moving {p.velocity.y}"));
+        }
+
+        [Fact]
+        public void A2DCachedContactUnderAKinematicBodyReportsToTheBodysObject()
+        {
+            // Medium meets a Kinematic Rigidbody2D's collider (particlerender
+            // collide/rules/2d/medium_kinematic); a cached contact reports to the body's object as a
+            // queried one does (collide/world2d/kinematic).
+            QualitySettings.particleRaycastBudget = 1;
+            var ps = Dropping(ParticleSystemCollisionQuality.Medium, count: 8, twoD: true);
+            var box = m_Objects[0] as GameObject;
+            var body = new GameObject("body");
+            m_Objects.Add(body);
+            body.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+            box.transform.SetParent(body.transform, true);
+            Physics2D.SyncTransforms();
+            var c = ps.collision; c.sendCollisionMessages = true;
+            ps.Play();
+            int toBody = 0, toBox = 0;
+            var events = new List<ParticleCollisionEvent>();
+            for (int frame = 0; frame < 20; frame++)
+            {
+                Frame();
+                toBody += ps.GetCollisionEvents(body, events);
+                toBox += ps.GetCollisionEvents(box, events);
+            }
+            Assert.True(toBody > 1, $"{toBody} events reported to the body's object");
+            Assert.Equal(0, toBox);
         }
     }
 }

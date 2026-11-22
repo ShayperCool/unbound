@@ -281,6 +281,31 @@ namespace UnityEngine.Tests
             finally { Done(ps.gameObject, box); }
         }
 
+        /// <summary>A system meets only the colliders of its own physics scene: in a local 3D
+        /// physics scene, the box there and not one of the main scene
+        /// (particlerender collide/rules/3d/local, local_split).</summary>
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(false, false)]
+        public void ASystemMeetsOnlyTheCollidersOfItsPhysicsScene(bool boxInLocalScene, bool met)
+        {
+            var (ps, box) = TowardsBox(body: false, kinematic: false, colliderForce: 0f);
+            var scene = UnityEngine.SceneManagement.SceneManager.CreateScene("particle physics scene " + boxInLocalScene,
+                new UnityEngine.SceneManagement.CreateSceneParameters(UnityEngine.SceneManagement.LocalPhysicsMode.Physics3D));
+            try
+            {
+                UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(ps.gameObject, scene);
+                if (boxInLocalScene) UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(box, scene);
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(met, Assert.Single(Live(ps)).velocity.x < 0f);
+            }
+            finally
+            {
+                Done(ps.gameObject, box);
+                SceneOperations.Unload(scene);
+            }
+        }
+
         [Theory]
         [InlineData(false, false, 5f)]
         [InlineData(true, true, 5f)]
