@@ -1,0 +1,33 @@
+{"k":"initial","v":"throws=<none>|during=0/0|later=0/0|A=00010001 A1=00010001 A2=00010001 A2a=00010001 B=00010001 scene=000000 isolated=0"}
+{"k":"hideA","v":"throws=<none>|during=0/0|later=0/0|A=10010001 A1=00010001 A2=00010001 A2a=00010001 B=00010001 scene=001000 isolated=0"}
+{"k":"hideAWithDescendants","v":"throws=<none>|during=0/0|later=0/0|A=11100001 A1=11010001 A2=11100001 A2a=11010001 B=00010001 scene=001000 isolated=0"}
+{"k":"showA1","v":"throws=<none>|during=0/0|later=0/0|A=10000001 A1=00010001 A2=11100001 A2a=11010001 B=00010001 scene=001000 isolated=0"}
+{"k":"toggleA2WithDescendants","v":"throws=<none>|during=0/0|later=0/0|A=10010001 A1=00010001 A2=00010001 A2a=00010001 B=00010001 scene=001000 isolated=0"}
+{"k":"toggleB","v":"throws=<none>|during=0/0|later=0/0|A=10010001 A1=00010001 A2=00010001 A2a=00010001 B=11010001 scene=001000 isolated=0"}
+{"k":"hideBAgain","v":"throws=<none>|during=0/0|later=0/0|A=10010001 A1=00010001 A2=00010001 A2a=00010001 B=11010001 scene=001000 isolated=0"}
+{"k":"showScene","v":"throws=<none>|during=1/0|later=0/0|A=00010001 A1=00010001 A2=00010001 A2a=00010001 B=00010001 scene=000000 isolated=0"}
+{"k":"hideScene","v":"throws=<none>|during=0/0|later=0/0|A=11100001 A1=11010001 A2=11100001 A2a=11010001 B=11010001 scene=111000 isolated=0"}
+{"k":"showAll","v":"throws=<none>|during=0/0|later=0/0|A=00010001 A1=00010001 A2=00010001 A2a=00010001 B=00010001 scene=000000 isolated=0"}
+{"k":"hideArray","v":"throws=<none>|during=0/0|later=0/0|A=00000001 A1=11010001 A2=00010001 A2a=00010001 B=11010001 scene=001000 isolated=0"}
+{"k":"showArrayWithDescendants","v":"throws=<none>|during=0/0|later=0/0|A=00010001 A1=00010001 A2=00010001 A2a=00010001 B=11010001 scene=001000 isolated=0"}
+{"k":"hideAll","v":"throws=<none>|during=0/0|later=0/0|A=11100001 A1=11010001 A2=11100001 A2a=11010001 B=11010001 scene=111000 isolated=0"}
+{"k":"showAllAgain","v":"throws=<none>|during=0/0|later=0/0|A=00010001 A1=00010001 A2=00010001 A2a=00010001 B=00010001 scene=000000 isolated=0"}
+{"k":"isolateA1","v":"throws=<none>|during=0/0|later=0/0|A=10000001 A1=00010001 A2=11100001 A2a=11010001 B=11010001 scene=001000 isolated=1"}
+{"k":"showBIsolated","v":"throws=<none>|during=0/0|later=0/0|A=10000001 A1=00010001 A2=11100001 A2a=11010001 B=00010001 scene=001000 isolated=1"}
+{"k":"exitIsolation","v":"throws=<none>|during=0/0|later=0/0|A=00010001 A1=00010001 A2=00010001 A2a=00010001 B=00010001 scene=000000 isolated=0"}
+{"k":"showAllAfterIsolation","v":"throws=<none>|during=0/0|later=0/0|A=00010001 A1=00010001 A2=00010001 A2a=00010001 B=00010001 scene=000000 isolated=0"}
+{"k":"disablePickingAWithDescendants","v":"throws=<none>|during=0/0|later=0/0|A=00011110 A1=00011101 A2=00011110 A2a=00011101 B=00010001 scene=000001 isolated=0"}
+{"k":"enablePickingA2","v":"throws=<none>|during=0/0|later=0/0|A=00011000 A1=00011101 A2=00010010 A2a=00011101 B=00010001 scene=000001 isolated=0"}
+{"k":"togglePickingB","v":"throws=<none>|during=0/0|later=0/0|A=00011000 A1=00011101 A2=00010010 A2a=00011101 B=00011101 scene=000001 isolated=0"}
+{"k":"disablePickingScene","v":"throws=<none>|during=0/0|later=0/0|A=00011110 A1=00011101 A2=00011110 A2a=00011101 B=00011101 scene=000111 isolated=0"}
+{"k":"enablePickingScene","v":"throws=<none>|during=0/0|later=0/0|A=00010001 A1=00010001 A2=00010001 A2a=00010001 B=00010001 scene=000000 isolated=0"}
+{"k":"disableAllPicking","v":"throws=<none>|during=0/0|later=0/0|A=00011110 A1=00011101 A2=00011110 A2a=00011101 B=00011101 scene=000111 isolated=0"}
+{"k":"enableAllPicking","v":"throws=<none>|during=0/0|later=0/0|A=00010001 A1=00010001 A2=00010001 A2a=00010001 B=00010001 scene=000000 isolated=0"}
+{"k":"disablePickingArray","v":"throws=<none>|during=0/0|later=0/0|A=00010000 A1=00011101 A2=00010001 A2a=00010001 B=00011101 scene=000001 isolated=0"}
+{"k":"enablePickingArrayWithDescendants","v":"throws=<none>|during=0/0|later=0/0|A=00010001 A1=00010001 A2=00010001 A2a=00010001 B=00010001 scene=000000 isolated=0"}
+{"k":"hideNull","v":"throws=ArgumentNullException|during=0/0|later=0/0|A=00010001 A1=00010001 A2=00010001 A2a=00010001 B=00010001 scene=000000 isolated=0"}
+{"k":"hideNullArray","v":"throws=ArgumentNullException|during=0/0|later=0/0|A=00010001 A1=00010001 A2=00010001 A2a=00010001 B=00010001 scene=000000 isolated=0"}
+{"k":"hideAThenAddA3","v":"throws=<none>|during=0/0|later=0/0|A=10000001 A1=11010001 A2=11100001 A2a=11010001 A3=00010001 B=00010001 scene=001000 isolated=0"}
+{"k":"destroyA2a","v":"throws=<none>|during=0/0|later=0/0|A=10000001 A1=11010001 A2=11010001 A2a=destroyed A3=00010001 B=00010001 scene=001000 isolated=0"}
+{"k":"showAllAtEnd","v":"throws=<none>|during=0/0|later=0/0|A=00010001 A1=00010001 A2=00010001 A2a=destroyed A3=00010001 B=00010001 scene=000000 isolated=0"}
+{"k":"complete","v":true}
