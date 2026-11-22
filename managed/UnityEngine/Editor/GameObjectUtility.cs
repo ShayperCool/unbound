@@ -19,9 +19,9 @@ namespace UnityEditor
         /// <summary>"Unique name for a new GameObject" among the children of
         /// <paramref name="parent"/> (null: the active scene's roots), Scripting API 6000.0: the
         /// name itself when no sibling has it, else the name with the lowest free incremental suffix
-        /// of the project's naming scheme ("Prefab (1)", "Prefab (2)"; EditorSettings). A name that
-        /// already ends in such a suffix is numbered from its base (unmeasured, as are case
-        /// differences: names compare ordinally).</summary>
+        /// of the project's naming scheme ("Prefab (1)", "Prefab (2)"; EditorSettings); a name that
+        /// already ends in such a number counts on from it (tests/projects/objectfactory unique.*;
+        /// other schemes and case differences unmeasured: names compare ordinally).</summary>
         public static string GetUniqueNameForSibling(Transform parent, string name) =>
             UniqueName(SiblingNames(parent, parent == null ? UnityEngine.SceneManagement.SceneManager.GetActiveScene() : default, null), name ?? "");
 
@@ -58,8 +58,10 @@ namespace UnityEditor
             if (!taken.Contains(name)) return name;
             var scheme = EditorSettings.gameObjectNamingScheme;
             int digits = Math.Max(1, EditorSettings.gameObjectNamingDigits);
-            var stem = StemOf(name, scheme);
-            for (int n = 1; ; n++)
+            var stem = StemOf(name, scheme, out int numbered);
+            // "Item (5)" taken gives "Item (6)": the count goes on after the name's own number
+            // (tests/projects/objectfactory unique.placed).
+            for (int n = numbered + 1; ; n++)
             {
                 var candidate = Numbered(stem, n, scheme, digits);
                 if (!taken.Contains(candidate)) return candidate;
@@ -77,9 +79,11 @@ namespace UnityEditor
             };
         }
 
-        /// <summary>The name without a trailing number of the scheme.</summary>
-        static string StemOf(string name, EditorSettings.NamingScheme scheme)
+        /// <summary>The name without a trailing number of the scheme, and that number (0 without
+        /// one).</summary>
+        static string StemOf(string name, EditorSettings.NamingScheme scheme, out int number)
         {
+            number = 0;
             int end = name.Length;
             if (scheme == EditorSettings.NamingScheme.SpaceParenthesis)
             {
@@ -95,9 +99,13 @@ namespace UnityEditor
                 EditorSettings.NamingScheme.Underscore => "_",
                 _ => " (",
             };
-            return digitsStart >= separator.Length && string.CompareOrdinal(name, digitsStart - separator.Length, separator, 0, separator.Length) == 0
-                ? name.Substring(0, digitsStart - separator.Length)
-                : name;
+            if (digitsStart < separator.Length || string.CompareOrdinal(name, digitsStart - separator.Length, separator, 0, separator.Length) != 0
+                || !int.TryParse(name.AsSpan(digitsStart, end - digitsStart), NumberStyles.None, CultureInfo.InvariantCulture, out number))
+            {
+                number = 0;
+                return name;
+            }
+            return name.Substring(0, digitsStart - separator.Length);
         }
     }
 
