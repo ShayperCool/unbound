@@ -26,6 +26,22 @@ namespace UnityEngine.Tests
             public void LogException(System.Exception exception, Object context) => m_Inner.LogException(exception, context);
         }
 
+        // Which materials' emission the bake takes (tests/projects/bakedbuffers Glow measures the
+        // first five; a material flagged both emissive and black is Unbound's reading).
+        [Theory]
+        [InlineData(MaterialGlobalIlluminationFlags.BakedEmissive, true)]
+        [InlineData(MaterialGlobalIlluminationFlags.RealtimeEmissive, true)]
+        [InlineData(MaterialGlobalIlluminationFlags.AnyEmissive, true)]
+        [InlineData(MaterialGlobalIlluminationFlags.None, false)]
+        [InlineData(MaterialGlobalIlluminationFlags.EmissiveIsBlack, false)]
+        [InlineData(MaterialGlobalIlluminationFlags.BakedEmissive | MaterialGlobalIlluminationFlags.EmissiveIsBlack, false)]
+        public void EmissionIsBakedForMaterialsFlaggedEmissiveAndNotBlack(MaterialGlobalIlluminationFlags flags, bool emits)
+        {
+            var material = new Material(Shader.Create("Test/BakedEmission", 2000)) { globalIlluminationFlags = flags };
+            Assert.Equal(emits, BakedAtlas.Emits(material));
+            Object.DestroyImmediate(material);
+        }
+
         [Fact]
         public void ALightmappedTerrainLeavesTheSceneWithoutALayout()
         {

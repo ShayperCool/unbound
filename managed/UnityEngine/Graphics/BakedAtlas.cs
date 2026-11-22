@@ -166,9 +166,11 @@ namespace UnityEngine
         /// RealtimeEmissive alone lights the baked lightmaps too, one with neither flag does
         /// not, tests/projects/bakedbuffers Glow; one with both an emissive flag and
         /// EmissiveIsBlack is not measured).</summary>
-        static readonly Func<Material, bool> s_Emits = material =>
+        internal static bool Emits(Material material) =>
             (material.globalIlluminationFlags & MaterialGlobalIlluminationFlags.AnyEmissive) != 0
             && (material.globalIlluminationFlags & MaterialGlobalIlluminationFlags.EmissiveIsBlack) == 0;
+
+        static readonly Func<Material, bool> s_Emits = Emits;
 
         static readonly Action<string, string> s_Warn = Warn;
 
