@@ -15,10 +15,10 @@ color space, including the ETC2 sRGB format for ETC1 in a Linear project. The Sc
 describes dimensions and format selection. The diagnostic and its delivery are measured here.
 [Unity 6000.0 Texture2D constructor](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D-ctor.html)
 
-The aligned controls check construction outcome and dimensions. DXT3, signed EAC and
-ETC2 punchthrough use uncompressed backing storage in Unbound, which reports this limitation
-to its console. PVRTC size validation, other release families and Reinitialize's separate
-size, readability and Crunch validation remain open.
+The aligned controls check construction outcome and dimensions. Compressed constructor requests
+that use uncompressed backing storage report this limitation to Unbound's console. This includes
+DXT3, signed EAC and ETC2 punchthrough. PVRTC size validation, other release families and
+Reinitialize's separate size, readability and Crunch validation remain open.
 [Unity 6000.0 Reinitialize](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.Reinitialize.html)
 
 ```sh

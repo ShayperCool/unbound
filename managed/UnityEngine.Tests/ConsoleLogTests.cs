@@ -118,6 +118,32 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
+        [InlineData(TestRelease.Measured, TextureFormat.PVRTC_RGBA4)]
+        [InlineData(TestRelease.Unmeasured, TextureFormat.EAC_R_SIGNED)]
+        [InlineData(TestRelease.Measured, TextureFormat.EAC_R_SIGNED)]
+        public void Compressed_texture_storage_fallback_is_reported(string release, TextureFormat format)
+        {
+            using var releaseScope = TestRelease.Pin(release);
+            string path = Path.Combine(Logs, "texture-storage.log");
+            Open(path);
+            var uncompressed = new Texture2D(8, 8, TextureFormat.RGBA32, false);
+            var fallback = new Texture2D(8, 8, format, false);
+            try
+            {
+                Assert.Equal(new[]
+                {
+                    "log sentinel",
+                    $"Unbound: Texture2D uses uncompressed fallback storage for '{format}'.",
+                }, File.ReadAllLines(path));
+            }
+            finally
+            {
+                Object.DestroyImmediate(fallback);
+                Object.DestroyImmediate(uncompressed);
+            }
+        }
+
+        [Theory]
         [InlineData(false)]
         [InlineData(true)]
         public void Project_view_logs_use_the_physical_library_and_keep_authored_vetoes(bool explicitPath)

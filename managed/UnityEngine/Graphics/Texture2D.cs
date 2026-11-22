@@ -173,12 +173,13 @@ namespace UnityEngine
                 for (int i = 0; i < m_Pixels.Length; i++) m_Pixels[i] = new Color32(205, 205, 205, 205);
             }
             m_PixelsDirty = true;
-            if (measuredConstructor && (format == TextureFormat.ETC2_RGBA1 || BlockFormats.IsSignedEac(format)
-                || requestedFormat is GraphicsFormat.RGBA_DXT3_UNorm or GraphicsFormat.RGBA_DXT3_SRGB))
+            if (constructor && (requestedFormat is GraphicsFormat graphics
+                ? GraphicsFormatUtility.IsCompressedFormat(graphics)
+                : GraphicsFormatUtility.IsCompressedFormat(format)))
             {
                 string requested = requestedFormat?.ToString() ?? format.ToString();
-                Log.Engine(LogType.Warning, $"{Log.DiagnosticPrefix}Texture2D uses uncompressed fallback storage for '{requested}'.",
-                    null);
+                Log.Write(LogType.Warning, $"{Log.DiagnosticPrefix}Texture2D uses uncompressed fallback storage for '{requested}'.",
+                    "", null);
             }
         }
 
