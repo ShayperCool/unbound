@@ -31,7 +31,6 @@ namespace UnityEngine.Tests
             var error = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Hidden/InternalErrorShader\" { SubShader { Pass { } } }");
             var plain = new Material(UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/MissingMaterialPlain\" { SubShader { Pass { } } }"));
             var go = new GameObject("Missing", typeof(MeshFilter), typeof(MeshRenderer));
-            Material.ForgetError();
             try
             {
                 Assert.NotNull(Material.Error);
@@ -46,6 +45,18 @@ namespace UnityEngine.Tests
                 Assert.Same(Material.Error, draws[1].Material);
                 Assert.Equal(1, draws[1].Submesh);
                 Assert.Equal("Hidden/InternalErrorShader", draws[1].Material.shader.name);
+
+                // More slots than sub-meshes: each further slot draws the last sub-mesh again.
+                renderer.sharedMaterials = new Material[] { plain, plain, null };
+                draws = Draws(renderer);
+                Assert.Equal(3, draws.Count);
+                Assert.Equal(new[] { 0, 1, 1 }, new[] { draws[0].Submesh, draws[1].Submesh, draws[2].Submesh });
+                Assert.Same(Material.Error, draws[2].Material);
+                // A material destroyed in its slot is none.
+                var doomed = new Material(plain);
+                renderer.sharedMaterials = new Material[] { doomed };
+                Object.DestroyImmediate(doomed);
+                Assert.Same(Material.Error, Assert.Single(Draws(renderer)).Material);
 
                 renderer.sharedMaterials = new Material[0];
                 Assert.Empty(Draws(renderer));
@@ -71,7 +82,6 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(go);
                 Object.DestroyImmediate(plain);
                 Object.DestroyImmediate(error);
-                Material.ForgetError();
             }
         }
     }

@@ -3,5 +3,6 @@
 {"k":"builtin_scene.pipeline","v":"none"}
 {"k":"builtin_depth.pipeline","v":"none"}
 {"k":"missing.material","v":"null"}
+{"k":"destroyed.material","v":"null"}
 {"k":"sprite.material","v":"null"}
 {"k":"complete","v":true}

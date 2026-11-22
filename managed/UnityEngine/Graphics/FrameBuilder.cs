@@ -267,8 +267,9 @@ namespace Unbound.Runtime
             {
                 // A slot without a material draws with the error material (measured for mesh,
                 // skinned mesh, sprite and line renderers: tests/projects/missingmaterial).
-                var material = renderer.DrawnMaterial(i, materials[i]) ?? Material.Error;
-                if (material == null) continue;
+                // (also one whose material was destroyed: Unity's null).
+                var material = renderer.DrawnMaterial(i, materials[i]);
+                if (material == null) material = Material.Error;
                 into.Add(new DrawItem
                 {
                     Mesh = meshHandle,

@@ -636,8 +636,6 @@ namespace UnityEngine
                     ps.m_NoiseSumEnabled = true;
         }
 
-
-
         readonly Geometry m_TrailGeometry = new Geometry();
         readonly Dictionary<Camera, Mesh> m_TrailMeshes = new Dictionary<Camera, Mesh>();
 

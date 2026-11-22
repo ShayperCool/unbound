@@ -129,7 +129,6 @@ namespace UnityEngine
             if (m_Dirty || m_Mesh == null || m_BuiltAtRebuild != s_FontRebuilds)
             {
                 Generate(font);
-                ReportMissingMaterial();
             }
             return m_Mesh;
         }
@@ -150,16 +149,6 @@ namespace UnityEngine
             foreach (var material in renderer.m_Materials)
                 if (material != null) return true;
             return false;
-        }
-
-        /// <summary>A renderer without a material (as a scene may serialize it) draws nothing;
-        /// Unbound says so rather than drawing nothing silently.</summary>
-        void ReportMissingMaterial()
-        {
-            var renderer = GetComponent<MeshRenderer>();
-            if (renderer == null || HasMaterial(renderer)) return;
-            Stubs.Ignored("TextMesh without a material",
-                "is not drawn: its MeshRenderer has no material (assign one, such as the font's material)");
         }
 
         void Generate(Font font)

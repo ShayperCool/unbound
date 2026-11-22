@@ -227,20 +227,30 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         m_Out.Append("{\"k\":\"renderers\",\"v\":").Append(lines.Count).Append("}\n");
     }
 
+    /// <summary>More effects than this get no rows of their own (a large scene has hundreds).</summary>
+    const int MostEffectRows = 64;
+
+    /// <summary>The order effects are listed in: by name, then by place.</summary>
+    static int ByNameAndPlace(UnityEngine.VFX.VisualEffect a, UnityEngine.VFX.VisualEffect b)
+    {
+        int order = string.CompareOrdinal(a.name, b.name);
+        if (order != 0) return order;
+        Vector3 p = a.transform.position, q = b.transform.position;
+        return p.x != q.x ? p.x.CompareTo(q.x) : p.y != q.y ? p.y.CompareTo(q.y) : p.z.CompareTo(q.z);
+    }
+
     /// <summary>One row per effect at a shot: its alive particles, and each of its systems'
     /// alive count, capacity and sleeping state (as the effect last read them back), in the
     /// order of the effects' names and places.</summary>
     void Effects()
     {
         var effects = new System.Collections.Generic.List<UnityEngine.VFX.VisualEffect>(FindObjectsByType<UnityEngine.VFX.VisualEffect>(FindObjectsSortMode.None));
-        if (effects.Count > 64) return;
-        effects.Sort((a, b) =>
+        if (effects.Count > MostEffectRows)
         {
-            int order = string.CompareOrdinal(a.name, b.name);
-            if (order != 0) return order;
-            Vector3 p = a.transform.position, q = b.transform.position;
-            return p.x != q.x ? p.x.CompareTo(q.x) : p.y != q.y ? p.y.CompareTo(q.y) : p.z.CompareTo(q.z);
-        });
+            m_Out.Append("{\"k\":\"effect/").Append(m_Frame.ToString("000")).Append("\",\"v\":\"").Append(effects.Count).Append(" effects: rows omitted\"}\n");
+            return;
+        }
+        effects.Sort(ByNameAndPlace);
         var names = new System.Collections.Generic.List<string>();
         for (int i = 0; i < effects.Count; i++)
         {
@@ -263,13 +273,7 @@ public sealed class UnboundSceneCapture : MonoBehaviour
     void EachEffect()
     {
         var effects = new System.Collections.Generic.List<UnityEngine.VFX.VisualEffect>(FindObjectsByType<UnityEngine.VFX.VisualEffect>(FindObjectsSortMode.None));
-        effects.Sort((a, b) =>
-        {
-            int order = string.CompareOrdinal(a.name, b.name);
-            if (order != 0) return order;
-            Vector3 p = a.transform.position, q = b.transform.position;
-            return p.x != q.x ? p.x.CompareTo(q.x) : p.y != q.y ? p.y.CompareTo(q.y) : p.z.CompareTo(q.z);
-        });
+        effects.Sort(ByNameAndPlace);
         if (effects.Count == 0) throw new InvalidOperationException("UnboundSceneCapture: the scene has no active effect");
         var offset = m_Settings.views[0].position;
         var rotation = Quaternion.LookRotation(-offset).eulerAngles;

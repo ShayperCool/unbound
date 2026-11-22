@@ -359,17 +359,22 @@ namespace Unbound.Tests
             Assert.Same(preset, go.GetComponent<MeshRenderer>().sharedMaterial);
         }
 
-        // Loud, not silent: a TextMesh whose MeshRenderer has no material is reported once per
-        // regeneration through the stub report.
+        // A TextMesh whose MeshRenderer has no material draws its text with the error material,
+        // as the Editor does, and says nothing (tests/projects/missingmaterial `Text`).
         [Fact]
-        public void AMissingMaterialIsReported()
+        public void WithoutAMaterialTheTextDrawsWithTheErrorMaterial()
         {
             static int Hits() => Stubs.HitReport().FirstOrDefault(h => h.Key == "TextMesh without a material").Value;
             int before = Hits();
             var text = Make("AB", BoxFont());
-            text.GetComponent<MeshRenderer>().sharedMaterials = new Material[1];
+            var renderer = text.GetComponent<MeshRenderer>();
+            renderer.sharedMaterials = new Material[1];
             Assert.NotNull(Drawn(text));
-            Assert.Equal(before + 1, Hits());
+            Assert.Equal(before, Hits());
+            var draws = new List<Unbound.Runtime.FrameBuilder.DrawItem>();
+            renderer.CollectDraws(new Unbound.Runtime.FrameBuilder.CameraContext { Forward = Vector3.forward }, draws);
+            Assert.Single(draws);
+            Assert.Same(Material.Error, draws[0].Material);
         }
 
         // Measured: a TextMesh without a font (none set, or set to null) uses the built-in

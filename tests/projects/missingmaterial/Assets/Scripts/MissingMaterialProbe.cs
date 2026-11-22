@@ -7,8 +7,8 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 /// <summary>Renderers whose material is missing, under the Universal Render Pipeline and then
-/// the built-in one: what they draw, whether they hide what is behind them, cast shadows and
-/// reach the camera's depth texture. Each scenario's image is written into MISSING_MATERIAL_OUT
+/// the built-in one: what they draw, whether they hide what is behind them and reach the
+/// camera's depth texture. Each scenario's image is written into MISSING_MATERIAL_OUT
 /// (and values.jsonl), then the run exits. See README.md.</summary>
 public class MissingMaterialProbe : MonoBehaviour
 {
@@ -121,6 +121,24 @@ public class MissingMaterialProbe : MonoBehaviour
         line.SetPosition(1, new Vector3(-2.6f, 3.2f, 0f));
         line.startWidth = line.endWidth = 0.2f;
         line.sharedMaterial = null;
+        // One sub-mesh under two slots, the second without a material. The first is translucent
+        // (drawn after the opaque objects), so that the image tells whether the second slot draws
+        // the sub-mesh again without depending on which of two draws at one depth comes first.
+        var extra = Shape(PrimitiveType.Cube, "Extra", new Vector3(1.6f, 0.5f, -1.6f), Vector3.one * 0.8f).GetComponent<MeshRenderer>();
+        // A material destroyed while its renderer keeps it.
+        var destroyed = Shape(PrimitiveType.Cube, "Destroyed", new Vector3(3.2f, 2.9f, 0f), Vector3.one * 0.8f).GetComponent<MeshRenderer>();
+        var doomed = new Material(Shader.Find("Hidden/InternalErrorShader"));
+        destroyed.sharedMaterial = doomed;
+        DestroyImmediate(doomed);
+        // Text of the built-in font whose renderer has no material.
+        var text = new GameObject("Text", typeof(MeshRenderer)).AddComponent<TextMesh>();
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.text = "Ab";
+        text.characterSize = 0.25f;
+        text.fontSize = 40;
+        text.anchor = TextAnchor.MiddleCenter;
+        text.transform.position = new Vector3(-1.2f, 0.6f, -2f);
+        text.GetComponent<MeshRenderer>().sharedMaterial = null;
         // The camera's depth texture over the whole view (the depth scenarios).
         var depthView = Shape(PrimitiveType.Quad, "DepthView", Vector3.zero, Vector3.one * 4f);
         depthView.transform.SetParent(camera.transform, false);
@@ -128,6 +146,8 @@ public class MissingMaterialProbe : MonoBehaviour
         depthView.GetComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Probe/DepthView"));
         depthView.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
 
+        var veil = new Material(Shader.Find("Sprites/Default"));
+        veil.SetColor("_Color", new Color(1f, 0f, 0f, 0.5f));
         foreach (string pipeline in new[] { "urp", "builtin" })
         {
             bool urp = pipeline == "urp";
@@ -143,6 +163,7 @@ public class MissingMaterialProbe : MonoBehaviour
             ground.sharedMaterial = lit;
             ball.sharedMaterial = red;
             halvesRenderer.sharedMaterials = new[] { red, null };
+            extra.sharedMaterials = new[] { veil, null };
             foreach (bool depth in new[] { false, true })
             {
                 depthView.SetActive(depth);
@@ -154,6 +175,7 @@ public class MissingMaterialProbe : MonoBehaviour
             }
         }
         Value("missing.material", missing.sharedMaterial == null ? "\"null\"" : "\"" + missing.sharedMaterial.shader.name + "\"");
+        Value("destroyed.material", destroyed.sharedMaterial == null ? "\"null\"" : "\"alive\"");
         Value("sprite.material", sprite.sharedMaterial == null ? "\"null\"" : "\"" + sprite.sharedMaterial.shader.name + "\"");
         Value("complete", "true");
         int code = 0;
