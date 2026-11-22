@@ -1021,16 +1021,6 @@ pub fn fitting_choice(
             .map(|output| Fit { output, ways: 1 })
             .ok_or_else(|| first_error.expect("at least one layout"));
     }
-    // The margin scales with the part: misfits of a small part are small.
-    let (mut lo, mut hi) = ([f64::MAX; 3], [f64::MIN; 3]);
-    for p in input.positions {
-        for k in 0..3 {
-            lo[k] = lo[k].min(p[k] as f64);
-            hi[k] = hi[k].max(p[k] as f64);
-        }
-    }
-    let size = (0..3).map(|k| (hi[k] - lo[k]).powi(2)).sum::<f64>().sqrt();
-    let margin = (MISFIT_MARGIN_SHARE * size).max(MISFIT_MARGIN_LEAST);
     let normals = match input.charts {
         Charts::Automatic { normals, .. } => Some(normals),
         Charts::Preserved => None,
@@ -1055,7 +1045,7 @@ pub fn fitting_choice(
         let mut order: Vec<usize> = (0..fitting.len()).collect();
         order.sort_by(|&a, &b| key(a).total_cmp(&key(b)));
         let (best, next) = (key(order[0]), key(order[1]));
-        (best.is_finite() && best <= MISFIT_RATIO * next && next - best >= margin)
+        (best.is_finite() && best <= MISFIT_RATIO * next && next - best >= MISFIT_MARGIN)
             .then_some(order[0])
     };
     let (by_place, by_place_and_facing) = (clear(0), clear(1));
@@ -1078,12 +1068,11 @@ pub fn fitting_choice(
 
 /// A layout is taken over the others that fit the precomputed chart mask too when its misfit
 /// (by place, or by place and facing: see [`misfit`]) is at most this share of every other's,
-/// and smaller by at least this share of the part's size (the diagonal of its bounds; at
-/// least the least margin, in metres): misfits that a fit with too few groups brings near zero
-/// for every layout tell nothing. And the other measure must not clearly take another layout.
+/// and smaller by at least this many metres (misfits that a fit with too few groups brings
+/// near zero for every layout tell nothing), and the other measure does not clearly take
+/// another layout.
 const MISFIT_RATIO: f64 = 0.5;
-const MISFIT_MARGIN_SHARE: f64 = 0.05;
-const MISFIT_MARGIN_LEAST: f64 = 1e-4;
+const MISFIT_MARGIN: f64 = 0.05;
 /// A difference of normals counts as a distance of this many metres: a texel whose surface
 /// faces otherwise than the points the cluster sampled there (another face of a box) weighs
 /// as much as being that far from them.

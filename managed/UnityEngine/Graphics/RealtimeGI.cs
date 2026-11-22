@@ -844,9 +844,8 @@ namespace UnityEngine
             if (status > 0)
             {
                 // Several ways of laying its charts out fit the system's precomputed layout and
-                // its data does not tell them apart (a part too small for the system's
-                // clusters): the first is drawn.
-                Warn("ways:" + renderer.GetInstanceID(), $"'{renderer.name}': {status} ways of laying out its automatic realtime charts fit the precomputed layout and the data does not tell which the Editor's precompute made (the part is too small for its clusters); one is drawn, so the realtime lighting of its charts may be exchanged.");
+                // its data does not tell them apart: the first is drawn.
+                Warn("ways:" + renderer.GetInstanceID(), $"'{renderer.name}': {status} ways of laying out its automatic realtime charts fit the precomputed layout and the system's data does not tell which the Editor's precompute made; one is drawn, so the realtime lighting of its charts may be exchanged.");
                 status = 0;
             }
             if (status != 0)
