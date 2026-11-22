@@ -48,7 +48,7 @@ namespace UnityEngine
             }
             tex.Reinitialize(width, height, jpeg ? TextureFormat.RGB24 : TextureFormat.ARGB32, tex.mipmapCount > 1);
             tex.SetPixels32(pixels);
-            tex.Apply(true, markNonReadable);
+            tex.ApplyQuietly(true, markNonReadable);
             return true;
         }
 

@@ -119,6 +119,72 @@ namespace UnityEngine.Tests
             }));
         }
 
+        /// <summary>A document in an older serialization (its keys unprefixed, another version) is
+        /// kept as read when its object is edited: nothing is mixed into it.</summary>
+        [Fact]
+        public void AnOlderSerializationIsKeptAsRead()
+        {
+            const string older = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!134 &13400000\nPhysicMaterial:\n"
+                + "  m_ObjectHideFlags: 0\n  m_Name: Slippy\n  dynamicFriction: 0.1\n  staticFriction: 0.1\n  bounciness: 0\n"
+                + "  frictionCombine: 0\n  bounceCombine: 0\n";
+            Assert.Null(Rewrite(older, o => { ((PhysicsMaterial)o).bounciness = 0.9f; return o; }));
+            var mesh = Reference("Assets/Native/Tri.asset");
+            Assert.Null(Rewrite(mesh.Replace("  serializedVersion: 11\n", "  serializedVersion: 10\n"), o => o));
+            Assert.Null(Rewrite(mesh.Replace("    serializedVersion: 3\n    m_VertexCount", "    serializedVersion: 2\n    m_VertexCount"), o => o));
+        }
+
+        /// <summary>A mesh read from its file holds its file's layout; bone weights set later add the
+        /// skin channels to it, so they are listed and written.</summary>
+        [Fact]
+        public void BoneWeightsSetOnAReadMeshAreInItsLayout()
+        {
+            var mesh = new Mesh();
+            try
+            {
+                mesh.ReadSerialized(TestYaml.DocumentBody(Reference("Assets/Native/Tri.asset")), new NullResolver());
+                Assert.False(mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.BlendWeight));
+                mesh.boneWeights = new[] { new BoneWeight { weight0 = 1f }, new BoneWeight { weight0 = 1f }, new BoneWeight { weight0 = 1f } };
+                Assert.True(mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.BlendWeight));
+                Assert.True(mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.BlendIndices));
+                Assert.Equal(3, mesh.boneWeights.Length);
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        /// <summary>The engine's own applies (a font atlas, a terrain's alphamaps, an import, LoadImage)
+        /// do not dirty an asset texture; a script's Apply does. Under a release family without the
+        /// measurement, edits of an asset this session did not make dirty nothing and its document
+        /// is kept as read.</summary>
+        [Fact]
+        public void EngineAppliesAndUnmeasuredFamiliesDirtyNothing()
+        {
+            var texture = new Texture2D(2, 2);
+            var physics = new PhysicsMaterial();
+            try
+            {
+                texture.IsPersistentAsset = true;
+                texture.ApplyQuietly();
+                Assert.False(EditorUtility.IsDirty(texture));
+                texture.Apply();
+                Assert.True(EditorUtility.IsDirty(texture));
+                EditorUtility.ClearDirty(texture);
+                using (TestRelease.Pin(TestRelease.Unmeasured))
+                {
+                    texture.Apply();
+                    Assert.False(EditorUtility.IsDirty(texture));
+                    physics.IsPersistentAsset = true;
+                    physics.bounciness = 0.9f;
+                    Assert.False(EditorUtility.IsDirty(physics));
+                    Assert.Null(Rewrite(Reference("Assets/Native/Bouncy.physicMaterial"), o => { ((PhysicsMaterial)o).bounciness = 0.9f; return o; }));
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(physics);
+            }
+        }
+
         [Fact]
         public void EveryUnityWrittenNativeDocumentIsWrittenAgainUnchanged()
         {

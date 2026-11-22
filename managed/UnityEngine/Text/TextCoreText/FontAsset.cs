@@ -897,7 +897,7 @@ namespace UnityEngine.TextCore.Text
             if (setAtlasSizeToZero) texture.Reinitialize(1, 1, format, false);
             else if (texture.width != m_AtlasWidth || texture.height != m_AtlasHeight) texture.Reinitialize(m_AtlasWidth, m_AtlasHeight, format, false);
             FontEngine.ResetAtlasTexture(texture);
-            texture.Apply();
+            texture.ApplyQuietly();
         }
 
         void DestroyAtlasTextures()
@@ -947,7 +947,7 @@ namespace UnityEngine.TextCore.Text
         {
             if (s_AtlasTexturesUpdateQueue.Count == 0) return;
             foreach (var texture in s_AtlasTexturesUpdateQueue)
-                if (texture != null) texture.Apply(false, false);
+                if (texture != null) texture.ApplyQuietly(false, false);
             s_AtlasTexturesUpdateQueue.Clear();
             s_AtlasTexturesUpdateQueueLookup.Clear();
         }

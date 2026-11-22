@@ -63,7 +63,7 @@ namespace UnityEngine
         void Edited()
         {
             m_ChangeVersion++;
-            if (IsPersistentAsset) UnityEditor.EditorUtility.SetDirty(this);
+            if (IsPersistentAsset && Compat.ReadAssetSavesMeasured) UnityEditor.EditorUtility.SetDirty(this);
         }
 
         internal void CopyValues(PhysicsMaterial s)

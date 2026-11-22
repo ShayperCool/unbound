@@ -78,10 +78,16 @@ namespace Unbound.Runtime
                 // tests/projects/scenesave native-saves model.dirtyAfter, a model's mesh). A prefab's
                 // are written by prefab saves.
                 if (info.Kind == "prefab")
-                {
                     Debug.LogWarning($"Unbound: {info.Path} is not saved: Unbound does not write prefab assets from AssetDatabase.SaveAssets yet.");
+                if (info.Kind == "prefab" || !Compat.ReadAssetSavesMeasured)
                     foreach (var o in dirty) EditorUtility.ClearDirty(o);
-                }
+                return;
+            }
+            // A package the project does not hold (registry, built-in, Git) is shared, not the
+            // project's: nothing is written into it, and its objects stay dirty (unmeasured).
+            if (AssetDatabase.IsImmutablePackagePath(info.Path))
+            {
+                Debug.LogWarning($"Unbound: {info.Path} is not saved: it is in a package the project does not hold.");
                 return;
             }
             var docs = TextDocuments(File.ReadAllText(info.File), loaded.Objects, dirty);

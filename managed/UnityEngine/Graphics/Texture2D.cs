@@ -398,7 +398,9 @@ namespace UnityEngine
             // this session or read from its file; SetPixel alone does not mark it (matches the Unity
             // 6000.0.71f1 Editor, tests/projects/scenesave engine-assets alphaEdit, native-saves
             // texture.dirtySetPixel, texture.dirty).
-            if (IsPersistentAsset) UnityEditor.EditorUtility.SetDirty(this);
+            // The engine's own applies (font atlases, terrain alphamaps, imports) mark nothing.
+            if (IsPersistentAsset && !m_QuietApply && (Compat.ReadAssetSavesMeasured || UnityEditor.AssetDatabase.CreatedThisSession(this)))
+                UnityEditor.EditorUtility.SetDirty(this);
             if (makeNoLongerReadable)
             {
                 RetireStore();
@@ -413,6 +415,18 @@ namespace UnityEngine
         }
 
         public void Apply(bool updateMipmaps) => Apply(updateMipmaps, false);
+
+        bool m_QuietApply;
+
+        /// <summary>Apply by the engine itself (not a script's edit): the asset is not marked
+        /// dirty. Whether the Editor marks assets its own updates apply (a dynamic font's atlas,
+        /// a terrain's alphamaps) is unmeasured; Unbound writes nothing for them.</summary>
+        internal void ApplyQuietly(bool updateMipmaps = true, bool makeNoLongerReadable = false)
+        {
+            m_QuietApply = true;
+            try { Apply(updateMipmaps, makeNoLongerReadable); }
+            finally { m_QuietApply = false; }
+        }
 
         public void Apply() => Apply(true, false);
 

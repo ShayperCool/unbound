@@ -505,7 +505,7 @@ namespace UnityEngine
                     var pixels = new Color32[m_AlphamapResolution * m_AlphamapResolution];
                     Array.Fill(pixels, new Color32(255, 0, 0, 0));
                     t.SetPixels32(pixels);
-                    t.Apply();
+                    t.ApplyQuietly();
                 }
                 m_SplatVersion++;
             }
@@ -542,7 +542,7 @@ namespace UnityEngine
                 filterMode = FilterMode.Bilinear,
             };
             t.SetPixels32(new Color32[m_AlphamapResolution * m_AlphamapResolution]);
-            t.Apply();
+            t.ApplyQuietly();
             return t;
         }
 
@@ -607,7 +607,7 @@ namespace UnityEngine
                         }
                     }
                 texture.SetPixels32(pixels);
-                texture.Apply();
+                texture.ApplyQuietly();
             }
             m_SplatVersion++;
         }

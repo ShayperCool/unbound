@@ -1329,8 +1329,10 @@ namespace Unbound.Runtime
     /// hierarchy (an asset file's object, an object embedded in a scene).</summary>
     internal static class NativeDocuments
     {
-        /// <summary>Writes the object's fields into its document: a script object's whole body, a material's modeled fields over the file's; false (the document
-        /// kept as read) for other classes.</summary>
+        /// <summary>Writes the object's fields into its document: a script object's whole body, a
+        /// material's modeled fields over the file's, a V1 sprite atlas's changed settings, an edited
+        /// mesh's, texture's or physics material's data over the file's; false (the document kept
+        /// as read) for other classes and for those it cannot write.</summary>
         /// <param name="references">Overrides how references are written (a scene's checks).</param>
         internal static bool Write(YTextDocument doc, Object o, Dictionary<Object, long> ids, AssetDatabaseRuntime.Locations locations, ref int unlocated,
             Func<Object, string> references = null)
@@ -1351,23 +1353,37 @@ namespace Unbound.Runtime
                 WriteSpriteAtlas(doc.Body, atlas);
                 return true;
             }
-            // An edited native asset read from its file. Not edited, or a document without the data
-            // Unbound reads (it was not read from it), it is kept as read; so are unreadable,
-            // compressed and block-compressed ones (unmeasured).
-            if (ReadNativeKeys(o) is string[] keys && EditorUtility.IsDirty(o))
+            // An edited native asset read from its file. Not edited, or a document in another
+            // serialization than the release's (an older version, keys it does not hold) is kept as
+            // read; so are unreadable, compressed and block-compressed ones (unmeasured).
+            if (ReadNativeKeys(o) is string[] keys && EditorUtility.IsDirty(o) && Compat.ReadAssetSavesMeasured)
             {
                 if (!UnityYamlWriter.WritesNew(o)) return false;
-                if (o is Mesh && doc.Body.Get("m_VertexData") == null) return false;
-                if (o is Texture2D && doc.Body.Get("_typelessdata") == null) return false;
                 var text = UnityYamlWriter.Write(new[] { o }, new Dictionary<Object, long>(ReferenceEqualityComparer.Instance) { [o] = doc.FileId });
                 var written = UnityYamlText.Parse(text)[0].Body;
+                if (!SameSerialization(doc.Body, written, keys)) return false;
                 var kept = YText.Map();
-                foreach (var key in keys)
-                    if (written.Get(key) is YText value) kept.Set(key, value);
+                foreach (var key in keys) kept.Set(key, written.Get(key));
                 SceneFiles.Overlay(doc.Body, kept, ref unlocated);
                 return true;
             }
             return false;
+        }
+
+        /// <summary>Whether a file's document is in the serialization the writer writes: the same
+        /// serialized version, of the document and of each written map that has one, and every
+        /// written key present.</summary>
+        static bool SameSerialization(YText file, YText written, string[] keys)
+        {
+            if (file.Get("serializedVersion")?.Raw != written.Get("serializedVersion")?.Raw) return false;
+            foreach (var key in keys)
+            {
+                var value = written.Get(key);
+                var held = file.Get(key);
+                if (value == null || held == null) return false;
+                if (value.Kind == YKind.Map && value.Get("serializedVersion") is YText version && held.Get("serializedVersion")?.Raw != version.Raw) return false;
+            }
+            return true;
         }
 
         /// <summary>The keys of a native asset read from its file that SaveAssets writes from the

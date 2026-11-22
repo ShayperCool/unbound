@@ -201,7 +201,9 @@ namespace UnityEngine
             // of one read from its file and of a model's mesh (matches the Unity 6000.0.71f1 Editor,
             // tests/projects/scenesave engine-assets richEdit, native-saves mesh.dirty,
             // model.dirtyVertices). Reading the mesh or loading a model's geometry is no edit.
-            if (IsPersistentAsset && !m_Reading && !m_LoadingModel) UnityEditor.EditorUtility.SetDirty(this);
+            if (IsPersistentAsset && !m_Reading && !m_LoadingModel
+                && (Compat.ReadAssetSavesMeasured || UnityEditor.AssetDatabase.CreatedThisSession(this)))
+                UnityEditor.EditorUtility.SetDirty(this);
         }
 
         public bool isReadable => m_IsReadable;
@@ -928,7 +930,22 @@ namespace UnityEngine
         public BoneWeight[] boneWeights
         {
             get { EnsureModelLoaded(); return m_BoneWeights != null ? (BoneWeight[])m_BoneWeights.Clone() : Array.Empty<BoneWeight>(); }
-            set { EnsureModelLoaded(); m_BoneWeights = Checked(value, "boneWeights"); InvalidatePackedChannel(VertexAttribute.BlendWeight); InvalidatePackedChannel(VertexAttribute.BlendIndices); Changed(indices: false); }
+            set
+            {
+                EnsureModelLoaded();
+                m_BoneWeights = Checked(value, "boneWeights");
+                // A layout without skin channels (one read from a file) gets them, as a new mesh's
+                // layout lists them.
+                if (m_BoneWeights != null && m_Layout != null && !LayoutHas(VertexAttribute.BlendWeight))
+                {
+                    Array.Resize(ref m_Layout, m_Layout.Length + 2);
+                    m_Layout[m_Layout.Length - 2] = new VertexAttributeDescriptor(VertexAttribute.BlendWeight, VertexAttributeFormat.Float32, 4, 1);
+                    m_Layout[m_Layout.Length - 1] = new VertexAttributeDescriptor(VertexAttribute.BlendIndices, VertexAttributeFormat.UInt32, 4, 1);
+                }
+                InvalidatePackedChannel(VertexAttribute.BlendWeight);
+                InvalidatePackedChannel(VertexAttribute.BlendIndices);
+                Changed(indices: false);
+            }
         }
 
         public Matrix4x4[] bindposes

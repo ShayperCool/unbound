@@ -351,7 +351,7 @@ namespace Unbound.UIElements
                 texture.wrapModeV = (TextureWrapMode)Int(settings, "m_WrapV");
                 texture.anisoLevel = Int(settings, "m_Aniso");
             }
-            texture.Apply(false, false);
+            texture.ApplyQuietly(false, false);
             return texture;
         }
 

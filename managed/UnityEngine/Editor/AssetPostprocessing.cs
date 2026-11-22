@@ -359,7 +359,7 @@ namespace UnityEditor
                     // on the CPU only for a readable texture.
                     if (texture.m_Pixels != null || texture.m_Hdr != null)
                     {
-                        try { texture.Apply(false, !readable); }
+                        try { texture.ApplyQuietly(false, !readable); }
                         catch (Exception e) { Debug.LogException(e, texture); }
                     }
                     texture.m_IsReadable = readable;
@@ -499,7 +499,7 @@ namespace UnityEditor
             try
             {
                 texture.LoadRawTextureData(blocks.ToArray());
-                texture.Apply(false, !readable);
+                texture.ApplyQuietly(false, !readable);
             }
             catch (Exception e)
             {
