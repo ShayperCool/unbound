@@ -240,12 +240,106 @@ public static class BuffersSetup
         Save(scene, "Bare");
     }
 
+    static Light NewLight(string name, LightType type, Vector3 position, Vector3 euler, Color color, float intensity, LightmapBakeType mode = LightmapBakeType.Baked)
+    {
+        var go = new GameObject(name);
+        go.transform.position = position;
+        go.transform.eulerAngles = euler;
+        var light = go.AddComponent<Light>();
+        light.type = type;
+        light.color = color;
+        light.intensity = intensity;
+        light.lightmapBakeType = mode;
+        light.shadows = LightShadows.Hard;
+        return light;
+    }
+
+    /// <summary>A scene to light: no sky and no ambient light, 16 direct samples (every sample
+    /// of a texel weighs the same), with a ground, a cube and a sphere.</summary>
+    static Scene Lit(string name, MixedLightingMode mixed = MixedLightingMode.IndirectOnly)
+    {
+        var scene = NewScene(name, 4f, 128);
+        Lightmapping.lightingSettings.directSampleCount = 16;
+        Lightmapping.lightingSettings.mixedBakeMode = mixed;
+        RenderSettings.skybox = null;
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = Color.black;
+        Prim(PrimitiveType.Plane, "Ground", Vector3.zero, Vector3.zero, Vector3.one);
+        Prim(PrimitiveType.Cube, "Cube", new Vector3(0f, 0.5f, 0f), new Vector3(0f, 20f, 0f), Vector3.one);
+        Prim(PrimitiveType.Sphere, "Sphere", new Vector3(2f, 0.5f, 1f), Vector3.zero, Vector3.one);
+        return scene;
+    }
+
+    /// <summary>A coloured directional light with an Indirect Multiplier, over renderers that do
+    /// not cast shadows, do not receive them, are lit by light probes (and cast them), are
+    /// mirrored, and have Scale In Lightmap 0.</summary>
+    static void Sun()
+    {
+        var scene = Lit("Sun");
+        NewLight("Sun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), new Color(1f, 0.5f, 0.25f), 2f).bounceIntensity = 3f;
+        Prim(PrimitiveType.Cube, "NoCast", new Vector3(-2f, 0.5f, 2f), Vector3.zero, Vector3.one).GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        Prim(PrimitiveType.Cube, "NoReceive", new Vector3(-0.4f, 0.25f, -1.6f), Vector3.zero, new Vector3(1f, 0.5f, 1f)).GetComponent<MeshRenderer>().receiveShadows = false;
+        Prim(PrimitiveType.Cube, "Probes", new Vector3(3f, 0.5f, -2f), new Vector3(0f, 45f, 0f), Vector3.one).GetComponent<MeshRenderer>().receiveGI = ReceiveGI.LightProbes;
+        Prim(PrimitiveType.Capsule, "Mirrored", new Vector3(-3f, 1f, -2f), new Vector3(0f, 40f, 20f), new Vector3(-1f, 1f, 1f));
+        Set(Prim(PrimitiveType.Cube, "Zero", new Vector3(1f, 0.5f, -3f), Vector3.zero, Vector3.one), "m_ScaleInLightmap", p => p.floatValue = 0f);
+        Prim(PrimitiveType.Cube, "ShadowsOnly", new Vector3(-1f, 2.5f, 3f), Vector3.zero, new Vector3(1f, 0.2f, 1f)).GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+        Save(scene, "Sun");
+    }
+
+    /// <summary>Point and spot lights: ranges that end on the ground, wide and narrow cones, one
+    /// without shadows, one inside a renderer, and lights that are disabled, inactive or beyond
+    /// everything.</summary>
+    static void Lamps()
+    {
+        var scene = Lit("Lamps");
+        NewLight("Bulb", LightType.Point, new Vector3(1f, 2f, -1f), Vector3.zero, Color.white, 2f).range = 6f;
+        NewLight("Small", LightType.Point, new Vector3(-3f, 0.5f, 3f), Vector3.zero, new Color(0.2f, 1f, 0.4f), 1.5f).range = 1.5f;
+        var bare = NewLight("NoShadows", LightType.Point, new Vector3(3.5f, 1f, 3f), Vector3.zero, new Color(1f, 0.3f, 0.3f), 1f);
+        bare.range = 4f;
+        bare.shadows = LightShadows.None;
+        var wide = NewLight("Wide", LightType.Spot, new Vector3(-2f, 3f, 0f), new Vector3(60f, 90f, 0f), Color.white, 3f);
+        wide.range = 10f;
+        wide.spotAngle = 60f;
+        var narrow = NewLight("Narrow", LightType.Spot, new Vector3(4f, 4f, -4f), new Vector3(45f, -45f, 30f), new Color(0.4f, 0.6f, 1f), 8f);
+        narrow.range = 12f;
+        narrow.spotAngle = 20f;
+        var broad = NewLight("Broad", LightType.Spot, new Vector3(-4f, 1f, -4f), new Vector3(10f, 45f, 0f), Color.white, 1f);
+        broad.range = 5f;
+        broad.spotAngle = 170f;
+        // (Off the sphere's centre, so that no ray to it runs along an edge of the sphere's mesh.)
+        NewLight("Inside", LightType.Point, new Vector3(2.013f, 0.517f, 0.991f), Vector3.zero, Color.white, 4f).range = 3f;
+        NewLight("Disabled", LightType.Point, new Vector3(0f, 3f, 0f), Vector3.zero, Color.white, 5f).enabled = false;
+        NewLight("Inactive", LightType.Point, new Vector3(0f, 3f, 0f), Vector3.zero, Color.white, 5f).gameObject.SetActive(false);
+        NewLight("Away", LightType.Point, new Vector3(100f, 3f, 0f), Vector3.zero, Color.white, 5f).range = 2f;
+        Save(scene, "Lamps");
+    }
+
+    /// <summary>A mixed sun, a baked bulb and a realtime spot, in each Lighting Mode.</summary>
+    static void Modes(string name, MixedLightingMode mixed)
+    {
+        var scene = Lit(name, mixed);
+        NewLight("MixedSun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), Color.white, 1f, LightmapBakeType.Mixed);
+        NewLight("BakedBulb", LightType.Point, new Vector3(1f, 2f, -1f), Vector3.zero, new Color(1f, 0.8f, 0.6f), 2f).range = 6f;
+        var spot = NewLight("RealtimeSpot", LightType.Spot, new Vector3(-2f, 3f, 0f), new Vector3(60f, 90f, 0f), Color.white, 3f, LightmapBakeType.Realtime);
+        spot.range = 10f;
+        var mixedSpot = NewLight("MixedSpot", LightType.Spot, new Vector3(3f, 3f, 3f), new Vector3(50f, 225f, 0f), new Color(0.5f, 0.7f, 1f), 4f, LightmapBakeType.Mixed);
+        mixedSpot.range = 10f;
+        mixedSpot.spotAngle = 50f;
+        Save(scene, name);
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
         try
         {
-            var all = new (string Name, Action Make)[] { ("Shapes", Shapes), ("Samples", Samples), ("Charts", Charts), ("Bare", Bare) };
+            var all = new (string Name, Action Make)[]
+            {
+                ("Shapes", Shapes), ("Samples", Samples), ("Charts", Charts), ("Bare", Bare), ("Sun", Sun), ("Lamps", Lamps),
+                ("ModeIndirect", () => Modes("ModeIndirect", MixedLightingMode.IndirectOnly)),
+                ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
+                ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
+            };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
             if (!AssetDatabase.IsValidFolder(Folder)) AssetDatabase.CreateFolder("Assets", "Scenes");

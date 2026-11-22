@@ -1,0 +1,42 @@
+{
+ "mixedMode": 0,
+ "lights": [
+  {
+   "color": [
+    4.594793796539307,
+    1.0,
+    0.21404114365577698
+   ],
+   "indirectColor": [
+    51.514892578125,
+    11.211579322814941,
+    2.440061569213867
+   ],
+   "orientation": [
+    0.4082179367542267,
+    -0.2345697283744812,
+    0.10938166081905365,
+    0.8754261136054993
+   ],
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "range": 0.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 1.0,
+   "innerConeAngle": 1.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 0,
+   "mode": 2,
+   "falloff": 4,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Sun"
+  }
+ ]
+}

@@ -53,7 +53,10 @@ def read_r2d(path):
     is 'R2d!', the width and height, eight format bytes (bytes per texel, channels, ...), then
     chunks of rows (compressed flag, first row, rows, byte size), each LZ4-compressed and laid
     out as planes: for each channel, for each byte of its float, the rows."""
-    data = open(path, 'rb').read()
+    return parse_r2d(open(path, 'rb').read(), path)
+
+
+def parse_r2d(data, path='an r2d buffer'):
     if data[:4] != b'R2d!':
         raise ValueError(f'{path}: not an r2d file')
     width, height = struct.unpack_from('<II', data, 4)

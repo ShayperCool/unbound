@@ -15,7 +15,8 @@ using UnityEngine;
 /// what <see cref="Lightmapping.Bake"/> starts from), written as the Editor serializes them, and
 /// the Progressive CPU lightmapper's bake of them (<c>LightBaker.Bake</c>), which writes every
 /// buffer of each lightmap unprocessed into <c>&lt;out&gt;/&lt;scene&gt;/lightmapRequest0</c>.
-/// The instances' names go to <c>instances.txt</c> in the bake input's order.</para>
+/// The instances' and the lights' names go to <c>instances.txt</c> and <c>lights.txt</c> in the
+/// bake input's order.</para>
 /// <para>With <c>BAKED_BUFFERS_AUTO</c> set (Unbound's <c>unbound test</c>) it starts itself once
 /// Edit mode has run a few updates and bakes with <see cref="Lightmapping.Bake"/>; Unbound writes
 /// its bake's buffers where <c>UNBOUND_BAKED_GI_BUFFERS</c> says. What is logged meanwhile goes
@@ -128,6 +129,15 @@ public static class BuffersRecord
             names.Add(transform == null ? "?" : PathOf(transform));
         }
         File.WriteAllLines(Path.Combine(folder, "instances.txt"), names);
+        var lights = new List<string>();
+        uint lightCount = (uint)Call(input.GetType(), "GetLightCount", input);
+        for (int i = 0; i < lightCount; i++)
+        {
+            var source = EditorUtility.InstanceIDToObject((int)Call(mapType, "GetLightInstanceID", map, i));
+            var transform = source is Component component ? component.transform : source is GameObject go ? go.transform : null;
+            lights.Add(transform == null ? "?" : PathOf(transform));
+        }
+        File.WriteAllLines(Path.Combine(folder, "lights.txt"), lights);
         if (!(bool)Call(device.GetType(), "Initialize", device, Enum.Parse(baker.GetNestedType("Backend"), "CPU")))
             return "the CPU lightmapper could not be initialized";
         return "bake " + Call(baker, "Bake", null, input, requests, probes, device);

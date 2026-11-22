@@ -1,0 +1,301 @@
+{
+ "mixedMode": 0,
+ "lights": [
+  {
+   "color": [
+    12.92200756072998,
+    31.53049659729004,
+    97.00586700439453
+   ],
+   "indirectColor": [
+    12.92200756072998,
+    31.53049659729004,
+    97.00586700439453
+   ],
+   "orientation": [
+    0.2500000298023224,
+    -0.4330127537250519,
+    0.362372487783432,
+    0.7865660786628723
+   ],
+   "position": [
+    4.0,
+    4.0,
+    -4.0
+   ],
+   "range": 12.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.3490658402442932,
+   "innerConeAngle": 0.25212591886520386,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 2,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Narrow"
+  },
+  {
+   "color": [
+    34.49324417114258,
+    34.49324417114258,
+    34.49324417114258
+   ],
+   "indirectColor": [
+    34.49324417114258,
+    34.49324417114258,
+    34.49324417114258
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    100.0,
+    3.0,
+    0.0
+   ],
+   "range": 2.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Away"
+  },
+  {
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "indirectColor": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "orientation": [
+    0.08052139729261398,
+    0.3812272250652313,
+    -0.033353060483932495,
+    0.9203639030456543
+   ],
+   "position": [
+    -4.0,
+    1.0,
+    -4.0
+   ],
+   "range": 5.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 2.96705961227417,
+   "innerConeAngle": 2.8993375301361084,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 2,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Broad"
+  },
+  {
+   "color": [
+    11.211579322814941,
+    11.211579322814941,
+    11.211579322814941
+   ],
+   "indirectColor": [
+    11.211579322814941,
+    11.211579322814941,
+    11.211579322814941
+   ],
+   "orientation": [
+    0.3535534143447876,
+    0.6123724579811096,
+    -0.3535534143447876,
+    0.6123724579811096
+   ],
+   "position": [
+    -2.0,
+    3.0,
+    0.0
+   ],
+   "range": 10.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 1.0471975803375244,
+   "innerConeAngle": 0.7866899967193604,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 2,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Wide"
+  },
+  {
+   "color": [
+    21.11212730407715,
+    21.11212730407715,
+    21.11212730407715
+   ],
+   "indirectColor": [
+    21.11212730407715,
+    21.11212730407715,
+    21.11212730407715
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    2.013000011444092,
+    0.5170000195503235,
+    0.9909999966621399
+   ],
+   "range": 3.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Inside"
+  },
+  {
+   "color": [
+    4.594793796539307,
+    4.594793796539307,
+    4.594793796539307
+   ],
+   "indirectColor": [
+    4.594793796539307,
+    4.594793796539307,
+    4.594793796539307
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    1.0,
+    2.0,
+    -1.0
+   ],
+   "range": 6.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Bulb"
+  },
+  {
+   "color": [
+    0.07323896884918213,
+    2.440061569213867,
+    0.3185468316078186
+   ],
+   "indirectColor": [
+    0.07323896884918213,
+    2.440061569213867,
+    0.3185468316078186
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    -3.0,
+    0.5,
+    3.0
+   ],
+   "range": 1.5,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Small"
+  },
+  {
+   "color": [
+    1.0,
+    0.07323896884918213,
+    0.07323896884918213
+   ],
+   "indirectColor": [
+    1.0,
+    0.07323896884918213,
+    0.07323896884918213
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    3.5,
+    1.0,
+    3.0
+   ],
+   "range": 4.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": false,
+   "shadowMaskChannel": 4294967295,
+   "name": "NoShadows"
+  }
+ ]
+}

@@ -2,9 +2,10 @@
 """The buffers of baked lightmaps before lighting: which texels of each lightmap are used, the
 chart of each and the surface normal at each of its samples, after a bake in Edit mode.
 
-    bake_buffers.py create [--scene S]  # authoring: the Editor makes Assets/Scenes (BuffersSetup.Create), or adds scene S
+    bake_buffers.py create [--scene S,..]  # authoring: the Editor makes Assets/Scenes (BuffersSetup.Create), or adds scenes
     bake_buffers.py native --label L    # an Editor capture (batch mode on the GPU runner)
-    bake_buffers.py publish L1 L2       # two byte-identical captures -> Reference/unity-<version>/
+    bake_buffers.py publish L1 L2       # two byte-identical captures -> Reference/unity-<version>/ (what is there stays
+                                        # and must be the captures' too; what is new is added)
     bake_buffers.py engine --label L    # Unbound (unbound test, Edit mode)
     bake_buffers.py compare --label L   # an engine run's buffers against the reference
     bake_buffers.py check               # engine run + compare
@@ -54,7 +55,17 @@ NORMAL_TOLERANCE = 1e-5
 # A sample without a surface has this as its fourth value.
 EMPTY = -1.0e6
 UNBOUND_NOTE = 'Unbound'
-BUFFERS = ('occupancy{}.r2d', 'chartIndex{}.int', 'normal{}.r2d')
+BUFFERS = ('occupancy{}.r2d', 'chartIndex{}.int', 'normal{}.r2d', 'irradianceDirect{}.r2d')
+# The direct light of a texel is compared within this, times its value where that is above 1.
+# The Editor's and Unbound's 32-bit arithmetic differ in their last bits, which a narrow spot
+# cone's falloff multiplies (a 20 degree cone: by about 65 before its table's slope); the worst
+# seen is 2.5e-5 (`Lamps`).
+DIRECT_TOLERANCE = 1e-4
+# Two Editor bakes of one scene give a texel's light within this (see `repeats`).
+REPEAT_TOLERANCE = 2e-6
+# Of a bake input's light: what Unbound's bake takes of it, the numbers within this (relative).
+LIGHT_FIELDS = ('type', 'mode', 'color', 'indirectColor', 'position', 'orientation', 'range', 'coneAngle', 'castsShadows')
+LIGHT_TOLERANCE = 2e-6
 
 
 def scenes():
@@ -72,25 +83,28 @@ def editor(out, method, env, label, graphics=True, progress=None):
     return int(result.get('exit_code') != 0 or bool(result.get('forced_exit')))
 
 
-def create(scene=None):
+def create(names=None):
+    """Makes all the scenes, or adds those named (comma-separated); nothing that exists is replaced."""
     target = PROBE/'Assets/Scenes'
-    if scene is None and target.exists():
+    names = names.split(',') if names else None
+    if names is None and target.exists():
         sys.exit(f'refusing to overwrite {target}')
-    if scene is not None and (target/(scene + '.unity')).exists():
-        sys.exit(f'refusing to overwrite {scene}')
+    for name in names or []:
+        if (target/(name + '.unity')).exists():
+            sys.exit(f'refusing to overwrite {name}')
     out = WORK/private_label('create')
     project_copy(PROBE, out/'project', package_cache=False)
-    env = {'BAKED_BUFFERS_SCENES': scene} if scene else {}
+    env = {'BAKED_BUFFERS_SCENES': ','.join(names)} if names else {}
     if editor(out, 'BuffersSetup.Create', env, 'create', graphics=False):
         return 1
     made = out/'project/Assets/Scenes'
-    if scene is None:
+    if names is None:
         shutil.copytree(made, target)
         shutil.copy2(out/'project/Assets/Scenes.meta', PROBE/'Assets/Scenes.meta')
         return 0
-    # Only the new scene's files (its name first); nothing that exists is replaced.
+    # Only the new scenes' files (their names first).
     for path in sorted(made.iterdir()):
-        if path.name.startswith(scene) and not (target/path.name).exists():
+        if any(path.name.startswith(name) for name in names) and not (target/path.name).exists():
             shutil.copy2(path, target/path.name)
     return 0
 
@@ -114,6 +128,18 @@ def digest(folder, log):
     return out
 
 
+def lights_digest(folder):
+    """A scene's lights as its bake input has them, by their names, and its Lighting Mode."""
+    if not (folder/'bakeInput.bin').is_file():
+        return {'mixedMode': None, 'lights': []}
+    bake = editor_bake.read_bake_input(folder/'bakeInput.bin')
+    names = (folder/'lights.txt').read_text().splitlines()
+    if len(names) != len(bake['lights']):
+        raise ValueError(f'{folder}: {len(names)} names for {len(bake["lights"])} lights')
+    return {'mixedMode': bake['settings']['mixedMode'],
+            'lights': [dict(light, name=name) for name, light in zip(names, bake['lights'])]}
+
+
 def native(label):
     out = WORK/label
     if out.exists():
@@ -134,6 +160,7 @@ def native(label):
         target.mkdir(parents=True)
         scene_digest = digest(out/'raw'/scene, log.get(scene, 'not baked'))
         (target/'scene.json').write_text(json.dumps(scene_digest, indent=1) + '\n')
+        (target/'lights.json').write_text(json.dumps(lights_digest(out/'raw'/scene), indent=1) + '\n')
         for index in range(len(scene_digest['lightmaps'])):
             for name in BUFFERS:
                 shutil.copy2(out/'raw'/scene/'lightmapRequest0'/name.format(index), target/name.format(index))
@@ -144,16 +171,38 @@ def tree(root):
     return {str(p.relative_to(root)): p.read_bytes() for p in sorted(root.rglob('*')) if p.is_file()}
 
 
+def repeats(name, first, other):
+    """Whether two captures' file is the same result: byte for byte, but for a buffer of light,
+    which the Editor sums in an order that varies from bake to bake (the same used texels, and
+    values within REPEAT_TOLERANCE, times the value where that is above 1)."""
+    if first == other:
+        return True
+    if other is None or not Path(name).name.startswith('irradiance'):
+        return False
+    a, b = editor_bake.parse_r2d(first), editor_bake.parse_r2d(other)
+    if a[:3] != b[:3]:
+        return False
+    return all(x == y if k % 4 == 3 else abs(x - y) <= REPEAT_TOLERANCE * max(1.0, abs(x)) for k, (x, y) in enumerate(zip(a[3], b[3])))
+
+
 def publish(labels):
     if len(labels) < 2:
         sys.exit('publishing needs two independent repeats')
     captures = [tree(WORK/label/'reference') for label in labels]
-    if not captures[0] or any(capture != captures[0] for capture in captures):
-        sys.exit('the repeats differ; not publishing')
+    differing = [name for capture in captures[1:] for name in sorted(captures[0].keys() | capture.keys())
+                 if not repeats(name, captures[0].get(name, b''), capture.get(name))]
+    if not captures[0] or differing:
+        sys.exit(f'the repeats differ in {differing}; not publishing')
     target = reference_root(PROBE)
-    if target.exists():
-        sys.exit(f'refusing to overwrite reference: {target}')
-    shutil.copytree(WORK/labels[0]/'reference', target)
+    # What the reference has stays as it is: the captures must repeat it.
+    present = tree(target) if target.exists() else {}
+    changed = [name for name, data in present.items() if not repeats(name, data, captures[0].get(name))]
+    if changed:
+        sys.exit(f'the captures differ from the reference in {changed}; not publishing')
+    for name, data in captures[0].items():
+        if name not in present:
+            (target/name).parent.mkdir(parents=True, exist_ok=True)
+            (target/name).write_bytes(data)
     return 0
 
 
@@ -174,7 +223,12 @@ def expected(root):
             if (width, height, channels) != (side * lightmap['width'], side * lightmap['height'], 4):
                 raise ValueError(f'{folder}: normal{index} of {width}x{height}')
             lightmap['normals'] = normals
+            width, height, channels, direct = editor_bake.read_r2d(folder/f'irradianceDirect{index}.r2d')
+            if (width, height, channels) != (lightmap['width'], lightmap['height'], 4):
+                raise ValueError(f'{folder}: irradianceDirect{index} of {width}x{height}')
+            lightmap['direct'] = direct
         entry['baked'] = 'Success' in entry['bake']
+        entry['lights'] = json.loads((folder/'lights.json').read_text())
         out[scene] = entry
     return out
 
@@ -197,7 +251,7 @@ def actual(out):
     result = {}
     for scene in scenes():
         guid = guid_of(project, scene)
-        entry = {'bake': log.get(scene, 'not baked'), 'messages': [], 'instances': [], 'lightmaps': []}
+        entry = {'bake': log.get(scene, 'not baked'), 'messages': [], 'instances': [], 'lightmaps': [], 'lights': {'lights': []}}
         entry['baked'] = entry['bake'] == 'bake True'
         if (out/'raw'/scene/'messages.txt').is_file():
             # Unbound's own notes of what its bake does not make yet are not the Editor's messages.
@@ -206,10 +260,13 @@ def actual(out):
         dump = out/'buffers'/guid
         if layout.is_file() and (dump/'buffers.json').is_file():
             entry['instances'] = [r['path'] for r in json.loads(layout.read_text())['renderers']]
-            for index, lightmap in enumerate(json.loads((dump/'buffers.json').read_text())['lightmaps']):
+            description = json.loads((dump/'buffers.json').read_text())
+            entry['lights'] = {'lights': description['lights']}
+            for index, lightmap in enumerate(description['lightmaps']):
                 lightmap['occupancy'] = [int(v > 0) for v in (dump/f'occupancy{index}.u8').read_bytes()]
                 lightmap['charts'] = list(numbers(dump/f'chartIndex{index}.i32', 'i'))
                 lightmap['normals'] = numbers(dump/f'normal{index}.f32', 'f')
+                lightmap['direct'] = numbers(dump/f'irradianceDirect{index}.f32', 'f')
                 entry['lightmaps'].append(lightmap)
         result[scene] = entry
     return result
@@ -260,6 +317,38 @@ def normal_difference(got, want):
     return None
 
 
+def light_difference(got, want):
+    """The bake's lights by their names in its order, and of each what Unbound's bake takes."""
+    if [light['name'] for light in got] != [light['name'] for light in want]:
+        return f"expected {[light['name'] for light in want]} actual {[light['name'] for light in got]}"
+    problems = []
+    for mine, theirs in zip(got, want):
+        for field in LIGHT_FIELDS:
+            a, b = mine[field], theirs[field]
+            pairs = list(zip(a, b)) if isinstance(b, list) else [(a, b)]
+            if isinstance(b, list) and len(a) != len(b) or any(
+                    abs(x - y) > LIGHT_TOLERANCE * max(1.0, abs(y)) if isinstance(y, float) else x != y for x, y in pairs):
+                problems.append(f"{theirs['name']}.{field}: expected {b} actual {a}")
+    return '; '.join(problems) or None
+
+
+def direct_difference(got, want):
+    """Used texels exactly (the fourth value), their light within the tolerance."""
+    if len(got) != len(want):
+        return f'{len(got) // 4} texels, expected {len(want) // 4}'
+    used = off = 0
+    worst = 0.0
+    for k in range(0, len(want), 4):
+        used += got[k + 3] != want[k + 3]
+        for c in range(3):
+            error = abs(got[k + c] - want[k + c]) / max(1.0, abs(want[k + c]))
+            worst = max(worst, error)
+            off += not error <= DIRECT_TOLERANCE
+    if used or off:
+        return f'{used} texels differ in being used, {off} values in their light (worst {worst:.3g}, tolerance {DIRECT_TOLERANCE:g})'
+    return None
+
+
 def compare(label):
     want, got = expected(reference_root(PROBE)), actual(WORK/label)
     records = []
@@ -277,13 +366,14 @@ def compare(label):
         same(scene + '.baked', a['baked'], e['baked'])
         same(scene + '.messages', a['messages'], e['messages'])
         same(scene + '.instances', a['instances'], e['instances'])
+        record(scene + '.lights', light_difference(a['lights']['lights'], e['lights']['lights']))
         form = lambda entry: ' '.join(f"{m['width']}x{m['height']}@{m['supersampling']}" for m in entry['lightmaps'])  # noqa: E731
         same(scene + '.lightmaps', form(a), form(e))
         for index, lightmap in enumerate(e['lightmaps']):
             key = f'{scene}.lightmap{index}.'
             mine = a['lightmaps'][index] if index < len(a['lightmaps']) else None
             if mine is None or (mine['width'], mine['height'], mine['supersampling']) != (lightmap['width'], lightmap['height'], lightmap['supersampling']):
-                for part in ('instances', 'occupancy', 'charts', 'normals'):
+                for part in ('instances', 'occupancy', 'charts', 'normals', 'direct'):
                     record(key + part, 'no such lightmap of that size')
                 continue
             names = lambda entry, m: [entry['instances'][i] for i in m['instances']]  # noqa: E731
@@ -291,6 +381,7 @@ def compare(label):
             record(key + 'occupancy', differing(mine['occupancy'], lightmap['occupancy']))
             record(key + 'charts', differing(mine['charts'], lightmap['charts']))
             record(key + 'normals', normal_difference(mine['normals'], lightmap['normals']))
+            record(key + 'direct', direct_difference(mine['direct'], lightmap['direct']))
     failed = sum(problem is not None for _, problem in records)
     print(f'bakedbuffers: {len(records) - failed}/{len(records)} records match; {failed} differ')
     return int(failed != 0)
@@ -352,7 +443,7 @@ def main():
     parser.add_argument('mode', choices=['create', 'native', 'engine', 'publish', 'compare', 'check', 'replay'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
-    parser.add_argument('--scene', help='create: add this scene only')
+    parser.add_argument('--scene', help='create: add these scenes only (comma-separated)')
     args = parser.parse_args()
     labels = args.labels + ([args.label] if args.label else [])
     if any(Path(label).name != label or label in ('.', '..') for label in labels):
