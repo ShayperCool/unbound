@@ -6,19 +6,20 @@ and changed-area resizing, with and without an earlier upload, plus mipmaps,
 block storage, a second resize, an explicit GraphicsFormat, and a final
 Apply that discards CPU readability. Separate controls check that successful
 compression completes the texture allocation and recompressing a block texture
-leaves it unchanged. Resizing unreadable input keeps the existing dimensions,
-format, mip count, readability and reported allocation for all overloads,
-including invalid-dimension attempts.
-It records the graphics API so each
-capture is compared against that device's measurements.
+leaves it unchanged. For the script-created, owned textures in the fixture,
+unreadable input keeps its dimensions, format, mip count, readability and
+reported allocation across all tested overloads and invalid-dimension attempts.
+The graphics API identifies the measurements used for comparison.
 
 [Unity 6.0 Texture2D.Reinitialize](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.Reinitialize.html)
 requires readable input and directs callers to Apply to upload the changed
 pixels. The profiler's byte counts and their device differences are measured
 by this probe for owned runtime textures. Imported and externally backed
-textures retain the previous accounting. The explicit TextureFormat overload
-logs an error and returns false for an unreadable input. The other overloads
-throw UnityException without logging. The LoadImage success control separately
+textures retain the previous accounting. For the measured unreadable textures,
+the explicit TextureFormat overload logs an error and returns false. The other
+overloads throw UnityException without logging. The behavior and diagnostics of
+resizing an external texture are unmeasured and retain their previous handling.
+The LoadImage success control separately
 records the existing readability difference when replacing an unreadable image.
 [Unity 6.0 ImageConversion.LoadImage](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ImageConversion.LoadImage.html)
 documents that it replaces the image and uploads it automatically.
