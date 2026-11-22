@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/terrainnormalmap/run.py gate"
+  ],
+  "summary": "terrainnormalmap: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Terrain/TerrainNormalmap.cs",
+    "managed/UnityEngine/Terrain/Terrain.cs",
+    "managed/UnityEngine/Terrain/TerrainRenderer.cs"
+  ]
+}
