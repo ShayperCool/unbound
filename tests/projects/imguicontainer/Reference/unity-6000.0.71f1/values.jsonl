@@ -37,5 +37,9 @@
 {"k":"imgui.spaced","v":"41"}
 {"k":"imgui.spaced.calls","v":"tagged.height:18;tagged.gui:Layout:0,0,375,21:Spaced"}
 {"k":"imgui.plainSpaced","v":"78"}
+{"k":"builtin.heights","v":"headed=45|note=66|longNote=96|shortNote=51|flag=30|numbers=18|point=38|ratio=18|multi=62"}
+{"k":"builtin.rects","v":"headed=45|note=66|longNote=96|shortNote=51|flag=30|numbers=18|point=38|ratio=18|multi=62"}
+{"k":"builtin.error","v":""}
+{"k":"builtin.outsideGUI","v":"headed=45|note=66|flag=30|ratio=18|"}
 {"k":"logs","v":[]}
 {"k":"complete","v":true}

@@ -11,8 +11,10 @@ pixel size, drawn into a target texture):
 - `foldout.*`: the class a container has at each depth inside foldouts, and after it is moved out.
 - `fixed`, `empty`: a container with a fixed size (never measured) and one without a handler.
 - `mouse.*`, `key.down`: a `MouseDownEvent`/`MouseUpEvent`/`KeyDownEvent` made from an IMGUI event
-  and sent to a container (a Layout pass, then the event), and a mouse event without an IMGUI
-  event (not passed on).
+  and sent to a container (a Layout pass, then the event; the handler sees the mouse where the GUI
+  last saw it, here the panel's corner, not where the sent event says, so the button under the
+  event's position does not take the press), and a mouse event without an IMGUI event (not
+  passed on).
 - `focus`: the container is focusable and cannot take focus without a control that can.
 - `paint.*`: the handler gets no Repaint in a runtime panel, and nothing is drawn into the target.
 - `property*`: a `PropertyField` whose drawer has only IMGUI: its `IMGUIContainer`, the heights, and
@@ -24,6 +26,10 @@ pixel size, drawn into a target texture):
   above its drawer's IMGUI, and `EditorGUILayout.PropertyField` in a container's handler gives it
   the top of the property's rect, with and without a drawer; a property whose IMGUI a
   `PropertyField` has drawn keeps its decorator left out of later IMGUI calls (`imgui.spaced`).
+
+- `builtin.*`: properties with the Editor's own attributes and types (`[Header]`, `[TextArea]`,
+  `[Space]`, `[Range]`, `[Multiline]`, an array, a vector): their heights inside a GUI pass and
+  outside one, and the rects `EditorGUILayout.PropertyField` gives them.
 
 ## Usage
 
@@ -38,14 +44,13 @@ compare exactly (tolerance 0). The captures are batch-mode ones (`macos_batch`).
 
 ## Residuals
 
-`residuals.json` lists two open differences:
+`residuals.json` lists two open differences, both of the Editor GUI skin that Unbound's IMGUI does
+not have yet:
 
-- The heights of the measured containers come from the Editor GUI skin's styles, which Unbound's
-  IMGUI does not have yet; the positions of the elements below them follow.
-- The mouse events are made by the script. The batch Editor's handler sees the mouse at the GUI's
-  own last mouse position (the panel's corner) whatever position the sent event carries, so the
-  button does not take the press; Unbound passes the event's position, as for an event from the
-  OS. A real mouse is not measured.
+- The heights of the measured containers come from the Editor skin's styles; the positions of the
+  elements below them follow, and with them the mouse rows, which carry a container's position.
+- A `[TextArea]` whose line limits differ takes as many lines as its text needs in the Editor's
+  text area style.
 
 ## Reference
 

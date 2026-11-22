@@ -423,6 +423,46 @@ public class ImguiContainerProbe : MonoBehaviour
         m_Root.Add(drawnPlain);
         yield return Frames(5);
         Put("imgui.plainSpaced", F(drawnPlain.layout.height));
+
+        // 9. The Editor's own attributes and types through IMGUI: each property's height inside a
+        // GUI pass, and the rect EditorGUILayout.PropertyField gives it (read in a key event).
+        string[] names = { "headed", "note", "longNote", "shortNote", "flag", "numbers", "point", "ratio", "multi" };
+        var heights = new string[names.Length];
+        var rects = new string[names.Length];
+        string builtinError = "";
+        var builtin = new IMGUIContainer(() =>
+        {
+            try
+            {
+                so.Update();
+                for (int i = 0; i < names.Length; i++)
+                {
+                    var property = so.FindProperty(names[i]);
+                    heights[i] = names[i] + "=" + F(EditorGUI.GetPropertyHeight(property));
+                    EditorGUILayout.PropertyField(property, true);
+                    if (Event.current.type == EventType.KeyDown) rects[i] = names[i] + "=" + F(GUILayoutUtility.GetLastRect().height);
+                }
+            }
+            catch (ExitGUIException) { throw; }
+            catch (Exception e) { builtinError = e.GetType().Name; }
+        }) { name = "builtin" };
+        m_Root.Add(builtin);
+        yield return Frames(5);
+        using (var evt = KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.B }))
+        {
+            evt.target = builtin;
+            builtin.SendEvent(evt);
+        }
+        Put("builtin.heights", string.Join("|", heights));
+        Put("builtin.rects", string.Join("|", rects));
+        Put("builtin.error", builtinError);
+        string outside = "";
+        foreach (var name in new[] { "headed", "note", "flag", "ratio" })
+        {
+            try { outside += name + "=" + F(EditorGUI.GetPropertyHeight(so.FindProperty(name))) + "|"; }
+            catch (Exception e) { outside += name + "=" + e.GetType().Name + "|"; }
+        }
+        Put("builtin.outsideGUI", outside);
 #endif
     }
 }
