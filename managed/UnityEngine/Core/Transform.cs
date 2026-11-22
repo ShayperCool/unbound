@@ -424,6 +424,13 @@ namespace UnityEngine
             m_LocalEulerAnglesHint = pose.EulerHint;
         }
 
+        /// <summary>Records the initial local pose and parent of a clone before activation.</summary>
+        internal void InitializePoseSnapshot()
+        {
+            m_PoseParent = m_Parent;
+            m_PoseAfterChange = CurrentPose();
+        }
+
         /// <summary>This transform changed: it and every descendant must recompute their world state.</summary>
         internal void MarkChanged(bool layoutChanged = false)
         {

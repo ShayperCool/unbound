@@ -187,6 +187,7 @@ namespace Unbound.Runtime
                 {
                     moved.m_GameObject.m_Scene = scene;
                     if (asset) moved.m_GameObject.m_IsPrefabAsset = true;
+                    moved.InitializePoseSnapshot();
                 }
             if (parent == null || localPose)
             {
