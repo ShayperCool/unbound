@@ -117,8 +117,9 @@ fn build(bounds: &[([f32; 3], [f32; 3])], order: &mut [u32], start: u32, nodes: 
             centre_max[k] = centre_max[k].max(centre);
         }
     }
-    // A node's box is a little wider than its triangles, so that a ray through a triangle on
-    // the box's side (a flat floor: a box without thickness) is not kept out by rounding.
+    // A node's box is a little wider than its triangles: a precaution against a ray through
+    // a triangle on the box's side (a flat floor: a box without thickness) being kept out by
+    // rounding. No such ray is known.
     for k in 0..3 {
         let margin = BOX_MARGIN * (1.0 + min[k].abs().max(max[k].abs()));
         min[k] -= margin;
