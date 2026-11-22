@@ -1498,7 +1498,9 @@ namespace DotRecast.Detour.Crowd
 
                         float share = nei.option.avoidancePriority < ag.option.avoidancePriority ? 1.0f : 0.5f;
                         RcVec3f diff = RcVec3f.Subtract(ag.npos, nei.npos);
-                        diff.Y = 0;
+                        // The overlap solve includes vertical separation on the measured release.
+                        // Surface projection constrains the corrected position afterwards.
+                        if (!_config.resolveAgentOverlapsIn3D) diff.Y = 0;
 
                         float dist = diff.LengthSquared();
                         if (dist > RcMath.Sqr(ag.option.radius + nei.option.radius))
@@ -1524,7 +1526,10 @@ namespace DotRecast.Detour.Crowd
                         }
                         else
                         {
-                            pen = (1.0f / dist) * (pen * share) * _config.collisionResolveFactor;
+                            float sharedPenetration = pen * share;
+                            pen = _config.resolveAgentOverlapsIn3D
+                                ? sharedPenetration * _config.collisionResolveFactor / dist
+                                : (1.0f / dist) * sharedPenetration * _config.collisionResolveFactor;
                         }
 
                         ag.disp = RcVec.Mad(ag.disp, diff, pen);

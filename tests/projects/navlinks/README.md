@@ -426,3 +426,28 @@ family.
 [updatePosition](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/updateposition),
 [SetAreaCost](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmesh/setareacost),
 [SetPath](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/setpath).
+
+## Separating overlapping agents at different elevations
+
+The overlap correction uses the full distance between agents before
+projecting their corrected positions back onto the NavMesh. The
+overlap profile records two agents on the same plane, on nearby
+parallel surfaces, and with both height and sideways offsets. The
+farther pair stays in place. When the agents have different radii
+and avoidance priorities, the lower-priority agent moves and the
+higher-priority agent stays fixed.
+
+The priority and radius settings follow the NavMesh Agent component
+reference. The displacement rule is measured on Unity 6000.0.71f1.
+[NavMesh Agent obstacle avoidance](https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshAgent.html#obstacle-avoidance).
+
+```
+python3 tests/projects/navlinks/projection.py editor --profile overlap --release 6000.0.71f1 --label L
+python3 tests/projects/navlinks/projection.py publish --profile overlap --release 6000.0.71f1 --label L
+UNBOUND_CLI=.../unbound python3 tests/projects/navlinks/projection.py gate --profile overlap --release 6000.0.71f1
+```
+
+Two independent Editor runs produced the same reference. The overlap
+profile matches all 20 records and 240 values. The previous planar
+correction differs in 48 values across the near, diagonal and
+different-priority cases.

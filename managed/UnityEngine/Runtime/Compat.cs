@@ -320,6 +320,10 @@ namespace Unbound.Runtime
         /// a new request (navlinks, Unity 6000.0.71f1).</summary>
         internal static bool NavMeshAreaStalenessMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Agent overlap resolution uses the full offset before projecting the corrected
+        /// positions onto the NavMesh (navlinks, Unity 6000.0.71f1).</summary>
+        internal static bool NavMeshAgentOverlap3DMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Enabling an agent starts its reported velocity at zero, measured by
         /// tests/projects/navlinks on 6000.0.71f1. Other releases retain the previous,
         /// unmeasured velocity report until the next update.</summary>

@@ -1133,6 +1133,7 @@ namespace Unbound.Runtime
                     measuredStoppingDistance = Compat.NavMeshStoppingDistanceMeasured,
                     measuredBrakingPlan = Compat.NavMeshBrakingPlanMeasured,
                     joinMovedCorridorStart = Compat.NavMeshCorridorJoinMeasured,
+                    resolveAgentOverlapsIn3D = Compat.NavMeshAgentOverlap3DMeasured,
                 };
                 crowd = new DtCrowd(config, surface.Mesh, i => AreaFilter.Of(-1));
                 crowd.tryEnterConnection = polyRef => TryEnterLink(surface, polyRef);
