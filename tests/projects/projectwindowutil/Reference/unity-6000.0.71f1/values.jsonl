@@ -1,0 +1,15 @@
+{"k":"action.created","v":"hideFlags=HideAndDontSave"}
+{"k":"edit.zeroId","v":"throws=<none>|logs=<none>|calls=Action(2147483646,Assets/New Thing.asset,resource.txt)|actionAlive=False|selection=<null>"}
+{"k":"edit.lowercasePrefix","v":"throws=<none>|logs=<none>|calls=Action(2147483646,Assets/Lower.asset,<null>)|actionAlive=False|selection=<null>"}
+{"k":"edit.existingPath","v":"throws=<none>|logs=<none>|calls=Action(2147483646,Assets/Data/Existing 1.txt,<null>)|actionAlive=False|selection=<null>"}
+{"k":"edit.nested","v":"throws=<none>|logs=<none>|calls=Action(2147483646,Assets/Data/Inner.asset,<null>)|actionAlive=False|selection=<null>"}
+{"k":"edit.liveObject","v":"throws=<none>|logs=<none>|calls=Action(<Target>,Assets/Made.asset,<null>)|actionAlive=False|selection=Target"}
+{"k":"edit.noSelection","v":"throws=<none>|logs=<none>|calls=Action(<Target>,Assets/Made.asset,<null>)|actionAlive=False|selection=Marker"}
+{"k":"edit.nullAction","v":"throws=<none>|logs=<none>|selection=Target"}
+{"k":"folder.active","v":"\"Assets\""}
+{"k":"folder.tryActive","v":"False|\"\""}
+{"k":"folder.containing","v":"\"Assets/A/b.png\"=>\"Assets/A\"|\"Assets/A/\"=>\"Assets\"|\"/Assets/A/b/\"=>\"Assets/A\"|\"Assets\"=><null>|\"\"=><null>|<null>=><null>|\"a//b\"=>\"a/\"|\"Assets\\A\\b.png\"=><null>"}
+{"k":"folder.base","v":"[\"Assets/A\",\"Assets/AB\",\"Assets/B\"]|[\"Assets/X\"]|[\"Only/\"]|[]"}
+{"k":"folder.isFolder","v":"folder=True|file=False|scene=False|none=False"}
+{"k":"show.created","v":"object=Target|null=<null>"}
+{"k":"complete","v":true}
