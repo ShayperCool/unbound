@@ -71,15 +71,18 @@ namespace UnityEditor
             return slash < 0 ? null : path.Substring(0, slash);
         }
 
-        /// <summary>The folders no other given folder contains, sorted, without outer slashes; a
-        /// set of one or none comes back as given. A folder counts as inside another when its path
-        /// starts with the other's followed by '/'.</summary>
+        /// <summary>The given folders, sorted and without outer slashes, less each one inside the
+        /// last folder kept before it (its path starts with that folder's followed by '/'); a set
+        /// of one or none comes back as given. The paths are sorted before the '/' is added, so
+        /// "Assets/A" comes before "Assets/A 1", and then "Assets/A/Sub" is kept, as in the
+        /// Editor.</summary>
         public static string[] GetBaseFolders(string[] folders)
         {
             if (folders.Length <= 1) return folders;
             var sorted = new List<string>(folders.Length);
-            foreach (var folder in folders) sorted.Add(folder.Trim('/') + "/");
+            foreach (var folder in folders) sorted.Add(folder.Trim('/'));
             sorted.Sort();
+            for (int i = 0; i < sorted.Count; i++) sorted[i] += "/";
             var bases = new List<string> { sorted[0] };
             foreach (var folder in sorted)
                 if (!folder.StartsWith(bases[bases.Count - 1], StringComparison.Ordinal)) bases.Add(folder);

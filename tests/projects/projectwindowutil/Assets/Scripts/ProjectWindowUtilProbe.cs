@@ -54,6 +54,7 @@ static class ProjectWindowUtilProbe
         {
             new[] { "Assets/B", "Assets/A", "Assets/A/Sub", "Assets/AB" },
             new[] { "/Assets/X/", "Assets/X/Y/" },
+            new[] { "Assets/A 1", "Assets/A", "Assets/A/Sub" },
             new[] { "Only/" },
             new string[0],
         }.Select(set => "[" + string.Join(",", ProjectWindowUtil.GetBaseFolders(set).Select(Text)) + "]")));

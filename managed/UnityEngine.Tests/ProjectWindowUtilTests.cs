@@ -26,14 +26,14 @@ namespace UnityEngine.Tests
             Assert.Empty(action.Calls);
             action.CleanUp();
             Assert.True(action == null);
-            Assert.Equal("Assets", ProjectWindowUtilActiveFolder());
         }
 
-        static string ProjectWindowUtilActiveFolder()
+        [Fact]
+        public void WithoutAProjectWindowTheActiveFolderIsAssets()
         {
             Assert.False(ProjectWindowUtil.TryGetActiveFolderPath(out var path));
             Assert.Equal("", path);
-            return ProjectWindowUtil.GetActiveFolderPath();
+            Assert.Equal("Assets", ProjectWindowUtil.GetActiveFolderPath());
         }
 
         [Fact]
@@ -45,6 +45,9 @@ namespace UnityEngine.Tests
             Assert.Equal("a/", ProjectWindowUtil.GetContainingFolder("a//b"));
             Assert.Equal(new[] { "Assets/A", "Assets/AB", "Assets/B" }, ProjectWindowUtil.GetBaseFolders(new[] { "Assets/B", "Assets/A", "Assets/A/Sub", "Assets/AB" }));
             Assert.Equal(new[] { "Only/" }, ProjectWindowUtil.GetBaseFolders(new[] { "Only/" }));
+            // Sorted before the '/' is added, "Assets/A" comes first; a folder is checked against
+            // the last base folder only, so "Assets/A/Sub" after "Assets/A 1" stays.
+            Assert.Equal(new[] { "Assets/A", "Assets/A 1", "Assets/A/Sub" }, ProjectWindowUtil.GetBaseFolders(new[] { "Assets/A 1", "Assets/A", "Assets/A/Sub" }));
         }
     }
 }

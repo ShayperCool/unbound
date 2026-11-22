@@ -9,7 +9,7 @@
 {"k":"folder.active","v":"\"Assets\""}
 {"k":"folder.tryActive","v":"False|\"\""}
 {"k":"folder.containing","v":"\"Assets/A/b.png\"=>\"Assets/A\"|\"Assets/A/\"=>\"Assets\"|\"/Assets/A/b/\"=>\"Assets/A\"|\"Assets\"=><null>|\"\"=><null>|<null>=><null>|\"a//b\"=>\"a/\"|\"Assets\\A\\b.png\"=><null>"}
-{"k":"folder.base","v":"[\"Assets/A\",\"Assets/AB\",\"Assets/B\"]|[\"Assets/X\"]|[\"Only/\"]|[]"}
+{"k":"folder.base","v":"[\"Assets/A\",\"Assets/AB\",\"Assets/B\"]|[\"Assets/X\"]|[\"Assets/A\",\"Assets/A 1\",\"Assets/A/Sub\"]|[\"Only/\"]|[]"}
 {"k":"folder.isFolder","v":"folder=True|file=False|scene=False|none=False"}
 {"k":"show.created","v":"object=Target|null=<null>"}
 {"k":"complete","v":true}
