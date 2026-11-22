@@ -325,6 +325,26 @@ struct DrawPropertySummary {
     mesh_batch_limits: Option<[f32; 4]>,
 }
 
+/// The texture a draw reads by `name`: its own property of that name (the last), else the
+/// material's; 0 when that property is not a texture (whatever it is, a draw's own property of the
+/// name hides the material's).
+fn layered_texture(
+    overrides: &[(String, owned::PropertyValue)],
+    material: &owned::Material,
+    name: &str,
+) -> u64 {
+    let value = overrides
+        .iter()
+        .rev()
+        .find(|(n, _)| n == name)
+        .map(|(_, v)| v)
+        .or_else(|| material.get(name));
+    match value {
+        Some(owned::PropertyValue::Texture { handle, .. }) => *handle,
+        _ => 0,
+    }
+}
+
 fn scan_draw_properties(properties: &[(String, owned::PropertyValue)]) -> DrawPropertySummary {
     let mut main_tex_override = None;
     let mut has_texture_override = false;
@@ -4526,6 +4546,7 @@ impl UnityRenderer {
                             self.warn_once(format!("args{args}"), || {
                                 format!("an indirect draw's arguments buffer {args} does not exist: skipped")
                             });
+                            self.planned_scratch = planned;
                             continue;
                         }
                         let mut draw_offset = u64::from(offset);
@@ -4535,6 +4556,7 @@ impl UnityRenderer {
                                 self.warn_once(format!("args-range{args}-{offset}"), || {
                                     format!("an indirect draw's arguments at byte {offset} of buffer {args} are not 4-byte aligned or lie past its end: skipped")
                                 });
+                                self.planned_scratch = planned;
                                 continue;
                             }
                             let (destination, at) = self.indirect_args.slot(&self.device);
@@ -4580,6 +4602,7 @@ impl UnityRenderer {
                         let Some(index) =
                             self.external_indices((handle, size, first, count), shape, &planned)
                         else {
+                            self.planned_scratch = planned;
                             continue;
                         };
                         for p in &mut planned {
@@ -5170,20 +5193,7 @@ impl UnityRenderer {
         let overrides: &[(String, owned::PropertyValue)] = &draw.properties;
         let prop_summary = scan_draw_properties(overrides);
         let material_props: &owned::Material = &resolved.material;
-        let texture_of = |name: &str| {
-            if prop_summary.has_texture_override
-                && let Some((_, v)) = overrides.iter().rev().find(|(n, _)| n == name)
-            {
-                return match v {
-                    owned::PropertyValue::Texture { handle, .. } => *handle,
-                    _ => 0,
-                };
-            }
-            match material_props.get(name) {
-                Some(owned::PropertyValue::Texture { handle, .. }) => *handle,
-                _ => 0,
-            }
-        };
+        let texture_of = |name: &str| layered_texture(overrides, material_props, name);
         // `_MainTex`: the renderer's (a sprite's texture), else the draw override's, else the
         // material's, else a global one when the shader does not declare it.
         let layered_main = prop_summary
@@ -7821,6 +7831,27 @@ mod tests {
         // Overwriting with a non-texture returns 0.
         globals[1].1 = owned::PropertyValue::Float(1.0);
         assert_eq!(slot.find_handle(&globals, &index, "_CameraDepthTexture"), 0);
+    }
+
+    #[test]
+    fn a_draw_property_of_a_texture_name_hides_the_material_texture_whatever_its_type() {
+        let texture = |handle| owned::PropertyValue::Texture {
+            handle,
+            st: [1.0, 1.0, 0.0, 0.0],
+        };
+        let material = owned::Material {
+            properties: vec![("_DetailTex".into(), texture(5))],
+            ..Default::default()
+        };
+        assert_eq!(layered_texture(&[], &material, "_DetailTex"), 5);
+        let float = [("_DetailTex".to_string(), owned::PropertyValue::Float(1.0))];
+        assert_eq!(layered_texture(&float, &material, "_DetailTex"), 0);
+        let last = [
+            ("_DetailTex".to_string(), texture(7)),
+            ("_DetailTex".to_string(), texture(9)),
+        ];
+        assert_eq!(layered_texture(&last, &material, "_DetailTex"), 9);
+        assert_eq!(layered_texture(&float, &material, "_OtherTex"), 0);
     }
 
     #[test]

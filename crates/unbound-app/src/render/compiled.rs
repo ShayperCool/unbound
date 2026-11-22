@@ -1305,16 +1305,16 @@ fn inverse(m: &Mat) -> Mat {
                 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
             ];
         }
-        let inv_det = 1.0 / det;
-        let i0 = c0 * inv_det;
-        let i4 = c4 * inv_det;
-        let i8 = c8 * inv_det;
-        let i1 = (m[9] * m[2] - m[1] * m[10]) * inv_det;
-        let i5 = (m[0] * m[10] - m[8] * m[2]) * inv_det;
-        let i9 = (m[8] * m[1] - m[0] * m[9]) * inv_det;
-        let i2 = (m[1] * m[6] - m[5] * m[2]) * inv_det;
-        let i6 = (m[4] * m[2] - m[0] * m[6]) * inv_det;
-        let i10 = (m[0] * m[5] - m[4] * m[1]) * inv_det;
+        // Divided by the determinant as the general inverse does, so the 3x3 part is the same.
+        let i0 = c0 / det;
+        let i4 = c4 / det;
+        let i8 = c8 / det;
+        let i1 = (m[9] * m[2] - m[1] * m[10]) / det;
+        let i5 = (m[0] * m[10] - m[8] * m[2]) / det;
+        let i9 = (m[8] * m[1] - m[0] * m[9]) / det;
+        let i2 = (m[1] * m[6] - m[5] * m[2]) / det;
+        let i6 = (m[4] * m[2] - m[0] * m[6]) / det;
+        let i10 = (m[0] * m[5] - m[4] * m[1]) / det;
         let (tx, ty, tz) = (m[12], m[13], m[14]);
         return [
             i0,
@@ -4658,6 +4658,15 @@ mod tests {
         for (idx, m) in cases.iter().enumerate() {
             let fast = inverse(m);
             let general = inverse_general(m);
+            // The rotation and scale part of an affine matrix's inverse is the general one's,
+            // bit for bit (the translation is computed differently).
+            for k in [0, 1, 2, 4, 5, 6, 8, 9, 10] {
+                assert_eq!(
+                    fast[k].to_bits(),
+                    general[k].to_bits(),
+                    "case {idx} elem {k}"
+                );
+            }
             for (k, (&a, &b)) in fast.iter().zip(general.iter()).enumerate() {
                 let tol = 1e-5 * b.abs().max(1.0);
                 assert!(
