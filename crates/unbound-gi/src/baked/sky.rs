@@ -118,7 +118,11 @@ impl Importance {
                 }
             }
             let (direction, color) = picked.unwrap_or_else(|| draw(&mut shift));
-            let scale = integral / brightness(color);
+            // A direction taken after the draws found no bright one may look at black sky: it
+            // brings nothing (not measured against the Editor: a sky so dark around its few
+            // bright texels is not in tests/projects/bakedbuffers).
+            let bright = brightness(color);
+            let scale = if bright > 0.0 { integral / bright } else { 0.0 };
             directions.push(direction);
             weighted.push(color.map(|v| scale * v));
         }
@@ -401,22 +405,44 @@ mod tests {
         let up = [0.0, 1.0, 0.0];
         let whole = 1.0 / (4.0 * PI);
         // The third number above a half picks a direction: the first number's place among
-        // them.
-        let (direction, light) = sky.arriving(up, up, [0.3, 0.0, 0.75]).unwrap_or_default();
+        // them. Seen from a surface facing it, the third of the eight.
         let expected = importance.directions[2];
-        if dot(expected, up) > 0.0 {
-            assert_eq!(direction, expected);
-            let cosine = dot(expected, up);
-            let want =
-                2.0 * whole / (whole + cosine / PI) * importance.weighted[2][0] * cosine / PI;
-            assert!((light[0] - want).abs() <= 1e-5 * want, "{light:?} {want}");
-        } else {
-            assert_eq!((direction, light), ([0.0; 3], [0.0; 3]));
-        }
+        let (direction, light) = sky.arriving(expected, expected, [0.3, 0.0, 0.75]).unwrap();
+        assert_eq!(direction, expected);
+        let cosine = dot(expected, expected);
+        let want = 2.0 * whole / (whole + cosine / PI) * importance.weighted[2][0] * cosine / PI;
+        assert!((light[0] - want).abs() <= 1e-5 * want, "{light:?} {want}");
         // Else a direction drawn by the cosine, weighed against the picking.
         let (direction, light) = sky.arriving(up, up, [0.3, 0.6, 0.25]).unwrap();
         let cosine = dot(direction, up);
         let want = 2.0 * (cosine / PI) / (cosine / PI + whole) * 2.0;
         assert!((light[0] - want).abs() <= 1e-4 * want, "{light:?} {want}");
+    }
+
+    #[test]
+    fn a_direction_taken_after_the_draws_found_no_light_brings_nothing() {
+        // One lit texel among 6 x 256 x 256 black ones: most of the draws find black sky,
+        // and directions taken after them must not bring an endless or undefined light.
+        let side = 256;
+        let black = || Texture {
+            width: side,
+            height: side,
+            texels: vec![[0.0, 0.0, 0.0, 1.0]; side * side],
+        };
+        let mut lit = black();
+        lit.texels[side * side / 2 + side / 2] = [1.0, 1.0, 1.0, 1.0];
+        let faces = [black(), black(), lit, black(), black(), black()];
+        let picked = Importance::of(&faces, 8);
+        assert!(picked.integral > 0.0);
+        assert_eq!(picked.weighted.len(), 8);
+        let mut dark = 0;
+        for (direction, weighted) in picked.directions.iter().zip(&picked.weighted) {
+            assert!(weighted.iter().all(|v| v.is_finite()), "{weighted:?}");
+            if mean_of_faces(&faces, side, *direction) == [0.0; 3] {
+                dark += 1;
+                assert_eq!(*weighted, [0.0; 3]);
+            }
+        }
+        assert!(dark > 0, "every direction found the lit texel");
     }
 }
