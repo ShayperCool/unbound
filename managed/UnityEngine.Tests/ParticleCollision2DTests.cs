@@ -169,6 +169,31 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void TheQueryAllocatesNothingOnceWarm()
+        {
+            Box(new Vector3(0f, 0f, 3f), new Vector2(4f, .2f));
+            Collider<CircleCollider2D>(new Vector3(3f, 0f, 0f)).radius = .5f;
+            var capsule = Collider<CapsuleCollider2D>(new Vector3(-3f, 0f, 0f), 30f);
+            capsule.size = new Vector2(.4f, 2f);
+            Collider<EdgeCollider2D>(new Vector3(6f, 0f, 0f)).points = new[] { new Vector2(-1f, 0f), new Vector2(1f, .3f) };
+            var owner = new GameObject("owner");
+            m_Made.Add(owner);
+            var scratch = new Unbound.Runtime.Physics2DParticleQuery.Scratch();
+            var xs = new[] { 0f, 3f, -3f, 6f, .5f };
+            void Run()
+            {
+                foreach (float x in xs)
+                    Unbound.Runtime.Physics2DParticleQuery.Contact(owner, new Vector2(x, .8f), new Vector2(x, -.05f), .1f, -1, true, 256, scratch,
+                        out _, out _, out _, out _, out _);
+            }
+            Run();
+            AllocationMeasurement.EmptyAllocationContext();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 64; i++) Run();
+            Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
+        }
+
+        [Fact]
         public void ColliderForcePushesADynamicBodyAlongTheParticlesMovement()
         {
             var box = Box(Vector3.zero, new Vector2(4f, .2f));
