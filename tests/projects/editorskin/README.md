@@ -17,6 +17,10 @@ The Unity 6000.0.71f1 Play mode capture (Linux, dark theme) records, from a game
 - `load/*`: the order `EditorGUIUtility.Load` looks in: the project has a font under
   `Assets/Editor Default Resources` at the path of one of the Editor's fonts (it is the one
   loaded), none at the path of another (the Editor's is loaded), and neither has the third.
+- `textArea/*`: `EditorStyles.textField`, `numberField` and `textArea` (which of them are the
+  skin's own style object) and the heights of `[TextArea]` properties inside groups 150 and 400
+  points wide: a long line that wraps, texts with line breaks, one line and none, with limits
+  that clamp and limits that do not, beside the text area style's height of the text.
 - `osAsset/<family>/*`: a font asset made of an OS family by name and the feature records it has
   once the characters of a text with kerning pairs are added.
 

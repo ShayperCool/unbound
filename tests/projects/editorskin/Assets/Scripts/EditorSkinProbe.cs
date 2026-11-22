@@ -16,6 +16,15 @@ using UnityEngine.TextCore.Text;
 public sealed class EditorSkinProbe : MonoBehaviour
 {
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+
+    const string LongLine = "This note is one long line of text without any line break, long enough to wrap several times at the width it is measured in, whichever width that is.";
+
+    [TextArea(2, 5)] public string wrapping = LongLine;
+    [TextArea(3, 3)] public string fixedLines = LongLine;
+    [TextArea(1, 20)] public string manyLines = LongLine;
+    [TextArea(1, 20)] public string fourLines = "one\ntwo\nthree\nfour";
+    [TextArea(1, 20)] public string oneLine = "one";
+    [TextArea(1, 20)] public string empty = "";
     readonly StringBuilder m_Out = new StringBuilder();
     string m_Dir;
     bool m_Done;
@@ -79,6 +88,7 @@ public sealed class EditorSkinProbe : MonoBehaviour
         Fonts();
         OsFontAssets();
         LoadOrder();
+        TextAreas();
         m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(m_Dir, "values.jsonl"), m_Out.ToString());
         EditorApplication.Exit(0);
@@ -225,6 +235,54 @@ public sealed class EditorSkinProbe : MonoBehaviour
         {
             var font = EditorGUIUtility.Load(path) as Font;
             Put(key, font == null ? "null" : $"[{Json(font.name)},[{string.Join(",", font.fontNames.Select(Json))}]]");
+        }
+    }
+
+    static readonly string[] s_TextAreas = { "wrapping", "fixedLines", "manyLines", "fourLines", "oneLine", "empty" };
+
+    /// <summary>The Editor's text field, number field and text area styles, and the height of
+    /// [TextArea] properties: of a text that wraps, of texts with line breaks and of an empty
+    /// one, inside groups of two widths, with the context width and the text area style's own
+    /// height for the texts at that width beside them.</summary>
+    void TextAreas()
+    {
+        try
+        {
+            Style("textArea/style/textField", EditorStyles.textField);
+            Style("textArea/style/numberField", EditorStyles.numberField);
+            Style("textArea/style/textArea", EditorStyles.textArea);
+            var scene = EditorGUIUtility.GetBuiltinSkin(EditorSkin.Scene);
+            Put("textArea/style/same", "[" + string.Join(",", new[]
+            {
+                ReferenceEquals(EditorStyles.textField, scene.textField), ReferenceEquals(EditorStyles.numberField, EditorStyles.textField),
+                ReferenceEquals(EditorStyles.textArea, EditorStyles.textField), ReferenceEquals(EditorStyles.textArea, scene.textArea),
+            }.Select(b => b ? "true" : "false")) + "]");
+            using (var target = new SerializedObject(this))
+            {
+                // The context is a group of a known width: outside one it is the Editor
+                // window's, which is not the probe's to choose.
+                foreach (float width in new[] { 150f, 400f })
+                {
+                    GUI.BeginGroup(new Rect(10f, 10f, width, 200f));
+                    Heights("textArea/group" + width.ToString(Inv) + "/", target);
+                    GUI.EndGroup();
+                }
+            }
+        }
+        catch (Exception error)
+        {
+            Put("textArea/error", Json(error.GetType().Name + ": " + (error.InnerException ?? error).Message));
+        }
+    }
+
+    void Heights(string prefix, SerializedObject target)
+    {
+        float contextWidth = (float)typeof(EditorGUIUtility).GetProperty("contextWidth", Hidden).GetValue(null);
+        Put(prefix + "contextWidth", F(contextWidth));
+        foreach (string name in s_TextAreas)
+        {
+            var property = target.FindProperty(name);
+            Put(prefix + name, $"[{F(EditorGUI.GetPropertyHeight(property, true))},{F(EditorStyles.textArea.CalcHeight(new GUIContent(property.stringValue), contextWidth))}]");
         }
     }
 

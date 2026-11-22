@@ -836,9 +836,10 @@ namespace UnityEditor
 
         // The label's line, the first text line and 15 points for each further one: the lines are
         // the height the text has in the Editor's text area style at the context's width, in
-        // steps of 15 points, within the attribute's limits (the style's padding makes four
-        // lines of text count five: tests/projects/imguicontainer builtin.heights longNote).
-        // The style is the Editor's: there is none before a GUI pass.
+        // steps of 15 points, within the attribute's limits. A text that wraps at that width
+        // takes its wrapped lines, and the style's padding makes a text exactly n lines high
+        // count n + 1 (tests/projects/editorskin textArea/group*, tests/projects/imguicontainer
+        // builtin.heights longNote). The style is the Editor's: there is none before a GUI pass.
         static float OfTextArea(SerializedProperty property, TextAreaAttribute area)
         {
             if (!EditorStyles.Available) EditorStyles.Require();
