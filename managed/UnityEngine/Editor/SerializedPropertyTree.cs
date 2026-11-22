@@ -1081,6 +1081,7 @@ namespace Unbound.Runtime
                 node.TypeName = fresh.TypeName;
             }
             MarkReplaced(node);
+            node.EditPath = null;
         }
 
         static int Nesting(SerializedNode node)
@@ -1117,6 +1118,7 @@ namespace Unbound.Runtime
             }
             RePath(target, target.Path);
             MarkReplaced(target);
+            target.EditPath = null;
             return true;
         }
 
@@ -1422,6 +1424,7 @@ namespace Unbound.Runtime
             copy.Parent = parent;
             copy.Dirty = false;
             copy.Replaced = false;
+            copy.EditPath = null;
             copy.Children = new List<SerializedNode>(node.Children.Count);
             if (copy.Kind == SerializedNodeKind.Composite) copy.Value = null;
             else if (copy.Kind == SerializedNodeKind.Leaf) copy.Value = CopyLeaf(node.Value, node.Shape);

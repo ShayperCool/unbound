@@ -162,6 +162,40 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AnAddedElementAndAnUnchangedValueAreNoPropertiesOfTheName()
+        {
+            Undo.ClearAll();
+            var a = Make("Alpha");
+            try
+            {
+                var so = new SerializedObject(a);
+                Undo.IncrementCurrentGroup();
+                var numbers = so.FindProperty("numbers");
+                numbers.arraySize = 3;
+                numbers.GetArrayElementAtIndex(2).intValue = 9;
+                so.ApplyModifiedProperties();
+                Undo.FlushUndoRecordObjects();
+                Assert.Equal("Modified Numbers.Array.size in Alpha", Undo.GetCurrentGroupName());
+                Assert.Equal(new[] { 5, 6, 9 }, a.numbers);
+
+                // The SerializedObject still reads count 3; the object holds 7 already.
+                Undo.IncrementCurrentGroup();
+                so.Update();
+                a.count = 7;
+                so.FindProperty("count").intValue = 7;
+                so.FindProperty("title").stringValue = "x";
+                so.ApplyModifiedProperties();
+                Undo.FlushUndoRecordObjects();
+                Assert.Equal("Modified Title in Alpha", Undo.GetCurrentGroupName());
+            }
+            finally
+            {
+                Object.DestroyImmediate(a);
+                Undo.ClearAll();
+            }
+        }
+
+        [Fact]
         public void AnUndoRestoresOnlyWhatTheApplyChanged()
         {
             Undo.ClearAll();

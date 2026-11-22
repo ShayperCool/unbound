@@ -306,7 +306,9 @@ namespace UnityEditor
             void Walk(SerializedNode node)
             {
                 if (!node.Dirty && !node.Replaced) return;
-                if (node.Parent != null && node.Replaced)
+                // An element edit or a value assigned whole (a composite, an array) is one property;
+                // a value set counts when it changed.
+                if (node.Parent != null && node.Replaced && (node.EditPath != null || node.Children.Count > 0))
                 {
                     path = node.EditPath ?? node.Path;
                     count++;
