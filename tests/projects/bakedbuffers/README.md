@@ -16,6 +16,13 @@ and [Lighting Mode](https://docs.unity3d.com/6000.0/Documentation/Manual/lightin
 (Baked lights: "Unity bakes direct lighting and indirect lighting from Baked Lights into
 lightmaps"; Mixed lights: their direct light is baked in Subtractive mode and stays realtime in
 Baked Indirect and Shadowmask), [Light](https://docs.unity3d.com/6000.0/Documentation/Manual/class-Light.html).
+[Lighting Settings](https://docs.unity3d.com/6000.0/Documentation/Manual/class-LightingSettings.html)
+(Environment Samples: the samples the lightmapper takes of the environment's light;
+Environment Importance Sampling) and
+[Environment Lighting](https://docs.unity3d.com/6000.0/Documentation/Manual/lighting-window.html)
+(the ambient source: the skybox, a gradient or a colour, and its Intensity Multiplier). The
+documentation gives no rule for the sky's images, for the picked directions, for the mesh a sky
+is drawn on or for a submesh without a material: those are the release's observed results.
 The documentation gives no rule for the texels a chart covers or for the charts' numbers: what
 is compared here is the release's observed result.
 
