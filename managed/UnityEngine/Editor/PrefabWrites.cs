@@ -660,8 +660,9 @@ namespace UnityEditor
         }
 
         /// <summary>The project path a prefab is saved to, after the argument checks in the order and
-        /// with the messages of Unity's PrefabUtility C# (measured: tests/projects/scenesave
-        /// prefab-writes errors.*): the root, a persistent root to connect, part of an instance, then
+        /// with Unity's messages (measured for a null root, a path that is no prefab's and a missing
+        /// folder: tests/projects/scenesave prefab-writes errors.*; the other checks unmeasured): the
+        /// root, a persistent root to connect, part of an instance, then
         /// the path (valid, no folder there, no immutable folder, an existing folder) and, to connect,
         /// not under StreamingAssets.</summary>
         static string PrefabPath(GameObject instanceRoot, string assetPath, bool connect)
@@ -678,8 +679,9 @@ namespace UnityEditor
             var path = SceneFiles.ProjectRelative(assetPath).Replace('\\', '/');
             if (Directory.Exists(Path.Combine(ProjectInfo.ProjectPath, path)))
                 throw new ArgumentException($"Overwriting a folder with an Asset is not allowed: '{assetPath}'");
-            // An asset folder of a package the project does not hold, its root included (an
-            // immutable folder in the Editor: tests/projects/projectwrites 06.readonly.folder); a
+            // An asset folder of a package the project does not hold, its root included (the Editor
+            // calls such a folder immutable: tests/projects/projectwrites 06.readonly.logs; inferred
+            // for prefab saves, unmeasured); a
             // folder that is no asset folder falls through to the next check (Unity's PrefabUtility C#).
             var folder = Path.GetDirectoryName(path)?.Replace('\\', '/');
             if (!string.IsNullOrEmpty(folder) && AssetDatabase.IsImmutablePackagePath(folder)
@@ -687,7 +689,7 @@ namespace UnityEditor
                 throw new ArgumentException($"Saving Prefab to immutable folder is not allowed: '{assetPath}'");
             if (string.IsNullOrEmpty(folder) || !Directory.Exists(Path.Combine(ProjectInfo.ProjectPath, folder)))
                 throw new ArgumentException($"Given path does not exist: '{assetPath}'");
-            // The project's StreamingAssets folder (Unbound's reading of Unity's check, which is not in its C#).
+            // The project's StreamingAssets folder (Unity's message; this check is unmeasured).
             if (connect && path.StartsWith("Assets/StreamingAssets/", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("Can't connect a Prefab in the StreamingAssets folder to GameObjects in the scene. To save a Prefab to the StreamingAssets folder use SaveAsPrefabAsset instead.");
             return path;
