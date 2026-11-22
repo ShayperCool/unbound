@@ -1,0 +1,19 @@
+{
+  "commands": [
+    "python3 tests/projects/editorskin/run.py gate"
+  ],
+  "summary": "editorskin: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/EditorStyleCatalog.cs",
+    "managed/UnityEngine/Editor/EditorTextSettings.cs",
+    "managed/UnityEngine/Editor/EditorGUIUtility.cs",
+    "managed/UnityEngine/IMGUI/GUIStyle.cs",
+    "managed/UnityEngine/IMGUI/GUIUtility.cs",
+    "managed/UnityEngine/IMGUI/IMGUITextHandle.cs",
+    "managed/UnityEngine/UIElements/Assets/UiAssets.cs",
+    "managed/UnityEngine/UIElements/StyleSheets/",
+    "managed/UnityEngine/Text/TextCoreText/",
+    "crates/unbound-runtime/src/editor_resources.rs",
+    "crates/unbound-assets/src/font_features.rs"
+  ]
+}

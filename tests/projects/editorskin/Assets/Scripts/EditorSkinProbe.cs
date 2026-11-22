@@ -78,6 +78,7 @@ public sealed class EditorSkinProbe : MonoBehaviour
         }
         Fonts();
         OsFontAssets();
+        LoadOrder();
         m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(m_Dir, "values.jsonl"), m_Out.ToString());
         EditorApplication.Exit(0);
@@ -159,6 +160,9 @@ public sealed class EditorSkinProbe : MonoBehaviour
                 string Typeface(FontAsset typeface) => typeface == null ? "null" : Json(typeface.faceInfo.familyName + " " + typeface.faceInfo.styleName);
                 var weights = asset.fontWeightTable;
                 Put(prefix + "weights", "[" + string.Join(",", Enumerable.Range(0, weights.Length).Select(i => "[" + Typeface(weights[i].regularTypeface) + "," + Typeface(weights[i].italicTypeface) + "]")) + "]");
+                // The Editor draws its own windows with the Inter fonts: the records of their
+                // assets count the glyphs of that text too, which is no property of the fonts.
+                if (font.name.StartsWith("Inter", StringComparison.Ordinal)) continue;
                 var table = typeof(FontAsset).GetProperty("fontFeatureTable", Hidden)?.GetValue(asset);
                 string Records(string property) =>
                     table?.GetType().GetProperty(property, Hidden)?.GetValue(table) is System.Collections.ICollection records ? records.Count.ToString(Inv) : "null";
@@ -203,6 +207,23 @@ public sealed class EditorSkinProbe : MonoBehaviour
             {
                 Put(prefix + "error", Json(error.GetType().Name + ": " + (error.InnerException ?? error).Message));
             }
+        }
+    }
+
+    /// <summary>EditorGUIUtility.Load looks under "Assets/Editor Default Resources" before the
+    /// Editor's own resources: the project has a font at the path of one of the Editor's fonts,
+    /// and none at the path of the one beside it.</summary>
+    void LoadOrder()
+    {
+        foreach (var (key, path) in new[]
+        {
+            ("load/projectBeforeEditor", "Fonts/RobotoMono/RobotoMono-Italic.ttf"),
+            ("load/editorOnly", "Fonts/RobotoMono/RobotoMono-BoldItalic.ttf"),
+            ("load/neither", "Fonts/RobotoMono/NoSuchFont.ttf"),
+        })
+        {
+            var font = EditorGUIUtility.Load(path) as Font;
+            Put(key, font == null ? "null" : $"[{Json(font.name)},[{string.Join(",", font.fontNames.Select(Json))}]]");
         }
     }
 

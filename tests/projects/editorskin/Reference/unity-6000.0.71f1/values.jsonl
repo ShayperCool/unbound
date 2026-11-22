@@ -1335,7 +1335,6 @@
 {"k":"font/Inter-Regular/face","v":["Inter","Regular",90,87.1875,-21.732954,108.920456]}
 {"k":"font/Inter-Regular/atlas","v":["SDFAA",9,"DynamicOS",true]}
 {"k":"font/Inter-Regular/weights","v":[[null,null],[null,null],[null,null],[null,null],[null,"Inter Italic"],[null,null],[null,null],["Inter Semi Bold","Inter Semi Bold Italic"],[null,null],[null,null]]}
-{"k":"font/Inter-Regular/featureRecords","v":[7178,0,0,0]}
 {"k":"font/Inter-SemiBold/font","v":["Inter-SemiBold",12,true,14,["Inter"]]}
 {"k":"font/Inter-SemiBold/lineHeight/Normal","v":15}
 {"k":"font/Inter-SemiBold/widths/Normal","v":[14.08,7.92,7.12,16.38,8.69,8.69,71.44]}
@@ -1345,7 +1344,6 @@
 {"k":"font/Inter-SemiBold/face","v":["Inter","Semi Bold",90,87.1875,-21.732954,108.920456]}
 {"k":"font/Inter-SemiBold/atlas","v":["SDFAA",9,"Dynamic",true]}
 {"k":"font/Inter-SemiBold/weights","v":[[null,null],[null,null],[null,null],[null,null],[null,null],[null,null],[null,null],[null,null],[null,null],[null,null]]}
-{"k":"font/Inter-SemiBold/featureRecords","v":[3739,0,0,0]}
 {"k":"font/RobotoMono-Regular/font","v":["RobotoMono-Regular",16,true,21,["Roboto Mono"]]}
 {"k":"font/RobotoMono-Regular/lineHeight/Normal","v":21}
 {"k":"font/RobotoMono-Regular/widths/Normal","v":[19.21,9.61,9.61,19.21,9.61,9.61,105.64]}
@@ -1372,4 +1370,7 @@
 {"k":"osAsset/Cantarell/face","v":["Cantarell","Regular","DynamicOS"]}
 {"k":"osAsset/Cantarell/added","v":[true,""]}
 {"k":"osAsset/Cantarell/featureRecords","v":[0,0,823,0]}
+{"k":"load/projectBeforeEditor","v":["RobotoMono-Italic",["Liberation Serif"]]}
+{"k":"load/editorOnly","v":["RobotoMono-BoldItalic",["Roboto Mono"]]}
+{"k":"load/neither","v":null}
 {"k":"complete","v":true}

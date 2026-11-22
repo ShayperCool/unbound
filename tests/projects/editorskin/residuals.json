@@ -1,0 +1,39 @@
+{
+  "Font feature records of OS font assets: the Editor's TextCore takes pair adjustment and mark records from some OS faces and none from others (Liberation Sans and Liberation Serif: both; Cantarell: marks only; FreeSans and FreeSerif: none, tests/projects/imguiskin calcText/imguiAsset). Unbound gives no OS font asset any record (Compat.OsFontAssetsTakeNoFontFeatures), so a text with a kerning pair is wider in the Editor's system fonts (\"Te\" 11.62 in the Editor, 12.84 in Unbound at 11 points). What in a face decides it is not known; proposed as a queue row.": [
+    "font/System Normal/featureRecords",
+    "font/System Normal/widths/Bold",
+    "font/System Normal/widths/Normal",
+    "font/System Big/featureRecords",
+    "font/System Big/widths/Bold",
+    "font/System Big/widths/Normal",
+    "font/System Small/featureRecords",
+    "font/System Small/widths/Bold",
+    "font/System Small/widths/Normal",
+    "font/System Warning/featureRecords",
+    "font/System Warning/widths/Bold",
+    "font/System Warning/widths/Normal",
+    "font/System Normal Bold/featureRecords",
+    "font/System Normal Bold/widths/Bold",
+    "font/System Normal Bold/widths/Normal",
+    "font/System Small Bold/featureRecords",
+    "font/System Small Bold/widths/Bold",
+    "font/System Small Bold/widths/Normal",
+    "osAsset/Cantarell/featureRecords",
+    "osAsset/Liberation Sans/featureRecords",
+    "osAsset/Liberation Serif/featureRecords",
+    "skin/Inspector/custom/NotificationBackground",
+    "skin/Inspector/custom/NotificationText",
+    "skin/Inspector/custom/PreButtonBlue",
+    "skin/Inspector/custom/PreButtonGreen",
+    "skin/Inspector/custom/PreButtonRed",
+    "skin/Scene/custom/NotificationBackground",
+    "skin/Scene/custom/NotificationText",
+    "skin/Scene/custom/PreButtonBlue",
+    "skin/Scene/custom/PreButtonGreen",
+    "skin/Scene/custom/PreButtonRed"
+  ],
+  "The font assets of the Inter and Roboto Mono families: the Editor makes them as OS font assets (atlas population mode DynamicOS, the fonts being known to its font engine by family name); Unbound makes them of the fonts of the Editor's resources (Dynamic). Faces, weight tables, line heights and widths match.": [
+    "font/Inter-Regular/atlas",
+    "font/RobotoMono-Regular/atlas"
+  ]
+}
