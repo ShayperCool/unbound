@@ -27,6 +27,18 @@ namespace Unbound.Runtime
     /// <summary>What the Editor's controller API does with the objects it makes and removes.</summary>
     internal static class ControllerObjects
     {
+        /// <summary>The name a state or state machine takes: a dot separates the names of a state's
+        /// path, so each becomes an underscore, with the Editor's warning (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/animatorapi <c>names.*</c>: AddState, AddMotion,
+        /// AddStateMachine, a new layer's machine and the name setter; the unique name helpers,
+        /// layers and parameters keep their dots).</summary>
+        internal static string StateName(string name)
+        {
+            if (name == null || name.IndexOf('.') < 0) return name;
+            Debug.LogWarning("'.' is not allowed in State name");
+            return name.Replace('.', '_');
+        }
+
         /// <summary>Whether two objects are in the same asset file (or both in none).</summary>
         internal static bool SameAsset(Object a, Object b) => AssetDatabase.GetAssetPath(a) == AssetDatabase.GetAssetPath(b);
 
@@ -703,6 +715,8 @@ namespace UnityEditor.Animations
 
         public AnimatorStateMachine() { }
 
+        internal override void SetName(string value) => m_Name = ControllerObjects.StateName(value);
+
         // Where the graph view draws the Any State, Entry, Exit and parent nodes; a new state
         // machine's defaults match Unity 6000.0.71f1 (tests/projects/defaultstate).
         static readonly Vector3 k_AnyStatePosition = new Vector3(50, 20, 0), k_EntryPosition = new Vector3(50, 120, 0),
@@ -1193,6 +1207,8 @@ namespace UnityEditor.Animations
     public sealed partial class AnimatorState : Object
     {
         public AnimatorState() { }
+
+        internal override void SetName(string value) => m_Name = ControllerObjects.StateName(value);
 
         public int nameHash => Animator.StringToHash(name);
         public Motion motion { get => Motion; set { Motion = value; Edited(); } }
