@@ -133,12 +133,6 @@ namespace UnityEngine.Tests
                 EditorGUIUtility.PingObject(0);
                 Assert.Empty(logs.Entries);
 
-                Assert.True(EditorGUIUtility.IsBuiltinResource("Library/unity default resources"));
-                Assert.True(EditorGUIUtility.IsBuiltinResource("Resources/unity_builtin_extra"));
-                Assert.True(EditorGUIUtility.IsBuiltinResource("RESOURCES/UNITY_BUILTIN_EXTRA"));
-                Assert.False(EditorGUIUtility.IsBuiltinResource("Assets/Test.txt"));
-                Assert.False(EditorGUIUtility.IsBuiltinResource(""));
-                Assert.False(EditorGUIUtility.IsBuiltinResource(null));
             }
             finally
             {

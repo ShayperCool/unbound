@@ -128,21 +128,16 @@ namespace UnityEditor
             return obj;
         }
 
-        internal static bool IsBuiltinResource(string path) =>
-            string.Equals(path, "Library/unity default resources", System.StringComparison.OrdinalIgnoreCase)
-            || string.Equals(path, "Resources/unity_builtin_extra", System.StringComparison.OrdinalIgnoreCase);
-
-        /// <summary>Pings an object in open hierarchy/project windows (no-op when none are open).</summary>
+        /// <summary>Highlights an object in the Hierarchy and Project windows that show it. Without
+        /// such a window nothing happens, also in the Editor (no exception, no log:
+        /// tests/projects/editorlayout util/pingObject); Unbound has none.</summary>
         public static void PingObject(Object obj)
         {
             if (obj != null) PingObject(obj.GetInstanceID());
         }
 
-        /// <summary>Pings an instance ID in open hierarchy/project windows (ignores built-in resources).</summary>
-        public static void PingObject(int targetInstanceID)
-        {
-            if (IsBuiltinResource(AssetDatabase.GetAssetPath(targetInstanceID))) return;
-        }
+        [Unbound.EditorFaithful("highlights the object in open Hierarchy and Project windows; with none open nothing happens (tests/projects/editorlayout util/pingObject)")]
+        public static void PingObject(int targetInstanceID) { }
 
         internal static float CalcContextWidth()
         {
