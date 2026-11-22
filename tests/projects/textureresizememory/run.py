@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Record Texture2D memory before and after reinitialization on each graphics device."""
 import argparse
+import hashlib
 from pathlib import Path
 import sys
 
@@ -13,6 +14,7 @@ BASE = (PROBE.parent/'formatmapping', ['Assets/Scenes', 'Assets/Scenes.meta', 'P
 CAPTURE = 'TEXTURE_RESIZE_MEMORY_OUT'
 DEVICES = ('opengl', 'metal')
 HOST_DEVICE = 'metal' if sys.platform == 'darwin' else 'opengl'
+CAPTURE_SEAL = 'capture.sha256'
 
 
 def directory(label, device):
@@ -25,28 +27,39 @@ def directory(label, device):
     return out
 
 
+def capture_fingerprints(root, device):
+    capture = root/'capture'
+    name = value_probe.editor_runner.RESULT
+    values = capture/value_probe.VALUES
+    launch = root/name
+    if any(path.resolve() != path for path in (capture, capture/name, values, launch, root/CAPTURE_SEAL)):
+        raise SystemExit(f'{root}: capture files must stay in their run directory')
+    for path in (values, launch, capture/name, root/CAPTURE_SEAL):
+        if path.exists() and path.stat().st_nlink != 1:
+            raise SystemExit(f'{path}: capture file must have a single filesystem link')
+    rows = value_probe.read_values(values)
+    expected_device = {'opengl': 'OpenGLCore', 'metal': 'Metal'}[device]
+    if rows.get('device') != expected_device or rows.get('unity') != unity_version():
+        raise SystemExit(f'{root}: expected a {expected_device} Editor capture for {unity_version()}')
+    return [hashlib.sha256(path.read_bytes()).hexdigest() for path in (launch, values)]
+
+
 def publish(labels, device):
     roots = [directory(label, device) for label in labels]
     if len(roots) < 2 or len(roots) != len(set(roots)):
         raise SystemExit('publish requires at least two distinct Editor runs')
     launches = set()
     for root in roots:
-        capture = root/'capture'
-        name = value_probe.editor_runner.RESULT
-        values = capture/value_probe.VALUES
-        paths = (capture, capture/name, values, root/name)
-        if any(path.resolve() != path for path in paths):
-            raise SystemExit(f'{root}: capture files must stay in their run directory')
-        if (capture/name).exists() and (capture/name).stat().st_nlink != 1:
-            raise SystemExit(f'{capture/name}: capture metadata must have a single filesystem link')
-        launch = (root/name).read_bytes()
+        try:
+            fingerprints = capture_fingerprints(root, device)
+            if fingerprints != (root/CAPTURE_SEAL).read_text().splitlines():
+                raise SystemExit(f'{root}: captured values or launch metadata changed after recording')
+        except OSError as error:
+            raise SystemExit(f'{root}: missing or invalid Editor record: {error}') from error
+        launch = fingerprints[0]
         if launch in launches:
             raise SystemExit(f'{root}: duplicate Editor launch record')
         launches.add(launch)
-        rows = value_probe.read_values(values)
-        expected_device = {'opengl': 'OpenGLCore', 'metal': 'Metal'}[device]
-        if rows.get('device') != expected_device or rows.get('unity') != unity_version():
-            raise SystemExit(f'{root}: expected a {expected_device} Editor capture for {unity_version()}')
     value_probe.METAL = device == 'metal'
     return value_probe.publish(PROBE, [str(root) for root in roots],
                                profile='opengl' if device == 'opengl' else None)
@@ -74,6 +87,8 @@ def main():
     if args.mode == 'record':
         value_probe.record(PROBE, 'RecordTextureResizeMemory.Record', CAPTURE, str(out), batch=True,
                            macos_batch=True, base=BASE)
+        with (out/CAPTURE_SEAL).open('x') as seal:
+            seal.write('\n'.join(capture_fingerprints(out, device)) + '\n')
         return 0
 
     engine_args = ['--headless', '12']

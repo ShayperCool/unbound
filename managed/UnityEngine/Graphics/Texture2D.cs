@@ -471,8 +471,9 @@ namespace UnityEngine
 
         bool ReinitializeImage(int width, int height, TextureFormat format, bool hasMipMap, bool linear)
         {
+            bool wasReadable = m_IsReadable;
             Init(width, height, format, hasMipMap ? -1 : 1, linear, constructor: false);
-            m_ResizeMemoryPendingApply = true;
+            m_ResizeMemoryPendingApply = wasReadable;
             return true;
         }
 

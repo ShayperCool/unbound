@@ -41,6 +41,32 @@ public static class TextureResizeMemory
         UnityEngine.Object.DestroyImmediate(texture);
     }
 
+    static void Compress(string key, TextureFormat format)
+    {
+        var texture = new Texture2D(8, 8, format, false, true);
+        texture.Reinitialize(16, 24);
+        Size(key + ".resized", texture);
+        texture.Compress(false);
+        Put(key + ".format", texture.format);
+        Size(key + ".compressed", texture);
+        texture.Apply(false, false);
+        Size(key + ".applied", texture);
+        UnityEngine.Object.DestroyImmediate(texture);
+    }
+
+    static void ResizeUnreadable(string key, Action<Texture2D> resize)
+    {
+        var texture = new Texture2D(16, 24, TextureFormat.RGBA32, false, true);
+        texture.Apply(false, true);
+        Size(key + ".before", texture);
+        // Match the existing image dimensions and format to isolate profiler accounting
+        // from the separate difference in how the runtimes reject unreadable input.
+        try { resize(texture); }
+        catch (UnityException) { }
+        Size(key + ".after", texture);
+        UnityEngine.Object.DestroyImmediate(texture);
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Record()
     {
@@ -58,6 +84,10 @@ public static class TextureResizeMemory
         explicitFormat.Apply(false, false);
         Size("explicit.uploaded", explicitFormat);
         UnityEngine.Object.DestroyImmediate(explicitFormat);
+        Compress("compress.rgba", TextureFormat.RGBA32);
+        Compress("compress.dxt1", TextureFormat.DXT1);
+        ResizeUnreadable("unreadable.textureFormat", t => t.Reinitialize(t.width, t.height, t.format, false));
+        ResizeUnreadable("unreadable.graphicsFormat", t => t.Reinitialize(t.width, t.height, t.graphicsFormat, false));
         Rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), Rows);
 #if UNITY_EDITOR

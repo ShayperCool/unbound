@@ -5,6 +5,7 @@
   "summary": "textureresizememory.*: .*",
   "engine_paths": [
     "managed/UnityEngine/Graphics/Texture2D.cs",
+    "managed/UnityEngine/Graphics/Texture2D.Blocks.cs",
     "managed/UnityEngine/Profiling/MemorySizes.cs",
     "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs"
   ]

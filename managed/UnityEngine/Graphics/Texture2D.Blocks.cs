@@ -368,6 +368,7 @@ namespace UnityEngine
             DecodeAllBlocks();
             m_PixelsDirty = true;
             Upload();
+            m_ResizeMemoryPendingApply = false;
         }
 
         /// <summary>Graphics.CopyTexture where either texture is block-compressed (tests/projects/
