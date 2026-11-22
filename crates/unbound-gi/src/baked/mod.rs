@@ -6,8 +6,8 @@ pub mod direct;
 pub mod gbuffer;
 pub mod light;
 pub mod raster;
-pub mod trace;
 mod spooky;
+pub mod trace;
 
 #[cfg(test)]
 mod tests;

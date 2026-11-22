@@ -32,18 +32,6 @@ fn sub(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
 
-fn cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-
-fn dot(a: [f32; 3], b: [f32; 3]) -> f32 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
 impl Scene {
     /// A scene of triangles given by their corners in world space. Triangles with a corner that
     /// is not a number are left out.
@@ -176,24 +164,40 @@ fn crosses(node: &Node, ray: &Ray, inverse: &[f32; 3], limit: f32) -> bool {
 }
 
 /// Where along the ray it crosses the triangle (first corner and two edges), after its origin.
+/// In double precision: with 32-bit products a ray through an edge two triangles share can
+/// miss both.
 fn hit(triangle: &[[f32; 3]; 3], ray: &Ray) -> Option<f32> {
-    let [corner, e1, e2] = *triangle;
-    let p = cross(ray.direction, e2);
+    let wide = |v: [f32; 3]| v.map(f64::from);
+    let cross = |a: [f64; 3], b: [f64; 3]| {
+        [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ]
+    };
+    let dot = |a: [f64; 3], b: [f64; 3]| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    let (corner, e1, e2) = (wide(triangle[0]), wide(triangle[1]), wide(triangle[2]));
+    let (origin, direction) = (wide(ray.origin), wide(ray.direction));
+    let p = cross(direction, e2);
     let determinant = dot(e1, p);
     if determinant == 0.0 {
         return None;
     }
     let inverse = 1.0 / determinant;
-    let s = sub(ray.origin, corner);
+    let s = [
+        origin[0] - corner[0],
+        origin[1] - corner[1],
+        origin[2] - corner[2],
+    ];
     let u = dot(s, p) * inverse;
     if !(0.0..=1.0).contains(&u) {
         return None;
     }
     let q = cross(s, e1);
-    let v = dot(ray.direction, q) * inverse;
+    let v = dot(direction, q) * inverse;
     if v < 0.0 || u + v > 1.0 {
         return None;
     }
     let distance = dot(e2, q) * inverse;
-    (distance > 0.0).then_some(distance)
+    (distance > 0.0).then_some(distance as f32)
 }
