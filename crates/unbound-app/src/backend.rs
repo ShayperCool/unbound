@@ -1,12 +1,13 @@
 //! The render backend the managed engine talks to. Once the GPU device is installed, a dedicated
-//! render thread (`Unbound Render`) owns [`UnityRenderer`] and executes uploads and command
+//! render thread (`Unbound Render`, an Unbound design: the measured Editor renders on its main
+//! thread, tests/projects/nativegfx) owns [`UnityRenderer`] and executes uploads and command
 //! streams in strict FIFO order while the game thread builds the next frame (up to one frame in
-//! flight, matching Unity's pipelined render thread). Synchronous readbacks and queries flush in
-//! order on the render thread; native plugin callbacks and native-texture interop temporarily
-//! borrow the renderer onto the game thread in strict FIFO order so plugin thread identity,
-//! OpenGL context ownership, and log deferral match Unity. Calls made before the renderer exists
-//! wait in order until [`GpuBackend::install`]; shader queries before then are answered by the
-//! backend's own resolver.
+//! flight). Synchronous readbacks and queries flush in order on the render thread. Native plugin
+//! callbacks and native-texture interop borrow the renderer onto the game thread in FIFO order so
+//! plugin thread identity, OpenGL context ownership and log deferral are as before; once a native
+//! rendering plugin is loaded, every command batch runs that way (see [`GpuBackend`]). A panic on
+//! the render thread stops the process. Calls made before the renderer exists wait in order until
+//! [`GpuBackend::install`]; shader queries before then are answered by the backend's own resolver.
 use crate::materials::Resolver;
 use crate::render::executor::{UnityRenderer, Upload};
 use crate::shaderlab::ShaderIndex;
@@ -147,51 +148,68 @@ struct Worker {
 }
 
 impl Worker {
-    fn spawn(mut renderer: UnityRenderer) -> Arc<Self> {
+    fn spawn(renderer: UnityRenderer) -> Arc<Self> {
         let queue = RenderQueue::new();
         let worker_queue = Arc::clone(&queue);
         let handle = std::thread::Builder::new()
             .name("Unbound Render".into())
             .spawn(move || {
                 let _close_on_exit = CloseOnDrop(Arc::clone(&worker_queue));
-                while let Some(msg) = worker_queue.pop() {
-                    match msg {
-                        RenderMsg::Upload(u) => renderer.apply(u),
-                        RenderMsg::Commands {
-                            commands,
-                            end_frames,
-                        } => {
-                            renderer.execute(commands);
-                            worker_queue.complete_frames(end_frames);
-                        }
-                        RenderMsg::Call(op) => op(&mut renderer),
-                        RenderMsg::Lend { take_tx, return_rx } => {
-                            if take_tx.send(renderer).is_err() {
-                                return;
-                            }
-                            match return_rx.recv() {
-                                Ok(returned) => renderer = returned,
-                                Err(_) => return,
-                            }
-                        }
-                        RenderMsg::Flush(reply) => {
-                            let _ = reply.send(());
-                        }
-                        RenderMsg::Shutdown(reply) => {
-                            drop(renderer);
-                            worker_queue.close();
-                            let _ = reply.send(());
-                            return;
-                        }
-                    }
+                // A renderer that panics leaves nothing drawn from then on: stop the process
+                // loudly, as a panic on the game thread did before the render thread existed.
+                let run = std::panic::AssertUnwindSafe(|| Self::serve(&worker_queue, renderer));
+                if let Err(panic) = std::panic::catch_unwind(run) {
+                    let message = panic
+                        .downcast_ref::<&str>()
+                        .map(|s| s.to_string())
+                        .or_else(|| panic.downcast_ref::<String>().cloned())
+                        .unwrap_or_default();
+                    tracing::error!("the render thread panicked: {message}");
+                    eprintln!("Unbound: the render thread panicked: {message}");
+                    std::process::abort();
                 }
-                drop(renderer);
             })
             .expect("failed to spawn Unbound Render thread");
         Arc::new(Self {
             queue,
             join: Mutex::new(Some(handle)),
         })
+    }
+
+    /// The render thread's loop: the queue's messages in order until it closes or shuts down.
+    fn serve(worker_queue: &RenderQueue, mut renderer: UnityRenderer) {
+        while let Some(msg) = worker_queue.pop() {
+            match msg {
+                RenderMsg::Upload(u) => renderer.apply(u),
+                RenderMsg::Commands {
+                    commands,
+                    end_frames,
+                } => {
+                    renderer.execute(commands);
+                    worker_queue.complete_frames(end_frames);
+                }
+                RenderMsg::Call(op) => op(&mut renderer),
+                RenderMsg::Lend { take_tx, return_rx } => {
+                    if take_tx.send(renderer).is_err() {
+                        return;
+                    }
+                    match return_rx.recv() {
+                        Ok(returned) => renderer = returned,
+                        Err(_) => return,
+                    }
+                }
+                RenderMsg::Flush(reply) => {
+                    let _ = reply.send(());
+                }
+                RenderMsg::Shutdown(reply) => {
+                    drop(renderer);
+                    worker_queue.close();
+                    let _ = reply.send(());
+                    return;
+                }
+            }
+        }
+        drop(renderer);
     }
 
     fn call<R: Send + 'static>(
@@ -285,6 +303,11 @@ impl Inner {
 #[derive(Default)]
 pub struct GpuBackend {
     inner: Mutex<Inner>,
+    /// A native rendering plugin is loaded: command batches run on the game thread from then on
+    /// (the renderer lent to it, in order), as they did before the render thread, because a
+    /// plugin's own device work from scripts (OpenGL calls on its context, Vulkan queue submits,
+    /// Metal encoders outside callbacks) is ordered with Unity's rendering on that thread.
+    plugins: std::sync::atomic::AtomicBool,
 }
 
 impl Drop for GpuBackend {
@@ -419,7 +442,7 @@ impl RenderBackend for GpuBackend {
             }
         };
         let has_plugin = commands.iter().any(|c| matches!(c, Command::Plugin(_)));
-        if has_plugin {
+        if has_plugin || self.plugins.load(std::sync::atomic::Ordering::Relaxed) {
             unbound_runtime::plugin_api::while_rendering(|| {
                 let _ = worker.with_renderer_on_caller(|r| r.execute(commands));
             });
@@ -530,6 +553,9 @@ impl RenderBackend for GpuBackend {
     }
 
     fn with_plugin_context(&self, work: &mut dyn FnMut()) {
+        // A plugin is loading, queried or shutting down: rendering runs synchronously from now on.
+        self.plugins
+            .store(true, std::sync::atomic::Ordering::Relaxed);
         // Only OpenGL Core has a context of the plugins' to make current (the other devices'
         // plugins use the device's own interface): the work alone elsewhere.
         if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore {
@@ -537,7 +563,6 @@ impl RenderBackend for GpuBackend {
         }
         // Flush any queued texture/target uploads before the plugin inspects the GL share group.
         self.flush();
-        crate::render::gl_interop::mark_render_thread();
         // The renderer is not held meanwhile: the plugin may call back into the engine.
         let mut ran = false;
         let _ = crate::render::gl_interop::with(|_| {
