@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/capturestart/run.py check"
+  ],
+  "summary": "capturestart: \\d+/\\d+ values match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Core/Time.cs",
+    "crates/unbound-runtime/src/game.rs",
+    "managed/Unbound.Host/Game.cs"
+  ]
+}
