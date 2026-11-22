@@ -103,9 +103,10 @@ compared within 2e-6 relative. A texel's direct light is compared within 1e-4 (t
 above 1): last-bit differences of 32-bit arithmetic are multiplied by a narrow spot cone's falloff
 (the worst here is 2.5e-5, in `Lamps`); the used texels are compared exactly.
 
-`bake_buffers.py replay <capture>` is a development check of the rasterizer alone: it feeds a
-capture's own bake input (kept in the run folder, not in Git) to the
-`cargo run -p unbound-gi --example baked_gbuffer` tool and compares its texels with the capture's.
+`bake_buffers.py replay <capture>` is a development check of the baker's core alone: it feeds a
+capture's own bake input (kept in the run folder, not in Git: meshes, placements, shadow casters,
+lights, Lighting Mode and pushoff) to the `cargo run -p unbound-gi --example baked_gbuffer` tool
+and compares its used texels, charts, samples and direct light with the capture's.
 
 Not baked by Unbound yet (said, each once per scene): area lights, light cookies, soft baked
 shadows (a Baked Shadow Angle or Radius: baked hard), lights whose intensity multiplies their
@@ -115,7 +116,8 @@ and not said: materials that let light through stop it.
 
 Not measured: Direct Samples that are no power of two or fewer than a texel's samples (Unbound
 takes the mean of a texel's samples whatever the count), gamma colour
-space projects, light colour temperatures, the points and the triangles' own normals the texels' samples stand for (the
+space projects, light colour temperatures, the light of samples whose normals have no length or whose
+triangles have no area (the scenes with such meshes have no lights), the points and the triangles' own normals the texels' samples stand for (the
 Editor writes neither; Unbound derives them with the interpolated normals, for the bake's
 lighting to come), several open scenes, renderers of prefab instances (their order in the bake),
 Anti-aliasing Samples below 1, meshes with UVs that are not numbers or with other vertex formats

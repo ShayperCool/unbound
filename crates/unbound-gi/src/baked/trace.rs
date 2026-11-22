@@ -27,6 +27,8 @@ pub struct Scene {
 }
 
 const LEAF_TRIANGLES: usize = 4;
+/// How much wider a node's box is than its triangles, of its coordinates' size.
+const BOX_MARGIN: f32 = 1e-5;
 
 fn sub(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
@@ -114,6 +116,13 @@ fn build(bounds: &[([f32; 3], [f32; 3])], order: &mut [u32], start: u32, nodes: 
             centre_min[k] = centre_min[k].min(centre);
             centre_max[k] = centre_max[k].max(centre);
         }
+    }
+    // A node's box is a little wider than its triangles, so that a ray through a triangle on
+    // the box's side (a flat floor: a box without thickness) is not kept out by rounding.
+    for k in 0..3 {
+        let margin = BOX_MARGIN * (1.0 + min[k].abs().max(max[k].abs()));
+        min[k] -= margin;
+        max[k] += margin;
     }
     let node = nodes.len();
     nodes.push(Node {

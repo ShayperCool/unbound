@@ -280,7 +280,6 @@ impl<'a> Buffers<'a> {
         std::fs::write(&path, bytes).with_context(|| format!("writing {}", path.display()))
     }
 
-    /// The next lightmap: its texels, and its renderers by their number in the bake.
     /// The next lightmap: its texels, its renderers by their number in the bake, and its
     /// texels' direct light.
     fn lightmap(
@@ -323,12 +322,14 @@ impl<'a> Buffers<'a> {
         Ok(())
     }
 
-    /// Ends the bake's buffers with their description: the lightmaps, and the bake's lights in
-    /// its order.
-    fn finish(self, lights: Json) -> Result<()> {
+    /// Ends the bake's buffers with their description: the lightmaps, the Lighting Mode of
+    /// mixed lights and the bake's lights in its order.
+    fn finish(self, mixed_mode: u8, lights: Json) -> Result<()> {
         self.write(
             Self::DESCRIPTION.into(),
-            serde_json::to_vec_pretty(&json!({ "lightmaps": self.lightmaps, "lights": lights }))?,
+            serde_json::to_vec_pretty(
+                &json!({ "lightmaps": self.lightmaps, "mixedMode": mixed_mode, "lights": lights }),
+            )?,
         )
     }
 }
@@ -497,30 +498,33 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             );
             written.lightmap(&g, &members, &baked, &lit)?;
         }
-        written.finish(json!(
-            lights
-                .iter()
-                .zip(&baked_lights)
-                .map(|(data, light)| json!({
-                    "name": data.name,
-                    "type": data.kind,
-                    "mode": data.mode,
-                    "color": light.color,
-                    "indirectColor": light.indirect_color,
-                    "position": light.position,
-                    "orientation": data.rotation,
-                    // As a bake input's lights are described (the probe's lights.json): no range
-                    // and a cone of 1 for a directional light, no cone for a point light.
-                    "range": if light.kind == Kind::Directional { 0.0 } else { light.range },
-                    "coneAngle": match light.kind {
-                        Kind::Directional => 1.0,
-                        Kind::Point => 0.0,
-                        Kind::Spot => light.cone_angle,
-                    },
-                    "castsShadows": light.casts_shadows,
-                }))
-                .collect::<Vec<_>>()
-        ))?;
+        written.finish(
+            request.mixed_mode,
+            json!(
+                lights
+                    .iter()
+                    .zip(&baked_lights)
+                    .map(|(data, light)| json!({
+                        "name": data.name,
+                        "type": data.kind,
+                        "mode": data.mode,
+                        "color": light.color,
+                        "indirectColor": light.indirect_color,
+                        "position": light.position,
+                        "orientation": data.rotation,
+                        // As a bake input's lights are described (the probe's lights.json): no range
+                        // and a cone of 1 for a directional light, no cone for a point light.
+                        "range": if light.kind == Kind::Directional { 0.0 } else { light.range },
+                        "coneAngle": match light.kind {
+                            Kind::Directional => 1.0,
+                            Kind::Point => 0.0,
+                            Kind::Spot => light.cone_angle,
+                        },
+                        "castsShadows": light.casts_shadows,
+                    }))
+                    .collect::<Vec<_>>()
+            ),
+        )?;
     }
 
     let mut placements = vec![Json::Null; request.renderers.len()];

@@ -11,7 +11,7 @@ and the bake's lights, after a bake in Edit mode.
     bake_buffers.py compare --label L   # an engine run's buffers against the reference
     bake_buffers.py check               # engine run + compare
     bake_buffers.py replay L            # development: the Editor capture L's own bake input through Unbound's
-                                        # rasterizer alone (cargo example baked_gbuffer), against the capture
+                                        # rasterizer and direct light alone (cargo example baked_gbuffer)
 
 `Assets/Editor/BuffersRecord.cs` opens each scene of Assets/Scenes and bakes it. In the Editor the
 bake goes through its `UnityEditor.LightBaking` API, which writes the scene's bake input and
@@ -181,7 +181,7 @@ def repeats(name, first, other):
     values within REPEAT_TOLERANCE, times the value where that is above 1)."""
     if first == other:
         return True
-    if other is None or not Path(name).name.startswith('irradiance'):
+    if not first or not other or not Path(name).name.startswith('irradiance'):
         return False
     a, b = editor_bake.parse_r2d(first), editor_bake.parse_r2d(other)
     if a[:3] != b[:3]:
@@ -255,7 +255,7 @@ def actual(out):
     result = {}
     for scene in scenes():
         guid = guid_of(project, scene)
-        entry = {'bake': log.get(scene, 'not baked'), 'messages': [], 'instances': [], 'lightmaps': [], 'lights': {'lights': []}}
+        entry = {'bake': log.get(scene, 'not baked'), 'messages': [], 'instances': [], 'lightmaps': [], 'lights': {'mixedMode': None, 'lights': []}}
         entry['baked'] = entry['bake'] == 'bake True'
         if (out/'raw'/scene/'messages.txt').is_file():
             # Unbound's own notes of what its bake does not make yet are not the Editor's messages.
@@ -265,7 +265,7 @@ def actual(out):
         if layout.is_file() and (dump/'buffers.json').is_file():
             entry['instances'] = [r['path'] for r in json.loads(layout.read_text())['renderers']]
             description = json.loads((dump/'buffers.json').read_text())
-            entry['lights'] = {'lights': description['lights']}
+            entry['lights'] = {'mixedMode': description['mixedMode'], 'lights': description['lights']}
             for index, lightmap in enumerate(description['lightmaps']):
                 lightmap['occupancy'] = [int(v > 0) for v in (dump/f'occupancy{index}.u8').read_bytes()]
                 lightmap['charts'] = list(numbers(dump/f'chartIndex{index}.i32', 'i'))
@@ -370,6 +370,7 @@ def compare(label):
         same(scene + '.baked', a['baked'], e['baked'])
         same(scene + '.messages', a['messages'], e['messages'])
         same(scene + '.instances', a['instances'], e['instances'])
+        same(scene + '.lightingMode', a['lights']['mixedMode'], e['lights']['mixedMode'])
         record(scene + '.lights', light_difference(a['lights']['lights'], e['lights']['lights']))
         form = lambda entry: ' '.join(f"{m['width']}x{m['height']}@{m['supersampling']}" for m in entry['lightmaps'])  # noqa: E731
         same(scene + '.lightmaps', form(a), form(e))
@@ -391,8 +392,14 @@ def compare(label):
     return int(failed != 0)
 
 
+def forward_of(orientation):
+    """A rotation's forward axis."""
+    x, y, z, w = orientation
+    return 2 * (x * z + w * y), 2 * (y * z - w * x), 1 - 2 * (x * x + y * y)
+
+
 def replay(label):
-    """The capture's bake inputs through Unbound's rasterizer alone."""
+    """The capture's bake inputs through Unbound's rasterizer and direct light alone."""
     example = os.environ.get('UNBOUND_BAKED_GBUFFER')
     if not example:
         sys.exit('UNBOUND_BAKED_GBUFFER names the built example (cargo build --release -p unbound-gi --example baked_gbuffer)')
@@ -403,6 +410,9 @@ def replay(label):
         if not (folder/'lightmapRequests.bin').is_file():
             continue
         bake = editor_bake.read_bake_input(folder/'bakeInput.bin')
+        if any(light['type'] > 2 for light in bake['lights']):
+            print('skipped', scene, '(a light that is not directional, point or spot)')
+            continue
         atlassing = editor_bake.read_lightmap_requests(folder/'lightmapRequests.bin')['atlassing']
         gbuffer_of, gbuffers = dict(atlassing['gbufferOfHash']), dict(atlassing['gbuffers'])
         for index, atlas in enumerate(atlassing['lightmapped']):
@@ -419,7 +429,20 @@ def replay(label):
             instances = gbuffers[gbuffer_of[atlas['hash']]]['instances']
             data += struct.pack('<I', len(instances))
             for instance in instances:
-                data += struct.pack('<I4fi', bake['instances'][instance['object'][0]]['mesh'], *instance['scaleOffset'], instance['transformIndex'])
+                source = bake['instances'][instance['object'][0]]
+                data += struct.pack('<I4fi', source['mesh'], *instance['scaleOffset'], instance['transformIndex'])
+                data += struct.pack('<16fI', *source['transform'], int(source['receiveShadows']))
+            # The scene the texels are lit from: every instance that casts shadows, the lights,
+            # the Lighting Mode and the lightmap's pushoff.
+            casters = [i for i in bake['instances'] if i['castShadows']]
+            data += struct.pack('<I', len(casters))
+            for caster in casters:
+                data += struct.pack('<I16f', caster['mesh'], *caster['transform'])
+            data += struct.pack('<I', len(bake['lights']))
+            for light in bake['lights']:
+                data += struct.pack('<II3f3f3fffI', light['type'], light['mode'], *light['color'], *light['position'],
+                                    *forward_of(light['orientation']), light['range'], light['coneAngle'], int(light['castsShadows']))
+            data += struct.pack('<If', bake['settings']['mixedMode'], atlas['pushoff'])
             work = out/'replay'/scene/str(index)
             work.mkdir(parents=True, exist_ok=True)
             (work/'input.bin').write_bytes(data)
@@ -430,6 +453,8 @@ def replay(label):
                                        [int(occupancy[k] > 0) for k in range(0, len(occupancy), channels)]),
                 'charts': differing(list(numbers(work/'charts.i32', 'i')),
                                     list(editor_bake.read_chart_indices(folder/'lightmapRequest0'/f'chartIndex{index}.int'))),
+                'direct': direct_difference(numbers(work/'irradianceDirect.f32', 'f'),
+                                            editor_bake.read_r2d(folder/'lightmapRequest0'/f'irradianceDirect{index}.r2d')[3]),
             }
             # The example's normals are in each renderer's own space: only which samples have a
             # surface and their numbers are compared here.

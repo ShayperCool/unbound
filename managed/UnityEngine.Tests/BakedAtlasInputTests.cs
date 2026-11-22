@@ -197,11 +197,86 @@ namespace UnityEngine.Tests
                 Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'Area' is a ") && l.Contains(" light, which Unbound's bake"));
                 Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'Soft' has soft baked shadows"));
                 Assert.DoesNotContain(capture.Logs, l => l.Contains("'Sun'") || l.Contains("'Spot'") || l.Contains("'Realtime'"));
+
+                // A cookie is said and not applied: the light is still of the bake.
+                capture.Logs.Clear();
+                var cookieFile = new LoadedFile { Path = "Assets/LitCookie.unity", Guid = "20000000000000000000000000000000" };
+                sun.cookie = Texture2D.whiteTexture;
+                cookieFile.Objects[1] = sun;
+                Assert.Single(BakedAtlas.Lights(cookieFile, cookieFile.Path));
+                Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'Sun' has a cookie"));
+
+                // Lights whose intensity multiplies their linear colour are said once for the
+                // scene and none of them is of the bake.
+                capture.Logs.Clear();
+                var linearFile = new LoadedFile { Path = "Assets/LitLinear.unity", Guid = "30000000000000000000000000000000" };
+                linearFile.Objects[1] = spot;
+                linearFile.Objects[2] = soft;
+                bool before = UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity;
+                try
+                {
+                    UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = true;
+                    Assert.Empty(BakedAtlas.Lights(linearFile, linearFile.Path));
+                }
+                finally { UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = before; }
+                Assert.Single(capture.Logs, l => l.Contains("lightsUseLinearIntensity"));
+                Assert.DoesNotContain(capture.Logs, l => l.Contains("soft baked shadows"));
             }
             finally
             {
                 logger.logHandler = previous;
                 foreach (var go in made) Object.DestroyImmediate(go);
+            }
+        }
+
+        /// <summary>A scene file of one lightmapped quad, in a LOD Group or not.</summary>
+        static LoadedFile QuadScene(string path, bool inLodGroup, List<Object> made)
+        {
+            var file = new LoadedFile { Path = path, Guid = "40000000000000000000000000000000" };
+            var mesh = new Mesh
+            {
+                vertices = new[] { Vector3.zero, Vector3.right, new Vector3(1f, 1f, 0f), Vector3.up },
+                normals = new[] { Vector3.back, Vector3.back, Vector3.back, Vector3.back },
+                uv = new[] { Vector2.zero, Vector2.right, Vector2.one, Vector2.up },
+                triangles = new[] { 0, 2, 1, 0, 3, 2 },
+            };
+            var go = new GameObject("Leveled");
+            made.Add(mesh);
+            made.Add(go);
+            go.m_StaticEditorFlags = 1;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var renderer = go.AddComponent<MeshRenderer>();
+            file.Objects[1] = renderer;
+            if (inLodGroup)
+            {
+                var group = go.AddComponent<LODGroup>();
+                group.SetLODs(new[] { new LOD(0.5f, new Renderer[] { renderer }) });
+                file.Objects[2] = group;
+            }
+            return file;
+        }
+
+        [Fact]
+        public void ABakeSaysThatItDoesNotTellLodLevelsApart()
+        {
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            var capture = new Capture(previous);
+            var made = new List<Object>();
+            try
+            {
+                logger.logHandler = capture;
+                BakedAtlas.Lay(QuadScene("Assets/WithLod.unity", true, made), new LightingSettings());
+                Assert.Single(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'Leveled' is of a LOD Group"));
+                // Without a LOD Group nothing of the kind is said.
+                capture.Logs.Clear();
+                BakedAtlas.Lay(QuadScene("Assets/WithoutLod.unity", false, made), new LightingSettings());
+                Assert.DoesNotContain(capture.Logs, l => l.Contains("LOD Group"));
+            }
+            finally
+            {
+                logger.logHandler = previous;
+                foreach (var o in made) Object.DestroyImmediate(o);
             }
         }
     }

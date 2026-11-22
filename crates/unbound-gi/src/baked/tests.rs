@@ -738,6 +738,42 @@ mod lighting {
     }
 
     #[test]
+    fn a_ray_through_the_edges_and_corners_of_a_flat_grid_is_stopped() {
+        // A floor of 8 × 8 squares in one plane (their boxes have no thickness, and its
+        // triangles are in many leaves): rays through the squares' corners and edges, from
+        // below at several slants.
+        let floor = (0..64).flat_map(|k| {
+            let (x, y) = ((k % 8) as f32 * 0.37, (k / 8) as f32 * 0.37);
+            let corner = |dx: f32, dy: f32| [x + dx * 0.37, y + dy * 0.37, 1.3];
+            [
+                [corner(0.0, 0.0), corner(1.0, 0.0), corner(1.0, 1.0)],
+                [corner(0.0, 0.0), corner(1.0, 1.0), corner(0.0, 1.0)],
+            ]
+        });
+        let scene = Scene::new(floor);
+        assert_eq!(scene.triangle_count(), 128);
+        for k in 0..49 {
+            let corner = [(1 + k % 7) as f32 * 0.37, (1 + k / 7) as f32 * 0.37, 1.3];
+            for (slant, along) in [
+                ([0.0, 0.0, 1.0], 0.0),
+                ([0.3, -0.2, 1.0], 0.0),
+                ([-0.11, 0.07, 0.4], 0.5),
+                ([0.9, 0.9, 0.2], 0.25),
+            ] {
+                // Through the corner, and through a point along the edge from it.
+                let through = [corner[0] + along * 0.37, corner[1], corner[2]];
+                let origin: [f32; 3] = std::array::from_fn(|c| through[c] - slant[c] * 1.7);
+                assert!(
+                    scene.occluded(&ray(origin, slant), 100.0),
+                    "{k} {slant:?} {along}"
+                );
+            }
+        }
+        // Past the floor's side: not stopped.
+        assert!(!scene.occluded(&ray([3.5, 1.0, 0.0], [0.0, 0.0, 1.0]), 100.0));
+    }
+
+    #[test]
     fn many_triangles_stop_the_rays_a_search_of_all_of_them_finds() {
         // A fixed scatter of small triangles and of rays.
         let mut state = 12345u32;
