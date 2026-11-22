@@ -7,7 +7,7 @@ using Object = UnityEngine.Object;
 
 /// <summary>
 /// The probe's [OnOpenAsset] methods: each writes down its call and answers what the probe set
-/// for it. Orders -5, -3, 0, the default, 3 and 100 with one, two and three parameters, two
+/// for it. Orders -5, -3, 0, the default, 2, 3 and 100 with one, two and three parameters, two
 /// validators, and methods of shapes the attribute does not name.
 /// </summary>
 public static class OpenAssetCallbacks
@@ -56,6 +56,9 @@ public static class OpenAssetCallbacks
 
     [OnOpenAsset]
     static bool Default(int id, int line, int column) => Call("Default", id, "," + line + "," + column);
+
+    [OnOpenAsset(2)]
+    static bool Two(int id, int line) => Call("Two", id, "," + line);
 
     [OnOpenAsset(3)]
     static bool Three(int id) => Call("Three", id, "");

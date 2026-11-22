@@ -2,7 +2,7 @@
 
 What `AssetDatabase.OpenAsset`, `AssetDatabase.CanOpenAssetInEditor` and `[OnOpenAsset]` methods do
 in Unity 6000.0.71f1 Play mode (`Assets/OpenAsset/OpenAssetProbe.cs`). The methods
-(`Assets/OpenAsset/OpenAssetCallbacks.cs`) have orders -5, -3, 0, the default, 3 and 100 with
+(`Assets/OpenAsset/OpenAssetCallbacks.cs`) have orders -5, -3, 0, the default, 2, 3 and 100 with
 one, two and three parameters, two validators (one of them with two parameters), and methods of
 shapes the attribute does not name, in both modes; each writes down its call and answers, or
 throws, as the row tells it. Every row has the answer, the selection afterwards (a scene object
@@ -15,9 +15,18 @@ the object's type and name for a sub-asset, or as a scene object's name).
   (`open.asset:<path>`, opened by the order-0 method), a sub-asset, methods that throw, and
   `open.unhandled:<path>` for assets of the Editor's own format and a folder that no method opens.
 - `can.none:<target>` and `can.validate:<target>`: `CanOpenAssetInEditor` for the same targets, a
-  native sub-asset and a model's mesh and part, with no validator answering and with one; then
+  native sub-asset, a prefab's and a model's component and a model's mesh and part, with no validator answering and with one; then
   which validators are asked, where they stop, and what one that throws does (`can.text.*`,
   `can.material.validateThrows`).
+
+Unity's Scripting API for 6000.0 (`Callbacks.OnOpenAssetAttribute`, `AssetDatabase.OpenAsset`,
+`AssetDatabase.CanOpenAssetInEditor`,
+docs.unity.com/en-us/engine/6000.0/script-reference/unityeditor/callbacks/onopenassetattribute)
+says the methods are called "in ascending numerical order, starting from 0", that a Validate
+method has the one-parameter signature, and that the array form answers true "if all assets opened
+successfully". The captures agree on the order and the array form, and show two things the page
+does not say: methods of negative orders are called too, before order 0, and a Validate method
+with a line (and column) parameter is accepted and called with -1.
 
 Not recorded: an asset of another format that no method opens (the Editor starts an application
 outside for it), an unhandled scene or prefab (the Editor loads the one and enters Prefab Mode for

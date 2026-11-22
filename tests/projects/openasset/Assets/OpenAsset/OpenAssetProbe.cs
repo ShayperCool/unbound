@@ -47,7 +47,7 @@ static class OpenAssetProbe
         Open("open.noObject.none", () => AssetDatabase.OpenAsset(NoObject));
         Open("open.zero.none", () => AssetDatabase.OpenAsset(0));
         Open("open.memory.none", () => AssetDatabase.OpenAsset(memory));
-        foreach (var name in new[] { "Negative", "Zero", "Default", "Three", "Hundred", "Validate", "ValidateEarly",
+        foreach (var name in new[] { "Negative", "Zero", "Default", "Two", "Three", "Hundred", "Validate", "ValidateEarly",
                      "WrongReturn", "WrongParameter", "NoParameters", "FourParameters", "ValidateTwoParameters", "Instance" })
             Open("open.scene.handledBy." + name, () => AssetDatabase.OpenAsset(marker.GetInstanceID(), 7, 3), handle: new[] { name });
         Open("open.scene.handledByTwo", () => AssetDatabase.OpenAsset(marker.GetInstanceID()), handle: new[] { "Zero", "Three" });
@@ -110,6 +110,8 @@ static class OpenAssetProbe
             new KeyValuePair<string, Func<int>>("memory", () => memory.GetInstanceID()),
             new KeyValuePair<string, Func<int>>("subAsset", () => sprite.GetInstanceID()),
             new KeyValuePair<string, Func<int>>("nativeSubAsset", () => Sub<UnityEditor.Animations.AnimatorStateMachine>("Assets/Native/Controller.controller").GetInstanceID()),
+            new KeyValuePair<string, Func<int>>("prefabComponent", () => ((GameObject)AssetDatabase.LoadMainAssetAtPath("Assets/Native/Thing.prefab")).transform.GetInstanceID()),
+            new KeyValuePair<string, Func<int>>("modelComponent", () => ((GameObject)AssetDatabase.LoadMainAssetAtPath("Assets/Models/Lods.fbx")).transform.GetInstanceID()),
             new KeyValuePair<string, Func<int>>("modelMesh", () => Sub<Mesh>("Assets/Models/Lods.fbx").GetInstanceID()),
             new KeyValuePair<string, Func<int>>("modelPart", () => PrefabPart("Assets/Models/Lods.fbx").GetInstanceID()),
         };
@@ -126,7 +128,7 @@ static class OpenAssetProbe
         Func<bool> canText = () => AssetDatabase.CanOpenAssetInEditor(text.GetInstanceID());
         Open("can.text.validateEarly", canText, handle: new[] { "ValidateEarly" });
         Open("can.text.both", canText, handle: new[] { "ValidateEarly", "Validate" });
-        Open("can.text.executeAnswers", canText, handle: new[] { "Negative", "Zero", "Default", "Three", "Hundred" });
+        Open("can.text.executeAnswers", canText, handle: new[] { "Negative", "Zero", "Default", "Two", "Three", "Hundred" });
         Open("can.text.wrongShapesAnswer", canText, handle: new[] { "WrongReturn", "WrongParameter", "NoParameters", "FourParameters", "ValidateTwoParameters", "Instance" });
         Open("can.text.wrongValidatorAnswers", canText, handle: new[] { "ValidateWrongReturn" });
         Open("can.material.validateThrows", () => AssetDatabase.CanOpenAssetInEditor(material.GetInstanceID()), throws: "Validate");
