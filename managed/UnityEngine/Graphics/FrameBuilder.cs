@@ -742,7 +742,8 @@ namespace Unbound.Runtime
 
         /// <summary>The sky the camera sees (its Skybox's, else RenderSettings.skybox) drawn on a sphere around the
         /// camera inside its far plane (skybox shaders read directions from the vertices; the
-        /// procedural sky computes its colors per vertex, so the sphere is fine).</summary>
+        /// procedural sky computes its colors per vertex, so the sphere's triangles show: see
+        /// <see cref="SkyboxTriangles"/>).</summary>
         internal static void DrawSkybox(Camera camera)
         {
             var material = Skybox.Of(camera);
@@ -783,42 +784,100 @@ namespace Unbound.Runtime
             s_SkyLight[id] = value;
         }
 
-        /// <summary>The sky mesh: an octahedron whose triangles are split in four five times,
-        /// edge midpoints pushed onto the unit sphere (the vertices the Editor's sky draws with,
-        /// measured: tests/projects/urp SkyMeshProbe).</summary>
+        /// <summary>The sky mesh's first triangles: an octahedron's.</summary>
+        static readonly Vector3[] s_SkyOctahedron =
+        {
+            new Vector3(0, 1, 0), new Vector3(0, 0, -1), new Vector3(1, 0, 0),
+            new Vector3(0, 1, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1),
+            new Vector3(0, 1, 0), new Vector3(0, 0, 1), new Vector3(-1, 0, 0),
+            new Vector3(0, 1, 0), new Vector3(-1, 0, 0), new Vector3(0, 0, -1),
+            new Vector3(0, -1, 0), new Vector3(1, 0, 0), new Vector3(0, 0, -1),
+            new Vector3(0, -1, 0), new Vector3(0, 0, 1), new Vector3(1, 0, 0),
+            new Vector3(0, -1, 0), new Vector3(-1, 0, 0), new Vector3(0, 0, 1),
+            new Vector3(0, -1, 0), new Vector3(0, 0, -1), new Vector3(-1, 0, 0),
+        };
+
+        /// <summary>The middle of two points of the unit sphere, on the sphere.</summary>
+        static Vector3 SkyMiddle(Vector3 a, Vector3 b)
+        {
+            float x = a.x * 0.5f + b.x * 0.5f, y = a.y * 0.5f + b.y * 0.5f, z = a.z * 0.5f + b.z * 0.5f;
+            float length = Mathf.Sqrt(x * x + y * y + z * z);
+            return new Vector3(x / length, y / length, z / length);
+        }
+
+        static float SkyDistance(Vector3 a, Vector3 b)
+        {
+            float x = a.x - b.x, y = a.y - b.y, z = a.z - b.z;
+            return x * x + y * y + z * z;
+        }
+
+        /// <summary>The sky mesh's triangles, three points each: an octahedron whose triangles
+        /// are split in four three times, edge midpoints pushed onto the unit sphere, then
+        /// twice more near the horizon, where a triangle with no corner higher or lower than a
+        /// limit (a half, then a quarter) is cut across the two edges that climb most into a
+        /// triangle and a quadrilateral, the latter halved along its shorter diagonal. The
+        /// procedural sky computes its colours per vertex: the mesh shows in what it draws
+        /// (matches the Unity 6000.0.71f1 Editor: tests/projects/bakedbuffers sky, the faces a
+        /// bake takes; every vertex a camera's sky shows in tests/projects/urp `sky-mesh.jsonl`
+        /// is one of the mesh's).</summary>
+        internal static List<Vector3> SkyboxTriangles()
+        {
+            var points = new List<Vector3>(s_SkyOctahedron);
+            for (int pass = 0; pass < 3; pass++)
+            {
+                var old = points;
+                points = new List<Vector3>(old.Count * 4);
+                for (int t = 0; t < old.Count; t += 3)
+                {
+                    Vector3 a = old[t], b = old[t + 1], c = old[t + 2];
+                    Vector3 ab = SkyMiddle(a, b), bc = SkyMiddle(b, c), ca = SkyMiddle(a, c);
+                    points.AddRange(new[] { a, ab, ca, ab, b, bc, bc, ca, ab, c, ca, bc });
+                }
+            }
+            for (int pass = 0; pass < 2; pass++)
+            {
+                float limit = pass == 0 ? 0.5f : 0.25f;
+                var old = points;
+                points = new List<Vector3>(old.Count * 2);
+                for (int t = 0; t < old.Count; t += 3)
+                {
+                    Vector3 a = old[t], b = old[t + 1], c = old[t + 2];
+                    if (Mathf.Max(Mathf.Max(Mathf.Abs(a.y), Mathf.Abs(b.y)), Mathf.Abs(c.y)) > limit)
+                    {
+                        points.Add(a); points.Add(b); points.Add(c);
+                        continue;
+                    }
+                    // The corner opposite the edge that climbs least stays whole.
+                    float ab = Mathf.Abs(b.y - a.y), bc = Mathf.Abs(b.y - c.y), ca = Mathf.Abs(c.y - a.y);
+                    Vector3 apex, first, second;
+                    if (bc > ab && ca > ab) (apex, first, second) = (c, a, b);
+                    else if (ab > bc && ca > bc) (apex, first, second) = (a, b, c);
+                    else (apex, first, second) = (b, c, a);
+                    Vector3 m1 = SkyMiddle(apex, first), m2 = SkyMiddle(apex, second);
+                    points.Add(apex); points.Add(m1); points.Add(m2);
+                    if (SkyDistance(m2, first) <= SkyDistance(m1, second))
+                        points.AddRange(new[] { m2, m1, first, m2, first, second });
+                    else
+                        points.AddRange(new[] { m1, first, second, m2, m1, second });
+                }
+            }
+            return points;
+        }
+
         static Mesh SkyboxMesh()
         {
             var vertices = new List<Vector3>();
             var index = new Dictionary<Vector3, int>();
             var triangles = new List<int>();
-            int Vertex(Vector3 v)
+            foreach (var v in SkyboxTriangles())
             {
                 if (!index.TryGetValue(v, out var i))
                 {
                     index[v] = i = vertices.Count;
                     vertices.Add(v);
                 }
-                return i;
+                triangles.Add(i);
             }
-            void Split(Vector3 a, Vector3 b, Vector3 c, int depth)
-            {
-                if (depth == 0)
-                {
-                    triangles.Add(Vertex(a));
-                    triangles.Add(Vertex(b));
-                    triangles.Add(Vertex(c));
-                    return;
-                }
-                Vector3 ab = ((a + b) * 0.5f).normalized, bc = ((b + c) * 0.5f).normalized, ca = ((c + a) * 0.5f).normalized;
-                Split(a, ab, ca, depth - 1);
-                Split(ab, b, bc, depth - 1);
-                Split(ca, bc, c, depth - 1);
-                Split(ab, bc, ca, depth - 1);
-            }
-            foreach (var x in new[] { 1f, -1f })
-                foreach (var y in new[] { 1f, -1f })
-                    foreach (var z in new[] { 1f, -1f })
-                        Split(new Vector3(x, 0, 0), new Vector3(0, y, 0), new Vector3(0, 0, z), 5);
             Mesh mesh;
             using (ObjectRegistry.AsAssets()) mesh = new Mesh { name = "Unbound Skybox", indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
             mesh.SetVertices(vertices);
