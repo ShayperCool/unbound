@@ -7,7 +7,8 @@ using UnityEngine;
 /// Edit mode: animator controllers made through the Editor's controller API and their files: the
 /// file CreateAnimatorControllerAtPath writes at once, the file after edits (parameters, a second
 /// layer, states with clips, the default state, transitions with conditions from a state, from Any
-/// State, from Entry and to Exit, a sub-state machine, a blend tree) before and after
+/// State, from Entry and to Exit, two sub-state machines and transitions out of them (the later
+/// one's first), a blend tree, a synced layer overriding a motion) before and after
 /// AssetDatabase.SaveAssets, and a controller made with a clip. Each row records a file's hash or a
 /// flag; run.py compares the files on disk after the run.
 /// </summary>
@@ -50,6 +51,9 @@ public class ControllerAssetTests
         var land = fall.AddExitTransition();
         land.AddCondition(AnimatorConditionMode.If, 0f, "Grounded");
         root.AddEntryTransition(run).AddCondition(AnimatorConditionMode.Equals, 2f, "Count");
+        var swim = root.AddStateMachine("Swim");
+        swim.AddState("Paddle");
+        root.AddStateMachineTransition(swim, idle);
         var leave = root.AddStateMachineTransition(air, run);
         leave.AddCondition(AnimatorConditionMode.IfNot, 0f, "Grounded");
         root.AddStateMachineExitTransition(air);
