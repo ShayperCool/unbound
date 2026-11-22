@@ -38,25 +38,39 @@ namespace UnityEditor
                 throw new ArgumentException("GameObject type must be created using ObjectFactory.CreateGameObject instead : " + type.FullName);
             if (type.IsSubclassOf(typeof(Component)))
                 throw new ArgumentException("Component type must be created using ObjectFactory.AddComponent instead : " + type.FullName);
-            // A type that hides its parameterless constructor is refused; Material, which the Editor
-            // makes (tests/projects/objectfactory instance.material), has an internal one only in
-            // Unbound.
-            if (type != typeof(Material)
-                && type.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null)
+            if (type.FullName == "UnityEngine.ProceduralMaterial")
+                throw new ArgumentException("'type' parameter is not a valid UnityEngine.Object type : " + type.Name);
+            // An engine type the Editor makes without a public parameterless constructor is in the
+            // measured table; any other engine type without one, and a script type that hides its
+            // parameterless constructor, is refused (tests/projects/factoryinstances).
+            bool engine = type.Assembly == typeof(Object).Assembly;
+            if (engine ? !s_EngineDefaults.Contains(type.FullName) && type.GetConstructor(Type.EmptyTypes) == null
+                       : type.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null)
                 throw new ArgumentException(type.FullName + " constructor is not accessible which prevent this type from being used in ObjectFactory.");
             return CreateDefaultInstance(type);
         }
 
+        /// <summary>The engine types without a public parameterless constructor the Unity
+        /// 6000.0.71f1 Editor's factory makes (tests/projects/factoryinstances).</summary>
+        static readonly HashSet<string> s_EngineDefaults = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "UnityEngine.Texture2D", "UnityEngine.Texture3D", "UnityEngine.Texture2DArray", "UnityEngine.Cubemap",
+            "UnityEngine.CubemapArray", "UnityEngine.CustomRenderTexture", "UnityEngine.SparseTexture",
+            "UnityEngine.SpeedTreeWindAsset", "UnityEditor.Presets.Preset", "UnityEngine.Material",
+        };
+
         /// <summary>A new object of the type as the Editor makes one: unnamed; a ScriptableObject
-        /// through CreateInstance, a material with the error shader. Engine types without a public
-        /// parameterless constructor are not supported (unmeasured).</summary>
+        /// through CreateInstance, a material with the error shader, an engine type through its
+        /// parameterless constructor. An engine type Unbound has no parameterless constructor for
+        /// (SparseTexture, SpeedTreeWindAsset, Preset) is not supported yet and says so.</summary>
         static Object CreateDefaultInstance(Type type)
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
             Object made;
             if (typeof(ScriptableObject).IsAssignableFrom(type)) made = ScriptableObject.CreateInstance(type);
             else if (type == typeof(Material)) made = new Material(Shader.Find("Hidden/InternalErrorShader"));
-            else if (type.GetConstructor(Type.EmptyTypes) != null) made = (Object)Activator.CreateInstance(type);
+            else if (type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null)
+                made = (Object)Activator.CreateInstance(type, nonPublic: true);
             else throw new NotSupportedException("Unbound: ObjectFactory.CreateInstance cannot make a default " + type.FullName + " yet");
             made.name = "";
             return made;

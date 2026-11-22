@@ -145,5 +145,20 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(parent); }
         }
+
+        [Fact]
+        public void EngineTypesWithoutAPublicConstructorAreMadeOrRefusedAsTheEditorDoes()
+        {
+            // tests/projects/factoryinstances: textures are made, unnamed; a shader is refused.
+            var texture = ObjectFactory.CreateInstance(typeof(Texture2D));
+            try
+            {
+                Assert.IsType<Texture2D>(texture);
+                Assert.Equal("", texture.name);
+            }
+            finally { Object.DestroyImmediate(texture); }
+            var refused = Assert.Throws<ArgumentException>(() => ObjectFactory.CreateInstance(typeof(Shader)));
+            Assert.Equal("UnityEngine.Shader constructor is not accessible which prevent this type from being used in ObjectFactory.", refused.Message);
+        }
     }
 }
