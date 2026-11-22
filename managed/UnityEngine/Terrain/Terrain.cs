@@ -65,6 +65,7 @@ namespace UnityEngine
             m_Renderer ??= TerrainRenderer.For(this);
             m_Renderer.renderingLayerMask = m_RenderingLayerMask;
             m_Renderer.OnEngineEnable();
+            EnableNormalmap();
         }
 
         internal override void OnEngineDisable()

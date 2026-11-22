@@ -125,6 +125,20 @@ public sealed class TerrainNormalmapProbe : MonoBehaviour
         Describe("other.instanced.rendered", other);
         Texels("other.instanced.rendered", other.normalmapTexture);
 
+        // A map first read after the heights changed: without a render since instancing went on
+        // (firstread.direct), and with one (firstread.rendered).
+        var direct = MakeTerrain("TerrainFirstRead", 33, new Vector3(64, 16, 64), new Vector3(0, 0, 200));
+        direct.drawInstanced = true;
+        direct.terrainData.SetHeights(10, 12, patch);
+        TexelRows("firstread.direct", direct.normalmapTexture, 9, 18);
+        var rendered = MakeTerrain("TerrainFirstReadRendered", 33, new Vector3(64, 16, 64), new Vector3(0, 0, 300));
+        rendered.drawInstanced = true;
+        Render();
+        rendered.terrainData.SetHeights(10, 12, patch);
+        TexelRows("firstread.rendered", rendered.normalmapTexture, 9, 18);
+        Render();
+        TexelRows("firstread.rendered.again", rendered.normalmapTexture, 9, 18);
+
         // Instancing turned off again.
         terrain.drawInstanced = false;
         Rec("uninstanced.firstAlive", first != null);
@@ -190,6 +204,25 @@ public sealed class TerrainNormalmapProbe : MonoBehaviour
         Destroy(copy);
         level.Release();
         Destroy(level);
+    }
+
+    /// <summary>Rows <paramref name="from"/> to <paramref name="to"/> (exclusive) of the first
+    /// level, as <see cref="Texels"/> writes them.</summary>
+    void TexelRows(string key, RenderTexture rt, int from, int to)
+    {
+        var all = new StringBuilder();
+        var saved = m_Out.ToString();
+        m_Out.Clear();
+        Texels(key, rt);
+        foreach (var line in m_Out.ToString().Split('\n'))
+        {
+            int row;
+            int at = line.IndexOf(".texels.", StringComparison.Ordinal);
+            if (at < 0 || !int.TryParse(line.Substring(at + 8, 3), NumberStyles.None, CultureInfo.InvariantCulture, out row)) continue;
+            if (row >= from && row < to) all.Append(line).Append('\n');
+        }
+        m_Out.Clear();
+        m_Out.Append(saved).Append(all);
     }
 
     void Rec(string key, string value) => m_Out.Append("{\"k\":\"").Append(key).Append("\",\"v\":\"").Append(value).Append("\"}\n");

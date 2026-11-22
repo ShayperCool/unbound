@@ -124,21 +124,40 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>Unbound makes the map when a script first asks for it: an instanced terrain
-        /// nobody asks about has none to keep up to date.</summary>
+        /// <summary>A map first read after the heights changed holds the heights from before (the
+        /// Editor's, tests/projects/terrainnormalmap firstread.*): it is made with instancing.</summary>
         [Fact]
-        public void TheMapIsMadeWhenAScriptAsksForIt()
+        public void AMapFirstReadAfterAHeightChangeHoldsTheHeightsFromBefore()
         {
             var (go, terrain, data) = Make(null);
             try
             {
                 terrain.drawInstanced = true;
-                terrain.UpdateNormalmap();
-                Assert.Null(terrain.NormalmapIfMade);
-                Assert.NotNull(terrain.normalmapTexture);
                 Assert.NotNull(terrain.NormalmapIfMade);
+                data.SetHeights(10, 12, new float[,] { { 0.25f } });
+                Assert.NotNull(terrain.normalmapTexture);
+                Assert.Equal(new Color32(128, 255, 128, 255), terrain.NormalmapTexelsIfMade[12 * 33 + 11]);
+            }
+            finally
+            {
                 Object.DestroyImmediate(go);
-                Assert.Null(terrain.normalmapTexture);
+                Object.DestroyImmediate(data);
+            }
+        }
+
+        /// <summary>Reading the map of a destroyed terrain throws, as for any member of a
+        /// destroyed object; destroying the terrain releases its map.</summary>
+        [Fact]
+        public void ADestroyedTerrainsMapCannotBeRead()
+        {
+            var (go, terrain, data) = Make(null);
+            try
+            {
+                terrain.drawInstanced = true;
+                var map = terrain.normalmapTexture;
+                Object.DestroyImmediate(go);
+                Assert.True(map == null);
+                Assert.Throws<MissingReferenceException>(() => terrain.normalmapTexture);
             }
             finally
             {

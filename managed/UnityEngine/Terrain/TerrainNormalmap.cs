@@ -15,9 +15,10 @@ namespace UnityEngine
     /// one). Height changes reach it when the terrain is next rendered, not when they are made.
     /// The Editor draws it on its GPU: one value in about seven is one 8-bit step from this rule
     /// (the probe compares within that step). The other devices and releases are unmeasured.
-    /// Unbound's own renderer does not sample it: Unbound makes it when a script first asks for it
-    /// and keeps it up to date from then on (nothing else can see it: it is hidden), so instanced
-    /// terrains nobody asks about cost nothing.
+    /// A map first read after its heights changed holds the heights from before (as of instancing
+    /// turned on, or the last render), so it is made when instancing is turned on, and on enable
+    /// for a terrain loaded with instancing on (unmeasured). Reading it from a destroyed terrain
+    /// throws.
     /// </summary>
     public sealed partial class Terrain
     {
@@ -26,6 +27,12 @@ namespace UnityEngine
         Color32[] m_NormalmapTexels;
         TerrainData m_NormalmapData;
         internal int m_NormalmapVersion;
+        /// <summary>An enabled terrain loaded with instancing on has its map from then on.</summary>
+        void EnableNormalmap()
+        {
+            if (m_DrawInstanced && m_Normalmap == null) MakeNormalmap();
+        }
+
         /// <summary>The normal map and its texels, when made (tests).</summary>
         internal RenderTexture NormalmapIfMade => m_Normalmap;
         internal Color32[] NormalmapTexelsIfMade => m_NormalmapTexels;
@@ -35,8 +42,8 @@ namespace UnityEngine
         {
             get
             {
-                // A destroyed terrain has none (and makes none that nothing would release).
-                if (this == null || !m_DrawInstanced) return null;
+                ThrowIfDestroyed();
+                if (!m_DrawInstanced) return null;
                 if (m_Normalmap == null) MakeNormalmap();
                 return m_Normalmap;
             }
@@ -46,15 +53,16 @@ namespace UnityEngine
         {
             if (m_DrawInstanced == value) return;
             m_DrawInstanced = value;
-            if (!value) ReleaseNormalmap();
+            if (value) MakeNormalmap();
+            else ReleaseNormalmap();
         }
 
         /// <summary>Before the terrain is rendered: the heights changed since the normal map was
-        /// made reach it (once a script has it).</summary>
+        /// made reach it.</summary>
         internal void UpdateNormalmap()
         {
-            if (!m_DrawInstanced || m_TerrainData == null || m_Normalmap == null) return;
-            if (!ReferenceEquals(m_NormalmapData, m_TerrainData)
+            if (!m_DrawInstanced || m_TerrainData == null) return;
+            if (m_Normalmap == null || !ReferenceEquals(m_NormalmapData, m_TerrainData)
                 || m_Normalmap.width != m_TerrainData.heightmapResolution)
                 MakeNormalmap();
             else if (m_NormalmapVersion != m_TerrainData.m_HeightsVersion)
