@@ -8,6 +8,7 @@ pixel size, drawn into a target texture):
   with `MarkDirtyLayout`.
 - `late.*`: a container added once the panel has painted, marked dirty with the same content, and
   removed and added again (one Layout pass, as it was painted before).
+- `foldout.*`: the class a container has at each depth inside foldouts, and after it is moved out.
 - `fixed`, `empty`: a container with a fixed size (never measured) and one without a handler.
 - `mouse.*`, `key.down`: a `MouseDownEvent`/`MouseUpEvent`/`KeyDownEvent` made from an IMGUI event
   and sent to a container (a Layout pass, then the event), and a mouse event without an IMGUI

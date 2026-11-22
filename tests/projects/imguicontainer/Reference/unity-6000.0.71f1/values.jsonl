@@ -13,6 +13,8 @@
 {"k":"late.sameDirty","v":"Layout"}
 {"k":"late.readded1","v":"Layout"}
 {"k":"late.readded","v":""}
+{"k":"foldout.classes","v":"unity-imgui-container unity-foldout__unity-imgui-container--depth-1|unity-imgui-container unity-foldout__unity-imgui-container--depth-2|unity-imgui-container unity-foldout__unity-imgui-container--depth-3|unity-imgui-container unity-foldout__unity-imgui-container--depth-4|unity-imgui-container unity-foldout__unity-imgui-container--depth-max|unity-imgui-container unity-foldout__unity-imgui-container--depth-max"}
+{"k":"foldout.moved","v":"unity-imgui-container"}
 {"k":"mouse.down.events","v":"Layout,mouseDown"}
 {"k":"mouse.down","v":"mouseDown@0,-175;|stopped=False|hot=False|center=400,184.5"}
 {"k":"mouse.later","v":"mouseDown@0,-175;|hot=False"}

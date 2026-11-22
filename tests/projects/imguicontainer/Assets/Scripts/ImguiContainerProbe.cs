@@ -232,6 +232,31 @@ public class ImguiContainerProbe : MonoBehaviour
         late.RemoveFromHierarchy();
         yield return null;
 
+        // Inside foldouts: the class of its depth.
+        var foldouts = new VisualElement { name = "foldouts" };
+        foldouts.style.position = Position.Absolute;
+        m_Root.Add(foldouts);
+        VisualElement inner = foldouts;
+        var depths = new List<string>();
+        for (int depth = 1; depth <= 6; depth++)
+        {
+            var foldout = new Foldout { text = "F" + depth };
+            inner.Add(foldout);
+            inner = foldout;
+            var inFoldout = new IMGUIContainer(() => { });
+            inFoldout.style.width = 10f;
+            inFoldout.style.height = 10f;
+            foldout.Add(inFoldout);
+            depths.Add(string.Join(" ", inFoldout.GetClasses()));
+        }
+        Put("foldout.classes", string.Join("|", depths));
+        var moved = foldouts.Query<IMGUIContainer>().Last();
+        m_Root.Add(moved);
+        Put("foldout.moved", string.Join(" ", moved.GetClasses()));
+        moved.RemoveFromHierarchy();
+        foldouts.RemoveFromHierarchy();
+        yield return null;
+
         // 4. A mouse event on the button.
         autoLog.Take();
         string mouse = "";
