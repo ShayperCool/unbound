@@ -1,0 +1,17 @@
+{
+  "Q699 Editor GUI skin: an Editor-context container's IMGUI is measured with the Editor skin's styles (two labels and a button 57 points, four and a button 95); Unbound has only the game skin (71 and 120), and the elements below sit lower by the difference": [
+    "auto.frame1",
+    "auto.frame2",
+    "auto.settled",
+    "auto.moreLines",
+    "auto.markedDirty",
+    "fixed",
+    "empty",
+    "property"
+  ],
+  "a mouse event made by a script: the batch Editor's handler sees the mouse at the GUI's own last mouse position (the panel's corner, outside the button) whatever position the sent event carries; Unbound passes the event's position, as for an event from the OS, so the button takes the press. Not measured with a real mouse": [
+    "mouse.down",
+    "mouse.later",
+    "mouse.up"
+  ]
+}

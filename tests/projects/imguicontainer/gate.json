@@ -1,0 +1,16 @@
+{
+  "commands": ["python3 tests/projects/imguicontainer/run.py gate"],
+  "summary": "imguicontainer: .*",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Core/IMGUIContainerGUI.cs",
+    "managed/UnityEngine/UIElements/Core/Support.cs",
+    "managed/UnityEngine/UIElements/Events/Focus.cs",
+    "managed/UnityEngine/IMGUI/GUIUtility.cs",
+    "managed/UnityEngine/IMGUI/GUILayout.cs",
+    "managed/UnityEngine/IMGUI/GuiRender.cs",
+    "managed/UnityEngine/Editor/PropertyField.cs",
+    "managed/UnityEngine/Editor/PropertyHandler.cs",
+    "managed/UnityEngine/Editor/InspectorElement.cs",
+    "managed/UnityEngine/Editor/EditorGUIState.cs"
+  ]
+}
