@@ -283,7 +283,6 @@ namespace UnityEngine
     unsafe partial class GUIUtility
     {
         [global::Unbound.Stub] internal static int s_ControlCount;
-        [global::Unbound.Stub] internal static int s_SkinMode;
         [global::Unbound.Stub] internal static int s_OriginalID;
         [global::Unbound.Stub] internal static global::System.Action takeCapture;
         [global::Unbound.Stub] internal static global::System.Action releaseCapture;
@@ -306,7 +305,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static void EndContainer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.EndContainer"); }
         [global::Unbound.Stub] internal static void CleanupRoots() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.CleanupRoots"); }
         [global::Unbound.Stub] internal static void DestroyGUI(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.DestroyGUI"); }
-        [global::Unbound.Stub] internal static void SetSkin(int skinMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.SetSkin"); }
         [global::Unbound.Stub] internal static bool EndGUIFromException(global::System.Exception exception) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.EndGUIFromException"); return default; }
         [global::Unbound.Stub] internal static bool EndContainerGUIFromException(global::System.Exception exception) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.EndContainerGUIFromException"); return default; }
         internal static global::UnityEngine.Vector2 s_EditorScreenPointOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.s_EditorScreenPointOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.s_EditorScreenPointOffset"); } }

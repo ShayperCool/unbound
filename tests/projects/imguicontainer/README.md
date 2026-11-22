@@ -44,13 +44,8 @@ compare exactly (tolerance 0). The captures are batch-mode ones (`macos_batch`).
 
 ## Residuals
 
-`residuals.json` lists two open differences, both of the Editor GUI skin that Unbound's IMGUI does
-not have yet:
-
-- The heights of the measured containers come from the Editor skin's styles; the positions of the
-  elements below them follow, and with them the mouse rows, which carry a container's position.
-- A `[TextArea]` whose line limits differ takes as many lines as its text needs in the Editor's
-  text area style.
+None: the heights of Editor-context containers and of a `[TextArea]` come from the Editor's GUI
+skin (`tests/projects/editorskin`).
 
 ## Reference
 

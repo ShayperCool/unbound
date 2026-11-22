@@ -160,12 +160,13 @@ namespace UnityEngine
             GUIClip.State m_Clip;
             GUILayoutUtility.OuterLayout m_Layout;
             GUISkin m_Skin;
+            int m_SkinMode;
             bool m_Exiting;
 
             internal static OuterGUI Save() => new OuterGUI
             {
                 Saved = true, m_IdList = s_CurrentIdList, m_Clip = GUIClip.Save(), m_Layout = GUILayoutUtility.SaveOuter(),
-                m_Skin = GUI.UserSkin, m_Exiting = guiIsExiting,
+                m_Skin = GUI.UserSkin, m_SkinMode = s_SkinMode, m_Exiting = guiIsExiting,
             };
 
             internal void Restore()
@@ -174,18 +175,21 @@ namespace UnityEngine
                 s_CurrentIdList = m_IdList;
                 GUIClip.Restore(m_Clip);
                 GUILayoutUtility.RestoreOuter(m_Layout);
+                s_SkinMode = m_SkinMode;
                 GUI.skin = m_Skin;
                 guiIsExiting = m_Exiting;
             }
         }
 
-        /// <summary>Starts an IMGUIContainer's handler call: default skin and colors, its own
+        /// <summary>Starts an IMGUIContainer's handler call: the default skin of its context
+        /// (<paramref name="skinMode"/>) and default colors, its own
         /// control IDs and layout cache, its coordinates from <paramref name="origin"/> and
         /// <paramref name="clip"/> as all it shows. Inside an OnGUI (<paramref name="nested"/>) that
         /// pass's state is kept for <see cref="EndContainerGUI"/>.</summary>
-        internal static OuterGUI BeginContainerGUI(int scope, GUILayoutUtility.LayoutCache cache, Vector2 origin, Rect clip, bool nested)
+        internal static OuterGUI BeginContainerGUI(int scope, GUILayoutUtility.LayoutCache cache, Vector2 origin, Rect clip, bool nested, int skinMode)
         {
             var outer = nested ? OuterGUI.Save() : default;
+            s_SkinMode = skinMode;
             ResetGlobalState();
             guiIsExiting = false;
             s_CurrentIdList = IdListFor(scope);
@@ -209,6 +213,8 @@ namespace UnityEngine
             finally
             {
                 ResetAfterGUI();
+                // Outside a pass the game's skin is the default again.
+                if (!outer.Saved && s_SkinMode != 0) SetSkin(0);
                 outer.Restore();
             }
         }
@@ -450,9 +456,23 @@ namespace UnityEngine
                 throw new ArgumentException("You can only call GUI functions from inside OnGUI.");
         }
 
-        internal static GUISkin GetDefaultSkin() => BuiltinGuiSkin.Skin;
+        /// <summary>Whose GUI the current pass is: 0 the game's, 1 the Editor's (an IMGUIContainer
+        /// of the Editor context). It decides the skin a pass starts with.</summary>
+        internal static int s_SkinMode;
 
-        internal static GUISkin GetDefaultSkin(int skinMode) => GetBuiltinSkin(skinMode);
+        internal static void SetSkin(int skinMode)
+        {
+            s_SkinMode = skinMode;
+            GUI.DoSetSkin(null);
+        }
+
+        internal static GUISkin GetDefaultSkin() => GetDefaultSkin(s_SkinMode);
+
+        /// <summary>The skin GUI of a mode starts with: the game's, or the Editor's skin of its
+        /// theme (matches the Unity 6000.0.71f1 Editor: tests/projects/editorskin gui/skin for a
+        /// game OnGUI, tests/projects/imguicontainer auto.* for a container of the Editor context,
+        /// measured with the dark theme).</summary>
+        internal static GUISkin GetDefaultSkin(int skinMode) => skinMode == 0 ? BuiltinGuiSkin.Skin : EditorGuiSkins.Current;
 
         /// <summary>The built-in skins by index: the game's, then the Editor's light and dark
         /// ones (EditorGUIUtility.GetBuiltinSkin's Game, Inspector and Scene; matches the Unity
@@ -468,6 +488,7 @@ namespace UnityEngine
         /// the behaviour's control IDs and its layout.</summary>
         internal static void BeginGUI(int skinMode, int instanceID, int useGUILayout)
         {
+            s_SkinMode = skinMode;
             ResetGlobalState();
             guiIsExiting = false;
             s_CurrentIdList = IdListFor(instanceID);

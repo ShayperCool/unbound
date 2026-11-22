@@ -103,7 +103,7 @@ namespace UnityEngine.UIElements
             float measuredWidth = layoutMeasuredWidth, measuredHeight = layoutMeasuredHeight;
             Event.current = evt;
             evt.mousePosition = this.WorldToLocal(Unbound.Runtime.GuiEvents.MousePosition);
-            var outer = GUIUtility.BeginContainerGUI(Scope, cache, origin, clip, nested: outerEvent != null);
+            var outer = GUIUtility.BeginContainerGUI(Scope, cache, origin, clip, nested: outerEvent != null, skinMode: (int)m_ContextType);
             GUI.enabled = enabledInHierarchy;
             if (m_ContextType == ContextType.Editor) UnityEditor.EditorStyles.Loaded = true;
             var type = evt.type;

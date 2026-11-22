@@ -834,23 +834,17 @@ namespace UnityEditor
         // drawers and decorators are measured here, a game's by its GetHeight/GetPropertyHeight.
         const float TextAreaLine = 15f;
 
-        // The label's line, the first text line and 15 points for each further one: as many lines
-        // as the text takes in the Editor's text area style, within the attribute's limits. Unbound
-        // has no such style yet: with limits that differ it counts the text's own lines, without
-        // wrapping them. The style is the Editor's: there is none before a GUI pass.
+        // The label's line, the first text line and 15 points for each further one: the lines are
+        // the height the text has in the Editor's text area style at the context's width, in
+        // steps of 15 points, within the attribute's limits (the style's padding makes four
+        // lines of text count five: tests/projects/imguicontainer builtin.heights longNote).
+        // The style is the Editor's: there is none before a GUI pass.
         static float OfTextArea(SerializedProperty property, TextAreaAttribute area)
         {
             if (!EditorStyles.Available) EditorStyles.Require();
-            int lines = area.minLines;
-            if (area.maxLines > area.minLines)
-            {
-                lines = 1;
-                string text = property.propertyType == SerializedPropertyType.String ? property.stringValue : null;
-                if (text != null)
-                    foreach (char c in text)
-                        if (c == '\n') lines++;
-                lines = Mathf.Clamp(lines, area.minLines, area.maxLines);
-            }
+            string text = property.propertyType == SerializedPropertyType.String ? property.stringValue : "";
+            float textHeight = EditorStyles.TextAreaStyle.CalcHeight(GUIContent.Temp(text ?? ""), EditorGUIUtility.contextWidth);
+            int lines = Mathf.Clamp(Mathf.CeilToInt(textHeight / TextAreaLine), area.minLines, area.maxLines);
             return Line + Line + (lines - 1) * TextAreaLine;
         }
 
@@ -1056,9 +1050,30 @@ namespace UnityEditor
         public static GUIStyle wordWrappedLabel => Style();
         public static GUIStyle linkLabel => Style();
         public static GUIStyle whiteLabel => Style();
-        public static GUIStyle textField => Style();
-        public static GUIStyle textArea => Style();
-        public static GUIStyle numberField => Style();
+        public static GUIStyle textField => HasInspectorStyles ? TextFieldStyle : Style();
+        public static GUIStyle textArea => HasInspectorStyles ? TextAreaStyle : Style();
+        public static GUIStyle numberField => HasInspectorStyles ? TextFieldStyle : Style();
+
+        static GUIStyle s_TextArea;
+        static GUIStyle s_TextAreaSource;
+
+        /// <summary>The text field style of the Editor's skin (number fields have the same one).</summary>
+        internal static GUIStyle TextFieldStyle => Unbound.Runtime.EditorGuiSkins.Current.textField;
+
+        /// <summary>The text field style with word wrap.</summary>
+        internal static GUIStyle TextAreaStyle
+        {
+            get
+            {
+                var source = TextFieldStyle;
+                if (s_TextArea == null || s_TextAreaSource != source)
+                {
+                    s_TextAreaSource = source;
+                    s_TextArea = new GUIStyle(source) { wordWrap = true };
+                }
+                return s_TextArea;
+            }
+        }
         public static GUIStyle popup => Style();
         public static GUIStyle objectField => Style();
         public static GUIStyle colorField => Style();

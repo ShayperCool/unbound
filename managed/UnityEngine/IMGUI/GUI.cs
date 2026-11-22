@@ -117,7 +117,7 @@ namespace UnityEngine
 
         internal static void DoSetSkin(GUISkin newSkin)
         {
-            if (newSkin == null) newSkin = BuiltinGuiSkin.Skin;
+            if (newSkin == null) newSkin = GUIUtility.GetDefaultSkin();
             s_Skin = newSkin;
             newSkin.MakeCurrent();
         }
