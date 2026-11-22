@@ -1,4 +1,12 @@
 {
-  "commands": ["python3 tests/projects/imguiskin/run.py gate"],
-  "summary": "imguiskin: .*"
+  "commands": [
+    "python3 tests/projects/imguiskin/run.py gate"
+  ],
+  "summary": "imguiskin: .*",
+  "engine_paths": [
+    "managed/UnityEngine/IMGUI/",
+    "managed/UnityEngine/Editor/EditorGUIState.cs",
+    "managed/UnityEngine/Editor/EditorTextSettings.cs",
+    "managed/UnityEngine/Text/TextCoreText/"
+  ]
 }

@@ -1,0 +1,6 @@
+{
+  "The Editor answers NaN: its offset of the text inside the position is not a number in this capture (first Repaint of a Play mode Game view), so GUIStyle.GetCursorPixelPosition is not one either. Unbound answers the position. The text handle's own cursor positions (calcText/cursor/handle) match. Follow-up: measure the call inside a drawn text field.": [
+    "calcText/cursor/public",
+    "calcText/cursor/text"
+  ]
+}

@@ -17,6 +17,10 @@ public sealed partial class ImguiSkinProbe
 
     Texture2D m_CalcTex5;
     Texture2D m_CalcTex20;
+    Texture2D m_CalcTex30;
+    Texture2D m_CalcTex40;
+    Texture2D m_CalcTex40x1500;
+    Texture2D m_CalcTex40x2000;
     GUIStyle m_CalcWrapStyle;
     GUIStyle m_CalcPlainStyle;
     int m_Q671IdA1;
@@ -45,6 +49,10 @@ public sealed partial class ImguiSkinProbe
         if (m_CalcTex5 != null) return;
         m_CalcTex5 = new Texture2D(5, 5, TextureFormat.RGBA32, false);
         m_CalcTex20 = new Texture2D(20, 20, TextureFormat.RGBA32, false);
+        m_CalcTex30 = new Texture2D(30, 30, TextureFormat.RGBA32, false);
+        m_CalcTex40 = new Texture2D(40, 40, TextureFormat.RGBA32, false);
+        m_CalcTex40x1500 = new Texture2D(40, 1500, TextureFormat.RGBA32, false);
+        m_CalcTex40x2000 = new Texture2D(40, 2000, TextureFormat.RGBA32, false);
         m_CalcPlainStyle = new GUIStyle(EditorStyles.label)
         {
             padding = new RectOffset(9, 3, 1, 0),
@@ -409,6 +417,52 @@ public sealed partial class ImguiSkinProbe
             Write("minWidthGroup/group", GUILayoutUtility.GetLastRect());
         }
         finally { GUILayout.EndArea(); }
+
+        // Scroll views with MaxWidth / MaxHeight options must honor their maximum instead of stretching.
+        GUILayout.BeginArea(new Rect(0, 0, 400, 100));
+        try
+        {
+            GUILayout.BeginScrollView(Vector2.zero, GUILayout.MaxWidth(200));
+            try
+            {
+                Write("scrollMaxWidth/label", GUILayoutUtility.GetRect(new GUIContent("Short"), m_CalcPlainStyle));
+                Write("scrollMaxWidth/skinLabel", GUILayoutUtility.GetRect(new GUIContent("Short"), GUI.skin.label));
+                Write("scrollMaxWidth/stretch", GUILayoutUtility.GetRect(40, 40, 20, 20, stretchX));
+                GUILayout.BeginHorizontal();
+                Write("scrollMaxWidth/rowLeft", GUILayoutUtility.GetRect(20, 20, 20, 20, stretchX));
+                Write("scrollMaxWidth/rowRight", GUILayoutUtility.GetRect(20, 20, 20, 20, stretchX));
+                GUILayout.EndHorizontal();
+            }
+            finally { GUILayout.EndScrollView(); }
+            Write("scrollMaxWidth/group", GUILayoutUtility.GetLastRect());
+        }
+        finally { GUILayout.EndArea(); }
+
+        GUILayout.BeginArea(new Rect(0, 0, 200, 400));
+        try
+        {
+            GUILayout.BeginScrollView(Vector2.zero, GUILayout.MaxHeight(120));
+            try
+            {
+                Write("scrollMaxHeight/entry", GUILayoutUtility.GetRect(40, 40, 20, 20, stretchY));
+            }
+            finally { GUILayout.EndScrollView(); }
+            Write("scrollMaxHeight/group", GUILayoutUtility.GetLastRect());
+        }
+        finally { GUILayout.EndArea(); }
+
+        GUILayout.BeginArea(new Rect(0, 0, 400, 100));
+        try
+        {
+            GUILayout.BeginScrollView(Vector2.zero, GUILayout.MinWidth(100), GUILayout.MaxWidth(200));
+            try
+            {
+                Write("scrollMinMaxWidth/entry", GUILayoutUtility.GetRect(300, 300, 20, 20, stretchX));
+            }
+            finally { GUILayout.EndScrollView(); }
+            Write("scrollMinMaxWidth/group", GUILayoutUtility.GetLastRect());
+        }
+        finally { GUILayout.EndArea(); }
     }
 
     void RecordCalcHeightAndFallbacks(string phase)
@@ -421,6 +475,28 @@ public sealed partial class ImguiSkinProbe
             for (int i = 0; i < 4; i++)
                 Put($"calcHeight/stack/{phase}/{i}", RectJson(GUILayoutUtility.GetRect(wrapContent, m_CalcWrapStyle, GUILayout.Width(83))));
             Put($"calcHeight/stack/{phase}/after", RectJson(GUILayoutUtility.GetRect(12, 6)));
+        }
+        finally { GUILayout.EndArea(); }
+
+        // A maximum size option bounds a non-wrapping content's own size: its image gives way.
+        var imageLeft = new GUIStyle(m_CalcPlainStyle) { imagePosition = ImagePosition.ImageLeft, stretchWidth = false };
+        var imageAbove = new GUIStyle(m_CalcPlainStyle) { imagePosition = ImagePosition.ImageAbove, stretchWidth = false };
+        var pictured = new GUIContent("Hi there", m_CalcTex40);
+        GUILayout.BeginArea(new Rect(0, 0, 300, 600));
+        try
+        {
+            void Bound(string name, GUIStyle style, params GUILayoutOption[] options) =>
+                Put($"calcText/constraint/{phase}/{name}", RectJson(GUILayoutUtility.GetRect(pictured, style, options)));
+            Bound("left/free", imageLeft);
+            Bound("left/maxWidth70", imageLeft, GUILayout.MaxWidth(70));
+            Bound("left/maxHeight20", imageLeft, GUILayout.MaxHeight(20));
+            Bound("left/maxWidth70Height20", imageLeft, GUILayout.MaxWidth(70), GUILayout.MaxHeight(20));
+            Bound("left/maxWidth90Height10", imageLeft, GUILayout.MaxWidth(90), GUILayout.MaxHeight(10));
+            Bound("above/free", imageAbove);
+            Bound("above/maxWidth30", imageAbove, GUILayout.MaxWidth(30));
+            Bound("above/maxHeight30", imageAbove, GUILayout.MaxHeight(30));
+            Bound("above/maxWidth30Height30", imageAbove, GUILayout.MaxWidth(30), GUILayout.MaxHeight(30));
+            Bound("above/maxWidth20Height45", imageAbove, GUILayout.MaxWidth(20), GUILayout.MaxHeight(45));
         }
         finally { GUILayout.EndArea(); }
 
@@ -480,8 +556,173 @@ public sealed partial class ImguiSkinProbe
                 EditorGUIUtility.SetIconSize(new Vector2(0, 24));
                 CH($"img/{pos}/icon0x24_t5", st, c5, 83f);
             }
+
+            // Discriminating ImageLeft controls: iconSize.x vs image.width vs fixed subtraction, plus narrow/tall scaling.
+            var leftStyle = new GUIStyle(m_CalcWrapStyle) { imagePosition = ImagePosition.ImageLeft };
+            var c30 = new GUIContent(CalcWrapText, m_CalcTex30);
+            var c40 = new GUIContent(CalcWrapText, m_CalcTex40);
+            var longWrap = string.Join(" ", Enumerable.Repeat(CalcWrapText, 40));
+            var cLongNoImg = new GUIContent(longWrap);
+            var cTall1500Short = new GUIContent("Short", m_CalcTex40x1500);
+            var cTall2000Long = new GUIContent(longWrap, m_CalcTex40x2000);
+
+            foreach (float w in new[] { 95f, 110f, 125f })
+            {
+                EditorGUIUtility.SetIconSize(Vector2.zero);
+                CH($"imgDiscrim/w{w.ToString(Inv)}/icon0_t30", leftStyle, c30, w);
+                EditorGUIUtility.SetIconSize(new Vector2(10, 10));
+                CH($"imgDiscrim/w{w.ToString(Inv)}/icon10_t30", leftStyle, c30, w);
+                EditorGUIUtility.SetIconSize(new Vector2(50, 10));
+                CH($"imgDiscrim/w{w.ToString(Inv)}/icon50_t30", leftStyle, c30, w);
+            }
+
+            EditorGUIUtility.SetIconSize(Vector2.zero);
+            CH("imgDiscrim/narrow35_t40", leftStyle, c40, 35f);
+            CH("imgDiscrim/tall1500_short_w100", leftStyle, cTall1500Short, 100f);
+            CH("imgDiscrim/tall2000_long_w110", leftStyle, cTall2000Long, 110f);
+            CH("imgDiscrim/longNoImg_w83", m_CalcWrapStyle, cLongNoImg, 83f);
+
+            // Font-size fallback and lineHeight controls.
+            var defaultSize0 = new GUIStyle { fontSize = 0, wordWrap = true };
+            var editorSize0 = new GUIStyle(EditorStyles.label) { fontSize = 0, wordWrap = true };
+            var editorSize16 = new GUIStyle(EditorStyles.label) { fontSize = 16, wordWrap = true };
+            var editorSize24 = new GUIStyle(EditorStyles.label) { fontSize = 24, wordWrap = false };
+            CH("fontSize/default0_w83", defaultSize0, wrapContent, 83f);
+            CH("fontSize/editor0_w83", editorSize0, wrapContent, 83f);
+            CH("fontSize/editor16_w83", editorSize16, wrapContent, 83f);
+            Put("calcText/lineHeight/default0", F(defaultSize0.lineHeight));
+            Put("calcText/lineHeight/editor0", F(editorSize0.lineHeight));
+            Put("calcText/lineHeight/editor16", F(editorSize16.lineHeight));
+            Put("calcText/lineHeight/editor24", F(editorSize24.lineHeight));
+
+            // Unified TextCore CalcSize, CalcMinMaxWidth, and cursor placement controls.
+            void CS(string name, GUIStyle style, GUIContent content)
+            {
+                var s = style.CalcSize(content);
+                Put("calcText/size/" + name, $"[{F(s.x)},{F(s.y)}]");
+            }
+            void CMM(string name, GUIStyle style, GUIContent content)
+            {
+                style.CalcMinMaxWidth(content, out float minW, out float maxW);
+                Put("calcText/minMax/" + name, $"[{F(minW)},{F(maxW)}]");
+            }
+
+            EditorGUIUtility.SetIconSize(Vector2.zero);
+            CS("plain/hello", m_CalcPlainStyle, new GUIContent("Hello"));
+            CS("plain/wrapText", m_CalcPlainStyle, wrapContent);
+            CS("wrap/wrapText", m_CalcWrapStyle, wrapContent);
+            CS("plain/empty", m_CalcPlainStyle, new GUIContent(""));
+            CS("plain/nullText", m_CalcPlainStyle, new GUIContent((string)null));
+            CS("plain/multiline", m_CalcPlainStyle, new GUIContent("Line1\nLine2"));
+            CS("plain/fixedW50", new GUIStyle(m_CalcPlainStyle) { fixedWidth = 50 }, new GUIContent("Hello"));
+            CS("plain/fixedH30", new GUIStyle(m_CalcPlainStyle) { fixedHeight = 30 }, new GUIContent("Hello"));
+            CS("imgLeft/t20", leftStyle, c20);
+            EditorGUIUtility.SetIconSize(new Vector2(16, 16));
+            CS("imgLeft/icon16_t20", leftStyle, c20);
+            EditorGUIUtility.SetIconSize(Vector2.zero);
+            CS("imgAbove/t20", new GUIStyle(m_CalcWrapStyle) { imagePosition = ImagePosition.ImageAbove }, c20);
+            CS("imgOnly/t20", new GUIStyle(m_CalcWrapStyle) { imagePosition = ImagePosition.ImageOnly }, c20);
+            CS("textOnly/t20", new GUIStyle(m_CalcWrapStyle) { imagePosition = ImagePosition.TextOnly }, c20);
+
+            CMM("plain/wrapText", m_CalcPlainStyle, wrapContent);
+            CMM("wrap/wrapText", m_CalcWrapStyle, wrapContent);
+            CMM("wrap/longWord", m_CalcWrapStyle, new GUIContent("Short Supercalifragilistic"));
+            CMM("wrap/empty", m_CalcWrapStyle, new GUIContent(""));
+            CMM("wrap/imgLeft_t20", leftStyle, c20);
+            CMM("wrap/fixedW50", new GUIStyle(m_CalcWrapStyle) { fixedWidth = 50 }, wrapContent);
+
+            // Widths of single characters and of pairs tell glyph advances from pair adjustments.
+            var bare = new GUIStyle(m_CalcPlainStyle) { padding = new RectOffset() };
+            foreach (var t in new[] { "H", "e", "l", "o", " ", "He", "el", "ll", "lo", "ee", "oo", "Te", "AV", "n ", " t", "One", "two", "seven", "Hello", "Hello World" })
+                Put("calcText/width/" + t.Replace(' ', '_'), F(bare.CalcSize(new GUIContent(t)).x));
+            var bare13 = new GUIStyle(bare) { fontSize = 13 };
+            var bare24 = new GUIStyle(bare) { fontSize = 24 };
+            var bareBold = new GUIStyle(bare) { fontStyle = FontStyle.Bold };
+            CS("width13/hello", bare13, new GUIContent("Hello World"));
+            CS("width24/hello", bare24, new GUIContent("Hello World"));
+            CS("widthBold/hello", bareBold, new GUIContent("Hello World"));
+
+            // Cursor positions of a drawn single line. GUIStyle.GetCursorPixelPosition gave no
+            // number in this capture (its row keeps that visible: the text's offset in the position,
+            // also recorded, is what is not a number), so the text handle's own cursor positions
+            // are recorded, with the index it finds at each.
+            const BindingFlags Hidden = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance;
+            var fieldStyle = GUI.skin.textField;
+            var fieldContent = new GUIContent("Hello World");
+            var fieldRect = new Rect(30, 40, 150, 20);
+            fieldStyle.Draw(fieldRect, fieldContent, false, false, false, false);
+            var publicCursor = fieldStyle.GetCursorPixelPosition(fieldRect, fieldContent, 5);
+            Put("calcText/cursor/public", $"[{F(publicCursor.x)},{F(publicCursor.y)}]");
+            var handleType = typeof(GUIStyle).Assembly.GetType("UnityEngine.IMGUITextHandle");
+            var getHandle = handleType.GetMethod("GetTextHandle", Hidden, null, new[] { typeof(GUIStyle), typeof(Rect), typeof(string), typeof(Color32) }, null);
+            var fieldText = (string)typeof(GUIContent).GetProperty("textWithWhitespace", Hidden).GetValue(fieldContent);
+            var handle = getHandle.Invoke(null, new object[] { fieldStyle, fieldStyle.padding.Remove(fieldRect), fieldText, (Color32)Color.white });
+            var preferred = (Vector2)handle.GetType().GetProperty("preferredSize", Hidden).GetValue(handle);
+            var offset = (Vector2)typeof(GUIStyle).GetMethod("Internal_GetTextRectOffset", Hidden).Invoke(fieldStyle, new object[] { fieldRect, fieldContent, preferred });
+            Put("calcText/cursor/text", $"[{F(preferred.x)},{F(preferred.y)},{F(offset.x)},{F(offset.y)},{F(fieldStyle.lineHeight)}]");
+            var cursorAt = handle.GetType().GetMethod("GetCursorPositionFromStringIndexUsingLineHeight", Hidden);
+            var indexAt = handle.GetType().GetMethod("GetCursorIndexFromPosition", Hidden);
+            for (int idx = 0; idx <= fieldContent.text.Length; idx++)
+            {
+                var p = (Vector2)cursorAt.Invoke(handle, new object[] { idx, false, true });
+                int found = (int)indexAt.Invoke(handle, new object[] { p, true });
+                Put($"calcText/cursor/handle/{idx}", $"[{F(p.x)},{F(p.y)},{found.ToString(Inv)}]");
+            }
+
+            // Characters whose glyphs take ligature and mark records where a font asset reads them.
+            foreach (var t in new[] { "fi", "ffl", "e\u0301", "a\u0308\u0301" })
+                Put("calcText/width/features/" + string.Join("-", t.Select(c => ((int)c).ToString("X4", Inv))), F(bare.CalcSize(new GUIContent(t)).x));
+
+            // The font asset IMGUI generates the default font's text with: its face and the
+            // metrics of a few glyphs (the widths above are sums of these advances).
+            RecordImguiFontAsset();
         }
         finally { EditorGUIUtility.SetIconSize(prevIconSize); }
+    }
+
+    void RecordImguiFontAsset()
+    {
+        const BindingFlags Hidden = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance;
+        try
+        {
+            var handleType = typeof(GUIStyle).Assembly.GetType("UnityEngine.IMGUITextHandle");
+            var settings = (TextSettings)handleType.GetField("s_EditorTextSettings", Hidden).GetValue(null);
+            Put("calcText/imguiAsset/settings", settings == null ? "null" : Json(settings.GetType().Name));
+            var font = (Font)typeof(GUIStyle).GetMethod("GetDefaultFont", Hidden).Invoke(null, null);
+            Put("calcText/imguiAsset/defaultFont", font == null ? "null" : $"[{Json(font.name)},{font.fontSize},{(font.dynamic ? "true" : "false")}]");
+            if (settings == null || font == null) return;
+            var asset = (FontAsset)typeof(TextSettings).GetMethod("GetCachedFontAsset", Hidden).Invoke(settings, new object[] { font });
+            if (asset == null)
+            {
+                Put("calcText/imguiAsset/face", "null");
+                return;
+            }
+            var face = asset.faceInfo;
+            Put("calcText/imguiAsset/face",
+                $"[{Json(face.familyName)},{Json(face.styleName)},{F(face.pointSize)},{F(face.scale)},{F(face.ascentLine)},{F(face.descentLine)},{F(face.lineHeight)},{F(face.tabWidth)}]");
+            Put("calcText/imguiAsset/atlas",
+                $"[{Json(asset.atlasRenderMode.ToString())},{asset.atlasPadding},{asset.atlasWidth},{asset.atlasHeight},{Json(asset.atlasPopulationMode.ToString())},{Json(asset.material != null && asset.material.shader != null ? asset.material.shader.name : "null")}]");
+            foreach (char c in "Helo WAVT1")
+            {
+                if (!asset.characterLookupTable.TryGetValue(c, out var character) || character.glyph == null)
+                {
+                    Put("calcText/imguiAsset/glyph/" + (int)c, "null");
+                    continue;
+                }
+                var m = character.glyph.metrics;
+                Put("calcText/imguiAsset/glyph/" + (int)c,
+                    $"[{F(m.horizontalAdvance)},{F(m.horizontalBearingX)},{F(m.horizontalBearingY)},{F(m.width)},{F(m.height)},{F(character.glyph.scale)},{F(character.scale)}]");
+            }
+            var table = typeof(FontAsset).GetProperty("fontFeatureTable", Hidden)?.GetValue(asset);
+            string Records(string property) =>
+                table?.GetType().GetProperty(property, Hidden)?.GetValue(table) is System.Collections.ICollection records ? records.Count.ToString(Inv) : "null";
+            Put("calcText/imguiAsset/featureRecords",
+                $"[{Records("glyphPairAdjustmentRecords")},{Records("ligatureRecords")},{Records("MarkToBaseAdjustmentRecords")},{Records("MarkToMarkAdjustmentRecords")}]");
+        }
+        catch (Exception error)
+        {
+            Put("calcText/imguiAsset/error", Json(error.GetType().Name + ": " + error.Message));
+        }
     }
 
     static bool ReflectCanHaveKeyboardFocus(int id)

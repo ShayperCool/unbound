@@ -101,6 +101,40 @@ a new hint allocates a new ID, `EventType.Used` returns `-1` without advancing t
 named `TextField`, `LabelField` and `ToggleLeft` controls keep stable IDs and focusability.
 [Unity 6000.0 `GUIUtility.GetControlID`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUIUtility.GetControlID.html)
 
+The text controls (`calcText/*`, `calcHeight/*`) measure IMGUI text, which the Editor generates
+with TextCore. The Scripting API describes
+[`GUIStyle.CalcSize`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUIStyle.CalcSize.html)
+("the size of some content if it is rendered with this style"),
+[`CalcHeight`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUIStyle.CalcHeight.html),
+[`CalcMinMaxWidth`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUIStyle.CalcMinMaxWidth.html)
+and [`lineHeight`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUIStyle-lineHeight.html);
+the values are this capture's. They cover plain, wrapped, empty, multi-line and fixed-size
+content, every image position with and without an icon size, widths that tell the image's width
+from the icon's and from a constant (`imgDiscrim`), images taller than the measuring height,
+font sizes (a style without one draws at 13), single characters and pairs (`width/*`: the sums
+show no pair adjustment), and the font asset IMGUI makes for the default font (`imguiAsset/*`:
+its face, glyph metrics and the number of pair, ligature and mark records, which is 0 after
+such characters were drawn). `constraint/*` gives non-wrapping content `MaxWidth` and
+`MaxHeight` options ([`GUILayout.MaxWidth`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUILayout.MaxWidth.html)).
+
+The cursor controls draw a text field's content and ask for cursor positions.
+[`GUIStyle.GetCursorPixelPosition`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUIStyle.GetCursorPixelPosition.html)
+answers NaN in this capture (`cursor/public`; `cursor/text` shows that the text's offset inside
+the position is what is not a number). Both rows are listed in `residuals.json`: Unbound answers
+the position. The text handle's own cursor positions and the index found at each
+(`cursor/handle/*`) are numbers and are compared. Copied styles and handles queried after
+another text was converted gave empty answers while the probe was written; those are not recorded.
+
+The scroll view controls (`narrowParent/*/scroll*`) put
+[`GUILayout.BeginScrollView`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUILayout.BeginScrollView.html)
+with `MaxWidth`, `MaxHeight` and `MinWidth` options into a larger area: the view keeps its
+maximum, its stretching content fills it, and content wider than it scrolls.
+
+`text-paint.png` is the Game view's pixels of texts and images drawn with fresh styles: sizes,
+bold, a tint, wrapping, alignments, clipping, a disabled label, and images left of, above and
+without text (aligned, scaled into their room, at an icon size, and at places between pixels).
+`image_limits.json` holds its recorded difference (one step of 255 on single pixels).
+
 ```sh
 python3 tests/projects/imguiskin/run.py record --label native-a
 python3 tests/projects/imguiskin/run.py record --label native-b

@@ -1,0 +1,8 @@
+{
+  "text-paint.png": {
+    "mean": 0.01,
+    "worst": 1,
+    "over8": 0,
+    "reason": "Game skin text drawn from TextCore's distance field atlas with the font asset's material: single pixels differ from the Editor by one step of 255."
+  }
+}

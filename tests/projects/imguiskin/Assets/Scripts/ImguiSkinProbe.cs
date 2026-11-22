@@ -27,6 +27,7 @@ public sealed partial class ImguiSkinProbe : MonoBehaviour
     bool m_RecordedRepaint;
     bool m_RecordedPass2Layout;
     bool m_RecordedPass2Repaint;
+    ImguiTextPaint m_TextPaint;
     ReorderableList m_ListA;
     ReorderableList m_ListB;
     int m_ListAId;
@@ -44,6 +45,7 @@ public sealed partial class ImguiSkinProbe : MonoBehaviour
         probe.m_Dir = dir;
         probe.m_ListA = new ReorderableList(Array.Empty<int>(), typeof(int));
         probe.m_ListB = new ReorderableList(Array.Empty<int>(), typeof(int));
+        probe.m_TextPaint = ImguiTextPaint.Create(dir);
     }
 
     void OnGUI()
@@ -83,7 +85,7 @@ public sealed partial class ImguiSkinProbe : MonoBehaviour
 
     void Update()
     {
-        if (m_Done || ((!m_RecordedLayout || !m_RecordedRepaint || !m_RecordedPass2Layout || !m_RecordedPass2Repaint) && Time.frameCount < 600)) return;
+        if (m_Done || ((!m_RecordedLayout || !m_RecordedRepaint || !m_RecordedPass2Layout || !m_RecordedPass2Repaint || !m_TextPaint.Done) && Time.frameCount < 600)) return;
         m_Done = true;
         RecordListFocus("Update");
         Put("onGUI", Json(m_Skin != null ? "called" : "not called"));
