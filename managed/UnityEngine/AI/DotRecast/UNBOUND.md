@@ -141,6 +141,13 @@ Altered (marked `Unbound:` in the sources):
   the search reached from another polygon (none: failure), and `MergeCorridorStartShortcut` keeps
   the corridor from its farthest polygon the visited ones hold (the last copy of it), also when
   that is the first visited polygon; the Detour flags that switched these off are gone;
+- a move of the corridor's position (`DtPathCorridor.MovePosition`: the crowd's step, a scripted
+  move, leaving a link) merges the visited polygons as Detour does, then joins the first of the
+  polygons put before the common one, from the agent's own on, that borders a polygon further
+  along (from the common one; past it for the last) to the furthest such polygon, leaving out the
+  polygons between (`DtPathUtils.JoinMovedStartToNeighbour`; Unity's: `tests/projects/avoidance`
+  `corners`, navmesh blocked agent; `DtCrowdConfig.joinMovedCorridorStart`, other releases keep
+  the merge alone);
 - an agent without avoidance gathers no neighbours (agents or obstacles), so it is never pushed out
   of overlaps and walks through obstacles (Unity's: navpath `replan.*`, `replan.none`).
 - the engine's `remainingDistance` sums the corners found again from where the agent stands (after

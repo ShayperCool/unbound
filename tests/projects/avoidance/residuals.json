@@ -1,0 +1,13 @@
+{
+  "Agents moved by a scripted velocity along a 45-degree line through a tile corner: the line passes within about 1e-6 m of the corner vertex, and Unity drops that corner from the third frame while Unbound keeps it through the recorded frames. A float tie at the vertex; not fitted.": [
+    "corners 55 88 3",
+    "corners 55 88 4",
+    "corners 55 88 5",
+    "corners 55 139 3",
+    "corners 55 139 4",
+    "corners 55 139 5",
+    "corners 55 157 3",
+    "corners 55 157 4",
+    "corners 55 157 5"
+  ]
+}

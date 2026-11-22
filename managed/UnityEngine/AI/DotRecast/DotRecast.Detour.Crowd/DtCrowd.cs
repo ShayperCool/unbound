@@ -234,6 +234,7 @@ namespace DotRecast.Detour.Crowd
             int idx = _agentIdx.GetAndIncrement();
             DtCrowdAgent ag = new DtCrowdAgent(idx);
             ag.corridor.Init(_maxPathResult);
+            ag.corridor.joinMovedStart = _config.joinMovedCorridorStart;
             AddAgent(ag);
             UpdateAgentParameters(ag, option);
 

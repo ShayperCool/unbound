@@ -148,8 +148,14 @@ namespace DotRecast.Detour
             return npath;
         }
 
-        public static int MergeCorridorStartMoved(Span<long> path, int npath, int maxPath, Span<long> visited, int nvisited)
+        public static int MergeCorridorStartMoved(Span<long> path, int npath, int maxPath, Span<long> visited, int nvisited) =>
+            MergeCorridorStartMoved(path, npath, maxPath, visited, nvisited, out _);
+
+        /// Unbound: <paramref name="prepended"/> is the number of visited polygons put before the
+        /// furthest common one (0 when the path is unchanged).
+        public static int MergeCorridorStartMoved(Span<long> path, int npath, int maxPath, Span<long> visited, int nvisited, out int prepended)
         {
+            prepended = 0;
             int furthestPath = -1;
             int furthestVisited = -1;
 
@@ -194,7 +200,49 @@ namespace DotRecast.Detour
             for (int i = 0, n = Math.Min(req, maxPath); i < n; ++i)
                 path[i] = visited[(nvisited-1)-i];
 
+            prepended = Math.Min(req, maxPath) - 1;
             return req+size;
+        }
+
+        /// Unbound: after a move put <paramref name="prepended"/> polygons before the corridor's
+        /// common polygon (at that index), the first of them, from the agent's own on, that borders
+        /// a polygon further along (from the common one; past it for the last of them) is joined to
+        /// the furthest such polygon, the polygons between left out. Only with at least two
+        /// polygons from the common one on. Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/avoidance `corners`: an agent stepping round a tile corner past its path's
+        /// first polygons walks on straight instead of back round the corner.
+        public static int JoinMovedStartToNeighbour(DtNavMesh nav, Span<long> path, int npath, int prepended)
+        {
+            if (prepended < 1 || npath - prepended < 2) return npath;
+            for (int i = 0; i < prepended; i++)
+            {
+                int first = i == prepended - 1 ? prepended + 1 : prepended;
+                int furthest = FurthestNeighbourIn(nav, path[i], path, first, npath);
+                if (furthest < 0) continue;
+                int cut = furthest - (i + 1);
+                RcSpans.Move(path, furthest, i + 1, npath - furthest);
+                return npath - cut;
+            }
+            return npath;
+        }
+
+        /// The last index in [<paramref name="first"/>, <paramref name="end"/>) of
+        /// <paramref name="path"/> holding a polygon linked to <paramref name="polyRef"/>, else -1.
+        private static int FurthestNeighbourIn(DtNavMesh nav, long polyRef, Span<long> path, int first, int end)
+        {
+            if (nav.GetTileAndPolyByRef(polyRef, out var tile, out var poly).Failed()) return -1;
+            int furthest = -1;
+            for (int k = poly.firstLink; k != DT_NULL_LINK && furthest < end - 1; k = tile.links[k].next)
+            {
+                long neighbour = tile.links[k].refs;
+                for (int j = end - 1; j > furthest && j >= first; j--)
+                {
+                    if (path[j] != neighbour) continue;
+                    furthest = j;
+                    break;
+                }
+            }
+            return furthest;
         }
 
         public static int MergeCorridorEndMoved(Span<long> path, int npath, int maxPath, Span<long> visited, int nvisited)

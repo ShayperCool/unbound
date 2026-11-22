@@ -1067,6 +1067,7 @@ namespace Unbound.Runtime
                     predictNeighbourBounds = Compat.NavMeshPredictionBoundsMeasured,
                     measuredStoppingDistance = Compat.NavMeshStoppingDistanceMeasured,
                     measuredBrakingPlan = Compat.NavMeshBrakingPlanMeasured,
+                    joinMovedCorridorStart = Compat.NavMeshCorridorJoinMeasured,
                 };
                 crowd = new DtCrowd(config, surface.Mesh, i => AreaFilter.Of(-1));
                 crowd.tryEnterConnection = polyRef => TryEnterLink(surface, polyRef);

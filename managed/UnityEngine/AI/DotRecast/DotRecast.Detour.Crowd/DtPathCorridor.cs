@@ -38,6 +38,11 @@ namespace DotRecast.Detour.Crowd
         private int m_npath;
         private int m_maxPath;
 
+        /// Unbound: a move that leaves the corridor's first polygons joins the polygon it reaches to
+        /// the furthest corridor polygon it borders (DtPathUtils.JoinMovedStartToNeighbour); selected
+        /// by the runtime compatibility profile.
+        public bool joinMovedStart;
+
         /**
         @class dtPathCorridor
         @par
@@ -367,7 +372,9 @@ namespace DotRecast.Detour.Crowd
             var status = navquery.MoveAlongSurface(m_path[0], m_pos, npos, filter, out var result, visited, out var nvisited, MAX_VISITED);
             if (status.Succeeded())
             {
-                m_npath = DtPathUtils.MergeCorridorStartMoved(m_path, m_npath, m_maxPath, visited, nvisited);
+                m_npath = DtPathUtils.MergeCorridorStartMoved(m_path, m_npath, m_maxPath, visited, nvisited, out int prepended);
+                if (joinMovedStart)
+                    m_npath = DtPathUtils.JoinMovedStartToNeighbour(navquery.GetAttachedNavMesh(), m_path, m_npath, prepended);
 
                 // Adjust the position to stay on top of the navmesh.
                 m_pos = result;

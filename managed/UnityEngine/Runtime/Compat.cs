@@ -157,6 +157,11 @@ namespace Unbound.Runtime
         /// releases retain the previous, unmeasured arrival-dependent reports.</summary>
         internal static bool NavMeshCorridorReportingMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>A move that leaves the corridor's first polygons joins the polygon it reaches to
+        /// the furthest corridor polygon it borders, measured by tests/projects/avoidance `corners`
+        /// on 6000.0.71f1. Other releases retain Detour's merge alone, unmeasured.</summary>
+        internal static bool NavMeshCorridorJoinMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Stopping distance selects planned speed before braking, measured by
         /// tests/projects/navlinks on 6000.0.71f1. Other releases retain their previous,
         /// unmeasured immediate stop.</summary>
