@@ -839,3 +839,6 @@ The inspector slice adds `UnityEditor.UIElements.InspectorElement` (44 rows) to 
 6000.0.71f1 batch Editor captures on macOS write them; every earlier row is unchanged. Those captures ran on a 2x main
 display, so its `scaledPixelsPerPoint` and the same value inside `contentContainer` read 2 where every other row reads
 1; the two rows are queued in `debt.json` with their raw values until the type is captured on a 1x display.
+
+The object factory slice adds the static `ObjectFactory` (excluded) to the inventory, as two Unity
+6000.0.71f1 batch Editor captures on macOS write it; every earlier row is unchanged.

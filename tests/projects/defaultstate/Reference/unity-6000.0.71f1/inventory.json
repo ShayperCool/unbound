@@ -1884,6 +1884,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.ObjectFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.ObjectNames"
     },

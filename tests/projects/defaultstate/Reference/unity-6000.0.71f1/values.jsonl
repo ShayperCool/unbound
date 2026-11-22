@@ -1044,6 +1044,7 @@
 {"key":"UnityEditor.ObjectChangeEventStream+Builder/@factory","status":"value","value":"struct"}
 {"key":"UnityEditor.ObjectChangeEventStream+Builder/Property/UnityEditor.ObjectChangeEventStream+Builder/eventCount","status":"value","value":"0"}
 {"key":"UnityEditor.ObjectChangeEvents/@factory","status":"excluded","value":"static"}
+{"key":"UnityEditor.ObjectFactory/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.ObjectNames/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.ObjectReferenceKeyframe/@factory","status":"value","value":"struct"}
 {"key":"UnityEditor.ObjectReferenceKeyframe/Field/UnityEditor.ObjectReferenceKeyframe/time","status":"value","value":"0"}
