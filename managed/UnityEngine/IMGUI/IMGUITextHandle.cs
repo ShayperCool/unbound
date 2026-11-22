@@ -54,7 +54,10 @@ namespace UnityEngine
             return s_DefaultTextSettings;
         }
 
-        internal static bool TryConvertStyleToSettings(TextCoreSettings tgs, GUIStyle style, Color textColor, string text, Rect rect)
+        internal static bool TryConvertStyleToSettings(TextCoreSettings tgs, GUIStyle style, Color textColor, string text, Rect rect) =>
+            TryConvertStyleToSettings(tgs, style, textColor, new RenderedText(text ?? ""), rect);
+
+        internal static bool TryConvertStyleToSettings(TextCoreSettings tgs, GUIStyle style, Color textColor, RenderedText text, Rect rect)
         {
             var textSettings = ResolveTextSettings();
             tgs.textSettings = textSettings;
@@ -65,11 +68,14 @@ namespace UnityEngine
 
             tgs.fontSize = style.fontSize > 0 ? style.fontSize : (font.fontSize > 0 ? font.fontSize : 13f);
             tgs.fontStyle = TextGeneratorUtilities.LegacyStyleToNewStyle(style.fontStyle);
+            tgs.fontWeight = TextFontWeight.Regular;
             tgs.fontAsset = textSettings.GetCachedFontAsset(font);
             if (tgs.fontAsset == null) return false;
 
             tgs.screenRect = new Rect(0f, 0f, rect.width, rect.height);
-            tgs.text = text ?? "";
+            tgs.pixelsPerPoint = GUIUtility.pixelsPerPoint;
+            tgs.isEditorRenderingModeBitmap = false;
+            tgs.renderedText = text;
 
             var alignment = style.alignment;
             if (style.imagePosition == ImagePosition.ImageAbove)
@@ -92,7 +98,9 @@ namespace UnityEngine
             tgs.textWrappingMode = rect.width > 0f && style.wordWrap
                 ? TextWrappingMode.PreserveWhitespace
                 : TextWrappingMode.PreserveWhitespaceNoWrap;
+            tgs.emojiFallbackSupport = true;
             tgs.richText = style.richText;
+            tgs.extraPadding = 6f;
             tgs.parseControlCharacters = false;
             tgs.isPlaceholder = false;
             tgs.isRightToLeft = false;
@@ -108,13 +116,13 @@ namespace UnityEngine
         internal static IMGUITextHandle GetTextHandle(GUIStyle style, Rect position, string content, Color32 textColor)
         {
             bool isCached = false;
-            return GetTextHandleInternal(style, position, content, textColor, isCalledFromNative: false, ref isCached);
+            return GetTextHandleInternal(style, position, new RenderedText(content ?? ""), textColor, isCalledFromNative: false, ref isCached);
         }
 
         internal static IMGUITextHandle GetTextHandle(GUIStyle style, Rect position, string content, Color32 textColor, ref bool isCached) =>
-            GetTextHandleInternal(style, position, content, textColor, isCalledFromNative: true, ref isCached);
+            GetTextHandleInternal(style, position, new RenderedText(content ?? ""), textColor, isCalledFromNative: true, ref isCached);
 
-        static IMGUITextHandle GetTextHandleInternal(GUIStyle style, Rect position, string content, Color32 textColor, bool isCalledFromNative, ref bool isCached)
+        static IMGUITextHandle GetTextHandleInternal(GUIStyle style, Rect position, RenderedText content, Color32 textColor, bool isCalledFromNative, ref bool isCached)
         {
             isCached = false;
             var tgs = TextHandle.settings;
@@ -161,10 +169,11 @@ namespace UnityEngine
 
         internal Vector2 GetPreferredSize() => preferredSize;
 
-        internal static bool TryMeasurePreferredSize(GUIStyle style, string content, Rect outerRect, out Vector2 size)
+        internal static bool TryMeasurePreferredSize(GUIStyle style, RenderedText content, Rect outerRect, out Vector2 size)
         {
             var inner = style.padding.Remove(outerRect);
-            var handle = GetTextHandle(style, inner, content, Color.white);
+            bool isCached = false;
+            var handle = GetTextHandleInternal(style, inner, content, Color.white, isCalledFromNative: false, ref isCached);
             if (handle == null)
             {
                 size = Vector2.zero;

@@ -58,7 +58,7 @@ namespace UnityEngine
                 var eventType = currentEvent != null ? currentEvent.type : EventType.Ignore;
                 if (eventType == EventType.Used) return -1;
 
-                bool focusable = focus == FocusType.Keyboard || (int)focus > (int)FocusType.Passive;
+                bool focusable = focus == FocusType.Keyboard;
                 int id = FindOrAllocate(hint, focusable);
                 if (eventType != EventType.Layout && focus != FocusType.Passive && m_SearchIndex > 0)
                 {

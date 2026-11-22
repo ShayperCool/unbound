@@ -621,7 +621,7 @@ namespace UnityEngine
             float textHeight = 0f;
             if (m_ImagePosition != ImagePosition.ImageOnly && hasText)
             {
-                if (IMGUITextHandle.TryMeasurePreferredSize(this, content.textWithWhitespace, new Rect(0f, 0f, measureWidth, MeasureMaxHeight), out var preferred))
+                if (IMGUITextHandle.TryMeasurePreferredSize(this, new TextCore.Text.RenderedText(content.text, "\u200B"), new Rect(0f, 0f, measureWidth, MeasureMaxHeight), out var preferred))
                     textHeight = preferred.y;
                 else
                     textHeight = GuiText.Size(content.text, this, m_WordWrap ? Math.Max(1f, measureWidth - m_Padding.horizontal) : 0f).y;

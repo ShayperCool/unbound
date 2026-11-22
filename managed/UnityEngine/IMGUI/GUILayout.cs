@@ -982,7 +982,7 @@ namespace UnityEngine
                 g = CreateGroup(layoutType);
                 g.style = style;
                 if (options != null) g.ApplyOptions(options);
-                current.groups.Peek().Add(g);
+                if (eventType == EventType.Layout) current.groups.Peek().Add(g);
             }
             else
             {
@@ -1019,7 +1019,7 @@ namespace UnityEngine
             {
                 g = CreateGroup(layoutType);
                 g.style = style;
-                current.windows.Add(g);
+                if (eventType == EventType.Layout) current.windows.Add(g);
             }
             else
             {

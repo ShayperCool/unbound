@@ -6,6 +6,15 @@ namespace UnityEditor
     public sealed partial class EditorGUI
     {
         static readonly int s_FloatFieldHash = "EditorTextField".GetHashCode();
+        static readonly GUIContent s_TempPrefix = new GUIContent();
+
+        internal static GUIContent TempPrefixContent(string text)
+        {
+            s_TempPrefix.text = text;
+            s_TempPrefix.image = null;
+            s_TempPrefix.tooltip = "";
+            return s_TempPrefix;
+        }
 
         public static void LabelField(Rect position, string label) => LabelField(position, GUIContent.Temp(label));
 
@@ -34,7 +43,7 @@ namespace UnityEditor
             LabelField(position, GUIContent.none, label, style);
 
         public static void LabelField(Rect position, string label, string label2, GUIStyle style) =>
-            LabelField(position, new GUIContent(label), GUIContent.Temp(label2), style);
+            LabelField(position, TempPrefixContent(label), GUIContent.Temp(label2), style);
 
         public static void LabelField(Rect position, GUIContent label, GUIContent label2) =>
             LabelField(position, label, label2, DefaultPrefixLabelStyle);
@@ -83,7 +92,7 @@ namespace UnityEditor
             LabelField(GUIContent.none, label, style, options);
 
         public static void LabelField(string label, string label2, GUIStyle style, params GUILayoutOption[] options) =>
-            LabelField(new GUIContent(label), GUIContent.Temp(label2), style, options);
+            LabelField(EditorGUI.TempPrefixContent(label), GUIContent.Temp(label2), style, options);
 
         public static void LabelField(GUIContent label, GUIContent label2, params GUILayoutOption[] options) =>
             LabelField(label, label2, EditorGUI.DefaultPrefixLabelStyle, options);
