@@ -572,10 +572,15 @@ namespace UnityEngine.U2D
         internal static void PackV1ForPlayMode()
         {
             if (UnityEditor.EditorSettings.SpritePackerModeValue != UnityEditor.EditorSettings.SpritePackerModeAlwaysOnAtlas || !Native.IsReady) return;
-            // Every entry packs the atlases as they are now: the first through the Play-mode pack,
-            // later ones again.
-            if (s_Atlases == null) Load();
-            else if (!RepackForPlayMode()) return;
+            // Only a session's first pack is made at its Play-mode entry: once atlases were packed
+            // (an earlier entry, or SpriteAtlasUtility in Edit mode), entering Play mode stores
+            // nothing (the Editor packs again at every entry; not done).
+            if (s_Atlases != null)
+            {
+                Debug.LogWarning("Unbound: entering Play mode again does not pack V1 sprite atlases and store their packs, as the Editor does");
+                return;
+            }
+            Load();
             if (s_Cancelled || s_Atlases == null) return;
             var variants = new List<SpriteAtlas>();
             foreach (var packed in new List<Atlas>(s_Atlases.Values))
@@ -598,40 +603,13 @@ namespace UnityEngine.U2D
                 UnityEditor.EditorUtility.SetDirty(atlas);
                 AssetFiles.SaveDirty(atlas, unchangedStays: true);
                 UnityEditor.EditorUtility.ClearDirty(atlas);
-                s_ClampedOnEntry.Remove(atlas);
                 atlas.InvalidateCachedSprites();
             }
             foreach (var variant in variants)
-                if (variant.ClampVariantScale())
-                {
-                    UnityEditor.EditorUtility.SetDirty(variant);
-                    s_ClampedOnEntry.Add(variant);
-                }
+                if (variant.ClampVariantScale()) UnityEditor.EditorUtility.SetDirty(variant);
         }
 
-        /// <summary>Variants a Play-mode entry left dirty by clamping their scale: not unsaved edits
-        /// at the next entry.</summary>
-        static readonly HashSet<SpriteAtlas> s_ClampedOnEntry = new HashSet<SpriteAtlas>(ReferenceEqualityComparer.Instance);
-
-        static bool HasUnsavedChanges(SpriteAtlas atlas) =>
-            UnityEditor.EditorUtility.IsDirty(atlas) && !s_ClampedOnEntry.Contains(atlas);
-
-        /// <summary>Packs the Play-mode atlases again (a later Play-mode entry) and takes the result;
-        /// false when the packing was cancelled.</summary>
-        static bool RepackForPlayMode()
-        {
-            var paths = new List<string>();
-            foreach (var guid in s_PlayModePacked)
-                if (UnityEditor.AssetDatabase.GUIDToAssetPath(guid) is string path && path.Length > 0) paths.Add(path);
-            if (paths.Count == 0) return true;
-            var payload = JsonSerializer.Serialize(new { paths }, s_Options);
-            var json = JsonSerializer.Deserialize<Json>(Native.Call("sprite-atlases-pack", payload), s_Options);
-            if (json?.Cancelled != null || json?.Atlases == null) return false;
-            foreach (var a in json.Atlases)
-                s_Atlases[a.Guid] = BuildAtlas(a);
-            RebuildSpriteTables();
-            return true;
-        }
+        static bool HasUnsavedChanges(SpriteAtlas atlas) => UnityEditor.EditorUtility.IsDirty(atlas);
 
         static int CountBuiltInAtlasesContaining((string, long) key)
         {
