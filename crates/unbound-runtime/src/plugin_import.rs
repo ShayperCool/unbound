@@ -40,7 +40,7 @@ pub fn prepare_plugins(project: &Project) -> Vec<Plugin> {
     if !found.has_conflicts() {
         return found.plugins;
     }
-    let library = project.library_dir();
+    let library = project.unbound_dir();
     // Serialize only the exceptional import, with a fresh scan under the lock. No import
     // state is carried from one scan to the next.
     let _lock = match import_lock(&library) {
