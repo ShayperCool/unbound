@@ -1,0 +1,107 @@
+{"k":"class.custom","v":"type=ProbeImporterEditor|target=ProbeImporter:|targets=1|hideFlags=HideAndDontSave|unsaved=False|message=\"Unapplied import settings for 'Assets/Things/First.probeimp'\"|showImportedObject=True|modified=False"}
+{"k":"class.default","v":"type=UnityEditor.AssetImporters.ScriptedImporterEditor|target=PlainImporter:|targets=1|hideFlags=HideAndDontSave|unsaved=False|message=\"Unapplied import settings for 'Assets/Things/Plain.plainimp'\"|showImportedObject=True|modified=False"}
+{"k":"class.named","v":"type=ProbeImporterEditor|target=PlainImporter:|targets=1|hideFlags=HideAndDontSave|unsaved=False|message=\"Unapplied import settings for 'Assets/Things/Plain.plainimp'\"|showImportedObject=True|modified=False"}
+{"k":"class.baseForScripted","v":"type=PlainAssetImporterEditor|target=PlainImporter:|targets=1|hideFlags=HideAndDontSave|unsaved=False|message=\"Unapplied import settings for 'Assets/Things/Plain.plainimp'\"|showImportedObject=True|modified=False"}
+{"k":"class.abstract","v":"<null>"}
+{"k":"class.new","v":"throws=<none>|calls=<none>|logs=Exception:NullReferenceException: Object reference not set to an instance of an object|made=True|targets=<null>|unsaved=False|message=<null>|showImportedObject=True"}
+{"k":"class.newDestroy","v":"throws=<none>|calls=<none>|logs=Error:ScriptedImporterEditor.OnEnable must call base.OnEnable to avoid unexpected behaviour.||Exception:NullReferenceException: Object reference not set to an instance of an object|alive=False"}
+{"k":"settings.create","v":"throws=<none>|calls=ProbeImporterEditor.Awake ProbeImporterEditor.OnEnable|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"settings.members","v":"assetTarget=<null>|assetTargets=<null>|assetSerializedObject=<null>|needsApplyRevert=False|showImportedObject=True|useAssetDrawPreview=True|extraDataType=<null>|extraDataTargets=<null>|extraDataSerializedObject=<null>|extraDataTarget=throws NullReferenceException|canApply=True|serializedObject=set|message=\"Unapplied import settings for 'Assets/Things/First.probeimp'\""}
+{"k":"settings.editUnapplied","v":"throws=<none>|calls=<none>|logs=<none>|importerBefore=3|dirtyBefore=False|importer=3->7|label=start|modified=True|unsaved=False|dirty=True|meta=3|imports=0"}
+{"k":"settings.discard","v":"throws=<none>|calls=ProbeImporterEditor.DiscardChanges|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|property=3"}
+{"k":"settings.editApplied","v":"throws=<none>|calls=<none>|logs=<none>|importer=8|label=start|modified=True|unsaved=False|dirty=True|meta=3|imports=0"}
+{"k":"settings.apply","v":"throws=<none>|calls=ProbeImporterEditor.Apply|logs=<none>|importer=8|label=start|modified=False|unsaved=False|dirty=True|meta=3|imports=0"}
+{"k":"settings.discardAfterApply","v":"throws=<none>|calls=ProbeImporterEditor.DiscardChanges|logs=<none>|importer=8|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"settings.editAgain","v":"throws=<none>|calls=<none>|logs=<none>|importer=9|label=edited|modified=True|unsaved=False|dirty=True|meta=3|imports=0"}
+{"k":"settings.save","v":"throws=<none>|calls=ProbeImporterEditor.SaveChanges ProbeImporterEditor.Apply|logs=<none>|importer=9|label=edited|modified=False|unsaved=False|dirty=True|meta=3|imports=0"}
+{"k":"settings.sameValue","v":"throws=<none>|calls=<none>|logs=<none>|importer=9|label=edited|modified=False|unsaved=False|dirty=True|meta=3|imports=0"}
+{"k":"settings.resetValues","v":"throws=<none>|calls=ProbeImporterEditor.DiscardChanges|logs=<none>|importer=9|label=edited|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"settings.applyAndImport","v":"throws=<none>|calls=ProbeImporterEditor.SaveChanges ProbeImporterEditor.Apply|logs=<none>|importer=13|label=edited|modified=False|unsaved=False|dirty=True|meta=3|imports=0"}
+{"k":"settings.destroy","v":"throws=<none>|calls=ProbeImporterEditor.OnDisable|logs=<none>|importer=13|dirty=True|meta=3|imports=0"}
+{"k":"importer.create","v":"throws=<none>|calls=ProbeImporterEditor.Awake ProbeImporterEditor.OnEnable|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"importer.field","v":"throws=<none>|calls=<none>|logs=<none>|importer=21|label=start|modified=True|unsaved=False|dirty=False|meta=3|imports=0|property=3"}
+{"k":"importer.discard","v":"throws=<none>|calls=ProbeImporterEditor.DiscardChanges|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|property=3"}
+{"k":"importer.userData","v":"throws=<none>|calls=<none>|logs=<none>|importer=3|label=start|modified=True|unsaved=False|dirty=True|meta=3|imports=0|userData=\"probe\""}
+{"k":"importer.discardUserData","v":"throws=<none>|calls=ProbeImporterEditor.DiscardChanges|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|userData=\"\""}
+{"k":"importer.fieldDirty","v":"throws=<none>|calls=<none>|logs=<none>|importer=22|label=start|modified=True|unsaved=False|dirty=True|meta=3|imports=0"}
+{"k":"importer.saveAndReimport","v":"throws=<none>|calls=<none>|logs=<none>|importer=22|label=start|modified=True|unsaved=False|dirty=False|meta=22|imports=1"}
+{"k":"importer.discardAfterReimport","v":"throws=<none>|calls=ProbeImporterEditor.DiscardChanges|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=22|imports=1"}
+{"k":"importer.writeFieldClean","v":"throws=<none>|calls=<none>|logs=<none>|wrote=False|importer=23|label=start|modified=True|unsaved=False|dirty=False|meta=22|imports=1"}
+{"k":"importer.writeFieldDirty","v":"throws=<none>|calls=<none>|logs=<none>|wrote=True|importer=23|label=start|modified=True|unsaved=False|dirty=False|meta=23|imports=1"}
+{"k":"importer.writeAgain","v":"throws=<none>|calls=<none>|logs=<none>|wrote=False|importer=23|label=start|modified=True|unsaved=False|dirty=False|meta=23|imports=1"}
+{"k":"importer.reimportFieldClean","v":"throws=<none>|calls=<none>|logs=<none>|importer=23|label=start|modified=True|unsaved=False|dirty=False|meta=23|imports=2"}
+{"k":"importer.destroy","v":"throws=<none>|calls=ProbeImporterEditor.OnDisable|logs=<none>|importer=23|dirty=False|meta=23|imports=2"}
+{"k":"shared.first","v":"throws=<none>|calls=ProbeImporterEditor.Awake ProbeImporterEditor.OnEnable|logs=<none>|importer=31|label=start|modified=True|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"shared.second","v":"throws=<none>|calls=ProbeImporterEditor.Awake ProbeImporterEditor.OnEnable|logs=<none>|second:importer=31|label=start|modified=True|unsaved=False|dirty=False|meta=3|imports=0|first:importer=31|label=start|modified=True|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"shared.secondApplies","v":"throws=<none>|calls=ProbeImporterEditor.Apply|logs=<none>|second:importer=31|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|first:importer=31|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"shared.editAndDestroySecond","v":"throws=<none>|calls=ProbeImporterEditor.OnDisable|logs=<none>|first:importer=32|label=start|modified=True|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"shared.destroyFirst","v":"throws=<none>|calls=ProbeImporterEditor.OnDisable|logs=<none>|importer=32|dirty=False|meta=3|imports=0"}
+{"k":"shared.third","v":"throws=<none>|calls=ProbeImporterEditor.Awake ProbeImporterEditor.OnEnable|logs=<none>|importer=32|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"shared.thirdDiscards","v":"throws=<none>|calls=ProbeImporterEditor.DiscardChanges|logs=<none>|importer=32|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"shared.destroyThird","v":"throws=<none>|calls=ProbeImporterEditor.OnDisable|logs=<none>|importer=32|dirty=False|meta=3|imports=0"}
+{"k":"extra.create","v":"throws=<none>|calls=ExtraImporterEditor.Awake ExtraImporterEditor.OnEnable ExtraImporterEditor.InitializeExtraDataInstance(ProbeExtra,0)|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|extraDataTargets=1|extraDataTarget=ProbeExtra:\"\":DontSaveInEditor, DontUnloadUnusedAsset:40:persistent=False|extraDataSerializedObject=ExtraDataSerializedObject:ProbeExtra:|same=True"}
+{"k":"extra.editUnapplied","v":"throws=<none>|calls=<none>|logs=<none>|extraBefore=40|importer=3|label=start|modified=True|unsaved=False|dirty=False|meta=3|imports=0|extra=50"}
+{"k":"extra.discard","v":"throws=<none>|calls=ExtraImporterEditor.DiscardChanges|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|extra=40|property=40"}
+{"k":"extra.field","v":"throws=<none>|calls=<none>|logs=<none>|importer=3|label=start|modified=True|unsaved=False|dirty=False|meta=3|imports=0|extra=60"}
+{"k":"extra.apply","v":"throws=<none>|calls=ExtraImporterEditor.Apply|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|extra=60"}
+{"k":"extra.editImporterToo","v":"throws=<none>|calls=<none>|logs=<none>|importer=71|label=start|modified=True|unsaved=False|dirty=False|meta=3|imports=0|extra=61"}
+{"k":"extra.discardBoth","v":"throws=<none>|calls=ExtraImporterEditor.DiscardChanges|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|extra=60"}
+{"k":"extra.applyRevertGUI","v":"throws=<none>|calls=ExtraImporterEditor.Apply|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|extra=62"}
+{"k":"extra.destroy","v":"throws=<none>|calls=ExtraImporterEditor.OnDisable|logs=<none>|extraAlive=False"}
+{"k":"extra.again","v":"throws=<none>|calls=ExtraImporterEditor.Awake ExtraImporterEditor.OnEnable ExtraImporterEditor.InitializeExtraDataInstance(ProbeExtra,0)|logs=<none>|sameObject=False|extra=40"}
+{"k":"extra.secondEditor","v":"throws=<none>|calls=ExtraImporterEditor.Awake ExtraImporterEditor.OnEnable|logs=<none>|sameObject=True|extra=40"}
+{"k":"extra.destroyBoth","v":"throws=<none>|calls=ExtraImporterEditor.OnDisable ExtraImporterEditor.OnDisable|logs=<none>|extraAlive=False"}
+{"k":"mistake.extraType","v":"throws=<none>|calls=BadExtraImporterEditor.Awake BadExtraImporterEditor.OnEnable|logs=Error:Extra Data objects needs to be ScriptableObject to support assembly reloads and Undo/Redo|extraDataTargets=<null>|modified=False|stateLogs=Error:SerializedObject target has been destroyed."}
+{"k":"mistake.extraTypeDestroy","v":"throws=<none>|calls=BadExtraImporterEditor.OnDisable|logs=<none>|alive=False"}
+{"k":"mistake.extraUninitialized","v":"throws=<none>|calls=UninitializedExtraImporterEditor.Awake UninitializedExtraImporterEditor.OnEnable|logs=Exception:NotImplementedException: InitializeExtraDataInstance must be implemented when extraDataType is overridden.|made=True|message=<null>|extraDataTargets=1|extraDataTarget=ProbeExtra:\"\":DontSaveInEditor, DontUnloadUnusedAsset:5:persistent=False|extraDataSerializedObject=ExtraDataSerializedObject:ProbeExtra:"}
+{"k":"mistake.extraUninitializedDestroy","v":"throws=<none>|calls=UninitializedExtraImporterEditor.OnDisable|logs=Error:UninitializedExtraImporterEditor.OnEnable must call base.OnEnable to avoid unexpected behaviour.||Exception:NullReferenceException: Object reference not set to an instance of an object|alive=False"}
+{"k":"mistake.noBaseEnable","v":"throws=<none>|calls=NoBaseEnableImporterEditor.Awake NoBaseEnableImporterEditor.OnEnable|logs=<none>|message=<null>|modified=True"}
+{"k":"mistake.noBaseEnableEdit","v":"throws=<none>|calls=<none>|logs=<none>|modified=True"}
+{"k":"mistake.noBaseEnableApply","v":"throws=<none>|calls=NoBaseEnableImporterEditor.Apply|logs=<none>|modified=False|importer=81"}
+{"k":"mistake.noBaseEnableDiscard","v":"throws=<none>|calls=NoBaseEnableImporterEditor.DiscardChanges|logs=<none>|modified=False|importer=81"}
+{"k":"mistake.noBaseEnableDestroy","v":"throws=<none>|calls=NoBaseEnableImporterEditor.OnDisable|logs=Error:NoBaseEnableImporterEditor.OnEnable must call base.OnEnable to avoid unexpected behaviour.||Exception:NullReferenceException: Object reference not set to an instance of an object|alive=False"}
+{"k":"mistake.leftover","v":"throws=<none>|calls=NoBaseEnableImporterEditor.Awake NoBaseEnableImporterEditor.OnEnable|logs=<none>|modified=True"}
+{"k":"mistake.leftoverDiscard","v":"throws=<none>|calls=NoBaseEnableImporterEditor.DiscardChanges|logs=<none>|modified=False|importer=3"}
+{"k":"mistake.leftoverDestroy","v":"throws=<none>|calls=NoBaseEnableImporterEditor.OnDisable|logs=Error:NoBaseEnableImporterEditor.OnEnable must call base.OnEnable to avoid unexpected behaviour.||Exception:NullReferenceException: Object reference not set to an instance of an object|alive=False"}
+{"k":"unsaved.create","v":"throws=<none>|calls=ProbeImporterEditor.Awake ProbeImporterEditor.OnEnable|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"unsaved.set","v":"throws=<none>|calls=<none>|logs=<none>|importer=91|label=start|modified=True|unsaved=True|dirty=False|meta=3|imports=0"}
+{"k":"unsaved.discard","v":"throws=<none>|calls=ProbeImporterEditor.DiscardChanges|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"unsaved.setAgain","v":"throws=<none>|calls=<none>|logs=<none>|importer=92|label=start|modified=True|unsaved=True|dirty=False|meta=3|imports=0"}
+{"k":"unsaved.apply","v":"throws=<none>|calls=ProbeImporterEditor.Apply|logs=<none>|importer=92|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"unsaved.save","v":"throws=<none>|calls=ProbeImporterEditor.SaveChanges ProbeImporterEditor.Apply|logs=<none>|importer=92|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"unsaved.destroy","v":"throws=<none>|calls=ProbeImporterEditor.OnDisable|logs=<none>|importer=92|dirty=False|meta=3|imports=0"}
+{"k":"several.create","v":"throws=<none>|calls=ProbeImporterEditor.Awake ProbeImporterEditor.OnEnable|logs=<none>|type=ProbeImporterEditor|targets=2|message=\"Unapplied import settings for '2' files\"|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"several.editSecond","v":"throws=<none>|calls=<none>|logs=<none>|importer=41|label=start|modified=True|unsaved=False|dirty=False|meta=3|imports=0|first=3"}
+{"k":"several.editBoth","v":"throws=<none>|calls=<none>|logs=<none>|importer=42|label=start|modified=True|unsaved=False|dirty=True|meta=3|imports=0|first=42"}
+{"k":"several.discard","v":"throws=<none>|calls=ProbeImporterEditor.DiscardChanges|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|first=3"}
+{"k":"several.destroy","v":"throws=<none>|calls=ProbeImporterEditor.OnDisable|logs=<none>|second=3|first=3"}
+{"k":"applyRevert.create","v":"throws=<none>|calls=ApplyRevertImporterEditor.Awake ApplyRevertImporterEditor.OnEnable|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|needsApplyRevert=True|asset=\"number 3 label start\""}
+{"k":"applyRevert.apply","v":"throws=<none>|calls=ApplyRevertImporterEditor.Apply|logs=<none>|importer=51|label=start|modified=False|unsaved=False|dirty=True|meta=3|imports=0|asset=\"number 3 label start\""}
+{"k":"applyRevert.save","v":"throws=<none>|calls=ApplyRevertImporterEditor.SaveChanges ApplyRevertImporterEditor.Apply|logs=<none>|importer=52|label=start|modified=False|unsaved=False|dirty=False|meta=52|imports=1|asset=\"number 52 label start\""}
+{"k":"applyRevert.saveUnchanged","v":"throws=<none>|calls=ApplyRevertImporterEditor.SaveChanges ApplyRevertImporterEditor.Apply|logs=<none>|importer=52|label=start|modified=False|unsaved=False|dirty=False|meta=52|imports=2|asset=\"number 52 label start\""}
+{"k":"applyRevert.saveField","v":"throws=<none>|calls=ApplyRevertImporterEditor.SaveChanges ApplyRevertImporterEditor.Apply|logs=<none>|importer=52|label=start|modified=False|unsaved=False|dirty=False|meta=52|imports=3|asset=\"number 52 label start\""}
+{"k":"applyRevert.editAfterImport","v":"throws=<none>|calls=<none>|logs=<none>|importer=54|label=start|modified=True|unsaved=False|dirty=True|meta=52|imports=3|asset=\"number 52 label start\""}
+{"k":"applyRevert.discard","v":"throws=<none>|calls=ApplyRevertImporterEditor.DiscardChanges|logs=<none>|importer=52|label=start|modified=False|unsaved=False|dirty=False|meta=52|imports=3|asset=\"number 52 label start\""}
+{"k":"applyRevert.destroyEdited","v":"throws=<none>|calls=ApplyRevertImporterEditor.OnDisable|logs=<none>|importer=55|dirty=True|meta=52|imports=3|asset=\"number 52 label start\""}
+{"k":"applyRevert.destroyUnused","v":"throws=<none>|calls=ApplyRevertImporterEditor.Awake ApplyRevertImporterEditor.OnEnable ApplyRevertImporterEditor.OnDisable|logs=<none>|importer=55|dirty=True|meta=52|imports=3"}
+{"k":"outside.create","v":"throws=<none>|calls=ProbeImporterEditor.Awake ProbeImporterEditor.OnEnable|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"outside.applyRevertGUIUnchanged","v":"throws=<none>|calls=<none>|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
+{"k":"outside.applyRevertGUI","v":"throws=<none>|calls=<none>|logs=<none>|importer=61|label=start|modified=True|unsaved=True|dirty=False|meta=3|imports=0"}
+{"k":"outside.applyRevertGUIUnapplied","v":"throws=<none>|calls=<none>|logs=<none>|importer=62|label=start|modified=True|unsaved=True|dirty=True|meta=3|imports=0"}
+{"k":"outside.onInspectorGUI","v":"throws=NullReferenceException|calls=<none>|logs=<none>|importer=62|label=start|modified=True|unsaved=True|dirty=True|meta=3|imports=0"}
+{"k":"outside.applyButton","v":"throws=ArgumentException|calls=ProbeImporterEditor.CanApply|logs=<none>|importer=62|label=start|modified=True|unsaved=True|dirty=True|meta=3|imports=0"}
+{"k":"outside.revertButton","v":"throws=ArgumentException|calls=<none>|logs=<none>|importer=62|label=start|modified=True|unsaved=True|dirty=True|meta=3|imports=0"}
+{"k":"outside.onApplyRevertGUI","v":"throws=ArgumentException|calls=<none>|logs=<none>|importer=62|label=start|modified=True|unsaved=True|dirty=True|meta=3|imports=0"}
+{"k":"outside.destroyUnsaved","v":"throws=<none>|calls=ProbeImporterEditor.OnDisable ProbeImporterEditor.SaveChanges ProbeImporterEditor.Apply|logs=<none>|importer=62|dirty=True|meta=3|imports=0"}
+{"k":"outside.buttons.create","v":"throws=<none>|calls=ApplyRevertImporterEditor.Awake ApplyRevertImporterEditor.OnEnable|logs=<none>|importer=62|label=start|modified=False|unsaved=False|dirty=True|meta=3|imports=0"}
+{"k":"outside.buttons.applyRevertGUI","v":"throws=NullReferenceException|calls=<none>|logs=<none>|importer=63|label=start|modified=True|unsaved=True|dirty=True|meta=3|imports=0"}
+{"k":"outside.buttons.destroyUnsaved","v":"throws=<none>|calls=ApplyRevertImporterEditor.OnDisable ApplyRevertImporterEditor.SaveChanges ApplyRevertImporterEditor.Apply|logs=<none>|importer=63|dirty=False|meta=63|imports=1"}
+{"k":"texture.create","v":"throws=<none>|calls=<none>|logs=<none>|type=PlainAssetImporterEditor|needsApplyRevert=False|assetTarget=<null>|message=\"Unapplied import settings for 'Assets/Sprites/Single.png'\"|modified=False|unsaved=False"}
+{"k":"texture.edit","v":"throws=<none>|calls=<none>|logs=<none>|modified=True|changed=True"}
+{"k":"texture.discard","v":"throws=<none>|calls=<none>|logs=<none>|modified=False|changed=False"}
+{"k":"texture.editProperty","v":"throws=<none>|calls=<none>|logs=<none>|modified=True|changed=True"}
+{"k":"texture.apply","v":"throws=<none>|calls=<none>|logs=<none>|modified=False|changed=True"}
+{"k":"texture.editBack","v":"throws=<none>|calls=<none>|logs=<none>|modified=True|changed=False"}
+{"k":"texture.applyBack","v":"throws=<none>|calls=<none>|logs=<none>|modified=False|changed=False"}
+{"k":"texture.destroy","v":"throws=<none>|calls=<none>|logs=<none>|changed=False"}
+{"k":"complete","v":true}

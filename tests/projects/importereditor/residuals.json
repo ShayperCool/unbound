@@ -1,0 +1,5 @@
+{
+  "An editor made without targets has an empty target list in Unbound where the Editor has none (queued in tests/projects/defaultstate debt.json, UnityEditor.Editor targets)": [
+    "class.new"
+  ]
+}
