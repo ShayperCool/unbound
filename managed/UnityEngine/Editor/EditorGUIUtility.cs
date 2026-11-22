@@ -124,13 +124,17 @@ namespace UnityEditor
         public static GUIContent TrIconContent(Texture icon, string tooltip = null) => new GUIContent(null, icon, tooltip);
 
         /// <summary>A project asset by path (packages load their icons so), else one under
-        /// "Assets/Editor Default Resources"; the Editor's own resources ship inside the Editor: null.</summary>
+        /// "Assets/Editor Default Resources", else a resource of the Editor itself by its path
+        /// there (the documented order of the last two; fonts, skins, style sheets, UXML and
+        /// textures in uncompressed formats load, tests/projects/editorskin font/*). A resource
+        /// the Editor finds by its bare name (its icons) is not looked up: null.</summary>
         public static Object Load(string path)
         {
             if (path == null) throw new System.NullReferenceException("Object reference not set to an instance of an object");
             if (path.Length == 0) throw new System.ArgumentException("The input asset path cannot be empty.", nameof(path));
             return AssetDatabase.LoadAssetAtPath(path, typeof(Object))
-                ?? AssetDatabase.LoadAssetAtPath("Assets/Editor Default Resources/" + path, typeof(Object));
+                ?? AssetDatabase.LoadAssetAtPath("Assets/Editor Default Resources/" + path, typeof(Object))
+                ?? Unbound.UIElements.UiResources.EditorLoad(path);
         }
 
         /// <summary>Loads an editor resource via <see cref="Load(string)"/> and logs an error when missing.</summary>

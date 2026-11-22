@@ -360,7 +360,18 @@ namespace Unbound.UIElements
             return texture;
         }
 
-        static Font ReadFont(JsonElement f, long pathId) => Font.UaFromEditorResource(pathId, Str(f, "m_Name") ?? "", Float(f, "m_FontSize"));
+        static Font ReadFont(JsonElement f, long pathId)
+        {
+            var font = Font.UaFromEditorResource(pathId, Str(f, "m_Name") ?? "", Float(f, "m_FontSize"));
+            // The names the font lists: its own family, then the OS fonts it stands for.
+            if (f.TryGetProperty("m_FontNames", out var names) && names.ValueKind == JsonValueKind.Array && names.GetArrayLength() > 0)
+            {
+                var list = new List<string>();
+                foreach (var name in names.EnumerateArray()) list.Add(name.GetString() ?? "");
+                font.m_FontNames = list.ToArray();
+            }
+            return font;
+        }
 
         static Object ReadMonoBehaviour(JsonElement f)
         {
