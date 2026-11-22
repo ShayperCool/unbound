@@ -1339,7 +1339,29 @@ pub struct TestArgs {
     pub filter: Option<String>,
     pub category: Option<String>,
     pub assembly_names: Option<String>,
+    /// The session has a graphics device (a window).
+    pub graphics: bool,
     pub unity_args: Vec<String>,
+}
+
+/// A game in the windowed app that keeps the exit code it quits with for the command.
+struct Session {
+    game: unbound_runtime::Game,
+    exit: std::sync::Arc<std::sync::Mutex<Option<i32>>>,
+}
+
+impl unbound_app::FrameDriver for Session {
+    fn frame(&mut self, input: &unbound_runtime::FrameInput) -> bool {
+        let goes_on = unbound_app::FrameDriver::frame(&mut self.game, input);
+        if !goes_on {
+            *self.exit.lock().unwrap() = self.game.exit_code();
+        }
+        goes_on
+    }
+
+    fn shutdown(&mut self) {
+        unbound_app::FrameDriver::shutdown(&mut self.game);
+    }
 }
 
 /// `unbound test`: the Editor starts in Edit mode with the command line `-runTests` gives it, so
@@ -1408,13 +1430,47 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
         .command_line
         .iter()
         .any(|a| a.trim_start_matches('-') == "force-gfx-mt");
-    choose_graphics_device(&project, forced, false, force_gfx_mt)?;
+    choose_graphics_device(&project, forced, test.graphics, force_gfx_mt)?;
     install_shader_declarations(&project, &args.target);
-    let mut game = unbound_runtime::Game::start(&project, &options)?;
-    game.run_headless(u32::MAX, width, height);
-    let exit = game.exit_code();
+    let exit = if test.graphics {
+        // In a window, as a run: the renderer is installed before the session starts.
+        unbound_app::initialize_display();
+        let (width, height) = unbound_app::fitted_window_size(width, height);
+        let (shader_compiler, mut shader_roots, builtin_roots) =
+            shader_setup(&project, &args.target);
+        shader_roots.extend(builtin_roots);
+        let backend = std::sync::Arc::new(unbound_app::backend::GpuBackend::with_shader_roots(
+            shader_roots.clone(),
+        ));
+        let game =
+            unbound_runtime::Game::start_with_backend(&project, &options, Some(backend.clone()))?;
+        let exit = std::sync::Arc::new(std::sync::Mutex::new(None));
+        unbound_app::run(
+            Box::new(Session {
+                game,
+                exit: exit.clone(),
+            }),
+            backend,
+            unbound_app::AppOptions {
+                title: "Unbound".to_string(),
+                width: width.max(1) as u32,
+                height: height.max(1) as u32,
+                screenshot: None,
+                frames: None,
+                snapshots: Vec::new(),
+                shader_roots,
+                shader_compiler: Some(shader_compiler),
+                remote: None,
+            },
+        )?;
+        let code = *exit.lock().unwrap();
+        code
+    } else {
+        let mut game = unbound_runtime::Game::start(&project, &options)?;
+        game.run_headless(u32::MAX, width, height);
+        game.exit_code()
+    };
     let code = exit.unwrap_or(3);
-    drop(game);
     // A reload of the scripts outside the Test Framework's lock (at their load, or in a Play Mode
     // run, which holds no lock: a compilation they asked for, new scripting defines) runs the tests
     // again from the start in a relaunched session, as `run` does; a run that keeps asking stops

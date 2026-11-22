@@ -243,6 +243,11 @@ enum Command {
         /// Run only tests in these assemblies (semicolon-separated).
         #[arg(long)]
         assembly_names: Option<String>,
+        /// Run the session with a graphics device, in a window, as the Editor's batch mode has
+        /// one unless `-nographics` is given. Without it the session draws nothing, and what
+        /// needs a device says so (reading pixels back, a bake's material images).
+        #[arg(long)]
+        graphics: bool,
         /// Further Editor command-line options for the framework (after `--`).
         #[arg(last = true)]
         unity_args: Vec<String>,
@@ -420,6 +425,7 @@ fn main() -> anyhow::Result<()> {
             filter,
             category,
             assembly_names,
+            graphics,
             unity_args,
         } => commands::test(
             &project,
@@ -429,6 +435,7 @@ fn main() -> anyhow::Result<()> {
                 filter,
                 category,
                 assembly_names,
+                graphics,
                 unity_args,
             },
         ),

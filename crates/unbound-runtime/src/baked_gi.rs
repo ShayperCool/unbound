@@ -95,7 +95,10 @@ impl ImageData {
 
     /// The image as the bake reads it; one texel where all its texels are the same.
     fn texture(&self, texels: Vec<[f32; 4]>) -> Texture {
-        if texels.iter().all(|t| t.map(f32::to_bits) == texels[0].map(f32::to_bits)) {
+        if texels
+            .iter()
+            .all(|t| t.map(f32::to_bits) == texels[0].map(f32::to_bits))
+        {
             Texture::uniform(texels[0])
         } else {
             Texture {
@@ -438,7 +441,11 @@ impl<'a> Buffers<'a> {
             )?;
             self.write(
                 format!("validity{index}.f32"),
-                bounced.validity.iter().flat_map(|v| v.to_le_bytes()).collect(),
+                bounced
+                    .validity
+                    .iter()
+                    .flat_map(|v| v.to_le_bytes())
+                    .collect(),
             )?;
         }
         self.lightmaps.push(json!({
@@ -480,7 +487,11 @@ fn described_image(image: &Texture) -> Json {
 /// lightmap, at least one each way (tests/projects/bakedbuffers materials). A renderer
 /// without a lightmap takes its rectangle as the layout sized it (not measured where the layout
 /// shrinks rectangles to fit).
-fn image_size(instance: &atlas::Instance, placement: &atlas::Placement, layout: &atlas::Layout) -> [usize; 2] {
+fn image_size(
+    instance: &atlas::Instance,
+    placement: &atlas::Placement,
+    layout: &atlas::Layout,
+) -> [usize; 2] {
     let rectangle = match layout.lightmaps.get(placement.lightmap as usize) {
         Some(size) if placement.lightmap != atlas::NO_LIGHTMAP => [
             instance.uv_bounds[2] * placement.scale_offset[0] * size[0] as f32,
@@ -635,10 +646,17 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             .as_ref()
             .map(|data| -> Result<Bounce> {
                 let blue_noise = std::fs::read(&data.blue_noise).with_context(|| {
-                    format!("reading the blue noise data {} of the Unity installation", data.blue_noise)
+                    format!(
+                        "reading the blue noise data {} of the Unity installation",
+                        data.blue_noise
+                    )
                 })?;
                 let samples = Samples::new(&blue_noise).map_err(|size| {
-                    anyhow::anyhow!("the blue noise data {} has {} bytes", data.blue_noise, size.0)
+                    anyhow::anyhow!(
+                        "the blue noise data {} has {} bytes",
+                        data.blue_noise,
+                        size.0
+                    )
                 })?;
                 let mut surfaces = Vec::new();
                 let mut materials = Vec::new();
@@ -651,13 +669,15 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                         - m[4] * (m[1] * m[10] - m[2] * m[9])
                         + m[8] * (m[1] * m[6] - m[2] * m[5]);
                     for (submesh, triangles) in mesh.submeshes.iter().enumerate() {
-                        let double_sided = images.double_sided.get(submesh).copied().unwrap_or(false);
+                        let double_sided =
+                            images.double_sided.get(submesh).copied().unwrap_or(false);
                         surfaces.extend(triangles.iter().map(|t| Surface {
                             material: materials.len() as u32,
                             mirrored: determinant < 0.0,
                             double_sided,
                             corners: t.map(|v| direct::point(m, mesh.positions[v as usize])),
-                            normals: t.map(|v| direct::world_normal(&rows, mesh.normals[v as usize])),
+                            normals:
+                                t.map(|v| direct::world_normal(&rows, mesh.normals[v as usize])),
                             uvs: t.map(|v| mesh.uvs[v as usize]),
                         }));
                     }
