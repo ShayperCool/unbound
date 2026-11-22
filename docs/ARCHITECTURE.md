@@ -138,8 +138,12 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   `LibraryUnbound` is Unbound's own directory in the project (`Library/` is Unity's; nothing of
   Unbound's is kept there). `--project-data <dir>` / `UNBOUND_PROJECT_DATA` name another place,
   relative to the project or absolute; the host resolves it once (`unbound_project::unbound_dir`)
-  and hands the managed side the resolved path (`ProjectInfo.UnboundDirectory`), so both agree;
-  no cache key depends on where the directory is. The view links every entry of the project's
+  and hands the managed side the resolved path (`ProjectInfo.UnboundDirectory`), so both agree.
+  The import, shader, GI and adapted-assembly caches are keyed by content, wherever the directory
+  is (compiled script assemblies are keyed by their references' paths and stamps, like the
+  project's own path: a directory moved with its contents compiles them once more). Compiled
+  script assemblies load from that directory, so `Assembly.Location` is not under the project
+  path the game sees (in the Editor it is `Library/ScriptAssemblies`). The view links every entry of the project's
   folder but that directory.
 * **Number formatting**: Mono formats floating point by .NET Framework rules, which .NET Core 3.0
   changed (default and "G" print 7/15 significant digits, not the shortest round-trip string, so

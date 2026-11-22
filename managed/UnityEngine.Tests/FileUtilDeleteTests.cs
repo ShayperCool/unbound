@@ -100,7 +100,6 @@ namespace UnityEngine.Tests
                 Assert.Equal(Path.Combine("/p", "LibraryUnbound"), ProjectInfo.UnboundDirectory("/p/"));
                 // The project view is in the directory.
                 Assert.Equal(Path.Combine("/p", "LibraryUnbound"), ProjectInfo.UnboundDirectory("/p/LibraryUnbound/ProjectView"));
-                Assert.DoesNotContain(Path.Combine("Library", "Unbound"), ProjectInfo.UnboundDirectory("/p"));
                 ProjectInfo.ProjectPath = "/elsewhere/data/ProjectView";
                 ProjectInfo.UnboundDirectoryPath = "/elsewhere/data";
                 Assert.Equal("/elsewhere/data", ProjectInfo.UnboundDirectory(ProjectInfo.ProjectPath));

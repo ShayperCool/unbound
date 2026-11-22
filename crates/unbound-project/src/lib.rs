@@ -116,53 +116,118 @@ pub fn unbound_dir(project_root: &Path) -> PathBuf {
     unbound_dir_at(project_root, asked_project_data())
 }
 
-/// Why a directory cannot be Unbound's for this project (`None`: it can): the project's root
-/// itself, and the authored folders and Unity's `Library/` or anything in them. Decided on the
-/// path as spelled and, where it exists, on where its links lead.
+/// Where a path lands: the links of its longest existing part followed (which also gives that
+/// part the case the volume has for it), the rest appended as spelled.
+fn landing(path: &Path) -> PathBuf {
+    let mut rest = Vec::new();
+    let mut existing = path;
+    loop {
+        if let Ok(landed) = existing.canonicalize() {
+            return rest.iter().rev().fold(landed, |path, part| path.join(part));
+        }
+        match (existing.parent(), existing.file_name()) {
+            (Some(parent), Some(name)) => {
+                rest.push(name.to_os_string());
+                existing = parent;
+            }
+            _ => return path.to_path_buf(),
+        }
+    }
+}
+
+/// Whether a directory is in a project's folder, by where both land.
+fn in_project(project_root: &Path, dir: &Path) -> bool {
+    landing(dir).starts_with(landing(project_root))
+}
+
+/// Why a directory cannot be Unbound's for this project (`None`: it can): the project's folder
+/// itself or one that holds it, and the authored folders and Unity's `Library/` or anything in
+/// them. Decided on where the path lands (the directory need not exist yet): through links, and
+/// in the case the volume has for the folders.
 pub fn refused_project_data(project_root: &Path, dir: &Path) -> Option<String> {
-    let landed_root = project_root.canonicalize().ok();
-    let landed = dir.canonicalize().ok();
-    let spelled = Some((project_root, dir));
-    let followed = landed_root.as_deref().zip(landed.as_deref());
-    for (root, candidate) in spelled.into_iter().chain(followed) {
-        if candidate == root {
+    let (root, candidate) = (landing(project_root), landing(dir));
+    if root.starts_with(&candidate) {
+        return Some(format!(
+            "{} is the project's folder or holds it: Unbound's project data needs a directory of its own",
+            dir.display()
+        ));
+    }
+    for name in NOT_FOR_PROJECT_DATA {
+        if candidate.starts_with(landing(&root.join(name))) {
             return Some(format!(
-                "{} is the project's folder itself: Unbound's project data needs a directory of its own",
+                "{} is in the project's {name}/ folder: Unbound's project data may not be in Assets/, Packages/, ProjectSettings/ or Library/",
                 dir.display()
             ));
-        }
-        for name in NOT_FOR_PROJECT_DATA {
-            if candidate.starts_with(root.join(name)) {
-                return Some(format!(
-                    "{} is in the project's {name}/ folder: Unbound's project data may not be in Assets/, Packages/, ProjectSettings/ or Library/",
-                    dir.display()
-                ));
-            }
         }
     }
     None
 }
 
-/// What is kept of a former directory: the files that are no cache and cannot be made again
-/// (the settings the game set, the last sessions' logs, test results).
-const KEPT_OF_FORMER: &[&str] = &[
-    "EditorUserSettings.asset",
-    "Editor.log",
-    "Editor-prev.log",
-    "TestResults",
+/// Whether a directory is the Unbound directory of some project in this process, by the place
+/// asked for (`None`: the default name; a relative place: the path's end; an absolute one:
+/// the path itself).
+pub fn is_unbound_dir_at(dir: &Path, asked: Option<&Path>) -> bool {
+    match asked {
+        None => dir.file_name().is_some_and(|n| n == UNBOUND_DIR),
+        Some(asked) if asked.is_absolute() => dir == lexical(asked),
+        Some(asked) => dir.ends_with(lexical(asked)),
+    }
+}
+
+/// [`is_unbound_dir_at`] for the place this process was asked for.
+pub fn is_unbound_dir(dir: &Path) -> bool {
+    is_unbound_dir_at(dir, asked_project_data())
+}
+
+/// The caches of a former directory: made again, so removed with it. Everything else there
+/// (logs, test results, the settings the game set, what a script or a tool put there) moves.
+const CACHES_OF_FORMER: &[&str] = &[
+    "Imports",
+    "ScriptAssemblies",
+    "AdaptedAssemblies",
+    "GeneratedShaders",
+    "ImportArtifacts",
+    "ProjectView",
+    "Caching",
+    "BakedGI",
+    "RealtimeGI",
+    "RealtimeUVs",
 ];
+
+/// A file or folder copied (links as links), for a move between volumes.
+fn copy_entry(from: &Path, to: &Path) -> std::io::Result<()> {
+    let kind = std::fs::symlink_metadata(from)?.file_type();
+    if kind.is_symlink() {
+        std::os::unix::fs::symlink(std::fs::read_link(from)?, to)
+    } else if kind.is_dir() {
+        std::fs::create_dir_all(to)?;
+        for entry in std::fs::read_dir(from)? {
+            let entry = entry?;
+            copy_entry(&entry.path(), &to.join(entry.file_name()))?;
+        }
+        Ok(())
+    } else {
+        std::fs::copy(from, to).map(|_| ())
+    }
+}
+
+/// Moves a file or folder: renamed where both are on one volume, else copied (the source goes
+/// with its directory).
+fn move_entry(from: &Path, to: &Path) -> std::io::Result<()> {
+    std::fs::rename(from, to).or_else(|_| copy_entry(from, to))
+}
 
 /// Makes a project's Unbound directory ready: creates it, in the project with a `.gitignore`
 /// that ignores all of it (a Unity project ignores `/Library/`, not this directory, and Unbound
-/// does not edit the project's own `.gitignore`), and retires a former `Library/Unbound`: the files of
-/// [`KEPT_OF_FORMER`] move over where the new directory has none, the rest (caches, which are
-/// made again) is removed. Nothing else of `Library/` is touched. Answers what to say when a
-/// former directory was retired.
+/// does not edit the project's own `.gitignore`), and retires a former `Library/Unbound`: its
+/// caches ([`CACHES_OF_FORMER`]) are removed, as they are made again; everything else moves
+/// over where the new directory has no entry of that name. Nothing else of `Library/` is
+/// touched. Answers what to say when a former directory was retired.
 pub fn prepare_unbound_dir(project_root: &Path, dir: &Path) -> std::io::Result<Option<String>> {
     std::fs::create_dir_all(dir)?;
     // A directory outside the project is in no project's version control.
     let ignore = dir.join(".gitignore");
-    if dir.starts_with(project_root) && !ignore.exists() {
+    if in_project(project_root, dir) && !ignore.exists() {
         std::fs::write(&ignore, "*\n")?;
     }
     let former = project_root.join(FORMER_UNBOUND_DIR);
@@ -171,12 +236,18 @@ pub fn prepare_unbound_dir(project_root: &Path, dir: &Path) -> std::io::Result<O
         return Ok(None);
     }
     let mut kept = Vec::new();
-    for name in KEPT_OF_FORMER {
-        let (from, to) = (former.join(name), dir.join(name));
-        if std::fs::symlink_metadata(&from).is_ok() && std::fs::symlink_metadata(&to).is_err() {
-            std::fs::rename(&from, &to)?;
-            kept.push(*name);
+    let mut entries: Vec<_> = std::fs::read_dir(&former)?
+        .filter_map(|entry| entry.ok().map(|entry| entry.file_name()))
+        .collect();
+    entries.sort();
+    for name in entries {
+        let to = dir.join(&name);
+        let cache = CACHES_OF_FORMER.iter().any(|cache| name == *cache);
+        if cache || name == ".gitignore" || std::fs::symlink_metadata(&to).is_ok() {
+            continue;
         }
+        move_entry(&former.join(&name), &to)?;
+        kept.push(name.to_string_lossy().into_owned());
     }
     std::fs::remove_dir_all(&former)?;
     Ok(Some(format!(
@@ -610,11 +681,29 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("Editor.log"), "new log").unwrap();
 
+        // What is no cache moves, also what Unbound does not know: a session's log under its
+        // own name, a tool's folder.
+        std::fs::write(former.join("session.log"), "a session").unwrap();
+        std::fs::create_dir_all(former.join("Staged/deep")).unwrap();
+        std::fs::write(former.join("Staged/deep/authored.mat"), "staged").unwrap();
+        std::fs::create_dir_all(former.join("Caching/bundle")).unwrap();
+
         let said = super::prepare_unbound_dir(&root, &dir).unwrap().unwrap();
         assert!(
-            said.contains("removed") && said.contains("EditorUserSettings.asset, TestResults"),
+            said.contains("removed")
+                && said
+                    .contains("(kept: EditorUserSettings.asset, Staged, TestResults, session.log)"),
             "{said}"
         );
+        assert_eq!(
+            std::fs::read_to_string(dir.join("session.log")).unwrap(),
+            "a session"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.join("Staged/deep/authored.mat")).unwrap(),
+            "staged"
+        );
+        assert!(!dir.join("Caching").exists() && !dir.join("ProjectView").exists());
         assert!(!former.exists());
         assert_eq!(
             std::fs::read_to_string(root.join("Library/Other.txt")).unwrap(),
@@ -677,6 +766,10 @@ mod tests {
     fn the_authored_folders_library_and_the_project_itself_are_refused() {
         let root = scratch_project("refused");
         let elsewhere = scratch_project("refused-elsewhere");
+        std::fs::create_dir_all(root.join("Assets")).unwrap();
+        // A link of the project's into an authored folder: what is asked for below it does
+        // not exist yet.
+        std::os::unix::fs::symlink(root.join("Assets"), root.join("Link")).unwrap();
         for asked in [
             "Assets",
             "Assets/Data",
@@ -687,6 +780,9 @@ mod tests {
             ".",
             "Sub/..",
             "Sub/../Assets/Data",
+            "..",
+            "../..",
+            "Link/Data",
         ] {
             let dir = super::unbound_dir_at(&root, Some(Path::new(asked)));
             assert!(
@@ -700,6 +796,23 @@ mod tests {
         std::fs::create_dir_all(root.join("Assets/Real")).unwrap();
         std::os::unix::fs::symlink(root.join("Assets/Real"), elsewhere.join("link")).unwrap();
         assert!(super::refused_project_data(&root, &elsewhere.join("link")).is_some());
+        // The project's folder spelled through a link to it, the place not there yet.
+        std::os::unix::fs::symlink(&root, elsewhere.join("project")).unwrap();
+        let aliased = elsewhere.join("project/Assets/New/Data");
+        assert!(super::refused_project_data(&root, &aliased).is_some());
+        // The folder's name in another case names the folder where the volume ignores case.
+        if root.join("ASSETS").exists() {
+            let other_case = super::unbound_dir_at(&root, Some(Path::new("assets/Data")));
+            assert!(super::refused_project_data(&root, &other_case).is_some());
+        }
+        // In the project by another spelling of its folder: the ignore file is written.
+        let spelled = elsewhere.join("project/Build/Data");
+        assert_eq!(super::refused_project_data(&root, &spelled), None);
+        assert_eq!(super::prepare_unbound_dir(&root, &spelled).unwrap(), None);
+        assert_eq!(
+            std::fs::read_to_string(root.join("Build/Data/.gitignore")).unwrap(),
+            "*\n"
+        );
         for asked in ["LibraryUnbound", "AssetsData", "Build/Data"] {
             let dir = super::unbound_dir_at(&root, Some(Path::new(asked)));
             assert_eq!(super::refused_project_data(&root, &dir), None, "{asked}");
@@ -788,6 +901,58 @@ mod tests {
             found.is_empty(),
             "the former Library/Unbound is spelled in: {found:#?}"
         );
+    }
+
+    #[test]
+    fn what_cannot_be_renamed_across_volumes_is_copied() {
+        let root = scratch_project("copy");
+        std::fs::create_dir_all(root.join("from/TestResults/deep")).unwrap();
+        std::fs::write(root.join("from/TestResults/deep/EditMode.xml"), "<r/>").unwrap();
+        std::fs::write(root.join("from/Editor.log"), "log").unwrap();
+        std::os::unix::fs::symlink("Editor.log", root.join("from/TestResults/link")).unwrap();
+        super::copy_entry(&root.join("from"), &root.join("to")).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(root.join("to/Editor.log")).unwrap(),
+            "log"
+        );
+        assert_eq!(
+            std::fs::read_to_string(root.join("to/TestResults/deep/EditMode.xml")).unwrap(),
+            "<r/>"
+        );
+        assert_eq!(
+            std::fs::read_link(root.join("to/TestResults/link")).unwrap(),
+            Path::new("Editor.log")
+        );
+        // A destination whose folder is missing gets neither: the error is the caller's.
+        assert!(
+            super::move_entry(&root.join("from/Editor.log"), &root.join("none/Editor.log"))
+                .is_err()
+        );
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn the_directory_is_known_by_the_place_asked_for() {
+        assert!(super::is_unbound_dir_at(
+            Path::new("/p/LibraryUnbound"),
+            None
+        ));
+        assert!(!super::is_unbound_dir_at(Path::new("/p/Build/Data"), None));
+        let relative = Some(Path::new("Build/./Data"));
+        assert!(super::is_unbound_dir_at(
+            Path::new("/p/Build/Data"),
+            relative
+        ));
+        assert!(!super::is_unbound_dir_at(
+            Path::new("/p/LibraryUnbound"),
+            relative
+        ));
+        let absolute = Some(Path::new("/elsewhere/data"));
+        assert!(super::is_unbound_dir_at(
+            Path::new("/elsewhere/data"),
+            absolute
+        ));
+        assert!(!super::is_unbound_dir_at(Path::new("/p/data"), absolute));
     }
 
     #[test]

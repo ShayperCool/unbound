@@ -1723,13 +1723,16 @@ pub fn generated_shaders(project_root: &Path) -> PathBuf {
     unbound_project::unbound_dir(project_root).join(GENERATED_SHADERS)
 }
 
-/// Whether a shader root is a project's folder of generated shaders.
+/// Whether a shader root is a project's folder of generated shaders: that folder of Unbound's
+/// directory, wherever the directory was asked to be.
 fn is_generated_shaders(root: &Path) -> bool {
+    generated_shaders_of(root, unbound_project::is_unbound_dir)
+}
+
+/// [`is_generated_shaders`] for a way to know Unbound's directory.
+fn generated_shaders_of(root: &Path, is_unbound_dir: impl Fn(&Path) -> bool) -> bool {
     root.file_name().is_some_and(|n| n == GENERATED_SHADERS)
-        && root
-            .parent()
-            .and_then(Path::file_name)
-            .is_some_and(|n| n == unbound_project::UNBOUND_DIR)
+        && root.parent().is_some_and(is_unbound_dir)
 }
 
 impl ShaderIndex {
@@ -2143,6 +2146,40 @@ mod tests {
         assert_eq!(plain.name, "Unbound/Dup");
         assert_eq!(plain.passes[0].name, "First");
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// The generated shaders' root is known wherever Unbound's directory was asked to be, not
+    /// by the default name: only then is it scanned by key and scanned again as shaders arrive.
+    #[test]
+    fn the_generated_shaders_root_follows_the_place_of_unbounds_directory() {
+        use unbound_project::is_unbound_dir_at;
+        let default = |dir: &Path| is_unbound_dir_at(dir, None);
+        let outside = |dir: &Path| is_unbound_dir_at(dir, Some(Path::new("/elsewhere/data")));
+        let nested = |dir: &Path| is_unbound_dir_at(dir, Some(Path::new("Build/Data")));
+        assert!(generated_shaders_of(
+            Path::new("/p/LibraryUnbound/GeneratedShaders"),
+            default
+        ));
+        assert!(!generated_shaders_of(
+            Path::new("/p/Assets/GeneratedShaders"),
+            default
+        ));
+        assert!(generated_shaders_of(
+            Path::new("/elsewhere/data/GeneratedShaders"),
+            outside
+        ));
+        assert!(!generated_shaders_of(
+            Path::new("/p/LibraryUnbound/GeneratedShaders"),
+            outside
+        ));
+        assert!(generated_shaders_of(
+            Path::new("/p/Build/Data/GeneratedShaders"),
+            nested
+        ));
+        assert!(!generated_shaders_of(
+            Path::new("/p/Build/Data/Other"),
+            nested
+        ));
     }
 
     #[test]
