@@ -153,12 +153,10 @@ namespace UnityEngine.AI
         // Area costs. Documented (Scripting API 6000.0): NavMesh.SetAreaCost sets an area's cost "on
         // all agents", replacing any custom area costs on all agents, and is the default for agents
         // created later; enabling or disabling an agent resets its costs to the defaults
-        // (NavMeshAgent.SetAreaCost). Unbound's choices (unmeasured): NavMesh.SetAreaCost replaces
-        // the custom cost of that one area (an agent's custom costs for other areas stay), on every
-        // agent with custom costs, enabled or not, and makes the path of an agent whose cost it
-        // changes stale (as the agent's own SetAreaCost does); the reset happens at once when the
-        // agent is enabled and when it is disabled, before it is placed, and does not by itself
-        // make the path stale.
+        // (NavMeshAgent.SetAreaCost). In Unity 6000.0.71f1, changing the effective cost for one area
+        // marks a reported path stale and preserves custom costs for other areas (navlinks
+        // staleCostReplacement). Unbound also replaces costs on disabled agents and resets costs
+        // on enable/disable before placement without separately marking the path stale.
 
         /// <summary>The agents with their own area costs (<see cref="m_AreaCosts"/> set).</summary>
         static readonly List<NavMeshAgent> s_WithOwnAreaCosts = new List<NavMeshAgent>();
@@ -172,7 +170,6 @@ namespace UnityEngine.AI
                 s_WithOwnAreaCosts.Add(this);
             }
             if (areaIndex < 0 || areaIndex >= 32) return;
-            // The agent's own area costs changed: its path is stale (unmeasured).
             if (m_AreaCosts[areaIndex] != areaCost) AreaSettingsChanged();
             m_AreaCosts[areaIndex] = areaCost;
         }
@@ -383,9 +380,13 @@ namespace UnityEngine.AI
             m_ReportedDestination = m_Destination;
             m_HasDestination = true;
             AgentSystem.ApplyPath(this, m_RequestedPath);
-            // A path set directly reports its corners at once (Unbound's choice, unmeasured:
-            // hasPath was already true at once before the measured corner reports).
-            if (Compat.NavMeshCorridorReportingMeasured) AgentSystem.ReportCorners(this);
+            if (Compat.NavMeshCorridorReportingMeasured)
+            {
+                // A directly assigned path reports immediately, even after a same-call
+                // SetDestination that supplied an unreported path (navlinks staleAssigned).
+                m_PathFromCall = false;
+                AgentSystem.ReportCorners(this);
+            }
             return true;
         }
 
@@ -457,9 +458,15 @@ namespace UnityEngine.AI
 
         // Area changes can invalidate a route reported this frame, including the route
         // followed while another request is pending (navlinks staleArea, Unity 6000.0.71f1).
-        internal void AreaSettingsChanged()
+        void AreaSettingsChanged()
         {
             if (!Compat.NavMeshAreaStalenessMeasured || ReportsPath) m_OwnPathStale = true;
+        }
+
+        internal void DefaultAreaCostChanged()
+        {
+            // ReplaceAreaCost handles agents with their own cost array.
+            if (m_AreaCosts == null) AreaSettingsChanged();
         }
 
         /// <summary>A new path was applied: it is not stale.</summary>
@@ -1578,9 +1585,9 @@ namespace Unbound.Runtime
             if (Compat.NavMeshAgentQuerySyncMeasured) SyncPosition(agent);
         }
 
-        internal static void MarkAreaCostsStale()
+        internal static void MarkDefaultAreaCostsStale()
         {
-            foreach (var agent in s_Agents) agent.AreaSettingsChanged();
+            foreach (var agent in s_Agents) agent.DefaultAreaCostChanged();
         }
 
         static void SyncPosition(NavMeshAgent agent)

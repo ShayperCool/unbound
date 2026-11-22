@@ -403,20 +403,26 @@ python3 tests/projects/navlinks/projection.py publish --profile staleness --rele
 UNBOUND_CLI=.../unbound python3 tests/projects/navlinks/projection.py gate --profile staleness --release 6000.0.71f1
 ```
 
-Two independent Editor runs agree on all 3,104 values. Both frame-130
+Two independent Editor runs agree on all 3,150 values. Both frame-130
 stale values now match in the original profile. The remaining 172 values
 come from `crosstile` and `areamask`.
 
 A no-op transform write on a cloned parent preserves the pending state
 just as on the original parent. Area mask, per-agent cost and global
-cost changes mark a reported route stale. The controls distinguish a
-pending first request from a pending replacement for an active route,
-and cover same-frame path assignment, arrival, ResetPath and a
-subsequent link change.
+cost changes mark a reported route stale when the effective setting
+changes. Global cost replacement preserves a route's freshness when
+the new default equals its override, and invalidates it when the
+override changes even if the default stays the same. Overrides for
+other areas keep their values. The controls distinguish a pending first
+request from a pending replacement for an active route. They also cover
+arrival, ResetPath, a subsequent link change, and immediate reporting
+after SetPath replaces a route from SetDestination in the same frame.
 
 Unity documents link and area changes and position coupling. The timing
 of these query and area-change effects is measured for the 6000.0
 family.
 [isPathStale](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/ispathstale),
 [nextPosition](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/nextposition),
-[updatePosition](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/updateposition).
+[updatePosition](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/updateposition),
+[SetAreaCost](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmesh/setareacost),
+[SetPath](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/setpath).
