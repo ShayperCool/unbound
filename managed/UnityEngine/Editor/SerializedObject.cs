@@ -129,7 +129,14 @@ namespace UnityEditor
             // reports an object changed again before the flush (OnValidate, a second apply, a direct
             // set), or undone before it, is unmeasured; a handler subscribed after the apply gets
             // nothing of it.
-            if (recordUndo && Undo.postprocessModifications != null) Undo.QueueModifications(Modifications());
+            // An apply recorded for Undo is one undo record of its targets, named by what it
+            // changes (measured: tests/projects/serializedundo).
+            if (recordUndo)
+            {
+                var changes = Changes(out var befores);
+                Undo.RecordApply(m_Targets, befores, ChangedPaths(), UndoName(changes));
+                if (Undo.postprocessModifications != null) Undo.QueueModifications(Modifications(changes));
+            }
             for (int i = 0; i < m_Targets.Length; i++)
             {
                 var target = m_Targets[i];
@@ -178,11 +185,31 @@ namespace UnityEditor
 
         static void CallOnValidate(Object target) => ScriptMessages.Validate(target);
 
-        /// <summary>The changes an apply records for Undo: per target, each changed property's value
-        /// before and after (Undo.postprocessModifications sees them; measured:
-        /// tests/projects/scenesave postprocess).</summary>
-        UndoPropertyModification[] Modifications()
+        /// <summary>One changed property of one target: its value before the apply (none when the
+        /// apply adds it) and after.</summary>
+        readonly struct Change
         {
+            public readonly Object Target;
+            public readonly string Path;
+            public readonly bool Existed;
+            public readonly object Before;
+            public readonly object After;
+
+            public Change(Object target, string path, bool existed, object before, object after)
+            {
+                Target = target;
+                Path = path;
+                Existed = existed;
+                Before = before;
+                After = after;
+            }
+        }
+
+        /// <summary>The changed properties of each target, target by target, and each target's data
+        /// before the apply (null for a missing target).</summary>
+        List<Change> Changes(out SerializedNode[] befores)
+        {
+            befores = new SerializedNode[m_Targets.Length];
             var changed = new List<SerializedNode>();
             void Leaves(SerializedNode node)
             {
@@ -191,23 +218,96 @@ namespace UnityEditor
                 foreach (var child in node.Children) Leaves(child);
             }
             Leaves(m_UnboundRoot);
-            var list = new List<UndoPropertyModification>();
-            foreach (var target in m_Targets)
+            var list = new List<Change>();
+            for (int i = 0; i < m_Targets.Length; i++)
             {
+                var target = m_Targets[i];
                 if (target == null) continue;
-                var tree = TypeTreeTargets.Of(target);
-                var before = tree != null ? TypeTreeSerialized.BuildRoot(tree, target) : SerializedTree.BuildRoot(target, callbacks: false);
+                var before = befores[i] = ReadRoot(target);
                 foreach (var node in changed)
                 {
                     var old = SerializedTree.Find(before, node.Path);
-                    list.Add(new UndoPropertyModification
-                    {
-                        previousValue = Modification(target, node.Path, old == null ? null : SerializedTree.GetValue(old)),
-                        currentValue = Modification(target, node.Path, SerializedTree.GetValue(node)),
-                    });
+                    list.Add(new Change(target, node.Path, old != null, old == null ? null : SerializedTree.GetValue(old), SerializedTree.GetValue(node)));
                 }
             }
-            return list.ToArray();
+            return list;
+        }
+
+        /// <summary>A target's serialized data as Unbound models it.</summary>
+        internal static SerializedNode ReadRoot(Object target)
+        {
+            var tree = TypeTreeTargets.Of(target);
+            return tree != null ? TypeTreeSerialized.BuildRoot(tree, target) : SerializedTree.BuildRoot(target, callbacks: false);
+        }
+
+        /// <summary>Writes a target's data (the changed nodes of <paramref name="root"/>).</summary>
+        internal static void WriteRoot(Object target, SerializedNode root)
+        {
+            var tree = TypeTreeTargets.Of(target);
+            if (tree == null) SerializedTree.Apply(root, target, primary: true);
+            else TypeTreeSerialized.Apply(root, tree);
+        }
+
+        /// <summary>The paths this apply changes: each changed value, a replaced value or a resized
+        /// array whole.</summary>
+        List<string> ChangedPaths()
+        {
+            var paths = new List<string>();
+            void Walk(SerializedNode node)
+            {
+                if (!node.Dirty && !node.Replaced) return;
+                if (node.Parent != null && (node.Replaced || node.Children.Count == 0
+                    || (node.Kind == SerializedNodeKind.Array && SerializedTree.IsResized(node))))
+                {
+                    paths.Add(node.Path);
+                    return;
+                }
+                foreach (var child in node.Children) Walk(child);
+            }
+            Walk(m_UnboundRoot);
+            return paths;
+        }
+
+        /// <summary>The changes an apply records for Undo: per target, each changed property's value
+        /// before and after (Undo.postprocessModifications sees them; measured:
+        /// tests/projects/scenesave postprocess).</summary>
+        static UndoPropertyModification[] Modifications(List<Change> changes)
+        {
+            var list = new UndoPropertyModification[changes.Count];
+            for (int i = 0; i < changes.Count; i++)
+                list[i] = new UndoPropertyModification
+                {
+                    previousValue = Modification(changes[i].Target, changes[i].Path, changes[i].Before),
+                    currentValue = Modification(changes[i].Target, changes[i].Path, changes[i].After),
+                };
+            return list;
+        }
+
+        /// <summary>"Modified {property} in {object}": the one property whose value changed (its
+        /// path, nicified), else their count ("3 properties"); the target's name, else the count of
+        /// targets ("2 Objects"). An array's size counts, the elements it adds or removes do not
+        /// (measured: tests/projects/serializedundo).</summary>
+        string UndoName(List<Change> changes)
+        {
+            Object first = null;
+            int targets = 0;
+            foreach (var target in m_Targets)
+            {
+                if (target == null) continue;
+                first ??= target;
+                targets++;
+            }
+            string path = null;
+            int count = 0;
+            foreach (var change in changes)
+            {
+                if (!ReferenceEquals(change.Target, first) || !change.Existed || Equals(change.Before, change.After)) continue;
+                path = change.Path;
+                count++;
+            }
+            string property = count == 1 ? ObjectNames.NicifyVariableName(path) : count + " properties";
+            string objects = targets > 1 ? targets + " Objects" : first != null ? first.name : "";
+            return "Modified " + property + " in " + objects;
         }
 
         static PropertyModification Modification(Object target, string path, object value) => new PropertyModification

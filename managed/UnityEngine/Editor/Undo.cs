@@ -11,9 +11,13 @@ namespace UnityEditor
     /// <summary>
     /// The Editor's undo stack, in Play mode (tests/projects/editor measured it): operations are
     /// recorded into the current group (0 when Play mode starts; editor code increments it), a
-    /// group is named by <see cref="SetCurrentGroupName"/> else by its first operation, undo and
-    /// redo apply a whole group and each advances the current group by one, and new operations
-    /// drop what could be redone. Object state is the serialized state Unbound models (script fields,
+    /// group is named by <see cref="SetCurrentGroupName"/> else by its operations: a created
+    /// object's record over an added component's over the others (object and property records),
+    /// the latest of equal rank (tests/projects/serializedundo priority.*, records.*). Object and
+    /// property records name it only once Undo's records are flushed (the end of the frame,
+    /// FlushUndoRecordObjects, a new group, an undo or a redo; until then the current group name is
+    /// the last named group's), undo and redo apply a whole group and each advances the current
+    /// group by one, and new operations drop what could be redone. Object state is the serialized state Unbound models (script fields,
     /// GameObject and Transform properties, enabled flags). Recreating destroyed objects on undo is
     /// not supported and says so.
     /// </summary>
@@ -32,12 +36,35 @@ namespace UnityEditor
             public int Index;
             public string Name;
             public readonly List<Operation> Operations = new List<Operation>();
-            public string DisplayName => Name ?? (Operations.Count > 0 ? Operations[0].Name : "");
+            public string DisplayName => Name ?? Naming(publishedOnly: false) ?? "";
+
+            /// <summary>The name the group shows before an undo: its own, else its naming flushed
+            /// operation's; null while it has neither.</summary>
+            public string PublishedName => Name ?? Naming(publishedOnly: true);
+
+            // The operation of highest rank names the group, the latest of them.
+            string Naming(bool publishedOnly)
+            {
+                Operation naming = null;
+                foreach (var operation in Operations)
+                    if ((!publishedOnly || operation.Published) && (naming == null || operation.NameRank >= naming.NameRank)) naming = operation;
+                return naming?.Name;
+            }
+
+            public void Publish()
+            {
+                foreach (var operation in Operations) operation.Published = true;
+            }
         }
 
         abstract class Operation
         {
             public string Name;
+            /// <summary>Flushed: the operation names its group.</summary>
+            public bool Published;
+            /// <summary>How the operation ranks for naming its group: created objects 2, added
+            /// components 1, the others 0.</summary>
+            public int NameRank;
             public abstract void Undo();
             public abstract void Redo();
             /// <summary>Notes the changes the operation made (done or redone), or its undo made.</summary>
@@ -67,6 +94,10 @@ namespace UnityEditor
             operation.NoteChanges(undone: false);
             s_Redo.Clear();
             Current(true).Operations.Add(operation);
+            // Object and property records name their group once flushed; the others at once
+            // (a selection change names it in the same frame: tests/projects/editor undo.f0).
+            if (operation is StateOperation || operation is PropertiesOperation) s_Unpublished.Add(operation);
+            else operation.Published = true;
             if (operation is StateOperation state) s_Unflushed.Add(state);
         }
 
@@ -75,12 +106,16 @@ namespace UnityEditor
         /// tests/projects/scenesave second.undo).</summary>
         static readonly List<StateOperation> s_Unflushed = new List<StateOperation>();
 
+        /// <summary>Operations recorded since the last flush: they name their group from it on.</summary>
+        static readonly List<Operation> s_Unpublished = new List<Operation>();
+
         /// <summary>Marks the objects recorded since the last flush dirty when they changed, and
         /// passes the property changes recorded since to Undo.postprocessModifications (a handler's
         /// exception is logged, the flush goes on; what the handlers return changes no value:
         /// measured, tests/projects/scenesave filter.*, throw.*).</summary>
         internal static void FlushDirtiness()
         {
+            PublishRecords();
             foreach (var state in s_Unflushed) state.DirtyIfChanged();
             s_Unflushed.Clear();
             if (s_Recorded.Count == 0) return;
@@ -98,11 +133,28 @@ namespace UnityEditor
 
         public static int GetCurrentGroup() => s_Current;
 
-        public static string GetCurrentGroupName() => Current(false)?.DisplayName ?? "";
+        public static string GetCurrentGroupName()
+        {
+            for (int i = s_Undo.Count - 1; i >= 0; i--)
+                if (s_Undo[i].PublishedName is { } name) return name;
+            return "";
+        }
 
         public static void SetCurrentGroupName(string name) => Current(true).Name = name;
 
-        public static void IncrementCurrentGroup() => s_Current++;
+        /// <summary>Closes the current group: its records name it from now on (tests/projects/serializedundo
+        /// split.applied).</summary>
+        public static void IncrementCurrentGroup()
+        {
+            PublishRecords();
+            s_Current++;
+        }
+
+        static void PublishRecords()
+        {
+            foreach (var operation in s_Unpublished) operation.Published = true;
+            s_Unpublished.Clear();
+        }
 
         // ------------------------------------------------------------------ recording
 
@@ -110,6 +162,15 @@ namespace UnityEditor
         {
             if (objectToUndo == null) return;
             Add(new StateOperation(objectToUndo, name));
+        }
+
+        /// <summary>The record SerializedObject.ApplyModifiedProperties makes of its targets before
+        /// it writes them: the properties it changes, whose values an undo restores and a redo sets
+        /// again, leaving the others as they are then (tests/projects/serializedundo without.*).</summary>
+        internal static void RecordApply(Object[] targets, SerializedNode[] befores, List<string> paths, string name)
+        {
+            var operation = new PropertiesOperation { Name = name, Targets = (Object[])targets.Clone(), Befores = befores, Paths = paths };
+            Add(operation);
         }
 
         public static void RecordObjects(Object[] objectsToUndo, string name)
@@ -142,14 +203,21 @@ namespace UnityEditor
         public static void RegisterCreatedObjectUndo(Object objectToUndo, string name)
         {
             if (objectToUndo == null) return;
-            Add(CreatedOperation.Of(objectToUndo, name));
+            var operation = CreatedOperation.Of(objectToUndo, name);
+            operation.NameRank = 2;
+            Add(operation);
         }
 
         public static Component AddComponent(GameObject gameObject, Type type)
         {
             if (gameObject == null) throw new ArgumentNullException(nameof(gameObject));
             var component = gameObject.AddComponent(type);
-            if (component != null) Add(CreatedOperation.Of(component, "Add " + type.Name));
+            if (component != null)
+            {
+                var operation = CreatedOperation.Of(component, "Add " + type.Name);
+                operation.NameRank = 1;
+                Add(operation);
+            }
             return component;
         }
 
@@ -209,8 +277,8 @@ namespace UnityEditor
         public delegate UndoPropertyModification[] PostprocessModifications(UndoPropertyModification[] modifications);
 
         /// <summary>Called, when Undo's records are flushed, with the property changes recorded
-        /// edits (SerializedObject's ApplyModifiedProperties) made; what it returns is not used yet
-        /// (those applies add no Undo entry in Unbound).</summary>
+        /// edits (SerializedObject's ApplyModifiedProperties) made; what it returns changes neither
+        /// the values nor the undo records.</summary>
         public static PostprocessModifications postprocessModifications;
 
         internal static UndoPropertyModification[] InvokePostprocessModifications(UndoPropertyModification[] modifications)
@@ -235,6 +303,7 @@ namespace UnityEditor
             if (s_Undo.Count == 0) return;
             var group = s_Undo[^1];
             s_Undo.RemoveAt(s_Undo.Count - 1);
+            group.Publish();
             Apply(group, redo: false);
             s_Redo.Add(group);
             s_Current++;
@@ -297,7 +366,13 @@ namespace UnityEditor
             for (int i = 0; i < s_Undo.Count; i++)
             {
                 if (s_Undo[i].Index < groupIndex) continue;
-                if (into == null) { into = s_Undo[i]; continue; }
+                if (into == null)
+                {
+                    // The collapsed group keeps its name (tests/projects/editor undo.f2).
+                    into = s_Undo[i];
+                    into.Name ??= into.PublishedName;
+                    continue;
+                }
                 into.Operations.AddRange(s_Undo[i].Operations);
                 into.Name ??= s_Undo[i].Name;
                 s_Undo.RemoveAt(i--);
@@ -326,6 +401,7 @@ namespace UnityEditor
         {
             s_Undo.Clear();
             s_Redo.Clear();
+            s_Unpublished.Clear();
         }
 
         public static void ClearUndo(Object identifier)
@@ -338,6 +414,56 @@ namespace UnityEditor
             Add(new CustomOperation { Name = name, UndoAction = undo, RedoAction = redo });
 
         // ------------------------------------------------------------------ operations
+
+        /// <summary>Properties of objects, set back to their values before (undo) or after (redo).</summary>
+        sealed class PropertiesOperation : Operation
+        {
+            public Object[] Targets;
+            public SerializedNode[] Befores;
+            public SerializedNode[] Afters;
+            public List<string> Paths;
+
+            public override void Undo()
+            {
+                Afters = new SerializedNode[Targets.Length];
+                for (int i = 0; i < Targets.Length; i++)
+                    if (Targets[i] != null && Befores[i] != null)
+                    {
+                        Afters[i] = SerializedObject.ReadRoot(Targets[i]);
+                        Write(Targets[i], Befores[i]);
+                    }
+            }
+
+            public override void Redo()
+            {
+                if (Afters == null) return;
+                for (int i = 0; i < Targets.Length; i++)
+                    if (Targets[i] != null && Afters[i] != null) Write(Targets[i], Afters[i]);
+            }
+
+            // The paths' values from a state, over the object's current data.
+            void Write(Object target, SerializedNode state)
+            {
+                var current = SerializedObject.ReadRoot(target);
+                foreach (var path in Paths)
+                {
+                    var from = SerializedTree.Find(state, path);
+                    var to = SerializedTree.Find(current, path);
+                    if (from != null && to != null) SerializedTree.CopyData(to, from);
+                }
+                SerializedObject.WriteRoot(target, current);
+            }
+
+            public override bool Concerns(Object o) => Array.IndexOf(Targets, o) >= 0;
+
+            public override void NoteChanges(bool undone)
+            {
+                // The apply publishes its own changes; an undo or redo publishes the targets'.
+                if (!s_Processing) return;
+                foreach (var target in Targets)
+                    if (target != null) ObjectChangeEvents.NoteProperties(target);
+            }
+        }
 
         sealed class CustomOperation : Operation
         {

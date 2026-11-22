@@ -1372,7 +1372,7 @@ namespace Unbound.Runtime
         // An array's size node, the first child of its container, is dirty when an edit resized it.
         static void MarkResized(SerializedNode array) => MarkDirty(array.ArrayContainer.Children[0]);
 
-        static bool IsResized(SerializedNode array)
+        internal static bool IsResized(SerializedNode array)
         {
             var container = array.ArrayContainer;
             return container.Children.Count > 0 && container.Children[0].Kind == SerializedNodeKind.ArraySize
