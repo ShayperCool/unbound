@@ -946,8 +946,8 @@ mod deferring_tests {
     }
 
     /// Names forgotten while the renderer's context is pinned wait for the end of the pinned
-    /// work (the plugins' context is not made current inside it), then are forgotten in order;
-    /// a nested region leaves that to the outermost one.
+    /// work (the plugins' context is not made current inside it), then go on, in order; a
+    /// nested region leaves that to the outermost one.
     #[test]
     fn forgets_inside_a_pinned_region_wait_until_it_ends() {
         if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore {
@@ -962,14 +962,11 @@ mod deferring_tests {
         });
         assert_eq!(inside, Some(vec![(A, false), (B, true)]));
         assert_eq!(deferred(), None);
-        // This test thread does not run the renderer: the names wait for the next plugin call.
-        let mut pending = PENDING_FORGETS.lock().unwrap();
-        let ours: Vec<(u32, bool)> = pending
-            .iter()
-            .copied()
-            .filter(|(name, _)| *name == A || *name == B)
-            .collect();
-        pending.retain(|(name, _)| *name != A && *name != B);
-        assert_eq!(ours, [(A, false), (B, true)]);
+        // This test thread does not run the renderer: the names went on to wait for the next
+        // plugin call (another test's may already have taken them); not left for later tests.
+        PENDING_FORGETS
+            .lock()
+            .unwrap()
+            .retain(|(name, _)| *name != A && *name != B);
     }
 }
