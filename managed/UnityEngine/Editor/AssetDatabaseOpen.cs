@@ -39,7 +39,7 @@ namespace UnityEditor.Callbacks
             m_AttributeMode = attributeMode;
         }
 
-        /// <summary>The order of a method that names none: after order 0, before 3 (matches the
+        /// <summary>The order of a method that names none: after order 0, before 2 (matches the
         /// Unity 6000.0.71f1 Editor, tests/projects/openasset open.unhandled:*).</summary>
         internal const int DefaultOrder = 1;
 
@@ -114,23 +114,27 @@ namespace UnityEditor
             return Ask(OnOpenAssetAttributeMode.Validate, instanceID, -1, -1) || AssetDatabase.IsNativeAsset(target);
         }
 
-        /// <summary>Whether the path is an asset the project's database lists (a built-in resource
-        /// and a project settings object count as none: not measured).</summary>
+        /// <summary>Whether the path is an asset the project's database has a GUID for: a project
+        /// settings object is one, a built-in resource is none (neither is measured).</summary>
         static bool InProject(string path) =>
             path.Length > 0 && AssetDatabase.AssetPathToGUID(path, AssetPathToGUIDOptions.OnlyExistingAssets).Length > 0;
 
         /// <summary>The objects the Editor has its own window or mode for: a scene, a sprite
-        /// atlas, a GameObject that is no part of a model, and an assembly definition or reference
-        /// (the one object of its file, known by the file's importer).</summary>
+        /// atlas, a GameObject that is no part of a model (the object itself decides: a prefab's
+        /// component is not one, tests/projects/openasset can.none:prefabComponent), and an
+        /// assembly definition or reference (the one object of its file, known by the file's
+        /// importer).</summary>
         static bool OpensInEditor(Object target, string path) =>
             target is SceneAsset || target is UnityEngine.U2D.SpriteAtlas || target is GameObject && !PrefabUtility.IsPartOfModelPrefab(target)
             || AssetDatabase.ImporterOf(path) is "AssemblyDefinitionImporter" or "AssemblyDefinitionReferenceImporter";
 
         /// <summary>An asset no method opened. A folder, and an asset of the Editor's own format,
         /// is selected and counts as opened (the Editor also shows a folder in its Project window
-        /// and an Audio Mixer in its window, which Unbound has not). A scene the Editor loads and a
-        /// prefab it opens in Prefab Mode: Unbound does neither and says so. Any other file goes to
-        /// an application outside, as from the Editor (not measured: the probe starts none).</summary>
+        /// and an Audio Mixer in its window, which Unbound has not). A scene the Editor loads, and
+        /// for any object of a .prefab file it enters Prefab Mode: Unbound does neither and says
+        /// so. Any other file goes to an application outside, as from the Editor, which also gives
+        /// a script's editor the line and column; the desktop's opener takes the file alone (none
+        /// of this is measured: the probe starts no application).</summary>
         static bool OpenUnhandled(Object target, string path)
         {
             if (AssetDatabase.IsValidFolder(path) || AssetDatabase.IsNativeAsset(target))
@@ -144,7 +148,7 @@ namespace UnityEditor
                 Debug.LogWarning($"{Log.DiagnosticPrefix}AssetDatabase.OpenAsset does not load the scene '{path}' yet; use EditorSceneManager.OpenScene.");
                 return false;
             }
-            if (target is GameObject && !PrefabUtility.IsPartOfModelPrefab(target))
+            if (path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
             {
                 Debug.LogWarning($"{Log.DiagnosticPrefix}AssetDatabase.OpenAsset does not open the prefab '{path}': Unbound has no Prefab Mode.");
                 return false;

@@ -38,6 +38,9 @@ namespace UnityEngine.Tests
         [OnOpenAsset(0)]
         static bool Zero(int id, int line, int column) => Call("Zero", line + "," + column);
 
+        [OnOpenAsset(2)]
+        static bool Two(int id) => Call("Two", "");
+
         [OnOpenAsset(3)]
         static bool Three(int id) => Call("Three", "");
 
@@ -228,10 +231,10 @@ namespace UnityEngine.Tests
         {
             OpenAssetTestCallbacks.Answer.Add("Late");
             Assert.True(AssetDatabase.OpenAsset(m_Text.GetInstanceID()));
-            Assert.Equal("Early() Zero(-1,-1) Default(-1) Three() Late(-1,-1)", Calls());
+            Assert.Equal("Early() Zero(-1,-1) Default(-1) Two() Three() Late(-1,-1)", Calls());
             OpenAssetTestCallbacks.Calls.Clear();
             Assert.True(AssetDatabase.OpenAsset(m_Text, 7));
-            Assert.Equal("Early() Zero(7,-1) Default(7) Three() Late(7,-1)", Calls());
+            Assert.Equal("Early() Zero(7,-1) Default(7) Two() Three() Late(7,-1)", Calls());
         }
 
         [Fact]
@@ -273,7 +276,7 @@ namespace UnityEngine.Tests
         public void AnUnopenedNativeAssetOrFolderIsSelectedAndCountsAsOpened()
         {
             Assert.True(AssetDatabase.OpenAsset(m_Clip));
-            Assert.Equal("Early() Zero(-1,-1) Default(-1) Three() Late(-1,-1)", Calls());
+            Assert.Equal("Early() Zero(-1,-1) Default(-1) Two() Three() Late(-1,-1)", Calls());
             Assert.Same(m_Clip, Selection.activeObject);
             Assert.True(AssetDatabase.OpenAsset(m_ClipPart));
             Assert.Same(m_ClipPart, Selection.activeObject);
@@ -290,7 +293,7 @@ namespace UnityEngine.Tests
             while (!File.Exists(m_OpenerLog) && DateTime.UtcNow < deadline) System.Threading.Thread.Sleep(20);
             Assert.Equal(AssetDatabase.FileOf("Assets/Plain.txt"), File.ReadAllText(m_OpenerLog).TrimEnd('\n'));
             Assert.Same(m_Selected, Selection.activeObject);
-            // An opener that cannot be started: the asset is not opened, and Unbound says why.
+            // An opener that cannot be started: the asset is not opened.
             Environment.SetEnvironmentVariable("UNBOUND_OPEN_URL", Path.Combine(m_Directory, "missing-opener"));
             Assert.False(AssetDatabase.OpenAsset(m_Text));
         }
@@ -299,7 +302,7 @@ namespace UnityEngine.Tests
         public void AnUnopenedSceneOrPrefabIsRefusedLoudly()
         {
             var scene = Adopt(8, "Assets/Main.unity", new SceneAsset(), 102900000);
-            var prefab = Adopt(4, "Assets/Thing.prefab", new GameObject("Thing"), 100100000);
+            var prefab = Adopt(4, "Assets/Thing.prefab", new GameObject("Thing") { m_IsPrefabAsset = true }, 100100000);
             // Unbound's own diagnostics reach the log handler, not the game's log callbacks.
             var handler = new Recorder();
             var previous = Debug.unityLogger.logHandler;
@@ -308,6 +311,8 @@ namespace UnityEngine.Tests
             {
                 Assert.False(AssetDatabase.OpenAsset(scene));
                 Assert.False(AssetDatabase.OpenAsset(prefab));
+                // Prefab Mode is for every object of a prefab file: its components are refused too.
+                Assert.False(AssetDatabase.OpenAsset(prefab.transform));
             }
             finally
             {
@@ -316,6 +321,7 @@ namespace UnityEngine.Tests
             Assert.Equal(new[]
             {
                 "Warning:Unbound: AssetDatabase.OpenAsset does not load the scene 'Assets/Main.unity' yet; use EditorSceneManager.OpenScene.",
+                "Warning:Unbound: AssetDatabase.OpenAsset does not open the prefab 'Assets/Thing.prefab': Unbound has no Prefab Mode.",
                 "Warning:Unbound: AssetDatabase.OpenAsset does not open the prefab 'Assets/Thing.prefab': Unbound has no Prefab Mode.",
             }, handler.Logs.Where(l => l.StartsWith("Warning:", StringComparison.Ordinal)));
             Assert.Same(m_Selected, Selection.activeObject);
@@ -326,7 +332,7 @@ namespace UnityEngine.Tests
         public void TheEditorOpensFoldersScenesAtlasesPrefabsAndAssemblyDefinitionsItself()
         {
             var scene = Adopt(8, "Assets/Main.unity", new SceneAsset(), 102900000);
-            var prefab = Adopt(4, "Assets/Thing.prefab", new GameObject("Thing"), 100100000);
+            var prefab = Adopt(4, "Assets/Thing.prefab", new GameObject("Thing") { m_IsPrefabAsset = true }, 100100000);
             var atlas = Adopt(5, "Assets/Atlas.spriteatlasv2", new SpriteAtlas(), 4343727234628468602);
             var definition = Adopt(6, "Assets/Code.asmdef", new TextAsset("{}") { name = "Code" }, 5897886265953266890);
             var reference = Adopt(7, "Assets/Code.asmref", new TextAsset("{}") { name = "Code" }, 5897886265953266890);
@@ -335,6 +341,12 @@ namespace UnityEngine.Tests
             // No validator is asked about them, so none is reported either.
             Assert.Empty(OpenAssetTestCallbacks.Calls);
             Assert.Empty(m_Logs);
+            // The object itself decides: a prefab's component is no GameObject, so the validators
+            // are asked, and a prefab is not of the Editor's own format.
+            Assert.False(AssetDatabase.CanOpenAssetInEditor(prefab.transform.GetInstanceID()));
+            Assert.Equal("ValidateEarly(-1) Validate()", Calls());
+            OpenAssetTestCallbacks.Answer.Add("Validate");
+            Assert.True(AssetDatabase.CanOpenAssetInEditor(prefab.transform.GetInstanceID()));
         }
 
         [Fact]
