@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Make disposable plug-in projects, record their Unity graph, and check Unbound's."""
 import argparse
+import base64
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager, nullcontext
 import difflib
 import gzip
-from hashlib import sha256
+from hashlib import sha1, sha256, sha512
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
 import os
@@ -14,6 +17,7 @@ import re
 import subprocess
 import sys
 import tarfile
+from threading import Thread
 import time
 
 HERE = Path(__file__).resolve().parent
@@ -24,6 +28,7 @@ from value_probe import engine_cli
 from build_assets import csc, meta_text, write_metas
 
 PACKAGE = 'com.example.archive'
+REGISTRY = 'com.example.guid-registry'
 DLL_PREFIX = 'ProbeTie'
 # Each row places two copies. *Second controls compare against path order.
 # LowNibble and GuidWord controls separate textual and byte ordering.
@@ -82,7 +87,9 @@ COLLISION_CASES = {
     # normal tie-breaking from always selecting the original GUID's owner.
     'ArchiveKeepsReference': ('Assets/A', PACKAGE, '0'*31+'1'),
     'ArchiveLosesReference': ('Assets/A', PACKAGE, 'f'*32),
+    'RegistryKeepsReference': ('Assets/A', REGISTRY, '0'*30+'02'),
     'EmbeddedWithArchive': ('Packages/com.example.first', PACKAGE, 'a1'*16),
+    'EmbeddedWithRegistry': ('Packages/com.example.first', REGISTRY, 'a5'*16),
     'EmbeddedWithAssets': ('Assets/A', 'Packages/com.example.first', 'a2'*16),
     'BothInAssets': ('Assets/A', 'Assets/B', 'a3'*16),
     'BothEmbedded': ('Packages/com.example.first', 'Packages/com.example.second', 'a4'*16),
@@ -94,7 +101,7 @@ CONFLICT = re.compile(r"GUID \[([\da-f]{32})\] for asset '([^']+)' conflicts wit
 
 
 def make_tarball(staging, destination):
-    destination.parent.mkdir()
+    destination.parent.mkdir(exist_ok=True, parents=True)
     with destination.open('wb') as file, gzip.GzipFile(fileobj=file, mode='wb', mtime=0) as compressed:
         with tarfile.open(fileobj=compressed, mode='w') as archive:
             for path in sorted(staging.iterdir()):
@@ -105,7 +112,7 @@ def make_tarball(staging, destination):
 
 
 def compile_copy(project, staging, compiler, reference, case, location, prefix, index, conflicts):
-    target = (staging if location == PACKAGE else project/location)/(DLL_PREFIX + case + '.dll')
+    target = staging.get(location, project/location)/(DLL_PREFIX + case + '.dll')
     target.parent.mkdir(parents=True, exist_ok=True)
     # The compiler embeds the output filename as the assembly name.
     defines = []
@@ -117,6 +124,8 @@ def compile_copy(project, staging, compiler, reference, case, location, prefix, 
         defines.append('-define:PACKAGE_API')
     if case in ('ArchiveSecond', 'ArchiveKeepsReference'):
         defines.append('-define:ARCHIVE_SECOND')
+    if case == 'RegistryKeepsReference':
+        defines.append('-define:REGISTRY_CONTROL')
     subprocess.run([*compiler, '-nologo', '-noconfig', '-nostdlib', '-deterministic', '-optimize+',
                     '-target:library', f'-r:{reference}', f'-out:{target}', *defines,
                     str(HERE/'Plugin.cs')], check=True)
@@ -145,11 +154,14 @@ def generate(project, release, conflicts=False):
         embed = project/'Packages'/name
         embed.mkdir()
         (embed/'package.json').write_text(json.dumps({'name': name, 'version': '1.0.0'}))
-    archive = project.parent/'archive'
-    archive.mkdir()
-    manifest = archive/'package.json'
-    manifest.write_text(json.dumps({'name': PACKAGE, 'version': '1.0.0'}))
-    manifest.with_suffix('.json.meta').write_text(meta_text(manifest, PACKAGE+'/package.json'))
+    staging = {PACKAGE: project.parent/'archive'}
+    if conflicts:
+        staging[REGISTRY] = project.parent/'registry'
+    for name, directory in staging.items():
+        directory.mkdir()
+        manifest = directory/'package.json'
+        manifest.write_text(json.dumps({'name': name, 'version': '1.0.0'}))
+        manifest.with_suffix('.json.meta').write_text(meta_text(manifest, name+'/package.json'))
     editor = probe_paths.editor_path()
     editor_data = editor.parents[1] if probe_paths.MACOS_ARM64 else editor.parent/'Data'
     reference = editor_data/'NetStandard/ref/2.1.0/netstandard.dll'
@@ -157,15 +169,17 @@ def generate(project, release, conflicts=False):
     cases = ({case: (*row[:2], row[2], row[2]) for case, row in COLLISION_CASES.items()}
              if conflicts else CASES)
     with ThreadPoolExecutor(max_workers=4) as pool:
-        tasks = [pool.submit(compile_copy, project, archive, compiler, reference, case, location, prefix, i, conflicts)
+        tasks = [pool.submit(compile_copy, project, staging, compiler, reference, case, location, prefix, i, conflicts)
                  for case, row in cases.items()
                  for i, (location, prefix) in enumerate(zip(row[:2], row[2:]))]
         if not conflicts:
-            tasks.extend(pool.submit(compile_copy, project, archive, compiler, reference, case, PACKAGE, '21', 2, conflicts)
+            tasks.extend(pool.submit(compile_copy, project, staging, compiler, reference, case, PACKAGE, '21', 2, conflicts)
                          for case in ('VersionTie', 'MixedVersionTie', 'ExplicitVersionTie'))
         for task in tasks:
             task.result()
-    make_tarball(archive, project/'Packages/LocalPackages/com.example.archive-1.0.0.tgz')
+    make_tarball(staging[PACKAGE], project/'Packages/LocalPackages/com.example.archive-1.0.0.tgz')
+    if conflicts:
+        make_tarball(staging[REGISTRY], project.parent/'registry.tgz')
     for folder, override in [('Automatic', False), ('Explicit', True)]:
         root = project/'Assets'/folder
         root.mkdir()
@@ -174,6 +188,8 @@ def generate(project, release, conflicts=False):
             asmdef.update(overrideReferences=True, precompiledReferences=[DLL_PREFIX+case+'.dll' for case in cases])
         (root/(folder+'.asmdef')).write_text(json.dumps(asmdef))
         body = 'public static int Value() => ProbeTieArchiveSecond.Marker.PackageOnly();'
+        if conflicts:
+            body = 'public static int Value() => ProbeTieRegistry.Marker.PackageOnly();'
         (root/(folder+'Control.cs')).write_text('public static class '+folder+'Control {'+body+'}\n')
     write_metas(project/'Assets', project, set())
     write_metas(project/'Packages', project, set())
@@ -183,18 +199,20 @@ def generate(project, release, conflicts=False):
 GUID_LINE = re.compile(rb'(?m)^guid: ([0-9a-f]{32})')
 
 
-def collision_metadata(project, archive=None):
+def collision_metadata(project, packages=None):
     result = {}
-    if archive is None:
+    if packages is None:
         package_cache = project/'Library/PackageCache'
-        matches = list(package_cache.glob(PACKAGE+'@*'))
-        archive = matches[0] if matches else project.parent/'archive'
+        packages = {
+            name: next(package_cache.glob(name+'@*'), project.parent/staging)
+            for name, staging in ((PACKAGE, 'archive'), (REGISTRY, 'registry'))
+        }
     for case, (*locations, _) in COLLISION_CASES.items():
         filename = DLL_PREFIX+case+'.dll.meta'
         for location in locations:
-            if location == PACKAGE:
-                file = archive/filename
-                path = 'Packages/'+PACKAGE+'/'+filename
+            if location in packages:
+                file = packages[location]/filename
+                path = 'Packages/'+location+'/'+filename
             else:
                 path = location+'/'+filename
                 file = project/path
@@ -231,7 +249,7 @@ def collision_record(before, after, graph, log):
     # Preserve the known low/high GUID reference choices and verify counts
     # for the cases whose choice can vary between fresh imports.
     random_winners = {DLL_PREFIX+case+'.dll' for case in COLLISION_CASES
-                      if case not in ('ArchiveKeepsReference', 'ArchiveLosesReference')}
+                      if case not in ('ArchiveKeepsReference', 'ArchiveLosesReference', 'RegistryKeepsReference')}
     references = sorted((assembly, Path(path).name if Path(path).name in random_winners else path)
                         for assembly, path in graph)
     conflicts = sorted(set(re.findall(r"GUID \[[0-9a-f]{32}\] for asset '[^']*ProbeTie[^']*' conflicts with:\n"
@@ -242,7 +260,57 @@ def collision_record(before, after, graph, log):
 
 def normalize(path, project):
     path = path.replace('\\', '/').removeprefix(project.as_posix()+'/')
-    return re.sub(r'^.*(?:PackageCache|tarballs)/'+re.escape(PACKAGE)+r'@[^/]+/', 'Packages/'+PACKAGE+'/', path)
+    packages = '|'.join(map(re.escape, (PACKAGE, REGISTRY)))
+    return re.sub(r'^.*(?:PackageCache|tarballs|packages)/('+packages+r')@[^/]+/', r'Packages/\1/', path)
+
+
+@contextmanager
+def registry_package(project):
+    work = project.parent
+    tarball = (work/'registry.tgz').read_bytes()
+    routes = {}
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            route = routes.get(self.path.split('?')[0])
+            if route is None:
+                self.send_error(404)
+                return
+            content_type, body = route
+            self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', len(body))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    with ThreadingHTTPServer(('127.0.0.1', 0), Handler) as server:
+        url = f'http://127.0.0.1:{server.server_port}'
+        document = {
+            '_id': REGISTRY, 'name': REGISTRY, 'dist-tags': {'latest': '1.0.0'},
+            'versions': {'1.0.0': {'name': REGISTRY, 'version': '1.0.0', 'dist': {
+                'tarball': url+'/registry.tgz', 'shasum': sha1(tarball).hexdigest(),
+                'integrity': 'sha512-'+base64.b64encode(sha512(tarball).digest()).decode(),
+            }}},
+        }
+        routes['/'+REGISTRY] = ('application/json', json.dumps(document).encode())
+        routes['/registry.tgz'] = ('application/octet-stream', tarball)
+        manifest = project/'Packages/manifest.json'
+        data = json.loads(manifest.read_text())
+        data['dependencies'][REGISTRY] = '1.0.0'
+        data['scopedRegistries'] = [{'name': 'Probe Registry', 'url': url, 'scopes': [REGISTRY]}]
+        manifest.write_text(json.dumps(data))
+        config = work/'upmconfig.toml'
+        config.write_text('')
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            yield {'UPM_USER_CONFIG_FILE': str(config), 'UPM_CACHE_ROOT': str(work/'upm-cache')}
+        finally:
+            server.shutdown()
+            thread.join()
 
 
 def diagnostics(log, project):
@@ -282,13 +350,18 @@ def record(run, release, conflicts):
             batch=True, graphics=True, timeout=600, env={'PLUGIN_TIES_OUT': str(out/'graph.tsv')},
         ))
     for job in jobs:
-        result = editor_runner.run(job)
+        with registry_package(job.project) if conflicts else nullcontext({}) as env:
+            job.env.update(env)
+            result = editor_runner.run(job)
         if result['exit_code'] != 0 or result['forced_exit'] or not result['renderer_ok'] or not result['shutdown_logged']:
             raise RuntimeError(f'Editor did not exit normally: {job.out}')
         data = {'graph': read_editor_graph(job.out/'graph.tsv', job.project),
                 **diagnostics(job.log.read_text(errors='replace'), job.project)}
         (job.out/'record.json').write_text(json.dumps(data, indent=2)+'\n')
         if conflicts:
+            lock = json.loads((job.project/'Packages/packages-lock.json').read_text())
+            if lock['dependencies'][REGISTRY]['source'] != 'registry':
+                raise RuntimeError('Editor did not resolve the registry package')
             result = collision_record(original_metadata[job.project], collision_metadata(job.project),
                                       data['graph'], job.log.read_text(errors='replace'))
             (job.out/'guid-import.json').write_text(json.dumps(result, indent=2)+'\n')
@@ -346,21 +419,28 @@ def gate_conflicts(run, release):
     before = generate(project, release, conflicts=True)
     cli = engine_cli()
     cache = run/'cache'
-    env = {**os.environ, 'UNBOUND_CACHE': str(cache), 'UNBOUND_LOG': 'info', 'UNBOUND_OFFLINE': '1'}
+    with registry_package(project) as config:
+        return compare_import(run, project, release, before, cli, cache, config)
+
+
+def compare_import(run, project, release, before, cli, cache, config):
+    env = {**os.environ, **config, 'UNBOUND_CACHE': str(cache), 'UNBOUND_LOG': 'info'}
+    env.pop('UNBOUND_OFFLINE', None)
     log = run/'compile.log'
     if (result := compile_engine(cli, project, log, env)):
         return result
     graph = run/'graph.json'
     engine_graph(cli, project, graph, run/'engine.log', env)
     archive, = (cache/'packages/tarballs').glob(PACKAGE+'@*')
-    after = collision_metadata(project, archive)
+    packages = {PACKAGE: archive, REGISTRY: cache/'packages'/f'{REGISTRY}@1.0.0'}
+    after = collision_metadata(project, packages)
     actual = collision_record(before, after, read_engine_graph(graph, project), log.read_text(errors='replace'))
     reference = HERE/'Reference'/f'unity-{release}'/'guid-import.json'
     if not compare(actual, reference, run/'guid-import.json'):
         return 1
     if (result := compile_engine(cli, project, run/'recompile.log', env)):
         return result
-    if after != collision_metadata(project, archive):
+    if after != collision_metadata(project, packages):
         raise RuntimeError('compiling again changed the imported metadata')
     print(f"pluginties: {len(actual['metas'])} metadata files and {len(actual['conflicts'])} GUID conflicts match, compile succeeded")
     return 0

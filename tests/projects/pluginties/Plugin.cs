@@ -8,6 +8,8 @@ using System.Reflection;
 
 #if ARCHIVE_SECOND
 namespace ProbeTieArchiveSecond
+#elif REGISTRY_CONTROL
+namespace ProbeTieRegistry
 #else
 namespace ProbeTie
 #endif

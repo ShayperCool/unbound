@@ -10,6 +10,10 @@
     ],
     [
       "Assembly-CSharp",
+      "Packages/com.example.guid-registry/ProbeTieRegistryKeepsReference.dll"
+    ],
+    [
+      "Assembly-CSharp",
       "ProbeTieBothEmbedded.dll"
     ],
     [
@@ -25,12 +29,20 @@
       "ProbeTieEmbeddedWithAssets.dll"
     ],
     [
+      "Assembly-CSharp",
+      "ProbeTieEmbeddedWithRegistry.dll"
+    ],
+    [
       "Assembly-CSharp-Editor",
       "Assets/A/ProbeTieArchiveLosesReference.dll"
     ],
     [
       "Assembly-CSharp-Editor",
       "Packages/com.example.archive/ProbeTieArchiveKeepsReference.dll"
+    ],
+    [
+      "Assembly-CSharp-Editor",
+      "Packages/com.example.guid-registry/ProbeTieRegistryKeepsReference.dll"
     ],
     [
       "Assembly-CSharp-Editor",
@@ -49,12 +61,20 @@
       "ProbeTieEmbeddedWithAssets.dll"
     ],
     [
+      "Assembly-CSharp-Editor",
+      "ProbeTieEmbeddedWithRegistry.dll"
+    ],
+    [
       "Probe.Automatic",
       "Assets/A/ProbeTieArchiveLosesReference.dll"
     ],
     [
       "Probe.Automatic",
       "Packages/com.example.archive/ProbeTieArchiveKeepsReference.dll"
+    ],
+    [
+      "Probe.Automatic",
+      "Packages/com.example.guid-registry/ProbeTieRegistryKeepsReference.dll"
     ],
     [
       "Probe.Automatic",
@@ -73,12 +93,20 @@
       "ProbeTieEmbeddedWithAssets.dll"
     ],
     [
+      "Probe.Automatic",
+      "ProbeTieEmbeddedWithRegistry.dll"
+    ],
+    [
       "Probe.Explicit",
       "Assets/A/ProbeTieArchiveLosesReference.dll"
     ],
     [
       "Probe.Explicit",
       "Packages/com.example.archive/ProbeTieArchiveKeepsReference.dll"
+    ],
+    [
+      "Probe.Explicit",
+      "Packages/com.example.guid-registry/ProbeTieRegistryKeepsReference.dll"
     ],
     [
       "Probe.Explicit",
@@ -95,6 +123,10 @@
     [
       "Probe.Explicit",
       "ProbeTieEmbeddedWithAssets.dll"
+    ],
+    [
+      "Probe.Explicit",
+      "ProbeTieEmbeddedWithRegistry.dll"
     ]
   ],
   "metas": [
@@ -121,6 +153,13 @@
     },
     {
       "path": "Assets/A/ProbeTieEmbeddedWithAssets.dll.meta",
+      "same_guid": false,
+      "distinct_guid": true,
+      "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
+      "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
+    },
+    {
+      "path": "Assets/A/ProbeTieRegistryKeepsReference.dll.meta",
       "same_guid": false,
       "distinct_guid": true,
       "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
@@ -176,6 +215,27 @@
       "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
     },
     {
+      "path": "Packages/com.example.first/ProbeTieEmbeddedWithRegistry.dll.meta",
+      "same_guid": false,
+      "distinct_guid": true,
+      "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
+      "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
+    },
+    {
+      "path": "Packages/com.example.guid-registry/ProbeTieEmbeddedWithRegistry.dll.meta",
+      "same_guid": true,
+      "distinct_guid": true,
+      "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
+      "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
+    },
+    {
+      "path": "Packages/com.example.guid-registry/ProbeTieRegistryKeepsReference.dll.meta",
+      "same_guid": true,
+      "distinct_guid": true,
+      "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
+      "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
+    },
+    {
       "path": "Packages/com.example.second/ProbeTieBothEmbedded.dll.meta",
       "same_guid": false,
       "distinct_guid": true,
@@ -185,6 +245,7 @@
   ],
   "conflicts": [
     "GUID [00000000000000000000000000000001] for asset 'Assets/A/ProbeTieArchiveKeepsReference.dll.meta' conflicts with:\n  'Packages/com.example.archive/ProbeTieArchiveKeepsReference.dll.meta'\nAssigning a new guid.",
+    "GUID [00000000000000000000000000000002] for asset 'Assets/A/ProbeTieRegistryKeepsReference.dll.meta' conflicts with:\n  'Packages/com.example.guid-registry/ProbeTieRegistryKeepsReference.dll.meta'\nAssigning a new guid.",
     "GUID [a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1] for asset 'Packages/com.example.first/ProbeTieEmbeddedWithArchive.dll' conflicts with:\n  'Packages/com.example.archive/ProbeTieEmbeddedWithArchive.dll' (current owner)\nAssigning a new guid.",
     "GUID [a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2] for asset 'Assets/A/ProbeTieEmbeddedWithAssets.dll.meta' conflicts with:\n  'Packages/com.example.first/ProbeTieEmbeddedWithAssets.dll.meta'\nAssigning a new guid.",
     "GUID [a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2] for asset 'Packages/com.example.first/ProbeTieEmbeddedWithAssets.dll.meta' conflicts with:\n  'Assets/A/ProbeTieEmbeddedWithAssets.dll.meta'\nAssigning a new guid.",
@@ -192,6 +253,7 @@
     "GUID [a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3] for asset 'Assets/B/ProbeTieBothInAssets.dll.meta' conflicts with:\n  'Assets/A/ProbeTieBothInAssets.dll.meta'\nAssigning a new guid.",
     "GUID [a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4] for asset 'Packages/com.example.first/ProbeTieBothEmbedded.dll.meta' conflicts with:\n  'Packages/com.example.second/ProbeTieBothEmbedded.dll.meta'\nAssigning a new guid.",
     "GUID [a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4] for asset 'Packages/com.example.second/ProbeTieBothEmbedded.dll.meta' conflicts with:\n  'Packages/com.example.first/ProbeTieBothEmbedded.dll.meta'\nAssigning a new guid.",
+    "GUID [a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5] for asset 'Packages/com.example.first/ProbeTieEmbeddedWithRegistry.dll.meta' conflicts with:\n  'Packages/com.example.guid-registry/ProbeTieEmbeddedWithRegistry.dll.meta'\nAssigning a new guid.",
     "GUID [ffffffffffffffffffffffffffffffff] for asset 'Assets/A/ProbeTieArchiveLosesReference.dll.meta' conflicts with:\n  'Packages/com.example.archive/ProbeTieArchiveLosesReference.dll.meta'\nAssigning a new guid."
   ]
 }

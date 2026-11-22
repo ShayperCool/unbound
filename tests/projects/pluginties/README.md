@@ -51,10 +51,13 @@ the complete record and compiles the project, including the Editor assembly.
 
 Pass `--conflicts` to record and publish the fresh-import cases. Unity gives
 each mutable DLL a fresh GUID when they share a GUID on first import.
-An immutable package retains its original GUID. The collision log names the
-conflicting paths. The rewrite replaces only the GUID token, including when
-the metadata uses CRLF. This uses Unity's unique asset IDs and the Package
-Manager's distinction between mutable folders and immutable archives.
+Registry and local tarball packages retain their original GUIDs. The
+collision log names the conflicting paths. An embedded DLL colliding with
+a local tarball reports a current owner. The same collision with a registry
+package reports both metadata paths. The rewrite replaces only the plain
+GUID token, including when the metadata uses CRLF. This uses Unity's unique
+asset IDs and the Package Manager's distinction between mutable folders and
+immutable packages.
 [Asset metadata](https://docs.unity.com/en-us/engine/6000.0/manual/assets-and-media/import-assets/asset-metadata),
 [Package sources](https://docs.unity.com/en-us/engine/6000.0/manual/packages-list/packages/upm-concepts).
 
@@ -65,10 +68,14 @@ can select either copy on a fresh import. The reference preserves their
 assembly and DLL names, the exact conflict diagnostics, GUID ownership and
 hashes of every metadata file with its GUID token replaced. The raw captures
 include the assigned GUIDs and complete reference paths. The project must
-compile with the package-only API, then compile again with identical metadata.
+compile with the registry DLL's package-only API, then compile again with
+identical metadata. A private loopback registry serves the synthetic package.
 
 Unbound performs the measured repair before startup indexing and compilation
-on the 6000.0 family. Graph inspection reads the current metadata and reports
-unresolved ties. Pairs involving more than one immutable package, aliased
-source files, prior Unity ownership for two mutable files, and incremental
-registration remain outside this import profile.
+on the 6000.0 family. An interrupted repair resumes from the project cache.
+Graph inspection reads the current metadata and reports unresolved ties.
+Quoted GUIDs use a different metadata rewrite in Unity. Unbound reports
+that case and preserves the prior compile behavior. Unmeasured groups with
+multiple immutable owners, aliased metadata or prior Unity ownership for
+two mutable files stop the repair with a diagnostic. Incremental registration
+remains outside this import profile.
