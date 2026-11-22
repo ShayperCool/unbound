@@ -2,7 +2,6 @@ using System.Runtime.InteropServices;
 
 namespace UnityEngine.Animations
 {
-    [System.Flags]
     internal enum Flags
     {
         kNone = 0,

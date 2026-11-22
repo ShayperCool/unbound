@@ -18,12 +18,12 @@ Sections (all run in Play mode):
   clips, edited copies of `Mixed`, and `null`.
 * `propmod.*`: `AnimationUtility.PropertyModificationToEditorCurveBinding` (Transform, GameObject,
   MonoBehaviour float/int/bool/Vector3/enum/DiscreteEvaluation/Object/unknown, MeshRenderer, and
-  null/unrelated/destroyed edge cases) and `AnimationMode.AddPropertyModification` (outside mode,
+  null/unrelated edge cases) and `AnimationMode.AddPropertyModification` (outside mode,
   diverging modification value vs current value, duplicate registration order, bool/GameObject/
   Transform/objectReference revert, and null edge cases).
 * `generic.*`: `AnimationUtility.EditorCurveBindingsToGenericBindings` and
   `UnityEngine.Animations.GenericBinding` properties across Transform, GameObject, MonoBehaviour
-  (float/int/bool/discrete/enum/PPtr), MeshRenderer, Animator, empty/null arrays, and null type.
+  (float/int/bool/discrete/enum/PPtr), MeshRenderer, Animator, and empty/null arrays.
 * `playablecurve.*`: `AnimatorControllerPlayable.IsParameterControlledByCurve` before/during play
   and after replacing `Animator.runtimeAnimatorController`.
 

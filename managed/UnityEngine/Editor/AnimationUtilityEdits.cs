@@ -343,10 +343,18 @@ namespace UnityEditor
                 }
                 return null;
             }
-            if (modification.target is Renderer && TryParseMaterialSlot(prop, out _))
+            if (modification.target is Renderer)
             {
-                binding = EditorCurveBinding.PPtrCurve(path, targetType, prop);
-                return typeof(Material);
+                if (prop == "m_Enabled")
+                {
+                    binding = EditorCurveBinding.FloatCurve(path, targetType, prop);
+                    return typeof(bool);
+                }
+                if (TryParseMaterialSlot(prop, out _))
+                {
+                    binding = EditorCurveBinding.PPtrCurve(path, targetType, prop);
+                    return typeof(Material);
+                }
             }
             if (modification.target is SpriteRenderer && prop == "m_Sprite")
             {
@@ -430,11 +438,9 @@ namespace UnityEditor
             data = null;
             var target = root == null ? null : GetAnimatedObject(root, binding);
             if (target == null || target is MonoBehaviour) return false;
-            const string slot = "m_Materials.Array.data[";
             var name = binding.propertyName ?? "";
-            if (target is Renderer renderer && name.StartsWith(slot, StringComparison.Ordinal) && name.EndsWith("]", StringComparison.Ordinal))
+            if (target is Renderer renderer && TryParseMaterialSlot(name, out int index))
             {
-                if (!int.TryParse(name.AsSpan(slot.Length, name.Length - slot.Length - 1), out int index)) return false;
                 var materials = renderer.sharedMaterials;
                 data = index >= 0 && index < materials.Length ? materials[index] : null;
                 return data != null;

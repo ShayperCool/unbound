@@ -20,7 +20,7 @@ namespace UnityEngine
 
         internal virtual (Vector3 Speed, float AngularSpeed, float ApparentSpeed) GetMotionStats()
         {
-            Unbound.Runtime.Stubs.Ignored("Motion.averageSpeed", "is zero for blend trees (their children's root motion is not averaged yet)");
+            Unbound.Runtime.Stubs.Ignored("Motion.averageSpeed", "is zero for unknown Motion subclasses");
             return (Vector3.zero, 0f, 0f);
         }
 

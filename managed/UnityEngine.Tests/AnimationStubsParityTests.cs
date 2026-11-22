@@ -12,12 +12,11 @@ namespace UnityEngine.Tests
     /// AnimationClip.EnsureQuaternionContinuity, Animation.SyncLayer and
     /// AnimatorControllerPlayable.IsParameterControlledByCurve. Documented (6000.0 Scripting API):
     /// quaternion keys are realigned for the shortest interpolation path; the playable's query
-    /// returns whether the parameter is controlled by a curve. Not documented in 6000.0 (no page):
-    /// SyncLayer; that it synchronizes the playback speed of all animations in the layer is
-    /// Unbound's reading of its purpose, unmeasured. EnsureQuaternionContinuity is measured
-    /// (tests/projects/editorui EnsureQuaternionContinuity.*); the other two are not: expected values
-    /// beyond their contracts are Unbound's unmeasured choices and are marked so. Created
-    /// objects are destroyed in <see cref="Dispose"/>, which also fails on unexpected warnings.
+    /// returns whether the parameter is controlled by a curve. EnsureQuaternionContinuity is
+    /// measured in tests/projects/editorui EnsureQuaternionContinuity.*; Animation.SyncLayer and
+    /// AnimatorControllerPlayable.IsParameterControlledByCurve are measured in
+    /// tests/projects/animrest (synclayer.*, playablecurve.*). Created objects are destroyed in
+    /// <see cref="Dispose"/>, which also fails on unexpected warnings.
     /// </summary>
     [Collection("Animation")]
     public class AnimationStubsParityTests : System.IDisposable
@@ -315,17 +314,15 @@ namespace UnityEngine.Tests
             animation[name].weight = weight;
         }
 
-        /// <summary>Not documented in 6000.0; Unbound's reading (unmeasured): the playback speed of
-        /// the layer's animations is synchronized. Hypotheses (unmeasured): the layer stays synchronized from a call made before its states
-        /// play; its states advance by the weight-weighted mean normalizedSpeed (0.5·1/1 + 0.5·1/2
-        /// = 0.75 per second), a weight-0 state follows without contributing, their speed
-        /// properties keep their values, and other layers advance as before. RED at b988: A reaches
-        /// normalized time 0.2, B 0.1, D 0.05.</summary>
+        /// <summary>Measured (Unity 6000.0.71f1, tests/projects/animrest synclayer.*): the layer
+        /// stays synchronized from a call made before its states play; its states advance by the
+        /// weight-weighted mean normalizedSpeed (0.5·1/1 + 0.5·1/2 = 0.75 per second), a weight-0
+        /// state follows without contributing, their speed properties keep their values, and other
+        /// layers advance as before, with no Unbound warning.</summary>
         [Fact]
         public void SynchronizedStatesAdvanceByTheirWeightedMeanNormalizedSpeed()
         {
             var animation = LayeredAnimation(("A", 1f, 1), ("B", 2f, 1), ("D", 4f, 1), ("C", 1f, 0));
-            m_Expected.Add("Animation.SyncLayer"); // the once-per-process unmeasured-semantics notice
             animation.SyncLayer(1);
             animation.Play("C");
             Enable(animation, "A", 0.5f);
@@ -342,14 +339,15 @@ namespace UnityEngine.Tests
             Near.Equal(0.5f, animation["B"].normalizedSpeed);
         }
 
-        /// <summary>Hypothesis (unmeasured): weights and speeds both enter the mean, and normalized
-        /// times keep their offsets. Mean = (0.25·2/1 + 0.75·1/2) = 0.875 per second. RED at b988:
-        /// A advances by 0.8, B by 0.2.</summary>
+        /// <summary>Measured (Unity 6000.0.71f1, tests/projects/animrest synclayer.*): both
+        /// normalized time and normalized speed are weight-averaged before advancing.
+        /// Starting at A=0 (weight 0.25, nspeed 2) and B=0.5 (weight 0.75, nspeed 0.5):
+        /// mean ntime = 0.375, mean nspeed = 0.875/s; after 0.4s both reach 0.375 + 0.35 = 0.725,
+        /// and A.speed stays 2.</summary>
         [Fact]
-        public void SynchronizedStatesKeepTheirNormalizedTimeOffsets()
+        public void SynchronizedStatesAverageBothNormalizedTimeAndSpeed()
         {
             var animation = LayeredAnimation(("A", 1f, 2), ("B", 2f, 2));
-            m_Expected.Add("Animation.SyncLayer"); // the once-per-process unmeasured-semantics notice
             animation.SyncLayer(2);
             animation["A"].speed = 2f;
             Enable(animation, "A", 0.25f);
@@ -357,18 +355,17 @@ namespace UnityEngine.Tests
             animation.Step(0f);
             animation["B"].normalizedTime = 0.5f;
             animation.Step(0.4f);
-            Near.Equal(0.35f, animation["A"].normalizedTime);
-            Near.Equal(0.85f, animation["B"].normalizedTime);
+            Near.Equal(0.725f, animation["A"].normalizedTime);
+            Near.Equal(0.725f, animation["B"].normalizedTime);
             Assert.Equal(2f, animation["A"].speed);
         }
 
-        /// <summary>Guard, not a red (green at b988 too): a synchronized layer without weight, and a
-        /// layer without states, change nothing (Unbound's choice, unmeasured).</summary>
+        /// <summary>Measured (Unity 6000.0.71f1, tests/projects/animrest synclayer.zeroWeight.*):
+        /// a synchronized layer whose weights sum to 0, and a layer without states, advance as before.</summary>
         [Fact]
         public void LayersWithoutWeightOrStatesAdvanceAsBefore()
         {
             var animation = LayeredAnimation(("A", 1f, 3), ("B", 2f, 3));
-            m_Expected.Add("Animation.SyncLayer"); // b988's stub warning, once per process
             animation.SyncLayer(3);
             animation.SyncLayer(42);
             animation.Blend("A", 0f, 0f);
@@ -398,9 +395,10 @@ namespace UnityEngine.Tests
             return (RuntimeAnimatorController)file.Objects[9100000];
         }
 
-        /// <summary>Documented: true when a curve controls the parameter. The playable answers as
-        /// the Animator does for the same controller (Speed by a clip curve; Run is a bool, Missing
-        /// unknown). RED at b988: always false.</summary>
+        /// <summary>Documented and measured (Unity 6000.0.71f1, tests/projects/animrest
+        /// playablecurve.*): returns false before first evaluation, true after evaluation when a
+        /// clip curve controls the float parameter (Speed), false for non-float/unknown parameters,
+        /// and logs the missing-parameter warning on unknown parameters.</summary>
         [Fact]
         public void AControllerPlayableAnswersWhetherACurveDrivesItsParameter()
         {
@@ -416,12 +414,17 @@ namespace UnityEngine.Tests
                 var playable = AnimatorControllerPlayable.Create(g, controller);
                 output.SetSourcePlayable(playable);
                 Assert.True(animator.IsParameterControlledByCurve("Speed"));
+                Assert.False(playable.IsParameterControlledByCurve("Speed"));
+                g.Evaluate(0f);
                 Assert.True(playable.IsParameterControlledByCurve("Speed"));
                 Assert.True(playable.IsParameterControlledByCurve(Animator.StringToHash("Speed")));
                 Assert.False(playable.IsParameterControlledByCurve("Run"));
                 Assert.False(playable.IsParameterControlledByCurve(Animator.StringToHash("Run")));
+                m_Expected.Add("Parameter 'Missing' does not exist.");
+                m_Expected.Add($"Parameter 'Hash {Animator.StringToHash("Missing")}' does not exist.");
                 Assert.False(playable.IsParameterControlledByCurve("Missing"));
                 Assert.False(playable.IsParameterControlledByCurve(Animator.StringToHash("Missing")));
+                Assert.Contains(m_Logs, l => l.Contains("Parameter 'Missing' does not exist."));
             }
             finally
             {
@@ -429,12 +432,11 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>Guard, not a red (green at b988 too): the null playable and a playable no output
-        /// plays answer false without throwing (existing convention of the playable's queries).</summary>
+        /// <summary>Guard: the null playable and a playable no output plays answer false without
+        /// throwing and without Unbound stub warnings.</summary>
         [Fact]
         public void PlayablesWithoutAPlayerAnswerFalse()
         {
-            m_Expected.Add("AnimatorControllerPlayable.IsParameterControlledByCurve"); // b988's stub warning
             Assert.False(AnimatorControllerPlayable.Null.IsParameterControlledByCurve("Speed"));
             Assert.False(AnimatorControllerPlayable.Null.IsParameterControlledByCurve(Animator.StringToHash("Speed")));
             var g = PlayableGraph.Create("unplayed");

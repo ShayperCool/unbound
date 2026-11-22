@@ -1,7 +1,4 @@
 {
-  "Q629 editor curves: a clip's authored editor curves (m_EditorCurves: one Euler component, their own order) are not kept apart from its runtime curves, so GetCurveBindings lists all three Euler components by path": [
-    "clip.Mixed.bindings"
-  ],
   "Q629 clip stats size: AnimationClipStats.size is the memory of the Editor's compiled clip, which Unbound does not build; Unbound reports its key data size (counts match)": [
     "clip.Mixed.stats",
     "clip.Pose.stats",
@@ -9,21 +6,8 @@
     "clip.Run.stats",
     "clip.Walk.stats"
   ],
-  "Q629 PropertyModification: AnimationMode.AddPropertyModification and AnimationUtility.PropertyModificationToEditorCurveBinding stay stubs until the hand-written PropertyModification type (scene work) is on main": [
-    "mode.added",
-    "util.fromModification.active",
-    "util.fromModification.field",
-    "util.fromModification.object",
-    "util.fromModification.position",
-    "util.fromModification.rotation",
-    "util.fromModification.unknown",
-    "util.fromModification.vector"
-  ],
-  "Q629 object curve of a script field typed Object: the Editor's AnimationMode sampling leaves it, Unbound's clip sampling binds and sets it; which script object fields Unity binds is unmeasured (mode.stopped also carries the AddPropertyModification residual)": [
+  "Q629 object curve of a script field typed Object: the Editor's AnimationMode sampling leaves it, Unbound's clip sampling binds and sets it; which script object fields Unity binds is unmeasured": [
     "mode.sampled",
     "mode.stopped"
-  ],
-  "Q629 GenericBinding is still a stub type, so EditorCurveBindingsToGenericBindings answers nothing": [
-    "util.generic"
   ]
 }

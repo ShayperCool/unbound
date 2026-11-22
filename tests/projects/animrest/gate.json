@@ -1,0 +1,18 @@
+{
+  "commands": [
+    "python3 tests/projects/animrest/run.py gate"
+  ],
+  "summary": "animrest: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Animation/Animation.cs",
+    "managed/UnityEngine/Animation/AnimationClip.cs",
+    "managed/UnityEngine/Animation/AnimatorControllerModel.cs",
+    "managed/UnityEngine/Animation/AnimatorPlayer.cs",
+    "managed/UnityEngine/Animation/GenericBinding.cs",
+    "managed/UnityEngine/Animation/Playables/AnimationPlayables.cs",
+    "managed/UnityEngine/Animation/Playables/AnimatorControllerPlayable.cs",
+    "managed/UnityEngine/Editor/AnimationMode.cs",
+    "managed/UnityEngine/Editor/AnimationUtility.cs",
+    "managed/UnityEngine/Editor/AnimationUtilityEdits.cs"
+  ]
+}

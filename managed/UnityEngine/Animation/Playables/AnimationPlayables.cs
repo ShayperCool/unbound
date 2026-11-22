@@ -790,7 +790,11 @@ namespace Unbound.Runtime.Playables
         {
             var player = EnsurePlayer(e.Animator);
             if (player == null) return;
-            if (!ReferenceEquals(player.Bindings, e.Bindings)) player.Rebind(e.Bindings);
+            if (!ReferenceEquals(player.Bindings, e.Bindings))
+            {
+                if (!ReferenceEquals(player.Bindings.Root, e.Bindings.Root)) return;
+                player.Rebind(e.Bindings);
+            }
             Bound = true;
         }
 
@@ -798,7 +802,11 @@ namespace Unbound.Runtime.Playables
         {
             var player = EnsurePlayer(e.Animator);
             if (player == null) return;
-            if (!ReferenceEquals(player.Bindings, e.Bindings)) player.Rebind(e.Bindings);
+            if (!ReferenceEquals(player.Bindings, e.Bindings))
+            {
+                if (!ReferenceEquals(player.Bindings.Root, e.Bindings.Root)) return;
+                player.Rebind(e.Bindings);
+            }
             Bound = true;
             if (e.ReferencePose) return;
             player.EvaluateInto(into.Values, into.Animated, into.Objects, into.ObjectAnimated);

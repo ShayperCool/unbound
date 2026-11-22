@@ -177,6 +177,23 @@ namespace UnityEditor
             else if (existingEditor >= 0)
             {
                 clip.m_EditorCurves.RemoveAt(existingEditor);
+                if (binding.type == typeof(Transform) && !string.IsNullOrEmpty(binding.propertyName))
+                {
+                    int dot = binding.propertyName.LastIndexOf('.');
+                    var head = dot > 0 ? binding.propertyName.Substring(0, dot) : null;
+                    if (head != null && TransformKind(head) >= 0)
+                    {
+                        var prefix = head + ".";
+                        bool anyLeft = false;
+                        foreach (var c in clip.m_EditorCurves)
+                            if (c.Binding.Path == path && c.Binding.Matches(typeof(Transform))
+                                && c.Binding.Attribute != null && c.Binding.Attribute.StartsWith(prefix, StringComparison.Ordinal))
+                            { anyLeft = true; break; }
+                        if (!anyLeft)
+                            clip.m_Curves.RemoveAll(c => c.Binding.Path == path && c.Binding.Matches(typeof(Transform))
+                                && c.Binding.Attribute != null && c.Binding.Attribute.StartsWith(prefix, StringComparison.Ordinal));
+                    }
+                }
             }
             clip.m_BindingsBuilt = true;
             clip.m_EditorCurvesSynced = true;
@@ -248,6 +265,7 @@ namespace UnityEditor
                 if (v == null) return null;
                 return axis switch { "x" => v.Value.x, "y" => v.Value.y, "z" => v.Value.z, _ => (float?)null };
             }
+            if (target is Renderer renderer && propertyName == "m_Enabled") return renderer.enabled ? 1f : 0f;
             using var so = new SerializedObject(target);
             var p = so.FindProperty(propertyName);
             if (p == null) return null;

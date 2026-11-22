@@ -332,28 +332,6 @@ namespace UnityEngine.Animations
         public int version { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.BoundProperty.version"); return default; } }
         public static global::UnityEngine.Animations.BoundProperty Null { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.BoundProperty.Null"); return default; } }
     }
-    internal enum Flags
-    {
-        kNone = 0,
-        kDiscrete = 1,
-        kPPtr = 2,
-        kSerializeReference = 4,
-        kPhantom = 8,
-        kUnknown = 16,
-    }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct GenericBinding
-    {
-        [global::Unbound.Stub] internal readonly global::UnityEngine.Animations.Flags m_Flags;
-        public bool isObjectReference { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.GenericBinding.isObjectReference"); return default; } }
-        public bool isDiscrete { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.GenericBinding.isDiscrete"); return default; } }
-        public bool isSerializeReference { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.GenericBinding.isSerializeReference"); return default; } }
-        public uint transformPathHash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.GenericBinding.transformPathHash"); return default; } }
-        public uint propertyNameHash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.GenericBinding.propertyNameHash"); return default; } }
-        public int scriptInstanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.GenericBinding.scriptInstanceID"); return default; } }
-        public int typeID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.GenericBinding.typeID"); return default; } }
-        public byte customTypeID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.GenericBinding.customTypeID"); return default; } }
-    }
     [global::Unbound.Stub]
     public unsafe static partial class GenericBindingUtility
     {

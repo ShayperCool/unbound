@@ -143,10 +143,10 @@ namespace UnityEditor
             if (!InAnimationMode())
                 throw new InvalidOperationException("AnimationMode.AddPropertyModification may only be called in animation mode.  See AnimationMode.StartAnimationMode.");
             if (modification == null || modification.target == null)
-                throw new NullReferenceException();
+                throw new NullReferenceException("(null)");
             var path = modification.propertyPath ?? "";
             if (IsRecorded(modification.target, path)) return;
-            if (binding.isPPtrCurve || modification.objectReference != null)
+            if (binding.isPPtrCurve || modification.objectReference != null || IsObjectReferenceProperty(modification.target, path))
             {
                 s_Recorded.Add(new Recorded { Target = modification.target, Path = path, IsObject = true, ObjectValue = modification.objectReference });
                 return;
@@ -159,6 +159,16 @@ namespace UnityEditor
             {
                 s_Recorded.Add(new Recorded { Target = modification.target, Path = path, Value = current });
             }
+        }
+
+        static bool IsObjectReferenceProperty(Object target, string path)
+        {
+            if (target is Renderer && AnimationUtility.TryParseMaterialSlot(path, out _)) return true;
+            if (target is SpriteRenderer && path == "m_Sprite") return true;
+            if (target is GameObject || target is Transform) return false;
+            using var so = new SerializedObject(target);
+            var p = so.FindProperty(path);
+            return p != null && p.propertyType == SerializedPropertyType.ObjectReference;
         }
 
         static bool TryParseModificationFloat(string text, out float value)
@@ -270,6 +280,11 @@ namespace UnityEditor
             if (target is GameObject go)
             {
                 if (path == "m_IsActive") go.SetActive(value > 0.5f);
+                return;
+            }
+            if (target is Renderer renderer && path == "m_Enabled")
+            {
+                renderer.enabled = value != 0f;
                 return;
             }
             using var so = new SerializedObject(target);

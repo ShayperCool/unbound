@@ -10,15 +10,12 @@ namespace UnityEngine.Tests
 {
     /// <summary>
     /// Clip curves named after a controller parameter, played by an AnimatorControllerPlayable on an
-    /// Animator, and the once-only notice of Animation.SyncLayer. Documented (6000.0 Scripting
-    /// API): AnimatorControllerPlayable.IsParameterControlledByCurve and
-    /// Animator.IsParameterControlledByCurve return true if the parameter is controlled by a curve,
-    /// false otherwise; the playable's parameters are its controller's. That a playable's own clip
-    /// curve drives the playable's own float parameter (and not the Animator's controller's) is
-    /// read from those contracts; no Reference capture measures it, and the values the parameter
-    /// takes are Unbound's choices (unmeasured) and are marked so. Animation.SyncLayer has no 6000.0
-    /// page: its notice claims no guarantee. Created objects and graphs are destroyed in
-    /// <see cref="Dispose"/>, which also fails on unexpected warnings.
+    /// Animator, and Animation.SyncLayer. Documented (6000.0 Scripting API) and measured in
+    /// tests/projects/animrest (playablecurve.*, synclayer.*): IsParameterControlledByCurve returns
+    /// false before the playable has been bound/evaluated, true while playing and after the Animator
+    /// swaps its controller; SyncLayer synchronizes layer time and speed without an Unbound notice.
+    /// Outer graph mixing weights remain unmeasured and are marked so. Created objects and graphs
+    /// are destroyed in <see cref="Dispose"/>, which also fails on unexpected warnings.
     /// </summary>
     [Collection("Animation")]
     public class PlayableControllerParameterCurveTests : System.IDisposable
@@ -172,11 +169,12 @@ namespace UnityEngine.Tests
         {
             var animator = Character(NoParameters());
             var playable = Play(animator, SpeedCurveController(), out var g);
-            Assert.True(playable.IsParameterControlledByCurve("Speed"));
-            Assert.True(playable.IsParameterControlledByCurve(Animator.StringToHash("Speed")));
+            Assert.False(playable.IsParameterControlledByCurve("Speed"));
+            Assert.False(playable.IsParameterControlledByCurve(Animator.StringToHash("Speed")));
             g.Evaluate(0f);
             Near.Equal(0.8f, playable.GetFloat("Speed"));
             Assert.True(playable.IsParameterControlledByCurve("Speed"));
+            Assert.True(playable.IsParameterControlledByCurve(Animator.StringToHash("Speed")));
             Assert.False(animator.IsParameterControlledByCurve("Speed"));
         }
 
@@ -220,24 +218,24 @@ namespace UnityEngine.Tests
         {
             var animator = Character(null);
             var playable = Play(animator, SpeedCurveController(), out var g);
-            Assert.True(playable.IsParameterControlledByCurve("Speed"));
+            Assert.False(playable.IsParameterControlledByCurve("Speed"));
             g.Evaluate(0f);
+            Assert.True(playable.IsParameterControlledByCurve("Speed"));
             Near.Equal(0.8f, playable.GetFloat("Speed"));
             Assert.False(animator.IsParameterControlledByCurve("Speed"));
         }
 
         /// <summary>The Animator's own controller is a distinct one that also has a float Speed
         /// (but no curve of it): the playable's own clip curve still drives the playable's own
-        /// Speed (documented contract; value Unbound's choice, unmeasured). What the Animator's own
-        /// parameter does is kept as before and not asserted here. RED at 0f003eed: the playable's
-        /// Speed stays 0.5 (the curve wrote only the Animator's own Speed).</summary>
+        /// Speed (documented contract; measured in tests/projects/animrest playablecurve.*).</summary>
         [Fact]
         public void ADistinctPlayableControllerHasItsOwnParameterDriven()
         {
             var animator = Character(Locomotion());
             var playable = Play(animator, SpeedCurveController(), out var g);
-            Assert.True(playable.IsParameterControlledByCurve("Speed"));
+            Assert.False(playable.IsParameterControlledByCurve("Speed"));
             g.Evaluate(0f);
+            Assert.True(playable.IsParameterControlledByCurve("Speed"));
             Near.Equal(0.8f, playable.GetFloat("Speed"));
         }
 
@@ -304,8 +302,9 @@ namespace UnityEngine.Tests
             first.Evaluate(0f);
             first.Destroy();
             var playable = Play(animator, controller, out var g);
-            Assert.True(playable.IsParameterControlledByCurve("Speed"));
+            Assert.False(playable.IsParameterControlledByCurve("Speed"));
             g.Evaluate(0f);
+            Assert.True(playable.IsParameterControlledByCurve("Speed"));
             Near.Equal(0.8f, playable.GetFloat("Speed"));
         }
 
@@ -460,28 +459,18 @@ namespace UnityEngine.Tests
 
         // ------------------------------------------------------------------ SyncLayer notice
 
-        /// <summary>Animation.SyncLayer has no 6000.0 page and nothing measures it: every call is
-        /// counted, and the first in the process logs one notice that its semantics are unmeasured
-        /// (no documented guarantee is claimed; the behaviour is not asserted here). RED at
-        /// 0f003eed: the calls are not counted (no notice at all).</summary>
+        /// <summary>Animation.SyncLayer is measured in tests/projects/animrest (synclayer.*):
+        /// calling it logs no Unbound warning and records no Stubs.Ignored hits.</summary>
         [Fact]
-        public void SyncLayerReportsItsUnmeasuredSemanticsOnce()
+        public void SyncLayerLogsNoUnboundWarning()
         {
-            m_Expected.Add("Animation.SyncLayer");
             int before = Hits("Animation.SyncLayer");
             var animation = Keep(new GameObject("Legacy")).AddComponent<Animation>();
             animation.SyncLayer(1);
             animation.SyncLayer(1);
             animation.SyncLayer(2);
-            Assert.Equal(before + 3, Hits("Animation.SyncLayer"));
-            var notices = m_Logs.FindAll(l => l.Contains("Animation.SyncLayer"));
-            int logged = before == 0 ? 1 : 0; // an earlier call in the process logged it already
-            Assert.Equal(logged, notices.Count);
-            foreach (var notice in notices)
-            {
-                Assert.StartsWith("Warning: Unbound: Animation.SyncLayer", notice);
-                Assert.Contains("unmeasured", notice);
-            }
+            Assert.Equal(before, Hits("Animation.SyncLayer"));
+            Assert.DoesNotContain(m_Logs, l => l.Contains("Animation.SyncLayer"));
         }
     }
 }
