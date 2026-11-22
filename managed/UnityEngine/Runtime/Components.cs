@@ -139,13 +139,13 @@ namespace Unbound.Runtime
                 if (Compat.ComponentFactoryEligibilityMeasured && ReferenceEquals(dependency, null)) return null;
             }
             var c = Create(type, go);
-            go.m_Components.Add(c);
+            go.AddComponentToList(c);
             var companionType = c.AddedCompanion;
             Component companion = null;
             if (companionType != null && go.FindComponent(companionType) == null)
             {
                 companion = Create(companionType, go);
-                go.m_Components.Add(companion);
+                go.AddComponentToList(companion);
             }
             if (Compat.AudioComponentActivationMeasured)
             {

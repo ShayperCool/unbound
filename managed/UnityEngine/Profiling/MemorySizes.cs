@@ -47,9 +47,7 @@ namespace Unbound.Runtime
                 case Mesh m: return MeshSize(m);
                 case AudioClip clip: return clip.m_IsAsset ? null : AudioClipSize(clip);
                 case TextAsset text when Compat.TextAssetMemoryMeasured: return TextAssetSize(text);
-                case GameObject go:
-                    int entries = go.m_ReportComponentCapacity ? go.m_Components.Capacity : go.GetComponentCount();
-                    return GameObjectHeader + GameObjectPerComponent * entries;
+                case GameObject go: return GameObjectHeader + GameObjectPerComponent * go.ProfilerComponentSlots;
                 default: return null;
             }
         }

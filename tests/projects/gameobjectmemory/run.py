@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import inside_git_checkout, private_label, run_root  # noqa: E402
+from probe_paths import inside_git_checkout, private_label, run_root, unity_version  # noqa: E402
 import value_probe  # noqa: E402
 
 PROBE = Path(__file__).resolve().parent
@@ -25,22 +25,11 @@ def directory(label):
 
 def publish(labels):
     roots = [directory(label) for label in labels]
-    if len(roots) < 2 or len(set(roots)) != len(roots):
-        raise SystemExit('publish requires at least two distinct Editor runs')
-    launches = set()
+    value_probe.verify_sealed_value_repeats(roots)
     for root in roots:
-        capture = root/'capture'
-        name = value_probe.editor_runner.RESULT
-        files = [capture, capture/name, capture/value_probe.VALUES, root/name]
-        if any(path.resolve() != path for path in files):
-            raise SystemExit(f'{root}: capture files must stay in their run directory')
-        metadata = capture/name
-        if metadata.exists() and metadata.stat().st_nlink != 1:
-            raise SystemExit(f'{metadata}: capture metadata must have a single filesystem link')
-        launch = (root/name).read_bytes()
-        if launch in launches:
-            raise SystemExit(f'{root}: duplicate Editor launch record')
-        launches.add(launch)
+        rows = value_probe.read_values(root/'capture'/value_probe.VALUES)
+        if rows.get('unity') != unity_version():
+            raise SystemExit(f'{root}: expected Editor capture for {unity_version()}')
     return value_probe.publish(PROBE, [str(root) for root in roots])
 
 
@@ -54,12 +43,13 @@ def main():
         return publish(args.labels)
     if args.labels:
         parser.error('use --label for record and gate')
-    out = directory(args.label or private_label())
+    out = directory(private_label() if args.label is None else args.label)
     if out.exists():
         raise SystemExit(f'{out}: expected a fresh run directory')
     if args.mode == 'record':
         value_probe.record(PROBE, 'RecordGameObjectMemory.Record', CAPTURE, str(out), batch=True,
                            macos_batch=True, base=BASE)
+        value_probe.seal_value_capture(out)
         return 0
     return value_probe.gate(PROBE, CAPTURE, str(out), 0, ['--headless', '8'], base=BASE)
 

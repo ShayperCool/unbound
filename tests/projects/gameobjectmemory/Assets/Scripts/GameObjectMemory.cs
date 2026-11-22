@@ -15,12 +15,21 @@ public sealed class GameObjectMemory : MonoBehaviour
     }
 
     static readonly List<string> Rows = new List<string>();
+    static bool RecordRequiredAwake;
+
+    void Awake()
+    {
+        if (RecordRequiredAwake) Read("required.awake", gameObject);
+    }
+
+    static void Put(string key, string value)
+        => Rows.Add(JsonUtility.ToJson(new Row { k = key, v = value }));
 
     static void Read(string key, GameObject go)
     {
         int count = go.GetComponents<Component>().Length;
         long memory = Profiler.GetRuntimeMemorySizeLong(go);
-        Rows.Add(JsonUtility.ToJson(new Row { k = key, v = $"{count}/{memory}" }));
+        Put(key, $"{count}/{memory}");
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -29,6 +38,7 @@ public sealed class GameObjectMemory : MonoBehaviour
         string output = Environment.GetEnvironmentVariable("GAME_OBJECT_MEMORY_OUT");
         if (string.IsNullOrEmpty(output)) return;
 
+        Put("unity", Application.unityVersion);
         var go = new GameObject("Memory");
         Read("created", go);
         var added = new List<Component>();
@@ -63,7 +73,9 @@ public sealed class GameObjectMemory : MonoBehaviour
         }
 
         var dependencies = new GameObject("Required component");
-        Read("required", Add(dependencies, typeof(GameObjectMemory)));
+        RecordRequiredAwake = true;
+        try { Read("required", Add(dependencies, typeof(GameObjectMemory))); }
+        finally { RecordRequiredAwake = false; }
         Object.DestroyImmediate(dependencies);
         Object.DestroyImmediate(clone);
         Object.DestroyImmediate(go);

@@ -1,6 +1,6 @@
 # Component storage in a script-created GameObject
 
-Two independent Unity 6000.0.71f1 Editor runs agree on all 25 values.
+Two independent Unity 6000.0.71f1 Editor runs agree on the captured values.
 An object starts with one component slot for its Transform. Adding components
 doubles the capacity when it fills. Removing components leaves the allocation
 in place. The profiler reports 240 bytes plus 24 bytes per slot.
@@ -9,6 +9,7 @@ Cloning an object reserves exactly its live component count. A clone with
 three slots doubles to six when it gains a fourth component. The source
 keeps its own allocation. The type-list constructor and RequireComponent
 controls include the implicit Transform and any other components they add.
+The dependency case also reads the allocation from Awake.
 Scope is script-created objects and their clones. Authored scene and prefab
 lists and internal detached objects retain the prior accounting.
 

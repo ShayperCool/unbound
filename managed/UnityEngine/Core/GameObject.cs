@@ -7,9 +7,11 @@ namespace UnityEngine
 {
     public sealed partial class GameObject : Object
     {
-        internal const int DefaultComponentCapacity = 4;
-        internal readonly List<Component> m_Components;
-        internal bool m_ReportComponentCapacity;
+        internal readonly List<Component> m_Components = new List<Component>(4);
+        // The Unity component-list allocation grows independently of the managed list's capacity.
+        // Zero means this object's construction path was not measured (gameobjectmemory).
+        internal int m_ProfilerComponentCapacity;
+        internal int ProfilerComponentSlots => m_ProfilerComponentCapacity != 0 ? m_ProfilerComponentCapacity : m_Components.Count;
         internal Transform m_Transform;
         /// <summary>Creation order for the existing application callback traversal, independent
         /// of the public instance ID and retained when the source scene is unloaded.</summary>
@@ -29,23 +31,26 @@ namespace UnityEngine
         /// <summary>A GameObject of an asset (a prefab's contents): never awake, never in a scene.</summary>
         internal bool m_IsPrefabAsset;
 
-        public GameObject(string name) : this(name, null) { }
+        public GameObject(string name)
+        {
+            m_Name = name ?? "";
+            Internal_Create(this, null);
+        }
 
-        public GameObject() : this("New Game Object") { }
+        public GameObject() : this("New Game Object")
+        {
+        }
 
         public GameObject(string name, params Type[] components)
-            : this(name, bare: true, componentCapacity: Compat.GameObjectComponentMemoryMeasured ? 1 : DefaultComponentCapacity)
         {
+            m_Name = name ?? "";
             Internal_Create(this, components);
         }
 
         /// <summary>Used by loaders that add the transform themselves.</summary>
-        internal GameObject(string name, bool bare) : this(name, bare, DefaultComponentCapacity) { }
-
-        internal GameObject(string name, bool bare, int componentCapacity)
+        internal GameObject(string name, bool bare)
         {
             m_Name = name ?? "";
-            m_Components = new List<Component>(componentCapacity);
         }
 
         /// <summary>A hidden object the engine keeps for its own work (a capture camera): it is in
@@ -76,7 +81,8 @@ namespace UnityEngine
             // During a Single load's teardown this is the incoming scene, not the active one, and
             // it is set before any component wakes up.
             go.m_Scene = (scene ?? SceneRegistry.DefaultCreationScene()).Handle;
-            go.m_ReportComponentCapacity = scene == null && Compat.GameObjectComponentMemoryMeasured;
+            if (scene == null && Compat.GameObjectComponentMemoryMeasured)
+                go.m_ProfilerComponentCapacity = 1;
             go.AddTransform(typeof(Transform));
             // Its Transform's added-component message is refused inside OnValidate (Unity
             // 6000.0.71f1, tests/projects/gameinterop hier.validate_add).
@@ -473,6 +479,13 @@ namespace UnityEngine
             var list = new List<Component>();
             ComponentQueries.AllInParent(this, typeof(T), includeInactive, list);
             foreach (var c in list) results.Add((T)(object)c);
+        }
+
+        internal void AddComponentToList(Component component)
+        {
+            m_Components.Add(component);
+            if (m_ProfilerComponentCapacity != 0 && m_Components.Count > m_ProfilerComponentCapacity)
+                m_ProfilerComponentCapacity = Math.Max(m_Components.Count, m_ProfilerComponentCapacity * 2);
         }
 
         public int GetComponentCount() => m_Components.Count;

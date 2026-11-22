@@ -46,6 +46,7 @@ reason and does not fail the gate; one that matches again is printed as resolved
 Every other difference fails.
 """
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -291,6 +292,48 @@ def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=N
     if problem:
         raise SystemExit(f'{out}: {problem}')
     print('captured', capture)
+
+
+def value_capture_fingerprints(root):
+    """Hashes the launch and payload of a value-only capture inside its private run."""
+    root = Path(root)
+    capture = root/'capture'
+    name = editor_runner.RESULT
+    values, launch = capture/VALUES, root/name
+    paths = (capture, capture/name, values, launch, root/'capture.sha256')
+    if any(path.resolve() != path for path in paths):
+        raise SystemExit(f'{root}: capture files must stay in their run directory')
+    if images(capture):
+        raise SystemExit(f'{root}: sealed value-only captures cannot contain screenshots')
+    for path in paths[1:]:
+        if path.exists() and path.stat().st_nlink != 1:
+            raise SystemExit(f'{path}: capture file must have a single filesystem link')
+    return [hashlib.sha256(path.read_bytes()).hexdigest() for path in (launch, values)]
+
+
+def seal_value_capture(root):
+    """Binds the values to the completed launch before authoring may publish them."""
+    fingerprints = value_capture_fingerprints(root)
+    with (root/'capture.sha256').open('x') as seal:
+        seal.write('\n'.join(fingerprints) + '\n')
+
+
+def verify_sealed_value_repeats(roots):
+    """Checks distinct launch records and intact payloads for a values-only probe."""
+    if len(roots) < 2 or len(set(roots)) != len(roots):
+        raise SystemExit('publish requires at least two distinct Editor runs')
+    launches = set()
+    for root in roots:
+        try:
+            fingerprints = value_capture_fingerprints(root)
+            if fingerprints != (root/'capture.sha256').read_text().splitlines():
+                raise SystemExit(f'{root}: captured values or launch metadata changed after recording')
+        except OSError as error:
+            raise SystemExit(f'{root}: missing or invalid Editor record: {error}') from error
+        launch = fingerprints[0]
+        if launch in launches:
+            raise SystemExit(f'{root}: duplicate Editor launch record')
+        launches.add(launch)
 
 
 def publish(probe, labels, space=None, device=None, *, profile=None):
