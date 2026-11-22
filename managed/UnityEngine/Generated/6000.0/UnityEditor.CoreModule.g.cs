@@ -21829,68 +21829,19 @@ namespace UnityEditor
     unsafe partial class SceneVisibilityManager
     {
         [global::Unbound.Stub] internal static void StageNavigationManagerAfterSuccessfullySwitchedToStage(global::UnityEditor.SceneManagement.Stage newStage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.StageNavigationManagerAfterSuccessfullySwitchedToStage"); }
-        [global::Unbound.Stub] public void HideAll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.HideAll"); }
-        [global::Unbound.Stub] public void DisableAllPicking() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.DisableAllPicking"); }
-        [global::Unbound.Stub] public void DisablePicking(global::UnityEngine.GameObject gameObject, bool includeDescendants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.DisablePicking"); }
-        [global::Unbound.Stub] public void EnablePicking(global::UnityEngine.GameObject gameObject, bool includeDescendants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.EnablePicking"); }
         [global::Unbound.Stub] internal static void ShowAllShortcut() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.ShowAllShortcut"); }
-        [global::Unbound.Stub] public void ShowAll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.ShowAll"); }
-        [global::Unbound.Stub] public void EnableAllPicking() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.EnableAllPicking"); }
-        [global::Unbound.Stub] public void Show(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.Show"); }
-        [global::Unbound.Stub] public void EnablePicking(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.EnablePicking"); }
         [global::Unbound.Stub] internal void DisablePickingNoUndo(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.DisablePickingNoUndo"); }
-        [global::Unbound.Stub] public void Hide(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.Hide"); }
-        [global::Unbound.Stub] public void DisablePicking(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.DisablePicking"); }
-        [global::Unbound.Stub] public bool IsHidden(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.IsHidden"); return default; }
-        [global::Unbound.Stub] public bool IsPickingDisabled(global::UnityEngine.GameObject gameObject, bool includeDescendants = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.IsPickingDisabled"); return default; }
-        [global::Unbound.Stub] internal bool IsSelectable(global::UnityEngine.GameObject go) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.IsSelectable"); return default; }
-        [global::Unbound.Stub] internal bool IsSelectable(global::UnityEngine.GameObject go, bool includeDescendants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.IsSelectable"); return default; }
-        [global::Unbound.Stub] public bool IsPickingDisabled(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.IsPickingDisabled"); return default; }
-        [global::Unbound.Stub] public bool AreAllDescendantsHidden(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.AreAllDescendantsHidden"); return default; }
-        [global::Unbound.Stub] public bool IsPickingDisabledOnAllDescendants(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.IsPickingDisabledOnAllDescendants"); return default; }
-        [global::Unbound.Stub] public bool IsPickingDisabledOnAnyDescendant(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.IsPickingDisabledOnAnyDescendant"); return default; }
-        [global::Unbound.Stub] internal global::UnityEditor.SceneVisibilityManager.SceneVisState GetSceneVisibilityState(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.GetSceneVisibilityState"); return default; }
-        [global::Unbound.Stub] internal global::UnityEditor.SceneVisibilityManager.ScenePickingState GetScenePickingState(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.GetScenePickingState"); return default; }
-        [global::Unbound.Stub] public void DisablePicking(global::UnityEngine.GameObject[] gameObjects, bool includeDescendants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.DisablePicking"); }
-        [global::Unbound.Stub] public void EnablePicking(global::UnityEngine.GameObject[] gameObjects, bool includeDescendants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.EnablePicking"); }
-        [global::Unbound.Stub] public void Isolate(global::UnityEngine.GameObject gameObject, bool includeDescendants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.Isolate"); }
-        [global::Unbound.Stub] public void Isolate(global::UnityEngine.GameObject[] gameObjects, bool includeDescendants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.Isolate"); }
-        [global::Unbound.Stub] public void ToggleVisibility(global::UnityEngine.GameObject gameObject, bool includeDescendants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.ToggleVisibility"); }
-        [global::Unbound.Stub] public void TogglePicking(global::UnityEngine.GameObject gameObject, bool includeDescendants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.TogglePicking"); }
-        [global::Unbound.Stub] public bool AreAllDescendantsHidden(global::UnityEngine.GameObject gameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.AreAllDescendantsHidden"); return default; }
-        [global::Unbound.Stub] public bool AreAllDescendantsVisible(global::UnityEngine.GameObject gameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.AreAllDescendantsVisible"); return default; }
-        [global::Unbound.Stub] public bool IsPickingDisabledOnAllDescendants(global::UnityEngine.GameObject gameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.IsPickingDisabledOnAllDescendants"); return default; }
-        [global::Unbound.Stub] public bool IsPickingEnabledOnAllDescendants(global::UnityEngine.GameObject gameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.IsPickingEnabledOnAllDescendants"); return default; }
-        [global::Unbound.Stub] public bool IsCurrentStageIsolated() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.IsCurrentStageIsolated"); return default; }
-        [global::Unbound.Stub] public void ExitIsolation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.ExitIsolation"); }
         [global::Unbound.Stub] internal static void ToggleSelectionVisibility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.ToggleSelectionVisibility"); }
         [global::Unbound.Stub] internal static void ToggleSelectionPickable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.ToggleSelectionPickable"); }
         [global::Unbound.Stub] internal void ToggleIsolateSelectionAndDescendants() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.ToggleIsolateSelectionAndDescendants"); }
         [global::Unbound.Stub] internal static void ToggleIsolateSelectionShortcut() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.ToggleIsolateSelectionShortcut"); }
         [global::Unbound.Stub] internal void ToggleIsolateSelection() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.ToggleIsolateSelection"); }
         [global::Unbound.Stub] internal void ToggleScene(global::UnityEngine.SceneManagement.Scene scene, global::UnityEditor.SceneVisibilityManager.SceneVisState visibilityState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.ToggleScene"); }
-        internal bool enableSceneVisibility { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.enableSceneVisibility"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.enableSceneVisibility"); } }
-        internal bool enableScenePicking { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.enableScenePicking"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.enableScenePicking"); } }
-        public static event global::System.Action visibilityChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.visibilityChanged"); } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action pickingChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.pickingChanged"); } [global::Unbound.Stub] remove { } }
-        internal static event global::System.Action<bool> currentStageIsIsolated { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.currentStageIsIsolated"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         internal unsafe partial class ShortcutContext : global::UnityEditor.ShortcutManagement.IShortcutContext
         {
             [global::Unbound.Stub] public ShortcutContext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.ShortcutContext.ctor"); }
             public bool active { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneVisibilityManager.ShortcutContext.active"); return default; } }
-        }
-        internal enum SceneVisState
-        {
-            AllHidden = 0,
-            AllVisible = 1,
-            Mixed = 2,
-        }
-        internal enum ScenePickingState
-        {
-            PickingDisabledAll = 0,
-            PickingEnabledAll = 1,
-            Mixed = 2,
         }
     }
     [global::Unbound.Stub]
