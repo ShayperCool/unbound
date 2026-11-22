@@ -87,7 +87,7 @@ file the run added, changed or removed.
 - `modification-timing` (Edit Mode, `ModificationTimingTests`): when a prefab instance's property
   modifications (`PrefabUtility.GetPropertyModifications`) take a change made by script: a
   Transform's position and a script field set directly, then after a frame, after
-  `RecordPrefabInstancePropertyModifications`, after `EditorUtility.SetDirty`, after
+  `RecordPrefabInstancePropertyModifications` (also before any frame), after `EditorUtility.SetDirty`, after
   `Undo.RecordObject` before the change (then `Undo.FlushUndoRecordObjects`), through a
   `SerializedObject`, and around a scene save. Recorded in the Linux Editor (batch mode, no
   graphics: two identical captures).

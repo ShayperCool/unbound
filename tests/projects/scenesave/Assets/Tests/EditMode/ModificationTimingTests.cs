@@ -11,7 +11,8 @@ using Object = UnityEngine.Object;
 /// <summary>
 /// Edit mode: when a prefab instance's property modifications take a change made by script: a
 /// Transform's position and a script field set directly, then after a frame, after
-/// RecordPrefabInstancePropertyModifications, after EditorUtility.SetDirty, after Undo.RecordObject
+/// RecordPrefabInstancePropertyModifications (after the frame and, on other instances, before any),
+/// after EditorUtility.SetDirty, after Undo.RecordObject
 /// before the change, after a change through SerializedObject, and after the scene is saved. Each
 /// row lists the instance's modifications of the changed property.
 /// </summary>
@@ -54,6 +55,17 @@ public class ModificationTimingTests
         ProbeLog.Row("script.frame", Mods(counted, "count"));
         PrefabUtility.RecordPrefabInstancePropertyModifications(holder);
         ProbeLog.Row("script.recorded", Mods(counted, "count"));
+
+        // Recorded before any frame passes.
+        var recordedMove = Instance();
+        recordedMove.transform.localPosition = new Vector3(6f, 0f, 0f);
+        PrefabUtility.RecordPrefabInstancePropertyModifications(recordedMove.transform);
+        ProbeLog.Row("transformRecord.direct", Mods(recordedMove, "m_LocalPosition.x"));
+        var recordedCount = Instance();
+        var recordedHolder = recordedCount.GetComponent<Holder>();
+        recordedHolder.count = 8;
+        PrefabUtility.RecordPrefabInstancePropertyModifications(recordedHolder);
+        ProbeLog.Row("scriptRecord.direct", Mods(recordedCount, "count"));
 
         var dirtied = Instance();
         dirtied.transform.localPosition = new Vector3(2f, 0f, 0f);
