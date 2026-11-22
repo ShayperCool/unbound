@@ -13,8 +13,9 @@ using UnityEngine.SceneManagement;
 /// under a system with maxCollisionShapes 1; two equal boxes at the same place; a system and its box
 /// in a local physics scene, and a system there over a box of the main scene; 2D boxes merged by a
 /// CompositeCollider2D (outlines and polygons). <c>force/rules/*</c>: colliderForce on free
-/// Rigidbodies (as <c>force/*</c>) with a negative force and the size multiplier at another radius
-/// scale and a non-uniform 3D start size.
+/// Rigidbodies (as <c>force/*</c>) with a negative force, the size multiplier at another radius
+/// scale and a non-uniform 3D start size, and the angle multiplier for particles starting inside the
+/// body. Low quality over Dynamic and Kinematic bodies comes last.
 /// </summary>
 public partial class ParticleRenderProbe
 {
@@ -174,6 +175,29 @@ public partial class ParticleRenderProbe
                 Target(key + "/box", ps, box);
             }
         }
+        // Low quality (it queries every fifth frame) over Dynamic and Kinematic bodies.
+        foreach (bool twoD in new[] { false, true })
+            foreach (bool kinematic in new[] { false, true })
+            {
+                string d = twoD ? "2d" : "3d";
+                var at = Next();
+                var key = "collide/rules/" + d + "/low_" + (kinematic ? "kinematic" : "dynamic");
+                var ps = System(key, at, twoD, ParticleSystemCollisionQuality.Low);
+                var box = RuleBox(at + new Vector3(0f, -0.5f, 0f), twoD, key + "/box");
+                if (twoD)
+                {
+                    var body = box.AddComponent<Rigidbody2D>();
+                    body.gravityScale = 0f;
+                    body.bodyType = kinematic ? RigidbodyType2D.Kinematic : RigidbodyType2D.Dynamic;
+                }
+                else
+                {
+                    var body = box.AddComponent<Rigidbody>();
+                    body.useGravity = false;
+                    body.isKinematic = kinematic;
+                }
+                Target(key + "/box", ps, box);
+            }
         Physics.SyncTransforms();
         Physics2D.SyncTransforms();
         foreach (var (_, ps, _) in controls) ps.Play();
@@ -197,15 +221,18 @@ public partial class ParticleRenderProbe
     IEnumerator ColliderForceRules()
     {
         Time.captureDeltaTime = 1f / 20f;
-        var cases = new[] { ("negative", -2f, false, 1f), ("size_radius", 2f, false, 0.5f), ("size_3d", 2f, true, 1f) };
+        var cases = new[] { ("negative", -2f, false, 1f), ("size_radius", 2f, false, 0.5f), ("size_3d", 2f, true, 1f), ("angle_inside", 2f, false, 1f) };
         var bodies = new List<(string, Rigidbody, ParticleSystem)>();
         int slot = 0;
         foreach (var (name, force, size3D, radiusScale) in cases)
         {
             var origin = new Vector3(30f + 6f * slot++, 0f, 40f);
+            bool inside = name == "angle_inside";
             var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
             box.name = "force/rules/" + name + "/body";
-            box.transform.position = origin + new Vector3(0f, 0f, 3f);
+            // angle_inside: the particles start inside the body, nearer its front face (z -0.15)
+            // than the back one they move to (z 0.35).
+            box.transform.position = origin + new Vector3(0f, 0f, inside ? 0.1f : 3f);
             box.transform.localScale = new Vector3(2f, 2f, 0.5f);
             var body = box.AddComponent<Rigidbody>();
             body.useGravity = false;
@@ -226,7 +253,8 @@ public partial class ParticleRenderProbe
                 var c = s.collision; c.enabled = true; c.type = ParticleSystemCollisionType.World; c.mode = ParticleSystemCollisionMode.Collision3D;
                 c.bounce = 0f; c.lifetimeLoss = 1f; c.dampen = 0f; c.radiusScale = radiusScale; c.quality = ParticleSystemCollisionQuality.High;
                 c.colliderForce = force;
-                c.multiplyColliderForceByParticleSize = force > 0f;
+                c.multiplyColliderForceByParticleSize = force > 0f && !inside;
+                c.multiplyColliderForceByCollisionAngle = inside;
             });
             ps.transform.position = origin;
             bodies.Add(("force/rules/" + name, body, ps));
