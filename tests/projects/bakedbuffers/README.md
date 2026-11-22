@@ -60,6 +60,27 @@ a ground, a cube and a sphere, and lights with hard shadows:
   bulb and a realtime spot, in each Lighting Mode. Mixed lights' direct light is in the lightmap
   in Subtractive mode alone; the realtime light is not of the bake.
 
+The scenes of indirect light have no sky and no ambient light either, materials of their own
+(`Assets/Scenes/*.mat`, Standard shader) and 16 Direct Samples:
+
+- `Bounce`, `BounceFar`, `BounceMany`, `BounceFew`, `BouncePoint` (4, 128): a grey ground, a
+  white cube, a blue sphere and a red wall under a sun with Indirect Multiplier 1.5: one bounce
+  of 64 Indirect Samples; four bounces (Min Bounces 2: paths end by chance from the second
+  surface on); two bounces of 512 samples with Min Bounces 1; 10 samples asked for (a texel
+  takes 8); and two bounces of one point light's (off whole coordinates, as the lamp in the
+  sphere above).
+- `Glow`: no light but emission: a lamp facing down with an emission map and an HDR colour,
+  and panels whose materials are flagged BakedEmissive, RealtimeEmissive alone (it lights the
+  baked lightmaps too), EmissiveIsBlack and with no flag (neither does).
+- `Roof`: surfaces met from behind: a roof whose back faces the ground (the ground's rays
+  that meet it bring nothing and count in `validity`), one with Double Sided Global
+  Illumination, and a mirrored cube.
+- `Textured`: Albedo Boost 2 and materials with textures: a rough ground with a ramp, a cube
+  with a tiled checker, a metal sphere, a smooth wall.
+- `Levels` (300, 512): a strip whose albedo image runs through every 8-bit level the bake can
+  get (0 to 252: albedo is capped at 0.97): the linear value of each
+  (`crates/unbound-gi/src/baked/levels.rs`).
+
 ## Capture and comparison
 
 `Assets/Editor/BuffersRecord.cs` opens each scene and bakes it. In the Editor
@@ -81,15 +102,20 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
   per side: the interpolated world normal, and the instance's place in the lightmap plus the
   triangle's number in its submesh; (0, 0, 0, -1000000) without a surface) and
   `irradianceDirect<N>.r2d` (per texel the direct light's red, green and blue, and 1 for a used
-  texel) as the Editor wrote them.
+  texel), `irradianceIndirect<N>.r2d` (the same of the indirect light) and `validity<N>.r2d`
+  (per texel the part of its rays that met a back face first) as the Editor wrote them;
+- `materials.json`, each instance's albedo and emission images as the bake input has them
+  (size and texels, rows from the first), in the bake's order.
 
 Two captures make the reference (`bake_buffers.py publish`): their files byte-identical, but for
 the buffers of light, which the Editor sums in an order that varies from bake to bake (repeats
 differ in the last bits, up to 4e-7 here): those have the same used texels and values within
-2e-6 (times the value above 1), and the first capture's is kept. Publishing adds what is new and
-refuses to change what the reference has.
+2e-6 (times the value above 1), the indirect light's within 1e-5 (sums of up to 512 samples of
+several bounces: 3e-6 is the worst seen, in `BounceMany`), and the first capture's is kept.
+Publishing adds what is new and refuses to change what the reference has.
 
-Unbound's bake (`Lightmapping.Bake`, `bake_buffers.py engine`) writes the same buffers of its own
+Unbound's bake (`Lightmapping.Bake`, `bake_buffers.py engine`: `unbound test --graphics`, a
+session with a graphics device, which the materials' images need) writes the same buffers of its own
 where `UNBOUND_BAKED_GI_BUFFERS` says and its layout to
 `Library/Unbound/BakedGI/<scene GUID>/atlas.json`. `bake_buffers.py check` compares exactly: the
 bake's result, the logged messages (of Unbound's, those that are not its own notes of what its
@@ -101,18 +127,36 @@ into world space in an order of operations Unbound does not repeat). Of each lig
 Unbound's bake takes (colour, indirect colour, position, orientation, range, cone angle) are
 compared within 2e-6 relative. A texel's direct light is compared within 1e-4 (times the value
 above 1): last-bit differences of 32-bit arithmetic are multiplied by a narrow spot cone's falloff
-(the worst here is 2.5e-5, in `Lamps`); the used texels are compared exactly.
+(the worst here is 2.5e-5, in `Lamps`); the used texels are compared exactly. A texel's indirect
+light is compared within 1e-3 likewise (Unbound sends the Editor's rays; with the Editor's own
+bake input the worst texel is within 3e-4), its validity within 1e-6 (a count over its rays),
+and every texel of every instance's material images within 1e-6, with the images' sizes.
+
+`residuals.json` names the known differences, each with the exact text the comparison gives it
+(another text, or none, fails the run):
+
+- `Lamps` indirect light: several point and spot lights reach a surface; the Editor takes at
+  most four of them there (fewer at later bounces), picked by their power, Unbound all of them.
+- One texel of `Roof`'s indirect light and one of `Glow`'s validity: a single ray that meets a
+  triangle exactly on its edge falls on the other side of it than in the Editor.
 
 `bake_buffers.py replay <capture>` is a development check of the baker's core alone: it feeds a
 capture's own bake input (kept in the run folder, not in Git: meshes, placements, shadow casters,
 lights, Lighting Mode and pushoff) to the `cargo run -p unbound-gi --example baked_gbuffer` tool
 and compares its used texels, charts, samples and direct light with the capture's.
 
-Not baked by Unbound yet (said, each once per scene): area lights, light cookies, soft baked
+Not baked by Unbound yet: the environment's light, ambient occlusion, directionality and the
+shadowmask; without a graphics device, the indirect light (said). Not baked (said, each once per
+scene): area lights, light cookies, soft baked
 shadows (a Baked Shadow Angle or Radius: baked hard), lights whose intensity multiplies their
 linear colour (GraphicsSettings.lightsUseLinearIntensity), the levels of LOD Groups (their
 renderers take and stop light like any other; the Editor's rays tell the levels apart). Not done
 and not said: materials that let light through stop it.
+
+Not measured, of the indirect light: materials that let light through (they stop it), LOD
+Groups, a material flagged both emissive and black, shaders without a meta pass (said; the
+renderer adds no albedo or emission), meshes without lightmap UVs, textured renderers that have
+no lightmap, the light grid's pick among several point and spot lights (see the residuals).
 
 Not measured: Direct Samples that are no power of two or fewer than a texel's samples (Unbound
 takes the mean of a texel's samples whatever the count), gamma colour

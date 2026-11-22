@@ -471,6 +471,8 @@ lightmap UVs. Unbound's model of how they are made and read (`Graphics/RealtimeG
 Editor's but for the residuals below, which do not come from the materials (the clusters' albedo
 equals the Editor's):
 
+- (The drawing is `Graphics/GIMaterialImages.cs`, which the bake of baked lightmaps shares: it
+  draws each renderer alone, over the bounds of its baked lightmap UVs.)
 - Each renderer is drawn with `unity_LightmapST` and `unity_DynamicLightmapST` set to its scale
   and offset within the system (the scene mapping's `dynamicLightmapSTInSystem`),
   `unity_MetaVertexControl` (0, 1, 0, 0), `unity_MetaFragmentControl` (1, 0, 0, 0) for albedo and
@@ -1083,12 +1085,13 @@ precomputed data is not made: said once, and `lightingDataAsset` stays null), an
 lightmaps and baked probes of a scene with baked global illumination (Q677; Unbound lays out
 where its lightmaps would go, `tests/projects/bakedatlas`, and writes the layout to
 `Library/Unbound/BakedGI`; it can rasterize each lightmap's texels and gather their direct
-light as the Editor does, `tests/projects/bakedbuffers`, but does not make the lightmaps yet),
+and, from the renderers' albedo and emission images, their indirect light as the Editor does,
+`tests/projects/bakedbuffers`, but does not make the lightmaps yet),
 the environment
 lighting from a sky and baked reflection probes are not made (each said once). Renderers a
 script added to the scene after it loaded are not baked (named). The records of the asset and
-the Editor's log are reported, not gated. (`unbound test` runs without a graphics device, where
-realtime GI is baked but never drawn.) Not measured: several open scenes (Unbound bakes them
+the Editor's log are reported, not gated. (`unbound test` runs without a graphics device unless
+`--graphics` is given; without one realtime GI is baked but never drawn.) Not measured: several open scenes (Unbound bakes them
 one by one as they would load), a scene with Editor lighting data baked again (Unbound bakes
 its realtime GI anew; in Edit mode the scene keeps the rest of that data, its baked lightmaps
 and environment, until it loads again, when the script's bake replaces it all), and
