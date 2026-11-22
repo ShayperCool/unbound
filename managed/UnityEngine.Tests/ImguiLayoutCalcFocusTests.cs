@@ -407,6 +407,92 @@ namespace UnityEngine.Tests
             Assert.Equal(120f, scroll.calcMaxHeight);
         }
 
+        static GUIScrollGroup NewScrollGroup(params GUILayoutOption[] options)
+        {
+            var scroll = new GUIScrollGroup
+            {
+                isVertical = true,
+                verticalScrollbar = new GUIStyle { fixedWidth = 15f },
+                horizontalScrollbar = new GUIStyle { fixedHeight = 15f },
+            };
+            scroll.ApplyOptions(options);
+            return scroll;
+        }
+
+        static void Arrange(GUILayoutGroup group, float width, float height)
+        {
+            group.CalcWidth();
+            group.SetHorizontal(0f, width);
+            group.CalcHeight();
+            group.SetVertical(0f, height);
+        }
+
+        [Fact]
+        public void ScrollViewWithMaximumSizeDoesNotTakeItsParentsExtraSpace()
+        {
+            var stretchBoth = new GUIStyle { stretchWidth = true, stretchHeight = true };
+
+            // A view limited to 200 wide in a 400 wide column keeps 200; its stretching content fills it.
+            var column = new GUILayoutGroup { isVertical = true };
+            var maxWidthView = NewScrollGroup(GUILayout.MaxWidth(200f));
+            var content = new GUILayoutEntry(40f, 40f, 20f, 20f, stretchBoth);
+            maxWidthView.Add(content);
+            column.Add(maxWidthView);
+            Arrange(column, 400f, 300f);
+            Assert.Equal(0, maxWidthView.stretchWidth);
+            Assert.Equal(200f, maxWidthView.rect.width);
+            Assert.Equal(200f, content.rect.width);
+            // The height has no maximum: the view still takes the column's height.
+            Assert.Equal(300f, maxWidthView.rect.height);
+
+            // The same for the height, in a row.
+            var row = new GUILayoutGroup { isVertical = false };
+            var maxHeightView = NewScrollGroup(GUILayout.MaxHeight(120f));
+            var tall = new GUILayoutEntry(40f, 40f, 20f, 20f, stretchBoth);
+            maxHeightView.Add(tall);
+            row.Add(maxHeightView);
+            Arrange(row, 200f, 400f);
+            Assert.Equal(0, maxHeightView.stretchHeight);
+            Assert.Equal(120f, maxHeightView.rect.height);
+            Assert.Equal(120f, tall.rect.height);
+            Assert.Equal(200f, maxHeightView.rect.width);
+
+            // Control: without a maximum the view takes all of its parent.
+            var freeColumn = new GUILayoutGroup { isVertical = true };
+            var freeView = NewScrollGroup();
+            freeView.Add(new GUILayoutEntry(40f, 40f, 20f, 20f, stretchBoth));
+            freeColumn.Add(freeView);
+            Arrange(freeColumn, 400f, 300f);
+            Assert.Equal(400f, freeView.rect.width);
+            Assert.Equal(300f, freeView.rect.height);
+
+            // The maximum bounds the view, not what scrolls inside it: content wider than the
+            // maximum keeps its width and the view shows a horizontal scrollbar.
+            var narrowColumn = new GUILayoutGroup { isVertical = true };
+            var narrowView = NewScrollGroup(GUILayout.MinWidth(100f), GUILayout.MaxWidth(200f));
+            var wide = new GUILayoutEntry(300f, 300f, 20f, 20f, stretchBoth);
+            narrowView.Add(wide);
+            narrowColumn.Add(narrowView);
+            Arrange(narrowColumn, 400f, 300f);
+            Assert.Equal(200f, narrowView.rect.width);
+            Assert.True(narrowView.needsHorizontalScrollbar);
+            Assert.Equal(300f, wide.rect.width);
+
+            // A row of stretching entries inside a limited view still shares the view's width.
+            var rowView = NewScrollGroup(GUILayout.MaxWidth(200f));
+            rowView.isVertical = false;
+            var left = new GUILayoutEntry(20f, 20f, 20f, 20f, stretchBoth);
+            var right = new GUILayoutEntry(20f, 20f, 20f, 20f, stretchBoth);
+            rowView.Add(left);
+            rowView.Add(right);
+            var rowColumn = new GUILayoutGroup { isVertical = true };
+            rowColumn.Add(rowView);
+            Arrange(rowColumn, 400f, 300f);
+            Assert.Equal(200f, rowView.rect.width);
+            Assert.Equal(100f, left.rect.width);
+            Assert.Equal(100f, right.rect.width);
+        }
+
         sealed class DynamicHeightEntry : GUILayoutEntry
         {
             public float CurrentHeight;

@@ -681,7 +681,9 @@ namespace UnityEngine
 
     /// <summary>
     /// A scroll view's group: it may be smaller than its content, which is laid out at its full size
-    /// in the client area (less the scrollbars it needs).
+    /// in the client area (less the scrollbars it needs). In a scrolling direction its own minimum
+    /// and maximum options bound the view, not the content: a given maximum also stops the view
+    /// from taking its parent's extra space, while the content keeps stretching inside it.
     /// </summary>
     internal sealed partial class GUIScrollGroup : GUILayoutGroup
     {
@@ -715,7 +717,7 @@ namespace UnityEngine
                 if (max != 0f)
                 {
                     maxWidth = max;
-                    m_StretchableCountX = 0;
+                    stretchWidth = 0;
                 }
             }
         }
@@ -769,7 +771,7 @@ namespace UnityEngine
                 if (max != 0f)
                 {
                     maxHeight = max;
-                    m_StretchableCountY = 0;
+                    stretchHeight = 0;
                 }
             }
         }
