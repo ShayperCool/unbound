@@ -1,0 +1,14 @@
+{
+  "case": "controller-assets",
+  "exit": 0,
+  "changed": [
+    "Assets/Controllers/Basic.controller",
+    "Assets/Controllers/Basic.controller.meta",
+    "Assets/Controllers/Layered.controller",
+    "Assets/Controllers/Layered.controller.meta",
+    "Assets/Controllers/WithClip.controller",
+    "Assets/Controllers/WithClip.controller.meta",
+    "Assets/Controllers.meta"
+  ],
+  "removed": []
+}

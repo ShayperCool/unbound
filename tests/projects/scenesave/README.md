@@ -77,6 +77,12 @@ file the run added, changed or removed.
   `AnimationUtility.SetEditorCurve`, material properties, clip settings or events set after `SetCurve`, an empty clip;
   each with the curve bindings `AnimationUtility` lists. Recorded in the Linux Editor (batch mode,
   no graphics: two identical captures).
+- `controller-assets` (Edit Mode, `ControllerAssetTests`): animator controllers made through the
+  Editor's controller API: the file `CreateAnimatorControllerAtPath` writes at once, the file after
+  edits (parameters, a second layer, states with clips, the default state, transitions with
+  conditions from a state, Any State and Entry and to Exit, a sub-state machine, a blend tree)
+  before and after `SaveAssets`, and a controller made with a clip. Recorded in the Linux Editor
+  (batch mode, no graphics: two identical captures).
 - `play-nosave`, `play-save` (Play Mode, `SavePlayTests.NoSave` and `.Save`, each alone): assets
   edited in Play mode, left unsaved or saved by `AssetDatabase.SaveAssets` there; scene saves and
   `MarkSceneDirty` in Play mode.
