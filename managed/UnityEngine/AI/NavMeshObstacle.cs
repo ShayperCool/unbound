@@ -369,7 +369,8 @@ namespace Unbound.Runtime
             : b.ExtentSq.CompareTo(a.ExtentSq);
 
         /// <summary>The holes added or removed by this carving update (reused).</summary>
-        static readonly List<(NavMeshCarving.Footprint Hole, bool Added)> s_Changed = new();
+        static readonly List<NavMeshCarving.Footprint> s_Removed = new();
+        static readonly HashSet<NavMeshCarving.Footprint> s_Added = new();
 
         /// <summary>The holes in the NavMesh now.</summary>
         internal static IReadOnlyList<NavMeshCarving.Footprint> Holes => s_Holes;
@@ -414,7 +415,8 @@ namespace Unbound.Runtime
         internal static void ApplyCarving()
         {
             if (s_Carves.Count == 0 && s_Obstacles.Count == 0) return;
-            s_Changed.Clear();
+            s_Removed.Clear();
+            s_Added.Clear();
             s_Gone.Clear();
             foreach (var pair in s_Carves)
             {
@@ -423,8 +425,8 @@ namespace Unbound.Runtime
                 {
                     if (!ReferenceEquals(c.Applied, c.Next))
                     {
-                        if (c.Applied != null) s_Changed.Add((c.Applied, false));
-                        if (c.Next != null) s_Changed.Add((c.Next, true));
+                        if (c.Applied != null) s_Removed.Add(c.Applied);
+                        if (c.Next != null) s_Added.Add(c.Next);
                     }
                     c.Applied = c.Next;
                     c.Pending = false;
@@ -432,7 +434,7 @@ namespace Unbound.Runtime
                 if (c.Applied == null && !Carving(pair.Key)) s_Gone.Add(pair.Key);
             }
             foreach (var gone in s_Gone) s_Carves.Remove(gone);
-            if (s_Changed.Count > 0)
+            if (s_Removed.Count != 0 || s_Added.Count != 0)
             {
                 s_Holes.Clear();
                 foreach (var c in s_Carves.Values)
@@ -441,7 +443,7 @@ namespace Unbound.Runtime
                 // place (Unity's order: holes overlapping in one polygon split it accordingly).
                 s_Holes.Sort(s_HoleOrder);
                 // Cut the affected tiles so agents see the changed mesh in this frame's update.
-                NavWorld.HolesChanged(s_Changed);
+                NavWorld.HolesChanged(s_Removed, s_Added);
             }
         }
 

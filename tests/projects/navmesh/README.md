@@ -220,13 +220,15 @@ Editor runs the agent follows the same remaining route, with the same reported
 corners, steering, velocity, and remaining distance. The hole that disappears
 lies behind the agent on a tile its corridor still uses. In a third run a
 new hole appears on a distant tile in the same update. Its open-ground sample
-changes and the blocked agent retains its route.
+changes and the blocked agent retains its route. In a fourth run the new
+obstacle sits directly above the removed hole, too high to cut the ground.
+The reported ground and route match the removal run in every frame.
 
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navmesh/carving_route.py editor --label L
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navmesh/carving_route.py publish --label L
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 UNBOUND_CLI=.../unbound python3 tests/projects/navmesh/carving_route.py gate
 
-Two independent GPU Editor captures for each setting agree on all 2,369
+Two independent GPU Editor captures for each setting agree on all 3,174
 values. The route check uses the existing comparator and reference tolerance.
 The earlier broad capture still reports all its raw residuals. The Unity 6.0
 API documents carving's effect on the mesh and pathfinding. The running

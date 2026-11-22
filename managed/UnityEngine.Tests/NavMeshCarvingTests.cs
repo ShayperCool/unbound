@@ -613,6 +613,33 @@ namespace UnityEngine.Tests
             Assert.True((walker.nextPosition - new Vector3(8f, walker.nextPosition.y, -3f)).magnitude < 0.05f, $"walker at {walker.nextPosition}");
         }
 
+        [Theory]
+        [InlineData(0.5f, true)]
+        [InlineData(10f, false)]
+        public void AnAddedObstaclePreventsRemovalRepairOnlyIfItCutsGround(float height, bool cuts)
+        {
+            using var pinned = TestRelease.Pin(TestRelease.Measured);
+            var removed = Box(new Vector3(-7f, 0.5f, 2f), Vector3.one);
+            Frame();
+            Frame();
+            Assert.False(OnNavMesh(-7f, 2f));
+            var surface = NavWorld.Get(0);
+            var tile = surface.Tiles.Find(t => t.MinX <= -7f && t.MaxX >= -7f
+                && t.MinZ <= 2f && t.MaxZ >= 2f);
+            Assert.NotNull(tile);
+            long oldRef = tile.Ref;
+
+            removed.carving = false;
+            Box(new Vector3(-3f, height, 2f), Vector3.one);
+            Frame();
+            Frame();
+
+            Assert.NotEqual(oldRef, tile.Ref);
+            Assert.True(OnNavMesh(-7f, 2f));
+            Assert.Equal(cuts, !OnNavMesh(-3f, 2f));
+            Assert.Equal(!cuts, surface.RemovedCarvingTiles.ContainsKey(oldRef));
+        }
+
         [Fact]
         public void ATurnedBoxsCornerAcrossATileEdgeIsCutAndRemovedThereToo()
         {

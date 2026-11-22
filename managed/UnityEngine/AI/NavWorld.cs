@@ -56,8 +56,9 @@ namespace Unbound.Runtime
             internal readonly Dictionary<int, DataInstance> DataOfTile = new Dictionary<int, DataInstance>();
             /// <summary>Every tile in the mesh: where it came from and where it lies.</summary>
             internal readonly List<PlacedTile> Tiles = new List<PlacedTile>();
-        /// <summary>Old tile references and ground polygon counts for the last removal-only recuts.</summary>
-        internal readonly Dictionary<long, int> RemovedCarvingTiles = new();
+            /// <summary>Old tile references and ground polygon counts for the last recuts with
+            /// a removed footprint in bounds and no newly cut ground.</summary>
+            internal readonly Dictionary<long, int> RemovedCarvingTiles = new();
         }
 
         /// <summary>A data instance's tile as placed in a surface's mesh.</summary>
@@ -385,7 +386,8 @@ namespace Unbound.Runtime
         /// <summary>Carving holes changed: the tiles the changed holes (their outlines before and
         /// after) reach are cut again and replaced in their meshes, the others are kept with their
         /// polygon references. A NavMesh waiting for a rebuild is rebuilt whole instead.</summary>
-        internal static void HolesChanged(IReadOnlyList<(NavMeshCarving.Footprint Hole, bool Added)> changed)
+        internal static void HolesChanged(IReadOnlyList<NavMeshCarving.Footprint> removed,
+            IReadOnlySet<NavMeshCarving.Footprint> addedHoles)
         {
             if (s_Dirty)
             {
@@ -396,7 +398,7 @@ namespace Unbound.Runtime
             bool trackRemoved = Compat.NavMeshCarvingCorridorMeasured;
             CollectUnboundEnds();
             // Each changed hole's bounds, per agent radius (usually one).
-            var bounds = new Dictionary<float, (float MinX, float MaxX, float MinZ, float MaxZ, bool Added)[]>();
+            var bounds = new Dictionary<float, (float MinX, float MaxX, float MinZ, float MaxZ)[]>();
             foreach (var surface in s_Surfaces.Values)
             {
                 surface.RemovedCarvingTiles.Clear();
@@ -405,20 +407,19 @@ namespace Unbound.Runtime
                     var settings = placed.Instance.Data.m_Settings;
                     if (!bounds.TryGetValue(settings.agentRadius, out var holes))
                     {
-                        holes = new (float, float, float, float, bool)[changed.Count];
-                        for (int i = 0; i < holes.Length; i++)
-                        {
-                            var (minX, maxX, minZ, maxZ) = NavMeshCarving.HoleBounds(changed[i].Hole, settings.agentRadius);
-                            holes[i] = (minX, maxX, minZ, maxZ, changed[i].Added);
-                        }
+                        holes = new (float, float, float, float)[removed.Count + addedHoles.Count];
+                        int i = 0;
+                        foreach (var hole in removed) holes[i++] = NavMeshCarving.HoleBounds(hole, settings.agentRadius);
+                        foreach (var hole in addedHoles) holes[i++] = NavMeshCarving.HoleBounds(hole, settings.agentRadius);
                         bounds[settings.agentRadius] = holes;
                     }
-                    if (!Reaches(placed, holes, out bool onlyRemoved)) continue;
+                    bool removedHere = trackRemoved && Reaches(placed, holes.AsSpan(0, removed.Count));
+                    if (!removedHere && !Reaches(placed, holes.AsSpan(trackRemoved ? removed.Count : 0))) continue;
                     var old = surface.Mesh.GetTileByRef(placed.Ref);
                     if (old?.data == null) continue;
                     var source = placed.Instance.Data.m_Tiles[placed.Index];
                     var tile = NavMeshCarving.Carve(Place(source, placed.Instance.Position, placed.Instance.Rotation),
-                        settings, ObstacleSystem.Holes);
+                        settings, ObstacleSystem.Holes, removedHere && addedHoles.Count != 0 ? addedHoles : null, out bool addedCut);
                     Attach(tile, placed.Surface, source.header);
                     // A link end bound to nothing that the tile cut anew lets attach: the whole
                     // NavMesh is built again, where binding chooses among all data.
@@ -452,7 +453,7 @@ namespace Unbound.Runtime
                     var added = surface.Mesh.GetTileByRef(tileRef);
                     surface.DataOfTile[DtDetour.DecodePolyIdTile(tileRef)] = placed.Instance;
                     MapLinks(surface, added, true);
-                    if (trackRemoved && onlyRemoved) surface.RemovedCarvingTiles.Add(replacedRef, groundCount);
+                    if (removedHere && !addedCut) surface.RemovedCarvingTiles.Add(replacedRef, groundCount);
                 }
             }
             if (replaced) TileVersion++;
@@ -493,20 +494,12 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A changed hole, grown by the agent radius as it is cut, reaches the tile.</summary>
-        static bool Reaches(PlacedTile tile, (float MinX, float MaxX, float MinZ, float MaxZ, bool Added)[] holes,
-            out bool onlyRemoved)
+        static bool Reaches(PlacedTile tile, ReadOnlySpan<(float MinX, float MaxX, float MinZ, float MaxZ)> holes)
         {
-            bool reached = false;
-            onlyRemoved = true;
             foreach (var hole in holes)
-            {
                 if (hole.MaxX >= tile.MinX && hole.MinX <= tile.MaxX && hole.MaxZ >= tile.MinZ && hole.MinZ <= tile.MaxZ)
-                {
-                    reached = true;
-                    onlyRemoved &= !hole.Added;
-                }
-            }
-            return reached;
+                    return true;
+            return false;
         }
 
         static RcVec3f Center(DtMeshHeader h) => new RcVec3f((h.bmin.X + h.bmax.X) * 0.5f, (h.bmin.Y + h.bmax.Y) * 0.5f, (h.bmin.Z + h.bmax.Z) * 0.5f);

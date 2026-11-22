@@ -118,6 +118,7 @@ namespace Unbound.Runtime
             internal Vector2[] Outline;
             internal float MinX, MaxX, MinZ, MaxZ;
             internal float Bottom, Top;
+            internal bool Added;
         }
 
         sealed class OutPoly
@@ -135,7 +136,13 @@ namespace Unbound.Runtime
         /// <summary>The tile with the footprints' holes cut, grown by the agent type's radius; the
         /// tile itself when no hole reaches its ground polygons.</summary>
         internal static DtMeshData Carve(DtMeshData tile, NavMeshBuildSettings settings, IReadOnlyList<Footprint> footprints)
+            => Carve(tile, settings, footprints, null, out _);
+
+        // Report an added cut only when the new footprint clips ground during the recut.
+        internal static DtMeshData Carve(DtMeshData tile, NavMeshBuildSettings settings, IReadOnlyList<Footprint> footprints,
+            IReadOnlySet<Footprint> additions, out bool addedCut)
         {
+            addedCut = false;
             if (footprints == null || footprints.Count == 0) return tile;
             var h = tile.header;
             var holes = new List<Hole>();
@@ -145,6 +152,7 @@ namespace Unbound.Runtime
                 // An outline of fewer than three points (an obstacle of no size) cuts nothing.
                 if (hole.Outline.Length < 3) continue;
                 if (hole.MaxX <= h.bmin.X || hole.MinX >= h.bmax.X || hole.MaxZ <= h.bmin.Z || hole.MinZ >= h.bmax.Z) continue;
+                hole.Added = additions?.Contains(f) == true;
                 holes.Add(hole);
             }
             if (holes.Count == 0) return tile;
@@ -175,7 +183,12 @@ namespace Unbound.Runtime
                 work.Add(new Piece { Points = points, Source = pi, Unchanged = true });
             }
             bool carved = false;
-            foreach (var hull in hulls) carved |= CutGroup(work, hull, eps);
+            foreach (var hull in hulls)
+            {
+                bool cut = CutGroup(work, hull, eps);
+                carved |= cut;
+                addedCut |= cut && hull.Added;
+            }
             if (!carved) return tile;
 
             var verts = new List<Vector3>();
@@ -311,6 +324,7 @@ namespace Unbound.Runtime
         /// and the polygons (by their place in the tile) it is cut into.</summary>
         sealed class GroupHull
         {
+            internal bool Added;
             internal List<EdgePlane> Planes;
             internal HashSet<int> Sources;
         }
@@ -425,7 +439,7 @@ namespace Unbound.Runtime
                     // The hull is clockwise seen from above: (-dz, dx) points out of it.
                     planes.Add(new EdgePlane(-d.y, d.x, -(a.y * d.x + -d.y * a.x + 0f)));
                 }
-                hulls.Add(new GroupHull { Planes = planes, Sources = cut });
+                hulls.Add(new GroupHull { Planes = planes, Sources = cut, Added = hole.Added });
             }
             return hulls;
         }
