@@ -180,6 +180,7 @@ public class InspectorElementProbe : MonoBehaviour
         var byComponent = Show(new InspectorElement(behaviour));
         Put("default.component", Tree(byComponent) + "|editor=" + EditorOf(byComponent));
         var second = ScriptableObject.CreateInstance<InspectorDefaultTarget>();
+        second.count = 8;
         var multi = Show(new InspectorElement(new SerializedObject(new UnityEngine.Object[] { defaults, second })));
         Put("default.multi", Tree(multi) + "|editor=" + EditorOf(multi));
 
@@ -193,6 +194,8 @@ public class InspectorElementProbe : MonoBehaviour
         uie.RemoveFromHierarchy();
         Frames();
         Put("custom.uieRemoved", Counts() + "|editor=" + EditorOf(uie));
+        Show(uie);
+        Put("custom.uieReattached", Tree(uie) + "|editor=" + EditorOf(uie) + "|" + Counts());
         var imgui = Show(new InspectorElement(imguiTarget));
         Put("custom.imgui", Tree(imgui) + "|editor=" + EditorOf(imgui));
         var nullGui = Show(new InspectorElement(ScriptableObject.CreateInstance<InspectorNullGuiTarget>()));
@@ -217,9 +220,25 @@ public class InspectorElementProbe : MonoBehaviour
         empty.Bind(new SerializedObject(defaults));
         Frames();
         Put("empty.bound", Tree(empty) + "|editor=" + EditorOf(empty));
+        var firstGui = empty.hierarchy[2];
+        var firstEditor = Internal(empty, "editor");
+        empty.Bind(new SerializedObject(second));
+        Frames();
+        Put("empty.sameType", Tree(empty) + $"|sameGui={ReferenceEquals(empty.hierarchy[2], firstGui)}|sameEditor={ReferenceEquals(Internal(empty, "editor"), firstEditor)}|count={empty.Q<IntegerField>()?.value}");
         empty.Bind(new SerializedObject(uieTarget));
         Frames();
         Put("empty.rebound", Tree(empty) + "|editor=" + EditorOf(empty) + "|" + Counts());
+
+        // An element bound to its own object inside a container bound to another one.
+        var holder = new VisualElement { name = "holder" };
+        var own = new InspectorElement(new SerializedObject(defaults));
+        holder.Add(own);
+        m_Root.Add(holder);
+        Frames();
+        holder.Bind(new SerializedObject(behaviour));
+        Frames();
+        Put("nested.own", Tree(own) + "|editor=" + EditorOf(own));
+        holder.RemoveFromHierarchy();
 
         // 6. FillDefaultInspector: no object, an object without an editor, with one.
         var none = new VisualElement();
@@ -235,11 +254,11 @@ public class InspectorElementProbe : MonoBehaviour
         UnityEngine.Object.DestroyImmediate(behaviourEditor);
 
         // 7. The panel's visual tree updater, one phase at a time.
-        VisualTreeUpdater();
+        VisualTreeUpdater(defaults);
         UnityEngine.Object.DestroyImmediate(go);
     }
 
-    void VisualTreeUpdater()
+    void VisualTreeUpdater(InspectorDefaultTarget defaults)
     {
         var panelType = typeof(VisualElement).Assembly.GetType("UnityEngine.UIElements.Panel");
         var field = panelType.GetField("m_VisualTreeUpdater", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -279,6 +298,17 @@ public class InspectorElementProbe : MonoBehaviour
         Put("vtu.stylesThen", State());
         phase.Invoke(updater, new[] { Enum.Parse(phaseType, "Layout") });
         Put("vtu.layoutThen", State());
+
+        // A field bound off its panel: its binding request, then its value.
+        defaults.count = 21;
+        var bound = new IntegerField { bindingPath = "count" };
+        bound.Bind(new SerializedObject(defaults));
+        m_Root.Add(bound);
+        Put("vtu.bindAdded", $"value={bound.value}");
+        phase.Invoke(updater, new[] { Enum.Parse(phaseType, "Bindings") });
+        Put("vtu.bindBindings", $"value={bound.value}");
+        phase.Invoke(updater, new[] { Enum.Parse(phaseType, "DataBinding") });
+        Put("vtu.bindDataBinding", $"value={bound.value}");
     }
 #else
     void Run() { }

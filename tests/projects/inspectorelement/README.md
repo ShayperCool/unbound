@@ -10,12 +10,16 @@ Records a Unity 6000.0.71f1 `InspectorElement` and the panel's visual tree updat
   disabled) and the editor it makes.
 - `custom.*`: custom editors with `CreateInspectorGUI`, with only `OnInspectorGUI`, with a null UI
   Toolkit GUI and without default margins; the editor's `OnEnable`/`OnDisable` and
-  `CreateInspectorGUI` counts, and the editor destroyed when the element leaves its panel.
+  `CreateInspectorGUI` counts, the editor destroyed when the element leaves its panel and the
+  inspector built again when it comes back.
 - `given.*`: an element made for a given editor, which it does not destroy.
-- `empty*`: an element without an object, then bound, then bound to an object of another type.
+- `empty*`: an element without an object, then bound, bound to another object of the same type
+  (the GUI is kept, the editor is new), then to an object of another type.
+- `nested.own`: an element bound to its own object inside a container bound to another one.
 - `fill.*`: `InspectorElement.FillDefaultInspector` without an object, without and with an editor.
 - `vtu.*`: the panel's `m_VisualTreeUpdater` field (read by reflection, as editor extensions do)
-  and the element's layout after each phase run alone, then after the whole update.
+  and the element's layout after each phase run alone, then after the whole update; a field bound
+  off its panel, after the bindings and the data bindings phases.
 
 ## Usage
 

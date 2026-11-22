@@ -170,6 +170,48 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AnotherObjectOfTheSameTypeKeepsTheGUIAndAnInspectorKeepsItsOwnObject()
+        {
+            using var f = new Fixture();
+            var second = ScriptableObject.CreateInstance<Inspected>();
+            second.count = 8;
+            var inspector = f.Show(new InspectorElement(f.Target));
+            var gui = inspector.hierarchy[2];
+            var editor = inspector.editor;
+            inspector.Bind(new SerializedObject(second));
+            Tick(f.Panel);
+            Assert.Same(gui, inspector.hierarchy[2]);
+            Assert.NotSame(editor, inspector.editor);
+            Assert.Equal(8, inspector.Q<IntegerField>().value);
+
+            var other = ScriptableObject.CreateInstance<Other>();
+            var holder = new VisualElement();
+            var own = new InspectorElement(new SerializedObject(f.Target));
+            holder.Add(own);
+            f.Show(holder);
+            holder.Bind(new SerializedObject(other));
+            Tick(f.Panel);
+            Assert.Equal("PropertyField:count", own.hierarchy[2][1].name);
+            Assert.Equal(3, own.Q<IntegerField>().value);
+            Object.DestroyImmediate(second);
+            Object.DestroyImmediate(other);
+        }
+
+        [Fact]
+        public void AFieldBoundOffItsPanelTakesItsValueInTheBindingsPhase()
+        {
+            using var f = new Fixture();
+            var updater = (VisualTreeUpdater)typeof(Panel).GetField("m_VisualTreeUpdater", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(f.Panel);
+            f.Target.count = 21;
+            var field = new IntegerField { bindingPath = "count" };
+            field.Bind(new SerializedObject(f.Target));
+            f.Panel.visualTree.Add(field);
+            Assert.Equal(0, field.value);
+            updater.UpdateVisualTreePhase(VisualTreeUpdatePhase.Bindings);
+            Assert.Equal(21, field.value);
+        }
+
+        [Fact]
         public void ThePanelUpdatesOnePhaseAtATime()
         {
             using var f = new Fixture();

@@ -739,10 +739,11 @@ namespace UnityEngine.UIElements
 
     /// <summary>A panel's update, one phase at a time, as the Unity 6000.0.71f1 Editor runs it
     /// (tests/projects/inspectorelement vtu.*): bindings take their pending requests, data
-    /// bindings update, animations and transitions step, styles resolve and the layout is
-    /// computed (with the styles it needs; its geometry events are sent). Unbound keeps no view
-    /// data and computes transforms and clips when they are read, so those phases do nothing;
-    /// the repaint phase is the panel's rendering, reported (the panel renders in its frame).</summary>
+    /// bindings update, styles resolve and the layout is computed (with the styles it needs; its
+    /// geometry events are sent). The animation phase steps the panel's animations and
+    /// transitions as its update does (not compared). Unbound keeps no view data and computes
+    /// transforms and clips when they are read, so those phases do nothing; the repaint phase is
+    /// the panel's rendering, reported (the panel renders in its frame).</summary>
     internal sealed partial class VisualTreeUpdater : IDisposable
     {
         readonly BaseVisualElementPanel m_Panel;
