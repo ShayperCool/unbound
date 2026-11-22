@@ -2,12 +2,13 @@
 
 Five fresh Unity 6000.0.71f1 sessions cover a one-frame mono PCM clip, stereo callback PCM,
 stereo streaming, an audio reset before creation and an audio reset with the first clip alive.
-Two independent captures agree for each profile. The fixture borrows a scene and configuration from
+Two independent captures agree on 25 values across the profiles. The fixture borrows a scene and configuration from
 `formatmapping`.
 
 The first script-created clip reports 88 additional bytes across the three creation modes.
 Reading the audio configuration and loading an imported clip leave that first-creation state
-available. Writing PCM samples leaves the charge on the first clip. Destroying it leaves later
+available. Writing PCM samples leaves the charge on the first clip. A clip created inside its
+PCM reader callback has the ordinary size. Destroying the first clip leaves later
 clips at the ordinary total. A successful reset consumes first-creation state before its
 configuration callback creates a clip. If the first clip already exists, the retained difference
 between it and an identical second clip remains 88 bytes after reset. The probe measures this

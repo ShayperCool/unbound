@@ -24,7 +24,6 @@ public static class ClipStartupMemory
         void Put(string key, object value) =>
             rows.Add(JsonUtility.ToJson(new Row { k = key, v = value.ToString() }));
         long Size(AudioClip clip) => Profiler.GetRuntimeMemorySizeLong(clip);
-        void Read(float[] samples) => Array.Clear(samples, 0, samples.Length);
 
         if (profile == "Reset")
         {
@@ -56,12 +55,20 @@ public static class ClipStartupMemory
         {
             bool mono = profile == "PCM";
             bool stream = profile == "Stream";
+            bool nestedControl = profile == "Callback";
             int frames = mono ? 1 : 41, channels = mono ? 1 : 2, rate = mono ? 44100 : 32003;
             if (mono)
             {
                 AudioSettings.GetConfiguration();
                 var imported = Resources.Load<AudioClip>("ClipStartupWarm");
                 Put("imported", imported != null && imported.LoadAudioData());
+            }
+            AudioClip nested = null;
+            void Read(float[] samples)
+            {
+                Array.Clear(samples, 0, samples.Length);
+                if (nestedControl && nested == null)
+                    nested = AudioClip.Create("nested", frames, channels, rate, false);
             }
             AudioClip Create() => AudioClip.Create("clip", frames, channels, rate, stream,
                 mono ? null : (AudioClip.PCMReaderCallback)Read);
@@ -80,6 +87,11 @@ public static class ClipStartupMemory
             var after = Create();
             Put("after.destroy.bytes", Size(after));
             Object.DestroyImmediate(after);
+            if (nestedControl)
+            {
+                Put("nested.bytes", Size(nested));
+                Object.DestroyImmediate(nested);
+            }
         }
 
         rows.Add("{\"k\":\"complete\",\"v\":true}");
