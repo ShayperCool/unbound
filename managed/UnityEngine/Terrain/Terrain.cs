@@ -201,6 +201,7 @@ namespace UnityEngine
         /// <summary>The normal map's formats (Unity 6000.0.71f1: tests/projects/terrainnormalmap
         /// format.*): 10-bit channels, and no TextureFormat (value 0).</summary>
         public static GraphicsFormat normalmapFormat => GraphicsFormat.A2B10G10R10_UNormPack32;
+        [Unbound.EditorFaithful("measured 0, no TextureFormat: tests/projects/terrainnormalmap format.normalmapTextureFormat")]
         public static TextureFormat normalmapTextureFormat => (TextureFormat)0;
         public static RenderTextureFormat normalmapRenderTextureFormat => RenderTextureFormat.ARGB2101010;
         public static GraphicsFormat holesFormat => GraphicsFormat.R8_UNorm;
