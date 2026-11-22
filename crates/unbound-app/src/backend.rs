@@ -326,6 +326,9 @@ pub struct GpuBackend {
     /// thread, so a plugin's own device work from scripts (OpenGL calls on its context, Vulkan
     /// queue submits, Metal encoders outside callbacks) is ordered with Unity's rendering.
     direct: std::sync::atomic::AtomicBool,
+    /// Held while the first switch to `direct` waits for the queue, so that every caller that
+    /// sees the switch starts after that wait.
+    going_direct: Mutex<()>,
 }
 
 impl Drop for GpuBackend {
@@ -423,8 +426,14 @@ impl GpuBackend {
     /// Runs everything on the calling game thread from now on (see `direct`), once what was
     /// queued before has finished.
     fn go_direct(&self) {
-        if !self.direct.swap(true, std::sync::atomic::Ordering::AcqRel) {
+        if self.is_direct() {
+            return;
+        }
+        let _switching = self.going_direct.lock().unwrap_or_else(|e| e.into_inner());
+        if !self.is_direct() {
             self.flush();
+            self.direct
+                .store(true, std::sync::atomic::Ordering::Release);
         }
     }
 }
@@ -465,6 +474,10 @@ impl RenderBackend for GpuBackend {
     fn submit_commands(&self, commands: Vec<Command>) {
         // The game thread keeps the plugins' OpenGL context current between script calls.
         crate::render::gl_interop::mark_render_thread();
+        // A plugin event, also one waiting for the device: the plugin works with it from now on.
+        if commands.iter().any(|c| matches!(c, Command::Plugin(_))) {
+            self.go_direct();
+        }
         let worker = {
             let mut inner = self.inner.lock().unwrap();
             match &inner.worker {
@@ -475,9 +488,6 @@ impl RenderBackend for GpuBackend {
                 }
             }
         };
-        if commands.iter().any(|c| matches!(c, Command::Plugin(_))) {
-            self.go_direct();
-        }
         if self.is_direct() {
             unbound_runtime::plugin_api::while_rendering(|| {
                 let _ = worker.with_renderer_on_caller(|r| r.execute(commands));
