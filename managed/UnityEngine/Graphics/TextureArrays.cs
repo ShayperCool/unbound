@@ -534,10 +534,13 @@ namespace UnityEngine
         }
 
         /// <summary>The first serialized version of a Texture3D asset whose <c>m_Format</c> is a
-        /// GraphicsFormat (with <c>m_ColorSpace</c> beside it); version 2 keeps a TextureFormat
-        /// there (the Visual Effect Graph package's <c>SignedDistanceField</c> and
-        /// <c>vectorfield</c> textures). Texture2DArray and CubemapArray assets of the release
-        /// are at version 3 too; their older forms are not measured.</summary>
+        /// GraphicsFormat with <c>m_ColorSpace</c> beside it: the release writes version 4
+        /// (measured), and version 3 assets in packages (the Visual Effect Graph's Learning
+        /// Templates' <c>Hand_SDF</c>) have the same fields, not measured. Version 2 keeps a
+        /// TextureFormat there and no colour space (measured; the Visual Effect Graph package's
+        /// <c>SignedDistanceField</c> and <c>vectorfield</c> textures). The release writes
+        /// Texture2DArray and CubemapArray assets at version 3; their older forms are not
+        /// measured.</summary>
         const int k_FirstGraphicsFormatVersion = 3;
 
         /// <summary>Whether the asset's <c>m_Format</c> is a TextureFormat: a Texture3D written
