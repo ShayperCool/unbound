@@ -449,6 +449,7 @@
 {"key":"UnityEditor.AssetImporter/Property/UnityEngine.Object/hideFlags","status":"getter-threw","value":"System.NullReferenceException"}
 {"key":"UnityEditor.AssetImporter/Property/UnityEngine.Object/name","status":"getter-threw","value":"System.NullReferenceException"}
 {"key":"UnityEditor.AssetImporters.AssetImportContext/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.AssetImporters.AssetImporterEditor/@factory","status":"excluded","value":"abstract"}
 {"key":"UnityEditor.AssetImporters.FBXMaterialDescriptionPreprocessor/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.AssetImporters.FBXMaterialDescriptionPreprocessor/Property/UnityEditor.AssetPostprocessor/assetImporter","status":"value","value":"null"}
 {"key":"UnityEditor.AssetImporters.FBXMaterialDescriptionPreprocessor/Property/UnityEditor.AssetPostprocessor/assetPath","status":"value","value":"null"}
@@ -14123,6 +14124,15 @@
 {"key":"UnityEditor.AssetImporter+SourceAssetIdentifier/Field/UnityEditor.AssetImporter+SourceAssetIdentifier/name","status":"value","value":"null"}
 {"key":"UnityEditor.AssetImporter+SourceAssetIdentifier/Field/UnityEditor.AssetImporter+SourceAssetIdentifier/type","status":"value","value":"null"}
 {"key":"UnityEditor.AssetImporters.ScriptedImporterAttribute/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.AssetImporters.ScriptedImporterEditor/@factory","status":"value","value":"scriptable"}
+{"key":"UnityEditor.AssetImporters.ScriptedImporterEditor/Property/UnityEditor.AssetImporters.AssetImporterEditor/showImportedObject","status":"value","value":"true"}
+{"key":"UnityEditor.AssetImporters.ScriptedImporterEditor/Property/UnityEditor.Editor/hasUnsavedChanges","status":"value","value":"false"}
+{"key":"UnityEditor.AssetImporters.ScriptedImporterEditor/Property/UnityEditor.Editor/saveChangesMessage","status":"value","value":"null"}
+{"key":"UnityEditor.AssetImporters.ScriptedImporterEditor/Property/UnityEditor.Editor/serializedObject","status":"value","value":"UnityEditor.SerializedObject{context=null;forceChildVisibility=false;hasModifiedProperties=false;isEditingMultipleObjects=false;maxArraySizeForMultiEditing=64;targetObject=null;targetObjects=[]}"}
+{"key":"UnityEditor.AssetImporters.ScriptedImporterEditor/Property/UnityEditor.Editor/target","status":"getter-threw","value":"System.NullReferenceException"}
+{"key":"UnityEditor.AssetImporters.ScriptedImporterEditor/Property/UnityEditor.Editor/targets","status":"value","value":"null"}
+{"key":"UnityEditor.AssetImporters.ScriptedImporterEditor/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:0"}
+{"key":"UnityEditor.AssetImporters.ScriptedImporterEditor/Property/UnityEngine.Object/name","status":"value","value":"string:"}
 {"key":"UnityEditor.SpeedTree.Importer.MaterialSettingsCallbackAttribute/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.SpeedTree.Importer.SpeedTree9Importer/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.SpeedTree.Importer.SpeedTree9Importer/Property/UnityEditor.AssetImporter/assetBundleName","status":"getter-threw","value":"System.NullReferenceException"}

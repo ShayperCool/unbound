@@ -1102,6 +1102,12 @@
       "type": "UnityEditor.AssetImporters.AssetImportContext"
     },
     {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "abstract",
+      "type": "UnityEditor.AssetImporters.AssetImporterEditor"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
@@ -1124,6 +1130,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEditor.AssetImporters.ScriptedImporterAttribute"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.AssetImporters.ScriptedImporterEditor"
     },
     {
       "category": "class",

@@ -4015,6 +4015,45 @@
         "status": "value",
         "value": "1"
       }
+    },
+    {
+      "key": "UnityEditor.AssetImporters.ScriptedImporterEditor/Property/UnityEditor.Editor/serializedObject",
+      "module": "UnityEditor.CoreModule",
+      "reason": "A targetless inspector still differs. Creating it through ScriptableObject does not establish valid target binding or lazy SerializedObject state; paired CreateEditor controls remain needed before changing the existing target path.",
+      "expected": {
+        "status": "value",
+        "value": "UnityEditor.SerializedObject{context=null;forceChildVisibility=false;hasModifiedProperties=false;isEditingMultipleObjects=false;maxArraySizeForMultiEditing=64;targetObject=null;targetObjects=[]}"
+      },
+      "actual": {
+        "status": "value",
+        "value": "null"
+      }
+    },
+    {
+      "key": "UnityEditor.AssetImporters.ScriptedImporterEditor/Property/UnityEditor.Editor/target",
+      "module": "UnityEditor.CoreModule",
+      "reason": "A targetless inspector still differs. Creating it through ScriptableObject does not establish valid target binding or lazy SerializedObject state; paired CreateEditor controls remain needed before changing the existing target path.",
+      "expected": {
+        "status": "getter-threw",
+        "value": "System.NullReferenceException"
+      },
+      "actual": {
+        "status": "value",
+        "value": "null"
+      }
+    },
+    {
+      "key": "UnityEditor.AssetImporters.ScriptedImporterEditor/Property/UnityEditor.Editor/targets",
+      "module": "UnityEditor.CoreModule",
+      "reason": "A targetless inspector still differs. Creating it through ScriptableObject does not establish valid target binding or lazy SerializedObject state; paired CreateEditor controls remain needed before changing the existing target path.",
+      "expected": {
+        "status": "value",
+        "value": "null"
+      },
+      "actual": {
+        "status": "value",
+        "value": "[]"
+      }
     }
   ],
   "constructorStores": []

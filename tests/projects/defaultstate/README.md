@@ -854,3 +854,8 @@ inventory, as two Unity 6000.0.71f1 batch Editor captures on macOS write them; e
 
 The prefab contents slice adds the struct `PrefabUtility.EditPrefabContentsScope` to the inventory, as two
 Unity 6000.0.71f1 batch Editor captures on macOS write its rows; every earlier row is unchanged.
+
+The importer editor slice adds the abstract `AssetImporters.AssetImporterEditor` (excluded) and `AssetImporters.ScriptedImporterEditor`
+(9 rows) to the inventory, as two Unity 6000.0.71f1 batch Editor captures on macOS write them; every earlier row is
+unchanged. Its `serializedObject`, `target` and `targets` rows read as those of every editor made without targets and
+are queued in `debt.json` beside `Editor`'s.
