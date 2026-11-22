@@ -42,7 +42,8 @@ are `Output ParticleStrip Quad` contexts with an `Orient: Face Camera Position` 
   opaque strip output told to draw through an indirect buffer (`Indirect Draw`, sort off: the
   list the system's update makes), and each particle as a small red quad from a list culled in
   a compute pass (`Compute Culling`). `StripCulled`: the same strips culled by each camera's
-  frustum (`Frustum Culling`, sort off), so each camera draws a list of its own.
+  frustum (`Frustum Culling`, sort off), so each camera draws a list of its own (no segment
+  leaves the view here, so none is culled away).
 - `StripIndex`: four strips of eight; the strip a particle goes into is the initialize
   context's `stripIndex`, an exposed property `Strip` of the effect.
 - `StripBoth`: a strip drawn twice: joined, and each of its particles as a quad of its own.
@@ -116,6 +117,9 @@ alive` (whose strip particles die) is exact throughout.
 
 ## Not covered
 
+- Drawn but not measured: alpha blended strips with their sort off through a list (where
+  overlapping segments show the order), a sorted quad output of a strip system's particles,
+  `Compute Culling` on a strip output itself, several cameras.
 - Lit strip outputs, Shader Graph strip outputs, line strips
   (`Output ParticleStrip Line`), and any output but quads of a strip system's particles: not
   drawn (the effect says so).
