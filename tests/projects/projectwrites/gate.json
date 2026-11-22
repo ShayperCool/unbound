@@ -11,6 +11,7 @@
     "managed/UnityEngine/Editor/AssetDatabase.cs",
     "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
     "managed/UnityEngine/Editor/AssetDatabaseCreate.cs",
+    "managed/UnityEngine/Editor/AssetDatabasePackages.cs",
     "managed/UnityEngine/Editor/ImporterMetaFiles.cs",
     "managed/UnityEngine/Editor/SettingsAssets.cs",
     "managed/UnityEngine/Editor/EditorBuildSettings.cs",

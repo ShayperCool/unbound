@@ -2244,7 +2244,6 @@ namespace UnityEditor
     }
     unsafe partial class AssetDatabase
     {
-        [global::Unbound.Stub] public static global::System.Action<string[]> onImportPackageItemsCompleted;
         [global::Unbound.Stub] public static void CanOpenForEdit(string[] assetOrMetaFilePaths, global::System.Collections.Generic.List<string> outNotEditablePaths, global::UnityEditor.StatusQueryOptions statusQueryOptions = (global::UnityEditor.StatusQueryOptions)1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.CanOpenForEdit"); }
         [global::Unbound.Stub] public static bool MakeEditable(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.MakeEditable"); return default; }
         [global::Unbound.Stub] public static bool MakeEditable(string[] paths, string prompt = null, global::System.Collections.Generic.List<string> outNotEditablePaths = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.MakeEditable"); return default; }
@@ -2340,7 +2339,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static void ForceReserializeAssets() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.ForceReserializeAssets"); }
         [global::Unbound.Stub] public static global::UnityEditor.AssetDatabaseLoadOperation LoadObjectAsync(string assetPath, long localId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.LoadObjectAsync"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.GUID GUIDFromExistingAssetPath(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.GUIDFromExistingAssetPath"); return default; }
-        [global::Unbound.Stub] public static void ImportPackage(string packagePath, bool interactive) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.ImportPackage"); }
         [global::Unbound.Stub] internal static void ImportPackage(string packagePath, global::UnityEditor.AssetOrigin origin, bool interactive) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.ImportPackage"); }
         [global::Unbound.Stub] internal static bool ImportPackageImmediately(string packagePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.ImportPackageImmediately"); return default; }
         [global::Unbound.Stub] public static void DisallowAutoRefresh() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.DisallowAutoRefresh"); }

@@ -35,7 +35,12 @@ GUID) and a `.meta` edited outside the AssetDatabase; imports and `CreateAsset` 
 `AssetPostprocessor` that changes its settings; `PlayerSettings.SetScriptingDefineSymbols`
 (Edit mode; in Play mode after the values are written), `EditorBuildSettings.scenes`,
 `EditorSettings.projectGenerationRootNamespace`, `SaveAssets`, settings changed after the last
-`SaveAssets` (`PlayerSettings.companyName`), a manifest change and `Client.Resolve`.
+`SaveAssets` (`PlayerSettings.companyName`), a manifest change and `Client.Resolve`. First of all, in
+Edit mode, `ImportPackage` without its window (run.py builds the packages under `Incoming/`): a package
+with a folder, files with and without a `.meta`, a file in a folder it does not list, a GUID the
+project has at another path and a path the project has under another GUID; the same package again
+over an edited and a deleted file; a missing file, no archive, null and ""; an absolute path with the
+window asked for; in Play mode a package and a missing file.
 
 Measured: a new file or folder gets its `.meta` when it is imported (opening the project, `Refresh`,
 `ImportAsset`, a new folder's parents too): `fileFormatVersion: 2`, a new GUID of 32 lowercase hex
@@ -53,6 +58,17 @@ asset is left alone and null throws; an object added (back) is of the asset at o
 sub-asset only from the save on; without its main object the asset has none
 (`LoadMainAssetAtPath` null) until the save makes the object left the main one, under its own
 file id and name, with the warning `Main Object Name '<name>' does not match filename '<file>'`.
+`ImportPackage` in Play mode logs `Failed to import package with error: Cannot import package in
+play mode.` twice and raises `importPackageFailed` with `Failed to unpack package contents`; in Edit
+mode a missing file, no archive, null or "" do the same at once with `Couldn't decompress package`.
+A package raises `importPackageStarted` in the call with nothing written; some updates later its
+files and `.meta` files are written (a missing `.meta` becomes one of its GUID alone, a folder it
+does not list gets a new one) and imported, then `importPackageCompleted` and
+`onImportPackageItemsCompleted` with the paths written. An item whose GUID the project has goes to
+that asset's path; an item at the path of an asset with another GUID replaces it, GUID too, with the
+warning `Overriding existing asset with new GUID from package, this may break links within your
+project to package assets (<path>)`. In batch mode the window asked for never comes and that import
+neither ends nor writes.
 Copies, moves and renames name a native asset's main object after its new file; a copy gets a new
 GUID, a move keeps it. `GenerateUniqueAssetPath` keeps a free path, else takes the first free
 `name N` (a name's own ` N` replaced), spells the folder as the project does and gives "" for a
@@ -70,13 +86,16 @@ changes during an import are written too. Settings changed through the API are w
 `SaveAssets` and when the Editor quits in Edit mode, never in Play mode. In Edit mode the lock
 follows a resolved manifest change by the time the Editor quits.
 
-Unbound on macOS, 2026-11-22: 715/742 values, 0 failures and 27 recorded residuals
+Unbound on macOS, 2026-11-23: 1285/1313 values, 0 failures and 30 recorded residuals
 (`residuals.json`): the lock not written again after an Edit-mode `Client.Resolve`, no
 `.meta` for a file of an extension no importer claims (when the project opens, Unbound cannot tell
 which extensions packages' ScriptedImporters claim), copies and folders refused in a read-only
 package (the Editor writes into its per-project copy of the package; Unbound's package files are
 the installation's or the shared store's), and labels YAML reads as something else (the Editor
-reads them back as YAML; Unbound keeps their text).
+reads them back as YAML; Unbound keeps their text), a new object dirty from its creation and the
+`Import Logs` object after a new main object's warning (RemoveObjectFromAsset), the import window
+`ImportPackage` is asked for (it never comes in batch mode; Unbound has none and imports the whole
+package) and a folder the package does not name among a second import's items.
 
 Unmeasured: other importers (`.asmref`, plug-ins and folder plug-ins such as `.bundle`, videos,
 packages' ScriptedImporters: Unbound reports such new files and writes no `.meta`), file operations

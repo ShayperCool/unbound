@@ -16,17 +16,8 @@ namespace UnityEditor
 
     public sealed partial class AssetDatabase
     {
-        [Unbound.EditorFaithful("raised by a package import (AssetDatabase.ImportPackage, which Unbound does not implement and warns) (measured: tests/projects/editorload later.events)")]
-        public static event ImportPackageCallback importPackageStarted;
-
-        [Unbound.EditorFaithful("raised by a package import (AssetDatabase.ImportPackage, which Unbound does not implement and warns) (measured: tests/projects/editorload later.events)")]
-        public static event ImportPackageCallback importPackageCompleted;
-
-        [Unbound.EditorFaithful("raised by a package import (AssetDatabase.ImportPackage, which Unbound does not implement and warns) (measured: tests/projects/editorload later.events)")]
+        [Unbound.EditorFaithful("raised when the import window of AssetDatabase.ImportPackage is cancelled; Unbound shows no such window (measured: tests/projects/editorload later.events)")]
         public static event ImportPackageCallback importPackageCancelled;
-
-        [Unbound.EditorFaithful("raised by a package import (AssetDatabase.ImportPackage, which Unbound does not implement and warns) (measured: tests/projects/editorload later.events)")]
-        public static event ImportPackageFailedCallback importPackageFailed;
 
         public unsafe delegate void ImportPackageCallback(string packageName);
         public unsafe delegate void ImportPackageFailedCallback(string packageName, string errorMessage);

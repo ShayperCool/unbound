@@ -37,5 +37,12 @@
   "After the warning about the new main object's name the Editor lists an `Import Logs` object (ImportLog) among the asset's objects; Unbound keeps no import-log objects": [
     "edit.14.remove.main.saved.all",
     "play.14.remove.main.saved.all"
+  ],
+  "The window ImportPackage is asked for (interactive) never comes in the Editor's batch mode, where that import neither ends nor writes; Unbound has no such window and imports the whole package with the next editor update": [
+    "edit.exit.Assets/Second.txt",
+    "edit.exit.Assets/Second.txt.meta"
+  ],
+  "A second import of a package also lists a folder the package does not name (made by the first import) among its items; when the Editor lists such folders is not known, Unbound lists the package's own items": [
+    "edit.14.package.again.later.events"
   ]
 }

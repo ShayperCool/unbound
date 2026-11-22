@@ -144,6 +144,10 @@ namespace UnityEditor
         /// project holds it (Assets, embedded and local packages) or it is read-only.</summary>
         static Root[] Roots => s_Roots ??= JsonSerializer.Deserialize<Root[]>(Native.Call("asset-roots", "{}"), s_Json) ?? Array.Empty<Root>();
 
+        /// <summary>The roots for the managed tests, which have no engine to ask (null: ask it again).</summary>
+        internal static void SetRootsForTests(params (string Path, bool Editable)[] roots) =>
+            s_Roots = roots?.Select(r => new Root { Path = r.Path, Editable = r.Editable }).ToArray();
+
         static bool IsRoot(string path) =>
             string.Equals(path, "Packages", StringComparison.OrdinalIgnoreCase) || Roots.Any(r => string.Equals(r.Path, path, StringComparison.OrdinalIgnoreCase));
 
@@ -156,7 +160,7 @@ namespace UnityEditor
         static bool InReadOnlyPackage(string path) =>
             Roots.Any(r => !r.Editable && path.StartsWith(r.Path + "/", StringComparison.OrdinalIgnoreCase));
 
-        static void Refused(string operation, string path) =>
+        internal static void Refused(string operation, string path) =>
             Debug.LogError($"{operation}: '{path}' is not in the project's own assets (Assets/, or a package embedded or kept locally); nothing is written there.");
 
         /// <summary>The file or folder a project path names (absolute).</summary>
