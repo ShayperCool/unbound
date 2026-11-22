@@ -11,7 +11,9 @@ ScriptableObject, a Material, a GameObject and a component type, places objects 
 parent (also under a layer-5 RectTransform parent, with a rotation and scale to reset, and several
 objects of one name, "Item (5)" among them, as roots and as children), asks
 `GameObjectUtility.GetUniqueNameForSibling`, records undo group names without placement (a
-creation then a recording, an added component alone), then undoes once. Each object is recorded by name, hide flags, scene, active state, layer,
+creation then a recording, an added component alone), names with a gap among the siblings'
+numbers, a RectTransform object placed under a RectTransform parent and given a second RectTransform,
+then undoes once. Each object is recorded by name, hide flags, scene, active state, layer,
 parent, positions and components with their hide flags; each call with the `componentWasAdded`
 events it raised, what it threw, the undo group's name and the scene's dirty state.
 
@@ -26,10 +28,17 @@ built-in mesh, Default-Material and the shape's collider; `CreateInstance` gives
 (a Material with the error shader); `PlaceGameObject` puts an object under a parent at the parent's
 origin with no rotation and unit scale, on the parent's layer and with a RectTransform under a
 RectTransform parent, leaves one without a parent where it is, makes the name unique among the
-siblings ("Dup", "Dup (1)", "Dup (2)"; a second "Item (5)" becomes "Item (6)"), names the undo group
+siblings with the lowest free number from the name's own ("Dup", "Dup (1)", "Dup (2)"; "Gap (1)" beside
+"Gap (2)"; a second "Item (5)" becomes "Item (6)"), names the undo group
 "Create NAME" and selects the object; an undo group is named by its first recording ("Create Named"
 after a later RecordObject; "Add BoxCollider" for an added component alone); one undo destroys
 everything the factory made in the group.
+
+A second RectTransform is "already added": `PlaceGameObject` throws (after reparenting) and
+`GameObject.AddComponent` returns null with that log.
+
+Residual (`residuals.json`): `afterUndo.roots`, the Editor lists the parent that an undone
+reparenting involved after the roots made later; Unbound keeps the root order.
 
 ```sh
 python3 tests/projects/objectfactory/run.py record --label a

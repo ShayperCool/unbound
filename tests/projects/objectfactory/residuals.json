@@ -1,0 +1,5 @@
+{
+  "After the one undo the Editor lists UiParent, the parent PlaceGameObject reparented objects into (and that undo unparented them from), after the roots created later; Unbound's undo leaves the scene's root order as it was (the Editor's reordering on undoing a reparenting is unmeasured beyond this row)": [
+    "afterUndo.roots"
+  ]
+}

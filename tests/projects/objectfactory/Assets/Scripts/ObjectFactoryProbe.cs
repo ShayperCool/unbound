@@ -169,6 +169,26 @@ public static class ObjectFactoryProbe
         Row("unique.forRoot", GameObjectUtility.GetUniqueNameForSibling(null, "Dup"));
         Row("unique.forChild", GameObjectUtility.GetUniqueNameForSibling(canvasParent.transform, "Child"));
         Row("unique.fresh", GameObjectUtility.GetUniqueNameForSibling(canvasParent.transform, "Fresh"));
+        // Numbers with a gap: siblings "Gap" and "Gap (2)", then a new "Gap"; siblings "Hole" and
+        // "Hole (3)", then a new "Hole (1)".
+        new GameObject("Gap"); new GameObject("Gap (2)");
+        var gap = ObjectFactory.CreateGameObject("Gap");
+        ObjectFactory.PlaceGameObject(gap);
+        new GameObject("Hole"); new GameObject("Hole (3)");
+        var hole = ObjectFactory.CreateGameObject("Hole (1)");
+        ObjectFactory.PlaceGameObject(hole);
+        Row("unique.gaps", gap.name + "|" + hole.name + "|" + GameObjectUtility.GetUniqueNameForSibling(null, "Hole"));
+
+        // A RectTransform object placed under a RectTransform parent, and a second RectTransform
+        // asked of GameObject.AddComponent.
+        var uiTwice = ObjectFactory.CreateGameObject("UiTwice", typeof(RectTransform));
+        Row("placed.rectTwice", Try(() => { ObjectFactory.PlaceGameObject(uiTwice, canvasParent); return "ok"; }));
+        Row("placed.rectTwice.components", string.Join(",", uiTwice.GetComponents<Component>().Select(x => x.GetType().Name)) + "|" + (uiTwice.transform.parent == null ? "none" : uiTwice.transform.parent.name));
+        int logsBefore = s_Log.Count;
+        Row("addComponent.rectTwice", Try(() => uiTwice.AddComponent<RectTransform>() == null ? "null" : "added"));
+        Row("addComponent.rectTwice.log", string.Join("||", s_Log.Skip(logsBefore)));
+        Events("rectTwice");
+
         Row("place.groupName.end", Undo.GetCurrentGroupName());
         Row("place.selection.end", Selection.activeGameObject == null ? "none" : Selection.activeGameObject.name);
         Events("unique");

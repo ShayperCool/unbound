@@ -202,12 +202,19 @@
 {"k":"unique.forRoot","v":"Dup (3)"}
 {"k":"unique.forChild","v":"Child (2)"}
 {"k":"unique.fresh","v":"Fresh"}
-{"k":"place.groupName.end","v":"Create Child (1)"}
-{"k":"place.selection.end","v":"Child (1)"}
-{"k":"unique.events","v":"Transform@Dup,Transform@Dup,Transform@Dup,Transform@Item (5),Transform@Item (5),Transform@Child,RectTransform@Child,Transform@Child,RectTransform@Child"}
-{"k":"roots","v":"A,B,C,,Sphere,Capsule,Cylinder,Cube,Plane,Quad,Parent,Loose,UiParent,Dup,Dup (1),Dup (2),Item (5),Item (6)"}
+{"k":"unique.gaps","v":"Gap (1)|Hole (1)|Hole (2)"}
+{"k":"placed.rectTwice","v":"throws ArgumentException: Can't add component 'RectTransform' to UiTwice because such a component is already added to the game object!"}
+{"k":"placed.rectTwice.components","v":"RectTransform|UiParent"}
+{"k":"addComponent.rectTwice","v":"null"}
+{"k":"addComponent.rectTwice.log","v":"Log: Can't add component 'RectTransform' to UiTwice because such a component is already added to the game object!"}
+{"k":"rectTwice.events","v":"Transform@Dup,Transform@Dup,Transform@Dup,Transform@Item (5),Transform@Item (5),Transform@Child,RectTransform@Child,Transform@Child,RectTransform@Child,Transform@Gap,Transform@Hole (1),Transform@UiTwice,RectTransform@UiTwice"}
+{"k":"place.groupName.end","v":"Create Hole (1)"}
+{"k":"place.selection.end","v":"Hole (1)"}
+{"k":"unique.events","v":""}
+{"k":"roots","v":"A,B,C,,Sphere,Capsule,Cylinder,Cube,Plane,Quad,Parent,Loose,UiParent,Dup,Dup (1),Dup (2),Item (5),Item (6),Gap,Gap (2),Gap (1),Hole,Hole (3),Hole (1)"}
 {"k":"sceneDirty.end","v":"False"}
-{"k":"undoGroupName.end","v":"Create Child (1)"}
-{"k":"afterUndo.roots","v":"Parent,UiParent"}
+{"k":"undoGroupName.end","v":"Create Hole (1)"}
+{"k":"log/00","v":"Log: Can't add component 'RectTransform' to UiTwice because such a component is already added to the game object!"}
+{"k":"afterUndo.roots","v":"Parent,Gap,Gap (2),Hole,Hole (3),UiParent"}
 {"k":"afterUndo.a.components","v":"destroyed"}
 {"k":"complete","v":true}
