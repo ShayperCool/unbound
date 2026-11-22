@@ -324,6 +324,19 @@ namespace Unbound.Runtime
             GamepadEvents(time);
         }
 
+        /// <summary>Delivers the paused Play mode keyboard configuration events before the
+        /// Editor callbacks (tests/projects/inputframes ConfigurationControl).</summary>
+        internal static void UpdatePausedKeyboardConfiguration(FrameInput* input)
+        {
+            if (!Enabled || !Compat.KeyboardConfigurationMeasured) return;
+            double time = CurrentTime;
+            bool keyboardRefreshed = false;
+            for (int i = 0; i < input->KeyEventCount; i++)
+                if (input->KeyEvents[i].IsKeyboardConfiguration)
+                    QueueHostKeyboardConfiguration(time, ref keyboardRefreshed);
+            if (keyboardRefreshed) EditorUpdate();
+        }
+
         // ------------------------------------------------------------------ gamepads
 
         /// <summary>The pads SDL maps, as the Editor reports them: the "SDL" interface, the
@@ -420,16 +433,14 @@ namespace Unbound.Runtime
         static void KeyAndButtonEvents(FrameInput* input, double time)
         {
             Span<bool> pressedThisFrame = stackalloc bool[KeyboardStateSize * 8];
+            bool keyboardRefreshed = false;
             for (int i = 0; i < input->KeyEventCount; i++)
             {
                 var e = input->KeyEvents[i];
                 if (e.IsKeyboardConfiguration)
                 {
                     if (Compat.KeyboardConfigurationMeasured)
-                    {
-                        ReadKeyboardConfiguration();
-                        QueueKeyboardConfiguration(time);
-                    }
+                        QueueHostKeyboardConfiguration(time, ref keyboardRefreshed);
                     continue;
                 }
                 int button = e.Key - (int)KeyCode.Mouse0;
@@ -499,8 +510,13 @@ namespace Unbound.Runtime
             QueueEvent((IntPtr)e);
         }
 
-        static void QueueKeyboardConfiguration(double time)
+        static void QueueHostKeyboardConfiguration(double time, ref bool keyboardRefreshed)
         {
+            if (!keyboardRefreshed)
+            {
+                ReadKeyboardConfiguration();
+                keyboardRefreshed = true;
+            }
             byte* e = stackalloc byte[EventHeaderSize];
             Header(e, ConfigurationEventType, EventHeaderSize, KeyboardId, time);
             QueueEvent((IntPtr)e);

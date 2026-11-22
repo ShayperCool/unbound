@@ -12,10 +12,9 @@ static CONNECTION: Mutex<Option<RustConnection>> = Mutex::new(None);
 const CORE_KEYBOARD: xkb::DeviceSpec = 256;
 
 pub(crate) fn initialize() {
-    if std::env::var_os("DISPLAY").is_none()
-        || std::env::var_os("WAYLAND_DISPLAY").is_some()
-        || std::env::var_os("WAYLAND_SOCKET").is_some()
-    {
+    let has_display = |name| std::env::var(name).is_ok_and(|value| !value.is_empty());
+    // Match the window backend's display selection. An empty variable does not select a backend.
+    if !has_display("DISPLAY") || has_display("WAYLAND_DISPLAY") || has_display("WAYLAND_SOCKET") {
         return;
     }
     match connect() {

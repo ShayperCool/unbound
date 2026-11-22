@@ -25,7 +25,8 @@ not reproduce the original first-key trigger or test refreshed key names.
 
 The host profile starts its own X server. It reads the layout and Y/Z labels,
 delivers two taps through XTEST, loads a German map and remaps one physical
-key with the layout name still German. Two independent Unity 6000.0.71f1
+key with the layout name still German. It then switches between two active
+groups and replaces the map during paused Play mode. Two independent Unity 6000.0.71f1
 captures agree on the event sequences, configuration callback counts and
 labels.
 
@@ -46,9 +47,15 @@ per event.
 [GDK X11 event handling](https://github.com/GNOME/gtk/blob/gtk-3-24/gdk/x11/gdkdisplay-x11.c).
 
 The host delivers queued notifications before the frame's key changes.
-Changes that fall between multiple X11 key reports in one frame, standalone
-group switches, Wayland keyboards and other release families are outside
-this control.
+Switching the active XKB group alone preserves the cached layout and labels
+and generates zero notifications. Each switch verifies the actual group on
+the X server. Replacing the map while Play mode is paused refreshes the
+layout and labels during the pause and generates three callbacks before play
+resumes. The Linux landing gate runs the host replay with empty Wayland
+environment variables.
+
+Changes that fall between multiple X11 key reports in one frame, Wayland
+keyboards and other release families are outside this control.
 
 The process-local GDK signal control runs in the Editor. The X11 host
 profile uses actual input on its own display in both engines.

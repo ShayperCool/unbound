@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
@@ -53,6 +54,63 @@ public sealed class InputHostConfigControl : MonoBehaviour
         if (process.ExitCode != 0) throw new InvalidOperationException(program + " exited " + process.ExitCode);
     }
 
+    const int CoreKeyboard = 0x100;
+    [DllImport("libX11.so.6")] static extern IntPtr XOpenDisplay(IntPtr displayName);
+    [DllImport("libX11.so.6")] static extern int XkbLockGroup(IntPtr display, int device, int group);
+    [DllImport("libX11.so.6")] static extern int XkbGetState(IntPtr display, int device, IntPtr state);
+    [DllImport("libX11.so.6")] static extern int XSync(IntPtr display, int discard);
+    [DllImport("libX11.so.6")] static extern int XCloseDisplay(IntPtr display);
+
+    static void SelectGroup(int group)
+    {
+        var display = XOpenDisplay(IntPtr.Zero);
+        if (display == IntPtr.Zero) throw new InvalidOperationException("could not open the probe display");
+        try
+        {
+            if (XkbLockGroup(display, CoreKeyboard, group) == 0)
+                throw new InvalidOperationException("could not select the keyboard layout");
+            XSync(display, 0);
+            // XkbStateRec starts with the active group byte.
+            var state = Marshal.AllocHGlobal(32);
+            try
+            {
+                if (XkbGetState(display, CoreKeyboard, state) != 0 || Marshal.ReadByte(state) != group)
+                    throw new InvalidOperationException("the requested keyboard layout is inactive");
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(state);
+            }
+        }
+        finally
+        {
+            XCloseDisplay(display);
+        }
+    }
+
+#if UNITY_EDITOR
+    int pauseTicks;
+
+    void BeginPause()
+    {
+        UnityEditor.EditorApplication.update += UpdatePaused;
+        UnityEditor.EditorApplication.isPaused = true;
+    }
+
+    void UpdatePaused()
+    {
+        switch (++pauseTicks)
+        {
+            case 6: Run("setxkbmap", "-layout de"); break;
+            case 30:
+                Read("whilePaused");
+                UnityEditor.EditorApplication.update -= UpdatePaused;
+                UnityEditor.EditorApplication.isPaused = false;
+                break;
+        }
+    }
+#endif
+
     void Update()
     {
         switch (++frame)
@@ -67,7 +125,17 @@ public sealed class InputHostConfigControl : MonoBehaviour
             case 85: Read("layoutChange"); break;
             case 90: Run("xmodmap", "-e \"keycode 29 = y Y\""); break;
             case 105: Read("mappingChange"); break;
-            case 110:
+            case 110: Run("setxkbmap", "-layout us,de"); break;
+            case 125: Read("multipleGroups"); break;
+            case 130: SelectGroup(1); break;
+            case 145: Read("groupChanged"); break;
+            case 150: SelectGroup(0); break;
+            case 165: Read("groupRestored"); break;
+#if UNITY_EDITOR
+            case 170: BeginPause(); break;
+            case 185: Read("afterPause"); break;
+#endif
+            case 190:
                 rows.Add("complete");
                 File.WriteAllLines(output, rows);
                 if (Environment.GetEnvironmentVariable("INPUT_HOST_CONFIG_UNBOUND") == "1")

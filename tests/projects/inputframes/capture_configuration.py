@@ -50,6 +50,9 @@ def prepare(project, release):
 
 
 def engine(work, release, reference):
+    if not sys.platform.startswith('linux'):
+        print('keyboard host configuration control requires Linux X11')
+        return 0
     project = work / 'projects' / 'unbound'
     out = work / 'unbound'
     prepare(project, release)
@@ -58,10 +61,11 @@ def engine(work, release, reference):
     try:
         env = environment(dict(os.environ, INPUT_HOST_CONFIG_OUT=str(out / 'values.txt'),
                                INPUT_HOST_CONFIG_UNBOUND='1'), display.name)
+        env.update(WAYLAND_DISPLAY='', WAYLAND_SOCKET='')
         with (out / 'unbound.log').open('x') as log:
             command = [str(Path.home() / '.cache/compat/with-heavy-job'), '--kind', 'engine-gpu',
                 'timeout', '180', *GPU_PREFIX, engine_cli(), 'run', '-p', str(project),
-                '--size', '960x540', '--frames', '150', '--force-glcore', '--no-watch']
+                '--size', '960x540', '--frames', '255', '--force-glcore', '--no-watch']
             with subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT) as process:
                 # There is no window manager to focus the game window on this display.
                 focus = subprocess.run(['timeout', '150', 'xdotool', 'search', '--sync',

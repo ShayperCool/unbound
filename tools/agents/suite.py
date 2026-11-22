@@ -623,6 +623,13 @@ def recipes(release):
                           env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'})]
         R[name][0].kind = 'compare'
         R[name][0].timeout = DRIVER_TIMEOUT
+    if sys.platform.startswith('linux'):
+        keyboard = driver('capture_configuration.py', 'unbound', '--host',
+                          '--release', '{release}', '--label', '{label}-host',
+                          env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'})
+        keyboard.kind = 'compare'
+        keyboard.timeout = DRIVER_TIMEOUT
+        R['inputframes'].append(keyboard)
     R['screencapture'] = []
     for space in ('Linear', 'Gamma'):
         R['screencapture'] += [
