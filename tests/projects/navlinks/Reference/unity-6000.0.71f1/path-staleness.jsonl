@@ -283,3 +283,11 @@
 {"lane":"staleArea.idleThenPlan.areaMask","agent":"a","f":0,"area":false,"request":false,"link":true,"path":false,"pending":true,"update":false,"positionDelta":[0,0,0]}
 {"lane":"staleArea.idleThenPlan.agentCost","agent":"a","f":0,"area":false,"request":false,"link":true,"path":false,"pending":true,"update":false,"positionDelta":[0,0,0]}
 {"lane":"staleArea.idleThenPlan.globalCost","agent":"a","f":0,"area":false,"request":false,"link":true,"path":false,"pending":true,"update":false,"positionDelta":[0,0,0]}
+{"lane":"staleCostReplacement.default","agent":"a","f":0,"before":false,"after":true,"update":true,"beforeCost":2,"cost":3,"otherCost":1}
+{"lane":"staleCostReplacement.equalOverride","agent":"a","f":0,"before":false,"after":false,"update":false,"beforeCost":3,"cost":3,"otherCost":1}
+{"lane":"staleCostReplacement.differentOverride","agent":"a","f":0,"before":false,"after":true,"update":true,"beforeCost":4,"cost":3,"otherCost":1}
+{"lane":"staleCostReplacement.otherOverride","agent":"a","f":0,"before":false,"after":true,"update":true,"beforeCost":2,"cost":3,"otherCost":3}
+{"lane":"staleCostReplacement.sameDefault","agent":"a","f":0,"before":false,"after":false,"update":false,"beforeCost":2,"cost":2,"otherCost":1}
+{"lane":"staleCostReplacement.sameDefaultOverride","agent":"a","f":0,"before":false,"after":true,"update":true,"beforeCost":4,"cost":2,"otherCost":3}
+{"lane":"staleAssigned.fresh","agent":"a","f":0,"pathBefore":false,"path":true,"before":false,"after":true,"update":true}
+{"lane":"staleAssigned.replace","agent":"a","f":0,"pathBefore":false,"path":true,"before":false,"after":true,"update":true}

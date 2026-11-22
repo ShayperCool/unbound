@@ -40,6 +40,8 @@ public partial class NavLinksProbe
         yield return RecordStalePathReset(remoteLink, local.O);
         yield return RecordCloneStaleness(remoteLink, local.O);
         yield return RecordAreaStaleness(local, remoteLink);
+        yield return RecordAreaCostReplacement(local);
+        yield return RecordAssignedPath(local);
         Finish(0);
     }
 
@@ -338,6 +340,72 @@ public partial class NavLinksProbe
                 + ",\"update\":" + B(afterUpdate) + ",\"positionDelta\":" + V(positionDelta));
             DestroyImmediate(agent.gameObject);
             if (change == "globalCost") NavMesh.SetAreaCost(4, cost);
+            yield return null;
+        }
+    }
+
+    IEnumerator RecordAreaCostReplacement(Lane local)
+    {
+        const int area = 4;
+        const int otherArea = 5;
+        foreach (string mode in new[] { "default", "equalOverride", "differentOverride", "otherOverride", "sameDefault", "sameDefaultOverride" })
+        {
+            var lane = new Lane { Name = "staleCostReplacement." + mode, O = local.O };
+            var agent = Agent(lane, "a", new Vector3(-8f, 0f, -0.3f), null, a => {
+                a.speed = 0f;
+                a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            });
+            for (int i = 0; i < 5; i++) yield return null;
+            float original = NavMesh.GetAreaCost(area);
+            float other = NavMesh.GetAreaCost(otherArea);
+            float replacement = mode.StartsWith("sameDefault", StringComparison.Ordinal) ? original : original + 1f;
+            if (mode == "equalOverride") agent.SetAreaCost(area, replacement);
+            if (mode == "differentOverride" || mode == "sameDefaultOverride") agent.SetAreaCost(area, original + 2f);
+            if (mode == "otherOverride" || mode == "sameDefaultOverride") agent.SetAreaCost(otherArea, other + 2f);
+            SetTestDestination(agent, agent.nextPosition + Vector3.right * 2f);
+            yield return null;
+            if (!agent.hasPath) throw new InvalidOperationException("agent has no test route");
+            float beforeCost = agent.GetAreaCost(area);
+            bool beforeStale = agent.isPathStale;
+            NavMesh.SetAreaCost(area, replacement);
+            bool afterStale = agent.isPathStale;
+            float afterCost = agent.GetAreaCost(area);
+            float afterOther = agent.GetAreaCost(otherArea);
+            yield return null;
+            Line(lane.Name, "a", 0, "\"before\":" + B(beforeStale) + ",\"after\":" + B(afterStale)
+                + ",\"update\":" + B(agent.isPathStale) + ",\"beforeCost\":" + N(beforeCost)
+                + ",\"cost\":" + N(afterCost) + ",\"otherCost\":" + N(afterOther));
+            DestroyImmediate(agent.gameObject);
+            NavMesh.SetAreaCost(area, original);
+            yield return null;
+        }
+    }
+
+    IEnumerator RecordAssignedPath(Lane local)
+    {
+        foreach (bool replace in new[] { false, true })
+        {
+            var lane = new Lane { Name = replace ? "staleAssigned.replace" : "staleAssigned.fresh", O = local.O };
+            var agent = Agent(lane, "a", new Vector3(-8f, 0f, -0.3f), null, a => {
+                a.speed = 0f;
+                a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            });
+            for (int i = 0; i < 5; i++) yield return null;
+            var here = agent.nextPosition;
+            if (replace) SetTestDestination(agent, here + Vector3.right * 0.15f);
+            bool beforePath = agent.hasPath;
+            var path = new NavMeshPath();
+            if (!agent.CalculatePath(here + Vector3.right * 2f, path) || !agent.SetPath(path))
+                throw new InvalidOperationException("test path refused");
+            bool afterPath = agent.hasPath;
+            bool beforeStale = agent.isPathStale;
+            agent.areaMask &= ~(1 << 4);
+            bool afterStale = agent.isPathStale;
+            yield return null;
+            Line(lane.Name, "a", 0, "\"pathBefore\":" + B(beforePath) + ",\"path\":" + B(afterPath)
+                + ",\"before\":" + B(beforeStale) + ",\"after\":" + B(afterStale)
+                + ",\"update\":" + B(agent.isPathStale));
+            DestroyImmediate(agent.gameObject);
             yield return null;
         }
     }
