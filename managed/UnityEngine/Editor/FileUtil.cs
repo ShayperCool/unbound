@@ -74,7 +74,7 @@ namespace UnityEditor
         {
             readonly string m_View, m_Project, m_Unbound;
             readonly StringComparison m_Case;
-            readonly string m_PhysicalView, m_PhysicalProject, m_PhysicalLibrary, m_PhysicalUnbound, m_PhysicalEmbedded;
+            readonly string m_PhysicalView, m_PhysicalProject, m_PhysicalLibrary, m_PhysicalUnbound, m_PhysicalGameLibrary, m_PhysicalEmbedded;
             readonly List<string> m_OtherPackages = new List<string>();
 
             ProjectView(string view, string project, string unbound)
@@ -87,6 +87,9 @@ namespace UnityEditor
                 m_PhysicalLibrary = Path.Combine(m_PhysicalProject, "Library");
                 m_Unbound = unbound;
                 m_PhysicalUnbound = ConsoleLogPath.Resolve(unbound);
+                // The view's Library/: Unbound's own (LibraryUnbound/Library), what Editor code
+                // keeps there is the game's, as the Editor's Library/ is.
+                m_PhysicalGameLibrary = Path.Combine(m_PhysicalUnbound, "Library");
                 m_PhysicalEmbedded = Path.Combine(m_PhysicalProject, "Packages");
                 string packages = Path.Combine(view, "Packages");
                 if (!Directory.Exists(packages)) return;
@@ -180,7 +183,8 @@ namespace UnityEditor
             }
 
             /// <summary>Whether the deletion of <paramref name="full"/> would land on the project
-            /// folder, Library, Unbound's directory or below it, or in a package kept elsewhere.</summary>
+            /// folder, a Library folder, Unbound's directory or below it (but in the game's
+            /// Library/), or in a package kept elsewhere.</summary>
             internal bool Refuses(string full)
             {
                 // Spelled into Unbound's directory: by its own path, or, where it is in the
@@ -192,7 +196,9 @@ namespace UnityEditor
                 // Where the entry itself lands: its folder's links followed, not its own.
                 string parent = Path.GetDirectoryName(full);
                 string landing = parent == null ? full : Path.Combine(ConsoleLogPath.Resolve(parent), Path.GetFileName(full));
-                if (Same(landing, m_PhysicalProject) || Same(landing, m_PhysicalLibrary)) return true;
+                if (Same(landing, m_PhysicalProject) || Same(landing, m_PhysicalLibrary) || Same(landing, m_PhysicalGameLibrary)) return true;
+                // What is in the game's Library/ goes, as in the Editor's Library/.
+                if (Below(landing, m_PhysicalGameLibrary) is { Length: > 0 }) return false;
                 // Unbound's directory (LibraryUnbound) and what is in it, except the view's own entries (links, handled
                 // above, and what a script wrote in its working directory) named in the view
                 // itself: one reached through a link into it (a project's own link) is refused.
