@@ -245,9 +245,9 @@ def image_difference(expected, actual):
     return total/(wa*ha), worst, over
 
 
-def residuals(probe):
+def residuals(probe, filename='residuals.json'):
     """{key: reason} of the probe's residuals.json (none without one)."""
-    path = device_file(probe, 'residuals.json')
+    path = device_file(probe, filename)
     if not path.exists():
         return {}
     known = {}
@@ -373,9 +373,9 @@ def engine_cli():
 
 
 def gate(probe, variable, label, tolerance, engine_args, authored=None, base=None, space=None, device=None,
-         *, configure=None, profile=None):
+         *, configure=None, profile=None, residuals_file='residuals.json'):
     # The limits and residuals are read first: a missing Metal counterpart stops before the run.
-    residuals(probe), image_limits(probe)
+    known, limits = residuals(probe, residuals_file), image_limits(probe)
     out = run_root(probe, label)
     if authored:
         project = out/'project'
@@ -402,7 +402,6 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
         print(f'{probe.name}: no complete engine capture ({error}); engine exit {code}; log {out}/engine.log')
         return 1
     matched, failures = compare(expected, actual, tolerance)
-    known = residuals(probe)
     residual = [f for f in failures if f['key'] in known]
     failures = [f for f in failures if f['key'] not in known]
     for failure in failures:
@@ -411,8 +410,7 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
         print(json.dumps({**failure, 'residual': known[failure['key']]}))
     differing = {f['key'] for f in residual}
     for key in sorted(k for k in known if k not in differing and k in expected):
-        print(f'residual resolved (remove it from residuals.json): {key}')
-    limits = image_limits(probe)
+        print(f'residual resolved (remove it from {residuals_file}): {key}')
     for name in images(reference):
         if not (capture/name).exists():
             print(f'{name}: missing')

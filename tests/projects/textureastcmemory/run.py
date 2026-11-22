@@ -15,7 +15,7 @@ BASE = (PROBE.parent/'formatmapping', ['Assets/Scenes', 'Assets/Scenes.meta', 'P
 CAPTURE = 'ASTC_MEMORY_OUT'
 PROFILES = ('Ordinary', 'Wide', 'CubeFirst', 'ResizeFirst', 'UninitializedFirst', 'CloneFirst',
             'ArrayFirst', 'VolumeFirst', 'HdrFirst', 'UninitializedApplyFirst', 'ImportFirst',
-            'ArrayBeforeApply', 'CubeUninitialized', 'ArrayUninitialized')
+            'ArrayBeforeApply', 'CubeUninitialized', 'ArrayUninitialized', 'SwitchFootprint')
 
 
 def include_astc_import(project):
@@ -36,42 +36,57 @@ def directory(label, profile):
     return out
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('record', 'publish', 'gate'))
-    parser.add_argument('labels', nargs='*')
-    parser.add_argument('--label')
-    parser.add_argument('--profile', choices=PROFILES, required=True)
-    args = parser.parse_intermixed_args()
-    if args.mode == 'publish':
-        roots = [directory(label, args.profile) for label in args.labels]
-        value_probe.verify_sealed_value_repeats(roots)
-        for root in roots:
-            rows = value_probe.read_values(root/'capture'/value_probe.VALUES)
-            if (rows.get('device'), rows.get('unity'), rows.get('profile')) != ('OpenGLCore', unity_version(), args.profile):
-                raise SystemExit(f'{root}: unexpected device, version or run profile')
-        return value_probe.publish(PROBE, [str(root) for root in roots], profile=args.profile)
+def validate_capture(root, profile):
+    rows = value_probe.read_values(root/'capture'/value_probe.VALUES)
+    if (rows.get('device'), rows.get('unity'), rows.get('profile')) != ('OpenGLCore', unity_version(), profile):
+        raise SystemExit(f'{root}: unexpected device, version or run profile')
 
-    if args.labels:
-        parser.error('use --label for record and gate')
-    os.environ['ASTC_MEMORY_PROFILE'] = args.profile
-    label = private_label() if args.label is None else args.label
-    out = directory(label, args.profile)
+
+def run(mode, label, profile):
+    os.environ['ASTC_MEMORY_PROFILE'] = profile
+    out = directory(label, profile)
     if out.exists():
         raise SystemExit(f'{out}: expected a fresh run directory')
-    android = args.profile == 'ImportFirst'
+    android = profile == 'ImportFirst'
     configure = include_astc_import if android else None
-    if args.mode == 'record':
+    if mode == 'record':
         editor_args = ('-buildTarget', 'Android') if android else ()
         value_probe.record(PROBE, 'RecordAstcMemory.Record', CAPTURE, str(out), batch=True, base=BASE,
                            configure=configure, editor_args=editor_args)
+        validate_capture(out, profile)
         value_probe.seal_value_capture(out)
         return 0
     engine_args = ['--headless', '12', '--force-glcore']
     if android:
         engine_args += ['--target', 'Android']
     return value_probe.gate(PROBE, CAPTURE, str(out), 0, engine_args,
-                            base=BASE, profile=args.profile, configure=configure)
+                            base=BASE, profile=profile, configure=configure,
+                            residuals_file=f'residuals-{profile}.json')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('mode', choices=('record', 'publish', 'gate'))
+    parser.add_argument('labels', nargs='*')
+    parser.add_argument('--label')
+    parser.add_argument('--profile', choices=PROFILES)
+    args = parser.parse_intermixed_args()
+    if args.mode != 'gate' and args.profile is None:
+        parser.error('record and publish require --profile')
+    if args.mode == 'publish':
+        roots = [directory(label, args.profile) for label in args.labels]
+        value_probe.verify_sealed_value_repeats(roots)
+        for root in roots:
+            validate_capture(root, args.profile)
+        return value_probe.publish(PROBE, [str(root) for root in roots], profile=args.profile)
+
+    if args.labels:
+        parser.error('use --label for record and gate')
+    if sys.platform != 'linux':
+        parser.error('record and gate require the Linux OpenGL Core device')
+    label = private_label() if args.label is None else args.label
+    profiles = (args.profile,) if args.profile else PROFILES
+    return max([run(args.mode, label, profile) for profile in profiles])
 
 
 if __name__ == '__main__':

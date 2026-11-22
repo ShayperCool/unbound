@@ -42,6 +42,7 @@ public static class AstcMemory
         Put("unity", Application.unityVersion);
         Put("device", SystemInfo.graphicsDeviceType);
         Put("profile", profile);
+        Texture2DArray retainedArray = null;
         if (profile == "ImportFirst")
         {
             var imported = Resources.Load<Texture2D>("WorkspaceInput");
@@ -59,8 +60,10 @@ public static class AstcMemory
                 {
                     array.Apply(false, false);
                     Size("prelude.array.applied", array);
+                    Object.DestroyImmediate(array);
                 }
-                Object.DestroyImmediate(array);
+                else
+                    retainedArray = array;
             });
         }
         if (profile == "VolumeFirst")
@@ -152,6 +155,15 @@ public static class AstcMemory
             Size("clone", clone);
             Object.DestroyImmediate(clone);
         }
+        if (profile == "SwitchFootprint")
+        {
+            Put("first.switch.result", first.Reinitialize(8, 8, TextureFormat.ASTC_5x5, false));
+            Size("first.switch.new", first);
+            first.Apply(false, false);
+            Size("first.switch.applied", first);
+            var sameFootprint = Create("sameFootprint", TextureFormat.ASTC_5x5, 8, 8, false, true);
+            Object.DestroyImmediate(sameFootprint);
+        }
         Put("first.reinitialize.result", first.Reinitialize(16, 24, TextureFormat.RGBA32, false));
         Size("first.reinitialize", first);
         first.Apply(false, false);
@@ -159,6 +171,12 @@ public static class AstcMemory
         Object.DestroyImmediate(first);
         var after = Create("after", format, width, 17, true, true);
         foreach (var item in new[] { same, color, secondFormat, after }) Object.DestroyImmediate(item);
+        if (retainedArray != null)
+        {
+            retainedArray.Apply(false, false);
+            Size("prelude.array.applied", retainedArray);
+            Object.DestroyImmediate(retainedArray);
+        }
         Rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), Rows);
 #if UNITY_EDITOR
