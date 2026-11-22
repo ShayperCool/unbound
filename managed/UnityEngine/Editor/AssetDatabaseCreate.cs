@@ -51,9 +51,9 @@ namespace UnityEditor
             }
             if (!UnityYamlWriter.WritesNew(asset))
             {
-                var reason = asset is AnimationClip clip ? AnimationClipFiles.Unwritable(clip) : null;
+                var reason = Unwritable(asset);
                 Debug.LogError(reason != null
-                    ? $"Unbound does not write this AnimationClip yet: {reason}; '{path}' is not created."
+                    ? $"Unbound does not write this {asset.GetType().Name} yet: {reason}; '{path}' is not created."
                     : $"Unbound does not write {asset.GetType().Name} assets yet: '{path}' is not created.");
                 return;
             }
@@ -93,7 +93,10 @@ namespace UnityEditor
             }
             if (!UnityYamlWriter.WritesNew(objectToAdd))
             {
-                Debug.LogError($"Unbound does not write {objectToAdd.GetType().Name} objects into assets yet: it is not added to '{created.Path}'.");
+                var reason = Unwritable(objectToAdd);
+                Debug.LogError(reason != null
+                    ? $"Unbound does not write this {objectToAdd.GetType().Name} yet: {reason}; it is not added to '{created.Path}'."
+                    : $"Unbound does not write {objectToAdd.GetType().Name} objects into assets yet: it is not added to '{created.Path}'.");
                 return;
             }
             long id;
@@ -106,6 +109,12 @@ namespace UnityEditor
 
         /// <summary>Whether the object is part of an asset CreateAsset made in this session (one Unbound
         /// writes whole from its objects).</summary>
+        /// <summary>Why an object of a class Unbound writes cannot be written yet (null otherwise).</summary>
+        static string Unwritable(Object o) =>
+            o is AnimationClip clip ? AnimationClipFiles.Unwritable(clip)
+            : ControllerFiles.Writes(o) ? ControllerFiles.Unwritable(o)
+            : null;
+
         internal static bool CreatedThisSession(Object o)
         {
             foreach (var created in s_Created.Values)

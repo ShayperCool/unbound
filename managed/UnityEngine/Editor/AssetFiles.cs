@@ -35,6 +35,8 @@ namespace Unbound.Runtime
             {
                 var o = ObjectRegistry.FindById(id);
                 if (o == null || !o.IsPersistentAsset) continue;
+                // An asset CreateAsset made is written by SaveCreated, which reports one it cannot write.
+                if (AssetDatabase.CreatedThisSession(o)) continue;
                 // A V2 sprite atlas is an imported object (SpriteAtlasImporter); SaveAssets writes
                 // neither the .spriteatlasv2 nor its .meta and leaves the object dirty (matches the
                 // Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v2include).

@@ -9,8 +9,10 @@ namespace Unbound.Runtime
     /// <summary>
     /// The documents of an animator controller made through the Editor's controller API, written
     /// as the Editor writes them (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
-    /// controller-assets): the controller (its parameters and layers), its state machines, states,
-    /// transitions and blend trees, each object's fields in the Editor's order.
+    /// controller-assets; a synced layer's behaviours and state machine behaviours as
+    /// tests/projects/animatorapi model.file.* holds them): the controller (its parameters and
+    /// layers), its state machines, states, transitions and blend trees, each object's fields in the
+    /// Editor's order.
     /// </summary>
     internal static class ControllerFiles
     {
@@ -24,13 +26,8 @@ namespace Unbound.Runtime
         {
             switch (o)
             {
-                case AnimatorController c:
-                    foreach (var layer in c.m_Layers)
-                        if (layer.SyncedMotions.Count > 0 || layer.SyncedBehaviours.Count > 0)
-                            return "a synced layer's motions or behaviours";
-                    return null;
                 case AnimatorStateMachine m:
-                    return m.MachineTransitions.Count > 0 ? "state machine transitions" : null;
+                    return m.MachineTransitions.Count > 1 ? $"its state machine '{m.name}' has transitions out of several state machines, whose order in a controller file is not measured" : null;
                 default:
                     return null;
             }
@@ -56,9 +53,18 @@ namespace Unbound.Runtime
                 foreach (var o in objects) SequenceValue(level, Reference(o));
             }
 
+            /// <summary>Refuses, when the file is written, a part its object took after it was made
+            /// an asset's (the caller reports the file as not saved).</summary>
+            static void CheckWritable(Object o)
+            {
+                if (ControllerFiles.Unwritable(o) is string reason)
+                    throw new NotSupportedException($"Unbound does not write this controller yet: {reason}.");
+            }
+
             /// <summary>An AnimatorController's body (class 91).</summary>
             internal void AnimatorControllerBody(AnimatorController c)
             {
+                CheckWritable(c);
                 ObjectHeader(c);
                 String("m_Name", c.name);
                 Int("serializedVersion", 5);
@@ -86,8 +92,29 @@ namespace Unbound.Runtime
                         String("m_Name", l.Name ?? "", 2);
                         Line(2, "m_StateMachine", Reference(l.StateMachine));
                         Line(2, "m_Mask", Reference(l.Mask));
-                        Line(2, "m_Motions", "[]");
-                        Line(2, "m_Behaviours", "[]");
+                        if (l.SyncedMotions.Count == 0) Line(2, "m_Motions", "[]");
+                        else
+                        {
+                            // A synced layer's motions (controller-assets layered.saved).
+                            Key("m_Motions", 2);
+                            foreach (var (state, motion) in l.SyncedMotions)
+                            {
+                                Item("serializedVersion", "2", 2);
+                                Line(3, "m_State", Reference(state));
+                                Line(3, "m_Motion", Reference(motion));
+                            }
+                        }
+                        if (l.SyncedBehaviours.Count == 0) Line(2, "m_Behaviours", "[]");
+                        else
+                        {
+                            // A synced layer's behaviours (tests/projects/animatorapi model.file.C).
+                            Key("m_Behaviours", 2);
+                            foreach (var (state, behaviours) in l.SyncedBehaviours)
+                            {
+                                Item("m_State", Reference(state), 2);
+                                References("m_StateMachineBehaviours", behaviours, 3);
+                            }
+                        }
                         Int("m_BlendingMode", l.BlendingMode, 2);
                         Int("m_SyncedLayerIndex", l.SyncedLayerIndex, 2);
                         Float("m_DefaultWeight", l.DefaultWeight, 2);
@@ -101,6 +128,7 @@ namespace Unbound.Runtime
             /// <summary>An AnimatorStateMachine's body (class 1107).</summary>
             internal void AnimatorStateMachineBody(AnimatorStateMachine m)
             {
+                CheckWritable(m);
                 Int("serializedVersion", 6);
                 ObjectHeader(m);
                 String("m_Name", m.name);
@@ -130,7 +158,18 @@ namespace Unbound.Runtime
                 }
                 References("m_AnyStateTransitions", m.AnyStateTransitions, 1);
                 References("m_EntryTransitions", m.EntryTransitions, 1);
-                Line(1, "m_StateMachineTransitions", "{}");
+                if (m.MachineTransitions.Count == 0) Line(1, "m_StateMachineTransitions", "{}");
+                else
+                {
+                    // Transitions out of a sub-state machine, by their source (controller-assets
+                    // basic.saved), in the order made.
+                    Key("m_StateMachineTransitions", 1);
+                    foreach (var (source, transitions) in m.MachineTransitions)
+                    {
+                        Item("first", Reference(source), 1);
+                        References("second", transitions, 2);
+                    }
+                }
                 References("m_StateMachineBehaviours", m.Behaviours, 1);
                 Line(1, "m_AnyStatePosition", Position(m.anyStatePosition));
                 Line(1, "m_EntryPosition", Position(m.entryPosition));

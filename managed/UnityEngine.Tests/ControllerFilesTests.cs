@@ -36,30 +36,45 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(machine); }
         }
 
-        /// <summary>Parts whose form in a file is not measured are refused: state machine
-        /// transitions and a synced layer's override motions.</summary>
+        /// <summary>Transitions out of a sub-state machine and a synced layer's motions are written
+        /// in the forms measured (controller-assets basic.saved, layered.saved); transitions out of
+        /// several state machines, whose order is not measured, are refused, also when taken after
+        /// the machine was added to an asset (when the file is written, with the reason).</summary>
         [Fact]
-        public void UnmeasuredPartsAreRefused()
+        public void MachineTransitionsAndSyncedMotions()
         {
             var machine = new AnimatorStateMachine { name = "Root" };
             var controller = new AnimatorController();
             var clip = new AnimationClip();
             try
             {
-                Assert.True(UnityYamlWriter.WritesNew(machine));
                 var sub = machine.AddStateMachine("Sub");
-                machine.AddStateMachineTransition(sub, machine);
+                var run = machine.AddState("Run");
+                machine.AddStateMachineTransition(sub, run);
+                Assert.True(UnityYamlWriter.WritesNew(machine));
+                Assert.Contains("  m_StateMachineTransitions:\n  - first: {fileID: 0}\n    second:\n    - {fileID: 0}\n  m_StateMachineBehaviours: []\n", Write(machine, 1));
+                var other = machine.AddStateMachine("Other");
+                machine.AddStateMachineTransition(other, run);
                 Assert.False(UnityYamlWriter.WritesNew(machine));
+                Assert.Contains("several state machines", Assert.Throws<System.NotSupportedException>(() => Write(machine, 1)).Message);
 
                 controller.AddLayer("Base Layer");
-                Assert.True(UnityYamlWriter.WritesNew(controller));
                 var synced = new AnimatorControllerLayer { name = "Synced", syncedLayerIndex = 0 };
                 controller.AddLayer(synced);
                 var state = controller.layers[0].stateMachine.AddState("Idle");
                 var layers = controller.layers;
                 layers[1].SetOverrideMotion(state, clip);
                 controller.layers = layers;
-                Assert.False(UnityYamlWriter.WritesNew(controller));
+                Assert.True(UnityYamlWriter.WritesNew(controller));
+                Assert.Contains("    m_Motions:\n    - serializedVersion: 2\n      m_State: {fileID: 0}\n      m_Motion: {fileID: 0}\n    m_Behaviours: []\n", Write(controller, 9100000));
+
+                // A synced layer's behaviours (tests/projects/animatorapi model.file.C).
+                var behaviour = ScriptableObject.CreateInstance<ProbeStateBehaviour>();
+                layers = controller.layers;
+                layers[1].SetOverrideBehaviours(state, new StateMachineBehaviour[] { behaviour });
+                controller.layers = layers;
+                Assert.Contains("    m_Behaviours:\n    - m_State: {fileID: 0}\n      m_StateMachineBehaviours:\n      - {fileID: 0}\n    m_BlendingMode: ", Write(controller, 9100000));
+                Object.DestroyImmediate(behaviour);
             }
             finally
             {
@@ -68,5 +83,9 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(clip);
             }
         }
+    }
+
+    public class ProbeStateBehaviour : StateMachineBehaviour
+    {
     }
 }
