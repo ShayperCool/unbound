@@ -1088,10 +1088,13 @@ namespace Unbound.Runtime
             /// not load, for an object still added with the same target (when listed after the
             /// prefab's objects, insertIndex -1, it must still come after them) and, for GameObjects,
             /// for another instance's object still saved (an instance placed under this one's
-            /// object); one for an object applied to the prefab or gone is dropped (tests/projects/
-            /// scenesave BaseApplied). A new object is listed after the prefab's objects (insertIndex
-            /// -1, measured: prefab-nested, Base); an added object moved to another target or among
-            /// the prefab's objects is not measured and fails the save.
+            /// object, while it is still there); one for an object applied to the prefab or gone is
+            /// dropped (tests/projects/scenesave BaseApplied). A new object is listed after the
+            /// prefab's objects (insertIndex -1, measured: prefab-nested, Base). The entries must give
+            /// the order the objects have now when placed as a load places them (each at its
+            /// insertIndex, else after the others, in the list's order); an added object moved to
+            /// another target, among the prefab's objects or out of that order, and another instance
+            /// moved away, are not measured and fail the save.
             /// </summary>
             YText AddedList(InstanceState state, YText fileList, List<(long Target, long Added, bool Last)> current, string what, bool gameObjects)
             {
@@ -1115,7 +1118,14 @@ namespace Unbound.Runtime
                         if (m_Source.ContainsKey(id)) list.Items.Add(item.Clone());
                     }
                     else if (gameObjects && m_KnownObjects.TryGetValue(id, out var o) && o != null && Saved(o) && Link(o) is PrefabLink other && other.Instance != state.Data)
+                    {
+                        // Kept only while that instance is still under this one's object the entry names.
+                        var parent = (o as Transform ?? (o as GameObject)?.transform)?.parent;
+                        if (parent == null || Link(parent) is not PrefabLink at || at.Instance != state.Data
+                            || at.SourceFileId != ParseFileId(item.Get("targetCorrespondingSourceObject")))
+                            m_Unwritten.Add("an instance placed under a prefab instance's object and moved (its new place is not measured)");
                         list.Items.Add(item.Clone());
+                    }
                 }
                 foreach (var c in current)
                 {
@@ -1127,8 +1137,62 @@ namespace Unbound.Runtime
                     entry.Add("addedObject", FlowValue("{fileID: " + c.Added + "}"));
                     list.Items.Add(entry);
                 }
+                if (!InOrder(list, gameObjects)) m_Unwritten.Add($"{what} added to a prefab instance and reordered (their new place is not measured)");
                 list.Flow = list.Items.Count == 0;
                 return list;
+            }
+
+            /// <summary>Whether the entries, placed as a load places them (each, in the list's order,
+            /// at its insertIndex among the target's objects, else after them), give the order the
+            /// targets' children or components have now.</summary>
+            bool InOrder(YText list, bool gameObjects)
+            {
+                var byTarget = new Dictionary<Object, List<(Object Added, int Index)>>(ReferenceEqualityComparer.Instance);
+                foreach (var item in list.Items)
+                {
+                    if (!ObjectOf(ParseFileId(item.Get("addedObject")), out var added)) continue;
+                    Object container = gameObjects ? (added as Transform ?? (added as GameObject)?.transform)?.parent : (added as Component)?.gameObject;
+                    if (container == null) continue;
+                    if (!byTarget.TryGetValue(container, out var entries)) byTarget[container] = entries = new List<(Object, int)>();
+                    int.TryParse(item.Get("insertIndex")?.Text, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int index);
+                    entries.Add((added is GameObject g ? g.transform : added, index));
+                }
+                foreach (var (container, entries) in byTarget)
+                {
+                    var current = new List<Object>();
+                    if (container is Transform parent)
+                    {
+                        for (int i = 0; i < parent.childCount; i++)
+                            if (Saved(parent.GetChild(i).gameObject)) current.Add(parent.GetChild(i));
+                    }
+                    else if (container is GameObject go)
+                        foreach (var c in go.m_Components) if (c != null && !c.m_Destroyed) current.Add(c);
+                    var placed = new List<Object>();
+                    foreach (var o in current)
+                        if (!entries.Exists(e => ReferenceEquals(e.Added, o))) placed.Add(o);
+                    foreach (var (added, index) in entries)
+                    {
+                        if (index >= 0 && index <= placed.Count) placed.Insert(index, added);
+                        else placed.Add(added);
+                    }
+                    if (placed.Count != current.Count) return false;
+                    for (int i = 0; i < placed.Count; i++)
+                        if (!ReferenceEquals(placed[i], current[i])) return false;
+                }
+                return true;
+            }
+
+            Dictionary<long, Object> m_ObjectsById;
+
+            /// <summary>The object this save writes under a file id.</summary>
+            bool ObjectOf(long id, out Object o)
+            {
+                if (m_ObjectsById == null)
+                {
+                    m_ObjectsById = new Dictionary<long, Object>();
+                    foreach (var pair in m_Ids) m_ObjectsById[pair.Value] = pair.Key;
+                }
+                return m_ObjectsById.TryGetValue(id, out o) && o != null;
             }
 
             static string SourceGuid(InstanceState state) => state.Document.Body.Get("m_SourcePrefab")?.Get("guid")?.Text ?? "";

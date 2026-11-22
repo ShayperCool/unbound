@@ -485,6 +485,8 @@ namespace UnityEngine.Tests
             Assert.Contains("    - targetCorrespondingSourceObject: {fileID: 101, guid: " + m_Guid + ", type: 3}\n      insertIndex: -1\n", first);
             var file = Path.Combine(m_Project, "Assets", "Holder.prefab");
             File.WriteAllText(file, first.Replace("insertIndex: -1", "insertIndex: 0"));
+            // At index 0, where a load places the entry.
+            added.transform.SetSiblingIndex(0);
             var kept = SceneFiles.Write(target);
             Assert.Contains("      insertIndex: 0\n", kept);
             Assert.DoesNotContain("insertIndex: -1", kept);
@@ -503,6 +505,19 @@ namespace UnityEngine.Tests
                 errors.Lines.Clear();
                 Assert.Null(SceneFiles.Write(target));
                 Assert.Contains(errors.Lines, l => l.Contains("GameObjects added to a prefab instance and moved"));
+
+                // Two added after the prefab's children, then swapped: a load would place them in the
+                // file's order, so the save is refused.
+                added.transform.SetAsLastSibling();
+                var second = new GameObject("Second");
+                second.transform.SetParent(instance.transform, false);
+                errors.Lines.Clear();
+                var both = SceneFiles.Write(target);
+                Assert.NotNull(both);
+                File.WriteAllText(file, both);
+                second.transform.SetSiblingIndex(added.transform.GetSiblingIndex());
+                Assert.Null(SceneFiles.Write(target));
+                Assert.Contains(errors.Lines, l => l.Contains("GameObjects added to a prefab instance and reordered"));
             }
             finally
             {
@@ -511,8 +526,8 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>An instance's file entry for another instance placed under its object (that
-        /// instance's root Transform, as files list nested instances) stays through a save while that
-        /// instance is saved.</summary>
+        /// instance's root Transform) stays through a save while that instance is still there; moved
+        /// away, the save is refused with the reason (its new place is not measured).</summary>
         [Fact]
         public void ASaveKeepsTheEntryOfAnInstancePlacedUnderAnother()
         {
@@ -548,7 +563,22 @@ namespace UnityEngine.Tests
             docs.Add(stand);
             var file = Path.Combine(m_Project, "Assets", "Holder.prefab");
             File.WriteAllText(file, UnityYamlText.Write(docs));
+            inner.transform.SetParent(outer.transform, false);
             Assert.Contains("addedObject: {fileID: " + InnerRoot + "}", SceneFiles.Write(target));
+
+            var errors = new Errors();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = errors;
+            try
+            {
+                inner.transform.SetParent(holder.transform, false);
+                Assert.Null(SceneFiles.Write(target));
+                Assert.Contains(errors.Lines, l => l.Contains("an instance placed under a prefab instance's object and moved"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
         }
 
         /// <summary>New prefabs whose instances are not measured are refused or not written: an
