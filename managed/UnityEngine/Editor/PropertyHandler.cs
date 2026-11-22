@@ -43,6 +43,10 @@ namespace UnityEditor
 
         internal List<PropertyDrawer> PropertyDrawers;
         internal List<DecoratorDrawer> Decorators;
+        /// <summary>Set once a PropertyField, which shows the decorators itself, has drawn the
+        /// property's IMGUI: IMGUI calls for the property leave the decorators out from then on
+        /// (tests/projects/imguicontainer imgui.spaced).</summary>
+        internal bool SkipDecorators;
 
         internal PropertyDrawer DrawerAt(int nestingLevel) =>
             PropertyDrawers != null && nestingLevel < PropertyDrawers.Count ? PropertyDrawers[nestingLevel] : null;
@@ -69,13 +73,20 @@ namespace UnityEditor
             return target != null ? target.GetInstanceID() : 0;
         }
 
-        /// <summary>The level of the drawer a call for this property draws or measures with.</summary>
-        internal static int LevelFor(SerializedProperty property)
+        /// <summary>The level of the drawer a call for this property draws or measures with, and
+        /// whether the call shows the property's decorators: only one from outside the property's
+        /// own drawers and PropertyField.</summary>
+        internal static int LevelFor(SerializedProperty property, out bool decorated)
         {
             int target = TargetOf(property);
             string path = property.propertyPath;
             for (int i = s_Stack.Count - 1; i >= 0; i--)
-                if (s_Stack[i].Target == target && s_Stack[i].Path == path) return s_Stack[i].Level + 1;
+            {
+                if (s_Stack[i].Target != target || s_Stack[i].Path != path) continue;
+                decorated = false;
+                return s_Stack[i].Level + 1;
+            }
+            decorated = !DrawerDispatch.For(property).SkipDecorators;
             return 0;
         }
 
@@ -102,14 +113,6 @@ namespace UnityEditor
         /// <summary>A drawer the game's code wrote (the engine's own drawers have UI Toolkit GUI
         /// only; IMGUI draws their attributes itself).</summary>
         internal static bool IsGameDrawer(GUIDrawer drawer) => drawer != null && drawer.GetType().Assembly != typeof(UnityEngine.Object).Assembly;
-
-        /// <summary>The game drawer an IMGUI call for this property draws with, or null.</summary>
-        internal static PropertyDrawer GameDrawerFor(SerializedProperty property, out int level)
-        {
-            level = LevelFor(property);
-            var drawer = DrawerDispatch.For(property).DrawerAt(level);
-            return IsGameDrawer(drawer) ? drawer : null;
-        }
     }
 
     internal static class DrawerDispatch

@@ -229,15 +229,39 @@ namespace UnityEditor
         public static bool PropertyField(Rect position, SerializedProperty property, bool includeChildren) => PropertyField(position, property, null, includeChildren);
         public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label) => PropertyField(position, property, label, false);
 
-        /// <summary>A property's own drawer draws it when it has one (the game's), else the
-        /// Editor's control for its type.</summary>
+        /// <summary>A property's decorators take the top of its rect (unless a drawer of the property
+        /// or a PropertyField that shows them itself is drawing it); below them its own drawer draws
+        /// it when it has one (the game's), else the Editor's control for its type.</summary>
         public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label, bool includeChildren)
         {
             RequireGUI();
-            var drawer = DrawerNesting.GameDrawerFor(property, out int level);
-            if (drawer == null) return EditorGUIControls.Property(position, property, label);
+            var drawers = DrawerDispatch.For(property);
+            int level = DrawerNesting.LevelFor(property, out bool decorated);
+            if (decorated && drawers.Decorators != null)
+            {
+                float bottom = position.yMax;
+                foreach (var decorator in drawers.Decorators)
+                {
+                    position.height = PropertyHeights.OfDecorator(decorator);
+                    // The engine's decorators (a space, a header) have no IMGUI of their own here.
+                    if (DrawerNesting.IsGameDrawer(decorator))
+                    {
+                        float labelWidth = EditorGUIUtility.labelWidth, fieldWidth = EditorGUIUtility.fieldWidth;
+                        decorator.OnGUI(position);
+                        EditorGUIUtility.labelWidth = labelWidth;
+                        EditorGUIUtility.fieldWidth = fieldWidth;
+                    }
+                    position.y += position.height;
+                }
+                position.height = bottom - position.y;
+            }
+            var drawer = drawers.DrawerAt(level);
+            if (!DrawerNesting.IsGameDrawer(drawer)) return EditorGUIControls.Property(position, property, label);
+            float oldLabelWidth = EditorGUIUtility.labelWidth, oldFieldWidth = EditorGUIUtility.fieldWidth;
             using (DrawerNesting.Enter(property, level))
-                drawer.OnGUI(position, property, label ?? new GUIContent(property.displayName));
+                drawer.OnGUI(position, property.Copy(), label ?? new GUIContent(property.displayName));
+            EditorGUIUtility.labelWidth = oldLabelWidth;
+            EditorGUIUtility.fieldWidth = oldFieldWidth;
             return false;
         }
         public static Rect PrefixLabel(Rect totalPosition, GUIContent label)
@@ -805,38 +829,37 @@ namespace UnityEditor
         // A property's drawers are the ones PropertyField finds (DrawerDispatch: the declaring field,
         // a collection's attributes on its elements, the built-in attributes); the engine's own
         // drawers and decorators are measured here, a game's by its GetHeight/GetPropertyHeight.
+        internal static float OfDecorator(DecoratorDrawer decorator)
+        {
+            switch (decorator)
+            {
+                case SpaceDrawer _:
+                    return ((SpaceAttribute)decorator.attribute).height;
+                case HeaderDrawer _:
+                    // The header's style is the Editor's: there is none outside an editor window.
+                    EditorStyles.Require();
+                    return Line * 1.5f + 6f;
+                default:
+                    return decorator.GetHeight();
+            }
+        }
+
         internal static float Of(SerializedProperty property, GUIContent label, bool includeChildren)
         {
             var drawers = DrawerDispatch.For(property);
             float height = 0f;
             // A drawer measuring its own property again gets the next drawer, without the
-            // decorators.
-            int level = DrawerNesting.LevelFor(property);
-            if (drawers.Decorators != null && level == 0)
+            // decorators; so does a PropertyField that shows the decorators itself.
+            int level = DrawerNesting.LevelFor(property, out bool decorated);
+            if (drawers.Decorators != null && decorated)
             {
-                foreach (var decorator in drawers.Decorators)
-                {
-                    switch (decorator)
-                    {
-                        case SpaceDrawer _:
-                            height += ((SpaceAttribute)decorator.attribute).height;
-                            break;
-                        case HeaderDrawer _:
-                            // The header's style is the Editor's: there is none outside an editor window.
-                            EditorStyles.Require();
-                            height += Line * 1.5f + 6f;
-                            break;
-                        default:
-                            height += decorator.GetHeight();
-                            break;
-                    }
-                }
+                foreach (var decorator in drawers.Decorators) height += OfDecorator(decorator);
             }
             var drawer = drawers.DrawerAt(level);
             if (DrawerNesting.IsGameDrawer(drawer))
             {
                 using (DrawerNesting.Enter(property, level))
-                    return height + drawer.GetPropertyHeight(property, label ?? new GUIContent(property.displayName));
+                    return height + drawer.GetPropertyHeight(property.Copy(), label ?? new GUIContent(property.displayName));
             }
             switch (drawer?.attribute)
             {

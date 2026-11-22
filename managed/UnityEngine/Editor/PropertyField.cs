@@ -441,7 +441,10 @@ namespace UnityEditor.UIElements
                 EditorGUI.BeginChangeCheck();
                 property.serializedObject.Update();
                 var shown = m_Label == null ? null : m_Label.Length == 0 ? GUIContent.none : new GUIContent(m_Label);
-                // The IMGUI field starts at this field's drawer.
+                // The IMGUI field starts at this field's drawer; the decorators are this field's
+                // own elements.
+                var drawers = DrawerDispatch.For(property);
+                if (drawers.Decorators != null) drawers.SkipDecorators = true;
                 using (DrawerNesting.Enter(property, m_DrawNestingLevel - 1))
                     EditorGUILayout.PropertyField(property, shown, true);
                 property.serializedObject.ApplyModifiedProperties();

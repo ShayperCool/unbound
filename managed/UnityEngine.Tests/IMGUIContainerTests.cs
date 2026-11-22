@@ -293,6 +293,7 @@ namespace UnityEngine.Tests
         {
             [Tagged] public float tagged = 0.5f;
             public float plain = 1f;
+            [Space(20f)] [Tagged] public float spaced = 2f;
         }
 
         // A drawer that measures and draws its own property again.
@@ -311,6 +312,41 @@ namespace UnityEngine.Tests
             {
                 TaggedDrawer.position = position;
                 EditorGUI.PropertyField(position, property, label);
+            }
+        }
+
+        [Fact]
+        public void DecoratorsTakeTheTopOfTheRectUntilAPropertyFieldShowsThemItself()
+        {
+            using var f = new Fixture();
+            var target = ScriptableObject.CreateInstance<Nested>();
+            using var so = new SerializedObject(target);
+            using var registered = new PropertyFieldDrawerTests.DrawerTable((typeof(Tagged), typeof(TaggedDrawer)));
+            try
+            {
+                // The space, then the drawer's 18 + 3.
+                Assert.Equal(41f, EditorGUI.GetPropertyHeight(so.FindProperty("spaced")));
+                var drawn = f.Add(() => EditorGUI.PropertyField(new Rect(3f, 7f, 100f, 41f), so.FindProperty("spaced")));
+                f.Tick();
+                Assert.Equal(new Rect(3f, 27f, 100f, 21f), TaggedDrawer.position);
+                drawn.RemoveFromHierarchy();
+
+                // A PropertyField shows the space itself and its IMGUI leaves it out, also in
+                // every later IMGUI call for the property.
+                var field = new UnityEditor.UIElements.PropertyField(so.FindProperty("spaced"));
+                field.style.width = 300f;
+                f.Panel.visualTree.Add(field);
+                UnityEditor.UIElements.BindingExtensions.Bind(field, so);
+                f.Tick();
+                f.Tick();
+                Assert.Equal(2, field.hierarchy.childCount);
+                Assert.Equal(20f, field.hierarchy[0].layout.height);
+                Assert.Equal(21f, TaggedDrawer.position.height);
+                Assert.Equal(21f, EditorGUI.GetPropertyHeight(so.FindProperty("spaced")));
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
             }
         }
 
