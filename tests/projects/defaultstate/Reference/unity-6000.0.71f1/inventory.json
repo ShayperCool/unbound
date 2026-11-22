@@ -1243,6 +1243,12 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
+      "type": "UnityEditor.Callbacks.OnOpenAssetAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
       "type": "UnityEditor.Callbacks.PostProcessSceneAttribute"
     },
     {

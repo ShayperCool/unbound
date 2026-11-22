@@ -842,3 +842,6 @@ display, so its `scaledPixelsPerPoint` and the same value inside `contentContain
 
 The object factory slice adds the static `ObjectFactory` (excluded) to the inventory, as two Unity
 6000.0.71f1 batch Editor captures on macOS write it; every earlier row is unchanged.
+
+The asset opening slice adds `Callbacks.OnOpenAssetAttribute` (its `class` factory row and `TypeId`) to the
+inventory, as two Unity 6000.0.71f1 batch Editor captures on macOS write them; every earlier row is unchanged.

@@ -545,6 +545,8 @@
 {"key":"UnityEditor.CallbackOrderAttribute/@factory","status":"excluded","value":"abstract"}
 {"key":"UnityEditor.Callbacks.DidReloadScripts/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.Callbacks.DidReloadScripts/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEditor.Callbacks.DidReloadScripts"}
+{"key":"UnityEditor.Callbacks.OnOpenAssetAttribute/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.Callbacks.OnOpenAssetAttribute/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEditor.Callbacks.OnOpenAssetAttribute"}
 {"key":"UnityEditor.Callbacks.PostProcessSceneAttribute/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.Callbacks.PostProcessSceneAttribute/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEditor.Callbacks.PostProcessSceneAttribute"}
 {"key":"UnityEditor.CanEditMultipleObjects/@factory","status":"value","value":"class"}
