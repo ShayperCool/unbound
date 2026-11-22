@@ -1,0 +1,44 @@
+{"k":"preview.new","v":"targets=null|index=0|target=NullReferenceException|title=NullReferenceException"}
+{"k":"preview.one","v":"has=False|title='Alpha'|sameTitle=False|info=''|create=null|target=obj:Alpha"}
+{"k":"preview.three","v":"title='3 EditorPreviewTargets'|target=obj:Alpha"}
+{"k":"preview.walk","v":"True>obj:Beta|False>obj:Gamma|False>IndexOutOfRangeException|False>IndexOutOfRangeException|reset>obj:Alpha"}
+{"k":"preview.native","v":"title='2 Materials'"}
+{"k":"preview.none","v":"title=IndexOutOfRangeException|target=IndexOutOfRangeException|next=False"}
+{"k":"preview.null","v":"title=NullReferenceException|target=NullReferenceException"}
+{"k":"attribute","v":"Material"}
+{"k":"names.gameObject","v":"title='Go'|multi='Go'|class='GameObject'|type='GameObject'"}
+{"k":"names.transform","v":"title='Transform'|multi='Transform'|class='Transform'|type='Transform'"}
+{"k":"names.light","v":"title='Light'|multi='Light'|class='Light'|type='Light'"}
+{"k":"names.camera","v":"title='Camera'|multi='Camera'|class='Camera'|type='Camera'"}
+{"k":"names.sprite","v":"title='Sprite Renderer'|multi='Sprite Renderer'|class='SpriteRenderer'|type='SpriteRenderer'"}
+{"k":"names.line","v":"title='Line Renderer'|multi='Line Renderer'|class='LineRenderer'|type='LineRenderer'"}
+{"k":"names.meshFilter","v":"title='[none] (Mesh Filter)'|multi='Mesh Filter'|class='MeshFilter'|type='MeshFilter'"}
+{"k":"names.behaviour","v":"title='Editor Preview Behaviour (Script)'|multi='Editor Preview Behaviour (Script)'|class='MonoBehaviour'|type='EditorPreviewBehaviour'"}
+{"k":"names.menu","v":"title='Fancy Name'|multi='Fancy Name'|class='MonoBehaviour'|type='EditorPreviewMenuBehaviour'"}
+{"k":"names.hidden","v":"title='Editor Preview Hidden Behaviour (Script)'|multi='Editor Preview Hidden Behaviour (Script)'|class='MonoBehaviour'|type='EditorPreviewHiddenBehaviour'"}
+{"k":"names.trailing","v":"title='Editor Preview Trailing Behaviour (Script)'|multi='Editor Preview Trailing Behaviour (Script)'|class='MonoBehaviour'|type='EditorPreviewTrailingBehaviour'"}
+{"k":"names.old","v":"title='Editor Preview Old Behaviour (Script) (Deprecated)'|multi='Editor Preview Old Behaviour (Script) (Deprecated)'|class='MonoBehaviour'|type='EditorPreviewOldBehaviour'"}
+{"k":"names.scriptable","v":"title='Alpha (Editor Preview Target)'|multi='Alpha (Editor Preview Target)'|class='MonoBehaviour'|type='EditorPreviewTarget'"}
+{"k":"names.material","v":"title='M1 (Material)'|multi='M1 (Material)'|class='Material'|type='Material'"}
+{"k":"names.texture","v":"title='Tex (Texture 2D)'|multi='Tex (Texture 2D)'|class='Texture2D'|type='Texture2D'"}
+{"k":"names.mesh","v":"title='My Mesh (Mesh)'|multi='My Mesh (Mesh)'|class='Mesh'|type='Mesh'"}
+{"k":"names.null","v":"title='Nothing Selected'|multi='Nothing Selected'|class=ArgumentNullException|type='Object'"}
+{"k":"names.meshFilter.mesh","v":"title='My Mesh (Mesh Filter)'|multi='Mesh Filter'"}
+{"k":"names.destroyed","v":"script=' (Script)'|material='Nothing Selected'|class=MissingReferenceException"}
+{"k":"names.obsolete","v":"'Some Name'|'Transform'"}
+{"k":"editor.one","v":"has=False|title='Alpha'|info=''|static=null|create=null|targetTitle='Alpha (Editor Preview Target)'|index=0"}
+{"k":"editor.generic","v":"type=GenericInspector|has=False|title='Alpha'|info=''"}
+{"k":"editor.three","v":"title='3 EditorPreviewTargets'|targetTitle='3 Editor Preview Targets'|target=Alpha"}
+{"k":"editor.walk","v":"True>obj:Beta>1|True>obj:Gamma>2|True>obj:Alpha>0|True>obj:Beta>1|reset>obj:Alpha"}
+{"k":"editor.cleanup","v":"InvalidOperationException:You shouldn't call Cleanup for Editors. Dispose resources in Editor.OnDisable"}
+{"k":"editor.settings","v":"'ok'"}
+{"k":"editor.outsideGUI","v":"NullReferenceException"}
+{"k":"draw.single","v":"gui:KeyDown:4,6,300,200:PreBackground:0"}
+{"k":"draw.many","v":"reset;gui:KeyDown:0,0,82,82:PreBackgroundSolid:0;next:1:True;gui:KeyDown:0,0,82,82:PreBackgroundSolid:1;next:2:False;gui:KeyDown:0,0,82,82:PreBackgroundSolid:2;next:3:False;reset"}
+{"k":"draw.editors","v":"gui:KeyDown:4,6,300,200:PreBackground:Alpha:1;gui:KeyDown:0,0,82,82:PreBackgroundSolid:Alpha:3;gui:KeyDown:0,0,82,82:PreBackgroundSolid:Beta:3;gui:KeyDown:0,0,82,82:PreBackgroundSolid:Gamma:3"}
+{"k":"draw.error","v":""}
+{"k":"draw.after","v":"many=0|three=Alpha"}
+{"k":"excluding","v":"=78|second=58|m_Script=58|m_Script,first,third=18|missing=78"}
+{"k":"excluding.null","v":"0"}
+{"k":"logs","v":["Error:The targets array should not be used inside OnSceneGUI or OnPreviewGUI. Use the single target property instead.","Error:The targets array should not be used inside OnSceneGUI or OnPreviewGUI. Use the single target property instead.","Error:The targets array should not be used inside OnSceneGUI or OnPreviewGUI. Use the single target property instead.","Exception:ArgumentNullException: Value cannot be null.\nParameter name: source"]}
+{"k":"complete","v":true}
