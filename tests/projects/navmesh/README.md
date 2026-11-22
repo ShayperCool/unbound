@@ -218,13 +218,15 @@ obstacle. At frame 230 one run turns off carving and the control leaves it
 enabled. From frame 232 the cleared ground differs between the runs. In both
 Editor runs the agent follows the same remaining route, with the same reported
 corners, steering, velocity, and remaining distance. The hole that disappears
-lies behind the agent on a tile its corridor still uses.
+lies behind the agent on a tile its corridor still uses. In a third run a
+new hole appears on a distant tile in the same update. Its open-ground sample
+changes and the blocked agent retains its route.
 
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navmesh/carving_route.py editor --label L
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navmesh/carving_route.py publish --label L
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 UNBOUND_CLI=.../unbound python3 tests/projects/navmesh/carving_route.py gate
 
-Two independent GPU Editor captures for each setting agree on all 1,564
+Two independent GPU Editor captures for each setting agree on all 2,369
 values. The route check uses the existing comparator and reference tolerance.
 The earlier broad capture still reports all its raw residuals. The Unity 6.0
 API documents carving's effect on the mesh and pathfinding. The running
@@ -235,5 +237,6 @@ corridor through this edit is an observation from these controls.
 When removing a hole replaces the agent's current polygons, Unbound reconnects
 the affected prefix to the surviving ground route. This closes the 19 later
 blocked-agent differences in the broad capture, so all 253 of its values match.
-The new control covers a complete ground path. Partial paths, off-mesh routes
-and edits that also add or move holes keep the existing replan.
+The control covers a complete ground path with a replaced prefix. A new
+hole in any tile of that prefix, an intact prefix before the edit, partial
+paths and off-mesh routes use the existing replan.

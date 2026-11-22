@@ -177,5 +177,20 @@ namespace UnityEngine.Tests
             var query = StripQuery();
             Assert.Equal("direct", Route(query, (-4f, -4f), (-2f, -2f), 3f));
         }
+
+        [Fact]
+        public void CarvingReconnectRequiresAReplacedGroundPrefixAndAnIntactTail()
+        {
+            var mesh = StripQuery().GetAttachedNavMesh();
+            long current = mesh.GetPolyRefBase(mesh.GetTile(0));
+            DtDetour.DecodePolyId(current, out int salt, out int tile, out _);
+            long replaced = DtDetour.EncodePolyId(salt + 1, tile, 0);
+            var removed = new Dictionary<long, int> { [replaced] = 2 };
+
+            Assert.Equal(2, AgentSystem.CarvingRoutePrefixLength(mesh, new[] { replaced, replaced + 1, current }, removed));
+            Assert.Equal(0, AgentSystem.CarvingRoutePrefixLength(mesh, new[] { current, replaced, current + 1 }, removed));
+            Assert.Equal(0, AgentSystem.CarvingRoutePrefixLength(mesh, new[] { replaced + 2, current }, removed));
+            Assert.Equal(0, AgentSystem.CarvingRoutePrefixLength(mesh, new[] { replaced, replaced + 1 }, removed));
+        }
     }
 }

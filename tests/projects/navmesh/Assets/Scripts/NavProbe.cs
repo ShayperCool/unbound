@@ -25,6 +25,7 @@ public class NavProbe : MonoBehaviour
     bool m_Done;
     NavMeshObstacle m_Carver;
     NavMeshObstacle m_Parked;
+    NavMeshObstacle m_Remote;
     string m_UpdateHoles;
     // A carving obstacle with the default settings (carveOnlyStationary, 0.5 s to stationary,
     // 0.1 m threshold), away from the agents: carved once stationary, moved below and above the
@@ -32,6 +33,7 @@ public class NavProbe : MonoBehaviour
     static readonly Vector3 CarverAt = new Vector3(2f, 0.5f, 7.5f);
     static readonly Vector3 ParkedAt = new Vector3(-8.5f, 0.5f, 5f);
     static readonly Vector3 ParkedMoved = new Vector3(-7.25f, 0.5f, 5f);
+    static readonly Vector3 RemoteAt = new Vector3(15f, 0.5f, -1.5f);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Create()
@@ -368,6 +370,13 @@ public class NavProbe : MonoBehaviour
         if (m_Frame == 160) m_Parked.transform.position = ParkedAt + new Vector3(0.05f, 0f, 0f);
         if (m_Frame == 180) m_Parked.transform.position = ParkedMoved;
         if (m_Frame == 230 && m_CarvingRoute != "keep") m_Parked.carving = false;
+        if (m_Frame == 230 && m_CarvingRoute == "removePlusAdd")
+        {
+            var remote = new GameObject("Remote carver");
+            remote.transform.position = RemoteAt;
+            m_Remote = remote.AddComponent<NavMeshObstacle>();
+            m_Remote.carving = true;
+        }
         ProbeLog.Begin("agents.f" + m_Frame);
         ProbeLog.Value("dt", Time.deltaTime);
         if (m_Frame >= 58) ProbeLog.Value("holes", "u" + m_UpdateHoles + " l" + Holes());
@@ -409,6 +418,9 @@ public class NavProbe : MonoBehaviour
         var agent = m_Agents[5].Agent;
         ProbeLog.Begin("carvingRoute." + m_CarvingRoute + ".f" + m_Frame);
         ProbeLog.Value("holes", "u" + m_UpdateHoles + " l" + Holes());
+        if (m_CarvingRoute == "removePlusAdd")
+            ProbeLog.Value("remoteOpen", NavMesh.SamplePosition(new Vector3(RemoteAt.x, 0.054f, RemoteAt.z),
+                out _, 0.05f, NavMesh.AllAreas));
         ProbeLog.Value("position", agent.transform.position);
         ProbeLog.Value("nextPosition", agent.nextPosition);
         ProbeLog.Value("velocity", agent.velocity);
@@ -454,6 +466,7 @@ public class NavProbe : MonoBehaviour
         m_Agents.Clear();
         if (m_Carver != null) DestroyImmediate(m_Carver.gameObject);
         if (m_Parked != null) DestroyImmediate(m_Parked.gameObject);
+        if (m_Remote != null) DestroyImmediate(m_Remote.gameObject);
         NavMesh.RemoveAllNavMeshData();
         var settings = NavMesh.GetSettingsByID(0);
         var data = NavMeshBuilder.BuildNavMeshData(settings, new List<NavMeshBuildSource>

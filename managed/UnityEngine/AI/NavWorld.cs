@@ -56,6 +56,8 @@ namespace Unbound.Runtime
             internal readonly Dictionary<int, DataInstance> DataOfTile = new Dictionary<int, DataInstance>();
             /// <summary>Every tile in the mesh: where it came from and where it lies.</summary>
             internal readonly List<PlacedTile> Tiles = new List<PlacedTile>();
+        /// <summary>Old tile references and ground polygon counts for the last removal-only recuts.</summary>
+        internal readonly Dictionary<long, int> RemovedCarvingTiles = new();
         }
 
         /// <summary>A data instance's tile as placed in a surface's mesh.</summary>
@@ -82,7 +84,6 @@ namespace Unbound.Runtime
         /// <summary>Bumped when tiles are cut again in place (carving): the polygons of those tiles
         /// are new, every other polygon reference stays valid.</summary>
         internal static int TileVersion;
-        internal static bool OnlyRemovedCarving { get; private set; }
         /// <summary>Changes on every change of the meshes (a rebuild or tiles cut again).</summary>
         internal static int Changes => Version + TileVersion;
         /// <summary>Bumped by the NavMesh changes that make every agent's path stale
@@ -329,6 +330,8 @@ namespace Unbound.Runtime
             foreach (var surface in s_Surfaces.Values)
             {
                 surface.Query = new DtNavMeshQuery(surface.Mesh);
+                if (Compat.NavMeshCarvingCorridorMeasured)
+                    surface.RemovedCarvingTiles.EnsureCapacity(surface.Tiles.Count);
                 var polyDump = Environment.GetEnvironmentVariable("UNBOUND_NAVMESH_POLYS");
                 if (polyDump != null)
                 {
@@ -382,7 +385,7 @@ namespace Unbound.Runtime
         /// <summary>Carving holes changed: the tiles the changed holes (their outlines before and
         /// after) reach are cut again and replaced in their meshes, the others are kept with their
         /// polygon references. A NavMesh waiting for a rebuild is rebuilt whole instead.</summary>
-        internal static void HolesChanged(IReadOnlyList<NavMeshCarving.Footprint> changed, bool onlyRemoved)
+        internal static void HolesChanged(IReadOnlyList<(NavMeshCarving.Footprint Hole, bool Added)> changed)
         {
             if (s_Dirty)
             {
@@ -390,21 +393,27 @@ namespace Unbound.Runtime
                 return;
             }
             bool replaced = false;
+            bool trackRemoved = Compat.NavMeshCarvingCorridorMeasured;
             CollectUnboundEnds();
             // Each changed hole's bounds, per agent radius (usually one).
-            var bounds = new Dictionary<float, (float MinX, float MaxX, float MinZ, float MaxZ)[]>();
+            var bounds = new Dictionary<float, (float MinX, float MaxX, float MinZ, float MaxZ, bool Added)[]>();
             foreach (var surface in s_Surfaces.Values)
             {
+                surface.RemovedCarvingTiles.Clear();
                 foreach (var placed in surface.Tiles)
                 {
                     var settings = placed.Instance.Data.m_Settings;
                     if (!bounds.TryGetValue(settings.agentRadius, out var holes))
                     {
-                        holes = new (float, float, float, float)[changed.Count];
-                        for (int i = 0; i < holes.Length; i++) holes[i] = NavMeshCarving.HoleBounds(changed[i], settings.agentRadius);
+                        holes = new (float, float, float, float, bool)[changed.Count];
+                        for (int i = 0; i < holes.Length; i++)
+                        {
+                            var (minX, maxX, minZ, maxZ) = NavMeshCarving.HoleBounds(changed[i].Hole, settings.agentRadius);
+                            holes[i] = (minX, maxX, minZ, maxZ, changed[i].Added);
+                        }
                         bounds[settings.agentRadius] = holes;
                     }
-                    if (!Reaches(placed, holes)) continue;
+                    if (!Reaches(placed, holes, out bool onlyRemoved)) continue;
                     var old = surface.Mesh.GetTileByRef(placed.Ref);
                     if (old?.data == null) continue;
                     var source = placed.Instance.Data.m_Tiles[placed.Index];
@@ -425,8 +434,10 @@ namespace Unbound.Runtime
                     tile.header.x = old.data.header.x;
                     tile.header.y = old.data.header.y;
                     tile.header.layer = old.data.header.layer;
+                    long replacedRef = placed.Ref;
+                    int groundCount = old.data.header.offMeshBase;
                     MapLinks(surface, old, false);
-                    surface.Mesh.RemoveTile(placed.Ref);
+                    surface.Mesh.RemoveTile(replacedRef);
                     replaced = true;
                     surface.Mesh.AddTile(tile, 0, 0, out long tileRef);
                     placed.Ref = tileRef;
@@ -441,13 +452,10 @@ namespace Unbound.Runtime
                     var added = surface.Mesh.GetTileByRef(tileRef);
                     surface.DataOfTile[DtDetour.DecodePolyIdTile(tileRef)] = placed.Instance;
                     MapLinks(surface, added, true);
+                    if (trackRemoved && onlyRemoved) surface.RemovedCarvingTiles.Add(replacedRef, groundCount);
                 }
             }
-            if (replaced)
-            {
-                OnlyRemovedCarving = onlyRemoved;
-                TileVersion++;
-            }
+            if (replaced) TileVersion++;
         }
 
         /// <summary>The ends bound to nothing that may bind again, by agent type: an end (of a link
@@ -485,11 +493,20 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A changed hole, grown by the agent radius as it is cut, reaches the tile.</summary>
-        static bool Reaches(PlacedTile tile, (float MinX, float MaxX, float MinZ, float MaxZ)[] holes)
+        static bool Reaches(PlacedTile tile, (float MinX, float MaxX, float MinZ, float MaxZ, bool Added)[] holes,
+            out bool onlyRemoved)
         {
+            bool reached = false;
+            onlyRemoved = true;
             foreach (var hole in holes)
-                if (hole.MaxX >= tile.MinX && hole.MinX <= tile.MaxX && hole.MaxZ >= tile.MinZ && hole.MinZ <= tile.MaxZ) return true;
-            return false;
+            {
+                if (hole.MaxX >= tile.MinX && hole.MinX <= tile.MaxX && hole.MaxZ >= tile.MinZ && hole.MinZ <= tile.MaxZ)
+                {
+                    reached = true;
+                    onlyRemoved &= !hole.Added;
+                }
+            }
+            return reached;
         }
 
         static RcVec3f Center(DtMeshHeader h) => new RcVec3f((h.bmin.X + h.bmax.X) * 0.5f, (h.bmin.Y + h.bmax.Y) * 0.5f, (h.bmin.Z + h.bmax.Z) * 0.5f);
@@ -838,6 +855,7 @@ namespace Unbound.Runtime
     {
         internal int Mask = -1;
         internal float[] Costs;
+        internal bool GroundOnly;
 
         internal static AreaFilter Of(int mask, float[] costs = null)
         {
@@ -847,7 +865,7 @@ namespace Unbound.Runtime
 
         public bool PassFilter(long refs, DtMeshTile tile, DtPoly poly) =>
             (Mask & (1 << poly.GetArea())) != 0
-            && (poly.GetPolyType() != DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION || poly.flags != 0);
+            && (poly.GetPolyType() != DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION || (!GroundOnly && poly.flags != 0));
 
         public float GetCost(RcVec3f pa, RcVec3f pb, long prevRef, DtMeshTile prevTile, DtPoly prevPoly, long curRef, DtMeshTile curTile,
             DtPoly curPoly, long nextRef, DtMeshTile nextTile, DtPoly nextPoly)

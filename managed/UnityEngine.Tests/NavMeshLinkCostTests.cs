@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using DotRecast.Detour;
+using Unbound.Runtime;
 using UnityEngine.AI;
 using Xunit;
 
@@ -82,6 +85,25 @@ namespace UnityEngine.Tests
 
         [Fact]
         public void AZeroCostModifierReplacesTheAreaCost() => Assert.False(PathTakesTheBridge(0f, area: 2));
+
+        [Fact]
+        public void CarvingReconnectUsesTheGroundBridgeWhenTheLinkCostsLess()
+        {
+            Assert.False(PathTakesTheBridge(0f));
+            var surface = NavWorld.Get(0);
+            var filter = AreaFilter.Of(NavMesh.AllAreas);
+            var extents = NavMesh.AgentExtents(0);
+            Assert.True(NavMesh.Nearest(surface, new Vector3(-4.5f, 0f, 0f), extents, filter, out long from, out var start));
+            Assert.True(NavMesh.Nearest(surface, new Vector3(4.5f, 0f, 0f), extents, filter, out long to, out var end));
+            Span<long> route = stackalloc long[16];
+            Assert.True(AgentSystem.TryFindCarvingBridge(surface.Query, from, to, NavMesh.V(start), NavMesh.V(end),
+                filter, route, out int count));
+            Assert.True(count > 2);
+            var corners = new DtStraightPath[16];
+            Assert.True(surface.Query.FindStraightPath(NavMesh.V(start), NavMesh.V(end), route, count, corners,
+                out int length, corners.Length, 0).Succeeded());
+            Assert.Contains(corners.AsSpan(0, length).ToArray(), corner => corner.pos.Z > 2f);
+        }
 
         /// <summary>The link's ends are corners of the path also when the path runs on exactly in
         /// line with them (start, link start, link end, end all at z = 0; tests/projects/navlinks,

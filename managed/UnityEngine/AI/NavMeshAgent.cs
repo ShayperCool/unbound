@@ -880,6 +880,7 @@ namespace Unbound.Runtime
         static int s_CrowdVersion = -1;
         static int s_TileVersion = -1;
         static readonly Dictionary<long, int> s_CarvingTail = new Dictionary<long, int>(DtCrowdConst.MAX_PATH_RESULT);
+        static readonly AreaFilter s_CarvingGroundFilter = new AreaFilter { GroundOnly = true };
         static bool s_Registered;
 
         static void EnsureRegistered()
@@ -1175,8 +1176,7 @@ namespace Unbound.Runtime
         /// their corridors.</summary>
         static void RejoinTouched()
         {
-            bool repairCarvedPath = Compat.NavMeshCarvingCorridorMeasured && NavWorld.OnlyRemovedCarving
-                && s_TileVersion + 1 == NavWorld.TileVersion;
+            bool repairCarvedPath = Compat.NavMeshCarvingCorridorMeasured && s_TileVersion + 1 == NavWorld.TileVersion;
             s_TileVersion = NavWorld.TileVersion;
             for (int i = 0; i < s_Agents.Count; i++)
             {
@@ -1307,9 +1307,8 @@ namespace Unbound.Runtime
             var surface = agent.m_Surface;
             var mesh = surface.Mesh;
             var path = moving.corridor.GetPath().Slice(0, moving.corridor.GetPathCount());
-            var tail = path.Length;
-            while (tail > 0 && mesh.IsValidPolyRef(path[tail - 1])) tail--;
-            if (tail == 0 || tail == path.Length) return false;
+            int tail = CarvingRoutePrefixLength(mesh, path, surface.RemovedCarvingTiles);
+            if (tail == 0) return false;
 
             var filter = agent.CrowdFilter;
             s_CarvingTail.Clear();
@@ -1329,8 +1328,7 @@ namespace Unbound.Runtime
             if (query.ClosestPointOnPoly(joinRef, start, out var join, out _).Failed()) return false;
 
             Span<long> repaired = stackalloc long[DtCrowdConst.MAX_PATH_RESULT];
-            if (query.FindPath(ag.corridor.GetFirstPoly(), joinRef, start, join, filter,
-                    repaired, out int count, repaired.Length).Failed() || count == 0 || repaired[count - 1] != joinRef)
+            if (!TryFindCarvingBridge(query, ag.corridor.GetFirstPoly(), joinRef, start, join, filter, repaired, out int count))
                 return false;
             for (int i = 0; i < count; i++)
             {
@@ -1347,10 +1345,36 @@ namespace Unbound.Runtime
                     agent.RestoreStaleness(stale);
                     return true;
                 }
-                mesh.GetTileAndPolyByRefUnsafe(polyRef, out _, out var poly);
-                if (poly.GetPolyType() != DtPolyTypes.DT_POLYTYPE_GROUND) return false;
             }
             return false;
+        }
+
+        /// <summary>Length of a replaced ground prefix that leaves a valid tail. Zero when the
+        /// changed polygons are in the middle of the route or touch a tile that added a hole.</summary>
+        internal static int CarvingRoutePrefixLength(DtNavMesh mesh, ReadOnlySpan<long> path,
+            IReadOnlyDictionary<long, int> removedTiles)
+        {
+            int tail = path.Length;
+            while (tail > 0 && mesh.IsValidPolyRef(path[tail - 1])) tail--;
+            if (tail == path.Length) return 0;
+            for (int i = 0; i < tail; i++)
+            {
+                DtDetour.DecodePolyId(path[i], out int salt, out int tile, out int polygon);
+                long tileRef = DtDetour.EncodePolyId(salt, tile, 0);
+                if (!removedTiles.TryGetValue(tileRef, out int groundCount) || polygon >= groundCount)
+                    return 0;
+            }
+            return tail;
+        }
+
+        /// <summary>Reconnect through ground polygons and report a complete route to the join.</summary>
+        internal static bool TryFindCarvingBridge(DtNavMeshQuery query, long from, long to, RcVec3f start,
+            RcVec3f join, AreaFilter filter, Span<long> route, out int count)
+        {
+            s_CarvingGroundFilter.Mask = filter.Mask;
+            s_CarvingGroundFilter.Costs = filter.Costs;
+            return query.FindPath(from, to, start, join, s_CarvingGroundFilter, route, out count, route.Length).Succeeded()
+                && count > 0 && route[count - 1] == to;
         }
 
         /// <summary>A request again on the rebuilt NavMesh. A search that was under way starts again

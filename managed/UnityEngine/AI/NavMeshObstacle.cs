@@ -369,7 +369,7 @@ namespace Unbound.Runtime
             : b.ExtentSq.CompareTo(a.ExtentSq);
 
         /// <summary>The holes added or removed by this carving update (reused).</summary>
-        static readonly List<NavMeshCarving.Footprint> s_Changed = new List<NavMeshCarving.Footprint>();
+        static readonly List<(NavMeshCarving.Footprint Hole, bool Added)> s_Changed = new();
 
         /// <summary>The holes in the NavMesh now.</summary>
         internal static IReadOnlyList<NavMeshCarving.Footprint> Holes => s_Holes;
@@ -416,7 +416,6 @@ namespace Unbound.Runtime
             if (s_Carves.Count == 0 && s_Obstacles.Count == 0) return;
             s_Changed.Clear();
             s_Gone.Clear();
-            bool onlyRemoved = true;
             foreach (var pair in s_Carves)
             {
                 var c = pair.Value;
@@ -424,12 +423,8 @@ namespace Unbound.Runtime
                 {
                     if (!ReferenceEquals(c.Applied, c.Next))
                     {
-                        if (c.Applied != null) s_Changed.Add(c.Applied);
-                        if (c.Next != null)
-                        {
-                            s_Changed.Add(c.Next);
-                            onlyRemoved = false;
-                        }
+                        if (c.Applied != null) s_Changed.Add((c.Applied, false));
+                        if (c.Next != null) s_Changed.Add((c.Next, true));
                     }
                     c.Applied = c.Next;
                     c.Pending = false;
@@ -446,7 +441,7 @@ namespace Unbound.Runtime
                 // place (Unity's order: holes overlapping in one polygon split it accordingly).
                 s_Holes.Sort(s_HoleOrder);
                 // Cut the affected tiles so agents see the changed mesh in this frame's update.
-                NavWorld.HolesChanged(s_Changed, onlyRemoved);
+                NavWorld.HolesChanged(s_Changed);
             }
         }
 

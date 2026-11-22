@@ -14,7 +14,7 @@ from probe_paths import private_label, project_copy, reference_root, run_root
 from value_probe import engine_cli
 
 REPEATS = ('native1', 'native2')
-MODES = ('remove', 'keep')
+MODES = ('remove', 'keep', 'removePlusAdd')
 OUTPUT = 'navmesh.json'
 
 
