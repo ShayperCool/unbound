@@ -34,7 +34,8 @@ pub const LEGACY_RUNTIME_PATH_ID: i64 = 10102;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FaceMetrics {
     pub units_per_em: u16,
-    /// FreeType's `face->ascender`: `hhea`, else `OS/2` typographic, else `OS/2` windows values.
+    /// FreeType's `face->ascender`: `OS/2` typographic when `USE_TYPO_METRICS` is set, else
+    /// `hhea`, else `OS/2` typographic, else `OS/2` windows values.
     pub ascender: i16,
     pub descender: i16,
     pub line_gap: i16,
@@ -345,8 +346,19 @@ impl FontFace {
 
 fn read_metrics(face: &Face) -> FaceMetrics {
     let hhea = face.tables().hhea;
-    let (mut ascender, mut descender, mut line_gap) =
-        (hhea.ascender, hhea.descender, hhea.line_gap);
+    let use_typo = face
+        .raw_face()
+        .table(ttf_parser::Tag::from_bytes(b"OS/2"))
+        .and_then(|os2| os2.get(OS2_FS_SELECTION_OFFSET..OS2_FS_SELECTION_OFFSET + 2))
+        .is_some_and(|b| u16::from_be_bytes([b[0], b[1]]) & FS_SELECTION_USE_TYPO_METRICS != 0);
+    let (mut ascender, mut descender, mut line_gap) = match face.tables().os2 {
+        Some(os2) if use_typo => (
+            os2.typographic_ascender(),
+            os2.typographic_descender(),
+            os2.typographic_line_gap(),
+        ),
+        _ => (hhea.ascender, hhea.descender, hhea.line_gap),
+    };
     if ascender == 0
         && descender == 0
         && let Some(os2) = face.tables().os2
@@ -374,6 +386,8 @@ fn read_metrics(face: &Face) -> FaceMetrics {
     }
 }
 
+/// Bit 7 of the OS/2 table's `fsSelection` (at byte 62): use the typographic line metrics.
+const FS_SELECTION_USE_TYPO_METRICS: u16 = 1 << 7;
 /// Bit 8 of the OS/2 table's `fsSelection` (at byte 62): the face's names are WWS-conformant.
 const FS_SELECTION_WWS: u16 = 1 << 8;
 const OS2_FS_SELECTION_OFFSET: usize = 62;
@@ -758,6 +772,82 @@ mod tests {
         assert_eq!(names(Some(0)), ("Sans WWS".into(), "W3".into()));
         assert_eq!(names(Some(FS_SELECTION_WWS)), ("Sans".into(), "W3".into()));
         assert_eq!(face_count(&named_face(&records, None)), 1);
+    }
+
+    /// When OS/2 sets USE_TYPO_METRICS (fsSelection bit 7), face metrics come from OS/2
+    /// sTypoAscender/sTypoDescender/sTypoLineGap instead of hhea (matching FreeType).
+    #[test]
+    fn face_metrics_honor_os2_use_typo_metrics() {
+        let build = |fs_selection: Option<u16>| {
+            let mut head = vec![0u8; 54];
+            head[0..4].copy_from_slice(&0x0001_0000u32.to_be_bytes());
+            head[12..16].copy_from_slice(&0x5F0F_3CF5u32.to_be_bytes());
+            head[18..20].copy_from_slice(&1000u16.to_be_bytes());
+            let mut hhea = vec![0u8; 36];
+            hhea[0..4].copy_from_slice(&0x0001_0000u32.to_be_bytes());
+            hhea[4..6].copy_from_slice(&900i16.to_be_bytes());
+            hhea[6..8].copy_from_slice(&(-300i16).to_be_bytes());
+            hhea[8..10].copy_from_slice(&100i16.to_be_bytes());
+            let mut maxp = vec![0u8; 6];
+            maxp[0..4].copy_from_slice(&0x0000_5000u32.to_be_bytes());
+            maxp[4..6].copy_from_slice(&1u16.to_be_bytes());
+            let mut tables: Vec<(&[u8; 4], Vec<u8>)> =
+                vec![(b"head", head), (b"hhea", hhea), (b"maxp", maxp)];
+            if let Some(fs) = fs_selection {
+                let mut os2 = vec![0u8; 96];
+                os2[0..2].copy_from_slice(&4u16.to_be_bytes());
+                os2[62..64].copy_from_slice(&fs.to_be_bytes());
+                os2[68..70].copy_from_slice(&800i16.to_be_bytes());
+                os2[70..72].copy_from_slice(&(-200i16).to_be_bytes());
+                os2[72..74].copy_from_slice(&150i16.to_be_bytes());
+                tables.push((b"OS/2", os2));
+            }
+            tables.sort_by_key(|(tag, _)| **tag);
+            let mut font = Vec::new();
+            font.extend_from_slice(&0x0001_0000u32.to_be_bytes());
+            font.extend_from_slice(&(tables.len() as u16).to_be_bytes());
+            font.extend_from_slice(&[0u8; 6]);
+            let mut offset = 12 + 16 * tables.len();
+            let mut body = Vec::new();
+            for (tag, data) in &tables {
+                font.extend_from_slice(*tag);
+                font.extend_from_slice(&0u32.to_be_bytes());
+                font.extend_from_slice(&(offset as u32).to_be_bytes());
+                font.extend_from_slice(&(data.len() as u32).to_be_bytes());
+                let mut padded = data.clone();
+                padded.resize(data.len().div_ceil(4) * 4, 0);
+                offset += padded.len();
+                body.extend_from_slice(&padded);
+            }
+            font.extend_from_slice(&body);
+            FontFace::from_bytes(font, 0).unwrap().metrics().clone()
+        };
+
+        let without_os2 = build(None);
+        assert_eq!(
+            (
+                without_os2.ascender,
+                without_os2.descender,
+                without_os2.line_gap
+            ),
+            (900, -300, 100)
+        );
+
+        let without_flag = build(Some(0));
+        assert_eq!(
+            (
+                without_flag.ascender,
+                without_flag.descender,
+                without_flag.line_gap
+            ),
+            (900, -300, 100)
+        );
+
+        let with_flag = build(Some(FS_SELECTION_USE_TYPO_METRICS));
+        assert_eq!(
+            (with_flag.ascender, with_flag.descender, with_flag.line_gap),
+            (800, -200, 150)
+        );
     }
 
     /// A test face: DejaVu or Liberation from the system, when present.
