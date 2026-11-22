@@ -134,7 +134,9 @@ namespace Unbound.Runtime
 
         /// <summary>The OS families TextCore makes fallback font assets of (Font.GetOSFallbacks), in
         /// order. On macOS the Unity 6000.0.71f1 macOS Editor's list (tests/projects/osfontfallback):
-        /// the common families, Apple Color Emoji, then LastResort. Elsewhere the groups above
+        /// the common families, Apple Color Emoji, then LastResort. On Linux the Unity 6000.0.71f1
+        /// Linux Editor's list (tests/projects/imguiskin, tests/projects/glyphraster): the common
+        /// families, the Linux families, then LastResort. Elsewhere the groups above
         /// (unmeasured).</summary>
         internal static string[] OsFallbackNames
         {
@@ -148,6 +150,8 @@ namespace Unbound.Runtime
                     names.Add("LastResort");
                     return names.ToArray();
                 }
+                if (OperatingSystem.IsLinux())
+                    return (string[])LegacyOsFallbackNames.Clone();
                 foreach (var group in s_OsFallbackGroups) names.AddRange(group);
                 return names.ToArray();
             }

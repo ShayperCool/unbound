@@ -36,10 +36,10 @@ Observations, for the built-in LegacyRuntime font and a project font (Liberation
 
 Unbound lists the faces of `/System/Library/Fonts`, `/Library/Fonts` and `~/Library/Fonts` on
 macOS, collections included, whatever fontconfig is installed. The Editor's list also holds the
-Editor's own interface fonts (Inter, Roboto Mono), which Unbound does not list. Unmeasured:
-`Font.GetOSInstalledFontNames` (the Editor lists full face names such as `Arial Bold` and hidden
-`.`-names, and leaves out LastResort and Apple Color Emoji), other macOS versions, bold and italic
-requests, alpha pixels (batch mode has no graphics device), and TextCore's OS list on Linux.
+Editor's own interface fonts (Inter, Roboto Mono), which Unbound does not list. Unmeasured: `Font.GetOSInstalledFontNames` (the Editor lists full face names such as `Arial Bold`
+and hidden `.`-names, and leaves out LastResort and Apple Color Emoji), other macOS versions, bold
+and italic requests, and alpha pixels (batch mode has no graphics device). TextCore's Linux OS
+fallback list and `LegacyRuntime` asset face are measured separately in `tests/projects/imguiskin`.
 
 ```sh
 python3 tests/projects/osfontfallback/run.py record --label mac-a

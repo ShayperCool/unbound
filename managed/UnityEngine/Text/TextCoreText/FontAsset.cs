@@ -418,11 +418,13 @@ namespace UnityEngine.TextCore.Text
 
         /// <summary>Whether TextCore makes the font's asset from the installed OS fallback families:
         /// for the Editor's built-in LegacyRuntime, which holds no font data, on macOS (Unity
-        /// 6000.0.71f1 macOS Editor, tests/projects/osfontfallback: Arial, its fallback table the
-        /// installed families in order). Elsewhere (unmeasured), and when none of those families is
-        /// installed, the asset keeps the built-in face it has here.</summary>
+        /// 6000.0.71f1 macOS Editor, tests/projects/osfontfallback) and Linux (Unity 6000.0.71f1
+        /// Linux Editor, tests/projects/editortogglegroup and tests/projects/imguiskin). Elsewhere
+        /// (unmeasured), and when none of those families is installed, the asset keeps the built-in
+        /// face it has here.</summary>
         internal static bool BuildsFromOsFallbacks(Font font) =>
-            OperatingSystem.IsMacOS() && font.m_Source is Unbound.Runtime.NativeGlyphSource { HasGlyphData: false };
+            (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
+            && font.m_Source is Unbound.Runtime.NativeGlyphSource { HasGlyphData: false };
 
         /// <summary>A font asset of the face the font engine has loaded: an empty atlas texture
         /// (1 x 1 until the first glyph), its material and a free rect of the whole atlas.</summary>

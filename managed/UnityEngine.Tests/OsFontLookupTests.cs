@@ -59,21 +59,22 @@ namespace UnityEngine.Tests
             return source;
         }
 
-        // The Editor's LegacyRuntime has no font data: on macOS its TextCore asset is made of the
-        // installed OS fallback families; elsewhere, and for a font with data, the font's own face.
+        // The Editor's LegacyRuntime has no font data: on macOS and Linux its TextCore asset is
+        // made of the installed OS fallback families; for a font with data, the font's own face.
         [Fact]
-        public void OnlyAFontWithoutDataOnMacOsIsBuiltFromTheOsFallbacks()
+        public void OnlyAFontWithoutDataOnMeasuredOsIsBuiltFromTheOsFallbacks()
         {
             var legacy = new Font { m_Source = Source(false) };
             var withData = new Font { m_Source = Source(true) };
             try
             {
-                Assert.Equal(OperatingSystem.IsMacOS(), UnityEngine.TextCore.Text.FontAsset.BuildsFromOsFallbacks(legacy));
+                Assert.Equal(OperatingSystem.IsMacOS() || OperatingSystem.IsLinux(),
+                    UnityEngine.TextCore.Text.FontAsset.BuildsFromOsFallbacks(legacy));
                 Assert.False(UnityEngine.TextCore.Text.FontAsset.BuildsFromOsFallbacks(withData));
                 Assert.False(UnityEngine.TextCore.Text.FontAsset.BuildsFromOsFallbacks(new Font()));
                 // With none of the families installed there is no OS asset, and the built-in face is kept.
                 Assert.Null(WithFaces(() => UnityEngine.TextCore.Text.FontAsset.CreateFontAssetWithOSFallbackList(Font.GetOSFallbacks()),
-                    Face("Liberation Sans", "Regular", "/fonts/LiberationSans-Regular.ttf")));
+                    Face("Unlisted Test Family", "Regular", "/fonts/UnlistedTest-Regular.ttf")));
             }
             finally
             {
@@ -82,7 +83,7 @@ namespace UnityEngine.Tests
             }
         }
 
-        // Unity 6000.0.71f1 macOS Editor, tests/projects/osfontfallback.
+        // Unity 6000.0.71f1: macOS Editor (tests/projects/osfontfallback), Linux Editor (tests/projects/imguiskin).
         [Fact]
         public void TheOsFallbackListIsTheEditorsOfThisOs()
         {
@@ -90,6 +91,12 @@ namespace UnityEngine.Tests
             if (OperatingSystem.IsMacOS())
                 Assert.Equal(new[] { "Arial", "Arial Unicode MS", "Helvetica Neue", "Microsoft Sans Serif", "Microsoft YaHei",
                     "Malgun Gothic", "Gulim", "MS Gothic", "Nirmala UI", "Apple Color Emoji", "LastResort" }, names);
+            else if (OperatingSystem.IsLinux())
+                Assert.Equal(new[] { "Arial", "Arial Unicode MS", "Helvetica Neue", "Microsoft Sans Serif", "Microsoft YaHei",
+                    "Malgun Gothic", "Gulim", "MS Gothic", "Nirmala UI", "FreeSans", "Droid Sans", "DejaVu Sans",
+                    "Liberation Sans", "WenQuanYi Micro Hei", "HYSong", "NanumGothic", "TakaoGothic",
+                    "Noto Sans CJK JP", "Noto Sans CJK KR", "Noto Sans CJK SC", "Noto Sans CJK TC",
+                    "Droid Sans Fallback", "Noto Color Emoji", "LastResort" }, names);
             else
                 Assert.DoesNotContain("Apple Color Emoji", names);
             // A copy: callers cannot change the list.
