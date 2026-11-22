@@ -1,4 +1,7 @@
 {"k":"scene.dirty.open","v":"False"}
+{"k":"undo.createThenRecord","v":"Create Named"}
+{"k":"undo.addComponentAlone","v":"Add BoxCollider"}
+{"k":"undo.factoryAddComponentAlone","v":"Add SphereCollider"}
 {"k":"a.name","v":"A"}
 {"k":"a.hideFlags","v":"0"}
 {"k":"a.scene","v":"Probe"}
@@ -180,9 +183,31 @@
 {"k":"placed.alone.componentFlags","v":"0"}
 {"k":"place.null","v":"throws NullReferenceException: Object reference not set to an instance of an object"}
 {"k":"place.events","v":"Transform@Placed,Transform@Loose"}
-{"k":"roots","v":"A,B,C,,Sphere,Capsule,Cylinder,Cube,Plane,Quad,Parent,Loose"}
+{"k":"place.groupName","v":"Create Loose"}
+{"k":"place.selection","v":"Loose"}
+{"k":"placed.ui.name","v":"UiChild"}
+{"k":"placed.ui.hideFlags","v":"0"}
+{"k":"placed.ui.scene","v":"Probe"}
+{"k":"placed.ui.active","v":"True"}
+{"k":"placed.ui.layer","v":"5"}
+{"k":"placed.ui.parent","v":"UiParent"}
+{"k":"placed.ui.position","v":"4,5,6"}
+{"k":"placed.ui.localPosition","v":"0,0,0"}
+{"k":"placed.ui.components","v":"RectTransform"}
+{"k":"placed.ui.componentFlags","v":"0"}
+{"k":"placed.ui.localRotation","v":"0,0,0"}
+{"k":"placed.ui.localScale","v":"1,1,1"}
+{"k":"place.ui.events","v":"Transform@UiChild,RectTransform@UiChild"}
+{"k":"unique.placed","v":"Dup,Dup (1),Dup (2),Item (5),Item (6),Child,Child (1)"}
+{"k":"unique.forRoot","v":"Dup (3)"}
+{"k":"unique.forChild","v":"Child (2)"}
+{"k":"unique.fresh","v":"Fresh"}
+{"k":"place.groupName.end","v":"Create Child (1)"}
+{"k":"place.selection.end","v":"Child (1)"}
+{"k":"unique.events","v":"Transform@Dup,Transform@Dup,Transform@Dup,Transform@Item (5),Transform@Item (5),Transform@Child,RectTransform@Child,Transform@Child,RectTransform@Child"}
+{"k":"roots","v":"A,B,C,,Sphere,Capsule,Cylinder,Cube,Plane,Quad,Parent,Loose,UiParent,Dup,Dup (1),Dup (2),Item (5),Item (6)"}
 {"k":"sceneDirty.end","v":"False"}
-{"k":"undoGroupName.end","v":"Create Loose"}
-{"k":"afterUndo.roots","v":"Parent"}
+{"k":"undoGroupName.end","v":"Create Child (1)"}
+{"k":"afterUndo.roots","v":"Parent,UiParent"}
 {"k":"afterUndo.a.components","v":"destroyed"}
 {"k":"complete","v":true}

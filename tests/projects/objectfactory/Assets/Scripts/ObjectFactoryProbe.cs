@@ -39,6 +39,20 @@ public static class ObjectFactoryProbe
         Row("scene.dirty.open", scene.isDirty.ToString());
         Application.logMessageReceived += (message, _, type) => s_Log.Add(type + ": " + message);
         ObjectFactory.componentWasAdded += c => s_Added.Add(c.GetType().Name + "@" + c.gameObject.name);
+        // Undo group names without placement: a creation then a recording, and an added component alone.
+        Undo.IncrementCurrentGroup();
+        var named = ObjectFactory.CreateGameObject("Named");
+        Undo.RecordObject(named.transform, "Move Named");
+        Row("undo.createThenRecord", Undo.GetCurrentGroupName());
+        Undo.IncrementCurrentGroup();
+        Undo.AddComponent<BoxCollider>(named);
+        Row("undo.addComponentAlone", Undo.GetCurrentGroupName());
+        Undo.IncrementCurrentGroup();
+        ObjectFactory.AddComponent<SphereCollider>(named);
+        Row("undo.factoryAddComponentAlone", Undo.GetCurrentGroupName());
+        Undo.IncrementCurrentGroup();
+        UnityEngine.Object.DestroyImmediate(named);
+        s_Added.Clear();
         Undo.IncrementCurrentGroup();
         int group = Undo.GetCurrentGroup();
 
@@ -114,6 +128,50 @@ public static class ObjectFactoryProbe
         Object("placed.alone", loose);
         Row("place.null", Try(() => { ObjectFactory.PlaceGameObject(null); return "ok"; }));
         Events("place");
+
+        Row("place.groupName", Undo.GetCurrentGroupName());
+        Row("place.selection", Selection.activeGameObject == null ? "none" : Selection.activeGameObject.name);
+
+        // Placing under a UI parent on another layer, with a rotation and scale to reset.
+        var canvasParent = new GameObject("UiParent", typeof(RectTransform));
+        canvasParent.layer = 5;
+        canvasParent.transform.position = new Vector3(4, 5, 6);
+        var uiChild = ObjectFactory.CreateGameObject("UiChild");
+        uiChild.transform.localRotation = Quaternion.Euler(10, 20, 30);
+        uiChild.transform.localScale = new Vector3(2, 3, 4);
+        ObjectFactory.PlaceGameObject(uiChild, canvasParent);
+        Object("placed.ui", uiChild);
+        Row("placed.ui.localRotation", V(uiChild.transform.localRotation.eulerAngles));
+        Row("placed.ui.localScale", V(uiChild.transform.localScale));
+        Events("place.ui");
+
+        // Unique names among siblings.
+        var names = new List<string>();
+        for (int i = 0; i < 3; i++)
+        {
+            var dup = ObjectFactory.CreateGameObject("Dup");
+            ObjectFactory.PlaceGameObject(dup);
+            names.Add(dup.name);
+        }
+        for (int i = 0; i < 2; i++)
+        {
+            var item = ObjectFactory.CreateGameObject("Item (5)");
+            ObjectFactory.PlaceGameObject(item);
+            names.Add(item.name);
+        }
+        for (int i = 0; i < 2; i++)
+        {
+            var sibling = ObjectFactory.CreateGameObject("Child");
+            ObjectFactory.PlaceGameObject(sibling, canvasParent);
+            names.Add(sibling.name);
+        }
+        Row("unique.placed", string.Join(",", names));
+        Row("unique.forRoot", GameObjectUtility.GetUniqueNameForSibling(null, "Dup"));
+        Row("unique.forChild", GameObjectUtility.GetUniqueNameForSibling(canvasParent.transform, "Child"));
+        Row("unique.fresh", GameObjectUtility.GetUniqueNameForSibling(canvasParent.transform, "Fresh"));
+        Row("place.groupName.end", Undo.GetCurrentGroupName());
+        Row("place.selection.end", Selection.activeGameObject == null ? "none" : Selection.activeGameObject.name);
+        Events("unique");
 
         Row("roots", string.Join(",", scene.GetRootGameObjects().Select(r => r.name)));
         Row("sceneDirty.end", scene.isDirty.ToString());
