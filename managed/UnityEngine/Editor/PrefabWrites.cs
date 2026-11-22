@@ -572,8 +572,34 @@ namespace UnityEditor
             if (assetPath == null) throw new ArgumentNullException(nameof(assetPath));
             var file = PrefabAssets.FileAt(SceneFiles.ProjectRelative(assetPath));
             if (file == null) throw new ArgumentException($"Path: {assetPath}, does not exist");
-            return PrefabContents.Load(file);
+            return PrefabContents.Load(file, SceneFiles.ProjectRelative(assetPath));
         }
+
+        /// <summary>A prefab's contents loaded for the scope's lifetime, then saved to the prefab
+        /// and unloaded (the Scripting API's EditPrefabContentsScope).</summary>
+        public partial struct EditPrefabContentsScope : IDisposable
+        {
+            public readonly string assetPath;
+            public readonly GameObject prefabContentsRoot;
+
+            public EditPrefabContentsScope(string assetPath)
+            {
+                this.assetPath = assetPath;
+                prefabContentsRoot = LoadPrefabContents(assetPath);
+            }
+
+            public void Dispose()
+            {
+                SaveAsPrefabAsset(prefabContentsRoot, assetPath);
+                UnloadPrefabContents(prefabContentsRoot);
+            }
+        }
+
+#pragma warning disable CS0067 // Nothing asks it yet.
+        /// <summary>Handlers that may refuse the recording of an object's prefab overrides. Kept;
+        /// Unbound does not ask them (when the Editor does is not measured).</summary>
+        internal static event Func<Object, bool> allowRecordingPrefabPropertyOverridesFor;
+#pragma warning restore CS0067
 
         public static void UnloadPrefabContents(GameObject contentsRoot)
         {

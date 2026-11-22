@@ -19225,7 +19225,6 @@ namespace UnityEditor
         internal static event global::System.Action prefabInstanceModificationCacheCleared { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.prefabInstanceModificationCacheCleared"); } [global::Unbound.Stub] remove { } }
         public static event global::System.Action<global::UnityEngine.GameObject, global::UnityEditor.PrefabUnpackMode> prefabInstanceUnpacking { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.prefabInstanceUnpacking"); } [global::Unbound.Stub] remove { } }
         public static event global::System.Action<global::UnityEngine.GameObject, global::UnityEditor.PrefabUnpackMode> prefabInstanceUnpacked { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.prefabInstanceUnpacked"); } [global::Unbound.Stub] remove { } }
-        internal static event global::System.Func<global::UnityEngine.Object, bool> allowRecordingPrefabPropertyOverridesFor { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.allowRecordingPrefabPropertyOverridesFor"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         internal unsafe static partial class GameObjectStyles
         {
@@ -19274,14 +19273,6 @@ namespace UnityEditor
                 Innermost = 2,
                 Middle = 3,
             }
-        }
-        [global::Unbound.Stub]
-        public unsafe partial struct EditPrefabContentsScope : global::System.IDisposable
-        {
-            [global::Unbound.Stub] public readonly string assetPath;
-            [global::Unbound.Stub] public readonly global::UnityEngine.GameObject prefabContentsRoot;
-            [global::Unbound.Stub] public EditPrefabContentsScope(string assetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.EditPrefabContentsScope.ctor"); }
-            [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.EditPrefabContentsScope.Dispose"); }
         }
     }
     [global::Unbound.Stub]
@@ -22373,7 +22364,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal bool IsValid() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.IsValid"); return default; }
         [global::Unbound.Stub] internal bool HasAnyInstantiatedPrefabsWithValidAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.HasAnyInstantiatedPrefabsWithValidAsset"); return default; }
         [global::Unbound.Stub] internal static bool VersionEquals(global::UnityEditor.SerializedObject x, global::UnityEditor.SerializedObject y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.VersionEquals"); return default; }
-        internal int targetObjectsCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.targetObjectsCount"); return default; } }
         internal global::UnityEditor.InspectorMode inspectorMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.inspectorMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.inspectorMode"); } }
         internal global::UnityEditor.DataMode inspectorDataMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.inspectorDataMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.inspectorDataMode"); } }
         [global::Unbound.Stub]
@@ -25043,8 +25033,6 @@ namespace UnityEditor
     }
     unsafe partial class Undo
     {
-        [global::Unbound.Stub] internal static void GetRecords(global::System.Collections.Generic.List<string> undoRecords, out int undoCursor) { undoCursor = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.GetRecords"); }
-        [global::Unbound.Stub] internal static void GetRecords(global::System.Collections.Generic.List<string> undoRecords, global::System.Collections.Generic.List<string> redoRecords) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.GetRecords"); }
         [global::Unbound.Stub] internal static void GetUndoList(global::System.Collections.Generic.List<string> undoList, out int undoCursor, bool serialized = false) { undoCursor = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.GetUndoList"); }
         [global::Unbound.Stub] public static void SetSiblingIndex(global::UnityEngine.Transform transform, int siblingIndex, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.SetSiblingIndex"); }
         [global::Unbound.Stub] internal static void RegisterCreatedObjectUndoToFrontOfUndoQueue(global::UnityEngine.Object objectToUndo, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterCreatedObjectUndoToFrontOfUndoQueue"); }
@@ -42029,10 +42017,7 @@ namespace UnityEditor.SceneManagement
         [global::Unbound.Stub] internal static bool CanOpenScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.CanOpenScene"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.SceneManagement.Scene OpenPreviewScene(string scenePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.OpenPreviewScene"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.SceneManagement.Scene OpenPreviewScene(string scenePath, bool allocateSceneCullingMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.OpenPreviewScene"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.SceneManagement.Scene NewPreviewScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.SceneManagement.Scene NewPreviewScene(bool allocateSceneCullingMask, global::UnityEditor.SceneManagement.PreviewSceneFlags previewSceneFlags = (global::UnityEditor.SceneManagement.PreviewSceneFlags)1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene"); return default; }
         [global::Unbound.Stub] internal static void RemapAssetReferencesInScene(global::UnityEngine.SceneManagement.Scene scene, global::System.Collections.Generic.Dictionary<string, string> pathMap, global::System.Collections.Generic.Dictionary<int, int> idMap = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.RemapAssetReferencesInScene"); }
-        [global::Unbound.Stub] public static bool ClosePreviewScene(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene"); return default; }
         [global::Unbound.Stub] internal static void SetPreviewScenesVisibleInHierarchy(bool visible) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.SetPreviewScenesVisibleInHierarchy"); }
         [global::Unbound.Stub] internal static bool GetPreviewScenesVisibleInHierarchy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.GetPreviewScenesVisibleInHierarchy"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.SceneManagement.Scene GetDontDestroyOnLoadScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.GetDontDestroyOnLoadScene"); return default; }
@@ -42151,8 +42136,6 @@ namespace UnityEditor.SceneManagement
         internal override bool isAssetMissing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PrefabStage.isAssetMissing"); return default; } }
         internal bool showOverrides { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PrefabStage.showOverrides"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PrefabStage.showOverrides"); } }
         public static event global::System.Action<global::UnityEditor.SceneManagement.PrefabStage> prefabStageDirtied { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PrefabStage.prefabStageDirtied"); } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<global::UnityEngine.GameObject> prefabSaving { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PrefabStage.prefabSaving"); } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<global::UnityEngine.GameObject> prefabSaved { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PrefabStage.prefabSaved"); } [global::Unbound.Stub] remove { } }
         internal static event global::System.Action<global::UnityEditor.SceneManagement.PrefabStage> prefabStageSavedAsNewPrefab { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PrefabStage.prefabStageSavedAsNewPrefab"); } [global::Unbound.Stub] remove { } }
         internal static event global::System.Action<global::UnityEditor.SceneManagement.PrefabStage> prefabStageReloaded { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PrefabStage.prefabStageReloaded"); } [global::Unbound.Stub] remove { } }
     }
@@ -42177,17 +42160,6 @@ namespace UnityEditor.SceneManagement
         [global::Unbound.Stub] internal static void HandleUIReparentingIfNeeded(global::UnityEngine.GameObject instanceRoot, int stagePriority) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PrefabStageUtility.HandleUIReparentingIfNeeded"); }
         [global::Unbound.Stub] internal static global::UnityEditor.SceneManagement.PrefabStage.Mode GetPrefabStageModeFromModifierKeys() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PrefabStageUtility.GetPrefabStageModeFromModifierKeys"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent GetPrefabButtonContent(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PrefabStageUtility.GetPrefabButtonContent"); return default; }
-    }
-    [global::System.Flags]
-    internal enum PreviewSceneFlags
-    {
-        NoFlags = 0,
-        IsPreviewScene = 1,
-        AllowCamerasForRendering = 2,
-        AllowMonoBehaviourEvents = 4,
-        AllowGlobalIlluminationLights = 8,
-        AllowAutoPlayAudioSources = 16,
-        AllFlags = 31,
     }
     unsafe partial class PreviewSceneStage
     {

@@ -78,6 +78,10 @@ namespace UnityEditor.SceneManagement
     {
         public static event Action<PrefabStage> prefabStageOpened;
         public static event Action<PrefabStage> prefabStageClosing;
+        /// <summary>A Prefab stage saving its prefab, before and after: Unbound has no Prefab
+        /// mode, so nothing raises them; handlers are kept.</summary>
+        public static event Action<GameObject> prefabSaving;
+        public static event Action<GameObject> prefabSaved;
     }
 }
 namespace UnityEditor.PackageManager

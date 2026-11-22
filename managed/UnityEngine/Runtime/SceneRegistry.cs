@@ -50,8 +50,8 @@ namespace Unbound.Runtime
         /// EditorSceneManager.OpenScene), as opposed to loading it at runtime (SceneManager):
         /// the Editor bakes an opened scene that asks for it (Lightmapping.bakeOnSceneLoad).</summary>
         internal bool OpenedInEditor;
-        /// <summary>A preview scene of the Editor's (a prefab's contents loaded for editing): no
-        /// loaded scene, not listed by SceneManager.</summary>
+        /// <summary>A preview scene of the Editor's (a prefab's contents loaded for editing, or one
+        /// EditorSceneManager.NewPreviewScene made): not listed by SceneManager.</summary>
         internal bool IsPreview;
     }
 
@@ -89,6 +89,28 @@ namespace Unbound.Runtime
             s_NextHandle += 2;
             s_Scenes[scene.Handle.Value] = scene;
             return scene;
+        }
+
+        /// <summary>A preview scene of the Editor's: loaded, in no list of loaded scenes.</summary>
+        internal static SceneData CreatePreview(string name, string path)
+        {
+            var scene = Create(name, path, -1);
+            scene.IsPreview = true;
+            scene.IsLoaded = true;
+            scene.LoadingState = Scene.LoadingState.Loaded;
+            return scene;
+        }
+
+        /// <summary>How many preview scenes are open.</summary>
+        internal static int PreviewCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (var scene in s_Scenes.Values)
+                    if (scene.IsPreview) count++;
+                return count;
+            }
         }
 
         /// <summary>The scene file and file id an object was loaded from.</summary>

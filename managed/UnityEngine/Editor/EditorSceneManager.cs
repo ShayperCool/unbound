@@ -50,9 +50,37 @@ namespace UnityEditor.SceneManagement
 
         public static int loadedRootSceneCount => SceneRegistry.Loaded.Count(s => s.IsLoaded);
 
-        /// <summary>The preview scenes open: those of prefab contents loaded by script (no editor
-        /// window, inspector preview or Prefab mode makes one, as in the batch-mode Editor).</summary>
-        public static int previewSceneCount => PrefabContents.LoadedCount;
+        /// <summary>The preview scenes open: those of prefab contents loaded by script and those
+        /// NewPreviewScene made (no editor window, inspector preview or Prefab mode makes one, as
+        /// in the batch-mode Editor; measured: tests/projects/scenesave scene-api-rest
+        /// preview.count, contents.scene).</summary>
+        public static int previewSceneCount => SceneRegistry.PreviewCount;
+
+        /// <summary>A new preview scene: loaded, with no name or path, not among SceneManager's
+        /// scenes and not active (measured: tests/projects/scenesave scene-api-rest preview.*).</summary>
+        public static Scene NewPreviewScene() => NewPreviewScene(true);
+
+        /// <summary>What the flags allow in the scene (cameras drawing, script events, lights in
+        /// global illumination, audio) is not measured: its objects are treated as those of
+        /// prefab contents are.</summary>
+        internal static Scene NewPreviewScene(bool allocateSceneCullingMask, PreviewSceneFlags previewSceneFlags = PreviewSceneFlags.IsPreviewScene) =>
+            new Scene(SceneRegistry.CreatePreview("", "").Handle);
+
+        /// <summary>Closes a preview scene and destroys its objects; prefab contents loaded into
+        /// it are no longer contents. False for a scene that is not valid (one closed before);
+        /// a valid scene that is no preview scene throws (measured: tests/projects/scenesave
+        /// scene-api-rest preview.close*, contents.close).</summary>
+        public static bool ClosePreviewScene(Scene scene)
+        {
+            var data = scene.Data;
+            if (data == null) return false;
+            if (!data.IsPreview) throw new ArgumentException("EditorSceneManager.ClosePreviewScene failed; a non preview scene was passed in");
+            PrefabContents.SceneClosing(data);
+            foreach (var root in data.Roots.ToArray())
+                if (root != null) Object.DestroyImmediate(root);
+            SceneRegistry.Forget(data);
+            return true;
+        }
 
         [Unbound.EditorFaithful("scenes only reload from Edit mode (after an asset change), never while playing")]
         public static bool IsReloading(Scene scene) => false;
@@ -342,5 +370,20 @@ namespace UnityEditor
     public partial class SceneAsset : UnityEngine.Object
     {
         internal SceneAsset() { }
+    }
+}
+
+namespace UnityEditor.SceneManagement
+{
+    [Flags]
+    internal enum PreviewSceneFlags
+    {
+        NoFlags = 0,
+        IsPreviewScene = 1,
+        AllowCamerasForRendering = 2,
+        AllowMonoBehaviourEvents = 4,
+        AllowGlobalIlluminationLights = 8,
+        AllowAutoPlayAudioSources = 16,
+        AllFlags = 31,
     }
 }

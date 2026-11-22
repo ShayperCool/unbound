@@ -80,6 +80,8 @@ namespace UnityEditor
 
         public Object[] targetObjects => (Object[])m_Targets.Clone();
 
+        internal int targetObjectsCount => m_Targets.Length;
+
         public Object context => m_Context;
 
         public bool hasModifiedProperties => m_Modified;

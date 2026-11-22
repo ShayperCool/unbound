@@ -53,7 +53,8 @@ namespace UnityEditor
 
             public void Publish()
             {
-                foreach (var operation in Operations) operation.Published = true;
+                int batch = ++s_Batch;
+                foreach (var operation in Operations) operation.Publish(batch);
             }
         }
 
@@ -70,7 +71,32 @@ namespace UnityEditor
             /// <summary>Notes the changes the operation made (done or redone), or its undo made.</summary>
             public virtual void NoteChanges(bool undone) { }
             public virtual bool Concerns(Object o) => false;
+
+            /// <summary>Which entry of Undo.GetRecords the operation is part of: recorded objects
+            /// and properties get the number of the flush that found them changed, and those of one
+            /// flush (or of one RegisterCompleteObjectUndo or RegisterFullObjectHierarchyUndo call)
+            /// that follow each other are one entry; <see cref="Unlisted"/> until then. Other
+            /// operations are entries of their own (<see cref="OwnEntries"/>).</summary>
+            public int Batch = OwnEntries;
+            public const int OwnEntries = -1, Unlisted = 0;
+
+            /// <summary>A flush reached the operation: it names its group, and a recorded object
+            /// that changed is listed from now on.</summary>
+            public void Publish(int batch)
+            {
+                if (Published) return;
+                Published = true;
+                if (Batch == Unlisted && ChangedSinceRecorded) Batch = batch;
+            }
+
+            protected virtual bool ChangedSinceRecorded => true;
+
+            /// <summary>The operation's own entries of Undo.GetRecords.</summary>
+            public virtual void List(List<string> entries) => entries.Add(Name);
         }
+
+        /// <summary>The last flush or complete registration numbered (<see cref="Operation.Batch"/>).</summary>
+        static int s_Batch;
 
         static readonly List<Group> s_Undo = new List<Group>();
         static readonly List<Group> s_Redo = new List<Group>();
@@ -158,8 +184,62 @@ namespace UnityEditor
 
         static void PublishRecords()
         {
-            foreach (var operation in s_Unpublished) operation.Published = true;
+            if (s_Unpublished.Count == 0) return;
+            int batch = ++s_Batch;
+            foreach (var operation in s_Unpublished) operation.Publish(batch);
             s_Unpublished.Clear();
+        }
+
+        // ------------------------------------------------------------------ the record list
+
+        /// <summary>The name a recorded object's entry has when its record was given none.</summary>
+        const string UnnamedRecord = "Record Modification";
+
+        /// <summary>
+        /// The entries of the undo and redo lists, oldest first (the next to redo first). An entry
+        /// is not a group: a group's name set by SetCurrentGroupName is one; the objects and
+        /// properties recorded in a group that one flush found changed are one, named by the last
+        /// of them (an unchanged or unflushed record is none); a complete object or hierarchy
+        /// registration is one at once; a registered created object is two, an object destroyed
+        /// through Undo a selection clear and its own; other operations are one each. Matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/scenesave scene-api-rest undo.*. Not measured:
+        /// selection changes, a group named after its records were listed, created objects that
+        /// are no GameObject, records of several objects registered complete in one call.
+        /// </summary>
+        internal static void GetRecords(List<string> undoRecords, List<string> redoRecords)
+        {
+            if (undoRecords == null || redoRecords == null) throw new NullReferenceException("List must be non-null.");
+            undoRecords.Clear();
+            redoRecords.Clear();
+            foreach (var group in s_Undo) AddEntries(group, undoRecords);
+            for (int i = s_Redo.Count - 1; i >= 0; i--) AddEntries(s_Redo[i], redoRecords);
+        }
+
+        /// <summary>Both lists in one, and how many of its entries can be undone.</summary>
+        internal static void GetRecords(List<string> undoRecords, out int undoCursor)
+        {
+            if (undoRecords == null) throw new NullReferenceException("List must be non-null.");
+            undoRecords.Clear();
+            foreach (var group in s_Undo) AddEntries(group, undoRecords);
+            undoCursor = undoRecords.Count;
+            for (int i = s_Redo.Count - 1; i >= 0; i--) AddEntries(s_Redo[i], undoRecords);
+        }
+
+        static void AddEntries(Group group, List<string> entries)
+        {
+            if (group.Name != null) entries.Add(group.Name);
+            int batch = Operation.OwnEntries;
+            foreach (var operation in group.Operations)
+            {
+                if (operation.Batch == Operation.OwnEntries) operation.List(entries);
+                else if (operation.Batch != Operation.Unlisted)
+                {
+                    string name = string.IsNullOrEmpty(operation.Name) ? UnnamedRecord : operation.Name;
+                    if (operation.Batch == batch) entries[^1] = name;
+                    else entries.Add(name);
+                }
+                batch = operation.Batch;
+            }
         }
 
         // ------------------------------------------------------------------ recording
@@ -170,12 +250,19 @@ namespace UnityEditor
             Add(new StateOperation(objectToUndo, name));
         }
 
+        /// <summary>A record listed at once, whether or not its object changes afterwards.</summary>
+        static void RecordComplete(Object objectToUndo, string name, int batch)
+        {
+            if (objectToUndo == null) return;
+            Add(new StateOperation(objectToUndo, name) { Batch = batch });
+        }
+
         /// <summary>The record SerializedObject.ApplyModifiedProperties makes of its targets before
         /// it writes them: the properties it changes, whose values an undo restores and a redo sets
         /// again, leaving the others as they are then (tests/projects/serializedundo without.*).</summary>
         internal static void RecordApply(Object[] targets, SerializedNode[] befores, List<string> paths, string name)
         {
-            var operation = new PropertiesOperation { Name = name, Targets = (Object[])targets.Clone(), Befores = befores, Paths = paths };
+            var operation = new PropertiesOperation { Name = name, Targets = (Object[])targets.Clone(), Befores = befores, Paths = paths, Batch = Operation.Unlisted };
             Add(operation);
         }
 
@@ -185,22 +272,28 @@ namespace UnityEditor
             foreach (var o in objectsToUndo) RecordObject(o, name);
         }
 
-        public static void RegisterCompleteObjectUndo(Object objectToUndo, string name) => RecordObject(objectToUndo, name);
+        public static void RegisterCompleteObjectUndo(Object objectToUndo, string name) => RecordComplete(objectToUndo, name, ++s_Batch);
 
-        public static void RegisterCompleteObjectUndo(Object[] objectsToUndo, string name) => RecordObjects(objectsToUndo, name);
+        public static void RegisterCompleteObjectUndo(Object[] objectsToUndo, string name)
+        {
+            if (objectsToUndo == null) return;
+            int batch = ++s_Batch;
+            foreach (var o in objectsToUndo) RecordComplete(o, name, batch);
+        }
 
         public static void RegisterFullObjectHierarchyUndo(Object objectToUndo, string name)
         {
             var go = objectToUndo as GameObject ?? (objectToUndo as Component)?.gameObject;
+            int batch = ++s_Batch;
             if (go == null)
             {
-                RecordObject(objectToUndo, name);
+                RecordComplete(objectToUndo, name, batch);
                 return;
             }
             foreach (var t in go.GetComponentsInChildren<Transform>(true))
             {
-                RecordObject(t.gameObject, name);
-                foreach (var c in t.GetComponents<Component>()) RecordObject(c, name);
+                RecordComplete(t.gameObject, name, batch);
+                foreach (var c in t.GetComponents<Component>()) RecordComplete(c, name, batch);
             }
         }
 
@@ -209,8 +302,12 @@ namespace UnityEditor
         public static void RegisterCreatedObjectUndo(Object objectToUndo, string name)
         {
             if (objectToUndo == null) return;
+            // Records made before it are listed before it (scenesave scene-api-rest
+            // undo.kind.recordThenCreated).
+            PublishRecords();
             var operation = CreatedOperation.Of(objectToUndo, name);
             operation.NameRank = 2;
+            operation.Registered = true;
             Add(operation);
         }
 
@@ -488,7 +585,10 @@ namespace UnityEditor
                 m_Target = target;
                 Name = name;
                 m_Before = ObjectState.Capture(target);
+                Batch = Unlisted;
             }
+
+            protected override bool ChangedSinceRecorded => m_Target != null && !m_Before.SameAs(ObjectState.Capture(m_Target));
 
             public override void Undo()
             {
@@ -529,6 +629,16 @@ namespace UnityEditor
             GameObject m_Owner;
             int m_OwnerId;
             Scene m_Scene;
+            /// <summary>Made by RegisterCreatedObjectUndo (not an added component).</summary>
+            public bool Registered;
+
+            /// <summary>A registered object is two entries of its name; unnamed, these two.</summary>
+            public override void List(List<string> entries)
+            {
+                if (!Registered) base.List(entries);
+                else if (string.IsNullOrEmpty(Name)) { entries.Add("Create Object"); entries.Add("Update Object"); }
+                else { entries.Add(Name); entries.Add(Name); }
+            }
 
             internal static CreatedOperation Of(Object target, string name)
             {
@@ -566,6 +676,13 @@ namespace UnityEditor
             public Object Target;
             public int Id, ParentId, OwnerId;
             public Scene Scene;
+
+            /// <summary>Listed after a selection clear (measured for a GameObject that was not selected).</summary>
+            public override void List(List<string> entries)
+            {
+                entries.Add("Clear Selection");
+                base.List(entries);
+            }
 
             /// <summary>A destroyed component changes its GameObject's structure (measured:
             /// tests/projects/scenesave prefab-writes removeRevert.event).</summary>

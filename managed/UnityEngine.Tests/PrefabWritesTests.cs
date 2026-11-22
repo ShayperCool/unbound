@@ -383,6 +383,41 @@ namespace UnityEngine.Tests
             Assert.Contains("label: from contents", FileText());
         }
 
+        [Fact]
+        public void ContentsLiveInASceneNamedAfterThePrefabAndClosingItUnloadsThem()
+        {
+            int previews = EditorSceneManager.previewSceneCount;
+            var contents = PrefabUtility.LoadPrefabContents(AssetPath);
+            var scene = contents.scene;
+            Assert.Equal((System.IO.Path.GetFileNameWithoutExtension(AssetPath), AssetPath, true, 1), (scene.name, scene.path, scene.isLoaded, scene.rootCount));
+            Assert.Equal(previews + 1, EditorSceneManager.previewSceneCount);
+            Assert.True(EditorSceneManager.ClosePreviewScene(scene));
+            Assert.True(contents == null);
+            Assert.False(scene.IsValid());
+            Assert.Equal(previews, EditorSceneManager.previewSceneCount);
+            // They are contents no longer.
+            Assert.Equal("Specified object is not part of Prefab contents",
+                Assert.Throws<ArgumentException>(() => PrefabUtility.UnloadPrefabContents(contents)).Message);
+        }
+
+        [Fact]
+        public void TheEditScopeSavesItsContentsToThePrefabAndUnloadsThem()
+        {
+            int previews = EditorSceneManager.previewSceneCount;
+            GameObject root;
+            using (var scope = new PrefabUtility.EditPrefabContentsScope(AssetPath))
+            {
+                root = scope.prefabContentsRoot;
+                Assert.Equal(AssetPath, scope.assetPath);
+                Assert.True(EditorSceneManager.IsPreviewScene(root.scene));
+                root.GetComponent<PrefabTestHolder>().label = "from the scope";
+            }
+            Assert.True(root == null);
+            Assert.Equal(previews, EditorSceneManager.previewSceneCount);
+            Assert.Equal("from the scope", m_Asset.GetComponent<PrefabTestHolder>().label);
+            Assert.Contains("label: from the scope", FileText());
+        }
+
         /// <summary>A new prefab's file is a copy of the hierarchy: the root named after the file,
         /// references inside it to the copies, to a scene object outside it as none, a random id
         /// per object; the hierarchy itself stays a plain one with its name.</summary>

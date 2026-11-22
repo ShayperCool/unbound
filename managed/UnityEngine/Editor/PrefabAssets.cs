@@ -344,21 +344,19 @@ namespace Unbound.Runtime
 
         static readonly List<PrefabContents> s_Loaded = new List<PrefabContents>();
 
-        internal static int LoadedCount => s_Loaded.Count;
-
         internal static PrefabContents Of(GameObject root)
         {
             foreach (var c in s_Loaded) if (ReferenceEquals(c.Root, root)) return c;
             return null;
         }
 
-        internal static GameObject Load(LoadedFile file)
+        /// <summary>The contents of the prefab at a project path, in a preview scene named after
+        /// the prefab whose path is the prefab's (measured: tests/projects/scenesave
+        /// scene-api-rest contents.scene).</summary>
+        internal static GameObject Load(LoadedFile file, string assetPath)
         {
             var assetRoot = (GameObject)file.MainObject;
-            var scene = SceneRegistry.Create("", "", -1);
-            scene.IsPreview = true;
-            scene.IsLoaded = true;
-            scene.LoadingState = UnityEngine.SceneManagement.Scene.LoadingState.Loaded;
+            var scene = SceneRegistry.CreatePreview(System.IO.Path.GetFileNameWithoutExtension(assetPath), assetPath);
             var clone = Instantiation.Prepare(assetRoot, assetRoot, scene.Handle, "");
             Instantiation.Place(clone, null, scene.Handle, false, false, null, null);
             var contents = new PrefabContents { File = file, Root = clone.RootGo, Scene = scene };
@@ -372,6 +370,11 @@ namespace Unbound.Runtime
             Instantiation.Activate(new[] { clone });
             return contents.Root;
         }
+
+        /// <summary>A preview scene is being closed: contents loaded into it are no longer
+        /// contents (unloading them then throws, measured: tests/projects/scenesave scene-api-rest
+        /// contents.unloadAfterClose).</summary>
+        internal static void SceneClosing(SceneData scene) => s_Loaded.RemoveAll(c => c.Scene == scene);
 
         internal static bool Unload(GameObject root)
         {
