@@ -9,7 +9,9 @@
     "managed/UnityEngine/Runtime/Coroutines.cs",
     "tests/projects/stpmotion/ProjectSettings/",
     "tests/projects/stpmotion/Packages/",
-    "tests/projects/stpmotion/Assets/Settings/"
+    "tests/projects/stpmotion/Assets/Settings/",
+    "tests/projects/stpmotion/Assets/DefaultVolumeProfile.asset",
+    "tests/projects/stpmotion/Assets/UniversalRenderPipelineGlobalSettings.asset"
   ],
   "summary": "eofstartup: [0-9]+/[0-9]+ records, [0-9]+/[0-9]+ values match"
 }

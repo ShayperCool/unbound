@@ -29,7 +29,8 @@ and focusing the Game view.
 project settings, packages and pipeline assets of `tests/projects/stpmotion`; reference
 `unity-<release>.urp.jsonl`, two identical captures): every end-of-frame row is the built-in
 pipeline's, also in the first frame; only the `Camera.onPostRender` counters are 0, which that
-pipeline does not send.
+pipeline does not send (so the camera-before-end-of-frame control holds for the built-in
+pipeline only).
 The counters check every frame through frame 9, so skipping more than startup or
 adding a delay to every newly started coroutine fails the comparison.
 
