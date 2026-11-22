@@ -131,10 +131,12 @@ namespace UnityEditor
             // nothing of it.
             // An apply recorded for Undo is one undo record of its targets, named by what it
             // changes (measured: tests/projects/serializedundo).
+            // A project settings object's apply is left out: the Test Framework's revert of the
+            // run's undo groups leaves it in the file (tests/projects/scenesave settings-writes).
             if (recordUndo)
             {
                 var changes = Changes(out var befores);
-                Undo.RecordApply(m_Targets, befores, ChangedPaths(), UndoName(befores));
+                if (!IsProjectSettings()) Undo.RecordApply(m_Targets, befores, ChangedPaths(), UndoName(befores));
                 if (Undo.postprocessModifications != null) Undo.QueueModifications(Modifications(changes));
             }
             for (int i = 0; i < m_Targets.Length; i++)
@@ -229,6 +231,13 @@ namespace UnityEditor
                 }
             }
             return list;
+        }
+
+        bool IsProjectSettings()
+        {
+            foreach (var target in m_Targets)
+                if (target != null && SettingsAssets.Of(target) != null) return true;
+            return false;
         }
 
         /// <summary>A target's serialized data as Unbound models it.</summary>
