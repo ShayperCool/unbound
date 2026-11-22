@@ -17,11 +17,16 @@ namespace UnityEngine
         static readonly HashSet<string> s_Unsupported = new HashSet<string>();
 
         /// <summary>The object a world collision with <paramref name="hit"/> reports to: a collider
-        /// attached to a Rigidbody reports to the Rigidbody's GameObject, which GetCollisionEvents
-        /// then takes (6000.0.71f1, tests/projects/particlecollision collide/Parent); the event's
+        /// attached to a Rigidbody (a Rigidbody2D) reports to the body's GameObject, which
+        /// GetCollisionEvents then takes (6000.0.71f1, tests/projects/particlecollision
+        /// collide/Parent, tests/projects/particlerender collide/world2d/kinematic); the event's
         /// collider stays the one hit.</summary>
-        internal static GameObject CollisionReceiver(Collider hit) =>
-            hit == null ? null : hit.attachedRigidbody != null ? hit.attachedRigidbody.gameObject : hit.gameObject;
+        internal static GameObject CollisionReceiver(Component hit) => hit switch
+        {
+            Collider c => c.attachedRigidbody != null ? c.attachedRigidbody.gameObject : c.gameObject,
+            Collider2D c => c.attachedRigidbody != null ? c.attachedRigidbody.gameObject : c.gameObject,
+            _ => null,
+        };
 
         /// <summary>Reports a module setting Unbound does not simulate, once per setting.</summary>
         internal static void ReportUnsupported(string what)
@@ -142,19 +147,25 @@ namespace UnityEngine
             }
             else
             {
-                if (C.mode == ParticleSystemCollisionMode.Collision2D)
+                Component hit;
+                bool found;
+                if (UsesCollisionCache) found = CachedWorldContact(end, velocity, radius, dt, c, out contact, out normal, out hit);
+                else if (C.mode == ParticleSystemCollisionMode.Collision2D)
                 {
-                    ReportUnsupported("2D world collision");
-                    return false;
+                    found = WorldContact2D(end, velocity, radius, dt, c, out contact, out normal, out var hit2D);
+                    hit = hit2D;
                 }
-                Collider hit;
-                bool found = UsesCollisionCache
-                    ? CachedWorldContact(end, velocity, radius, dt, c, out contact, out normal, out hit)
-                    : WorldContact(end, velocity, radius, dt, c, out contact, out normal, out hit);
+                else
+                {
+                    found = WorldContact(end, velocity, radius, dt, c, out contact, out normal, out var hit3D);
+                    hit = hit3D;
+                }
                 if (!found) return false;
                 other = CollisionReceiver(hit);
                 colliderId = hit != null ? hit.GetInstanceID() : 0;
-                if (C.colliderForce != 0f && hit != null) ApplyColliderForce(hit.attachedRigidbody, contact, normal, velocity, size, c);
+                // A 2D query pushes the bodies it hits itself (see Query2D).
+                if (C.colliderForce != 0f && hit is Collider collider3D)
+                    ApplyColliderForce(collider3D.attachedRigidbody, contact, normal, velocity, size, c);
             }
 
             h.contact = contact;
@@ -380,6 +391,63 @@ namespace UnityEngine
             contact = c.WorldToSimMatrix.MultiplyPoint3x4(worldContact);
             normal = c.WorldToSimMatrix.MultiplyVector(worldNormal).normalized;
             return true;
+        }
+
+        readonly Unbound.Runtime.Physics2DParticleQuery.Scratch m_Query2D = new Unbound.Runtime.Physics2DParticleQuery.Scratch();
+
+        /// <summary>A particle's step against 2D colliders (Collision2D; see <see cref="Query2D"/>).</summary>
+        bool WorldContact2D(Vector3 end, Vector3 velocity, float radius, float dt, in StepContext c, out Vector3 contact, out Vector3 normal, out Collider2D hit)
+        {
+            contact = normal = default;
+            var w0 = c.SimToWorld.MultiplyPoint3x4(end - velocity * dt);
+            if (!Query2D(w0, c.SimToWorld.MultiplyPoint3x4(end), radius, dt, out var worldContact, out var worldNormal, out hit)) return false;
+            contact = c.WorldToSimMatrix.MultiplyPoint3x4(worldContact);
+            normal = c.WorldToSimMatrix.MultiplyVector(worldNormal).normalized;
+            return true;
+        }
+
+        /// <summary>A particle's circle moving from <paramref name="w0"/> to <paramref name="w1"/>
+        /// (world space) against 2D colliders: in the XY plane, colliders at any depth (see
+        /// <see cref="Unbound.Runtime.Physics2DParticleQuery"/>). The contact keeps the depth the
+        /// movement started at; the normal lies in the plane. A Dynamic body hit is pushed as
+        /// <see cref="ApplyColliderForce2D"/> says, from this movement (Unity 6000.0.71f1,
+        /// tests/projects/particlerender collide/world2d/*).</summary>
+        bool Query2D(Vector3 w0, Vector3 w1, float radius, float dt, out Vector3 contact, out Vector3 normal, out Collider2D hit)
+        {
+            contact = normal = default;
+            var C = m_Collision;
+            var start = new Vector2(w0.x, w0.y);
+            bool found = Unbound.Runtime.Physics2DParticleQuery.Contact(m_GameObject, start, new Vector2(w1.x, w1.y), radius, C.collidesWith,
+                C.enableDynamicColliders, C.maxCollisionShapes, m_Query2D, out var point, out var impact, out var n, out hit, out bool truncated);
+            // Unity takes the first maxCollisionShapes colliders near the whole system; Unbound
+            // looks per particle, so it can only tell when a single particle has more.
+            if (truncated) ReportUnsupported("2D World collision with more than maxCollisionShapes colliders near a particle");
+            if (!found) return false;
+            contact = new Vector3(point.x, point.y, w0.z);
+            normal = new Vector3(n.x, n.y, 0f);
+            if (C.colliderForce > 0f) ApplyColliderForce2D(hit.attachedRigidbody, new Vector2(w1.x - w0.x, w1.y - w0.y), impact, n, radius, dt);
+            return true;
+        }
+
+        /// <summary>colliderForce against a Dynamic Rigidbody2D: the particle pushes the body with
+        /// a force along its movement in the plane, applied for the body's next physics step at the
+        /// point of the particle's circle nearest the surface where the step met it
+        /// (<paramref name="impact"/>, before the push out); the force is multiplied by the
+        /// cosine of the angle between the movement and the surface (zero when moving away), by the
+        /// particle's planar speed and by its circle's area, as their flags ask (Unity 6000.0.71f1,
+        /// tests/projects/particlerender collide/world2d/force_*).</summary>
+        void ApplyColliderForce2D(Rigidbody2D body, Vector2 move, Vector2 impact, Vector2 normal, float radius, float dt)
+        {
+            if (body == null || body.bodyType != RigidbodyType2D.Dynamic) return;
+            var C = m_Collision;
+            var velocity = move / dt;
+            float speed = velocity.magnitude;
+            var direction = speed > 0f ? velocity * (1f / speed) : Vector2.zero;
+            float force = C.colliderForce;
+            if (C.multiplyColliderForceByCollisionAngle) force *= Mathf.Max(0f, -Vector2.Dot(direction, normal));
+            if (C.multiplyColliderForceByParticleSpeed) force *= speed;
+            if (C.multiplyColliderForceByParticleSize) force *= Mathf.PI * radius * radius;
+            body.AddForceAtPosition(direction * force, impact - normal * radius, ForceMode2D.Force);
         }
 
         /// <summary>Sweeps a particle's sphere from <paramref name="from"/> along

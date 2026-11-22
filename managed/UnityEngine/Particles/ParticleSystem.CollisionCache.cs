@@ -15,7 +15,8 @@ namespace UnityEngine
     //   contact and normal) is stored for the voxel of its start and the main axis of its
     //   direction. Any other particle takes the plane stored for its own voxel and direction.
     // - A particle collides when its step crosses that plane, at the crossing.
-    // Voxels are voxelSize wide along x and z and four times that along y.
+    // Voxels are voxelSize wide along x and z and four times that along y. Collision2D caches the
+    // same way, its query being the 2D one (tests/projects/particlerender collide/world2d/slope_medium).
     public sealed partial class ParticleSystem
     {
         struct VoxelKey : System.IEquatable<VoxelKey>
@@ -29,7 +30,8 @@ namespace UnityEngine
         struct CachedPlane
         {
             internal Vector3 point, normal;
-            internal Collider collider;
+            /// <summary>A Collider, or a Collider2D in Collision2D mode.</summary>
+            internal Component collider;
         }
 
         /// <summary>The planes found so far, by voxel and direction (kept for the system's life),
@@ -58,7 +60,7 @@ namespace UnityEngine
         static readonly List<ParticleSystem> s_RaySystems = new List<ParticleSystem>();
 
         bool UsesCollisionCache => m_Collision.enabled && m_Collision.type == ParticleSystemCollisionType.World
-            && m_Collision.mode == ParticleSystemCollisionMode.Collision3D && m_Collision.quality != ParticleSystemCollisionQuality.High;
+            && m_Collision.quality != ParticleSystemCollisionQuality.High;
 
         /// <summary>Shares the frame's queries out among the systems (see the class comment).</summary>
         internal static void AssignRayBudgets(ParticleSystem[] systems, int n)
@@ -151,7 +153,7 @@ namespace UnityEngine
 
         /// <summary>A world collision at Medium or Low quality (see the class comment).</summary>
         bool CachedWorldContact(Vector3 end, Vector3 velocity, float radius, float dt, in StepContext c,
-            out Vector3 contact, out Vector3 normal, out Collider hit)
+            out Vector3 contact, out Vector3 normal, out Component hit)
         {
             contact = normal = default;
             hit = null;
@@ -165,8 +167,22 @@ namespace UnityEngine
                 float length = move.magnitude;
                 if (!(length > MinSweepLength)) return false;
                 var direction = move / length;
-                if (!SweepContact(w0, direction, CacheSweepVoxels * voxel, radius, out var worldContact, out var worldNormal, out var collider))
-                    return false;
+                Vector3 worldContact, worldNormal;
+                Component collider;
+                bool found;
+                if (m_Collision.mode == ParticleSystemCollisionMode.Collision2D)
+                {
+                    // The 2D query takes the lengthened movement as the particle's own, also for
+                    // the force it gives a Dynamic body (unmeasured with colliderForce).
+                    found = Query2D(w0, w0 + direction * (CacheSweepVoxels * voxel), radius, dt, out worldContact, out worldNormal, out var collider2D);
+                    collider = collider2D;
+                }
+                else
+                {
+                    found = SweepContact(w0, direction, CacheSweepVoxels * voxel, radius, out worldContact, out worldNormal, out var collider3D);
+                    collider = collider3D;
+                }
+                if (!found) return false;
                 plane = new CachedPlane
                 {
                     point = c.WorldToSimMatrix.MultiplyPoint3x4(worldContact),
@@ -195,14 +211,15 @@ namespace UnityEngine
             if (!CrossesPlane(plane, h.end, h.velocity, h.dt, out h.contact, out h.normal, out var collider)) return false;
             h.other = CollisionReceiver(collider);
             h.colliderId = collider != null ? collider.GetInstanceID() : 0;
-            if (m_Collision.colliderForce != 0f && collider != null)
-                ApplyColliderForce(collider.attachedRigidbody, h.contact, h.normal, h.velocity, h.lookupSize, c);
+            // A 2D body is pushed only by the query that found the plane (Query2D).
+            if (m_Collision.colliderForce != 0f && collider is Collider collider3D)
+                ApplyColliderForce(collider3D.attachedRigidbody, h.contact, h.normal, h.velocity, h.lookupSize, c);
             return true;
         }
 
         /// <summary>Whether the step of a particle that ended at <paramref name="end"/> crosses a
         /// cached plane moving into it, and where.</summary>
-        static bool CrossesPlane(in CachedPlane plane, Vector3 end, Vector3 velocity, float dt, out Vector3 contact, out Vector3 normal, out Collider hit)
+        static bool CrossesPlane(in CachedPlane plane, Vector3 end, Vector3 velocity, float dt, out Vector3 contact, out Vector3 normal, out Component hit)
         {
             contact = normal = default;
             hit = null;
