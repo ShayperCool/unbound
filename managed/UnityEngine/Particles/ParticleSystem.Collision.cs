@@ -138,7 +138,7 @@ namespace UnityEngine
             var C = m_Collision;
             h = default;
             if (dt < MinCollisionStep) return false;
-            float radius = Mathf.Max(size.x, Mathf.Max(size.y, size.z)) * (C.radiusScale * 0.5f);
+            float radius = CollisionRadius(size);
             var end = p.m_Position;
             Vector3 contact, normal;
             GameObject other;
@@ -170,7 +170,7 @@ namespace UnityEngine
                 colliderId = hit != null ? hit.GetInstanceID() : 0;
                 // A 2D query pushes the bodies it hits itself (see Query2D).
                 if (C.colliderForce != 0f && hit != null && hit is Collider collider3D)
-                    ApplyColliderForce(collider3D.attachedRigidbody, contact, normal, velocity, size, c);
+                    ApplyColliderForce(collider3D.attachedRigidbody, contact, normal, velocity, radius, c);
             }
 
             h.contact = contact;
@@ -422,15 +422,9 @@ namespace UnityEngine
             contact = normal = default;
             var C = m_Collision;
             var start = new Vector2(w0.x, w0.y);
-            // Medium and Low are "Static Colliders" qualities (6000.0 Manual): their queries pass
-            // Dynamic bodies, which therefore never take a collider force there
-            // (collide/world2d/force_speed_medium).
-            bool dynamicColliders = C.enableDynamicColliders && C.quality == ParticleSystemCollisionQuality.High;
             bool found = Unbound.Runtime.Physics2DParticleQuery.Contact(m_GameObject, start, new Vector2(w1.x, w1.y), radius, C.collidesWith,
-                dynamicColliders, C.maxCollisionShapes, m_Query2D, out var point, out var impact, out var n, out hit, out bool truncated);
-            // Unity takes the first maxCollisionShapes colliders near the whole system; Unbound
-            // looks per particle, so it can only tell when a single particle has more.
-            if (truncated) ReportUnsupported("2D World collision with more than maxCollisionShapes colliders near a particle");
+                MeetsDynamicColliders, C.maxCollisionShapes, m_Query2D, out var point, out var impact, out var n, out hit, out bool truncated);
+            if (truncated) ReportUnsupported("2D World collision with more than maxCollisionShapes colliders near a system's particles");
             if (!found) return false;
             contact = new Vector3(point.x, point.y, w0.z);
             normal = new Vector3(n.x, n.y, 0f);
@@ -471,8 +465,13 @@ namespace UnityEngine
             float shrink = radius * WorldSweepShrink;
             float sweepRadius = radius - shrink;
             if (!(sweepRadius > MinSweepRadius)) sweepRadius = MinSweepRadius;
-            if (!PhysicsQueries.ParticleSweep(from, sweepRadius, direction, length + shrink, m_Collision.collidesWith, out float distance, out var hitNormal, out hit))
-                return false;
+            // The system's own physics scene (collide/rules/3d/local, local_split).
+            float distance;
+            Vector3 hitNormal;
+            using (PhysicsQueries.In(Unbound.Runtime.PhysicsWorld.SpaceOf(m_GameObject)))
+                if (!PhysicsQueries.ParticleSweep(from, sweepRadius, direction, length + shrink, m_Collision.collidesWith, MeetsDynamicColliders,
+                        out distance, out hitNormal, out hit))
+                    return false;
             if (distance > 0f)
             {
                 contact = from + direction * (distance - shrink);
@@ -489,28 +488,39 @@ namespace UnityEngine
             return true;
         }
 
-        /// <summary>Volume of a sphere per cubed diameter (π/6): a particle's size factor.</summary>
-        const float SphereVolumePerCubedDiameter = Mathf.PI / 6f;
+        /// <summary>A particle's collision radius: half its largest size axis times the radius scale.</summary>
+        float CollisionRadius(Vector3 size) => Mathf.Max(size.x, Mathf.Max(size.y, size.z)) * (m_Collision.radiusScale * 0.5f);
+
+        /// <summary>Whether a World collision meets dynamic colliders: with enableDynamicColliders at
+        /// High quality only, Medium and Low being the "Static Colliders" qualities (6000.0
+        /// Manual). In 3D a collider of any Rigidbody, Kinematic too, is dynamic; in 2D a collider of
+        /// a Dynamic Rigidbody2D (Unity 6000.0.71f1, tests/projects/particlerender
+        /// collide/rules/*, collide/world2d/force_speed_medium). Bodies that are passed take no
+        /// collider force.</summary>
+        bool MeetsDynamicColliders => m_Collision.enableDynamicColliders && m_Collision.quality == ParticleSystemCollisionQuality.High;
+
+        /// <summary>Volume of a sphere per cubed radius (4π/3): a particle's size factor.</summary>
+        const float SphereVolumePerCubedRadius = 4f * Mathf.PI / 3f;
 
         /// <summary>colliderForce: a particle that hits a collider of a Rigidbody pushes it at the
         /// contact, along the particle's velocity, with the force for one physics step; the force
-        /// is multiplied by the cosine of the angle between the velocity and the surface normal,
-        /// by the particle's speed and by the volume of the sphere of the particle's size, as their
-        /// flags ask (Unity 6000.0.71f1, tests/projects/particlerender force/*). A size that differs
-        /// per axis takes the ellipsoid's volume (unmeasured). Kinematic bodies do not move.</summary>
-        void ApplyColliderForce(Rigidbody body, Vector3 contact, Vector3 normal, Vector3 velocity, Vector3 size, in StepContext c)
+        /// is multiplied by the cosine of the angle between the velocity and the surface (zero when
+        /// moving away), by the particle's speed and by the volume of the sphere of its collision
+        /// radius, as their flags ask; a force of zero or less pushes nothing (Unity 6000.0.71f1,
+        /// tests/projects/particlerender force/*, force/rules/*). Kinematic bodies do not move.</summary>
+        void ApplyColliderForce(Rigidbody body, Vector3 contact, Vector3 normal, Vector3 velocity, float radius, in StepContext c)
         {
-            if (body == null || body.isKinematic) return;
+            var C = m_Collision;
+            if (body == null || body.isKinematic || !(C.colliderForce > 0f)) return;
             var worldVelocity = c.SimToWorld.MultiplyVector(velocity);
             float speed = worldVelocity.magnitude;
             if (!(speed > 0f)) return;
             var direction = worldVelocity / speed;
-            var C = m_Collision;
             float force = C.colliderForce;
             if (C.multiplyColliderForceByCollisionAngle)
-                force *= Mathf.Abs(Vector3.Dot(direction, c.SimToWorld.MultiplyVector(normal).normalized));
+                force *= Mathf.Max(0f, -Vector3.Dot(direction, c.SimToWorld.MultiplyVector(normal).normalized));
             if (C.multiplyColliderForceByParticleSpeed) force *= speed;
-            if (C.multiplyColliderForceByParticleSize) force *= SphereVolumePerCubedDiameter * size.x * size.y * size.z;
+            if (C.multiplyColliderForceByParticleSize) force *= SphereVolumePerCubedRadius * radius * radius * radius;
             body.AddForceAtPosition(direction * force, c.SimToWorld.MultiplyPoint3x4(contact), ForceMode.Force);
         }
 

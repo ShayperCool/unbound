@@ -54,6 +54,11 @@ namespace Unbound.Runtime
             internal readonly EdgeShape ChainEdge = new EdgeShape();
             internal int LayerMask, MaxShapes;
             internal bool DynamicColliders, Truncated;
+            /// <summary>The shapes the system's particles have found in the frame of
+            /// <see cref="Frame"/>: Unity takes at most maxCollisionShapes of them for the whole
+            /// system, Unbound tells when there are more.</summary>
+            internal readonly HashSet<Fixture> FrameShapes = new HashSet<Fixture>();
+            internal int Frame = -1;
 
             public bool QueryCallback(Fixture fixture, int childIndex)
             {
@@ -68,6 +73,7 @@ namespace Unbound.Runtime
                     return false;
                 }
                 Candidates.Add((fixture, childIndex));
+                if (FrameShapes.Add(fixture) && FrameShapes.Count > MaxShapes) Truncated = true;
                 return true;
             }
         }
@@ -76,8 +82,11 @@ namespace Unbound.Runtime
         /// <paramref name="start"/> to <paramref name="end"/> (world XY) in the physics scene of
         /// <paramref name="owner"/> (see the class comment): where the circle's center is at the
         /// contact, where it was at the time of impact before the push out
-        /// (<paramref name="impact"/>), the normal out of the shape hit, and its collider. <paramref name="truncated"/>
-        /// tells that more than <paramref name="maxShapes"/> shapes were near.</summary>
+        /// (<paramref name="impact"/>), the normal out of the shape hit, and its collider.
+        /// <paramref name="truncated"/> tells that the system's particles have found more than
+        /// <paramref name="maxShapes"/> shapes in the frame: Unity searches only the first
+        /// maxCollisionShapes shapes near all of the system's particles (collide/rules/2d/maxshapes),
+        /// which Unbound does not reproduce.</summary>
         internal static bool Contact(GameObject owner, Vector2 start, Vector2 end, float radius, int layerMask, bool dynamicColliders,
             int maxShapes, Scratch s, out Vector2 point, out Vector2 impact, out Vector2 normal, out Collider2D collider, out bool truncated)
         {
@@ -95,6 +104,11 @@ namespace Unbound.Runtime
             var upper = B2.Max(a, b);
             s.Candidates.Clear();
             s.Impacts.Clear();
+            if (s.Frame != Time.frameCount)
+            {
+                s.Frame = Time.frameCount;
+                s.FrameShapes.Clear();
+            }
             s.LayerMask = layerMask;
             s.MaxShapes = maxShapes;
             s.DynamicColliders = dynamicColliders;

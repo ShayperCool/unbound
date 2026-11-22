@@ -196,27 +196,37 @@ namespace Unbound.Runtime
             Collect(ReadCast(false, kind, a, b, rotation, radius, direction, maxDistance, layerMask, triggers, closest, false), Length(maxDistance), direction.normalized);
 
         /// <summary>The particle Collision module's world sweep: the closest hit of a sphere, without
-        /// allocating. A sphere that starts inside a collider hits it at minus its penetration
-        /// depth, <paramref name="normal"/> then being the direction that separates them.</summary>
-        internal static bool ParticleSweep(Vector3 origin, float radius, Vector3 direction, float maxDistance, int layerMask,
+        /// allocating once its hit buffer has grown. A sphere that starts inside a collider hits it
+        /// at minus its penetration depth, <paramref name="normal"/> then being the direction that
+        /// separates them. Without <paramref name="bodies"/>, colliders attached to a Rigidbody
+        /// (Kinematic too) are passed (Unity 6000.0.71f1, tests/projects/particlerender
+        /// collide/rules/3d/*); of equally close hits the first the query reports wins.</summary>
+        internal static bool ParticleSweep(Vector3 origin, float radius, Vector3 direction, float maxDistance, int layerMask, bool bodies,
             out float distance, out Vector3 normal, out Collider collider)
         {
             int count = ReadCast(false, B3.Proxy.Sphere, origin, origin, Quaternion.identity, radius, direction, maxDistance, layerMask,
-                QueryTriggerInteraction.Ignore, true, false, InitialDepth);
+                QueryTriggerInteraction.Ignore, bodies, false, InitialDepth);
             float length = Length(maxDistance);
+            int best = -1;
+            collider = null;
             for (int i = 0; i < count; i++)
             {
-                var raw = s_Hits[i];
-                collider = W.ColliderOf(raw.Shape);
-                if (collider == null) continue;
-                distance = raw.Fraction * length;
-                normal = raw.Normal;
-                return true;
+                var hit = W.ColliderOf(s_Hits[i].Shape);
+                if (hit == null || !bodies && hit.attachedRigidbody != null) continue;
+                if (best >= 0 && !(s_Hits[i].Fraction < s_Hits[best].Fraction)) continue;
+                best = i;
+                collider = hit;
+                if (bodies) break;
             }
-            distance = 0f;
-            normal = default;
-            collider = null;
-            return false;
+            if (best < 0)
+            {
+                distance = 0f;
+                normal = default;
+                return false;
+            }
+            distance = s_Hits[best].Fraction * length;
+            normal = s_Hits[best].Normal;
+            return true;
         }
 
         internal static int BatchCast(PhysicsScene scene, bool ray, B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius,

@@ -215,7 +215,7 @@ namespace UnityEngine
             h.colliderId = collider != null ? collider.GetInstanceID() : 0;
             // A 2D body is pushed only by the query that found the plane (Query2D).
             if (m_Collision.colliderForce != 0f && collider != null && collider is Collider collider3D)
-                ApplyColliderForce(collider3D.attachedRigidbody, h.contact, h.normal, h.velocity, h.lookupSize, c);
+                ApplyColliderForce(collider3D.attachedRigidbody, h.contact, h.normal, h.velocity, CollisionRadius(h.lookupSize), c);
             return true;
         }
 
