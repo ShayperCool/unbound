@@ -61,10 +61,6 @@ namespace UnityEngine
         /// on the main thread within this budget.</summary>
         const float FrameBudgetMs = 2f;
 
-        /// <summary>The meta pass's largest albedo (unity_MaxOutputValue) when the Editor renders
-        /// albedo for realtime GI.</summary>
-        const float MaxAlbedo = 0.97f;
-
         sealed class GISystem
         {
             internal int Atlas, Width, Height;
@@ -1059,10 +1055,6 @@ namespace UnityEngine
             return null;
         }
 
-        static readonly Dictionary<int, object> s_MetaProperties = new Dictionary<int, object>();
-        static readonly int s_LightmapST = Shader.PropertyToID("unity_LightmapST");
-        static readonly int s_DynamicLightmapST = Shader.PropertyToID("unity_DynamicLightmapST");
-
         /// <summary>A system's albedo and emission textures, its renderers' meta passes drawn at
         /// their realtime lightmap positions within the system (as the Editor renders them: filled,
         /// then again as wireframe so that texels the triangles only touch are covered too), read
@@ -1100,76 +1092,24 @@ namespace UnityEngine
             }
         }
 
-        static void DrawMeta(GIScene scene, GISystem system, RenderTexture target, bool emissive, bool linear)
-        {
-            var saved = GfxStream.Current;
-            bool wireframe = GL.wireframe;
-            GfxStream.SetTarget(target.EnsureCreated());
-            GfxStream.Viewport(new Rect(0, 0, system.Width, system.Height));
-            GfxStream.Clear(GfxStream.ClearColor | GfxStream.ClearDepth, emissive ? new Color(0f, 0f, 0f, 1f) : new Color(0f, 0f, 0f, 0f));
-            GfxStream.Camera(Matrix4x4.identity, Matrix4x4.Ortho(0f, 1f, 0f, 1f, -1f, 1f));
-            GfxStream.GlobalVector("unity_MetaVertexControl", new Vector4(0f, 1f, 0f, 0f));
-            GfxStream.GlobalVector("unity_MetaFragmentControl", emissive ? new Vector4(0f, 1f, 0f, 0f) : new Vector4(1f, 0f, 0f, 0f));
-            GfxStream.GlobalFloat("unity_OneOverOutputBoost", 1f / scene.AlbedoBoost);
-            GfxStream.GlobalFloat("unity_MaxOutputValue", MaxAlbedo);
-            GfxStream.GlobalFloat("unity_UseLinearSpace", linear ? 1f : 0f);
-            try
+        static void DrawMeta(GIScene scene, GISystem system, RenderTexture target, bool emissive, bool linear) =>
+            GIMaterialImages.Draw(target, system.Width, system.Height, emissive, linear, scene.AlbedoBoost, realtimeUVs: true, () =>
             {
-                for (int pass = 0; pass < 2; pass++)
+                for (int r = 0; r < system.Renderers.Length; r++)
                 {
-                    GL.wireframe = pass == 1;
-                    for (int r = 0; r < system.Renderers.Length; r++)
-                        DrawRenderer(system.Renderers[r], system.ScaleOffsets[r], emissive);
+                    var renderer = system.Renderers[r];
+                    if (renderer == null) continue;
+                    GIMaterialImages.DrawRenderer(renderer, (renderer as MeshRenderer)?.RealtimeGIMesh(), system.ScaleOffsets[r],
+                        emissive, s_EmitsRealtime, "precomputed realtime GI", s_Warn);
                 }
-            }
-            finally
-            {
-                GL.wireframe = wireframe;
-                GfxStream.Restore(saved);
-            }
-        }
+            });
 
-        static void DrawRenderer(Renderer renderer, Vector4 scaleOffset, bool emissive)
-        {
-            if (renderer == null) return;
-            var mesh = (renderer as MeshRenderer)?.RealtimeGIMesh();
-            if (mesh == null)
-            {
-                Warn("mesh:" + renderer.name, $"'{renderer.name}' ({renderer.GetType().Name}) has no mesh Unbound can render for precomputed realtime GI: it adds no albedo or emission.");
-                return;
-            }
-            var materials = renderer.sharedMaterials;
-            s_MetaProperties.Clear();
-            s_MetaProperties[s_LightmapST] = scaleOffset;
-            s_MetaProperties[s_DynamicLightmapST] = scaleOffset;
-            int submeshes = Math.Min(materials.Length, mesh.subMeshCount);
-            for (int i = 0; i < submeshes; i++)
-            {
-                var material = materials[i];
-                if (material == null) continue;
-                // Emission counts for realtime GI when the material says so.
-                if (emissive && (material.globalIlluminationFlags & (MaterialGlobalIlluminationFlags.RealtimeEmissive | MaterialGlobalIlluminationFlags.EmissiveIsBlack))
-                    != MaterialGlobalIlluminationFlags.RealtimeEmissive)
-                    continue;
-                int pass = MetaPass(material);
-                if (pass < 0)
-                {
-                    Warn("meta:" + material.name, $"GI: setting up material '{material.name}' failed: its shader has no Meta pass. '{renderer.name}' does not affect precomputed realtime GI.");
-                    continue;
-                }
-                GfxStream.Draw(mesh.Sync(), i, material.Sync(), pass, renderer.localToWorldMatrix, Color.white, properties: s_MetaProperties);
-            }
-        }
+        /// <summary>Emission counts for realtime GI when the material says so.</summary>
+        static readonly Func<Material, bool> s_EmitsRealtime = material =>
+            (material.globalIlluminationFlags & (MaterialGlobalIlluminationFlags.RealtimeEmissive | MaterialGlobalIlluminationFlags.EmissiveIsBlack))
+            == MaterialGlobalIlluminationFlags.RealtimeEmissive;
 
-        static int MetaPass(Material material)
-        {
-            var info = ShaderPassInfo.Of(material.shader);
-            if (info == null) return -1;
-            for (int i = 0; i < info.Passes.Count; i++)
-                if (info.Passes[i].Tags.TryGetValue("LightMode", out var mode) && string.Equals(mode, "Meta", StringComparison.OrdinalIgnoreCase))
-                    return i;
-            return -1;
-        }
+        static readonly Action<string, string> s_Warn = Warn;
     }
 }
 

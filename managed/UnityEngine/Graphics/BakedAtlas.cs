@@ -154,6 +154,127 @@ namespace UnityEngine
             return entries;
         }
 
+        /// <summary>The folder the bake's texel buffers are written to, when set
+        /// (tests/projects/bakedbuffers).</summary>
+        const string BuffersVariable = "UNBOUND_BAKED_GI_BUFFERS";
+
+        /// <summary>Where a Unity installation keeps the blue noise data its bakes sample with.</summary>
+        const string BlueNoiseData = "Resources/GI/SamplingData/bluenoisedata";
+
+        /// <summary>A material's emission is baked when its flags have it emit for baked or
+        /// for realtime lighting, unless they say it is black (measured: a material with
+        /// RealtimeEmissive alone lights the baked lightmaps too, one with neither flag does
+        /// not, tests/projects/bakedbuffers Glow; one with both an emissive flag and
+        /// EmissiveIsBlack is not measured).</summary>
+        static readonly Func<Material, bool> s_Emits = material =>
+            (material.globalIlluminationFlags & MaterialGlobalIlluminationFlags.AnyEmissive) != 0
+            && (material.globalIlluminationFlags & MaterialGlobalIlluminationFlags.EmissiveIsBlack) == 0;
+
+        static readonly Action<string, string> s_Warn = Warn;
+
+        /// <summary>
+        /// What the bake's indirect light is made with: the Lighting Settings' Indirect Samples
+        /// and bounces, the installation's blue noise data, and each renderer's albedo and
+        /// emission images, drawn by its materials' meta passes over the bounds of its lightmap
+        /// UVs at the size the layout (<paramref name="layout"/>, the bake's answer) gives it.
+        /// Null, said, where they cannot be made: the direct light is baked alone.
+        /// </summary>
+        static object Indirect(string path, LightingSettings settings, List<(MeshRenderer renderer, long fileId)> placed, string layout)
+        {
+            string blueNoise = Path.Combine(UnityEditor.EditorApplication.applicationContentsPath ?? "", BlueNoiseData);
+            if (!File.Exists(blueNoise))
+            {
+                Warn("bluenoise:" + path, $"{path}: the Unity installation has no {BlueNoiseData} ({blueNoise}); Unbound's bake (Lightmapping.Bake) makes no indirect light without it.");
+                return null;
+            }
+            var placements = JsonDocument.Parse(layout).RootElement.GetProperty("placements");
+            if (placements.GetArrayLength() != placed.Count) throw new InvalidOperationException($"{placements.GetArrayLength()} placements for {placed.Count} renderers");
+            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+            var materials = new List<object>();
+            var withUVs = new Dictionary<Mesh, Mesh>();
+            try
+            {
+                for (int i = 0; i < placed.Count; i++)
+                {
+                    var renderer = placed[i].renderer;
+                    var p = placements[i];
+                    // A renderer the bake leaves out (a mesh without normals) has no images.
+                    int width = 1, height = 1;
+                    var scaleOffset = new Vector4(1f, 1f, 0f, 0f);
+                    if (p.ValueKind == JsonValueKind.Object)
+                    {
+                        width = p.GetProperty("image")[0].GetInt32();
+                        height = p.GetProperty("image")[1].GetInt32();
+                        var st = p.GetProperty("imageScaleOffset");
+                        scaleOffset = new Vector4(st[0].GetSingle(), st[1].GetSingle(), st[2].GetSingle(), st[3].GetSingle());
+                    }
+                    var mesh = BakedUVs(renderer.RealtimeGIMesh(), withUVs);
+                    var albedo = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32, linear ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear);
+                    var emission = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+                    try
+                    {
+                        foreach (var (target, emissive) in new[] { (albedo, false), (emission, true) })
+                            GIMaterialImages.Draw(target, width, height, emissive, linear, settings.albedoBoost, realtimeUVs: false,
+                                () => GIMaterialImages.DrawRenderer(renderer, mesh, scaleOffset, emissive, s_Emits, "the bake of baked lightmaps", s_Warn));
+                        var albedoBytes = Native.ReadPixels(albedo.EnsureCreated(), 0, 0, width, height, false);
+                        var emissionBytes = Native.ReadPixels(emission.EnsureCreated(), 0, 0, width, height, true);
+                        if (albedoBytes == null || emissionBytes == null)
+                        {
+                            Warn("headless:" + path, $"{path}: Unbound's bake (Lightmapping.Bake) needs a GPU for its materials' meta passes; it makes no indirect light without one.");
+                            return null;
+                        }
+                        var shared = renderer.sharedMaterials;
+                        var doubleSided = new bool[shared.Length];
+                        for (int k = 0; k < shared.Length; k++) doubleSided[k] = shared[k] != null && shared[k].doubleSidedGI;
+                        materials.Add(new
+                        {
+                            albedo = new { width, height, data = Convert.ToBase64String(albedoBytes) },
+                            emissive = new { width, height, data = Convert.ToBase64String(emissionBytes) },
+                            doubleSided,
+                        });
+                    }
+                    finally
+                    {
+                        RenderTexture.ReleaseTemporary(albedo);
+                        RenderTexture.ReleaseTemporary(emission);
+                    }
+                }
+            }
+            finally
+            {
+                foreach (var copy in withUVs.Values)
+                    if (copy != null) Object.DestroyImmediate(copy);
+            }
+            return new
+            {
+                samples = settings.indirectSampleCount,
+                maxBounces = settings.maxBounces,
+                minBounces = Math.Min(settings.minBounces, settings.maxBounces),
+                blueNoise,
+                materials,
+            };
+        }
+
+        /// <summary>The mesh a renderer's material images are drawn with: its own, or for a mesh
+        /// without lightmap UVs a copy that has its UVs as them (the bake lays such a mesh out by
+        /// its UVs).</summary>
+        static Mesh BakedUVs(Mesh mesh, Dictionary<Mesh, Mesh> copies)
+        {
+            if (mesh == null) return null;
+            using (Mesh.EngineReads())
+            {
+                if (mesh.uv2.Length == mesh.vertexCount) return mesh;
+                if (!copies.TryGetValue(mesh, out var copy))
+                {
+                    copy = Object.Instantiate(mesh);
+                    copy.hideFlags = HideFlags.HideAndDontSave;
+                    copy.uv2 = mesh.uv;
+                    copies[mesh] = copy;
+                }
+                return copy;
+            }
+        }
+
         static string LayoutPath(string guid) => Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "BakedGI", guid, "atlas.json");
 
         /// <summary>Removes the layout an earlier bake of the scene wrote.</summary>
@@ -342,7 +463,8 @@ namespace UnityEngine
             List<object> entries;
             try
             {
-                var request = new
+                var lights = Lights(file, path);
+                string Request(bool layoutOnly, object indirect) => JsonSerializer.Serialize(new
                 {
                     maxSize = settings.lightmapMaxSize,
                     padding = settings.lightmapPadding,
@@ -351,14 +473,23 @@ namespace UnityEngine
                     scene = guid,
                     meshes,
                     renderers,
-                    lights = Lights(file, path),
+                    lights,
                     mixedMode = (int)settings.mixedBakeMode,
-                };
+                    layoutOnly,
+                    indirect,
+                });
                 // The request, the bake (a renderer it refuses, named) and the reading of its
                 // answer all fail the scene's layout, said.
                 var paths = new List<(string, long)>();
                 foreach (var (renderer, fileId) in placed) paths.Add((HierarchyPath(renderer.transform), fileId));
-                entries = Read(Native.Call("baked-gi-bake", JsonSerializer.Serialize(request)), paths, lightmaps);
+                // The indirect light needs the renderers' material images, whose sizes come
+                // with the layout: the layout is asked for first. Nothing reads the bake's light
+                // yet but the folder its texel buffers are written to, so without one the
+                // materials are not drawn.
+                object indirect = null;
+                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable(BuffersVariable)))
+                    indirect = Indirect(path, settings, placed, Native.Call("baked-gi-bake", Request(true, null)));
+                entries = Read(Native.Call("baked-gi-bake", Request(false, indirect)), paths, lightmaps);
             }
             catch (Exception e)
             {
