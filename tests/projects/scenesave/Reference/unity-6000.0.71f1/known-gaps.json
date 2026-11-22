@@ -7,17 +7,6 @@
     "reason": "The macOS arm64 Editor rounds the new scene's light rotation Quaternion.Euler(50, -30, 0) to x 0.40821788; the Linux Editor writes 0.40821794, as Unbound does (the Linux-authored scenes of tests/projects hold it). arm64 arithmetic is recorded, not chased; every other line of the file is identical (the comparison lists each differing line)."
   },
   {
-    "case": "prefab-nested",
-    "key": "variant.before.mods",
-    "reference": [
-      "GameObject:Thing|m_Name|Thing|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|0|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null"
-    ],
-    "actual": [
-      "GameObject:Thing|m_Name|Thing|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Transform:Thing|m_LocalPosition.x|5|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|0|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null"
-    ],
-    "reason": "PrefabUtility.GetPropertyModifications right after a script moves an instance's Transform: the Editor still lists the value the modification had (it takes the change at the next Editor frame or a record point such as SaveAsPrefabAsset: tests/projects/scenesave modification-timing, Q693), Unbound lists the Transform's value at once."
-  },
-  {
     "case": "native-saves",
     "key": "clip.dirty",
     "reference": [
@@ -154,60 +143,5 @@
     "reference": "written",
     "actual": "lines 30-31: reference ['        inSlope: {x: 0, y: 0, z: 0, w: -0.13397467}', '        outSlope: {x: 0.6666667, y: 0, z: 0, w: -0.13397467}'], actual ['        inSlope: {x: 0, y: 0, z: 0, w: -0.13397461}', '        outSlope: {x: 0.6666667, y: 0, z: 0, w: -0.13397461}']",
     "reason": "The slope of the key a rotation's w component gets at another component's time (0.25 s on a linear segment of slope -0.13397461): the Editor writes -0.13397467 (4 float steps away), Unbound the segment's slope; position keys added the same way match. How the Editor derives an added rotation key's slope is not reproduced; recorded, not chased."
-  },
-  {
-    "case": "modification-timing",
-    "key": "save.before",
-    "reference": [
-      "Transform=0"
-    ],
-    "actual": [
-      "Transform=5"
-    ],
-    "reason": "PrefabUtility.GetPropertyModifications after a change made by script (Q693, tests/projects/scenesave modification-timing, measured in an Edit Mode test of the batch-mode Editor): the Editor takes a change into an instance's modifications at the next Editor frame (one yield of the test), a Transform's and a script field's alike (a Transform's with SetDirty too; a script field's with SetDirty unmeasured), although the Scripting API page of RecordPrefabInstancePropertyModifications says unrecorded changes are lost; at once on RecordPrefabInstancePropertyModifications (a Transform's and a script field's), Undo.FlushUndoRecordObjects after Undo.RecordObject of the object, SerializedObject.ApplyModifiedProperties, and a scene save for a Transform's change (not a script field's: edit save.base); until then it lists the value recorded before. Unbound computes a Transform's modifications from its value at once and takes a script field's only when recorded. Keeping each instance's recorded modifications apart from its live values is left for its own task; the windowed Editor and Play mode are unmeasured."
-  },
-  {
-    "case": "modification-timing",
-    "key": "script.frame",
-    "reference": [
-      "Holder=7"
-    ],
-    "actual": [
-      ""
-    ],
-    "reason": "PrefabUtility.GetPropertyModifications after a change made by script (Q693, tests/projects/scenesave modification-timing, measured in an Edit Mode test of the batch-mode Editor): the Editor takes a change into an instance's modifications at the next Editor frame (one yield of the test), a Transform's and a script field's alike (a Transform's with SetDirty too; a script field's with SetDirty unmeasured), although the Scripting API page of RecordPrefabInstancePropertyModifications says unrecorded changes are lost; at once on RecordPrefabInstancePropertyModifications (a Transform's and a script field's), Undo.FlushUndoRecordObjects after Undo.RecordObject of the object, SerializedObject.ApplyModifiedProperties, and a scene save for a Transform's change (not a script field's: edit save.base); until then it lists the value recorded before. Unbound computes a Transform's modifications from its value at once and takes a script field's only when recorded. Keeping each instance's recorded modifications apart from its live values is left for its own task; the windowed Editor and Play mode are unmeasured."
-  },
-  {
-    "case": "modification-timing",
-    "key": "setDirty.direct",
-    "reference": [
-      "Transform=0"
-    ],
-    "actual": [
-      "Transform=2"
-    ],
-    "reason": "PrefabUtility.GetPropertyModifications after a change made by script (Q693, tests/projects/scenesave modification-timing, measured in an Edit Mode test of the batch-mode Editor): the Editor takes a change into an instance's modifications at the next Editor frame (one yield of the test), a Transform's and a script field's alike (a Transform's with SetDirty too; a script field's with SetDirty unmeasured), although the Scripting API page of RecordPrefabInstancePropertyModifications says unrecorded changes are lost; at once on RecordPrefabInstancePropertyModifications (a Transform's and a script field's), Undo.FlushUndoRecordObjects after Undo.RecordObject of the object, SerializedObject.ApplyModifiedProperties, and a scene save for a Transform's change (not a script field's: edit save.base); until then it lists the value recorded before. Unbound computes a Transform's modifications from its value at once and takes a script field's only when recorded. Keeping each instance's recorded modifications apart from its live values is left for its own task; the windowed Editor and Play mode are unmeasured."
-  },
-  {
-    "case": "modification-timing",
-    "key": "transform.direct",
-    "reference": [
-      "Transform=0"
-    ],
-    "actual": [
-      "Transform=1"
-    ],
-    "reason": "PrefabUtility.GetPropertyModifications after a change made by script (Q693, tests/projects/scenesave modification-timing, measured in an Edit Mode test of the batch-mode Editor): the Editor takes a change into an instance's modifications at the next Editor frame (one yield of the test), a Transform's and a script field's alike (a Transform's with SetDirty too; a script field's with SetDirty unmeasured), although the Scripting API page of RecordPrefabInstancePropertyModifications says unrecorded changes are lost; at once on RecordPrefabInstancePropertyModifications (a Transform's and a script field's), Undo.FlushUndoRecordObjects after Undo.RecordObject of the object, SerializedObject.ApplyModifiedProperties, and a scene save for a Transform's change (not a script field's: edit save.base); until then it lists the value recorded before. Unbound computes a Transform's modifications from its value at once and takes a script field's only when recorded. Keeping each instance's recorded modifications apart from its live values is left for its own task; the windowed Editor and Play mode are unmeasured."
-  },
-  {
-    "case": "modification-timing",
-    "key": "undo.direct",
-    "reference": [
-      "Transform=0"
-    ],
-    "actual": [
-      "Transform=3"
-    ],
-    "reason": "PrefabUtility.GetPropertyModifications after a change made by script (Q693, tests/projects/scenesave modification-timing, measured in an Edit Mode test of the batch-mode Editor): the Editor takes a change into an instance's modifications at the next Editor frame (one yield of the test), a Transform's and a script field's alike (a Transform's with SetDirty too; a script field's with SetDirty unmeasured), although the Scripting API page of RecordPrefabInstancePropertyModifications says unrecorded changes are lost; at once on RecordPrefabInstancePropertyModifications (a Transform's and a script field's), Undo.FlushUndoRecordObjects after Undo.RecordObject of the object, SerializedObject.ApplyModifiedProperties, and a scene save for a Transform's change (not a script field's: edit save.base); until then it lists the value recorded before. Unbound computes a Transform's modifications from its value at once and takes a script field's only when recorded. Keeping each instance's recorded modifications apart from its live values is left for its own task; the windowed Editor and Play mode are unmeasured."
   }
 ]
