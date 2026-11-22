@@ -11,8 +11,8 @@ that the dispatch still happens exactly once before the capture completes.
 The Editor calls the concrete-return Start and leaves its enumerator
 unscheduled. Unbound advances it once. The probe reports this existing
 difference, and the managed test checks that dispatch preserves the returned
-instance. Callbacks returning a function pointer use a direct call and may
-still lose their entry frame to inlining.
+instance. Callbacks returning by reference, a pointer, a function pointer or
+a byref-like value use a direct call. Their frames can still be inlined.
 
 The [Unity 6.0 Scripting API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Debug.ExtractStackTraceNoAlloc.html)
 documents the current managed stack, UTF-8 byte count and path cleanup. This

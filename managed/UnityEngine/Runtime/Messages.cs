@@ -231,9 +231,10 @@ namespace Unbound.Runtime
 
             Type scriptReturnType = method.ReturnType;
             Expression call;
-            // The expression delegate factory cannot bind a function-pointer return. The
-            // direct call can discard it and keep this script's other messages available.
-            if (scriptReturnType == returnType || scriptReturnType.IsFunctionPointer)
+            // These return types need special delegate signatures. Keep the direct call
+            // so a discarded result cannot make the script's message registration fail.
+            if (scriptReturnType == returnType || scriptReturnType.IsByRef || scriptReturnType.IsPointer
+                || scriptReturnType.IsFunctionPointer || scriptReturnType.IsByRefLike)
             {
                 call = Expression.Call(receiver, method, arguments);
             }
@@ -247,10 +248,10 @@ namespace Unbound.Runtime
                 signature[^1] = scriptReturnType;
                 var callback = method.CreateDelegate(Expression.GetDelegateType(signature));
                 call = Expression.Invoke(Expression.Constant(callback), arguments.Prepend(receiver));
-                if (returnType != typeof(void))
-                    call = Expression.Convert(call, returnType);
             }
 
+            if (returnType != typeof(void) && scriptReturnType != returnType)
+                call = Expression.Convert(call, returnType);
             return Expression.Lambda<T>(call, tailCall: true, parameters: parameters).Compile();
         }
     }

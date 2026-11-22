@@ -1,5 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.CompilerServices;
 using Unbound.Runtime;
 using Xunit;
 
@@ -34,6 +37,55 @@ namespace UnityEngine.Tests
         {
             lateCalls++;
             return null;
+        }
+    }
+
+    public class RecordsRefFunctionPointerMessage : RecordsFunctionPointerMessage
+    {
+        unsafe delegate*<void> result;
+
+        unsafe ref delegate*<void> LateUpdate()
+        {
+            lateCalls++;
+            return ref result;
+        }
+    }
+
+    public class RecordsIndirectFunctionPointerMessage : RecordsFunctionPointerMessage
+    {
+        unsafe delegate*<void>* LateUpdate()
+        {
+            lateCalls++;
+            return null;
+        }
+    }
+
+    public class RecordsRefMessage : RecordsFunctionPointerMessage
+    {
+        int result;
+
+        ref int LateUpdate()
+        {
+            lateCalls++;
+            return ref result;
+        }
+    }
+
+    public class RecordsPointerMessage : RecordsFunctionPointerMessage
+    {
+        unsafe int* LateUpdate()
+        {
+            lateCalls++;
+            return null;
+        }
+    }
+
+    public class RecordsSpanMessage : RecordsFunctionPointerMessage
+    {
+        Span<int> LateUpdate()
+        {
+            lateCalls++;
+            return default;
         }
     }
 
@@ -79,14 +131,17 @@ namespace UnityEngine.Tests
             }
         }
 
-        [Fact]
-        public void AFunctionPointerResultDoesNotBlockScriptMessages()
+        [Theory]
+        [InlineData(typeof(RecordsFunctionPointerMessage))]
+        [InlineData(typeof(RecordsRefFunctionPointerMessage))]
+        [InlineData(typeof(RecordsIndirectFunctionPointerMessage))]
+        public void AFunctionPointerResultDoesNotBlockScriptMessages(Type type)
         {
             var go = new GameObject("callback test");
             try
             {
-                var script = go.AddComponent<RecordsFunctionPointerMessage>();
-                ScriptMessages.For(script.GetType()).LateUpdate(script);
+                var script = (RecordsFunctionPointerMessage)go.AddComponent(type);
+                ScriptMessages.For(type).LateUpdate(script);
                 Assert.Equal(1, script.enableCalls);
                 Assert.Equal(1, script.lateCalls);
             }
@@ -137,6 +192,34 @@ namespace UnityEngine.Tests
             go.SetActive(true);
             Object.DestroyImmediate(go);
             Assert.Equal(new[] { "enable", "disable", "enable", "disable" }, recorder.log);
+        }
+    }
+
+    [Collection(CollectibleContexts.Name)]
+    public sealed class CollectibleScriptMessageTests
+    {
+        [Theory]
+        [InlineData(typeof(RecordsRefMessage))]
+        [InlineData(typeof(RecordsPointerMessage))]
+        [InlineData(typeof(RecordsSpanMessage))]
+        public void ADiscardedReturnKeepsCollectibleScriptMessagesAvailable(Type original)
+        {
+            CollectibleContexts.Use("discarded callback return", context =>
+            {
+                using var image = File.OpenRead(original.Assembly.Location);
+                var type = context.LoadFromStream(image).GetType(original.FullName, throwOnError: true);
+                // Only test dispatch here, without registering an object owned by this context.
+                var script = (MonoBehaviour)RuntimeHelpers.GetUninitializedObject(type);
+                try
+                {
+                    ScriptMessages.For(type).LateUpdate(script);
+                    Assert.Equal(1, type.GetField(nameof(RecordsFunctionPointerMessage.lateCalls)).GetValue(script));
+                }
+                finally
+                {
+                    ScriptMessages.ClearCache();
+                }
+            });
         }
     }
 }
