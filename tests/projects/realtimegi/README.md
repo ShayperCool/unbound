@@ -77,6 +77,10 @@ and a dynamic probe-lit sphere. Ambient: flat color, no skybox.
   (`RoofAtLimit`), a 0.6 x 0.4 x 0.5 box modelled turned 30 degrees about Y away from its mesh's
   origin (`BoxOffOrigin`) and a 2 x 1.2 m quad on a tilted plane whose lightmap UVs are a true
   copy of it turned a quarter (`TiltedQuad`).
+- `RoomSmall`: as `RoomAuto`'s room (`run.py setup-small` adds this scene alone), with small
+  turned shapes whose faces the system's clusters do not sample apart: a cube of 0.45 turned 25
+  degrees about Y (`CubeTurned`), a 6 cm cube turned (15, 30, 10) (`CubeTiny`) and the wedge's
+  mesh at 5 cm turned (10, 30, 0) (`WedgeTiny`).
 
 `Assets/Scripts/RealtimeGIProbe.cs` (with `REALTIME_GI_OUT` set) changes one input at a time and
 records, per case:
@@ -207,8 +211,8 @@ the cube given again and `RoomBakedEnvironment` loaded alone, its lights put out
 Then `RoomAuto`: `roomauto-base` and `roomauto-moved` (the point light moved), recorded as the
 `RoomCharts` cases are. The charts the precompute made are in the scene's precomputed data, as
 there. Then `RoomTurned` the same way: `roomturned-base` and `roomturned-moved`, `RoomCurved`
-(`roomcurved-base`, `roomcurved-moved`) and `RoomRounding` (`roomrounding-base`,
-`roomrounding-moved`). Then `RoomHoles` (`roomholes-base`). Then the Room loaded seven more times with a script's light delegate
+(`roomcurved-base`, `roomcurved-moved`), `RoomRounding` (`roomrounding-base`,
+`roomrounding-moved`) and `RoomSmall` (`roomsmall-base`, `roomsmall-moved`). Then `RoomHoles` (`roomholes-base`). Then the Room loaded seven more times with a script's light delegate
 (`GlobalIllumination.Lightmapping.SetDelegate`, set before the load) that extracts the lights as
 `LightmapperUtils` does but gives the point and spot lights one falloff type each:
 `room-delegate-legacy` and `room-delegate-undefined` at the point light's own range,
@@ -488,6 +492,10 @@ Observations (not documented guarantees):
   1. `RoomRounding`: the roof at its Max Angle is one chart, the tilted quad is its projection
   (6 x 4 texels; its own UVs would be 4 x 6), and the slab and the box are laid out as the one of the ways the rounding
   allows that the system's clusters tell from the other that fits the chart mask.
+  `RoomSmall`: the clusters cannot tell the cubes' ways apart (117 and 56 fit their chart
+  masks): the first is drawn, with a warning; the Editor's GI cache has that way for the 0.45
+  cube and the wedge, another for the 6 cm cube, whose lightmap is within the tolerance all the
+  same.
   docs/REALTIME_GI.md (Automatic charts) has the rule Unbound makes them by and what it does
   not make.
 

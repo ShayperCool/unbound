@@ -673,9 +673,10 @@ public class RealtimeGIProbe : MonoBehaviour
         // quarter circle and bent strips whose lightmap UVs are true to them, stretched or
         // folded), each chart its projection or its own lightmap UVs as the precompute chooses,
         // and renderers with Scale In Lightmap 4 and 0.25; then shapes whose charts the
-        // rounding of the precompute's arithmetic decides: as each loads and with the point
+        // rounding of the precompute's arithmetic decides, and small turned shapes too small for
+        // the system's clusters to tell those ways apart: as each loads and with the point
         // light moved.
-        foreach (var scene in new[] { "RoomCurved", "RoomRounding" })
+        foreach (var scene in new[] { "RoomCurved", "RoomRounding", "RoomSmall" })
         {
             yield return Load(scene);
             s = Scene();

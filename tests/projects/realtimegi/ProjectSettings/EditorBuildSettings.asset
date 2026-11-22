@@ -95,5 +95,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/RoomRounding.unity
     guid: 6c9c15d53dc61b478b57bb334fc3273f
+  - enabled: 1
+    path: Assets/Scenes/RoomSmall.unity
+    guid: 59baac641fbd12cd1be88974a9c44cf4
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

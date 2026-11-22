@@ -129,11 +129,16 @@ public static class RealtimeGISetup
     /// off whose charts the rounding of the precompute's arithmetic decides.</summary>
     public static void CreateRounding() => AddScene("RoomRounding", rounding: true);
 
-    static void AddScene(string name, bool curved = false, bool rounding = false)
+    /// <summary>Adds the <c>RoomSmall</c> scene alone: the room and small turned shapes with
+    /// Preserve UVs off, too small for the system's clusters to tell the ways their charts may
+    /// be laid out apart.</summary>
+    public static void CreateSmall() => AddScene("RoomSmall", small: true);
+
+    static void AddScene(string name, bool curved = false, bool rounding = false, bool small = false)
     {
         try
         {
-            CreateRoom(name, LightmapsMode.NonDirectional, 1f, 1f, curved: curved, rounding: rounding);
+            CreateRoom(name, LightmapsMode.NonDirectional, 1f, 1f, curved: curved, rounding: rounding, small: small);
             var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
             scenes.Add(new EditorBuildSettingsScene($"{Scenes}/{name}.unity", true));
             EditorBuildSettings.scenes = scenes.ToArray();
@@ -541,7 +546,7 @@ public static class RealtimeGISetup
         return Custom(scene, name, position, Vector3.zero, Vector3.one, material, v, n, uv, t);
     }
 
-    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false, bool charts = false, bool autoCharts = false, bool turned = false, bool holes = false, bool bakeOnLoad = false, bool curved = false, bool rounding = false)
+    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false, bool bakedEnvironment = false, bool charts = false, bool autoCharts = false, bool turned = false, bool holes = false, bool bakeOnLoad = false, bool curved = false, bool rounding = false, bool small = false)
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var camera = new GameObject("Main Camera", typeof(Camera));
@@ -773,7 +778,7 @@ public static class RealtimeGISetup
             }
         }
 
-        if (curved || rounding)
+        if (curved || rounding || small)
         {
             var limits = new Dictionary<string, (float distance, float angle)>();
             var lightmapScales = new Dictionary<string, float>();
@@ -811,6 +816,20 @@ public static class RealtimeGISetup
                 lightmapScales["Ball"] = 4f;
                 lightmapScales["ScaleUp"] = 4f;
                 lightmapScales["ScaleDown"] = 0.25f;
+            }
+            if (small)
+            {
+                // Small turned shapes: a cube of 0.45 turned 25 degrees about Y, a 6 cm cube
+                // turned about all three axes, and the wedge's mesh at 5 cm turned 30 degrees
+                // about Y and 10 about X; each lies in one cluster of the system.
+                lit.Add(Static(PrimitiveType.Cube, "CubeTurned", new Vector3(2.2f, 0.25f, -2.2f), new Vector3(0.45f, 0.45f, 0.45f), white));
+                lit[lit.Count - 1].transform.rotation = Quaternion.Euler(0f, 25f, 0f);
+                lit.Add(Static(PrimitiveType.Cube, "CubeTiny", new Vector3(-0.5f, 1.6f, -1.8f), new Vector3(0.06f, 0.06f, 0.06f), white));
+                lit[lit.Count - 1].transform.rotation = Quaternion.Euler(15f, 30f, 10f);
+                var wedgeSection = new[] { new Vector2(0f, 0f), new Vector2(1.2f, 0f), new Vector2(0f, 0.9f) };
+                var wedgeTiny = Solid(name, "WedgeTiny", new Vector3(1.6f, 1.2f, -1.6f), new Vector3(10f, 30f, 0f), white, new Vector3(0.4f, 0.3f, 0.4f), false, Prism(wedgeSection, 0.8f));
+                wedgeTiny.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f);
+                lit.Add(wedgeTiny);
             }
             if (rounding)
             {
