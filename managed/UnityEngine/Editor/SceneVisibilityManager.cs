@@ -116,7 +116,7 @@ namespace UnityEditor
         }
 
         /// <summary>A scene's roots, in a list reused between calls (render pipelines ask every
-        /// Scene view frame).</summary>
+        /// Scene view frame) and emptied after each, so it keeps no objects alive.</summary>
         static readonly List<GameObject> s_Roots = new List<GameObject>();
 
         static List<GameObject> Roots(Scene scene)
@@ -131,6 +131,7 @@ namespace UnityEditor
         {
             var roots = Roots(scene);
             for (int i = 0; i < roots.Count; i++) Mark(set, roots[i], on, true);
+            roots.Clear();
         }
 
         /// <summary>Whether every root of the scene and all its descendants are in the set (true for
@@ -139,18 +140,20 @@ namespace UnityEditor
         {
             if (!Loaded(scene)) return false;
             var roots = Roots(scene);
-            for (int i = 0; i < roots.Count; i++)
-                if (!Holds(set, roots[i], true)) return false;
-            return true;
+            bool all = true;
+            for (int i = 0; i < roots.Count && all; i++) all = Holds(set, roots[i], true);
+            roots.Clear();
+            return all;
         }
 
         static bool AnyInScene(HashSet<int> set, Scene scene)
         {
             if (!Loaded(scene) || set.Count == 0) return false;
             var roots = Roots(scene);
-            for (int i = 0; i < roots.Count; i++)
-                if (AnyInSet(set, roots[i])) return true;
-            return false;
+            bool any = false;
+            for (int i = 0; i < roots.Count && !any; i++) any = AnyInSet(set, roots[i]);
+            roots.Clear();
+            return any;
         }
 
         public void Hide(GameObject gameObject, bool includeDescendants) => Set(Hidden, gameObject, true, includeDescendants);
