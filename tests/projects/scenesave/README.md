@@ -80,8 +80,8 @@ file the run added, changed or removed.
 - `controller-assets` (Edit Mode, `ControllerAssetTests`): animator controllers made through the
   Editor's controller API: the file `CreateAnimatorControllerAtPath` writes at once, the file after
   edits (parameters, a second layer, states with clips, the default state, transitions with
-  conditions from a state, Any State and Entry and to Exit, two sub-state machines and transitions out
-  of them (the later one's first), a blend tree, a synced layer overriding a motion)
+  conditions from a state, Any State and Entry and to Exit, three sub-state machines made and given
+  transitions in different orders, a blend tree, a synced layer overriding a motion)
   before and after `SaveAssets`, and a controller made with a clip. Recorded in the Linux Editor
   (batch mode, no graphics: two identical captures).
 - `play-nosave`, `play-save` (Play Mode, `SavePlayTests.NoSave` and `.Save`, each alone): assets
