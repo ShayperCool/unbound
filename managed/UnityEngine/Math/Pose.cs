@@ -2,8 +2,7 @@ using System;
 
 namespace UnityEngine
 {
-    /// <summary>A position and a rotation. Its math is the Quaternion and Vector3 operators' and
-    /// Transform.TransformPoint's, so the results are theirs to the bit (tests/projects/coreapis).</summary>
+    /// <summary>A position and a rotation.</summary>
     [Serializable]
     public partial struct Pose : IEquatable<Pose>
     {
@@ -23,7 +22,11 @@ namespace UnityEngine
         public Pose GetTransformedBy(Pose lhs) => new Pose
         {
             position = lhs.position + (lhs.rotation * position),
+#if UNBOUND_SCRIPT_MATH
             rotation = lhs.rotation * rotation,
+#else
+            rotation = ComposeRotation(lhs.rotation, rotation),
+#endif
         };
 
 #if !UNBOUND_SCRIPT_MATH // Transform uses the engine's math types
@@ -34,8 +37,23 @@ namespace UnityEngine
             return new Pose
             {
                 position = lhs.TransformPoint(position),
-                rotation = lhs.rotation * rotation,
+                rotation = ComposeRotation(lhs.rotation, rotation),
             };
+        }
+
+        static Quaternion ComposeRotation(Quaternion lhs, Quaternion rhs)
+        {
+            if (!Unbound.Runtime.Compat.QuaternionApiPrecisionMeasured)
+                return lhs * rhs;
+
+            // The measured Unity 6000.0.71f1 Pose compositions round each rotation component
+            // after adding its terms (tests/projects/oroorder, both overloads).
+            double x = lhs.x, y = lhs.y, z = lhs.z, w = lhs.w;
+            return new Quaternion(
+                (float)(w * rhs.x + x * rhs.w + y * rhs.z - z * rhs.y),
+                (float)(w * rhs.y + y * rhs.w + z * rhs.x - x * rhs.z),
+                (float)(w * rhs.z + z * rhs.w + x * rhs.y - y * rhs.x),
+                (float)(w * rhs.w - x * rhs.x - y * rhs.y - z * rhs.z));
         }
 #endif
 

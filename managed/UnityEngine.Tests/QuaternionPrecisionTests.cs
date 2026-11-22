@@ -85,6 +85,43 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void PoseCompositionKeepsTheMeasuredProductBits()
+        {
+            var left = new Pose(Vector3.zero, new Quaternion(.23f, -.17f, .31f, .9f));
+            var right = new Pose(Vector3.zero, new Quaternion(-.0123f, .9876f, .1357f, -.0789f));
+            Bits(right.GetTransformedBy(left).rotation, unchecked((int)0xBEB785B6), 0x3F5E02B8, 0x3EA53C9B, 0x3D6C1C1F);
+            Bits(left.GetTransformedBy(right).rotation, 0x3E999AA6, 0x3F6FF163, unchecked((int)0xBE02717B), 0x3D6C1C1F);
+
+            // The two terms of w exceed float.MaxValue and cancel before the result is rounded.
+            var huge = new Pose(Vector3.zero, new Quaternion(float.MaxValue, float.MaxValue, 0f, 0f));
+            var scaled = new Pose(Vector3.zero, new Quaternion(2f, -2f, 0f, 0f));
+            Bits(scaled.GetTransformedBy(huge).rotation, 0, 0, unchecked((int)0xFF800000), 0);
+
+            var tiny = new Pose(Vector3.zero, new Quaternion(float.Epsilon, 0f, -float.Epsilon, 0f));
+            var half = new Pose(Vector3.zero, new Quaternion(.5f, -.5f, .5f, -.5f));
+            Bits(half.GetTransformedBy(tiny).rotation, unchecked((int)0x80000001), unchecked((int)0x80000001), 0, 0);
+
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            Assert.Equal(left.rotation * right.rotation, right.GetTransformedBy(left).rotation);
+        }
+
+        [Fact]
+        public void PoseCompositionUsesTheTransformRotation()
+        {
+            var parent = new GameObject("Pose rotation");
+            try
+            {
+                parent.transform.localRotation = new Quaternion(.2f, -.3f, .1f, .9273618f);
+                var pose = new Pose(new Vector3(1f, 2f, 3f), new Quaternion(.1f, .2f, .3f, .9273618f));
+                Bits(pose.GetTransformedBy(parent.transform).rotation, 0x3E2C3EDC, unchecked((int)0xBE122971), 0x3EE1C383, 0x3F5EB851);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(parent);
+            }
+        }
+
+        [Fact]
         public void EngineAndOtherReleasesKeepTheirArithmetic()
         {
             var q = new Quaternion(0f, 0f, .199367926f, .9799247f);

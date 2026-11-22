@@ -171,3 +171,13 @@ row): OnRenderObject handler order 48 lines (the Editor calls RtCam's handler be
 ScreenCam's in every differing render; Unity documents no order), batch activation order 11,
 the shared CoreProbe rotation 21, exception text 4 and JSON number spelling 2 (see coreapis).
 Anything else is a regression.
+
+## Pose rotation composition
+
+Both `GetTransformedBy` overloads compose the two rotations in their given
+order. On Unity 6000.0.71f1 the four products and signed sum for each component
+use double precision, then the component rounds to float. The repeated pose
+pairs and transformed parent and child controls distinguish the rule from
+rounding every product or intermediate sum. The 21 rotation lines now match
+exactly. The strict comparison reports 59 missing and 59 extra lines, all in
+the receiver orders above.
