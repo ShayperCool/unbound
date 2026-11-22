@@ -369,9 +369,13 @@ and three (`w?1`, `v?1`). The Voronoi noise is not among them: the compiler refu
 reads it in a spawn context ("not valid" on the CPU), and the folded one is a NaN whatever it is
 given. From frame 3, one step a frame for fourteen
 frames, the probe gives the effect other coordinates and settings: cells at the lattices' period,
-far coordinates, a negative frequency, roughness and lacunarity, a lacunarity of zero, no octaves,
-a negative count and twelve of them, and huge, infinite and absent coordinates. The rows are
-written at frame 20.
+far coordinates, a negative frequency, a lacunarity of zero, and huge, infinite and absent
+coordinates. The operators' slots clamp what they pass on (a count of octaves within one to eight,
+a roughness within zero to one, a lacunarity from zero), so the steps with no octaves, a negative
+count, twelve of them and a negative roughness and lacunarity record that clamp: the noise itself
+reads one, one, eight, zero and zero. Persistences and lacunarities outside those ranges and
+counts below one are measured by the `noise/api` rows only (their counts are -1 to 5). The rows
+are written at frame 20.
 
 ## Mesh operations
 
@@ -470,7 +474,11 @@ shadows by `tests/projects/vfxlit`; strips by `tests/projects/vfxstrips`; GPU ev
 Motion vectors, bounds computed on the GPU. Expression operations without a control: a matrix's axis
 (made only by blocks of initialize and update contexts: collision shapes, a position on a mesh), a
 texture's format (no operator makes it), and the ones the runtime does not do yet:
-a skinned mesh renderer's mesh, vertices and root bone. Not measured of noise: the sign of a NaN. Not measured of meshes: no mesh, and a mesh without the
+a skinned mesh renderer's mesh, vertices and root bone. Not measured of noise: the sign of a NaN, and a
+compiled graph whose noise reads a count of octaves, a persistence or a lacunarity outside what the
+operators' slots keep (Unbound computes for them what it computes for the folded noise), and a
+count of more than eight octaves anywhere (more than five for the folded noise): Unbound sums as
+many octaves as it is given. Not measured of meshes: no mesh, and a mesh without the
 channel a program reads, read by a program (Unbound gives them zeros, as for a mesh without
 read/write access); a copy whose data was given up read by a program (taken to read as
 `MeshLocked`); a mesh without read/write access whose buffers a script gave a target for compute

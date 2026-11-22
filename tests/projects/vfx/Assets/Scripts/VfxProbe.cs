@@ -650,7 +650,9 @@ public sealed class VfxProbe : MonoBehaviour
 
     /// <summary>What the effect of the noise controls is given, one step a frame from frame 3:
     /// a coordinate on a line, in a plane and in space, a frequency, a count of octaves, a
-    /// roughness (the persistence) and a lacunarity.</summary>
+    /// roughness (the persistence) and a lacunarity. The operators' slots clamp the last three
+    /// (octaves within one to eight, roughness within zero to one, lacunarity from zero) before
+    /// the noise reads them.</summary>
     static readonly (float Line, Vector2 Plane, Vector3 Point, float Frequency, int Octaves, float Roughness, float Lacunarity)[] k_NoiseSteps =
     {
         (-3.3331528f, new Vector2(2.1938133f, -2.454937f), new Vector3(-7.822835f, -3.9788828f, -1.3851948f), 1f, 1, 0.5f, 2f),
@@ -661,13 +663,15 @@ public sealed class VfxProbe : MonoBehaviour
         (70.5f, new Vector2(70.5f, -0.5f), new Vector3(68.5f, 68.25f, -68.75f), 1f, 2, 0.5f, 2f),
         (71f, new Vector2(142f, -71f), new Vector3(69f, -69f, 138f), 1f, 1, 0.5f, 2f),
         (-1234.567f, new Vector2(4321.5f, -987.25f), new Vector3(2500.75f, -3999.5f, 123.456f), 0.37f, 3, 0.3f, 2.7f),
-        // A negative frequency, roughness and lacunarity; a lacunarity of zero.
+        // A negative frequency; a negative roughness and lacunarity, and a lacunarity of zero
+        // (the operators' slots keep a roughness within zero to one and a lacunarity from zero).
         (3.7f, new Vector2(-1.3f, 4.4f), new Vector3(2.2f, 0.6f, -5.1f), -1.7f, 5, -0.6f, -1.3f),
         (3.7f, new Vector2(-1.3f, 4.4f), new Vector3(2.2f, 0.6f, -5.1f), 1.2f, 4, 1f, 0f),
-        // No octaves and a negative count: nothing summed.
+        // No octaves and a negative count: the operators' slots keep the count within one to
+        // eight, so these rows are a single octave's.
         (3.7f, new Vector2(-1.3f, 4.4f), new Vector3(2.2f, 0.6f, -5.1f), 1f, 0, 0.5f, 2f),
         (3.7f, new Vector2(-1.3f, 4.4f), new Vector3(2.2f, 0.6f, -5.1f), 1f, -2, 0.5f, 2f),
-        // More octaves than the operators' sliders allow.
+        // More octaves than the operators' slots keep: eight are summed.
         (3.7f, new Vector2(-1.3f, 4.4f), new Vector3(2.2f, 0.6f, -5.1f), 1f, 12, 0.5f, 2f),
         // Huge, infinite and absent coordinates.
         (1e9f, new Vector2(1e6f, -1e9f), new Vector3(1e9f, 3f, -1e6f), 1f, 1, 0.5f, 2f),

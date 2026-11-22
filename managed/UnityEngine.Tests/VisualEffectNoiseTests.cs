@@ -89,11 +89,22 @@ namespace UnityEngine.Tests
             Assert.False(VFXExpressionEvaluator.Supported(VFXExpressionOperation.VoroNoise2D));
         }
 
+        static readonly Vector3 point = new Vector3(F(0x40ac7c2c), F(0xc0e5803a), F(0x40034ef4));
+        static readonly Vector3 tuning = new Vector3(F(0xbfd25694), F(0xbf024f9a), F(0xbf97f206));
+
+        /// <summary>Perlin noise of a graph whose operation reads the count of octaves as it is.</summary>
+        static Vector4 Unclamped(int octaves)
+        {
+            var data = Data(new[] { Value(VFXValueType.Float3), Value(VFXValueType.Float3), Value(VFXValueType.Int32), Op(VFXExpressionOperation.PerlinNoise3D, 0, 1, 2) },
+                new[] { Constant(0, point), Constant(1, tuning), Constant(2, octaves) });
+            var values = new VisualEffectValues(data);
+            VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
+            return values.GetVector(3, 4);
+        }
+
         [Fact]
         public void AGraphsNoiseOperationsReadACoordinateItsTuningAndAnOctaveCount()
         {
-            var point = new Vector3(F(0x40ac7c2c), F(0xc0e5803a), F(0x40034ef4));
-            var tuning = new Vector3(F(0xbfd25694), F(0xbf024f9a), F(0xbf97f206));
             var data = Data(new[]
             {
                 Value(VFXValueType.Float3), Value(VFXValueType.Float3), Value(VFXValueType.Int32),
@@ -107,6 +118,10 @@ namespace UnityEngine.Tests
                 Constant(0, point), Constant(1, tuning), Constant(2, 3), Constant(4, 2.5f), Constant(6, new Vector2(0.4f, -3.2f)),
             });
             foreach (var op in data.Operations) Assert.True(VFXExpressionEvaluator.Supported(op), op.ToString());
+            Assert.True(float.IsNaN(Unclamped(0).x), "a graph that reads no octaves sums nothing, as the folded noise");
+            // Not an Editor value (more than eight octaves are not measured): the graph's path and
+            // the folded one compute the same.
+            Assert.Equal(VFXExpressionNoise.GeneratePerlinNoise3D(point, tuning.x, 12, tuning.y, tuning.z), Unclamped(12));
             var values = new VisualEffectValues(data);
             VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
             var perlin = values.GetVector(3, 4);
