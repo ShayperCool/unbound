@@ -12,6 +12,18 @@ namespace UnityEngine.Tests
     /// </summary>
     public class SpriteAtlasPackingTests
     {
+        /// <summary>A V1 atlas file a Play-entry pack stores is left as it is only when its text is
+        /// the same: one that differs only in CRLF line endings is written (with LF), as in the
+        /// Editor (tests/projects/spriteatlaseditor v1wholewritecrlf).</summary>
+        [Fact]
+        public void AFileThatDiffersOnlyInItsLineEndingsIsWritten()
+        {
+            const string written = "%YAML 1.1\n--- !u!687078895 &1\nSpriteAtlas:\n  m_Name: A\n";
+            Assert.True(Unbound.Runtime.AssetFiles.Unchanged(written, written));
+            Assert.False(Unbound.Runtime.AssetFiles.Unchanged(written.Replace("\n", "\r\n"), written));
+            Assert.False(Unbound.Runtime.AssetFiles.Unchanged(written + "\n", written));
+        }
+
         static Sprite Quad() => Sprite.Create(new Texture2D(8, 4), new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 1f, 0, SpriteMeshType.FullRect);
 
         [Fact]
@@ -127,6 +139,32 @@ namespace UnityEngine.Tests
                 if (type == LogType.Warning) Warnings.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
             }
             public void LogException(Exception exception, Object context) { }
+        }
+
+        [Fact]
+        public void OnlyAFirstPlayModeEntryPacksAndALaterOneWarnsWhenAtlasesWerePacked()
+        {
+            var previous = Debug.unityLogger.logHandler;
+            var capture = new WarningCapture();
+            Debug.unityLogger.logHandler = capture;
+            try
+            {
+                // Nothing packed before: the entry packs and stores, silently.
+                Assert.True(SpriteAtlasPacking.FirstPlayModePack(null, cancelled: false));
+                Assert.Empty(capture.Warnings);
+                // Packed before (an earlier entry, or an Edit-mode pack): nothing is stored again.
+                Assert.False(SpriteAtlasPacking.FirstPlayModePack(3, cancelled: false));
+                Assert.Single(capture.Warnings);
+                Assert.Contains("does not pack V1 sprite atlases again", capture.Warnings[0]);
+                // No atlas packed, or a cancelled pack: nothing stored and nothing to warn about.
+                Assert.False(SpriteAtlasPacking.FirstPlayModePack(0, cancelled: false));
+                Assert.False(SpriteAtlasPacking.FirstPlayModePack(3, cancelled: true));
+                Assert.Single(capture.Warnings);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
         }
 
         [Fact]

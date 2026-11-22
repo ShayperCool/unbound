@@ -397,7 +397,8 @@ impl Importer for AtlasImporter<'_> {
     // 3: compressed pages keep their block format (the size fallback resolves per page).
     // 4: each packed sprite keeps its name.
     // 5: an atlas tells whether its pack is complete.
-    const VERSION: u32 = 5;
+    // 6: a variant without a master is not packed (its pack is incomplete).
+    const VERSION: u32 = 6;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<PathBuf>> {
         let bytes = std::fs::read(source)?;
@@ -462,6 +463,17 @@ impl Importer for AtlasImporter<'_> {
         };
         if let Some((master, scale)) = def.variant {
             return self.variant(source, packed, &def, master, scale);
+        }
+        // A variant without a master has nothing to pack, and its pack is not stored into its
+        // file (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor
+        // v1wholewritecrlf: such a file is not written at the Play-mode entry).
+        if def.variant_without_master {
+            packed.warnings.push(format!(
+                "variant atlas {}: it has no master atlas; it is not packed",
+                def.name
+            ));
+            packed.complete = false;
+            return Ok(packed);
         }
         let skipped = self.skipped(&def.packables);
         if !skipped.is_empty() {
@@ -799,6 +811,20 @@ mod tests {
         // A scripted importer's file left out: incomplete; nothing to pack: complete.
         assert!(!import(&scripted).complete);
         assert!(import(&empty).complete);
+        // A variant without a master: not packed, incomplete (its pack is not stored).
+        let orphan = assets.join("V.spriteatlas");
+        std::fs::write(&orphan, "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!687078895 &1\nSpriteAtlas:\n  m_Name: V\n  m_EditorData:\n    variantMultiplier: 2\n    packables: []\n  m_MasterAtlas: {fileID: 0}\n  m_IsVariant: 1\n").unwrap();
+        meta(&orphan, "a1000000000000000000000000000000");
+        let packed = import(&orphan);
+        assert!(!packed.complete);
+        assert!(
+            packed
+                .warnings
+                .iter()
+                .any(|w| w.contains("has no master atlas")),
+            "{:?}",
+            packed.warnings
+        );
         std::fs::remove_dir_all(&root).ok();
     }
 

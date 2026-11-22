@@ -18,6 +18,8 @@ pub struct AtlasDefinition {
     pub include_in_build: bool,
     /// A variant's master atlas and scale.
     pub variant: Option<(Guid, f32)>,
+    /// A variant without a master atlas (`m_IsVariant` set, `m_MasterAtlas` none).
+    pub variant_without_master: bool,
     pub padding: u32,
     pub block_offset: u32,
     pub allow_rotation: bool,
@@ -164,6 +166,7 @@ pub fn read_v1(text: &str) -> Result<AtlasDefinition> {
             .then(|| master(body))
             .flatten()
             .map(|m| (m, float(data, "variantMultiplier").unwrap_or(1.0) as f32)),
+        variant_without_master: is_variant && master(body).is_none(),
         padding: int(&packing, "padding").unwrap_or(4).max(0) as u32,
         block_offset: int(&packing, "blockOffset").unwrap_or(1).max(0) as u32,
         allow_rotation: int(&packing, "enableRotation").unwrap_or(1) != 0,
@@ -202,6 +205,7 @@ pub fn read_v2(text: &str, meta: &Value, file_name: &str) -> Result<AtlasDefinit
                 float(importer, "variantMultiplier").unwrap_or(1.0) as f32,
             )
         }),
+        variant_without_master: is_variant && master(body).is_none(),
         padding: int(&packing, "padding").unwrap_or(4).max(0) as u32,
         block_offset: int(&packing, "blockOffset").unwrap_or(1).max(0) as u32,
         allow_rotation: int(&packing, "enableRotation").unwrap_or(1) != 0,

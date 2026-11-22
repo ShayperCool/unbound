@@ -562,24 +562,32 @@ namespace UnityEngine.U2D
             return (keys, refs, names);
         }
 
-        /// <summary>Entering Play mode in "Sprite Atlas V1 - Always Enabled" packs every V1 atlas of
-        /// the project and writes each one whose file then changes: its packed sprites, its settings
-        /// at their current serialized versions, a variant's master's tag, a non-variant's
-        /// out-of-range variant scale clamped;
-        /// a variant's out-of-range variant scale is clamped after that, the atlas left dirty (matches
-        /// the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v1wholewrite; in the other
-        /// modes nothing is packed or written, v1wholewritedisabled).</summary>
+        /// <summary>Whether entering Play mode packs and stores the V1 atlases: only when nothing was
+        /// packed before (<paramref name="earlierAtlases"/>, the atlases an earlier pack holds, null). Once atlases were packed (an earlier
+        /// entry, or SpriteAtlasUtility in Edit mode) an entry stores nothing; atlas files restored
+        /// between two entries stay as they are, as in the Unity 6000.0.71f1 Editor
+        /// (tests/projects/spriteatlaseditor v1replay). An entry after sprites changed is
+        /// unmeasured: their atlases keep the earlier pack, with a warning when there are any.</summary>
+        internal static bool FirstPlayModePack(int? earlierAtlases, bool cancelled)
+        {
+            if (earlierAtlases == null) return true;
+            if (earlierAtlases > 0 && !cancelled)
+                Debug.LogWarning("Unbound: entering Play mode again does not pack V1 sprite atlases again; an atlas whose sprites changed since keeps its earlier pack");
+            return false;
+        }
+
+        /// <summary>Entering Play mode in "Sprite Atlas V1 - Always Enabled" or "Sprite Atlas V2 -
+        /// Enabled" packs every V1 atlas of the project and writes each one whose file then differs
+        /// (a file with CRLF line endings too): its packed sprites, its settings at their current
+        /// serialized versions, a variant's master's tag, a non-variant's out-of-range variant scale
+        /// clamped; a variant's out-of-range variant scale is clamped after that, the atlas left dirty
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v1wholewrite,
+        /// v1wholewritev2, v1wholewritecrlf; in the other modes nothing is packed or written,
+        /// v1wholewritedisabled, v1wholewritev2build).</summary>
         internal static void PackV1ForPlayMode()
         {
-            if (UnityEditor.EditorSettings.SpritePackerModeValue != UnityEditor.EditorSettings.SpritePackerModeAlwaysOnAtlas || !Native.IsReady) return;
-            // Only a session's first pack is made at its Play-mode entry: once atlases were packed
-            // (an earlier entry, or SpriteAtlasUtility in Edit mode), entering Play mode stores
-            // nothing (the Editor packs again at every entry; not done).
-            if (s_Atlases != null)
-            {
-                Debug.LogWarning("Unbound: entering Play mode again does not pack V1 sprite atlases and store their packs, as the Editor does");
-                return;
-            }
+            if (!UnityEditor.EditorSettings.IsPlayModeAtlasPackingActive || !Native.IsReady) return;
+            if (!FirstPlayModePack(s_Atlases?.Count, s_Cancelled)) return;
             Load();
             if (s_Cancelled || s_Atlases == null) return;
             var variants = new List<SpriteAtlas>();
@@ -588,15 +596,15 @@ namespace UnityEngine.U2D
                 var path = UnityEditor.AssetDatabase.GUIDToAssetPath(packed.Guid);
                 var atlas = string.IsNullOrEmpty(path) ? null : UnityEditor.AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
                 if (atlas == null || atlas.IsFromImporter) continue;
+                // Every variant's scale is clamped once the packs are stored, also a variant whose
+                // pack is not stored (one without a master: tests/projects/spriteatlaseditor
+                // v1wholewrite ScaledAlone).
+                if (atlas.isVariant) variants.Add(atlas);
                 // A variant takes its master's tag: not while the master has unsaved changes.
                 var master = atlas.isVariant ? atlas.MasterAtlas : null;
                 bool unsaved = HasUnsavedChanges(atlas) || (master != null && HasUnsavedChanges(master));
                 if (!MayStorePack(atlas.name, packed.Complete, unsaved)) continue;
-                if (atlas.isVariant)
-                {
-                    variants.Add(atlas);
-                    atlas.TakeMasterTag();
-                }
+                if (atlas.isVariant) atlas.TakeMasterTag();
                 else atlas.ClampVariantScale();
                 var (_, refs, names) = PackedSpriteLists(packed);
                 atlas.ApplyPackedSprites(refs, names, markModified: true);

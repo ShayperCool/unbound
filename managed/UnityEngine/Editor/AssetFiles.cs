@@ -24,6 +24,12 @@ namespace Unbound.Runtime
         /// <summary>Writes the files of the dirty asset objects (<paramref name="only"/>: of that
         /// object only, when it is dirty); with <paramref name="unchangedStays"/>, a file whose text
         /// would not change is left untouched.</summary>
+        /// <summary>Whether a file holding <paramref name="existing"/> would be left as it is when
+        /// <paramref name="written"/> is saved over it: only when the text is the same, line endings
+        /// included (a CRLF file is written with LF; matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/spriteatlaseditor v1wholewritecrlf).</summary>
+        internal static bool Unchanged(string existing, string written) => string.Equals(existing, written, StringComparison.Ordinal);
+
         internal static void SaveDirty(Object only = null, bool unchangedStays = false)
         {
             Undo.FlushDirtiness();
@@ -61,7 +67,9 @@ namespace Unbound.Runtime
         /// then left as it is).</summary>
         internal static List<YTextDocument> TextDocuments(string text, Dictionary<long, Object> objects, List<Object> dirty)
         {
-            if (!text.StartsWith(UnityYamlText.Preamble, StringComparison.Ordinal)) return null;
+            // A file with CRLF line endings is text serialization too (Parse reads it as LF).
+            if (!text.StartsWith(UnityYamlText.Preamble, StringComparison.Ordinal)
+                && !text.StartsWith(UnityYamlText.Preamble.Replace("\n", "\r\n"), StringComparison.Ordinal)) return null;
             var docs = UnityYamlText.Parse(text);
             foreach (var o in dirty)
                 if (!docs.Exists(d => objects.TryGetValue(d.FileId, out var x) && ReferenceEquals(x, o))) return null;
@@ -114,7 +122,7 @@ namespace Unbound.Runtime
             if (unlocated > 0)
                 Debug.LogWarning($"Unbound: {info.Path} is saved with {unlocated} references to assets Unbound cannot name written as none.");
             var written = UnityYamlText.Write(docs);
-            if (!unchangedStays || !File.Exists(info.File) || File.ReadAllText(info.File).Replace("\r\n", "\n") != written)
+            if (!unchangedStays || !File.Exists(info.File) || !Unchanged(File.ReadAllText(info.File), written))
                 SceneFiles.WriteFile(info.File, written);
             foreach (var o in loaded.Objects.Values)
                 if (o is not null) EditorUtility.ClearDirty(o);

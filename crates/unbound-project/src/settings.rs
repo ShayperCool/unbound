@@ -94,8 +94,10 @@ const SPRITE_ATLAS_V2: i64 = 5;
 
 /// The sprite atlases the Editor packs before it enters Play mode, by the project's Sprite
 /// Packer mode: documented for "Sprite Atlas V1 - Always Enabled" (`.spriteatlas` assets) and
-/// "Sprite Atlas V2 - Enabled" (`.spriteatlasv2`) in the Editor settings Manual. Unbound packs
-/// them for Play-mode sessions (unbound-runtime's sprite_atlases).
+/// "Sprite Atlas V2 - Enabled" (`.spriteatlasv2`) in the Editor settings Manual; in "Sprite Atlas
+/// V2 - Enabled" `.spriteatlas` assets are packed too (matches the Unity 6000.0.71f1 Editor,
+/// tests/projects/spriteatlaseditor v1wholewritev2). Unbound packs them for Play-mode sessions
+/// (unbound-runtime's sprite_atlases).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlayModeAtlases {
     /// The mode's name in the Editor settings.
@@ -730,17 +732,22 @@ impl Settings {
         &self,
         asset_paths: impl IntoIterator<Item = &'a str>,
     ) -> Option<PlayModeAtlases> {
-        let (mode, extension) = match self.sprite_packer_mode {
-            ALWAYS_ON_ATLAS => ("Sprite Atlas V1 - Always Enabled", ".spriteatlas"),
-            SPRITE_ATLAS_V2 => ("Sprite Atlas V2 - Enabled", ".spriteatlasv2"),
+        let (mode, extensions): (_, &[&str]) = match self.sprite_packer_mode {
+            ALWAYS_ON_ATLAS => ("Sprite Atlas V1 - Always Enabled", &[".spriteatlas"]),
+            SPRITE_ATLAS_V2 => (
+                "Sprite Atlas V2 - Enabled",
+                &[".spriteatlasv2", ".spriteatlas"],
+            ),
             _ => return None,
         };
         let mut paths: Vec<String> = asset_paths
             .into_iter()
             .filter(|path| {
-                path.len() > extension.len()
-                    && path.is_char_boundary(path.len() - extension.len())
-                    && path[path.len() - extension.len()..].eq_ignore_ascii_case(extension)
+                extensions.iter().any(|extension| {
+                    path.len() > extension.len()
+                        && path.is_char_boundary(path.len() - extension.len())
+                        && path[path.len() - extension.len()..].eq_ignore_ascii_case(extension)
+                })
             })
             .map(String::from)
             .collect();
@@ -855,9 +862,15 @@ mod tests {
                 ],
             })
         );
+        // V2 mode packs the V1 atlases too.
         assert_eq!(
             with_mode(5).play_mode_atlases(paths).unwrap().paths,
-            ["Assets/UI/C.SPRITEATLASV2", "Assets/UI/c.spriteatlasv2"]
+            [
+                "Assets/UI/C.SPRITEATLASV2",
+                "Assets/UI/a.spriteatlas",
+                "Assets/UI/b.spriteatlas",
+                "Assets/UI/c.spriteatlasv2"
+            ]
         );
         // Disabled, packing for builds only, and the legacy packer: nothing packed in Play mode.
         for mode in [0, 1, 2, 3, 6] {
