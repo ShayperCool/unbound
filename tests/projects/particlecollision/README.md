@@ -23,7 +23,7 @@ were byte-identical.
 | [ParticlePhysicsExtensions.GetSafeCollisionEventSize](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticlePhysicsExtensions.GetSafeCollisionEventSize.html) | A safe array size for GetCollisionEvents. | The system's events of the update over all objects (12 with 11 and 1 on two boxes); an array takes as many as it holds. |
 | [ParticleSystemForceField.vectorField](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystemForceField-vectorField.html), vectorFieldSpeed, vectorFieldAttraction | The texture, its speed, how strongly particles are dragged toward it. | Each step the velocity relaxes toward the field's nearest texel at the particle (over the field's range) times the speed by attraction × multiplier × 30 × dt, unclamped (attraction 2 overshoots), the texel turned with the field; no effect with a zero or negative attraction, in the system's first step, whether or not it had particles (a particle emitted later is moved in its first step; a fresh system in a field another system already used is not) or outside the field. |
 
-Unbound: 212/214 with 2 recorded residuals (`residuals.json`: 2D world collision, unsupported).
+Unbound: 214/214.
 Unbound applies the vector field in the measured context only (a Box field without scale, with
 constant speed and attraction, without drag or rotation) and reports the others as unsupported;
 a restart without live particles starts over (inferred), one with live particles does not (unmeasured). Unmeasured: those cases, imported vector field assets.

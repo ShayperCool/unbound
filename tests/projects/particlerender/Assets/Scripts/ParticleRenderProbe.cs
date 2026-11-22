@@ -1210,6 +1210,7 @@ public partial class ParticleRenderProbe : MonoBehaviour
         VertexStreams();
         MeshInstancing();
         yield return ColliderForce();
+        yield return Collide2DControls();
         Record("complete", new List<float> { 1f });
         File.WriteAllText(s_Path, s_Out.ToString());
         Debug.Log("particle render complete: " + s_Path);

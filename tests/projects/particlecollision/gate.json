@@ -3,7 +3,9 @@
   "engine_paths": [
     "managed/UnityEngine/Particles/ParticleSystem.Collision.cs",
     "managed/UnityEngine/Particles/ParticleSystemForceField.cs",
-    "managed/UnityEngine/Particles/ParticleTypes.cs"
+    "managed/UnityEngine/Particles/ParticleTypes.cs",
+    "managed/UnityEngine/Particles/ParticleSystem.CollisionCache.cs",
+    "managed/UnityEngine/Physics2D/Physics2DParticleQuery.cs"
   ],
   "summary": "particlecollision: [0-9]+/[0-9]+ values match.*"
 }
