@@ -144,7 +144,8 @@ namespace Unbound.Runtime
                     // different orders).
                     Key("m_StateMachineTransitions", 1);
                     var sources = new System.Collections.Generic.List<(AnimatorStateMachine Source, System.Collections.Generic.List<AnimatorTransitionBase> Transitions)>(m.MachineTransitions);
-                    sources.Sort((a, b) => (a.Source != null ? a.Source.GetInstanceID() : 0).CompareTo(b.Source != null ? b.Source.GetInstanceID() : 0));
+                    // A destroyed source keeps its instance id (GetInstanceID answers it after destruction).
+                    sources.Sort((a, b) => (a.Source is null ? 0 : a.Source.GetInstanceID()).CompareTo(b.Source is null ? 0 : b.Source.GetInstanceID()));
                     foreach (var (source, transitions) in sources)
                     {
                         Item("first", Reference(source), 1);

@@ -42,6 +42,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void MachineTransitionsAndSyncedMotions()
         {
+            var early = new AnimatorStateMachine { name = "Early" };
             var machine = new AnimatorStateMachine { name = "Root" };
             var controller = new AnimatorController();
             var clip = new AnimationClip();
@@ -56,8 +57,13 @@ namespace UnityEngine.Tests
                 // sources by instance id (controller-assets basic.saved).
                 var other = machine.AddStateMachine("Other");
                 machine.AddStateMachineTransition(other, run);
-                Assert.Contains("  m_StateMachineTransitions:\n  - first: {fileID: 4}\n    second:\n    - {fileID: 0}\n  - first: {fileID: 3}\n", UnityYamlWriter.Write(new Object[] { machine, sub, other },
-                    new Dictionary<Object, long>(ReferenceEqualityComparer.Instance) { [machine] = 1, [sub] = 3, [other] = 4 }));
+                // A third made before both but given its first transition last: by instance id it
+                // comes after them (not by the order of first transitions).
+                machine.AddStateMachine(early, Vector3.zero);
+                machine.AddStateMachineTransition(early, run);
+                Assert.Contains("  m_StateMachineTransitions:\n  - first: {fileID: 4}\n    second:\n    - {fileID: 0}\n  - first: {fileID: 3}\n    second:\n    - {fileID: 0}\n  - first: {fileID: 5}\n",
+                    UnityYamlWriter.Write(new Object[] { machine, sub, other, early },
+                    new Dictionary<Object, long>(ReferenceEqualityComparer.Instance) { [machine] = 1, [sub] = 3, [other] = 4, [early] = 5 }));
 
                 controller.AddLayer("Base Layer");
                 var synced = new AnimatorControllerLayer { name = "Synced", syncedLayerIndex = 0 };
@@ -80,6 +86,7 @@ namespace UnityEngine.Tests
             finally
             {
                 Object.DestroyImmediate(machine);
+                Object.DestroyImmediate(early);
                 Object.DestroyImmediate(controller);
                 Object.DestroyImmediate(clip);
             }
