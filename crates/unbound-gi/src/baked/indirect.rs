@@ -43,15 +43,27 @@ impl Texture {
         }
     }
 
-    /// The texel the coordinates fall in (the nearest one; coordinates outside 0..1 take the
-    /// edge's).
-    fn at(&self, uv: [f32; 2]) -> [f32; 4] {
+    /// The image at the coordinates: its four texels around them, mixed by the coordinates'
+    /// place between their centres; beyond the centres of the outermost texels, those texels.
+    pub(super) fn at(&self, uv: [f32; 2]) -> [f32; 4] {
         if self.width == 0 || self.height == 0 {
             return [0.0; 4];
         }
-        let place =
-            |v: f32, size: usize| ((v * size as f32).floor().max(0.0) as usize).min(size - 1);
-        self.texels[place(uv[1], self.height) * self.width + place(uv[0], self.width)]
+        let (x, y) = (
+            uv[0] * self.width as f32 - 0.5,
+            uv[1] * self.height as f32 - 0.5,
+        );
+        let (column, row) = (x.floor(), y.floor());
+        let (tx, ty) = (x - column, y - row);
+        let texel = |column: f32, row: f32| {
+            let within = |v: f32, size: usize| (v.max(0.0) as usize).min(size - 1);
+            self.texels[within(row, self.height) * self.width + within(column, self.width)]
+        };
+        let (a, b) = (texel(column, row), texel(column + 1.0, row));
+        let (c, d) = (texel(column, row + 1.0), texel(column + 1.0, row + 1.0));
+        std::array::from_fn(|k| {
+            (a[k] * (1.0 - tx) + b[k] * tx) * (1.0 - ty) + (c[k] * (1.0 - tx) + d[k] * tx) * ty
+        })
     }
 }
 

@@ -1526,9 +1526,47 @@ mod bounced {
     }
 
     #[test]
+    fn a_material_image_is_read_between_its_texels_centres() {
+        let (red, green, blue) = (
+            [1.0, 0.0, 0.0, 1.0],
+            [0.0, 1.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0],
+        );
+        let image = Texture {
+            width: 2,
+            height: 2,
+            texels: vec![red, green, blue, blue],
+        };
+        // At a texel's centre: the texel. Rows run from v = 0.
+        assert_eq!(image.at([0.25, 0.25]), red);
+        assert_eq!(image.at([0.75, 0.25]), green);
+        assert_eq!(image.at([0.25, 0.75]), blue);
+        // Between two centres: their mix; between the four: all of them.
+        assert_eq!(image.at([0.5, 0.25]), [0.5, 0.5, 0.0, 1.0]);
+        assert_eq!(image.at([0.375, 0.25]), [0.75, 0.25, 0.0, 1.0]);
+        assert_eq!(image.at([0.5, 0.5]), [0.25, 0.25, 0.5, 1.0]);
+        // Beyond the outermost centres, and outside the image: the edge's texels.
+        assert_eq!(image.at([0.0, 0.0]), red);
+        assert_eq!(image.at([1.0, 0.1]), green);
+        assert_eq!(image.at([-3.0, 0.25]), red);
+        assert_eq!(image.at([7.0, 0.25]), green);
+        assert_eq!(image.at([0.25, 9.0]), blue);
+        assert_eq!(Texture::uniform(green).at([0.3, 0.9]), green);
+        assert_eq!(
+            Texture {
+                width: 0,
+                height: 0,
+                texels: Vec::new()
+            }
+            .at([0.5, 0.5]),
+            [0.0; 4]
+        );
+    }
+
+    #[test]
     fn a_material_is_read_at_the_lightmap_coordinates_of_the_point() {
         // The ceiling's emission image has two columns; the floor's rays (all one direction
-        // with the test's sequence) meet it where u is small.
+        // with the test's sequence) meet it where its first coordinate is small.
         let mut glow = Bake::new(ceiling(0), [0.0; 3], [0.0; 3]);
         glow.materials[0].emissive = Texture {
             width: 2,
@@ -1536,10 +1574,14 @@ mod bounced {
             texels: vec![[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0]],
         };
         let (left, _) = glow.run();
-        assert!(near(left, [1.0, 0.0, 0.0]), "{left:?}");
-        // The same corners with the coordinates' ends swapped: the other column.
+        assert!(left[0] > 0.8 && left[1] < 0.2 && left[2] == 0.0, "{left:?}");
+        // The same corners with the coordinate's ends swapped: the other column.
         glow.surfaces[0].uvs = [[1.0, 0.0], [1.0, 1.0], [0.0, 0.0]];
         let (right, _) = glow.run();
-        assert!(near(right, [0.0, 1.0, 0.0]), "{right:?}");
+        assert!(
+            right[1] > 0.8 && right[0] < 0.2 && right[2] == 0.0,
+            "{right:?}"
+        );
+        assert!((left[0] - right[1]).abs() < 1e-5 && (left[1] - right[0]).abs() < 1e-5);
     }
 }
