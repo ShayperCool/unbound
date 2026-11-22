@@ -118,5 +118,44 @@ Mesh:
             }
             finally { Object.DestroyImmediate(mesh); }
         }
+
+        [Fact]
+        public void SubMeshBoundsAndRangeAreTheFilesOrMeasuredWhenTheFileHasNone()
+        {
+            // Sub-mesh 0's stored box and range differ from its vertices; sub-mesh 1 stores neither.
+            var yaml = WideTwoSubmeshMesh
+                .Replace(@"    firstVertex: 0
+    vertexCount: 3
+    localAABB:
+      m_Center: {x: 0.5, y: 0.5, z: 0}
+      m_Extent: {x: 0.5, y: 0.5, z: 0}", @"    firstVertex: 1
+    vertexCount: 5
+    localAABB:
+      m_Center: {x: 7, y: 8, z: 9}
+      m_Extent: {x: 1, y: 2, z: 3}")
+                .Replace(@"    firstVertex: 3
+    vertexCount: 3
+    localAABB:
+      m_Center: {x: 1.5, y: 0.5, z: 0}
+      m_Extent: {x: 0.5, y: 0.5, z: 0}
+", "");
+            Assert.DoesNotContain("m_Center: {x: 1.5", yaml);
+            var mesh = new Mesh();
+            try
+            {
+                mesh.ReadSerialized(TestYaml.DocumentBody(yaml), new NullResolver());
+                var first = mesh.GetSubMesh(0);
+                Assert.Equal(new Vector3(7, 8, 9), first.bounds.center);
+                Assert.Equal(new Vector3(1, 2, 3), first.bounds.extents);
+                Assert.Equal(1, first.firstVertex);
+                Assert.Equal(5, first.vertexCount);
+                var second = mesh.GetSubMesh(1);
+                Assert.Equal(new Vector3(1.5f, 0.5f, 0), second.bounds.center);
+                Assert.Equal(new Vector3(0.5f, 0.5f, 0), second.bounds.extents);
+                Assert.Equal(3, second.firstVertex);
+                Assert.Equal(3, second.vertexCount);
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
     }
 }
