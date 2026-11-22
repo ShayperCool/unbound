@@ -5,6 +5,9 @@ The Unity 6000.0.71f1 Play mode capture measures `EditorGUILayout.BeginFadeGroup
 `ScrollViewScope`, `EditorGUILayout.Separator` / `Space`, and `EditorGUIUtility.PointsToPixels` /
 `PixelsToPoints` / `PingObject` / `LoadRequired` both outside and inside `OnGUI`.
 
+The scroll view rows also put a view with `MaxWidth` and `MaxHeight` options into a larger area:
+it keeps its maximum, stretching content fills it, and content wider than the view scrolls.
+
 Unity 6000.0 Scripting Reference:
 - [`EditorGUILayout.BeginFadeGroup`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUILayout.BeginFadeGroup.html)
 - [`EditorGUILayout.BeginScrollView`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUILayout.BeginScrollView.html)

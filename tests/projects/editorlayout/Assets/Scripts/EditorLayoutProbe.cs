@@ -287,6 +287,29 @@ public sealed class EditorLayoutProbe : MonoBehaviour
         }
         GUILayout.EndArea();
 
+        // 2b. A scroll view with a maximum size in a larger area keeps the maximum: its
+        // stretching content fills the view, and content wider than the view scrolls.
+        GUILayout.BeginArea(new Rect(0, 0, 420, 220));
+        {
+            var stretch = new GUIStyle { stretchWidth = true, stretchHeight = true };
+            EditorGUILayout.BeginScrollView(Vector2.zero, GUILayout.MaxWidth(200), GUILayout.MaxHeight(90));
+            var maxChild = GUILayoutUtility.GetRect(40, 40, 20, 20, stretch);
+            EditorGUILayout.EndScrollView();
+            var maxRect = GUILayoutUtility.GetLastRect();
+
+            EditorGUILayout.BeginScrollView(Vector2.zero, GUILayout.MaxWidth(150));
+            var wideChild = GUILayoutUtility.GetRect(300, 300, 20, 20, stretch);
+            EditorGUILayout.EndScrollView();
+            var wideRect = GUILayoutUtility.GetLastRect();
+
+            if (record)
+            {
+                Put("scroll/maxSize", RectArr(maxRect), RectArr(maxChild));
+                Put("scroll/maxWidthWideContent", RectArr(wideRect), RectArr(wideChild));
+            }
+        }
+        GUILayout.EndArea();
+
         // 3. Separator & Space in vertical and horizontal groups
         GUILayout.BeginArea(new Rect(0, 0, 420, 220));
         {
