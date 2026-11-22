@@ -987,9 +987,10 @@ SubShader {
     fn a_plugin_context_moves_rendering_to_the_caller() {
         let (backend, log) = recording();
         backend.submit(vec![Command::ColorSpace(1)]);
-        let mut called = false;
-        backend.plugin_context(&mut || called = true);
-        assert!(called);
+        // The plugin's work starts after what was queued before it has run.
+        let mut seen = Vec::new();
+        backend.plugin_context(&mut || seen = ran(&log));
+        assert_eq!(seen, on(&[("commands 1", false)]));
         backend.submit(vec![Command::ColorSpace(2)]);
         backend.flush();
         assert_eq!(
