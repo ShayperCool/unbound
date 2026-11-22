@@ -97,6 +97,8 @@ namespace UnityEngine.UIElements
 
     public partial class IMGUIContainer : VisualElement, IDisposable
     {
+        public static readonly string ussClassName = "unity-imgui-container";
+
         Action m_OnGUIHandler;
         ContextType m_ContextType;
 
@@ -113,6 +115,7 @@ namespace UnityEngine.UIElements
         {
             isIMGUIContainer = true;
             if (!Unbound.Runtime.Compat.DefaultConstructorStateMeasured) return;
+            AddToClassList(ussClassName);
             focusable = true;
             m_ContextType = ContextType.Editor;
         }
