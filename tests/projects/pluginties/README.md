@@ -49,11 +49,26 @@ the complete record and compiles the project, including the Editor assembly.
   can win by GUID. If the winner requires an explicit reference, only the
   asmdef that names it receives the DLL.
 
-Pass `--conflicts` to record a diagnostic pair with one shared GUID on a
-mutable Assets DLL and an immutable package DLL. The Editor reassigns the
-Assets metadata GUID. Independent fresh imports with shared GUIDs can pick
-different copies. The diagnostic mode retains each capture separately.
-Unbound reports missing or shared GUIDs across the equal-version group and
-keeps the existing selection order in those cases. Incremental Editor
-import history, built Player compilation and other release families remain
-unmeasured by the gate.
+Pass `--conflicts` to record and publish the fresh-import cases. Unity gives
+each mutable DLL a fresh GUID when they share a GUID on first import.
+An immutable package retains its original GUID. The collision log names the
+conflicting paths. The rewrite replaces only the GUID token, including when
+the metadata uses CRLF. This uses Unity's unique asset IDs and the Package
+Manager's distinction between mutable folders and immutable archives.
+[Asset metadata](https://docs.unity.com/en-us/engine/6000.0/manual/assets-and-media/import-assets/asset-metadata),
+[Package sources](https://docs.unity.com/en-us/engine/6000.0/manual/packages-list/packages/upm-concepts).
+
+The gate runs both profiles. The import profile checks that every graph
+reference follows the newly assigned GUIDs. The archive keeps the reference
+with the early GUID and loses it with the late GUID. The remaining pairs
+can select either copy on a fresh import. The reference preserves their
+assembly and DLL names, the exact conflict diagnostics, GUID ownership and
+hashes of every metadata file with its GUID token replaced. The raw captures
+include the assigned GUIDs and complete reference paths. The project must
+compile with the package-only API, then compile again with identical metadata.
+
+Unbound performs the measured repair before startup indexing and compilation
+on the 6000.0 family. Graph inspection reads the current metadata and reports
+unresolved ties. Pairs involving more than one immutable package, aliased
+source files, prior Unity ownership for two mutable files, and incremental
+registration remain outside this import profile.

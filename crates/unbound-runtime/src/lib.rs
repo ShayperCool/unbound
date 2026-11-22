@@ -19,6 +19,7 @@ pub mod lighting;
 mod models;
 pub mod native_api;
 pub mod plugin_api;
+mod plugin_import;
 pub mod presentation;
 pub mod realtime_gi;
 pub mod render_commands;
@@ -36,4 +37,5 @@ pub use game::{
     DEFINES_VARIABLE, FrameInput, Game, KeyEvent, restart_in_debug, restart_requested,
     scripting_define_overrides,
 };
+pub use plugin_import::repair_plugin_guid_conflicts;
 pub use scripted::ScriptedInput;

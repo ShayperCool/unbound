@@ -7,7 +7,7 @@ pub struct Plugin {
     pub file: PathBuf,
     /// `Assets/...` or `Packages/<name>/...`
     pub path: String,
-    pub(crate) guid: Option<Guid>,
+    pub guid: Option<Guid>,
     /// Referenced only by assemblies that list it in `precompiledReferences`.
     pub explicitly_referenced: bool,
     pub define_constraints: Vec<String>,

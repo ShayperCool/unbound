@@ -157,6 +157,27 @@ pub fn new_guid() -> Guid {
     if guid.is_zero() { new_guid() } else { guid }
 }
 
+/// Replaces the top-level GUID token while leaving the other metadata bytes alone.
+pub fn replace_guid(text: &str, old: Guid, new: Guid) -> anyhow::Result<String> {
+    use anyhow::Context;
+
+    let mut offset = 0;
+    for line in text.split_inclusive('\n') {
+        if let Some(value) = line.strip_prefix("guid:") {
+            let token = value.trim();
+            anyhow::ensure!(Guid::parse(token) == Some(old), "the .meta GUID changed");
+            let start = offset + "guid:".len() + value.len() - value.trim_start().len();
+            return Ok(format!(
+                "{}{new}{}",
+                &text[..start],
+                &text[start + token.len()..]
+            ));
+        }
+        offset += line.len();
+    }
+    None.context("no guid line")
+}
+
 const TRAILER: &str = "  userData: \n  assetBundleName: \n  assetBundleVariant: \n";
 
 /// The text of the new `.meta` of `asset` (the file itself, for what it names: a font).

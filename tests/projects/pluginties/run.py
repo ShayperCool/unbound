@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Make disposable plug-in projects, record their Unity graph, and check Unbound's."""
 import argparse
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 import difflib
 import gzip
@@ -76,6 +77,16 @@ LEGACY_IMPORTER = """PluginImporter:
       settings:
         DefaultValueInitialized: true
 """
+COLLISION_CASES = {
+    # The two ends of GUID ordering distinguish GUID reassignment followed by
+    # normal tie-breaking from always selecting the original GUID's owner.
+    'ArchiveKeepsReference': ('Assets/A', PACKAGE, '0'*31+'1'),
+    'ArchiveLosesReference': ('Assets/A', PACKAGE, 'f'*32),
+    'EmbeddedWithArchive': ('Packages/com.example.first', PACKAGE, 'a1'*16),
+    'EmbeddedWithAssets': ('Assets/A', 'Packages/com.example.first', 'a2'*16),
+    'BothInAssets': ('Assets/A', 'Assets/B', 'a3'*16),
+    'BothEmbedded': ('Packages/com.example.first', 'Packages/com.example.second', 'a4'*16),
+}
 DUPLICATE = re.compile(r"Duplicate assembly '(ProbeTie[^']+)' with different versions detected, "
                        r"using '([^']+)' and ignoring '([^']+)'\.")
 CONFLICT = re.compile(r"GUID \[([\da-f]{32})\] for asset '([^']+)' conflicts with:\s*"
@@ -104,14 +115,12 @@ def compile_copy(project, staging, compiler, reference, case, location, prefix, 
         defines.append('-define:VERSION_TWO')
     if index:
         defines.append('-define:PACKAGE_API')
-    if case == 'ArchiveSecond':
+    if case in ('ArchiveSecond', 'ArchiveKeepsReference'):
         defines.append('-define:ARCHIVE_SECOND')
     subprocess.run([*compiler, '-nologo', '-noconfig', '-nostdlib', '-deterministic', '-optimize+',
                     '-target:library', f'-r:{reference}', f'-out:{target}', *defines,
                     str(HERE/'Plugin.cs')], check=True)
     guid = prefix + sha256(case.encode()).hexdigest()[len(prefix):32]
-    if conflicts and case == 'ArchiveSecond':
-        guid = '70000000000000000000000000000000'
     allowed = (case, index) not in (('AssetsExcluded', 0), ('PackageExcluded', 1))
     importer = LEGACY_IMPORTER.replace('ANY', str(int(allowed)))
     explicit = (
@@ -120,7 +129,10 @@ def compile_copy(project, staging, compiler, reference, case, location, prefix, 
     )
     if case.startswith('BothExplicit') or (case, index) in explicit:
         importer += '  isExplicitlyReferenced: 1\n'
-    target.with_suffix('.dll.meta').write_text(meta_text(target, target.name, guid, importer))
+    metadata = meta_text(target, target.name, guid, importer)
+    if conflicts and case == 'ArchiveLosesReference' and index == 0:
+        metadata = metadata.replace('\n', '\r\n')
+    target.with_suffix('.dll.meta').write_bytes(metadata.encode())
 
 
 def generate(project, release, conflicts=False):
@@ -142,12 +154,15 @@ def generate(project, release, conflicts=False):
     editor_data = editor.parents[1] if probe_paths.MACOS_ARM64 else editor.parent/'Data'
     reference = editor_data/'NetStandard/ref/2.1.0/netstandard.dll'
     compiler = csc()
+    cases = ({case: (*row[:2], row[2], row[2]) for case, row in COLLISION_CASES.items()}
+             if conflicts else CASES)
     with ThreadPoolExecutor(max_workers=4) as pool:
         tasks = [pool.submit(compile_copy, project, archive, compiler, reference, case, location, prefix, i, conflicts)
-                 for case, row in CASES.items()
+                 for case, row in cases.items()
                  for i, (location, prefix) in enumerate(zip(row[:2], row[2:]))]
-        tasks.extend(pool.submit(compile_copy, project, archive, compiler, reference, case, PACKAGE, '21', 2, conflicts)
-                     for case in ('VersionTie', 'MixedVersionTie', 'ExplicitVersionTie'))
+        if not conflicts:
+            tasks.extend(pool.submit(compile_copy, project, archive, compiler, reference, case, PACKAGE, '21', 2, conflicts)
+                         for case in ('VersionTie', 'MixedVersionTie', 'ExplicitVersionTie'))
         for task in tasks:
             task.result()
     make_tarball(archive, project/'Packages/LocalPackages/com.example.archive-1.0.0.tgz')
@@ -156,12 +171,73 @@ def generate(project, release, conflicts=False):
         root.mkdir()
         asmdef = {'name': 'Probe.'+folder}
         if override:
-            asmdef.update(overrideReferences=True, precompiledReferences=[DLL_PREFIX+case+'.dll' for case in CASES])
+            asmdef.update(overrideReferences=True, precompiledReferences=[DLL_PREFIX+case+'.dll' for case in cases])
         (root/(folder+'.asmdef')).write_text(json.dumps(asmdef))
-        body = '' if conflicts else 'public static int Value() => ProbeTieArchiveSecond.Marker.PackageOnly();'
+        body = 'public static int Value() => ProbeTieArchiveSecond.Marker.PackageOnly();'
         (root/(folder+'Control.cs')).write_text('public static class '+folder+'Control {'+body+'}\n')
     write_metas(project/'Assets', project, set())
     write_metas(project/'Packages', project, set())
+    return collision_metadata(project) if conflicts else None
+
+
+GUID_LINE = re.compile(rb'(?m)^guid: ([0-9a-f]{32})')
+
+
+def collision_metadata(project, archive=None):
+    result = {}
+    if archive is None:
+        package_cache = project/'Library/PackageCache'
+        matches = list(package_cache.glob(PACKAGE+'@*'))
+        archive = matches[0] if matches else project.parent/'archive'
+    for case, (*locations, _) in COLLISION_CASES.items():
+        filename = DLL_PREFIX+case+'.dll.meta'
+        for location in locations:
+            if location == PACKAGE:
+                file = archive/filename
+                path = 'Packages/'+PACKAGE+'/'+filename
+            else:
+                path = location+'/'+filename
+                file = project/path
+            result[path] = file.read_bytes()
+    return result
+
+
+def collision_record(before, after, graph, log):
+    metas = []
+    guid_by_path = {}
+    counts = Counter(GUID_LINE.search(data)[1] for data in after.values())
+    for path, old in sorted(before.items()):
+        new = after[path]
+        guid = GUID_LINE.search(new)[1]
+        guid_by_path[path.removesuffix('.meta')] = guid
+        before_guid = GUID_LINE.search(old)[1]
+        metas.append({
+            'path': path,
+            'same_guid': before_guid == guid,
+            'distinct_guid': counts[guid] == 1,
+            'before': sha256(GUID_LINE.sub(b'guid: <GUID>', old)).hexdigest(),
+            'after': sha256(GUID_LINE.sub(b'guid: <GUID>', new)).hexdigest(),
+        })
+    # The GUIDs are randomly assigned. Each graph row must still select the
+    # earlier GUID in Unity's ordering. Keep the full capture in the run.
+    def guid_order(guid):
+        return [guid[i+1:i+2]+guid[i:i+1] for i in range(0, len(guid), 2)]
+    for assembly, path in graph:
+        filename = path.split('/')[-1]
+        tied = [candidate for candidate in guid_by_path if candidate.split('/')[-1] == filename]
+        winner = min(tied, key=lambda candidate: guid_order(guid_by_path[candidate]))
+        if path != winner:
+            raise RuntimeError(f'{assembly} references {path}, expected {winner} from assigned GUIDs')
+    # Preserve the known low/high GUID reference choices and verify counts
+    # for the cases whose choice can vary between fresh imports.
+    random_winners = {DLL_PREFIX+case+'.dll' for case in COLLISION_CASES
+                      if case not in ('ArchiveKeepsReference', 'ArchiveLosesReference')}
+    references = sorted((assembly, Path(path).name if Path(path).name in random_winners else path)
+                        for assembly, path in graph)
+    conflicts = sorted(set(re.findall(r"GUID \[[0-9a-f]{32}\] for asset '[^']*ProbeTie[^']*' conflicts with:\n"
+                                     r"(?:  '[^']+'(?: \(current owner\))?\n)+"
+                                     r"Assigning a new guid\.", log)))
+    return {'references': references, 'metas': metas, 'conflicts': conflicts}
 
 
 def normalize(path, project):
@@ -196,10 +272,11 @@ def read_engine_graph(path, project):
 
 def record(run, release, conflicts):
     jobs = []
+    original_metadata = {}
     for repeat in ('native1', 'native2'):
         out = run/repeat
         project = out/'project'
-        generate(project, release, conflicts)
+        original_metadata[project] = generate(project, release, conflicts)
         jobs.append(editor_runner.EditorJob(
             project, out/'editor.log', out, ['-force-glcore', '-quit', '-executeMethod', 'RecordPluginReferences.Record'],
             batch=True, graphics=True, timeout=600, env={'PLUGIN_TIES_OUT': str(out/'graph.tsv')},
@@ -211,6 +288,38 @@ def record(run, release, conflicts):
         data = {'graph': read_editor_graph(job.out/'graph.tsv', job.project),
                 **diagnostics(job.log.read_text(errors='replace'), job.project)}
         (job.out/'record.json').write_text(json.dumps(data, indent=2)+'\n')
+        if conflicts:
+            result = collision_record(original_metadata[job.project], collision_metadata(job.project),
+                                      data['graph'], job.log.read_text(errors='replace'))
+            (job.out/'guid-import.json').write_text(json.dumps(result, indent=2)+'\n')
+
+
+def engine_graph(cli, project, graph, log, env):
+    with graph.open('w') as output, log.open('w') as errors:
+        subprocess.run([str(cli), 'graph', '-p', str(project), '--json'],
+                       stdout=output, stderr=errors, env=env, check=True)
+
+
+def compare(actual, reference, output):
+    candidate = json.dumps(actual, indent=2)+'\n'
+    output.write_text(candidate)
+    native = reference.read_text()
+    if native != candidate:
+        print(''.join(difflib.unified_diff(native.splitlines(True), candidate.splitlines(True),
+                                           fromfile=str(reference), tofile=str(output))), end='')
+        return False
+    return True
+
+
+def compile_engine(cli, project, log, env):
+    command = [str(cli), 'compile', '-p', str(project), '--editor-assemblies']
+    if editor_runner.LAUNCHER.is_file():
+        command = [str(editor_runner.LAUNCHER), '--kind', 'tool', *command]
+    with log.open('w') as output:
+        result = subprocess.run(command, stdout=output, stderr=subprocess.STDOUT, env=env)
+    if result.returncode:
+        print(f'pluginties: compilation failed, see {log}')
+    return result.returncode
 
 
 def gate(run, release):
@@ -220,28 +329,40 @@ def gate(run, release):
     log = run/'engine.log'
     graph = run/'graph.json'
     env = {**os.environ, 'UNBOUND_LOG': 'info', 'UNBOUND_OFFLINE': '1'}
-    with graph.open('w') as output, log.open('w') as errors:
-        subprocess.run([str(cli), 'graph', '-p', str(project), '--json'],
-                       stdout=output, stderr=errors, env=env, check=True)
+    engine_graph(cli, project, graph, log, env)
     actual = {'graph': read_engine_graph(graph, project),
               **diagnostics(log.read_text(errors='replace'), project)}
-    candidate = json.dumps(actual, indent=2)+'\n'
-    (run/'record.json').write_text(candidate)
     reference = HERE/'Reference'/f'unity-{release}'/'record.json'
-    native = reference.read_text()
-    if native != candidate:
-        print(''.join(difflib.unified_diff(native.splitlines(True), candidate.splitlines(True),
-                                           fromfile=str(reference), tofile=str(run/'record.json'))), end='')
+    if not compare(actual, reference, run/'record.json'):
         return 1
-    command = [str(cli), 'compile', '-p', str(project), '--editor-assemblies']
-    if editor_runner.LAUNCHER.is_file():
-        command = [str(editor_runner.LAUNCHER), '--kind', 'tool', *command]
-    with (run/'compile.log').open('w') as log:
-        result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, env=env)
-    if result.returncode:
-        print(f'pluginties: compilation failed, see {run / "compile.log"}')
-        return result.returncode
+    if (result := compile_engine(cli, project, run/'compile.log', env)):
+        return result
     print(f"pluginties: {len(actual['graph'])} references, {len(actual['versions'])} version diagnostics, compile succeeded")
+    return 0
+
+
+def gate_conflicts(run, release):
+    project = run/'project'
+    before = generate(project, release, conflicts=True)
+    cli = engine_cli()
+    cache = run/'cache'
+    env = {**os.environ, 'UNBOUND_CACHE': str(cache), 'UNBOUND_LOG': 'info', 'UNBOUND_OFFLINE': '1'}
+    log = run/'compile.log'
+    if (result := compile_engine(cli, project, log, env)):
+        return result
+    graph = run/'graph.json'
+    engine_graph(cli, project, graph, run/'engine.log', env)
+    archive, = (cache/'packages/tarballs').glob(PACKAGE+'@*')
+    after = collision_metadata(project, archive)
+    actual = collision_record(before, after, read_engine_graph(graph, project), log.read_text(errors='replace'))
+    reference = HERE/'Reference'/f'unity-{release}'/'guid-import.json'
+    if not compare(actual, reference, run/'guid-import.json'):
+        return 1
+    if (result := compile_engine(cli, project, run/'recompile.log', env)):
+        return result
+    if after != collision_metadata(project, archive):
+        raise RuntimeError('compiling again changed the imported metadata')
+    print(f"pluginties: {len(actual['metas'])} metadata files and {len(actual['conflicts'])} GUID conflicts match, compile succeeded")
     return 0
 
 
@@ -250,18 +371,15 @@ def main():
     parser.add_argument('mode', choices=('editor', 'publish', 'gate'))
     parser.add_argument('--release', default=probe_paths.unity_version())
     parser.add_argument('--label', default=f'run-{time.time_ns()}')
-    parser.add_argument('--conflicts', action='store_true', help='record an unresolved GUID collision')
+    parser.add_argument('--conflicts', action='store_true', help='test duplicate GUID import')
     args = parser.parse_args()
     run = probe_paths.run_root(HERE, args.label).resolve()
-    target = HERE/'Reference'/f'unity-{args.release}'/'record.json'
+    filename = 'guid-import.json' if args.conflicts else 'record.json'
+    target = HERE/'Reference'/f'unity-{args.release}'/filename
     if args.mode == 'publish':
-        if args.conflicts:
-            parser.error('collision captures are diagnostic')
-        first, second = [(run/repeat/'record.json').read_bytes() for repeat in ('native1', 'native2')]
+        first, second = [(run/repeat/filename).read_bytes() for repeat in ('native1', 'native2')]
         if first != second:
             raise RuntimeError(f'independent Editor captures differ: {run}')
-        if json.loads(first)['conflicts']:
-            raise RuntimeError(f'GUID collision captures are diagnostic: {run}')
         target.parent.mkdir(parents=True, exist_ok=True)
         with target.open('xb') as output:
             output.write(first)
@@ -271,7 +389,9 @@ def main():
     if args.mode == 'editor':
         record(run, args.release, args.conflicts)
         return 0
-    return gate(run, args.release)
+    if args.conflicts:
+        return gate_conflicts(run, args.release)
+    return gate(run, args.release) or gate_conflicts(run/'guid-import', args.release)
 
 
 if __name__ == '__main__':

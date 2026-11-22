@@ -621,6 +621,7 @@ fn report(
 pub fn compile(args: &ProjectArgs, editor_assemblies: bool, repeat: u32) -> Result<()> {
     let start = Instant::now();
     let project = open(args)?;
+    unbound_runtime::repair_plugin_guid_conflicts(&project)?;
     let graph = project.script_graph(mode(args), &args.target)?;
     let request = project.compile_request(
         &graph,

@@ -249,6 +249,7 @@ impl Game {
         backend: Option<Arc<dyn RenderBackend>>,
     ) -> Result<Self> {
         let mut project = Project::open(&project.root)?;
+        crate::repair_plugin_guid_conflicts(&project)?;
         apply_define_overrides(&mut project.settings);
         let runtime = ManagedRuntime::start()?;
         let runtime_state = state::initialize(&project)?;
