@@ -1620,16 +1620,15 @@ namespace UnityEditor.UIElements.Bindings
             m_OnExpressionEvaluated = OnExpressionEvaluated;
         }
 
-        // An expression with per-object variables (L(a,b), R(a,b), +=...) typed while editing several
-        // objects gives each object its own value in Unity, evaluated over every target's current
-        // value. Unbound cannot write different values to the targets of one edit yet: such an
-        // edit is reported and not applied, rather than writing the first target's result to all.
+        // An expression typed while editing several objects is applied when evaluated; one with
+        // per-object variables (L(a,b), R(a,b), +=...) gives each object its own value
+        // (SyncFieldValueToProperty; measured: tests/projects/multiexpr).
         void OnExpressionEvaluated(ExpressionEvaluator.Expression expression)
         {
             if (boundProperty == null || !boundProperty.serializedObject.isEditingMultipleObjects) return;
+            if (expression != null && expression.Equals(m_LastFieldExpression)) return;
             m_LastFieldExpression = expression;
-            if (expression != null && expression.hasVariables)
-                Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBinding (an expression with per-object variables while editing several objects)");
+            if (m_LastFieldExpression != null) FieldValueChange(m_Field as IEventHandler);
         }
 
         void OnFieldBlur(BlurEvent evt)
@@ -1638,12 +1637,18 @@ namespace UnityEditor.UIElements.Bindings
                 mixed.showMixedValue = boundProperty.hasMultipleDifferentValues;
         }
 
+        // A value an expression with per-object variables gave is applied by the expression.
         void FieldValueChanged(ChangeEvent<TValue> evt)
         {
-            if (isReleased || m_IsUpdating || !ReferenceEquals(evt.target, m_Field)) return;
             if (m_LastFieldExpression != null && m_LastFieldExpression.hasVariables
                 && boundProperty != null && boundProperty.serializedObject.isEditingMultipleObjects)
                 return;
+            FieldValueChange(evt.target);
+        }
+
+        void FieldValueChange(IEventHandler target)
+        {
+            if (isReleased || m_IsUpdating || !ReferenceEquals(target, m_Field)) return;
             try
             {
                 int currentGroup = Undo.GetCurrentGroup();
@@ -1915,7 +1920,32 @@ namespace UnityEditor.UIElements.Bindings
                 field.value = lastValue;
         }
 
-        protected override bool SyncFieldValueToProperty() => base.SyncFieldValueToProperty();
+        /// <summary>An expression with per-object variables while editing several objects sets each
+        /// target's value from its own (measured: tests/projects/multiexpr).</summary>
+        protected override bool SyncFieldValueToProperty()
+        {
+            var expression = m_LastFieldExpression;
+            if (!boundProperty.serializedObject.isEditingMultipleObjects || field is not BaseField<TValue> || expression == null || !expression.hasVariables)
+                return base.SyncFieldValueToProperty();
+            bool evaluated = false;
+            if (typeof(TValue) == typeof(float) || typeof(TValue) == typeof(double))
+            {
+                evaluated = true;
+                var values = boundProperty.allDoubleValues;
+                for (int i = 0; i < values.Length; i++) evaluated = evaluated && expression.Evaluate(ref values[i], i, values.Length);
+                if (evaluated) boundProperty.allDoubleValues = values;
+            }
+            else if (typeof(TValue) == typeof(int) || typeof(TValue) == typeof(uint) || typeof(TValue) == typeof(long) || typeof(TValue) == typeof(ulong))
+            {
+                evaluated = true;
+                var values = boundProperty.allLongValues;
+                for (int i = 0; i < values.Length; i++) evaluated = evaluated && expression.Evaluate(ref values[i], i, values.Length);
+                if (evaluated) boundProperty.allLongValues = values;
+            }
+            if (!evaluated) return false;
+            boundProperty.serializedObject.ApplyModifiedProperties();
+            return true;
+        }
     }
 
     internal partial class SerializedDefaultEnumBinding : SerializedObjectBindingToBaseField<string, PopupField<string>>

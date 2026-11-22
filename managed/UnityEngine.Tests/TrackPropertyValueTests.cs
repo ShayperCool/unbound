@@ -122,6 +122,12 @@ namespace UnityEngine.Tests
             protected override void UpdateMixedValueContent() { }
         }
 
+        sealed class FloatTarget : ScriptableObject
+        {
+            public float ratio = 1.5f;
+            public double precise = 0.25;
+        }
+
         sealed class TestTarget : ScriptableObject
         {
             public bool flag = true;
@@ -298,44 +304,88 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void APerObjectExpressionWhileEditingSeveralObjectsIsReportedNotWrittenToAll()
+        public void APerObjectExpressionWhileEditingSeveralObjectsGivesEachItsOwnValue()
         {
-            const string member = "UnityEditor.UIElements.Bindings.SerializedObjectBinding (an expression with per-object variables while editing several objects)";
-            int Hits() => Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var t1 = ScriptableObject.CreateInstance<TestTarget>();
             var t2 = ScriptableObject.CreateInstance<TestTarget>();
-            t2.count = 20;
+            var t3 = ScriptableObject.CreateInstance<TestTarget>();
+            t1.count = 3;
+            t2.count = 7;
+            t3.count = 1;
             using var panel = RuntimePanel.Create(settings);
             using var so = new SerializedObject(new Object[] { t1, t2 });
             try
             {
+                Undo.ClearAll();
                 var field = new IntegerField();
                 panel.visualTree.Add(field);
                 field.BindProperty(so.FindProperty("count"));
                 Tick(panel);
                 Tick(panel);
 
-                // L(a,b) gives each object its own value in Unity; it is reported here, not applied.
-                int before = Hits();
+                // L(a,b) spreads the objects over the range; += and *= start from each one's value.
+                Undo.IncrementCurrentGroup();
                 field.text = "L(0,10)";
                 field.UpdateValueFromText();
                 Tick(panel);
-                Assert.Equal(before + 1, Hits());
-                Assert.Equal(10, t1.count);
-                Assert.Equal(20, t2.count);
+                Assert.Equal(0, t1.count);
+                Assert.Equal(10, t2.count);
+                Assert.Equal("L(0,10)", field.text);
+                Undo.FlushUndoRecordObjects();
+                Assert.Equal("Set Int Values", Undo.GetCurrentGroupName());
+                Undo.PerformUndo();
+                Assert.Equal(3, t1.count);
+                Assert.Equal(7, t2.count);
+                so.Update();
 
-                // A plain value still reaches every object.
+                Undo.IncrementCurrentGroup();
+                field.text = "+=5";
+                field.UpdateValueFromText();
+                Tick(panel);
+                Assert.Equal(8, t1.count);
+                Assert.Equal(12, t2.count);
+
+                // A plain value reaches every object.
+                Undo.IncrementCurrentGroup();
                 field.text = "7";
                 field.UpdateValueFromText();
                 Tick(panel);
                 Assert.Equal(7, t1.count);
                 Assert.Equal(7, t2.count);
+
+                // Three objects, each with its own value.
+                using var three = new SerializedObject(new Object[] { t1, t2, t3 });
+                var counts = three.FindProperty("count");
+                Assert.Equal(new long[] { 7, 7, 1 }, counts.allLongValues);
+                counts.allLongValues = new long[] { 0, 5, 10 };
+                Assert.Equal(new[] { 0, 5, 10 }, new[] { t1.count, t2.count, t3.count });
+
+                // Float and double properties.
+                var f1 = ScriptableObject.CreateInstance<FloatTarget>();
+                var f2 = ScriptableObject.CreateInstance<FloatTarget>();
+                f2.ratio = 2.5f;
+                try
+                {
+                    using var floats = new SerializedObject(new Object[] { f1, f2 });
+                    Assert.Equal(new[] { 1.5, 2.5 }, floats.FindProperty("ratio").allDoubleValues);
+                    floats.FindProperty("ratio").allDoubleValues = new[] { 0.5, 4.0 };
+                    floats.FindProperty("precise").allDoubleValues = new[] { 1.25, 2.25 };
+                    Assert.Equal((0.5f, 4f, 1.25, 2.25), (f1.ratio, f2.ratio, f1.precise, f2.precise));
+                    Assert.Throws<System.ArgumentException>(() => floats.FindProperty("ratio").allDoubleValues = new[] { 1.0 });
+                }
+                finally
+                {
+                    Object.DestroyImmediate(f1);
+                    Object.DestroyImmediate(f2);
+                }
             }
             finally
             {
+                Undo.ClearAll();
                 Object.DestroyImmediate(t1);
                 Object.DestroyImmediate(t2);
+                Object.DestroyImmediate(t3);
                 Object.DestroyImmediate(settings);
             }
         }

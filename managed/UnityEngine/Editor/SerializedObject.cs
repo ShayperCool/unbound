@@ -233,6 +233,33 @@ namespace UnityEditor
             return list;
         }
 
+        /// <summary>Sets one property of each target to its own value, recorded for Undo, and reads
+        /// the targets again (the edits not applied yet are kept).</summary>
+        internal void WriteEachTarget(string path, object[] values, string undoName)
+        {
+            var befores = new SerializedNode[m_Targets.Length];
+            for (int i = 0; i < m_Targets.Length; i++)
+                if (m_Targets[i] != null) befores[i] = ReadRoot(m_Targets[i]);
+            if (!IsProjectSettings()) Undo.RecordApply(m_Targets, befores, new List<string> { path }, undoName);
+            for (int i = 0; i < m_Targets.Length; i++)
+            {
+                var target = m_Targets[i];
+                if (target == null) continue;
+                var root = ReadRoot(target);
+                var node = SerializedTree.Find(root, path);
+                if (node == null || !SerializedTree.SetValue(node, values[i], force: true)) continue;
+                WriteRoot(target, root);
+                EditorUtility.SetDirty(target);
+                if (Unbound.Runtime.PrefabLinks.Of(target) != null) Unbound.Runtime.PrefabRecords.Record(target);
+                ObjectChangeEvents.NoteProperties(target);
+            }
+            var own = SerializedTree.Find(m_UnboundRoot, path);
+            if (own != null && !own.Dirty) own.Value = SerializedTree.CopyLeaf(values[0], own.Shape);
+            m_OtherRoots = null;
+            m_IsDifferentCacheDirty = true;
+            m_ObjectVersion++;
+        }
+
         bool IsProjectSettings()
         {
             foreach (var target in m_Targets)
@@ -842,6 +869,62 @@ namespace UnityEditor
         // ------------------------------------------------------------ values
 
         static void Unsupported(string kind) => Debug.LogError($"type is not a supported {kind} value");
+
+        /// <summary>Each target's value of an integer property, target by target.</summary>
+        internal long[] allLongValues
+        {
+            get => AllValues(IsIntegral, n => ToLong(SerializedTree.GetValue(n)), "long");
+            set => SetAllValues(value, IsIntegral, (v, n) => FromLong(v, n.ClrType), "long", "Set Int Values");
+        }
+
+        /// <summary>Each target's value of a float property, target by target.</summary>
+        internal double[] allDoubleValues
+        {
+            get => AllValues(IsFloat, n => Convert.ToDouble(SerializedTree.GetValue(n), CultureInfo.InvariantCulture), "double");
+            set => SetAllValues(value, IsFloat, (v, n) => n.ClrType == typeof(float) ? (object)(float)v : v, "double", "Set Float Values");
+        }
+
+        static bool IsFloat(SerializedNode n) => n.PropertyType == SerializedPropertyType.Float;
+
+        // The first target's value from this SerializedObject's data, the others' from theirs.
+        T[] AllValues<T>(Func<SerializedNode, bool> accepts, Func<SerializedNode, T> read, string kind)
+        {
+            var n = N;
+            var values = new T[m_SerializedObject.targetObjects.Length];
+            if (!accepts(n))
+            {
+                Unsupported(kind);
+                return values;
+            }
+            values[0] = read(n);
+            if (values.Length > 1)
+            {
+                var others = m_SerializedObject.OtherRoots();
+                for (int i = 1; i < values.Length; i++)
+                {
+                    var other = others[i - 1] == null ? null : SerializedTree.Find(others[i - 1], n.Path);
+                    if (other != null) values[i] = read(other);
+                }
+            }
+            return values;
+        }
+
+        // Each target takes its own value at once, as one undo record (measured:
+        // tests/projects/multiexpr).
+        void SetAllValues<T>(T[] values, Func<SerializedNode, bool> accepts, Func<T, SerializedNode, object> convert, string kind, string undoName)
+        {
+            var n = N;
+            if (!accepts(n))
+            {
+                Unsupported(kind);
+                return;
+            }
+            if (values == null || values.Length != m_SerializedObject.targetObjects.Length)
+                throw new ArgumentException($"{values?.Length ?? 0} values for {m_SerializedObject.targetObjects.Length} objects");
+            var converted = new object[values.Length];
+            for (int i = 0; i < values.Length; i++) converted[i] = convert(values[i], n);
+            m_SerializedObject.WriteEachTarget(n.Path, converted, undoName);
+        }
 
         void Write(SerializedNode node, object value)
         {
