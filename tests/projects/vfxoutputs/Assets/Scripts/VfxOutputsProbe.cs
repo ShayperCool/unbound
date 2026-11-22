@@ -7,6 +7,8 @@ using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.VFX;
 
 /// <summary>
@@ -95,6 +97,34 @@ public sealed class VfxOutputsProbe : MonoBehaviour
         return camera;
     }
 
+    /// <summary>The layer of the volume only the motion stages' cameras read.</summary>
+    const int MotionLayer = 30;
+    static VolumeProfile s_MotionProfile;
+
+    /// <summary>The stage's cameras with post-processing and a volume of object motion blur
+    /// (camera and objects, high quality, intensity 1) that only they read.</summary>
+    static void Blurred(Stage stage)
+    {
+        if (s_MotionProfile == null)
+        {
+            s_MotionProfile = ScriptableObject.CreateInstance<VolumeProfile>();
+            var blur = s_MotionProfile.Add<MotionBlur>();
+            blur.mode.Override(MotionBlurMode.CameraAndObjects);
+            blur.quality.Override(MotionBlurQuality.High);
+            blur.intensity.Override(1f);
+            blur.clamp.Override(0.2f);
+            var volume = new GameObject("motion volume") { layer = MotionLayer }.AddComponent<Volume>();
+            volume.isGlobal = true;
+            volume.sharedProfile = s_MotionProfile;
+        }
+        foreach (var (_, camera) in stage.Eyes)
+        {
+            var data = camera.GetUniversalAdditionalCameraData();
+            data.renderPostProcessing = true;
+            data.volumeLayerMask = 1 << MotionLayer;
+        }
+    }
+
     static Stage Front(Stage stage)
     {
         Eye(stage, "front", new Vector3(0f, 0f, -10f), Vector3.forward);
@@ -179,6 +209,10 @@ public sealed class VfxOutputsProbe : MonoBehaviour
             Front(AddStage("TwinA", "TwinA/Twin", 12));
             Front(AddStage("TwinB", "TwinB/Twin", 12));
             Front(AddStage("AlikeOutputs", "AlikeOutputs", 12));
+            // Quads moving sideways under the camera's object motion blur: with and without
+            // motion vectors, and the camera's motion vector state.
+            foreach (var graph in new[] { "MovingVectors", "MovingPlain" })
+                Blurred(Front(AddStage(graph, graph, 9, 10)));
         }
     }
 

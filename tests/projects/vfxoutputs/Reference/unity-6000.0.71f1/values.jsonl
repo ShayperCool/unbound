@@ -23,6 +23,8 @@
 {"k":"draw/FrustumCulled many/f005","v":"alive=20000 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/SortMany/f005","v":"alive=6000 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/SortKeyedMany/f005","v":"alive=20000 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/MovingVectors/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/MovingPlain/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/UpdateList still/f010","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/UpdateList glow/f010","v":"alive=30 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/UpdateList away/f010","v":"alive=-1 culled=1 awake=1 renderer enabled=1 visible=0"}
@@ -40,6 +42,8 @@
 {"k":"draw/UpdateList late/f010","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/ComputeCulled late/f010","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/FrustumCulled late/f010","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/MovingVectors/f010","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/MovingPlain/f010","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/UpdateList dying/f012","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/ComputeCulled dying/f012","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/FrustumCulled dying/f012","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}

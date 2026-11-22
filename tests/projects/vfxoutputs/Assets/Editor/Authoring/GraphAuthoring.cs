@@ -33,6 +33,7 @@ public static class GraphAuthoring
         Prioritized();
         Primitives();
         Alike();
+        Moving();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -429,6 +430,25 @@ public static class GraphAuthoring
         Set(pairInit, "size", 0.4f);
         SetRandom(pairInit, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
         Save(pair);
+    }
+
+    /// <summary>Quads moving sideways (README.md, "Moving"): an opaque output that writes motion
+    /// vectors, and the same graph without them.</summary>
+    static void Moving()
+    {
+        foreach (var (name, vectors) in new[] { ("MovingVectors", true), ("MovingPlain", false) })
+        {
+            var graph = NewGraph(name);
+            var (spawn, init, output) = System(graph, 64);
+            output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+            output.SetSettingValue("generateMotionVector", vectors);
+            Burst(spawn, 20f);
+            SetRandom(init, "position", new Vector3(-1.4f, -1f, 0f), new Vector3(-0.8f, 1f, 0f));
+            SetVector(init, "velocity", new Vector3(6f, 0f, 0f));
+            Set(init, "size", 0.25f);
+            SetRandom(init, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+            Save(graph);
+        }
     }
 
     /// <summary>The probe scene: a camera that sees none of the stages (the probe builds them).</summary>
