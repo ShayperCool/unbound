@@ -466,7 +466,7 @@ namespace UnityEngine.Tests
                 Debug.unityLogger.logHandler = previous;
             }
             Assert.Equal("ScriptedImporter:\n  externalObjects: {}\n  userData: \n  number: 3\n", UnityYamlText.WriteTopLevel(root));
-            Assert.Equal(new[] { "Error:Unbound: the fields of the importer of 'Assets/Thing.reference' are not written into its .meta: its [SerializeReference] fields are not written yet" }, handler.Logs);
+            Assert.Equal(new[] { "Error:Unbound: the fields of the importer of 'Assets/Thing.reference' are left as its .meta has them: its [SerializeReference] fields are not written yet" }, handler.Logs);
         }
 
         [Fact]

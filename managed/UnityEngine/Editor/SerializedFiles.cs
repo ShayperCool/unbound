@@ -560,14 +560,14 @@ namespace Unbound.Runtime
                 return rid.ToString(CultureInfo.InvariantCulture);
             }
 
-            /// <summary>The document's references block (Unity 2021.2+ version 2), when it has
-            /// [SerializeReference] fields: the null entry, then each referenced object by
-            /// ascending id with its type and data (written first, so references found inside the
-            /// data are listed too).</summary>
             /// <summary>Whether a field written so far is a managed reference, whose data
             /// <see cref="References"/> writes.</summary>
             internal bool HasManagedReferences => m_HasManagedReferences;
 
+            /// <summary>The document's references block (Unity 2021.2+ version 2), when it has
+            /// [SerializeReference] fields: the null entry, then each referenced object by
+            /// ascending id with its type and data (written first, so references found inside the
+            /// data are listed too).</summary>
             internal void References(int level)
             {
                 if (!m_HasManagedReferences) return;

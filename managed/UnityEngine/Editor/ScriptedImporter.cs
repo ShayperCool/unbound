@@ -212,7 +212,7 @@ namespace UnityEditor.AssetImporters
             if (problem == null && (fields == null || fields.Kind != YKind.Map)) return false;
             if (problem != null)
             {
-                Debug.LogError($"{Log.DiagnosticPrefix}the fields of the importer of '{assetPath}' are not written into its .meta: {problem}");
+                Debug.LogError($"{Log.DiagnosticPrefix}the fields of the importer of '{assetPath}' are left as its .meta has them: {problem}");
                 return false;
             }
             for (int i = 0; i < fields.Keys.Count; i++) section.Set(fields.Keys[i], fields.Values[i]);
