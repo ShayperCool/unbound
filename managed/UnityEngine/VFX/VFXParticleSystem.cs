@@ -46,6 +46,11 @@ namespace Unbound.Runtime
         /// <summary>The sorts of drawn outputs' lists: after each step's kernels, or after a
         /// camera's.</summary>
         readonly SortTask[] m_StepSorts, m_CameraSorts;
+        /// <summary>The sort the system's outputs that share their sort draw (the compiler's
+        /// global sort): the kernel that writes each particle's key from the system's list,
+        /// then the sort of those keys back into that list; null when no output draws it.</summary>
+        readonly Kernel m_GlobalKeys;
+        readonly SortTask m_GlobalSort;
         readonly VFXOutput[] m_Outputs;
         /// <summary>The buffers that count the particles of the lists of particles to draw:
         /// those the step's kernels make (emptied before each step) and those the camera's do
@@ -131,6 +136,8 @@ namespace Unbound.Runtime
             var updates = new List<Kernel>();
             var perCamera = new List<Kernel>();
             var sorts = new List<VFXEditorTaskDesc>();
+            VFXEditorTaskDesc? globalSort = null;
+            ComputeShader globalKeys = null;
             var outputs = new List<VFXOutput>();
             var processors = index < data.Processors.Length ? data.Processors[index] : Array.Empty<UnityEngine.Object>();
             for (int i = 0; i < (Desc.tasks?.Length ?? 0); i++)
@@ -151,6 +158,12 @@ namespace Unbound.Runtime
                     continue;
                 }
                 if (!(processor is ComputeShader shader)) continue;
+                if (task.type == VFXTaskType.GlobalSort)
+                {
+                    globalSort = task;
+                    globalKeys = shader;
+                    continue;
+                }
                 if (task.type == VFXTaskType.Initialize) m_Initialize = new Kernel(this, task, shader);
                 else if (task.type == VFXTaskType.Update) updates.Add(new Kernel(this, task, shader));
                 else if (task.type == VFXTaskType.PerCameraUpdate) perCamera.Add(new Kernel(this, task, shader));
@@ -184,6 +197,15 @@ namespace Unbound.Runtime
             }
             m_StepSorts = stepSorts.ToArray();
             m_CameraSorts = cameraSorts.ToArray();
+            if (globalSort.HasValue)
+            {
+                var sort = SortTask.Global(Desc, globalSort.Value, Capacity);
+                if (sort.Passes != null && Drawn(sort.Sorted))
+                {
+                    m_GlobalSort = sort;
+                    m_GlobalKeys = new Kernel(this, globalSort.Value, globalKeys);
+                }
+            }
         }
 
         /// <summary>The kernels whose list an output draws, and of those that make no list,
@@ -225,6 +247,10 @@ namespace Unbound.Runtime
         /// <summary>How the compiler names the system's buffers of lists of particles to draw
         /// (`indirectBuffer0`, `indirectBuffer0_a`, ...), and those it makes for each camera.</summary>
         const string IndirectListName = "indirectBuffer", PerCameraSuffix = "PerCamera";
+
+        /// <summary>How the compiler names a system's buffers of its global sort: the keys, the
+        /// scratch list, and the list of particles to draw that the sort orders.</summary>
+        internal const string GlobalKeysName = "sortBufferA", GlobalScratchName = "sortBufferB", GlobalListName = "indirectBuffer0";
 
         /// <summary>A camera's views as the generated programs read them
         /// (`cameraXRSettings`): one view in all, one drawn at once, from the first, as a camera
@@ -427,6 +453,12 @@ namespace Unbound.Runtime
             m_KernelsUsable &= StripKernelUsable();
             foreach (var update in m_Updates) m_KernelsUsable &= update.Usable();
             foreach (var kernel in m_PerCamera) m_KernelsUsable &= kernel.Usable();
+            // A global sort whose keys kernel does not compile leaves the system simulating: the
+            // sort, given no keys, leaves its list empty (Unity 6000.0.71f1: the Editor says the
+            // kernel does not compile, counts the particles and draws none of the outputs that
+            // share the sort; tests/projects/vfxoutputs `GlobalKeyed`, whose package kernel
+            // reads the graph's values it does not declare).
+            m_GlobalKeys?.Usable("the outputs that share its sort draw nothing");
             return m_KernelsUsable;
         }
 
@@ -495,8 +527,19 @@ namespace Unbound.Runtime
             foreach (var update in m_Updates) update.Dispatch(updated, m_UpdatedPrefix);
             UpdateStrips();
             if (m_HasRenderer)
+            {
+                if (m_GlobalSort != null && !m_GlobalSort.PerCamera) SortGlobally();
                 foreach (var sort in m_StepSorts) sort.Run(Effect);
+            }
             FillEventArguments();
+        }
+
+        /// <summary>The system's global sort: each particle's key written from the system's
+        /// list, then sorted back into it (after the step's kernels, or a camera's).</summary>
+        void SortGlobally()
+        {
+            m_GlobalKeys.Dispatch(m_UpdatedThreads, m_UpdatedPrefix);
+            m_GlobalSort.Run(Effect);
         }
 
         /// <summary>The sort of an output's list (a task of the compiled graph): the list of key
@@ -510,14 +553,28 @@ namespace Unbound.Runtime
             readonly object m_Capacity;
 
             internal SortTask(in VFXEditorTaskDesc task, uint capacity)
+                : this(VFXOutput.Buffer(task, "srcBuffer"), VFXOutput.Buffer(task, "scratchBuffer"), VFXOutput.Buffer(task, "dstBuffer"),
+                    VFXOutput.Parameter(task, "isPerCameraSort") != 0, capacity)
             {
-                List = VFXOutput.Buffer(task, "srcBuffer");
-                Scratch = VFXOutput.Buffer(task, "scratchBuffer");
-                Sorted = VFXOutput.Buffer(task, "dstBuffer");
-                PerCamera = VFXOutput.Parameter(task, "isPerCameraSort") != 0;
+            }
+
+            SortTask(int list, int scratch, int sorted, bool perCamera, uint capacity)
+            {
+                List = list;
+                Scratch = scratch;
+                Sorted = sorted;
+                PerCamera = perCamera;
                 m_Capacity = (int)capacity;
                 Passes = List < 0 || Sorted < 0 ? null : VFXSort.Plan(capacity, Scratch >= 0);
             }
+
+            /// <summary>A system's global sort (its task): the keys its kernel writes into the
+            /// system's `sortBufferA`, sorted through `sortBufferB` into the system's list of
+            /// particles to draw (`indirectBuffer0`), which the outputs that share the sort
+            /// draw; for each camera when the task says so.</summary>
+            internal static SortTask Global(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task, uint capacity) =>
+                new SortTask(VFXSpawnerSystem.Value(system.buffers, GlobalKeysName), VFXSpawnerSystem.Value(system.buffers, GlobalScratchName),
+                    VFXSpawnerSystem.Value(system.buffers, GlobalListName), VFXOutput.Parameter(task, "isPerCameraSort") != 0, capacity);
 
             internal void Run(VisualEffect effect) =>
                 VFXSort.Shared.Sort(Passes, m_Capacity, effect.GpuBuffer(List, 0), Scratch >= 0 ? effect.GpuBuffer(Scratch, 0) : null, effect.GpuBuffer(Sorted, 0));
@@ -540,6 +597,11 @@ namespace Unbound.Runtime
             {
                 kernel.SetCamera(camera);
                 kernel.Dispatch(m_UpdatedThreads, m_UpdatedPrefix);
+            }
+            if (m_GlobalSort != null && m_GlobalSort.PerCamera)
+            {
+                m_GlobalKeys.SetCamera(camera);
+                SortGlobally();
             }
             foreach (var sort in m_CameraSorts) sort.Run(Effect);
             foreach (var output in m_Outputs)
@@ -771,9 +833,10 @@ namespace Unbound.Runtime
                 m_SystemBuffer = buffer;
             }
 
-            /// <summary>Whether the kernel compiles here; said once when it does not (a system
-            /// whose kernel cannot run stops, rather than count particles nothing spawns).</summary>
-            internal bool Usable()
+            /// <summary>Whether the kernel compiles here; said once when it does not, with what
+            /// follows (<paramref name="consequence"/>: by default a system whose kernel cannot
+            /// run stops, rather than count particles nothing spawns).</summary>
+            internal bool Usable(string consequence = "the system does not simulate")
             {
                 if (m_Checked) return !m_Failed;
                 m_Checked = true;
@@ -785,7 +848,7 @@ namespace Unbound.Runtime
                 {
                     m_Failed = true;
                     var effect = m_System.Effect;
-                    Debug.LogError($"Unbound: VisualEffect '{effect.name}': the {m_Task.type} kernel of '{m_System.Desc.name}' does not compile ({e.Message}); the system does not simulate", effect);
+                    Debug.LogError($"Unbound: VisualEffect '{effect.name}': the {m_Task.type} kernel of '{m_System.Desc.name}' does not compile ({e.Message}); {consequence}", effect);
                 }
                 return !m_Failed;
             }
@@ -879,6 +942,7 @@ namespace Unbound.Runtime
             m_Initialize?.Release();
             foreach (var update in m_Updates) update.Release();
             foreach (var kernel in m_PerCamera) kernel.Release();
+            m_GlobalKeys?.Release();
             foreach (var output in m_Outputs) output.Release();
         }
     }

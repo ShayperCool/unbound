@@ -1012,8 +1012,8 @@ namespace UnityEngine.Tests
             Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleTriangleOutput }, material));
             Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleOctagonOutput }, material));
             // Through an indirect buffer: drawn from the list that counts its particles, or from
-            // the sorted copy a sort task of its system makes; not from a list no task makes, nor
-            // in a system that sorts one list for all its outputs.
+            // the sorted copy a sort task of its system makes, or from its system's list that the
+            // system's global sort orders; not from a list no task makes.
             VFXEditorTaskDesc Indirect(int list, int read) => new VFXEditorTaskDesc
             {
                 type = VFXTaskType.ParticleQuadOutput,
@@ -1035,8 +1035,31 @@ namespace UnityEngine.Tests
             // A list longer than one pass sorts, without a scratch list to merge through.
             sortingOne.capacity = VFXSort.MaxSortedAtOnce + 1;
             Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(sortingOne, Indirect(2, 3), material));
-            var sorting = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.GlobalSort } } };
-            Assert.Equal("its system sorts one list for all its outputs, which is not done yet", VFXOutput.Refusal(sorting, Indirect(2, 2), material));
+            // A global sort orders the system's list (indirectBuffer0) through its keys and
+            // scratch list (tests/projects/vfxoutputs `Global*`): an output of that list is
+            // drawn, of any length; so is one of another list. Without the sort's keys, or
+            // longer than one pass without its scratch list, the list cannot be sorted.
+            var sorting = new VFXEditorSystemDesc
+            {
+                name = "Particles", type = VFXSystemType.Particle, capacity = 32,
+                buffers = new[] { new VFXMapping("indirectBuffer0", 2), new VFXMapping("sortBufferA", 6), new VFXMapping("sortBufferB", 7) },
+                tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.GlobalSort } },
+            };
+            Assert.Null(VFXOutput.Refusal(sorting, Indirect(2, 2), material));
+            Assert.Null(VFXOutput.Refusal(sorting, Indirect(8, 8), material));
+            var sortingLong = sorting;
+            sortingLong.capacity = 3 * VFXSort.MaxSortedAtOnce;
+            Assert.Null(VFXOutput.Refusal(sortingLong, Indirect(2, 2), material));
+            sortingLong.buffers = new[] { new VFXMapping("indirectBuffer0", 2), new VFXMapping("sortBufferA", 6) };
+            Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(sortingLong, Indirect(2, 2), material));
+            var sortingKeyless = sorting;
+            sortingKeyless.buffers = new[] { new VFXMapping("indirectBuffer0", 2) };
+            Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(sortingKeyless, Indirect(2, 2), material));
+            // Strips of such a system are not measured.
+            var sortingStrips = sorting;
+            sortingStrips.flags = VFXSystemFlag.SystemHasStrips;
+            Assert.Equal("its system sorts one list for all its outputs, which is not measured for strips yet",
+                VFXOutput.Refusal(sortingStrips, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, parameters = new[] { new VFXMapping("indirectDraw", 1), new VFXMapping("strips", 1), new VFXMapping("indirectIndex", 2) }, buffers = new[] { new VFXMapping("indirectBuffer", 2) } }, material));
             // A mesh output's task names its mesh and the mask of its submeshes; it draws itself
             // or through an indirect buffer. An output of several meshes compiles to one such
             // task per mesh, all with the output's shader, each drawn; not when its system's

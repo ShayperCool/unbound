@@ -164,13 +164,13 @@ namespace Unbound.Runtime
                 // strip output does by default) are measured.
                 if (Parameter(task, IndirectDrawName) != 0)
                 {
+                    if (SortsForAll(system)) return "its system sorts one list for all its outputs, which is not measured for strips yet";
                     if (Parameter(task, StripsName) == 0) return "it draws a strip system's particles one by one through an indirect buffer, which is not measured yet";
                     if (!ReadsSortedList(task)) return "it draws strips through an indirect buffer that is not sorted, which is not measured yet";
                 }
             }
             if (Parameter(task, IndirectDrawName) != 0)
             {
-                if (SortsForAll(system)) return "its system sorts one list for all its outputs, which is not done yet";
                 if (!ListMade(system, task)) return "it draws a list of particles no task of its system makes or can sort";
             }
             // The graph compiler gives a Shader Graph output a material variant only when it
@@ -271,11 +271,17 @@ namespace Unbound.Runtime
             return false;
         }
 
-        /// <summary>Whether an output draws a sorted copy of its list: one a sort task of its
-        /// system writes (its indices are another buffer than the one that counts them).</summary>
+        /// <summary>Whether the list an output draws is made: its system's own list (ordered by
+        /// the system's global sort when it has one, which needs its keys and a sort planned for
+        /// the system's capacity), or a sorted copy one sort task of its system writes from the
+        /// list that counts it.</summary>
         static bool ListMade(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task)
         {
-            if (!ReadsSortedList(task)) return true;
+            // The system's own list, which its global sort orders when it has one.
+            if (!ReadsSortedList(task))
+                return !SortsForAll(system) || Buffer(task, "indirectBuffer") != VFXSpawnerSystem.Value(system.buffers, VFXParticleSystem.GlobalListName)
+                    || (VFXSpawnerSystem.Value(system.buffers, VFXParticleSystem.GlobalKeysName) >= 0
+                        && VFXSort.Plan(system.capacity, VFXSpawnerSystem.Value(system.buffers, VFXParticleSystem.GlobalScratchName) >= 0) != null);
             int read = Buffer(task, "indirectBuffer");
             foreach (var other in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
                 if (other.type == VFXTaskType.PerOutputSort && Buffer(other, "dstBuffer") == read)
