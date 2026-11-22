@@ -143,9 +143,25 @@ namespace Unbound.Runtime
         /// tests/projects/uniquecomponents); other releases keep the earlier rule (no such
         /// refusal, unmeasured).</summary>
         internal static bool NativeComponentIsUnique(Type type) => ComponentFactoryEligibilityMeasured
-            && type.FullName != null && s_UniqueNativeComponents.Contains(type.FullName);
+            && UniqueNativeComponents.Contains(type);
 
-        static readonly System.Collections.Generic.HashSet<string> s_UniqueNativeComponents = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal)
+        /// <summary>The table's engine types, resolved once.</summary>
+        static System.Collections.Generic.HashSet<Type> s_UniqueNativeComponentTypes;
+
+        static System.Collections.Generic.HashSet<Type> UniqueNativeComponents
+        {
+            get
+            {
+                if (s_UniqueNativeComponentTypes != null) return s_UniqueNativeComponentTypes;
+                var types = new System.Collections.Generic.HashSet<Type>();
+                var engine = typeof(UnityEngine.Object).Assembly;
+                foreach (var name in s_UniqueNativeComponentNames)
+                    if (engine.GetType(name) is Type type) types.Add(type);
+                return s_UniqueNativeComponentTypes = types;
+            }
+        }
+
+        static readonly string[] s_UniqueNativeComponentNames =
         {
             "UnityEngine.AI.NavMeshAgent", "UnityEngine.AI.NavMeshObstacle", "UnityEngine.Animation",
             "UnityEngine.Animations.AimConstraint", "UnityEngine.Animations.LookAtConstraint",

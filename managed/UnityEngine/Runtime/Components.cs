@@ -84,11 +84,9 @@ namespace Unbound.Runtime
             // A base class the object already has a component of (measured for Component,
             // Behaviour and Transform), or a second engine component of a kind an object holds
             // one of (tests/projects/uniquecomponents); other classes keep their earlier diagnostics.
-            if (measured && (type == typeof(Component) || type == typeof(Behaviour) || type == typeof(Transform)
-                    || Compat.NativeComponentIsUnique(type))
-                && go.FindComponent(type) != null)
+            if (Duplicate(go, type, out var already) == DuplicateKind.AlreadyAdded)
             {
-                Log.Engine(LogType.Log, $"Can't add component '{type.Name}' to {go.name} because such a component is already added to the game object!", go);
+                Log.Engine(LogType.Log, DuplicateMessage(go, type, DuplicateKind.AlreadyAdded, already), go);
                 return null;
             }
             if (type.IsAbstract || type.IsInterface || type.ContainsGenericParameters || Compat.NativeComponentIsAbstract(type))
@@ -114,12 +112,10 @@ namespace Unbound.Runtime
                 Debug.LogError("A GameObject can only contain one 'Transform' component.", go);
                 return null;
             }
-            if (Disallowed(go, type, out var existing))
+            var duplicate = Duplicate(go, type, out var existing);
+            if (duplicate != DuplicateKind.None)
             {
-                // A second 2D effector conflicts with the first (tests/projects/uniquecomponents).
-                string message = Compat.ComponentFactoryEligibilityMeasured && typeof(Effector2D).IsAssignableFrom(type)
-                    ? $"Can't add component '{type.Name}' to {go.name} because it conflicts with the existing '{existing.GetType().Name}' derived component!"
-                    : $"The component '{type.Name}' can't be added to '{go.name}' because it already contains the same component ({existing.GetType().Name}).";
+                string message = DuplicateMessage(go, type, duplicate, existing);
                 // Component rejection reaches Application callbacks independently of the public logger.
                 // Measured on 6000.0.71f1 by tests/projects/componentlogs.
                 if (Compat.ComponentFactoryEligibilityMeasured)
@@ -186,6 +182,39 @@ namespace Unbound.Runtime
             rect.MarkChanged();
             return rect;
         }
+
+        /// <summary>Why the object cannot take another component of the type: none; one of a kind
+        /// already there (Component, Behaviour and Transform bases, and the engine types an object
+        /// holds one of: measured family); a 2D effector; a DisallowMultipleComponent class; another
+        /// engine limit (ConstantForce, audio filters).</summary>
+        internal enum DuplicateKind { None, AlreadyAdded, Effector, DisallowMultiple, OtherLimit }
+
+        /// <summary>The one refusal rule GameObject.AddComponent and ObjectFactory share.</summary>
+        internal static DuplicateKind Duplicate(GameObject go, Type type, out Component existing)
+        {
+            existing = null;
+            if (Compat.ComponentFactoryEligibilityMeasured
+                && (type == typeof(Component) || type == typeof(Behaviour) || type == typeof(Transform) || Compat.NativeComponentIsUnique(type)))
+            {
+                existing = go.FindComponent(type);
+                if (existing != null) return DuplicateKind.AlreadyAdded;
+            }
+            if (!Disallowed(go, type, out existing)) return DuplicateKind.None;
+            if (typeof(Effector2D).IsAssignableFrom(type)) return DuplicateKind.Effector;
+            for (var t = type; t != null && t != typeof(MonoBehaviour) && t != typeof(Component); t = t.BaseType)
+                if (t.GetCustomAttribute<DisallowMultipleComponent>(inherit: false) != null) return DuplicateKind.DisallowMultiple;
+            return DuplicateKind.OtherLimit;
+        }
+
+        /// <summary>What GameObject.AddComponent logs for a refused duplicate.</summary>
+        internal static string DuplicateMessage(GameObject go, Type type, DuplicateKind kind, Component existing) => kind switch
+        {
+            DuplicateKind.AlreadyAdded => $"Can't add component '{type.Name}' to {go.name} because such a component is already added to the game object!",
+            // A second 2D effector conflicts with the first (tests/projects/uniquecomponents).
+            DuplicateKind.Effector when Compat.ComponentFactoryEligibilityMeasured =>
+                $"Can't add component '{type.Name}' to {go.name} because it conflicts with the existing '{existing.GetType().Name}' derived component!",
+            _ => $"The component '{type.Name}' can't be added to '{go.name}' because it already contains the same component ({existing.GetType().Name}).",
+        };
 
         static bool Disallowed(GameObject go, Type type, out Component existing)
         {
