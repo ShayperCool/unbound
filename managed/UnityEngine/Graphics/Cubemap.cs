@@ -35,21 +35,25 @@ namespace UnityEngine
 
         public Cubemap(int width, TextureFormat format, int mipCount, bool createUninitialized)
         {
+            Initialize(width, format, mipCount, linear: true);
+            RecordInitialAstcMemory(format, createUninitialized);
+        }
+
+        void Initialize(int width, TextureFormat format, int mipCount, bool linear)
+        {
             if (width <= 0) throw new ArgumentException("Cubemap width must be positive.", nameof(width));
             m_Width = m_Height = width;
             m_Format = format;
             m_MipCount = mipCount < 0 ? FullMipCount(width) : Math.Max(1, Math.Min(mipCount, FullMipCount(width)));
-            // A cubemap made from a TextureFormat holds linear data (Unity creates it so).
-            m_Linear = true;
+            m_Linear = linear;
             Allocate();
-            RecordInitialAstcMemory(format, createUninitialized);
         }
 
         public Cubemap(int width, GraphicsFormat format, TextureCreationFlags flags) : this(width, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
 
         public Cubemap(int width, GraphicsFormat format, TextureCreationFlags flags, int mipCount)
-            : this(width, GraphicsFormatUtility.StoredTextureFormat(format), mipCount, false) =>
-            m_Linear = !GraphicsFormatUtility.IsSRGBFormat(format);
+            => Initialize(width, GraphicsFormatUtility.StoredTextureFormat(format), mipCount,
+                !GraphicsFormatUtility.IsSRGBFormat(format));
 
         public Cubemap(int width, DefaultFormat format, TextureCreationFlags flags) : this(width, SystemInfo.GetGraphicsFormat(format), flags) { }
         public Cubemap(int width, DefaultFormat format, TextureCreationFlags flags, int mipCount) : this(width, SystemInfo.GetGraphicsFormat(format), flags, mipCount) { }
@@ -475,7 +479,7 @@ namespace UnityEngine
                 if (updateMipmaps) Debug.LogError("Rebuilding mipmaps of compressed textures is not supported");
                 if (m_SourceRaw != null) UploadBlocks(blocks);
             }
-            RecordUploadedAstcMemory(format);
+            if (m_AstcMemoryPendingUpload) RecordUploadedAstcMemory(format);
             if (makeNoLongerReadable)
             {
                 ReleaseStore();

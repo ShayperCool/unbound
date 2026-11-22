@@ -683,6 +683,12 @@ namespace UnityEngine
 
         public Texture2DArray(int width, int height, int depth, TextureFormat textureFormat, int mipCount, bool linear, bool createUninitialized)
         {
+            Initialize(width, height, depth, textureFormat, mipCount, linear);
+            RecordInitialAstcMemory(textureFormat, createUninitialized);
+        }
+
+        void Initialize(int width, int height, int depth, TextureFormat textureFormat, int mipCount, bool linear)
+        {
             if (width <= 0 || height <= 0 || depth <= 0)
                 throw new UnityException($"Failed to create 2D array texture because of invalid parameters. Width {width}, height {height}, depth {depth}.");
             m_Width = width;
@@ -693,13 +699,13 @@ namespace UnityEngine
             int full = LayeredPixels.FullMipCount(width, height, 1);
             m_MipCount = mipCount < 0 ? full : Math.Max(1, Math.Min(mipCount, full));
             m_Pixels = new LayeredPixels(width, height, depth, m_MipCount, false, PixelStorage(textureFormat, width, height));
-            RecordInitialAstcMemory(textureFormat, createUninitialized);
         }
 
         public Texture2DArray(int width, int height, int depth, GraphicsFormat format, TextureCreationFlags flags) : this(width, height, depth, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
 
         public Texture2DArray(int width, int height, int depth, GraphicsFormat format, TextureCreationFlags flags, int mipCount)
-            : this(width, height, depth, GraphicsFormatUtility.StoredTextureFormat(format), mipCount, !GraphicsFormatUtility.IsSRGBFormat(format)) { }
+            => Initialize(width, height, depth, GraphicsFormatUtility.StoredTextureFormat(format), mipCount,
+                !GraphicsFormatUtility.IsSRGBFormat(format));
 
         public Texture2DArray(int width, int height, int depth, DefaultFormat format, TextureCreationFlags flags) : this(width, height, depth, SystemInfo.GetGraphicsFormat(format), flags) { }
         public Texture2DArray(int width, int height, int depth, DefaultFormat format, TextureCreationFlags flags, int mipCount) : this(width, height, depth, SystemInfo.GetGraphicsFormat(format), flags, mipCount) { }
@@ -801,7 +807,7 @@ namespace UnityEngine
             if (updateMipmaps) pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel);
-            RecordUploadedAstcMemory(m_Format);
+            if (m_AstcMemoryPendingUpload) RecordUploadedAstcMemory(m_Format);
             if (mipMapBias != 0f) EmitSamplerMetadata();
             IncrementUpdateCount();
             if (makeNoLongerReadable)

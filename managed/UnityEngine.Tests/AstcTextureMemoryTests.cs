@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using Unbound.Runtime;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Profiling;
 using Xunit;
 
@@ -89,6 +90,66 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(second);
                 Object.DestroyImmediate(color);
             }
+        }
+
+        [Fact]
+        public void UnsupportedExplicitGraphicsFormatsLeaveTheLegacyFallbackCold()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var graphics = GraphicsFormatUtility.GetGraphicsFormat(TextureFormat.ASTC_4x4, false);
+            Assert.False(SystemInfo.IsFormatSupported(graphics, GraphicsFormatUsage.Sample));
+            var cube = new Cubemap(8, graphics, TextureCreationFlags.None);
+            var array = new Texture2DArray(8, 8, 2, graphics, TextureCreationFlags.None);
+            Texture2D first = null;
+            try
+            {
+                if (cube != null) cube.Apply(false, false);
+                if (array != null) array.Apply(false, false);
+                first = new Texture2D(8, 8, TextureFormat.ASTC_4x4, false, true);
+                Assert.Equal(4456, Profiler.GetRuntimeMemorySizeLong(first));
+            }
+            finally
+            {
+                Object.DestroyImmediate(cube);
+                Object.DestroyImmediate(array);
+                Object.DestroyImmediate(first);
+            }
+        }
+
+        [Fact]
+        public void ImportedCubemapWithoutAnUploadLeavesTheFallbackCold()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var cube = new Cubemap(8, TextureFormat.RGBA32, false);
+            // An imported wrapper can know its block format before its source bytes are available.
+            cube.IsPersistentAsset = true;
+            cube.m_SourceFormat = TextureFormat.ASTC_4x4;
+            Texture2D first = null;
+            try
+            {
+                cube.Apply(false, false);
+                first = new Texture2D(8, 8, TextureFormat.ASTC_4x4, false, true);
+                Assert.Equal(4456, Profiler.GetRuntimeMemorySizeLong(first));
+            }
+            finally
+            {
+                Object.DestroyImmediate(cube, true);
+                Object.DestroyImmediate(first);
+            }
+        }
+
+        [Fact]
+        public void HdrFallbackUsesHalfFloatBytesInPerObjectAccounting()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            long previous = Profiler.GetAllocatedMemoryForGraphicsDriver();
+            var texture = new Texture2D(8, 8, TextureFormat.ASTC_HDR_4x4, false, true);
+            try
+            {
+                Assert.Equal(4712, Profiler.GetRuntimeMemorySizeLong(texture));
+                Assert.Equal(previous + 256, Profiler.GetAllocatedMemoryForGraphicsDriver());
+            }
+            finally { Object.DestroyImmediate(texture); }
         }
 
         [Fact]

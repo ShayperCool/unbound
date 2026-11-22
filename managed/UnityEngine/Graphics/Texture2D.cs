@@ -14,6 +14,8 @@ namespace UnityEngine
     {
         internal TextureFormat m_Format = TextureFormat.RGBA32;
         internal bool m_ResizeMemoryPendingApply;
+        /// <summary>The texture started in a public runtime constructor, including empty images.</summary>
+        internal bool m_ScriptTextureStorage;
         internal int m_MipCount = 1;
         /// <summary>Mip levels of the renderer's copy, kept for sampler-only updates.</summary>
         int m_GpuMipCount = 1;
@@ -50,6 +52,7 @@ namespace UnityEngine
             ignoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
             if (width == 0 && height == 0)
             {
+                m_ScriptTextureStorage = true;
                 InitEmpty(TextureFormat.RGBA32, false);
             }
             else Init(width, height, TextureFormat.RGBA32, -1, false);
@@ -142,6 +145,7 @@ namespace UnityEngine
             m_Format = format;
             int fullMips = LayeredPixels.FullMipCount(width, height, 1);
             if (mipCount > fullMips) throw new UnityException("Failed to create texture because its mip count exceeds its dimensions.");
+            if (constructor) m_ScriptTextureStorage = true;
             m_MipCount = mipCount <= 0 ? fullMips : mipCount;
             m_Linear = linear;
             m_IsReadable = true;
@@ -412,7 +416,8 @@ namespace UnityEngine
             var rawCopy = makeNoLongerReadable && !SourceBlocks ? m_Store ?? EncodeMipChain() : null;
             m_PixelsDirty = true;
             Upload();
-            RecordUploadedAstcMemory(format);
+            if (m_AstcMemoryPendingUpload || (m_ScriptTextureStorage && !IsPersistentAsset && m_ResizeMemoryPendingApply))
+                RecordUploadedAstcMemory(format);
             m_ResizeMemoryPendingApply = false;
             // An asset's pixels applied are an Editor change, saved by SaveAssets, whether it was made
             // this session or read from its file; SetPixel alone does not mark it (matches the Unity
@@ -936,6 +941,7 @@ namespace UnityEngine
                 texture = new Texture2D { m_Name = name, hideFlags = HideFlags.NotEditable, IsPersistentAsset = true, m_AssetGuid = guid, m_ImportedFrom = guid };
             texture.m_NativeHandle = handle;
             texture.ApplyImport(info);
+            if (!BlockFormats.IsAstcHdr(texture.format)) texture.RecordUploadedAstcMemory(texture.format);
             texture.m_ImportUpdateCount = texture.updateCount;
             return texture;
         }
@@ -972,7 +978,6 @@ namespace UnityEngine
             wrapModeV = (TextureWrapMode)info.WrapV;
             anisoLevel = info.AnisoLevel;
             ReadSamplerMetadata();
-            RecordUploadedAstcMemory(format);
         }
 
         /// <summary>

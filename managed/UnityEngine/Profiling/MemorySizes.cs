@@ -98,7 +98,11 @@ namespace Unbound.Runtime
                 int header = texture.m_ResizeMemoryPendingApply ? overhead.CpuOnly : overhead.WithGpu;
                 return header + Chain(texture.width, texture.height, 1, false, texture.mipmapCount, texture.format, gpu: false, faces: 1);
             }
-            return overhead.WithGpu + Both(texture.width, texture.height, 1, false, texture.mipmapCount, texture.format, 1);
+            long decompressedBytesPerPixel =
+                texture.m_ScriptTextureStorage && BlockFormats.IsAstcHdr(texture.format) && MeasuresAstcFallback(texture, texture.format)
+                    ? 8 : 4;
+            return overhead.WithGpu + Both(texture.width, texture.height, 1, false, texture.mipmapCount, texture.format, 1,
+                decompressedBytesPerPixel: decompressedBytesPerPixel);
         }
 
         static long TextAssetSize(TextAsset text)
@@ -107,24 +111,24 @@ namespace Unbound.Runtime
             return TextAssetHeader + (bytes > TextAssetInlineBytes ? bytes + 1 : 0);
         }
 
-        static long Both(int w, int h, int d, bool volume, int mips, TextureFormat format, int faces, bool hasGpu = true) =>
+        static long Both(int w, int h, int d, bool volume, int mips, TextureFormat format, int faces, bool hasGpu = true,
+            long decompressedBytesPerPixel = 4) =>
             Chain(w, h, d, volume, mips, format, gpu: false, faces)
-            + (hasGpu ? Chain(w, h, d, volume, mips, format, gpu: true, faces) : 0);
+            + (hasGpu ? Chain(w, h, d, volume, mips, format, gpu: true, faces, decompressedBytesPerPixel) : 0);
 
         /// <summary>A texture's mip chain in <paramref name="format"/>; the GPU copy of a format the
-        /// device does not sample usually uses RGBA8; measured HDR ASTC uses RGBAHalf.</summary>
-        static long Chain(int w, int h, int d, bool volume, int mips, TextureFormat format, bool gpu, int faces)
+        /// device does not sample uses the caller's decompressed texel size.</summary>
+        static long Chain(int w, int h, int d, bool volume, int mips, TextureFormat format, bool gpu, int faces,
+            long decompressedBytesPerPixel = 4)
         {
             var graphics = GraphicsFormatUtility.GetGraphicsFormat(format, false);
             if (graphics == GraphicsFormat.None) return 0;
             bool decompressed = gpu && !SystemInfo.IsFormatSupported(graphics, GraphicsFormatUsage.Sample);
-            long fallbackBytes = decompressed && BlockFormats.IsAstcHdr(format) && Compat.AstcFallbackMemoryMeasured
-                && GraphicsDeviceProfile.Current.AstcFallbackMemoryOverhead != null ? 8 : 4;
             long size = 0;
             for (int i = 0; i < Math.Max(1, mips); i++)
             {
                 int mw = Math.Max(1, w >> i), mh = Math.Max(1, h >> i), md = volume ? Math.Max(1, d >> i) : d;
-                size += decompressed ? fallbackBytes * mw * mh * md : Surface(mw, mh, graphics) * md;
+                size += decompressed ? decompressedBytesPerPixel * mw * mh * md : Surface(mw, mh, graphics) * md;
             }
             return size * faces;
         }
