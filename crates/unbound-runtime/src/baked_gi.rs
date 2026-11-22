@@ -504,7 +504,8 @@ fn image_size(
 }
 
 /// How far below a whole number of texels a rectangle's side may be computed and still count
-/// as that many.
+/// as that many (a side of 12 texels comes out of its scale and the lightmap's size as
+/// 11.99999: tests/projects/bakedbuffers `Textured`, the cube).
 const IMAGE_SIDE_SLACK: f32 = 1e-3;
 
 /// The bake: each lightmap's size, each renderer's lightmap and scale and offset in the order

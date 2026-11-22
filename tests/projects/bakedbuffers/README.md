@@ -135,8 +135,9 @@ and every texel of every instance's material images within 1e-6, with the images
 `residuals.json` names the known differences, each with the exact text the comparison gives it
 (another text, or none, fails the run):
 
-- `Lamps` indirect light: several point and spot lights reach a surface; the Editor takes at
-  most four of them there (fewer at later bounces), picked by their power, Unbound all of them.
+- `Lamps` indirect light: several point and spot lights reach a surface; the Editor seems to
+  take at most four of them there (fewer at later bounces), picked by their power, Unbound all
+  of them. Whether both give the same light on average is not measured.
 - One texel of `Roof`'s indirect light and one of `Glow`'s validity: a single ray that meets a
   triangle exactly on its edge falls on the other side of it than in the Editor.
 

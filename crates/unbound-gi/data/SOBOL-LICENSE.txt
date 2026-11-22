@@ -29,6 +29,3 @@ two-dimensional projections", SIAM J. Sci. Comput. 30, 2635-2654 (2008).
 
 The tabulated direction numbers are available here:
 http://web.maths.unsw.edu.au/~fkuo/sobol/new-joe-kuo-6.21201
-
-namespace UnityEngine.Rendering.Sampling
-{

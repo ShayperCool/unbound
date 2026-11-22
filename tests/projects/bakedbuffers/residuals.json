@@ -1,5 +1,5 @@
 {
-  "Several point and spot lights: at a surface a path meets, the Editor takes at most 4 of the lights that reach its part of the scene (fewer at later bounces), picked by their power, where more reach it; Unbound takes them all. Both are the same light on average; the texels' noise differs. Follow-up: the Editor's light grid and its pick.": {
+  "Several point and spot lights: at a surface a path meets, the Editor seems to take at most 4 of the lights that reach its part of the scene (fewer at later bounces), picked by their power, where more reach it; Unbound takes them all. Whether the two give the same light on average is not measured (the texels differ as noise would; the channels' means here are within 7%). Follow-up: how the Editor picks, measured on a converged bake.": {
     "Lamps.lightmap0.indirect": "0 texels differ in being used, 629 values in their light (worst 5.64, tolerance 0.001)"
   },
   "One ray of one texel meets a triangle exactly on its edge and falls on the other side of it than in the Editor (Unbound tests a ray against a triangle in double precision; replaying the Editor's own bake input gives the same single difference). Not chased: no rule of the bake differs.": {
