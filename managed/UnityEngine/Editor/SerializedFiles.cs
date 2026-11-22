@@ -235,13 +235,11 @@ namespace Unbound.Runtime
         /// <summary>Whether <see cref="Write(Object[], Dictionary{Object, long})"/> writes the
         /// object whole into a new file (not a material variant: unmeasured).</summary>
         internal static bool WritesNew(Object o) => SerializedTree.IsScript(o) || o is Material { isVariant: false } || o is PhysicsMaterial
-            || o is Texture2D { isReadable: true } && !TextureCrunched((Texture2D)o)
+            || o is Texture2D { isReadable: true } && !UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsCompressedFormat(((Texture2D)o).format)
             || o is Mesh { isReadable: true } && ((Mesh)o).m_MeshCompression == UnityEditor.ModelImporterMeshCompression.Off;
 
-        /// <summary>A crunched texture's data is an archive, which is not measured (nor are compressed
-        /// or unreadable meshes and unreadable textures).</summary>
-        static bool TextureCrunched(Texture2D t) => t.format is TextureFormat.DXT1Crunched or TextureFormat.DXT5Crunched
-            or TextureFormat.ETC_RGB4Crunched or TextureFormat.ETC2_RGBA8Crunched;
+        // Not written (unmeasured): compressed or unreadable meshes, unreadable and block-compressed
+        // or crunched textures.
 
         /// <summary>Writes one document's fields. References to objects of the same file are by
         /// <c>ids</c>; to assets in <c>assets</c> (an import's own meshes and materials) by their GUID

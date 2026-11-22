@@ -140,24 +140,23 @@ namespace UnityEngine.Tests
             Assert.Equal(Reference("engine-assets/snapshots/alpha.file"), Write(alpha, 2800000));
         }
 
-        /// <summary>A mesh asset file saved again is written from the mesh, keeping the fields
-        /// Unbound does not model as the file has them (its cooking options, mesh metrics).</summary>
+        /// <summary>A mesh or texture read from its file is kept as read when its file is saved:
+        /// Unbound does not read back everything such a file holds (a layout's formats, sampler
+        /// fields), so it writes only those made this session.</summary>
         [Fact]
-        public void ASavedMeshFileKeepsTheFieldsUnboundDoesNotModel()
+        public void MeshAndTextureDocumentsReadFromFilesAreKeptAsRead()
         {
-            var text = Reference("create-assets/files/Assets/Created/Tri.asset")
-                .Replace("m_CookingOptions: 30", "m_CookingOptions: 14").Replace("'m_MeshMetrics[0]': 1", "'m_MeshMetrics[0]': 2.5");
+            var text = Reference("create-assets/files/Assets/Created/Tri.asset");
             var doc = UnityYamlText.Parse(text)[0];
             var mesh = Own(new Mesh { name = "Tri" });
             mesh.vertices = new[] { Vector3.zero, Vector3.right * 2f, Vector3.up };
             mesh.triangles = new[] { 0, 1, 2 };
             int unlocated = 0;
-            Assert.True(NativeDocuments.Write(doc, mesh, new Dictionary<Object, long>(ReferenceEqualityComparer.Instance) { [mesh] = 4300000 },
-                new AssetDatabaseRuntime.Locations(), ref unlocated));
-            var written = UnityYamlText.Write(new List<YTextDocument> { doc });
-            Assert.Contains("  m_CookingOptions: 14\n", written);
-            Assert.Contains("  'm_MeshMetrics[0]': 2.5\n", written);
-            Assert.Contains("      m_Extent: {x: 1, y: 0.5, z: 0}\n", written);
+            var ids = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance) { [mesh] = 4300000 };
+            Assert.False(NativeDocuments.Write(doc, mesh, ids, new AssetDatabaseRuntime.Locations(), ref unlocated));
+            Assert.Equal(text, UnityYamlText.Write(new List<YTextDocument> { doc }));
+            var texture = Own(new Texture2D(2, 2));
+            Assert.False(NativeDocuments.Write(UnityYamlText.Parse(Reference("engine-assets/snapshots/alpha.file"))[0], texture, ids, new AssetDatabaseRuntime.Locations(), ref unlocated));
         }
 
         /// <summary>RecalculateBounds as documented for 6000.0 (the mesh and its sub-meshes, from
@@ -169,7 +168,8 @@ namespace UnityEngine.Tests
             mesh.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
             mesh.triangles = new[] { 0, 1, 2 };
             mesh.vertices = new[] { Vector3.zero, Vector3.right * 4f, Vector3.up * 4f };
-            // The vertices changed: the sub-mesh's bounds are stale until recalculated.
+            // The vertices changed: the sub-mesh's bounds are stale until recalculated (engine-assets
+            // BoundsStale, BoundsRecalculated).
             Assert.Equal(new Vector3(0.5f, 0.5f, 0f), mesh.GetSubMesh(0).bounds.extents);
             mesh.RecalculateBounds();
             Assert.Equal(new Vector3(2f, 2f, 0f), mesh.GetSubMesh(0).bounds.extents);
@@ -185,6 +185,7 @@ namespace UnityEngine.Tests
             half.SetIndexBufferParams(3, UnityEngine.Rendering.IndexFormat.UInt16);
             half.SetIndexBufferData(new ushort[] { 0, 1, 2 }, 0, 0, 3);
             half.SetSubMesh(0, new UnityEngine.Rendering.SubMeshDescriptor(0, 3));
+            half.bounds = new Bounds(Vector3.one, Vector3.one);
             half.RecalculateBounds();
             Assert.Equal(default, half.bounds);
             Assert.Equal(default, half.GetSubMesh(0).bounds);
@@ -200,26 +201,24 @@ namespace UnityEngine.Tests
             Assert.True(Own(new Texture2D(2, 2, UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm, UnityEngine.Experimental.Rendering.TextureCreationFlags.None)).ignoreMipmapLimit);
         }
 
-        /// <summary>An asset's edits through the API dirty it (engine-assets richEdit, alphaEdit);
-        /// a mesh read from its file is not dirtied by the reading, a mesh that is no asset never.</summary>
+        /// <summary>Only the edits of mesh and texture assets made this session dirty them (the
+        /// probe's richEdit and alphaEdit rows hold the positive case); a mesh or texture asset read
+        /// from its file, and one that is no asset, are not dirtied by edits or by reading.</summary>
         [Fact]
-        public void EditsOfMeshAndTextureAssetsDirtyThem()
+        public void EditsOfMeshAndTextureAssetsReadFromFilesDoNotDirtyThem()
         {
             var mesh = Own(new Mesh());
             mesh.vertices = new[] { Vector3.zero };
             Assert.False(EditorUtility.IsDirty(mesh));
             mesh.IsPersistentAsset = true;
             mesh.ReadSerialized(UnityYamlText.Parse(Reference("create-assets/files/Assets/Created/Tri.asset"))[0].Body.ToNode(), null);
-            Assert.False(EditorUtility.IsDirty(mesh));
             mesh.vertices = new[] { Vector3.zero, Vector3.one, Vector3.up };
-            Assert.True(EditorUtility.IsDirty(mesh));
-            EditorUtility.ClearDirty(mesh);
+            Assert.False(EditorUtility.IsDirty(mesh));
             var texture = Own(new Texture2D(2, 2));
             texture.IsPersistentAsset = true;
             texture.SetPixel(0, 0, Color.black);
             texture.Apply();
-            Assert.True(EditorUtility.IsDirty(texture));
-            EditorUtility.ClearDirty(texture);
+            Assert.False(EditorUtility.IsDirty(texture));
         }
 
         [Fact]
@@ -230,6 +229,7 @@ namespace UnityEngine.Tests
             unreadable.Apply(false, true);
             Assert.False(UnityYamlWriter.WritesNew(unreadable));
             Assert.False(UnityYamlWriter.WritesNew(Own(new Texture2D(4, 4, TextureFormat.DXT1Crunched, false))));
+            Assert.False(UnityYamlWriter.WritesNew(Own(new Texture2D(4, 4, TextureFormat.DXT1, false))));
             Assert.True(UnityYamlWriter.WritesNew(Own(new Texture2D(2, 2))));
             Assert.True(UnityYamlWriter.WritesNew(Own(new Mesh())));
             Assert.True(UnityYamlWriter.WritesNew(Own(ScriptableObject.CreateInstance<NewAssetTestData>())));

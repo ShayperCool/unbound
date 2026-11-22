@@ -193,9 +193,11 @@ namespace UnityEngine
             m_Dirty = true; m_GraphicsBuffersDirty = true;
             m_GraphicsVerticesDirty |= vertices; m_GraphicsDirtyIndices |= indices;
             if (!m_LoadingModel) ObjectDispatch.Changed(this);
-            // An asset's edit is an Editor change, saved by SaveAssets (matches the Unity 6000.0.71f1
-            // Editor, tests/projects/scenesave engine-assets richEdit: vertices set by script).
-            if (IsPersistentAsset && !m_Reading) UnityEditor.EditorUtility.SetDirty(this);
+            // An edit of an asset made this session is an Editor change, saved by SaveAssets (matches
+            // the Unity 6000.0.71f1 Editor, tests/projects/scenesave engine-assets richEdit: vertices
+            // set by script). A mesh read from its file is not written back (its file keeps what
+            // Unbound does not read), so its edits are not marked.
+            if (IsPersistentAsset && !m_Reading && UnityEditor.AssetDatabase.CreatedThisSession(this)) UnityEditor.EditorUtility.SetDirty(this);
         }
 
         public bool isReadable => m_IsReadable;
@@ -982,11 +984,20 @@ namespace UnityEngine
         {
             if (!CanCall(nameof(RecalculateBounds))) return;
             EnsureModelLoaded();
+            // Positions in another format than Float32 give no bounds: the mesh's and its
+            // sub-meshes' are none, bounds assigned before included (engine-assets
+            // BoundsHalfAssigned); the sub-meshes keep their vertex ranges.
+            if (!BoundsFromPositions)
+            {
+                m_Bounds = default;
+                foreach (var s in m_SubMeshes) s.Measure(m_Vertices, false);
+                return;
+            }
             UpdateBounds();
-            if (!BoundsFromPositions || m_Vertices.Length == 0) return;
-            // The sub-meshes' bounds too (documented), and the mesh's take each blend shape frame
-            // at its full weight (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
-            // engine-assets Shaped, Rich).
+            if (m_Vertices.Length == 0) return;
+            // The sub-meshes' bounds too (documented; engine-assets BoundsRecalculated, where they
+            // were stale before), and the mesh's take each blend shape frame at its full weight
+            // (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave engine-assets Shaped).
             foreach (var s in m_SubMeshes) s.Measure(m_Vertices);
             if (m_BlendShapes.Count == 0) return;
             var min = m_Bounds.min;
@@ -1005,8 +1016,8 @@ namespace UnityEngine
         /// <summary>Whether bounds are computed from the positions: only from Float32 ones (Mesh.
         /// RecalculateBounds, 6000.0: "Unity can only recalculate the bounding volume for Meshes that
         /// use the default VertexAttributeFormat.Float32 vertex position format"; tests/projects/
-        /// scenesave engine-assets Custom: half positions leave the mesh's and the sub-mesh's bounds
-        /// zero, the sub-mesh's vertex range is still measured).</summary>
+        /// scenesave engine-assets Custom, BoundsHalfAssigned: half positions leave the mesh's and the
+        /// sub-mesh's bounds zero, the sub-mesh's vertex range is still measured).</summary>
         internal bool BoundsFromPositions
         {
             get
@@ -1023,7 +1034,6 @@ namespace UnityEngine
         /// frame), without RecalculateBounds' check, sub-meshes and blend shapes.</summary>
         internal void UpdateBounds()
         {
-            if (!BoundsFromPositions) return;
             if (m_Vertices.Length == 0)
             {
                 m_Bounds = default;

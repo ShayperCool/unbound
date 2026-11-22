@@ -177,7 +177,8 @@ namespace Unbound.Runtime
             string ReferenceFreeFlow(Vector3 v) =>
                 "{x: " + F(v.x) + ", y: " + F(v.y) + ", z: " + F(v.z) + "}";
 
-            /// <summary>Each bone's bounds: the vertices with a weight of it, in its bind pose's space.</summary>
+            /// <summary>Each bone's bounds: the vertices with a weight of it, in its bind pose's space
+            /// (engine-assets Skinned, Boneless).</summary>
             void BonesBounds(Mesh mesh, Matrix4x4[] poses)
             {
                 if (poses.Length == 0)
@@ -187,16 +188,21 @@ namespace Unbound.Runtime
                 }
                 var weights = mesh.boneWeights;
                 var vertices = mesh.vertices;
+                // A bone no vertex weighs keeps the empty box: min infinite, max minus infinite
+                // (engine-assets Boneless).
                 var lo = new Vector3[poses.Length];
                 var hi = new Vector3[poses.Length];
-                var any = new bool[poses.Length];
+                for (int b = 0; b < poses.Length; b++)
+                {
+                    lo[b] = UnityEngine.Vector3.positiveInfinity;
+                    hi[b] = UnityEngine.Vector3.negativeInfinity;
+                }
                 void Add(int bone, float weight, int v)
                 {
                     if (weight <= 0f || bone < 0 || bone >= poses.Length) return;
                     var p = poses[bone].MultiplyPoint3x4(vertices[v]);
-                    lo[bone] = any[bone] ? UnityEngine.Vector3.Min(lo[bone], p) : p;
-                    hi[bone] = any[bone] ? UnityEngine.Vector3.Max(hi[bone], p) : p;
-                    any[bone] = true;
+                    lo[bone] = UnityEngine.Vector3.Min(lo[bone], p);
+                    hi[bone] = UnityEngine.Vector3.Max(hi[bone], p);
                 }
                 for (int v = 0; v < weights.Length && v < vertices.Length; v++)
                 {

@@ -100,6 +100,15 @@ namespace UnityEditor
             created.Unsaved = true;
         }
 
+        /// <summary>Whether the object is part of an asset CreateAsset made in this session (one Unbound
+        /// writes whole from its objects).</summary>
+        internal static bool CreatedThisSession(Object o)
+        {
+            foreach (var created in s_Created.Values)
+                if (created.Objects.ContainsKey(o)) return true;
+            return false;
+        }
+
         /// <summary>The assets CreateAsset made in this session, by GUID.</summary>
         static readonly Dictionary<string, CreatedAsset> s_Created = new Dictionary<string, CreatedAsset>(StringComparer.OrdinalIgnoreCase);
 
