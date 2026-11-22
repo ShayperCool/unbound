@@ -202,6 +202,7 @@ namespace UnityEditor.SpeedTree.Importer
                         for (int k = 0; k < indices.Length; k++) indices[k] = (int)lod.Indices[draw.IndexStart + k];
                         mesh.SetIndices(indices, MeshTopology.Triangles, d, calculateBounds: true);
                     }
+                    mesh.UpdateBounds();
                     mesh.RecalculateUVDistributionMetrics();
                     var go = new GameObject("LOD" + i);
                     go.transform.parent = main.transform;

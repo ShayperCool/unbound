@@ -56,9 +56,13 @@ namespace UnityEngine
             internal int FirstVertex, VertexCount;
 
             /// <summary>The submesh's vertex range and bounds; <paramref name="bounds"/> false: the
-            /// bounds are none (positions in a format bounds are not computed from).</summary>
-            internal void Measure(Vector3[] vertices, bool bounds = true)
+            /// bounds are none (positions in a format bounds are not computed from);
+            /// <paramref name="keepBounds"/>: the bounds stay as they were, only the range is measured
+            /// (SetTriangles and SetIndices without calculateBounds: tests/projects/scenesave
+            /// mesh-bounds setTrianglesNoBounds, setIndicesNoBounds).</summary>
+            internal void Measure(Vector3[] vertices, bool bounds = true, bool keepBounds = false)
             {
+                var kept = Bounds;
                 if (Indices.Length == 0)
                 {
                     Bounds = default;
@@ -82,7 +86,7 @@ namespace UnityEngine
                     FirstVertex = VertexCount = 0;
                     return;
                 }
-                Bounds = bounds ? BoundsOf(lo, hi) : default;
+                Bounds = keepBounds ? kept : bounds ? BoundsOf(lo, hi) : default;
                 FirstVertex = min;
                 VertexCount = max - min + 1;
             }
@@ -329,7 +333,7 @@ namespace UnityEngine
                     Debug.LogError("Mesh.vertices is too small. The supplied vertex array has less vertices than are referenced by the triangles array.");
                     return;
                 }
-                AdoptVertices(value != null ? (Vector3[])value.Clone() : Array.Empty<Vector3>());
+                AdoptVertices(value != null ? (Vector3[])value.Clone() : Array.Empty<Vector3>(), scriptSet: true);
             }
         }
 
@@ -346,9 +350,16 @@ namespace UnityEngine
 
         /// <summary>Mesh.vertices with an array the mesh keeps as it is (not a copy): the caller
         /// no longer changes it, or sets it again after every change.</summary>
-        internal void AdoptVertices(Vector3[] value)
+        /// <param name="scriptSet">Set through Mesh.vertices or SetVertices: the mesh's bounds are made
+        /// again only when the vertex count changes, else they stay as they were (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/scenesave mesh-bounds verticesOnly, verticesSameCount,
+        /// verticesMoreCount, boundsAssignedVertices; a smaller count is unmeasured and handled the same),
+        /// the sub-meshes' with them; the engine's own
+        /// writes always make the mesh's again.</param>
+        internal void AdoptVertices(Vector3[] value, bool scriptSet = false)
         {
             EnsureModelLoaded();
+            bool resized = m_Vertices.Length != value.Length;
             m_Vertices = value;
             m_HasPositionChannel = true;
             m_PositionsVersion++;
@@ -366,7 +377,10 @@ namespace UnityEngine
             ResizeVertexChannel(ref m_BoneWeights, count);
             for (int channel = 0; channel < m_UVs.Length; channel++)
                 ResizeVertexChannel(ref m_UVs[channel], count);
-            UpdateBounds();
+            if (!scriptSet || resized) UpdateBounds();
+            // A script's new vertex count measures the sub-meshes again too (mesh-bounds verticesMoreCount).
+            if (scriptSet && resized)
+                foreach (var s in m_SubMeshes) s.Measure(m_Vertices, BoundsFromPositions);
             InvalidatePackedChannel(VertexAttribute.Position);
             ResizePackedChannels(count);
             Changed(indices: false);
@@ -871,11 +885,13 @@ namespace UnityEngine
             s.Indices = (int[])indices.Clone();
             s.Topology = topology;
             s.BaseVertex = baseVertex;
-            s.Measure(m_Vertices, BoundsFromPositions);
+            // The sub-mesh's bounds are measured with calculateBounds, its range always; the mesh's
+            // bounds stay as they are (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
+            // mesh-bounds setTriangles*, setIndices*, boundsAssignedTriangles).
+            s.Measure(m_Vertices, BoundsFromPositions, keepBounds: !calculateBounds);
             // The index buffer is the submeshes' indices again.
             m_IndexBuffer = null;
             foreach (var other in m_SubMeshes) other.IndexStart = -1;
-            if (calculateBounds) UpdateBounds();
             Changed(false);
         }
 
@@ -970,11 +986,14 @@ namespace UnityEngine
                 s.Indices = Array.Empty<int>();
                 s.DeferredIndexCount = 0;
                 s.IndexStart = -1;
+                // A sub-mesh without indices has no bounds or vertex range (tests/projects/scenesave
+                // mesh-bounds clear, clearKeepLayout).
+                s.Measure(m_Vertices);
             }
             m_IndexBuffer = null;
             if (!keepVertexLayout) m_Layout = null;
-            // The bounds stay (matches the Unity 6000.0.71f1 Editor, tests/projects/meshreadable
-            // `write.*.Clear`, readable or not; Clear(false) unmeasured, the same).
+            // The mesh's bounds stay (matches the Unity 6000.0.71f1 Editor, tests/projects/meshreadable
+            // `write.*.Clear`, readable or not; tests/projects/scenesave mesh-bounds clear, Clear(false)).
             Changed();
         }
 

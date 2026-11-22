@@ -575,7 +575,8 @@ namespace Unbound.Runtime
             s_Mesh.uv = s_Uvs.ToArray();
             s_Mesh.subMeshCount = s_Batches.Count;
             for (int i = 0; i < s_Batches.Count; i++)
-                s_Mesh.SetTriangles(s_Batches[i].Indices, i, false);
+                s_Mesh.SetTriangles(s_Batches[i].Indices, i, true);
+            s_Mesh.UpdateBounds();
             ulong mesh = s_Mesh.Sync();
             CollectItems(mesh, height, into);
         }

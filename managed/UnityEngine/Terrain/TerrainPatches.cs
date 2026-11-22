@@ -408,6 +408,7 @@ namespace UnityEngine
             mesh.uv3 = uvs;
             mesh.uv4 = uvs;
             mesh.SetTriangles(PatchIndices(mask), 0, true);
+            mesh.UpdateBounds();
             tree.Meshes[key] = mesh;
             return mesh;
         }

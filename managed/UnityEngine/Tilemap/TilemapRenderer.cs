@@ -124,6 +124,7 @@ namespace UnityEngine.Tilemaps
                 mesh.SetUVs(0, group.Uvs);
                 if (group.Colors != null) mesh.SetColors(group.Colors);
                 mesh.SetTriangles(group.Triangles, 0);
+                mesh.UpdateBounds();
                 m_Batches.Add((mesh, group.Texture, group.Center, group.Tint));
             }
         }

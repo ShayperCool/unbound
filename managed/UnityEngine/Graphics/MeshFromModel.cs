@@ -283,7 +283,7 @@ namespace UnityEngine
                 foreach (var submesh in submeshes.EnumerateArray())
                 {
                     var data = Convert.FromBase64String(submesh.GetString() ?? "");
-                    SetTriangles(MemoryMarshal.Cast<byte, int>(data).ToArray(), index++, false);
+                    SetTriangles(MemoryMarshal.Cast<byte, int>(data).ToArray(), index++, true);
                 }
             }
             // Skinning: four bone indices then four weights per vertex.

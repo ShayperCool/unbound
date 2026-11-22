@@ -359,6 +359,7 @@ namespace Unbound.Runtime
                 var vertices = new Vector3[count];
                 for (int i = 0; i < count; i++) vertices[i] = new Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]);
                 mesh.vertices = vertices;
+                mesh.UpdateBounds();
                 var n = Floats(root.GetProperty("normals"));
                 if (n.Length == count * 3)
                 {

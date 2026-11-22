@@ -33,10 +33,13 @@ namespace UnityEngine.Tests
                 Near(new Vector3(2f, 2f, 0f), renderer.bounds.center);
                 Near(Vector3.one, renderer.bounds.extents);
 
-                // An edit of the mesh moves its bounds.
+                // An edit of the mesh moves its bounds once they are recalculated: the same vertex count
+                // keeps the mesh's bounds (tests/projects/scenesave mesh-bounds verticesSameCount).
                 var vertices = mesh.vertices;
                 for (int i = 0; i < vertices.Length; i++) vertices[i] += new Vector3(0f, 0f, 1f);
                 mesh.vertices = vertices;
+                Near(new Vector3(2f, 2f, 0f), renderer.bounds.center);
+                mesh.RecalculateBounds();
                 Near(new Vector3(2f, 2f, 2f), renderer.bounds.center);
 
                 cube.GetComponent<MeshFilter>().sharedMesh = other;

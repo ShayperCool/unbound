@@ -554,6 +554,7 @@ namespace UnityEngine
             var triangles = new int[m_Sprite.m_Triangles.Length];
             for (int i = 0; i < triangles.Length; i++) triangles[i] = m_Sprite.m_Triangles[i];
             m_DeformMesh.triangles = triangles;
+            m_DeformMesh.UpdateBounds();
             m_DeformMeshStale = false;
             return m_DeformMesh;
         }

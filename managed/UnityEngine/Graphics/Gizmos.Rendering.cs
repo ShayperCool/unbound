@@ -114,6 +114,7 @@ namespace UnityEngine
                         if ((i & bit) == 0) { indices.Add(i); indices.Add(i | bit); }
                 s_Edges = new Mesh { vertices = points, hideFlags = HideFlags.HideAndDontSave };
                 s_Edges.SetIndices(indices.ToArray(), MeshTopology.Lines, 0);
+                s_Edges.UpdateBounds();
                 return s_Edges;
             }
         }
@@ -125,6 +126,7 @@ namespace UnityEngine
             {
                 s_Line = new Mesh { vertices = new[] { Vector3.zero, Vector3.right }, hideFlags = HideFlags.HideAndDontSave };
                 s_Line.SetIndices(new[] { 0, 1 }, MeshTopology.Lines, 0);
+                s_Line.UpdateBounds();
             }
             var model = Matrix4x4.identity;
             model.SetColumn(0, new Vector4(to.x - from.x, to.y - from.y, to.z - from.z, 0));

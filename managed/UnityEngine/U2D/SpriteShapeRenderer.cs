@@ -376,7 +376,8 @@ namespace UnityEngine.U2D
             if (tangents != null) m_Mesh.SetTangents(tangents);
             if (normals != null) m_Mesh.SetNormals(normals);
             m_Mesh.subMeshCount = Math.Max(1, triangles.Count);
-            for (int i = 0; i < triangles.Count; i++) m_Mesh.SetTriangles(triangles[i], i, false);
+            for (int i = 0; i < triangles.Count; i++) m_Mesh.SetTriangles(triangles[i], i, true);
+            m_Mesh.UpdateBounds();
             m_SplineMeshCount = 2;
         }
 

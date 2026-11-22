@@ -667,6 +667,7 @@ namespace UnityEngine
             mesh.SetUVs(2, uv2);
             mesh.SetUVs(3, uv3);
             mesh.SetIndices(indices.ToArray(), MeshTopology.Triangles, 0);
+            mesh.UpdateBounds();
             SetMesh(mesh);
             Object.DestroyImmediate(mesh);
         }

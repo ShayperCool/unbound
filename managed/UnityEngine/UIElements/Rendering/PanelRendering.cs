@@ -276,8 +276,9 @@ namespace Unbound.UIElements
             {
                 var b = p.Batches[i];
                 var range = indices.GetRange(b.IndexStart, b.IndexCount);
-                mesh.SetIndices(range, MeshTopology.Triangles, i, false);
+                mesh.SetIndices(range, MeshTopology.Triangles, i, true);
             }
+            mesh.UpdateBounds();
         }
 
         static void UploadShaderInfo(PanelGpu gpu)

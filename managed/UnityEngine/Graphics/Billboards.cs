@@ -143,7 +143,7 @@ namespace UnityEngine
                 var indices = asset.Indices;
                 var triangles = new int[indices.Length];
                 for (int i = 0; i < indices.Length; i++) triangles[i] = indices[i];
-                m_Mesh.SetTriangles(triangles, 0, false);
+                m_Mesh.SetTriangles(triangles, 0, true);
                 m_Mesh.bounds = GetLocalBounds();
                 m_MeshKey = key;
             }

@@ -468,6 +468,7 @@ namespace UnityEngine
                 mesh.SetColors(Colors, 0, n);
                 mesh.SetUVs(0, Uvs, 0, n);
                 mesh.SetTriangles(Indices, 0, IndexCount, 0);
+                mesh.UpdateBounds();
                 return;
             }
             int length = Mesh.StreamCapacity(mesh.m_Vertices.Length, n);

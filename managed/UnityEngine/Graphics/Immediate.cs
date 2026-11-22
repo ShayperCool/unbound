@@ -49,6 +49,7 @@ namespace Unbound.Runtime
                 s_BlitQuad.vertices = new[] { new UnityEngine.Vector3(0, 0, 0.1f), new UnityEngine.Vector3(0, 1, 0.1f), new UnityEngine.Vector3(1, 1, 0.1f), new UnityEngine.Vector3(1, 0, 0.1f) };
                 s_BlitQuad.uv = new[] { new UnityEngine.Vector2(0, 0), new UnityEngine.Vector2(0, 1), new UnityEngine.Vector2(1, 1), new UnityEngine.Vector2(1, 0) };
                 s_BlitQuad.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+                s_BlitQuad.UpdateBounds();
                 return s_BlitQuad;
             }
         }
@@ -304,6 +305,7 @@ namespace Unbound.Runtime
             mesh.SetColors(s_Colors);
             for (int i = 0; i < 4; i++) mesh.SetUVs(i, s_Uvs[i]);
             mesh.SetIndices(indices.ToArray(), topology, 0);
+            mesh.UpdateBounds();
             DrawNow(mesh, 0, UnityEngine.Matrix4x4.identity);
         }
 

@@ -507,6 +507,7 @@ namespace UnityEngine
                 new Vector3(screenRect.xMin, screenRect.yMin, 0f), new Vector3(screenRect.xMin, screenRect.yMax, 0f),
                 new Vector3(screenRect.xMax, screenRect.yMax, 0f), new Vector3(screenRect.xMax, screenRect.yMin, 0f),
             };
+            s_TextureQuad.UpdateBounds();
             s_TextureQuad.uv = new[]
             {
                 new Vector2(sourceRect.xMin, sourceRect.yMax), new Vector2(sourceRect.xMin, sourceRect.yMin),
