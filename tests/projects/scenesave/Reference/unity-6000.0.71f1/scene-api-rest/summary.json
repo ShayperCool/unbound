@@ -1,0 +1,8 @@
+{
+  "case": "scene-api-rest",
+  "exit": 0,
+  "changed": [
+    "Assets/Prefabs/Thing.prefab"
+  ],
+  "removed": []
+}

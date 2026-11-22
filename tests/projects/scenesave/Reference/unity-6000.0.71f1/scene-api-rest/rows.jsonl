@@ -1,0 +1,52 @@
+{"key": "preview.scene", "value": "valid name='' path='' loaded=True build=-1 roots=0 dirty=False preview=True"}
+{"key": "preview.sceneCount", "value": "1->1"}
+{"key": "preview.active", "value": false}
+{"key": "preview.object", "value": "True True roots=1"}
+{"key": "preview.second", "value": "valid name='' path='' loaded=True build=-1 roots=0 dirty=False preview=True same=False"}
+{"key": "preview.count", "value": "0->2"}
+{"key": "preview.lookup", "value": "True False found=False"}
+{"key": "preview.close", "value": true}
+{"key": "preview.afterClose", "value": "invalid object=True"}
+{"key": "preview.closeAgain", "value": false}
+{"key": "preview.closeSecond", "value": "True objects=True,True count=0"}
+{"key": "preview.closeInvalid", "value": false}
+{"key": "preview.closeActive", "value": "throws ArgumentException: EditorSceneManager.ClosePreviewScene failed; a non preview scene was passed in"}
+{"key": "preview.logs", "value": ""}
+{"key": "contents.scene", "value": "valid name='Thing' path='Assets/Prefabs/Thing.prefab' loaded=True build=-1 roots=1 dirty=False preview=True count=1"}
+{"key": "contents.close", "value": "True root=True invalid count=0"}
+{"key": "contents.unloadAfterClose", "value": "throws ArgumentException: Specified object is not part of Prefab contents"}
+{"key": "contents.logs", "value": ""}
+{"key": "scope.path", "value": "Assets/Prefabs/Thing.prefab"}
+{"key": "scope.root", "value": "Thing True valid name='Thing' path='Assets/Prefabs/Thing.prefab' loaded=True build=-1 roots=1 dirty=False preview=True"}
+{"key": "scope.prefab", "value": "b6df10b286fb63f02c77a929392a9d6bca2ce45b529acdad0c22e9bf5df53ac3"}
+{"key": "scope.missing", "value": "throws ArgumentException: Path: Assets/Prefabs/Missing.prefab, does not exist"}
+{"key": "scope.logs", "value": ""}
+{"key": "so.count", "value": "2 1"}
+{"key": "undo.records", "value": "Move A,Move B,Move B with A / "}
+{"key": "undo.afterUndo", "value": "Move A,Move B / Move B with A"}
+{"key": "undo.afterTwoUndos", "value": "Move A / Move B,Move B with A"}
+{"key": "undo.cursor", "value": "Move A,Move B,Move B with A @1"}
+{"key": "undo.cursorAfterRedo", "value": "Move A,Move B,Move B with A @2"}
+{"key": "undo.unnamed", "value": "Move A,Move B,Create Object,Update Object / "}
+{"key": "undo.cleared", "value": " / "}
+{"key": "undo.createdNamed", "value": "Make It,Make It / "}
+{"key": "undo.createdUnnamed", "value": "Create Object,Update Object / "}
+{"key": "undo.recordedUnnamed", "value": "Record Modification / "}
+{"key": "undo.openGroup", "value": " / "}
+{"key": "undo.kind.addComponent", "value": "Add BoxCollider -> Add BoxCollider / "}
+{"key": "undo.kind.destroy", "value": "Clear Selection,Destroy Object -> Clear Selection,Destroy Object / "}
+{"key": "undo.kind.parent", "value": "Reparent -> Reparent / "}
+{"key": "undo.kind.complete", "value": "Complete -> Complete / "}
+{"key": "undo.kind.hierarchy", "value": "Hierarchy -> Hierarchy / "}
+{"key": "undo.kind.unchanged", "value": " ->  / "}
+{"key": "undo.kind.created", "value": "Made,Made -> Made,Made / "}
+{"key": "undo.kind.recordThenCreated", "value": "Rec,Made,Made -> Rec,Made,Made / "}
+{"key": "undo.kind.createdThenRecord", "value": "Made,Made -> Made,Made,Rec / "}
+{"key": "undo.kind.twoCreated", "value": "First,First,Second,Second -> First,First,Second,Second / "}
+{"key": "undo.kind.createdThenAdd", "value": "Made,Made,Add BoxCollider -> Made,Made,Add BoxCollider / "}
+{"key": "undo.kind.namedGroup", "value": "Group Name -> Group Name,Rec / "}
+{"key": "undo.kind.sameNameTwoGroups", "value": "Same -> Same,Same / "}
+{"key": "undo.createdUndone", "value": "True  / Made,Made"}
+{"key": "undo.nullList", "value": "throws NullReferenceException: List must be non-null."}
+{"key": "events.allowType", "value": "System.Func`2[UnityEngine.Object,System.Boolean]"}
+{"key": "events.logs", "value": ""}

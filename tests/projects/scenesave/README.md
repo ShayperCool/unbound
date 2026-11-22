@@ -91,6 +91,16 @@ file the run added, changed or removed.
   `Undo.RecordObject` before the change (then `Undo.FlushUndoRecordObjects`), through a
   `SerializedObject`, and around a scene save. Recorded in the Linux Editor (batch mode, no
   graphics: two identical captures).
+- `scene-api-rest` (Edit Mode, `SceneApiRestTests`): a preview scene made and closed
+  (`EditorSceneManager.NewPreviewScene`, `ClosePreviewScene`: no name or path, loaded, not counted
+  by `SceneManager.sceneCount`, not active; closing destroys its objects, a closed one closes
+  `false`, a scene that is no preview scene throws ArgumentException), a prefab edited through
+  `PrefabUtility.EditPrefabContentsScope` (its contents scene is a preview scene named after the
+  prefab with the prefab's path; the file after the scope), a `SerializedObject`'s internal
+  `targetObjectsCount`, the internal `Undo.GetRecords` before and after an undo, and the
+  `PrefabStage.prefabSaving` and `PrefabUtility.allowRecordingPrefabPropertyOverridesFor` events
+  subscribed (when they are raised is not measured). Recorded in the Linux Editor (batch mode, no
+  graphics: two captures that agree).
 - `play-nosave`, `play-save` (Play Mode, `SavePlayTests.NoSave` and `.Save`, each alone): assets
   edited in Play mode, left unsaved or saved by `AssetDatabase.SaveAssets` there; scene saves and
   `MarkSceneDirty` in Play mode.
