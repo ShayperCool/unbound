@@ -1269,12 +1269,14 @@ namespace Unbound.Runtime
             // tests/projects/scenesave engine-assets; an existing file's save is unmeasured).
             if (o is Texture2D texture && UnityYamlWriter.WritesNew(texture))
             {
-                doc.Body = SceneFiles.Resolve(SceneFiles.Body(w => w.Texture2DBody(texture), ids, locations, references), doc.Body, ref unlocated);
+                doc.Body = KeepFileValues(SceneFiles.Resolve(SceneFiles.Body(w => w.Texture2DBody(texture), ids, locations, references), doc.Body, ref unlocated),
+                    doc.Body, s_TextureFileValues);
                 return true;
             }
             if (o is Mesh mesh && UnityYamlWriter.WritesNew(mesh))
             {
-                doc.Body = SceneFiles.Resolve(SceneFiles.Body(w => w.MeshBody(mesh), ids, locations, references), doc.Body, ref unlocated);
+                doc.Body = KeepFileValues(SceneFiles.Resolve(SceneFiles.Body(w => w.MeshBody(mesh), ids, locations, references), doc.Body, ref unlocated),
+                    doc.Body, s_MeshFileValues);
                 return true;
             }
             if (o is UnityEngine.U2D.SpriteAtlas atlas && !atlas.IsFromImporter)
@@ -1283,6 +1285,27 @@ namespace Unbound.Runtime
                 return true;
             }
             return false;
+        }
+
+        /// <summary>The fields a new texture's or mesh's document takes as a new object's (Unbound
+        /// does not model them): a file that has them keeps its own.</summary>
+        static readonly string[] s_TextureFileValues =
+        {
+            "m_ImageContentsHash", "m_IsAlphaChannelOptional", "m_IsPreProcessed", "m_MipmapLimitGroupName", "m_StreamingMipmaps",
+            "m_StreamingMipmapsPriority", "m_VTOnly", "m_LightmapFormat", "m_PlatformBlob",
+        };
+
+        static readonly string[] s_MeshFileValues =
+        {
+            "m_MeshUsageFlags", "m_CookingOptions", "m_BakedConvexCollisionMesh", "m_BakedTriangleCollisionMesh",
+            "'m_MeshMetrics[0]'", "'m_MeshMetrics[1]'", "m_MeshOptimizationFlags",
+        };
+
+        static YText KeepFileValues(YText written, YText file, string[] keys)
+        {
+            foreach (var key in keys)
+                if (file.Get(key) is YText kept && written.Get(key) != null) written.Set(key, kept.Clone());
+            return written;
         }
 
         /// <summary>The keys of a V1 sprite atlas document in the order the Editor writes them.</summary>

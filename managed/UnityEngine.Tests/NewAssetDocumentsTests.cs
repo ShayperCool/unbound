@@ -140,6 +140,26 @@ namespace UnityEngine.Tests
             Assert.Equal(Reference("engine-assets/snapshots/alpha.file"), Write(alpha, 2800000));
         }
 
+        /// <summary>A mesh asset file saved again is written from the mesh, keeping the fields
+        /// Unbound does not model as the file has them (its cooking options, mesh metrics).</summary>
+        [Fact]
+        public void ASavedMeshFileKeepsTheFieldsUnboundDoesNotModel()
+        {
+            var text = Reference("create-assets/files/Assets/Created/Tri.asset")
+                .Replace("m_CookingOptions: 30", "m_CookingOptions: 14").Replace("'m_MeshMetrics[0]': 1", "'m_MeshMetrics[0]': 2.5");
+            var doc = UnityYamlText.Parse(text)[0];
+            var mesh = Own(new Mesh { name = "Tri" });
+            mesh.vertices = new[] { Vector3.zero, Vector3.right * 2f, Vector3.up };
+            mesh.triangles = new[] { 0, 1, 2 };
+            int unlocated = 0;
+            Assert.True(NativeDocuments.Write(doc, mesh, new Dictionary<Object, long>(ReferenceEqualityComparer.Instance) { [mesh] = 4300000 },
+                new AssetDatabaseRuntime.Locations(), ref unlocated));
+            var written = UnityYamlText.Write(new List<YTextDocument> { doc });
+            Assert.Contains("  m_CookingOptions: 14\n", written);
+            Assert.Contains("  'm_MeshMetrics[0]': 2.5\n", written);
+            Assert.Contains("      m_Extent: {x: 1, y: 0.5, z: 0}\n", written);
+        }
+
         /// <summary>RecalculateBounds as documented for 6000.0 (the mesh and its sub-meshes, from
         /// Float32 positions only) and as the Editor's files show (blend shapes at full weight).</summary>
         [Fact]
