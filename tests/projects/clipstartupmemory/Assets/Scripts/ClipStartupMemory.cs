@@ -108,6 +108,7 @@ public static class ClipStartupMemory
         rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), rows);
 #if UNITY_EDITOR
+        File.WriteAllLines(Path.Combine(output, "profile-release.txt"), new[] { profile, Application.unityVersion });
         UnityEditor.EditorApplication.Exit(0);
 #else
         Application.Quit(0);

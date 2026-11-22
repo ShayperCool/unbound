@@ -34,6 +34,6 @@ python3 tests/projects/clipstartupmemory/run.py gate
 ```
 
 Repeat the recording commands for Callback, Stream, Reset, ResetOwner and Disabled. Publishing
-checks the selected profile, the recorded release and two independent Editor runs. The gate
-compares every profile exactly. Imported clip sizes, absolute totals of clips after reset and
+checks the profile, the release reported by the Editor and the values recorded by each independent
+launch. The gate compares every profile exactly. Imported clip sizes, absolute totals of clips after reset and
 other Unity families retain their previous behavior.
