@@ -105,6 +105,20 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ALocalSystemTurnedInThePlaneMeetsTheBoxWhereAWorldOneDoes()
+        {
+            // As ABoxIsMet...: the system turned 90 degrees about z, so its x is the world's y.
+            Box(new Vector3(0f, 0f, 3f), new Vector2(4f, .2f));
+            var ps = Make();
+            var main = ps.main; main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            ps.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
+            var p = StepOne(ps, new Vector3(.3f, 0f, 0f), new Vector3(-10f, 0f, 0f));
+            float contact = .1f + .097f;
+            Near(new Vector3(contact + (contact - .05f), 0f, 0f), p.position, 2e-4f);
+            Near(new Vector3(10f, 0f, 0f), p.velocity, 2e-4f);
+        }
+
+        [Fact]
         public void ACircleColliderIsMetAtTheSumOfTheRadiiLessTheSlop()
         {
             // Circle .5 and particle .1: impact at .585 between centers, pushed back by .002.

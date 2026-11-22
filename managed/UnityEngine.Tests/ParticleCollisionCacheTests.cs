@@ -54,12 +54,13 @@ namespace UnityEngine.Tests
         /// <summary>A box whose top is at y 0 and a system <paramref name="height"/> above it
         /// dropping one particle (radius 0.1) at <paramref name="speed"/> (by default 0.5 above at
         /// 5 units/s, reaching the box in its fourth frame).</summary>
-        ParticleSystem Dropping(ParticleSystemCollisionQuality quality, float height = 0.5f, float speed = 5f, short count = 1)
+        ParticleSystem Dropping(ParticleSystemCollisionQuality quality, float height = 0.5f, float speed = 5f, short count = 1, bool twoD = false)
         {
-            var box = new GameObject("box").AddComponent<BoxCollider>();
-            box.size = new Vector3(4f, 2f, 4f);
-            box.transform.position = new Vector3(0f, -1f, 0f);
-            m_Objects.Add(box.gameObject);
+            var boxObject = new GameObject("box");
+            boxObject.transform.position = new Vector3(0f, -1f, 0f);
+            if (twoD) boxObject.AddComponent<BoxCollider2D>().size = new Vector2(4f, 2f);
+            else boxObject.AddComponent<BoxCollider>().size = new Vector3(4f, 2f, 4f);
+            m_Objects.Add(boxObject);
             Physics.SyncTransforms();
             var go = new GameObject("particles");
             m_Objects.Add(go);
@@ -71,7 +72,8 @@ namespace UnityEngine.Tests
             main.simulationSpace = ParticleSystemSimulationSpace.World; main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
             var shape = ps.shape; shape.enabled = false;
             var emission = ps.emission; emission.rateOverTime = 0f; emission.SetBursts(new[] { new ParticleSystem.Burst(0f, count) });
-            var c = ps.collision; c.enabled = true; c.type = ParticleSystemCollisionType.World; c.mode = ParticleSystemCollisionMode.Collision3D;
+            var c = ps.collision; c.enabled = true; c.type = ParticleSystemCollisionType.World;
+            c.mode = twoD ? ParticleSystemCollisionMode.Collision2D : ParticleSystemCollisionMode.Collision3D;
             c.quality = quality; c.bounce = 1f; c.dampen = 0f; c.lifetimeLoss = 0f;
             go.SetActive(true);
             return ps;
@@ -85,11 +87,13 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        [InlineData(ParticleSystemCollisionQuality.High)]
-        [InlineData(ParticleSystemCollisionQuality.Medium)]
-        public void HighAndMediumWithTheDefaultBudgetBounceInTheSameFrame(ParticleSystemCollisionQuality quality)
+        [InlineData(ParticleSystemCollisionQuality.High, false)]
+        [InlineData(ParticleSystemCollisionQuality.Medium, false)]
+        [InlineData(ParticleSystemCollisionQuality.High, true)]
+        [InlineData(ParticleSystemCollisionQuality.Medium, true)]
+        public void HighAndMediumWithTheDefaultBudgetBounceInTheSameFrame(ParticleSystemCollisionQuality quality, bool twoD)
         {
-            var ps = Dropping(quality);
+            var ps = Dropping(quality, twoD: twoD);
             ps.Play();
             for (int frame = 0; frame < 6; frame++) Frame();
             Assert.True(Only(ps).velocity.y > 0f, quality + " did not bounce");
@@ -132,6 +136,46 @@ namespace UnityEngine.Tests
                 bounced = particles[0].velocity.y > 0f && particles[1].velocity.y > 0f;
             }
             Assert.Equal(bounces, bounced);
+        }
+
+        [Theory]
+        [InlineData(ParticleSystemCollisionQuality.High, true)]
+        [InlineData(ParticleSystemCollisionQuality.Medium, false)]
+        public void Only2DHighQualityMeetsADynamicBody(ParticleSystemCollisionQuality quality, bool bounces)
+        {
+            // Medium and Low are the "Static Colliders" qualities (6000.0 Manual; particlerender
+            // collide/world2d/force_speed_medium passes a Dynamic body).
+            var ps = Dropping(quality, twoD: true);
+            var body = (m_Objects[0] as GameObject).AddComponent<Rigidbody2D>();
+            body.gravityScale = 0f;
+            ps.Play();
+            for (int frame = 0; frame < 6; frame++) Frame();
+            Assert.Equal(bounces, Only(ps).velocity.y > 0f);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ACachedPlaneOfADestroyedColliderStillBouncesWithoutAnEvent(bool twoD)
+        {
+            // As OnlyALowSystemMeetsThePlaneOfAColliderThatLeft, the collider destroyed instead of
+            // moved: the cached plane still bounces the particles; the event has nobody to go to.
+            var ps = Dropping(ParticleSystemCollisionQuality.Low, height: 1.5f, speed: 3.2f, count: 2, twoD: twoD);
+            var c = ps.collision; c.sendCollisionMessages = true;
+            var box = m_Objects[0] as GameObject;
+            ps.Play();
+            for (int frame = 0; frame < 5; frame++) Frame();
+            Object.DestroyImmediate(box);
+            var particles = new ParticleSystem.Particle[2];
+            bool bounced = false;
+            for (int frame = 5; frame < 40 && !bounced; frame++)
+            {
+                Frame();
+                Assert.Equal(2, ps.GetParticles(particles));
+                bounced = particles[0].velocity.y > 0f && particles[1].velocity.y > 0f;
+            }
+            Assert.True(bounced);
+            Assert.Empty(ps.m_CollisionEvents);
         }
 
         [Theory]
