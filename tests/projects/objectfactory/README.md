@@ -37,8 +37,9 @@ everything the factory made in the group.
 A second RectTransform is "already added": `PlaceGameObject` throws (after reparenting) and
 `GameObject.AddComponent` returns null with that log.
 
-Residual (`residuals.json`): `afterUndo.roots`, the Editor lists the parent that an undone
-reparenting involved after the roots made later; Unbound keeps the root order.
+Residual (`residuals.json`): `afterUndo.roots`, the Editor lists UiParent after the roots made
+later (why only it moves is not established); Unbound keeps the root order. The set of roots left
+after the undo is checked (`afterUndo.rootSet`).
 
 ```sh
 python3 tests/projects/objectfactory/run.py record --label a

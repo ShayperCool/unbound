@@ -199,6 +199,8 @@ public static class ObjectFactoryProbe
         for (int i = 0; i < s_Log.Count; i++) Row("log/" + i.ToString("D2", CultureInfo.InvariantCulture), s_Log[i]);
         Undo.PerformUndo();
         Row("afterUndo.roots", string.Join(",", scene.GetRootGameObjects().Select(r => r.name)));
+        // The same roots as a set: what the undo destroyed, whatever their order.
+        Row("afterUndo.rootSet", string.Join(",", scene.GetRootGameObjects().Select(r => r.name).OrderBy(n => n, StringComparer.Ordinal)));
         Row("afterUndo.a.components", a == null ? "destroyed" : string.Join(",", a.GetComponents<Component>().Select(x => x.GetType().Name)));
     }
 

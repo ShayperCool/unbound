@@ -104,7 +104,7 @@ namespace UnityEngine.Tests
                 Assert.Equal("Gap (1)", GameObjectUtility.GetUniqueNameForSibling(null, "Gap"));
                 Assert.Equal("Item (6)", GameObjectUtility.GetUniqueNameForSibling(null, "Item (5)"));
                 Assert.Equal("Fresh", GameObjectUtility.GetUniqueNameForSibling(null, "Fresh"));
-                // A number too long to read is part of the name.
+                // A number too long to read is part of the name (Unbound's choice; unmeasured).
                 Assert.Equal("Big (99999999999) (1)", GameObjectUtility.GetUniqueNameForSibling(null, "Big (99999999999)"));
                 // An object does not clash with itself.
                 var solo = Make("Solo");
@@ -138,7 +138,10 @@ namespace UnityEngine.Tests
                 Assert.Same(child, Selection.activeGameObject);
                 // A second RectTransform is one too many (objectfactory placed.rectTwice).
                 var twice = ObjectFactory.CreateGameObject("UiTwice", typeof(RectTransform));
-                Assert.Throws<ArgumentException>(() => ObjectFactory.PlaceGameObject(twice, parent));
+                var refused = Assert.Throws<ArgumentException>(() => ObjectFactory.PlaceGameObject(twice, parent));
+                Assert.Equal("Can't add component 'RectTransform' to UiTwice because such a component is already added to the game object!", refused.Message);
+                // It throws after reparenting (objectfactory placed.rectTwice.components).
+                Assert.Same(parent.transform, twice.transform.parent);
             }
             finally { Object.DestroyImmediate(parent); }
         }

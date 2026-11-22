@@ -61,11 +61,13 @@ namespace UnityEditor
             var stem = StemOf(name, scheme, out int numbered);
             // "Item (5)" taken gives "Item (6)": the count goes on after the name's own number
             // (tests/projects/objectfactory unique.placed).
-            for (int n = numbered + 1; ; n++)
+            // A number at int.MaxValue counts on from 1 (Unbound's choice; unmeasured).
+            for (int n = numbered == int.MaxValue ? 1 : numbered + 1; n > 0; n++)
             {
                 var candidate = Numbered(stem, n, scheme, digits);
                 if (!taken.Contains(candidate)) return candidate;
             }
+            return name;
         }
 
         static string Numbered(string stem, int n, EditorSettings.NamingScheme scheme, int digits)

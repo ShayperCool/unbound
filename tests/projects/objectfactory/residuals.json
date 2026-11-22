@@ -1,5 +1,5 @@
 {
-  "After the one undo the Editor lists UiParent, the parent PlaceGameObject reparented objects into (and that undo unparented them from), after the roots created later; Unbound's undo leaves the scene's root order as it was (the Editor's reordering on undoing a reparenting is unmeasured beyond this row)": [
+  "After the one undo the Editor lists UiParent after the roots created later, while Unbound keeps the scene's root order; the set of roots matches (afterUndo.rootSet). Why only UiParent moves (it is the parent of the placement that threw for a second RectTransform; Parent, also a reparenting target, keeps its place) is not established": [
     "afterUndo.roots"
   ]
 }

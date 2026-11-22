@@ -216,5 +216,6 @@
 {"k":"undoGroupName.end","v":"Create Hole (1)"}
 {"k":"log/00","v":"Log: Can't add component 'RectTransform' to UiTwice because such a component is already added to the game object!"}
 {"k":"afterUndo.roots","v":"Parent,Gap,Gap (2),Hole,Hole (3),UiParent"}
+{"k":"afterUndo.rootSet","v":"Gap,Gap (2),Hole,Hole (3),Parent,UiParent"}
 {"k":"afterUndo.a.components","v":"destroyed"}
 {"k":"complete","v":true}
