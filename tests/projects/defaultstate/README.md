@@ -826,3 +826,7 @@ text-asset identities, whose debt entries record the new raw values.
 The keyword filter slice adds the 13 `UnityEditor.ShaderKeywordFilter` attribute types to the inventory with their
 `excluded, no-public-parameterless-constructor` rows, as two Unity 6000.0.71f1 batch Editor captures on macOS write
 them (decided by the inventory alone); every earlier row is unchanged.
+
+The Project window helpers slice adds `ProjectWindowUtil` (its `class` factory row) and the abstract
+`ProjectWindowCallback.EndNameEditAction` (excluded) to the inventory, as two Unity 6000.0.71f1 batch Editor captures on
+macOS write them; every earlier row is unchanged.

@@ -2026,6 +2026,18 @@
       "type": "UnityEditor.Progress"
     },
     {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "abstract",
+      "type": "UnityEditor.ProjectWindowCallback.EndNameEditAction"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ProjectWindowUtil"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "abstract",

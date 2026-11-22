@@ -1081,6 +1081,8 @@
 {"key":"UnityEditor.PrefabUtility/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.PreferenceItem/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.Progress/@factory","status":"excluded","value":"static"}
+{"key":"UnityEditor.ProjectWindowCallback.EndNameEditAction/@factory","status":"excluded","value":"abstract"}
+{"key":"UnityEditor.ProjectWindowUtil/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.PropertyDrawer/@factory","status":"excluded","value":"abstract"}
 {"key":"UnityEditor.PropertyEditor/@factory","status":"value","value":"scriptable"}
 {"key":"UnityEditor.PropertyEditor/Property/UnityEditor.EditorWindow/antiAlias","status":"value","value":"1"}
