@@ -104,6 +104,14 @@ Mesh:
                 Assert.Equal(new[] { 0, 1, 1, 2 }, mesh.GetIndices(1, false));
                 Assert.Equal(new[] { 3, 4, 4, 5 }, mesh.GetIndices(1));
 
+                // Each sub-mesh keeps the bounds and vertex range its file holds.
+                var second = mesh.GetSubMesh(1);
+                Assert.Equal(new Vector3(0.5f, 0.5f, 0), mesh.GetSubMesh(0).bounds.center);
+                Assert.Equal(new Vector3(1.5f, 0.5f, 0), second.bounds.center);
+                Assert.Equal(new Vector3(0.5f, 0.5f, 0), second.bounds.extents);
+                Assert.Equal(3, second.firstVertex);
+                Assert.Equal(3, second.vertexCount);
+
                 // The rest of the document is read after the indices.
                 Assert.Equal(new Vector3(1, 0.5f, 0), mesh.bounds.center);
                 Assert.Equal(new Vector3(1, 0.5f, 0), mesh.bounds.extents);

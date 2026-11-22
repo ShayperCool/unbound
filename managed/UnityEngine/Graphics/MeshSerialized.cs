@@ -175,7 +175,17 @@ namespace UnityEngine
                     5 => MeshTopology.Points,
                     _ => MeshTopology.Triangles,
                 };
-                SetIndices(indices, topology, s, false, sm.Int("baseVertex"));
+                // The sub-mesh's bounds and vertex range are those the file holds, as the mesh's own
+                // m_LocalAABB is; measured from the vertices when the file has none.
+                var box = sm.Get("localAABB");
+                SetIndices(indices, topology, s, box == null, sm.Int("baseVertex"));
+                if (box != null)
+                {
+                    var read = m_SubMeshes[s];
+                    read.Bounds = new Bounds(Vec3(box.Get("m_Center")), Vec3(box.Get("m_Extent")) * 2f);
+                    read.FirstVertex = sm.Int("firstVertex");
+                    read.VertexCount = sm.Int("vertexCount");
+                }
             }
 
             var poses = new List<Matrix4x4>();
