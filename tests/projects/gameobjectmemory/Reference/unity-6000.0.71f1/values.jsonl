@@ -25,4 +25,9 @@
 {"k":"constructor.clone.4","v":"5/360"}
 {"k":"required.awake","v":"3/336"}
 {"k":"required","v":"3/336"}
+{"k":"clone.awake.before","v":"3/312"}
+{"k":"clone.awake.after","v":"4/384"}
+{"k":"clone.awake.returned","v":"4/384"}
+{"k":"clone.awake.source","v":"3/336"}
+{"k":"companion","v":"3/336"}
 {"k":"complete","v":true}
