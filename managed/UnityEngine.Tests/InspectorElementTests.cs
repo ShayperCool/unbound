@@ -226,6 +226,7 @@ namespace UnityEngine.Tests
             Assert.Equal("PropertyField:count", inspector.hierarchy[2][1].name);
             inspector.Bind(new SerializedObject(engineObject));
             Tick(f.Panel);
+            Assert.Equal(before + 3, Hits(member));
             Assert.Equal(2, inspector.hierarchy.childCount);
             Assert.Equal(new[] { "unity-inspector-element" }, inspector.GetClasses().ToArray());
             Object.DestroyImmediate(engineObject);
