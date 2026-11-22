@@ -72,26 +72,15 @@ metadata file with its GUID token replaced. The project compiles with the
 registry DLL's package-only API, then compiles again with identical metadata.
 A private loopback registry serves the synthetic package.
 
-Pass `--conflicts --established` to record or replay reopening an imported
-project. The runner restores the authored Assets metadata and recorded file
-timestamps after the first import. On reopening, the Editor leaves all four
-metadata files byte-for-byte unchanged and emits no GUID reassignment message.
-The registry paths retain the authored GUIDs in the database, and the Assets
-paths retain their distinct registered GUIDs. The early registry GUID selects
-the registry DLL and the late registry GUID selects the Assets DLL.
-[AssetDatabase.AssetPathToGUID](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AssetDatabase.AssetPathToGUID.html),
-[AssetDatabase.GUIDToAssetPath](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AssetDatabase.GUIDToAssetPath.html).
-
-On the 6000.0 family, Unbound repairs measured fresh groups before startup
-indexing and compilation. Each replacement uses an atomic rename from the
-project cache. An interrupted import starts again from the GUIDs currently
-on disk. Graph inspection stays read-only. On Linux with liblmdb, the script
-graph uses the registered GUIDs for a measured established Assets and registry
-pair once the path and GUID lookups agree. That replay compares the reference
-paths, emitted diagnostics, and complete metadata bytes.
+On the 6000.0 family, Unbound repairs measured groups before startup indexing
+and compilation using the authored metadata. Each replacement uses an atomic
+rename from the project cache. An interrupted import starts again from the GUIDs
+currently on disk. The gate compares the reference paths, emitted diagnostics
+and metadata bytes, and checks graph inspection after import.
 
 Quoted tokens, mixed asset types, aliased paths, groups outside the measured
 package sources, and failed reads or writes produce a diagnostic and retain
-the previous reference-selection rule for unresolved GUIDs. Asset database
-registration beyond managed DLL selection, incremental refresh, and other
-established-database formats and hosts remain outside this profile.
+the previous reference-selection rule for unresolved GUIDs. The gate also
+checks fallbacks for quoted tokens, mixed text and native assets, and read-only
+metadata. Changes found by incremental refresh and other release families remain
+outside the measured scope.

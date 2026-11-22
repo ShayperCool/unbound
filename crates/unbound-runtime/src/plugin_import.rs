@@ -10,8 +10,6 @@ use unbound_assets::new_meta::{is_folder_plugin, meta_path, new_guid, replace_gu
 use unbound_project::{PackageSource, Project, plugins::Plugin};
 use unbound_yaml::Guid;
 
-use crate::editor_asset_guids::EditorAssetGuids;
-
 struct PluginAssets {
     plugins: Vec<Plugin>,
     guids: BTreeMap<Guid, Vec<String>>,
@@ -35,21 +33,7 @@ impl PluginAssets {
 
 /// Plugin metadata is imported before compiling or starting a project.
 pub fn prepare_plugins(project: &Project) -> Vec<Plugin> {
-    select_plugins(project, true)
-}
-
-/// Inspection and hot reload can use registered GUIDs without authoring metadata.
-pub fn inspect_plugins(project: &Project) -> Vec<Plugin> {
-    select_plugins(project, false)
-}
-
-fn select_plugins(project: &Project, import: bool) -> Vec<Plugin> {
     if project.version.measured_family() != Some(unbound_compat::MeasuredFamily::Unity6000_0) {
-        return project.plugins();
-    }
-    let database = project.root.join("Library/SourceAssetDB");
-    let established = has_editor_database(&database);
-    if !import && !established {
         return project.plugins();
     }
     let found = PluginAssets::scan(project);
@@ -57,15 +41,6 @@ fn select_plugins(project: &Project, import: bool) -> Vec<Plugin> {
         return found.plugins;
     }
     let library = project.library_dir();
-    if established {
-        let registered = EditorAssetGuids::open(&database, &library);
-        return resolve_groups(project, found, |guid, entries, reserved| {
-            registered
-                .as_ref()
-                .map_err(|error| anyhow::anyhow!("{error:#}"))?
-                .resolve(guid, entries, reserved)
-        });
-    }
     // Serialize only the exceptional import, with a fresh scan under the lock. No import
     // state is carried from one scan to the next.
     let _lock = match import_lock(&library) {
@@ -75,29 +50,7 @@ fn select_plugins(project: &Project, import: bool) -> Vec<Plugin> {
             return found.plugins;
         }
     };
-    let found = PluginAssets::scan(project);
-    resolve_groups(project, found, |guid, entries, reserved| {
-        anyhow::ensure!(
-            !has_editor_database(&database),
-            "the project has an established Unity asset database"
-        );
-        let plan = plan_group(guid, entries, reserved, &library)?;
-        let mut applied = Vec::new();
-        for replacement in plan {
-            match replacement.apply() {
-                Ok(change) => applied.push(change),
-                Err(error) => {
-                    warn_group(guid, entries.iter().map(|entry| entry.path), &error);
-                    break;
-                }
-            }
-        }
-        Ok(applied)
-    })
-}
-
-fn has_editor_database(database: &Path) -> bool {
-    !matches!(fs::symlink_metadata(database), Err(error) if error.kind() == std::io::ErrorKind::NotFound)
+    repair_groups(project, PluginAssets::scan(project), &library)
 }
 
 fn import_lock(library: &Path) -> Result<File> {
@@ -111,11 +64,7 @@ fn import_lock(library: &Path) -> Result<File> {
     Ok(file)
 }
 
-fn resolve_groups(
-    project: &Project,
-    mut found: PluginAssets,
-    mut resolve: impl FnMut(Guid, &[Entry<'_>], &mut HashSet<Guid>) -> Result<Vec<(usize, Guid)>>,
-) -> Vec<Plugin> {
+fn repair_groups(project: &Project, mut found: PluginAssets, library: &Path) -> Vec<Plugin> {
     let by_path: HashMap<_, _> = found
         .plugins
         .iter()
@@ -140,10 +89,21 @@ fn resolve_groups(
         let result = if group.len() != paths.len() {
             Err(anyhow::anyhow!("the group includes other asset types"))
         } else {
-            entries_for(project, &group).and_then(|entries| resolve(guid, &entries, &mut reserved))
+            entries_for(project, &group)
+                .and_then(|entries| plan_group(guid, &entries, &mut reserved, library))
         };
         match result {
-            Ok(resolved) => changes.extend(resolved),
+            Ok(plan) => {
+                for replacement in plan {
+                    match replacement.apply() {
+                        Ok(change) => changes.push(change),
+                        Err(error) => {
+                            warn_group(guid, paths.iter().map(String::as_str), &error);
+                            break;
+                        }
+                    }
+                }
+            }
             Err(error) => warn_group(guid, paths.iter().map(String::as_str), &error),
         }
     }
@@ -163,7 +123,7 @@ fn warn_group<'a>(guid: Guid, paths: impl Iterator<Item = &'a str>, error: &anyh
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum Source {
+enum Source {
     Assets,
     Package(PackageSource),
 }
@@ -174,10 +134,10 @@ impl Source {
     }
 }
 
-pub(super) struct Entry<'a> {
-    pub index: usize,
-    pub path: &'a str,
-    pub source: Source,
+struct Entry<'a> {
+    index: usize,
+    path: &'a str,
+    source: Source,
     root: &'a Path,
     relative: &'a Path,
 }
@@ -214,7 +174,7 @@ fn entries_for<'a>(project: &'a Project, group: &[(usize, &'a Plugin)]) -> Resul
 }
 
 impl Entry<'_> {
-    pub(super) fn metadata(&self) -> Result<PathBuf> {
+    fn metadata(&self) -> Result<PathBuf> {
         anyhow::ensure!(
             self.relative
                 .components()
@@ -258,10 +218,10 @@ impl PendingMetadata {
     }
 }
 
-pub(super) struct StagedFile(pub PathBuf);
+struct StagedFile(PathBuf);
 
 impl StagedFile {
-    pub fn create(library: &Path) -> Result<(Self, File)> {
+    fn create(library: &Path) -> Result<(Self, File)> {
         let path = library.join(format!("plugin-import-{}.tmp", new_guid()));
         let file = OpenOptions::new()
             .write(true)
@@ -389,7 +349,7 @@ mod tests {
     impl Files {
         fn new() -> Result<Self> {
             let root = std::env::temp_dir().join(format!("unbound-plugin-import-{}", new_guid()));
-            let library = root.join("Library/Unbound");
+            let library = root.join("staging");
             fs::create_dir_all(&library)?;
             Ok(Self { root, library })
         }
@@ -519,17 +479,6 @@ mod tests {
         assert!(error.to_string().contains("unmeasured metadata rewrite"));
         assert_eq!(fs::read_to_string(entries[0].metadata()?)?, authored());
         assert_eq!(fs::read_to_string(&path)?, quoted);
-        assert!(fs::read_dir(&files.library)?.next().is_none());
-        Ok(())
-    }
-
-    #[test]
-    fn established_database_that_cannot_be_read_has_a_fallback() -> Result<()> {
-        let files = Files::new()?;
-        let database = files.root.join("Library/SourceAssetDB");
-        fs::write(&database, "")?;
-        assert!(EditorAssetGuids::open(&database, &files.library).is_err());
-        assert_eq!(fs::read(&database)?, b"");
         assert!(fs::read_dir(&files.library)?.next().is_none());
         Ok(())
     }

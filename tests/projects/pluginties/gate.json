@@ -1,11 +1,12 @@
 {
-  "commands": ["python3 tests/projects/pluginties/run.py gate"],
+  "commands": [
+    "python3 tests/projects/pluginties/run.py gate"
+  ],
   "summary": "pluginties: .*",
   "engine_paths": [
     "crates/unbound-project/src/assemblies.rs",
     "crates/unbound-project/src/plugins.rs",
     "crates/unbound-project/src/compile.rs",
-    "crates/unbound-runtime/src/editor_asset_guids.rs",
     "crates/unbound-runtime/src/plugin_import.rs"
   ]
 }

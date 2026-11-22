@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using UnityEditor;
 using UnityEditor.Compilation;
 
 public static class RecordPluginReferences
@@ -18,16 +17,5 @@ public static class RecordPluginReferences
                 output.WriteLine($"{assembly.name}\t{path}");
         }
         output.WriteLine("complete");
-
-        string paths = Environment.GetEnvironmentVariable("PLUGIN_TIES_GUID_PATHS");
-        if (string.IsNullOrEmpty(paths))
-            return;
-        using var guids = File.CreateText(Environment.GetEnvironmentVariable("PLUGIN_TIES_GUID_OUT"));
-        foreach (string path in paths.Split('\n'))
-        {
-            string guid = AssetDatabase.AssetPathToGUID(path, AssetPathToGUIDOptions.OnlyExistingAssets);
-            guids.WriteLine($"{path}\t{guid}\t{AssetDatabase.GUIDToAssetPath(guid)}");
-        }
-        guids.WriteLine("complete");
     }
 }

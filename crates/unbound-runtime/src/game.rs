@@ -356,12 +356,9 @@ impl Game {
         if !changes.scripts.is_empty() || changes.graph || requested {
             let started = Instant::now();
             apply_define_overrides(&mut self.project.settings);
-            let plugins = crate::inspect_plugins(&self.project);
-            let graph = self.project.script_graph_with_plugins(
-                self.options.mode,
-                &self.options.target,
-                &plugins,
-            )?;
+            let graph = self
+                .project
+                .script_graph(self.options.mode, &self.options.target)?;
             // The same assemblies as the initial compile (editor ones in Editor Play mode).
             let editor = self.options.mode == unbound_compat::CompileMode::EditorPlayMode;
             let request = self.project.compile_request(
