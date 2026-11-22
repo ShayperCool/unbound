@@ -6,6 +6,10 @@
   "engine_paths": [
     "managed/UnityEngine/UnityEngine.csproj",
     "managed/Unbound.ApiTools/FacadeGenerator.cs",
-    "managed/UnityEngine/Runtime/GameDomain.cs"
+    "managed/UnityEngine/Runtime/GameDomain.cs",
+    "managed/UnityEngine/Generated/",
+    "managed/Unbound.ApiTools/StubEmitter.cs",
+    "managed/UnityEngine/Core/Events.cs",
+    "managed/UnityEngine/Editor/UnityEventTools.cs"
   ]
 }

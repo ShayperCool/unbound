@@ -7,8 +7,10 @@ answers, `engine` Unbound's, `check` runs Unbound and compares with the referenc
 reflected type names, so they do not depend on the OS or the graphics device; the reference was
 recorded with the macOS Editor in batch mode (on Linux `native` uses the shared GPU Editor runner).
 
-residuals.json ({reason: [key, ...]}) lists known differences: each is printed and counted and does
-not fail the comparison; a listed row that matches is reported. Every other differing row fails.
+residuals.json ({reason: {key: Unbound's value}}) lists known differences with the value Unbound gives:
+a listed row with that value is printed and counted and does not fail the comparison; a listed row
+with any other value fails, and one that matches the reference is reported. Every other differing
+row fails.
 The other API coverage is api-check's subject: a type Unbound does not implement answers `<null>`."""
 import argparse
 import json
@@ -126,9 +128,10 @@ def rows(path):
 
 
 def residuals():
-    """{key: reason} of residuals.json ({reason: [key, ...]})."""
+    """{key: (reason, Unbound's value)} of residuals.json ({reason: {key: value}})."""
     path = ROOT/'residuals.json'
-    return {key: reason for reason, keys in (json.loads(path.read_text()) if path.exists() else {}).items() for key in keys}
+    listed = json.loads(path.read_text()) if path.exists() else {}
+    return {key: (reason, value) for reason, rows in listed.items() for key, value in rows.items()}
 
 
 def compare(candidate):
@@ -140,9 +143,13 @@ def compare(candidate):
             if key in known:
                 print('LISTED BUT MATCHING', key)
             continue
-        if key in known:
+        if key in known and actual.get(key) == known[key][1]:
             listed += 1
-            print('RESIDUAL', key, 'expected', repr(expected.get(key)), 'actual', repr(actual.get(key)), '--', known[key])
+            print('RESIDUAL', key, 'expected', repr(expected.get(key)), 'actual', repr(actual.get(key)), '--', known[key][0])
+            continue
+        if key in known:
+            print('FAIL', key, 'expected', repr(expected.get(key)), 'listed', repr(known[key][1]), 'actual', repr(actual.get(key)))
+            failed += 1
             continue
         print('FAIL', key, 'expected', repr(expected.get(key)), 'actual', repr(actual.get(key)))
         failed += 1
