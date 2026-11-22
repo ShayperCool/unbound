@@ -175,7 +175,7 @@ namespace Unbound.Runtime
         /// its depth buffer): the OpenGL texture name plugins see, sharing the renderer's memory.</summary>
         internal static IntPtr TexturePointer(ulong handle, bool depth, bool hasDepth = true)
         {
-            if (handle == 0) return IntPtr.Zero;
+            if (handle == 0) return NoPointer();
             // The texture exists on the renderer once the commands so far have run.
             GfxStream.Flush();
             ulong name = Native.IsReady ? Native.Api.NativeTexture(handle, depth ? 1 : 0) : 0;
@@ -187,6 +187,22 @@ namespace Unbound.Runtime
             }
             // A texture without a depth buffer gives its color texture for it.
             return (IntPtr)(long)(UnsharedPointer | (depth && hasDepth ? UnsharedDepth : 0) | handle);
+        }
+
+        /// <summary>No native pointer (a texture not created): with multithreaded rendering the
+        /// query still waits for the render thread (Unity 6000.0 Texture.GetNativeTexturePtr,
+        /// RenderTexture.GetNativeDepthBufferPtr: "calling this function when using multi-threaded
+        /// rendering will synchronize with the rendering thread"; tests/projects/nativegfx
+        /// vulkan-mt.jsonl device.msaa.*, where the plugin events before such a query have run).</summary>
+        internal static IntPtr NoPointer()
+        {
+            if (GraphicsDeviceProfile.CurrentThreadingMode == UnityEngine.Rendering.RenderingThreadingMode.MultiThreaded && Native.IsReady)
+            {
+                GfxStream.Flush();
+                // Handle 0 names no texture: the renderer only waits.
+                Native.Api.NativeTexture(0, 0);
+            }
+            return IntPtr.Zero;
         }
 
         /// <summary>A render buffer's native pointer: stable for the render texture (none: the

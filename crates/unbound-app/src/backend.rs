@@ -704,6 +704,10 @@ impl RenderBackend for GpuBackend {
     }
 
     fn native_texture(&self, texture: u64, depth: bool) -> u64 {
+        if texture == 0 {
+            // No texture (one not created): the query only waits for the render thread.
+            return self.0.lend(|_| 0).unwrap_or(0);
+        }
         // A native pointer is for a plugin's own device work.
         self.0
             .lend(|r| r.native_texture(texture, depth))

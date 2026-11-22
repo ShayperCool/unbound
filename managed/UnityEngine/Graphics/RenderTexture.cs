@@ -354,7 +354,7 @@ namespace UnityEngine
         /// Unity 6000.0.71f1 Editor (tests/projects/nativegfx ptr.rt.*).</summary>
         internal override IntPtr NativePointer()
         {
-            if (!m_Created) return IntPtr.Zero;
+            if (!m_Created) return NativePlugins.NoPointer();
             // Its images at the current scale (tests/projects/nativegfx dynres.*).
             EnsureCreated();
             return NativePlugins.TexturePointer(m_NativeHandle, false);
@@ -365,7 +365,7 @@ namespace UnityEngine
         /// ptr.rt.nodepth.*, shape.rt.msaa.color.depth): the renderer knows which.</summary>
         public IntPtr GetNativeDepthBufferPtr()
         {
-            if (!m_Created) return IntPtr.Zero;
+            if (!m_Created) return NativePlugins.NoPointer();
             EnsureCreated();
             return NativePlugins.TexturePointer(m_NativeHandle, true, depth > 0);
         }
