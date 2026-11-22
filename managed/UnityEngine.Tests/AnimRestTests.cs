@@ -262,6 +262,17 @@ namespace UnityEngine.Tests
                 fixedInUpdate.Step(0.02f);
                 Near.Equal(0.03f, fixedInUpdate["C"].time, 1e-5f);
 
+                // Play inside a fixed step (the time read there is the fixed time, 10.04), stepped
+                // by the frame at 10.05: the frame-stepped state advances by the 0.01 between.
+                Time.s_InFixedTimeStep = true;
+                var inFixedStep = Make("PlayedInFixedStep", false);
+                inFixedStep.Play("C");
+                Time.s_InFixedTimeStep = false;
+                Time.s_Time = 10.05;
+                inFixedStep.Step(0.03f);
+                Near.Equal(0.01f, inFixedStep["C"].time, 1e-5f);
+                Time.s_Time = 10.01;
+
                 // The next frame: a state first stepped a frame after Play advances the whole
                 // step, never more than the step even when more time has passed.
                 Time.s_Time = 10.04;
@@ -278,6 +289,7 @@ namespace UnityEngine.Tests
             }
             finally
             {
+                Time.s_InFixedTimeStep = false;
                 Time.s_Time = savedTime;
                 Time.s_FixedTime = savedFixed;
             }

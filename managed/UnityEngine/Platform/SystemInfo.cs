@@ -84,8 +84,9 @@ namespace UnityEngine
                     long now = Environment.TickCount64;
                     if (s_BatteryReadAt == long.MinValue || now - s_BatteryReadAt >= BatteryReadingMilliseconds)
                     {
-                        s_Battery = ReadLinuxBattery("/sys/class/power_supply");
+                        s_Battery = ReadLinuxBattery("/sys/class/power_supply", out bool found);
                         s_BatteryReadAt = now;
+                        if (found) NoteUnmeasuredBattery();
                     }
                     return s_Battery;
                 }
@@ -103,8 +104,18 @@ namespace UnityEngine
         /// battery. Of several batteries the one with the most seconds left is taken; without
         /// seconds, the one with the highest percent. The Editor's statuses for SDL's states:
         /// on battery Discharging, charging Charging, charged and no battery Full, unknown Unknown.</summary>
-        internal static (float Level, BatteryStatus Status) ReadLinuxBattery(string powerSupplyRoot)
+        internal static (float Level, BatteryStatus Status) ReadLinuxBattery(string powerSupplyRoot) =>
+            ReadLinuxBattery(powerSupplyRoot, out _);
+
+        /// <summary>Says once that a battery's own state is read without an Editor measurement.</summary>
+        internal static void NoteUnmeasuredBattery() =>
+            Unbound.Runtime.Stubs.Ignored("SystemInfo.batteryLevel/batteryStatus",
+                "read this machine's battery as SDL 2 reads the power supplies; the Editor's answers on a machine with a battery are not measured");
+
+        /// <param name="found">Whether a system battery was read (false: the measured answer of a machine without one).</param>
+        internal static (float Level, BatteryStatus Status) ReadLinuxBattery(string powerSupplyRoot, out bool found)
         {
+            found = false;
             string[] dirs;
             try
             {
@@ -124,6 +135,7 @@ namespace UnityEngine
                 if (string.Equals(ReadTrimmed(Path.Combine(dir, "scope")), "Device", StringComparison.OrdinalIgnoreCase))
                     continue;
 
+                found = true;
                 bool onBattery = false;
                 BatteryStatus status;
                 if (ReadTrimmed(Path.Combine(dir, "present")) == "0")

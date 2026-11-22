@@ -14,10 +14,11 @@ Sections (all run in Play mode):
 * `playtiming.*`: when a legacy `Animation` state started with `Play` first advances
   (`Time.captureDeltaTime = 0.03f`, `Time.fixedDeltaTime = 0.02f`, started in a frame whose time
   is 0.01 ahead of the fixed time): `Play` in `Update`, in `LateUpdate`, in a coroutine resumed
-  after `Update`, and for `AnimationUpdateMode.Fixed` in `Update` and in `FixedUpdate`. Four
+  after `Update`, in `FixedUpdate`, and for `AnimationUpdateMode.Fixed` in `Update` and in `FixedUpdate`. Four
   frames of state times next to the elapsed time and fixed time. A state's first step advances
   it by the clock time since `Play`: nothing in the step it began in, the whole step a frame
-  later, and 0.01 for the fixed-step state begun in `Update`.
+  later, 0.01 for the fixed-step state begun in `Update`, and 0.02 for the frame-stepped state
+  begun in a `FixedUpdate` 0.02 before the frame's time.
 * `propmod.extra.*`: `AnimationMode.AddPropertyModification` with a string property (recorded,
   and reverted to the modification's value) and on a prefab instance with and without an
   existing override, for both `keepPrefabOverride` values: the values are reverted and the

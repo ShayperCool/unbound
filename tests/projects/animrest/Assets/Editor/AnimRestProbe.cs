@@ -619,6 +619,7 @@ public static class AnimRestProbe
         var animCoro = MakeAnim("TimingCoro", false);
         var animFixUpd = MakeAnim("TimingFixUpd", true);
         var animFixFix = MakeAnim("TimingFixFix", true);
+        var animNormFix = MakeAnim("TimingNormFix", false);
 
         var driverGo = new GameObject("PlayTimingDriver");
         var driver = driverGo.AddComponent<PlayTimingDriver>();
@@ -633,6 +634,7 @@ public static class AnimRestProbe
             {
                 fixStarted = true;
                 animFixFix.Play("C");
+                animNormFix.Play("C");
             }
         };
         driver.OnUpdate = () =>
@@ -672,6 +674,7 @@ public static class AnimRestProbe
                 Put($"playtiming.f{idx}.coro", animCoro["C"].time);
                 Put($"playtiming.f{idx}.fixUpd", animFixUpd["C"].time);
                 Put($"playtiming.f{idx}.fixFix", animFixFix["C"].time);
+                Put($"playtiming.f{idx}.normFix", animNormFix["C"].time);
                 if (phase == 4) phase = 5;
             }
         };
@@ -689,6 +692,7 @@ public static class AnimRestProbe
         Object.Destroy(animCoro.gameObject);
         Object.Destroy(animFixUpd.gameObject);
         Object.Destroy(animFixFix.gameObject);
+        Object.Destroy(animNormFix.gameObject);
         Time.captureDeltaTime = prevCapture;
         Time.fixedDeltaTime = prevFixed;
         Logs("playtiming");

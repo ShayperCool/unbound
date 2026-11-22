@@ -275,18 +275,27 @@ namespace Unbound.Tests
             }
             try
             {
-                // No directory, and only a mains supply: no battery, which the Editor answers as -1 and Full.
-                Assert.Equal((-1f, BatteryStatus.Full), SystemInfo.ReadLinuxBattery(root));
+                // No directory, and only a mains supply: no battery, which the Editor answers as -1
+                // and Full. That answer is measured: no battery is found, so nothing is to be noted.
+                Assert.Equal((-1f, BatteryStatus.Full), SystemInfo.ReadLinuxBattery(root, out bool found));
+                Assert.False(found);
                 Supply("AC0", ("type", "Mains"));
-                Assert.Equal((-1f, BatteryStatus.Full), SystemInfo.ReadLinuxBattery(root));
+                Assert.Equal((-1f, BatteryStatus.Full), SystemInfo.ReadLinuxBattery(root, out found));
+                Assert.False(found);
 
                 // A peripheral's battery does not count.
                 Supply("hidpp_battery_0", ("type", "Battery"), ("scope", "Device"), ("status", "Discharging"), ("capacity", "42"));
-                Assert.Equal((-1f, BatteryStatus.Full), SystemInfo.ReadLinuxBattery(root));
+                Assert.Equal((-1f, BatteryStatus.Full), SystemInfo.ReadLinuxBattery(root, out found));
+                Assert.False(found);
 
-                // A system battery: its status and capacity.
+                // A system battery: its status and capacity. Reading one is not measured in the
+                // Editor, which the getters say (once).
                 Supply("BAT0", ("type", "Battery"), ("present", "1"), ("status", "Charging"), ("capacity", "73"));
-                Assert.Equal((0.73f, BatteryStatus.Charging), SystemInfo.ReadLinuxBattery(root));
+                Assert.Equal((0.73f, BatteryStatus.Charging), SystemInfo.ReadLinuxBattery(root, out found));
+                Assert.True(found);
+                int noted = Hits("SystemInfo.batteryLevel/batteryStatus");
+                SystemInfo.NoteUnmeasuredBattery();
+                Assert.Equal(noted + 1, Hits("SystemInfo.batteryLevel/batteryStatus"));
                 Supply("BAT0", ("type", "Battery"), ("status", "Discharging"), ("capacity", "40"));
                 Assert.Equal((0.4f, BatteryStatus.Discharging), SystemInfo.ReadLinuxBattery(root));
                 // Full and Not charging are both a charged battery; a capacity over 100 is 100.

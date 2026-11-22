@@ -246,6 +246,7 @@
 {"k":"playtiming.f0.coro","v":0}
 {"k":"playtiming.f0.fixUpd","v":0}
 {"k":"playtiming.f0.fixFix","v":0}
+{"k":"playtiming.f0.normFix","v":0}
 {"k":"playtiming.f1.dt","v":0.0299999937}
 {"k":"playtiming.f1.dft","v":0.0399999842}
 {"k":"playtiming.f1.upd","v":0.0299999937}
@@ -253,6 +254,7 @@
 {"k":"playtiming.f1.coro","v":0}
 {"k":"playtiming.f1.fixUpd","v":0.0299997162}
 {"k":"playtiming.f1.fixFix","v":0.0199999921}
+{"k":"playtiming.f1.normFix","v":0.0200002696}
 {"k":"playtiming.f2.dt","v":0.0599999875}
 {"k":"playtiming.f2.dft","v":0.05999998}
 {"k":"playtiming.f2.upd","v":0.0599999875}
@@ -260,6 +262,7 @@
 {"k":"playtiming.f2.coro","v":0.0299999937}
 {"k":"playtiming.f2.fixUpd","v":0.0499997064}
 {"k":"playtiming.f2.fixFix","v":0.0399999842}
+{"k":"playtiming.f2.normFix","v":0.0500002652}
 {"k":"playtiming.f3.dt","v":0.0899999812}
 {"k":"playtiming.f3.dft","v":0.0999999642}
 {"k":"playtiming.f3.upd","v":0.0899999812}
@@ -267,6 +270,7 @@
 {"k":"playtiming.f3.coro","v":0.0599999875}
 {"k":"playtiming.f3.fixUpd","v":0.0899996907}
 {"k":"playtiming.f3.fixFix","v":0.0799999684}
+{"k":"playtiming.f3.normFix","v":0.080000259}
 {"k":"playtiming.logs","v":""}
 {"k":"propmod.extra.str.animated","v":true}
 {"k":"propmod.extra.str.reverted","v":"RecordedName"}
