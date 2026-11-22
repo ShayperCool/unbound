@@ -206,6 +206,29 @@ namespace UnityEngine.Tests
             [Range(0f, 1f)] public List<float> xs = new List<float> { 0.5f };
             public List<ThrowingDrawn> shapes = new List<ThrowingDrawn> { new ThrowingDrawn() };
             public GenericDrawn sized = new GenericDrawn();
+            [Tall] public List<int> talls = new List<int> { 1 };
+        }
+
+        public class TallAttribute : PropertyAttribute { }
+
+        [Fact]
+        public void IMGUIMeasuresAnElementsDrawersAndLeavesTheCollectionsToItsElements()
+        {
+            // An element's drawers are its collection's: the element type's drawer and the
+            // collection's attribute drawers apply to each element, not to the collection.
+            using var table = new DrawerTable((typeof(ThrowingDrawn), typeof(TallDrawer)), (typeof(TallAttribute), typeof(TallDrawer)));
+            var target = ScriptableObject.CreateInstance<SizeSample>();
+            using var so = new SerializedObject(target);
+            try
+            {
+                Assert.Equal(77f, EditorGUI.GetPropertyHeight(so.FindProperty("shapes.Array.data[0]")));
+                Assert.Equal(77f, EditorGUI.GetPropertyHeight(so.FindProperty("talls.Array.data[0]")));
+                Assert.NotEqual(77f, EditorGUI.GetPropertyHeight(so.FindProperty("talls"), false));
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+            }
         }
 
         [Fact]

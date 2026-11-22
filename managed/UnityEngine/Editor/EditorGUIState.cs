@@ -778,33 +778,37 @@ namespace UnityEditor
             }
         }
 
+        // A property's drawers are the ones PropertyField finds (DrawerDispatch: the declaring field,
+        // a collection's attributes on its elements, the built-in attributes); the engine's own
+        // drawers and decorators are measured here, a game's by its GetHeight/GetPropertyHeight.
         internal static float Of(SerializedProperty property, GUIContent label, bool includeChildren)
         {
-            var field = PropertyDrawers.FieldOf(property);
+            var drawers = DrawerDispatch.For(property);
             float height = 0f;
-            PropertyAttribute drawerAttribute = null;
-            if (field != null)
+            if (drawers.Decorators != null)
             {
-                foreach (var attribute in field.GetCustomAttributes<PropertyAttribute>(true).OrderBy(a => a.order))
+                foreach (var decorator in drawers.Decorators)
                 {
-                    switch (attribute)
+                    switch (decorator)
                     {
-                        case SpaceAttribute space: height += space.height; break;
-                        case HeaderAttribute _:
+                        case SpaceDrawer _:
+                            height += ((SpaceAttribute)decorator.attribute).height;
+                            break;
+                        case HeaderDrawer _:
                             // The header's style is the Editor's: there is none outside an editor window.
                             EditorStyles.Require();
                             height += Line * 1.5f + 6f;
                             break;
                         default:
-                            if (PropertyDrawers.DecoratorFor(attribute) is DecoratorDrawer decorator) height += decorator.GetHeight();
-                            else drawerAttribute ??= attribute;
+                            height += decorator.GetHeight();
                             break;
                     }
                 }
             }
-            var drawer = PropertyDrawers.DrawerFor(property, field, drawerAttribute);
-            if (drawer != null) return height + drawer.GetPropertyHeight(property, label ?? new GUIContent(property.displayName));
-            switch (drawerAttribute)
+            var drawer = drawers.DrawerAt(0);
+            if (drawer != null && drawer.GetType().Assembly != typeof(UnityEngine.Object).Assembly)
+                return height + drawer.GetPropertyHeight(property, label ?? new GUIContent(property.displayName));
+            switch (drawer?.attribute)
             {
                 case MultilineAttribute multiline:
                     return height + (!EditorGUIUtility.wideMode ? Line : 0f) + Line + (multiline.lines - 1) * 13f;
@@ -843,55 +847,6 @@ namespace UnityEditor
                 while (child.NextVisible(false));
             }
             return total;
-        }
-    }
-
-    /// <summary>Property and decorator drawers for IMGUI, found as PropertyField finds them
-    /// (<see cref="DrawerDispatch"/>).</summary>
-    internal static class PropertyDrawers
-    {
-        static Type Find(Type target, bool decorator, UnityEngine.Object owner = null)
-        {
-            var drawer = DrawerDispatch.ImguiDrawerType(target, owner);
-            return drawer != null && typeof(DecoratorDrawer).IsAssignableFrom(drawer) == decorator ? drawer : null;
-        }
-
-        internal static FieldInfo FieldOf(SerializedProperty property) => property.UnboundField;
-
-        internal static DecoratorDrawer DecoratorFor(PropertyAttribute attribute)
-        {
-            var type = Find(attribute.GetType(), decorator: true);
-            if (type == null) return null;
-            var drawer = (DecoratorDrawer)Activator.CreateInstance(type, nonPublic: true);
-            drawer.m_Attribute = attribute;
-            return drawer;
-        }
-
-        internal static PropertyDrawer DrawerFor(SerializedProperty property, FieldInfo field, PropertyAttribute attribute)
-        {
-            var type = DrawerTypeFor(property, field, attribute);
-            if (type == null) return null;
-            var drawer = (PropertyDrawer)Activator.CreateInstance(type, nonPublic: true);
-            drawer.m_Attribute = attribute;
-            drawer.m_FieldInfo = field;
-            return drawer;
-        }
-
-        /// <summary>The PropertyDrawer class for an attribute, else for the field's type (an
-        /// array's or list's element type), without creating it.</summary>
-        internal static Type DrawerTypeFor(SerializedProperty property, FieldInfo field, PropertyAttribute attribute)
-        {
-            var owner = property.serializedObject.targetObject;
-            Type type = attribute != null ? Find(attribute.GetType(), decorator: false, owner) : null;
-            if (type == null && field != null)
-            {
-                var fieldType = field.FieldType;
-                if (property.isArray && property.propertyType != SerializedPropertyType.String) fieldType = null;
-                else if (fieldType.IsArray) fieldType = fieldType.GetElementType();
-                else if (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(List<>)) fieldType = fieldType.GetGenericArguments()[0];
-                if (fieldType != null) type = Find(fieldType, decorator: false, owner);
-            }
-            return type != null && typeof(PropertyDrawer).IsAssignableFrom(type) ? type : null;
         }
     }
 

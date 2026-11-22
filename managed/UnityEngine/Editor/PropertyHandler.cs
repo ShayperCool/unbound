@@ -14,7 +14,7 @@ using UnityEngine.UIElements;
 // decorator drawers of the attributes. A collection's attribute drawers apply to its elements,
 // unless the attribute applies to the collection; its decorators apply to the collection. One set
 // is kept per target object and property path (array indices left out), so the fields of one
-// property share their drawer instances.
+// property share their drawer instances, and IMGUI measures the same drawers.
 
 namespace UnityEditor
 {
@@ -194,16 +194,6 @@ namespace UnityEditor
             if (own != null) return (own, target.GetType());
             var current = GraphicsSettings.currentRenderPipelineAssetType;
             return (GraphicsSettings.isScriptableRenderPipelineEnabled && current != null ? new[] { current } : null, null);
-        }
-
-        /// <summary>The drawer class IMGUI uses for a drawn type (its attribute's type, or the field's
-        /// type): the same lookup, without the engine's own drawers, whose attributes IMGUI draws
-        /// itself.</summary>
-        internal static Type ImguiDrawerType(Type drawnType, UnityEngine.Object target)
-        {
-            var (pipelines, owner) = PipelinesFor(target);
-            var type = DrawerForType(drawnType, pipelines, owner, false, Table);
-            return type != null && type.Assembly != typeof(UnityEngine.Object).Assembly ? type : null;
         }
 
         internal static bool IsArrayOrList(Type type) =>
