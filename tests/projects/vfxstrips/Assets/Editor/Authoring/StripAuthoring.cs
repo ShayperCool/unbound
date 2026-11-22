@@ -163,8 +163,7 @@ public static class StripAuthoring
         context.AddChild(block);
     }
 
-    /// <summary>Particles that move across the view, each spawning into a system of strips.</summary>
-    /// <summary>Particles in room for four that move, each triggering <paramref name="rate"/>
+    /// <summary>Particles in room for four that move across the view, each triggering <paramref name="rate"/>
     /// GPU events a second: three at once that never die, or, given a
     /// <paramref name="lifetime"/>, <paramref name="spawnRate"/> a second that live that
     /// long.</summary>
