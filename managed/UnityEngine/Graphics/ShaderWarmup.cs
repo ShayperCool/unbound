@@ -19,7 +19,7 @@ namespace Unbound.Runtime
             Flush();
             // Every source SubShader of a known shader, whatever the pipeline and maximum LOD.
             foreach (var shader in shaders)
-                if (Info(shader).Known) Send(shader.name, Array.Empty<int>(), Array.Empty<string>(), true);
+                if (Info(shader).Known) Send(shader.SourceName, Array.Empty<int>(), Array.Empty<string>(), true);
                 else Skip(shader, NoSource);
         }
 

@@ -234,30 +234,6 @@ namespace Unbound.Runtime
                     if ((systems[s].flags & VFXSystemFlag.SystemHasStrips) != 0) refusals[s][t] = LitStripRefusal;
                 }
             }
-            // The renderer finds a generated shader by its name: outputs whose shaders share one
-            // with another source (outputs of one system the graph names alike: no label, no
-            // letter) cannot each be drawn with their own.
-            var seen = new Dictionary<string, string>(StringComparer.Ordinal);
-            var clashing = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var system in systems)
-                foreach (var task in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
-                    if (task.shaderSourceIndex >= 0 && task.shaderSourceIndex < sources.Length && !sources[task.shaderSourceIndex].compute && IsOutput(task.type)
-                        && ShaderLab.Name(sources[task.shaderSourceIndex].source ?? "") is string name)
-                    {
-                        string source = sources[task.shaderSourceIndex].source;
-                        if (!seen.TryAdd(name, source) && !string.Equals(seen[name], source, StringComparison.Ordinal)) clashing.Add(name);
-                    }
-            for (int s = 0; s < systems.Length; s++)
-            {
-                var tasks = systems[s].tasks ?? Array.Empty<VFXEditorTaskDesc>();
-                for (int t = 0; t < tasks.Length; t++)
-                {
-                    int index = tasks[t].shaderSourceIndex;
-                    if (index >= 0 && index < sources.Length && !sources[index].compute && IsOutput(tasks[t].type)
-                        && ShaderLab.Name(sources[index].source ?? "") is string name && clashing.Contains(name))
-                        refusals[s][t] ??= $"its shader's name '{name}' is another output's, whose shader differs, and Unbound finds generated shaders by name";
-                }
-            }
             return refusals;
         }
 

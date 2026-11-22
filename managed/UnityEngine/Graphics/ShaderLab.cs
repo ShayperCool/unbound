@@ -31,6 +31,16 @@ namespace Unbound.Runtime
             return m.Success ? m.Groups[1].Value : null;
         }
 
+        /// <summary>The source with its <c>Shader "Name"</c> declaration naming <paramref name="name"/>
+        /// instead; the source itself without one.</summary>
+        internal static string Renamed(string source, string name)
+        {
+            var m = s_Name.Match(source);
+            if (!m.Success) return source;
+            var group = m.Groups[1];
+            return source.Substring(0, group.Index) + name + source.Substring(group.Index + group.Length);
+        }
+
         /// <summary>
         /// A SubShader `Queue` tag's value as a render queue, null when Unity does not take it: a
         /// queue name in any case, optionally followed at once by a `+`/`-` integer offset, then

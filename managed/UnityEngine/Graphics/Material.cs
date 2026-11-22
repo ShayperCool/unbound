@@ -962,7 +962,7 @@ namespace UnityEngine
             var info = Unbound.Runtime.ShaderPassInfo.Of(m_Shader);
             if (info != null)
             {
-                if ((searchFallbacks || info.DrawnShader == m_Shader.name) && info.Tags.TryGetValue(tag, out var shaderValue)) return shaderValue;
+                if ((searchFallbacks || info.DrawnShader == m_Shader.SourceName) && info.Tags.TryGetValue(tag, out var shaderValue)) return shaderValue;
                 return defaultValue;
             }
             return tag == "RenderType" ? (renderQueue >= 2500 ? "Transparent" : "Opaque") : defaultValue;
@@ -977,7 +977,7 @@ namespace UnityEngine
         {
             if (m_Tags.TryGetValue(tag, out var value)) return value;
             var info = m_Shader != null ? Unbound.Runtime.ShaderPassInfo.Of(m_Shader) : null;
-            return info != null && info.DrawnShader == m_Shader.name && info.Tags.TryGetValue(tag, out var drawn) ? drawn : null;
+            return info != null && info.DrawnShader == m_Shader.SourceName && info.Tags.TryGetValue(tag, out var drawn) ? drawn : null;
         }
 
         /// <summary>Activates a pass for GL drawing and Graphics.DrawMeshNow.</summary>

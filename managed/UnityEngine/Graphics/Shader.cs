@@ -67,6 +67,15 @@ namespace UnityEngine
         /// <summary>The LOD the shader's SubShaders are picked under (int.MaxValue: every one).</summary>
         internal int EffectiveLOD => m_MaximumLOD >= 0 ? m_MaximumLOD : s_GlobalMaximumLOD;
 
+        /// <summary>The name a shader an importer generated is known by to the renderer: its
+        /// ShaderLab name with its source's key (see GeneratedShaders), so two generated shaders of
+        /// one name (graphs of one file name in different folders, a graph's earlier versions)
+        /// each draw with their own source; null for others, which the renderer knows by name.</summary>
+        internal string m_SourceKey;
+
+        /// <summary>The name the renderer finds the shader's source by (see <see cref="m_SourceKey"/>).</summary>
+        internal string SourceName => m_SourceKey ?? m_Name;
+
         /// <summary>The name the renderer knows the shader by: with the maximum LOD when one
         /// applies (<c>Name|lod=N</c>: the first SubShader whose LOD is at most N, SubShaders
         /// without one being LOD 0, else the fallback's under the same limit).</summary>
@@ -75,7 +84,7 @@ namespace UnityEngine
             get
             {
                 int lod = EffectiveLOD;
-                return lod == int.MaxValue ? m_Name : m_Name + "|lod=" + lod.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                return lod == int.MaxValue ? SourceName : SourceName + "|lod=" + lod.ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
         }
 
@@ -131,10 +140,10 @@ namespace UnityEngine
         /// Vertex or untagged passes, else its fallback's (the renderer picks by the name).</summary>
         internal static Shader VertexLit(Shader shader)
         {
-            var key = (shader.m_Name, "|vertexlit", "");
+            var key = (shader.SourceName, "|vertexlit", "");
             if (s_Replacements.TryGetValue(key, out var variant) && variant) return variant;
             using (ObjectRegistry.AsAssets())
-                variant = new Shader { m_Name = shader.m_Name + "|vertexlit", m_RenderQueue = shader.m_RenderQueue, m_Variant = true, hideFlags = HideFlags.HideAndDontSave };
+                variant = new Shader { m_Name = shader.SourceName + "|vertexlit", m_RenderQueue = shader.m_RenderQueue, m_Variant = true, hideFlags = HideFlags.HideAndDontSave };
             variant.m_Properties.AddRange(shader.m_Properties);
             s_Replacements[key] = variant;
             return variant;
@@ -142,10 +151,10 @@ namespace UnityEngine
 
         internal static Shader Replacement(Shader shader, string tag, string value)
         {
-            var key = (shader.m_Name, tag, value);
+            var key = (shader.SourceName, tag, value);
             if (s_Replacements.TryGetValue(key, out var replacement) && replacement) return replacement;
             using (ObjectRegistry.AsAssets())
-                replacement = new Shader { m_Name = shader.m_Name + "|tag=" + tag + "=" + value, m_RenderQueue = shader.m_RenderQueue, m_Variant = true, hideFlags = HideFlags.HideAndDontSave };
+                replacement = new Shader { m_Name = shader.SourceName + "|tag=" + tag + "=" + value, m_RenderQueue = shader.m_RenderQueue, m_Variant = true, hideFlags = HideFlags.HideAndDontSave };
             replacement.m_Properties.AddRange(shader.m_Properties);
             s_Replacements[key] = replacement;
             return replacement;

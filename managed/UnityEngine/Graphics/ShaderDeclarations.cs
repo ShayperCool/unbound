@@ -140,12 +140,12 @@ namespace Unbound.Runtime
         internal static ShaderDeclarations Kept(UnityEngine.Shader shader)
         {
             if (shader == null || string.IsNullOrEmpty(shader.name)) return null;
-            lock (s_Lock) return s_Kept.TryGetValue(("shader-declarations", shader.name), out var kept) ? kept : null;
+            lock (s_Lock) return s_Kept.TryGetValue(("shader-declarations", shader.SourceName), out var kept) ? kept : null;
         }
 
         /// <summary>A shader's declarations (by its name).</summary>
         internal static ShaderDeclarations Of(UnityEngine.Shader shader) =>
-            Get("shader-declarations", shader != null ? shader.name : null, "name");
+            Get("shader-declarations", shader != null ? shader.SourceName : null, "name");
 
         /// <summary>A compute shader's declared keywords (by its file).</summary>
         internal static ShaderDeclarations OfCompute(ComputeShader shader) =>

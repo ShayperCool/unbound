@@ -32,8 +32,10 @@ namespace UnityEditor
         public static Shader CreateShaderAsset(AssetImportContext context, string source, bool compileInitialShaderVariants)
         {
             if (source == null) throw new System.ArgumentNullException(nameof(source));
-            GeneratedShaders.Write(context?.assetPath ?? "", source, ".shader");
-            return CreateShaderAsset(source, compileInitialShaderVariants);
+            GeneratedShaders.Write(context?.assetPath ?? "", source, ".shader", out string key);
+            var shader = CreateShaderAsset(source, compileInitialShaderVariants);
+            shader.m_SourceKey = key;
+            return shader;
         }
 
         public static void UpdateShaderAsset(Shader shader, string source) => UpdateShaderAsset(shader, source, true);
@@ -49,8 +51,10 @@ namespace UnityEditor
 
         public static void UpdateShaderAsset(AssetImportContext context, Shader shader, string source, bool compileInitialShaderVariants)
         {
-            if (source != null) GeneratedShaders.Write(context?.assetPath ?? "", source, ".shader");
+            string key = null;
+            if (source != null) GeneratedShaders.Write(context?.assetPath ?? "", source, ".shader", out key);
             UpdateShaderAsset(shader, source, compileInitialShaderVariants);
+            if (shader != null && source != null) shader.m_SourceKey = key;
         }
 
         static void Fill(Shader shader, string source)
@@ -200,12 +204,34 @@ namespace Unbound.Runtime
     {
         static readonly Regex s_Include = new Regex(@"^([ \t]*#[ \t]*include(?:_with_pragmas)?[ \t]+"")([^""]+)("")", RegexOptions.Multiline);
 
-        internal static string Write(string assetPath, string source, string extension)
+        /// <summary>The format of the files written: part of every file's name, so a change of
+        /// what they hold never reads an older file (2: ShaderLab files declare their key).</summary>
+        const string FormatVersion = "2";
+
+        /// <summary>What joins a generated shader's ShaderLab name and its source's hash in the
+        /// name its file declares (see <see cref="Write(string, string, string, out string)"/>).</summary>
+        const string KeySeparator = "#";
+
+        internal static string Write(string assetPath, string source, string extension) => Write(assetPath, source, extension, out _);
+
+        /// <summary>Writes a generated source (includes made project paths) under a name of its
+        /// asset's path and its text. A ShaderLab source's file declares its name with that
+        /// hash joined (<paramref name="key"/>; null for other sources), which is the name the
+        /// renderer knows the shader by (Shader.m_SourceKey): Unity draws each asset's own
+        /// shader, also when two generated shaders share a name (graphs of one file name in
+        /// different folders, a graph's earlier versions left here).</summary>
+        internal static string Write(string assetPath, string source, string extension, out string key)
         {
             var text = AnchorIncludes(assetPath, source);
             string hash;
             using (var sha = SHA1.Create())
-                hash = Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(assetPath + "\n" + text))).ToLowerInvariant();
+                hash = Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(FormatVersion + "\n" + assetPath + "\n" + text))).ToLowerInvariant();
+            key = null;
+            if (extension == ".shader" && ShaderLab.Name(text) is string name)
+            {
+                key = name + KeySeparator + hash.Substring(0, 16);
+                text = ShaderLab.Renamed(text, key);
+            }
             var dir = Path.Combine(UnityEngine.ProjectInfo.ProjectPath, "Library", "Unbound", "GeneratedShaders");
             Directory.CreateDirectory(dir);
             var file = Path.Combine(dir, hash + extension);
