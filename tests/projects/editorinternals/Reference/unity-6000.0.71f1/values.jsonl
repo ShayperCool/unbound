@@ -1,0 +1,14 @@
+{"k":"reload.requested","v":"False"}
+{"k":"repaint","v":"ok"}
+{"k":"expanded.defaults","v":"gameObject=True|transform=True|camera=True|light=True|behaviour=True|material=False|asset=True|texture=True"}
+{"k":"expanded.null","v":"False|set=ok|after=False"}
+{"k":"expanded.collapsed","v":"gameObject=False|transform=False|camera=False|light=False|behaviour=False|material=False|asset=False|texture=False"}
+{"k":"expanded.collapsed.others","v":"gameObject2=False|transform2=False|camera2=False|behaviour2=False|material2=False|asset2=False|otherType=True"}
+{"k":"expanded.again","v":"transform=True|transform2=True|material=False|material2=True|asset=True|asset2=True|camera=False"}
+{"k":"expanded.newAfter","v":"gameObject=False|transform=True|camera=False|asset=True"}
+{"k":"expanded.destroyed","v":"False|set=ok"}
+{"k":"layers.named","v":"Default,TransparentFX,Ignore Raycast,Water,UI"}
+{"k":"layers.fromConcatenated","v":"0>0|1>1|2>2|4>4|8>16|16>32|31>55|32>0|64>0|-1>55|-2147483648>0|5>5"}
+{"k":"layers.toConcatenated","v":"0>0|1>1|2>2|4>4|8>4|16>8|32>16|55>31|64>16|-2147483648>16|-1>31|17>9"}
+{"k":"logs","v":""}
+{"k":"complete","v":true}

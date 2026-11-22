@@ -1,0 +1,8 @@
+{
+  "commands": ["python3 tests/projects/editorinternals/run.py gate"],
+  "summary": "editorinternals: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/InternalEditorUtilityState.cs",
+    "managed/UnityEngine/Runtime/Components.cs"
+  ]
+}
