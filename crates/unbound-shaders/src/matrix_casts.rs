@@ -168,7 +168,7 @@ mod tests {
             assert_eq!(compile(&fixed), first);
         }
         assert_eq!(floats(&first), [2.0]);
-        // Without the rewrite the constant is not 2 (glslang copies the integer's bits).
-        assert!(!floats(&compile(source)).contains(&2.0));
+        // Without the rewrite the constant is whatever bits glslang reads, which may happen to
+        // be 2 in a given compile: nothing is asserted of it.
     }
 }
