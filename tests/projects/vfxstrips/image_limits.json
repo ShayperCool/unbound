@@ -465,37 +465,37 @@
   "mean": 0.03,
   "worst": 70,
   "over8": 2,
-  "reason": "While the heads live, the Editor draws each strip one segment shorter at its newest end (the head's quad shows where Unbound draws the strip's last segment over it); every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly. The same heads with strips whose particles die (trails alive) match exactly. Cause not resolved: strips whose particles never die behind heads that do."
+  "reason": "While the heads live, the pixels where a strip's newest end meets its head differ: the Editor shows the head there and Unbound the strip. Every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly; the same heads with strips whose particles die (trails alive) match exactly. Not resolved whether the Editor's strip is shorter there or drawn under the head (a control without the heads' output would tell)."
  },
  "draw-trails alive keep-f012.png": {
   "mean": 0.177,
   "worst": 209,
   "over8": 7,
-  "reason": "While the heads live, the Editor draws each strip one segment shorter at its newest end (the head's quad shows where Unbound draws the strip's last segment over it); every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly. The same heads with strips whose particles die (trails alive) match exactly. Cause not resolved: strips whose particles never die behind heads that do."
+  "reason": "While the heads live, the pixels where a strip's newest end meets its head differ: the Editor shows the head there and Unbound the strip. Every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly; the same heads with strips whose particles die (trails alive) match exactly. Not resolved whether the Editor's strip is shorter there or drawn under the head (a control without the heads' output would tell)."
  },
  "draw-trails alive keep-f016.png": {
   "mean": 0.15,
   "worst": 140,
   "over8": 7,
-  "reason": "While the heads live, the Editor draws each strip one segment shorter at its newest end (the head's quad shows where Unbound draws the strip's last segment over it); every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly. The same heads with strips whose particles die (trails alive) match exactly. Cause not resolved: strips whose particles never die behind heads that do."
+  "reason": "While the heads live, the pixels where a strip's newest end meets its head differ: the Editor shows the head there and Unbound the strip. Every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly; the same heads with strips whose particles die (trails alive) match exactly. Not resolved whether the Editor's strip is shorter there or drawn under the head (a control without the heads' output would tell)."
  },
  "draw-trails alive keep-f020.png": {
   "mean": 0.185,
   "worst": 142,
   "over8": 9,
-  "reason": "While the heads live, the Editor draws each strip one segment shorter at its newest end (the head's quad shows where Unbound draws the strip's last segment over it); every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly. The same heads with strips whose particles die (trails alive) match exactly. Cause not resolved: strips whose particles never die behind heads that do."
+  "reason": "While the heads live, the pixels where a strip's newest end meets its head differ: the Editor shows the head there and Unbound the strip. Every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly; the same heads with strips whose particles die (trails alive) match exactly. Not resolved whether the Editor's strip is shorter there or drawn under the head (a control without the heads' output would tell)."
  },
  "draw-trails alive keep-f024.png": {
   "mean": 0.148,
   "worst": 173,
   "over8": 7,
-  "reason": "While the heads live, the Editor draws each strip one segment shorter at its newest end (the head's quad shows where Unbound draws the strip's last segment over it); every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly. The same heads with strips whose particles die (trails alive) match exactly. Cause not resolved: strips whose particles never die behind heads that do."
+  "reason": "While the heads live, the pixels where a strip's newest end meets its head differ: the Editor shows the head there and Unbound the strip. Every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly; the same heads with strips whose particles die (trails alive) match exactly. Not resolved whether the Editor's strip is shorter there or drawn under the head (a control without the heads' output would tell)."
  },
  "draw-trails alive keep-f028.png": {
   "mean": 0.163,
   "worst": 181,
   "over8": 7,
-  "reason": "While the heads live, the Editor draws each strip one segment shorter at its newest end (the head's quad shows where Unbound draws the strip's last segment over it); every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly. The same heads with strips whose particles die (trails alive) match exactly. Cause not resolved: strips whose particles never die behind heads that do."
+  "reason": "While the heads live, the pixels where a strip's newest end meets its head differ: the Editor shows the head there and Unbound the strip. Every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly; the same heads with strips whose particles die (trails alive) match exactly. Not resolved whether the Editor's strip is shorter there or drawn under the head (a control without the heads' output would tell)."
  },
  "draw-trails keep-f010.png": {
   "mean": 0,

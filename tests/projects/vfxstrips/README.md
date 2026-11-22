@@ -102,10 +102,11 @@ Row 1 is not recorded (the first frame's end of frame: `tests/projects/vfx/READM
 
 Every image is the Editor's pixel for pixel on the machine both ran on (an NVIDIA driver, the
 Linux Editor on OpenGL Core), except `trails alive keep` from frame 8 to frame 28: while its heads
-live, the Editor draws each strip one segment shorter at its newest end (a few pixels where the
-strip meets its head; `image_limits.json`). From frame 32, when no head is alive, the images are
-the Editor's, and `trails alive` (whose strip particles die) is exact throughout. Cause not
-resolved.
+live, the pixels where a strip's newest end meets its head differ, the Editor showing the head
+and Unbound the strip (a few pixels each; `image_limits.json`). Whether the Editor's strip is
+shorter there or drawn under the head is not resolved (a control without the heads' output
+would tell). From frame 32, when no head is alive, the images are the Editor's, and `trails
+alive` (whose strip particles die) is exact throughout.
 
 ## Not covered
 
@@ -119,8 +120,9 @@ resolved.
 - A batch in which an effect wakes in every frame for longer than three frames (as measured,
   its counts would not be asked while that lasts).
 - `stripAlive` with several strip systems spawned from one system (the graph compiler reads
-  the first), with sleeping or culled effects, and the cause of `trails alive keep`'s short
-  strips.
+  the first), with sleeping or culled effects, a system with more room than its strip system
+  has strips (the update kernel reads the strip of each dying particle's own index), and the
+  cause of `trails alive keep`'s differing pixels.
 - The strip tiling mode `Custom`; `Orient` modes other than `Face Camera Position` on a
   strip; a perspective camera.
 - `stripIndex` computed for each particle (linked to an attribute); the attributes
