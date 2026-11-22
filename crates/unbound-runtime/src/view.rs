@@ -1,8 +1,8 @@
 //! The directory the game runs in. Unity's Mono maps `Packages/<name>/...` to each package's
 //! files for plain file IO, so Editor code reads package files by those paths; .NET has no such
 //! hook. The game runs instead in `LibraryUnbound/ProjectView`, a directory of symbolic links: every
-//! top-level entry of the project but Unbound's own directory, and `Packages/<name>` for every
-//! resolved package.
+//! top-level entry of the project but Unbound's own directory and Unity's `Library/`,
+//! `Packages/<name>` for every resolved package, and a `Library/` of Unbound's own.
 use anyhow::{Context, Result};
 use serde_json::{Value as Json, json};
 use std::path::{Path, PathBuf};
@@ -11,6 +11,13 @@ use unbound_project::{Package, PackageSource, Project};
 /// The project view's directory: `<project>/LibraryUnbound/ProjectView`.
 pub fn dir(project: &Project) -> PathBuf {
     project.unbound_dir().join("ProjectView")
+}
+
+/// The `Library/` the game sees (Editor code keeps its own files there, as in the Editor's
+/// `Library/`): `<project>/LibraryUnbound/Library`, which outlives the view's rebuilds. Unity's
+/// own `Library/` is no part of the view: Unbound neither reads nor writes it.
+pub fn library(project: &Project) -> PathBuf {
+    project.unbound_dir().join("Library")
 }
 
 /// A project or package file as the game sees it through the view (its working directory):
@@ -46,8 +53,10 @@ pub fn to_view(project: &Project, path: &Path) -> PathBuf {
     {
         return view.join("Packages").join(&package.name).join(rest);
     }
+    // Unity's Library/ is no part of the view (the view's Library/ is Unbound's own).
     if let Ok(rest) = path.strip_prefix(&project.root)
         && !rest.starts_with("Packages")
+        && !rest.starts_with("Library")
     {
         return view.join(rest);
     }
@@ -66,12 +75,17 @@ pub fn build(project: &Project) -> Result<PathBuf> {
     let data = project.unbound_dir();
     for entry in std::fs::read_dir(&project.root)?.flatten() {
         let name = entry.file_name();
-        // Unbound's own directory is no part of the project the game sees.
-        if name == "Packages" || entry.path() == data {
+        // Unbound's own directory is no part of the project the game sees, nor Unity's Library/.
+        if name == "Packages" || name == "Library" || entry.path() == data {
             continue;
         }
         link(&entry.path(), &view.join(&name))?;
     }
+    // The Editor always has a Library/ (it makes one when it opens a project); Editor code writes
+    // its own files there.
+    let library = library(project);
+    std::fs::create_dir_all(&library).with_context(|| format!("creating {}", library.display()))?;
+    link(&library, &view.join("Library"))?;
     // The manifest, the lock and anything else at the top of Packages/.
     if let Ok(entries) = std::fs::read_dir(project.root.join("Packages")) {
         for entry in entries.flatten() {

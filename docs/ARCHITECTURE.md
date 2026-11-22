@@ -134,7 +134,9 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   references (Mono lets them use engine internals); .NET Framework assemblies .NET only has as thin
   facades (`System.Web`) come from the release's Mono; and the game runs in
   `LibraryUnbound/ProjectView`, a directory of links where `Packages/<name>/...` resolves for plain
-  file IO, as Mono's path remapping makes it in the Editor.
+  file IO, as Mono's path remapping makes it in the Editor. Its `Library/` is
+  `LibraryUnbound/Library`, kept between runs, where Editor code finds the `Library/` the Editor
+  always has (Unity's own `Library/` is no part of the view).
   `LibraryUnbound` is Unbound's own directory in the project (`Library/` is Unity's; nothing of
   Unbound's is kept there). `--project-data <dir>` / `UNBOUND_PROJECT_DATA` name another place,
   relative to the project or absolute; the host resolves it once (`unbound_project::unbound_dir`)

@@ -111,6 +111,50 @@ fn the_fixture_runs_its_script() {
     );
 }
 
+/// Editor code finds a `Library/` as in the Editor, which always has one: Unbound's own
+/// `LibraryUnbound/Library`, kept from run to run. Unity's `Library/` stays out of the game's
+/// view and untouched.
+#[test]
+fn editor_code_has_a_library_of_its_own() {
+    if !enabled() {
+        return;
+    }
+    let project = fixture_copy("view-library");
+    let run = || {
+        let status = unbound()
+            .args(["run", "--headless", "3", "--no-watch", "-p"])
+            .arg(&project)
+            .status()
+            .unwrap();
+        assert!(status.success());
+    };
+    run();
+    let data = project.join("LibraryUnbound");
+    let library = data.join("ProjectView/Library");
+    assert!(std::fs::symlink_metadata(&library).unwrap().is_symlink());
+    assert_eq!(
+        library.canonicalize().unwrap(),
+        data.join("Library").canonicalize().unwrap()
+    );
+    std::fs::write(library.join("written-by-editor-code.txt"), "kept").unwrap();
+    assert!(!project.join("Library").exists());
+
+    // A project the Editor has opened: its Library/ is not what the game sees.
+    std::fs::create_dir_all(project.join("Library")).unwrap();
+    std::fs::write(project.join("Library/unity.txt"), "Unity's").unwrap();
+    run();
+    assert!(!library.join("unity.txt").exists());
+    assert_eq!(
+        std::fs::read_to_string(library.join("written-by-editor-code.txt")).unwrap(),
+        "kept"
+    );
+    let unity: Vec<_> = std::fs::read_dir(project.join("Library"))
+        .unwrap()
+        .map(|e| e.unwrap().file_name())
+        .collect();
+    assert_eq!(unity, ["unity.txt"]);
+}
+
 /// Whatever a run makes for itself goes to Unbound's directory: never into Unity's `Library/`,
 /// and where `--project-data` says when given, outside the project too.
 #[test]
