@@ -50,6 +50,8 @@ namespace DotRecast.Detour
         /// Unbound: straight paths over this mesh merge only points that are exactly equal, not
         /// points within Detour's colocation threshold (chosen by the profile when the mesh is made).
         public bool exactStraightPathMerge;
+        /// <summary>Unbound: bind point links to the chosen polygon's detail triangles.</summary>
+        public bool projectPointLinkEnds;
 
         /// Unbound: the surfaces (NavMesh data instances), in order of their ids, and how many
         /// tiles belong to none.
@@ -1177,6 +1179,7 @@ namespace DotRecast.Detour
                 return;
             }
 
+            nearestPt = ProjectPointLinkEnd(land, refs, p, nearestPt);
             // Make sure the location is on current mesh.
             target.data.verts[targetPoly.verts[1] * 3] = nearestPt.X;
             target.data.verts[targetPoly.verts[1] * 3 + 1] = nearestPt.Y;
@@ -1446,6 +1449,7 @@ namespace DotRecast.Detour
                 }
 
                 // Make sure the location is on current mesh.
+                nearestPt = ProjectPointLinkEnd(tile, refs, p[0], nearestPt);
                 tile.data.verts[poly.verts[0] * 3] = nearestPt.X;
                 tile.data.verts[poly.verts[0] * 3 + 1] = nearestPt.Y;
                 tile.data.verts[poly.verts[0] * 3 + 2] = nearestPt.Z;
@@ -1508,29 +1512,7 @@ namespace DotRecast.Detour
                     }
 
                     Span<RcVec3f> v = tempV;
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        if (tris[ti + j] < poly.vertCount)
-                        {
-                            int index = poly.verts[tris[ti + j]] * 3;
-                            v[j] = new RcVec3f
-                            {
-                                X = tile.data.verts[index],
-                                Y = tile.data.verts[index + 1],
-                                Z = tile.data.verts[index + 2]
-                            };
-                        }
-                        else
-                        {
-                            int index = (pd.vertBase + (tris[ti + j] - poly.vertCount)) * 3;
-                            v[j] = new RcVec3f
-                            {
-                                X = tile.data.detailVerts[index],
-                                Y = tile.data.detailVerts[index + 1],
-                                Z = tile.data.detailVerts[index + 2]
-                            };
-                        }
-                    }
+                    ReadDetailTriangle(tile.data, poly, pd, ti, v);
 
                     for (int k = 0, j = 2; k < 3; j = k++)
                     {
@@ -1639,29 +1621,7 @@ namespace DotRecast.Detour
                 {
                     int t = (pd.triBase + j) * 4;
                     Span<RcVec3f> v = tempV;
-                    for (int k = 0; k < 3; ++k)
-                    {
-                        if (tile.data.detailTris[t + k] < poly.vertCount)
-                        {
-                            int index = poly.verts[tile.data.detailTris[t + k]] * 3;
-                            v[k] = new RcVec3f
-                            {
-                                X = tile.data.verts[index],
-                                Y = tile.data.verts[index + 1],
-                                Z = tile.data.verts[index + 2]
-                            };
-                        }
-                        else
-                        {
-                            int index = (pd.vertBase + (tile.data.detailTris[t + k] - poly.vertCount)) * 3;
-                            v[k] = new RcVec3f
-                            {
-                                X = tile.data.detailVerts[index],
-                                Y = tile.data.detailVerts[index + 1],
-                                Z = tile.data.detailVerts[index + 2]
-                            };
-                        }
-                    }
+                    ReadDetailTriangle(tile.data, poly, pd, t, v);
 
                     if (DtUtils.ClosestHeightPointTriangle(pos, v[0], v[1], v[2], out var h))
                     {
@@ -1696,6 +1656,87 @@ namespace DotRecast.Detour
             // closest. This should almost never happen so the extra iteration here is
             // ok.
             return ClosestPointOnDetailEdges(tile, poly, pos, false).Y;
+        }
+
+        static void ReadDetailTriangle(DtMeshData data, DtPoly poly, DtPolyDetail detail, int triangle,
+            Span<RcVec3f> vertices)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                int vertex = data.detailTris[triangle + i];
+                bool baseVertex = vertex < poly.vertCount;
+                var positions = baseVertex ? data.verts : data.detailVerts;
+                int index = (baseVertex ? poly.verts[vertex] : detail.vertBase + vertex - poly.vertCount) * 3;
+                vertices[i] = new RcVec3f(positions[index], positions[index + 1], positions[index + 2]);
+            }
+        }
+
+        // Point links snap to the closest point of the bound polygon's detail mesh.
+        // Its path corner may be one float from the destination (tests/projects/navlinks projection).
+        RcVec3f ProjectPointLinkEnd(DtMeshTile tile, long polygon, RcVec3f point, RcVec3f fallback)
+        {
+            var data = tile.data;
+            if (!projectPointLinkEnds || data.detailMeshes == null || data.detailTris == null) return fallback;
+
+            int index = DecodePolyIdPoly(polygon);
+            if (index >= data.detailMeshes.Length) return fallback;
+            var poly = data.polys[index];
+            var detail = data.detailMeshes[index];
+            Span<RcVec3f> vertices = stackalloc RcVec3f[3];
+            var closest = fallback;
+            float best = float.PositiveInfinity;
+            for (int i = 0; i < detail.triCount; i++)
+            {
+                ReadDetailTriangle(data, poly, detail, (detail.triBase + i) * 4, vertices);
+                var a = vertices[0];
+                var ab = vertices[1] - a;
+                var ac = vertices[2] - a;
+                float areaSquared = RcVec3f.Cross(ab, ac).LengthSquared();
+                if (areaSquared <= 0f || !float.IsFinite(areaSquared)) continue;
+
+                var candidate = ClosestTrianglePoint(point, a, vertices[1], vertices[2], ab, ac);
+                float distance = RcVec3f.DistanceSquared(candidate, point);
+                if (distance < best)
+                {
+                    best = distance;
+                    closest = candidate;
+                }
+            }
+            return closest;
+        }
+
+        // Use the closest feature of the triangle, with the face point reconstructed in 3D.
+        static RcVec3f ClosestTrianglePoint(RcVec3f point, RcVec3f a, RcVec3f b, RcVec3f c,
+            RcVec3f ab, RcVec3f ac)
+        {
+            var ap = point - a;
+            float d1 = RcVec3f.Dot(ab, ap), d2 = RcVec3f.Dot(ac, ap);
+            if (d1 <= 0f && d2 <= 0f) return a;
+
+            var bp = point - b;
+            float d3 = RcVec3f.Dot(ab, bp), d4 = RcVec3f.Dot(ac, bp);
+            if (d3 >= 0f && d4 <= d3) return b;
+
+            float vc = d1 * d4 - d3 * d2;
+            if (vc <= 0f && d1 >= 0f && d3 <= 0f) return a + ab * (d1 / (d1 - d3));
+
+            var cp = point - c;
+            float d5 = RcVec3f.Dot(ab, cp), d6 = RcVec3f.Dot(ac, cp);
+            if (d6 >= 0f && d5 <= d6) return c;
+
+            float vb = d5 * d2 - d1 * d6;
+            if (vb <= 0f && d2 >= 0f && d6 <= 0f) return a + ac * (d2 / (d2 - d6));
+
+            float va = d3 * d6 - d5 * d4;
+            float edgeB = d4 - d3, edgeC = d5 - d6;
+            if (va <= 0f && edgeB >= 0f && edgeC >= 0f)
+            {
+                float t = edgeB / (edgeB + edgeC);
+                return b * (1f - t) + c * t;
+            }
+
+            float scale = 1f / (va + vb + vc);
+            return a + ab * (vb * scale) + ac * (vc * scale);
         }
 
         public void ClosestPointOnPoly(long refs, RcVec3f pos, out RcVec3f closest, out bool posOverPoly)

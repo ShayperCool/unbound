@@ -280,6 +280,9 @@ namespace Unbound.Runtime
         /// tests/projects/navpath `--profile layers` on 6000.0.71f1. Other releases keep attaching
         /// to every tile over them, unmeasured.</summary>
         internal static bool NavMeshLinkBindingMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>Point link endpoints project to a detail triangle before straight-path reporting.
+        /// Measured on Unity 6000.0.71f1 by the navlinks point projection controls.</summary>
+        internal static bool NavMeshPointLinkProjectionMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Straight paths keep points that are not exactly equal (a path's end 1e-7 m from
         /// its start is a second corner), measured by tests/projects/navarrival `query.*` on
