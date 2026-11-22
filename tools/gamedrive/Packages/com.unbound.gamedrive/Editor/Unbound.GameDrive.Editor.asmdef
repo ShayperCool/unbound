@@ -1,0 +1,11 @@
+{
+    "name": "Unbound.GameDrive.Editor",
+    "rootNamespace": "Unbound.GameDrive",
+    "references": [
+        "Unbound.GameDrive"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "autoReferenced": false
+}

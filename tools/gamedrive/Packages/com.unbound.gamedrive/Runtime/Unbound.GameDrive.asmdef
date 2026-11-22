@@ -1,0 +1,8 @@
+{
+    "name": "Unbound.GameDrive",
+    "rootNamespace": "Unbound.GameDrive",
+    "references": [
+        "UnityEngine.UI"
+    ],
+    "autoReferenced": true
+}

@@ -1,0 +1,10 @@
+{
+  "name": "com.unbound.gamedrive",
+  "version": "0.1.0",
+  "displayName": "Unbound game drive (debug)",
+  "description": "Drives a game the same way in the Unity Editor and in Unbound: waits on the wall clock, clicks, taps, swipes and stick gestures through uGUI pointer events, screenshots and a log.",
+  "unity": "6000.0",
+  "dependencies": {
+    "com.unity.ugui": "2.0.0"
+  }
+}
