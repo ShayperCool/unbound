@@ -1,0 +1,5 @@
+{
+  "LoadImage into an already unreadable texture can make it readable again in Unbound when markNonReadable is false. Unity 6000.0.71f1 keeps its prior readability. This predates the resize accounting change.": [
+    "loadImage.unreadable.readable"
+  ]
+}

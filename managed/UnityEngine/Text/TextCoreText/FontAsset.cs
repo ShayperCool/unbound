@@ -896,8 +896,8 @@ namespace UnityEngine.TextCore.Text
             if (texture == null) return;
             if (!texture.isReadable) SetAtlasTextureIsReadable?.Invoke(texture, true);
             var format = AtlasFormat(m_AtlasRenderMode);
-            if (setAtlasSizeToZero) texture.Reinitialize(1, 1, format, false);
-            else if (texture.width != m_AtlasWidth || texture.height != m_AtlasHeight) texture.Reinitialize(m_AtlasWidth, m_AtlasHeight, format, false);
+            if (setAtlasSizeToZero) texture.ReplaceImage(1, 1, format, false);
+            else if (texture.width != m_AtlasWidth || texture.height != m_AtlasHeight) texture.ReplaceImage(m_AtlasWidth, m_AtlasHeight, format, false);
             FontEngine.ResetAtlasTexture(texture);
             texture.ApplyQuietly();
         }
@@ -1063,7 +1063,7 @@ namespace UnityEngine.TextCore.Text
         {
             var texture = m_AtlasTextures[m_AtlasTextureIndex];
             if (texture.width > 1 && texture.height > 1) return;
-            texture.Reinitialize(m_AtlasWidth, m_AtlasHeight);
+            texture.ReplaceImage(m_AtlasWidth, m_AtlasHeight, texture.format, texture.mipmapCount > 1);
             FontEngine.ResetAtlasTexture(texture);
         }
 

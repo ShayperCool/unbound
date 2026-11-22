@@ -276,7 +276,7 @@ namespace UnityEngine
                 throw new ArgumentException("Texture contains no pixel data.");
             if (!m_IsReadable)
             {
-                string message = $"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.";
+                string message = UnreadableTextureMessage;
                 if (pixelArray) throw new ArgumentException(message);
                 throw new UnityException(message);
             }
@@ -294,7 +294,7 @@ namespace UnityEngine
                 }
                 if (m_IsReadable && m_AssetGuid != null) FetchImportedPixels();
                 if (m_Pixels == null && m_Hdr == null)
-                    throw new UnityException($"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.");
+                    throw new UnityException(UnreadableTextureMessage);
             }
         }
 
@@ -448,29 +448,47 @@ namespace UnityEngine
 
         public void Apply() => Apply(true, false);
 
-        public bool Reinitialize(int width, int height) => Reinitialize(width, height, format, MipmapCount() > 1);
+        string UnreadableTextureMessage => $"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.";
+
+        bool RejectUnreadableResize => Compat.TextureResizeMemoryMeasured && !IsExternalTexture && !m_IsReadable;
+
+        public bool Reinitialize(int width, int height)
+        {
+            MainThreadCheck.Check("Reinitialize");
+            if (RejectUnreadableResize) throw new UnityException(UnreadableTextureMessage);
+            return ReinitializeImage(width, height, format, MipmapCount() > 1, m_Linear);
+        }
 
         public bool Reinitialize(int width, int height, TextureFormat format, bool hasMipMap)
         {
             MainThreadCheck.Check("Reinitialize");
-            if (!SidesValid(width, height)) return false;
-            // A block format refuses sides that are not block-sized, leaving the texture as it was
-            // (tests/projects/texturecompression reinit.odd).
-            if (!BlockSized(format, width, height)) return false;
+            if (RejectUnreadableResize)
+            {
+                Log.Engine(LogType.Error, "Texture is not readable.", this);
+                return false;
+            }
             return ReinitializeImage(width, height, format, hasMipMap, m_Linear);
         }
 
         public bool Reinitialize(int width, int height, GraphicsFormat format, bool hasMipMap)
         {
             MainThreadCheck.Check("Reinitialize");
-            if (!SidesValid(width, height)) return false;
-            var textureFormat = TextureFormatOf(format);
-            if (!BlockSized(textureFormat, width, height)) return false;
-            return ReinitializeImage(width, height, textureFormat, hasMipMap, !GraphicsFormatUtility.IsSRGBFormat(format));
+            if (RejectUnreadableResize) throw new UnityException(UnreadableTextureMessage);
+            return ReinitializeImage(width, height, TextureFormatOf(format), hasMipMap, !GraphicsFormatUtility.IsSRGBFormat(format));
+        }
+
+        /// <summary>Replaces the engine's image storage even if its previous pixels are unreadable.</summary>
+        internal bool ReplaceImage(int width, int height, TextureFormat format, bool hasMipMap)
+        {
+            MainThreadCheck.Check("Reinitialize");
+            return ReinitializeImage(width, height, format, hasMipMap, m_Linear);
         }
 
         bool ReinitializeImage(int width, int height, TextureFormat format, bool hasMipMap, bool linear)
         {
+            // A block format refuses sides that are not block-sized, leaving the texture as it was
+            // (tests/projects/texturecompression reinit.odd).
+            if (!SidesValid(width, height) || !BlockSized(format, width, height)) return false;
             bool wasReadable = m_IsReadable;
             Init(width, height, format, hasMipMap ? -1 : 1, linear, constructor: false);
             m_ResizeMemoryPendingApply = wasReadable;

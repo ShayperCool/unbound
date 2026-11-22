@@ -43,10 +43,10 @@ namespace UnityEngine
             if (!Native.DecodeImage(data, out int width, out int height, out bool jpeg, out var pixels))
             {
                 // Unity shows a red-and-white "?" texture for data it cannot read; a blank 8x8 here.
-                tex.Reinitialize(8, 8, TextureFormat.RGBA32, tex.mipmapCount > 1);
+                tex.ReplaceImage(8, 8, TextureFormat.RGBA32, tex.mipmapCount > 1);
                 return false;
             }
-            tex.Reinitialize(width, height, jpeg ? TextureFormat.RGB24 : TextureFormat.ARGB32, tex.mipmapCount > 1);
+            tex.ReplaceImage(width, height, jpeg ? TextureFormat.RGB24 : TextureFormat.ARGB32, tex.mipmapCount > 1);
             tex.SetPixels32(pixels);
             tex.Apply(true, markNonReadable);
             return true;

@@ -275,7 +275,7 @@ namespace Unbound.Runtime
                 CopyBlocks(atlas, unique, xs, ys, width, height, format, mipmaps ? BlockMipCount(unique) : 1);
             else
             {
-                if (!atlas.Reinitialize(width, height, format, mipmaps)) return null;
+                if (!atlas.ReplaceImage(width, height, format, mipmaps)) return null;
                 var pixels = new UnityEngine.Color32[width * height];
                 for (int i = 0; i < n; i++) Blit(unique[i], widths[i], heights[i], pixels, width, xs[i], ys[i]);
                 atlas.SetPixels32(pixels);
