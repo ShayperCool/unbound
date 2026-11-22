@@ -46,7 +46,7 @@ namespace UnityEditor
             }
         }
 
-        internal const string UnsupportedMember = "FileUtil.DeleteFileOrDirectory of the project folder, its Library folder, Unbound's directory (LibraryUnbound) and what is in it, or a package not embedded in the project's Packages folder and what is in it";
+        internal const string UnsupportedMember = "FileUtil.DeleteFileOrDirectory of the project folder, its Library folder, Unbound's directory (LibraryUnbound) and what is in it but the game's Library/, or a package not embedded in the project's Packages folder and what is in it";
 
         static bool Delete(string full)
         {

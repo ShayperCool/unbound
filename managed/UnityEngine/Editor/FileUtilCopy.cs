@@ -26,7 +26,7 @@ namespace UnityEditor
     /// </summary>
     public partial class FileUtil
     {
-        internal const string UnsupportedCopyMember = "FileUtil copy, move or replace onto the project folder, its Library folder, Unbound's directory (LibraryUnbound) and what is in it, or a package not embedded in the project's Packages folder and what is in it; a move of the Packages folder";
+        internal const string UnsupportedCopyMember = "FileUtil copy, move or replace onto the project folder, its Library folder, Unbound's directory (LibraryUnbound) and what is in it but the game's Library/, or a package not embedded in the project's Packages folder and what is in it; a move of the Packages folder";
 
         static void CheckSourceAndDestination(string source, string dest)
         {

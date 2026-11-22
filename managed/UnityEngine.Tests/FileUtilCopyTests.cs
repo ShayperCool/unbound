@@ -282,8 +282,11 @@ namespace UnityEngine.Tests
             Make("project/Builds/b.txt", "B");
             Make("project/Temp/manifest.json", "new");
             Make("project/Library/unity.bin", "U");
-            foreach (var name in new[] { "Assets", "Library", "Builds", "Temp" })
+            foreach (var name in new[] { "Assets", "Builds", "Temp" })
                 Directory.CreateSymbolicLink(Path.Combine(view, name), Path.Combine(project, name));
+            // The view's Library/ is Unbound's own (LibraryUnbound/Library), not Unity's.
+            Directory.CreateDirectory(Path.Combine(project, "LibraryUnbound", "Library"));
+            Directory.CreateSymbolicLink(Path.Combine(view, "Library"), Path.Combine(project, "LibraryUnbound", "Library"));
             File.CreateSymbolicLink(Path.Combine(view, "Packages", "manifest.json"), manifest);
             var previousDirectory = Directory.GetCurrentDirectory();
             var previousProject = ProjectInfo.ProjectPath;
@@ -347,9 +350,18 @@ namespace UnityEngine.Tests
                 Assert.Equal("none", Tree(Path.Combine(project, "Assets/cache.bin")));
                 Assert.Equal(hits + 2, Hits());
                 Assert.Throws<IOException>(() => FileUtil.MoveFileOrDirectory("Library", "Assets/Library"));
-                Assert.True(Directory.Exists(Path.Combine(project, "Library")));
+                Assert.True(Directory.Exists(Path.Combine(project, "LibraryUnbound", "Library")));
                 Assert.Equal("link", Tree(Path.Combine(view, "Library")));
                 Assert.Equal("file(X)", Tree(asset));
+                Assert.Equal(hits + 3, Hits());
+                // What is in the game's Library/ is the game's: copied there and moved back as anywhere.
+                FileUtil.CopyFileOrDirectory("Assets/x.txt", "Library/x.txt");
+                Assert.Equal("file(X)", Tree(Path.Combine(project, "LibraryUnbound", "Library", "x.txt")));
+                FileUtil.MoveFileOrDirectory("Library/x.txt", "Assets/back.txt");
+                Assert.Equal("file(X)", Tree(Path.Combine(project, "Assets", "back.txt")));
+                Assert.Equal("none", Tree(Path.Combine(project, "LibraryUnbound", "Library", "x.txt")));
+                Assert.Equal(hits + 3, Hits());
+                Assert.Equal("file(U)", Tree(Path.Combine(project, "Library", "unity.bin")));
             }
             finally
             {
