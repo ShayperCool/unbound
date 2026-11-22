@@ -32,3 +32,20 @@ public class BuiltinWrapper
     public List<RenderingLayerMask> masks = new List<RenderingLayerMask>();
     public SphericalHarmonicsL2[] shs = new SphericalHarmonicsL2[0];
 }
+
+// A gradient and a curve as serialized fields, for their JsonUtility text.
+[Serializable]
+public class CurveGradientHolder
+{
+    public Gradient gradient = new Gradient();
+    public AnimationCurve curve = new AnimationCurve();
+    public int after;
+}
+
+// Floats and doubles as serialized fields, for the digits of their JsonUtility text.
+[Serializable]
+public class NumberHolder
+{
+    public float[] floats = new float[0];
+    public double[] doubles = new double[0];
+}
