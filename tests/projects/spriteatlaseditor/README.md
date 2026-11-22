@@ -333,10 +333,15 @@ importers and loaded `SpriteAtlas` instances independent until reimport, writes 
   `ScaledAlone` (variants without a master, whose packs are not stored) keep theirs.
 - `v1replay` (mode 4) enters Play mode twice in one session: the first entry leaves Play mode, the
   fixtures get their original files back (`ReplayOriginals/`) and Play mode starts again, and the
-  second entry records: the restored files are not written again. It is an Editor reference only:
-  an Unbound run ends when it leaves Play mode, so `gate` says so and does not run it.
+  second entry records: the restored files are not written again, while `Scaled` and `ScaledAlone`
+  are dirty again (their restored out-of-range scale is clamped at that entry too). It is an Editor
+  reference only: an Unbound run ends when it leaves Play mode, so `gate` says so and does not run
+  it. Open in Unbound: a later entry does not clamp a variant's scale again (it stores and clamps
+  nothing), which only an Edit-mode session (`unbound test`) entering Play mode twice reaches.
 
-Not measured: V2 atlases in V1 modes; an entry after the sprites changed since an earlier pack.
+Not measured: V2 atlases in V1 modes; an entry after the sprites changed since an earlier pack; a
+V1 variant without a master that has packables, and a V2 one (Unbound packs neither and stores no
+pack for them, with a warning).
 
 Values compare exactly.
 

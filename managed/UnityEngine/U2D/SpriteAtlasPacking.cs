@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Text.Json;
 using Unbound.Runtime;
@@ -587,7 +588,10 @@ namespace UnityEngine.U2D
         internal static void PackV1ForPlayMode()
         {
             if (!UnityEditor.EditorSettings.IsPlayModeAtlasPackingActive || !Native.IsReady) return;
-            if (!FirstPlayModePack(s_Atlases?.Count, s_Cancelled)) return;
+            // The V1 atlases an earlier pack holds (in mode 5 it holds V2 atlases too).
+            int? earlierV1 = s_Atlases == null ? null : s_Atlases.Values.Count(a =>
+                UnityEditor.AssetDatabase.GUIDToAssetPath(a.Guid).EndsWith(".spriteatlas", StringComparison.OrdinalIgnoreCase));
+            if (!FirstPlayModePack(earlierV1, s_Cancelled)) return;
             Load();
             if (s_Cancelled || s_Atlases == null) return;
             var variants = new List<SpriteAtlas>();

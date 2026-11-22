@@ -21,15 +21,15 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class AssetFiles
     {
-        /// <summary>Writes the files of the dirty asset objects (<paramref name="only"/>: of that
-        /// object only, when it is dirty); with <paramref name="unchangedStays"/>, a file whose text
-        /// would not change is left untouched.</summary>
         /// <summary>Whether a file holding <paramref name="existing"/> would be left as it is when
         /// <paramref name="written"/> is saved over it: only when the text is the same, line endings
         /// included (a CRLF file is written with LF; matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/spriteatlaseditor v1wholewritecrlf).</summary>
         internal static bool Unchanged(string existing, string written) => string.Equals(existing, written, StringComparison.Ordinal);
 
+        /// <summary>Writes the files of the dirty asset objects (<paramref name="only"/>: of that
+        /// object only, when it is dirty); with <paramref name="unchangedStays"/>, a file whose text
+        /// would not change is left untouched.</summary>
         internal static void SaveDirty(Object only = null, bool unchangedStays = false)
         {
             Undo.FlushDirtiness();
