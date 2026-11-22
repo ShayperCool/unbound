@@ -71,6 +71,10 @@
 {"key":"Oversize.Small3","value":"1 3f1112bd 3f1112bd bb16a045 bb16a045"}
 {"key":"Oversize.Small4","value":"1 3f294088 3f294088 bb2fbafc 3ecea08a"}
 {"key":"Oversize.Small5","value":"2 3f416e52 3f416e52 bb48d5b1 bb48d5b1"}
+{"key":"Small.bake","value":"True"}
+{"key":"Small.lightmaps","value":"16x16"}
+{"key":"Small.Little","value":"0 3f1112bd 3f1112bd bb16a045 3e3da57f"}
+{"key":"Small.Zero","value":"65534 3d80f436 3d80f436 b985e3cb b985e3cb"}
 {"key":"Spread.bake","value":"True"}
 {"key":"Spread.lightmaps","value":"512x512"}
 {"key":"Spread.Capsule","value":"0 3d602b5b 3d602b5b 3f2b8000 3d300000"}

@@ -91,7 +91,7 @@ public static class AtlasSetup
     }
 
     /// <summary>Primitives of every kind, placed, turned and scaled; Scale In Lightmap 0.5, 2 and 0;
-    /// renderers the Editor leaves out (not static, lit by probes, disabled, inactive); children of
+    /// renderers the Editor leaves out (not static, disabled, inactive) and one lit by probes; children of
     /// a scaled, turned parent; a LOD Group with a renderer in two levels; positions far away and
     /// beyond -65536.</summary>
     static void Spread()
@@ -270,18 +270,31 @@ public static class AtlasSetup
         Save(scene, "Ties");
     }
 
+    /// <summary>One small cube, after a cube with Scale In Lightmap 0 whose one-texel slot comes
+    /// first: how far a lone lightmap shrinks, and that the slot moves the cube.</summary>
+    static void Small()
+    {
+        var scene = NewScene("Small", 10f, 1024, 2);
+        SetScaleInLightmap(Cube("Zero", new Vector3(0f, 0.5f, 0f)), 0f);
+        Cube("Little", new Vector3(0.1f, 0.5f, 0f), 0.3f);
+        Save(scene, "Small");
+    }
+
+    /// <summary>Makes the scenes <c>BAKED_ATLAS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
         try
         {
-            AssetDatabase.CreateFolder("Assets", "Scenes");
-            Spread();
-            Crowded();
-            Oversize();
-            Fixed();
-            Tags();
-            Meshes();
-            Ties();
+            var all = new (string Name, Action Make)[]
+            {
+                ("Spread", Spread), ("Crowded", Crowded), ("Oversize", Oversize), ("Fixed", Fixed),
+                ("Tags", Tags), ("Meshes", Meshes), ("Ties", Ties), ("Small", Small),
+            };
+            var only = Environment.GetEnvironmentVariable("BAKED_ATLAS_SCENES");
+            var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
+            if (!AssetDatabase.IsValidFolder(Folder)) AssetDatabase.CreateFolder("Assets", "Scenes");
+            foreach (var (name, make) in all)
+                if (wanted == null || wanted.Contains(name)) make();
             AssetDatabase.SaveAssets();
             EditorApplication.Exit(0);
         }

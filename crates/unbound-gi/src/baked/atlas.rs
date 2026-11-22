@@ -58,9 +58,19 @@ impl Parameters {
     }
 }
 
+/// The lightmap index of a renderer laid out without a lightmap of its own: one with Scale In
+/// Lightmap 0 ("internally used for objects that have their scale in lightmap set to 0; they
+/// affect lightmaps, but don't have a lightmap assigned themselves", Scripting API 6000.0,
+/// Renderer.lightmapIndex) and one that contributes to global illumination but is lit by light
+/// probes (tests/projects/bakedatlas).
+pub const NO_LIGHTMAP: u32 = 0xfffe;
+
 /// A renderer of the bake.
 #[derive(Clone, Debug)]
 pub struct Instance {
+    /// It contributes to global illumination but is lit by light probes: it is laid out after
+    /// the others, in atlases of its own that are no lightmaps, and gets [`NO_LIGHTMAP`].
+    pub probe_lit: bool,
     /// Its scene's GUID (16 bytes as Unity keeps a GUID: four 32-bit words).
     pub scene: [u32; 4],
     pub parameters: Parameters,
@@ -132,12 +142,10 @@ pub fn uv_bounds(uvs: &[[f32; 2]]) -> [f32; 4] {
     let (mut min, mut max) = (*first, *first);
     for uv in &uvs[1..] {
         for k in 0..2 {
-            if uv[k] < min[k] {
-                min[k] = uv[k];
-            }
-            if uv[k] > max[k] {
-                max[k] = uv[k];
-            }
+            // In this form a value that is not a number replaces the bound (until a number
+            // follows), as in the Editor.
+            min[k] = if min[k] <= uv[k] { min[k] } else { uv[k] };
+            max[k] = if uv[k] <= max[k] { max[k] } else { uv[k] };
         }
     }
     [min[0], min[1], max[0] - min[0], max[1] - min[1]]
@@ -227,26 +235,44 @@ impl Node {
     }
 }
 
-/// Puts a `w` × `h` rectangle with `padding` on its right and top into the tree below `node`:
-/// the leaf it fills, or none. With `shrink` a rectangle too big for a leaf spanning the atlas
-/// is scaled down to it (`w` and `h` change). Leaves are split along their longer leftover side,
-/// at a whole texel; at the atlas's right and top sides the padding may be left out.
+/// Puts a `w` × `h` rectangle with `padding` on its right and top into the tree below `root`:
+/// the leaf it fills, or none. The leaves are tried depth first, a node's first child before its
+/// second.
 fn insert(
     nodes: &mut Vec<Node>,
-    mut node: usize,
-    mut pad_x: f32,
-    mut pad_y: f32,
+    root: usize,
+    padding: f32,
     w: &mut f32,
     h: &mut f32,
     shrink: bool,
 ) -> Option<usize> {
-    loop {
-        while let Some(first) = nodes[node].children {
-            if let Some(found) = insert(nodes, first, pad_x, pad_y, w, h, shrink) {
-                return Some(found);
-            }
-            node = first + 1;
+    // An explicit stack: a tree of a large atlas can be thousands of nodes deep.
+    let mut stack = vec![root];
+    while let Some(node) = stack.pop() {
+        if let Some(first) = nodes[node].children {
+            stack.push(first + 1);
+            stack.push(first);
+        } else if let Some(found) = fill_leaf(nodes, node, padding, w, h, shrink) {
+            return Some(found);
         }
+    }
+    None
+}
+
+/// Puts the rectangle into the leaf `node` (splitting it as needed): the leaf it fills, or none.
+/// With `shrink` a rectangle too big for a leaf spanning the atlas is scaled down to it (`w` and
+/// `h` change, also when it does not fit after all). Leaves are split along their longer leftover
+/// side, at a whole texel; at the atlas's right and top sides the padding may be left out.
+fn fill_leaf(
+    nodes: &mut Vec<Node>,
+    mut node: usize,
+    padding: f32,
+    w: &mut f32,
+    h: &mut f32,
+    shrink: bool,
+) -> Option<usize> {
+    let (mut pad_x, mut pad_y) = (padding, padding);
+    loop {
         let Node {
             rect: [x, y, nw, nh],
             filled,
@@ -331,6 +357,7 @@ fn insert(
         nodes.push(Node::new(first, edges & (inherit | first_only)));
         nodes.push(Node::new(second, edges & (inherit | second_only)));
         nodes[node].children = Some(at);
+        // The first part, a new leaf, takes the rectangle.
         node = at;
     }
 }
@@ -359,7 +386,7 @@ fn pack(
                 nodes.push(Node::new([0.0, 0.0, full[0], full[1]], 0xf));
             }
             let [w, h] = rect;
-            if let Some(leaf) = insert(&mut nodes, roots[k], padding, padding, w, h, shrink) {
+            if let Some(leaf) = insert(&mut nodes, roots[k], padding, w, h, shrink) {
                 let [x, y, ..] = nodes[leaf].rect;
                 placed.push((k as u32, [x, y]));
                 break;
@@ -401,8 +428,9 @@ fn reduce(padding: f32, rects: &[[f32; 2]], size: [i32; 2]) -> Option<([i32; 2],
 }
 
 fn compare(a: &Instance, ha: (u64, u64), b: &Instance, hb: (u64, u64)) -> std::cmp::Ordering {
-    a.scene
-        .cmp(&b.scene)
+    a.probe_lit
+        .cmp(&b.probe_lit)
+        .then(a.scene.cmp(&b.scene))
         .then(ha.cmp(&hb))
         .then(a.morton.cmp(&b.morton))
         .then_with(|| {
@@ -419,7 +447,8 @@ fn compare(a: &Instance, ha: (u64, u64), b: &Instance, hb: (u64, u64)) -> std::c
 }
 
 /// Lays out the atlases of `instances` (the bake's renderers in the order the Editor numbers
-/// them).
+/// them). Fails for a renderer whose lightmap UVs' bounds give no finite scale (no area, or not a
+/// number): what the Editor makes of it is not known.
 pub fn layout(settings: &Settings, instances: &[Instance]) -> Result<Layout> {
     ensure!(
         settings.max_size > 0 && settings.padding >= 0,
@@ -457,7 +486,9 @@ pub fn layout(settings: &Settings, instances: &[Instance]) -> Result<Layout> {
             + order[start..]
                 .iter()
                 .take_while(|&&i| {
-                    instances[i].scene == instances[first].scene && hashes[i] == hashes[first]
+                    instances[i].probe_lit == instances[first].probe_lit
+                        && instances[i].scene == instances[first].scene
+                        && hashes[i] == hashes[first]
                 })
                 .count();
         let group = &order[start..end];
@@ -478,6 +509,8 @@ pub fn layout(settings: &Settings, instances: &[Instance]) -> Result<Layout> {
             }
         }
         let base = lightmaps.len() as u32;
+        // (Probe-lit groups sort last: leaving their atlases out keeps the others' numbers.)
+        let probe_lit = instances[first].probe_lit;
         for (k, &i) in group.iter().enumerate() {
             let (atlas, [px, py]) = placed[k];
             let [aw, ah] = sizes[atlas as usize];
@@ -488,12 +521,20 @@ pub fn layout(settings: &Settings, instances: &[Instance]) -> Result<Layout> {
             } else {
                 rects[k][0] / uw
             };
+            let scale_offset = [inv * k, inv * k, inv * (px - k * ux), inv * (py - k * uy)];
+            ensure!(
+                scale_offset.iter().all(|v| v.is_finite()),
+                "renderer {i}: a lightmap scale and offset that is not finite (its lightmap UVs' bounds {:?})",
+                instances[i].uv_bounds
+            );
             placements[i] = Placement {
-                lightmap: base + atlas,
-                scale_offset: [inv * k, inv * k, inv * (px - k * ux), inv * (py - k * uy)],
+                lightmap: if probe_lit { NO_LIGHTMAP } else { base + atlas },
+                scale_offset,
             };
         }
-        lightmaps.extend(sizes);
+        if !probe_lit {
+            lightmaps.extend(sizes);
+        }
         start = end;
     }
     Ok(Layout {

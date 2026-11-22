@@ -19,6 +19,8 @@ pub struct AtlasRequest {
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct AtlasRenderer {
+    /// Its name, for messages.
+    name: String,
     positions: Vec<f32>,
     triangles: Vec<u32>,
     uvs: Vec<f32>,
@@ -29,6 +31,9 @@ struct AtlasRenderer {
     lod_level: Option<u32>,
     /// Its scene's GUID as text.
     scene: String,
+    /// It contributes to global illumination but is lit by light probes.
+    #[serde(default)]
+    probe_lit: bool,
     parameters: AtlasParameters,
 }
 
@@ -93,8 +98,14 @@ pub fn atlas_request(request: AtlasRequest) -> Result<Json> {
             let uvs: Vec<[f32; 2]> = r.uvs.chunks_exact(2).map(|c| [c[0], c[1]]).collect();
             let area = atlas::surface_area(&positions, &triangles, &r.local_to_world);
             let uv_bounds = atlas::uv_bounds(&uvs);
+            ensure!(
+                uv_bounds[2] > 0.0 && uv_bounds[3] > 0.0,
+                "'{}': its lightmap UVs span no area (a mesh without UVs, or all of one value), which the layout does not support",
+                r.name
+            );
             let m = &r.local_to_world;
             Ok(atlas::Instance {
+                probe_lit: r.probe_lit,
                 scene: guid_words(&r.scene)?,
                 parameters: atlas::Parameters {
                     back_face_tolerance: r.parameters.back_face_tolerance,
@@ -122,7 +133,12 @@ pub fn atlas_request(request: AtlasRequest) -> Result<Json> {
         "placements": layout
             .placements
             .iter()
-            .map(|p| json!({ "lightmap": p.lightmap, "scaleOffset": p.scale_offset }))
+            .zip(&request.renderers)
+            .map(|(p, r)| {
+                // Packed like any other, without a lightmap of its own.
+                let lightmap = if r.scale_in_lightmap > 0.0 { p.lightmap } else { atlas::NO_LIGHTMAP };
+                json!({ "lightmap": lightmap, "scaleOffset": p.scale_offset })
+            })
             .collect::<Vec<_>>(),
     }))
 }
@@ -130,6 +146,62 @@ pub fn atlas_request(request: AtlasRequest) -> Result<Json> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn request(renderers: Vec<Json>) -> AtlasRequest {
+        serde_json::from_value(json!({
+            "maxSize": 64, "padding": 2, "resolution": 10.0, "fixedSize": true, "renderers": renderers,
+        }))
+        .unwrap()
+    }
+
+    fn quad(name: &str, scale: f32, uvs: Vec<f32>, x: f32) -> Json {
+        json!({
+            "name": name,
+            "positions": [0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0],
+            "triangles": [0, 2, 1, 0, 3, 2],
+            "uvs": uvs,
+            "localToWorld": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, 0, 0, 1],
+            "scaleInLightmap": scale,
+            "lodLevel": null,
+            "scene": "10000000200000003000000040000000",
+            "parameters": {
+                "backFaceTolerance": 0.9, "antiAliasingSamples": 2, "pushoff": 0.0001,
+                "bakedLightmapTag": -1, "maxLightmapCount": 0,
+            },
+        })
+    }
+
+    #[test]
+    fn scale_in_lightmap_0_is_packed_without_a_lightmap() {
+        let unit = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
+        // The scale-0 quad sorts first (its Morton code) and takes a one-texel slot at the
+        // origin, which moves the other above it (a 3-texel strip with the padding).
+        let out = atlas_request(request(vec![
+            quad("lit", 1.0, unit.clone(), 0.2),
+            quad("zero", 0.0, unit, 0.0),
+        ]))
+        .unwrap();
+        let placements = out["placements"].as_array().unwrap();
+        assert_eq!(placements[1]["lightmap"], json!(atlas::NO_LIGHTMAP));
+        assert_eq!(placements[0]["lightmap"], json!(0));
+        assert_eq!(placements[0]["scaleOffset"][3], json!(3.0 / 64.0));
+    }
+
+    #[test]
+    fn lightmap_uvs_without_area_are_refused_by_name() {
+        let error = atlas_request(request(vec![quad("bare", 1.0, vec![], 0.0)]))
+            .err()
+            .unwrap();
+        assert!(error.to_string().contains("'bare'"), "{error}");
+        let flat = vec![0.5; 8];
+        assert!(atlas_request(request(vec![quad("flat", 1.0, flat, 0.0)])).is_err());
+        // Not a number (which JSON cannot carry: set after reading).
+        let unit = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
+        let mut nan = request(vec![quad("nan", 1.0, unit, 0.0)]);
+        nan.renderers[0].uvs[6] = f32::NAN;
+        let error = atlas_request(nan).err().unwrap();
+        assert!(error.to_string().contains("'nan'"), "{error}");
+    }
 
     #[test]
     fn guid_text_is_low_digit_first() {

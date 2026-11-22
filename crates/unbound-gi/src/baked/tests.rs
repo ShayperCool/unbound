@@ -2,6 +2,7 @@ use super::atlas::*;
 
 fn instance(rect: [f32; 2], morton: u32) -> Instance {
     Instance {
+        probe_lit: false,
         scene: [1, 2, 3, 4],
         parameters: Parameters::DEFAULT,
         rect,
@@ -229,4 +230,65 @@ fn lightmap_parameter_groups_go_in_the_order_of_their_hashes() {
     ];
     let hashes: Vec<(u64, u64)> = groups.iter().map(Parameters::hash).collect();
     assert!(hashes.windows(2).all(|w| w[0] < w[1]), "{hashes:x?}");
+}
+
+#[test]
+fn a_renderer_whose_lightmap_uvs_span_no_area_fails_the_layout() {
+    let mut bare = instance([1.0, 1.0], 0);
+    bare.uv_bounds = [0.0; 4];
+    assert!(layout(&settings(64, 2), &[bare]).is_err());
+}
+
+#[test]
+fn many_rectangles_land_inside_their_lightmaps_without_overlapping() {
+    // Sizes from a fixed sequence, Morton codes in another order: every rectangle with its
+    // padding within its lightmap, none overlapping another of the same lightmap.
+    let instances: Vec<Instance> = (0..1500u32)
+        .map(|k| {
+            instance(
+                [1.0 + (k * 7 % 23) as f32, 1.0 + (k * 11 % 17) as f32],
+                k * 2654435761 % 4096,
+            )
+        })
+        .collect();
+    let s = settings(256, 2);
+    let layout = layout(&s, &instances).unwrap();
+    let mut boxes: Vec<(u32, [f32; 4])> = Vec::new();
+    for (i, p) in layout.placements.iter().enumerate() {
+        let [w, h] = layout.lightmaps[p.lightmap as usize];
+        let side = w.max(h) as f32;
+        // Square UV bounds: the scale is the rectangle's height over the side.
+        let x = p.scale_offset[2] * side;
+        let y = p.scale_offset[3] * side;
+        let [rw, rh] = instances[i].rect;
+        assert!(
+            x >= 0.0 && y >= 0.0 && x + rw <= w as f32 && y + rh <= h as f32,
+            "{i}: {x},{y} in {w}x{h}"
+        );
+        boxes.push((p.lightmap, [x, y, x + rw, y + rh]));
+    }
+    for (a, (la, ba)) in boxes.iter().enumerate() {
+        for (lb, bb) in &boxes[a + 1..] {
+            let apart =
+                la != lb || ba[2] <= bb[0] || bb[2] <= ba[0] || ba[3] <= bb[1] || bb[3] <= ba[1];
+            assert!(apart, "{ba:?} and {bb:?} overlap in lightmap {la}");
+        }
+    }
+}
+
+#[test]
+fn probe_lit_renderers_get_atlases_of_their_own_that_are_no_lightmaps() {
+    // tests/projects/bakedatlas Spread `Probes`: after the others, a lightmap-sized scale of its
+    // own reduced atlas, index 0xFFFE, and no lightmap added.
+    let mut probe_lit = instance([30.0, 30.0], 0);
+    probe_lit.probe_lit = true;
+    let lit = instance([10.0, 10.0], 5);
+    let layout = layout(&settings(1024, 2), &[probe_lit, lit]).unwrap();
+    assert_eq!(layout.lightmaps, vec![[16, 16]]);
+    assert_eq!(layout.placements[1].lightmap, 0);
+    assert_eq!(layout.placements[0].lightmap, NO_LIGHTMAP);
+    assert_eq!(
+        layout.placements[0].scale_offset,
+        [30.0 / 32.0, 30.0 / 32.0, 0.0, 0.0]
+    );
 }

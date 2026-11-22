@@ -2,7 +2,7 @@
 """The layout of baked lightmaps: which lightmap each renderer goes to, its lightmap scale and
 offset, and each lightmap's size, after Lightmapping.Bake in Edit mode.
 
-    bake_atlas.py create              # authoring: the Editor makes Assets/Scenes (AtlasSetup.Create)
+    bake_atlas.py create [--scene S]  # authoring: the Editor makes Assets/Scenes (AtlasSetup.Create), or adds scene S
     bake_atlas.py native --label L    # an Editor capture (batch mode on the GPU runner)
     bake_atlas.py publish L1 L2       # two byte-identical captures -> Reference/unity-<version>/atlas.jsonl
     bake_atlas.py engine --label L    # Unbound (unbound test, Edit mode)
@@ -14,8 +14,9 @@ MeshRenderer's lightmap index and scale and offset (float bits) and the lightmap
 does not bake lightmaps yet: its bake writes the layout to
 Library/Unbound/BakedGI/<scene GUID>/atlas.json, from which the candidate takes each renderer's
 index, scale and offset and the lightmaps' sizes. A renderer without a lightmap (index outside
-0..65533 in the Editor, absent from the layout in Unbound) is recorded as `none`. Every record
-is compared exactly."""
+0..65534 in the Editor, absent from the layout in Unbound) is recorded as `none`; 65534 is a
+renderer with Scale In Lightmap 0, which takes its place without a lightmap. Every record is
+compared exactly."""
 import argparse
 import json
 import os
@@ -52,16 +53,26 @@ def editor(out, method, env, label, graphics=True, progress=None):
     return int(result.get('exit_code') != 0 or bool(result.get('forced_exit')))
 
 
-def create():
+def create(scene=None):
     scenes = PROBE/'Assets/Scenes'
-    if scenes.exists():
+    if scene is None and scenes.exists():
         sys.exit(f'refusing to overwrite {scenes}')
+    if scene is not None and (scenes/(scene + '.unity')).exists():
+        sys.exit(f'refusing to overwrite {scene}')
     out = WORK/private_label('create')
     project_copy(PROBE, out/'project', package_cache=False)
-    if editor(out, 'AtlasSetup.Create', {}, 'create', graphics=False):
+    env = {'BAKED_ATLAS_SCENES': scene} if scene else {}
+    if editor(out, 'AtlasSetup.Create', env, 'create', graphics=False):
         return 1
-    shutil.copytree(out/'project/Assets/Scenes', scenes)
-    shutil.copy2(out/'project/Assets/Scenes.meta', PROBE/'Assets/Scenes.meta')
+    made = out/'project/Assets/Scenes'
+    if scene is None:
+        shutil.copytree(made, scenes)
+        shutil.copy2(out/'project/Assets/Scenes.meta', PROBE/'Assets/Scenes.meta')
+        return 0
+    # Only the new scene's files (its name first); nothing that exists is replaced.
+    for path in sorted(made.iterdir()):
+        if path.name.startswith(scene) and not (scenes/path.name).exists():
+            shutil.copy2(path, scenes/path.name)
     return 0
 
 
@@ -104,12 +115,13 @@ def placement(key):
 
 
 def normalized(values):
-    """A renderer's record without a lightmap is `none` (its scale and offset are not used)."""
+    """A renderer's record without a place in the lightmaps is `none` (its scale and offset are
+    not used)."""
     out = {}
     for key, value in values.items():
         if placement(key) and value != 'none':
             index = int(value.split()[0])
-            value = value if 0 <= index <= 65533 else 'none'
+            value = value if 0 <= index <= 65534 else 'none'
         out[key] = value
     return out
 
@@ -195,12 +207,13 @@ def main():
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
     parser.add_argument('--candidate', type=Path)
+    parser.add_argument('--scene', help='create: add this scene only')
     args = parser.parse_args()
     labels = args.labels + ([args.label] if args.label else [])
     if any(Path(label).name != label or label in ('.', '..') for label in labels):
         sys.exit('labels are plain names')
     if args.mode == 'create':
-        return create()
+        return create(args.scene)
     if args.mode == 'native':
         return native(labels[0] if labels else private_label('native'))
     if args.mode == 'engine':

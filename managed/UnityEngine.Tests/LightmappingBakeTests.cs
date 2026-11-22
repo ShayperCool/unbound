@@ -207,6 +207,40 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ARealtimeContributorLitByProbesIsBakedAsLightmappedAndNamed()
+        {
+            // Receive Global Illumination is read from the scene; what the Editor's realtime GI
+            // makes of such a contributor is not measured, so the bake keeps taking it as
+            // lightmapped and says so.
+            var lit = new GameObject("ProbeLit");
+            var plain = new GameObject("Plain");
+            RealtimeGI.s_Warned.Clear();
+            try
+            {
+                lit.m_StaticEditorFlags = plain.m_StaticEditorFlags = 1;
+                var renderer = lit.AddComponent<MeshRenderer>();
+                renderer.ReadSerialized(YNode.MakeMap(("m_ReceiveGI", YNode.MakeScalar("2"))), null);
+                var other = plain.AddComponent<MeshRenderer>();
+                var none = new HashSet<Renderer>();
+                var (logs, _) = Run(Phase.Edit, () =>
+                {
+                    Assert.True(RealtimeGI.TakesContributor("Assets/ProbeLit.unity", 1, renderer, none));
+                    Assert.True(RealtimeGI.TakesContributor("Assets/ProbeLit.unity", 2, other, none));
+                    Assert.False(RealtimeGI.TakesContributor("Assets/ProbeLit.unity", 1, renderer, new HashSet<Renderer> { renderer }));
+                });
+                var said = logs.Messages.FindAll(m => m.Type == LogType.Warning && m.Message.Contains("is lit by light probes"));
+                Assert.Single(said);
+                Assert.Contains("'ProbeLit'", said[0].Message);
+            }
+            finally
+            {
+                RealtimeGI.s_Warned.Clear();
+                Object.DestroyImmediate(lit);
+                Object.DestroyImmediate(plain);
+            }
+        }
+
+        [Fact]
         public void EditCodeThatAsksForPlayModeOrRunsAsItIsLeftBakesInEditMode()
         {
             // Play mode requested in Edit mode, and ExitingEditMode (sent before the domain

@@ -268,8 +268,7 @@ namespace UnityEngine
                     }
                 // (A renderer destroyed since the scene loaded is not baked.)
                 if (!(pair.Value is MeshRenderer renderer) || renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
-                if ((renderer.gameObject.m_StaticEditorFlags & ContributeGI) == 0 || renderer.receiveGI != ReceiveGI.Lightmaps
-                    || lowerLods.Contains(renderer)) continue;
+                if (!TakesContributor(file.Path, pair.Key, renderer, lowerLods)) continue;
                 if (BakeRequestOf(pair.Key, renderer, resolution, settings, out var why) is object request) renderers.Add(request);
                 else refused.Add($"'{renderer.name}': {why}");
             }
@@ -312,6 +311,19 @@ namespace UnityEngine
                 LightProbes.SceneLoaded(scene, LightProbes.FromSet(set));
             }
             return root;
+        }
+
+        /// <summary>Whether the bake takes an enabled renderer of an active GameObject: one with
+        /// Contribute Global Illumination that is not below the most detailed level of a LOD Group.
+        /// What the Editor's realtime GI makes of a contributor lit by light probes is not measured:
+        /// Unbound bakes it as one with a realtime lightmap, as before it read Receive Global
+        /// Illumination, and says so once.</summary>
+        internal static bool TakesContributor(string path, long fileId, MeshRenderer renderer, HashSet<Renderer> lowerLods)
+        {
+            if ((renderer.gameObject.m_StaticEditorFlags & ContributeGI) == 0 || lowerLods.Contains(renderer)) return false;
+            if (renderer.receiveGI != ReceiveGI.Lightmaps)
+                Warn("bake-probe-lit:" + path + fileId, $"{path}: '{renderer.name}' contributes to global illumination and is lit by light probes; Unbound's realtime GI bake gives it a realtime lightmap (what the Editor does is not measured).");
+            return true;
         }
 
         /// <summary>A renderer of the bake as the native side takes it (its mesh, its matrix and

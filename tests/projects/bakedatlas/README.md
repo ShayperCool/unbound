@@ -17,8 +17,8 @@ with its own Lighting Settings (Progressive CPU, one sample, no filtering, no co
 non-directional):
 
 - `Spread` (10 texels per unit, 1024, padding 2): every primitive, placed, turned and scaled;
-  Scale In Lightmap 0.5, 2 and 0; renderers the Editor leaves out (not static, lit by probes,
-  disabled, inactive); children of a scaled, turned parent; a LOD Group with a renderer in two
+  Scale In Lightmap 0.5, 2 and 0; renderers the Editor leaves out (not static, disabled,
+  inactive) and one lit by light probes; children of a scaled, turned parent; a LOD Group with a renderer in two
   levels; positions far away and beyond -65536.
 - `Crowded` (20, 256, 2): 48 cubes of five sizes, several lightmaps.
 - `Oversize` (40, 128, 4): a plane clamped to the lightmap's size and small cubes.
@@ -30,6 +30,8 @@ non-directional):
   narrow ones, a vertex no triangle uses, two submeshes.
 - `Ties` (10, 256, 2): equal cubes whose positions share a Morton code, made in another order
   than their names.
+- `Small` (10, 1024, 2): one small cube after a cube with Scale In Lightmap 0: how far a lone
+  lightmap shrinks, and the place the scale-0 cube takes.
 
 ## Capture and comparison
 
@@ -44,5 +46,6 @@ bakes again then (the layout is made before it). Two byte-identical captures mak
 Unbound does not make the lightmaps yet: its bake writes the layout to
 `Library/Unbound/BakedGI/<scene GUID>/atlas.json` (`Graphics/BakedAtlas.cs`), from which
 `bake_atlas.py engine` makes the candidate. A renderer without a lightmap (an index outside
-0..65533 in the Editor, absent from the layout in Unbound) is `none`. Every record is compared
-exactly (`bake_atlas.py check`).
+0..65534 in the Editor, absent from the layout in Unbound) is `none`; 65534 (0xFFFE) is a
+renderer laid out without a lightmap (Scale In Lightmap 0, or lit by light probes), compared with
+its scale and offset. Every record is compared exactly (`bake_atlas.py check`).
