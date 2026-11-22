@@ -7,7 +7,7 @@ Each line of a record is one agent of one configuration in one frame: its positi
 desired velocity (the velocity its avoidance chose), next position and steering target. A record
 matches when every value is within 1e-3 (positions) or 2e-3 (velocities) of the Editor's.
 residuals.json ({reason: ["set config agent frame", ...]}) lists known differing records: each is
-still printed and counted, and does not fail the set.
+still printed and counted, and does not fail the set; a listed record that matches is reported.
 """
 import json
 import math
@@ -55,6 +55,8 @@ def main():
         good = b is not None and all(math.dist(a[k], b[k]) <= tol[k] for k in a)
         ok += good
         if good:
+            if key in known:
+                print("LISTED BUT MATCHING", key, "--", known[key])
             continue
         if key in known:
             listed += 1
