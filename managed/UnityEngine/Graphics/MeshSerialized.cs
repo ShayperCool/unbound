@@ -45,7 +45,8 @@ namespace UnityEngine
         {
             var vertexData = body.Get("m_VertexData");
             if (vertexData == null) return false;
-            if (body.Int("m_MeshCompression") != 0)
+            m_MeshCompression = (UnityEditor.ModelImporterMeshCompression)body.Int("m_MeshCompression");
+            if (m_MeshCompression != UnityEditor.ModelImporterMeshCompression.Off)
                 Debug.LogWarning($"Unbound: mesh '{m_Name}' is stored compressed (Mesh Compression), which is not supported yet; it stays empty.");
             int count = vertexData.Int("m_VertexCount");
             var data = Hex(vertexData.Str("_typelessdata"));
@@ -151,6 +152,14 @@ namespace UnityEngine
                 boneWeights = bw;
             }
 
+            // The vertex layout the file holds: each channel's format, dimension and stream, as
+            // SetVertexBufferParams would give it (written back as it was read).
+            var layout = new List<VertexAttributeDescriptor>();
+            for (int i = 0; i < channels.Count && i <= (int)VertexAttribute.BlendIndices; i++)
+                if (channels[i].Dimension > 0)
+                    layout.Add(new VertexAttributeDescriptor((VertexAttribute)i, (VertexAttributeFormat)channels[i].Format, channels[i].Dimension, channels[i].Stream));
+            m_Layout = layout.Count > 0 ? layout.ToArray() : null;
+
             // Indices and submeshes.
             var indexBytes = Hex(body.Str("m_IndexBuffer"));
             bool wide = body.Int("m_IndexFormat") == 1;
@@ -203,6 +212,16 @@ namespace UnityEngine
             if (poses.Count > 0) bindposes = poses.ToArray();
 
             ReadBlendShapes(body.Get("m_Shapes"), count);
+
+            // The bones' names (their paths' CRC32), kept for the file's next write.
+            var hashBytes = Hex(body.Str("m_BoneNameHashes"));
+            if (hashBytes.Length >= 4)
+            {
+                var hashes = new uint[hashBytes.Length / 4];
+                for (int i = 0; i < hashes.Length; i++) hashes[i] = BitConverter.ToUInt32(hashBytes, i * 4);
+                m_BoneNameHashes = hashes;
+            }
+            if (body.Get("m_RootBoneNameHash") != null) m_RootBoneNameHash = (uint)body.Long("m_RootBoneNameHash");
 
             var aabb = body.Get("m_LocalAABB");
             if (aabb != null) bounds = new Bounds(Vec3(aabb.Get("m_Center")), Vec3(aabb.Get("m_Extent")) * 2f);
