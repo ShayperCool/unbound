@@ -322,6 +322,142 @@ namespace UnityEngine.Tests
             }
         }
 
+        static System.Collections.IEnumerator Yielded(System.Collections.IEnumerable items)
+        {
+            foreach (var item in items) yield return item;
+        }
+
+        static string Found(Func<UnityEditor.Search.SearchContext, SearchProvider, object> returns, out string[] logs)
+        {
+            var provider = new SearchProvider("shape");
+            provider.fetchItems = (context, items, self) =>
+            {
+                items.Add(self.CreateItem(context, "added"));
+                return returns(context, self);
+            };
+            var logged = new List<string>();
+            Application.LogCallback onLog = (condition, _, type) => logged.Add(type + ":" + condition);
+            Application.logMessageReceived += onLog;
+            try
+            {
+                using var c = UnityEditor.Search.SearchService.CreateContext(new[] { provider }, "x", SearchFlags.Synchronous);
+                return string.Join(",", UnityEditor.Search.SearchService.GetItems(c, SearchFlags.Synchronous).Select(i => i.id));
+            }
+            finally
+            {
+                Application.logMessageReceived -= onLog;
+                logs = logged.ToArray();
+            }
+        }
+
+        [Fact]
+        public void AProviderMayReturnAnyEnumerableOrEnumeratorAlsoNested()
+        {
+            SearchItem[] Two(UnityEditor.Search.SearchContext c, SearchProvider p) => new[] { p.CreateItem(c, "one"), p.CreateItem(c, "two") };
+            Assert.Equal("added,one,two", Found((c, p) => Two(c, p), out var logs));
+            Assert.Equal("added,one,two", Found((c, p) => Two(c, p).ToList().GetEnumerator(), out logs));
+            Assert.Equal("added,one,two", Found((c, p) => Yielded(Two(c, p)), out logs));
+            Assert.Equal("added,one,two", Found((c, p) => new System.Collections.ArrayList(Two(c, p)), out logs));
+            Assert.Equal("added,one,two", Found((c, p) => new object[] { Two(c, p)[0], null, new[] { Two(c, p)[1] } }, out logs));
+            Assert.Equal("added,one,two", Found((c, p) => Yielded(new object[] { Two(c, p)[0], Yielded(new[] { Two(c, p)[1] }) }), out logs));
+            Assert.Empty(logs);
+            Assert.Equal("added", Found((c, p) => null, out logs));
+            Assert.Empty(logs);
+        }
+
+        [Fact]
+        public void WhatIsNoEnumerationOfItemsIsAnErrorThatKeepsTheItemsBeforeIt()
+        {
+            Assert.Equal("added", Found((c, p) => p.CreateItem(c, "one"), out var logs));
+            Assert.Equal(new[] { "Exception:ArgumentException: Parameter itemEnumerator is not an IEnumerable or IEnumerator.\nParameter name: itemEnumerator" }, logs);
+            Assert.Equal("added", Found((c, p) => 5, out logs));
+            Assert.Single(logs);
+            // A text is an enumerable of characters, which are no items.
+            Assert.Equal("added,one", Found((c, p) => new object[] { p.CreateItem(c, "one"), "text", p.CreateItem(c, "two") }, out logs));
+            Assert.Equal(new[] { "Exception:InvalidCastException: Cannot cast \"System.Char\" to type UnityEditor.Search.SearchItem." }, logs);
+            Assert.Equal("added,one", Found((c, p) => new object[] { p.CreateItem(c, "one"), 5 }, out logs));
+            Assert.Equal(new[] { "Exception:InvalidCastException: Cannot cast \"System.Int32\" to type UnityEditor.Search.SearchItem." }, logs);
+        }
+
+        [Fact]
+        public void AProviderWithoutAHandlerIsLoggedAndInactiveOnesAreStillAsked()
+        {
+            var asked = new List<string>();
+            var silent = new SearchProvider("silent") { fetchItems = null };
+            var inactive = new SearchProvider("inactive") { active = false };
+            inactive.fetchItems = (context, items, provider) => { asked.Add("inactive"); return null; };
+            var logs = new List<string>();
+            Application.LogCallback onLog = (condition, _, type) => logs.Add(type + ":" + condition);
+            Application.logMessageReceived += onLog;
+            try
+            {
+                using var c = UnityEditor.Search.SearchService.CreateContext(new[] { silent, inactive }, "x", SearchFlags.Synchronous);
+                Assert.Empty(UnityEditor.Search.SearchService.GetItems(c, SearchFlags.Synchronous));
+            }
+            finally
+            {
+                Application.logMessageReceived -= onLog;
+            }
+            Assert.Equal(new[] { "inactive" }, asked);
+            Assert.Equal(new[] { "Exception:NullReferenceException: Object reference not set to an instance of an object" }, logs);
+        }
+
+        [Theory]
+        [InlineData(SearchFlags.Sorted, SearchFlags.Synchronous, "b:b again,a:a")]
+        [InlineData(SearchFlags.Sorted, SearchFlags.WantsMore | SearchFlags.Synchronous, "b:b again,a:a")]
+        [InlineData(SearchFlags.None, SearchFlags.Sorted, "b:b again,a:a")]
+        [InlineData(SearchFlags.None, SearchFlags.None, "b:b,a:a,b:b again")]
+        public void TheContextsFlagsJoinedWithTheCallsDecideTheSorting(SearchFlags made, SearchFlags asked, string expected)
+        {
+            var p = new SearchProvider("unordered");
+            p.fetchItems = (context, items, self) => new[]
+            {
+                self.CreateItem(context, "b", 9, "b", null, null, null), self.CreateItem(context, "a", 5, "a", null, null, null),
+                self.CreateItem(context, "b", 1, "b again", null, null, null),
+            };
+            using var c = UnityEditor.Search.SearchService.CreateContext(new[] { p }, "x", made);
+            Assert.Equal(expected, string.Join(",", UnityEditor.Search.SearchService.GetItems(c, asked).Select(i => i.id + ":" + i.label)));
+            Assert.Equal(made | asked, c.options);
+        }
+
+        [Fact]
+        public void TheDefaultThumbnailHandlerAnswersItsIconWhateverTheItemHas()
+        {
+            var texture = new Texture2D(4, 4);
+            try
+            {
+                var provider = new SearchProvider("plain");
+                var c = UnityEditor.Search.SearchService.CreateContext(provider);
+                var given = provider.CreateItem(c, "a", "Label", null, texture, null);
+                // Asked without keeping, the provider answers; asked to keep, the item's own stands.
+                Assert.NotSame(texture, given.GetThumbnail(c));
+                Assert.Same(texture, given.GetThumbnail(c, true));
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+            }
+        }
+
+        [Fact]
+        public void ACopiedContextHoldsItsProvidersTooAndAFilterAfterDisposeUnbalancesThem()
+        {
+            int enabled = 0, disabled = 0;
+            var p = new SearchProvider("probe") { onEnable = () => enabled++, onDisable = () => disabled++ };
+            var original = UnityEditor.Search.SearchService.CreateContext(new[] { p }, "x");
+            var copy = new UnityEditor.Search.SearchContext(original);
+            original.Dispose();
+            Assert.Equal((1, 0), (enabled, disabled));
+            copy.Dispose();
+            Assert.Equal((1, 1), (enabled, disabled));
+            // As in the Editor: a provider filtered out of a disposed context is disabled once
+            // more than it was enabled, and its next context does not enable it.
+            original.SetFilter("probe", false);
+            Assert.Empty(original.providers);
+            UnityEditor.Search.SearchService.CreateContext(new[] { p }, "y");
+            Assert.Equal((1, 1), (enabled, disabled));
+        }
+
         [Fact]
         public void AFilteredSearchAsksTheFilteredProviderAlone()
         {

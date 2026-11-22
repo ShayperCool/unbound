@@ -385,6 +385,8 @@ namespace UnityEditor.Search
             return fetched;
         }
 
+        /// <summary>A destroyed or missing texture is none; so is one without a size, which the
+        /// probe has no row for.</summary>
         static Texture2D Usable(Texture2D texture) => texture && texture.width > 0 && texture.height > 0 ? texture : null;
 
         public int CompareTo(SearchItem other) => string.CompareOrdinal(id, other.id);
@@ -593,23 +595,21 @@ namespace UnityEditor.Search
         /// <summary>
         /// The items the context's providers give for its text, now: each provider in turn, the
         /// items it added to the list and then those it returned; one that throws is logged and
-        /// the next is asked. The options join the context's; a sorted search orders the items
+        /// the next is asked. The options join the context's, and the joined flags decide the rest
+        /// (search.sortedContextPlainCall, search.plainContextSortedCall); a sorted search orders the items
         /// by their provider's priority, their score and their ID and keeps the first of each ID
         /// (matches the Unity 6000.0.71f1 Editor, tests/projects/searchprovider search.*).
         /// </summary>
         public static List<SearchItem> GetItems(SearchContext context, SearchFlags options = SearchFlags.Sorted)
         {
-            if ((options & SearchFlags.WantsMore) != 0) context.wantsMore = true;
             context.options |= options;
             var list = new List<SearchItem>();
             foreach (var provider in context.providers.ToArray())
             {
                 try
                 {
-                    var returned = provider.fetchItems(context, list, provider);
-                    if (returned is IEnumerable<SearchItem> items)
-                        foreach (var item in items)
-                            if (item != null) list.Add(item);
+                    var fetch = provider.fetchItems ?? throw Unbound.Runtime.MonoExceptions.NullReference();
+                    Collect(fetch(context, list, provider), list);
                 }
                 catch (Exception e)
                 {
@@ -625,6 +625,28 @@ namespace UnityEditor.Search
             });
             var seen = new HashSet<string>(StringComparer.Ordinal);
             return list.Where(item => seen.Add(item.id)).ToList();
+        }
+
+        /// <summary>The items of what a provider returned: nothing for null; an enumerable or
+        /// enumerator is walked to its end, nulls passed over and enumerables and enumerators
+        /// inside it walked in turn; anything else is an error, as in the Editor (a text is an
+        /// enumerable of characters, which are no items; tests/projects/searchprovider
+        /// search.returns.*). The walk runs to its end inside the call: Unbound has no
+        /// asynchronous search sessions to hand a long enumeration to.</summary>
+        static void Collect(object returned, List<SearchItem> list)
+        {
+            if (returned == null) return;
+            // An enumerable first: an iterator object is both, and only its GetEnumerator starts it.
+            var enumerator = (returned as System.Collections.IEnumerable)?.GetEnumerator() ?? returned as System.Collections.IEnumerator
+                ?? throw new ArgumentException("Parameter itemEnumerator is not an IEnumerable or IEnumerator.", "itemEnumerator");
+            while (enumerator.MoveNext())
+            {
+                var current = enumerator.Current;
+                if (current == null) continue;
+                if (current is SearchItem item) list.Add(item);
+                else if (current is System.Collections.IEnumerable || current is System.Collections.IEnumerator) Collect(current, list);
+                else throw new InvalidCastException($"Cannot cast \"{current.GetType()}\" to type {typeof(SearchItem)}.");
+            }
         }
     }
 }
