@@ -287,15 +287,7 @@ mod tests {
 
     fn plugin(meta: &str) -> Plugin {
         let meta = unbound_yaml::parse_value(meta).unwrap();
-        Plugin {
-            file: PathBuf::from("A.dll"),
-            path: String::new(),
-            explicitly_referenced: false,
-            define_constraints: Vec::new(),
-            analyzer: false,
-            identity: None,
-            importer: managed_importer(&meta),
-        }
+        plugin_from_meta(Path::new("A.dll"), String::new(), &meta)
     }
 
     #[test]
