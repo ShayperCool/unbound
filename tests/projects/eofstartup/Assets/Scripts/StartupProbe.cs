@@ -16,6 +16,18 @@ public class StartupProbe : MonoBehaviour
     static readonly int[] awakeFrames = new int[12], startFrames = new int[12], laterFrames = new int[12];
     static int manualPosts;
     static readonly int[] updateFrames = new int[12], awaitFrames = new int[12];
+    public static int Step => step;
+    public static int FirstUpdate => firstUpdate;
+    // An object with end-of-frame waits of its own, made at the point named.
+    static void Make(string point) => new GameObject("Made " + point).AddComponent<MadeWaiter>().point = point;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void AfterLoad()
+    {
+        if (Environment.GetEnvironmentVariable("EOF_STARTUP_OUT") == null) return;
+        Make("afterSceneLoad");
+    }
+
     static void Row(string key, int value) => Output.Append("{\"k\":\"").Append(key).Append("\",\"v\":").Append(value).Append("}\n");
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -26,6 +38,7 @@ public class StartupProbe : MonoBehaviour
         var go = new GameObject("StartupProbe");
         DontDestroyOnLoad(go);
         go.AddComponent<StartupProbe>();
+        Make("beforeSceneLoad");
     }
 
     void Awake()
@@ -38,10 +51,12 @@ public class StartupProbe : MonoBehaviour
         manual.targetTexture = new RenderTexture(16,16,0);
         Camera.onPostRender += Post;
         StartCoroutine(Wait(awakeFrames));
+        Make("awake");
     }
     void Start()
     {
         StartCoroutine(Wait(startFrames));
+        Make("start");
         AwaitEnd();
     }
     static async void AwaitEnd()
@@ -73,12 +88,13 @@ public class StartupProbe : MonoBehaviour
         step = Time.frameCount - firstUpdate;
         if (step == 0)
         {
+            Make("update0");
             StartCoroutine(Wait(updateFrames));
             Row("manual.before", manualPosts);
             manual.Render();
             Row("manual.after", manualPosts);
         }
-        if (step == 2) StartCoroutine(Wait(laterFrames));
+        if (step == 2) { StartCoroutine(Wait(laterFrames)); Make("update2"); }
         if (step == 3) SceneManager.LoadScene("Extra", LoadSceneMode.Additive);
         if (step != 10 || Finished) return;
         for (int i=0;i<10;i++)
@@ -92,6 +108,7 @@ public class StartupProbe : MonoBehaviour
             Row("frame."+i+".await",awaitFrames[i]);
         }
         SceneWaiter.Finish();
+        MadeWaiter.Finish();
         Row("complete",1);
         File.WriteAllText(Environment.GetEnvironmentVariable("EOF_STARTUP_OUT"),Output.ToString());
         Finished = true;

@@ -17,6 +17,12 @@ Update, and `Awaitable.EndOfFrameAsync` started in Start, first resume at frame 
 The control started in Update of frame 2 resumes in frame 2. After an additive
 scene load, the scene's Awake and Start waiters resume after its first Update and
 camera post-render callback; loading a scene does not repeat Play startup.
+Where the waiting object is made does not change this: objects made in BeforeSceneLoad,
+AfterSceneLoad, the probe's Awake, its Start and its first Update each run their Start in frame 0
+and first resume the waits they start in Awake and in a coroutine `Start` at frame 1; one made in
+the Update of frame 2 starts and resumes in frame 2 (`made.<point>.*`). Outside the reference,
+the same rows came out with `Time.captureFramerate` set at startup and without the runner opening
+and focusing the Game view.
 The counters check every frame through frame 9, so skipping more than startup or
 adding a delay to every newly started coroutine fails the comparison.
 
