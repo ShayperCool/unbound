@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using Unbound.Runtime;
 using UnityEngine;
@@ -95,9 +96,32 @@ namespace UnityEditor.PackageManager
         public static event Action<PackageRegistrationEventArgs> registeringPackages;
         public static event Action<PackageRegistrationEventArgs> registeredPackages;
     }
+    /// <summary>What a package registration event tells: the packages added, removed and
+    /// changed (as they were and as they are), each list read-only and in step with the
+    /// Scripting API's description. Unbound resolves a session's packages before its scripts
+    /// load and raises no such event, so it makes none of these itself.</summary>
     public partial class PackageRegistrationEventArgs
     {
+        static readonly System.Collections.ObjectModel.ReadOnlyCollection<PackageInfo> s_None =
+            new System.Collections.ObjectModel.ReadOnlyCollection<PackageInfo>(new PackageInfo[0]);
+
         private PackageRegistrationEventArgs() { }
+
+        internal PackageRegistrationEventArgs(IList<PackageInfo> added, IList<PackageInfo> removed, IList<PackageInfo> changedFrom, IList<PackageInfo> changedTo)
+        {
+            if (added != null) this.added = new System.Collections.ObjectModel.ReadOnlyCollection<PackageInfo>(added);
+            if (removed != null) this.removed = new System.Collections.ObjectModel.ReadOnlyCollection<PackageInfo>(removed);
+            if (changedFrom != null) this.changedFrom = new System.Collections.ObjectModel.ReadOnlyCollection<PackageInfo>(changedFrom);
+            if (changedTo != null) this.changedTo = new System.Collections.ObjectModel.ReadOnlyCollection<PackageInfo>(changedTo);
+        }
+
+        public System.Collections.ObjectModel.ReadOnlyCollection<PackageInfo> added { get; private set; } = s_None;
+
+        public System.Collections.ObjectModel.ReadOnlyCollection<PackageInfo> removed { get; private set; } = s_None;
+
+        public System.Collections.ObjectModel.ReadOnlyCollection<PackageInfo> changedFrom { get; private set; } = s_None;
+
+        public System.Collections.ObjectModel.ReadOnlyCollection<PackageInfo> changedTo { get; private set; } = s_None;
     }
 }
 namespace UnityEditor.AI

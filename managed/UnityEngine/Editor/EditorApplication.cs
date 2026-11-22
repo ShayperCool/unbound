@@ -466,14 +466,6 @@ namespace UnityEditor
         public static bool DisplayCancelableProgressBar(string title, string info, float progress) => false;
         [Unbound.EditorFaithful("no window shows a progress bar (as the batch-mode Editor)")]
         public static void ClearProgressBar() { }
-        /// <summary>A dialog nobody can answer (no editor windows): cancelled, as the batch-mode
-        /// Editor cancels them (measured).</summary>
-        public static bool DisplayDialog(string title, string message, string ok, [UnityEngine.Internal.DefaultValue("\"\"")] string cancel)
-        {
-            Debug.LogAssertion($"Cancelling DisplayDialog: {title} {message}");
-            return false;
-        }
-        public static bool DisplayDialog(string title, string message, string ok) => DisplayDialog(title, message, ok, "");
         public static Object InstanceIDToObject(int instanceID) => AssetDatabaseRuntime.Reloaded(ObjectRegistry.FindById(instanceID));
         public static void UnloadUnusedAssetsImmediate() => Resources.UnloadUnusedAssetsInternal();
         public static void UnloadUnusedAssetsImmediate(bool includeMonoReferencesAsRoots) => Resources.UnloadUnusedAssetsInternal();
@@ -484,13 +476,6 @@ namespace UnityEditor
         [Unbound.EditorFaithful("no Project window is open (as the batch-mode Editor)")]
         public static void FocusProjectWindow() { }
         public static void RevealInFinder(string path) => Stubs.Ignored("EditorUtility.RevealInFinder", "opens no file manager");
-        // File dialogs nobody can answer: cancelled, as the batch-mode Editor cancels its dialogs.
-        [Unbound.EditorFaithful("a dialog nobody answers is cancelled, as in the batch-mode Editor (measured for DisplayDialog: tests/projects/editorui)")]
-        public static string OpenFilePanel(string title, string directory, string extension) => "";
-        [Unbound.EditorFaithful("a dialog nobody answers is cancelled, as in the batch-mode Editor (measured for DisplayDialog: tests/projects/editorui)")]
-        public static string SaveFilePanel(string title, string directory, string defaultName, string extension) => "";
-        [Unbound.EditorFaithful("a dialog nobody answers is cancelled, as in the batch-mode Editor (measured for DisplayDialog: tests/projects/editorui)")]
-        public static string OpenFolderPanel(string title, string folder, string defaultName) => "";
     }
 }
 

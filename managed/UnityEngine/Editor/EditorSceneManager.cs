@@ -250,9 +250,8 @@ namespace UnityEditor.SceneManagement
                 if (s.Data is SceneData data && data.IsDirty) modified.Add(data.Name.Length > 0 ? data.Name : "Untitled");
             if (modified.Count == 0) return true;
             var names = string.Concat(modified.Select(n => "\n " + n));
-            // The scene dialog's own text, with the batch-mode Editor's suffix (EditorUtility.DisplayDialog's
-            // measured assertion has none).
-            Debug.LogAssertion($"Cancelling DisplayDialog: Scene(s) Have Been Modified Do you want to save the changes you made in the scenes:{names}\n\nYour changes will be lost if you don't save them.\nThis should not be called in batch mode.");
+            // The scene dialog's own title and text, cancelled as every dialog nobody can answer.
+            EditorUtility.Cancelled("DisplayDialog", $"Scene(s) Have Been Modified Do you want to save the changes you made in the scenes:{names}\n\nYour changes will be lost if you don't save them.");
             return false;
         }
 

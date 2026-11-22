@@ -9207,8 +9207,6 @@ namespace UnityEditor
     }
     unsafe partial class EditorUtility
     {
-        [global::Unbound.Stub] public static string OpenFilePanelWithFilters(string title, string directory, string[] filters) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.OpenFilePanelWithFilters"); return default; }
-        [global::Unbound.Stub] public static string SaveFolderPanel(string title, string folder, string defaultName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.SaveFolderPanel"); return default; }
         [global::Unbound.Stub] public static bool WarnPrefab(global::UnityEngine.Object target, string title, string warning, string okButton) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.WarnPrefab"); return default; }
         [global::Unbound.Stub] public static bool IsUnityExtensionsInitialized() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.IsUnityExtensionsInitialized"); return default; }
         [global::Unbound.Stub] public static bool IsValidUnityYAML(string yaml) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.IsValidUnityYAML"); return default; }
@@ -9262,8 +9260,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static void CompressTexture(global::UnityEngine.Texture2D texture, global::UnityEngine.TextureFormat format, global::UnityEditor.TextureCompressionQuality quality) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.CompressTexture"); }
         [global::Unbound.Stub] public static void CompressCubemapTexture(global::UnityEngine.Cubemap texture, global::UnityEngine.TextureFormat format, global::UnityEditor.TextureCompressionQuality quality) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.CompressCubemapTexture"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Texture GetIconInActiveState(global::UnityEngine.Texture icon) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.GetIconInActiveState"); return default; }
-        [global::Unbound.Stub] public static string SaveFilePanelInProject(string title, string defaultName, string extension, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.SaveFilePanelInProject"); return default; }
-        [global::Unbound.Stub] public static string SaveFilePanelInProject(string title, string defaultName, string extension, string message, string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.SaveFilePanelInProject"); return default; }
         [global::System.Obsolete("Use AssetDatabase.GetAssetPath")] [global::Unbound.Stub] public static string GetAssetPath(global::UnityEngine.Object asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.GetAssetPath"); return default; }
         [global::System.Obsolete("Use BuildPipeline.BuildAssetBundle instead")] [global::Unbound.Stub] public static bool BuildResourceFile(global::UnityEngine.Object[] selection, string pathName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.BuildResourceFile"); return default; }
         [global::Unbound.Stub] public static bool GetDialogOptOutDecision(global::UnityEditor.DialogOptOutDecisionType dialogOptOutDecisionType, string dialogOptOutDecisionStorageKey) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.GetDialogOptOutDecision"); return default; }
@@ -34790,10 +34786,6 @@ namespace UnityEditor.PackageManager
     unsafe partial class PackageRegistrationEventArgs
     {
         [global::Unbound.Stub] internal PackageRegistrationEventArgs(global::System.IntPtr nativeHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackageRegistrationEventArgs.ctor"); }
-        public global::System.Collections.ObjectModel.ReadOnlyCollection<global::UnityEditor.PackageManager.PackageInfo> added { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackageRegistrationEventArgs.added"); return default; } }
-        public global::System.Collections.ObjectModel.ReadOnlyCollection<global::UnityEditor.PackageManager.PackageInfo> removed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackageRegistrationEventArgs.removed"); return default; } }
-        public global::System.Collections.ObjectModel.ReadOnlyCollection<global::UnityEditor.PackageManager.PackageInfo> changedFrom { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackageRegistrationEventArgs.changedFrom"); return default; } }
-        public global::System.Collections.ObjectModel.ReadOnlyCollection<global::UnityEditor.PackageManager.PackageInfo> changedTo { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackageRegistrationEventArgs.changedTo"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class PackageValidation
