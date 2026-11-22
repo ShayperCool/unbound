@@ -146,16 +146,21 @@ namespace UnityEngine
                 Orthographic = orthographic;
             }
 
-            internal static CameraLodParams For(Camera camera)
+            internal static CameraLodParams For(Camera camera) => For(camera, camera.transform.position);
+
+            /// <summary>The parameters of a camera seen from <paramref name="cameraPosition"/>.</summary>
+            internal static CameraLodParams For(Camera camera, Vector3 cameraPosition)
             {
                 float bias = QualitySettings.lodBias;
                 int minLevel = Math.Max(0, QualitySettings.maximumLODLevel);
                 if (camera.orthographic)
                     return new CameraLodParams(default, (camera.orthographicSize + camera.orthographicSize) / bias, minLevel, true);
                 float fieldOfView = camera.fieldOfView;
+                // Half the field of view in radians (this float order is our choice; the probe's
+                // sweeps give the same levels with the plain product).
                 float tangent = Mathf.Tan((fieldOfView / 360f + fieldOfView / 360f) * Mathf.PI * 0.5f);
                 float scale = (tangent + tangent) / bias;
-                return new CameraLodParams(camera.transform.position, scale * scale, minLevel, false);
+                return new CameraLodParams(cameraPosition, scale * scale, minLevel, false);
             }
         }
 
@@ -261,49 +266,54 @@ namespace UnityEngine
 
         /// <summary>The level a camera draws of the group placed with a world reference point and
         /// size (a terrain's trees place their prefab's group).</summary>
-        internal int LevelFor(Camera camera, Vector3 cameraPosition, Vector3 reference, float worldSize)
-        {
-            if (m_LODs.Length == 0) return -1;
-            if (m_Forced >= 0) return Math.Min(m_Forced, m_LODs.Length - 1);
-            float distance = ViewDistance(camera, cameraPosition, reference);
-            for (int i = Math.Max(0, QualitySettings.maximumLODLevel); i < m_LODs.Length; i++)
-                if (distance < worldSize / m_LODs[i].screenRelativeTransitionHeight) return i;
-            return -1;
-        }
+        internal int LevelFor(Camera camera, Vector3 cameraPosition, Vector3 reference, float worldSize) =>
+            LevelFor(CameraLodParams.For(camera, cameraPosition), reference, worldSize);
 
         /// <summary>
-        /// The distance a level's reach is compared with: the reference point's distance times
-        /// the view's height at distance 1 (twice the tangent of half the field of view) over
-        /// the LOD bias; for an orthographic camera its height (twice the orthographic size)
-        /// over the bias, at any distance. A level is drawn while this is less than the
+        /// The level drawn: the first from the quality settings' maximum level on whose reach the
+        /// view distance is under, -1 past the last. The view distance is the reference point's
+        /// distance times the view's height at distance 1 (twice the tangent of half the field of
+        /// view) over the LOD bias; for an orthographic camera its height (twice the orthographic
+        /// size) over the bias, at any distance. A level is drawn while this is less than the
         /// group's size over the level's height: at equality the next level is (Unity
         /// 6000.0.71f1, tests/projects/lod: the fov 90 sweep's last level ends at 5.0 exactly,
         /// the orthographic one's at size 5.0).
         /// </summary>
-        static float ViewDistance(Camera camera, Vector3 cameraPosition, Vector3 reference)
+        int LevelFor(in CameraLodParams camera, Vector3 reference, float worldSize)
         {
-            float bias = QualitySettings.lodBias;
-            if (camera.orthographic) return (camera.orthographicSize + camera.orthographicSize) / bias;
-            float fieldOfView = camera.fieldOfView;
-            // Half the field of view in radians (this float order is our choice; the probe's
-            // sweeps give the same levels with the plain product).
-            float tangent = Mathf.Tan((fieldOfView / 360f + fieldOfView / 360f) * Mathf.PI * 0.5f);
-            float scale = (tangent + tangent) / bias;
-            var to = reference - cameraPosition;
-            return Mathf.Sqrt((to.z * to.z + to.y * to.y + to.x * to.x) * (scale * scale));
+            if (m_LODs.Length == 0) return -1;
+            if (m_Forced >= 0) return Math.Min(m_Forced, m_LODs.Length - 1);
+            float distance;
+            if (camera.Orthographic)
+            {
+                distance = camera.DistanceOrScaleSq;
+            }
+            else
+            {
+                var to = reference - camera.CameraPosition;
+                distance = Mathf.Sqrt((to.z * to.z + to.y * to.y + to.x * to.x) * camera.DistanceOrScaleSq);
+            }
+            for (int i = camera.MinLevel; i < m_LODs.Length; i++)
+                if (distance < worldSize / m_LODs[i].screenRelativeTransitionHeight) return i;
+            return -1;
+        }
+
+        /// <summary>Whether level <paramref name="level"/> (-1: none) lists the renderer.</summary>
+        bool LevelDraws(int level, Renderer renderer)
+        {
+            if (level < 0) return false;
+            var drawn = m_LODs[level].renderers;
+            if (drawn == null) return false;
+            for (int i = 0; i < drawn.Length; i++)
+                if (ReferenceEquals(drawn[i], renderer)) return true;
+            return false;
         }
 
         /// <summary>Whether a camera draws a renderer of the group: whether it is in the camera's level.</summary>
         internal bool Draws(Renderer renderer, Camera camera, Vector3 cameraPosition)
         {
             if (!m_Enabled || !gameObject.activeInHierarchy) return true;
-            int level = LevelFor(camera, cameraPosition);
-            if (level < 0) return false;
-            var drawn = m_LODs[level].renderers;
-            if (drawn == null) return false;
-            foreach (var r in drawn)
-                if (ReferenceEquals(r, renderer)) return true;
-            return false;
+            return LevelDraws(LevelFor(camera, cameraPosition), renderer);
         }
 
         /// <summary>Whether a camera draws a renderer: one of no LOD group, or in its group's level.</summary>
@@ -326,37 +336,12 @@ namespace UnityEngine
             }
             else
             {
-                level = LevelFor(in camera);
+                EnsureWorldCache();
+                level = LevelFor(in camera, m_WorldCacheRef, m_WorldCacheSize);
                 m_CachedCullPass = cullPass;
                 m_CachedCullLevel = level;
             }
-            if (level < 0) return false;
-            var drawn = m_LODs[level].renderers;
-            if (drawn == null) return false;
-            for (int i = 0; i < drawn.Length; i++)
-                if (ReferenceEquals(drawn[i], renderer)) return true;
-            return false;
-        }
-
-        int LevelFor(in CameraLodParams camera)
-        {
-            if (m_LODs.Length == 0) return -1;
-            if (m_Forced >= 0) return Math.Min(m_Forced, m_LODs.Length - 1);
-            EnsureWorldCache();
-            float distance;
-            if (camera.Orthographic)
-            {
-                distance = camera.DistanceOrScaleSq;
-            }
-            else
-            {
-                var to = m_WorldCacheRef - camera.CameraPosition;
-                distance = Mathf.Sqrt((to.z * to.z + to.y * to.y + to.x * to.x) * camera.DistanceOrScaleSq);
-            }
-            float worldSize = m_WorldCacheSize;
-            for (int i = camera.MinLevel; i < m_LODs.Length; i++)
-                if (distance < worldSize / m_LODs[i].screenRelativeTransitionHeight) return i;
-            return -1;
+            return LevelDraws(level, renderer);
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)

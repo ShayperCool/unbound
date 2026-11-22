@@ -598,7 +598,15 @@ namespace UnityEngine
         /// change the scene meanwhile.</summary>
         internal static void SendWillRenderObject(Matrix4x4 viewProjection, int cullingMask)
         {
-            if (s_WillRenderScriptCount <= 0) return;
+            if (s_WillRenderScriptCount <= 0)
+            {
+                // No script takes the message: only the bounds the pass gives every renderer it
+                // reaches (a particle system's first bounds come from a render,
+                // tests/projects/particlerender), without looking for scripts.
+                foreach (var renderer in RenderRegistry.Renderers)
+                    if (Reaches(renderer, cullingMask)) renderer.PrepareCullingBounds();
+                return;
+            }
             // Nothing changes the registry before the first script gets the message: walk it as it
             // is, and copy the rest from that renderer on, since scripts may change the scene.
             var list = s_WillRenderLists.Count > 0 ? s_WillRenderLists.Pop() : new List<Renderer>();
@@ -634,11 +642,18 @@ namespace UnityEngine
         /// without such a script).</summary>
         static bool WillRender(Renderer renderer, Matrix4x4 viewProjection, int cullingMask)
         {
+            if (!Reaches(renderer, cullingMask)) return false;
+            renderer.PrepareCullingBounds();
+            return HasWillRenderScript(renderer.m_GameObject) && FrameBuilder.InFrustum(viewProjection, renderer.CullingBounds);
+        }
+
+        /// <summary>Whether the pass looks at a renderer: enabled, drawing, on a layer the camera
+        /// sees, its object active.</summary>
+        static bool Reaches(Renderer renderer, int cullingMask)
+        {
             if (!renderer || renderer.forceRenderingOff || !renderer.m_Enabled) return false;
             var go = renderer.m_GameObject;
-            if ((cullingMask & (1 << go.m_Layer)) == 0 || !go.activeInHierarchy || renderer.NothingToDraw) return false;
-            renderer.PrepareCullingBounds();
-            return HasWillRenderScript(go) && FrameBuilder.InFrustum(viewProjection, renderer.CullingBounds);
+            return (cullingMask & (1 << go.m_Layer)) != 0 && go.activeInHierarchy && !renderer.NothingToDraw;
         }
 
         static bool HasWillRenderScript(GameObject go)
@@ -661,10 +676,14 @@ namespace UnityEngine
 
         /// <summary>A camera's culling (or a light's shadow casters) took it this frame: it becomes
         /// visible at once, OnBecameVisible inside the culling (measured: tests/projects/messages).</summary>
-        internal void MarkRendered()
+        /// <summary>Drawn this frame; returns whether it became visible now (OnBecameVisible was
+        /// sent, and its scripts ran).</summary>
+        internal bool MarkRendered()
         {
             m_RenderedFrame = Time.frameCount;
-            if (!m_IsVisible) SetVisible(true);
+            if (m_IsVisible) return false;
+            SetVisible(true);
+            return true;
         }
 
         static readonly List<Renderer> s_NotifyScratch = new List<Renderer>();

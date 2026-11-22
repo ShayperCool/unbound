@@ -1195,7 +1195,12 @@ namespace Unbound.Runtime
                     // tests/projects/residentdrawer, every level of a drawer's LOD group, a
                     // renderer on a layer the camera does not draw, and renderers behind the
                     // camera casting no shadows are all visible).
-                    renderer.MarkRendered();
+                    if (renderer.MarkRendered() && hasCamera)
+                    {
+                        // OnBecameVisible scripts may move the camera or change LOD state.
+                        lodParams = LODGroup.CameraLodParams.For(camera);
+                        lodPass = LODGroup.NextCullPass();
+                    }
                     continue;
                 }
                 if ((mask & (1u << go.m_Layer)) == 0) continue;
@@ -1206,7 +1211,12 @@ namespace Unbound.Runtime
                 {
                     data.Visible.Add(renderer);
                     // Visible from the culling on, as with the built-in pipeline.
-                    if (renderer.shadowCastingMode != ShadowCastingMode.ShadowsOnly) renderer.MarkRendered();
+                    if (renderer.shadowCastingMode != ShadowCastingMode.ShadowsOnly && renderer.MarkRendered() && hasCamera)
+                    {
+                        // OnBecameVisible scripts may move the camera or change LOD state.
+                        lodParams = LODGroup.CameraLodParams.For(camera);
+                        lodPass = LODGroup.NextCullPass();
+                    }
                 }
             }
             // Meshes queued with Graphics.DrawMesh and its kin are culled as renderers are, by

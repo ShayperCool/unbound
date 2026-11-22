@@ -203,6 +203,52 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>Without any OnWillRenderObject script the pass still gives each renderer it
+        /// reaches its bounds, as it did when it looked for scripts: a particle system's first
+        /// bounds come from a render (before, the pass returned at once and the system got none).</summary>
+        [Fact]
+        public void WithoutWillRenderScriptsThePassStillGivesRenderersTheirBounds()
+        {
+            var go = Track(new GameObject("Particles"));
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.m_HasBounds = ps.m_DrawPending = ps.m_BoundsFrozen = false;
+            Assert.Equal(0, Renderer.s_WillRenderScriptCount);
+            Renderer.SendWillRenderObject(Matrix4x4.identity, ~0);
+            Assert.True(ps.m_HasBounds);
+        }
+
+        sealed class MoveCameraOnVisible : MonoBehaviour
+        {
+            public Camera Camera;
+            void OnBecameVisible() => Camera.transform.position = new Vector3(0f, 0f, -500f);
+        }
+
+        /// <summary>OnBecameVisible scripts run inside the culling: a level change they cause (here
+        /// the camera moving away when LOD 0 becomes visible) reaches the group's later renderers
+        /// in the same culling, as when every renderer read the camera anew.</summary>
+        [Fact]
+        public void LevelChangesMadeByOnBecameVisibleReachTheRestOfTheCulling()
+        {
+            QualitySettings.lodBias = 1f;
+            QualitySettings.maximumLODLevel = 0;
+            var root = Track(new GameObject("LodRoot"));
+            var near = Track(GameObject.CreatePrimitive(PrimitiveType.Cube)).GetComponent<MeshRenderer>();
+            var far = Track(GameObject.CreatePrimitive(PrimitiveType.Cube)).GetComponent<MeshRenderer>();
+            near.transform.SetParent(root.transform, false);
+            far.transform.SetParent(root.transform, false);
+            var group = root.AddComponent<LODGroup>();
+            group.SetLODs(new[] { new LOD(0.5f, new Renderer[] { near }), new LOD(0.001f, new Renderer[] { far }) });
+            group.size = 1f;
+            var cam = Track(new GameObject("Cam")).AddComponent<Camera>();
+            // At 1 unit LOD 0 is drawn (view distance 1.15 under its reach of 2); at 500, LOD 1.
+            cam.transform.position = new Vector3(0f, 0f, -1f);
+            near.gameObject.AddComponent<MoveCameraOnVisible>().Camera = cam;
+            Assert.True(cam.TryGetCullingParameters(out var p));
+            Culling.Cull(ref p);
+            Assert.True(near.isVisible);
+            Assert.True(far.isVisible, "the level after the camera moved");
+        }
+
         sealed class WillRenderProbe : MonoBehaviour
         {
             public int Calls;
