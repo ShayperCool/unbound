@@ -61,6 +61,10 @@ immutable packages.
 [Asset metadata](https://docs.unity.com/en-us/engine/6000.0/manual/assets-and-media/import-assets/asset-metadata),
 [Package sources](https://docs.unity.com/en-us/engine/6000.0/manual/packages-list/packages/upm-concepts).
 
+The three-copy controls show that a batch diagnostic names the other
+mutable files before the immutable package. A current-owner diagnostic
+names the established owner.
+
 The gate runs both profiles. The import profile checks that every graph
 reference follows the newly assigned GUIDs. The archive keeps the reference
 with the early GUID and loses it with the late GUID. The remaining pairs
@@ -72,10 +76,12 @@ compile with the registry DLL's package-only API, then compile again with
 identical metadata. A private loopback registry serves the synthetic package.
 
 Unbound performs the measured repair before startup indexing and compilation
-on the 6000.0 family. An interrupted repair resumes from the project cache.
+on the 6000.0 family. An interrupted repair resumes from the project cache,
+including after a project directory move.
 Graph inspection reads the current metadata and reports unresolved ties.
 Quoted GUIDs use a different metadata rewrite in Unity. Unbound reports
 that case and preserves the prior compile behavior. Unmeasured groups with
-multiple immutable owners, aliased metadata or prior Unity ownership for
-two mutable files stop the repair with a diagnostic. Incremental registration
+multiple immutable owners, aliased metadata or an existing Unity source
+asset database stop the repair with a diagnostic. The existing database
+can change the owner and the conflict warning. Incremental registration
 remains outside this import profile.

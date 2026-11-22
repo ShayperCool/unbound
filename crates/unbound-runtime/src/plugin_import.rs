@@ -18,14 +18,19 @@ use unbound_yaml::Guid;
 /// Contains the outstanding writes of a group, including writes that may already have completed.
 /// Keeping the plan until the last rename lets the next import resume after a permissions error
 /// or interruption, even when the first rename eliminated the duplicate.
-const PENDING: &str = "plugin-guid-import-v1.pending.json";
+const PENDING: &str = "plugin-guid-import-v2.pending.json";
 
 #[derive(Deserialize, Serialize)]
 struct Rewrite {
-    meta: PathBuf,
+    asset: String,
     old: Guid,
     new: Guid,
     diagnostic: String,
+}
+
+struct WritableRoot {
+    path: String,
+    dir: PathBuf,
 }
 
 /// Import DLL metadata before indexing assets or building the compilation graph. Read-only
@@ -52,13 +57,30 @@ pub fn repair_plugin_guid_conflicts(project: &Project) -> Result<()> {
         .truncate(false)
         .open(library.join("plugin-guid-import.lock"))?;
     lock.lock().context("locking plugin metadata import")?;
+    let previous_editor_database = project.root.join("Library/SourceAssetDB").exists();
     let editable: Vec<_> = project
-        .editable_roots()
-        .iter()
-        .filter_map(|dir| dir.canonicalize().ok())
+        .asset_root_dirs()
+        .into_iter()
+        .filter(|(dir, _)| {
+            *dir == project.assets
+                || project
+                    .packages
+                    .iter()
+                    .any(|p| p.root == *dir && p.source == PackageSource::Embedded)
+        })
+        .filter_map(|(dir, path)| {
+            Some(WritableRoot {
+                path,
+                dir: dir.canonicalize().ok()?,
+            })
+        })
         .collect();
     match fs::read(&pending) {
         Ok(bytes) => {
+            anyhow::ensure!(
+                !previous_editor_database,
+                "cannot resume plugin GUID repair after Unity opened the project"
+            );
             let rewrites: Vec<Rewrite> = serde_json::from_slice(&bytes)
                 .with_context(|| format!("reading interrupted import {}", pending.display()))?;
             resume(&pending, &editable, &rewrites)?;
@@ -122,7 +144,7 @@ fn plan_group(
     project: &Project,
     guid: Guid,
     group: &[&Plugin],
-    editable: &[PathBuf],
+    editable: &[WritableRoot],
     reserved: &mut HashSet<Guid>,
     rewrites: &mut Vec<Rewrite>,
 ) -> Result<()> {
@@ -130,15 +152,6 @@ fn plan_group(
     let mut paths = HashSet::new();
     for plugin in group {
         let meta = meta_path(&plugin.file).canonicalize()?;
-        if read_meta_guid(&meta) != Some(guid) {
-            // The Editor reserializes metadata without a plain GUID token. Preserve the
-            // existing compilation for these files until that format can be written.
-            tracing::warn!(
-                "{}: plugin GUID [{guid}] requires an unmeasured metadata rewrite",
-                plugin.path
-            );
-            return Ok(());
-        }
         let source = plugin
             .path
             .strip_prefix("Packages/")
@@ -164,13 +177,16 @@ fn plan_group(
         };
         if entry.writable() {
             anyhow::ensure!(
-                editable.iter().any(|dir| entry.meta.starts_with(dir)),
+                editable
+                    .iter()
+                    .any(|root| entry.meta.starts_with(&root.dir)),
                 "{} resolves outside the project's writable asset roots",
                 plugin.path
             );
         }
         entries.push(entry);
     }
+    entries.sort_by_key(|entry| !entry.writable());
     let mut immutable = entries.iter().filter(|entry| !entry.writable());
     let owner = immutable.next();
     let previous_editor_database = project.root.join("Library/SourceAssetDB").exists();
@@ -180,14 +196,26 @@ fn plan_group(
                 entry.source,
                 Some(PackageSource::Registry | PackageSource::LocalTarball)
             ))
-            && (owner.is_some() || !previous_editor_database),
-        "Unbound cannot resolve plugin GUID [{guid}] shared by {}. The Editor's ownership for these files is needed before they can compile.",
+            && !previous_editor_database,
+        "Unbound cannot resolve plugin GUID [{guid}] shared by {}. Open the project in Unity to resolve the GUID conflict before compiling.",
         entries
             .iter()
             .map(|entry| entry.plugin.path.as_str())
             .collect::<Vec<_>>()
             .join(", ")
     );
+    if let Some(entry) = entries
+        .iter()
+        .find(|entry| read_meta_guid(&entry.meta) != Some(guid))
+    {
+        // The Editor reserializes metadata without a plain GUID token. Preserve the
+        // existing compilation for these files until that format can be written.
+        tracing::warn!(
+            "{}: plugin GUID [{guid}] requires an unmeasured metadata rewrite",
+            entry.plugin.path
+        );
+        return Ok(());
+    }
 
     // Unity 6000.0.71f1 imports Assets and registry packages in the initial batch. In the
     // embedded-package scan, a local tarball has already claimed its GUID. Both branches are
@@ -202,9 +230,12 @@ fn plan_group(
         let owner_label = if known_owner { " (current owner)" } else { "" };
         let others = entries
             .iter()
-            .filter(|other| match owner {
-                Some(owner) => other.meta == owner.meta,
-                None => other.meta != entry.meta,
+            .filter(|other| {
+                if known_owner {
+                    owner.is_some_and(|owner| other.meta == owner.meta)
+                } else {
+                    other.meta != entry.meta
+                }
             })
             .map(|other| format!("  '{}{suffix}'{owner_label}\n", other.plugin.path))
             .collect::<String>();
@@ -216,7 +247,7 @@ fn plan_group(
             entry.plugin.path
         );
         rewrites.push(Rewrite {
-            meta: entry.meta.clone(),
+            asset: entry.plugin.path.clone(),
             old: guid,
             new,
             diagnostic,
@@ -225,17 +256,28 @@ fn plan_group(
     Ok(())
 }
 
-fn resume(pending: &Path, editable: &[PathBuf], rewrites: &[Rewrite]) -> Result<()> {
+fn resume(pending: &Path, editable: &[WritableRoot], rewrites: &[Rewrite]) -> Result<()> {
     for rewrite in rewrites {
-        let path = match rewrite.meta.canonicalize() {
+        let meta = editable
+            .iter()
+            .find_map(|root| {
+                let relative =
+                    Path::new(rewrite.asset.strip_prefix(&root.path)?.strip_prefix('/')?);
+                relative
+                    .components()
+                    .all(|part| matches!(part, std::path::Component::Normal(_)))
+                    .then(|| meta_path(&root.dir.join(relative)))
+            })
+            .with_context(|| format!("{} is no longer a writable project asset", rewrite.asset))?;
+        let path = match meta.canonicalize() {
             Ok(path) => path,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
             Err(error) => return Err(error.into()),
         };
         anyhow::ensure!(
-            path == rewrite.meta && editable.iter().any(|dir| path.starts_with(dir)),
+            editable.iter().any(|root| path.starts_with(&root.dir)),
             "{} moved outside the writable asset roots during plugin import",
-            rewrite.meta.display()
+            rewrite.asset
         );
         let text = fs::read_to_string(&path)?;
         let metadata = unbound_yaml::parse_value(&text)?;
@@ -300,23 +342,40 @@ mod tests {
         let mut readonly = permissions.clone();
         readonly.set_readonly(true);
         fs::set_permissions(&second, readonly)?;
-        let rewrites = [(&first, Guid(2)), (&second, Guid(3))].map(|(path, new)| Rewrite {
-            meta: path.to_path_buf(),
+        let rewrites = [
+            ("Assets/first.dll", Guid(2)),
+            ("Assets/second.dll", Guid(3)),
+        ]
+        .map(|(asset, new)| Rewrite {
+            asset: asset.into(),
             old: guid,
             new,
             diagnostic: String::new(),
         });
         fs::write(&pending, serde_json::to_vec(&rewrites)?)?;
-        assert!(resume(&pending, std::slice::from_ref(&dir), &rewrites).is_err());
+        let editable = [WritableRoot {
+            path: "Assets".into(),
+            dir: dir.clone(),
+        }];
+        assert!(resume(&pending, &editable, &rewrites).is_err());
         assert_eq!(read_meta_guid(&first), Some(Guid(2)));
         assert_eq!(fs::read_to_string(&second)?, original);
+        let moved = dir.with_extension("moved");
+        fs::rename(&dir, &moved)?;
+        let pending = moved.join(PENDING);
+        let first = moved.join("first.dll.meta");
+        let second = moved.join("second.dll.meta");
+        let editable = [WritableRoot {
+            path: "Assets".into(),
+            dir: moved.clone(),
+        }];
         fs::set_permissions(&second, permissions)?;
         let rewrites: Vec<Rewrite> = serde_json::from_slice(&fs::read(&pending)?)?;
-        resume(&pending, std::slice::from_ref(&dir), &rewrites)?;
+        resume(&pending, &editable, &rewrites)?;
         assert_eq!(read_meta_guid(&first), Some(Guid(2)));
         assert_eq!(read_meta_guid(&second), Some(Guid(3)));
         assert!(!pending.exists());
-        fs::remove_dir_all(dir)?;
+        fs::remove_dir_all(moved)?;
         Ok(())
     }
 

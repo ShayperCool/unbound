@@ -90,6 +90,8 @@ COLLISION_CASES = {
     'RegistryKeepsReference': ('Assets/A', REGISTRY, '0'*30+'02'),
     'EmbeddedWithArchive': ('Packages/com.example.first', PACKAGE, 'a1'*16),
     'EmbeddedWithRegistry': ('Packages/com.example.first', REGISTRY, 'a5'*16),
+    'RegistryThreeWay': ('Assets/A', 'Packages/com.example.first', REGISTRY, 'a6'*16),
+    'ArchiveThreeWay': ('Assets/A', 'Packages/com.example.first', PACKAGE, 'a7'*16),
     'EmbeddedWithAssets': ('Assets/A', 'Packages/com.example.first', 'a2'*16),
     'BothInAssets': ('Assets/A', 'Assets/B', 'a3'*16),
     'BothEmbedded': ('Packages/com.example.first', 'Packages/com.example.second', 'a4'*16),
@@ -166,12 +168,15 @@ def generate(project, release, conflicts=False):
     editor_data = editor.parents[1] if probe_paths.MACOS_ARM64 else editor.parent/'Data'
     reference = editor_data/'NetStandard/ref/2.1.0/netstandard.dll'
     compiler = csc()
-    cases = ({case: (*row[:2], row[2], row[2]) for case, row in COLLISION_CASES.items()}
-             if conflicts else CASES)
+    if conflicts:
+        cases = {case: [(location, guid) for location in locations]
+                 for case, (*locations, guid) in COLLISION_CASES.items()}
+    else:
+        cases = {case: list(zip(row[:2], row[2:])) for case, row in CASES.items()}
     with ThreadPoolExecutor(max_workers=4) as pool:
         tasks = [pool.submit(compile_copy, project, staging, compiler, reference, case, location, prefix, i, conflicts)
-                 for case, row in cases.items()
-                 for i, (location, prefix) in enumerate(zip(row[:2], row[2:]))]
+                 for case, copies in cases.items()
+                 for i, (location, prefix) in enumerate(copies)]
         if not conflicts:
             tasks.extend(pool.submit(compile_copy, project, staging, compiler, reference, case, PACKAGE, '21', 2, conflicts)
                          for case in ('VersionTie', 'MixedVersionTie', 'ExplicitVersionTie'))
