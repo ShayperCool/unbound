@@ -1,0 +1,26 @@
+{
+  "case": "clip-assets",
+  "exit": 0,
+  "changed": [
+    "Assets/Clips/Common.anim",
+    "Assets/Clips/Common.anim.meta",
+    "Assets/Clips/Constants.anim",
+    "Assets/Clips/Constants.anim.meta",
+    "Assets/Clips/Editor.anim",
+    "Assets/Clips/Editor.anim.meta",
+    "Assets/Clips/Empty.anim",
+    "Assets/Clips/Empty.anim.meta",
+    "Assets/Clips/Events.anim",
+    "Assets/Clips/Events.anim.meta",
+    "Assets/Clips/Kinds.anim",
+    "Assets/Clips/Kinds.anim.meta",
+    "Assets/Clips/Merged.anim",
+    "Assets/Clips/Merged.anim.meta",
+    "Assets/Clips/Order.anim",
+    "Assets/Clips/Order.anim.meta",
+    "Assets/Clips/Settings.anim",
+    "Assets/Clips/Settings.anim.meta",
+    "Assets/Clips.meta"
+  ],
+  "removed": []
+}

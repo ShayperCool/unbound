@@ -1,0 +1,54 @@
+{"key": "order.result", "value": "Order"}
+{"key": "order.bindings", "value": "|Holder|ratio; B|Light|m_Intensity; A|GameObject|m_IsActive; |Holder|count; A/C|Transform|m_LocalRotation.x; A/C|Transform|m_LocalRotation.y; A/C|Transform|m_LocalRotation.z; A/C|Transform|m_LocalRotation.w; B|Transform|m_LocalPosition.x; B|Transform|m_LocalPosition.y; B|Transform|m_LocalPosition.z; A|Transform|m_LocalPosition.x; A|Transform|m_LocalPosition.y; A|Transform|m_LocalPosition.z; |Transform|m_LocalPosition.x; |Transform|m_LocalPosition.y; |Transform|m_LocalPosition.z; B|Transform|m_LocalScale.x; B|Transform|m_LocalScale.y; B|Transform|m_LocalScale.z"}
+{"key": "order.objectBindings", "value": "B|MeshRenderer|m_Materials.Array.data[0]|pptr|discrete; A|MeshRenderer|m_Materials.Array.data[0]|pptr|discrete"}
+{"key": "order.length", "value": "2"}
+{"key": "order.genericRoot", "value": true}
+{"key": "order.file", "value": "4d524b299c5f9efd02b37666e581a642ca59e22da6ed54e7ec817d001db1e896"}
+{"key": "constants.result", "value": "Constants"}
+{"key": "constants.bindings", "value": "|GameObject|m_IsActive; |Light|m_Intensity; |Light|m_Range; |Transform|m_LocalPosition.x; |Transform|m_LocalPosition.y; |Transform|m_LocalPosition.z"}
+{"key": "constants.objectBindings", "value": ""}
+{"key": "constants.length", "value": "1"}
+{"key": "constants.genericRoot", "value": false}
+{"key": "constants.file", "value": "78199097adb1ac7578b4fb859e5a20b8e2b1835969b1560fd27864ecb118a0af"}
+{"key": "merged.result", "value": "Merged"}
+{"key": "merged.bindings", "value": "|Transform|m_LocalRotation.x; |Transform|m_LocalRotation.y; |Transform|m_LocalRotation.z; |Transform|m_LocalRotation.w; Child|Transform|localEulerAnglesRaw.x; Child|Transform|localEulerAnglesRaw.y; Child|Transform|localEulerAnglesRaw.z; |Transform|m_LocalPosition.x; |Transform|m_LocalPosition.y; |Transform|m_LocalPosition.z"}
+{"key": "merged.objectBindings", "value": ""}
+{"key": "merged.length", "value": "2"}
+{"key": "merged.genericRoot", "value": false}
+{"key": "merged.file", "value": "fec517100dc2da25093d0d611a83a84276aba25711d4d476fa9e38c355b8b886"}
+{"key": "editor.result", "value": "Editor"}
+{"key": "editor.bindings", "value": "|Transform|localEulerAnglesRaw.y; Child|Transform|m_LocalPosition.z; |MeshRenderer|material._Color.r; Body|SkinnedMeshRenderer|blendShape.Smile; |SpriteRenderer|m_SortingOrder|discrete"}
+{"key": "editor.objectBindings", "value": ""}
+{"key": "editor.length", "value": "1"}
+{"key": "editor.genericRoot", "value": true}
+{"key": "editor.file", "value": "16ad1239ac7b7b8a7be3e21fb0d40271a67395d9b62fbf1569b0e369510d05eb"}
+{"key": "kinds.result", "value": "Kinds"}
+{"key": "kinds.bindings", "value": "|Holder|count; |Light|m_Intensity; |GameObject|m_IsActive; |Holder|ratio; R|Transform|m_LocalRotation.x; R|Transform|m_LocalRotation.y; R|Transform|m_LocalRotation.z; R|Transform|m_LocalRotation.w; E|Transform|localEulerAnglesRaw.x; E|Transform|localEulerAnglesRaw.y; E|Transform|localEulerAnglesRaw.z; Q|Transform|m_LocalPosition.x; Q|Transform|m_LocalPosition.y; Q|Transform|m_LocalPosition.z; P|Transform|m_LocalPosition.x; P|Transform|m_LocalPosition.y; P|Transform|m_LocalPosition.z; S|Transform|m_LocalScale.x; S|Transform|m_LocalScale.y; S|Transform|m_LocalScale.z"}
+{"key": "kinds.objectBindings", "value": "|MeshRenderer|m_Materials.Array.data[0]|pptr|discrete"}
+{"key": "kinds.length", "value": "1"}
+{"key": "kinds.genericRoot", "value": false}
+{"key": "kinds.file", "value": "e0c2c6b84bb0d7e64895cd0194d3dba9c4a3d1f2992ef49efc6c0c1e70690aa6"}
+{"key": "settings.result", "value": "Settings"}
+{"key": "settings.bindings", "value": "|Holder|ratio; |Transform|m_LocalPosition.x; |Transform|m_LocalPosition.y; |Transform|m_LocalPosition.z"}
+{"key": "settings.objectBindings", "value": ""}
+{"key": "settings.length", "value": "1"}
+{"key": "settings.genericRoot", "value": true}
+{"key": "settings.file", "value": "fdbd02fe5330ca71408440e148e5a77538df73f8ff2aef36ba21d6bf89c181a9"}
+{"key": "events.result", "value": "Events"}
+{"key": "events.bindings", "value": "|Holder|ratio; |Transform|m_LocalPosition.x; |Transform|m_LocalPosition.y; |Transform|m_LocalPosition.z"}
+{"key": "events.objectBindings", "value": ""}
+{"key": "events.length", "value": "1"}
+{"key": "events.genericRoot", "value": true}
+{"key": "events.file", "value": "a9647a2e4874ec4dc6c38cb5e9a518f453a5f594f2f1dac93b3ead95ec1e2a46"}
+{"key": "common.result", "value": "Common"}
+{"key": "common.bindings", "value": "UI|RectTransform|m_AnchoredPosition.x; UI|CanvasGroup|m_Alpha; |SpriteRenderer|m_Color.a; |MeshRenderer|m_Enabled; |AudioSource|m_Volume; |Camera|field of view; |Light|m_Color.r; |Light|m_Range; |Holder|offset.x"}
+{"key": "common.objectBindings", "value": "|SpriteRenderer|m_Sprite|pptr|discrete"}
+{"key": "common.length", "value": "1"}
+{"key": "common.genericRoot", "value": false}
+{"key": "common.file", "value": "a8bcd8bed9f9ed4c6a5fc35caedfe51cfd837de2d2299acb6eb5dbf12735257e"}
+{"key": "empty.result", "value": "Empty"}
+{"key": "empty.bindings", "value": ""}
+{"key": "empty.objectBindings", "value": ""}
+{"key": "empty.length", "value": "1"}
+{"key": "empty.genericRoot", "value": false}
+{"key": "empty.file", "value": "e1719a8202d515f571544ed0bab4c20e54866906b8e552871456ceecb9c80057"}

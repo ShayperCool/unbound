@@ -12,7 +12,7 @@ NoSave and Save, each alone), `prefab-api` (Edit Mode PrefabApiTests), `prefab-w
 PrefabWriteTests), `create-assets` (Edit Mode CreateAssetTests), `engine-assets` (Edit Mode
 EngineAssetTests), `prefab-nested` (Edit Mode NestedPrefabTests), `settings-writes` (Edit Mode
 SettingsWriteTests), `mesh-bounds` (Edit Mode MeshBoundsTests), `native-saves` (Edit Mode
-NativeSaveTests).
+NativeSaveTests), `clip-assets` (Edit Mode ClipAssetTests).
 """
 import argparse
 import json
@@ -42,6 +42,7 @@ CASES = {
     'settings-writes': ('EditMode', 'SettingsWriteTests.SettingsWrites'),
     'mesh-bounds': ('EditMode', 'MeshBoundsTests.MeshBounds'),
     'native-saves': ('EditMode', 'NativeSaveTests.NativeSaves'),
+    'clip-assets': ('EditMode', 'ClipAssetTests.ClipAssets'),
 }
 SKIPPED = {'Library', 'Logs', 'Temp', 'UserSettings', 'obj', 'run.py', 'README.md', 'Reference',
            'gate.json', 'scenesave_compare.py', 'test_compare.py', '__pycache__'}
