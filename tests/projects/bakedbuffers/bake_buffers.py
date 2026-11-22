@@ -1,0 +1,378 @@
+#!/usr/bin/env python3
+"""The buffers of baked lightmaps before lighting: which texels of each lightmap are used, the
+chart of each and the surface normal at each of its samples, after a bake in Edit mode.
+
+    bake_buffers.py create [--scene S]  # authoring: the Editor makes Assets/Scenes (BuffersSetup.Create), or adds scene S
+    bake_buffers.py native --label L    # an Editor capture (batch mode on the GPU runner)
+    bake_buffers.py publish L1 L2       # two byte-identical captures -> Reference/unity-<version>/
+    bake_buffers.py engine --label L    # Unbound (unbound test, Edit mode)
+    bake_buffers.py compare --label L   # an engine run's buffers against the reference
+    bake_buffers.py check               # engine run + compare
+    bake_buffers.py replay L            # development: the Editor capture L's own bake input through Unbound's
+                                        # rasterizer alone (cargo example baked_gbuffer), against the capture
+
+`Assets/Editor/BuffersRecord.cs` opens each scene of Assets/Scenes and bakes it. In the Editor the
+bake goes through its `UnityEditor.LightBaking` API, which writes the scene's bake input and
+lightmap requests and each lightmap's unprocessed buffers; the reference keeps, per scene, a
+digest of the first two (`scene.json`: the instances in the bake's order, each lightmap's size,
+samples per texel side and instances) and the buffers `occupancy<N>.r2d`, `chartIndex<N>.int` and
+`normal<N>.r2d` as the Editor wrote them. Unbound's bake (Lightmapping.Bake) writes the same
+buffers of its own where UNBOUND_BAKED_GI_BUFFERS says, and its layout to
+Library/Unbound/BakedGI/<scene GUID>/atlas.json.
+
+Compared exactly: the instances and their order, the lightmaps' sizes, samples and instances, which
+texels are used, every texel's chart, which samples have a surface and the number the bake gives
+each (its instance's place in the lightmap plus its triangle's in its submesh). Normals are unit
+vectors compared within NORMAL_TOLERANCE per component. What is logged while the bake's input is
+made is compared too (the Editor's messages while it extracts the bake input; of Unbound's during
+Lightmapping.Bake, those that are not its own notes of what its bake does not make yet)."""
+import argparse
+from array import array
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import struct
+import subprocess
+import sys
+
+PROBE = Path(__file__).resolve().parent
+REPO = PROBE.parents[2]
+sys.path.insert(0, str(REPO/'tests'))
+sys.path.insert(0, str(PROBE))
+import editor_bake  # noqa: E402
+import editor_runner  # noqa: E402
+from probe_paths import editor_path, private_label, project_copy, reference_root, run_root  # noqa: E402
+
+WORK = run_root(PROBE, 'bakedbuffers')
+HEAVY = Path.home()/'.cache/compat/with-heavy-job'
+# The Editor turns the normals into world space in an order of operations Unbound does not
+# repeat; both are unit vectors of 32-bit floats.
+NORMAL_TOLERANCE = 1e-5
+# A sample without a surface has this as its fourth value.
+EMPTY = -1.0e6
+UNBOUND_NOTE = 'Unbound'
+BUFFERS = ('occupancy{}.r2d', 'chartIndex{}.int', 'normal{}.r2d')
+
+
+def scenes():
+    return sorted(p.stem for p in (PROBE/'Assets/Scenes').glob('*.unity'))
+
+
+def editor(out, method, env, label, graphics=True, progress=None):
+    job = editor_runner.EditorJob(out/'project', out/'editor.log', out, ['-executeMethod', method],
+                                  batch=True, graphics=graphics, env=env,
+                                  progress_files=[progress] if progress else [],
+                                  progress_timeout=1200 if progress else None, timeout=2400,
+                                  label='bakedbuffers-'+label)
+    result = editor_runner.run(job)
+    print(editor_runner.summary(result))
+    return int(result.get('exit_code') != 0 or bool(result.get('forced_exit')))
+
+
+def create(scene=None):
+    target = PROBE/'Assets/Scenes'
+    if scene is None and target.exists():
+        sys.exit(f'refusing to overwrite {target}')
+    if scene is not None and (target/(scene + '.unity')).exists():
+        sys.exit(f'refusing to overwrite {scene}')
+    out = WORK/private_label('create')
+    project_copy(PROBE, out/'project', package_cache=False)
+    env = {'BAKED_BUFFERS_SCENES': scene} if scene else {}
+    if editor(out, 'BuffersSetup.Create', env, 'create', graphics=False):
+        return 1
+    made = out/'project/Assets/Scenes'
+    if scene is None:
+        shutil.copytree(made, target)
+        shutil.copy2(out/'project/Assets/Scenes.meta', PROBE/'Assets/Scenes.meta')
+        return 0
+    # Only the new scene's files (its name first); nothing that exists is replaced.
+    for path in sorted(made.iterdir()):
+        if path.name.startswith(scene) and not (target/path.name).exists():
+            shutil.copy2(path, target/path.name)
+    return 0
+
+
+def digest(folder, log):
+    """What a scene's bake input and lightmap requests say of its lightmaps."""
+    out = {'bake': log, 'messages': [], 'instances': [], 'lightmaps': []}
+    if (folder/'messages.txt').is_file():
+        out['messages'] = (folder/'messages.txt').read_text().splitlines()
+    if not (folder/'lightmapRequests.bin').is_file():
+        return out
+    out['instances'] = (folder/'instances.txt').read_text().splitlines()
+    atlassing = editor_bake.read_lightmap_requests(folder/'lightmapRequests.bin')['atlassing']
+    gbuffer_of, gbuffers = dict(atlassing['gbufferOfHash']), dict(atlassing['gbuffers'])
+    for atlas in atlassing['lightmapped']:
+        instances = gbuffers[gbuffer_of[atlas['hash']]]['instances']
+        if [i['transformIndex'] for i in instances] != list(range(len(instances))):
+            raise ValueError(f'{folder}: a lightmap whose instances are not numbered in their order')
+        out['lightmaps'].append({'width': atlassing['sizes'][2 * atlas['id']], 'height': atlassing['sizes'][2 * atlas['id'] + 1],
+                                 'supersampling': atlas['supersampling'], 'instances': [i['object'][0] for i in instances]})
+    return out
+
+
+def native(label):
+    out = WORK/label
+    if out.exists():
+        sys.exit(f'refusing to overwrite {out}')
+    project_copy(PROBE, out/'project', package_cache=False)
+    (out/'raw').mkdir()
+    # The Editor loads its lightmapper's plug-ins by bare name from its Data/Tools folder, which
+    # must be on the library path.
+    tools = str(editor_path().parent/'Data/Tools')
+    env = {'BAKED_BUFFERS_OUT': str(out/'raw'),
+           'LD_LIBRARY_PATH': tools + (':' + os.environ['LD_LIBRARY_PATH'] if os.environ.get('LD_LIBRARY_PATH') else '')}
+    code = editor(out, 'BuffersRecord.Record', env, label, progress=out/'raw/log.txt')
+    if code or not (out/'raw/log.txt').is_file():
+        return code or 1
+    log = dict(line.split(': ', 1) for line in (out/'raw/log.txt').read_text().splitlines() if ': ' in line)
+    for scene in scenes():
+        target = out/'reference'/scene
+        target.mkdir(parents=True)
+        scene_digest = digest(out/'raw'/scene, log.get(scene, 'not baked'))
+        (target/'scene.json').write_text(json.dumps(scene_digest, indent=1) + '\n')
+        for index in range(len(scene_digest['lightmaps'])):
+            for name in BUFFERS:
+                shutil.copy2(out/'raw'/scene/'lightmapRequest0'/name.format(index), target/name.format(index))
+    return 0
+
+
+def tree(root):
+    return {str(p.relative_to(root)): p.read_bytes() for p in sorted(root.rglob('*')) if p.is_file()}
+
+
+def publish(labels):
+    if len(labels) < 2:
+        sys.exit('publishing needs two independent repeats')
+    captures = [tree(WORK/label/'reference') for label in labels]
+    if not captures[0] or any(capture != captures[0] for capture in captures):
+        sys.exit('the repeats differ; not publishing')
+    target = reference_root(PROBE)
+    if target.exists():
+        sys.exit(f'refusing to overwrite reference: {target}')
+    shutil.copytree(WORK/labels[0]/'reference', target)
+    return 0
+
+
+def expected(root):
+    """The reference's scenes: each one's digest and its lightmaps' buffers."""
+    out = {}
+    for scene in scenes():
+        folder = root/scene
+        entry = json.loads((folder/'scene.json').read_text())
+        for index, lightmap in enumerate(entry['lightmaps']):
+            width, height, channels, occupancy = editor_bake.read_r2d(folder/f'occupancy{index}.r2d')
+            if (width, height) != (lightmap['width'], lightmap['height']):
+                raise ValueError(f'{folder}: occupancy{index} of {width}x{height}')
+            lightmap['occupancy'] = [int(occupancy[k] > 0) for k in range(0, len(occupancy), channels)]
+            lightmap['charts'] = list(editor_bake.read_chart_indices(folder/f'chartIndex{index}.int'))
+            width, height, channels, normals = editor_bake.read_r2d(folder/f'normal{index}.r2d')
+            side = lightmap['supersampling']
+            if (width, height, channels) != (side * lightmap['width'], side * lightmap['height'], 4):
+                raise ValueError(f'{folder}: normal{index} of {width}x{height}')
+            lightmap['normals'] = normals
+        entry['baked'] = 'Success' in entry['bake']
+        out[scene] = entry
+    return out
+
+
+def guid_of(project, scene):
+    meta = (project/'Assets/Scenes'/(scene + '.unity.meta')).read_text()
+    return re.search(r'(?m)^guid: ([0-9a-f]{32})$', meta).group(1)
+
+
+def numbers(path, code):
+    values = array(code)
+    values.frombytes(path.read_bytes())
+    return values
+
+
+def actual(out):
+    """An engine run's scenes, in the reference's form."""
+    project = out/'project'
+    log = dict(line.split(': ', 1) for line in (out/'raw/log.txt').read_text().splitlines() if ': ' in line)
+    result = {}
+    for scene in scenes():
+        guid = guid_of(project, scene)
+        entry = {'bake': log.get(scene, 'not baked'), 'messages': [], 'instances': [], 'lightmaps': []}
+        entry['baked'] = entry['bake'] == 'bake True'
+        if (out/'raw'/scene/'messages.txt').is_file():
+            # Unbound's own notes of what its bake does not make yet are not the Editor's messages.
+            entry['messages'] = [line for line in (out/'raw'/scene/'messages.txt').read_text().splitlines() if UNBOUND_NOTE not in line]
+        layout = project/'Library/Unbound/BakedGI'/guid/'atlas.json'
+        dump = out/'buffers'/guid
+        if layout.is_file() and (dump/'buffers.json').is_file():
+            entry['instances'] = [r['path'] for r in json.loads(layout.read_text())['renderers']]
+            for index, lightmap in enumerate(json.loads((dump/'buffers.json').read_text())['lightmaps']):
+                lightmap['occupancy'] = [int(v > 0) for v in (dump/f'occupancy{index}.u8').read_bytes()]
+                lightmap['charts'] = list(numbers(dump/f'chartIndex{index}.i32', 'i'))
+                lightmap['normals'] = numbers(dump/f'normal{index}.f32', 'f')
+                entry['lightmaps'].append(lightmap)
+        result[scene] = entry
+    return result
+
+
+def engine(label):
+    out = WORK/label
+    if out.exists():
+        sys.exit(f'refusing to overwrite {out}')
+    project = project_copy(PROBE, out/'project')
+    (out/'raw').mkdir()
+    cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
+    env = dict(os.environ, BAKED_BUFFERS_OUT=str(out/'raw'), BAKED_BUFFERS_AUTO='1', UNBOUND_BAKED_GI_BUFFERS=str(out/'buffers'))
+    command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '1200', cli, 'test', '-p', str(project),
+               '--platform', 'EditMode']
+    with (out/'engine.log').open('w') as log:
+        code = subprocess.run(command, cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
+    print('engine exit', code, 'log', out/'engine.log')
+    return code or int(not (out/'raw/log.txt').is_file())
+
+
+def differing(left, right, limit=6):
+    """How many values differ, and where the first of them are."""
+    if len(left) != len(right):
+        return f'{len(left)} values, expected {len(right)}'
+    where = [k for k in range(len(left)) if left[k] != right[k]]
+    return f'{len(where)} of {len(left)} differ, first at {where[:limit]}' if where else None
+
+
+def normal_difference(got, want):
+    """Samples with a surface and their numbers exactly, their normals within the tolerance."""
+    if len(got) != len(want):
+        return f'{len(got) // 4} samples, expected {len(want) // 4}'
+    surfaces = numbers_wrong = off = 0
+    worst = 0.0
+    for k in range(0, len(want), 4):
+        if (got[k + 3] == EMPTY) != (want[k + 3] == EMPTY):
+            surfaces += 1
+        elif got[k + 3] != want[k + 3]:
+            numbers_wrong += 1
+        elif want[k + 3] != EMPTY:
+            error = max(abs(got[k + c] - want[k + c]) for c in range(3))
+            worst = max(worst, error)
+            off += not error <= NORMAL_TOLERANCE
+    if surfaces or numbers_wrong or off:
+        return (f'{surfaces} samples differ in having a surface, {numbers_wrong} in their number, {off} in their normal '
+                f'(worst {worst:.3g}, tolerance {NORMAL_TOLERANCE:g})')
+    return None
+
+
+def compare(label):
+    want, got = expected(reference_root(PROBE)), actual(WORK/label)
+    records = []
+
+    def record(key, problem):
+        records.append((key, problem))
+        if problem:
+            print('FAIL', key, problem)
+
+    def same(key, a, b):
+        record(key, None if a == b else f'expected {b!r} actual {a!r}')
+
+    for scene in scenes():
+        e, a = want[scene], got[scene]
+        same(scene + '.baked', a['baked'], e['baked'])
+        same(scene + '.messages', a['messages'], e['messages'])
+        same(scene + '.instances', a['instances'], e['instances'])
+        form = lambda entry: ' '.join(f"{m['width']}x{m['height']}@{m['supersampling']}" for m in entry['lightmaps'])  # noqa: E731
+        same(scene + '.lightmaps', form(a), form(e))
+        for index, lightmap in enumerate(e['lightmaps']):
+            key = f'{scene}.lightmap{index}.'
+            mine = a['lightmaps'][index] if index < len(a['lightmaps']) else None
+            if mine is None or (mine['width'], mine['height'], mine['supersampling']) != (lightmap['width'], lightmap['height'], lightmap['supersampling']):
+                for part in ('instances', 'occupancy', 'charts', 'normals'):
+                    record(key + part, 'no such lightmap of that size')
+                continue
+            names = lambda entry, m: [entry['instances'][i] for i in m['instances']]  # noqa: E731
+            same(key + 'instances', names(a, mine), names(e, lightmap))
+            record(key + 'occupancy', differing(mine['occupancy'], lightmap['occupancy']))
+            record(key + 'charts', differing(mine['charts'], lightmap['charts']))
+            record(key + 'normals', normal_difference(mine['normals'], lightmap['normals']))
+    failed = sum(problem is not None for _, problem in records)
+    print(f'bakedbuffers: {len(records) - failed}/{len(records)} records match; {failed} differ')
+    return int(failed != 0)
+
+
+def replay(label):
+    """The capture's bake inputs through Unbound's rasterizer alone."""
+    example = os.environ.get('UNBOUND_BAKED_GBUFFER')
+    if not example:
+        sys.exit('UNBOUND_BAKED_GBUFFER names the built example (cargo build --release -p unbound-gi --example baked_gbuffer)')
+    out = WORK/label
+    failed = 0
+    for scene in scenes():
+        folder = out/'raw'/scene
+        if not (folder/'lightmapRequests.bin').is_file():
+            continue
+        bake = editor_bake.read_bake_input(folder/'bakeInput.bin')
+        atlassing = editor_bake.read_lightmap_requests(folder/'lightmapRequests.bin')['atlassing']
+        gbuffer_of, gbuffers = dict(atlassing['gbufferOfHash']), dict(atlassing['gbuffers'])
+        for index, atlas in enumerate(atlassing['lightmapped']):
+            width, height = atlassing['sizes'][2 * atlas['id']], atlassing['sizes'][2 * atlas['id'] + 1]
+            data = bytearray(struct.pack('<4I', width, height, atlas['supersampling'], len(bake['meshes'])))
+            for mesh in bake['meshes']:
+                data += struct.pack('<I', mesh['vertex']['count'])
+                for which in (0, 1, 3):
+                    for value in editor_bake.channel(mesh, which):
+                        data += struct.pack(f'<{len(value)}f', *value)
+                data += struct.pack('<4f', *mesh['uvScaleOffset']) + struct.pack('<I', len(mesh['submeshCounts']))
+                for offset, count in zip(mesh['submeshOffsets'], mesh['submeshCounts']):
+                    data += struct.pack('<I', count // 3) + mesh['indices'][offset:offset + count].tobytes()
+            instances = gbuffers[gbuffer_of[atlas['hash']]]['instances']
+            data += struct.pack('<I', len(instances))
+            for instance in instances:
+                data += struct.pack('<I4fi', bake['instances'][instance['object'][0]]['mesh'], *instance['scaleOffset'], instance['transformIndex'])
+            work = out/'replay'/scene/str(index)
+            work.mkdir(parents=True, exist_ok=True)
+            (work/'input.bin').write_bytes(data)
+            subprocess.run([example, str(work/'input.bin'), str(work)], check=True)
+            _, _, channels, occupancy = editor_bake.read_r2d(folder/'lightmapRequest0'/f'occupancy{index}.r2d')
+            problems = {
+                'occupancy': differing([int(v > 0) for v in (work/'occupancy.u8').read_bytes()],
+                                       [int(occupancy[k] > 0) for k in range(0, len(occupancy), channels)]),
+                'charts': differing(list(numbers(work/'charts.i32', 'i')),
+                                    list(editor_bake.read_chart_indices(folder/'lightmapRequest0'/f'chartIndex{index}.int'))),
+            }
+            # The example's normals are in each renderer's own space: only which samples have a
+            # surface and their numbers are compared here.
+            mine = numbers(work/'normals.f32', 'f')
+            theirs = editor_bake.read_r2d(folder/'lightmapRequest0'/f'normal{index}.r2d')[3]
+            problems['samples'] = differing([mine[k] for k in range(3, len(mine), 4)], [theirs[k] for k in range(3, len(theirs), 4)])
+            for part, problem in problems.items():
+                print('FAIL' if problem else 'ok', f'{scene}.lightmap{index}.{part}', problem or '')
+                failed += problem is not None
+    return int(failed != 0)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('mode', choices=['create', 'native', 'engine', 'publish', 'compare', 'check', 'replay'])
+    parser.add_argument('labels', nargs='*')
+    parser.add_argument('--label')
+    parser.add_argument('--scene', help='create: add this scene only')
+    args = parser.parse_args()
+    labels = args.labels + ([args.label] if args.label else [])
+    if any(Path(label).name != label or label in ('.', '..') for label in labels):
+        sys.exit('labels are plain names')
+    if args.mode == 'create':
+        return create(args.scene)
+    if args.mode == 'native':
+        return native(labels[0] if labels else private_label('native'))
+    if args.mode == 'publish':
+        return publish(labels)
+    if args.mode == 'replay':
+        return replay(labels[0])
+    if args.mode in ('engine', 'compare') and not labels:
+        labels = [private_label(args.mode)]
+    if args.mode == 'engine':
+        return engine(labels[0])
+    if args.mode == 'compare':
+        return compare(labels[0])
+    label = private_label('check')
+    return engine(label) or compare(label)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

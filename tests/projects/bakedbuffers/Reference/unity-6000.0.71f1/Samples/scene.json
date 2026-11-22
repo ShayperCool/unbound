@@ -1,0 +1,61 @@
+{
+ "bake": "bake Result type: 'Success'",
+ "messages": [],
+ "instances": [
+  "Cube5",
+  "Sphere5",
+  "Cube4",
+  "Sphere1",
+  "Cube256",
+  "Sphere4",
+  "Sphere8",
+  "Cube9",
+  "Cube1",
+  "Cube8",
+  "Sphere9",
+  "Sphere3",
+  "Sphere16",
+  "Cube3",
+  "Cube16",
+  "Sphere256"
+ ],
+ "lightmaps": [
+  {
+   "width": 64,
+   "height": 64,
+   "supersampling": 4,
+   "instances": [
+    0,
+    1,
+    2,
+    4,
+    5,
+    6,
+    7,
+    9,
+    10,
+    12,
+    14,
+    15
+   ]
+  },
+  {
+   "width": 32,
+   "height": 32,
+   "supersampling": 2,
+   "instances": [
+    11,
+    13
+   ]
+  },
+  {
+   "width": 32,
+   "height": 32,
+   "supersampling": 1,
+   "instances": [
+    3,
+    8
+   ]
+  }
+ ]
+}

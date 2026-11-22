@@ -1,0 +1,41 @@
+{
+ "bake": "bake Result type: 'Success'",
+ "messages": [],
+ "instances": [
+  "Slivers",
+  "Needles",
+  "Partial",
+  "Lengths",
+  "PartialFirst",
+  "Apart",
+  "Sharing",
+  "Flat",
+  "Joining",
+  "Stacked",
+  "Split",
+  "Same",
+  "Wound"
+ ],
+ "lightmaps": [
+  {
+   "width": 64,
+   "height": 64,
+   "supersampling": 2,
+   "instances": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ]
+  }
+ ]
+}

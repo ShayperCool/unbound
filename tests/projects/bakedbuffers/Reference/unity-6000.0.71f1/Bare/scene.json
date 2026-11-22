@@ -1,0 +1,19 @@
+{
+ "bake": "bake Result type: 'Success'",
+ "messages": [
+  "Warning: Some meshes have invalid normals and will be ignored by the Global Illumination system."
+ ],
+ "instances": [
+  "Cube"
+ ],
+ "lightmaps": [
+  {
+   "width": 64,
+   "height": 64,
+   "supersampling": 2,
+   "instances": [
+    0
+   ]
+  }
+ ]
+}

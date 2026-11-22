@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/bakedbuffers/bake_buffers.py check"
+  ],
+  "summary": "bakedbuffers: \\d+/\\d+ records match.*",
+  "engine_paths": [
+    "crates/unbound-gi/src/baked",
+    "crates/unbound-runtime/src/baked_gi.rs",
+    "managed/UnityEngine/Graphics/BakedAtlas.cs",
+    "managed/UnityEngine/Graphics/RealtimeGIBake.cs",
+    "managed/UnityEngine/Graphics/LightingSettings.cs"
+  ]
+}
