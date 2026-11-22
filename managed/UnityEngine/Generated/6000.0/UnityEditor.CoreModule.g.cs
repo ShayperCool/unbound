@@ -7237,7 +7237,6 @@ namespace UnityEditor
         [global::Unbound.Stub] protected internal static void DrawPropertiesExcluding(global::UnityEditor.SerializedObject obj, params string[] propertyToExclude) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.DrawPropertiesExcluding"); }
         [global::Unbound.Stub] internal static bool DoDrawDefaultInspector(global::UnityEditor.SerializedObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.DoDrawDefaultInspector"); return default; }
         [global::Unbound.Stub] internal bool DoDrawDefaultInspector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.DoDrawDefaultInspector"); return default; }
-        [global::Unbound.Stub] public virtual global::UnityEngine.UIElements.VisualElement CreateInspectorGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.CreateInspectorGUI"); return default; }
         [global::Unbound.Stub] public void DrawHeader() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.DrawHeader"); }
         [global::Unbound.Stub] protected virtual void OnHeaderGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.OnHeaderGUI"); }
         [global::Unbound.Stub] internal virtual void OnHeaderControlsGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.OnHeaderControlsGUI"); }
@@ -7269,7 +7268,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static bool IsAppropriateFileOpenForEdit(global::UnityEngine.Object assetObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.IsAppropriateFileOpenForEdit"); return default; }
         [global::Unbound.Stub] internal virtual bool IsEnabled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.IsEnabled"); return default; }
         [global::Unbound.Stub] internal bool IsOpenForEdit() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.IsOpenForEdit"); return default; }
-        [global::Unbound.Stub] public virtual bool UseDefaultMargins() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.UseDefaultMargins"); return default; }
         [global::Unbound.Stub] public void Cleanup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.Cleanup"); }
         [global::Unbound.Stub] public bool MoveNextTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.MoveNextTarget"); return default; }
         [global::Unbound.Stub] public void ResetTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.ResetTarget"); }
@@ -8977,7 +8975,6 @@ namespace UnityEditor
         public static int gameObjectNamingDigits { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.gameObjectNamingDigits"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.gameObjectNamingDigits"); } }
         public static global::UnityEditor.EditorSettings.NamingScheme gameObjectNamingScheme { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.gameObjectNamingScheme"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.gameObjectNamingScheme"); } }
         public static bool assetNamingUsesSpace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.assetNamingUsesSpace"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.assetNamingUsesSpace"); } }
-        internal static bool inspectorUseIMGUIDefaultInspector { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.inspectorUseIMGUIDefaultInspector"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.inspectorUseIMGUIDefaultInspector"); } }
         public static bool referencedClipsExactNaming { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.referencedClipsExactNaming"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.referencedClipsExactNaming"); } }
         internal enum Bc7TextureCompressor
         {
@@ -10943,7 +10940,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal void OnDisableINTERNAL() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GenericInspector.OnDisableINTERNAL"); }
         [global::Unbound.Stub] internal static bool ObjectIsMonoBehaviourOrScriptableObjectWithoutScript(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GenericInspector.ObjectIsMonoBehaviourOrScriptableObjectWithoutScript"); return default; }
         [global::Unbound.Stub] public override void OnInspectorGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GenericInspector.OnInspectorGUI"); }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.VisualElement CreateInspectorGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GenericInspector.CreateInspectorGUI"); return default; }
     }
     unsafe partial class GenericMenu
     {
@@ -46851,49 +46847,13 @@ namespace UnityEditor.UIElements
     {
         global::UnityEngine.UIElements.VisualElement OnCreateFooter(global::UnityEditor.Editor editor);
     }
-    [global::Unbound.Stub]
-    public unsafe partial class InspectorElement : global::UnityEngine.UIElements.BindableElement
+    unsafe partial class InspectorElement
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string customInspectorUssClassName;
-        [global::Unbound.Stub] public static readonly string iMGUIContainerUssClassName;
-        [global::Unbound.Stub] public static readonly string iMGUIInspectorVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string uIEInspectorVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string noInspectorFoundVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string uIECustomVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string iMGUICustomVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string iMGUIDefaultVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string uIEDefaultVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string debugVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string debugInternalVariantUssClassName;
-        [global::Unbound.Stub] internal static readonly string noScriptErrorContainerName;
         [global::Unbound.Stub] internal static string GetInspectorTrackerName(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.GetInspectorTrackerName"); return default; }
-        [global::Unbound.Stub] public InspectorElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.ctor"); }
-        [global::Unbound.Stub] public InspectorElement(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.ctor"); }
-        [global::Unbound.Stub] public InspectorElement(global::UnityEditor.SerializedObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.ctor"); }
-        [global::Unbound.Stub] public InspectorElement(global::UnityEditor.Editor editor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.ctor"); }
-        [global::Unbound.Stub] internal InspectorElement(global::UnityEngine.Object obj, global::UnityEditor.UIElements.InspectorElement.DefaultInspectorFramework defaultInspectorFramework) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.ctor"); }
-        [global::Unbound.Stub] internal InspectorElement(global::UnityEditor.SerializedObject serializedObject, global::UnityEditor.UIElements.InspectorElement.DefaultInspectorFramework defaultInspectorFramework) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.ctor"); }
-        [global::Unbound.Stub] internal InspectorElement(global::UnityEditor.Editor editor, global::UnityEditor.UIElements.InspectorElement.DefaultInspectorFramework defaultInspectorFramework) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.ctor"); }
-        [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.HandleEventBubbleUp"); }
-        [global::System.Obsolete("ExecuteDefaultActionAtTarget override has been removed because default event handling was migrated to HandleEventBubbleUp. Please use HandleEventBubbleUp.")] [global::Unbound.Stub] protected override void ExecuteDefaultActionAtTarget(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.ExecuteDefaultActionAtTarget"); }
-        [global::Unbound.Stub] internal void SetEditor(global::UnityEditor.Editor value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.SetEditor"); }
-        [global::Unbound.Stub] public static void FillDefaultInspector(global::UnityEngine.UIElements.VisualElement container, global::UnityEditor.SerializedObject serializedObject, global::UnityEditor.Editor editor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.FillDefaultInspector"); }
         [global::Unbound.Stub] internal static bool SetWideModeForWidth(global::UnityEngine.UIElements.VisualElement displayElement) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.SetWideModeForWidth"); return default; }
         internal static bool disabledThrottling { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.disabledThrottling"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.disabledThrottling"); } }
-        internal global::UnityEditor.Editor editor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.editor"); return default; } }
-        internal bool ownsEditor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.ownsEditor"); return default; } }
         internal string trackerName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.trackerName"); return default; } }
-        internal global::UnityEditor.SerializedObject boundObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.boundObject"); return default; } }
-        internal global::UnityEngine.UIElements.VisualElement prefabOverrideBlueBarsContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.prefabOverrideBlueBarsContainer"); return default; } }
-        internal global::UnityEngine.UIElements.VisualElement livePropertyYellowBarsContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.livePropertyYellowBarsContainer"); return default; } }
         internal global::UnityEditor.EditorGUIUtility.ComparisonViewMode comparisonViewMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.comparisonViewMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.comparisonViewMode"); } }
-        internal global::UnityEditor.UIElements.InspectorElement.DefaultInspectorFramework defaultInspectorFramework { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.defaultInspectorFramework"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.defaultInspectorFramework"); } }
-        internal enum DefaultInspectorFramework
-        {
-            UIToolkit = 0,
-            IMGUI = 1,
-        }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BindableElement.UxmlSerializedData

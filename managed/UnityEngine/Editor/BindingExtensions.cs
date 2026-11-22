@@ -433,7 +433,8 @@ namespace UnityEditor.UIElements.Bindings
         public void Bind(VisualElement element, SerializedObject obj)
         {
             element.SetProperty(BindingExtensions.s_DataSourceProperty, obj);
-            if (element.panel != null)
+            // An inspector builds its GUI when bound, before it is on a panel.
+            if (element.panel != null || element is InspectorElement)
                 FindOrCreateBindingContext(element, obj).Bind(element);
             else
                 CreateBindingRequest(element, obj);
@@ -1058,8 +1059,9 @@ namespace UnityEditor.UIElements.Bindings
         {
             // An element that handles SerializedObjectBindEvent can stop the binding of its subtree
             // (a bound ListView's rows, which its own binding binds). Unity sends the event to the
-            // elements interested in it; only registered callbacks take it here.
-            if (element.HasTrickleDownHandlers() || element.HasBubbleUpHandlers())
+            // elements interested in it: an InspectorElement, which builds its GUI, and elements
+            // with callbacks.
+            if (element is InspectorElement || element.HasTrickleDownHandlers() || element.HasBubbleUpHandlers())
             {
                 using var evt = SerializedObjectBindEvent.GetPooled(serializedObject);
                 evt.elementTarget = element;

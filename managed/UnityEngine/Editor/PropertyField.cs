@@ -232,8 +232,23 @@ namespace UnityEditor.UIElements
         {
             AddToClassList(ussClassName);
             this.label = label;
+            RegisterCallback<AttachToPanelEvent>(OnAttachToPanel);
+            RegisterCallback<DetachFromPanelEvent>(OnDetachFromPanel);
             if (property != null) bindingPath = property.propertyPath;
         }
+
+        // A field inside an inspector is marked as an inspector property while it is on a panel.
+        void OnAttachToPanel(AttachToPanelEvent evt)
+        {
+            if (evt.destinationPanel == null) return;
+            for (var ancestor = parent; ancestor != null; ancestor = ancestor.parent)
+            {
+                if (ancestor.ClassListContains(InspectorElement.ussClassName)) AddToClassList(inspectorElementUssClassName);
+                if (ancestor.ClassListContains("unity-inspector-main-container")) break;
+            }
+        }
+
+        void OnDetachFromPanel(DetachFromPanelEvent evt) => RemoveFromClassList(inspectorElementUssClassName);
 
         [EventInterest(new[] { typeof(SerializedPropertyBindEvent) })]
         protected override void HandleEventBubbleUp(EventBase evt)

@@ -1,0 +1,199 @@
+using System.Linq;
+using System.Reflection;
+using Unbound.Runtime;
+using UnityEditor;
+using UnityEditor.UIElements;
+using UnityEngine.UIElements;
+using Xunit;
+
+namespace UnityEngine.Tests
+{
+    /// <summary>InspectorElement and the panel's phase updater (tests/projects/inspectorelement
+    /// records the Editor's): the default inspector, custom editors' UI Toolkit and IMGUI GUI, the
+    /// lifetime of the editor it makes, rebinding, and one panel phase at a time.</summary>
+    public class InspectorElementTests
+    {
+        public class Inspected : ScriptableObject
+        {
+            public int count = 3;
+            public string title = "t";
+            [HideInInspector] public int secret = 4;
+        }
+
+        public class Other : ScriptableObject { public float speed = 2f; }
+
+        public class UieEditor : Editor
+        {
+            internal static int disabled;
+            void OnDisable() => disabled++;
+            public override VisualElement CreateInspectorGUI() => new Label("custom") { name = "custom" };
+        }
+
+        public class ImguiEditor : Editor
+        {
+            public override void OnInspectorGUI() { }
+        }
+
+        static void Tick(BaseRuntimePanel panel)
+        {
+            panel.Update();
+            panel.Repaint(null);
+        }
+
+        static int Hits(string member) => Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
+
+        sealed class Fixture : System.IDisposable
+        {
+            internal readonly PanelSettings Settings = ScriptableObject.CreateInstance<PanelSettings>();
+            internal readonly Inspected Target = ScriptableObject.CreateInstance<Inspected>();
+            internal readonly BaseRuntimePanel Panel;
+
+            internal Fixture() => Panel = RuntimePanel.Create(Settings);
+
+            internal T Show<T>(T element) where T : VisualElement
+            {
+                Panel.visualTree.Add(element);
+                Tick(Panel);
+                return element;
+            }
+
+            public void Dispose()
+            {
+                Panel.Dispose();
+                Object.DestroyImmediate(Target);
+                Object.DestroyImmediate(Settings);
+            }
+        }
+
+        static string[] Names(VisualElement e) => e.Children().Select(c => c.name).ToArray();
+
+        [Fact]
+        public void AnObjectsInspectorIsItsGenericInspectorsPropertyFields()
+        {
+            using var f = new Fixture();
+            var inspector = new InspectorElement(f.Target);
+            // Built when made, before it is on a panel.
+            Assert.IsType<GenericInspector>(inspector.editor);
+            Assert.Equal(3, inspector.hierarchy.childCount);
+            f.Show(inspector);
+            Assert.Equal(new[] { "unity-inspector-element", "unity-inspector-element--uie-default", "unity-inspector-element--uie" }, inspector.GetClasses().ToArray());
+            var root = inspector.hierarchy[2];
+            Assert.Equal(new[] { "PropertyField:m_Script", "PropertyField:count", "PropertyField:title" }, Names(root));
+            Assert.False(root[0].enabledSelf);
+            Assert.True(root[1].enabledSelf);
+            Assert.True(root[1].ClassListContains(PropertyField.inspectorElementUssClassName));
+            Assert.Equal(3, root[1].Q<IntegerField>().value);
+            var count = root[1];
+            count.RemoveFromHierarchy();
+            Assert.False(count.ClassListContains(PropertyField.inspectorElementUssClassName));
+        }
+
+        [Fact]
+        public void APropertyFieldOutsideAnInspectorIsNoInspectorProperty()
+        {
+            using var f = new Fixture();
+            var container = new VisualElement();
+            InspectorElement.FillDefaultInspector(container, new SerializedObject(f.Target), null);
+            f.Show(container);
+            Assert.Equal(new[] { "PropertyField:m_Script", "PropertyField:count", "PropertyField:title" }, Names(container));
+            Assert.All(container.Children(), c => Assert.False(c.ClassListContains(PropertyField.inspectorElementUssClassName)));
+            var empty = new VisualElement();
+            InspectorElement.FillDefaultInspector(empty, null, null);
+            Assert.Equal(0, empty.childCount);
+        }
+
+        [Fact]
+        public void ACustomEditorsGUIIsTheInspectorsAndItsIMGUIIsReported()
+        {
+            using var f = new Fixture();
+            var uieEditor = Editor.CreateEditor(f.Target, typeof(UieEditor));
+            var uie = f.Show(new InspectorElement(uieEditor));
+            Assert.True(uie.ClassListContains(InspectorElement.uIECustomVariantUssClassName));
+            Assert.True(uie.ClassListContains(InspectorElement.uIEInspectorVariantUssClassName));
+            var custom = uie.Q<Label>("custom");
+            Assert.True(custom.ClassListContains(InspectorElement.customInspectorUssClassName));
+
+            int reported = Hits("UnityEditor.UIElements.InspectorElement (IMGUI of ImguiEditor)");
+            var imguiEditor = Editor.CreateEditor(f.Target, typeof(ImguiEditor));
+            var imgui = f.Show(new InspectorElement(imguiEditor));
+            var container = Assert.IsType<IMGUIContainer>(imgui.hierarchy[2]);
+            Assert.Equal(new[] { "unity-imgui-container", InspectorElement.iMGUIContainerUssClassName, InspectorElement.customInspectorUssClassName }, container.GetClasses().ToArray());
+            Assert.Equal(Overflow.Visible, container.style.overflow.value);
+            Assert.True(imgui.ClassListContains(InspectorElement.iMGUICustomVariantUssClassName));
+            Assert.True(imgui.ClassListContains(InspectorElement.iMGUIInspectorVariantUssClassName));
+            Assert.Equal(reported + 1, Hits("UnityEditor.UIElements.InspectorElement (IMGUI of ImguiEditor)"));
+            Object.DestroyImmediate(uieEditor);
+            Object.DestroyImmediate(imguiEditor);
+        }
+
+        [Fact]
+        public void TheEditorAnInspectorMadeIsDestroyedWhenItLeavesItsPanelAndAGivenOneIsNot()
+        {
+            using var f = new Fixture();
+            var owned = f.Show(new InspectorElement(f.Target));
+            var made = owned.editor;
+            owned.RemoveFromHierarchy();
+            Assert.Null(owned.editor);
+            Assert.True(made == null);
+            // Back on a panel, it is built again.
+            f.Show(owned);
+            Assert.IsType<GenericInspector>(owned.editor);
+
+            int disabled = UieEditor.disabled;
+            var given = Editor.CreateEditor(f.Target, typeof(UieEditor));
+            var byEditor = f.Show(new InspectorElement(given));
+            Assert.Same(given, byEditor.editor);
+            byEditor.RemoveFromHierarchy();
+            Assert.True(given != null);
+            Assert.Equal(disabled, UieEditor.disabled);
+            Object.DestroyImmediate(given);
+        }
+
+        [Fact]
+        public void BindingAnotherObjectRebuildsTheInspector()
+        {
+            using var f = new Fixture();
+            var other = ScriptableObject.CreateInstance<Other>();
+            var inspector = f.Show(new InspectorElement());
+            Assert.Null(inspector.editor);
+            Assert.Equal(new[] { "unity-inspector-element" }, inspector.GetClasses().ToArray());
+            inspector.Bind(new SerializedObject(f.Target));
+            Tick(f.Panel);
+            Assert.Equal("PropertyField:count", inspector.hierarchy[2][1].name);
+            var first = inspector.editor;
+            inspector.Bind(new SerializedObject(other));
+            Tick(f.Panel);
+            Assert.True(first == null);
+            Assert.Equal(new[] { "PropertyField:m_Script", "PropertyField:speed" }, Names(inspector.hierarchy[2]));
+            Assert.Equal(3, inspector.hierarchy.childCount);
+            Object.DestroyImmediate(other);
+        }
+
+        [Fact]
+        public void ThePanelUpdatesOnePhaseAtATime()
+        {
+            using var f = new Fixture();
+            var field = typeof(Panel).GetField("m_VisualTreeUpdater", BindingFlags.Instance | BindingFlags.NonPublic);
+            var updater = (VisualTreeUpdater)field.GetValue(f.Panel);
+            var box = new VisualElement();
+            int geometry = 0;
+            box.RegisterCallback<GeometryChangedEvent>(_ => geometry++);
+            box.style.width = 123f;
+            f.Panel.visualTree.Add(box);
+            updater.UpdateVisualTreePhase(VisualTreeUpdatePhase.Styles);
+            Assert.True(float.IsNaN(box.layout.width));
+            updater.UpdateVisualTreePhase(VisualTreeUpdatePhase.Layout);
+            Assert.Equal(123f, box.layout.width);
+            Assert.Equal(1, geometry);
+            box.style.width = 77f;
+            updater.UpdateVisualTreePhase(VisualTreeUpdatePhase.Layout);
+            Assert.Equal(77f, box.layout.width);
+            box.style.width = 200f;
+            updater.UpdateVisualTreePhase(VisualTreeUpdatePhase.TransformClip);
+            Assert.Equal(77f, box.layout.width);
+            updater.UpdateVisualTree();
+            Assert.Equal(200f, box.layout.width);
+            Assert.Equal(3, geometry);
+        }
+    }
+}

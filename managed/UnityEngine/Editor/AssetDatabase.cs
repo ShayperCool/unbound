@@ -566,6 +566,7 @@ namespace UnityEditor
         static bool s_EnterPlayModeOptionsEnabled;
         static EnterPlayModeOptions s_EnterPlayModeOptions;
         static int s_SpritePackerMode;
+        static bool s_InspectorUseIMGUIDefaultInspector;
         // The Editor's default for a project whose asset does not set it (new projects write 1;
         // a project without the key is not measured).
         const bool ForceAssetUnloadAndGCOnSceneLoadDefault = true;
@@ -592,6 +593,7 @@ namespace UnityEditor
                             s_EnterPlayModeOptionsEnabled = doc.Body.Bool("m_EnterPlayModeOptionsEnabled");
                             s_EnterPlayModeOptions = (EnterPlayModeOptions)doc.Body.Int("m_EnterPlayModeOptions", 0);
                             s_SpritePackerMode = doc.Body.Int("m_SpritePackerMode", 0);
+                            s_InspectorUseIMGUIDefaultInspector = doc.Body.Bool("m_InspectorUseIMGUIDefaultInspector");
                             s_ForceAssetUnloadAndGCOnSceneLoad = doc.Body.Bool("m_ForceAssetUnloadAndGCOnSceneLoad", ForceAssetUnloadAndGCOnSceneLoadDefault);
                         }
                 }
@@ -600,6 +602,7 @@ namespace UnityEditor
                     s_EnterPlayModeOptionsEnabled = false;
                     s_EnterPlayModeOptions = EnterPlayModeOptions.None;
                     s_SpritePackerMode = 0;
+                    s_InspectorUseIMGUIDefaultInspector = false;
                     s_ForceAssetUnloadAndGCOnSceneLoad = ForceAssetUnloadAndGCOnSceneLoadDefault;
                     failure = e.Message;
                 }
@@ -641,6 +644,14 @@ namespace UnityEditor
             enterPlayModeOptionsEnabled ? enterPlayModeOptions : EnterPlayModeOptions.None;
 
         const int EditorSettingsClassId = 159;
+
+        /// <summary>Whether generic inspectors draw with IMGUI instead of UI Toolkit: the project's
+        /// m_InspectorUseIMGUIDefaultInspector, off when unset.</summary>
+        internal static bool inspectorUseIMGUIDefaultInspector
+        {
+            get { Load(); return s_InspectorUseIMGUIDefaultInspector; }
+            set { Load(); s_InspectorUseIMGUIDefaultInspector = value; }
+        }
 
         public static bool enterPlayModeOptionsEnabled
         {

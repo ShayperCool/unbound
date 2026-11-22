@@ -116,6 +116,14 @@ namespace UnityEditor
 
         public virtual void OnInspectorGUI() => DrawDefaultInspector();
 
+        /// <summary>The editor's UI Toolkit GUI: none unless the editor builds one, and an
+        /// InspectorElement then draws its IMGUI.</summary>
+        [Unbound.EditorFaithful("Unity's base implementation")]
+        public virtual UnityEngine.UIElements.VisualElement CreateInspectorGUI() => null;
+
+        [Unbound.EditorFaithful("Unity's base implementation (tests/projects/inspectorelement editor.base)")]
+        public virtual bool UseDefaultMargins() => true;
+
         [Unbound.EditorFaithful("Unity's base implementation")]
         public virtual bool RequiresConstantRepaint() => false;
     }
@@ -192,6 +200,16 @@ namespace UnityEditor
     internal partial class GenericInspector : Editor
     {
         public GenericInspector() { }
+
+        /// <summary>The default inspector: a container of the targets' PropertyFields
+        /// (InspectorElement.FillDefaultInspector).</summary>
+        public override UnityEngine.UIElements.VisualElement CreateInspectorGUI()
+        {
+            if (serializedObject == null) return null;
+            var root = new UnityEngine.UIElements.VisualElement();
+            UnityEditor.UIElements.InspectorElement.FillDefaultInspector(root, serializedObject, this);
+            return root;
+        }
     }
 
     public partial class MaterialEditor : Editor
