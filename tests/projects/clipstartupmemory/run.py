@@ -27,6 +27,8 @@ def configure_disabled(project):
 
 
 def private_run(label):
+    if not label or label in ('.', '..') or Path(label).name != label:
+        raise SystemExit(f'{label}: expected a single run directory name')
     base = run_root(PROBE, '').resolve()
     root = run_root(PROBE, label).resolve()
     if root == base or not root.is_relative_to(base) or inside_git_checkout(root):
@@ -35,7 +37,16 @@ def private_run(label):
 
 
 def capture_record(run, profile):
-    editor_profile, editor_release = (run / 'capture/profile-release.txt').read_text().splitlines()
+    capture = run / 'capture'
+    metadata = capture / value_probe.editor_runner.RESULT
+    values = capture / 'values.jsonl'
+    identity = capture / 'profile-release.txt'
+    for path in (capture, metadata, values, identity):
+        if path.resolve() != path:
+            raise ValueError(f'{path}: capture files must stay in their run directory')
+    if metadata.exists() and metadata.stat().st_nlink != 1:
+        raise ValueError(f'{metadata}: capture metadata must have a single filesystem link')
+    editor_profile, editor_release = identity.read_text().splitlines()
     actual_version = (run / 'project/ProjectSettings/ProjectVersion.txt').read_text().splitlines()
     if editor_profile != profile or editor_release != unity_version() or not actual_version or (
             actual_version[0] != 'm_EditorVersion: ' + editor_release):
@@ -43,7 +54,7 @@ def capture_record(run, profile):
     return {
         'profile': editor_profile,
         'release': editor_release,
-        'values_sha256': hashlib.sha256((run / 'capture/values.jsonl').read_bytes()).hexdigest(),
+        'values_sha256': hashlib.sha256(values.read_bytes()).hexdigest(),
         'launch_sha256': hashlib.sha256((run / value_probe.editor_runner.RESULT).read_bytes()).hexdigest(),
     }
 
@@ -66,7 +77,7 @@ def publish(profile, labels):
         if result in results:
             raise SystemExit(f'{run}: duplicate Editor launch record')
         results.add(result)
-    return value_probe.publish(PROBE, labels, profile=profile)
+    return value_probe.publish(PROBE, [str(root) for root in roots], profile=profile)
 
 
 def main():
@@ -86,13 +97,15 @@ def main():
         os.environ['CLIP_STARTUP_PROFILE'] = profile
         label = f'{args.label}-{profile}'
         out = private_run(label)
+        if out.exists():
+            raise SystemExit(f'{out}: expected a fresh run directory')
         configure = configure_disabled if profile == 'Disabled' else None
         if args.mode == 'record':
-            value_probe.record(PROBE, 'RecordStartupMemory.Record', CAPTURE, label, batch=True,
+            value_probe.record(PROBE, 'RecordStartupMemory.Record', CAPTURE, str(out), batch=True,
                                macos_batch=True, base=BASE, configure=configure)
             (out / PROFILE_RECORD).write_text(json.dumps(capture_record(out, profile)) + '\n')
             return 0
-        statuses.append(value_probe.gate(PROBE, CAPTURE, label, 0, ['--headless', '12'], base=BASE,
+        statuses.append(value_probe.gate(PROBE, CAPTURE, str(out), 0, ['--headless', '12'], base=BASE,
                                          profile=profile, configure=configure))
     return max(statuses)
 
