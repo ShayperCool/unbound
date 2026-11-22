@@ -70,6 +70,7 @@ namespace UnityEngine
         /// <summary>How long a battery reading is reused: the getters are read every frame by
         /// some games, and each reading opens several files.</summary>
         const long BatteryReadingMilliseconds = 1000;
+        static readonly object s_BatteryLock = new object();
         static (float Level, BatteryStatus Status) s_Battery;
         static long s_BatteryReadAt = long.MinValue;
 
@@ -77,13 +78,17 @@ namespace UnityEngine
         {
             if (OperatingSystem.IsLinux())
             {
-                long now = Environment.TickCount64;
-                if (s_BatteryReadAt == long.MinValue || now - s_BatteryReadAt >= BatteryReadingMilliseconds)
+                // The getters may be read from any thread.
+                lock (s_BatteryLock)
                 {
-                    s_Battery = ReadLinuxBattery("/sys/class/power_supply");
-                    s_BatteryReadAt = now;
+                    long now = Environment.TickCount64;
+                    if (s_BatteryReadAt == long.MinValue || now - s_BatteryReadAt >= BatteryReadingMilliseconds)
+                    {
+                        s_Battery = ReadLinuxBattery("/sys/class/power_supply");
+                        s_BatteryReadAt = now;
+                    }
+                    return s_Battery;
                 }
-                return s_Battery;
             }
             if (OperatingSystem.IsMacOS())
                 Unbound.Runtime.Stubs.Ignored("SystemInfo.batteryLevel/batteryStatus", "do not read the battery on macOS yet: they answer -1 and Full");
