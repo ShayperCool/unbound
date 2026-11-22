@@ -1,3 +1,4 @@
+{"k":"unity","v":"6000.0.71f1"}
 {"k":"created","v":"1/264"}
 {"k":"add.1","v":"2/288"}
 {"k":"add.2","v":"3/336"}
@@ -22,5 +23,6 @@
 {"k":"constructor.clone.2","v":"3/312"}
 {"k":"constructor.4","v":"5/432"}
 {"k":"constructor.clone.4","v":"5/360"}
+{"k":"required.awake","v":"3/336"}
 {"k":"required","v":"3/336"}
 {"k":"complete","v":true}

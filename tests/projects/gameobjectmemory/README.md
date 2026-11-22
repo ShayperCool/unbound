@@ -1,6 +1,7 @@
 # Component storage in a script-created GameObject
 
-Two independent Unity 6000.0.71f1 Editor runs agree on the captured values.
+Two independent Linux Unity 6000.0.71f1 Editor runs agree on all 27 values.
+Two macOS Editor repeats report the same values.
 An object starts with one component slot for its Transform. Adding components
 doubles the capacity when it fills. Removing components leaves the allocation
 in place. The profiler reports 240 bytes plus 24 bytes per slot.
