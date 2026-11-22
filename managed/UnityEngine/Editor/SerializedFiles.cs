@@ -163,7 +163,7 @@ namespace Unbound.Runtime
     /// document per object, the native header fields, then the serialized fields in Unity's YAML
     /// forms (flow maps for math structs and references, block maps and sequences otherwise).
     /// </summary>
-    internal static class UnityYamlWriter
+    internal static partial class UnityYamlWriter
     {
         internal static string Write(Object[] objects)
         {
@@ -202,6 +202,20 @@ namespace Unbound.Runtime
                     sb.Append(text, UnityYamlText.Preamble.Length, text.Length - UnityYamlText.Preamble.Length);
                     continue;
                 }
+                if (o is Mesh mesh)
+                {
+                    sb.Append("--- !u!").Append(EngineTypes.EngineClassIdOf(typeof(Mesh))).Append(" &").Append(ids[o]).Append('\n');
+                    sb.Append("Mesh:\n");
+                    writer.MeshBody(mesh);
+                    continue;
+                }
+                if (o is Texture2D texture)
+                {
+                    sb.Append("--- !u!").Append(EngineTypes.EngineClassIdOf(typeof(Texture2D))).Append(" &").Append(ids[o]).Append('\n');
+                    sb.Append("Texture2D:\n");
+                    writer.Texture2DBody(texture);
+                    continue;
+                }
                 if (o is PhysicsMaterial physics)
                 {
                     sb.Append("--- !u!").Append(EngineTypes.EngineClassIdOf(typeof(PhysicsMaterial))).Append(" &").Append(ids[o]).Append('\n');
@@ -220,12 +234,19 @@ namespace Unbound.Runtime
 
         /// <summary>Whether <see cref="Write(Object[], Dictionary{Object, long})"/> writes the
         /// object whole into a new file (not a material variant: unmeasured).</summary>
-        internal static bool WritesNew(Object o) => SerializedTree.IsScript(o) || o is Material { isVariant: false } || o is PhysicsMaterial;
+        internal static bool WritesNew(Object o) => SerializedTree.IsScript(o) || o is Material { isVariant: false } || o is PhysicsMaterial
+            || o is Texture2D { isReadable: true } && !TextureCrunched((Texture2D)o)
+            || o is Mesh { isReadable: true } && ((Mesh)o).m_MeshCompression == UnityEditor.ModelImporterMeshCompression.Off;
+
+        /// <summary>A crunched texture's data is an archive, which is not measured (nor are compressed
+        /// or unreadable meshes and unreadable textures).</summary>
+        static bool TextureCrunched(Texture2D t) => t.format is TextureFormat.DXT1Crunched or TextureFormat.DXT5Crunched
+            or TextureFormat.ETC_RGB4Crunched or TextureFormat.ETC2_RGBA8Crunched;
 
         /// <summary>Writes one document's fields. References to objects of the same file are by
         /// <c>ids</c>; to assets in <c>assets</c> (an import's own meshes and materials) by their GUID
         /// and file id; to other assets by where the asset database has them.</summary>
-        internal sealed class Writer
+        internal sealed partial class Writer
         {
             StringBuilder m_Out;
             readonly Dictionary<Object, long> m_Ids;
@@ -394,6 +415,68 @@ namespace Unbound.Runtime
                 Int("m_FrictionCombine", (int)m.frictionCombine);
                 Int("m_BounceCombine", (int)m.bounceCombine);
             }
+
+            /// <summary>A readable texture's whole body: its size, format, mip count and sampler
+            /// settings and its raw data, every mip (matches the Unity 6000.0.71f1 Editor,
+            /// tests/projects/scenesave engine-assets Mipped, Linear, Alpha, create-assets Tex).</summary>
+            internal void Texture2DBody(Texture2D t)
+            {
+                var data = t.GetRawTextureData();
+                ObjectHeader(t);
+                String("m_Name", t.name);
+                Key("m_ImageContentsHash", 1);
+                Int("serializedVersion", 2, 2);
+                Line(2, "Hash", NoImageContentsHash);
+                Bool("m_IsAlphaChannelOptional", false);
+                Int("serializedVersion", Texture2DSerializedVersion);
+                Int("m_Width", t.width);
+                Int("m_Height", t.height);
+                Int("m_CompleteImageSize", data.Length);
+                Int("m_MipsStripped", 0);
+                Int("m_TextureFormat", (int)t.format);
+                Int("m_MipCount", t.mipmapCount);
+                Bool("m_IsReadable", t.isReadable);
+                Bool("m_IsPreProcessed", false);
+                Bool("m_IgnoreMipmapLimit", t.ignoreMipmapLimit);
+                Line(1, "m_MipmapLimitGroupName", "");
+                Bool("m_StreamingMipmaps", false);
+                Int("m_StreamingMipmapsPriority", 0);
+                Bool("m_VTOnly", false);
+                Bool("m_AlphaIsTransparency", t.alphaIsTransparency);
+                Int("m_ImageCount", 1);
+                Int("m_TextureDimension", (int)UnityEngine.Rendering.TextureDimension.Tex2D);
+                Key("m_TextureSettings", 1);
+                Int("serializedVersion", 2, 2);
+                Int("m_FilterMode", (int)t.filterMode, 2);
+                Int("m_Aniso", t.anisoLevel, 2);
+                Float("m_MipBias", t.mipMapBias, 2);
+                Int("m_WrapU", (int)t.wrapModeU, 2);
+                Int("m_WrapV", (int)t.wrapModeV, 2);
+                Int("m_WrapW", (int)t.wrapModeW, 2);
+                Int("m_LightmapFormat", 0);
+                // The color space the data is in: 1 for sRGB, 0 for a linear texture.
+                Int("m_ColorSpace", t.m_Linear ? 0 : 1);
+                Line(1, "m_PlatformBlob", "");
+                Int("image data", data.Length);
+                Line(1, "_typelessdata", Convert.ToHexString(data).ToLowerInvariant());
+                StreamData();
+            }
+
+            /// <summary>A texture's or mesh's data kept in the file itself (no streaming file).</summary>
+            void StreamData()
+            {
+                Key("m_StreamData", 1);
+                Int("serializedVersion", 2, 2);
+                Int("offset", 0, 2);
+                Int("size", 0, 2);
+                Line(2, "path", "");
+            }
+
+            /// <summary>The image contents hash of a texture made by script: none.</summary>
+            const string NoImageContentsHash = "00000000000000000000000000000000";
+
+            /// <summary>The texture's serialized version in the release's files.</summary>
+            const int Texture2DSerializedVersion = 3;
 
             /// <summary>The physics material's serialized version in the release's files.</summary>
             const int PhysicsMaterialSerializedVersion = 2;

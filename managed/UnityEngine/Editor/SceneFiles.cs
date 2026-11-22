@@ -1247,9 +1247,9 @@ namespace Unbound.Runtime
     /// hierarchy (an asset file's object, an object embedded in a scene).</summary>
     internal static class NativeDocuments
     {
-        /// <summary>Writes the object's fields into its document: a script object's whole body, a
-        /// material's modeled fields over the file's; false (the document kept as read) for other
-        /// classes.</summary>
+        /// <summary>Writes the object's fields into its document: a script object's, a readable
+        /// texture's or mesh's whole body, a material's modeled fields over the file's; false (the document
+        /// kept as read) for other classes.</summary>
         /// <param name="references">Overrides how references are written (a scene's checks).</param>
         internal static bool Write(YTextDocument doc, Object o, Dictionary<Object, long> ids, AssetDatabaseRuntime.Locations locations, ref int unlocated,
             Func<Object, string> references = null)
@@ -1263,6 +1263,18 @@ namespace Unbound.Runtime
             {
                 var writer = new UnityYamlWriter.Writer(new StringBuilder(), ids, null, references, locations);
                 SceneFiles.Overlay(doc.Body, MaterialTypeTree.FileBody(material, r => SceneFiles.FlowValue(writer.ReferenceText(r))), ref unlocated);
+                return true;
+            }
+            // A readable texture's or mesh's document is written whole, as a new file's (the same body:
+            // tests/projects/scenesave engine-assets; an existing file's save is unmeasured).
+            if (o is Texture2D texture && UnityYamlWriter.WritesNew(texture))
+            {
+                doc.Body = SceneFiles.Resolve(SceneFiles.Body(w => w.Texture2DBody(texture), ids, locations, references), doc.Body, ref unlocated);
+                return true;
+            }
+            if (o is Mesh mesh && UnityYamlWriter.WritesNew(mesh))
+            {
+                doc.Body = SceneFiles.Resolve(SceneFiles.Body(w => w.MeshBody(mesh), ids, locations, references), doc.Body, ref unlocated);
                 return true;
             }
             if (o is UnityEngine.U2D.SpriteAtlas atlas && !atlas.IsFromImporter)
