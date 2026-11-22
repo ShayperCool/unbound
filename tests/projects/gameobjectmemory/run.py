@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Record component-list memory for new and cloned GameObjects."""
 import argparse
+import json
 from pathlib import Path
 import sys
 
@@ -13,6 +14,10 @@ BASE = (PROBE.parent/'formatmapping', ['Assets/Scenes', 'Assets/Scenes.meta', 'P
 CAPTURE = 'GAME_OBJECT_MEMORY_OUT'
 
 
+def include_particle_system(project):
+    value_probe.include_builtin_module(project, 'particlesystem')
+
+
 def directory(label):
     if not label or label in ('.', '..') or Path(label).name != label:
         raise SystemExit(f'{label}: expected a single run directory name')
@@ -23,13 +28,20 @@ def directory(label):
     return out
 
 
+def validate_capture(root):
+    rows = value_probe.read_values(root/'capture'/value_probe.VALUES)
+    if rows.get('unity') != unity_version():
+        raise SystemExit(f'{root}: expected Editor capture for {unity_version()}')
+
+
 def publish(labels):
     roots = [directory(label) for label in labels]
     value_probe.verify_sealed_value_repeats(roots)
     for root in roots:
-        rows = value_probe.read_values(root/'capture'/value_probe.VALUES)
-        if rows.get('unity') != unity_version():
-            raise SystemExit(f'{root}: expected Editor capture for {unity_version()}')
+        validate_capture(root)
+        receipt = json.loads((root/value_probe.editor_runner.RESULT).read_text())
+        if receipt.get('device') == 'metal' or not value_probe.editor_runner.gpu_renderer(receipt):
+            raise SystemExit(f'{root}: canonical publication requires Linux NVIDIA Editor captures')
     return value_probe.publish(PROBE, [str(root) for root in roots])
 
 
@@ -48,10 +60,12 @@ def main():
         raise SystemExit(f'{out}: expected a fresh run directory')
     if args.mode == 'record':
         value_probe.record(PROBE, 'RecordGameObjectMemory.Record', CAPTURE, str(out), batch=True,
-                           macos_batch=True, base=BASE)
+                           macos_batch=True, base=BASE, configure=include_particle_system)
+        validate_capture(out)
         value_probe.seal_value_capture(out)
         return 0
-    return value_probe.gate(PROBE, CAPTURE, str(out), 0, ['--headless', '8'], base=BASE)
+    return value_probe.gate(PROBE, CAPTURE, str(out), 0, ['--headless', '8'], base=BASE,
+                            configure=include_particle_system)
 
 
 if __name__ == '__main__':

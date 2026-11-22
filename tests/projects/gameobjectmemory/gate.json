@@ -5,6 +5,7 @@
   "summary": "gameobjectmemory: .*",
   "engine_paths": [
     "managed/UnityEngine/Core/GameObject.cs",
+    "managed/UnityEngine/Runtime/Compat.cs",
     "managed/UnityEngine/Runtime/Components.cs",
     "managed/UnityEngine/Runtime/Instantiation.cs",
     "managed/UnityEngine/Profiling/MemorySizes.cs"

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Record Texture2D memory before and after reinitialization on each graphics device."""
 import argparse
-import json
 from pathlib import Path
 import sys
 
@@ -17,10 +16,7 @@ HOST_DEVICE = 'metal' if sys.platform == 'darwin' else 'opengl'
 
 
 def include_image_conversion(project):
-    manifest = project/'Packages/manifest.json'
-    settings = json.loads(manifest.read_text())
-    settings['dependencies']['com.unity.modules.imageconversion'] = '1.0.0'
-    manifest.write_text(json.dumps(settings, indent=2) + '\n')
+    value_probe.include_builtin_module(project, 'imageconversion')
 
 
 def directory(label, device):
@@ -33,14 +29,18 @@ def directory(label, device):
     return out
 
 
+def validate_capture(root, device):
+    rows = value_probe.read_values(root/'capture'/value_probe.VALUES)
+    expected_device = {'opengl': 'OpenGLCore', 'metal': 'Metal'}[device]
+    if rows.get('device') != expected_device or rows.get('unity') != unity_version():
+        raise SystemExit(f'{root}: expected a {expected_device} Editor capture for {unity_version()}')
+
+
 def publish(labels, device):
     roots = [directory(label, device) for label in labels]
     value_probe.verify_sealed_value_repeats(roots)
     for root in roots:
-        rows = value_probe.read_values(root/'capture'/value_probe.VALUES)
-        expected_device = {'opengl': 'OpenGLCore', 'metal': 'Metal'}[device]
-        if rows.get('device') != expected_device or rows.get('unity') != unity_version():
-            raise SystemExit(f'{root}: expected a {expected_device} Editor capture for {unity_version()}')
+        validate_capture(root, device)
     value_probe.METAL = device == 'metal'
     return value_probe.publish(PROBE, [str(root) for root in roots],
                                profile='opengl' if device == 'opengl' else None)
@@ -68,6 +68,7 @@ def main():
     if args.mode == 'record':
         value_probe.record(PROBE, 'RecordTextureResizeMemory.Record', CAPTURE, str(out), batch=True,
                            macos_batch=True, base=BASE, configure=include_image_conversion)
+        validate_capture(out, device)
         value_probe.seal_value_capture(out)
         return 0
 

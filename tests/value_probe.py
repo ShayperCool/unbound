@@ -85,6 +85,14 @@ def reference_dir(probe, space=None, device=None, profile=None):
     return root/profile if profile else root
 
 
+def include_builtin_module(project, name):
+    """Adds a built-in module to the manifest of a probe's private copy."""
+    manifest = project/'Packages/manifest.json'
+    settings = json.loads(manifest.read_text())
+    settings['dependencies']['com.unity.modules.'+name] = '1.0.0'
+    manifest.write_text(json.dumps(settings, indent=2) + '\n')
+
+
 def set_color_space(project, space):
     """The project's color-space setting (ProjectSettings' m_ActiveColorSpace) set to `space`,
     'Gamma' or 'Linear'."""

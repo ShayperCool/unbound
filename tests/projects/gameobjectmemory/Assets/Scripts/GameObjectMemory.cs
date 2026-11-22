@@ -16,10 +16,17 @@ public sealed class GameObjectMemory : MonoBehaviour
 
     static readonly List<string> Rows = new List<string>();
     static bool RecordRequiredAwake;
+    static bool AddDuringCloneAwake;
 
     void Awake()
     {
         if (RecordRequiredAwake) Read("required.awake", gameObject);
+        if (AddDuringCloneAwake)
+        {
+            Read("clone.awake.before", gameObject);
+            gameObject.AddComponent<BoxCollider>();
+            Read("clone.awake.after", gameObject);
+        }
     }
 
     static void Put(string key, string value)
@@ -76,6 +83,18 @@ public sealed class GameObjectMemory : MonoBehaviour
         RecordRequiredAwake = true;
         try { Read("required", Add(dependencies, typeof(GameObjectMemory))); }
         finally { RecordRequiredAwake = false; }
+
+        GameObject callbackClone;
+        AddDuringCloneAwake = true;
+        try { callbackClone = Object.Instantiate(dependencies); }
+        finally { AddDuringCloneAwake = false; }
+        Read("clone.awake.returned", callbackClone);
+        Read("clone.awake.source", dependencies);
+
+        var withCompanion = new GameObject("Component with companion");
+        Read("companion", Add(withCompanion, typeof(ParticleSystem)));
+        Object.DestroyImmediate(withCompanion);
+        Object.DestroyImmediate(callbackClone);
         Object.DestroyImmediate(dependencies);
         Object.DestroyImmediate(clone);
         Object.DestroyImmediate(go);

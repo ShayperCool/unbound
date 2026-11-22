@@ -10,7 +10,10 @@ Cloning an object reserves exactly its live component count. A clone with
 three slots doubles to six when it gains a fourth component. The source
 keeps its own allocation. The type-list constructor and RequireComponent
 controls include the implicit Transform and any other components they add.
-The dependency case also reads the allocation from Awake.
+The dependency case reads the allocation from Awake. A second clone adds its
+fourth component in Awake, and a ParticleSystem checks the implicit renderer's
+slot. Publication uses Linux NVIDIA captures, with Metal runs available for
+comparison.
 Scope is script-created objects and their clones. Authored scene and prefab
 lists and internal detached objects retain the prior accounting.
 
