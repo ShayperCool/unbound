@@ -7,6 +7,6 @@
     "managed/UnityEngine/Graphics/Srp/SrpContext.cs",
     "managed/UnityEngine/Graphics/FrameBuilder.cs",
     "managed/UnityEngine/UI/CanvasSystem.cs",
-    "managed/UnityEngine/IMGUI/GuiRender.cs"
+    "managed/UnityEngine/IMGUI/"
   ]
 }

@@ -1,11 +1,13 @@
 {
-  "commands": ["python3 tests/projects/editorstyles/run.py gate"],
+  "commands": [
+    "python3 tests/projects/editorstyles/run.py gate"
+  ],
   "summary": "editorstyles (light|dark): .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/EditorGUIState.cs",
     "managed/UnityEngine/Editor/EditorGUIUtility.cs",
     "managed/UnityEngine/Editor/InspectorTogglePaint.cs",
-    "managed/UnityEngine/IMGUI/GUIStyle.cs",
-    "managed/UnityEngine/Runtime/Compat.cs"
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "managed/UnityEngine/IMGUI/"
   ]
 }

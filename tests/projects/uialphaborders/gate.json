@@ -4,10 +4,9 @@
   ],
   "summary": "uialphaborders: .*",
   "engine_paths": [
-    "managed/UnityEngine/IMGUI/GUI.cs",
-    "managed/UnityEngine/IMGUI/GuiRender.cs",
     "managed/UnityEngine/UI/CanvasSystem.cs",
     "managed/UnityEngine/UI/Canvas.cs",
-    "crates/unbound-assets/src/texture.rs"
+    "crates/unbound-assets/src/texture.rs",
+    "managed/UnityEngine/IMGUI/"
   ]
 }
