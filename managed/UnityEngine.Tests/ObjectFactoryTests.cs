@@ -46,6 +46,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void ASecondComponentOfAOneOfAKindTypeThrowsWithoutALog()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var go = new GameObject("A");
             try
             {
@@ -74,6 +76,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void GameObjectAddComponentRefusesASecondOneOfAKindComponent()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var go = new GameObject("U");
             try
             {
@@ -125,6 +129,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void PlacingUnderAUiParentTakesItsLayerAndARectTransformAndResetsTheTransform()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var parent = new GameObject("UiParent", typeof(RectTransform)) { layer = 5 };
             try
             {

@@ -168,6 +168,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheReviewedEdgesOfTheArgumentChecks()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             // The managed checks of an overload come before the engine's dead-object check
             // (the release's reference assemblies): a ScriptableObject with a pose is refused first.
             var asset = ScriptableObject.CreateInstance<Asset>();

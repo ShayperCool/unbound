@@ -144,6 +144,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void ALoadedScenesPhysicsScenesStayValidAndInertAfterItsUnload()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var loaded = LoadedScene(LocalPhysicsMode.Physics3D | LocalPhysicsMode.Physics2D);
             var physics = loaded.GetPhysicsScene();
             var physics2D = loaded.GetPhysicsScene2D();

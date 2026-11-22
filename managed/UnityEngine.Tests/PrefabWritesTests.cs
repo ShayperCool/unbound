@@ -27,6 +27,9 @@ namespace UnityEngine.Tests
     [Collection("Frames")]
     public class PrefabWritesTests : IDisposable
     {
+        // Prefab writes are measured for 6000.0 only (other families refuse them): the whole class,
+        // its setup's prefab save included, runs as that release.
+        readonly IDisposable m_Release = TestRelease.Pin(TestRelease.Measured);
         readonly string m_Project = Path.Combine(Path.GetTempPath(), "unbound-prefab-writes-" + Guid.NewGuid().ToString("N"));
         readonly string m_PreviousProject = ProjectInfo.ProjectPath;
         readonly string m_Guid = Guid.NewGuid().ToString("N");
@@ -90,6 +93,7 @@ namespace UnityEngine.Tests
             AssetDatabaseRuntime.Invalidate(m_Guid);
             ProjectInfo.ProjectPath = m_PreviousProject;
             try { Directory.Delete(m_Project, true); } catch (IOException) { }
+            m_Release.Dispose();
         }
 
         GameObject Instance()

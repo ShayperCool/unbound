@@ -97,6 +97,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void EditsOfReadAssetsAreWrittenAsTheEditorWroteThem()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             const string saved = "Reference/unity-6000.0.71f1/native-saves/snapshots/";
             Assert.Equal(Reference(saved + "mesh.file"), Rewrite(Reference("Assets/Native/Tri.asset"), o =>
             {
@@ -158,6 +160,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void EngineAppliesAndUnmeasuredFamiliesDirtyNothing()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var texture = new Texture2D(2, 2);
             var physics = new PhysicsMaterial();
             try

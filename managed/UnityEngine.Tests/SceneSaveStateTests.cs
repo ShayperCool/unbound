@@ -177,6 +177,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void ASceneSaveKeepsItsEmbeddedObjectsAndRefusesWhatItCannotWrite()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var previousProject = ProjectInfo.ProjectPath;
             var (scene, project, previous) = TemporaryScene(FileWithEmbeddedMesh);
             try
@@ -254,6 +256,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnEmbeddedObjectDroppedFromTheFileIsNoObjectOfItAnyMore()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var previousProject = ProjectInfo.ProjectPath;
             var (scene, project, previous) = TemporaryScene(FileWithEmbeddedMesh);
             try
@@ -283,6 +287,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void ASavedCopyLeavesTheScenesEmbeddedObjectsItsOwn()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var previousProject = ProjectInfo.ProjectPath;
             var (scene, project, previous) = TemporaryScene(FileWithEmbeddedMesh);
             try
@@ -312,6 +318,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnEmbeddedObjectsReferencesAreCheckedAsTheScenesAre()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var previousProject = ProjectInfo.ProjectPath;
             var (scene, project, previous) = TemporaryScene("%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!114 &600\nMonoBehaviour:\n  m_Name: embedded\n  mesh: {fileID: 0}\n");
             try
@@ -342,6 +350,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void ALinkedSceneFileIsWrittenWhereItLinksTo()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var previousProject = ProjectInfo.ProjectPath;
             var (scene, project, previous) = TemporaryScene(FileWithEmbeddedMesh);
             try

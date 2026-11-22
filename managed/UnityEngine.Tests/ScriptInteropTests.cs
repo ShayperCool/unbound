@@ -347,6 +347,8 @@ Transform:
         [Fact]
         public void AnInactiveAnimatorStillReadsItsControllersDefinition()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var go = Own(new GameObject("Inactive"));
             go.SetActive(false);
             var animator = go.AddComponent<Animator>();

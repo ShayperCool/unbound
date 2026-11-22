@@ -146,6 +146,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void MeshAndTextureDocumentsReadFromFilesAreKeptAsReadUntilEdited()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var text = Reference("create-assets/files/Assets/Created/Tri.asset");
             var doc = UnityYamlText.Parse(text)[0];
             var mesh = Own(new Mesh { name = "Tri" });
@@ -215,6 +217,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void EditsOfAssetsReadFromFilesDirtyThem()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var mesh = Own(new Mesh());
             mesh.vertices = new[] { Vector3.zero };
             Assert.False(EditorUtility.IsDirty(mesh));

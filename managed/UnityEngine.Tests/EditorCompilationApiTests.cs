@@ -69,6 +69,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheAnnotationTableListsTheEngineClassesAndSetsOnlyTheirOwnFlags()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var all = AnnotationUtility.GetAnnotations();
             Assert.Equal(Compat.BuiltinAnnotations.Length, all.Count(a => a.scriptClass == ""));
             var camera = AnnotationUtility.GetAnnotation(20, "");

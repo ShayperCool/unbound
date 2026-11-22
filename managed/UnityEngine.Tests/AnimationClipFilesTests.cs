@@ -26,6 +26,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnEmptyClip()
         {
+            // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var clip = new AnimationClip();
             try { Assert.Equal(Reference("Empty"), Write(clip, "Empty")); }
             finally { Object.DestroyImmediate(clip); }
