@@ -7205,8 +7205,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static global::UnityEditor.Editor.OnEditorGUIDelegate OnPostIconGUI;
         [global::Unbound.Stub] internal static bool m_AllowMultiObjectAccess;
         [global::Unbound.Stub] internal static global::UnityEngine.Vector2 GetCurrentMousePosition() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.GetCurrentMousePosition"); return default; }
-        [global::Unbound.Stub] public virtual void SaveChanges() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.SaveChanges"); }
-        [global::Unbound.Stub] public virtual void DiscardChanges() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.DiscardChanges"); }
         [global::Unbound.Stub] internal virtual bool HasLargeHeader() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.HasLargeHeader"); return default; }
         bool global::UnityEditor.IToolModeOwner.areToolModesAvailable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.areToolModesAvailable"); return default; } }
         [global::Unbound.Stub] internal virtual void PostSerializedObjectCreation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.PostSerializedObjectCreation"); }
@@ -7263,7 +7261,6 @@ namespace UnityEditor
         [global::Unbound.Stub] int global::UnityEditor.IToolModeOwner.GetInstanceID() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.GetInstanceID"); return default; }
         internal global::UnityEditor.InspectorMode inspectorMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.inspectorMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.inspectorMode"); } }
         internal global::UnityEditor.DataMode dataMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.dataMode"); return default; } }
-        public string saveChangesMessage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.saveChangesMessage"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.saveChangesMessage"); } }
         internal bool firstInspectedEditor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.firstInspectedEditor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.firstInspectedEditor"); } }
         internal global::UnityEditor.IPropertyView propertyViewer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.propertyViewer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.propertyViewer"); } }
         internal bool canEditMultipleObjects { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Editor.canEditMultipleObjects"); return default; } }
@@ -26692,53 +26689,15 @@ namespace UnityEditor.AssetImporters
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEditor.AssetImporters.AssetImportContext ctx) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImportContext.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class AssetImporterEditor : global::UnityEditor.Editor
+    unsafe partial class AssetImporterEditor
     {
-        [global::Unbound.Stub] internal void InternalSetAssetImporterTargetEditor(global::UnityEngine.Object editor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.InternalSetAssetImporterTargetEditor"); }
-        [global::Unbound.Stub] protected virtual void InitializeExtraDataInstance(global::UnityEngine.Object extraData, int targetIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.InitializeExtraDataInstance"); }
         [global::Unbound.Stub] public override void DrawPreview(global::UnityEngine.Rect previewArea) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.DrawPreview"); }
         [global::Unbound.Stub] internal override void OnHeaderControlsGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.OnHeaderControlsGUI"); }
         [global::Unbound.Stub] internal override void OnHeaderIconGUI(global::UnityEngine.Rect iconRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.OnHeaderIconGUI"); }
-        [global::Unbound.Stub] protected virtual void Awake() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.Awake"); }
-        [global::Unbound.Stub] public virtual void OnEnable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.OnEnable"); }
-        [global::Unbound.Stub] public virtual void OnDisable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.OnDisable"); }
-        [global::Unbound.Stub] public override void OnInspectorGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.OnInspectorGUI"); }
         [global::Unbound.Stub] internal bool AssetHasIssues() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.AssetHasIssues"); return default; }
-        [global::Unbound.Stub] public virtual bool HasModified() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.HasModified"); return default; }
-        [global::Unbound.Stub] protected virtual bool CanApply() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.CanApply"); return default; }
-        [global::Unbound.Stub] protected virtual void Apply() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.Apply"); }
-        [global::Unbound.Stub] public override void SaveChanges() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.SaveChanges"); }
-        [global::System.Obsolete("UnityUpgradeable () -> SaveChanges")] [global::Unbound.Stub] protected internal void ApplyAndImport() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.ApplyAndImport"); }
-        [global::Unbound.Stub] public override void DiscardChanges() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.DiscardChanges"); }
-        [global::System.Obsolete("UnityUpgradeable () -> DiscardChanges")] [global::Unbound.Stub] protected virtual void ResetValues() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.ResetValues"); }
-        [global::Unbound.Stub] protected void RevertButton() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.RevertButton"); }
-        [global::Unbound.Stub] protected bool ApplyButton() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.ApplyButton"); return default; }
-        [global::Unbound.Stub] protected virtual bool OnApplyRevertGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.OnApplyRevertGUI"); return default; }
-        [global::Unbound.Stub] protected void ApplyRevertGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.ApplyRevertGUI"); }
-        [global::Unbound.Stub] protected AssetImporterEditor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.ctor"); }
-        protected internal global::UnityEngine.Object[] assetTargets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.assetTargets"); return global::System.Array.Empty<global::UnityEngine.Object>(); } }
-        protected internal global::UnityEngine.Object assetTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.assetTarget"); return default; } }
-        protected internal global::UnityEditor.SerializedObject assetSerializedObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.assetSerializedObject"); return default; } }
-        protected global::UnityEngine.Object[] extraDataTargets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.extraDataTargets"); return global::System.Array.Empty<global::UnityEngine.Object>(); } }
-        protected global::UnityEngine.Object extraDataTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.extraDataTarget"); return default; } }
-        protected global::UnityEditor.AssetImporters.AssetImporterEditor.ExtraDataSerializedObject extraDataSerializedObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.extraDataSerializedObject"); return default; } }
-        protected virtual bool needsApplyRevert { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.needsApplyRevert"); return default; } }
-        protected virtual global::System.Type extraDataType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.extraDataType"); return default; } }
         internal override string targetTitle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.targetTitle"); return default; } }
         internal sealed override int referenceTargetIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.referenceTargetIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.referenceTargetIndex"); } }
         internal override global::UnityEditor.IPreviewable preview { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.preview"); return default; } }
-        protected virtual bool useAssetDrawPreview { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.useAssetDrawPreview"); return default; } }
-        public virtual bool showImportedObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.showImportedObject"); return default; } }
-        [global::Unbound.Stub]
-        protected unsafe sealed partial class ExtraDataSerializedObject : global::UnityEditor.SerializedObject
-        {
-            [global::Unbound.Stub] internal ExtraDataSerializedObject(global::UnityEngine.Object[] objs, global::UnityEditor.AssetImporters.AssetImporterEditor editor) : base(default(global::UnityEngine.Object)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.ExtraDataSerializedObject.ctor"); }
-            [global::Unbound.Stub] public void Update() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.ExtraDataSerializedObject.Update"); }
-            [global::Unbound.Stub] public void UpdateIfRequiredOrScript() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.ExtraDataSerializedObject.UpdateIfRequiredOrScript"); }
-            [global::Unbound.Stub] public void ApplyModifiedProperties() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.ExtraDataSerializedObject.ApplyModifiedProperties"); }
-            [global::Unbound.Stub] public void SetIsDifferentCacheDirty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.AssetImporterEditor.ExtraDataSerializedObject.SetIsDifferentCacheDirty"); }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class AssetImporterEditorPostProcessAsset : global::UnityEditor.AssetPostprocessor
@@ -26862,10 +26821,8 @@ namespace UnityEditor.AssetImporters
         public int importQueuePriority { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterAttribute.importQueuePriority"); return default; } }
         public string[] overrideFileExtensions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterAttribute.overrideFileExtensions"); return global::System.Array.Empty<string>(); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class ScriptedImporterEditor : global::UnityEditor.AssetImporters.AssetImporterEditor
+    unsafe partial class ScriptedImporterEditor
     {
-        [global::Unbound.Stub] public ScriptedImporterEditor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterEditor.ctor"); }
         internal override string targetTitle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterEditor.targetTitle"); return default; } }
     }
     [global::Unbound.Stub]

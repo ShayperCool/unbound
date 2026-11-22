@@ -38,6 +38,15 @@ namespace UnityEditor
 
         public bool hasUnsavedChanges { get; protected set; }
 
+        /// <summary>What the Editor asks before it discards the editor's unsaved changes.</summary>
+        public string saveChangesMessage { get; protected set; }
+
+        /// <summary>Saves the editor's changes: the base class only has none left.</summary>
+        public virtual void SaveChanges() => hasUnsavedChanges = false;
+
+        /// <summary>Drops the editor's changes: the base class only has none left.</summary>
+        public virtual void DiscardChanges() => hasUnsavedChanges = false;
+
         public void Initialize(Object[] targets)
         {
             m_Targets = targets ?? Array.Empty<Object>();

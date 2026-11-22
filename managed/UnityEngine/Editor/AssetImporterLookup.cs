@@ -127,12 +127,35 @@ namespace UnityEditor
             importer.assetBundleName = body.Str("assetBundleName");
             importer.assetBundleVariant = body.Str("assetBundleVariant");
             importer.ReadSettings(body);
+            importer.m_Loaded = true;
             EditorUtility.ClearDirty(importer);
             return importer;
         }
 
         /// <summary>Reads the importer's own settings from its section of the .meta.</summary>
         internal virtual void ReadSettings(YNode body) { }
+
+        /// <summary>The asset was imported again with this importer's settings.</summary>
+        internal virtual void Reimported() { }
+
+        /// <summary>The settings of the asset's .meta read into this importer again.</summary>
+        internal void ReloadSettings()
+        {
+            if (string.IsNullOrEmpty(m_Guid)) return;
+            var documents = Native.LoadDocuments("meta:" + m_Guid);
+            if (documents.Count == 0) return;
+            var body = documents[0].Body;
+            m_Settings = MetaSettings.Clone(body);
+            m_ImportedSettings = MetaSettings.ToJson(m_Settings);
+            m_UserData = body.Str("userData") ?? "";
+            m_AssetBundleName = body.Str("assetBundleName") ?? "";
+            m_AssetBundleVariant = body.Str("assetBundleVariant") ?? "";
+            ReadExternalObjects(body);
+            ReadSettings(body);
+            if (this is AssetImporters.ScriptedImporter)
+                new YamlReader(new LoadedFile { Guid = m_Guid, Path = m_AssetPath }, metaNames: true).ReadScriptObject(this, body);
+            ClearModifiedState();
+        }
 
         /// <summary>Whether <see cref="AssetDatabase.WriteImportSettingsIfDirty"/> checks
         /// <see cref="EditorUtility.IsDirty"/> and <see cref="WriteCustomMeta"/>.</summary>

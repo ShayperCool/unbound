@@ -131,6 +131,7 @@ namespace Unbound.Runtime
             }
             AssetDatabaseRuntime.Invalidate(guid);
             AssetPostprocessing.ForgetPreprocessed(path);
+            importer.Reimported();
         }
 
         sealed class Platform

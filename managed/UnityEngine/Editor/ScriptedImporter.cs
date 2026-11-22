@@ -35,8 +35,19 @@ namespace UnityEditor
         public string userData
         {
             get { CheckImporterState("get_userData"); return NormalizeString(m_UserData); }
-            set { CheckImporterState("set_userData"); m_UserData = NormalizeString(value); }
+            set
+            {
+                CheckImporterState("set_userData");
+                // Changed user data leaves the importer dirty (matches the Unity 6000.0.71f1
+                // Editor, tests/projects/importereditor importer.userData).
+                if (NormalizeString(value) != m_UserData && !string.IsNullOrEmpty(m_AssetPath) && m_Loaded) EditorUtility.SetDirty(this);
+                m_UserData = NormalizeString(value);
+            }
         }
+
+        /// <summary>Set once the importer has the settings of its .meta: what is set before is
+        /// the loading itself, not a change.</summary>
+        internal bool m_Loaded;
 
         public string assetBundleName
         {
@@ -168,6 +179,27 @@ namespace UnityEditor.AssetImporters
         protected ScriptedImporter() { }
 
         public abstract void OnImportAsset(AssetImportContext ctx);
+
+        /// <summary>A scripted importer's settings are its own fields: the .meta is written when
+        /// the importer is dirty, the fields whole, each where the file has it or after the last
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/importereditor
+        /// importer.saveAndReimport, applyRevert.save and applyRevert.saveField).</summary>
+        internal override bool UsesDirtyFlagForWrite => true;
+
+        /// <summary>An import leaves the importer with the settings of its .meta: a field that was
+        /// changed but not written, for want of the dirty mark, has the file's value again
+        /// (tests/projects/importereditor importer.reimportFieldClean and applyRevert.saveField).</summary>
+        internal override void Reimported() => ReloadSettings();
+
+        internal override bool WriteCustomMeta(YText section)
+        {
+            var text = new System.Text.StringBuilder("ScriptedImporter:\n");
+            new UnityYamlWriter.Writer(text, new Dictionary<Object, long>()).Fields(this, GetType(), 1);
+            var fields = UnityYamlText.ParseTopLevel(text.ToString()).Get("ScriptedImporter");
+            if (fields == null || fields.Kind != YKind.Map) return false;
+            for (int i = 0; i < fields.Keys.Count; i++) section.Set(fields.Keys[i], fields.Values[i]);
+            return true;
+        }
     }
 
     /// <summary>What a ScriptedImporter fills while it imports: the asset's objects and main object.</summary>

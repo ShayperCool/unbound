@@ -64,6 +64,24 @@ namespace UnityEngine
             reader.Complete();
         }
 
+        /// <summary>The serialized fields of an object of any class, by the rules scripts are
+        /// serialized with and with asset references kept (a saved copy of a scripted importer's
+        /// settings: its class is no script's, so the public calls write none of its fields).</summary>
+        internal static string FieldsToJson(object obj)
+        {
+            var writer = new JsonWriter(false, editor: true);
+            writer.WriteObject(obj, obj.GetType(), 0);
+            return writer.ToString();
+        }
+
+        /// <summary>The fields <see cref="FieldsToJson"/> wrote, put back.</summary>
+        internal static void FieldsFromJson(string json, object objectToOverwrite)
+        {
+            var reader = new JsonReader { Editor = true };
+            reader.ReadFields(objectToOverwrite, objectToOverwrite.GetType(), JsonParser.Parse(json), 0);
+            reader.Complete();
+        }
+
         // ------------------------------------------------------------------ EditorJsonUtility
 
         /// <summary>EditorJsonUtility.ToJson: any object; engine objects are wrapped in their

@@ -348,6 +348,11 @@ namespace Unbound.Runtime
 
         internal static bool IsScript(Object target) => target is MonoBehaviour || target is ScriptableObject;
 
+        /// <summary>Whether the object's class declares serialized fields of its own: a script, or
+        /// a scripted importer, whose settings are its fields (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/importereditor settings.*).</summary>
+        internal static bool HasScriptFields(Object target) => IsScript(target) || target is UnityEditor.AssetImporters.ScriptedImporter;
+
         internal static SerializedNode BuildRoot(Object target, bool callbacks)
         {
             var root = new SerializedNode
@@ -382,7 +387,7 @@ namespace Unbound.Runtime
                 node.Accessor = new DelegateAccessor(native.Get, native.Set);
                 AddChild(root, node);
             }
-            if (IsScript(target))
+            if (HasScriptFields(target))
             {
                 foreach (var member in SerializationRules.Members(target.GetType()))
                 {
