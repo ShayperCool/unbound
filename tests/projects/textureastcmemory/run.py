@@ -16,7 +16,8 @@ CAPTURE = 'ASTC_MEMORY_OUT'
 PROFILES = ('Ordinary', 'Wide', 'CubeFirst', 'ResizeFirst', 'UninitializedFirst', 'CloneFirst',
             'ArrayFirst', 'VolumeFirst', 'HdrFirst', 'UninitializedApplyFirst', 'ImportFirst',
             'ArrayBeforeApply', 'CubeUninitialized', 'ArrayUninitialized', 'SwitchFootprint',
-            'ExplicitGraphicsFormatFirst', 'HdrCloneFirst', 'CloneResizeFirst')
+            'ExplicitGraphicsFormatFirst', 'HdrCloneFirst', 'CloneResizeFirst', 'CloneResizePendingFirst',
+            'CloneResizeAppliedFirst')
 
 
 def include_astc_import(project):

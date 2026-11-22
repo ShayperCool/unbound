@@ -131,10 +131,17 @@ public static class AstcMemory
             Size("prelude.resize.applied", resized);
             Object.DestroyImmediate(resized);
         }
-        if (profile == "CloneResizeFirst")
+        if (profile is "CloneResizeFirst" or "CloneResizePendingFirst" or "CloneResizeAppliedFirst")
         {
             var source = new Texture2D(8, 8, TextureFormat.RGBA32, false, true);
+            if (profile != "CloneResizeFirst")
+            {
+                Put("prelude.source.resize.result", source.Reinitialize(12, 8, TextureFormat.RGBA32, false));
+                if (profile == "CloneResizeAppliedFirst") source.Apply(false, false);
+                Size("prelude.source.afterResize", source);
+            }
             var clone = Object.Instantiate(source);
+            if (profile != "CloneResizeFirst") Size("prelude.clone.new", clone);
             Put("prelude.clone.resize.result", clone.Reinitialize(8, 8, TextureFormat.ASTC_4x4, false));
             Size("prelude.clone.resize", clone);
             clone.Apply(false, false);
