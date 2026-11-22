@@ -232,7 +232,7 @@ namespace UnityEditor
         internal static long GetDirectorySize(string path)
         {
             long size = 0;
-            // Every file: the Editor's "*.*" search takes names without a dot too.
+            // Every file, hidden and extensionless ones included.
             foreach (string file in Directory.GetFiles(path, "*", SearchOption.AllDirectories)) size += new FileInfo(file).Length;
             return size;
         }
