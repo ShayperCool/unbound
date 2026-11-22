@@ -39,6 +39,24 @@ namespace UnityEngine.Tests
             return o;
         }
 
+        [Theory]
+        [InlineData(TestRelease.Measured)]
+        [InlineData(TestRelease.Unmeasured)]
+        public void PoseRejectsNullTransformWithReleaseText(string version)
+        {
+            using var release = TestRelease.Pin(version);
+            string message = version == TestRelease.Measured
+                ? "Object reference not set to an instance of an object"
+                : new NullReferenceException().Message;
+            Assert.Empty(Logs(() => Assert.Equal(message, Assert.Throws<NullReferenceException>(
+                () => Pose.identity.GetTransformedBy((Transform)null)).Message)));
+
+            var transform = Own(new GameObject("Pose Control")).transform;
+            transform.position = new Vector3(3f, 5f, 7f);
+            var pose = new Pose(Vector3.one, Quaternion.identity);
+            Assert.Equal(new Pose(new Vector3(4f, 6f, 8f), Quaternion.identity), pose.GetTransformedBy(transform));
+        }
+
         [Fact]
         public void ResourcesRefuseMissingArgumentsAndObjectsThatAreNoAssets()
         {

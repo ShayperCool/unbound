@@ -319,3 +319,8 @@ in float32 gives Unbound's bits and with double intermediates the Editor's. Unbo
 (`docs/COMPATIBILITY_GAPS.md`, row "Script float arithmetic in single precision") rewrites game
 assemblies only and would not change these keys, so keeping them is a policy choice, not a
 missing switch. Anything beyond these 62 pairs is a regression.
+
+The measured 6000.0 family uses the Mono null-reference message for the null Transform case.
+The exact exception in the existing reference has no trailing period. A real Transform still
+contributes its translation and rotation. Other release families retain the runtime exception.
+[Unity 6000.0 Pose.GetTransformedBy](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Pose.GetTransformedBy.html)

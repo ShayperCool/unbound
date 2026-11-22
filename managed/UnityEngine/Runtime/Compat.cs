@@ -234,6 +234,9 @@ namespace Unbound.Runtime
         /// <summary>Runtime compressed channel formats and readback controls measured by
         /// tests/projects/texturecompression on 6000.0.71f1. Other releases keep their previous formats.</summary>
         internal static bool RuntimeTextureCompressionMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>The null Transform message of Pose.GetTransformedBy in coreapis on 6000.0.71f1.
+        /// Other releases keep the previous runtime exception.</summary>
+        internal static bool PoseNullTransformMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Runtime NavMesh one-cell region merging, measured by tests/projects/navmesh
         /// on 6000.0.71f1. Other releases retain the previous, unmeasured zero-cell threshold.</summary>
         internal static bool NavMeshRegionMergingMeasured => Family == ReleaseFamily.Unity6000_0;
