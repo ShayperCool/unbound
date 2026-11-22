@@ -35,7 +35,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 70;
+pub const FORMAT_VERSION: u32 = 71;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -5131,6 +5131,57 @@ void surf (Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_M
             let cube = c.textures.iter().position(|t| t == "_Cube").unwrap();
             assert_eq!(c.texture_dims[cube], TextureDim::Cube);
         }
+    }
+
+    /// A quotient of constants over zero, which glslang keeps as written and WGSL refuses to
+    /// evaluate (a Visual Effect Graph kernel's volume factor over a thickness of zero), reads
+    /// back: its zero is made when the program runs. Another zero and another divisor stay
+    /// constants.
+    #[test]
+    fn a_constant_divided_by_zero_is_divided_at_run_time() {
+        fn wgsl(source: &str) -> String {
+            let compiler = shaderc::Compiler::new().unwrap();
+            let mut o = shaderc::CompileOptions::new().unwrap();
+            o.set_source_language(shaderc::SourceLanguage::HLSL);
+            o.set_auto_bind_uniforms(true);
+            o.set_auto_map_locations(true);
+            o.set_target_env(
+                shaderc::TargetEnv::Vulkan,
+                shaderc::EnvVersion::Vulkan1_1 as u32,
+            );
+            let spv = compiler
+                .compile_into_spirv(source, shaderc::ShaderKind::Vertex, "t", "main", Some(&o))
+                .unwrap();
+            let module = fit::parse(spv.as_binary(), fit::ClipSpace::OpenGl).unwrap();
+            let info = naga::valid::Validator::new(
+                naga::valid::ValidationFlags::all(),
+                naga::valid::Capabilities::all(),
+            )
+            .validate(&module)
+            .unwrap();
+            let wgsl = naga::back::wgsl::write_string(
+                &module,
+                &info,
+                naga::back::wgsl::WriterFlags::empty(),
+            )
+            .unwrap();
+            naga::front::wgsl::parse_str(&wgsl)
+                .unwrap_or_else(|e| panic!("{}", e.emit_to_string(&wgsl)));
+            wgsl
+        }
+        let divided = wgsl(
+            "float4 main(float4 p : POSITION) : SV_Position {\n\
+             float factor = (pow(abs(1.0), 0.5) - 1.0) / 0.0;\n\
+             return p.x > 0.0 ? p : p * factor + 0.0; }",
+        );
+        assert_eq!(divided.matches("bitcast<f32>").count(), 1, "{divided}");
+        // A zero that does not divide, and a divisor that is not zero, are not touched.
+        let plain = wgsl(
+            "float4 main(float4 p : POSITION) : SV_Position {\n\
+             float factor = (pow(abs(1.0), 0.5) - 1.0) / 2.0;\n\
+             return p.x > 0.0 ? p : p * factor + 0.0; }",
+        );
+        assert!(!plain.contains("bitcast<f32>"), "{plain}");
     }
 
     /// A constant that is not a number (WGSL has none) is made when the program runs: a vertex

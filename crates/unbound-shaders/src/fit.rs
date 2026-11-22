@@ -1129,6 +1129,11 @@ impl ClipSpace {
 /// arithmetic, calls, returns). The constant itself stays declared: read into a module, one
 /// that nothing uses any more is dropped with the module's other unused constants
 /// ([`parse`]), and one still used another way is reported by the validator.
+///
+/// A float zero that divides (`x / 0.0`: the Visual Effect Graph writes a volume factor over
+/// a thickness that a graph's constants make zero) is made the same way where it divides:
+/// glslang keeps such a quotient of constants as it is written, and WGSL refuses one it can
+/// evaluate to no number. Only a scalar divisor is; a vector of zeros stays as it is.
 fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
     const OP_TYPE_INT: u32 = 21;
     const OP_TYPE_FLOAT: u32 = 22;
@@ -1139,6 +1144,9 @@ fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
     const OP_VARIABLE: u32 = 59;
     const OP_LOAD: u32 = 61;
     const OP_BITCAST: u32 = 124;
+    const OP_FDIV: u32 = 136;
+    /// The place of OpFDiv's divisor among its words.
+    const FDIV_DIVISOR: usize = 4;
     const OP_PHI: u32 = 245;
     const OP_LABEL: u32 = 248;
     const STORAGE_FUNCTION: u32 = 7;
@@ -1146,8 +1154,10 @@ fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
     let op = |at: usize| words[at] & 0xffff;
     let mut floats = HashSet::new();
     let (mut uint, mut pointer) = (None, None);
-    // The constants: id → (its float type, its bits).
-    let mut nans: HashMap<u32, (u32, u32)> = HashMap::new();
+    // The constants: id → (its float type, its bits). A NaN is made at run time wherever it
+    // is a value, a zero where it divides.
+    let mut made_constants: HashMap<u32, (u32, u32)> = HashMap::new();
+    let mut zeros: HashSet<u32> = HashSet::new();
     for &(at, count) in &list {
         let inst = &words[at..at + count];
         match op(at) {
@@ -1160,13 +1170,16 @@ fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
             }
             OP_CONSTANT if count == 4 && floats.contains(&inst[1]) => {
                 if f32::from_bits(inst[3]).is_nan() {
-                    nans.insert(inst[2], (inst[1], inst[3]));
+                    made_constants.insert(inst[2], (inst[1], inst[3]));
+                } else if f32::from_bits(inst[3]) == 0.0 {
+                    made_constants.insert(inst[2], (inst[1], inst[3]));
+                    zeros.insert(inst[2]);
                 }
             }
             _ => {}
         }
     }
-    if nans.is_empty() {
+    if made_constants.is_empty() {
         return Ok(words.to_vec());
     }
     // The operands of an instruction that are values (never literals), by its opcode: the
@@ -1191,6 +1204,11 @@ fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
         };
         operands.step_by(step)
     };
+    // Whether the constant, as that operand of an instruction, is made at run time.
+    let at_run_time = |code: u32, operand: usize, id: u32| -> bool {
+        made_constants.contains_key(&id)
+            && (!zeros.contains(&id) || (code == OP_FDIV && operand == FDIV_DIVISOR))
+    };
     // Each function's instructions, and the constants its body uses as values (in the order
     // first used).
     let mut functions: Vec<(usize, usize, Vec<u32>)> = Vec::new();
@@ -1207,7 +1225,7 @@ fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
         for &(at, count) in &list[k..end] {
             for operand in values(op(at), count) {
                 let id = words[at + operand];
-                if nans.contains_key(&id) && !used.contains(&id) {
+                if at_run_time(op(at), operand, id) && !used.contains(&id) {
                     used.push(id);
                 }
             }
@@ -1245,7 +1263,12 @@ fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
         for &id in used {
             declared.entry(id).or_insert_with(|| {
                 let bits = fresh();
-                out.extend_from_slice(&[(4 << 16) | OP_CONSTANT, uint_type, bits, nans[&id].1]);
+                out.extend_from_slice(&[
+                    (4 << 16) | OP_CONSTANT,
+                    uint_type,
+                    bits,
+                    made_constants[&id].1,
+                ]);
                 bits
             });
         }
@@ -1272,14 +1295,20 @@ fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
                 for (&id, &variable) in used.iter().zip(&variables) {
                     let (loaded, value) = (fresh(), fresh());
                     out.extend_from_slice(&[(4 << 16) | OP_LOAD, uint_type, loaded, variable]);
-                    out.extend_from_slice(&[(4 << 16) | OP_BITCAST, nans[&id].0, value, loaded]);
+                    out.extend_from_slice(&[
+                        (4 << 16) | OP_BITCAST,
+                        made_constants[&id].0,
+                        value,
+                        loaded,
+                    ]);
                     made.insert(id, value);
                 }
             }
             let start = out.len();
             out.extend_from_slice(&words[at..at + count]);
             for operand in values(op(at), count) {
-                if let Some(&value) = made.get(&out[start + operand]) {
+                let id = out[start + operand];
+                if let Some(&value) = made.get(&id).filter(|_| at_run_time(op(at), operand, id)) {
                     out[start + operand] = value;
                 }
             }
