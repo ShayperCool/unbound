@@ -1,4 +1,4 @@
-// One of three shaders of one name in different folders (README.md): draws green.
+// One of four shaders of one name in different folders (README.md): draws green.
 Shader "Unbound/Dup"
 {
     Properties

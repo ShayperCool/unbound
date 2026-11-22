@@ -1,4 +1,4 @@
-// One of three shaders of one name in different folders (README.md): draws white.
+// One of four shaders of one name in different folders (README.md): draws white.
 Shader "Unbound/Dup"
 {
     Properties

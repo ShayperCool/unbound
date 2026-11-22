@@ -6,6 +6,7 @@
   "engine_paths": [
     "managed/UnityEngine/Graphics/AssetImporters.cs",
     "managed/UnityEngine/Graphics/Shader.cs",
-    "crates/unbound-app/src/shaderlab.rs"
+    "crates/unbound-app/src/shaderlab.rs",
+    "crates/unbound-runtime/src/state.rs"
   ]
 }
