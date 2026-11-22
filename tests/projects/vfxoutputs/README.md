@@ -64,6 +64,12 @@ own, with output priorities (`sortPriority`, the asset's output render order) of
 `PriorityTies`: two systems of two such outputs each, all of priority 0, added to the graph one of
 each system in turn.
 
+Alike (`AlikeOutputs.vfx`, `TwinA/Twin.vfx`, `TwinB/Twin.vfx`): generated shaders that share a
+name. Two graphs of one file name in different folders, forty quads each, the one opaque and orange,
+the other additive and blue; and one system with an opaque and an additive output, unlabelled (the
+graph's API names them alike; the Editor's window gives them letters). Each draws with its own
+shader (`draw/TwinA`, `draw/TwinB`, `draw/AlikeOutputs` at frame 12, made at frame 6).
+
 `Assets/Scenes/Probe.unity` holds only a camera that sees none of the stages. The Editor-authored
 files (graphs, scene, the package lock) are kept in `Authored/unity-<release>/default`
 (`tests/authored_project.py`); the gate assembles them.
@@ -151,9 +157,7 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
   differently (the three routes of one graph in one capture).
 - A system that sorts one list for all its outputs (the compiler's global sort, for outputs that
   share their sort), other primitives, lit outputs, motion vectors, strips, meshes and Shader
-  Graph outputs: Unbound refuses them loudly. Outputs of one system named alike (no label: the
-  graph's API makes them so; the Editor's window gives them letters) are refused too: Unbound
-  finds generated shaders by name.
+  Graph outputs: Unbound refuses them loudly.
 - Sorting on a device whose compute groups share less than 32 KB of memory; effects over each
   other at one distance.
 - Several instances of one asset in one batch: Unbound runs each effect as a batch of its own.

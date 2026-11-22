@@ -173,7 +173,13 @@ public sealed class VfxOutputsProbe : MonoBehaviour
         foreach (var stage in m_Stages) stage.Act?.Invoke(m_Frame, stage);
         // Effects made while the others play (after their draws have begun).
         if (m_Frame == 6)
+        {
             foreach (var route in k_Routes) Front(AddStage(route + " late", route + "Late", 10));
+            // Graphs whose generated shaders share a name: each draws with its own.
+            Front(AddStage("TwinA", "TwinA/Twin", 12));
+            Front(AddStage("TwinB", "TwinB/Twin", 12));
+            Front(AddStage("AlikeOutputs", "AlikeOutputs", 12));
+        }
     }
 
     static readonly string[] k_Routes = { "UpdateList", "ComputeCulled", "FrustumCulled" };

@@ -32,6 +32,7 @@ public static class GraphAuthoring
         Sorted();
         Prioritized();
         Primitives();
+        Alike();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -392,6 +393,42 @@ public static class GraphAuthoring
             SetVector(manyInit, "color", new Vector3(0.3f, 0.6f, 1f));
             Save(many);
         }
+    }
+
+    /// <summary>Graphs whose generated shaders share a name (README.md, "Alike"): one file name
+    /// in two folders, the one opaque and the other additive, and one system with an opaque and
+    /// an additive output of one name (no label).</summary>
+    static void Alike()
+    {
+        foreach (var (folder, blend, color) in new[]
+        {
+            ("TwinA", VFXAbstractRenderedOutput.BlendMode.Opaque, new Vector3(1f, 0.4f, 0.2f)),
+            ("TwinB", VFXAbstractRenderedOutput.BlendMode.Additive, new Vector3(0.2f, 0.4f, 1f)),
+        })
+        {
+            AssetDatabase.CreateFolder(Folder, folder);
+            var twin = NewGraph(folder + "/Twin");
+            var (spawn, init, output) = System(twin, 64);
+            output.SetSettingValue("blendMode", blend);
+            Burst(spawn, 40f);
+            SetRandom(init, "position", new Vector3(-1f, -1f, -1f), new Vector3(1f, 1f, 1f));
+            Set(init, "size", 0.4f);
+            SetVector(init, "color", color);
+            Save(twin);
+        }
+
+        var pair = NewGraph("AlikeOutputs");
+        var (pairSpawn, pairInit, opaque) = System(pair, 64);
+        opaque.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        var additive = Make<VFXPlanarPrimitiveOutput>();
+        pair.AddChild(additive);
+        pair.children.OfType<VFXBasicUpdate>().First().LinkTo(additive);
+        additive.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Additive);
+        Burst(pairSpawn, 40f);
+        SetRandom(pairInit, "position", new Vector3(-1f, -1f, -1f), new Vector3(1f, 1f, 1f));
+        Set(pairInit, "size", 0.4f);
+        SetRandom(pairInit, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
+        Save(pair);
     }
 
     /// <summary>The probe scene: a camera that sees none of the stages (the probe builds them).</summary>

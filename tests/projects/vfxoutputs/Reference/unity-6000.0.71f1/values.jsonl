@@ -43,6 +43,9 @@
 {"k":"draw/UpdateList dying/f012","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/ComputeCulled dying/f012","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/FrustumCulled dying/f012","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/TwinA/f012","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/TwinB/f012","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/AlikeOutputs/f012","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/UpdateList away/f019","v":"alive=-1 culled=1 awake=1 renderer enabled=1 visible=0"}
 {"k":"draw/ComputeCulled away/f019","v":"alive=-1 culled=1 awake=1 renderer enabled=1 visible=0"}
 {"k":"draw/FrustumCulled away/f019","v":"alive=-1 culled=1 awake=1 renderer enabled=1 visible=0"}
