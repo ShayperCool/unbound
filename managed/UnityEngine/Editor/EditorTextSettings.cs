@@ -98,6 +98,8 @@ namespace UnityEditor
         static FontAsset FamilyAsset(Family family)
         {
             if (family.Made) return family.Asset;
+            // Before the engine can open fonts nothing is decided yet.
+            if (!Unbound.Runtime.Native.IsReady) return null;
             family.Made = true;
             if (family.Os && !System.OperatingSystem.IsLinux()) return null;
             var regular = Face(family, family.Regular);

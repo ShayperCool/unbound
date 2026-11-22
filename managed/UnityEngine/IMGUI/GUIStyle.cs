@@ -699,7 +699,7 @@ namespace Unbound.Runtime
                 foreach (string path in CatalogSheets(UnityEditor.EditorGUIUtility.isProSkin))
                 {
                     var sheet = Unbound.UIElements.UiResources.EditorLoad(path) as UnityEngine.UIElements.StyleSheet;
-                    if (sheet == null) Debug.Log("Could not load " + path);
+                    if (sheet == null) Debug.LogWarning($"Unbound: the style sheet {path} of the Editor's style catalog is not in this installation's Editor resources; the Editor skin's styles lack its values.");
                     else if (!sheets.Contains(sheet)) sheets.Add(sheet);
                 }
                 return s_Catalog = EditorStyleCatalog.Build(sheets);

@@ -343,7 +343,7 @@ namespace Unbound.Runtime
                 Extend(earlier, done);
             if (!m_Rules.TryGetValue(extension.Parent, out var parent))
             {
-                Debug.LogWarning("Cannot resolve parent rule: " + extension.Parent);
+                Debug.LogWarning($"Unbound: the Editor's style catalog has no rule {extension.Parent} for the rules that extend it; they keep their own properties.");
                 return;
             }
             var sources = new List<Rule> { parent };

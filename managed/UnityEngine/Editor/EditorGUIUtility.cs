@@ -30,8 +30,8 @@ namespace UnityEditor
         public static bool isProSkin => EditorPrefs.GetInt("UserSkin", 1) == 1;
 
         /// <summary>A built-in skin: the game's, the Editor's light one (Inspector) or its dark
-        /// one (Scene), whatever the Editor's own theme is (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/editorskin).</summary>
+        /// one (Scene) (matches the Unity 6000.0.71f1 Editor with the dark theme,
+        /// tests/projects/editorskin skin/*/name; not measured with the light theme).</summary>
         public static GUISkin GetBuiltinSkin(EditorSkin skin) => GUIUtility.GetBuiltinSkin((int)skin);
 
         public new static float pixelsPerPoint => GUIUtility.pixelsPerPoint;
