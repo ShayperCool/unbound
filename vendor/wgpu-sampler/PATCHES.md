@@ -286,8 +286,11 @@ and Metal pay only one relaxed atomic load), and `wgpu/src/api/device.rs` adds
 (exclusive) -> `OwnedAdapterContext::pin()` and releases in exact reverse order, keeping the lock
 graph strictly acyclic (`SUBMISSION -> GL_PIN_GATE -> wgpu-core locks -> AdapterContext.glow`) so
 concurrent resource creation, `write_buffer`/`write_texture`, `Surface::configure`, and
-`Surface::present` on other threads cannot AB-BA deadlock. On non-EGL backends it is a direct call
-with no overhead.
+`Surface::present` on other threads cannot AB-BA deadlock. One exception: a guard detached by
+`texture_as_hal`/`buffer_as_hal` keeps its shared hold on the gate while the thread's depth count
+no longer shows it, so a thread holding one must not take another wgpu-core lock (or pin) while
+another thread waits to pin; no Unbound path holds such a guard across another wgpu call. On
+non-EGL backends it is a direct call with no overhead.
 
 `crates/unbound-app/src/render/gl_backend_tests.rs`
 (`gles_context_pinning_handles_nesting_foreign_context_unwind_and_concurrency`) verifies nested

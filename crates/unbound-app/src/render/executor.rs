@@ -1563,7 +1563,9 @@ impl UnityRenderer {
     pub fn apply(&mut self, upload: Upload) {
         if self.is_gles {
             let device = self.device.clone();
-            device.with_gles_context_pinned(|| self.apply_inner(upload));
+            super::gl_interop::deferring_forgets(|| {
+                device.with_gles_context_pinned(|| self.apply_inner(upload))
+            });
         } else {
             self.apply_inner(upload);
         }
@@ -4935,13 +4937,15 @@ impl UnityRenderer {
             true
         };
         if pin_gles {
-            loop {
-                let deadline = Some(std::time::Instant::now() + GL_PIN_BURST);
-                if device.with_gles_context_pinned(|| run_burst(deadline)) {
-                    break;
+            super::gl_interop::deferring_forgets(|| {
+                loop {
+                    let deadline = Some(std::time::Instant::now() + GL_PIN_BURST);
+                    if device.with_gles_context_pinned(|| run_burst(deadline)) {
+                        break;
+                    }
+                    std::thread::yield_now();
                 }
-                std::thread::yield_now();
-            }
+            });
         } else {
             run_burst(None);
         }

@@ -180,6 +180,16 @@ pub fn forget(name: u32, owned: bool) {
     if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore {
         return;
     }
+    let deferred = DEFERRED.with(|deferred| {
+        deferred
+            .borrow_mut()
+            .as_mut()
+            .map(|names| names.push((name, owned)))
+            .is_some()
+    });
+    if deferred {
+        return;
+    }
     if RENDER_THREAD.with(|render| render.get()) {
         let _ = with(|interop| interop.forget(name, owned));
     } else {
@@ -188,6 +198,50 @@ pub fn forget(name: u32, owned: bool) {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .push((name, owned));
     }
+}
+
+thread_local! {
+    /// The names [`forget`] was asked for while this thread held the renderer's context pinned
+    /// ([`deferring_forgets`]); None outside such a region.
+    static DEFERRED: std::cell::RefCell<Option<Vec<(u32, bool)>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Runs `pinned`, work during which the renderer's OpenGL context stays pinned current on this
+/// thread (the renderer's calls then skip making it current), so that the plugins' context does
+/// not become current in the middle of it: the plugin-visible names it forgets are forgotten once
+/// it returns, on this thread, before anything else is allocated.
+pub fn deferring_forgets<R>(pinned: impl FnOnce() -> R) -> R {
+    let outer = DEFERRED.with(|deferred| {
+        let mut deferred = deferred.borrow_mut();
+        let outer = deferred.is_some();
+        deferred.get_or_insert_with(Vec::new);
+        outer
+    });
+    struct Forget(bool);
+    impl Drop for Forget {
+        fn drop(&mut self) {
+            if self.0 {
+                return;
+            }
+            let names = DEFERRED
+                .with(|deferred| deferred.borrow_mut().take())
+                .unwrap_or_default();
+            if std::thread::panicking() {
+                // Unwinding: forgotten by the next plugin call instead.
+                PENDING_FORGETS
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner())
+                    .extend(names);
+                return;
+            }
+            for (name, owned) in names {
+                forget(name, owned);
+            }
+        }
+    }
+    let _forget = Forget(outer);
+    pinned()
 }
 
 /// Runs `work` with the plugins' context current on this thread; on another thread than the
@@ -880,5 +934,42 @@ mod tests {
             Some(COMPRESSED_SRGB_ALPHA_BPTC_UNORM)
         );
         assert_eq!(srgb(SRGB8_ALPHA8), None);
+    }
+}
+
+#[cfg(test)]
+mod deferring_tests {
+    use super::*;
+
+    fn deferred() -> Option<Vec<(u32, bool)>> {
+        DEFERRED.with(|deferred| deferred.borrow().clone())
+    }
+
+    /// Names forgotten while the renderer's context is pinned wait for the end of the pinned
+    /// work (the plugins' context is not made current inside it), then are forgotten in order;
+    /// a nested region leaves that to the outermost one.
+    #[test]
+    fn forgets_inside_a_pinned_region_wait_until_it_ends() {
+        if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore {
+            return;
+        }
+        const A: u32 = 0xFFFF_FF01;
+        const B: u32 = 0xFFFF_FF02;
+        let inside = deferring_forgets(|| {
+            forget(A, false);
+            deferring_forgets(|| forget(B, true));
+            deferred()
+        });
+        assert_eq!(inside, Some(vec![(A, false), (B, true)]));
+        assert_eq!(deferred(), None);
+        // This test thread does not run the renderer: the names wait for the next plugin call.
+        let mut pending = PENDING_FORGETS.lock().unwrap();
+        let ours: Vec<(u32, bool)> = pending
+            .iter()
+            .copied()
+            .filter(|(name, _)| *name == A || *name == B)
+            .collect();
+        pending.retain(|(name, _)| *name != A && *name != B);
+        assert_eq!(ours, [(A, false), (B, true)]);
     }
 }
