@@ -1056,7 +1056,8 @@ namespace UnityEngine
         }
 
         static GUILayoutGroup CreateGroup(Type layoutType) =>
-            layoutType == typeof(GUIScrollGroup) ? new GUIScrollGroup() : layoutType != null && layoutType != typeof(GUILayoutGroup)
+            layoutType == typeof(GUIScrollGroup) ? new GUIScrollGroup()
+            : layoutType != null && layoutType != typeof(GUILayoutGroup)
                 ? (GUILayoutGroup)Activator.CreateInstance(layoutType)
                 : new GUILayoutGroup();
 
