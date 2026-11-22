@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record or check the point-link projection and agent staleness controls."""
+"""Record or check the NavLinks projection, staleness, and crowd overlap controls."""
 import argparse
 import filecmp
 import os
@@ -19,6 +19,7 @@ OUTPUT = 'values.jsonl'
 PROFILES = {
     'projection': ('NAVLINKS_PROJECTION', 'point-projection.jsonl', 20),
     'staleness': ('NAVLINKS_STALE', 'path-staleness.jsonl', 30000),
+    'overlap': ('NAVLINKS_OVERLAP', 'crowd-overlap.jsonl', 300),
 }
 
 
