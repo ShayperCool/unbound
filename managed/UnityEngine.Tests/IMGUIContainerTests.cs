@@ -39,6 +39,8 @@ namespace UnityEngine.Tests
                 GUIUtility.hotControl = 0;
                 GUIUtility.keyboardControl = 0;
                 Unbound.Runtime.GuiEvents.MousePosition = Vector2.zero;
+                // Other tests' Editor GUI passes leave the Editor's styles loaded.
+                EditorStyles.Loaded = false;
             }
 
             internal void Tick()
