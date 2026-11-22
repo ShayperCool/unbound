@@ -1085,7 +1085,8 @@ precomputed data is not made: said once, and `lightingDataAsset` stays null), an
 lightmaps and baked probes of a scene with baked global illumination (Q677; Unbound lays out
 where its lightmaps would go, `tests/projects/bakedatlas`, and writes the layout to
 `LibraryUnbound/BakedGI`; it can rasterize each lightmap's texels and gather their direct
-and, from the renderers' albedo and emission images, their indirect light as the Editor does,
+and, from the renderers' albedo and emission images and the sky, their indirect light and
+the sky's as the Editor does,
 `tests/projects/bakedbuffers`, but does not make the lightmaps yet),
 the environment
 lighting from a sky and baked reflection probes are not made (each said once). Renderers a
