@@ -90,9 +90,18 @@ public sealed class InputHostConfigControl : MonoBehaviour
 
 #if UNITY_EDITOR
     int pauseTicks;
+    int inputUpdates, queuedGamepadEvents;
+    Gamepad syntheticPad;
 
     void BeginPause()
     {
+        syntheticPad = InputSystem.AddDevice<Gamepad>();
+        InputSystem.onEvent += (evt, device) => {
+            if (device == syntheticPad && evt.type == StateEvent.Type) queuedGamepadEvents++;
+        };
+        InputSystem.onAfterUpdate += () => {
+            if (UnityEditor.EditorApplication.isPaused) inputUpdates++;
+        };
         UnityEditor.EditorApplication.update += UpdatePaused;
         UnityEditor.EditorApplication.isPaused = true;
     }
@@ -101,8 +110,20 @@ public sealed class InputHostConfigControl : MonoBehaviour
     {
         switch (++pauseTicks)
         {
+            case 2:
+                InputSystem.QueueStateEvent(syntheticPad, new GamepadState().WithButton(GamepadButton.South));
+                break;
+            case 5:
+                Put("beforeMap.updates", inputUpdates.ToString());
+                Put("beforeMap.gamepadEvents", queuedGamepadEvents.ToString());
+                break;
             case 6: Run("setxkbmap", "-layout de"); break;
+            case 15:
+                InputSystem.QueueStateEvent(syntheticPad, new GamepadState());
+                break;
             case 30:
+                Put("afterMap.updates", inputUpdates.ToString());
+                Put("afterMap.gamepadEvents", queuedGamepadEvents.ToString());
                 Read("whilePaused");
                 UnityEditor.EditorApplication.update -= UpdatePaused;
                 UnityEditor.EditorApplication.isPaused = false;

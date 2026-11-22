@@ -524,7 +524,9 @@ namespace Unbound.Runtime
         static unsafe void PausedFrame(FrameInput* input)
         {
             Time.HostFrameOutsidePlay(input->FixedStep);
-            NativeInput.UpdatePausedKeyboardConfiguration(input);
+            NativeInput.QueuePausedKeyboardConfiguration(input);
+            // Input System runs an Editor update before each Editor tick, including during a pause.
+            NativeInput.EditorUpdate();
             MainThreadContext.Instance.RunPending();
             UnityEditor.EditorApplication.RunEditorCallbacksNow();
             Jobs.JobSystem.Flush();

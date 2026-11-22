@@ -51,11 +51,15 @@ Switching the active XKB group alone preserves the cached layout and labels
 and generates zero notifications. Each switch verifies the actual group on
 the X server. Replacing the map while Play mode is paused refreshes the
 layout and labels during the pause and generates three callbacks before play
-resumes. The Linux landing gate runs the host replay with empty Wayland
-environment variables.
+resumes. Queued gamepad events and update callbacks are also delivered during
+the pause, including before the map replacement. The package specifies an
+input update before each Editor update. The Linux landing gate runs the host
+replay with empty Wayland environment variables. [InputSettings.updateMode](https://docs.unity3d.com/Packages/com.unity.inputsystem@1.19/api/UnityEngine.InputSystem.InputSettings.html#UnityEngine_InputSystem_InputSettings_updateMode).
 
 Changes that fall between multiple X11 key reports in one frame, Wayland
-keyboards and other release families are outside this control.
+keyboards and other release families are outside this control. The host
+label lookup covers printable key positions. A remap from a function key
+to a printable character still reports the original label.
 
 The process-local GDK signal control runs in the Editor. The X11 host
 profile uses actual input on its own display in both engines.

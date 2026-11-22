@@ -324,9 +324,9 @@ namespace Unbound.Runtime
             GamepadEvents(time);
         }
 
-        /// <summary>Delivers the paused Play mode keyboard configuration events before the
-        /// Editor callbacks (tests/projects/inputframes ConfigurationControl).</summary>
-        internal static void UpdatePausedKeyboardConfiguration(FrameInput* input)
+        /// <summary>Queues the host keyboard changes received during a paused Play mode frame
+        /// (tests/projects/inputframes ConfigurationControl).</summary>
+        internal static void QueuePausedKeyboardConfiguration(FrameInput* input)
         {
             if (!Enabled || !Compat.KeyboardConfigurationMeasured) return;
             double time = CurrentTime;
@@ -334,7 +334,6 @@ namespace Unbound.Runtime
             for (int i = 0; i < input->KeyEventCount; i++)
                 if (input->KeyEvents[i].IsKeyboardConfiguration)
                     QueueHostKeyboardConfiguration(time, ref keyboardRefreshed);
-            if (keyboardRefreshed) EditorUpdate();
         }
 
         // ------------------------------------------------------------------ gamepads
