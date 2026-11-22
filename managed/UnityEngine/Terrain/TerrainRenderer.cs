@@ -60,6 +60,7 @@ namespace UnityEngine
             var terrain = m_Terrain;
             var data = terrain != null ? terrain.terrainData : null;
             if (data == null) return;
+            terrain.UpdateNormalmap();
             if (terrain.drawHeightmap)
             {
                 shadowCastingMode = terrain.shadowCastingMode;

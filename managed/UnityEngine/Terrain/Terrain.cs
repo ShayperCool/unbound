@@ -82,6 +82,7 @@ namespace UnityEngine
             s_Active.Remove(this);
             s_TilesChanged = true;
             m_TerrainData?.m_Users.Remove(this);
+            ReleaseNormalmap();
             if (m_Renderer != null)
             {
                 m_Renderer.OnEngineDisable();
@@ -169,16 +170,8 @@ namespace UnityEngine
         public bool drawHeightmap { get => m_DrawHeightmap; set => m_DrawHeightmap = value; }
         public bool allowAutoConnect { get => m_AllowAutoConnect; set => m_AllowAutoConnect = value; }
         public int groupingID { get => m_GroupingID; set => m_GroupingID = value; }
-        public bool drawInstanced { get => m_DrawInstanced; set => m_DrawInstanced = value; }
+        public bool drawInstanced { get => m_DrawInstanced; set => SetDrawInstanced(value); }
         public bool enableHeightmapRayTracing { get => m_EnableHeightmapRayTracing; set => m_EnableHeightmapRayTracing = value; }
-        public RenderTexture normalmapTexture
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("Terrain.normalmapTexture", "is not made yet: it answers null");
-                return null;
-            }
-        }
         public bool drawTreesAndFoliage { get => m_DrawTreesAndFoliage; set => m_DrawTreesAndFoliage = value; }
         public Vector3 patchBoundsMultiplier { get => m_PatchBoundsMultiplier; set => m_PatchBoundsMultiplier = value; }
         public float treeLODBiasMultiplier { get => m_TreeLODBiasMultiplier; set => m_TreeLODBiasMultiplier = value; }
@@ -204,9 +197,11 @@ namespace UnityEngine
         public static GraphicsFormat heightmapFormat => GraphicsFormat.R16_UNorm;
         public static TextureFormat heightmapTextureFormat => TextureFormat.R16;
         public static RenderTextureFormat heightmapRenderTextureFormat => RenderTextureFormat.R16;
-        public static GraphicsFormat normalmapFormat => GraphicsFormat.R8G8B8A8_UNorm;
-        public static TextureFormat normalmapTextureFormat => TextureFormat.RGBA32;
-        public static RenderTextureFormat normalmapRenderTextureFormat => RenderTextureFormat.ARGB32;
+        /// <summary>The normal map's formats (Unity 6000.0.71f1: tests/projects/terrainnormalmap
+        /// format.*): 10-bit channels, and no TextureFormat (value 0).</summary>
+        public static GraphicsFormat normalmapFormat => GraphicsFormat.A2B10G10R10_UNormPack32;
+        public static TextureFormat normalmapTextureFormat => (TextureFormat)0;
+        public static RenderTextureFormat normalmapRenderTextureFormat => RenderTextureFormat.ARGB2101010;
         public static GraphicsFormat holesFormat => GraphicsFormat.R8_UNorm;
         public static RenderTextureFormat holesRenderTextureFormat => RenderTextureFormat.R8;
         public static GraphicsFormat compressedHolesFormat => GraphicsFormat.RGBA_DXT1_UNorm;
