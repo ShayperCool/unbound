@@ -244,12 +244,13 @@ namespace Unbound.Runtime
         /// once the arrays are set.</summary>
         internal void Seal()
         {
+            // A graph may leave a name out (a system without one): it answers to the empty name.
             m_ExposedIds = new int[Exposed.Length];
-            for (int i = 0; i < Exposed.Length; i++) m_ExposedIds[i] = Shader.PropertyToID(Exposed[i].mapping.name);
+            for (int i = 0; i < Exposed.Length; i++) m_ExposedIds[i] = Shader.PropertyToID(Exposed[i].mapping.name ?? "");
             m_SystemIds = new int[Systems.Length];
-            for (int i = 0; i < Systems.Length; i++) m_SystemIds[i] = Shader.PropertyToID(Systems[i].name);
+            for (int i = 0; i < Systems.Length; i++) m_SystemIds[i] = Shader.PropertyToID(Systems[i].name ?? "");
             EventIds = new int[Events.Length];
-            for (int i = 0; i < Events.Length; i++) EventIds[i] = Shader.PropertyToID(Events[i].name);
+            for (int i = 0; i < Events.Length; i++) EventIds[i] = Shader.PropertyToID(Events[i].name ?? "");
 
             int count = Expressions.Length + ExpressionsPerSpawnEventAttribute.Length;
             ExpressionTypes = new VFXValueType[count];
