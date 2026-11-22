@@ -16,6 +16,7 @@ isolate one thing each:
 | `runs` | long head-on and crossing runs |
 | `arrival`, `arrival-start` | braking at the end of the path (speeds, accelerations, radii; starts near the end) |
 | `walls-along`, `walls-towards` (`Walls.unity`) | walking along a wall, towards it, round its end |
+| `corners` | agents on the corners and edges of the 42.67 m NavMesh tiles (slot 55's cell starts on a corner where four tiles meet; the set's other slots are empty): without avoidance, eight destinations and a first step by a scripted velocity into each quadrant; with avoidance, walking along a tile edge past a standing neighbour on either side, so that their first step leaves the edge |
 
 Measured (see `managed/UnityEngine/AI/DotRecast/UNBOUND.md`): the neighbours Unity's agents
 avoid (a proximity grid sized from all agents, covering each neighbour's radius and predicted travel; as or more important, not behind, the soonest
