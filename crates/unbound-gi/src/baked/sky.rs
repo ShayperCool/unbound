@@ -19,6 +19,147 @@ pub struct Importance {
     pub integral: f32,
 }
 
+/// The generator of the picked directions: a 32-bit xorshift over four words, started from 0.
+struct Shift {
+    words: [u32; 4],
+}
+
+impl Shift {
+    fn new() -> Shift {
+        let mut words = [0u32; 4];
+        for k in 1..4 {
+            words[k] = words[k - 1].wrapping_mul(1_812_433_253).wrapping_add(1);
+        }
+        Shift { words }
+    }
+
+    /// The next number of 0..=1, in steps of 1 / (2^23 - 1).
+    fn next(&mut self) -> f32 {
+        let [x, y, z, w] = self.words;
+        let t = x ^ (x << 11);
+        let next = w ^ (w >> 19) ^ t ^ (t >> 8);
+        self.words = [y, z, w, next];
+        (next & 0x7f_ffff) as f32 * (1.0 / 8_388_607.0)
+    }
+}
+
+/// How many directions are picked.
+pub const IMPORTANCE_DIRECTIONS: usize = 2048;
+/// How often a direction is drawn before one is taken whatever the sky's brightness there.
+const DRAWS: u32 = 100_000;
+
+/// The solid angle seen from the cube's centre between its face's centre and the point
+/// (x, y) of the face, of -1..1.
+fn corner_angle(x: f32, y: f32) -> f32 {
+    (x * y).atan2((x * x + y * y + 1.0).sqrt())
+}
+
+impl Importance {
+    /// Picks `count` directions over the sky by its brightness: directions drawn evenly over
+    /// the sphere are kept by the chance of the sky's brightness there over its greatest. A
+    /// black sky has none.
+    pub fn of(faces: &[Texture; 6], count: usize) -> Option<Importance> {
+        let side = faces[0].width;
+        if side == 0 || faces.iter().any(|f| f.width != side || f.height != side) {
+            return None;
+        }
+        // The sky's brightness over the sphere: each texel's by the solid angle it covers.
+        let step = 1.0 / side as f32;
+        let (mut integral, mut greatest) = (0f32, 0f32);
+        for face in faces {
+            for row in 0..side {
+                let y = ((row as f32 + 0.5) * 2.0) * step - 1.0;
+                for column in 0..side {
+                    let x = ((column as f32 + 0.5) * 2.0) * step - 1.0;
+                    let texel = face.texels[row * side + column];
+                    let bright = brightness([texel[0], texel[1], texel[2]]);
+                    let angle = corner_angle(x - step, y - step)
+                        - corner_angle(x - step, y + step)
+                        - corner_angle(x + step, y - step)
+                        + corner_angle(x + step, y + step);
+                    greatest = greatest.max(bright);
+                    integral += angle * bright;
+                }
+            }
+        }
+        if !(integral > 0.0) {
+            return None;
+        }
+        let mut shift = Shift::new();
+        let mut draw = |shift: &mut Shift| -> ([f32; 3], [f32; 3]) {
+            let first = shift.next();
+            let z = (1.0 - first) - first;
+            let radius = (1.0 - z * z).max(0.0).sqrt();
+            let angle = shift.next() as f64 * std::f64::consts::TAU;
+            let direction = [
+                angle.cos() as f32 * radius,
+                -(angle.sin() as f32) * radius,
+                z,
+            ];
+            (direction, mean_of_faces(faces, side, direction))
+        };
+        let (mut directions, mut weighted) = (Vec::with_capacity(count), Vec::with_capacity(count));
+        for _ in 0..count {
+            let mut picked = None;
+            for _ in 0..DRAWS {
+                let (direction, color) = draw(&mut shift);
+                if shift.next() * greatest <= brightness(color) {
+                    picked = Some((direction, color));
+                    break;
+                }
+            }
+            let (direction, color) = picked.unwrap_or_else(|| draw(&mut shift));
+            let scale = integral / brightness(color);
+            directions.push(direction);
+            weighted.push(color.map(|v| scale * v));
+        }
+        Some(Importance {
+            directions,
+            weighted,
+            integral,
+        })
+    }
+}
+
+/// The sky in a direction as the picking reads it: on each face the direction's line crosses
+/// within the face's square, the four texels around the point (texel centres at the square's
+/// edges), and the mean of the faces (more than one only along the cube's edges).
+fn mean_of_faces(faces: &[Texture; 6], side: usize, d: [f32; 3]) -> [f32; 3] {
+    // Per axis: which components run along the face's columns and rows, and per face their
+    // signs.
+    const ALONG: [(usize, usize); 3] = [(2, 1), (0, 2), (0, 1)];
+    const COLUMN_SIGN: [f32; 6] = [-1.0, 1.0, 1.0, 1.0, 1.0, -1.0];
+    const ROW_SIGN: [f32; 6] = [-1.0, -1.0, 1.0, -1.0, -1.0, -1.0];
+    let mut sum = [0f32; 3];
+    let mut count = 0f32;
+    let last = (side - 1) as f32;
+    for axis in 0..3 {
+        let c = d[axis];
+        if c == 0.0 {
+            continue;
+        }
+        let face = 2 * axis + usize::from(c <= 0.0);
+        let u = (COLUMN_SIGN[face] * d[ALONG[axis].0] / c.abs() + 1.0) * 0.5;
+        let v = (ROW_SIGN[face] * d[ALONG[axis].1] / c.abs() + 1.0) * 0.5;
+        if !((0.0..=1.0).contains(&u) && (0.0..=1.0).contains(&v)) {
+            continue;
+        }
+        let (x, y) = (u * last, v * last);
+        let (x0, y0, x1, y1) = (x.floor(), y.floor(), x.ceil(), y.ceil());
+        let texel =
+            |column: f32, row: f32| faces[face].texels[row as usize * side + column as usize];
+        let (a, b, c0, e) = (texel(x0, y0), texel(x1, y0), texel(x0, y1), texel(x1, y1));
+        let (tx, ty) = (x - x0, y - y0);
+        for k in 0..3 {
+            let top = (b[k] - a[k]) * tx + a[k];
+            let bottom = (e[k] - c0[k]) * tx + c0[k];
+            sum[k] += (bottom - top) * ty + top;
+        }
+        count += 1.0;
+    }
+    sum.map(|v| v / count.max(1.0))
+}
+
 /// The environment's light.
 pub struct Sky {
     /// The faces towards +x, -x, +y, -y, +z and -z.

@@ -219,14 +219,36 @@ fn main() {
         let integral = r.f32();
         let directions: Vec<[f32; 3]> = (0..count).map(|_| r.floats()).collect();
         let weighted: Vec<[f32; 3]> = (0..count).map(|_| r.floats()).collect();
-        Sky {
-            faces,
-            importance: (count > 0).then_some(Importance {
-                directions,
-                weighted,
-                integral,
-            }),
-        }
+        // With UNBOUND_OWN_DIRECTIONS set the directions are picked here instead of taken
+        // from the file, and how far the two are apart is said.
+        let given = (count > 0).then_some(Importance {
+            directions,
+            weighted,
+            integral,
+        });
+        let importance = match (given, std::env::var_os("UNBOUND_OWN_DIRECTIONS")) {
+            (Some(given), Some(_)) => {
+                let own = Importance::of(&faces, count).expect("a sky with light");
+                let apart = |a: &[[f32; 3]], b: &[[f32; 3]]| {
+                    a.iter()
+                        .zip(b)
+                        .flat_map(|(x, y)| {
+                            (0..3).map(move |k| (x[k] - y[k]).abs() / y[k].abs().max(1.0))
+                        })
+                        .fold(0f32, f32::max)
+                };
+                eprintln!(
+                    "own directions: {} apart, their light {}, the sky's brightness {} (given {})",
+                    apart(&own.directions, &given.directions),
+                    apart(&own.weighted, &given.weighted),
+                    own.integral,
+                    given.integral
+                );
+                Some(own)
+            }
+            (given, _) => given,
+        };
+        Sky { faces, importance }
     });
     let blue = std::fs::read(&args[3]).expect("the blue noise data");
     let samples = Samples::new(&blue).expect("the blue noise data's size");
