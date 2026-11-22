@@ -5,8 +5,11 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Records, in Play mode, what ObjectFactory.CreateInstance makes of engine object types that have
-/// no public parameterless constructor: the object's type, name and hide flags, or what it throws.
+/// Records, in Play mode, what ObjectFactory.CreateInstance makes of the engine object types the
+/// release declares no public parameterless constructor for (its own list, below): the object's type,
+/// name and hide flags, or what it throws, and what a made texture or material holds. With
+/// FACTORY_INSTANCES_LIST=1 it also writes that list as the running Editor's types give it
+/// (types.txt), to regenerate the list for another release.
 /// </summary>
 static class FactoryInstancesProbe
 {
@@ -18,6 +21,7 @@ static class FactoryInstancesProbe
         var directory = Environment.GetEnvironmentVariable("FACTORY_INSTANCES_OUT");
         if (string.IsNullOrEmpty(directory)) return;
         var output = new StringBuilder();
+        if (Environment.GetEnvironmentVariable("FACTORY_INSTANCES_LIST") == "1") WriteList(directory);
         foreach (var name in s_Types)
         {
             var type = Type.GetType(name + ", UnityEngine") ?? Type.GetType(name + ", UnityEditor");
@@ -29,7 +33,11 @@ static class FactoryInstancesProbe
             {
                 var made = type == null ? null : ObjectFactory.CreateInstance(type);
                 value = type == null ? "<no type>" : made == null ? "null" : made.GetType().FullName + "|" + Quote(made.name) + "|" + (int)made.hideFlags;
-                if (made != null) state = State(made);
+                if (made != null)
+                {
+                    try { state = State(made); }
+                    catch (Exception e) { state = "|throws " + e.GetType().Name; }
+                }
             }
             catch (Exception e) { value = "throws " + e.GetType().Name + ": " + e.Message; }
             // What a made object holds has a row of its own.
@@ -40,6 +48,32 @@ static class FactoryInstancesProbe
         Directory.CreateDirectory(directory);
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
+    }
+
+    /// <summary>The engine object types without a public parameterless constructor, as the running
+    /// Editor's assemblies declare them, with whether a hidden one exists.</summary>
+    static void WriteList(string directory)
+    {
+        var names = new System.Collections.Generic.List<string>();
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            var an = assembly.GetName().Name;
+            if (!an.StartsWith("UnityEngine.", StringComparison.Ordinal) && !an.StartsWith("UnityEditor.", StringComparison.Ordinal)
+                && an != "UnityEngine" && an != "UnityEditor") continue;
+            Type[] all;
+            try { all = assembly.GetTypes(); }
+            catch (System.Reflection.ReflectionTypeLoadException e) { all = Array.FindAll(e.Types, x => x != null); }
+            foreach (var t in all)
+            {
+                if (!t.IsPublic || t.IsAbstract || !typeof(UnityEngine.Object).IsAssignableFrom(t) || typeof(Component).IsAssignableFrom(t)
+                    || t == typeof(GameObject) || typeof(ScriptableObject).IsAssignableFrom(t) || t.GetConstructor(Type.EmptyTypes) != null) continue;
+                var hidden = t.GetConstructor(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null;
+                names.Add(t.FullName + (hidden ? " hidden" : " none"));
+            }
+        }
+        names.Sort(StringComparer.Ordinal);
+        Directory.CreateDirectory(directory);
+        File.WriteAllLines(Path.Combine(directory, "types.txt"), names);
     }
 
     /// <summary>What a made object holds: a texture's size, format, mip count and readability and

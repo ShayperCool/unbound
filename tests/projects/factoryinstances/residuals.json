@@ -1,11 +1,15 @@
 {
-  "Unbound has no parameterless constructor for these engine types yet, so ObjectFactory.CreateInstance fails loudly with NotSupportedException where the Editor makes an unnamed default object": [
+  "The Editor makes these engine types with a default state Unbound does not give yet (empty, readable textures that take Apply, with graphics format 88 for Texture2D and Cubemap, a readable R8G8B8A8_UNorm custom render texture; a Preset; a SpeedTreeWindAsset), so Unbound fails loudly with NotSupportedException and records no state": [
     "UnityEditor.Presets.Preset",
     "UnityEngine.SparseTexture",
     "UnityEngine.SpeedTreeWindAsset",
-    "state.UnityEngine.SparseTexture"
-  ],
-  "A texture the factory makes has Unbound's empty default state, not the Editor's: Texture2D and Cubemap are readable with graphics format 88 and take Apply, the 3D, 2D array and cubemap array textures take Apply, a CustomRenderTexture is readable R8G8B8A8_UNorm; in Unbound Apply throws and Texture2D is not readable (the default textures are their classes' own, owned by the render module)": [
+    "UnityEngine.Cubemap",
+    "UnityEngine.CubemapArray",
+    "UnityEngine.CustomRenderTexture",
+    "UnityEngine.Texture2D",
+    "UnityEngine.Texture2DArray",
+    "UnityEngine.Texture3D",
+    "state.UnityEngine.SparseTexture",
     "state.UnityEngine.Cubemap",
     "state.UnityEngine.CubemapArray",
     "state.UnityEngine.CustomRenderTexture",

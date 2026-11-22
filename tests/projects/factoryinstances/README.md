@@ -17,8 +17,8 @@ MovieTexture, ProceduralMaterial and ProceduralTexture are not valid object type
 are empty (0x0), readable, and take Apply; Texture2D and Cubemap have graphics format 88; a custom
 render texture is 256x256 R8G8B8A8_UNorm without a material; a material has the error shader.
 
-Residuals (`residuals.json`): Preset, SparseTexture and SpeedTreeWindAsset, which Unbound cannot make
-yet; the made textures' state, which is Unbound's own default.
+Residuals (`residuals.json`): Preset, SpeedTreeWindAsset and the textures, whose default state Unbound
+does not give yet: they fail loudly. `FACTORY_INSTANCES_LIST=1` also writes the release's list (types.txt).
 
 ```sh
 python3 tests/projects/factoryinstances/run.py record --label a
