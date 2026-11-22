@@ -77,6 +77,7 @@ namespace UnityEditor
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             clip.m_ObjectCurves.RemoveAll(c => c.Binding.Path == (binding.path ?? "") && c.Binding.Attribute == binding.propertyName && c.Binding.Matches(binding.type));
             clip.m_BindingsBuilt = true;
+            clip.Compile();
             if (keyframes != null)
             {
                 var sorted = (ObjectReferenceKeyframe[])keyframes.Clone();
@@ -276,7 +277,7 @@ namespace UnityEditor
             if (type == null || !typeof(MonoBehaviour).IsAssignableFrom(type) || string.IsNullOrEmpty(propertyName)) return false;
             var field = ScriptField(type, propertyName);
             if (field == null) return false;
-            return field.FieldType.IsEnum || (field.FieldType == typeof(int) && field.IsDefined(typeof(DiscreteEvaluationAttribute), true));
+            return FieldGroup.IsDiscrete(field);
         }
 
         const string k_MaterialSlotPrefix = "m_Materials.Array.data[";
@@ -497,58 +498,97 @@ namespace UnityEditor
 
         static readonly string[] s_Vector = { "x", "y", "z" }, s_Quaternion = { "x", "y", "z", "w" };
 
-        /// <summary>A clip's curve counts: Transform properties count one curve per vector (all of
-        /// its components constant or not), other float curves each, object curves each (never
-        /// constant); a clip with any curve is one clip (measured, tests/projects/animatorapi
-        /// clip.*.stats). <c>size</c> is the memory of the Editor's compiled clip, which Unbound
-        /// does not build: it is the clip's key data size here, zero for an empty clip as there.</summary>
+        /// <summary>The curves the Editor compiled a clip to (nothing for a clip it has not
+        /// compiled, <see cref="AnimationClip.Compile"/>): a Transform vector is one curve per
+        /// component, every component keyed at the union of the vector's key times, and constant
+        /// only when all its components are; other float curves count each, object curves each
+        /// (never constant). A curve is constant when its keys have one value and no slope.
+        /// <c>size</c> is the compiled clip's memory: a fixed part, eight bytes a curve and four
+        /// more a constant one, and for the others (the streamed curves) eight bytes for each
+        /// distinct key time and twenty for each key, where float curves have one key and one time
+        /// more than they hold (the values before their first). Matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/animatorapi <c>clip.*.stats</c>, <c>stats.*</c>, <c>typed.stats</c>.
+        /// Unmeasured: dense curves (a model's compressed clips) and Humanoid muscle clips, whose
+        /// sizes follow the same sum here.</summary>
         internal static AnimationClipStats GetAnimationClipStats(AnimationClip clip)
         {
             var stats = new AnimationClipStats();
-            if (clip == null) return stats;
-            var vectors = new Dictionary<(string Path, string Head), (int Kind, bool Constant)>();
-            int keys = 0;
+            if (clip == null || !clip.m_Compiled) return stats;
+            var vectors = new Dictionary<(string Path, string Head), VectorStats>();
+            var times = new HashSet<float>();
+            int streamKeys = 0;
+            bool floatStream = false;
             foreach (var c in clip.CurvesAsImported())
             {
-                keys += c.Curve?.length ?? 0;
                 bool constant = IsConstant(c.Curve);
                 var attribute = c.Binding.Attribute ?? "";
                 int dot = attribute.LastIndexOf('.');
                 var head = dot < 0 ? attribute : attribute.Substring(0, dot);
-                int kind = c.Binding.ClassId == k_TransformClassId ? TransformKind(head) : -1;
+                int kind = c.Binding.ResolveType() == typeof(Transform) ? TransformKind(head) : -1;
                 if (kind >= 0)
                 {
                     var key = (c.Binding.Path ?? "", head);
-                    vectors[key] = vectors.TryGetValue(key, out var v) ? (kind, v.Constant && constant) : (kind, constant);
+                    if (!vectors.TryGetValue(key, out var v)) vectors[key] = v = new VectorStats { Kind = kind, Constant = true };
+                    v.Constant &= constant;
+                    for (int i = 0, n = c.Curve?.length ?? 0; i < n; i++) v.Times.Add(c.Curve[i].time);
                     continue;
                 }
                 if (c.Binding.ClassId == k_AnimatorClassId && Unbound.Runtime.Humanoid.HumanClipImport.CurveIndex(attribute) >= 0) stats.muscleCurves++;
                 else stats.genericCurves++;
                 stats.totalCurves++;
-                if (constant) stats.constantCurves++;
+                if (constant)
+                {
+                    stats.constantCurves++;
+                    continue;
+                }
+                floatStream = true;
+                streamKeys += (c.Curve?.length ?? 0) + 1;
+                for (int i = 0, n = c.Curve?.length ?? 0; i < n; i++) times.Add(c.Curve[i].time);
             }
-            foreach (var (kind, constant) in vectors.Values)
+            foreach (var v in vectors.Values)
             {
-                int components = kind == 1 ? 4 : 3;
-                if (kind == 0) stats.positionCurves++;
-                else if (kind == 1) stats.quaternionCurves++;
-                else if (kind == 2) stats.eulerCurves++;
+                int components = v.Kind == 1 ? 4 : 3;
+                if (v.Kind == 0) stats.positionCurves++;
+                else if (v.Kind == 1) stats.quaternionCurves++;
+                else if (v.Kind == 2) stats.eulerCurves++;
                 else stats.scaleCurves++;
                 stats.totalCurves += components;
-                if (constant) stats.constantCurves += components;
+                if (v.Constant)
+                {
+                    stats.constantCurves += components;
+                    continue;
+                }
+                floatStream = true;
+                streamKeys += components * (v.Times.Count + 1);
+                times.UnionWith(v.Times);
             }
-            foreach (var c in clip.m_ObjectCurves) keys += c.Times.Length;
+            foreach (var c in clip.m_ObjectCurves)
+            {
+                streamKeys += c.Times.Length;
+                foreach (float t in c.Times) times.Add(t);
+            }
             stats.pptrCurves = clip.m_ObjectCurves.Count;
             stats.totalCurves += stats.pptrCurves;
             stats.streamCurves = stats.totalCurves - stats.constantCurves - stats.denseCurves;
-            stats.clips = stats.totalCurves > 0 ? 1 : 0;
-            stats.size = stats.totalCurves > 0 ? keys * k_KeyBytes : 0;
+            if (stats.totalCurves == 0) return stats;
+            stats.clips = 1;
+            stats.size = k_ClipBytes + k_CurveBytes * stats.totalCurves + k_ConstantBytes * stats.constantCurves
+                + k_FrameBytes * (times.Count + (floatStream ? 1 : 0)) + k_KeyBytes * streamKeys;
             return stats;
         }
 
-        // The class ids of Transform and Animator; the bytes of a key (time, value and two
-        // tangents as floats) in the size Unbound reports.
-        const int k_TransformClassId = 4, k_AnimatorClassId = 95, k_KeyBytes = 16;
+        /// <summary>A Transform vector's curves in a clip's stats.</summary>
+        sealed class VectorStats
+        {
+            internal int Kind;
+            internal bool Constant;
+            internal readonly HashSet<float> Times = new HashSet<float>();
+        }
+
+        // The class ids of Transform and Animator; the compiled clip's sizes in bytes (see
+        // GetAnimationClipStats): its fixed part, a curve, a constant curve's value, a streamed
+        // key time and a streamed key.
+        const int k_TransformClassId = 4, k_AnimatorClassId = 95, k_ClipBytes = 2536, k_CurveBytes = 8, k_ConstantBytes = 4, k_FrameBytes = 8, k_KeyBytes = 20;
 
         /// <summary>0 position, 1 rotation, 2 Euler angles, 3 scale; -1 another Transform property.</summary>
         static int TransformKind(string head) => head switch
@@ -564,8 +604,11 @@ namespace UnityEditor
         {
             if (curve == null || curve.length == 0) return true;
             float first = curve[0].value;
-            for (int i = 1; i < curve.length; i++)
-                if (curve[i].value != first) return false;
+            for (int i = 0; i < curve.length; i++)
+            {
+                var key = curve[i];
+                if (key.value != first || key.inTangent != 0f || key.outTangent != 0f) return false;
+            }
             return true;
         }
     }

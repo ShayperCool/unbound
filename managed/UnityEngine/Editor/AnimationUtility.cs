@@ -196,6 +196,7 @@ namespace UnityEditor
                 }
             }
             clip.m_BindingsBuilt = true;
+            clip.Compile();
             clip.m_EditorCurvesSynced = true;
             clip.m_Version++;
             CurveWasModified(clip, binding, curve != null ? CurveModifiedType.CurveModified : CurveModifiedType.CurveDeleted);
@@ -268,7 +269,7 @@ namespace UnityEditor
             if (target is Renderer renderer && propertyName == "m_Enabled") return renderer.enabled ? 1f : 0f;
             using var so = new SerializedObject(target);
             var p = so.FindProperty(propertyName);
-            if (p == null) return null;
+            if (p == null) return AnimatedGroup(target, propertyName, out int member) is PropertyGroup group ? ReadMember(group, member) : (float?)null;
             switch (p.propertyType)
             {
                 case SerializedPropertyType.Float: return p.floatValue;
@@ -276,6 +277,42 @@ namespace UnityEditor
                 case SerializedPropertyType.Boolean: return p.boolValue ? 1f : 0f;
                 default: return null;
             }
+        }
+
+        /// <summary>An engine component's number as animation binds it (a Light's
+        /// <c>m_Color.r</c>), for the properties its SerializedObject does not hold here: the
+        /// property's group and the member's place in it, or null (a script, or no such animated
+        /// property, which the binder reports once).</summary>
+        static PropertyGroup AnimatedGroup(Object target, string propertyName, out int member)
+        {
+            member = 0;
+            if (target is not Component component || target is MonoBehaviour || component.m_GameObject == null) return null;
+            var bindings = new AnimationBindings(component.m_GameObject, curvesOnly: true);
+            int channel = bindings.BindChannel(CurveBinding.ForType("", propertyName, target.GetType()), objectValued: false);
+            if (channel < 0) return null;
+            var group = bindings.FloatOwner[channel];
+            if (!ReferenceEquals(group.Target, target)) return null;
+            member = channel - group.First;
+            return group;
+        }
+
+        static float ReadMember(PropertyGroup group, int member)
+        {
+            var values = new float[group.First + group.Width];
+            group.Read(values, group.First);
+            return values[group.First + member];
+        }
+
+        /// <summary>Sets such a number (see <see cref="AnimatedGroup"/>); false when animation does
+        /// not bind the property.</summary>
+        internal static bool SetAnimatedValue(Object target, string propertyName, float value)
+        {
+            if (AnimatedGroup(target, propertyName, out int member) is not PropertyGroup group) return false;
+            var values = new float[group.First + group.Width];
+            group.Read(values, group.First);
+            values[group.First + member] = value;
+            group.Write(values, group.First);
+            return true;
         }
 
         /// <summary>The bindings the animation window offers for an object: its Transform's
@@ -346,6 +383,7 @@ namespace UnityEditor
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             if (srcClipInfo == null) throw new ArgumentNullException(nameof(srcClipInfo));
             clip.m_BindingsBuilt = true;
+            clip.Compile();
             clip.m_HasRange = true;
             clip.m_StartTime = srcClipInfo.startTime;
             clip.m_StopTime = srcClipInfo.stopTime;
@@ -401,6 +439,7 @@ namespace UnityEditor
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             clip.events = events ?? Array.Empty<AnimationEvent>();
             clip.m_BindingsBuilt = true;
+            clip.Compile();
             // The clip changed as a whole; the binding names no curve but has the Object type (measured).
             CurveWasModified(clip, new EditorCurveBinding { type = typeof(Object) }, CurveModifiedType.ClipModified);
         }

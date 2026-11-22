@@ -20,9 +20,11 @@ namespace UnityEditor
     /// it on, sampling a clip records each property it animates before writing it, as does
     /// AddEditorCurveBinding (with the current value); stopping the last driver writes the recorded values back. Measured in
     /// Unity 6000.0.71f1, tests/projects/animatorapi mode.*: a driver that did not start it stops
-    /// nothing; sampling outside the mode throws; a property counts as animated when it or a
-    /// component of it was recorded. Object curves are not sampled (the measured clip's
-    /// script reference kept its value).
+    /// nothing; sampling outside the mode throws. A property counts as animated when it was
+    /// recorded, and a Transform's vector when one of its components was (a script's or a Light's
+    /// struct does not: <c>typed.mode.*.animated</c>, <c>modify.plain.animated</c>,
+    /// <c>modify.text.animated</c>). A sampled clip's object curves are recorded but not applied,
+    /// whatever their property (<c>typed.mode.*</c>).
     /// </summary>
     public partial class AnimationMode
     {
@@ -39,6 +41,9 @@ namespace UnityEditor
             internal float Value;
             internal bool IsObject;
             internal Object ObjectValue;
+            /// <summary>A property modification's value as given: what a text property takes back.</summary>
+            internal bool IsText;
+            internal string Text;
         }
 
         static readonly List<Recorded> s_Recorded = new List<Recorded>();
@@ -92,7 +97,7 @@ namespace UnityEditor
                 {
                     if (!transforms.Contains(t)) transforms.Add(t);
                 }
-                else Write(r.Target, r.Path, r.Value);
+                else Write(r.Target, r.Path, r.Value, r.IsText, r.Text);
             }
             foreach (var t in transforms) RestoreTransform(t);
             s_Recorded.Clear();
@@ -107,8 +112,9 @@ namespace UnityEditor
         public static bool IsPropertyAnimated(Object target, string propertyPath)
         {
             if (target == null || propertyPath == null) return false;
+            bool vector = target is Transform;
             foreach (var r in s_Recorded)
-                if (ReferenceEquals(r.Target, target) && (r.Path == propertyPath || r.Path.Length > propertyPath.Length
+                if (ReferenceEquals(r.Target, target) && (r.Path == propertyPath || vector && r.Path.Length > propertyPath.Length
                     && r.Path.StartsWith(propertyPath, StringComparison.Ordinal) && r.Path[propertyPath.Length] == '.'))
                     return true;
             return false;
@@ -125,6 +131,13 @@ namespace UnityEditor
                 var binding = EditorCurveBinding.FloatCurve(curve.Binding.Path, curve.Binding.ResolveType(), curve.Binding.Attribute);
                 Record(AnimationUtility.GetAnimatedObject(gameObject, binding), binding.propertyName);
             }
+            foreach (var binding in AnimationUtility.GetObjectReferenceCurveBindings(clip))
+            {
+                var target = AnimationUtility.GetAnimatedObject(gameObject, binding);
+                if (target == null || IsRecorded(target, binding.propertyName)) continue;
+                AnimationUtility.GetObjectReferenceValue(gameObject, binding, out var current);
+                s_Recorded.Add(new Recorded { Target = target, Path = binding.propertyName, IsObject = true, ObjectValue = current });
+            }
             clip.SampleAnimation(gameObject, time);
         }
 
@@ -134,10 +147,16 @@ namespace UnityEditor
             Record(AnimationUtility.GetAnimatedObject(gameObject, binding), binding.propertyName);
         }
 
-        /// <summary>Registers a property modification to revert when animation mode stops (first
-        /// registration for a target/property wins; throws outside animation mode or on null
-        /// modification/target; matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/animatorapi <c>mode.*</c>, tests/projects/animrest <c>propmod.add.*</c>).</summary>
+        /// <summary>Registers a property modification to revert when animation mode stops: the
+        /// property then takes the modification's value, not the one it had (first registration
+        /// for a target/property wins; throws outside animation mode or on null
+        /// modification/target). A number, bool or enum takes the value read as a number, 0 when
+        /// it is none ("", null, "x", "true", an enum's name); a text property the value itself
+        /// ("" for null); an object property the object. A property the target does not have is
+        /// recorded all the same. <paramref name="keepPrefabOverride"/> changed nothing on prefab
+        /// instances with and without overrides. Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/animatorapi <c>mode.*</c>, <c>modify.*</c>, tests/projects/animrest
+        /// <c>propmod.add.*</c>. Unmeasured: number text with spaces, exponents or a suffix.</summary>
         public static void AddPropertyModification(EditorCurveBinding binding, PropertyModification modification, bool keepPrefabOverride)
         {
             if (!InAnimationMode())
@@ -151,14 +170,8 @@ namespace UnityEditor
                 s_Recorded.Add(new Recorded { Target = modification.target, Path = path, IsObject = true, ObjectValue = modification.objectReference });
                 return;
             }
-            if (TryParseModificationFloat(modification.value, out float parsed))
-            {
-                s_Recorded.Add(new Recorded { Target = modification.target, Path = path, Value = parsed });
-            }
-            else if (Read(modification.target, path) is float current)
-            {
-                s_Recorded.Add(new Recorded { Target = modification.target, Path = path, Value = current });
-            }
+            float.TryParse(modification.value, NumberStyles.Float, CultureInfo.InvariantCulture, out float number);
+            s_Recorded.Add(new Recorded { Target = modification.target, Path = path, Value = number, IsText = true, Text = modification.value });
         }
 
         static bool IsObjectReferenceProperty(Object target, string path)
@@ -169,16 +182,6 @@ namespace UnityEditor
             using var so = new SerializedObject(target);
             var p = so.FindProperty(path);
             return p != null && p.propertyType == SerializedPropertyType.ObjectReference;
-        }
-
-        static bool TryParseModificationFloat(string text, out float value)
-        {
-            value = 0f;
-            if (string.IsNullOrEmpty(text)) return false;
-            if (float.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out value)) return true;
-            if (string.Equals(text, "true", StringComparison.OrdinalIgnoreCase)) { value = 1f; return true; }
-            if (string.Equals(text, "false", StringComparison.OrdinalIgnoreCase)) { value = 0f; return true; }
-            return false;
         }
 
         /// <summary>The bindings animation mode records for a clip: non-Transform float curves,
@@ -275,7 +278,7 @@ namespace UnityEditor
 
         /// <summary>Writes a recorded number back: a GameObject's active state, else the
         /// serialized property.</summary>
-        static void Write(Object target, string path, float value)
+        static void Write(Object target, string path, float value, bool isText, string text)
         {
             if (target is GameObject go)
             {
@@ -289,15 +292,22 @@ namespace UnityEditor
             }
             using var so = new SerializedObject(target);
             var p = so.FindProperty(path);
-            if (p == null) return;
+            if (p == null)
+            {
+                AnimationUtility.SetAnimatedValue(target, path, value);
+                return;
+            }
             switch (p.propertyType)
             {
                 case SerializedPropertyType.Float: p.floatValue = value; break;
                 case SerializedPropertyType.Integer: case SerializedPropertyType.Enum: p.intValue = (int)value; break;
                 case SerializedPropertyType.Boolean: p.boolValue = value != 0f; break;
+                case SerializedPropertyType.String when isText: p.stringValue = text ?? ""; break;
                 default: return;
             }
-            so.ApplyModifiedPropertiesWithoutUndo();
+            // The mode's own write, not an edit: a prefab instance gets no override from it
+            // (tests/projects/animatorapi modify.*.after; whether it dirties is unmeasured).
+            so.ApplyQuietly();
         }
 
         /// <summary>Writes a recorded object reference back to the target.</summary>
@@ -323,7 +333,7 @@ namespace UnityEditor
             if (p != null && p.propertyType == SerializedPropertyType.ObjectReference)
             {
                 p.objectReferenceValue = value;
-                so.ApplyModifiedPropertiesWithoutUndo();
+                so.ApplyQuietly();
             }
         }
 
