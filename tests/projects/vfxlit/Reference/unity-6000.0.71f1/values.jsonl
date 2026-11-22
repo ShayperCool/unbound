@@ -40,6 +40,7 @@
 {"k":"renderer/lit 2d","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitMatte/System (1)/Output Particle|URP Lit|Quad"}
 {"k":"renderer/mesh 2d","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MeshUnlit/System (1)/Output Particle|Unlit Mesh"}
 {"k":"renderer/graph legacy mesh","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/GraphLegacyMesh/System (1)/Output Particle|Unlit Mesh"}
+{"k":"renderer/graph lit","v":"cast=On receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/GraphLit/System (1)/Output Particle|Shader Graph Quad - Lit"}
 {"k":"renderer/no asset","v":"cast=Off receive=0 motion=Camera materials=0"}
 {"k":"renderer/asset given","v":"cast=On receive=0 motion=Camera materials=1"}
 {"k":"renderer/asset taken","v":"cast=Off receive=0 motion=Camera materials=0"}
@@ -93,6 +94,7 @@
 {"k":"draw/lit 2d/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh 2d/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/graph legacy mesh/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/graph lit/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"act/mesh paused/f006","v":"pause=1"}
 {"k":"act/mesh exposed/f006","v":"Mask=1 -> Shape=Wedge Mask=1"}
 {"k":"draw/curve output/f006","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}

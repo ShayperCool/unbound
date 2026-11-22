@@ -1172,6 +1172,9 @@ namespace UnityEngine.Tests
             Assert.Null(VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"MotionVectors\"")));
             Assert.Equal("its pass 'DBufferProjectorVFX' is not drawn yet", VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"DBufferProjectorVFX\"")));
             Assert.Equal("its pass 'DBufferProjectorVFX' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"DepthOnly\"", "\"DBufferProjectorVFX\"")));
+            // A lit Shader Graph output's lightmapper pass, which no camera draws, does not keep
+            // the output from being drawn (tests/projects/vfxlit `graph lit`).
+            Assert.Null(VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"Meta\"")));
             // A Shader Graph output of a 2D sprite graph: its sprite and normals passes are drawn
             // by the 2D renderer, its forward pass by the others.
             const string sprite = "Shader \"Hidden/VFX/G/S/Output Particle|Shader Graph Quad - Sprite Lit\" { SubShader { Pass { Tags { \"LightMode\"=\"Universal2D\" } }\n"

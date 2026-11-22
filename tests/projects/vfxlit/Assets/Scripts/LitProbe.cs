@@ -180,6 +180,9 @@ public sealed class LitProbe : MonoBehaviour
             // Meshes drawn by a graph of the older target that samples its node's default
             // texture.
             Draw("graph legacy mesh", "GraphLegacyMesh", 5);
+            // Quads drawn by a lit graph of the render pipeline (its passes include the
+            // lightmapper's, which no camera draws), under a point light.
+            Lamp(Draw("graph lit", "GraphLit", 5), LightType.Point);
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)

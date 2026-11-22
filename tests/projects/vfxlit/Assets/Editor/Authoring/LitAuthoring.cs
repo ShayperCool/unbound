@@ -1,12 +1,14 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEditor.VFX;
 using UnityEditor.VFX.Block;
 using UnityEditor.ShaderGraph;
 using UnityEditor.ShaderGraph.Internal;
+using UnityEditor.Rendering.Universal.ShaderGraph;
 using UnityEditor.VFX.URP;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -369,6 +371,10 @@ public static class LitAuthoring
     /// particles itself: the probe's copy of it does.</summary>
     const string DefaultGraph = "Packages/com.unity.visualeffectgraph/ShaderGraph/VFXDefault.shadergraph";
     const string UnlitGraph = GraphFolder + "/Unlit.shadergraph";
+    /// <summary>The render pipeline's lit graph (URP Lit, opaque, its default surface), its
+    /// support for particles on, its base colour the probe's image through a texture property
+    /// of its own.</summary>
+    const string LitGraph = GraphFolder + "/Lit.shadergraph";
 
     static ShaderGraphVfxAsset ShaderGraph(string path) =>
         AssetDatabase.LoadAllAssetsAtPath(path).OfType<ShaderGraphVfxAsset>().FirstOrDefault()
@@ -405,6 +411,18 @@ public static class LitAuthoring
         Save(Drawn<VFXComposedParticleOutput>("SpriteLit", SpriteLitGraph).Item1);
         Save(Drawn<VFXComposedParticleOutput>("SpriteUnlit", SpriteUnlitGraph).Item1);
         Save(Drawn<VFXComposedParticleOutput>("GraphUnlit", UnlitGraph).Item1);
+        // A lit graph of the render pipeline: besides the passes cameras draw, it has the
+        // lightmapper's (`Meta`).
+        var lit = new UniversalTarget();
+        lit.TrySetActiveSubTarget(typeof(UniversalLitSubTarget));
+        typeof(UniversalTarget).GetField("m_SupportVFX", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(lit, true);
+        WriteImageGraph(LitGraph, lit, new[]
+        {
+            BlockFields.VertexDescription.Position, BlockFields.VertexDescription.Normal, BlockFields.VertexDescription.Tangent,
+            BlockFields.SurfaceDescription.BaseColor, BlockFields.SurfaceDescription.NormalTS, BlockFields.SurfaceDescription.Metallic,
+            BlockFields.SurfaceDescription.Smoothness, BlockFields.SurfaceDescription.Emission, BlockFields.SurfaceDescription.Occlusion,
+        }, true);
+        Save(Drawn<VFXComposedParticleOutput>("GraphLit", LitGraph).Item1);
         // The graph given to `Output Particle Quad` instead, whose own setting takes it.
         Save(Drawn<VFXPlanarPrimitiveOutput>("SpriteClassic", SpriteLitGraph).Item1);
         // The output of the probe's other unlit quads, without a Shader Graph, through the 2D
@@ -429,11 +447,17 @@ public static class LitAuthoring
     const string LegacyGraph = GraphFolder + "/Legacy.shadergraph";
     const string LegacyDefaultGraph = GraphFolder + "/LegacyDefault.shadergraph";
 
-    static void WriteLegacyGraph(string path, bool property)
+    static void WriteLegacyGraph(string path, bool property) =>
+        WriteImageGraph(path, new VFXTarget(), new[] { BlockFields.SurfaceDescription.BaseColor, BlockFields.SurfaceDescription.Alpha }, property);
+
+    /// <summary>A graph of the target with those blocks whose base colour is the probe's image,
+    /// sampled through a texture property of the graph's own or as the default texture of the
+    /// sampling node.</summary>
+    static void WriteImageGraph(string path, Target target, BlockFieldDescriptor[] blocks, bool property)
     {
         var graph = new GraphData();
         graph.AddContexts();
-        graph.InitializeOutputs(new Target[] { new VFXTarget() }, new[] { BlockFields.SurfaceDescription.BaseColor, BlockFields.SurfaceDescription.Alpha });
+        graph.InitializeOutputs(new[] { target }, blocks);
         graph.AddCategory(CategoryData.DefaultCategory());
         graph.path = "Shader Graphs";
         var sample = new SampleTexture2DNode();

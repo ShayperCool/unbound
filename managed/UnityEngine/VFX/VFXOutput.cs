@@ -192,10 +192,12 @@ namespace Unbound.Runtime
         /// outputs lit by 2D lights and unlit (tests/projects/vfxlit, `sprite*`). The motion
         /// vectors pass, measured for an opaque unlit quad output (tests/projects/vfxoutputs
         /// `MovingVectors`); a lit output's is admitted with it, not measured. The selection
-        /// and picking passes are the Editor's own.</summary>
+        /// and picking passes are the Editor's own, and the meta pass of a lit Shader Graph
+        /// output is the lightmapper's: no camera draws it (tests/projects/vfxlit `graph
+        /// lit`).</summary>
         static readonly string[] s_DrawnPasses =
         {
-            "UniversalForwardOnly", "UniversalForward", "UniversalGBuffer", "DepthOnly", "DepthNormals", "DepthNormalsOnly", "ShadowCaster", "SceneSelectionPass", "Picking", "Universal2D", "NormalsRendering", "MotionVectors",
+            "UniversalForwardOnly", "UniversalForward", "UniversalGBuffer", "DepthOnly", "DepthNormals", "DepthNormalsOnly", "ShadowCaster", "SceneSelectionPass", "Picking", "Universal2D", "NormalsRendering", "MotionVectors", "Meta",
         };
 
         /// <summary>The define the graph compiler writes into the shader of an output that the

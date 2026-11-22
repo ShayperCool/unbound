@@ -75,6 +75,10 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
   a texture property of its own. `GraphLegacyMesh`: wedges of `Output Particle Mesh` drawn by
   `Assets/Graphs/LegacyDefault.shadergraph`, the same graph sampling the image as its sampling
   node's default texture (a texture slot nothing feeds).
+- `GraphLit`: quads of `Output Particle ShaderGraph Quad` drawn by `Assets/Graphs/Lit.shadergraph`,
+  the render pipeline's lit graph (URP Lit, opaque, its default surface) written with its
+  support for particles on, its base colour the probe's image through a texture property of its
+  own. Such a graph has the lightmapper's pass (`Meta`) besides the passes cameras draw.
 
 `Assets/Objects/Spike.asset` is a second mesh, of one submesh. The project names its own URP
 global settings (`Assets/UniversalRenderPipelineGlobalSettings.asset`, with its default volume
@@ -164,6 +168,9 @@ effect's alive count, whether it is culled and awake, its renderer's state).
   captures differed), so no image of it is kept, and Unbound does not draw such an output.
 - `graph legacy`: the older target's graph, through the forward renderer. `graph legacy mesh`:
   the older target's graph of a default texture on meshes.
+- `graph lit`: `GraphLit` under a point light through the forward renderer: the output is drawn
+  as its lit graph has it; its lightmapper pass is drawn by no camera. Six pixels where two
+  quads or two quarters of the image meet differ by at most 3 levels (`image_limits.json`).
 - `lit 2d`, `mesh 2d`: `LitMatte` and `MeshUnlit` through the 2D renderer: the lit quads draw
   nothing there (no pass of theirs is one the 2D renderer draws), the meshes are drawn.
 - `capture/graphs imported while playing` must be empty (a capture where it is not stays
@@ -178,6 +185,8 @@ in a few pixels on shadow edges. `image_limits.json` records the residuals as me
 cause is not resolved: the control without an effect has them too, so the pipeline's shadows
 of the scene's own objects differ at caster edges already; whether the effects' shadow pass
 adds to that is not separated.
+`graph lit` differs in six pixels where two quads or two quarters of the image meet, by at most
+3 levels (cause not resolved; the unlit graph's and the lit output's own quads match exactly).
 
 ## Not covered
 
