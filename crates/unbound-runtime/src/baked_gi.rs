@@ -1160,6 +1160,236 @@ mod tests {
         );
     }
 
+    fn image(width: usize, height: usize, bytes: &[u8]) -> ImageData {
+        ImageData {
+            width,
+            height,
+            data: base64::engine::general_purpose::STANDARD.encode(bytes),
+        }
+    }
+
+    #[test]
+    fn material_images_are_read_by_level_and_one_value_is_one_texel() {
+        // Albedo: each level's measured value, and whether the texel is drawn.
+        let two = image(2, 1, &[0, 127, 252, 255, 255, 15, 0, 0])
+            .albedo("r")
+            .unwrap();
+        assert_eq!((two.width, two.height), (2, 1));
+        assert_eq!(
+            two.texels[0],
+            [
+                levels::albedo(0),
+                levels::albedo(127),
+                levels::albedo(252),
+                1.0
+            ]
+        );
+        // No level above 252 occurs; one takes the last value.
+        assert_eq!(
+            two.texels[1],
+            [
+                levels::albedo(252),
+                levels::albedo(15),
+                levels::albedo(0),
+                0.0
+            ]
+        );
+        assert!((levels::albedo(127) - 0.213_277_2).abs() < 1e-7 && levels::albedo(0) > 0.0);
+        // Every texel the same: one texel.
+        let same = image(2, 2, &[9, 9, 9, 255].repeat(4)).albedo("r").unwrap();
+        assert_eq!((same.width, same.height, same.texels.len()), (1, 1, 1));
+        // Emission: floats as they are.
+        let floats: Vec<u8> = [1.5f32, 0.25, 0.0, 1.0, 3.0, 0.0, 0.0, 1.0]
+            .iter()
+            .flat_map(|v| v.to_le_bytes())
+            .collect();
+        let glow = image(1, 2, &floats).emissive("r").unwrap();
+        assert_eq!(
+            glow.texels,
+            vec![[1.5, 0.25, 0.0, 1.0], [3.0, 0.0, 0.0, 1.0]]
+        );
+        // A size the data does not have, and no size, are refused with the renderer's name.
+        let error = image(2, 2, &[0; 8]).albedo("Wall").unwrap_err().to_string();
+        assert!(
+            error.contains("'Wall'") && error.contains("2 x 2"),
+            "{error}"
+        );
+        assert!(image(0, 1, &[]).emissive("r").is_err());
+        assert!(
+            ImageData {
+                width: 1,
+                height: 1,
+                data: "?".into()
+            }
+            .albedo("r")
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn the_layout_gives_each_renderer_its_material_images_size() {
+        let out = bake(
+            request(
+                vec![quad_mesh(
+                    &[0.0, 0.0, 0.5, 0.0, 0.5, 0.25, 0.0, 0.25],
+                    &BACK,
+                )],
+                vec![
+                    renderer("lit", 244122856, 0, 1.0, 0.2),
+                    renderer("zero", 879057353, 0, 0.0, 0.0),
+                ],
+            ),
+            None,
+        )
+        .unwrap();
+        // A unit quad at 10 texels a unit is 100 texels, laid out as its lightmap UVs' bounds
+        // are shaped, twice as wide as high: 14 by 7 whole texels. The bounds are brought to
+        // 0..1.
+        assert_eq!(out["placements"][0]["image"], json!([14, 7]));
+        let st: Vec<f64> = out["placements"][0]["imageScaleOffset"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_f64().unwrap())
+            .collect();
+        assert_eq!(st, [2.0, 4.0, 0.0, 0.0]);
+        // Scale In Lightmap 0: one texel.
+        assert_eq!(out["placements"][1]["image"], json!([1, 1]));
+    }
+
+    #[test]
+    fn the_indirect_light_is_baked_from_the_material_images() {
+        let folder =
+            std::env::temp_dir().join(format!("unbound-baked-gi-indirect-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&folder);
+        std::fs::create_dir_all(&folder).unwrap();
+        let blue_noise = folder.join("bluenoisedata");
+        std::fs::write(
+            &blue_noise,
+            vec![0u8; unbound_gi::baked::sampling::BLUE_NOISE_BYTES],
+        )
+        .unwrap();
+        // A floor facing up (z) and a ceiling over it facing down that glows.
+        let floor = json!({
+            "positions": floats(&[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0]),
+            "normals": floats(&[0.0, 0.0, 1.0].repeat(4)),
+            "uv": floats(&[]),
+            "uv2": floats(&UNIT),
+            "submeshes": [encoded(&[0u32, 1, 2, 0, 2, 3], u32::to_le_bytes)],
+        });
+        let ceiling = json!({
+            "positions": floats(&[-50.0, -50.0, 2.0, -50.0, 50.0, 2.0, 50.0, 50.0, 2.0, 50.0, -50.0, 2.0]),
+            "normals": floats(&[0.0, 0.0, -1.0].repeat(4)),
+            "uv": floats(&[]),
+            "uv2": floats(&UNIT),
+            "submeshes": [encoded(&[0u32, 1, 2, 0, 2, 3], u32::to_le_bytes)],
+        });
+        let black =
+            json!({ "width": 1, "height": 1, "data": encoded(&[0u8, 0, 0, 255], u8::to_le_bytes) });
+        let dark = json!({ "width": 1, "height": 1, "data": floats(&[0.0, 0.0, 0.0, 1.0]) });
+        let glow = json!({ "width": 1, "height": 1, "data": floats(&[3.0, 2.0, 1.0, 1.0]) });
+        let run = |materials: Json, blue: &Path, layout_only: bool| -> Result<Json> {
+            let mut value = json!({
+                "maxSize": 64, "padding": 2, "resolution": 4.0, "fixedSize": false,
+                "scene": "10000000200000003000000040000000",
+                "meshes": [floor, ceiling],
+                "renderers": [renderer("floor", 11, 0, 1.0, 0.0), renderer("ceiling", 22, 1, 0.0, 0.0)],
+                "layoutOnly": layout_only,
+            });
+            if !materials.is_null() {
+                value["indirect"] = json!({
+                    "samples": 16, "maxBounces": 1, "minBounces": 1,
+                    "blueNoise": blue.to_string_lossy(), "materials": materials,
+                });
+            }
+            bake(serde_json::from_value(value).unwrap(), Some(&folder))
+        };
+        let both = json!([
+            { "albedo": black, "emissive": dark, "doubleSided": [false] },
+            { "albedo": black, "emissive": glow, "doubleSided": [false] },
+        ]);
+        let out = run(both.clone(), &blue_noise, false).unwrap();
+        let dump = folder.join("10000000200000003000000040000000");
+        let description: Json =
+            serde_json::from_slice(&std::fs::read(dump.join("buffers.json")).unwrap()).unwrap();
+        assert_eq!(description["indirect"]["samples"], json!(16));
+        assert_eq!(
+            description["indirect"]["materials"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+        // The floor's lightmap: every used texel has the ceiling's glow, and no ray met a back.
+        let order: Vec<u64> = out["order"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_u64().unwrap())
+            .collect();
+        let lightmap = out["placements"][0]["lightmap"].as_u64().unwrap();
+        let light = read_floats(&dump.join(format!("irradianceIndirect{lightmap}.f32")));
+        let used: Vec<&[f32]> = light.chunks_exact(4).filter(|t| t[3] == 1.0).collect();
+        assert!(!used.is_empty() && order.len() == 2);
+        // (The ceiling, with Scale In Lightmap 0, keeps one texel of the lightmap: its rays
+        // go down to the black floor.)
+        let glowing = |t: &&[f32]| {
+            (t[0] - 3.0).abs() < 1e-4 && (t[1] - 2.0).abs() < 1e-4 && (t[2] - 1.0).abs() < 1e-4
+        };
+        let others: Vec<&[f32]> = used.iter().copied().filter(|t| !glowing(t)).collect();
+        assert!(used.len() > 4 && others.len() <= 1, "{others:?}");
+        assert!(
+            others.iter().all(|t| t[..3] == [0.0, 0.0, 0.0]),
+            "{others:?}"
+        );
+        assert!(
+            read_floats(&dump.join(format!("validity{lightmap}.f32")))
+                .iter()
+                .all(|&v| v == 0.0)
+        );
+        // Only the layout: nothing is written. Without materials: the direct light alone,
+        // and an earlier bake's indirect light is gone.
+        std::fs::remove_dir_all(&dump).unwrap();
+        run(both.clone(), &blue_noise, true).unwrap();
+        assert!(!dump.exists());
+        run(Json::Null, &blue_noise, false).unwrap();
+        assert!(
+            dump.join(format!("irradianceDirect{lightmap}.f32"))
+                .is_file()
+        );
+        assert!(
+            !dump
+                .join(format!("irradianceIndirect{lightmap}.f32"))
+                .exists()
+        );
+        // Images for another number of renderers, and blue noise data that is not there or
+        // of another size, are refused, named.
+        let error = run(json!([both[0]]), &blue_noise, false)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains("1 material images for 2 renderers"),
+            "{error}"
+        );
+        let error = format!(
+            "{:#}",
+            run(both.clone(), &folder.join("none"), false).unwrap_err()
+        );
+        assert!(error.contains("blue noise data"), "{error}");
+        std::fs::write(&blue_noise, [0u8; 10]).unwrap();
+        let error = run(both, &blue_noise, false).unwrap_err().to_string();
+        assert!(error.contains("10 bytes"), "{error}");
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    fn read_floats(path: &Path) -> Vec<f32> {
+        std::fs::read(path)
+            .unwrap()
+            .chunks_exact(4)
+            .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+            .collect()
+    }
+
     #[test]
     fn guid_text_is_low_digit_first() {
         assert_eq!(
