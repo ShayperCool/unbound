@@ -18,8 +18,9 @@ namespace UnityEngine
     /// active GameObjects with Contribute Global Illumination, Receive Global Illumination
     /// Lightmaps and a Scale In Lightmap above 0, made from the scene file. A renderer that cannot be laid out (no mesh, a
     /// submesh that is not triangles) is left out and named; Lightmap Parameters that cannot be
-    /// read, a built-in one other than Default-Medium or one with Limit Lightmap Count leave the
-    /// scene without a layout (said once).</para>
+    /// read, a built-in one other than Default-Medium or one with Limit Lightmap Count, and a
+    /// lightmapped Terrain leave the scene without a layout (said once). A mesh without UVs is laid
+    /// out as one texel (said; not measured).</para>
     /// </summary>
     internal static class BakedAtlas
     {
@@ -116,6 +117,16 @@ namespace UnityEngine
             return ordered;
         }
 
+        /// <summary>The scene file's GUID, or null (said once) when it has none.</summary>
+        static string SceneGuid(LoadedFile file)
+        {
+            string guid = file.Guid;
+            if (string.IsNullOrEmpty(guid)) guid = UnityEditor.AssetDatabase.AssetPathToGUID(file.Path);
+            if (!string.IsNullOrEmpty(guid)) return guid;
+            Warn("guid:" + file.Path, $"{file.Path}: a scene without a GUID; Unbound does not lay out its baked lightmaps (Lightmapping.Bake).");
+            return null;
+        }
+
         static string HierarchyPath(Transform t)
         {
             var parts = new List<string>();
@@ -125,18 +136,21 @@ namespace UnityEngine
         }
 
         /// <summary>Lays out the baked lightmaps of the scene made from <paramref name="file"/> (Lightmapping.Bake in Edit
-        /// mode) and writes the layout; nothing when its settings have baked global illumination off.</summary>
+        /// mode) and writes the layout; nothing when its settings have baked global illumination off or
+        /// no renderer of it is lightmapped.</summary>
         internal static void Lay(LoadedFile file, LightingSettings settings)
         {
             settings ??= UnityEditor.Lightmapping.lightingSettingsDefaults;
             if (!settings.bakedGI) return;
             string path = file.Path;
-            string guid = string.IsNullOrEmpty(file.Guid) ? UnityEditor.AssetDatabase.AssetPathToGUID(path) : file.Guid;
-            if (string.IsNullOrEmpty(guid))
-            {
-                Warn("guid:" + path, $"{path}: a scene without a GUID; Unbound does not lay out its baked lightmaps (Lightmapping.Bake).");
-                return;
-            }
+            string guid = null;
+            foreach (var obj in file.Objects.Values)
+                if (obj is Terrain terrain && terrain != null && terrain.enabled && terrain.gameObject.activeInHierarchy
+                    && (terrain.gameObject.m_StaticEditorFlags & ContributeGI) != 0)
+                {
+                    Warn("terrain:" + path, $"{path}: '{terrain.name}' is a lightmapped Terrain, which Unbound's layout of the baked lightmaps (Lightmapping.Bake) does not support; it lays out none for the scene.");
+                    return;
+                }
             var levels = LodLevels(file);
             var renderers = new List<object>();
             var placed = new List<(MeshRenderer renderer, long fileId)>();
@@ -159,6 +173,7 @@ namespace UnityEngine
                         Warn("left:" + path + fileId, $"{path}: '{renderer.name}' is left out of Unbound's layout of the baked lightmaps (Lightmapping.Bake): {left}.");
                         continue;
                     }
+                    if (guid == null && (guid = SceneGuid(file)) == null) return;
                     if (!(ParametersOf(renderer.m_LightmapParameters, settings, out var why) is Parameters parameters))
                     {
                         Warn("parameters:" + path, $"{path}: '{renderer.name}' has {why}; Unbound does not lay out its baked lightmaps (Lightmapping.Bake).");
@@ -167,6 +182,8 @@ namespace UnityEngine
                     var vertices = mesh.vertices;
                     var uvSource = mesh.uv2;
                     if (uvSource.Length != vertices.Length) uvSource = mesh.uv;
+                    if (uvSource.Length != vertices.Length)
+                        Warn("uvs:" + path + fileId, $"{path}: '{renderer.name}' has a mesh without UVs; Unbound lays out its baked lightmap as one texel (not measured).");
                     var positions = new float[3 * vertices.Length];
                     for (int v = 0; v < vertices.Length; v++)
                     {
@@ -202,6 +219,7 @@ namespace UnityEngine
                     placed.Add((renderer, fileId));
                 }
             }
+            if (renderers.Count == 0) return;
             bool fixedSize = settings.LightmapSizeFixed
                 || UnityEditor.PackageManager.PackageInfo.FindForPackageName("com.unity.entities.graphics") != null
                 || UnityEditor.PackageManager.PackageInfo.FindForPackageName("com.unity.rendering.hybrid") != null;
