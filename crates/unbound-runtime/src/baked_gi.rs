@@ -509,8 +509,8 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     "indirectColor": light.indirect_color,
                     "position": light.position,
                     "orientation": data.rotation,
-                    // As the Editor's bake input has them: no range for a directional light, whose
-                    // cone is its cookie's size (1 without one); no cone for a point light.
+                    // As a bake input's lights are described (the probe's lights.json): no range
+                    // and a cone of 1 for a directional light, no cone for a point light.
                     "range": if light.kind == Kind::Directional { 0.0 } else { light.range },
                     "coneAngle": match light.kind {
                         Kind::Directional => 1.0,

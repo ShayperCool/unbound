@@ -45,8 +45,8 @@ padding 2):
   lightmap).
 
 The lit scenes have no sky and no ambient light, 16 Direct Samples (a power of two not below a
-texel's samples, with which the Editor weighs a texel's samples equally), a ground, a cube and a
-sphere, and lights with hard shadows:
+texel's samples: the Editor's result is then the same from bake to bake but for its last bits),
+a ground, a cube and a sphere, and lights with hard shadows:
 
 - `Sun` (4, 128): a coloured baked directional light (intensity 2, Indirect Multiplier 3) over
   renderers with Cast Shadows Off and Shadows Only, with Receive Shadows off, lit by light probes
@@ -113,8 +113,8 @@ linear colour (GraphicsSettings.lightsUseLinearIntensity), the levels of LOD Gro
 renderers take and stop light like any other; the Editor's rays tell the levels apart). Not done
 and not said: materials that let light through stop it.
 
-Not measured: Direct Samples that are no power of two or fewer than a texel's samples (the Editor
-then weighs the samples unequally at random; Unbound's mean is what it approaches), gamma colour
+Not measured: Direct Samples that are no power of two or fewer than a texel's samples (Unbound
+takes the mean of a texel's samples whatever the count), gamma colour
 space projects, light colour temperatures, the points and the triangles' own normals the texels' samples stand for (the
 Editor writes neither; Unbound derives them with the interpolated normals, for the bake's
 lighting to come), several open scenes, renderers of prefab instances (their order in the bake),

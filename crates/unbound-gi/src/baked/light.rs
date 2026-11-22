@@ -1,7 +1,7 @@
-//! The lights of a bake and the light each sends to a point of a surface, as the Unity
-//! 6000.0.71f1 Editor's Progressive CPU lightmapper evaluates them (tests/projects/bakedbuffers):
-//! directional, point and spot lights of the built-in render pipeline, with its distance falloff
-//! and its spot cone's falloff, both taken from tables as the Editor takes them.
+//! The lights of a bake and the light each sends to a point of a surface: directional, point
+//! and spot lights of the built-in render pipeline, with its distance falloff and its spot
+//! cone's falloff, both read from tables whose size and reading give the values of the Unity
+//! 6000.0.71f1 Editor's Progressive CPU lightmapper (tests/projects/bakedbuffers).
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {

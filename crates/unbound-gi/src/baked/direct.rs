@@ -1,11 +1,10 @@
-//! The light a bake's lights send straight to each texel of a lightmap, as the Unity 6000.0.71f1
-//! Editor's Progressive CPU lightmapper gathers it (tests/projects/bakedbuffers): at each sample
-//! of the texel ([`gbuffer`](super::gbuffer)), every light that bakes its direct light adds its
-//! colour by the surface's facing (its interpolated normal), unless something of the scene lies
+//! The light a bake's lights send straight to each texel of a lightmap: at each sample of the
+//! texel ([`gbuffer`](super::gbuffer)), every light that bakes its direct light adds its colour
+//! by the surface's facing (its interpolated normal), unless something of the scene lies
 //! between the sample, pushed off its triangle, and the light. A texel takes the mean of its
-//! samples. The Editor draws a number of the samples at random for each light (Direct Samples);
-//! it comes to the same mean exactly where that number is a power of two not below the samples
-//! of a texel, and approaches it otherwise.
+//! samples, which is the Unity 6000.0.71f1 Editor's Progressive CPU lightmapper's result for
+//! lights with hard shadows where its Direct Samples are a power of two not below the samples
+//! of a texel (tests/projects/bakedbuffers: 16); other counts are not measured.
 use super::gbuffer::GBuffer;
 use super::light::{Light, Mode, Tables};
 use super::trace::{Ray, Scene};
