@@ -1,0 +1,26 @@
+{"k":"saveInProject","v":"result=\"\"|logs=Assert:Cancelling FileDialog: Save thing Where to save it\\nThis should not be called in batch mode."}
+{"k":"saveInProject.path","v":"result=\"\"|logs=Assert:Cancelling FileDialog: Save thing Where to save it\\nThis should not be called in batch mode."}
+{"k":"saveInProject.nulls","v":"result=\"\"|logs=Assert:Cancelling FileDialog:  \\nThis should not be called in batch mode."}
+{"k":"saveInProject.nullPath","v":"result=\"\"|logs=Assert:Cancelling FileDialog: Save thing Where\\nThis should not be called in batch mode."}
+{"k":"saveInProject.outside","v":"result=\"\"|logs=Assert:Cancelling FileDialog: Save thing Where\\nThis should not be called in batch mode."}
+{"k":"save","v":"result=\"\"|logs=Assert:Cancelling FileDialog: Save file\\nThis should not be called in batch mode."}
+{"k":"save.nulls","v":"result=\"\"|logs=Assert:Cancelling FileDialog: \\nThis should not be called in batch mode."}
+{"k":"open","v":"result=\"\"|logs=Assert:Cancelling FileDialog: Open file\\nThis should not be called in batch mode."}
+{"k":"open.nulls","v":"result=\"\"|logs=Assert:Cancelling FileDialog: Open\\nThis should not be called in batch mode."}
+{"k":"openFilters","v":"result=\"\"|logs=Assert:Cancelling FileDialog: Open file\\nThis should not be called in batch mode."}
+{"k":"openFolder","v":"result=\"\"|logs=Assert:Cancelling FileDialog: Open folder\\nThis should not be called in batch mode."}
+{"k":"saveFolder","v":"result=\"\"|logs=Assert:Cancelling FileDialog: Save folder\\nThis should not be called in batch mode."}
+{"k":"openFilters.nulls","v":"result=throws NullReferenceException:Object reference not set to an instance of an object|logs=<none>"}
+{"k":"openFolder.nulls","v":"result=\"\"|logs=Assert:Cancelling FileDialog: \\nThis should not be called in batch mode."}
+{"k":"saveFolder.nulls","v":"result=\"\"|logs=Assert:Cancelling FileDialog: \\nThis should not be called in batch mode."}
+{"k":"saveInProject.messageOnly","v":"result=\"\"|logs=Assert:Cancelling FileDialog:  Only a message\\nThis should not be called in batch mode."}
+{"k":"dialog","v":"result=\"False\"|logs=Assert:Cancelling DisplayDialog: Title Message\\nThis should not be called in batch mode."}
+{"k":"dialog.ok","v":"result=\"False\"|logs=Assert:Cancelling DisplayDialog: Title Message\\nThis should not be called in batch mode."}
+{"k":"dialog.nulls","v":"result=throws ArgumentException:Both 'ok' and 'cancel' strings are null or empty|logs=<none>"}
+{"k":"dialog.noButtons","v":"result=throws ArgumentException:Both 'ok' and 'cancel' strings are null or empty|logs=<none>"}
+{"k":"dialog.noText","v":"result=throws ArgumentException:Both 'title' and 'message' strings are null or empty|logs=<none>"}
+{"k":"dialog.titleOnly","v":"result=\"False\"|logs=Assert:Cancelling DisplayDialog: Title \\nThis should not be called in batch mode."}
+{"k":"dialog.messageOnly","v":"result=\"False\"|logs=Assert:Cancelling DisplayDialog:  Message\\nThis should not be called in batch mode."}
+{"k":"openFilters.odd","v":"result=throws Exception:Filters must be declared in pairs { \"FileType\", \"FileExtension\" }; for instance { \"CSharp\", \"cs\" }. |logs=<none>"}
+{"k":"openFilters.empty","v":"result=\"\"|logs=Assert:Cancelling FileDialog: Open file\\nThis should not be called in batch mode."}
+{"k":"complete","v":true}
