@@ -2653,6 +2653,12 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
+      "type": "UnityEditor.UIElements.InspectorElement"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
       "type": "UnityEditor.UIElements.LayerMaskField"
     },
     {

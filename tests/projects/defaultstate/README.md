@@ -830,3 +830,8 @@ them (decided by the inventory alone); every earlier row is unchanged.
 The Project window helpers slice adds `ProjectWindowUtil` (its `class` factory row) and the abstract
 `ProjectWindowCallback.EndNameEditAction` (excluded) to the inventory, as two Unity 6000.0.71f1 batch Editor captures on
 macOS write them; every earlier row is unchanged.
+
+The inspector slice adds `UnityEditor.UIElements.InspectorElement` (44 rows) to the inventory, as two Unity
+6000.0.71f1 batch Editor captures on macOS write them; every earlier row is unchanged. Those captures ran on a 2x main
+display, so its `scaledPixelsPerPoint` and the same value inside `contentContainer` read 2 where every other row reads
+1; the two rows are queued in `debt.json` with their raw values until the type is captured on a 1x display.
