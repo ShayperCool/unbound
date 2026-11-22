@@ -47,7 +47,7 @@ is written when the project has none. Between `StartAssetEditing` and `StopAsset
 waits for the last `StopAssetEditing`, `CreateAsset` does not. `CreateAsset` names the object after
 its file (file id 11400000, the `.meta`'s `mainObjectFileID`); `AddObjectToAsset` gives a random
 64-bit file id and the file is written by `SaveAssets`, documents in ascending file id order.
-`RemoveObjectFromAsset` makes the object one of no asset at once (alive, no path, not dirty) and
+`RemoveObjectFromAsset` makes the object one of no asset at once (alive, no path; a saved one stays not dirty) and
 the file loses its document with `SaveAssets`, a reference to it written as none; an object of no
 asset is left alone and null throws; an object added (back) is of the asset at once, dirty, and a
 sub-asset only from the save on; without its main object the asset has none
