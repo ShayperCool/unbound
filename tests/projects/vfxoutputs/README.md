@@ -5,7 +5,7 @@ under URP 17: how the outputs of the probe's own small graphs are drawn, recorde
 script in the Unity Editor and in Unbound. The `vfx` probe covers the import, the API and the
 simulation, and the outputs that draw every particle a system has room for; this one covers the
 outputs that draw through an indirect buffer, sorted outputs, the order of an effect's
-outputs, and triangle and octagon outputs.
+outputs, triangle and octagon outputs, and an output's motion vectors.
 
 The Editor records in a window (not in batch mode): in batch mode no camera ever sees an effect.
 
@@ -70,6 +70,15 @@ the other additive and blue; and one system with an opaque and an additive outpu
 graph's API names them alike; the Editor's window gives them letters). Each draws with its own
 shader (`draw/TwinA`, `draw/TwinB`, `draw/AlikeOutputs` at frame 12, made at frame 6).
 
+Moving (`MovingVectors.vfx`, `MovingPlain.vfx`): twenty opaque quads (size 0.25) burst at once in
+a strip at the left and flying right at 6 units a second, the one graph's output writing motion
+vectors (`generateMotionVector`), the other's not. Their stages' cameras post-process with a
+volume on a layer of their own (30) of URP's Motion Blur, Camera and Objects, high quality,
+intensity 1, clamp 0.2: with motion vectors the quads are smeared along their motion, the
+output's motion vectors pass reading its particles' clip positions of the frame before (kept by
+the output-update kernel in a ring of the effect's temporary buffers per camera); without, they
+are sharp.
+
 `Assets/Scenes/Probe.unity` holds only a camera that sees none of the stages. The Editor-authored
 files (graphs, scene, the package lock) are kept in `Authored/unity-<release>/default`
 (`tests/authored_project.py`); the gate assembles them.
@@ -107,6 +116,8 @@ others with a start seed of 11 and gives it orthographic cameras of its own, eac
 - `away` (frames 10, 19, 30): the camera looks away from the effect until frame 20, then at it: the
   effect is culled (its renderer is not visible, it does not simulate and asks for no alive count),
   then drawn. Its alive count is -1 until the first count read back after it is seen.
+- `MovingVectors`, `MovingPlain` (frames 9 and 10, made at frame 6): the quads under object
+  motion blur, with and without the output's motion vectors.
 
 The last row is `capture/graphs imported while playing`; it must be empty for a capture to be
 complete (Assets/Editor/ProbeRunner.cs waits five editor updates before playing, as the packages
@@ -156,8 +167,9 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
 - Quads seen at an angle: crossing quads are ties of depth that the Editor's own graphs decide
   differently (the three routes of one graph in one capture).
 - A system that sorts one list for all its outputs (the compiler's global sort, for outputs that
-  share their sort), other primitives, lit outputs, motion vectors, strips, meshes and Shader
-  Graph outputs: Unbound refuses them loudly.
+  share their sort), other primitives, lit outputs, strips, meshes and Shader Graph outputs
+  (`tests/projects/vfxlit`, `tests/projects/vfxstrips`), and motion vectors of outputs other
+  than opaque quads, which are drawn, not measured here.
 - Sorting on a device whose compute groups share less than 32 KB of memory; effects over each
   other at one distance.
 - Several instances of one asset in one batch: Unbound runs each effect as a batch of its own.

@@ -27,8 +27,8 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
   unlit quads moved towards the camera, and still smaller unlit meshes moved further. The sort
   priority of the lit output and of the mesh output is 1, the unlit quads' is 0.
 - `LitCaster`: lit quads that cast shadows. `UnlitCaster`: unlit quads that do.
-- `LitMoving`: a lit output that writes motion vectors (not drawn; what its asset asks of the
-  renderer is recorded). `LitReceiving`: `LitMatte` saved with renderer settings of its own:
+- `LitMoving`: a lit output that writes motion vectors (drawn, not shot; what its asset asks of
+  the renderer is recorded). `LitReceiving`: `LitMatte` saved with renderer settings of its own:
   receiving shadows, and, for the two settings the graph's compilation decides, values it does
   not decide (shadow casting two sided, motion vectors forced off).
 - `MeshUnlit`, `MeshLit`: each particle drawn as a mesh (`Output Particle Mesh` and
@@ -181,8 +181,9 @@ adds to that is not separated.
 
 ## Not covered
 
-- Outputs with motion vectors (they keep buffers of the frame before), lit strips, meshes chosen
-  among several by their size on screen: not drawn; each says so once for its asset. One mesh
+- A lit output's motion vectors (`LitMoving`: drawn, not shot; an unlit output's are measured
+  in `tests/projects/vfxoutputs`). Lit strips, meshes chosen among several by their size on
+  screen: not drawn; each says so once for its asset. One mesh
   culled by its size on screen is drawn, not measured. Outputs of three or four
   meshes, several meshes through a sorted list or by a lit output: drawn as `mesh pair`, not
   measured.

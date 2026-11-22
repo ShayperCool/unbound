@@ -199,8 +199,8 @@ In dependency order; each item ends with an Editor-reference probe.
       outputs, unlit and lit by 2D lights through the 2D renderer, also from unsorted lists,
       unlit through the forward renderer, and quads drawn by a graph of the older Visual
       Effect target (`tests/projects/vfxlit`). Not yet: meshes chosen by their size on
-      screen, points, lines and cubes, and motion vectors (such an output says once that it
-      is not drawn; its system runs).
+      screen, points, lines and cubes. Motion vectors of an opaque quad output are drawn
+      (`tests/projects/vfxoutputs` `MovingVectors`).
       Systems spawned by GPU events run (`tests/projects/vfxevents`), and particle strips,
       drawn as quads joined along each strip, also sorted (`tests/projects/vfxstrips`);
       bounds set to Automatic are computed from the particles (`tests/projects/vfxbounds`),
