@@ -84,7 +84,21 @@ namespace Unbound.Runtime
 
         /// <summary>Whether an instance's object is compared with its source: a script only once its
         /// changes were recorded.</summary>
-        internal static bool Considered(Object o) => o is not MonoBehaviour || PrefabRecords.IsRecorded(o);
+        /// <summary>Whether an object's values count as its instance's overrides: an engine
+        /// component's always, a script's once recorded or, in Edit mode, once an Editor frame has
+        /// passed since its instance was made (tests/projects/scenesave modification-timing
+        /// script.direct, script.frame; edit save.base: a script change in the same frame is not saved).</summary>
+        internal static bool Considered(Object o) =>
+            o is not MonoBehaviour || PrefabRecords.IsRecorded(o)
+            || !EditorApplication.isPlaying && PrefabLinks.Of(o)?.Instance is PrefabInstanceData data && data.CreatedStamp < PrefabRecordTiming.Boundary;
+
+        /// <summary>Whether an instance's modifications have taken a Transform's last change: in
+        /// Edit mode only at the next Editor frame or a record point (modification-timing
+        /// transform.direct, transform.frame, save.*); until then they keep the value recorded before.
+        /// Other engine components' changes are taken at once (their timing is unmeasured).</summary>
+        static bool Taken(Object o, PrefabInstanceData data) =>
+            o is not Transform t || EditorApplication.isPlaying
+            || t.m_ChangeStamp < Math.Max(PrefabRecordTiming.TransformsTaken, data.RecordStamp);
 
         /// <summary>References to the instance's objects written as the source objects they stand for
         /// (so an instance and its source compare alike).</summary>
@@ -300,7 +314,7 @@ namespace Unbound.Runtime
             var toSource = ToSource(data);
             foreach (var o in ObjectsOf(data))
             {
-                if (!Considered(o)) continue;
+                if (!Considered(o) || !Taken(o, data)) continue;
                 var link = PrefabLinks.Of(o);
                 var source = PrefabLinks.Source(o);
                 if (source == null) continue;
@@ -337,6 +351,7 @@ namespace Unbound.Runtime
     {
         internal static bool TrySet(Object target, string path, string value, Object reference)
         {
+            using var quiet = PrefabRecordTiming.QuietScope.Begin();
             if (target == null) return false;
             var so = new SerializedObject(target);
             var property = so.FindProperty(path);

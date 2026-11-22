@@ -8,8 +8,58 @@ namespace Unbound.Runtime
 {
     /// <summary>A PrefabInstance of a loaded file (or one PrefabUtility.InstantiatePrefab made): the
     /// prefab it instantiates and the properties it modifies.</summary>
+    /// <summary>
+    /// When an instance's modifications take a change made by script, in Edit mode (matches the
+    /// Unity 6000.0.71f1 Editor, tests/projects/scenesave modification-timing): at the next Editor
+    /// frame, a Transform's and a script field's, and at once at a record point
+    /// (RecordPrefabInstancePropertyModifications, Undo.FlushUndoRecordObjects after
+    /// Undo.RecordObject, SerializedObject.ApplyModifiedProperties; a scene save for Transforms
+    /// only). A stamp orders changes and record points: a Transform remembers the stamp of its last
+    /// change, an instance the stamps it was made and last recorded at.
+    /// </summary>
+    internal static class PrefabRecordTiming
+    {
+        /// <summary>The current stamp; each frame boundary and record point takes the next one.</summary>
+        internal static long Stamp = 1;
+        /// <summary>The last Editor frame boundary in Edit mode: changes before it are taken.</summary>
+        internal static long Boundary;
+        /// <summary>The last point that took every Transform's change (a boundary or a scene save).</summary>
+        internal static long TransformsTaken;
+
+        /// <summary>Above 0 while Unbound itself writes an instance's values (a revert, a merge of its
+        /// prefab's change): its own writes are no change made by script.</summary>
+        [ThreadStatic] internal static int Quiet;
+
+        internal readonly struct QuietScope : IDisposable
+        {
+            internal static QuietScope Begin()
+            {
+                Quiet++;
+                return default;
+            }
+
+            public void Dispose() => Quiet--;
+        }
+
+        internal static void FrameBoundary()
+        {
+            Boundary = TransformsTaken = ++Stamp;
+        }
+
+        internal static void SceneSaved() => TransformsTaken = ++Stamp;
+
+        internal static void Recorded(PrefabInstanceData data)
+        {
+            if (data != null) data.RecordStamp = ++Stamp;
+        }
+    }
+
     internal sealed class PrefabInstanceData
     {
+        /// <summary>The stamp (<see cref="PrefabRecordTiming"/>) the instance was made or read at.</summary>
+        internal readonly long CreatedStamp = PrefabRecordTiming.Stamp;
+        /// <summary>The stamp of the last record point that took the instance's changes.</summary>
+        internal long RecordStamp;
         /// <summary>The file id of its PrefabInstance document (0 for an instance no file holds).</summary>
         internal long FileId;
         internal string SourceGuid;

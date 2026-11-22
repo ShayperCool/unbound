@@ -385,10 +385,15 @@ namespace UnityEngine
 
         internal bool m_MotionDirty;
 
+        /// <summary>The stamp of the last change of the local values (prefab instances' modifications
+        /// take it at the next record point: <see cref="Unbound.Runtime.PrefabRecordTiming"/>).</summary>
+        internal long m_ChangeStamp;
+
         /// <summary>This transform changed: it and every descendant must recompute their world state.</summary>
         internal void MarkChanged()
         {
             if (s_AnimatedPhysicsStamp != 0) m_AnimatedPhysicsStamp = s_AnimatedPhysicsStamp;
+            if (Unbound.Runtime.PrefabRecordTiming.Quiet == 0) m_ChangeStamp = Unbound.Runtime.PrefabRecordTiming.Stamp;
             m_HasChanged = true;
             m_Version++;
             m_WorldDirty = true;

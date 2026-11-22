@@ -126,6 +126,8 @@ namespace Unbound.Runtime
         internal static bool Save(SceneData scene, string path)
         {
             if (!CanSave(scene, path)) return false;
+            // A save takes the instances' Transform changes (scenesave modification-timing save.after).
+            PrefabRecordTiming.SceneSaved();
             path = ProjectRelative(path);
             string text;
             try { text = Write(scene); }

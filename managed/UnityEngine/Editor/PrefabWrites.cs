@@ -590,6 +590,9 @@ namespace UnityEditor
         public static GameObject SaveAsPrefabAsset(GameObject instanceRoot, string assetPath, out bool success)
         {
             success = false;
+            // Saving an instance takes its changes into its modifications (scenesave prefab-nested
+            // variant.before.mods, variant.after.mods).
+            PrefabRecordTiming.Recorded(instanceRoot == null ? null : PrefabLinks.Of(instanceRoot)?.Instance);
             var path = PrefabPath(instanceRoot, assetPath, connect: false);
             var file = PrefabAssets.FileAt(path);
             var contents = PrefabContents.Of(instanceRoot);

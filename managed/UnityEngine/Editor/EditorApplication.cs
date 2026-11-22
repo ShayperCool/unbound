@@ -86,6 +86,9 @@ namespace UnityEditor
 
         static void RunEditorCallbacks()
         {
+            // Each Editor update starts a frame: prefab instances take the changes made by script
+            // before it (scenesave modification-timing *.frame).
+            if (!isPlaying) Unbound.Runtime.PrefabRecordTiming.FrameBoundary();
             Undo.FlushDirtiness();
             ObjectChangeEvents.Publish();
             try { InternalUpdate?.Invoke(); }

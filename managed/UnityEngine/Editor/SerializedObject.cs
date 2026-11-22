@@ -118,7 +118,11 @@ namespace UnityEditor
 
         /// <summary>Applies without marking the targets dirty (a prefab instance taking its
         /// prefab's values: Unbound's own write, not an edit).</summary>
-        internal bool ApplyQuietly() => Apply(recordUndo: false, dirty: false);
+        internal bool ApplyQuietly()
+        {
+            using var quiet = Unbound.Runtime.PrefabRecordTiming.QuietScope.Begin();
+            return Apply(recordUndo: false, dirty: false);
+        }
 
         bool Apply(bool recordUndo = false, bool dirty = true)
         {
@@ -169,7 +173,11 @@ namespace UnityEditor
                 {
                     if (target == null) continue;
                     EditorUtility.SetDirty(target);
-                    if (Unbound.Runtime.PrefabLinks.Of(target) != null) Unbound.Runtime.PrefabRecords.Record(target);
+                    if (Unbound.Runtime.PrefabLinks.Of(target) is Unbound.Runtime.PrefabLink link)
+                    {
+                        Unbound.Runtime.PrefabRecords.Record(target);
+                        Unbound.Runtime.PrefabRecordTiming.Recorded(link.Instance);
+                    }
                     if (recordUndo) ObjectChangeEvents.NoteProperties(target);
                 }
             foreach (var target in m_Targets)

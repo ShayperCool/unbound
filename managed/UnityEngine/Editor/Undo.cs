@@ -116,7 +116,12 @@ namespace UnityEditor
         internal static void FlushDirtiness()
         {
             PublishRecords();
-            foreach (var state in s_Unflushed) state.DirtyIfChanged();
+            foreach (var state in s_Unflushed)
+            {
+                state.DirtyIfChanged();
+                // A recorded object's prefab instance takes its changes (scenesave modification-timing undo.flushed).
+                Unbound.Runtime.PrefabRecordTiming.Recorded(Unbound.Runtime.PrefabLinks.Of(state.Target)?.Instance);
+            }
             s_Unflushed.Clear();
             if (s_Recorded.Count == 0) return;
             var recorded = s_Recorded.ToArray();
@@ -473,6 +478,7 @@ namespace UnityEditor
         sealed class StateOperation : Operation
         {
             readonly Object m_Target;
+            internal Object Target => m_Target;
             readonly ObjectState m_Before;
             ObjectState m_After;
 
