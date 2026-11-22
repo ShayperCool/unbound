@@ -15,7 +15,9 @@ using UnityEngine;
 /// first by place, x then y then z) into a
 /// texture of the size the file gives;
 /// time advances by its fixed step (Time.captureDeltaTime); at the end of each frame it names,
-/// counted from the first frame the scene plays (when the file gives a `seed`, every effect
+/// counted from the frame the script starts in, which is frame 0 (a frame's number is the frames
+/// since then, not the ends of frame seen: whether the first Play frame completes one is the
+/// Editor session's own matter, and frame 0 is not shot) (when the file gives a `seed`, every effect
 /// of the scene is first given that seed and started again, so that runs draw the same
 /// particles), each view's colour is written to
 /// `vK-frame-NNN.png` beside the file. Then `values.jsonl` lists the frames shot and the run
@@ -42,6 +44,8 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         public string keep = "";
         /// <summary>Every other camera of the scene turned off: only the capture's render.</summary>
         public bool soleCameras;
+        /// <summary>The scene's renderers listed in `renderers.txt` beside the shots (<see cref="ListRenderers"/>).</summary>
+        public bool listRenderers;
         /// <summary>For scene_capture.py's self-test only: the frame whose shot fails (0: none).</summary>
         public int selfTestThrowAtFrame;
         public int[] frames = { 30 };
@@ -63,6 +67,7 @@ public sealed class UnboundSceneCapture : MonoBehaviour
     RenderTexture[] m_Targets;
     Texture2D m_Shot;
     int m_Frame;
+    int m_StartFrame;
     readonly StringBuilder m_Out = new StringBuilder();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -201,6 +206,24 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         m_Out.Append("{\"k\":\"keep\",\"v\":\"").Append(m_Settings.keep).Append(": ").Append(kept).Append(" drawn, ").Append(hidden).Append(" hidden\"}\n");
     }
 
+    /// <summary>One line per renderer of an active object, as the scene starts: its type, whether
+    /// it is enabled, and its object's path, sorted, to tell which objects one side has and the
+    /// other has not (scene_capture.py compare counts the lines only one side has).</summary>
+    void ListRenderers()
+    {
+        var lines = new System.Collections.Generic.List<string>();
+        var path = new StringBuilder();
+        foreach (var renderer in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+        {
+            path.Clear();
+            for (var t = renderer.transform; t != null; t = t.parent) path.Insert(0, "/" + t.name);
+            lines.Add(renderer.GetType().Name + "\t" + (renderer.enabled ? "on" : "off") + "\t" + path);
+        }
+        lines.Sort(string.CompareOrdinal);
+        File.WriteAllLines(Path.Combine(m_Dir, "renderers.txt"), lines);
+        m_Out.Append("{\"k\":\"renderers\",\"v\":").Append(lines.Count).Append("}\n");
+    }
+
     /// <summary>Turns off every camera but the capture's (recorded).</summary>
     void SoleCameras()
     {
@@ -257,12 +280,14 @@ public sealed class UnboundSceneCapture : MonoBehaviour
 
     IEnumerator Start()
     {
+        m_StartFrame = Time.frameCount;
         try
         {
             Seed();
             m_Cameras = new Camera[m_Settings.views.Length];
             m_Targets = new RenderTexture[m_Settings.views.Length];
             for (int i = 0; i < m_Cameras.Length; i++) m_Cameras[i] = MakeCamera(m_Settings.views[i], i);
+            if (m_Settings.listRenderers) ListRenderers();
             Keep();
             if (m_Settings.soleCameras) SoleCameras();
         }
@@ -277,7 +302,9 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         while (m_Frame < last)
         {
             yield return wait;
-            m_Frame++;
+            int frame = Time.frameCount - m_StartFrame;
+            if (frame == m_Frame) continue;
+            m_Frame = frame;
             try
             {
                 Shoot();

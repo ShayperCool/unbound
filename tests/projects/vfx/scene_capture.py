@@ -15,7 +15,8 @@ Settings: one view per --position X,Y,Z, each with its --rotation X,Y,Z (Euler d
 --target NAME (an active object; of several, the one nearest --target-near X,Y,Z) with each
 --position a camera's offset from it, looking at it;
 [--fov F] [--size WxH] [--step SECONDS] [--frames N,N,...] [--seed N: every effect's seed, so
-runs draw alike]. compare prints, per frame, the mean and worst max-channel difference and the
+runs draw alike] [--list-renderers: the renderers of the scene's active objects, which compare
+then tells apart]. compare prints, per frame, the mean and worst max-channel difference and the
 pixels over 8, and writes the two frames and their difference side by side into B's run
 directory (compare-vK-frame-NNN.png).
 """
@@ -71,7 +72,8 @@ def settings(args):
     return {'target': args.target or '', 'hasTargetNear': args.target_near is not None,
             'targetNear': dict(zip('xyz', args.target_near or (0, 0, 0))), 'views': views,
             'fieldOfView': args.fov, 'width': width, 'height': height, 'deltaTime': args.step, 'frames': frames,
-            'seed': args.seed, 'keep': getattr(args, 'keep', '') or '', 'soleCameras': bool(getattr(args, 'sole_cameras', False)), 'selfTestThrowAtFrame': getattr(args, 'throw_at', 0)}
+            'seed': args.seed, 'keep': getattr(args, 'keep', '') or '', 'soleCameras': bool(getattr(args, 'sole_cameras', False)),
+            'listRenderers': bool(getattr(args, 'list_renderers', False)), 'selfTestThrowAtFrame': getattr(args, 'throw_at', 0)}
 
 
 def prepare(args, fixtures=None):
@@ -152,6 +154,16 @@ def compare(args):
         if settings_a.get(key) != settings_b.get(key):
             print(f'settings differ: {key}: {settings_a.get(key)!r} in {args.a}, {settings_b.get(key)!r} in {args.b}')
             worst = 1
+    lists = [capture/'renderers.txt' for capture in (first, second)]
+    if all(path.is_file() for path in lists):
+        from collections import Counter
+        a, b = (Counter(path.read_text().splitlines()) for path in lists)
+        only_a, only_b = sorted((a - b).elements()), sorted((b - a).elements())
+        print(f'renderers: {sum(a.values())} in {args.a}, {sum(b.values())} in {args.b}; {len(only_a)} only in {args.a}, {len(only_b)} only in {args.b}')
+        for label, lines in ((args.a, only_a), (args.b, only_b)):
+            for line in lines[:40]:
+                print(f'  only in {label}: {line}')
+        worst = worst or int(bool(only_a or only_b))
     names = sorted(frames_of(first) | frames_of(second))
     if not names:
         raise SystemExit(f'{first}, {second}: no frames')
@@ -188,6 +200,7 @@ def selftest(args):
     # The probe's own script plays the scene through and ends the run: not in the self-test.
     shutil.rmtree(source/'Assets'/'Scripts')
     failures = []
+    clocks = {}
     sides = {'editor': run_editor, 'engine': run_engine}
     for side in (args.side,) if args.side != 'both' else ('editor', 'engine'):
         run = sides[side]
@@ -201,6 +214,7 @@ def selftest(args):
             a, b = (Image.open(capture/f'v0-frame-{n:03}.png').convert('RGB') for n in (5, 20))
             if ImageChops.difference(a, b).getbbox() is None:
                 failures.append(f'{side} moving: frames 5 and 20 are the same image (the copied camera stopped rendering)')
+            clocks[side] = [line for line in (capture/'values.jsonl').read_text().splitlines() if '"time/' in line]
         started = time.monotonic()
         failing = argparse.Namespace(**base, label=f'{stamp}-{side}-failing', frames='10', throw_at=3)
         _, capture, problem = run(failing, FIXTURES)
@@ -209,6 +223,10 @@ def selftest(args):
             failures.append(f'{side} failing: the run completed although its shot failed')
         elif elapsed > args.timeout / 2:
             failures.append(f'{side} failing: the run took {elapsed:.0f} s of its {args.timeout} s limit to end')
+    # A shot's frame number names the same frame on both sides: under the fixed step their
+    # clocks are equal.
+    if len(clocks) == 2 and clocks['editor'] != clocks['engine']:
+        failures.append(f"the shots' clocks differ: Editor {clocks['editor']}, Unbound {clocks['engine']}")
     for failure in failures:
         print('FAIL', failure)
     print('selftest:', 'ok' if not failures else f'{len(failures)} failures', f'(runs {stamp}-*)')
@@ -233,6 +251,7 @@ def main():
         run.add_argument('--frames', default='30')
         run.add_argument('--seed', type=int, default=-1)
         run.add_argument('--sole-cameras', action='store_true', help='every other camera of the scene turned off')
+        run.add_argument('--list-renderers', action='store_true', help="the scene's renderers listed in renderers.txt")
         run.add_argument('--keep', choices=('effects', 'others'),
                          help="only that kind of renderer under --target's parent is drawn")
         run.add_argument('--timeout', type=int, default=1800)
