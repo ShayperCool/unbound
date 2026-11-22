@@ -14,10 +14,14 @@ namespace UnityEditor
     /// itself, a link as a link. A .meta file beside a copied or moved path is left alone. A
     /// destination that exists, a missing source and a destination whose folder is missing fail with
     /// an IOException and change nothing. Relative paths are the working directory's (the project's);
-    /// backslashes separate folders. Unbound's choices (unmeasured): a link back into a copied tree
-    /// fails the copy; what a failed copy of a tree has already made stays; a move to another volume
-    /// copies and deletes; destinations and moved sources that land on what
-    /// <see cref="DeleteFileOrDirectory"/> refuses are refused and reported the same way.
+    /// backslashes separate folders. Unbound's choices (unmeasured): a destination inside the copied
+    /// or moved directory and a link back into a copied tree fail before anything is made; what a
+    /// failed copy of a tree has already made stays; a directory is not moved to another volume; a
+    /// link that points nowhere counts as a destination that exists. In Unbound's project view (see
+    /// <see cref="DeleteFileOrDirectory"/>) a path naming one of the view's own links, or a new
+    /// name beside them, names the project's own entry: it is copied, moved or made there and the
+    /// view gets or loses its link; destinations and moved sources that land on what
+    /// DeleteFileOrDirectory refuses are refused and reported the same way.
     /// </summary>
     public partial class FileUtil
     {
@@ -42,15 +46,39 @@ namespace UnityEditor
         static IOException DestinationExists(string source, string dest) =>
             new IOException(string.Format("Failed to Copy File / Directory from '{0}' to '{1}': destination path already exists.", source, dest));
 
-        // Whether Unbound lets a script write or take the entry: see DeleteFileOrDirectory.
-        static bool Allowed(string full)
+        // Where an entry is made or taken: the project's own entry for a path naming one of the
+        // view's links or a new name beside them (`viewEntry` is then the view's), else the path.
+        // Not allowed where DeleteFileOrDirectory refuses: that is reported.
+        static string Landing(string full, out string viewEntry, out bool allowed)
         {
+            viewEntry = null;
+            allowed = true;
             var view = ProjectView.Current();
-            if (view == null) return true;
-            view.ProjectEntryOf(full, out string projectEntry);
-            if (!view.Refuses(projectEntry ?? full)) return true;
-            Stubs.NotImplemented(UnsupportedCopyMember);
-            return false;
+            if (view == null) return full;
+            string landing = view.ProjectPathOf(full, out viewEntry) ?? full;
+            if (view.Refuses(landing))
+            {
+                Stubs.NotImplemented(UnsupportedCopyMember);
+                allowed = false;
+            }
+            return landing;
+        }
+
+        // The view's link to a project entry that was just made.
+        static void LinkInView(string viewEntry, string landing)
+        {
+            if (viewEntry == null || viewEntry == landing || EntryExists(viewEntry)) return;
+            if (Directory.Exists(landing)) Directory.CreateSymbolicLink(viewEntry, landing);
+            else File.CreateSymbolicLink(viewEntry, landing);
+        }
+
+        // Whether a path is a directory or inside it, links resolved.
+        static bool Inside(string path, string directory)
+        {
+            string parent = Path.GetDirectoryName(path);
+            string real = parent == null ? path : Path.Combine(ConsoleLogPath.Resolve(parent), Path.GetFileName(path));
+            string root = ConsoleLogPath.Resolve(directory);
+            return real == root || real.StartsWith(root + "/", StringComparison.Ordinal);
         }
 
         public static void CopyFileOrDirectory(string source, string dest)
@@ -92,15 +120,14 @@ namespace UnityEditor
 
         static bool Copy(string source, string dest)
         {
-            if (!Directory.Exists(Path.GetDirectoryName(dest)) || !Allowed(dest)) return false;
+            dest = Landing(dest, out string viewEntry, out bool allowed);
+            if (!allowed || !Directory.Exists(Path.GetDirectoryName(dest))) return false;
             try
             {
-                if (File.Exists(source))
-                {
-                    File.Copy(source, dest);
-                    return true;
-                }
-                return Directory.Exists(source) && CopyDirectory(source, dest, new HashSet<string>(StringComparer.Ordinal));
+                if (File.Exists(source)) File.Copy(source, dest);
+                else if (!Directory.Exists(source) || Inside(dest, source) || !CopyDirectory(source, dest, new HashSet<string>(StringComparer.Ordinal))) return false;
+                LinkInView(viewEntry, dest);
+                return true;
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
@@ -131,27 +158,23 @@ namespace UnityEditor
 
         static bool Move(string source, string dest)
         {
-            if (!EntryExists(source) || !Directory.Exists(Path.GetDirectoryName(dest)) || !Allowed(dest) || !Allowed(source)) return false;
+            if (!EntryExists(source)) return false;
+            source = Landing(source, out string sourceEntry, out bool sourceAllowed);
+            dest = Landing(dest, out string destEntry, out bool destAllowed);
+            if (!sourceAllowed || !destAllowed || !Directory.Exists(Path.GetDirectoryName(dest))) return false;
             try
             {
                 // A rename: a link stays a link, whatever it points to.
-                if (Directory.Exists(source)) Directory.Move(source, dest);
+                if (Directory.Exists(source))
+                {
+                    if (!IsLink(source) && Inside(dest, source)) return false;
+                    Directory.Move(source, dest);
+                }
                 else File.Move(source, dest);
+                // The view's link to the moved project entry goes, and one to the new entry comes.
+                if (sourceEntry != null && sourceEntry != source && IsLink(sourceEntry)) File.Delete(sourceEntry);
+                LinkInView(destEntry, dest);
                 return true;
-            }
-            catch (IOException) when (!IsLink(source) && Directory.Exists(source) && !EntryExists(dest))
-            {
-                // Another volume: a directory cannot be renamed onto it.
-                try
-                {
-                    if (!CopyDirectory(source, dest, new HashSet<string>(StringComparer.Ordinal))) return false;
-                    Directory.Delete(source, true);
-                    return true;
-                }
-                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
-                {
-                    return false;
-                }
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
@@ -164,24 +187,14 @@ namespace UnityEditor
 
         /// <summary>The path under the project folder of an absolute path inside it, spelled as it
         /// was given; "" for the project folder, for a path outside it and for a relative one. The
-        /// case of the project folder counts as it does on its volume.</summary>
+        /// project folder's case counts (not measured on a volume that ignores it).</summary>
         public static string GetProjectRelativePath(string path)
         {
             if (string.IsNullOrEmpty(path)) return "";
             string project = UnityEngine.ProjectInfo.ProjectPath;
             if (string.IsNullOrEmpty(project)) project = Directory.GetCurrentDirectory();
             project = Path.TrimEndingDirectorySeparator(Path.GetFullPath(project)) + "/";
-            var comparison = IgnoresCaseAt(project) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-            return path.StartsWith(project, comparison) ? path.Substring(project.Length) : "";
-        }
-
-        // Whether the volume finds the folder under another case of its name.
-        static bool IgnoresCaseAt(string folder)
-        {
-            folder = Path.TrimEndingDirectorySeparator(folder);
-            string upper = folder.ToUpperInvariant(), lower = folder.ToLowerInvariant();
-            string other = upper != folder ? upper : lower;
-            return other != folder && Directory.Exists(other);
+            return path.StartsWith(project, StringComparison.Ordinal) ? path.Substring(project.Length) : "";
         }
 
         // The start of a path's last component: slashes separate, backslashes are name characters.
@@ -218,14 +231,23 @@ namespace UnityEditor
 
         internal static bool IsSymlink(string path) => !string.IsNullOrEmpty(path) && IsLink(FullPath(path));
 
-        /// <summary>Where a link leads, as an absolute path; any other path as it was given.</summary>
+        /// <summary>Where a link leads, as an absolute path; any other path as it was given, also one
+        /// that only passes through a link (unmeasured).</summary>
         internal static string ResolveSymlinks(string path)
         {
             if (string.IsNullOrEmpty(path)) return path ?? "";
             string full = FullPath(path);
             if (!IsLink(full)) return path;
-            var target = File.ResolveLinkTarget(full, returnFinalTarget: true);
-            return target == null ? path : Path.TrimEndingDirectorySeparator(target.FullName);
+            try
+            {
+                var target = File.ResolveLinkTarget(full, returnFinalTarget: true);
+                return target == null ? path : Path.TrimEndingDirectorySeparator(target.FullName);
+            }
+            catch (IOException)
+            {
+                // Links that lead back to themselves lead nowhere.
+                return path;
+            }
         }
 
         /// <summary>A path with each existing component spelled as its entry is on the volume (it

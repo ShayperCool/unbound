@@ -114,13 +114,30 @@ namespace UnityEngine.Tests
             Assert.Equal("dir[k.txt=file(K)]", Tree(At("copiedDir")));
         }
 
-        // Unbound's choice (unmeasured): a link back into the tree ends the copy.
+        // Unbound's choices (unmeasured).
         [Fact]
-        public void ALinkBackIntoTheCopiedTreeFailsTheCopy()
+        public void ACopyOrMoveIntoItselfOrThroughALinkBackFailsAndMakesNothing()
         {
             Make("loop/x.txt", "X");
+            Make("loop/sub/y.txt", "Y");
+            Assert.Throws<IOException>(() => FileUtil.CopyFileOrDirectory(At("loop"), At("loop/copy")));
+            Assert.Throws<IOException>(() => FileUtil.CopyFileOrDirectory(At("loop"), At("loop/sub/copy")));
+            Assert.Throws<IOException>(() => FileUtil.MoveFileOrDirectory(At("loop"), At("loop/sub/moved")));
+            Assert.Equal("dir[sub=dir[y.txt=file(Y)],x.txt=file(X)]", Tree(At("loop")));
+            // A sibling whose name starts the same is another place.
+            FileUtil.CopyFileOrDirectory(At("loop"), At("loop2"));
+            Assert.Equal("dir[sub=dir[y.txt=file(Y)],x.txt=file(X)]", Tree(At("loop2")));
             Directory.CreateSymbolicLink(At("loop/back"), At("loop"));
-            Assert.Throws<IOException>(() => FileUtil.CopyFileOrDirectory(At("loop"), At("loop2")));
+            Assert.Throws<IOException>(() => FileUtil.CopyFileOrDirectory(At("loop"), At("loop3")));
+
+            // A link that points nowhere is a destination that exists.
+            File.CreateSymbolicLink(At("dangling"), At("nowhere.txt"));
+            Assert.EndsWith("destination path already exists.", Assert.Throws<IOException>(() => FileUtil.CopyFileOrDirectory(At("loop2/x.txt"), At("dangling"))).Message);
+            Assert.Equal("link", Tree(At("dangling")));
+            // Links that lead back to themselves resolve to nothing else.
+            File.CreateSymbolicLink(At("ring1"), At("ring2"));
+            File.CreateSymbolicLink(At("ring2"), At("ring1"));
+            Assert.Equal(At("ring1"), FileUtil.ResolveSymlinks(At("ring1")));
         }
 
         [Fact]
@@ -250,18 +267,23 @@ namespace UnityEngine.Tests
             finally { ProjectInfo.ProjectPath = previous; }
         }
 
-        // Unbound's own rule, as for DeleteFileOrDirectory: nothing is written onto the project
-        // folder, Library or Unbound's folder, and none of them is moved away.
+        // Unbound's own rules, as for DeleteFileOrDirectory: a path naming one of the view's links
+        // or a new name beside them names the project's own entry; nothing is written onto the
+        // project folder, Library or Unbound's folder, and none of them is moved away.
         [Fact]
-        public void WhatDeletingRefusesIsRefusedAsADestinationAndAsAMovedSource()
+        public void InTheProjectViewTopLevelPathsNameTheProjectsEntriesAndProtectedOnesAreRefused()
         {
             string project = At("project");
             string view = Path.Combine(project, "Library", "Unbound", "ProjectView");
-            Directory.CreateDirectory(view);
+            Directory.CreateDirectory(Path.Combine(view, "Packages"));
             var asset = Make("project/Assets/x.txt", "X");
             var cache = Make("project/Library/Unbound/cache.bin", "C");
-            foreach (var name in new[] { "Assets", "Library" })
+            var manifest = Make("project/Packages/manifest.json", "old");
+            Make("project/Builds/b.txt", "B");
+            Make("project/Temp/manifest.json", "new");
+            foreach (var name in new[] { "Assets", "Library", "Builds", "Temp" })
                 Directory.CreateSymbolicLink(Path.Combine(view, name), Path.Combine(project, name));
+            File.CreateSymbolicLink(Path.Combine(view, "Packages", "manifest.json"), manifest);
             var previousDirectory = Directory.GetCurrentDirectory();
             var previousProject = ProjectInfo.ProjectPath;
             try
@@ -272,7 +294,30 @@ namespace UnityEngine.Tests
                 // Inside the project's folders through the view's links: as anywhere.
                 FileUtil.CopyFileOrDirectory("Assets/x.txt", "Assets/y.txt");
                 Assert.Equal("file(X)", Tree(Path.Combine(project, "Assets/y.txt")));
+
+                // A file replaced through the view's link: the project's file, and the link stays one.
+                FileUtil.ReplaceFile("Temp/manifest.json", "Packages/manifest.json");
+                Assert.Equal("file(new)", Tree(manifest));
+                Assert.Equal("link", Tree(Path.Combine(view, "Packages", "manifest.json")));
+                Assert.Equal("new", File.ReadAllText("Packages/manifest.json"));
+                // A top-level folder moved: the project's folder, and the view's links follow.
+                FileUtil.MoveFileOrDirectory("Builds", "Builds_old");
+                Assert.Equal("none dir[b.txt=file(B)]", Tree(Path.Combine(project, "Builds")) + " " + Tree(Path.Combine(project, "Builds_old")));
+                Assert.Equal("none link", Tree(Path.Combine(view, "Builds")) + " " + Tree(Path.Combine(view, "Builds_old")));
+                Assert.Equal("B", File.ReadAllText("Builds_old/b.txt"));
+                // A new top-level name: made in the project, linked in the view.
+                FileUtil.CopyFileOrDirectory("Builds_old", "Builds");
+                FileUtil.CopyFileOrDirectory("Assets/x.txt", "top.txt");
+                Assert.Equal("dir[b.txt=file(B)] file(X)", Tree(Path.Combine(project, "Builds")) + " " + Tree(Path.Combine(project, "top.txt")));
+                Assert.Equal("link link", Tree(Path.Combine(view, "Builds")) + " " + Tree(Path.Combine(view, "top.txt")));
+                FileUtil.ReplaceDirectory("Builds_old", "Builds");
+                Assert.Equal("dir[b.txt=file(B)] link", Tree(Path.Combine(project, "Builds")) + " " + Tree(Path.Combine(view, "Builds")));
+                // What a script wrote in the view itself stays the view's.
+                File.WriteAllText("scratch.txt", "S");
+                FileUtil.MoveFileOrDirectory("scratch.txt", "Assets/scratch.txt");
+                Assert.Equal("file(S) none", Tree(Path.Combine(project, "Assets/scratch.txt")) + " " + Tree(Path.Combine(view, "scratch.txt")));
                 Assert.Equal(hits, Hits());
+
                 Assert.Throws<IOException>(() => FileUtil.CopyFileOrDirectory("Assets/x.txt", "Library/Unbound/stolen.txt"));
                 Assert.Equal("none", Tree(Path.Combine(project, "Library/Unbound/stolen.txt")));
                 Assert.Equal(hits + 1, Hits());
@@ -282,6 +327,7 @@ namespace UnityEngine.Tests
                 Assert.Equal(hits + 2, Hits());
                 Assert.Throws<IOException>(() => FileUtil.MoveFileOrDirectory("Library", "Assets/Library"));
                 Assert.True(Directory.Exists(Path.Combine(project, "Library")));
+                Assert.Equal("link", Tree(Path.Combine(view, "Library")));
                 Assert.Equal("file(X)", Tree(asset));
             }
             finally

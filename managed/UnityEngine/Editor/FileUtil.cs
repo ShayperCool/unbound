@@ -145,6 +145,30 @@ namespace UnityEditor
                 return link;
             }
 
+            /// <summary>The project's path for a path that names an entry directly in the view or in
+            /// its Packages folder, one of the view's links or a name nothing has yet, with the
+            /// view's entry; null for any other path, also for an entry a script made in the view
+            /// itself.</summary>
+            internal string ProjectPathOf(string full, out string viewEntry)
+            {
+                viewEntry = null;
+                string inView = Below(full, m_View) ?? Below(full, m_PhysicalView);
+                if (string.IsNullOrEmpty(inView)) return null;
+                string[] parts = inView.Split('/');
+                bool packages = string.Equals(parts[0], "Packages", m_Case);
+                if (parts.Length != (packages && parts.Length > 1 ? 2 : 1)) return null;
+                string entry = Path.Combine(m_View, inView);
+                if (packages && parts.Length == 1)
+                {
+                    viewEntry = entry;
+                    return Path.Combine(m_Project, "Packages");
+                }
+                string target = new FileInfo(entry).LinkTarget;
+                if (target == null && (File.Exists(entry) || Directory.Exists(entry))) return null;
+                viewEntry = entry;
+                return target != null ? Path.GetFullPath(target, Path.GetDirectoryName(entry)) : Path.Combine(m_Project, inView);
+            }
+
             /// <summary>Whether the deletion of <paramref name="full"/> would land on the project
             /// folder, Library, Library/Unbound or below it, or in a package kept elsewhere.</summary>
             internal bool Refuses(string full)
