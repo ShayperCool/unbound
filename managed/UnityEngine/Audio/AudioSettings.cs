@@ -119,10 +119,12 @@ namespace UnityEngine
         public static bool Reset(AudioConfiguration config)
         {
             AudioSystem.CheckMainThread("Reset");
-            bool ok = AudioBackend.Current.Reset(config);
+            var backend = AudioBackend.Current;
+            bool ok = backend.Reset(config);
             // Engine resource validation can reject a reset before changing anything.
             // Keep sources, pending capture registrations and notifications intact on failure.
             if (!ok) return false;
+            backend.ConsumeUserClipStartup();
             AudioSystem.OnReset();
             InvokeOnAudioConfigurationChanged(false);
             return ok;

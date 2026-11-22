@@ -11,8 +11,21 @@ namespace Unbound.Tests
     public sealed class CreatedClipMemoryTests : IDisposable
     {
         readonly string m_Release = ProjectInfo.UnityVersion;
-        public CreatedClipMemoryTests() => ProjectInfo.UnityVersion = "6000.0.71f1";
-        public void Dispose() => ProjectInfo.UnityVersion = m_Release;
+        readonly AudioBackend m_PreviousBackend = AudioBackend.Current;
+
+        public CreatedClipMemoryTests()
+        {
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            AudioBackend.Use(new VirtualAudioBackend());
+            // Match the clipmemory fixture, which creates a warmup clip before its matrix.
+            Object.DestroyImmediate(AudioClip.Create("warmup", 64, 2, 48000, false));
+        }
+
+        public void Dispose()
+        {
+            AudioBackend.Use(m_PreviousBackend);
+            ProjectInfo.UnityVersion = m_Release;
+        }
         static void Read(float[] data) => Array.Clear(data, 0, data.Length);
 
         [Theory]
@@ -51,6 +64,7 @@ namespace Unbound.Tests
         public void OtherReleasesRetainTheirUnmeasuredPreviousAccounting()
         {
             ProjectInfo.UnityVersion = "6000.1.0f1";
+            AudioBackend.Use(new VirtualAudioBackend());
             var clip = AudioClip.Create("probe", 1000, 1, 44100, true);
             try { Assert.Equal(4936L, Profiler.GetRuntimeMemorySizeLong(clip)); }
             finally { Object.DestroyImmediate(clip); }

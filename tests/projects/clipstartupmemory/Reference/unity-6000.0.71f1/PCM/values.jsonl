@@ -1,0 +1,8 @@
+{"k":"imported","v":"True"}
+{"k":"first.bytes","v":"1028"}
+{"k":"first.write","v":"True"}
+{"k":"first.written.bytes","v":"1028"}
+{"k":"second.bytes","v":"940"}
+{"k":"first.with.second.bytes","v":"1028"}
+{"k":"after.destroy.bytes","v":"940"}
+{"k":"complete","v":true}

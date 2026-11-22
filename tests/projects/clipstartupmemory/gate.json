@@ -1,0 +1,16 @@
+{
+  "commands": ["python3 tests/projects/clipstartupmemory/run.py gate"],
+  "summary": "clipstartupmemory (PCM|Callback|Stream|Reset|ResetOwner): .*",
+  "engine_paths": [
+    "tests/projects/clipstartupmemory/",
+    "tests/projects/formatmapping/Assets/Scenes/",
+    "tests/projects/formatmapping/Assets/Scenes.meta",
+    "tests/projects/formatmapping/Packages/",
+    "tests/projects/formatmapping/ProjectSettings/",
+    "managed/UnityEngine/Audio/AudioBackend.cs",
+    "managed/UnityEngine/Audio/AudioClip.cs",
+    "managed/UnityEngine/Audio/AudioSettings.cs",
+    "managed/UnityEngine/Profiling/MemorySizes.cs",
+    "managed/UnityEngine/Runtime/Compat.cs"
+  ]
+}

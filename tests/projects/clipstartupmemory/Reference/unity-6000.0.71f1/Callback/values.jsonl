@@ -1,0 +1,7 @@
+{"k":"first.bytes","v":"1384"}
+{"k":"first.write","v":"True"}
+{"k":"first.written.bytes","v":"1384"}
+{"k":"second.bytes","v":"1296"}
+{"k":"first.with.second.bytes","v":"1384"}
+{"k":"after.destroy.bytes","v":"1296"}
+{"k":"complete","v":true}

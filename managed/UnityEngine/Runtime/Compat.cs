@@ -493,6 +493,9 @@ namespace Unbound.Runtime
         /// <summary>Created clip stream memory follows the creation option and two truncated
         /// buffers, tests/projects/clipmemory on 6000.0.71f1. Other releases remain unmeasured.</summary>
         internal static bool CreatedClipStreamMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>First script-created clip memory measured by clipstartupmemory on 6000.0.71f1.
+        /// Other releases retain their previous accounting.</summary>
+        internal static bool CreatedClipStartupMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Created text and binary payload allocation accounting, Unity 6000.0.71f1
         /// (tests/projects/textassetmemory).</summary>
         internal static bool TextAssetMemoryMeasured => Family == ReleaseFamily.Unity6000_0;

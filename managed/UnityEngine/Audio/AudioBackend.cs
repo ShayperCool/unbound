@@ -43,6 +43,7 @@ namespace Unbound.Runtime
         }
         static AudioBackend s_Current;
         static long s_NextHandle;
+        int m_UserClipStartupConsumed;
 
         internal static AudioBackend Current => s_Current ??= Native.IsReady ? new NativeAudioBackend() : new VirtualAudioBackend();
 
@@ -50,6 +51,10 @@ namespace Unbound.Runtime
         internal static void Use(AudioBackend backend) => s_Current = backend;
 
         internal static ulong NextHandle() => (ulong)Interlocked.Increment(ref s_NextHandle);
+
+        /// <summary>Creating a script clip or successfully resetting audio consumes the
+        /// first-creation state for this backend (tests/projects/clipstartupmemory).</summary>
+        internal bool ConsumeUserClipStartup() => Interlocked.Exchange(ref m_UserClipStartupConsumed, 1) == 0;
 
         internal abstract bool ImportClip(ulong handle, string guid, out AudioClipInfo info);
         /// <summary>A downloaded file of the Unity <c>AudioType</c> decoded into the clip; with

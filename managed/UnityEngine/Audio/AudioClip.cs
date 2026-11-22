@@ -47,6 +47,7 @@ namespace UnityEngine
         internal bool m_Stream;
         /// <summary>The creation option, independent of the callback playback strategy.</summary>
         [NonSerialized] internal bool m_CreateStreamRequested;
+        [NonSerialized] internal bool m_OwnsStartupMemory;
         /// <summary><c>AudioCompressionFormat</c> of an asset's data.</summary>
         internal int m_CompressionFormat;
         // One node per streamed clip; the latest voice owns its cached buffer.
@@ -284,8 +285,10 @@ namespace UnityEngine
             m_LoadType = AudioClipLoadType.DecompressOnLoad;
             m_LoadState = AudioDataLoadState.Loaded;
             m_Handle = AudioBackend.NextHandle();
-            m_SharedData = new SharedClipData(AudioBackend.Current, m_Handle);
-            AudioBackend.Current.CreateClip(m_Handle, lengthSamples, channels, frequency, m_Stream);
+            var backend = AudioBackend.Current;
+            m_SharedData = new SharedClipData(backend, m_Handle);
+            backend.CreateClip(m_Handle, lengthSamples, channels, frequency, m_Stream);
+            m_OwnsStartupMemory = backend.ConsumeUserClipStartup();
             if (m_Stream)
             {
                 s_WithCallbacks[m_Handle] = this;

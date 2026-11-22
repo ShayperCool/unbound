@@ -24,6 +24,9 @@ namespace Unbound.Runtime
         const long RenderTextureHeader = 1024, ReleasedRenderTextureHeader = 544;
         const long MeshHeader = 1448, MeshVertexDataHeader = 16, MeshExtraSubMesh = 56;
         const long AudioClipHeader = 904, AudioClipPerChannel = 32;
+        // The first script-created clip before an audio reset carries this extra memory.
+        // Unity 6000.0.71f1, tests/projects/clipstartupmemory.
+        const long AudioClipStartupBytes = 88;
         // Created streams: two 400 ms buffers, each frame count truncated independently
         // (tests/projects/clipmemory, Unity 6000.0.71f1).
         const int CreatedStreamBuffers = 2, CreatedStreamBufferMilliseconds = 400;
@@ -152,6 +155,7 @@ namespace Unbound.Runtime
         {
             int channels = Math.Max(1, clip.channels);
             long header = AudioClipHeader + AudioClipPerChannel * channels;
+            if (Compat.CreatedClipStartupMemoryMeasured && clip.m_OwnsStartupMemory) header += AudioClipStartupBytes;
             bool measured = Compat.CreatedClipStreamMemoryMeasured;
             bool stream = clip.m_Stream || (measured && clip.m_CreateStreamRequested);
             long streamFrames = measured
