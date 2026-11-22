@@ -1,0 +1,42 @@
+{"k":"bound","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|count=—|True|ratio=—|True"}
+{"k":"count.L(0,10).before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"count.L(0,10)","v":"a=0,1.5,100,0.25,4|b=10,2.5,200,0.75,9|text=L(0,10)|mixed=False|undo=Set Int Values"}
+{"k":"ratio.L(0,10).before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"ratio.L(0,10)","v":"a=3,0,100,0.25,4|b=7,10,200,0.75,9|text=L(0,10)|mixed=False|undo=Set Float Values"}
+{"k":"count.+=5.before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"count.+=5","v":"a=8,1.5,100,0.25,4|b=12,2.5,200,0.75,9|text=+=5|mixed=False|undo=Set Int Values"}
+{"k":"ratio.+=5.before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"ratio.+=5","v":"a=3,6.5,100,0.25,4|b=7,7.5,200,0.75,9|text=+=5|mixed=False|undo=Set Float Values"}
+{"k":"count.*=2.before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"count.*=2","v":"a=6,1.5,100,0.25,4|b=14,2.5,200,0.75,9|text=*=2|mixed=False|undo=Set Int Values"}
+{"k":"ratio.*=2.before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"ratio.*=2","v":"a=3,3,100,0.25,4|b=7,5,200,0.75,9|text=*=2|mixed=False|undo=Set Float Values"}
+{"k":"count.R(5,5).before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"count.R(5,5)","v":"a=5,1.5,100,0.25,4|b=5,2.5,200,0.75,9|text=R(5,5)|mixed=False|undo=Set Int Values"}
+{"k":"ratio.R(5,5).before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"ratio.R(5,5)","v":"a=3,5,100,0.25,4|b=7,5,200,0.75,9|text=R(5,5)|mixed=False|undo=Set Float Values"}
+{"k":"count.2+3.before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"count.2+3","v":"a=5,1.5,100,0.25,4|b=5,2.5,200,0.75,9|text=2+3|mixed=False|undo=Modified Count in 2 Objects"}
+{"k":"ratio.2+3.before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"ratio.2+3","v":"a=3,5,100,0.25,4|b=7,5,200,0.75,9|text=2+3|mixed=False|undo=Modified Ratio in 2 Objects"}
+{"k":"count.L(1,1).before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"count.L(1,1)","v":"a=1,1.5,100,0.25,4|b=1,2.5,200,0.75,9|text=L(1,1)|mixed=False|undo=Set Int Values"}
+{"k":"ratio.L(1,1).before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"ratio.L(1,1)","v":"a=3,1,100,0.25,4|b=7,1,200,0.75,9|text=L(1,1)|mixed=False|undo=Set Float Values"}
+{"k":"big.L(0,10).before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"big.L(0,10)","v":"a=3,1.5,0,0.25,4|b=7,2.5,10,0.75,9|text=L(0,10)|mixed=False|undo=Set Int Values"}
+{"k":"precise.L(0,10).before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"precise.L(0,10)","v":"a=3,1.5,100,0,4|b=7,2.5,200,10,9|text=L(0,10)|mixed=False|undo=Set Float Values"}
+{"k":"unsigned.L(0,10).before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"unsigned.L(0,10)","v":"a=3,1.5,100,0.25,0|b=7,2.5,200,0.75,10|text=L(0,10)|mixed=False|undo=Set Int Values"}
+{"k":"big.+=5.before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"big.+=5","v":"a=3,1.5,105,0.25,4|b=7,2.5,205,0.75,9|text=+=5|mixed=False|undo=Set Int Values"}
+{"k":"precise.+=5.before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"precise.+=5","v":"a=3,1.5,100,5.25,4|b=7,2.5,200,5.75,9|text=+=5|mixed=False|undo=Set Float Values"}
+{"k":"unsigned.+=5.before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"unsigned.+=5","v":"a=3,1.5,100,0.25,9|b=7,2.5,200,0.75,14|text=+=5|mixed=False|undo=Set Int Values"}
+{"k":"three.L(0,10).before","v":"a=3,1.5,100,0.25,4|b=7,2.5,200,0.75,9|text=—|mixed=True"}
+{"k":"three.L(0,10)","v":"a=0,1.5,100,0.25,4|b=5,2.5,200,0.75,9|text=L(0,10)|mixed=False|undo=Set Int Values"}
+{"k":"three.c","v":"c=10"}
+{"k":"logs","v":[]}
+{"k":"complete","v":true}
