@@ -32,6 +32,8 @@ namespace Unbound.Runtime
         // (tests/projects/clipmemory, Unity 6000.0.71f1).
         const int CreatedStreamBuffers = 2, CreatedStreamBufferMilliseconds = 400;
         const long GameObjectHeader = 240, GameObjectPerComponent = 24;
+        // The attached component itself, measured by tests/projects/componentmemory on Unity 6000.0.71f1.
+        const long BoxColliderBytes = 288, MeshFilterBytes = 120, MonoBehaviourBytes = 456;
         // Unity 6000.0.71f1, tests/projects/textassetmemory: byte storage changes past 31 bytes.
         const long TextAssetHeader = 160, TextAssetInlineBytes = 31;
         static readonly object s_AstcFallbackLock = new();
@@ -83,6 +85,15 @@ namespace Unbound.Runtime
                 case AudioClip clip: return clip.m_IsAsset ? null : AudioClipSize(clip);
                 case TextAsset text when Compat.TextAssetMemoryMeasured: return TextAssetSize(text);
                 case GameObject go: return GameObjectHeader + GameObjectPerComponent * go.ProfilerComponentSlots;
+                case Component component when Compat.FixedComponentMemoryMeasured
+                    && component.m_GameObject != null && !component.IsPersistentAsset:
+                    return component switch
+                    {
+                        BoxCollider => BoxColliderBytes,
+                        MeshFilter => MeshFilterBytes,
+                        MonoBehaviour => MonoBehaviourBytes,
+                        _ => null,
+                    };
                 default: return null;
             }
         }

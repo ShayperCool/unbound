@@ -527,6 +527,8 @@ namespace Unbound.Runtime
         internal static bool TextAssetMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Component-list allocation for created and cloned GameObjects, measured by gameobjectmemory.</summary>
         internal static bool GameObjectComponentMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>Fixed native accounting for BoxCollider, MeshFilter and MonoBehaviour, measured by componentmemory.</summary>
+        internal static bool FixedComponentMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
 
 
         /// <summary>CRT loading, callback delivery and render-cycle scheduling,

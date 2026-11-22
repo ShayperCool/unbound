@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/componentmemory/run.py gate --release 6000.0.71f1"
+  ],
+  "summary": "componentmemory: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Profiling/MemorySizes.cs",
+    "managed/UnityEngine/Profiling/Profiling.cs",
+    "managed/UnityEngine/Runtime/Compat.cs"
+  ]
+}
