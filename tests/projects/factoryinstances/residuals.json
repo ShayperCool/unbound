@@ -1,0 +1,7 @@
+{
+  "Unbound has no parameterless constructor for these engine types yet, so ObjectFactory.CreateInstance fails loudly with NotSupportedException where the Editor makes an unnamed default object": [
+    "UnityEditor.Presets.Preset",
+    "UnityEngine.SparseTexture",
+    "UnityEngine.SpeedTreeWindAsset"
+  ]
+}
