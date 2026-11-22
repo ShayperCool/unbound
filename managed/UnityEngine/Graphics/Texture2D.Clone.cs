@@ -22,6 +22,8 @@ namespace UnityEngine
                 m_Format = m_Format,
                 m_MipCount = m_MipCount,
                 m_GpuMipCount = m_GpuMipCount,
+                m_ScriptTextureStorage = m_ScriptTextureStorage && !IsPersistentAsset && !IsExternalTexture
+                    && !m_ResizeMemoryPendingApply && !m_AstcMemoryPendingUpload,
                 m_IsReadable = m_IsReadable,
                 m_Linear = m_Linear,
                 m_UsageMode = m_UsageMode,

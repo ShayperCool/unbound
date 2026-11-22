@@ -153,6 +153,50 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void InitializedHdrCloneKeepsItsStorageAccountingAndCanOwnANewFootprint()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var source = new Texture2D(8, 8, TextureFormat.ASTC_HDR_4x4, false, true);
+            Texture2D copy = null;
+            try
+            {
+                copy = Object.Instantiate(source);
+                Assert.Equal(1512, Profiler.GetRuntimeMemorySizeLong(copy));
+                Assert.True(copy.Reinitialize(8, 8, TextureFormat.ASTC_5x5, false));
+                Assert.Equal(944, Profiler.GetRuntimeMemorySizeLong(copy));
+                copy.Apply(false, false);
+                Assert.Equal(1264, Profiler.GetRuntimeMemorySizeLong(copy));
+                Assert.Equal(4712, Profiler.GetRuntimeMemorySizeLong(source));
+            }
+            finally
+            {
+                Object.DestroyImmediate(copy);
+                Object.DestroyImmediate(source);
+            }
+        }
+
+        [Fact]
+        public void InitializedUncompressedCloneCanOwnTheFirstAstcSetup()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var source = new Texture2D(8, 8, TextureFormat.RGBA32, false, true);
+            Texture2D copy = null;
+            try
+            {
+                copy = Object.Instantiate(source);
+                Assert.True(copy.Reinitialize(8, 8, TextureFormat.ASTC_4x4, false));
+                Assert.Equal(944, Profiler.GetRuntimeMemorySizeLong(copy));
+                copy.Apply(false, false);
+                Assert.Equal(4456, Profiler.GetRuntimeMemorySizeLong(copy));
+            }
+            finally
+            {
+                Object.DestroyImmediate(copy);
+                Object.DestroyImmediate(source);
+            }
+        }
+
+        [Fact]
         public void UnmeasuredReleaseDoesNotClaimTheWorkspace()
         {
             using var release = TestRelease.Pin(TestRelease.Unmeasured);

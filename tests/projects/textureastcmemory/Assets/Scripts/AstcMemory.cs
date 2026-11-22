@@ -131,6 +131,17 @@ public static class AstcMemory
             Size("prelude.resize.applied", resized);
             Object.DestroyImmediate(resized);
         }
+        if (profile == "CloneResizeFirst")
+        {
+            var source = new Texture2D(8, 8, TextureFormat.RGBA32, false, true);
+            var clone = Object.Instantiate(source);
+            Put("prelude.clone.resize.result", clone.Reinitialize(8, 8, TextureFormat.ASTC_4x4, false));
+            Size("prelude.clone.resize", clone);
+            clone.Apply(false, false);
+            Size("prelude.clone.applied", clone);
+            Object.DestroyImmediate(clone);
+            Object.DestroyImmediate(source);
+        }
         if (profile == "UninitializedFirst")
         {
             var firstCreated = new Texture2D(8, 8, TextureFormat.ASTC_4x4, false, true, true);

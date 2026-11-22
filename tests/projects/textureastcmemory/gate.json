@@ -7,6 +7,7 @@
     "managed/UnityEngine/Graphics/Cubemap.cs",
     "managed/UnityEngine/Graphics/Texture.cs",
     "managed/UnityEngine/Graphics/Texture2D.cs",
+    "managed/UnityEngine/Graphics/Texture2D.Clone.cs",
     "managed/UnityEngine/Graphics/TextureArrays.cs",
     "managed/UnityEngine/Profiling/MemorySizes.cs",
     "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs"
