@@ -231,19 +231,16 @@ public partial class ParticleRenderProbe
             extra.Add(depthTarget);
         }
         // colliderForce on free Dynamic bodies (mass 1, no gravity or damping) with each
-        // multiplier, head-on, at a slant and off the body's center.
+        // multiplier, head-on, at a slant and off the body's center; at Medium quality (with the
+        // speed multiplier); and a negative force.
         var bodies = new List<(string key, Rigidbody2D body)>();
-        foreach (var (name, angle, speed, size, tilt, offset) in new[]
-        {
-            ("plain", false, false, false, 0f, 0f), ("angle", true, false, false, 0f, 0f), ("speed", false, true, false, 0f, 0f),
-            ("size", false, false, true, 0f, 0f), ("angle_tilted", true, false, false, 40f, 0f), ("plain_offset", false, false, false, 0f, 0.9f),
-        })
+        void ForceControl(string name, float force, bool angle, bool speed, bool size, float tilt, float offset, ParticleSystemCollisionQuality quality)
         {
             var at = Next();
             var key = "collide/world2d/force_" + name;
             controls.Add((key, CollideEmitter(key, at + Vector3.up, 4, 3f, s =>
             {
-                var c = s.collision; c.bounce = 0f; c.lifetimeLoss = 1f; c.colliderForce = 2f;
+                var c = s.collision; c.bounce = 0f; c.lifetimeLoss = 1f; c.colliderForce = force; c.quality = quality;
                 c.multiplyColliderForceByCollisionAngle = angle;
                 c.multiplyColliderForceByParticleSpeed = speed;
                 c.multiplyColliderForceByParticleSize = size;
@@ -259,6 +256,15 @@ public partial class ParticleRenderProbe
             bodies.Add((key, body));
             extra.Add(box);
         }
+        var high = ParticleSystemCollisionQuality.High;
+        ForceControl("plain", 2f, false, false, false, 0f, 0f, high);
+        ForceControl("angle", 2f, true, false, false, 0f, 0f, high);
+        ForceControl("speed", 2f, false, true, false, 0f, 0f, high);
+        ForceControl("size", 2f, false, false, true, 0f, 0f, high);
+        ForceControl("angle_tilted", 2f, true, false, false, 40f, 0f, high);
+        ForceControl("plain_offset", 2f, false, false, false, 0f, 0.9f, high);
+        ForceControl("speed_medium", 2f, false, true, false, 0f, 0f, ParticleSystemCollisionQuality.Medium);
+        ForceControl("negative", -2f, false, false, false, 0f, 0f, high);
         foreach (var (_, ps, _) in controls) ps.Play();
         for (int frame = 0; frame < 40; frame++)
         {
@@ -285,23 +291,32 @@ public partial class ParticleRenderProbe
 
     /// <summary>Particles starting inside a BoxCollider2D (as <c>collide/world2d/inside</c>) while
     /// Physics2D.baumgarteScale is 0.4 (<c>inside_baumgarte</c>), then while
-    /// Physics2D.maxLinearCorrection is 0.01 (<c>inside_correction</c>).</summary>
+    /// Physics2D.maxLinearCorrection is 0.01 (<c>inside_correction</c>), then, with
+    /// Physics2D.defaultContactOffset 0.05, inside a box made then (<c>inside_offset</c>) and over a
+    /// sloped box (<c>slope_offset</c>, as <c>slope</c> without its other settings).</summary>
     IEnumerator Collide2DBaumgarte()
     {
         float baumgarte = Physics2D.baumgarteScale, correction = Physics2D.maxLinearCorrection;
-        foreach (var (name, scale, limit) in new[] { ("inside_baumgarte", 0.4f, correction), ("inside_correction", baumgarte, 0.01f) })
+        float offset = Physics2D.defaultContactOffset;
+        foreach (var (name, scale, limit, contactOffset) in new[]
+        {
+            ("inside_baumgarte", 0.4f, correction, offset), ("inside_correction", baumgarte, 0.01f, offset),
+            ("inside_offset", baumgarte, correction, 0.05f), ("slope_offset", baumgarte, correction, 0.05f),
+        })
         {
             Physics2D.baumgarteScale = scale;
             Physics2D.maxLinearCorrection = limit;
+            Physics2D.defaultContactOffset = contactOffset;
             var at = s_CollideOrigin + new Vector3(0f, 10f, 40f);
             var key = "collide/world2d/" + name;
-            var ps = CollideEmitter(key, at, 3, 1f, s =>
+            bool slope = name == "slope_offset";
+            var ps = CollideEmitter(key, slope ? at + Vector3.up : at, slope ? 6 : 3, slope ? 3f : 1f, s =>
             {
-                var m = s.main; m.startSize = 0.2f;
+                var m = s.main; m.startSize = slope ? 0.3f : 0.2f;
                 var c = s.collision; c.bounce = 0.5f; c.mode = ParticleSystemCollisionMode.Collision2D;
             });
-            var box = Collide2D<BoxCollider2D>(at, Quaternion.identity);
-            box.GetComponent<BoxCollider2D>().size = new Vector2(2f, 2f);
+            var box = Collide2D<BoxCollider2D>(slope ? at + new Vector3(0f, -0.5f, 0f) : at, Quaternion.Euler(0f, 0f, slope ? 25f : 0f));
+            box.GetComponent<BoxCollider2D>().size = slope ? new Vector2(4f, 0.2f) : new Vector2(2f, 2f);
             yield return null;
             ps.Play();
             for (int frame = 0; frame < 20; frame++)
@@ -314,5 +329,6 @@ public partial class ParticleRenderProbe
         }
         Physics2D.baumgarteScale = baumgarte;
         Physics2D.maxLinearCorrection = correction;
+        Physics2D.defaultContactOffset = offset;
     }
 }
