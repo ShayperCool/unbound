@@ -178,13 +178,6 @@ namespace UnityEngine
 
         static readonly Action<string, string> s_Warn = Warn;
 
-        /// <summary>
-        /// What the bake's indirect light is made with: the Lighting Settings' Indirect Samples
-        /// and bounces, the installation's blue noise data, and each renderer's albedo and
-        /// emission images, drawn by its materials' meta passes over the bounds of its lightmap
-        /// UVs at the size the layout (<paramref name="layout"/>, the bake's answer) gives it.
-        /// Null, said, where they cannot be made: the direct light is baked alone.
-        /// </summary>
         /// <summary>The sky a bake takes: the ambient source's six faces of
         /// <see cref="SkyFaceSize"/> texels a side, black where the environment's light goes to
         /// the realtime lightmaps instead (Realtime Global Illumination on, and
@@ -202,6 +195,13 @@ namespace UnityEngine
         static Material EmptySlotMaterial() =>
             BuiltinShaders.Resolve(BuiltinShaders.ExtraGuid, BuiltinShaders.DefaultMaterialFileId) as Material;
 
+        /// <summary>
+        /// What the bake's indirect light is made with: the Lighting Settings' Indirect Samples
+        /// and bounces, the installation's blue noise data, and each renderer's albedo and
+        /// emission images, drawn by its materials' meta passes over the bounds of its lightmap
+        /// UVs at the size the layout (<paramref name="layout"/>, the bake's answer) gives it.
+        /// Null, said, where they cannot be made: the direct light is baked alone.
+        /// </summary>
         static object Indirect(string path, LightingSettings settings, List<(MeshRenderer renderer, long fileId)> placed, string layout)
         {
             string blueNoise = Path.Combine(UnityEditor.EditorApplication.applicationContentsPath ?? "", BlueNoiseData);
