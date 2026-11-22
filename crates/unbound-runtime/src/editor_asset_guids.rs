@@ -35,6 +35,7 @@ mod linux {
         ffi::{CStr, CString, c_char, c_int, c_uint, c_void},
         fs::{self, File},
         io::{self, Seek as _, SeekFrom},
+        mem::MaybeUninit,
         ptr::{self, NonNull},
         time::SystemTime,
     };
@@ -44,6 +45,26 @@ mod linux {
     struct Value {
         len: usize,
         data: *const u8,
+    }
+
+    #[repr(C)]
+    struct EnvInfo {
+        map_base: *mut c_void,
+        map_size: usize,
+        last_page: usize,
+        last_transaction: usize,
+        max_readers: c_uint,
+        readers: c_uint,
+    }
+
+    #[repr(C)]
+    struct EnvStat {
+        page_size: c_uint,
+        depth: c_uint,
+        branch_pages: usize,
+        leaf_pages: usize,
+        overflow_pages: usize,
+        entries: usize,
     }
 
     type EnvClose = unsafe extern "C" fn(*mut c_void);
@@ -60,7 +81,6 @@ mod linux {
         guid_to_path: c_uint,
         stamp: SystemTime,
         _library: libloading::Library,
-        _snapshot: StagedFile,
     }
 
     const READ_ONLY: c_uint = 0x20000;
@@ -72,6 +92,7 @@ mod linux {
             let stamp = fs::metadata(database)?.modified()?;
             let source = snapshot(database, library)
                 .context("reading a private copy of the Unity asset database")?;
+            let snapshot_len = fs::metadata(&source.0)?.len();
             let path = CString::new(source.0.as_os_str().as_encoded_bytes())?;
             // LMDB maps only the private copy. The source database and its lock stay untouched.
             unsafe {
@@ -88,6 +109,14 @@ mod linux {
                     c_uint,
                     c_uint,
                 ) -> c_int>(b"mdb_env_open")?;
+                let env_info = *lib
+                    .get::<unsafe extern "C" fn(*mut c_void, *mut EnvInfo) -> c_int>(
+                        b"mdb_env_info",
+                    )?;
+                let env_stat = *lib
+                    .get::<unsafe extern "C" fn(*mut c_void, *mut EnvStat) -> c_int>(
+                        b"mdb_env_stat",
+                    )?;
                 let txn_begin = *lib.get::<unsafe extern "C" fn(
                     *mut c_void,
                     *mut c_void,
@@ -117,7 +146,6 @@ mod linux {
                     guid_to_path: 0,
                     stamp,
                     _library: lib,
-                    _snapshot: source,
                 };
                 check(
                     set_maxdbs(env.as_ptr(), 64),
@@ -132,6 +160,34 @@ mod linux {
                     ),
                     "opening the database",
                 )?;
+                // The private mapping stays live without a directory entry.
+                fs::remove_file(&source.0).context("unlinking the private database copy")?;
+
+                // The environment reports its extent from its metadata pages without reading
+                // any B-tree pages. Check the file before opening a transaction.
+                let mut info = MaybeUninit::<EnvInfo>::uninit();
+                let mut stat = MaybeUninit::<EnvStat>::uninit();
+                check(
+                    env_info(env.as_ptr(), info.as_mut_ptr()),
+                    "reading the database extent",
+                )?;
+                check(
+                    env_stat(env.as_ptr(), stat.as_mut_ptr()),
+                    "reading the database page size",
+                )?;
+                let info = info.assume_init();
+                let stat = stat.assume_init();
+                let required = info
+                    .last_page
+                    .checked_add(1)
+                    .and_then(|pages| pages.checked_mul(stat.page_size as usize))
+                    .filter(|&size| size > 0)
+                    .context("invalid Unity asset database size")?;
+                anyhow::ensure!(
+                    snapshot_len >= required as u64,
+                    "truncated Unity asset database ({snapshot_len} bytes, expected at least {required})",
+                );
+
                 let mut txn = ptr::null_mut();
                 check(
                     txn_begin(env.as_ptr(), ptr::null_mut(), READ_ONLY, &mut txn),

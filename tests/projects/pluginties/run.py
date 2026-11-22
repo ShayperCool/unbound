@@ -15,6 +15,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -505,9 +506,9 @@ def seed_registered_guids(lmdb, project, registered):
 
 
 def engine_graph(cli, project, graph, log, env):
+    command = tool_command(cli, 'graph', '-p', str(project), '--json')
     with graph.open('w') as output, log.open('w') as errors:
-        subprocess.run([str(cli), 'graph', '-p', str(project), '--json'],
-                       stdout=output, stderr=errors, env=env, check=True)
+        subprocess.run(command, stdout=output, stderr=errors, env=env, check=True)
 
 
 def compare(actual, reference, output):
@@ -521,10 +522,15 @@ def compare(actual, reference, output):
     return True
 
 
-def compile_engine(cli, project, log, env):
-    command = [str(cli), 'compile', '-p', str(project), '--editor-assemblies']
+def tool_command(cli, *args):
+    command = [str(cli), *args]
     if editor_runner.LAUNCHER.is_file():
         command = [str(editor_runner.LAUNCHER), '--kind', 'tool', *command]
+    return command
+
+
+def compile_engine(cli, project, log, env):
+    command = tool_command(cli, 'compile', '-p', str(project), '--editor-assemblies')
     with log.open('w') as output:
         result = subprocess.run(command, stdout=output, stderr=subprocess.STDOUT, env=env)
     if result.returncode:
@@ -562,6 +568,7 @@ def gate_conflicts(run, release, linked_assets=False):
 
 def gate_established(run, release):
     if not sys.platform.startswith('linux'):
+        print('pluginties: skipping established database replay outside Linux')
         return 0
     try:
         lmdb = ctypes.CDLL('liblmdb.so.0')
@@ -612,7 +619,94 @@ def gate_established(run, release):
         return 1
     if database_before != (database.read_bytes(), lock.read_bytes()):
         raise RuntimeError('compilation altered the Unity asset database')
+    check_snapshot_cleanup(project)
     print(f"pluginties: {len(actual['references'])} established references and {len(actual['metas'])} unchanged metadata files match, compile succeeded")
+    return 0
+
+
+def check_snapshot_cleanup(project):
+    copies = list((project/'Library/Unbound').glob('plugin-import-*.tmp'))
+    if copies:
+        raise RuntimeError(f'leftover private database or metadata copies: {copies}')
+
+
+def fallback_project(project, release, second_asset, second_guid, guid):
+    probe_paths.project_copy(HERE, project, package_cache=False)
+    settings = project/'ProjectSettings'
+    settings.mkdir(exist_ok=True)
+    (settings/'ProjectVersion.txt').write_text(f'm_EditorVersion: {release}\n')
+    manifest = project/'Packages/manifest.json'
+    document = json.loads(manifest.read_text())
+    document['dependencies'].pop(PACKAGE)
+    manifest.write_text(json.dumps(document))
+    plugin = HERE.parent/'compilesetup/Assets/Plugins/Dup/ProbeDup.dll'
+    metas = []
+    for name, value in [('Assets/A/ProbeDup.dll', guid), (second_asset, second_guid)]:
+        asset = project/name
+        asset.parent.mkdir(parents=True, exist_ok=True)
+        importer = ''
+        if asset.suffix == '.dll':
+            shutil.copyfile(plugin, asset)
+            importer = LEGACY_IMPORTER.replace('ANY', '1')
+        else:
+            asset.write_text('plain test asset')
+        meta = asset.with_name(asset.name+'.meta')
+        meta.write_text(f'fileFormatVersion: 2\nguid: {value}\n'+importer)
+        metas.append(meta)
+    return metas
+
+
+def gate_fallbacks(run, release):
+    guid = '1a'*16
+    duplicate = 'Assets/B/ProbeDup.dll'
+    linux = sys.platform.startswith('linux')
+    bad_database = ('invalid asset database file' if linux
+                    else 'the established Unity asset database is unmeasured on this platform')
+    cases = [
+        ('bad-database', duplicate, guid, bad_database),
+        ('quoted', duplicate, f"'{guid}'", 'needs an unmeasured metadata rewrite'),
+        ('mixed-text', 'Assets/B/Shared.txt', guid, 'the group includes other asset types'),
+        ('mixed-native', 'Assets/B/Shared.so', guid, 'the group includes other asset types'),
+        ('read-only', duplicate, guid, 'is read-only'),
+    ]
+    if linux:
+        cases.append(('truncated-database', duplicate, guid, 'truncated Unity asset database'))
+    cli = engine_cli()
+    env = {**os.environ, 'UNBOUND_LOG': 'info', 'UNBOUND_OFFLINE': '1'}
+    for case, second_asset, second_guid, message in cases:
+        out = run/case
+        project = out/'project'
+        metas = fallback_project(project, release, second_asset, second_guid, guid)
+        database = project/'Library/SourceAssetDB'
+        if case == 'read-only':
+            metas[1].chmod(0o444)
+        if case == 'bad-database':
+            database.parent.mkdir(exist_ok=True)
+            database.touch()
+        if case == 'truncated-database':
+            seed_registered_guids(ctypes.CDLL('liblmdb.so.0'), project, {
+                'Assets/A/ProbeDup.dll': guid, duplicate: '2b'*16,
+            })
+            with database.open('r+b') as file:
+                if file.seek(0, os.SEEK_END) <= 8192:
+                    raise RuntimeError('the valid database does not extend beyond its metadata pages')
+                file.truncate(8192)
+        before = [meta.read_bytes() for meta in metas]
+        database_before = database.read_bytes() if database.exists() else None
+        compile_log = out/'compile.log'
+        if (result := compile_engine(cli, project, compile_log, env)):
+            return result
+        graph_log = out/'engine.log'
+        engine_graph(cli, project, out/'graph.json', graph_log, env)
+        for log in (compile_log, graph_log):
+            if message not in log.read_text(errors='replace'):
+                raise RuntimeError(f'{case}: expected fallback diagnostic in {log}: {message}')
+        if before != [meta.read_bytes() for meta in metas]:
+            raise RuntimeError(f'{case}: fallback altered the plugin metadata')
+        if database_before is not None and database_before != database.read_bytes():
+            raise RuntimeError(f'{case}: fallback altered the Unity asset database')
+        check_snapshot_cleanup(project)
+        print(f'pluginties: {case} falls back in compile and graph with unchanged metadata')
     return 0
 
 
@@ -678,7 +772,8 @@ def main():
     return (gate(run, args.release)
             or gate_conflicts(run/'guid-import', args.release)
             or gate_conflicts(run/'linked-assets', args.release, linked_assets=True)
-            or gate_established(run/'established', args.release))
+            or gate_established(run/'established', args.release)
+            or gate_fallbacks(run/'fallbacks', args.release))
 
 
 if __name__ == '__main__':
