@@ -206,7 +206,12 @@ namespace UnityEngine.Tests
             new GUIStyle { padding = padding, fixedWidth = 45f }.CalcMinMaxWidth(content, out min, out max);
             Assert.Equal((45f, 45f), (min, max));
 
-            Assert.Throws<ArgumentNullException>(() => new GUIStyle().CalcSize(null));
+            // Null content measures as empty content; a height of null content is an error as before.
+            Assert.Equal(new Vector2(7f, 3f), new GUIStyle { padding = padding }.CalcSize(null));
+            new GUIStyle { padding = padding }.CalcMinMaxWidth(null, out min, out max);
+            Assert.Equal((7f, 7f), (min, max));
+            Assert.Equal(new GUIStyle().GetCursorPixelPosition(new Rect(5f, 6f, 50f, 20f), GUIContent.none, 0), new GUIStyle().GetCursorPixelPosition(new Rect(5f, 6f, 50f, 20f), null, 0));
+            Assert.Equal(0, new GUIStyle().GetCursorStringIndex(new Rect(5f, 6f, 50f, 20f), null, new Vector2(9f, 9f)));
             Assert.Throws<ArgumentNullException>(() => new GUIStyle().CalcHeight(null, 10f));
             Assert.Equal(34f, new GUIStyle { fixedHeight = 34f }.CalcHeight(null, 10f));
         }

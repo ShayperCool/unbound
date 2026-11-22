@@ -109,7 +109,8 @@ namespace UnityEngine
 
         Vector2 DoCalcSize(GUIContent content, Vector2 constraints)
         {
-            if (content == null) throw new ArgumentNullException(nameof(content));
+            // Content that is null measures as content without text or image (unmeasured in the Editor).
+            content ??= GUIContent.none;
             if (m_FixedWidth != 0f && m_FixedHeight != 0f) return new Vector2(m_FixedWidth, m_FixedHeight);
 
             bool showsText = ShowsText(content);
@@ -225,7 +226,7 @@ namespace UnityEngine
                 minWidth = maxWidth = m_FixedWidth;
                 return;
             }
-            if (content == null) throw new ArgumentNullException(nameof(content));
+            content ??= GUIContent.none;
             maxWidth = HasText(content) ? TextSize(content, Vector2.zero).x : 0f;
             minWidth = m_WordWrap ? Mathf.Min(maxWidth, WrapMinimumWidth) : maxWidth;
             var image = SizeOf(content.image);
@@ -449,7 +450,7 @@ namespace UnityEngine
         /// rows.)</summary>
         public Vector2 GetCursorPixelPosition(Rect position, GUIContent content, int cursorStringIndex)
         {
-            if (content == null) throw new ArgumentNullException(nameof(content));
+            content ??= GUIContent.none;
             var inner = ContentRect(position);
             float line = lineHeight;
             var cursor = new Vector2(0f, line);
@@ -470,7 +471,7 @@ namespace UnityEngine
         /// <summary>The cursor index nearest a point of the content drawn in <paramref name="position"/>.</summary>
         public int GetCursorStringIndex(Rect position, GUIContent content, Vector2 cursorPixelPosition)
         {
-            if (content == null) throw new ArgumentNullException(nameof(content));
+            content ??= GUIContent.none;
             if (m_ImagePosition == ImagePosition.ImageOnly) return 0;
             var inner = ContentRect(position);
             float line = lineHeight;
