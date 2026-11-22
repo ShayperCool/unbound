@@ -1,0 +1,241 @@
+{"k":"blendtree.clip.root.dur","v":1}
+{"k":"blendtree.clip.root.sx","v":0}
+{"k":"blendtree.clip.root.sy","v":0}
+{"k":"blendtree.clip.root.sz","v":1.99999964}
+{"k":"blendtree.clip.root.ang","v":0}
+{"k":"blendtree.clip.root.app","v":1.99999964}
+{"k":"blendtree.clip.rootTurn.dur","v":2}
+{"k":"blendtree.clip.rootTurn.sx","v":1.31671405}
+{"k":"blendtree.clip.rootTurn.sy","v":0}
+{"k":"blendtree.clip.rootTurn.sz","v":1.21671414}
+{"k":"blendtree.clip.rootTurn.ang","v":0.785398126}
+{"k":"blendtree.clip.rootTurn.app","v":2.06927133}
+{"k":"blendtree.clip.empty.dur","v":1}
+{"k":"blendtree.clip.empty.sx","v":0}
+{"k":"blendtree.clip.empty.sy","v":0}
+{"k":"blendtree.clip.empty.sz","v":0}
+{"k":"blendtree.clip.empty.ang","v":0}
+{"k":"blendtree.clip.empty.app","v":0}
+{"k":"blendtree.empty.dur","v":0}
+{"k":"blendtree.empty.sx","v":0}
+{"k":"blendtree.empty.sy","v":0}
+{"k":"blendtree.empty.sz","v":0}
+{"k":"blendtree.empty.ang","v":0}
+{"k":"blendtree.empty.app","v":0}
+{"k":"blendtree.nullChild.dur","v":1}
+{"k":"blendtree.nullChild.sx","v":0}
+{"k":"blendtree.nullChild.sy","v":0}
+{"k":"blendtree.nullChild.sz","v":1.99999964}
+{"k":"blendtree.nullChild.ang","v":0}
+{"k":"blendtree.nullChild.app","v":1.99999964}
+{"k":"blendtree.withEmpty.dur","v":1}
+{"k":"blendtree.withEmpty.sx","v":0}
+{"k":"blendtree.withEmpty.sy","v":0}
+{"k":"blendtree.withEmpty.sz","v":0.999999821}
+{"k":"blendtree.withEmpty.ang","v":0}
+{"k":"blendtree.withEmpty.app","v":0.999999821}
+{"k":"blendtree.withTrulyEmpty.dur","v":1}
+{"k":"blendtree.withTrulyEmpty.sx","v":0}
+{"k":"blendtree.withTrulyEmpty.sy","v":0}
+{"k":"blendtree.withTrulyEmpty.sz","v":0.999999821}
+{"k":"blendtree.withTrulyEmpty.ang","v":0}
+{"k":"blendtree.withTrulyEmpty.app","v":0.999999821}
+{"k":"blendtree.twoClips.dur","v":1.5}
+{"k":"blendtree.twoClips.sx","v":0.658357024}
+{"k":"blendtree.twoClips.sy","v":0}
+{"k":"blendtree.twoClips.sz","v":1.60835695}
+{"k":"blendtree.twoClips.ang","v":0.392699063}
+{"k":"blendtree.twoClips.app","v":2.03463554}
+{"k":"blendtree.withZero.dur","v":1}
+{"k":"blendtree.withZero.sx","v":0}
+{"k":"blendtree.withZero.sy","v":0}
+{"k":"blendtree.withZero.sz","v":0.999999821}
+{"k":"blendtree.withZero.ang","v":0}
+{"k":"blendtree.withZero.app","v":0.999999821}
+{"k":"blendtree.timeScale.dur","v":1.5}
+{"k":"blendtree.timeScale.sx","v":0.658357024}
+{"k":"blendtree.timeScale.sy","v":0}
+{"k":"blendtree.timeScale.sz","v":1.60835695}
+{"k":"blendtree.timeScale.ang","v":0.392699063}
+{"k":"blendtree.timeScale.app","v":2.03463554}
+{"k":"blendtree.nested.dur","v":1.33333337}
+{"k":"blendtree.nested.sx","v":0.438904673}
+{"k":"blendtree.nested.sy","v":0}
+{"k":"blendtree.nested.sz","v":1.07223797}
+{"k":"blendtree.nested.ang","v":0.261799365}
+{"k":"blendtree.nested.app","v":1.35642374}
+{"k":"blendtree.logs","v":""}
+{"k":"synclayer.synced.f0.short.time","v":0.100000001}
+{"k":"synclayer.synced.f0.short.ntime","v":0.100000001}
+{"k":"synclayer.synced.f0.short.speed","v":1}
+{"k":"synclayer.synced.f0.short.nspeed","v":1}
+{"k":"synclayer.synced.f0.long.time","v":1}
+{"k":"synclayer.synced.f0.long.ntime","v":0.5}
+{"k":"synclayer.synced.f0.long.speed","v":3}
+{"k":"synclayer.synced.f0.long.nspeed","v":1.5}
+{"k":"synclayer.unsynced.f1.short.time","v":0.224999994}
+{"k":"synclayer.unsynced.f1.short.ntime","v":0.224999994}
+{"k":"synclayer.unsynced.f1.short.speed","v":1}
+{"k":"synclayer.unsynced.f1.short.nspeed","v":1}
+{"k":"synclayer.unsynced.f1.long.time","v":1.375}
+{"k":"synclayer.unsynced.f1.long.ntime","v":0.6875}
+{"k":"synclayer.unsynced.f1.long.speed","v":3}
+{"k":"synclayer.unsynced.f1.long.nspeed","v":1.5}
+{"k":"synclayer.synced.f1.short.time","v":0.571874976}
+{"k":"synclayer.synced.f1.short.ntime","v":0.571874976}
+{"k":"synclayer.synced.f1.short.speed","v":1}
+{"k":"synclayer.synced.f1.short.nspeed","v":1}
+{"k":"synclayer.synced.f1.long.time","v":1.14374995}
+{"k":"synclayer.synced.f1.long.ntime","v":0.571874976}
+{"k":"synclayer.synced.f1.long.speed","v":3}
+{"k":"synclayer.synced.f1.long.nspeed","v":1.5}
+{"k":"synclayer.synced.f1.other.time","v":0.75}
+{"k":"synclayer.synced.f1.other.ntime","v":0.375}
+{"k":"synclayer.synced.f1.other.speed","v":2}
+{"k":"synclayer.synced.f1.other.nspeed","v":1}
+{"k":"synclayer.synced.f1.dis.time","v":0.800000012}
+{"k":"synclayer.synced.f1.dis.ntime","v":0.800000012}
+{"k":"synclayer.synced.f1.dis.speed","v":4}
+{"k":"synclayer.synced.f1.dis.nspeed","v":4}
+{"k":"synclayer.zeroWeight.f1.short.time","v":0.224999994}
+{"k":"synclayer.zeroWeight.f1.short.ntime","v":0.224999994}
+{"k":"synclayer.zeroWeight.f1.short.speed","v":1}
+{"k":"synclayer.zeroWeight.f1.short.nspeed","v":1}
+{"k":"synclayer.zeroWeight.f1.long.time","v":1.375}
+{"k":"synclayer.zeroWeight.f1.long.ntime","v":0.6875}
+{"k":"synclayer.zeroWeight.f1.long.speed","v":3}
+{"k":"synclayer.zeroWeight.f1.long.nspeed","v":1.5}
+{"k":"synclayer.unsynced.f2.short.time","v":0.349999994}
+{"k":"synclayer.unsynced.f2.short.ntime","v":0.349999994}
+{"k":"synclayer.unsynced.f2.short.speed","v":1}
+{"k":"synclayer.unsynced.f2.short.nspeed","v":1}
+{"k":"synclayer.unsynced.f2.long.time","v":1.75}
+{"k":"synclayer.unsynced.f2.long.ntime","v":0.875}
+{"k":"synclayer.unsynced.f2.long.speed","v":3}
+{"k":"synclayer.unsynced.f2.long.nspeed","v":1.5}
+{"k":"synclayer.synced.f2.short.time","v":0.743749976}
+{"k":"synclayer.synced.f2.short.ntime","v":0.743749976}
+{"k":"synclayer.synced.f2.short.speed","v":1}
+{"k":"synclayer.synced.f2.short.nspeed","v":1}
+{"k":"synclayer.synced.f2.long.time","v":1.48749995}
+{"k":"synclayer.synced.f2.long.ntime","v":0.743749976}
+{"k":"synclayer.synced.f2.long.speed","v":3}
+{"k":"synclayer.synced.f2.long.nspeed","v":1.5}
+{"k":"synclayer.synced.f2.other.time","v":1}
+{"k":"synclayer.synced.f2.other.ntime","v":0.5}
+{"k":"synclayer.synced.f2.other.speed","v":2}
+{"k":"synclayer.synced.f2.other.nspeed","v":1}
+{"k":"synclayer.synced.f2.dis.time","v":0.800000012}
+{"k":"synclayer.synced.f2.dis.ntime","v":0.800000012}
+{"k":"synclayer.synced.f2.dis.speed","v":4}
+{"k":"synclayer.synced.f2.dis.nspeed","v":4}
+{"k":"synclayer.zeroWeight.f2.short.time","v":0.349999994}
+{"k":"synclayer.zeroWeight.f2.short.ntime","v":0.349999994}
+{"k":"synclayer.zeroWeight.f2.short.speed","v":1}
+{"k":"synclayer.zeroWeight.f2.short.nspeed","v":1}
+{"k":"synclayer.zeroWeight.f2.long.time","v":1.75}
+{"k":"synclayer.zeroWeight.f2.long.ntime","v":0.875}
+{"k":"synclayer.zeroWeight.f2.long.speed","v":3}
+{"k":"synclayer.zeroWeight.f2.long.nspeed","v":1.5}
+{"k":"synclayer.unsynced.f3.short.time","v":0.474999994}
+{"k":"synclayer.unsynced.f3.short.ntime","v":0.474999994}
+{"k":"synclayer.unsynced.f3.short.speed","v":1}
+{"k":"synclayer.unsynced.f3.short.nspeed","v":1}
+{"k":"synclayer.unsynced.f3.long.time","v":2.125}
+{"k":"synclayer.unsynced.f3.long.ntime","v":1.0625}
+{"k":"synclayer.unsynced.f3.long.speed","v":3}
+{"k":"synclayer.unsynced.f3.long.nspeed","v":1.5}
+{"k":"synclayer.synced.f3.short.time","v":0.915624976}
+{"k":"synclayer.synced.f3.short.ntime","v":0.915624976}
+{"k":"synclayer.synced.f3.short.speed","v":1}
+{"k":"synclayer.synced.f3.short.nspeed","v":1}
+{"k":"synclayer.synced.f3.long.time","v":1.83124995}
+{"k":"synclayer.synced.f3.long.ntime","v":0.915624976}
+{"k":"synclayer.synced.f3.long.speed","v":3}
+{"k":"synclayer.synced.f3.long.nspeed","v":1.5}
+{"k":"synclayer.synced.f3.other.time","v":1.25}
+{"k":"synclayer.synced.f3.other.ntime","v":0.625}
+{"k":"synclayer.synced.f3.other.speed","v":2}
+{"k":"synclayer.synced.f3.other.nspeed","v":1}
+{"k":"synclayer.synced.f3.dis.time","v":0.800000012}
+{"k":"synclayer.synced.f3.dis.ntime","v":0.800000012}
+{"k":"synclayer.synced.f3.dis.speed","v":4}
+{"k":"synclayer.synced.f3.dis.nspeed","v":4}
+{"k":"synclayer.zeroWeight.f3.short.time","v":0.474999994}
+{"k":"synclayer.zeroWeight.f3.short.ntime","v":0.474999994}
+{"k":"synclayer.zeroWeight.f3.short.speed","v":1}
+{"k":"synclayer.zeroWeight.f3.short.nspeed","v":1}
+{"k":"synclayer.zeroWeight.f3.long.time","v":2.125}
+{"k":"synclayer.zeroWeight.f3.long.ntime","v":1.0625}
+{"k":"synclayer.zeroWeight.f3.long.speed","v":3}
+{"k":"synclayer.zeroWeight.f3.long.nspeed","v":1.5}
+{"k":"synclayer.logs","v":""}
+{"k":"culling.default","v":"AlwaysAnimate"}
+{"k":"culling.always","v":"AlwaysAnimate"}
+{"k":"culling.clipBounds","v":"BasedOnRenderers"}
+{"k":"culling.userBounds","v":"BasedOnRenderers"}
+{"k":"culling.renderers","v":"BasedOnRenderers"}
+{"k":"culling.logs","v":""}
+{"k":"modebindings.util.Mixed","v":"Child|Transform|localEulerAnglesRaw.y|False|False;|ProbeTarget|amount|False|False;|ProbeTarget|offset.x|False|False;Child2|GameObject|m_IsActive|False|False"}
+{"k":"modebindings.mode.Mixed","v":"|ProbeTarget|amount|False|False;|ProbeTarget|offset.x|False|False;Child2|GameObject|m_IsActive|False|False;|ProbeTarget|reference|True|True;Child|Transform|m_LocalRotation.x|False|False;Child|Transform|m_LocalRotation.y|False|False;Child|Transform|m_LocalRotation.z|False|False;Child|Transform|m_LocalRotation.w|False|False;Child|Transform|m_LocalEulerAnglesHint.x|False|False;Child|Transform|m_LocalEulerAnglesHint.y|False|False;Child|Transform|m_LocalEulerAnglesHint.z|False|False"}
+{"k":"modebindings.util.Run","v":"Child|Transform|m_LocalRotation.x|False|False;Child|Transform|m_LocalRotation.y|False|False;Child|Transform|m_LocalRotation.z|False|False;Child|Transform|m_LocalRotation.w|False|False;Child|Transform|m_LocalPosition.x|False|False;Child|Transform|m_LocalPosition.y|False|False;Child|Transform|m_LocalPosition.z|False|False"}
+{"k":"modebindings.mode.Run","v":"Child|Transform|m_LocalRotation.x|False|False;Child|Transform|m_LocalRotation.y|False|False;Child|Transform|m_LocalRotation.z|False|False;Child|Transform|m_LocalRotation.w|False|False;Child|Transform|m_LocalPosition.x|False|False;Child|Transform|m_LocalPosition.y|False|False;Child|Transform|m_LocalPosition.z|False|False"}
+{"k":"modebindings.util.Pose","v":"Child|Transform|m_LocalScale.x|False|False;Child|Transform|m_LocalScale.y|False|False;Child|Transform|m_LocalScale.z|False|False"}
+{"k":"modebindings.mode.Pose","v":"Child|Transform|m_LocalScale.x|False|False;Child|Transform|m_LocalScale.y|False|False;Child|Transform|m_LocalScale.z|False|False"}
+{"k":"modebindings.util.Empty","v":""}
+{"k":"modebindings.mode.Empty","v":""}
+{"k":"modebindings.util.runtimeEd","v":"Child|Transform|localEulerAnglesRaw.y|False|False;Child|Transform|m_LocalPosition.x|False|False;Child|Transform|m_LocalScale.z|False|False;|ProbeTarget|amount|False|False;|ProbeTarget|counted|False|True;|ProbeTarget|mode|False|True;Child2|GameObject|m_IsActive|False|False"}
+{"k":"modebindings.mode.runtimeEd","v":"|ProbeTarget|amount|False|False;|ProbeTarget|counted|False|True;|ProbeTarget|mode|False|True;Child2|GameObject|m_IsActive|False|False;|ProbeTarget|reference|True|True;Child|Transform|m_LocalRotation.x|False|False;Child|Transform|m_LocalRotation.y|False|False;Child|Transform|m_LocalRotation.z|False|False;Child|Transform|m_LocalRotation.w|False|False;Child|Transform|m_LocalEulerAnglesHint.x|False|False;Child|Transform|m_LocalEulerAnglesHint.y|False|False;Child|Transform|m_LocalEulerAnglesHint.z|False|False;Child|Transform|m_LocalPosition.x|False|False;Child|Transform|m_LocalPosition.y|False|False;Child|Transform|m_LocalPosition.z|False|False;Child|Transform|m_LocalScale.x|False|False;Child|Transform|m_LocalScale.y|False|False;Child|Transform|m_LocalScale.z|False|False"}
+{"k":"modebindings.util.runtimeSet","v":"|ProbeTarget|amount|False|False;Child|Transform|m_LocalPosition.x|False|False;Child|Transform|m_LocalPosition.y|False|False;Child|Transform|m_LocalPosition.z|False|False"}
+{"k":"modebindings.mode.runtimeSet","v":"|ProbeTarget|amount|False|False;Child|Transform|m_LocalPosition.x|False|False;Child|Transform|m_LocalPosition.y|False|False;Child|Transform|m_LocalPosition.z|False|False"}
+{"k":"modebindings.util.mixedEdited","v":"Child|Transform|localEulerAnglesRaw.y|False|False;|ProbeTarget|amount|False|False;Child2|GameObject|m_IsActive|False|False;Child|Transform|m_LocalScale.y|False|False"}
+{"k":"modebindings.mode.mixedEdited","v":"|ProbeTarget|amount|False|False;Child2|GameObject|m_IsActive|False|False;|ProbeTarget|reference|True|True;Child|Transform|m_LocalRotation.x|False|False;Child|Transform|m_LocalRotation.y|False|False;Child|Transform|m_LocalRotation.z|False|False;Child|Transform|m_LocalRotation.w|False|False;Child|Transform|m_LocalEulerAnglesHint.x|False|False;Child|Transform|m_LocalEulerAnglesHint.y|False|False;Child|Transform|m_LocalEulerAnglesHint.z|False|False;Child|Transform|m_LocalScale.x|False|False;Child|Transform|m_LocalScale.y|False|False;Child|Transform|m_LocalScale.z|False|False"}
+{"k":"modebindings.util.mixedCleared","v":""}
+{"k":"modebindings.util.null.threw","v":"ArgumentNullException: Value cannot be null."}
+{"k":"modebindings.mode.null.threw","v":"TargetInvocationException: Exception has been thrown by the target of an invocation."}
+{"k":"modebindings.logs","v":""}
+{"k":"propmod.conv.posX","v":"type=Single Child|Transform|m_LocalPosition.x|False|False"}
+{"k":"propmod.conv.rotW","v":"type=Single Child|Transform|m_LocalRotation.w|False|False"}
+{"k":"propmod.conv.scaleZ","v":"type=Single Child|Transform|m_LocalScale.z|False|False"}
+{"k":"propmod.conv.eulerY","v":"type=null Child|Transform||False|False"}
+{"k":"propmod.conv.eulerHintX","v":"type=null Child|Transform||False|False"}
+{"k":"propmod.conv.active","v":"type=Boolean Child2|GameObject|m_IsActive|False|False"}
+{"k":"propmod.conv.floatField","v":"type=Single |ProbeTarget|amount|False|False"}
+{"k":"propmod.conv.intField","v":"type=Int32 |ProbeTarget|steps|False|False"}
+{"k":"propmod.conv.boolField","v":"type=Boolean |ProbeTarget|flag|False|False"}
+{"k":"propmod.conv.vecField","v":"type=Single |ProbeTarget|offset.y|False|False"}
+{"k":"propmod.conv.enumField","v":"type=Int32 |ProbeTarget|mode|False|True"}
+{"k":"propmod.conv.discreteInt","v":"type=Int32 |ProbeTarget|counted|False|True"}
+{"k":"propmod.conv.objField","v":"type=null |ProbeTarget||False|False"}
+{"k":"propmod.conv.unknown","v":"type=null |ProbeTarget||False|False"}
+{"k":"propmod.conv.renEnabled","v":"type=Boolean Child|MeshRenderer|m_Enabled|False|False"}
+{"k":"propmod.conv.renMat0","v":"type=Material Child|MeshRenderer|m_Materials.Array.data[0]|True|True"}
+{"k":"propmod.conv.unrelated","v":"type=null |Object||False|False"}
+{"k":"propmod.conv.nullTarget","v":"type=null |Object||False|False"}
+{"k":"propmod.conv.nullMod","v":"type=null |Object||False|False"}
+{"k":"propmod.conv.nullRoot.threw","v":"ArgumentNullException: Value cannot be null."}
+{"k":"propmod.add.outside.threw","v":"InvalidOperationException: AnimationMode.AddPropertyModification may only be called in animation mode.  See AnimationMode.StartAnimationMode."}
+{"k":"propmod.add.animated","v":"steps=True amount=True flag=True active=True posX=True pos=True mat=True ref=True"}
+{"k":"propmod.add.nullMod.threw","v":"NullReferenceException: (null)"}
+{"k":"propmod.add.nullTarget.threw","v":"NullReferenceException: (null)"}
+{"k":"propmod.add.reverted","v":"steps=2 amount=10 flag=True active=False pos=(4,2,3) mat=MatA ref=Walk"}
+{"k":"propmod.logs","v":""}
+{"k":"generic.count","v":10}
+{"k":"generic.item.0","v":"obj=False/disc=False/serRef=False/type=1/custom=0/path=1609142275/prop=2086281974/hasScript=False"}
+{"k":"generic.item.1","v":"obj=False/disc=False/serRef=False/type=114/custom=0/path=0/prop=2392944706/hasScript=True"}
+{"k":"generic.item.2","v":"obj=False/disc=False/serRef=False/type=114/custom=0/path=0/prop=874646130/hasScript=True"}
+{"k":"generic.item.3","v":"obj=False/disc=False/serRef=False/type=114/custom=0/path=0/prop=3522489242/hasScript=True"}
+{"k":"generic.item.4","v":"obj=False/disc=True/serRef=False/type=114/custom=0/path=0/prop=905322793/hasScript=True"}
+{"k":"generic.item.5","v":"obj=False/disc=True/serRef=False/type=114/custom=0/path=0/prop=2546616235/hasScript=True"}
+{"k":"generic.item.6","v":"obj=True/disc=True/serRef=False/type=114/custom=0/path=0/prop=2929936659/hasScript=True"}
+{"k":"generic.item.7","v":"obj=False/disc=False/serRef=False/type=23/custom=0/path=3815930669/prop=3305885265/hasScript=False"}
+{"k":"generic.item.8","v":"obj=True/disc=True/serRef=False/type=23/custom=21/path=3815930669/prop=0/hasScript=False"}
+{"k":"generic.item.9","v":"obj=False/disc=False/serRef=False/type=95/custom=0/path=0/prop=3471299058/hasScript=False"}
+{"k":"generic.empty","v":0}
+{"k":"generic.null","v":0}
+{"k":"generic.logs","v":""}
+{"k":"playablecurve.beforePlay","v":"curve=False plain=False int=False unknown=False"}
+{"k":"playablecurve.playing","v":"curve=True plain=False id=True val=0.5"}
+{"k":"playablecurve.afterSwap","v":"curve=True plain=False val=1"}
+{"k":"playablecurve.logs","v":"Warning: Parameter 'Missing' does not exist."}
+{"k":"complete","v":true}
