@@ -265,9 +265,9 @@ namespace Unbound.Runtime
             int submeshes = Math.Max(1, mesh.subMeshCount);
             for (int i = firstMaterial; i < end; i++)
             {
-                // A slot without a material draws with the error material (measured for mesh,
-                // skinned mesh, sprite and line renderers: tests/projects/missingmaterial).
-                // (also one whose material was destroyed: Unity's null).
+                // A slot without a material, or whose material was destroyed, draws with the error
+                // material, a slot beyond the sub-meshes too (measured for mesh, skinned mesh, sprite
+                // and line renderers and a TextMesh's text: tests/projects/missingmaterial).
                 var material = renderer.DrawnMaterial(i, materials[i]);
                 if (material == null) material = Material.Error;
                 into.Add(new DrawItem

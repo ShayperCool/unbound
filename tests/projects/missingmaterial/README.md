@@ -30,7 +30,7 @@ from the shaders' shadow caster passes, holds neither them nor the unlit ball.
 
 | Unity 6000.0 documentation | Control |
 | --- | --- |
-| [Renderer.sharedMaterial](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-sharedMaterial.html) and [Material](https://docs.unity3d.com/6000.0/Documentation/Manual/class-Material.html) do not say what a renderer without a material draws; the Manual's [shader loading](https://docs.unity3d.com/6000.0/Documentation/Manual/shader-loading.html) page names the magenta error shader for shaders that cannot draw. | `Missing`, `Halves`, `Sprite`, `Skinned`, `Line` against `Named` and `NoSlots`. |
+| [Renderer.sharedMaterial](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-sharedMaterial.html) and [Material](https://docs.unity3d.com/6000.0/Documentation/Manual/class-Material.html) do not say what a renderer without a material draws; the Manual's [shader loading](https://docs.unity3d.com/6000.0/Documentation/Manual/shader-loading.html) page names the magenta error shader for shaders that cannot draw. | `Missing`, `Halves`, `Sprite`, `Skinned`, `Line`, `Text`, `Extra`, `Destroyed` against `Named` and `NoSlots`. |
 
 Not measured: shadows (this project's quality settings draw none), trail, particle (see the
 particle probes), terrain, tilemap and effect renderers, which of two opaque draws at one depth
