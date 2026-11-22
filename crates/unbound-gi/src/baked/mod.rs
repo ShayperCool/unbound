@@ -6,6 +6,7 @@
 pub mod atlas;
 pub mod direct;
 pub mod gbuffer;
+pub mod grid;
 pub mod indirect;
 pub mod levels;
 pub mod light;

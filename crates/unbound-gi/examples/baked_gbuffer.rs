@@ -25,6 +25,7 @@
 use std::path::Path;
 use unbound_gi::baked::direct::{self, MixedMode, Receiver};
 use unbound_gi::baked::gbuffer::{Instance, Mesh, gbuffer};
+use unbound_gi::baked::grid::{Bounds, Grid};
 use unbound_gi::baked::indirect::{self, Material, Settings, Surface, Texture, World};
 use unbound_gi::baked::light::{Kind, Light, Mode};
 use unbound_gi::baked::sampling::Samples;
@@ -264,12 +265,18 @@ fn main() {
     let blue = std::fs::read(&args[3]).expect("the blue noise data");
     let samples = Samples::new(&blue).expect("the blue noise data's size");
     let scene = Scene::new(surfaces.iter().map(|s| s.corners));
+    let around = Bounds::around(surfaces.iter().flat_map(|s| s.corners)).unwrap_or(Bounds {
+        min: [0.0; 3],
+        max: [0.0; 3],
+    });
+    let grid = Grid::new(&lights, around);
     let world = World {
         scene: &scene,
         casters: &casters,
         surfaces: &surfaces,
         materials: &materials,
         lights: &lights,
+        grid: &grid,
         sky: sky.as_ref(),
     };
     let bounced = indirect::indirect(&g, &receivers, &world, &samples, settings);

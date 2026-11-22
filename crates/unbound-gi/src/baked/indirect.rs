@@ -12,6 +12,7 @@
 //! but for the last bits of its sums (tests/projects/bakedbuffers).
 use super::direct::{Receiver, normal_matrix, point, world_normal};
 use super::gbuffer::GBuffer;
+use super::grid::{Grid, Pick};
 use super::light::{Light, Tables};
 use super::sampling::{self, Samples};
 use super::sky::Sky;
@@ -142,6 +143,8 @@ pub struct World<'a> {
     pub surfaces: &'a [Surface],
     pub materials: &'a [Material],
     pub lights: &'a [Light],
+    /// Which of `lights` a surface takes (built from them).
+    pub grid: &'a Grid,
     /// The environment's light, if the scene has any.
     pub sky: Option<&'a Sky>,
 }
@@ -226,11 +229,14 @@ impl Path<'_> {
             let albedo = material.albedo.at(uv);
             let mut reflected: [f32; 3] = std::array::from_fn(|k| albedo[k] * throughput[k]);
             let numbers = self.numbers(index, (depth as usize + 1) * DIMENSIONS_PER_BOUNCE);
-            for light in world.lights {
+            // The lights: every directional one, and those of the surface's region of the
+            // light grid, picked where they are more than the bounce tests.
+            let mut lit = |pick: Pick| {
+                let light = &world.lights[pick.light];
                 let Some(arriving) =
                     light.arriving(self.tables, light.indirect_color, origin, smooth)
                 else {
-                    continue;
+                    return;
                 };
                 let shadowed = light.casts_shadows
                     && world.casters.occluded(
@@ -242,9 +248,17 @@ impl Path<'_> {
                     );
                 if !shadowed {
                     for k in 0..3 {
-                        sum[k] += arriving.color[k] * reflected[k];
+                        sum[k] += arriving.color[k] * reflected[k] * pick.weight;
                     }
                 }
+            };
+            for &light in &world.grid.directional {
+                lit(Pick { light, weight: 1.0 });
+            }
+            if let Some(region) = world.grid.region(origin) {
+                world
+                    .grid
+                    .lights_at(region, depth + 1, numbers[2], &mut lit);
             }
             let emissive = material.emissive.at(uv);
             for k in 0..3 {

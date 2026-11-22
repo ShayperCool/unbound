@@ -1150,6 +1150,7 @@ mod lighting {
 mod bounced {
     use crate::baked::direct::Receiver;
     use crate::baked::gbuffer::{self, Instance, Mesh};
+    use crate::baked::grid::{Bounds, Grid};
     use crate::baked::indirect::{self, Material, Settings, Surface, Texture, World};
     use crate::baked::light::{Kind, Light, Mode};
     use crate::baked::sampling::{self, BLUE_NOISE_BYTES, BlueNoiseSize, Samples, Twister};
@@ -1412,12 +1413,19 @@ mod bounced {
             }];
             let scene = Scene::new(self.surfaces.iter().map(|s| s.corners));
             let casters = Scene::new(self.casters.iter().copied());
+            let around =
+                Bounds::around(self.surfaces.iter().flat_map(|s| s.corners)).unwrap_or(Bounds {
+                    min: [0.0; 3],
+                    max: [0.0; 3],
+                });
+            let grid = Grid::new(&self.lights, around);
             let world = World {
                 scene: &scene,
                 casters: &casters,
                 surfaces: &self.surfaces,
                 materials: &self.materials,
                 lights: &self.lights,
+                grid: &grid,
                 sky: self.sky.as_ref(),
             };
             let samples = Samples::new(&vec![0; BLUE_NOISE_BYTES]).unwrap();

@@ -10,6 +10,7 @@ use base64::Engine;
 use serde_json::{Value as Json, json};
 use std::path::Path;
 use unbound_gi::baked::direct::{self, MixedMode, Receiver};
+use unbound_gi::baked::grid::{Bounds, Grid};
 use unbound_gi::baked::indirect::{self, Material, Surface, Texture, World};
 use unbound_gi::baked::light::{Kind, Light, Mode};
 use unbound_gi::baked::sampling::Samples;
@@ -715,6 +716,17 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             other => anyhow::bail!("a Lighting Mode of {other}"),
         };
         let baked: Vec<&Renderer> = taken.iter().map(|&i| &request.renderers[i]).collect();
+        // Which lights a surface of the scene takes at a bounce: the light grid over the box
+        // around the bake's renderers.
+        let around = Bounds::around(baked.iter().flat_map(|r| {
+            let (mesh, m) = (&meshes[r.mesh], r.local_to_world);
+            mesh.positions.iter().map(move |&p| direct::point(&m, p))
+        }))
+        .unwrap_or(Bounds {
+            min: [0.0; 3],
+            max: [0.0; 3],
+        });
+        let grid = Grid::new(&baked_lights, around);
         let scene = Scene::new(baked.iter().filter(|r| r.casts_shadows).flat_map(|r| {
             let (mesh, m) = (&meshes[r.mesh], r.local_to_world);
             let world = move |v: u32| direct::point(&m, mesh.positions[v as usize]);
@@ -843,6 +855,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                         surfaces: &b.surfaces,
                         materials: &b.materials,
                         lights: &baked_lights,
+                        grid: &grid,
                         sky: b.sky.as_ref().map(|s| &s.0),
                     },
                     &b.samples,
