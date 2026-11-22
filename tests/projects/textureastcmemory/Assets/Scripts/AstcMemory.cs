@@ -50,6 +50,26 @@ public static class AstcMemory
             Size("prelude.cube.applied", cube);
             Object.DestroyImmediate(cube);
         }
+        if (profile == "ResizeFirst")
+        {
+            var resized = new Texture2D(8, 8, TextureFormat.RGBA32, false, true);
+            Put("prelude.resize.result", resized.Reinitialize(8, 8, TextureFormat.ASTC_4x4, false));
+            Size("prelude.resize.new", resized);
+            resized.Apply(false, false);
+            Size("prelude.resize.applied", resized);
+            Object.DestroyImmediate(resized);
+        }
+        if (profile == "UninitializedFirst")
+        {
+            var firstCreated = new Texture2D(8, 8, TextureFormat.ASTC_4x4, false, true, true);
+            var firstRead = new Texture2D(8, 8, TextureFormat.ASTC_4x4, false, true);
+            Size("prelude.readFirst", firstRead);
+            Size("prelude.createdFirst", firstCreated);
+            firstCreated.Apply(false, false);
+            Size("prelude.createdFirst.applied", firstCreated);
+            Object.DestroyImmediate(firstCreated);
+            Object.DestroyImmediate(firstRead);
+        }
         var format = profile == "Wide" ? TextureFormat.ASTC_8x8 : TextureFormat.ASTC_4x4;
         int width = profile == "Wide" ? 77 : 13;
         var first = Create("first", format, width, 17, true, true);
@@ -57,6 +77,13 @@ public static class AstcMemory
         var color = Create("color", format, width, 17, true, false);
         var secondFormat = Create("secondFormat", TextureFormat.ASTC_6x6, 16, 24, false, true);
         Size("first.afterOthers", first);
+        if (profile == "CloneFirst")
+        {
+            var clone = Object.Instantiate(first);
+            Size("first.afterClone", first);
+            Size("clone", clone);
+            Object.DestroyImmediate(clone);
+        }
         Put("first.reinitialize.result", first.Reinitialize(16, 24, TextureFormat.RGBA32, false));
         Size("first.reinitialize", first);
         first.Apply(false, false);
