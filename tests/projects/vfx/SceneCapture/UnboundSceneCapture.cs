@@ -261,8 +261,16 @@ public sealed class UnboundSceneCapture : MonoBehaviour
             effect.GetParticleSystemNames(names);
             foreach (var name in names)
             {
-                var info = effect.GetParticleSystemInfo(name);
-                m_Out.Append(' ').Append(name).Append(':').Append(info.aliveCount).Append('/').Append(info.capacity).Append(info.sleeping ? "s" : "");
+                // A system the effect does not run (an effect that is not simulated) has no info.
+                try
+                {
+                    var info = effect.GetParticleSystemInfo(name);
+                    m_Out.Append(' ').Append(name).Append(':').Append(info.aliveCount).Append('/').Append(info.capacity).Append(info.sleeping ? "s" : "");
+                }
+                catch (ArgumentException)
+                {
+                    m_Out.Append(' ').Append(name).Append(":not running");
+                }
             }
             m_Out.Append("\"}\n");
         }
