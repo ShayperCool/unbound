@@ -11,7 +11,8 @@ using Object = UnityEngine.Object;
 /// <summary>
 /// Records, in Play mode, what SceneVisibilityManager answers and raises: on a small hierarchy
 /// (A with A1 and A2, A2 with A2a; B) it runs one operation per Editor update (hiding, showing,
-/// toggling, scene-wide calls, isolation, picking, null arguments, objects added under a hidden
+/// toggling, scene-wide calls, isolation (also of hidden objects, with changes made while
+/// isolated), picking, null arguments, objects added under a hidden
 /// parent and destroyed while hidden) and records, for each operation, the visibilityChanged and
 /// pickingChanged events raised during the call and before the next update, any exception, and
 /// then every object's and the scene's answers.
@@ -46,6 +47,12 @@ static class SceneVisibilityProbe
         ("showBIsolated", () => Manager.Show(O("B"), false)),
         ("exitIsolation", () => Manager.ExitIsolation()),
         ("showAllAfterIsolation", () => Manager.ShowAll()),
+        // Isolation over hidden objects: what it changes is dropped on exit.
+        ("hideBAndA2a", () => { Manager.Hide(O("B"), false); Manager.Hide(O("A2a"), false); }),
+        ("isolateHiddenB", () => Manager.Isolate(O("B"), false)),
+        ("showA2aIsolated", () => Manager.Show(O("A2a"), false)),
+        ("exitIsolationRestores", () => Manager.ExitIsolation()),
+        ("showAllAfterRestore", () => Manager.ShowAll()),
         ("disablePickingAWithDescendants", () => Manager.DisablePicking(O("A"), true)),
         ("enablePickingA2", () => Manager.EnablePicking(O("A2"), false)),
         ("togglePickingB", () => Manager.TogglePicking(O("B"), false)),
