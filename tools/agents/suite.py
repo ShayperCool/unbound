@@ -444,6 +444,7 @@ def recipes(release):
                         [single_ref('json'), '{work}/out.json'], verdict='exit')
     R['navmesh'] = classic('NAVMESH_PROBE_OUT', 'out.json', ['--no-watch', '--frames', '300'],
                            [single_ref('json'), '{work}/out.json'], verdict='exit')
+    R['navmesh'].append(driver('carving_route.py', 'gate'))
     for name, variable, frames in [('urp', 'URP_PROBE_DIR', '60'), ('urp2d', 'URP2D_PROBE_DIR', '40')]:
         scenarios = sorted((PROJECTS/name/'Reference/scenarios').glob('*.png'))
         R[name] = [run('--no-watch', '--frames', frames, '--size', '320x180', env={variable: '{work}/out'})]

@@ -20,6 +20,7 @@ public class NavProbe : MonoBehaviour
     const int Frames = 250;
     static string Only => Environment.GetEnvironmentVariable("NAVMESH_PROBE_ONLY") ?? "";
     readonly List<(string Name, NavMeshAgent Agent)> m_Agents = new List<(string, NavMeshAgent)>();
+    readonly string m_CarvingRoute = Environment.GetEnvironmentVariable("NAVMESH_PROBE_CARVING_ROUTE");
     int m_Frame;
     bool m_Done;
     NavMeshObstacle m_Carver;
@@ -366,7 +367,7 @@ public class NavProbe : MonoBehaviour
         // Below the move threshold, then well above it.
         if (m_Frame == 160) m_Parked.transform.position = ParkedAt + new Vector3(0.05f, 0f, 0f);
         if (m_Frame == 180) m_Parked.transform.position = ParkedMoved;
-        if (m_Frame == 230) m_Parked.carving = false;
+        if (m_Frame == 230 && m_CarvingRoute != "keep") m_Parked.carving = false;
         ProbeLog.Begin("agents.f" + m_Frame);
         ProbeLog.Value("dt", Time.deltaTime);
         if (m_Frame >= 58) ProbeLog.Value("holes", "u" + m_UpdateHoles + " l" + Holes());
@@ -394,11 +395,31 @@ public class NavProbe : MonoBehaviour
         if (Environment.GetEnvironmentVariable("NAVMESH_PROBE_CORRIDOR") == "1"
             && m_Frame >= 190 && m_Frame <= 196)
             RecordCorridorDiagnostic();
+        if (!string.IsNullOrEmpty(m_CarvingRoute) && m_Frame >= 228 && m_Frame <= Frames)
+            RecordCarvingRoute();
         if (m_Frame >= Frames)
         {
             m_Done = true;
             StartCoroutine(PredictionControls());
         }
+    }
+
+    void RecordCarvingRoute()
+    {
+        var agent = m_Agents[5].Agent;
+        ProbeLog.Begin("carvingRoute." + m_CarvingRoute + ".f" + m_Frame);
+        ProbeLog.Value("holes", "u" + m_UpdateHoles + " l" + Holes());
+        ProbeLog.Value("position", agent.transform.position);
+        ProbeLog.Value("nextPosition", agent.nextPosition);
+        ProbeLog.Value("velocity", agent.velocity);
+        ProbeLog.Value("desiredVelocity", agent.desiredVelocity);
+        ProbeLog.Value("steeringTarget", agent.steeringTarget);
+        ProbeLog.Value("remainingDistance", agent.remainingDistance);
+        ProbeLog.Value("hasPath", agent.hasPath);
+        ProbeLog.Value("pathPending", agent.pathPending);
+        ProbeLog.Value("pathStale", agent.isPathStale);
+        ProbeLog.Value("pathStatus", agent.pathStatus.ToString());
+        RecordDiagnosticCorners("path", agent.path.corners);
     }
 
     void RecordCorridorDiagnostic()

@@ -210,3 +210,24 @@ that join the corridor diagnostic matches in all seven frame scenarios (six diff
 the blocked agent matches from frame 191 to 231 (61 -> 19 of 253 values; it differs again from
 frame 232 with an extra corner), and the avoidance configurations named above match. The default
 rerun's differing frame scenarios stay at 212 (41 of them differ in fewer values).
+
+## Route after removing a carved hole
+
+The carving-route profile records the blocked agent as it walks past the parked
+obstacle. At frame 230 one run turns off carving and the control leaves it
+enabled. From frame 232 the cleared ground differs between the runs. In both
+Editor runs the agent follows the same remaining route, with the same reported
+corners, steering, velocity, and remaining distance. The hole that disappears
+lies behind the agent on a tile its corridor still uses.
+
+    UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navmesh/carving_route.py editor --label L
+    UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navmesh/carving_route.py publish --label L
+    UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 UNBOUND_CLI=.../unbound python3 tests/projects/navmesh/carving_route.py gate
+
+Two independent GPU Editor captures for each setting agree on all 1,564
+values. The route check uses the existing comparator and reference tolerance.
+The earlier broad capture still reports all its raw residuals. The Unity 6.0
+API documents carving's effect on the mesh and pathfinding. The running
+corridor through this edit is an observation from these controls.
+[NavMeshObstacle.carving](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshobstacle/carving),
+[AI Navigation manual](https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshObstacle.html).
