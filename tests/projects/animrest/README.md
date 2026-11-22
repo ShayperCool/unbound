@@ -23,7 +23,8 @@ Sections (all run in Play mode):
   and reverted to the modification's value) and on a prefab instance with and without an
   existing override, for both `keepPrefabOverride` values: the values are reverted and the
   instance's property modifications stay as they were before animation mode. Unbound reverts the
-  values but records them as overrides; those two rows are listed in `residuals.json`.
+  values and derives the modifications from the instance's current values; those two rows are
+  listed in `residuals.json`.
 * `culling.*`: setting obsolete `AnimationCullingType.BasedOnClipBounds` and `BasedOnUserBounds`
   versus `AlwaysAnimate` and `BasedOnRenderers` (getter readback and logs).
 * `modebindings.*`: `AnimationUtility.GetCurveBindings` and internal `AnimationMode.GetCurveBindings`

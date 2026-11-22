@@ -218,6 +218,29 @@ namespace UnityEngine.Tests
             Near.Equal(0.5f, so.normalizedTime, 1e-4f); // layer 1 unaffected: 0.25 + 0.25*1 = 0.5
         }
 
+        /// <summary>A GameObject's name recorded as a property modification goes back to the
+        /// modification's text when animation mode stops (tests/projects/animrest propmod.extra.str.*).</summary>
+        [Fact]
+        public void AModifiedGameObjectNameRevertsToTheModificationsText()
+        {
+            var go = Keep(new GameObject("OrigName"));
+            var driver = Keep(ScriptableObject.CreateInstance<AnimationModeDriver>());
+            AnimationMode.StartAnimationMode(driver);
+            AnimationMode.AddPropertyModification(
+                EditorCurveBinding.FloatCurve("", typeof(GameObject), "m_Name"),
+                new PropertyModification { target = go, propertyPath = "m_Name", value = "RecordedName" }, true);
+            Assert.True(AnimationMode.IsPropertyAnimated(go, "m_Name"));
+            go.name = "ChangedName";
+            AnimationMode.StopAnimationMode(driver);
+            Assert.Equal("RecordedName", go.name);
+            // Control: a name that was not recorded is left alone.
+            var other = Keep(new GameObject("Other"));
+            AnimationMode.StartAnimationMode(driver);
+            other.name = "Renamed";
+            AnimationMode.StopAnimationMode(driver);
+            Assert.Equal("Renamed", other.name);
+        }
+
         /// <summary>A state's first step advances it by the clock time since Play, at most the
         /// step (tests/projects/animrest playtiming.*): nothing at the time it began, the whole
         /// step a frame later, and the part between for a fixed-step Animation begun in Update,

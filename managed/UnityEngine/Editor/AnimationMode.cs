@@ -283,6 +283,9 @@ namespace UnityEditor
             if (target is GameObject go)
             {
                 if (path == "m_IsActive") go.SetActive(value > 0.5f);
+                // A GameObject's name takes the modification's text back like any text property
+                // (tests/projects/animrest propmod.extra.str.*).
+                else if (path == "m_Name" && isText) go.name = text ?? "";
                 return;
             }
             if (target is Renderer renderer && path == "m_Enabled")
