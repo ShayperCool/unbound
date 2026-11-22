@@ -224,5 +224,34 @@
   "keys": [
    "streams/disable_position"
   ]
+ },
+ "collision2d-max-shapes-per-system": {
+  "reason": "Collision2D with maxCollisionShapes below the shapes near the whole system: Unity searches only the first maxCollisionShapes shapes found near all of the system's particles in the step (here the left box, so the particles over the right box pass); Unbound looks per particle and reports the case as unsupported (collide/rules/2d/maxshapes).",
+  "keys": [
+   "collide/rules/2d/maxshapes/25",
+   "collide/rules/2d/maxshapes/26",
+   "collide/rules/2d/maxshapes/27",
+   "collide/rules/2d/maxshapes/28",
+   "collide/rules/2d/maxshapes/29",
+   "collide/rules/2d/maxshapes/30",
+   "collide/rules/2d/maxshapes/31",
+   "collide/rules/2d/maxshapes/32",
+   "collide/rules/2d/maxshapes/33",
+   "collide/rules/2d/maxshapes/34",
+   "collide/rules/2d/maxshapes/35",
+   "collide/rules/2d/maxshapes/36",
+   "collide/rules/2d/maxshapes/37",
+   "collide/rules/2d/maxshapes/38",
+   "collide/rules/2d/maxshapes/39",
+   "collide/rules/2d/maxshapes/right/events/25",
+   "collide/rules/2d/maxshapes/right/events/32",
+   "collide/rules/2d/maxshapes/right/events/33",
+   "collide/rules/2d/maxshapes/right/events/34",
+   "collide/rules/2d/maxshapes/right/events/35",
+   "collide/rules/2d/maxshapes/right/events/36",
+   "collide/rules/2d/maxshapes/right/events/37",
+   "collide/rules/2d/maxshapes/right/events/38",
+   "collide/rules/2d/maxshapes/right/events/39"
+  ]
  }
 }
