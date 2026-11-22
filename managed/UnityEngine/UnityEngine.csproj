@@ -3,6 +3,9 @@
        game code and plugins bind to it; the other modules are facades that forward to it. -->
   <PropertyGroup>
     <AssemblyName>UnityEngine.CoreModule</AssemblyName>
+    <!-- Unity's module assemblies are version 0.0.0.0: an engine type's assembly-qualified name
+         (UnityEvent arguments, type strings) names it so (tests/projects/unityeventtools). -->
+    <AssemblyVersion>0.0.0.0</AssemblyVersion>
     <RootNamespace>UnityEngine</RootNamespace>
     <Nullable>disable</Nullable>
     <DefineConstants>$(DefineConstants);UNITY_ASSERTIONS;ENABLE_UNITY_COLLECTIONS_CHECKS;ENABLE_PROFILER</DefineConstants>

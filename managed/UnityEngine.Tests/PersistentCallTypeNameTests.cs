@@ -83,5 +83,14 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(target);
             }
         }
+
+        [Fact]
+        public void EngineTypesNameTheirModuleAtVersionZeroAsUnitysDo()
+        {
+            // Unity's module assemblies are 0.0.0.0 (tests/projects/unityeventtools add.objectTyped).
+            Assert.Equal(new Version(0, 0, 0, 0), typeof(Transform).Assembly.GetName().Version);
+            Assert.Equal("UnityEngine.Transform, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+                typeof(Transform).AssemblyQualifiedName);
+        }
     }
 }
