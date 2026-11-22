@@ -28,6 +28,9 @@ drawn over everything) and runs two scripts on it:
   timeout and duration, and a tap with no EventSystem.
 * `controls.01` checks that a warning issued by a `Finished` subscriber stays out of the completed
   run's log.
+* `controls.02` checks that a world-space canvas without a raycaster still projects a named drag
+  through its camera. `controls.03` clicks an active child detached from its scene while an
+  additive scene load waits for activation.
 
 A row is what the driver logged for the step (`> ...`) and the events the UI recorded between its
 lines, a run of one event (a drag's moves) once. `final` is the UI's state at the end.
@@ -54,4 +57,5 @@ The Unity 6000.0 scripting API specifies the camera used to convert screen posit
 rectangle's coordinates. During a pointer callback, `pressEventCamera` supplies it for a click.
 The separate screenshot API writes a PNG and replaces a file of the same name.
 [RectTransformUtility](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RectTransformUtility.ScreenPointToLocalPointInRectangle.html)
+[Canvas.worldCamera](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Canvas-worldCamera.html)
 [ScreenCapture](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ScreenCapture.CaptureScreenshot.html)

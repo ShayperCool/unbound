@@ -4,6 +4,7 @@ using System.IO;
 using Unbound.GameDrive;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>Exercises sequences that cross step boundaries and checks the public run lifecycle.</summary>
@@ -23,6 +24,8 @@ public sealed class DriveDriverControls
     public IEnumerator Record(Action finished)
     {
         Build();
+        var heldLoad = SceneManager.LoadSceneAsync(0, LoadSceneMode.Additive);
+        heldLoad.allowSceneActivation = false;
         try
         {
             var invalid = Driver.Run(new DriveOptions { Timeout = float.NaN, Exit = false });
@@ -35,7 +38,8 @@ public sealed class DriveDriverControls
         }
 
         const string script = "wait:0.2;log:swap;click:Replace;click:Button;tap:0.95,0.05;log:empty;" +
-                              "hide:ControlOverlay;tap:0.35,0.06;drag:Rotated:1,0:0.1;drag:CameraTarget:1,0:0.1";
+                              "hide:ControlOverlay;tap:0.35,0.06;drag:Rotated:1,0:0.1;drag:CameraTarget:1,0:0.1;" +
+                              "drag:CanvasOnly:1,0:0.1;click:DetachedControl";
         var code = 0;
         var done = false;
         var swapAt = int.MaxValue;
@@ -102,7 +106,10 @@ public sealed class DriveDriverControls
         {
             Driver.Finished -= Completed;
             Driver.Logged -= Logged;
+            DriveProbe.Control("additive load held=" + !heldLoad.isDone, step: 3);
+            heldLoad.allowSceneActivation = true;
         }
+        while (!heldLoad.isDone) yield return null;
         finished();
     }
 
@@ -132,19 +139,34 @@ public sealed class DriveDriverControls
         camera.orthographic = true;
         camera.orthographicSize = 3f;
         camera.transform.position = new Vector3(0f, 0f, -10f);
-        var world = new GameObject("WorldControls", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+        WorldTarget("CameraTarget", camera, raycaster: true);
+        WorldTarget("CanvasOnly", camera, raycaster: false);
+
+        var root = new GameObject("DetachedDriverRoot");
+        var detached = DriveProbe.Box("DetachedControl", root.transform, 0f, 0f, 1f, 1f, Color.white).gameObject;
+        detached.AddComponent<Button>().onClick.AddListener(() => DriveProbe.Control("detached target clicked", step: 3));
+        root.hideFlags = HideFlags.HideInHierarchy | HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
+        DriveProbe.Control($"detached target active={detached.activeInHierarchy} sceneValid={detached.scene.IsValid()}", step: 3);
+    }
+
+    static void WorldTarget(string name, Camera camera, bool raycaster)
+    {
+        var world = new GameObject(name + "Canvas", typeof(RectTransform), typeof(Canvas));
         ((RectTransform)world.transform).sizeDelta = new Vector2(2f, 2f);
         world.transform.position = new Vector3(1f, -1f, 0f);
         var canvas = world.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
         canvas.worldCamera = camera;
-        DriveProbe.Box("CameraTarget", world.transform, 0f, 0f, 1f, 1f, Color.blue)
-            .gameObject.AddComponent<DriveGestureResult>();
+        if (raycaster) world.AddComponent<GraphicRaycaster>();
+        DriveProbe.Box(name, world.transform, 0f, 0f, 1f, 1f, Color.blue)
+            .gameObject.AddComponent<DriveGestureResult>().ProjectionOnly = !raycaster;
     }
 }
 
 public sealed class DriveGestureResult : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
 {
+    public bool ProjectionOnly;
+
     public void OnPointerDown(PointerEventData e) { }
 
     public void OnDrag(PointerEventData e) { }
@@ -152,6 +174,11 @@ public sealed class DriveGestureResult : MonoBehaviour, IPointerDownHandler, IPo
     public void OnPointerUp(PointerEventData e)
     {
         var camera = e.pressEventCamera;
+        if (ProjectionOnly)
+        {
+            DriveProbe.Control($"canvas-only drag={e.dragging} noRaycaster={camera == null}", step: 2);
+            return;
+        }
         var dx = e.position.x - e.pressPosition.x;
         DriveProbe.Control($"{name} camera={(camera != null ? camera.name : "none")} dragged={e.dragging} fortyPixels={Mathf.Abs(dx - 40f) < 0.1f}");
     }

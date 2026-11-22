@@ -36,6 +36,10 @@ A target is an active object's name, or a path suffix when the name contains a `
 and hierarchy order and logs the ambiguity once per target. Screen points are fractions of the
 screen from its bottom left.
 
+Scene events refresh the driver's scene list. It also checks for scenes created without an event
+four times per second. When no loaded target matches, it polls Unity's object search for detached
+targets at the same rate and fails an ambiguous detached match.
+
 | Step | What it does |
 |---|---|
 | `wait:SECONDS` | waits |

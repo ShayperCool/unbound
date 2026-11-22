@@ -128,6 +128,8 @@ namespace Unbound.GameDrive
             if (options.Seed is int seed) UnityEngine.Random.InitState(seed);
             Application.logMessageReceived += GameLog;
             SceneManager.sceneLoaded += SceneLoaded;
+            SceneManager.sceneUnloaded += SceneUnloaded;
+            SceneManager.activeSceneChanged += ActiveSceneChanged;
             Log($"start {m_Steps.Count} steps clock {(options.Frames ? "frames@" + options.Fps : "real")} screen {Screen.width}x{Screen.height}");
         }
 
@@ -147,6 +149,8 @@ namespace Unbound.GameDrive
             RestoreCaptureFramerate();
             Application.logMessageReceived -= GameLog;
             SceneManager.sceneLoaded -= SceneLoaded;
+            SceneManager.sceneUnloaded -= SceneUnloaded;
+            SceneManager.activeSceneChanged -= ActiveSceneChanged;
             m_Log?.Dispose();
             m_Log = null;
         }
@@ -158,7 +162,15 @@ namespace Unbound.GameDrive
             Log(type == LogType.Exception ? $"game {type}: {first} @ {stack.Split('\n')[0]}" : $"game {type}: {first}");
         }
 
-        void SceneLoaded(Scene scene, LoadSceneMode mode) => Log($"scene {scene.path} {mode}");
+        void SceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            m_SceneListDirty = true;
+            Log($"scene {scene.path} {mode}");
+        }
+
+        void SceneUnloaded(Scene scene) => m_SceneListDirty = true;
+
+        void ActiveSceneChanged(Scene previous, Scene next) => m_SceneListDirty = true;
 
         /// <summary>Seconds on the driver's clock: the wall clock, or frames of 1/Fps.</summary>
         double Now => m_Options.Frames ? Time.frameCount / (double)m_Options.Fps : Time.realtimeSinceStartupAsDouble;
@@ -177,7 +189,13 @@ namespace Unbound.GameDrive
         void Update()
         {
             if (m_Done) return;
-            Hide();
+            try { Hide(); }
+            catch (Exception error)
+            {
+                Log($"hide failed: {error.GetType().Name}: {error.Message}");
+                Finish(4);
+                return;
+            }
             // One step that sends input, or one that still waits, ends the frame's work.
             while (m_Index < m_Steps.Count)
             {
@@ -510,6 +528,11 @@ namespace Unbound.GameDrive
         readonly Stack<Transform> m_Descendants = new Stack<Transform>();
         readonly List<MonoBehaviour> m_Behaviours = new List<MonoBehaviour>();
         readonly HashSet<string> m_Ambiguous = new HashSet<string>(StringComparer.Ordinal);
+        readonly List<Scene> m_Scenes = new List<Scene>();
+        readonly List<Transform> m_Detached = new List<Transform>();
+        const double SceneRefreshSeconds = 0.25;
+        bool m_SceneListDirty = true;
+        double m_NextSceneRefresh, m_NextDetachedRefresh;
 
         GameObject FindActive(string name) => FindTarget(name, pressable: false);
 
@@ -524,17 +547,57 @@ namespace Unbound.GameDrive
             bool isPath = name.IndexOf('/') >= 0;
             var persistentScene = gameObject.scene;
             bool scannedPersistent = false;
-            for (int i = 0; i < SceneManager.sceneCount; i++)
+            RefreshScenes();
+            foreach (var scene in m_Scenes)
             {
-                var scene = SceneManager.GetSceneAt(i);
-                if (!scene.isLoaded) continue;
+                if (!scene.IsValid() || !scene.isLoaded) continue;
                 ScanScene(scene, name, isPath, pressable, ref first, ref matches);
                 scannedPersistent |= scene == persistentScene;
             }
             if (!scannedPersistent && persistentScene.IsValid() && persistentScene.isLoaded)
                 ScanScene(persistentScene, name, isPath, pressable, ref first, ref matches);
+            if (first == null) return FindDetached(name, isPath, pressable);
             if (matches > 1 && m_Ambiguous.Add(name))
                 Log($"{matches} objects match {name}: the first in the hierarchy is taken, {PathOf(first.transform)}");
+            return first;
+        }
+
+        void RefreshScenes()
+        {
+            double now = Now;
+            if (!m_SceneListDirty && now < m_NextSceneRefresh) return;
+            m_NextSceneRefresh = now + SceneRefreshSeconds;
+            int count = SceneManager.sceneCount;
+            // CreateScene may add an empty scene without raising a load event.
+            // Keep the snapshot between polls, including while another scene is waiting to load.
+            if (!m_SceneListDirty && count == m_Scenes.Count) return;
+            m_SceneListDirty = false;
+            m_Scenes.Clear();
+            for (int i = 0; i < count; i++) m_Scenes.Add(SceneManager.GetSceneAt(i));
+        }
+
+        GameObject FindDetached(string name, bool isPath, bool pressable)
+        {
+            double now = Now;
+            if (now >= m_NextDetachedRefresh)
+            {
+                m_NextDetachedRefresh = now + SceneRefreshSeconds;
+                m_Detached.Clear();
+                // A detached transform has no scene root list. Use the allocation-bearing
+                // global query at the polling interval and only when no loaded target matches.
+                foreach (var transform in FindObjectsByType<Transform>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                    if (!transform.gameObject.scene.IsValid()) m_Detached.Add(transform);
+            }
+            GameObject first = null;
+            foreach (var transform in m_Detached)
+            {
+                if (transform == null) continue;
+                var target = transform.gameObject;
+                if (!target.activeInHierarchy || target.scene.IsValid() || !Findable(target) || !Named(transform, name, isPath)) continue;
+                if (pressable && !IsPressable(target)) continue;
+                if (first != null) throw new InvalidOperationException($"ambiguous detached target {name}");
+                first = target;
+            }
             return first;
         }
 
@@ -549,12 +612,14 @@ namespace Unbound.GameDrive
                 var target = t.gameObject;
                 if (!target.activeSelf) continue;
                 for (int i = t.childCount - 1; i >= 0; i--) m_Descendants.Push(t.GetChild(i));
-                if ((target.hideFlags & HideFlags.DontSave) == HideFlags.DontSave) continue;
+                if (!Findable(target)) continue;
                 if (!Named(t, name, isPath)) continue;
                 if (pressable && !IsPressable(target)) continue;
                 if (matches++ == 0) first = target;
             }
         }
+
+        static bool Findable(GameObject target) => (target.hideFlags & HideFlags.DontSave) != HideFlags.DontSave;
 
         bool IsPressable(GameObject target)
         {
@@ -581,7 +646,10 @@ namespace Unbound.GameDrive
             if (target.transform is RectTransform rect)
             {
                 var raycaster = DrivePointer.RaycasterFor(target);
-                var camera = raycaster != null ? raycaster.eventCamera : null;
+                var canvas = target.GetComponentInParent<Canvas>()?.rootCanvas;
+                var camera = raycaster != null
+                    ? raycaster.eventCamera
+                    : canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
                 var corners = new Vector3[4];
                 rect.GetWorldCorners(corners);
                 Vector2 corner = RectTransformUtility.WorldToScreenPoint(camera, corners[0]);
