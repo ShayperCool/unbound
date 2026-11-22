@@ -13,6 +13,8 @@ whether the importer is dirty, the value in the `.meta` file and the imports of 
 
 - `class.*`: which editor class inspects an importer, the abstract base class, an editor made
   with `CreateInstance`.
+- `base.*`: the base `Editor`'s `SaveChanges` and `DiscardChanges` with `hasUnsavedChanges` set,
+  and overrides that do not call them.
 - `settings.*`: the members an Inspector would fill, and settings changed through the editor's
   SerializedObject: discarded, applied, saved, reset.
 - `importer.*`: settings changed on the importer itself and its user data, `SaveAndReimport`, and
@@ -21,6 +23,8 @@ whether the importer is dirty, the value in the `.meta` file and the imports of 
 - `shared.*`: two editors of one importer, and an editor made after the others were destroyed.
 - `extra.*`: an extra data type: the object made per importer, its part in the saved settings, a
   second editor, the object's end.
+- `extraButtons.*`: an editor with extra data and buttons destroyed with unsaved changes: what
+  its save still finds of the extra data.
 - `unsaved.*`: what applying, saving and discarding do to `hasUnsavedChanges`.
 - `mistake.*`: an extra data type that is no ScriptableObject, one whose initializer is left to
   the base class, an `OnEnable` that skips the base class's, and what the editors that failed in
@@ -28,7 +32,9 @@ whether the importer is dirty, the value in the `.meta` file and the imports of 
 - `several.*`: two targets.
 - `applyRevert.*`: an editor that asks for the Apply and Revert buttons: saving writes the
   `.meta` and imports the asset.
-- `outside.*`: `ApplyRevertGUI`, `OnInspectorGUI` and the button members called where no GUI runs.
+- `outside.*`: `ApplyRevertGUI`, `OnInspectorGUI` and the button members called where no GUI
+  runs, editors destroyed with unsaved changes, and (`outside.later.*`) what is still saved of the
+  importer for an editor made afterwards.
 - `texture.*`: a TextureImporter with an editor of the abstract base class.
 
 Not recorded: the buttons and the Asset PostProcessors list as they are drawn (batch mode runs no
@@ -41,7 +47,10 @@ Unity's Scripting API for 6000.0 (`AssetImporters.AssetImporterEditor`,
 docs.unity.com/en-us/engine/6000.0/script-reference/unityeditor/assetimporters/assetimportereditor)
 describes `needsApplyRevert`, `extraDataType` with `InitializeExtraDataInstance`, `HasModified`,
 `Apply`, `DiscardChanges` and `ApplyRevertGUI`, and says `OnEnable` and `OnDisable` overrides must
-call the base class's; the captures agree with it where they record the same thing.
+call the base class's; `Editor.SaveChanges`
+(docs.unity.com/en-us/engine/6000.0/script-reference/unityeditor/editor/savechanges) says an
+override must call the base implementation "or else the Editor.hasUnsavedChanges property is not
+reset to false" (`base.*`). The captures agree with the pages where they record the same thing.
 
 The textures come from `tests/projects/spriteatlaseditor`.
 

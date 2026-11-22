@@ -17,7 +17,12 @@ public class ProbeImporterEditor : ScriptedImporterEditor
     protected override void Awake() { Calls.Add(Tag + ".Awake"); base.Awake(); }
     public override void OnEnable() { Calls.Add(Tag + ".OnEnable"); base.OnEnable(); }
     public override void OnDisable() { Calls.Add(Tag + ".OnDisable"); base.OnDisable(); }
-    protected override void Apply() { Calls.Add(Tag + ".Apply"); base.Apply(); }
+    protected override void Apply()
+    {
+        // An editor with extra data also says whether its extra data object is still there.
+        Calls.Add(Tag + ".Apply" + (extraDataType == null ? "" : "(extraAlive=" + (extraDataTargets != null && extraDataTargets[0] != null) + ")"));
+        base.Apply();
+    }
     protected override bool CanApply() { Calls.Add(Tag + ".CanApply"); return base.CanApply(); }
     public override void SaveChanges() { Calls.Add(Tag + ".SaveChanges"); base.SaveChanges(); }
     public override void DiscardChanges() { Calls.Add(Tag + ".DiscardChanges"); base.DiscardChanges(); }
@@ -55,6 +60,12 @@ public class ExtraImporterEditor : ProbeImporterEditor
     }
 }
 
+/// <summary>An editor with extra data that asks for the Apply and Revert buttons.</summary>
+public class ExtraButtonsImporterEditor : ExtraImporterEditor
+{
+    protected override bool needsApplyRevert => true;
+}
+
 /// <summary>An editor with an extra data type that leaves the base class to initialize it.</summary>
 public class UninitializedExtraImporterEditor : ProbeImporterEditor
 {
@@ -85,4 +96,17 @@ public class PlainAssetImporterEditor : AssetImporterEditor
     public bool NeedsApplyRevert => needsApplyRevert;
     public Object AssetTarget => assetTarget;
     public void CallApply() => Apply();
+}
+
+/// <summary>A plain editor that can say it has unsaved changes.</summary>
+public class FlagEditor : Editor
+{
+    public void SetUnsaved() => hasUnsavedChanges = true;
+}
+
+/// <summary>An editor whose SaveChanges and DiscardChanges do not call the base class's.</summary>
+public class NoBaseSaveEditor : FlagEditor
+{
+    public override void SaveChanges() { }
+    public override void DiscardChanges() { }
 }

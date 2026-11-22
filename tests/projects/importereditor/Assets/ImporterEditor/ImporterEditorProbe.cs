@@ -31,10 +31,12 @@ static class ImporterEditorProbe
         Application.logMessageReceived += (condition, stackTrace, type) => s_Logs.Add(type + ":" + condition.Replace("\n", "\\n"));
 
         Classes();
+        BaseEditor("Assets/Things/First.probeimp");
         SettingsFlow("Assets/Things/First.probeimp");
         ImporterFlow("Assets/Things/Second.probeimp");
         SharedState("Assets/Things/Third.probeimp");
         ExtraData("Assets/Things/Fourth.probeimp");
+        ExtraButtons("Assets/Things/Twelfth.probeimp");
         Mistakes("Assets/Things/Fifth.probeimp", "Assets/Things/Tenth.probeimp");
         Unsaved("Assets/Things/Eleventh.probeimp");
         Several("Assets/Things/Sixth.probeimp", "Assets/Things/Seventh.probeimp");
@@ -58,9 +60,23 @@ static class ImporterEditorProbe
         Check("class.abstract", () => Made(Editor.CreateEditor(AssetImporter.GetAtPath("Assets/Things/Plain.plainimp"), typeof(AssetImporterEditor))));
         ScriptedImporterEditor made = null;
         Step("class.new", null, () => made = ScriptableObject.CreateInstance<ScriptedImporterEditor>(),
-            () => "made=" + (made != null) + "|targets=" + Try(() => Count(made.targets)) + "|unsaved=" + Try(() => made.hasUnsavedChanges.ToString())
+            () => "made=" + (made != null) + "|unsaved=" + Try(() => made.hasUnsavedChanges.ToString())
                 + "|message=" + Try(() => Text(made.saveChangesMessage)) + "|showImportedObject=" + Try(() => made.showImportedObject.ToString()));
+        Check("class.newTargets", () => Count(made.targets));
         Step("class.newDestroy", null, () => Object.DestroyImmediate(made), () => "alive=" + (made != null));
+    }
+
+    /// <summary>The base class's SaveChanges and DiscardChanges, and overrides that do not call them.</summary>
+    static void BaseEditor(string path)
+    {
+        foreach (var type in new[] { typeof(FlagEditor), typeof(NoBaseSaveEditor) })
+        {
+            var editor = (FlagEditor)Editor.CreateEditor(Importer(path), type);
+            Check("base." + type.Name + ".made", () => "unsaved=" + editor.hasUnsavedChanges + "|message=" + Text(editor.saveChangesMessage));
+            Check("base." + type.Name + ".save", () => { editor.SetUnsaved(); editor.SaveChanges(); return "unsaved=" + editor.hasUnsavedChanges; });
+            Check("base." + type.Name + ".discard", () => { editor.SetUnsaved(); editor.DiscardChanges(); return "unsaved=" + editor.hasUnsavedChanges; });
+            Object.DestroyImmediate(editor);
+        }
     }
 
     static string Made(Editor editor)
@@ -197,6 +213,24 @@ static class ImporterEditorProbe
         Step("unsaved.destroy", path, () => Object.DestroyImmediate(editor), () => Disk(path));
     }
 
+    /// <summary>An editor with extra data and buttons that is destroyed with unsaved changes.</summary>
+    static void ExtraButtons(string path)
+    {
+        ExtraButtonsImporterEditor editor = null;
+        ProbeExtra extra = null;
+        Step("extraButtons.create", path, () => editor = (ExtraButtonsImporterEditor)Editor.CreateEditor(Importer(path), typeof(ExtraButtonsImporterEditor)), () =>
+        {
+            extra = editor.ExtraDataTarget as ProbeExtra;
+            return State(editor, path) + "|" + Extra(editor);
+        });
+        Step("extraButtons.edit", path, () => { extra.extra = 77; Importer(path).number = 73; EditorUtility.SetDirty(Importer(path)); editor.CallApplyRevertGUI(); }, () => State(editor, path) + "|extra=" + extra.extra);
+        Step("extraButtons.destroyUnsaved", path, () => Object.DestroyImmediate(editor), () => Disk(path) + "|extraAlive=" + (extra != null));
+        ExtraButtonsImporterEditor again = null;
+        Step("extraButtons.again", path, () => again = (ExtraButtonsImporterEditor)Editor.CreateEditor(Importer(path), typeof(ExtraButtonsImporterEditor)),
+            () => State(again, path) + "|extra=" + ((ProbeExtra)again.ExtraDataTarget).extra);
+        Step("extraButtons.destroy", path, () => Object.DestroyImmediate(again), () => Disk(path));
+    }
+
     /// <summary>The second path has had no editor before: nothing of it is saved.</summary>
     static void Mistakes(string path, string freshPath)
     {
@@ -278,6 +312,11 @@ static class ImporterEditorProbe
         Step("outside.buttons.create", path, () => buttons = (ApplyRevertImporterEditor)Editor.CreateEditor(Importer(path), typeof(ApplyRevertImporterEditor)), () => State(buttons, path));
         Step("outside.buttons.applyRevertGUI", path, () => { Edit(buttons, 63); buttons.CallApplyRevertGUI(); }, () => State(buttons, path));
         Step("outside.buttons.destroyUnsaved", path, () => Object.DestroyImmediate(buttons), () => Disk(path));
+        // After an editor that was destroyed with unsaved changes: is anything still saved of the importer?
+        ProbeImporterEditor later = null;
+        Step("outside.later.create", path, () => { Importer(path).number = 64; later = (ProbeImporterEditor)Editor.CreateEditor(Importer(path)); }, () => State(later, path));
+        Step("outside.later.discard", path, () => later.DiscardChanges(), () => State(later, path));
+        Step("outside.later.destroy", path, () => Object.DestroyImmediate(later), () => Disk(path));
     }
 
     /// <summary>An importer that is not scripted, with an editor of the abstract base class.</summary>

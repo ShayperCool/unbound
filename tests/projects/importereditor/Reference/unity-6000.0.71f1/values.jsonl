@@ -3,8 +3,15 @@
 {"k":"class.named","v":"type=ProbeImporterEditor|target=PlainImporter:|targets=1|hideFlags=HideAndDontSave|unsaved=False|message=\"Unapplied import settings for 'Assets/Things/Plain.plainimp'\"|showImportedObject=True|modified=False"}
 {"k":"class.baseForScripted","v":"type=PlainAssetImporterEditor|target=PlainImporter:|targets=1|hideFlags=HideAndDontSave|unsaved=False|message=\"Unapplied import settings for 'Assets/Things/Plain.plainimp'\"|showImportedObject=True|modified=False"}
 {"k":"class.abstract","v":"<null>"}
-{"k":"class.new","v":"throws=<none>|calls=<none>|logs=Exception:NullReferenceException: Object reference not set to an instance of an object|made=True|targets=<null>|unsaved=False|message=<null>|showImportedObject=True"}
+{"k":"class.new","v":"throws=<none>|calls=<none>|logs=Exception:NullReferenceException: Object reference not set to an instance of an object|made=True|unsaved=False|message=<null>|showImportedObject=True"}
+{"k":"class.newTargets","v":"<null>"}
 {"k":"class.newDestroy","v":"throws=<none>|calls=<none>|logs=Error:ScriptedImporterEditor.OnEnable must call base.OnEnable to avoid unexpected behaviour.||Exception:NullReferenceException: Object reference not set to an instance of an object|alive=False"}
+{"k":"base.FlagEditor.made","v":"unsaved=False|message=<null>"}
+{"k":"base.FlagEditor.save","v":"unsaved=False"}
+{"k":"base.FlagEditor.discard","v":"unsaved=False"}
+{"k":"base.NoBaseSaveEditor.made","v":"unsaved=False|message=<null>"}
+{"k":"base.NoBaseSaveEditor.save","v":"unsaved=True"}
+{"k":"base.NoBaseSaveEditor.discard","v":"unsaved=True"}
 {"k":"settings.create","v":"throws=<none>|calls=ProbeImporterEditor.Awake ProbeImporterEditor.OnEnable|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0"}
 {"k":"settings.members","v":"assetTarget=<null>|assetTargets=<null>|assetSerializedObject=<null>|needsApplyRevert=False|showImportedObject=True|useAssetDrawPreview=True|extraDataType=<null>|extraDataTargets=<null>|extraDataSerializedObject=<null>|extraDataTarget=throws NullReferenceException|canApply=True|serializedObject=set|message=\"Unapplied import settings for 'Assets/Things/First.probeimp'\""}
 {"k":"settings.editUnapplied","v":"throws=<none>|calls=<none>|logs=<none>|importerBefore=3|dirtyBefore=False|importer=3->7|label=start|modified=True|unsaved=False|dirty=True|meta=3|imports=0"}
@@ -43,14 +50,19 @@
 {"k":"extra.editUnapplied","v":"throws=<none>|calls=<none>|logs=<none>|extraBefore=40|importer=3|label=start|modified=True|unsaved=False|dirty=False|meta=3|imports=0|extra=50"}
 {"k":"extra.discard","v":"throws=<none>|calls=ExtraImporterEditor.DiscardChanges|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|extra=40|property=40"}
 {"k":"extra.field","v":"throws=<none>|calls=<none>|logs=<none>|importer=3|label=start|modified=True|unsaved=False|dirty=False|meta=3|imports=0|extra=60"}
-{"k":"extra.apply","v":"throws=<none>|calls=ExtraImporterEditor.Apply|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|extra=60"}
+{"k":"extra.apply","v":"throws=<none>|calls=ExtraImporterEditor.Apply(extraAlive=True)|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|extra=60"}
 {"k":"extra.editImporterToo","v":"throws=<none>|calls=<none>|logs=<none>|importer=71|label=start|modified=True|unsaved=False|dirty=False|meta=3|imports=0|extra=61"}
 {"k":"extra.discardBoth","v":"throws=<none>|calls=ExtraImporterEditor.DiscardChanges|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|extra=60"}
-{"k":"extra.applyRevertGUI","v":"throws=<none>|calls=ExtraImporterEditor.Apply|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|extra=62"}
+{"k":"extra.applyRevertGUI","v":"throws=<none>|calls=ExtraImporterEditor.Apply(extraAlive=True)|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|extra=62"}
 {"k":"extra.destroy","v":"throws=<none>|calls=ExtraImporterEditor.OnDisable|logs=<none>|extraAlive=False"}
 {"k":"extra.again","v":"throws=<none>|calls=ExtraImporterEditor.Awake ExtraImporterEditor.OnEnable ExtraImporterEditor.InitializeExtraDataInstance(ProbeExtra,0)|logs=<none>|sameObject=False|extra=40"}
 {"k":"extra.secondEditor","v":"throws=<none>|calls=ExtraImporterEditor.Awake ExtraImporterEditor.OnEnable|logs=<none>|sameObject=True|extra=40"}
 {"k":"extra.destroyBoth","v":"throws=<none>|calls=ExtraImporterEditor.OnDisable ExtraImporterEditor.OnDisable|logs=<none>|extraAlive=False"}
+{"k":"extraButtons.create","v":"throws=<none>|calls=ExtraButtonsImporterEditor.Awake ExtraButtonsImporterEditor.OnEnable ExtraButtonsImporterEditor.InitializeExtraDataInstance(ProbeExtra,0)|logs=<none>|importer=3|label=start|modified=False|unsaved=False|dirty=False|meta=3|imports=0|extraDataTargets=1|extraDataTarget=ProbeExtra:\"\":DontSaveInEditor, DontUnloadUnusedAsset:40:persistent=False|extraDataSerializedObject=ExtraDataSerializedObject:ProbeExtra:"}
+{"k":"extraButtons.edit","v":"throws=NullReferenceException|calls=<none>|logs=<none>|importer=73|label=start|modified=True|unsaved=True|dirty=True|meta=3|imports=0|extra=77"}
+{"k":"extraButtons.destroyUnsaved","v":"throws=<none>|calls=ExtraButtonsImporterEditor.OnDisable ExtraButtonsImporterEditor.SaveChanges ExtraButtonsImporterEditor.Apply(extraAlive=False)|logs=Error:SerializedObject target has been destroyed.|importer=73|dirty=False|meta=73|imports=1|extraAlive=False"}
+{"k":"extraButtons.again","v":"throws=<none>|calls=ExtraButtonsImporterEditor.Awake ExtraButtonsImporterEditor.OnEnable ExtraButtonsImporterEditor.InitializeExtraDataInstance(ProbeExtra,0)|logs=<none>|importer=73|label=start|modified=False|unsaved=False|dirty=False|meta=73|imports=1|extra=40"}
+{"k":"extraButtons.destroy","v":"throws=<none>|calls=ExtraButtonsImporterEditor.OnDisable|logs=<none>|importer=73|dirty=False|meta=73|imports=1"}
 {"k":"mistake.extraType","v":"throws=<none>|calls=BadExtraImporterEditor.Awake BadExtraImporterEditor.OnEnable|logs=Error:Extra Data objects needs to be ScriptableObject to support assembly reloads and Undo/Redo|extraDataTargets=<null>|modified=False|stateLogs=Error:SerializedObject target has been destroyed."}
 {"k":"mistake.extraTypeDestroy","v":"throws=<none>|calls=BadExtraImporterEditor.OnDisable|logs=<none>|alive=False"}
 {"k":"mistake.extraUninitialized","v":"throws=<none>|calls=UninitializedExtraImporterEditor.Awake UninitializedExtraImporterEditor.OnEnable|logs=Exception:NotImplementedException: InitializeExtraDataInstance must be implemented when extraDataType is overridden.|made=True|message=<null>|extraDataTargets=1|extraDataTarget=ProbeExtra:\"\":DontSaveInEditor, DontUnloadUnusedAsset:5:persistent=False|extraDataSerializedObject=ExtraDataSerializedObject:ProbeExtra:"}
@@ -96,6 +108,9 @@
 {"k":"outside.buttons.create","v":"throws=<none>|calls=ApplyRevertImporterEditor.Awake ApplyRevertImporterEditor.OnEnable|logs=<none>|importer=62|label=start|modified=False|unsaved=False|dirty=True|meta=3|imports=0"}
 {"k":"outside.buttons.applyRevertGUI","v":"throws=NullReferenceException|calls=<none>|logs=<none>|importer=63|label=start|modified=True|unsaved=True|dirty=True|meta=3|imports=0"}
 {"k":"outside.buttons.destroyUnsaved","v":"throws=<none>|calls=ApplyRevertImporterEditor.OnDisable ApplyRevertImporterEditor.SaveChanges ApplyRevertImporterEditor.Apply|logs=<none>|importer=63|dirty=False|meta=63|imports=1"}
+{"k":"outside.later.create","v":"throws=<none>|calls=ProbeImporterEditor.Awake ProbeImporterEditor.OnEnable|logs=<none>|importer=64|label=start|modified=True|unsaved=False|dirty=False|meta=63|imports=1"}
+{"k":"outside.later.discard","v":"throws=<none>|calls=ProbeImporterEditor.DiscardChanges|logs=<none>|importer=63|label=start|modified=False|unsaved=False|dirty=False|meta=63|imports=1"}
+{"k":"outside.later.destroy","v":"throws=<none>|calls=ProbeImporterEditor.OnDisable|logs=<none>|importer=63|dirty=False|meta=63|imports=1"}
 {"k":"texture.create","v":"throws=<none>|calls=<none>|logs=<none>|type=PlainAssetImporterEditor|needsApplyRevert=False|assetTarget=<null>|message=\"Unapplied import settings for 'Assets/Sprites/Single.png'\"|modified=False|unsaved=False"}
 {"k":"texture.edit","v":"throws=<none>|calls=<none>|logs=<none>|modified=True|changed=True"}
 {"k":"texture.discard","v":"throws=<none>|calls=<none>|logs=<none>|modified=False|changed=False"}
