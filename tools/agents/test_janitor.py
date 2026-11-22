@@ -909,7 +909,7 @@ class JanitorTests(unittest.TestCase):
         work = self.directory('q1/sheriff-S20-example')
         logged = self.directory('q1/logged-output')
         declared = self.directory('q1/nested-output')
-        logs = work/'project/Library/Unbound/ProjectView/Logs'
+        logs = work/'project/LibraryUnbound/ProjectView/Logs'
         logs.mkdir(parents=True)
         (logs/'Output.log.json').write_text('')
         (logs/'Blank.log.json').write_text(' \n\n')

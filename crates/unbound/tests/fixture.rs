@@ -14,7 +14,8 @@ fn enabled() -> bool {
 /// A fresh copy of the fixture (tests never edit the repository's).
 fn fixture_copy(name: &str) -> PathBuf {
     let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/hello");
-    let target = std::env::temp_dir().join(format!("unbound-fixture-{name}-{}", std::process::id()));
+    let target =
+        std::env::temp_dir().join(format!("unbound-fixture-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&target);
     copy_dir(&source, &target);
     target
@@ -24,7 +25,10 @@ fn copy_dir(from: &Path, to: &Path) {
     std::fs::create_dir_all(to).unwrap();
     for entry in std::fs::read_dir(from).unwrap().flatten() {
         let path = entry.path();
-        if path.file_name().is_some_and(|n| n == "Library") {
+        if path
+            .file_name()
+            .is_some_and(|n| n == "Library" || n == "LibraryUnbound")
+        {
             continue;
         }
         let dest = to.join(entry.file_name());
@@ -105,6 +109,73 @@ fn the_fixture_runs_its_script() {
         log.contains("format 1850 1850 1.01 0.3333333 1.01 0.3 0.3 0.3333333 0.30000000000000004"),
         "{log}"
     );
+}
+
+/// Whatever a run makes for itself goes to Unbound's directory: never into Unity's `Library/`,
+/// and where `--project-data` says when given, outside the project too.
+#[test]
+fn a_run_keeps_nothing_in_library_and_follows_the_place_asked_for() {
+    if !enabled() {
+        return;
+    }
+    let project = fixture_copy("data-default");
+    let status = unbound()
+        .args(["run", "--headless", "3", "--no-watch", "-p"])
+        .arg(&project)
+        .status()
+        .unwrap();
+    assert!(status.success());
+    assert!(!project.join(unbound_project::FORMER_UNBOUND_DIR).exists());
+    let data = project.join("LibraryUnbound");
+    assert!(data.join("ProjectView/Assets").exists());
+    assert_eq!(
+        std::fs::read_to_string(data.join(".gitignore")).unwrap(),
+        "*\n"
+    );
+    assert!(data.join("Editor.log").is_file());
+    // The view shows the project without Unbound's directory.
+    assert!(!data.join("ProjectView/LibraryUnbound").exists());
+
+    let project = fixture_copy("data-outside");
+    let outside = std::env::temp_dir().join(format!("unbound-fixture-data-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&outside);
+    let status = unbound()
+        .args(["run", "--headless", "3", "--no-watch", "--project-data"])
+        .arg(&outside)
+        .arg("-p")
+        .arg(&project)
+        .status()
+        .unwrap();
+    assert!(status.success());
+    assert!(!project.join(unbound_project::FORMER_UNBOUND_DIR).exists());
+    assert!(!project.join("LibraryUnbound").exists());
+    assert!(outside.join("ProjectView/Assets").exists());
+    assert!(outside.join("Editor.log").is_file());
+    assert!(!outside.join(".gitignore").exists());
+
+    // A place in an authored folder is refused before anything is written.
+    let project = fixture_copy("data-refused");
+    let output = unbound()
+        .args([
+            "run",
+            "--headless",
+            "3",
+            "--no-watch",
+            "--project-data",
+            "Assets/Data",
+            "-p",
+        ])
+        .arg(&project)
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("--project-data"),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(!project.join("Assets/Data").exists());
+    assert!(!project.join("LibraryUnbound").exists());
 }
 
 /// A watched headless run whose output lines arrive on a channel; `edit` runs once `ready`

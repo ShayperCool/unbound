@@ -355,7 +355,7 @@ Probe drivers that need a runtime use `tests/probe_paths.py`'s
 `shared_runtime(cli, destination, managed=None, manifest=None)`. A supplied flat manifest must
 match all captured inputs. The returned path contains `unbound`, `managed/`, and the existing
 flat `runtime-manifest.json`. Existing per-run manifests, verifications, commands and results
-remain in their run directory. Project `Library/Unbound`, compiler caches, captures and logs
+remain in their run directory. Project `LibraryUnbound`, compiler caches, captures and logs
 belong to the private project/run, never to the snapshot. Do not chmod or write through runtime
 references.
 

@@ -511,7 +511,7 @@ UVs scaled by `realtimeLightmapScaleOffset`: the precompute repacks each mesh's 
 result in its GI cache, not in the project (a player build stores it in
 `MeshRenderer.enlightenVertexStream`); the LightingData asset holds only where each renderer's UV
 space lies in its system and the system's chart mask. Unbound makes them itself
-(`crates/unbound-gi/src/realtime_uv.rs`, cached in `Library/Unbound/RealtimeUVs` by a hash of
+(`crates/unbound-gi/src/realtime_uv.rs`, cached in `LibraryUnbound/RealtimeUVs` by a hash of
 the inputs and a format version), for renderers with Preserve UVs and triangle meshes, whatever
 their Lightmap Parameters (parameters that change the charts, such as their resolution, fail the
 layout check below; `RoomSystems` gives three renderers parameters of their own with System Tag
@@ -996,7 +996,7 @@ is how the Editor's products are made in the measured release, as follows.
   and its light probes' positions: the systems and their layout, then per system its clusters,
   transport and visibility through the whole scene, and one light probe set, in the form the
   runtime reads the Editor's data in. The result is cached under
-  `Library/Unbound/RealtimeGI/` by a hash of every input and the format versions of the cache
+  `LibraryUnbound/RealtimeGI/` by a hash of every input and the format versions of the cache
   and of the precompute (`precompute::FORMAT_VERSION`), with a checksum: a damaged or stale
   entry is made again. Each system is transported with its Lightmap Parameters' Irradiance
   Quality and Budget. A renderer the precompute cannot take (no triangles, a vertex that is
@@ -1041,7 +1041,7 @@ probes), its realtime lightmap UVs as for the Editor's data, its Lightmap
 Parameters' Cluster Resolution, Irradiance Quality and Budget, Modelling Tolerance and System
 Tag, and the light probes of its LightProbeGroups (their positions, tetrahedralized, with no
 baked lighting, as the Editor's bake gives a scene without baked global illumination). The
-bake is cached under `Library/Unbound/RealtimeGI/` ([A scene's bake](#unbounds-precompute));
+bake is cached under `LibraryUnbound/RealtimeGI/` ([A scene's bake](#unbounds-precompute));
 nothing is written to the project's files (the Editor writes `LightingData.asset` beside the
 scene). With it the probe's `roombake-base` puts 66 of its 5070 lightmap values outside the
 comparator's tolerance and `roombake-moved` 119 (gated on 4% of them; each renderer compared in
@@ -1084,7 +1084,7 @@ mode loads it again); it writes no lighting data asset (the Editor's binary form
 precomputed data is not made: said once, and `lightingDataAsset` stays null), and the baked
 lightmaps and baked probes of a scene with baked global illumination (Q677; Unbound lays out
 where its lightmaps would go, `tests/projects/bakedatlas`, and writes the layout to
-`Library/Unbound/BakedGI`; it can rasterize each lightmap's texels and gather their direct
+`LibraryUnbound/BakedGI`; it can rasterize each lightmap's texels and gather their direct
 and, from the renderers' albedo and emission images, their indirect light as the Editor does,
 `tests/projects/bakedbuffers`, but does not make the lightmaps yet),
 the environment

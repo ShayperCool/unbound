@@ -63,7 +63,7 @@ class ProbeSnapshotIntegrationTests(unittest.TestCase):
     def test_legacy_suite_projects_keep_mutable_state_private_to_each_run(self):
         projects = self.root/'projects'
         source = projects/'probe'
-        for folder in ('Assets', 'Packages', 'ProjectSettings', 'Reference', 'Library/Unbound'):
+        for folder in ('Assets', 'Packages', 'ProjectSettings', 'Reference', 'LibraryUnbound'):
             (source/folder).mkdir(parents=True)
             (source/folder/'input').write_text(folder)
         original = ['unbound', 'run', '-p', str(source), '--headless', '1']
@@ -78,8 +78,8 @@ class ProbeSnapshotIntegrationTests(unittest.TestCase):
         self.assertEqual((a/'Assets/input').read_text(), 'Assets')
         self.assertFalse((a/'Library').exists())
         (a/'Assets/input').write_text('changed only in one run')
-        (a/'Library/Unbound').mkdir(parents=True)
-        (a/'Library/Unbound/cache').write_text('mutable')
+        (a/'LibraryUnbound').mkdir(parents=True)
+        (a/'LibraryUnbound/cache').write_text('mutable')
         self.assertEqual((b/'Assets/input').read_text(), 'Assets')
         self.assertEqual((source/'Assets/input').read_text(), 'Assets')
         self.assertFalse((b/'Library').exists())
@@ -106,7 +106,7 @@ class ProbeSnapshotIntegrationTests(unittest.TestCase):
                          copied['dependencies']['local'])
         self.assertEqual(json.loads((source/'Packages/manifest.json').read_text()), manifest)
         self.assertEqual((project/'Library/PackageCache/pkg/package.json').read_text(), '{"name":"pkg"}')
-        self.assertFalse((project/'Library/Unbound').exists())
+        self.assertFalse((project/'LibraryUnbound').exists())
 
     def test_cached_gate_retains_its_snapshot_result(self):
         runtime = suite.make_runtime(self.root/'run', self.cli, self.managed)
@@ -144,8 +144,8 @@ os.execvpe(command[0], command, os.environ)
 import json, os, pathlib, sys
 args = sys.argv[1:]
 project = pathlib.Path(args[args.index('-p')+1])
-(project/'Library/Unbound').mkdir(parents=True, exist_ok=True)
-(project/'Library/Unbound/mutable').write_text('this run')
+(project/'LibraryUnbound').mkdir(parents=True, exist_ok=True)
+(project/'LibraryUnbound/mutable').write_text('this run')
 pathlib.Path(os.environ['ARG_RECORD']).write_text(json.dumps({{'args': args, 'project': str(project)}}))
 if os.environ.get('NETWORK_STREAMING_OUT'):
     (pathlib.Path(os.environ['NETWORK_STREAMING_OUT'])/'finished').touch()
@@ -175,7 +175,7 @@ if os.environ.get('NETWORK_STREAMING_OUT'):
                 actual = json.loads(record.read_text())
                 project = Path(actual['project'])
                 self.assertEqual(project, work/name/'projects'/name)
-                self.assertTrue((project/'Library/Unbound/mutable').is_file())
+                self.assertTrue((project/'LibraryUnbound/mutable').is_file())
                 self.assertFalse((source/'Library').exists())
                 self.assertEqual(json.loads(launch.read_text())[:2],
                                  ['--kind', 'engine-gpu' if name == 'networkstreaming' else 'engine-cpu'])

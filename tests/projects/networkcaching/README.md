@@ -33,7 +33,7 @@ a two-second WAV for partial reads, and a text file named `.wav`.
 Waits use the system clock (cache times follow it). Paths are written relative to the run
 (`<out>`, `<url>`). Keys starting with `os.` (the platform and the default cache's path) are
 listed but not compared: the Editor's default cache is in the user's cache directory, Unbound's
-in the project's `Library/Unbound/Caching`. Nothing else depends on the operating system.
+in the project's `LibraryUnbound/Caching`. Nothing else depends on the operating system.
 
 Record the reference (macOS; on Linux pass `--editor` or use the default Hub path):
 

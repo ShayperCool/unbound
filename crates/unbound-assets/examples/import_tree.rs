@@ -6,7 +6,7 @@
 //! cargo run --release -p unbound-assets --example import_tree -- <dir> [--cache <dir>] [--target <build target>]
 //! ```
 //!
-//! The cache defaults to `<project>/Library/Unbound/Imports` when `<dir>` is a project's `Assets`
+//! The cache defaults to `<project>/LibraryUnbound/Imports` when `<dir>` is a project's `Assets`
 //! folder. Like Unity, hidden names (`.x`, `x~`, `cvs`, `*.tmp`) are skipped, and so is
 //! `Assets/StreamingAssets`, whose files Unity copies verbatim instead of importing.
 use anyhow::{Context, Result, bail};
@@ -66,7 +66,7 @@ fn main() -> Result<()> {
     let cache_dir = match cache_dir {
         Some(dir) => dir,
         None if dir.file_name().is_some_and(|n| n == "Assets") => {
-            dir.parent().unwrap().join("Library/Unbound/Imports")
+            unbound_project::unbound_dir(dir.parent().unwrap()).join("Imports")
         }
         None => bail!(
             "{} is not an Assets folder: pass --cache <dir>",

@@ -237,7 +237,7 @@ impl Project {
 
     /// Where compiled script assemblies are kept, content-addressed.
     pub fn script_cache_dir(&self) -> PathBuf {
-        self.library_dir().join("ScriptAssemblies")
+        self.unbound_dir().join("ScriptAssemblies")
     }
 
     pub fn compile_request(

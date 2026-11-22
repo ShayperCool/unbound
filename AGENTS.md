@@ -26,7 +26,7 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   that changed a file of the checkout. Only a runner's explicit authoring modes (`create`, ...) edit
   the probe's own files, to be committed.
 - All engine outputs, candidates, comparisons, gates, manifests and logs go to the
-  project's `Library/Unbound/` or `$XDG_CACHE_HOME/unbound` (`~/.cache/unbound` by default).
+  project's `LibraryUnbound/` or `$XDG_CACHE_HOME/unbound` (`~/.cache/unbound` by default).
   Never add `Evidence*` or `*Evidence` run directories to Git.
 - Probe scripts select the release explicitly, read Native oracles from `Reference/`,
   and work in clean checkouts without machine-specific archived artifacts. Reports
@@ -48,7 +48,11 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   changed through editor APIs, the package lock, assets editor APIs create, copy, move or delete.
   Measure each case against the Editor (what is written, when, byte format, line endings) and
   write nothing the Editor would not write. What Unbound produces for itself goes to
-  `<project>/Library/Unbound/` (per-project cache) or the global cache (`$XDG_CACHE_HOME/unbound`).
+  `<project>/LibraryUnbound/` (per-project cache) or the global cache (`$XDG_CACHE_HOME/unbound`).
+  `Library/` is Unity's: Unbound keeps nothing there and needs nothing from there to work.
+  `--project-data <dir>` / `UNBOUND_PROJECT_DATA` put the per-project directory elsewhere; code
+  names it only through `unbound_project::unbound_dir` (Rust) and `ProjectInfo.UnboundDirectory`
+  (managed), never by spelling the path.
 - Every behaviour that differs between Unity releases goes through the compatibility profile
   (`compat` crate / `Unbound.Compat` on the managed side). Never hard-code a single release's behaviour
   where releases differ. Releases are grouped by family, `MAJOR.MINOR`: every release of a family

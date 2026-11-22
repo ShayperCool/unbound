@@ -213,7 +213,7 @@ namespace UnityEngine
         }
         /// <summary>The log file the session writes, as the Editor answers its own log: the
         /// command line's <c>-logFile</c> when given (measured: tests/projects/appfacts), else
-        /// <c>Library/Unbound/Editor.log</c> in the project (Unbound's stand-in for Editor.log).</summary>
+        /// <c>LibraryUnbound/Editor.log</c> in the project (Unbound's stand-in for Editor.log).</summary>
         public static string consoleLogPath => Unbound.Runtime.ConsoleLog.Path;
 
         /// <summary>As the Editor computes it: <c>~/.config/unity3d/&lt;company&gt;/&lt;product&gt;</c> on Linux,
@@ -296,6 +296,40 @@ namespace UnityEngine
         /// Feature names); empty when the host did not say, as in unit tests.</summary>
         internal static readonly HashSet<string> Features = new HashSet<string>(StringComparer.Ordinal);
         internal static string ProjectPath = "";
+
+        /// <summary>The project's own folder, as the host resolved it ("" where no host runs,
+        /// as in the managed tests): <see cref="ProjectPath"/> is the view the game runs in.</summary>
+        internal static string ProjectRootPath = "";
+
+        /// <summary>Unbound's directory for the project, as the host resolved it from the
+        /// command line's <c>--project-data</c> or <c>UNBOUND_PROJECT_DATA</c> ("" where no host
+        /// runs): the managed side asks no environment for it.</summary>
+        internal static string UnboundDirectoryPath = "";
+
+        /// <summary>The name of Unbound's own directory in a project's root, where nothing else
+        /// is asked for: everything Unbound keeps per project (caches, the project view the game
+        /// runs in, logs, results). <c>Library/</c> is Unity's: Unbound keeps nothing there.</summary>
+        internal const string UnboundFolder = "LibraryUnbound";
+
+        /// <summary>The name of the project view in Unbound's directory (the game's working
+        /// directory: links to the project's entries and packages).</summary>
+        internal const string ViewFolder = "ProjectView";
+
+        /// <summary>Unbound's directory for a project path, the one place that names it: what
+        /// the host resolved for the running project; without a host, or for another path,
+        /// the default place (the path is the project's root, or its view, which is in that
+        /// directory).</summary>
+        internal static string UnboundDirectory(string projectPath)
+        {
+            if (UnboundDirectoryPath.Length > 0 && projectPath == ProjectPath) return UnboundDirectoryPath;
+            string trimmed = Path.TrimEndingDirectorySeparator(projectPath ?? "");
+            string parent = Path.GetDirectoryName(trimmed);
+            if (parent != null && Path.GetFileName(trimmed) == ViewFolder && Path.GetFileName(parent) == UnboundFolder) return parent;
+            return Path.Combine(trimmed, UnboundFolder);
+        }
+
+        /// <summary>A path in the running project's Unbound directory.</summary>
+        internal static string UnboundPath(params string[] parts) => Path.Combine(UnboundDirectory(ProjectPath), Path.Combine(parts));
         internal static string AssetsPath = "";
         internal static string ProductName = "";
         internal static string CompanyName = "";

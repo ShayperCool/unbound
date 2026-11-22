@@ -94,7 +94,7 @@ namespace Unbound.Runtime
             Native.Log(3, $"[trace] unread: {lines.Count} serialized field(s) with values no reader took\n" + string.Join("\n", lines));
         }
 
-        /// <summary>With <c>hierarchy</c>: the scenes' objects at quit, to Library/Unbound/hierarchy.txt.</summary>
+        /// <summary>With <c>hierarchy</c>: the scenes' objects at quit, to LibraryUnbound/hierarchy.txt.</summary>
         internal static void DumpHierarchy()
         {
             if (!HierarchyOn) return;
@@ -105,7 +105,7 @@ namespace Unbound.Runtime
                 if (g.m_Destroyed || g.IsPersistentAsset || g.m_Transform == null || g.m_Transform.m_Parent != null) continue;
                 Dump(g.m_Transform, 0, text);
             }
-            var path = System.IO.Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "hierarchy.txt");
+            var path = ProjectInfo.UnboundPath("hierarchy.txt");
             System.IO.File.WriteAllText(path, text.ToString());
             Native.Log(3, $"[trace] hierarchy written to {path}");
         }

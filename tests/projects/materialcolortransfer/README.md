@@ -30,7 +30,7 @@ The default workspace is
 `MATERIAL_COLOR_TRANSFER_CLI`, `UNBOUND_MANAGED_DIR` and
 `MATERIAL_COLOR_TRANSFER_NATIVE_DIR` override those locations.
 `MATERIAL_COLOR_TRANSFER_COLOR_SPACE=Gamma` uses a generated project copy under
-`Library/Unbound`. Every heavy command acquires `~/.cache/compat/with-heavy-job`.
+`LibraryUnbound`. Every heavy command acquires `~/.cache/compat/with-heavy-job`.
 `UNBOUND_PROBE_UNITY_VERSION` selects the Editor and reference release;
 `UNBOUND_PROBE_UNITY` overrides its executable.
 

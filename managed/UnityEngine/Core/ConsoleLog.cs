@@ -6,7 +6,7 @@ namespace Unbound.Runtime
 {
     /// <summary>The session's log file, Application.consoleLogPath: every message the game's log
     /// sees, as the console prints it. The command line's <c>-logFile</c> names it as for the
-    /// Editor; otherwise it is <c>Library/Unbound/Editor.log</c> in the project, the previous
+    /// Editor; otherwise it is <c>LibraryUnbound/Editor.log</c> in the project, the previous
     /// session's moved to <c>Editor-prev.log</c> as the Editor does with its log.</summary>
     internal static class ConsoleLog
     {
@@ -32,7 +32,7 @@ namespace Unbound.Runtime
             for (int i = 0; i + 1 < args.Length; i++)
                 if (string.Equals(args[i], "-logFile", StringComparison.OrdinalIgnoreCase))
                     return args[i + 1] == "-" ? null : System.IO.Path.GetFullPath(args[i + 1]);
-            return string.IsNullOrEmpty(project) ? null : System.IO.Path.Combine(project, "Library", "Unbound", "Editor.log");
+            return string.IsNullOrEmpty(project) ? null : System.IO.Path.Combine(UnityEngine.ProjectInfo.UnboundDirectory(project), "Editor.log");
         }
 
         static void Open()

@@ -1710,20 +1710,34 @@ pub struct ShaderIndex {
     /// The active render pipeline's tag (empty: built-in): which SubShader shaders run.
     pipeline: String,
     /// Roots that gain shaders while the game runs (the ShaderLab importers generate, Shader
-    /// Graph's: `Library/Unbound/GeneratedShaders`), with the modification time last scanned.
+    /// Graph's: `LibraryUnbound/GeneratedShaders`), with the modification time last scanned.
     live: Vec<(PathBuf, Option<std::time::SystemTime>)>,
 }
 
-/// Where the managed side writes the ShaderLab source importers generate
-/// (`ShaderUtil.CreateShaderAsset`), relative to the project.
-pub const GENERATED_SHADERS: &str = "Library/Unbound/GeneratedShaders";
+/// The folder of Unbound's project directory where the managed side writes the ShaderLab source
+/// importers generate (`ShaderUtil.CreateShaderAsset`).
+const GENERATED_SHADERS: &str = "GeneratedShaders";
+
+/// That folder for a project root.
+pub fn generated_shaders(project_root: &Path) -> PathBuf {
+    unbound_project::unbound_dir(project_root).join(GENERATED_SHADERS)
+}
+
+/// Whether a shader root is a project's folder of generated shaders.
+fn is_generated_shaders(root: &Path) -> bool {
+    root.file_name().is_some_and(|n| n == GENERATED_SHADERS)
+        && root
+            .parent()
+            .and_then(Path::file_name)
+            .is_some_and(|n| n == unbound_project::UNBOUND_DIR)
+}
 
 impl ShaderIndex {
     /// Indexes every `.shader` file below the roots (an earlier root's shader wins a name).
     pub fn scan(roots: &[PathBuf]) -> ShaderIndex {
         let mut index = ShaderIndex::default();
         for root in roots {
-            if root.ends_with(GENERATED_SHADERS) {
+            if is_generated_shaders(root) {
                 index.scan_generated(root);
                 index.live.push((root.clone(), modified(root)));
             } else {
@@ -2135,7 +2149,7 @@ mod tests {
     fn generated_shaders_answer_to_their_key_and_their_newest_plain_name() {
         let root =
             std::env::temp_dir().join(format!("unbound-generated-index-{}", std::process::id()));
-        let generated = root.join(GENERATED_SHADERS);
+        let generated = generated_shaders(&root);
         let assets = root.join("Assets");
         std::fs::create_dir_all(&generated).unwrap();
         std::fs::create_dir_all(&assets).unwrap();

@@ -43,7 +43,7 @@ PYEDITOR
 )"
 mkdir -p "$root" "$(dirname "$MATERIAL_COLOR_TRANSFER_OUT")"
 # Live asset tests deliberately modify loaded assets. Preserve exact authored inputs.
-saved="$fixture/Library/Unbound/MaterialColorTransferAuthored"
+saved="$fixture/LibraryUnbound/MaterialColorTransferAuthored"
 if [ "$1" = native ]; then
  mkdir -p "$saved"
  cp "$fixture/Assets/Resources/Imported.mat" "$saved/Imported.mat"

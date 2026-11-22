@@ -51,13 +51,13 @@ namespace UnityEngine
         /// bakeCompleted (isRunning false again), answers true, and the scene then has the bake's
         /// realtime GI, in Edit mode at once and in Play mode, and is dirty (not saved). The
         /// realtime GI is Unbound's own precompute of the scene's renderers (<see cref="Bake"/>),
-        /// cached under Library/Unbound/RealtimeGI. Not made, each said once per scene: the
+        /// cached under LibraryUnbound/RealtimeGI. Not made, each said once per scene: the
         /// lighting data asset the Editor writes beside the scene (LightingData.asset and its
         /// .meta, with the scene's folder's .meta), which the scene then names; baked lightmaps
         /// and the light probes' baked lighting where the scene's Lighting Settings have baked
         /// global illumination on (Q677); the environment lighting from a sky and baked
         /// reflection probes. Of the baked lightmaps Unbound lays out where each renderer would
-        /// go (<see cref="BakedAtlas"/>, written to Library/Unbound/BakedGI; renderers get
+        /// go (<see cref="BakedAtlas"/>, written to LibraryUnbound/BakedGI; renderers get
         /// nothing). Renderers a script added to the scene after it loaded are not
         /// baked (named). Several open scenes are baked one by one as they would load (not
         /// measured).
@@ -78,7 +78,7 @@ namespace UnityEngine
                         continue;
                     }
                     var settings = scene.LightingSettings;
-                    Warn("script-bake-asset:" + scene.Path, $"{scene.Path}: Lightmapping.Bake writes its lighting data (LightingData.asset beside it) in the Editor, which the scene then names; Unbound keeps its own bake for the session (Library/Unbound/RealtimeGI) and writes none.");
+                    Warn("script-bake-asset:" + scene.Path, $"{scene.Path}: Lightmapping.Bake writes its lighting data (LightingData.asset beside it) in the Editor, which the scene then names; Unbound keeps its own bake for the session (LibraryUnbound/RealtimeGI) and writes none.");
                     var made = new HashSet<Object>(file.Objects.Values);
                     foreach (var root in scene.Roots)
                         foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>(true))

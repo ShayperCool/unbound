@@ -33,6 +33,7 @@ bytemuck = { version = "1", features = ["derive"] }
 wgpu = { version = "30", default-features = false, features = ["std", "wgsl"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 unbound-assets.workspace = true
+unbound-project.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 x11rb = { version = "0.13", features = ["randr", "xkb"] }

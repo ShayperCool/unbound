@@ -5,6 +5,7 @@
 *.swp
 /.claude/
 /tests/projects/*/Library/
+/tests/projects/*/LibraryUnbound/
 /tests/projects/*/Logs/
 /tests/projects/*/UserSettings/
 /tests/projects/*/Temp/
@@ -15,7 +16,7 @@
 # Python probe helpers
 __pycache__/
 
-# Probe run outputs belong in Library/Unbound or XDG_CACHE_HOME/unbound.
+# Probe run outputs belong in LibraryUnbound or XDG_CACHE_HOME/unbound.
 /tests/projects/**/Evidence*/
 /tests/projects/**/*Evidence/
 /tests/projects/*/evidence.json

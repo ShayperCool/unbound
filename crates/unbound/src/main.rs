@@ -30,6 +30,12 @@ struct Cli {
     /// `UNBOUND_PACKAGES` (`:`-separated).
     #[arg(long = "packages", global = true, value_name = "DIR")]
     packages: Vec<PathBuf>,
+    /// Where Unbound keeps what it makes for the project (caches, the project view the game
+    /// runs in, logs, test results) instead of `<project>/LibraryUnbound`: relative to the
+    /// project's folder, or absolute, which may be outside the project. Not in the project's
+    /// `Assets/`, `Packages/`, `ProjectSettings/` or `Library/`. Same as `UNBOUND_PROJECT_DATA`.
+    #[arg(long = "project-data", global = true, value_name = "DIR")]
+    project_data: Option<PathBuf>,
 }
 
 #[derive(clap::Args, Clone)]
@@ -231,7 +237,7 @@ enum Command {
         /// `EditMode` or `PlayMode`.
         #[arg(long, default_value = "EditMode")]
         platform: String,
-        /// The NUnit XML results file (Library/Unbound/TestResults/<platform>.xml by default).
+        /// The NUnit XML results file (LibraryUnbound/TestResults/<platform>.xml by default).
         #[arg(long)]
         results: Option<PathBuf>,
         /// Run only tests whose full names match (semicolon-separated names or regexes).
@@ -312,6 +318,9 @@ fn main() -> anyhow::Result<()> {
     // reads these.
     if let Some(unity) = &cli.unity {
         unsafe { std::env::set_var("UNBOUND_UNITY", unity) };
+    }
+    if let Some(data) = &cli.project_data {
+        unsafe { std::env::set_var(unbound_project::PROJECT_DATA_VARIABLE, data) };
     }
     if !cli.packages.is_empty() {
         let mut dirs: Vec<PathBuf> = cli.packages.clone();

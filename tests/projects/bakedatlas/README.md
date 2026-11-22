@@ -44,7 +44,7 @@ bakes again then (the layout is made before it). Two byte-identical captures mak
 (`Reference/unity-6000.0.71f1/atlas.jsonl`).
 
 Unbound does not make the lightmaps yet: its bake writes the layout to
-`Library/Unbound/BakedGI/<scene GUID>/atlas.json` (`Graphics/BakedAtlas.cs`), from which
+`LibraryUnbound/BakedGI/<scene GUID>/atlas.json` (`Graphics/BakedAtlas.cs`), from which
 `bake_atlas.py engine` makes the candidate. A renderer without a lightmap (an index outside
 0..65534 in the Editor, absent from the layout in Unbound) is `none`; 65534 (0xFFFE) is a
 renderer laid out without a lightmap (Scale In Lightmap 0, or lit by light probes), compared with

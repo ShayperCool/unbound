@@ -21,7 +21,7 @@ per texel side and instances; `lights.json`: the lights in the bake's order and 
 and the buffers `occupancy<N>.r2d`, `chartIndex<N>.int`, `normal<N>.r2d` and
 `irradianceDirect<N>.r2d` as the Editor wrote them. Unbound's bake (Lightmapping.Bake) writes the
 same buffers of its own where UNBOUND_BAKED_GI_BUFFERS says, and its layout to
-Library/Unbound/BakedGI/<scene GUID>/atlas.json.
+LibraryUnbound/BakedGI/<scene GUID>/atlas.json.
 
 Compared exactly: the instances and their order, the lightmaps' sizes, samples and instances, which
 texels are used, every texel's chart, which samples have a surface and the number the bake gives
@@ -296,7 +296,7 @@ def actual(out):
         if (out/'raw'/scene/'messages.txt').is_file():
             # Unbound's own notes of what its bake does not make yet are not the Editor's messages.
             entry['messages'] = [line for line in (out/'raw'/scene/'messages.txt').read_text().splitlines() if UNBOUND_NOTE not in line]
-        layout = project/'Library/Unbound/BakedGI'/guid/'atlas.json'
+        layout = project/'LibraryUnbound/BakedGI'/guid/'atlas.json'
         dump = out/'buffers'/guid
         if layout.is_file() and (dump/'buffers.json').is_file():
             entry['instances'] = [r['path'] for r in json.loads(layout.read_text())['renderers']]

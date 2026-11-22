@@ -79,7 +79,7 @@ namespace Unbound.Runtime
     /// (<see cref="VisualEffectResource.SetRuntimeData"/>);</item>
     /// <item>each compiled shader source becomes a <see cref="Shader"/> or a
     /// <see cref="ComputeShader"/>, compiled like any other from
-    /// <c>Library/Unbound/GeneratedShaders</c>;</item>
+    /// <c>LibraryUnbound/GeneratedShaders</c>;</item>
     /// <item>the asset takes the resource's settings and systems, each task with its processor: the
     /// object of its shader source, else its own object;</item>
     /// <item>each output task's shader gets a material (one per shader, set up by the package from

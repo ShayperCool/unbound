@@ -12,7 +12,7 @@ offset, and each lightmap's size, after Lightmapping.Bake in Edit mode.
 `Assets/Editor/AtlasRecord.cs` opens each scene of Assets/Scenes, bakes it and records every
 MeshRenderer's lightmap index and scale and offset (float bits) and the lightmaps' sizes. Unbound
 does not bake lightmaps yet: its bake writes the layout to
-Library/Unbound/BakedGI/<scene GUID>/atlas.json, from which the candidate takes each renderer's
+LibraryUnbound/BakedGI/<scene GUID>/atlas.json, from which the candidate takes each renderer's
 index, scale and offset and the lightmaps' sizes. A renderer without a lightmap (index outside
 0..65534 in the Editor, absent from the layout in Unbound) is recorded as `none`; 65534 is a
 renderer laid out without a lightmap (Scale In Lightmap 0, or lit by light probes), compared with
@@ -153,7 +153,7 @@ def engine(label):
     candidate = {}
     layouts = {}
     for scene in scenes():
-        path = project/'Library/Unbound/BakedGI'/guid_of(project, scene)/'atlas.json'
+        path = project/'LibraryUnbound/BakedGI'/guid_of(project, scene)/'atlas.json'
         layouts[scene] = json.loads(path.read_text()) if path.is_file() else None
     for key, value in captured.items():
         where = placement(key)

@@ -84,7 +84,7 @@ public class TransitionCallbackProbe : MonoBehaviour
             }
         }
         finally { time.SetValue(null, saved); }
-        string output = Environment.GetEnvironmentVariable("UITRANSITIONCALLBACKS_OUT") ?? Path.Combine("Library", "Unbound", "transitioncallbacks");
+        string output = Environment.GetEnvironmentVariable("UITRANSITIONCALLBACKS_OUT") ?? Path.Combine("LibraryUnbound", "transitioncallbacks");
         Directory.CreateDirectory(output);
         File.WriteAllLines(Path.Combine(output, "callbacks.jsonl"), rows.Select(r => JsonUtility.ToJson(r)).ToArray());
         Debug.Log("UITRANSITIONCALLBACKS: " + rows.Count + " samples");

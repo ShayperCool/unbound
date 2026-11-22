@@ -32,6 +32,88 @@ namespace UnityEngine.Tests
             return path;
         }
 
+        /// <summary>The host places Unbound's directory (--project-data): the rules follow the
+        /// place it resolved, here one outside the project, and one in the project under
+        /// another name.</summary>
+        [Theory]
+        [InlineData("data")]
+        [InlineData("project/Build/UnboundData")]
+        public void TheRulesFollowThePlaceTheHostResolvedForUnboundsDirectory(string place)
+        {
+            string project = Path.Combine(m_Root, "project");
+            string data = Path.Combine(m_Root, place);
+            string view = Path.Combine(data, "ProjectView");
+            Directory.CreateDirectory(view);
+            var asset = Make("project/Assets/x.txt");
+            var build = Make("project/Build/b.txt");
+            var cache = Make(place + "/cache.bin");
+            // A folder of the default name is the project's own here.
+            var named = Make("project/LibraryUnbound/theirs.txt");
+            foreach (var name in new[] { "Assets", "Build", "LibraryUnbound" })
+                Directory.CreateSymbolicLink(Path.Combine(view, name), Path.Combine(project, name));
+            var previousDirectory = Directory.GetCurrentDirectory();
+            var (previousProject, previousRoot, previousData) = (ProjectInfo.ProjectPath, ProjectInfo.ProjectRootPath, ProjectInfo.UnboundDirectoryPath);
+            try
+            {
+                Directory.SetCurrentDirectory(view);
+                ProjectInfo.ProjectPath = view;
+                ProjectInfo.ProjectRootPath = project;
+                ProjectInfo.UnboundDirectoryPath = data;
+                Assert.Equal(Path.Combine(data, "Caching", "x"), ProjectInfo.UnboundPath("Caching", "x"));
+                int hits = Hits();
+                Assert.False(FileUtil.DeleteFileOrDirectory(cache));
+                Assert.False(FileUtil.DeleteFileOrDirectory(data));
+                Assert.False(FileUtil.DeleteFileOrDirectory(view));
+                Assert.True(File.Exists(cache));
+                Assert.Equal(hits + 3, Hits());
+                if (place.StartsWith("project/", StringComparison.Ordinal))
+                {
+                    // In the project it is reached through the view's links too.
+                    Assert.False(FileUtil.DeleteFileOrDirectory("Build/UnboundData/cache.bin"));
+                    Assert.False(FileUtil.DeleteFileOrDirectory("Build"));
+                    Assert.True(File.Exists(cache));
+                    Assert.Equal(hits + 5, Hits());
+                }
+                // Controls: the project's files, and its folder of the default name, are its own.
+                Assert.True(FileUtil.DeleteFileOrDirectory("Build/b.txt"));
+                Assert.False(File.Exists(build));
+                Assert.True(FileUtil.DeleteFileOrDirectory("LibraryUnbound/theirs.txt"));
+                Assert.False(File.Exists(named));
+                Assert.True(FileUtil.DeleteFileOrDirectory("Assets"));
+                Assert.False(File.Exists(asset));
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(previousDirectory);
+                (ProjectInfo.ProjectPath, ProjectInfo.ProjectRootPath, ProjectInfo.UnboundDirectoryPath) = (previousProject, previousRoot, previousData);
+            }
+        }
+
+        [Fact]
+        public void UnboundsDirectoryIsInTheProjectsFolderUnlessTheHostSaysOtherwise()
+        {
+            var (previousProject, previousData) = (ProjectInfo.ProjectPath, ProjectInfo.UnboundDirectoryPath);
+            try
+            {
+                ProjectInfo.UnboundDirectoryPath = "";
+                Assert.Equal(Path.Combine("/p", "LibraryUnbound"), ProjectInfo.UnboundDirectory("/p"));
+                Assert.Equal(Path.Combine("/p", "LibraryUnbound"), ProjectInfo.UnboundDirectory("/p/"));
+                // The project view is in the directory.
+                Assert.Equal(Path.Combine("/p", "LibraryUnbound"), ProjectInfo.UnboundDirectory("/p/LibraryUnbound/ProjectView"));
+                Assert.DoesNotContain(Path.Combine("Library", "Unbound"), ProjectInfo.UnboundDirectory("/p"));
+                ProjectInfo.ProjectPath = "/elsewhere/data/ProjectView";
+                ProjectInfo.UnboundDirectoryPath = "/elsewhere/data";
+                Assert.Equal("/elsewhere/data", ProjectInfo.UnboundDirectory(ProjectInfo.ProjectPath));
+                Assert.Equal(Path.Combine("/elsewhere/data", "Editor.log"), ProjectInfo.UnboundPath("Editor.log"));
+                // Another project path is not the running project's.
+                Assert.Equal(Path.Combine("/q", "LibraryUnbound"), ProjectInfo.UnboundDirectory("/q"));
+            }
+            finally
+            {
+                (ProjectInfo.ProjectPath, ProjectInfo.UnboundDirectoryPath) = (previousProject, previousData);
+            }
+        }
+
         [Fact]
         public void AFileGoesAndItsMetaFileStays()
         {
@@ -104,10 +186,10 @@ namespace UnityEngine.Tests
         [Fact]
         public void APathNamingAProjectViewLinkDeletesTheProjectsOwnEntry()
         {
-            // The game runs in Library/Unbound/ProjectView, whose top-level entries and Packages/<name>
+            // The game runs in LibraryUnbound/ProjectView, whose top-level entries and Packages/<name>
             // are links to the project's: naming one deletes the project's entry, not only the link.
             string project = Path.Combine(m_Root, "project");
-            string view = Path.Combine(project, "Library", "Unbound", "ProjectView");
+            string view = Path.Combine(project, "LibraryUnbound", "ProjectView");
             Directory.CreateDirectory(Path.Combine(view, "Packages"));
             var build = Make("project/Builds/x.txt");
             var log = Make("project/Logs/a.log");
@@ -119,7 +201,7 @@ namespace UnityEngine.Tests
             var other = Make("project/Other/o.txt");
             Directory.CreateSymbolicLink(Path.Combine(project, "UserLink"), Path.GetDirectoryName(outside));
             var libraryFile = Make("project/Library/Other/l.txt");
-            var unboundFile = Make("project/Library/Unbound/cache.bin");
+            var unboundFile = Make("project/LibraryUnbound/cache.bin");
             foreach (var name in new[] { "Builds", "Logs", "Assets", "UserLink", "Other", "Library" })
                 Directory.CreateSymbolicLink(Path.Combine(view, name), Path.Combine(project, name));
             Directory.CreateSymbolicLink(Path.Combine(view, "Packages", "com.example.tool"), Path.GetDirectoryName(embedded));
@@ -157,10 +239,10 @@ namespace UnityEngine.Tests
                 Assert.True(File.Exists(shared));
                 Assert.False(FileUtil.DeleteFileOrDirectory("."));
                 Assert.True(File.Exists(other));
-                // The Library folder and Unbound's own folder in it, also by the project's own path.
+                // The Library folder and Unbound's own folder, also by the project's own path.
                 Assert.False(FileUtil.DeleteFileOrDirectory("Library"));
-                Assert.False(FileUtil.DeleteFileOrDirectory("Library/Unbound/cache.bin"));
-                Assert.False(FileUtil.DeleteFileOrDirectory(Path.Combine(project, "Library", "Unbound")));
+                Assert.False(FileUtil.DeleteFileOrDirectory("LibraryUnbound/cache.bin"));
+                Assert.False(FileUtil.DeleteFileOrDirectory(Path.Combine(project, "LibraryUnbound")));
                 Assert.True(File.Exists(unboundFile));
                 Assert.True(Directory.Exists(view));
                 Assert.Equal(reported + 6, Hits());
@@ -169,28 +251,30 @@ namespace UnityEngine.Tests
                 bool ignoresCase = Directory.Exists(Path.Combine(project, "LIBRARY"));
                 Assert.False(FileUtil.DeleteFileOrDirectory("packages/com.example.shared/package.json"));
                 Assert.False(FileUtil.DeleteFileOrDirectory("library"));
-                Assert.False(FileUtil.DeleteFileOrDirectory("Library/unbound"));
+                Assert.False(FileUtil.DeleteFileOrDirectory(Path.Combine(project, "libraryunbound")));
                 Assert.True(File.Exists(shared));
                 Assert.True(File.Exists(unboundFile));
                 Assert.True(Directory.Exists(view));
                 Assert.Equal(reported + 6 + (ignoresCase ? 3 : 0), Hits());
-                // Into Unbound's folder through the view's own Library link: refused, whatever it reaches.
+                // Into Unbound's folder by its name beside the view's links: refused, whatever it would reach.
                 File.WriteAllText(asset, "again");
                 int throughLibrary = Hits();
-                Assert.False(FileUtil.DeleteFileOrDirectory("Library/Unbound/ProjectView/Assets/x.txt"));
-                Assert.False(FileUtil.DeleteFileOrDirectory("Library/Unbound/ProjectView/Assets"));
+                Assert.False(FileUtil.DeleteFileOrDirectory("LibraryUnbound/ProjectView/Assets/x.txt"));
+                Assert.False(FileUtil.DeleteFileOrDirectory("LibraryUnbound/ProjectView/Assets"));
                 Assert.True(File.Exists(asset));
                 Assert.True(Directory.Exists(Path.Combine(view, "Assets")));
                 Assert.Equal(throughLibrary + 2, Hits());
-                // Into Unbound's folder through a link of the project's own back into its Library:
+                // Into Unbound's folder through a link of the project's own that leads there:
                 // refused too, the view's own entries as well.
+                Directory.CreateSymbolicLink(Path.Combine(project, "DataLink"), Path.Combine(project, "LibraryUnbound"));
+                Directory.CreateSymbolicLink(Path.Combine(view, "DataLink"), Path.Combine(project, "DataLink"));
                 Directory.CreateSymbolicLink(Path.Combine(project, "LibraryLink"), Path.Combine(project, "Library"));
                 Directory.CreateSymbolicLink(Path.Combine(view, "LibraryLink"), Path.Combine(project, "LibraryLink"));
                 File.WriteAllText(Path.Combine(view, "kept.txt"), "k");
                 int throughProjectLink = Hits();
-                Assert.False(FileUtil.DeleteFileOrDirectory("LibraryLink/Unbound/ProjectView/Assets"));
-                Assert.False(FileUtil.DeleteFileOrDirectory("LibraryLink/Unbound/ProjectView/kept.txt"));
-                Assert.False(FileUtil.DeleteFileOrDirectory("LibraryLink/Unbound/cache.bin"));
+                Assert.False(FileUtil.DeleteFileOrDirectory("DataLink/ProjectView/Assets"));
+                Assert.False(FileUtil.DeleteFileOrDirectory("DataLink/ProjectView/kept.txt"));
+                Assert.False(FileUtil.DeleteFileOrDirectory("DataLink/cache.bin"));
                 Assert.True(Directory.Exists(Path.Combine(view, "Assets")));
                 Assert.True(File.Exists(Path.Combine(view, "kept.txt")));
                 Assert.True(File.Exists(unboundFile));

@@ -77,7 +77,7 @@ namespace UnityEngine.Tests
             Assert.Equal(12960000, cache.expirationDelay);
             Assert.Equal(long.MaxValue, cache.maximumAvailableStorageSpace);
             Assert.Equal(long.MaxValue, cache.spaceFree);
-            Assert.Equal(Path.Combine(directory, "Library", "Unbound", "Caching", ProjectInfo.CompanyName + "_" + ProjectInfo.ProductName).Replace('\\', '/'), cache.path);
+            Assert.Equal(Path.Combine(directory, "LibraryUnbound", "Caching", ProjectInfo.CompanyName + "_" + ProjectInfo.ProductName).Replace('\\', '/'), cache.path);
             Assert.False(Directory.Exists(cache.path), "made when it first keeps something");
             Assert.True(Caching.compressionEnabled);
             Assert.False(default(Cache).valid);

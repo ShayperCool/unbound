@@ -12,9 +12,9 @@ status is nonzero when anything fails.
 it, plus /etc/os-release and the Editor licence file read now): the GPU's PCI ids, OpenGL
 strings and memory, the CPU's vendor, model and current clock, the host, machine id, memory and
 OS release, the battery, the log path (--editor: the Editor's -logFile; else the project's
-Library/Unbound/Editor.log, reported exactly as <project>/Library/Unbound/Editor.log:
-the file under the project path run.py recorded in run.json must exist, be non-empty
-and be written during the run) and the
+LibraryUnbound/Editor.log, reported as an absolute path that names that file: the file under
+the project path run.py recorded in run.json must exist, be non-empty and be written during
+the run) and the
 licence.
 """
 import argparse
@@ -66,8 +66,9 @@ def licence_pro():
 
 
 def unbound_log_problem(capture, log):
-    """Require the probe's logical project spelling and a fresh real log file.
-    File identity is a separate diagnostic, not equality of the game-visible string."""
+    """Require an absolute path that names the project's LibraryUnbound/Editor.log (the game
+    runs in a view of the project, which has no entry for Unbound's own directory, so the path
+    is not one under the game's project path) and a fresh real log file there."""
     try:
         run = json.loads((capture/'run.json').read_text())
         project, started = Path(run['project']), float(run['started'])
@@ -75,11 +76,14 @@ def unbound_log_problem(capture, log):
         return 'the capture records no project path and start (run.json)'
     if not project.is_absolute():
         return f'the recorded project path {project} is not absolute'
-    path = project/'Library/Unbound/Editor.log'
-    if log != '<project>/Library/Unbound/Editor.log':
-        return 'not the project\'s Library/Unbound/Editor.log spelling'
+    path = project/'LibraryUnbound/Editor.log'
+    reported = Path(log)
+    if not reported.is_absolute():
+        return 'not an absolute path'
     if not path.is_file():
         return f'{path} does not exist'
+    if not reported.is_file() or reported.resolve() != path.resolve():
+        return 'not the project\'s LibraryUnbound/Editor.log'
     if path.stat().st_size == 0:
         return f'{path} is empty'
     if path.stat().st_mtime < started:
@@ -144,7 +148,7 @@ def machine(capture, editor=False):
     if not editor:
         problem = unbound_log_problem(capture, log)
         if problem:
-            failures.append({'key': 'application.consoleLogPath', 'os': 'the project\'s Library/Unbound/Editor.log, written',
+            failures.append({'key': 'application.consoleLogPath', 'os': 'the project\'s LibraryUnbound/Editor.log, written',
                              'actual': log, 'problem': problem})
     if not isinstance(facts.get('profiler.graphicsDriver.start'), int) or facts['profiler.graphicsDriver.start'] < 0:
         failures.append({'key': 'profiler.graphicsDriver.start', 'os': 'a byte count', 'actual': facts.get('profiler.graphicsDriver.start')})

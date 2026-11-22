@@ -7,7 +7,7 @@
 //! is a different key. Old entries are simply left behind (`unbound cache gc` territory).
 //!
 //! Entries live at `<dir>/<kind>/<key[..2]>/<key>.bin` (for a project, `dir` is
-//! `<project>/Library/Unbound/Imports`): a small header, then the postcard encoding of the output,
+//! `<project>/LibraryUnbound/Imports`): a small header, then the postcard encoding of the output,
 //! LZ4-compressed. Files are written to a temporary name and renamed, so a reader never sees a
 //! partial entry and concurrent importers of the same asset are harmless.
 //!
@@ -88,9 +88,9 @@ impl AssetCache {
         }
     }
 
-    /// The cache of a project: `<project>/Library/Unbound/Imports`.
+    /// The cache of a project: `<project>/LibraryUnbound/Imports`.
     pub fn for_project(project_root: &Path) -> Self {
-        Self::new(project_root.join("Library/Unbound/Imports"))
+        Self::new(unbound_project::unbound_dir(project_root).join("Imports"))
     }
 
     pub fn dir(&self) -> &Path {

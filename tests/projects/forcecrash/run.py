@@ -128,7 +128,7 @@ def gate():
             except subprocess.TimeoutExpired:
                 code = None
         death = signal.Signals(-code).name if code is not None and code < 0 else None
-        console = project/'Library'/'Unbound'/'Editor.log'
+        console = project/'LibraryUnbound'/'Editor.log'
         log_text = console.read_text(errors='replace') if console.exists() else ''
         actual.update(summary(category, log_text, capture, death))
         print(f'{category}: engine exit {code} ({death or "no signal"})')

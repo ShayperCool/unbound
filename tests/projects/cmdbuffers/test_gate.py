@@ -8,8 +8,8 @@ import run
 
 class SafeAppendGateTests(unittest.TestCase):
     def setUp(self):
-        (run.ROOT/'Library'/'Unbound').mkdir(parents=True, exist_ok=True)
-        self.directory = tempfile.TemporaryDirectory(dir=run.ROOT/'Library'/'Unbound')
+        (run.ROOT/'LibraryUnbound').mkdir(parents=True, exist_ok=True)
+        self.directory = tempfile.TemporaryDirectory(dir=run.ROOT/'LibraryUnbound')
         self.addCleanup(self.directory.cleanup)
         self.out = Path(self.directory.name)
         self.rows = [json.loads(line) for line in run.device_reference(run.reference_file(run.ROOT, 'jsonl'), run.ROOT).read_text().splitlines()]

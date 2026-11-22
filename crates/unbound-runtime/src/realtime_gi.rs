@@ -760,7 +760,7 @@ const UV_CACHE_VERSION: u32 = 6;
 /// (`unbound_gi::realtime_uv::fitting_uvs`: among the ways the precompute's rounding allows, the
 /// one the system's precomputed layout has; for a system of Unbound's own bake the one its
 /// arithmetic makes, `realtime_uvs`), checked against that layout and cached under
-/// `<project>/Library/Unbound/RealtimeUVs` by a hash of the inputs and of the system. Writes
+/// `<project>/LibraryUnbound/RealtimeUVs` by a hash of the inputs and of the system. Writes
 /// `2 * vertices` floats into `out`. Answers how many ways that fit the system's layout its data
 /// could not tell apart (`Fit::ways`; such a layout, the first of them, is not cached, so that
 /// each session says so).
@@ -819,9 +819,8 @@ pub fn realtime_uvs(
         key.update(&(list.len() as u64).to_le_bytes());
         key.update(list);
     }
-    let path = crate::state::state()
-        .project_root
-        .join("Library/Unbound/RealtimeUVs")
+    let path = unbound_project::unbound_dir(&crate::state::state().project_root)
+        .join("RealtimeUVs")
         .join(format!("{}.bin", key.finalize().to_hex()));
     let (output, ways) = cached_or_fresh(
         &path,
@@ -1036,12 +1035,11 @@ impl BakeInput {
 
 /// A scene's realtime GI made by Unbound's own precompute from `inputs` and the light probes at
 /// `probes` (world positions), registered as a loaded scene's is (`load`'s answer); cached
-/// under `<project>/Library/Unbound/RealtimeGI` by a hash of every input and the format
+/// under `<project>/LibraryUnbound/RealtimeGI` by a hash of every input and the format
 /// version.
 pub fn bake(inputs: &[BakeInput], probes: &[[f32; 3]]) -> Result<Json> {
-    let path = crate::state::state()
-        .project_root
-        .join("Library/Unbound/RealtimeGI")
+    let path = unbound_project::unbound_dir(&crate::state::state().project_root)
+        .join("RealtimeGI")
         .join(format!("{}.bin", bake_key(inputs, probes)));
     let baked = match read_baked(&path) {
         Some(baked) => baked,

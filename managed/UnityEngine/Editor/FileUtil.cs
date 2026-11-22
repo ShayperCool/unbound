@@ -46,7 +46,7 @@ namespace UnityEditor
             }
         }
 
-        internal const string UnsupportedMember = "FileUtil.DeleteFileOrDirectory of the project folder, its Library folder, Library/Unbound and what is in it, or a package not embedded in the project's Packages folder and what is in it";
+        internal const string UnsupportedMember = "FileUtil.DeleteFileOrDirectory of the project folder, its Library folder, Unbound's directory (LibraryUnbound) and what is in it, or a package not embedded in the project's Packages folder and what is in it";
 
         static bool Delete(string full)
         {
@@ -58,7 +58,7 @@ namespace UnityEditor
         }
 
         /// <summary>
-        /// The game's working directory is Unbound's project view (<c>Library/Unbound/ProjectView</c>):
+        /// The game's working directory is Unbound's project view (<c>LibraryUnbound/ProjectView</c>):
         /// a directory of links to each top-level project entry and to each package as
         /// <c>Packages/&lt;name&gt;</c>. Unbound's reading (unmeasured): a path naming a top-level
         /// link, the view's <c>Packages</c> folder or an embedded package's link (one whose package
@@ -66,18 +66,18 @@ namespace UnityEditor
         /// links reach the project's files through them. Refused and reported, decided on where a
         /// path lands (its links followed, and without regard to case on a volume that ignores it),
         /// as what the Editor does there is unmeasured or would take Unbound's own files: the project
-        /// folder, its Library folder, Library/Unbound and what is in it, and a package kept
+        /// folder, its Library folder, Unbound's directory (LibraryUnbound) and what is in it, and a package kept
         /// elsewhere (the Editor's built-in packages, a package cache or store, a local package
         /// outside Packages) and what is in it.
         /// </summary>
         sealed class ProjectView
         {
-            readonly string m_View, m_Project;
+            readonly string m_View, m_Project, m_Unbound;
             readonly StringComparison m_Case;
             readonly string m_PhysicalView, m_PhysicalProject, m_PhysicalLibrary, m_PhysicalUnbound, m_PhysicalEmbedded;
             readonly List<string> m_OtherPackages = new List<string>();
 
-            ProjectView(string view, string project)
+            ProjectView(string view, string project, string unbound)
             {
                 m_View = view;
                 m_Project = project;
@@ -85,7 +85,8 @@ namespace UnityEditor
                 m_PhysicalView = ConsoleLogPath.Resolve(view);
                 m_PhysicalProject = ConsoleLogPath.Resolve(project);
                 m_PhysicalLibrary = Path.Combine(m_PhysicalProject, "Library");
-                m_PhysicalUnbound = Path.Combine(m_PhysicalLibrary, "Unbound");
+                m_Unbound = unbound;
+                m_PhysicalUnbound = ConsoleLogPath.Resolve(unbound);
                 m_PhysicalEmbedded = Path.Combine(m_PhysicalProject, "Packages");
                 string packages = Path.Combine(view, "Packages");
                 if (!Directory.Exists(packages)) return;
@@ -104,10 +105,19 @@ namespace UnityEditor
                 string view = UnityEngine.ProjectInfo.ProjectPath;
                 if (string.IsNullOrEmpty(view)) return null;
                 view = Path.TrimEndingDirectorySeparator(Path.GetFullPath(view));
-                string unbound = Path.GetDirectoryName(view), library = Path.GetDirectoryName(unbound);
-                if (Path.GetFileName(view) != "ProjectView" || Path.GetFileName(unbound) != "Unbound" || Path.GetFileName(library) != "Library")
+                // The view is in Unbound's directory, which the host places (by default in the
+                // project's folder, which is then the folder that holds it).
+                string unbound = Path.GetDirectoryName(view);
+                if (Path.GetFileName(view) != UnityEngine.ProjectInfo.ViewFolder
+                    || !string.Equals(unbound, Path.TrimEndingDirectorySeparator(Path.GetFullPath(UnityEngine.ProjectInfo.UnboundDirectory(UnityEngine.ProjectInfo.ProjectPath))), StringComparison.Ordinal))
                     return null;
-                return new ProjectView(view, Path.GetDirectoryName(library));
+                string project = UnityEngine.ProjectInfo.ProjectRootPath;
+                if (string.IsNullOrEmpty(project))
+                {
+                    if (Path.GetFileName(unbound) != UnityEngine.ProjectInfo.UnboundFolder) return null;
+                    project = Path.GetDirectoryName(unbound);
+                }
+                return new ProjectView(view, Path.TrimEndingDirectorySeparator(Path.GetFullPath(project)), unbound);
             }
 
             /// <summary>Whether the volume holding <paramref name="directory"/> finds it under another case.</summary>
@@ -170,26 +180,27 @@ namespace UnityEditor
             }
 
             /// <summary>Whether the deletion of <paramref name="full"/> would land on the project
-            /// folder, Library, Library/Unbound or below it, or in a package kept elsewhere.</summary>
+            /// folder, Library, Unbound's directory or below it, or in a package kept elsewhere.</summary>
             internal bool Refuses(string full)
             {
-                // Spelled into Library/Unbound (through the view's Library link or by the project's
-                // own path): whatever it reaches there, it goes through Unbound's own folder.
+                // Spelled into Unbound's directory: by its own path, or, where it is in the
+                // project, beside the view's links (where a new name is the project's).
                 string inView = Below(full, m_View) ?? Below(full, m_PhysicalView);
-                if (InUnbound(inView) || (inView == null && InUnbound(Below(full, m_Project) ?? Below(full, m_PhysicalProject))))
+                if (Below(full, m_Unbound) != null && inView == null) return true;
+                if (Below(m_Unbound, m_Project) is { Length: > 0 } place && inView != null && (Same(inView, place) || inView.StartsWith(place + "/", m_Case)))
                     return true;
                 // Where the entry itself lands: its folder's links followed, not its own.
                 string parent = Path.GetDirectoryName(full);
                 string landing = parent == null ? full : Path.Combine(ConsoleLogPath.Resolve(parent), Path.GetFileName(full));
                 if (Same(landing, m_PhysicalProject) || Same(landing, m_PhysicalLibrary)) return true;
-                // Library/Unbound and what is in it, except the view's own entries (links, handled
+                // Unbound's directory (LibraryUnbound) and what is in it, except the view's own entries (links, handled
                 // above, and what a script wrote in its working directory) named in the view
-                // itself: one reached through a link into Library (a project's own link) is refused.
+                // itself: one reached through a link into it (a project's own link) is refused.
                 if (Below(landing, m_PhysicalUnbound) != null && !(inView is { Length: > 0 } && Below(landing, m_PhysicalView) is { Length: > 0 } inViewLanding
                         && Same(inViewLanding, inView)))
                     return true;
                 // A folder that holds one of those goes with it.
-                if (Below(m_PhysicalProject, landing) != null) return true;
+                if (Below(m_PhysicalProject, landing) != null || Below(m_PhysicalUnbound, landing) != null) return true;
                 // A package kept elsewhere: what is in it, a folder holding it, and the view's link to it.
                 string link = new FileInfo(full).LinkTarget;
                 string linked = link == null || parent == null ? null : ConsoleLogPath.Resolve(Path.GetFullPath(link, parent));
@@ -199,13 +210,6 @@ namespace UnityEditor
             }
 
             bool Same(string a, string b) => string.Equals(a, b, m_Case);
-
-            bool InUnbound(string relative)
-            {
-                if (string.IsNullOrEmpty(relative)) return false;
-                string[] parts = relative.Split('/');
-                return parts.Length >= 2 && string.Equals(parts[0], "Library", m_Case) && string.Equals(parts[1], "Unbound", m_Case);
-            }
 
             /// <summary><paramref name="path"/> relative to <paramref name="root"/> ("" for the root
             /// itself), or null outside it.</summary>

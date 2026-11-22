@@ -285,7 +285,7 @@ public static class EditorApiProbe
         InternalEditorUtility.SaveToSerializedFileAndForget(new Object[] { saved }, "Temp/EditorProbe/Saved.asset", true);
         var text = File.Exists("Temp/EditorProbe/Saved.asset") ? File.ReadAllText("Temp/EditorProbe/Saved.asset") : "";
         // Unbound writes its copy elsewhere; the content is what counts.
-        var unbound = "Library/Unbound/EditorFiles/Temp/EditorProbe/Saved.asset";
+        var unbound = "LibraryUnbound/EditorFiles/Temp/EditorProbe/Saved.asset";
         if (text.Length == 0 && File.Exists(unbound)) text = File.ReadAllText(unbound);
         Record("serializedFile.text", Str(Guids(text)));
         var loaded = InternalEditorUtility.LoadSerializedFileAndForget("Temp/EditorProbe/Saved.asset");

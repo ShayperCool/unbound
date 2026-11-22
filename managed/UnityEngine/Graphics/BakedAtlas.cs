@@ -13,7 +13,7 @@ namespace UnityEngine
     /// lightmaps (tests/projects/bakedatlas): which lightmap, its lightmap scale and offset, and
     /// each lightmap's size. The bake does not make the lightmaps yet, so it gives renderers
     /// nothing (they keep what they had; said once per scene by the bake) and writes the layout
-    /// to <c>Library/Unbound/BakedGI/&lt;scene GUID&gt;/atlas.json</c> for the next parts, the
+    /// to <c>LibraryUnbound/BakedGI/&lt;scene GUID&gt;/atlas.json</c> for the next parts, the
     /// renderers in the order the Editor's bake numbers them. The native side also rasterizes
     /// each lightmap's texels and gathers the direct light of the scene's baked lights
     /// (<see cref="Lights"/>) as the Editor does (tests/projects/bakedbuffers), so far only to
@@ -277,7 +277,7 @@ namespace UnityEngine
             }
         }
 
-        static string LayoutPath(string guid) => Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "BakedGI", guid, "atlas.json");
+        static string LayoutPath(string guid) => ProjectInfo.UnboundPath("BakedGI", guid, "atlas.json");
 
         /// <summary>Removes the layout an earlier bake of the scene wrote.</summary>
         static void Forget(string path, string guid)

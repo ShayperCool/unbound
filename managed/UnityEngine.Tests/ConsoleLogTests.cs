@@ -17,7 +17,7 @@ namespace UnityEngine.Tests
         readonly string oldCache = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
         string Project => Path.Combine(root, "project");
         string Cache => Path.Combine(root, "cache");
-        string Logs => Path.Combine(Project, "Library/Unbound");
+        string Logs => Path.Combine(Project, ProjectInfo.UnboundFolder);
 
         public ConsoleLogTests()
         {
@@ -48,8 +48,9 @@ namespace UnityEngine.Tests
         [InlineData("Packages/sentinel.cs")]
         [InlineData("ProjectSettings/sentinel.cs")]
         [InlineData("Assets/new/sub/log.txt")]
-        [InlineData("Library/Unbound/../../Assets/sentinel.cs")]
-        [InlineData("Library/Unbound-sibling/log.txt")]
+        [InlineData("LibraryUnbound/../Assets/sentinel.cs")]
+        [InlineData("LibraryUnbound-sibling/log.txt")]
+        [InlineData("Library/Unbound/log.txt")]
         public void Unsafe_paths_leave_authored_files_and_directories_unchanged(string relative)
         {
             var before = Authored();
@@ -57,6 +58,7 @@ namespace UnityEngine.Tests
             Assert.Equal("", ConsoleLog.Path);
             Assert.Equal(before, Authored());
             Assert.False(Directory.Exists(Path.Combine(Project, "Library")));
+            Assert.False(Directory.Exists(Path.Combine(Project, "LibraryUnbound-sibling")));
         }
 
         [Theory]
@@ -177,19 +179,20 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void Project_view_logs_use_the_physical_library_and_keep_authored_vetoes(bool explicitPath)
+        public void Project_view_logs_use_unbounds_directory_and_keep_authored_vetoes(bool explicitPath)
         {
             Directory.CreateDirectory(Logs);
             string view = Path.Combine(Logs, "ProjectView");
             Directory.CreateDirectory(view);
-            foreach (string part in new[] { "Assets", "Packages", "ProjectSettings", "Library" })
+            // The view links the project's entries, not Unbound's own directory.
+            foreach (string part in new[] { "Assets", "Packages", "ProjectSettings" })
                 Directory.CreateSymbolicLink(Path.Combine(view, part), Path.Combine(Project, part));
             ProjectInfo.ProjectPath = view;
-            string requested = Path.Combine(view, "Library/Unbound/session.log");
+            string requested = Path.Combine(Logs, "session.log");
             EditorProcess.s_CommandLine = explicitPath ? new[] { "Unity", "-logFile", requested } : new[] { "Unity" };
             ConsoleLog.Append("first view session");
             string physical = Path.Combine(Logs, explicitPath ? "session.log" : "Editor.log");
-            Assert.Equal(explicitPath ? requested : Path.Combine(view, "Library/Unbound/Editor.log"), ConsoleLog.Path);
+            Assert.Equal(explicitPath ? requested : Path.Combine(Logs, "Editor.log"), ConsoleLog.Path);
             Assert.Contains("first view session", File.ReadAllText(physical));
             ConsoleLog.Reset();
             ConsoleLog.Append("second view session");
@@ -207,8 +210,8 @@ namespace UnityEngine.Tests
             string alias = Path.Combine(root, "project-alias");
             Directory.CreateSymbolicLink(alias, Project);
             ProjectInfo.ProjectPath = alias;
-            Open(Path.Combine(alias, "Library/Unbound/alias.log"));
-            Assert.Equal(Path.Combine(alias, "Library/Unbound/alias.log"), ConsoleLog.Path);
+            Open(Path.Combine(alias, "LibraryUnbound/alias.log"));
+            Assert.Equal(Path.Combine(alias, "LibraryUnbound/alias.log"), ConsoleLog.Path);
             Directory.CreateDirectory(Cache);
             string relocated = Path.Combine(root, "relocated");
             Directory.CreateDirectory(relocated);

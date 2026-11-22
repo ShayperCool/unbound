@@ -9,7 +9,7 @@ namespace UnityEditor
 {
     /// <summary>
     /// The project's per-user config values. Values the Editor saved (`UserSettings/EditorUserSettings.asset`)
-    /// are read; what the game sets goes to Unbound's own copy (`Library/Unbound/EditorUserSettings.asset`,
+    /// are read; what the game sets goes to Unbound's own copy (`LibraryUnbound/EditorUserSettings.asset`,
     /// the same format), so the user's file is never written.
     /// </summary>
     public sealed partial class EditorUserSettings : UnityEngine.Object
@@ -18,7 +18,7 @@ namespace UnityEditor
         static Dictionary<string, string> s_Own;
 
         static string UnityFile => Path.Combine(ProjectInfo.ProjectPath ?? "", "UserSettings", "EditorUserSettings.asset");
-        static string OwnFile => Path.Combine(ProjectInfo.ProjectPath ?? "", "Library", "Unbound", "EditorUserSettings.asset");
+        static string OwnFile => ProjectInfo.UnboundPath("EditorUserSettings.asset");
 
         static Dictionary<string, string> Values
         {

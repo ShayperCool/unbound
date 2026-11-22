@@ -67,7 +67,7 @@ Before the change, each color space matched 893/1351 values and 3/30 images exac
 change, each matches 1351/1351 values and 20/30 images exactly; all 30 images pass the unchanged
 8/255 bound. Textured Standard images retain maximum errors of 2/255 in Gamma and 1/255 in
 Linear. All untextured and unlit images are exact. The complete captures and reports stay under
-Library/Unbound or the validation cache, including the unsuccessful earlier candidates.
+LibraryUnbound or the validation cache, including the unsuccessful earlier candidates.
 
 The existing material-slot probe retains 306/306 exact API values and 20/20 exact images. The
 model import API/description residuals, lightmap UV and normal residuals, humanoid and baked

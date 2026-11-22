@@ -49,7 +49,7 @@ python3 tests/projects/appfacts/compare.py --machine ~/.cache/unbound/validation
 
 The Unbound capture's `run.json` records the absolute project path the engine was given and the
 start time. `--machine` requires the probe to report exactly
-`<project>/Library/Unbound/Editor.log`. That real file must exist, be non-empty and be written
+`<project>/LibraryUnbound/Editor.log`. That real file must exist, be non-empty and be written
 during the run. An alternate spelling of the same physical file fails the string check.
 `test_compare.py OUT` checks these rules on 18 synthetic captures, including project aliases.
 
@@ -80,8 +80,8 @@ comparison time. The checks cover the GPU's PCI ids, OpenGL strings and memory,
 the CPU vendor and model, the host name, the machine id as the device unique
 identifier, memory and OS release, and the battery. They also cover the log
 path (with `--editor` the Editor's `-logFile`, otherwise the project's
-`Library/Unbound/Editor.log`) and the licence. The engine log can be reported as
-`<project>/Library/Unbound/Editor.log` or as an absolute path that strictly resolves
+`LibraryUnbound/Editor.log`) and the licence. The engine log can be reported as
+`<project>/LibraryUnbound/Editor.log` or as an absolute path that strictly resolves
 to that same file under the absolute project recorded in `run.json`. This includes
 a physical cache path when the launch used a logical project alias. A different
 fresh file or a relative path cannot pass. The expected file must exist, contain

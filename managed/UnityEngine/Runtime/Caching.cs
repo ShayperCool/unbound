@@ -29,7 +29,7 @@ namespace Unbound.Runtime
     /// added again starts with the default delay and limit.
     ///
     /// Unbound's choices: the default cache is the project's
-    /// <c>Library/Unbound/Caching/&lt;company&gt;_&lt;product&gt;</c> (the Editor's is in the
+    /// <c>LibraryUnbound/Caching/&lt;company&gt;_&lt;product&gt;</c> (the Editor's is in the
     /// user's cache directory and is shared with the Editor, which Unbound does not write to); a
     /// cache is ready as soon as it is added (Unity reads its index on a thread); versions read
     /// from disk count as last used when their <c>__info</c> was last written.
@@ -310,7 +310,7 @@ namespace Unbound.Runtime
         {
             if (s_Default != null) return;
             string folder = ProjectInfo.CompanyName + "_" + ProjectInfo.ProductName;
-            var path = Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "Caching", folder).Replace('\\', '/');
+            var path = ProjectInfo.UnboundPath("Caching", folder).Replace('\\', '/');
             s_Default = new Store(++s_NextHandle, path, false);
             s_Stores.Insert(0, s_Default);
             s_Current = s_Default;

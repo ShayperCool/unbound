@@ -480,14 +480,14 @@ namespace Unbound.Runtime
             /// <summary>
             /// Loads from a file, as Unity does, so <c>Assembly.Location</c> names one (code
             /// compares it with asset paths): the assembly's own file when Unbound keeps its image
-            /// as it is, otherwise the adapted image saved under Library/Unbound/AdaptedAssemblies.
+            /// as it is, otherwise the adapted image saved under LibraryUnbound/AdaptedAssemblies.
             /// </summary>
             Assembly LoadGameAssembly(GameAssembly game)
             {
                 var original = File.ReadAllBytes(game.Dll);
                 // Adapting is slow (most assemblies are read and rewritten): the outcome is cached
                 // under the input's hash plus the filters' version.
-                var adapted = Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "AdaptedAssemblies");
+                var adapted = ProjectInfo.UnboundPath("AdaptedAssemblies");
                 var key = Hash(original, Path.GetFileName(game.Dll) + "|" + ImageFilterVersion + "|" + PeImage.Version
                     + (game.PluginGuid != null ? "|" + Dependencies(original) : ""));
                 var record = Path.Combine(adapted, "inputs", key);
@@ -517,10 +517,10 @@ namespace Unbound.Runtime
                 return LoadFromAssemblyPath(path);
             }
 
-            /// <summary>A generated assembly, from Library/Unbound/AdaptedAssemblies like adapted ones.</summary>
+            /// <summary>A generated assembly, from LibraryUnbound/AdaptedAssemblies like adapted ones.</summary>
             Assembly LoadGeneratedAssembly(string name, Func<byte[]> generate)
             {
-                var adapted = Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "AdaptedAssemblies");
+                var adapted = ProjectInfo.UnboundPath("AdaptedAssemblies");
                 var record = Path.Combine(adapted, "inputs", Hash(System.Text.Encoding.UTF8.GetBytes(name), "generated|" + ImageFilterVersion + "|" + PeImage.Version));
                 string path = File.Exists(record) ? File.ReadAllText(record) : null;
                 if (path == null || !File.Exists(path))

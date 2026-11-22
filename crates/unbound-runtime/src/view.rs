@@ -1,15 +1,16 @@
 //! The directory the game runs in. Unity's Mono maps `Packages/<name>/...` to each package's
 //! files for plain file IO, so Editor code reads package files by those paths; .NET has no such
-//! hook. The game runs instead in `Library/Unbound/ProjectView`, a directory of symbolic links: every
-//! top-level entry of the project, and `Packages/<name>` for every resolved package.
+//! hook. The game runs instead in `LibraryUnbound/ProjectView`, a directory of symbolic links: every
+//! top-level entry of the project but Unbound's own directory, and `Packages/<name>` for every
+//! resolved package.
 use anyhow::{Context, Result};
 use serde_json::{Value as Json, json};
 use std::path::{Path, PathBuf};
 use unbound_project::{Package, PackageSource, Project};
 
-/// The project view's directory: `<project>/Library/Unbound/ProjectView`.
+/// The project view's directory: `<project>/LibraryUnbound/ProjectView`.
 pub fn dir(project: &Project) -> PathBuf {
-    project.library_dir().join("ProjectView")
+    project.unbound_dir().join("ProjectView")
 }
 
 /// A project or package file as the game sees it through the view (its working directory):
@@ -25,6 +26,11 @@ pub fn unity_path(project: &Project, path: &Path) -> String {
 
 pub fn to_view(project: &Project, path: &Path) -> PathBuf {
     let view = dir(project);
+    // Unbound's own files (compiled assemblies, caches) are no part of the view, wherever the
+    // directory is: they keep their paths.
+    if path.starts_with(project.unbound_dir()) {
+        return path.to_path_buf();
+    }
     // Packages first: an embedded package lives under the project's Packages/ folder too.
     let mut best: Option<(&Package, usize)> = None;
     for package in &project.packages {
@@ -57,9 +63,11 @@ pub fn build(project: &Project) -> Result<PathBuf> {
     }
     let packages = view.join("Packages");
     std::fs::create_dir_all(&packages)?;
+    let data = project.unbound_dir();
     for entry in std::fs::read_dir(&project.root)?.flatten() {
         let name = entry.file_name();
-        if name == "Packages" {
+        // Unbound's own directory is no part of the project the game sees.
+        if name == "Packages" || entry.path() == data {
             continue;
         }
         link(&entry.path(), &view.join(&name))?;

@@ -77,8 +77,15 @@ scripted input (`--tap`, `--type`, `--press`, ...) and the screenshots used for 
 Unbound writes a project's files where the Unity Editor would: opening a project gives each new
 file and folder its `.meta` and writes `Packages/packages-lock.json` when there is none, and what
 editor scripts change through the AssetDatabase, importers and settings APIs is saved as the
-Editor saves it. Its own caches go to `<project>/Library/Unbound/` and `~/.cache/unbound/`
-(`$XDG_CACHE_HOME/unbound`). PlayerPrefs
+Editor saves it. What Unbound makes for itself (caches, the view of the project the game runs
+in, logs, test results) goes to `<project>/LibraryUnbound/` and `~/.cache/unbound/`
+(`$XDG_CACHE_HOME/unbound`); `Library/` is Unity's and Unbound keeps nothing there (a
+`Library/Unbound` left by an earlier version is removed when the project is opened, its logs,
+test results and editor user settings moved over). `--project-data <dir>` or
+`UNBOUND_PROJECT_DATA` puts that directory elsewhere: relative to the project, or absolute and
+possibly outside it; not in `Assets/`, `Packages/`, `ProjectSettings/` or `Library/`. In the
+project it holds a `.gitignore` of its own, so it stays out of the project's version control
+without a change to the project's files. PlayerPrefs
 and `Application.persistentDataPath` are the Editor's own unless you pass `--player-prefs` or
 `--persistent-data-path`.
 

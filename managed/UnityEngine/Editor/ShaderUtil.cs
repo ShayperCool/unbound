@@ -27,7 +27,7 @@ namespace UnityEditor
         }
 
         /// <summary>A shader an importer generates (Shader Graph): as from source, and its ShaderLab
-        /// kept in <c>Library/Unbound/GeneratedShaders</c> (includes made project paths), where the
+        /// kept in <c>LibraryUnbound/GeneratedShaders</c> (includes made project paths), where the
         /// renderer finds it by name and compiles it like a <c>.shader</c> asset.</summary>
         public static Shader CreateShaderAsset(AssetImportContext context, string source, bool compileInitialShaderVariants)
         {
@@ -79,7 +79,7 @@ namespace UnityEditor
 
         /// <summary>
         /// A compute shader from source text, as an importer makes one (Shader Graph, the unified
-        /// ray tracing shaders): the source is kept in <c>Library/Unbound/GeneratedShaders</c>, its
+        /// ray tracing shaders): the source is kept in <c>LibraryUnbound/GeneratedShaders</c>, its
         /// includes relative to the importing asset made project paths, and its kernels compile from
         /// there like a <c>.compute</c> asset's.
         /// </summary>
@@ -210,7 +210,7 @@ namespace UnityEngine.Rendering
 namespace Unbound.Runtime
 {
     /// <summary>Shader sources importers generate, written where the shader compiler reads files:
-    /// <c>Library/Unbound/GeneratedShaders/&lt;hash&gt;&lt;extension&gt;</c>.</summary>
+    /// <c>LibraryUnbound/GeneratedShaders/&lt;hash&gt;&lt;extension&gt;</c>.</summary>
     internal static class GeneratedShaders
     {
         static readonly Regex s_Include = new Regex(@"^([ \t]*#[ \t]*include(?:_with_pragmas)?[ \t]+"")([^""]+)("")", RegexOptions.Multiline);
@@ -240,7 +240,7 @@ namespace Unbound.Runtime
                 key = name + Shader.SourceKeySeparator + hash.Substring(0, Shader.SourceKeyLength);
                 text = ShaderLab.Renamed(text, key);
             }
-            var dir = Path.Combine(UnityEngine.ProjectInfo.ProjectPath, "Library", "Unbound", "GeneratedShaders");
+            var dir = UnityEngine.ProjectInfo.UnboundPath("GeneratedShaders");
             Directory.CreateDirectory(dir);
             var file = Path.Combine(dir, hash + extension);
             if (!File.Exists(file)) File.WriteAllText(file, text);

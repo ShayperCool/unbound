@@ -66,7 +66,7 @@ fn inputs(
     Inputs {
         project_roots: vec![
             scratch.0.join("Assets"),
-            scratch.0.join("Library/Unbound/GeneratedShaders"),
+            unbound_app::shaderlab::generated_shaders(&scratch.0),
         ],
         settings: unbound_shaders::Settings {
             includes: unbound_shaders::Includes {
@@ -382,7 +382,7 @@ fn installing_reads_nothing_and_questions_read_only_what_they_need() {
         "no built-in resources were read or cached"
     );
     assert!(
-        !scratch.0.join("Library").exists(),
+        !scratch.0.join("Library").exists() && !unbound_project::unbound_dir(&scratch.0).exists(),
         "nothing was created in the project"
     );
 }

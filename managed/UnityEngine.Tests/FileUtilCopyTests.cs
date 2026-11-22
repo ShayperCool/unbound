@@ -274,13 +274,14 @@ namespace UnityEngine.Tests
         public void InTheProjectViewTopLevelPathsNameTheProjectsEntriesAndProtectedOnesAreRefused()
         {
             string project = At("project");
-            string view = Path.Combine(project, "Library", "Unbound", "ProjectView");
+            string view = Path.Combine(project, "LibraryUnbound", "ProjectView");
             Directory.CreateDirectory(Path.Combine(view, "Packages"));
             var asset = Make("project/Assets/x.txt", "X");
-            var cache = Make("project/Library/Unbound/cache.bin", "C");
+            var cache = Make("project/LibraryUnbound/cache.bin", "C");
             var manifest = Make("project/Packages/manifest.json", "old");
             Make("project/Builds/b.txt", "B");
             Make("project/Temp/manifest.json", "new");
+            Make("project/Library/unity.bin", "U");
             foreach (var name in new[] { "Assets", "Library", "Builds", "Temp" })
                 Directory.CreateSymbolicLink(Path.Combine(view, name), Path.Combine(project, name));
             File.CreateSymbolicLink(Path.Combine(view, "Packages", "manifest.json"), manifest);
@@ -338,10 +339,10 @@ namespace UnityEngine.Tests
                 Assert.Equal("file(S) none", Tree(Path.Combine(project, "Assets/scratch.txt")) + " " + Tree(Path.Combine(view, "scratch.txt")));
                 Assert.Equal(hits, Hits());
 
-                Assert.Throws<IOException>(() => FileUtil.CopyFileOrDirectory("Assets/x.txt", "Library/Unbound/stolen.txt"));
-                Assert.Equal("none", Tree(Path.Combine(project, "Library/Unbound/stolen.txt")));
+                Assert.Throws<IOException>(() => FileUtil.CopyFileOrDirectory("Assets/x.txt", "LibraryUnbound/stolen.txt"));
+                Assert.Equal("none", Tree(Path.Combine(project, "LibraryUnbound/stolen.txt")));
                 Assert.Equal(hits + 1, Hits());
-                Assert.Throws<IOException>(() => FileUtil.MoveFileOrDirectory("Library/Unbound/cache.bin", "Assets/cache.bin"));
+                Assert.Throws<IOException>(() => FileUtil.MoveFileOrDirectory(cache, "Assets/cache.bin"));
                 Assert.Equal("file(C)", Tree(cache));
                 Assert.Equal("none", Tree(Path.Combine(project, "Assets/cache.bin")));
                 Assert.Equal(hits + 2, Hits());

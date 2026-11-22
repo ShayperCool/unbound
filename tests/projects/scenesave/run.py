@@ -49,7 +49,7 @@ CASES = {
     'modification-timing': ('EditMode', 'ModificationTimingTests.ModificationTiming'),
     'scene-api-rest': ('EditMode', 'SceneApiRestTests.SceneApiRest'),
 }
-SKIPPED = {'Library', 'Logs', 'Temp', 'UserSettings', 'obj', 'run.py', 'README.md', 'Reference',
+SKIPPED = {'Library', 'LibraryUnbound', 'Logs', 'Temp', 'UserSettings', 'obj', 'run.py', 'README.md', 'Reference',
            'gate.json', 'scenesave_compare.py', 'test_compare.py', '__pycache__'}
 
 

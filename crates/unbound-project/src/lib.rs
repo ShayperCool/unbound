@@ -59,6 +59,138 @@ pub struct Project {
     pub inexact_packages: Vec<(String, String)>,
 }
 
+/// The name of Unbound's own directory in a project's root, where nothing else is asked for:
+/// everything Unbound keeps per project (caches, the project view, logs, results). `Library/`
+/// is Unity's: Unbound keeps nothing there.
+pub const UNBOUND_DIR: &str = "LibraryUnbound";
+
+/// The environment variable that names another place for that directory (the command line's
+/// `--project-data` sets it): relative to the project's root, or absolute.
+pub const PROJECT_DATA_VARIABLE: &str = "UNBOUND_PROJECT_DATA";
+
+/// Where Unbound kept its directory before it left Unity's `Library/`, relative to the project.
+pub const FORMER_UNBOUND_DIR: &str = "Library/Unbound";
+
+/// The project folders Unbound's directory may not be, or be in: the authored ones and Unity's.
+const NOT_FOR_PROJECT_DATA: &[&str] = &["Assets", "Packages", "ProjectSettings", "Library"];
+
+/// The place asked for, read once: the process works on one project.
+fn asked_project_data() -> Option<&'static Path> {
+    static ASKED: std::sync::OnceLock<Option<PathBuf>> = std::sync::OnceLock::new();
+    ASKED
+        .get_or_init(|| {
+            std::env::var_os(PROJECT_DATA_VARIABLE)
+                .filter(|v| !v.is_empty())
+                .map(PathBuf::from)
+        })
+        .as_deref()
+}
+
+/// A path without its `.` and `..` components (no link is read).
+fn lexical(path: &Path) -> PathBuf {
+    let mut clean = PathBuf::new();
+    for part in path.components() {
+        match part {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                clean.pop();
+            }
+            other => clean.push(other),
+        }
+    }
+    clean
+}
+
+/// Unbound's directory for a project root and the place asked for (`None`: the default,
+/// `<project>/LibraryUnbound`): a relative place is in the project, an absolute one anywhere.
+pub fn unbound_dir_at(project_root: &Path, asked: Option<&Path>) -> PathBuf {
+    match asked {
+        None => project_root.join(UNBOUND_DIR),
+        Some(asked) => lexical(&project_root.join(asked)),
+    }
+}
+
+/// Unbound's directory of a project: the one place that names it. `<project>/LibraryUnbound`
+/// unless `--project-data` or `UNBOUND_PROJECT_DATA` asks for another.
+pub fn unbound_dir(project_root: &Path) -> PathBuf {
+    unbound_dir_at(project_root, asked_project_data())
+}
+
+/// Why a directory cannot be Unbound's for this project (`None`: it can): the project's root
+/// itself, and the authored folders and Unity's `Library/` or anything in them. Decided on the
+/// path as spelled and, where it exists, on where its links lead.
+pub fn refused_project_data(project_root: &Path, dir: &Path) -> Option<String> {
+    let landed_root = project_root.canonicalize().ok();
+    let landed = dir.canonicalize().ok();
+    let spelled = Some((project_root, dir));
+    let followed = landed_root.as_deref().zip(landed.as_deref());
+    for (root, candidate) in spelled.into_iter().chain(followed) {
+        if candidate == root {
+            return Some(format!(
+                "{} is the project's folder itself: Unbound's project data needs a directory of its own",
+                dir.display()
+            ));
+        }
+        for name in NOT_FOR_PROJECT_DATA {
+            if candidate.starts_with(root.join(name)) {
+                return Some(format!(
+                    "{} is in the project's {name}/ folder: Unbound's project data may not be in Assets/, Packages/, ProjectSettings/ or Library/",
+                    dir.display()
+                ));
+            }
+        }
+    }
+    None
+}
+
+/// What is kept of a former directory: the files that are no cache and cannot be made again
+/// (the settings the game set, the last sessions' logs, test results).
+const KEPT_OF_FORMER: &[&str] = &[
+    "EditorUserSettings.asset",
+    "Editor.log",
+    "Editor-prev.log",
+    "TestResults",
+];
+
+/// Makes a project's Unbound directory ready: creates it, in the project with a `.gitignore`
+/// that ignores all of it (a Unity project ignores `/Library/`, not this directory, and Unbound
+/// does not edit the project's own `.gitignore`), and retires a former `Library/Unbound`: the files of
+/// [`KEPT_OF_FORMER`] move over where the new directory has none, the rest (caches, which are
+/// made again) is removed. Nothing else of `Library/` is touched. Answers what to say when a
+/// former directory was retired.
+pub fn prepare_unbound_dir(project_root: &Path, dir: &Path) -> std::io::Result<Option<String>> {
+    std::fs::create_dir_all(dir)?;
+    // A directory outside the project is in no project's version control.
+    let ignore = dir.join(".gitignore");
+    if dir.starts_with(project_root) && !ignore.exists() {
+        std::fs::write(&ignore, "*\n")?;
+    }
+    let former = project_root.join(FORMER_UNBOUND_DIR);
+    // A link is not followed: only a directory of Unbound's own is retired.
+    if !std::fs::symlink_metadata(&former).is_ok_and(|m| m.is_dir()) {
+        return Ok(None);
+    }
+    let mut kept = Vec::new();
+    for name in KEPT_OF_FORMER {
+        let (from, to) = (former.join(name), dir.join(name));
+        if std::fs::symlink_metadata(&from).is_ok() && std::fs::symlink_metadata(&to).is_err() {
+            std::fs::rename(&from, &to)?;
+            kept.push(*name);
+        }
+    }
+    std::fs::remove_dir_all(&former)?;
+    Ok(Some(format!(
+        "{} removed: Unbound keeps its files in {} now and makes its caches again{}",
+        former.display(),
+        dir.display(),
+        if kept.is_empty() {
+            String::new()
+        } else {
+            format!(" (kept: {})", kept.join(", "))
+        }
+    )))
+}
+
 impl Project {
     pub fn open(root: &Path) -> Result<Self> {
         let root = root
@@ -77,6 +209,15 @@ impl Project {
             );
         }
         let install = UnityInstall::find(version, profile.release())?;
+        let data = unbound_dir(&root);
+        if let Some(refused) = refused_project_data(&root, &data) {
+            anyhow::bail!("--project-data / {PROJECT_DATA_VARIABLE}: {refused}");
+        }
+        match prepare_unbound_dir(&root, &data) {
+            Ok(Some(retired)) => tracing::warn!("{retired}"),
+            Ok(None) => {}
+            Err(e) => tracing::warn!("{}: {e}", data.display()),
+        }
         settings::write_missing_input_manager(&root, &profile);
         let settings = Settings::read(&root)?;
         let resolution = packages::resolve(
@@ -104,9 +245,9 @@ impl Project {
         builtin_shaders::BuiltinShaders::find(&self.install, txt.as_deref())
     }
 
-    /// `<project>/Library/Unbound`: everything Unbound keeps per project.
-    pub fn library_dir(&self) -> PathBuf {
-        self.root.join("Library/Unbound")
+    /// `<project>/LibraryUnbound`: everything Unbound keeps per project.
+    pub fn unbound_dir(&self) -> PathBuf {
+        unbound_dir(&self.root)
     }
 
     /// The asset folders the project holds itself, where the Editor writes (a new asset's `.meta`
@@ -417,6 +558,255 @@ fn dll_files(dir: &Path) -> Vec<PathBuf> {
 
 #[cfg(test)]
 mod tests {
+    fn scratch_project(name: &str) -> std::path::PathBuf {
+        let root =
+            std::env::temp_dir().join(format!("unbound-project-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        root
+    }
+
+    #[test]
+    fn the_unbound_directory_is_made_with_an_ignore_file_and_leaves_library_alone() {
+        let root = scratch_project("prepare");
+        std::fs::create_dir_all(root.join("Library/PackageCache")).unwrap();
+        let dir = super::unbound_dir_at(&root, None);
+        assert_eq!(dir, root.join("LibraryUnbound"));
+        assert_eq!(super::prepare_unbound_dir(&root, &dir).unwrap(), None);
+        assert_eq!(
+            std::fs::read_to_string(dir.join(".gitignore")).unwrap(),
+            "*\n"
+        );
+        assert!(root.join("Library/PackageCache").is_dir());
+        assert!(!root.join("Library/Unbound").exists());
+        // An ignore file the user changed stays as it is.
+        std::fs::write(dir.join(".gitignore"), "*\n!keep\n").unwrap();
+        assert_eq!(super::prepare_unbound_dir(&root, &dir).unwrap(), None);
+        assert_eq!(
+            std::fs::read_to_string(dir.join(".gitignore")).unwrap(),
+            "*\n!keep\n"
+        );
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn a_former_directory_is_retired_once_keeping_what_is_no_cache() {
+        let root = scratch_project("retire");
+        let former = root.join("Library/Unbound");
+        std::fs::create_dir_all(former.join("Imports")).unwrap();
+        std::fs::create_dir_all(former.join("TestResults")).unwrap();
+        std::fs::create_dir_all(former.join("ProjectView")).unwrap();
+        std::fs::create_dir_all(root.join("Assets")).unwrap();
+        std::fs::write(root.join("Assets/kept.txt"), "asset").unwrap();
+        // The view's links are removed, not what they name.
+        std::os::unix::fs::symlink(root.join("Assets"), former.join("ProjectView/Assets")).unwrap();
+        std::fs::write(former.join("Imports/entry.bin"), "cache").unwrap();
+        std::fs::write(former.join("TestResults/EditMode.xml"), "<r/>").unwrap();
+        std::fs::write(former.join("EditorUserSettings.asset"), "settings").unwrap();
+        std::fs::write(former.join("Editor.log"), "old log").unwrap();
+        std::fs::write(root.join("Library/Other.txt"), "unity's").unwrap();
+        // A log the new directory has already is not replaced.
+        let dir = super::unbound_dir_at(&root, None);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("Editor.log"), "new log").unwrap();
+
+        let said = super::prepare_unbound_dir(&root, &dir).unwrap().unwrap();
+        assert!(
+            said.contains("removed") && said.contains("EditorUserSettings.asset, TestResults"),
+            "{said}"
+        );
+        assert!(!former.exists());
+        assert_eq!(
+            std::fs::read_to_string(root.join("Library/Other.txt")).unwrap(),
+            "unity's"
+        );
+        assert_eq!(
+            std::fs::read_to_string(root.join("Assets/kept.txt")).unwrap(),
+            "asset"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.join("EditorUserSettings.asset")).unwrap(),
+            "settings"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.join("TestResults/EditMode.xml")).unwrap(),
+            "<r/>"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.join("Editor.log")).unwrap(),
+            "new log"
+        );
+        assert!(!dir.join("Imports").exists());
+        // Once: nothing is left to retire.
+        assert_eq!(super::prepare_unbound_dir(&root, &dir).unwrap(), None);
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn another_place_is_relative_to_the_project_or_absolute() {
+        let root = scratch_project("place");
+        let outside = scratch_project("place-outside").join("data");
+        let relative = super::unbound_dir_at(&root, Some(Path::new("Build/./UnboundData")));
+        assert_eq!(relative, root.join("Build/UnboundData"));
+        assert_eq!(super::refused_project_data(&root, &relative), None);
+        assert_eq!(super::prepare_unbound_dir(&root, &relative).unwrap(), None);
+        assert_eq!(
+            std::fs::read_to_string(relative.join(".gitignore")).unwrap(),
+            "*\n"
+        );
+
+        let absolute = super::unbound_dir_at(&root, Some(&outside));
+        assert_eq!(absolute, outside);
+        assert_eq!(super::refused_project_data(&root, &absolute), None);
+        // The former directory is retired whatever the place; outside the project no ignore
+        // file is written.
+        std::fs::create_dir_all(root.join("Library/Unbound/Imports")).unwrap();
+        assert!(
+            super::prepare_unbound_dir(&root, &absolute)
+                .unwrap()
+                .is_some()
+        );
+        assert!(!root.join("Library/Unbound").exists());
+        assert!(absolute.is_dir() && !absolute.join(".gitignore").exists());
+        assert!(!root.join("LibraryUnbound").exists());
+        std::fs::remove_dir_all(&root).unwrap();
+        std::fs::remove_dir_all(outside.parent().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn the_authored_folders_library_and_the_project_itself_are_refused() {
+        let root = scratch_project("refused");
+        let elsewhere = scratch_project("refused-elsewhere");
+        for asked in [
+            "Assets",
+            "Assets/Data",
+            "Packages/x",
+            "ProjectSettings",
+            "Library",
+            "Library/Unbound",
+            ".",
+            "Sub/..",
+            "Sub/../Assets/Data",
+        ] {
+            let dir = super::unbound_dir_at(&root, Some(Path::new(asked)));
+            assert!(
+                super::refused_project_data(&root, &dir).is_some(),
+                "{asked}"
+            );
+        }
+        let absolute = super::unbound_dir_at(&root, Some(&root.join("Assets/Deep")));
+        assert!(super::refused_project_data(&root, &absolute).is_some());
+        // A link that leads into an authored folder is refused by where it lands.
+        std::fs::create_dir_all(root.join("Assets/Real")).unwrap();
+        std::os::unix::fs::symlink(root.join("Assets/Real"), elsewhere.join("link")).unwrap();
+        assert!(super::refused_project_data(&root, &elsewhere.join("link")).is_some());
+        for asked in ["LibraryUnbound", "AssetsData", "Build/Data"] {
+            let dir = super::unbound_dir_at(&root, Some(Path::new(asked)));
+            assert_eq!(super::refused_project_data(&root, &dir), None, "{asked}");
+        }
+        std::fs::remove_dir_all(&root).unwrap();
+        std::fs::remove_dir_all(&elsewhere).unwrap();
+    }
+
+    /// No source spells the former place: every path into Unbound's directory goes through
+    /// `unbound_dir` (Rust) or `ProjectInfo.UnboundDirectory` (managed), so nothing can make
+    /// `Library/Unbound` again. Allowed: this file (the constant that retires it and its tests)
+    /// the checks that the former place is refused, and the README's note on its retirement.
+    #[test]
+    fn no_source_names_the_former_directory() {
+        const ALLOWED: &[&str] = &[
+            "crates/unbound-project/src/lib.rs",
+            "managed/UnityEngine.Tests/ConsoleLogTests.cs",
+            "tests/projects/appfacts/test_compare.py",
+        ];
+        const SPELLINGS: &[&str] = &[
+            "Library/Unbound",
+            "\"Library\", \"Unbound\"",
+            "'Library'/'Unbound'",
+            "'Library', 'Unbound'",
+            "join(\"Library\").join(\"Unbound\")",
+        ];
+        fn scan(dir: &Path, repo: &Path, found: &mut Vec<String>) {
+            for entry in std::fs::read_dir(dir).unwrap().flatten() {
+                let path = entry.path();
+                let name = entry.file_name().to_string_lossy().into_owned();
+                if entry.file_type().is_ok_and(|t| t.is_symlink()) {
+                    continue;
+                }
+                if path.is_dir() {
+                    if !matches!(
+                        name.as_str(),
+                        "target"
+                            | "bin"
+                            | "obj"
+                            | "Generated"
+                            | "Library"
+                            | "LibraryUnbound"
+                            | "Reference"
+                    ) && !name.starts_with('.')
+                    {
+                        scan(&path, repo, found);
+                    }
+                    continue;
+                }
+                let source = matches!(
+                    path.extension().and_then(|e| e.to_str()),
+                    Some("rs" | "cs" | "py" | "sh" | "md" | "toml" | "json")
+                );
+                let relative = path
+                    .strip_prefix(repo)
+                    .unwrap()
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                if !source || ALLOWED.contains(&relative.as_str()) {
+                    continue;
+                }
+                let Ok(text) = std::fs::read_to_string(&path) else {
+                    continue;
+                };
+                if SPELLINGS.iter().any(|s| text.contains(s)) {
+                    found.push(relative);
+                }
+            }
+        }
+        let repo = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .canonicalize()
+            .unwrap();
+        let mut found = Vec::new();
+        for part in ["crates", "managed", "tools", "tests", "docs"] {
+            scan(&repo.join(part), &repo, &mut found);
+        }
+        // README.md is left out: it says what becomes of a directory an earlier version left.
+        for file in ["AGENTS.md"] {
+            let text = std::fs::read_to_string(repo.join(file)).unwrap();
+            if SPELLINGS.iter().any(|s| text.contains(s)) {
+                found.push(file.to_string());
+            }
+        }
+        assert!(
+            found.is_empty(),
+            "the former Library/Unbound is spelled in: {found:#?}"
+        );
+    }
+
+    #[test]
+    fn a_link_in_the_former_place_is_not_followed() {
+        let root = scratch_project("retire-link");
+        let elsewhere = scratch_project("retire-link-target");
+        std::fs::write(elsewhere.join("file"), "theirs").unwrap();
+        std::fs::create_dir_all(root.join("Library")).unwrap();
+        std::os::unix::fs::symlink(&elsewhere, root.join("Library/Unbound")).unwrap();
+        let dir = super::unbound_dir_at(&root, None);
+        assert_eq!(super::prepare_unbound_dir(&root, &dir).unwrap(), None);
+        assert_eq!(
+            std::fs::read_to_string(elsewhere.join("file")).unwrap(),
+            "theirs"
+        );
+        std::fs::remove_dir_all(&root).unwrap();
+        std::fs::remove_dir_all(&elsewhere).unwrap();
+    }
+
     use super::*;
 
     /// A project on an earlier 6000.0 patch compiles against its own installation, which may

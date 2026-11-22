@@ -92,7 +92,7 @@ def cache_artifact_path(path):
 # What a project copy holds: the authored folders an engine or Editor run reads and may write.
 PROJECT_FOLDERS = ('Assets', 'Packages', 'ProjectSettings')
 # What the Editor (or Unbound) makes in a project's root for itself: never part of a copy.
-GENERATED = ('Library', 'Temp', 'Logs', 'UserSettings', 'obj', '__pycache__')
+GENERATED = ('Library', 'LibraryUnbound', 'Temp', 'Logs', 'UserSettings', 'obj', '__pycache__')
 CHECKOUT = Path(__file__).resolve().parents[1]
 
 

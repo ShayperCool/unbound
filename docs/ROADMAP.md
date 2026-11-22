@@ -180,11 +180,11 @@ In dependency order; each item ends with an Editor-reference probe.
       iterative sphere is the Editor's (Q393). (Multiple render targets are
       in; URP's deferred path stays off as on the Editor's OpenGL device.)
 - [x] Shader Graph assets: their ScriptedImporter runs unmodified and the ShaderLab it generates
-      (`Library/Unbound/GeneratedShaders`) is compiled like any shader; `tests/projects/shadergraph`
+      (`LibraryUnbound/GeneratedShaders`) is compiled like any shader; `tests/projects/shadergraph`
       matches the Editor's image (mean difference 0.02/255).
 - [ ] VFX Graph (back in scope since 2026-11-12), in slices. Done: graph files (`.vfx`,
       `.vfxoperator`, `.vfxblock`) import by running the package's own compiler, whose generated
-      compute and output shaders go to `Library/Unbound/GeneratedShaders` like Shader Graph's; the
+      compute and output shaders go to `LibraryUnbound/GeneratedShaders` like Shader Graph's; the
       asset and `VisualEffect` answer the API that needs no simulation (exposed properties and
       overrides, events and event attributes, system names, settings) as the Unity 6000.0.71f1
       Editor does, and effects simulate: the frame's steps per update mode, spawn contexts and

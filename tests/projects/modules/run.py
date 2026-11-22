@@ -126,7 +126,7 @@ if a.scenario == 'compile':
                 relative = str(path.relative_to(project)) if path.is_absolute() and path.is_relative_to(project) else m[1]
                 errors.add((relative, int(m[2]), int(m[3]), m[4], m[5]))
         result['notCompiled'] = compiled_status
-        result['compiledAssemblies'] = sorted(d.name for d in (project / 'Library/Unbound/ScriptAssemblies').iterdir()
+        result['compiledAssemblies'] = sorted(d.name for d in (project / 'LibraryUnbound/ScriptAssemblies').iterdir()
                                               if d.is_dir() and any(d.glob('*.dll')))
     result['errors'] = [dict(zip(['file', 'line', 'column', 'id', 'message'], e)) for e in sorted(errors)]
 elif a.scenario in ['play', 'editor-play']:

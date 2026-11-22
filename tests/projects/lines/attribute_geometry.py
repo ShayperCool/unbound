@@ -15,7 +15,7 @@ import numpy as np
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--batch', type=Path, required=True, help='Saved combined report directory')
 parser.add_argument('--preblend', type=Path, required=True, help='Saved pre-blend unbound capture directory')
-parser.add_argument('--out', type=Path, required=True, help='Cache or Library/Unbound output directory')
+parser.add_argument('--out', type=Path, required=True, help='Cache or LibraryUnbound output directory')
 args = parser.parse_args()
 HERE = args.out.resolve()
 HERE.mkdir(parents=True, exist_ok=True)

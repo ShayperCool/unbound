@@ -133,8 +133,14 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   is emulated: assemblies that request `SkipVerification` get `IgnoresAccessChecksTo` for their
   references (Mono lets them use engine internals); .NET Framework assemblies .NET only has as thin
   facades (`System.Web`) come from the release's Mono; and the game runs in
-  `Library/Unbound/ProjectView`, a directory of links where `Packages/<name>/...` resolves for plain
+  `LibraryUnbound/ProjectView`, a directory of links where `Packages/<name>/...` resolves for plain
   file IO, as Mono's path remapping makes it in the Editor.
+  `LibraryUnbound` is Unbound's own directory in the project (`Library/` is Unity's; nothing of
+  Unbound's is kept there). `--project-data <dir>` / `UNBOUND_PROJECT_DATA` name another place,
+  relative to the project or absolute; the host resolves it once (`unbound_project::unbound_dir`)
+  and hands the managed side the resolved path (`ProjectInfo.UnboundDirectory`), so both agree;
+  no cache key depends on where the directory is. The view links every entry of the project's
+  folder but that directory.
 * **Number formatting**: Mono formats floating point by .NET Framework rules, which .NET Core 3.0
   changed (default and "G" print 7/15 significant digits, not the shortest round-trip string, so
   `1849.9999f` shows "1850"; 9/17 digits when the format asks for more; exact ties round away from
@@ -144,13 +150,13 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   `Unbound.MonoNumberFormat` when they load (Cecil, keeping every IL offset so their PDBs still
   match), and the IL of each hot-reload delta is redirected the same way; the engine's own
   `Debug.Log` and math types' `ToString` use it directly. Adapted images are cached in
-  `Library/Unbound/AdaptedAssemblies`, keyed by the input's hash and the adapters' build.
+  `LibraryUnbound/AdaptedAssemblies`, keyed by the input's hash and the adapters' build.
 * **Tracing** (`UNBOUND_TRACE=<channels>` or `all`), to find where a game stalls or misbehaves:
   `lifecycle` (Awake/Start), `scenes` (loads and unloads), `render` / `render-detail` (cameras,
   canvases and draws per frame, and what the renderer skips), `exceptions` (every exception as it
   is thrown, also the ones plugins swallow), `perf` (time per script callback and native call,
   reported at quit), `memory` (every 600 frames: the GC heap, engine objects by type, textures holding CPU pixels, an estimate of texture VRAM, the native side's audio and sprite tables), `input` (each press and what the EventSystem's raycasters hit), `hierarchy`
-  (the live scene graph at quit, in `Library/Unbound/hierarchy.txt`), `stubs` (where each unimplemented member is first called from).
+  (the live scene graph at quit, in `LibraryUnbound/hierarchy.txt`), `stubs` (where each unimplemented member is first called from).
 * **Scripted input**: `unbound run --tap FRAME:X,Y` taps at a frame (window pixels from the top
   left), `--type FRAME:TEXT` types (`\n` Return, `\b` Backspace), `--move FRAME:X,Y` moves the
   pointer, `--press`/`--release FRAME:KEY` hold and release a key or button (Unity `KeyCode` names,
@@ -190,7 +196,7 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   (`Editor/VFX/VisualEffectImporter.cs`): the file's resource and graph models load, the package
   compiles the graph into the resource (expressions and their constants, exposed properties,
   systems with their tasks, events, buffer layouts, generated shader sources), each source becomes
-  a `Shader` or `ComputeShader` compiled from `Library/Unbound/GeneratedShaders`, and the asset
+  a `Shader` or `ComputeShader` compiled from `LibraryUnbound/GeneratedShaders`, and the asset
   takes the systems with a material per output shader. A graph loaded from disk compiles on a
   second, forced import the package asks for after sanitizing it; for that Unbound tells the
   package's postprocessors of the import (it has no post-import pass otherwise). An effect keeps
@@ -401,7 +407,7 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   (`SettingsAssets.Edit`).
 * **Editor API**: the UnityEditor API packages call is implemented without UI, answering as an
   interactive Editor with no windows open (no scene views, no selection, no players connected).
-  State the Editor keeps in files goes to the per-project cache (`Library/Unbound/EditorFiles`,
+  State the Editor keeps in files goes to the per-project cache (`LibraryUnbound/EditorFiles`,
   preferences under the global cache) and is never written to the project or Unity's own folders.
   `PlayerLoopDriver` also runs an Edit mode (`unbound test`): the editor domain loads, edit-mode
   frames run `[ExecuteAlways]` scripts and `EditorApplication.update`, and

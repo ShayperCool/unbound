@@ -532,7 +532,7 @@ parity PR is not ready while those rows remain open.
 
 For each selected feature, record independent agreeing Unity Editor references for the
 explicit release before accepting an implementation. Keep source projects' authored files
-intact, put captures and run artifacts in `Library/Unbound/` or the Unbound cache, and
+intact, put captures and run artifacts in `LibraryUnbound/` or the Unbound cache, and
 commit only probe sources and the canonical release references under `tests/projects/`.
 
 ## Trail runtime and particle aging

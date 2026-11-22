@@ -35,14 +35,20 @@ def capture(root, name, value, run=True, log='written', editor_log=None,
     if run:
         recorded = project.relative_to(root) if relative_project else project
         (out/'run.json').write_text(json.dumps({'project': str(recorded), 'command': [], 'started': started}))
-    path = project/'Library/Unbound/Editor.log'
+    path = project/'LibraryUnbound/Editor.log'
     if log is not None:
         path.parent.mkdir(parents=True)
         path.write_text('' if log == 'empty' else 'Unbound: a line\n')
         if log == 'stale':
             os.utime(path, (started - 3600, started - 3600))
-    if reported_path == 'expected physical':
-        value = str(path.resolve())
+    if reported_path == 'logical':
+        value = str(path)
+    elif reported_path == 'physical':
+        value = str(path.parent.resolve()/path.name)
+    elif reported_path == 'other name':
+        other = path.with_name('Other.log')
+        other.write_text('another fresh nonempty log\n')
+        value = str(other)
     elif reported_path == 'different fresh':
         other = root/'other-logs'/name/'Editor.log'
         other.parent.mkdir(parents=True)
@@ -65,32 +71,26 @@ def main():
     spec = importlib.util.spec_from_file_location('compare_under_test', args.compare)
     compare = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(compare)
-    good = '<project>/Library/Unbound/Editor.log'
     cases = [  # name, capture arguments, editor mode, must report consoleLogPath
-        ('written log', dict(value=good), False, False),
-        ('missing log', dict(value=good, log=None), False, True),
-        ('empty log', dict(value=good, log='empty'), False, True),
-        ('log older than the run', dict(value=good, log='stale'), False, True),
-        ('other file name', dict(value='<project>/Library/Unbound/Other.log'), False, True),
-        ('path outside the project', dict(value='/elsewhere/Library/Unbound/Editor.log'), False, True),
-        ('no run.json', dict(value=good, run=False), False, True),
+        ('written log', dict(value=None, reported_path='logical'), False, False),
+        ('missing log', dict(value=None, reported_path='logical', log=None), False, True),
+        ('empty log', dict(value=None, reported_path='logical', log='empty'), False, True),
+        ('log older than the run', dict(value=None, reported_path='logical', log='stale'), False, True),
+        ('other file name', dict(value=None, reported_path='other name'), False, True),
+        ('path outside the project', dict(value='/elsewhere/LibraryUnbound/Editor.log'), False, True),
+        ('no run.json', dict(value=None, reported_path='logical', run=False), False, True),
         ('editor -logFile', dict(value=None, editor_log='editor.log'), True, False),
         ('editor other file', dict(value=None, editor_log='other.log'), True, True),
-        ('masked logical alias', dict(value=good, physical_alias=True), False, False),
-        ('absolute physical alias', dict(value=None, physical_alias=True,
-                                         reported_path='expected physical'), False, True),
-        ('different fresh file', dict(value=None, physical_alias=True,
-                                      reported_path='different fresh'), False, True),
-        ('relative reported path', dict(value='Library/Unbound/Editor.log'), False, True),
-        ('absolute missing file', dict(value=None, physical_alias=True,
-                                       reported_path='expected physical', log=None), False, True),
-        ('absolute empty file', dict(value=None, physical_alias=True,
-                                     reported_path='expected physical', log='empty'), False, True),
-        ('absolute stale file', dict(value=None, physical_alias=True,
-                                     reported_path='expected physical', log='stale'), False, True),
-        ('absolute unrecorded file', dict(value=None, physical_alias=True,
-                                          reported_path='expected physical', run=False), False, True),
-        ('relative recorded project', dict(value=good, relative_project=True), False, True),
+        ('logical alias', dict(value=None, physical_alias=True, reported_path='logical'), False, False),
+        ('physical path of an alias', dict(value=None, physical_alias=True, reported_path='physical'), False, False),
+        ('different fresh file', dict(value=None, physical_alias=True, reported_path='different fresh'), False, True),
+        ('relative reported path', dict(value='LibraryUnbound/Editor.log'), False, True),
+        ('former place under the project path', dict(value='<project>/LibraryUnbound/Editor.log'), False, True),
+        ('physical missing file', dict(value=None, physical_alias=True, reported_path='physical', log=None), False, True),
+        ('physical empty file', dict(value=None, physical_alias=True, reported_path='physical', log='empty'), False, True),
+        ('physical stale file', dict(value=None, physical_alias=True, reported_path='physical', log='stale'), False, True),
+        ('physical unrecorded file', dict(value=None, physical_alias=True, reported_path='physical', run=False), False, True),
+        ('relative recorded project', dict(value=None, reported_path='logical', relative_project=True), False, True),
     ]
     wrong = 0
     for i, (name, kwargs, editor, must_fail) in enumerate(cases):

@@ -101,7 +101,7 @@ public class TransitionInlineProbe : MonoBehaviour
             }
         }
         finally { time.SetValue(null, saved); }
-        string output = Environment.GetEnvironmentVariable("UITRANSITIONINLINE_OUT") ?? Path.Combine("Library", "Unbound", "transitioninline");
+        string output = Environment.GetEnvironmentVariable("UITRANSITIONINLINE_OUT") ?? Path.Combine("LibraryUnbound", "transitioninline");
         Directory.CreateDirectory(output);
         File.WriteAllLines(Path.Combine(output, "inline.jsonl"), rows.Select(r => JsonUtility.ToJson(r)));
     }

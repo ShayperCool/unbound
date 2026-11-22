@@ -66,7 +66,7 @@ python3 tests/projects/particlenoise/compare.py tests/projects/particlenoise/Ref
 ```
 
 The Editor needs DISPLAY/XAUTHORITY and GPU support for BakeMesh. Engine products belong in
-Library/Unbound. No real Unity game project is modified. Integrated api-check belongs to the
+LibraryUnbound. No real Unity game project is modified. Integrated api-check belongs to the
 parent checkout and was deliberately not invoked from this child worktree.
 
 ## Validation evidence

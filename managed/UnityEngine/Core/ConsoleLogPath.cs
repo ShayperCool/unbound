@@ -26,8 +26,7 @@ namespace Unbound.Runtime
                     if (!string.IsNullOrEmpty(project))
                     {
                         string physicalProject = Resolve(project);
-                        // Library can itself be an alias, as it is in the runtime project view.
-                        projectRoot = Resolve(System.IO.Path.Combine(project, "Library", "Unbound"));
+                        projectRoot = Resolve(UnityEngine.ProjectInfo.UnboundDirectory(project));
                         var visited = new HashSet<string>(StringComparer.Ordinal);
                         foreach (string part in new[] { "Assets", "Packages", "ProjectSettings" })
                         {
@@ -53,7 +52,7 @@ namespace Unbound.Runtime
             {
                 string resolved = Resolve(path, Veto);
                 if (!Inside(resolved, projectRoot) && !Inside(resolved, cacheRoot) && !Inside(resolved, validationRoot))
-                    throw new IOException("log path must be inside this project's Library/Unbound or the global XDG cache/unbound directory");
+                    throw new IOException("log path must be inside this project's LibraryUnbound or the global XDG cache/unbound directory");
                 return resolved;
             }
 

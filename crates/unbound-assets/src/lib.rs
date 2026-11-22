@@ -10,7 +10,7 @@
 //!   `TrueTypeFontImporter` settings and the built-in `LegacyRuntime.ttf` data.
 //! * [`image_io`]: runtime image decoding and encoding (`ImageConversion`).
 //! * [`cache`]: imports keyed by the content hash of the source, its `.meta`, the importer kind and
-//!   version, stored under `<project>/Library/Unbound/Imports/`.
+//!   version, stored under `<project>/LibraryUnbound/Imports/`.
 //!
 //! The library has no engine dependency: the runtime converts these outputs to its own types.
 pub mod audio;

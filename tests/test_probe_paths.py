@@ -105,12 +105,12 @@ class ProjectCopyTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.source = Path(self.temp.name)/'projects/probe'
         for folder in ('Assets/Scripts', 'Packages', 'ProjectSettings', 'Reference', 'Library/PackageCache/pkg',
-                       'Library/Unbound'):
+                       'LibraryUnbound'):
             (self.source/folder).mkdir(parents=True)
         (self.source/'Assets/Scripts/Probe.cs').write_text('class Probe {}')
         (self.source/'ProjectSettings/ProjectSettings.asset').write_text('settings')
         (self.source/'Reference/unity-R.jsonl').write_text('reference')
-        (self.source/'Library/Unbound/cache').write_text('private to the source')
+        (self.source/'LibraryUnbound/cache').write_text('private to the source')
         (self.source/'run.py').write_text('driver')
         (self.source/'Content/bundles').mkdir(parents=True)
         (self.source/'Content/bundles/crc.txt').write_text('crc')
@@ -135,7 +135,7 @@ class ProjectCopyTests(unittest.TestCase):
         self.assertTrue((project/'Reference').is_symlink())
         self.assertEqual((project/'Reference/unity-R.jsonl').read_text(), 'reference')
         self.assertTrue((project/'Library/PackageCache').is_symlink())
-        self.assertFalse((project/'Library/Unbound').exists())
+        self.assertFalse((project/'LibraryUnbound').exists())
         # Other root inputs (a probe's Content/, its scripts) are the source's too.
         self.assertEqual((project/'Content/bundles/crc.txt').read_text(), 'crc')
         self.assertTrue((project/'Content').is_symlink() and (project/'run.py').is_symlink())

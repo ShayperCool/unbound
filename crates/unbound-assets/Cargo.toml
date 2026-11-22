@@ -54,6 +54,7 @@ texture2ddecoder = "0.1"
 bcdec_rs = "0.2"
 # BC7 compression of imported textures for the GPU (Intel ISPC kernels).
 intel_tex_2 = "0.5"
+unbound-project.workspace = true
 
 [build-dependencies]
 cc = { version = "1", features = ["parallel"] }
@@ -63,7 +64,6 @@ cc = { version = "1", features = ["parallel"] }
 test-util = []
 
 [dev-dependencies]
-unbound-project.workspace = true
 serde_json.workspace = true
 rayon.workspace = true
 walkdir.workspace = true

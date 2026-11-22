@@ -48,6 +48,6 @@ message (argument exception messages compare exactly: game code reads them as Mo
 The IL post-processors' output can be checked against the Editor's: after a Unity run,
 `Library/ScriptAssemblies/JobsProbe.dll` is the post-processed assembly (with
 `__JobReflectionRegistrationOutput__*` registering every job type); Unbound's is
-`Library/Unbound/ScriptAssemblies/JobsProbe/<key>.<hash>.pp.dll`. The generated
+`LibraryUnbound/ScriptAssemblies/JobsProbe/<key>.<hash>.pp.dll`. The generated
 registration code matches; the rest differs only as Release (the Editor) and Debug
 (Unbound, for Edit and Continue) compiles do.

@@ -357,6 +357,10 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "renderPipeline": render_pipeline(project),
 
     });
+    // The project's own folder and Unbound's directory for it, as resolved here: the managed
+    // side asks no environment for them.
+    config["projectRoot"] = json!(project.root);
+    config["projectData"] = json!(project.unbound_dir());
     config
         .as_object_mut()
         .unwrap()

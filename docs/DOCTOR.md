@@ -2,7 +2,7 @@
 
 `unbound doctor --all --json -p <project>` reports class support, unread serialized fields and
 unsupported script messages. It reads project files and writes compilation artifacts only under
-`Library/Unbound` or the global cache. It does not instantiate game objects, run lifecycle or
+`LibraryUnbound` or the global cache. It does not instantiate game objects, run lifecycle or
 serialization callbacks, or start a renderer.
 
 The serialized-object scan includes Unity YAML, binary serialized files with type trees and

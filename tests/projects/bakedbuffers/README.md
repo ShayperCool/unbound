@@ -117,7 +117,7 @@ Publishing adds what is new and refuses to change what the reference has.
 Unbound's bake (`Lightmapping.Bake`, `bake_buffers.py engine`: `unbound test --graphics`, a
 session with a graphics device, which the materials' images need) writes the same buffers of its own
 where `UNBOUND_BAKED_GI_BUFFERS` says and its layout to
-`Library/Unbound/BakedGI/<scene GUID>/atlas.json`. `bake_buffers.py check` compares exactly: the
+`LibraryUnbound/BakedGI/<scene GUID>/atlas.json`. `bake_buffers.py check` compares exactly: the
 bake's result, the logged messages (of Unbound's, those that are not its own notes of what its
 bake does not make yet), the instances and their order, the lightmaps' sizes, samples and
 instances, which texels are used, every texel's chart, which samples have a surface and each

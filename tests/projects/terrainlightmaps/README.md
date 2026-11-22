@@ -34,7 +34,7 @@ outputs default to
 `TERRAIN_LIGHTMAP_ROOT`, `TERRAIN_LIGHTMAP_OUT`, `TERRAIN_LIGHTMAP_CLI`,
 `UNBOUND_MANAGED_DIR` and `UNBOUND_NATIVE_DIR` override the paths.
 Both Native and engine runs use generated color-space project copies under
-`Library/Unbound`. Authored settings are unchanged. `UNBOUND_PROBE_UNITY_VERSION`
+`LibraryUnbound`. Authored settings are unchanged. `UNBOUND_PROBE_UNITY_VERSION`
 selects the Editor and reference release; `UNBOUND_PROBE_UNITY` overrides its executable.
 
 ```sh

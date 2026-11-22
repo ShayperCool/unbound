@@ -59,7 +59,7 @@ M-sized compiler/runtime follow-up; no expression-specific rewrite is applied.
 
 The CPU control can be rerun with explicit installed toolchain paths. It compiles
 one assembly and executes those exact bytes under four Mono and three CoreCLR
-modes, storing every output under Library/Unbound or the global probe cache:
+modes, storing every output under LibraryUnbound or the global probe cache:
 
 ```bash
 python3 tests/projects/texturepixels/ArithmeticControl/Operations/runtime_control.py --mono /editor/Data/MonoBleedingEdge/bin/mono --mcs /editor/Data/MonoBleedingEdge/lib/mono/4.5/mcs.exe --dotnet /sdk/dotnet --framework-version 10.0.12 --label fresh-label

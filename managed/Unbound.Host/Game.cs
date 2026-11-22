@@ -14,6 +14,8 @@ namespace Unbound.Host;
 public sealed class GameConfig
 {
     public string ProjectPath { get; set; } = "";
+    public string ProjectRoot { get; set; } = "";
+    public string ProjectData { get; set; } = "";
     public string UnityVersion { get; set; } = "";
     /// <summary>The graphics device the host chose (GraphicsDeviceType's name).</summary>
     public string GraphicsDevice { get; set; } = "";
@@ -350,6 +352,8 @@ public static unsafe class Game
     static void Configure(GameConfig c)
     {
         ProjectInfo.ProjectPath = c.ProjectPath;
+        ProjectInfo.ProjectRootPath = c.ProjectRoot;
+        ProjectInfo.UnboundDirectoryPath = c.ProjectData;
         Unbound.EditorProcess.s_CommandLine = c.CommandLine.Count > 0 ? c.CommandLine.ToArray() : null;
         UnityEditor.Compilation.CompilationPipeline.s_Compiler = (c.ScriptCompiler.LanguageVersion, c.ScriptCompiler.Arguments.ToArray(), c.ScriptCompiler.Analyzers.ToArray(), c.ScriptCompiler.NetStandard);
         UnityEditor.Compilation.CompilationPipeline.s_CodeOptimization = c.CodeOptimization == "debug"

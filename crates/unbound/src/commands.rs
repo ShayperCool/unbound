@@ -102,7 +102,7 @@ fn shader_setup(
     let mut project_roots = vec![project.assets.clone()];
     project_roots.extend(project.packages.iter().map(|p| p.root.clone()));
     // ShaderLab that importers generate (Shader Graph) while the game runs.
-    let generated = project.root.join(unbound_app::shaderlab::GENERATED_SHADERS);
+    let generated = unbound_app::shaderlab::generated_shaders(&project.root);
     let _ = std::fs::create_dir_all(&generated);
     project_roots.push(generated);
     let mut cg_includes = project.install.data.join("CGIncludes");
@@ -239,7 +239,7 @@ fn install_shader_declarations(project: &Project, target: &str) {
     let mut project_roots = vec![project.assets.clone()];
     project_roots.extend(project.packages.iter().map(|p| p.root.clone()));
     // Scanned only; the renderer's setup creates it.
-    project_roots.push(project.root.join(unbound_app::shaderlab::GENERATED_SHADERS));
+    project_roots.push(unbound_app::shaderlab::generated_shaders(&project.root));
     let install = project.install.clone();
     let version_txt = project.root.join("ProjectSettings/ProjectVersion.txt");
     let inputs = crate::declarations::Inputs {
@@ -1378,8 +1378,8 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
         Some(path) if path.is_absolute() => path,
         Some(path) => std::env::current_dir()?.join(path),
         None => project
-            .root
-            .join("Library/Unbound/TestResults")
+            .unbound_dir()
+            .join("TestResults")
             .join(format!("{platform}.xml")),
     };
     if let Some(dir) = results.parent() {

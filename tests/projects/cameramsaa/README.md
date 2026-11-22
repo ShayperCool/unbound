@@ -30,7 +30,7 @@ Run outputs, logs, manifests and reports default to
 The runners acquire `~/.cache/compat/with-heavy-job`. Set `CAMERA_MSAA_CLI`,
 `UNBOUND_MANAGED_DIR` and `UNBOUND_NATIVE_DIR` to use an existing isolated build.
 `CAMERA_MSAA_PROJECT` overrides the fixture. Gamma uses a generated project copy
-under `Library/Unbound`; the authored settings retain their exact bytes.
+under `LibraryUnbound`; the authored settings retain their exact bytes.
 `UNBOUND_PROBE_UNITY_VERSION` selects both the Editor release and reference
 version. `UNBOUND_PROBE_UNITY` can override the Editor executable.
 

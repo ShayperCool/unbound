@@ -292,7 +292,7 @@ namespace UnityEditor.AssetImporters
 
         public string GetOutputArtifactFilePath(string fileName)
         {
-            var dir = System.IO.Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "ImportArtifacts",
+            var dir = ProjectInfo.UnboundPath("ImportArtifacts",
                 AssetDatabase.AssetPathToGUID(assetPath));
             System.IO.Directory.CreateDirectory(dir);
             return System.IO.Path.Combine(dir, fileName);
