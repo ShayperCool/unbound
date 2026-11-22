@@ -967,6 +967,7 @@ namespace UnityEngine
         {
             ReadRendererData(body, resolver);
             scaleInLightmap = body.Float("m_ScaleInLightmap", 1f);
+            receiveGI = (ReceiveGI)body.Int("m_ReceiveGI", (int)ReceiveGI.Lightmaps);
             m_PreserveUVs = body.Bool("m_PreserveUVs");
             m_MinimumChartSize = body.Int("m_MinimumChartSize", 4);
             m_AutoUVMaxDistance = body.Float("m_AutoUVMaxDistance", 0.5f);
@@ -979,6 +980,7 @@ namespace UnityEngine
         {
             WriteRendererData(w);
             w.Float("m_ScaleInLightmap", scaleInLightmap);
+            w.Int("m_ReceiveGI", (int)receiveGI);
             w.Bool("m_PreserveUVs", m_PreserveUVs);
             w.Int("m_MinimumChartSize", m_MinimumChartSize);
             w.Float("m_AutoUVMaxDistance", m_AutoUVMaxDistance);
@@ -993,6 +995,7 @@ namespace UnityEngine
             stitchLightmapSeams = ((MeshRenderer)source).stitchLightmapSeams;
             var s = (MeshRenderer)source;
             scaleInLightmap = s.scaleInLightmap;
+            receiveGI = s.receiveGI;
             m_PreserveUVs = s.m_PreserveUVs;
             m_MinimumChartSize = s.m_MinimumChartSize;
             m_AutoUVMaxDistance = s.m_AutoUVMaxDistance;
