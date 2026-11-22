@@ -325,7 +325,18 @@ importers and loaded `SpriteAtlas` instances independent until reimport, writes 
   `EarlyMaster`'s before `EarlyVariant` first loads, and writes `UserData` (a legacy `.meta`)
   after changing only its importer's `userData`.
 
-Not measured: either kind of atlas in the other kind's packer mode.
+- `v1wholewritebuildonly`, `v1wholewritev2`, `v1wholewritev2build` run the V1 fixtures in modes
+  "Sprite Atlas V1 - Enabled For Builds" (3), "Sprite Atlas V2 - Enabled" (5) and "Sprite Atlas V2 -
+  Enabled For Builds" (6): mode 5 packs and writes the V1 files as mode 4 does, modes 3 and 6 leave
+  them as mode 0 does. `v1wholewritecrlf` (mode 4) gives every V1 file CRLF line endings first: each
+  file the pack stores is written with LF also when that is its only change; `Scaled` and
+  `ScaledAlone` (variants without a master, whose packs are not stored) keep theirs.
+- `v1replay` (mode 4) enters Play mode twice in one session: the first entry leaves Play mode, the
+  fixtures get their original files back (`ReplayOriginals/`) and Play mode starts again, and the
+  second entry records: the restored files are not written again. It is an Editor reference only:
+  an Unbound run ends when it leaves Play mode, so `gate` says so and does not run it.
+
+Not measured: V2 atlases in V1 modes; an entry after the sprites changed since an earlier pack.
 
 Values compare exactly.
 
