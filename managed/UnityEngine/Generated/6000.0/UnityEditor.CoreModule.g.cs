@@ -20099,16 +20099,12 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void SaveAsTemplate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectTemplateWindow.SaveAsTemplate"); }
         [global::Unbound.Stub] public ProjectTemplateWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectTemplateWindow.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class ProjectWindowUtil
+    unsafe partial class ProjectWindowUtil
     {
         [global::Unbound.Stub] internal static int k_FavoritesStartInstanceID;
         [global::Unbound.Stub] internal static string k_DraggingFavoriteGenericData;
         [global::Unbound.Stub] internal static string k_IsFolderGenericData;
         [global::Unbound.Stub] public static void CreateNewGUISkin() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.CreateNewGUISkin"); }
-        [global::Unbound.Stub] internal static string GetActiveFolderPath() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.GetActiveFolderPath"); return default; }
-        [global::Unbound.Stub] internal static bool TryGetActiveFolderPath(out string path) { path = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.TryGetActiveFolderPath"); return default; }
-        [global::Unbound.Stub] internal static void EndNameEditAction(global::UnityEditor.ProjectWindowCallback.EndNameEditAction action, int instanceId, string pathName, string resourceFile, bool accepted) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.EndNameEditAction"); }
         [global::Unbound.Stub] public static void CreateAsset(global::UnityEngine.Object asset, string pathName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.CreateAsset"); }
         [global::Unbound.Stub] public static void CreateFolder() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.CreateFolder"); }
         [global::Unbound.Stub] internal static void CreateFolderWithTemplates(string defaultName, params string[] templates) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.CreateFolderWithTemplates"); }
@@ -20116,15 +20112,12 @@ namespace UnityEditor
         [global::Unbound.Stub] public static void CreateScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.CreateScene"); }
         [global::Unbound.Stub] public static void CreateAssetWithContent(string filename, string content, global::UnityEngine.Texture2D icon = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.CreateAssetWithContent"); }
         [global::Unbound.Stub] public static void CreateScriptAssetFromTemplateFile(string templatePath, string defaultNewFileName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.CreateScriptAssetFromTemplateFile"); }
-        [global::Unbound.Stub] public static void ShowCreatedAsset(global::UnityEngine.Object o) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.ShowCreatedAsset"); }
         [global::Unbound.Stub] internal static void CreateAudioRandomContainer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.CreateAudioRandomContainer"); }
         [global::Unbound.Stub] internal static string SetLineEndings(string content, global::UnityEditor.LineEndingsMode lineEndingsMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.SetLineEndings"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Object CreateScriptAssetWithContent(string assetPath, string scriptContent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.CreateScriptAssetWithContent"); return default; }
         [global::Unbound.Stub] internal static string RemoveOrInsertNamespace(string content, string rootNamespace) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.RemoveOrInsertNamespace"); return default; }
         [global::Unbound.Stub] internal static string PreprocessScriptAssetTemplate(string pathName, string resourceContent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.PreprocessScriptAssetTemplate"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Object CreateScriptAssetFromTemplate(string pathName, string resourceFile) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.CreateScriptAssetFromTemplate"); return default; }
-        [global::Unbound.Stub] public static void StartNameEditingIfProjectWindowExists(int instanceID, global::UnityEditor.ProjectWindowCallback.EndNameEditAction endAction, string pathName, global::UnityEngine.Texture2D icon, string resourceFile) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.StartNameEditingIfProjectWindowExists"); }
-        [global::Unbound.Stub] public static void StartNameEditingIfProjectWindowExists(int instanceID, global::UnityEditor.ProjectWindowCallback.EndNameEditAction endAction, string pathName, global::UnityEngine.Texture2D icon, string resourceFile, bool selectAssetBeingCreated) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.StartNameEditingIfProjectWindowExists"); }
         [global::Unbound.Stub] internal static void FrameObjectInProjectWindow(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.FrameObjectInProjectWindow"); }
         [global::Unbound.Stub] internal static bool IsFavoritesItem(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.IsFavoritesItem"); return default; }
         [global::Unbound.Stub] internal static void StartDrag(int draggedInstanceID, global::System.Collections.Generic.List<int> selectedInstanceIDs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.StartDrag"); }
@@ -20132,12 +20125,8 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static string[] GetDragAndDropPaths(int draggedInstanceID, global::System.Collections.Generic.List<int> selectedInstanceIDs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.GetDragAndDropPaths"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] public static int[] GetAncestors(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.GetAncestors"); return global::System.Array.Empty<int>(); }
         [global::Unbound.Stub] internal static void GetAncestors(int instanceID, global::System.Collections.Generic.HashSet<int> ancestors) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.GetAncestors"); }
-        [global::Unbound.Stub] public static bool IsFolder(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.IsFolder"); return default; }
-        [global::Unbound.Stub] public static string GetContainingFolder(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.GetContainingFolder"); return default; }
-        [global::Unbound.Stub] public static string[] GetBaseFolders(string[] folders) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.GetBaseFolders"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] internal static bool DeleteAssets(global::System.Collections.Generic.List<int> instanceIDs, bool askIfSure) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.DeleteAssets"); return default; }
         [global::Unbound.Stub] internal static global::System.Collections.Generic.IEnumerable<string> GetMainPathsOfAssets(global::System.Collections.Generic.IEnumerable<int> instanceIDs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.GetMainPathsOfAssets"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public ProjectWindowUtil() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowUtil.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class PropertyAndTargetHandler
@@ -41861,15 +41850,6 @@ namespace UnityEditor.ProjectWindowCallback
     {
         [global::Unbound.Stub] public override void Action(int instanceId, string pathName, string resourceFile) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowCallback.DoCreateScriptAsset.Action"); }
         [global::Unbound.Stub] public DoCreateScriptAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowCallback.DoCreateScriptAsset.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class EndNameEditAction : global::UnityEngine.ScriptableObject
-    {
-        [global::Unbound.Stub] public virtual void OnEnable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowCallback.EndNameEditAction.OnEnable"); }
-        public abstract void Action(int instanceId, string pathName, string resourceFile);
-        [global::Unbound.Stub] public virtual void Cancelled(int instanceId, string pathName, string resourceFile) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowCallback.EndNameEditAction.Cancelled"); }
-        [global::Unbound.Stub] public virtual void CleanUp() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowCallback.EndNameEditAction.CleanUp"); }
-        [global::Unbound.Stub] protected EndNameEditAction() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ProjectWindowCallback.EndNameEditAction.ctor"); }
     }
 }
 namespace UnityEditor.Purchasing
