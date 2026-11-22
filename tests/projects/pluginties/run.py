@@ -48,8 +48,11 @@ CASES = {
     'AssetsExcluded': ('Assets/A', PACKAGE, '1d', 'e4'),
     'VersionTie': ('Assets/A', 'Assets/B', '1e', 'ef'),
     'MixedVersionTie': ('Assets/A', 'Assets/B', '1e', 'ef'),
+    'ExplicitVersionTie': ('Assets/A', 'Assets/B', '1e', '80'),
     'ExplicitPackage': ('Assets/A', PACKAGE, 'e5', '1a'),
     'ExplicitAssets': ('Assets/A', PACKAGE, '1b', 'e4'),
+    'ExplicitPackageEarlier': ('Assets/A', PACKAGE, '2e', '80'),
+    'ExplicitAssetsEarlier': ('Assets/A', PACKAGE, '80', '2e'),
     'BothExplicit': ('Assets/A', PACKAGE, 'e3', '1c'),
     'BothExplicitAssets': ('Assets/A', 'Assets/B', '7f', '80'),
     'BothExplicitEmbedded': ('Assets/A', 'Packages/com.example.first', '7f', '80'),
@@ -96,7 +99,7 @@ def compile_copy(project, staging, compiler, reference, case, location, prefix, 
     # The compiler embeds the output filename as the assembly name.
     defines = []
     if (case, index) in (('PackageNewer', 1), ('AssetsNewer', 0)) or (
-        case in ('VersionTie', 'MixedVersionTie') and index > 0
+        case in ('VersionTie', 'MixedVersionTie', 'ExplicitVersionTie') and index > 0
     ):
         defines.append('-define:VERSION_TWO')
     if index:
@@ -111,7 +114,10 @@ def compile_copy(project, staging, compiler, reference, case, location, prefix, 
         guid = '70000000000000000000000000000000'
     allowed = (case, index) not in (('AssetsExcluded', 0), ('PackageExcluded', 1))
     importer = LEGACY_IMPORTER.replace('ANY', str(int(allowed)))
-    explicit = (('ExplicitPackage', 1), ('ExplicitAssets', 0), ('MixedVersionTie', 1))
+    explicit = (
+        ('ExplicitPackage', 1), ('ExplicitAssets', 0), ('MixedVersionTie', 1),
+        ('ExplicitPackageEarlier', 1), ('ExplicitAssetsEarlier', 0), ('ExplicitVersionTie', 1),
+    )
     if case.startswith('BothExplicit') or (case, index) in explicit:
         importer += '  isExplicitlyReferenced: 1\n'
     target.with_suffix('.dll.meta').write_text(meta_text(target, target.name, guid, importer))
@@ -141,7 +147,7 @@ def generate(project, release, conflicts=False):
                  for case, row in CASES.items()
                  for i, (location, prefix) in enumerate(zip(row[:2], row[2:]))]
         tasks.extend(pool.submit(compile_copy, project, archive, compiler, reference, case, PACKAGE, '21', 2, conflicts)
-                     for case in ('VersionTie', 'MixedVersionTie'))
+                     for case in ('VersionTie', 'MixedVersionTie', 'ExplicitVersionTie'))
         for task in tasks:
             task.result()
     make_tarball(archive, project/'Packages/LocalPackages/com.example.archive-1.0.0.tgz')

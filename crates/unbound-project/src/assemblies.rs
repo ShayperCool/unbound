@@ -486,7 +486,7 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
                     .insert(other.file.clone())
                 {
                     tracing::warn!(
-                        "Managed plugins '{}' and '{}' have the same assembly name and version and lack distinct asset GUIDs. Relative reference order follows their paths.",
+                        "Managed plugins '{}' and '{}' have the same assembly name and version and lack distinct asset GUIDs. Keeping the existing reference selection for this tie.",
                         kept.path,
                         other.path
                     );
@@ -655,10 +655,10 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
 /// one (the Editor logs those of a lower version), and of several with one file name the first
 /// is taken. Copies of one assembly under different file names are all referenced (the Editor
 /// then fails with CS1704, as the compile here does). The initial Editor graph in
-/// tests/projects/pluginties prefers auto-referenced copies, then orders asset GUIDs within
-/// that reference mode when file name, assembly name and version match. Missing or shared GUIDs
-/// retain path order with a diagnostic, since the Editor can allocate new GUIDs on import. Returns the plugins and each lower version with the
-/// copy selected over it.
+/// tests/projects/pluginties orders asset GUIDs when file name, assembly name and version
+/// match. Auto Reference determines which assemblies use that copy. Missing or shared GUIDs
+/// preserve the existing selection with a diagnostic, since the Editor can allocate new GUIDs
+/// on import. Returns the plugins and each lower version with the copy selected over it.
 fn one_per_file_name<'p>(
     candidates: impl Iterator<Item = &'p Plugin>,
     measured_plugin_ties: bool,
@@ -714,7 +714,7 @@ fn one_per_file_name<'p>(
     if measured_plugin_ties {
         for (slot, selected) in plugins.iter_mut().enumerate() {
             if let Some(tied) = equal_versions.remove(&slot) {
-                *selected = select_equal_version(*selected, tied, &mut unresolved_tie);
+                *selected = select_equal_version(*selected, &tied, &mut unresolved_tie);
             }
         }
         for (used, _) in &mut lower {
@@ -727,34 +727,22 @@ fn one_per_file_name<'p>(
     (plugins, lower)
 }
 
-/// Give automatic references priority and keep path order if any GUID in the preferred mode
-/// is unresolved.
+/// Keep the original selection if the equal-version group has an unresolved GUID.
 fn select_equal_version<'p>(
     first: &'p Plugin,
-    tied: Vec<&'p Plugin>,
+    tied: &[&'p Plugin],
     unresolved_tie: &mut impl FnMut(&Plugin, &Plugin),
 ) -> &'p Plugin {
-    let has_automatic =
-        !first.explicitly_referenced || tied.iter().any(|plugin| !plugin.explicitly_referenced);
-    let mut preferred = std::iter::once(first)
-        .chain(tied)
-        .filter(|plugin| !has_automatic || !plugin.explicitly_referenced);
-    let fallback = preferred
-        .next()
-        .expect("a reference mode has at least one copy");
-    let Some(second) = preferred.next() else {
-        return fallback;
-    };
     let mut owners = HashMap::new();
-    let mut lowest = fallback;
+    let mut lowest = first;
     let mut lowest_order = None;
     let mut ambiguous = false;
-    for candidate in [fallback, second].into_iter().chain(preferred) {
+    for candidate in std::iter::once(first).chain(tied.iter().copied()) {
         let Some(guid) = candidate.guid else {
-            let other = if std::ptr::eq(candidate, fallback) {
-                second
+            let other = if std::ptr::eq(candidate, first) {
+                tied[0]
             } else {
-                fallback
+                first
             };
             unresolved_tie(other, candidate);
             ambiguous = true;
@@ -772,7 +760,7 @@ fn select_equal_version<'p>(
             lowest_order = Some(order);
         }
     }
-    if ambiguous { fallback } else { lowest }
+    if ambiguous { first } else { lowest }
 }
 
 #[cfg(test)]
@@ -821,6 +809,25 @@ mod plugin_tie_tests {
             assert_eq!(diagnosed, [(first.path.clone(), last.path.clone())]);
             assert_eq!(selected[0].path, first.path);
         }
+    }
+
+    #[test]
+    fn plugin_tie_diagnoses_a_shared_guid_across_reference_modes() {
+        let guid = "20000000000000000000000000000000";
+        let first = plugin("Assets/A/Plugin.dll", guid);
+        let second = plugin("Assets/B/Plugin.dll", "10000000000000000000000000000000");
+        let mut explicit = plugin("Packages/example/Plugin.dll", guid);
+        explicit.explicitly_referenced = true;
+        let mut diagnosed = Vec::new();
+        let (selected, _) = one_per_file_name(
+            [&first, &second, &explicit].into_iter(),
+            true,
+            |first, other| {
+                diagnosed.push((first.path.clone(), other.path.clone()));
+            },
+        );
+        assert_eq!(diagnosed, [(first.path.clone(), explicit.path.clone())]);
+        assert_eq!(selected[0].path, first.path);
     }
 
     #[test]

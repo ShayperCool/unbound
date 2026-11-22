@@ -298,6 +298,10 @@
     ],
     [
       "Probe.Explicit",
+      "Assets/A/ProbeTieExplicitAssetsEarlier.dll"
+    ],
+    [
+      "Probe.Explicit",
       "Assets/A/ProbeTieExplicitPackage.dll"
     ],
     [
@@ -330,6 +334,10 @@
     ],
     [
       "Probe.Explicit",
+      "Assets/B/ProbeTieExplicitVersionTie.dll"
+    ],
+    [
+      "Probe.Explicit",
       "Assets/B/ProbeTieGuidWord2.dll"
     ],
     [
@@ -355,6 +363,10 @@
     [
       "Probe.Explicit",
       "Packages/com.example.archive/ProbeTieExplicitAssets.dll"
+    ],
+    [
+      "Probe.Explicit",
+      "Packages/com.example.archive/ProbeTieExplicitPackageEarlier.dll"
     ],
     [
       "Probe.Explicit",
@@ -394,6 +406,11 @@
       "ProbeTieAssetsNewer.dll",
       "Assets/A/ProbeTieAssetsNewer.dll, AssemblyName=ProbeTieAssetsNewer, Version=2.0.0.0, Culture=neutral",
       "Packages/com.example.archive/ProbeTieAssetsNewer.dll, AssemblyName=ProbeTieAssetsNewer, Version=1.0.0.0, Culture=neutral"
+    ],
+    [
+      "ProbeTieExplicitVersionTie.dll",
+      "Assets/B/ProbeTieExplicitVersionTie.dll, AssemblyName=ProbeTieExplicitVersionTie, Version=2.0.0.0, Culture=neutral",
+      "Assets/A/ProbeTieExplicitVersionTie.dll, AssemblyName=ProbeTieExplicitVersionTie, Version=1.0.0.0, Culture=neutral"
     ],
     [
       "ProbeTieMixedVersionTie.dll",

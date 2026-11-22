@@ -34,7 +34,8 @@ the complete record and compiles the project, including the Editor assembly.
 
 ## Observations
 
-- For DLLs eligible for the same references, the earlier asset GUID wins.
+- When compatible DLLs share a file name, assembly name and version, the
+  earlier asset GUID wins.
   Compare GUID bytes from left to right, reading the low hex digit first in
   each printed pair. Controls reverse the selected copy in two Assets paths,
   two embedded packages, and Assets versus an embedded package or archive.
@@ -44,15 +45,15 @@ the complete record and compiles the project, including the Editor assembly.
   in either directory; the duplicate-version diagnostic names that copy.
   The three-copy cases tie for the higher version and check that the
   diagnostic names the selected one, with either matching or mixed reference modes.
-- With equal versions the automatic copy precedes an explicit-only copy.
-  When both require explicit references, only the overridden asmdef includes
-  the DLL. It uses the same GUID ordering as the automatic references.
+- Auto Reference applies after selection. With mixed settings, either copy
+  can win by GUID. If the winner requires an explicit reference, only the
+  asmdef that names it receives the DLL.
 
 Pass `--conflicts` to record a diagnostic pair with one shared GUID on a
 mutable Assets DLL and an immutable package DLL. The Editor reassigns the
 Assets metadata GUID. Independent fresh imports with shared GUIDs can pick
 different copies. The diagnostic mode retains each capture separately.
-Unbound reports missing or shared GUIDs among equal-version copies in the
-preferred reference mode and retains path order across that group. Incremental Editor
+Unbound reports missing or shared GUIDs across the equal-version group and
+keeps the existing selection order in those cases. Incremental Editor
 import history, built Player compilation and other release families remain
 unmeasured by the gate.
