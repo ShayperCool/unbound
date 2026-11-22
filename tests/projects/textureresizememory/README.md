@@ -10,7 +10,8 @@ capture is compared against that device's measurements.
 [Unity 6.0 Texture2D.Reinitialize](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.Reinitialize.html)
 requires readable input and directs callers to Apply to upload the changed
 pixels. The profiler's byte counts and their device differences are measured
-by this probe.
+by this probe for owned runtime textures. Imported and externally backed
+textures retain the previous accounting.
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1

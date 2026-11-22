@@ -54,7 +54,7 @@ namespace Unbound.Runtime
 
         static long Texture2DSize(Texture2D texture)
         {
-            if (!Compat.TextureResizeMemoryMeasured || texture.IsPersistentAsset || texture.width <= 0
+            if (!Compat.TextureResizeMemoryMeasured || texture.IsPersistentAsset || texture.IsExternalTexture || texture.width <= 0
                 || GraphicsDeviceProfile.Current.Texture2DMemoryOverhead is not { } overhead)
                 return Texture2DHeader + Both(texture.width, texture.height, 1, false, texture.mipmapCount, texture.format, 1);
 
