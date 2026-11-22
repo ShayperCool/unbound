@@ -202,20 +202,25 @@ namespace UnityEditor
         public GenericInspector() { }
 
         /// <summary>The default inspector: a container of the targets' PropertyFields
-        /// (InspectorElement.FillDefaultInspector). The Editor adds a level meter after them for a
-        /// MonoBehaviour with OnAudioFilterRead, which Unbound does not have: reported.</summary>
+        /// (InspectorElement.FillDefaultInspector). The Editor inspects most engine types with
+        /// their own editors, which Unbound does not have, so an engine type's generic GUI is
+        /// reported instead of built; so is the level meter the Editor adds for a MonoBehaviour
+        /// with OnAudioFilterRead.</summary>
         public override UnityEngine.UIElements.VisualElement CreateInspectorGUI()
         {
             if (serializedObject == null) return null;
+            var type = target != null ? target.GetType() : null;
+            if (type != null && type.Assembly == typeof(Object).Assembly)
+            {
+                Stubs.NotImplemented($"UnityEditor.GenericInspector (inspector of {type.FullName})");
+                return null;
+            }
             var root = new UnityEngine.UIElements.VisualElement();
             UnityEditor.UIElements.InspectorElement.FillDefaultInspector(root, serializedObject, this);
-            if (target is MonoBehaviour behaviour && behaviour != null && HasAudioFilter(behaviour.GetType()))
+            if (target is Component component && AudioFilters.HasFilterScript(component))
                 Stubs.NotImplemented("UnityEditor.GenericInspector (OnAudioFilterRead level meter)");
             return root;
         }
-
-        static bool HasAudioFilter(Type type) =>
-            type.GetMethod("OnAudioFilterRead", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(float[]), typeof(int) }, null) != null;
     }
 
     public partial class MaterialEditor : Editor

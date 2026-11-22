@@ -199,21 +199,33 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(other);
         }
 
-        public class AudioFiltered : MonoBehaviour
+        public class FilterBase : MonoBehaviour
         {
-            public int gain = 1;
             void OnAudioFilterRead(float[] data, int channels) { }
         }
+
+        // Its filter is its base class's private one.
+        public class AudioFiltered : FilterBase { public int gain = 1; }
 
         [Fact]
         public void AnEngineTypeWithoutItsEditorAndAnAudioFiltersMeterAreReported()
         {
             using var f = new Fixture();
             var engineObject = ScriptableObject.CreateInstance<PanelSettings>();
-            string member = "UnityEditor.UIElements.InspectorElement (inspector of UnityEngine.UIElements.PanelSettings)";
+            string member = "UnityEditor.GenericInspector (inspector of UnityEngine.UIElements.PanelSettings)";
             int before = Hits(member);
-            var inspector = f.Show(new InspectorElement(engineObject));
+            Assert.Null(Editor.CreateEditor(engineObject).CreateInspectorGUI());
             Assert.Equal(before + 1, Hits(member));
+            var inspector = f.Show(new InspectorElement(engineObject));
+            Assert.Equal(before + 2, Hits(member));
+            Assert.Equal(2, inspector.hierarchy.childCount);
+            Assert.Equal(new[] { "unity-inspector-element" }, inspector.GetClasses().ToArray());
+            // Rebound to a script object and back.
+            inspector.Bind(new SerializedObject(f.Target));
+            Tick(f.Panel);
+            Assert.Equal("PropertyField:count", inspector.hierarchy[2][1].name);
+            inspector.Bind(new SerializedObject(engineObject));
+            Tick(f.Panel);
             Assert.Equal(2, inspector.hierarchy.childCount);
             Assert.Equal(new[] { "unity-inspector-element" }, inspector.GetClasses().ToArray());
             Object.DestroyImmediate(engineObject);
@@ -225,6 +237,25 @@ namespace UnityEngine.Tests
             Assert.Equal(meter + 1, Hits("UnityEditor.GenericInspector (OnAudioFilterRead level meter)"));
             Assert.Equal("PropertyField:gain", gui[1].name);
             Object.DestroyImmediate(go);
+        }
+
+        [Fact]
+        public void TheIMGUIDefaultInspectorIsTheGenericInspectorsIMGUIReportedAndRebuiltOnEachBind()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            using var f = new Fixture();
+            string member = "UnityEditor.UIElements.InspectorElement (IMGUI of GenericInspector)";
+            int before = Hits(member);
+            var inspector = f.Show(new InspectorElement(new SerializedObject(f.Target), InspectorElement.DefaultInspectorFramework.IMGUI));
+            Assert.Equal(new[] { "unity-inspector-element", InspectorElement.iMGUIDefaultVariantUssClassName, InspectorElement.iMGUIInspectorVariantUssClassName }, inspector.GetClasses().ToArray());
+            var container = Assert.IsType<IMGUIContainer>(inspector.hierarchy[2]);
+            Assert.False(container.ClassListContains(InspectorElement.customInspectorUssClassName));
+            Assert.Equal(before + 1, Hits(member));
+            inspector.Bind(new SerializedObject(f.Target));
+            Tick(f.Panel);
+            Assert.Same(container, inspector.hierarchy[2]);
+            Assert.Equal(3, inspector.hierarchy.childCount);
+            Assert.Equal(before + 2, Hits(member));
         }
 
         [Fact]
