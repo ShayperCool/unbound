@@ -15,7 +15,8 @@ BASE = (PROBE.parent/'formatmapping', ['Assets/Scenes', 'Assets/Scenes.meta', 'P
 CAPTURE = 'ASTC_MEMORY_OUT'
 PROFILES = ('Ordinary', 'Wide', 'CubeFirst', 'ResizeFirst', 'UninitializedFirst', 'CloneFirst',
             'ArrayFirst', 'VolumeFirst', 'HdrFirst', 'UninitializedApplyFirst', 'ImportFirst',
-            'ArrayBeforeApply', 'CubeUninitialized', 'ArrayUninitialized', 'SwitchFootprint')
+            'ArrayBeforeApply', 'CubeUninitialized', 'ArrayUninitialized', 'SwitchFootprint',
+            'ExplicitGraphicsFormatFirst')
 
 
 def include_astc_import(project):

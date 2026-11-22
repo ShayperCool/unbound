@@ -50,6 +50,23 @@ public static class AstcMemory
             Put("prelude.import.samples", SystemInfo.IsFormatSupported(imported.graphicsFormat, GraphicsFormatUsage.Sample));
             Size("prelude.import", imported);
         }
+        if (profile == "ExplicitGraphicsFormatFirst")
+        {
+            var graphics = GraphicsFormatUtility.GetGraphicsFormat(TextureFormat.ASTC_4x4, false);
+            Put("prelude.explicit.samples", SystemInfo.IsFormatSupported(graphics, GraphicsFormatUsage.Sample));
+            var cube = new Cubemap(8, graphics, TextureCreationFlags.None);
+            var array = new Texture2DArray(8, 8, 2, graphics, TextureCreationFlags.None);
+            if (cube != null)
+            {
+                cube.Apply(false, false);
+                Object.DestroyImmediate(cube);
+            }
+            if (array != null)
+            {
+                array.Apply(false, false);
+                Object.DestroyImmediate(array);
+            }
+        }
         if (profile is "ArrayFirst" or "ArrayBeforeApply")
         {
             TryPrelude("array", () =>

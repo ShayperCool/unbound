@@ -6,7 +6,9 @@ Each profile runs in a new process. The first initialized ASTC fallback adds 3,2
 
 The initialized 2D array reserves the setup before its first Apply. Its reported memory includes its allocation header and texture storage. The Android 2D import control loads a readable ASTC image via Resources and records the charge on that texture. The HDR profile also measures the RGBAHalf GPU storage.
 
-The OpenGL Core Editor refused a compressed Texture3D in the volume control. Unbound currently creates it, and the gate reports the status and extra size observations by name. Texture bundle loading, native or external textures, other render devices and other release families are outside these captures.
+Unity checks sampling support for the explicit `GraphicsFormat` cube and array constructors. Following an unsupported request, the probe records the setup charge of the next eligible `TextureFormat` texture. [Unity 6000.0 constructor validation](https://github.com/Unity-Technologies/UnityCsReference/blob/6000.0/Runtime/Export/Graphics/Texture.cs#L651-L666)
+
+The OpenGL Core Editor refused a compressed Texture3D in the volume control. Unbound currently creates it, and the gate reports the status and extra size observations by name. Texture bundle loading, imported layered textures, HDR image import, image reload, native or external textures, other render devices and other release families are outside these captures.
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1
