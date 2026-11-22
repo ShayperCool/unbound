@@ -225,10 +225,21 @@ namespace UnityEditor
 
         public static bool Foldout(Rect position, bool foldout, string content) { RequireGUI(); return EditorGUIControls.Foldout(position, foldout, new GUIContent(content)); }
         public static bool Foldout(Rect position, bool foldout, GUIContent content) { RequireGUI(); return EditorGUIControls.Foldout(position, foldout, content); }
-        public static bool PropertyField(Rect position, SerializedProperty property) { RequireGUI(); return EditorGUIControls.Property(position, property, null); }
-        public static bool PropertyField(Rect position, SerializedProperty property, bool includeChildren) { RequireGUI(); return EditorGUIControls.Property(position, property, null); }
-        public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label) { RequireGUI(); return EditorGUIControls.Property(position, property, label); }
-        public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label, bool includeChildren) { RequireGUI(); return EditorGUIControls.Property(position, property, label); }
+        public static bool PropertyField(Rect position, SerializedProperty property) => PropertyField(position, property, null, false);
+        public static bool PropertyField(Rect position, SerializedProperty property, bool includeChildren) => PropertyField(position, property, null, includeChildren);
+        public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label) => PropertyField(position, property, label, false);
+
+        /// <summary>A property's own drawer draws it when it has one (the game's), else the
+        /// Editor's control for its type.</summary>
+        public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label, bool includeChildren)
+        {
+            RequireGUI();
+            var drawer = DrawerNesting.GameDrawerFor(property, out int level);
+            if (drawer == null) return EditorGUIControls.Property(position, property, label);
+            using (DrawerNesting.Enter(property, level))
+                drawer.OnGUI(position, property, label ?? new GUIContent(property.displayName));
+            return false;
+        }
         public static Rect PrefixLabel(Rect totalPosition, GUIContent label)
         {
             if (Compat.InspectorGuiStylesMeasured) return PrefixLabel(totalPosition, 0, label);
@@ -360,10 +371,22 @@ namespace UnityEditor
         public static bool Foldout(bool foldout, GUIContent content) => EditorGUIControls.Foldout(Line(null), foldout, content);
         public static bool Foldout(bool foldout, string content, bool toggleOnLabelClick) => EditorGUIControls.Foldout(Line(null), foldout, new GUIContent(content));
         public static bool Foldout(bool foldout, GUIContent content, bool toggleOnLabelClick) => EditorGUIControls.Foldout(Line(null), foldout, content);
-        public static bool PropertyField(SerializedProperty property, params GUILayoutOption[] options) => EditorGUIControls.Property(Line(options), property, null);
-        public static bool PropertyField(SerializedProperty property, GUIContent label, params GUILayoutOption[] options) => EditorGUIControls.Property(Line(options), property, label);
-        public static bool PropertyField(SerializedProperty property, bool includeChildren, params GUILayoutOption[] options) => EditorGUIControls.Property(Line(options), property, null);
-        public static bool PropertyField(SerializedProperty property, GUIContent label, bool includeChildren, params GUILayoutOption[] options) => EditorGUIControls.Property(Line(options), property, label);
+        public static bool PropertyField(SerializedProperty property, params GUILayoutOption[] options) => PropertyField(property, null, false, options);
+        public static bool PropertyField(SerializedProperty property, GUIContent label, params GUILayoutOption[] options) => PropertyField(property, label, false, options);
+        public static bool PropertyField(SerializedProperty property, bool includeChildren, params GUILayoutOption[] options) => PropertyField(property, null, includeChildren, options);
+
+        /// <summary>A property takes a control rect of its height (its drawer's, when it has one)
+        /// and is drawn in it. A checkbox without drawers keeps a plain line: the Editor's toggle
+        /// rect is not measured.</summary>
+        public static bool PropertyField(SerializedProperty property, GUIContent label, bool includeChildren, params GUILayoutOption[] options)
+        {
+            Rect rect;
+            if (property.propertyType == SerializedPropertyType.Boolean && DrawerDispatch.For(property) is { Decorators: null } drawers && drawers.DrawerAt(0) == null)
+                rect = Line(options);
+            else
+                rect = GetControlRect(label == null || label.text != string.Empty || label.image != null, EditorGUI.GetPropertyHeight(property, label, includeChildren), options);
+            return EditorGUI.PropertyField(rect, property, label, includeChildren);
+        }
         public static Object ObjectField(Object obj, Type objType, bool allowSceneObjects, params GUILayoutOption[] options) => EditorGUIControls.ObjectField(Line(options), GUIContent.none, obj, objType);
         public static Object ObjectField(string label, Object obj, Type objType, bool allowSceneObjects, params GUILayoutOption[] options) => EditorGUIControls.ObjectField(Line(options), new GUIContent(label), obj, objType);
         public static Object ObjectField(GUIContent label, Object obj, Type objType, bool allowSceneObjects, params GUILayoutOption[] options) => EditorGUIControls.ObjectField(Line(options), label, obj, objType);
@@ -786,7 +809,10 @@ namespace UnityEditor
         {
             var drawers = DrawerDispatch.For(property);
             float height = 0f;
-            if (drawers.Decorators != null)
+            // A drawer measuring its own property again gets the next drawer, without the
+            // decorators.
+            int level = DrawerNesting.LevelFor(property);
+            if (drawers.Decorators != null && level == 0)
             {
                 foreach (var decorator in drawers.Decorators)
                 {
@@ -806,9 +832,12 @@ namespace UnityEditor
                     }
                 }
             }
-            var drawer = drawers.DrawerAt(0);
-            if (drawer != null && drawer.GetType().Assembly != typeof(UnityEngine.Object).Assembly)
-                return height + drawer.GetPropertyHeight(property, label ?? new GUIContent(property.displayName));
+            var drawer = drawers.DrawerAt(level);
+            if (DrawerNesting.IsGameDrawer(drawer))
+            {
+                using (DrawerNesting.Enter(property, level))
+                    return height + drawer.GetPropertyHeight(property, label ?? new GUIContent(property.displayName));
+            }
             switch (drawer?.attribute)
             {
                 case MultilineAttribute multiline:
@@ -929,6 +958,12 @@ namespace UnityEditor
 
         static bool HasInspectorStyles => Compat.InspectorGuiStylesMeasured && Event.current != null;
 
+        static GUIStyle s_InspectorHorizontalDefaultMargins;
+        static GUIStyle s_InspectorDefaultMargins;
+
+        /// <summary>The inspector's horizontal margins: 18 points left, 4 right.</summary>
+        internal static GUIStyle inspectorHorizontalDefaultMargins => s_InspectorHorizontalDefaultMargins ??= new GUIStyle { padding = new RectOffset(18, 4, 0, 0) };
+
         internal static void Require() => throw new NullReferenceException("Object reference not set to an instance of an object");
 
         static GUIStyle Style() { Require(); return null; }
@@ -989,7 +1024,9 @@ namespace UnityEditor
         public static GUIStyle miniButton => Style();
         public static GUIStyle miniButtonLeft => Style();
         public static GUIStyle selectionRect => Style();
-        public static GUIStyle inspectorDefaultMargins => Style();
+        /// <summary>The inspector's margins: 18 points left, 4 right, 4 at the top.</summary>
+        public static GUIStyle inspectorDefaultMargins =>
+            HasInspectorStyles ? s_InspectorDefaultMargins ??= new GUIStyle { padding = new RectOffset(18, 4, 4, 0) } : Style();
         public static GUIStyle inspectorFullWidthMargins => Style();
 
         /// <summary>The Editor's UI font (its fonts load without a window).</summary>

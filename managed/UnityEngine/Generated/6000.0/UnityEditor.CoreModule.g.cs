@@ -9073,7 +9073,6 @@ namespace UnityEditor
         internal static global::UnityEngine.GUIStyle toolbarCreateAddNewDropDown { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorStyles.toolbarCreateAddNewDropDown"); return default; } }
         public static global::UnityEngine.GUIStyle toolbarTextField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorStyles.toolbarTextField"); return default; } }
         internal static global::UnityEngine.GUIStyle toolbarLabel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorStyles.toolbarLabel"); return default; } }
-        internal static global::UnityEngine.GUIStyle inspectorHorizontalDefaultMargins { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorStyles.inspectorHorizontalDefaultMargins"); return default; } }
         internal static global::UnityEngine.GUIStyle defaultContentMargins { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorStyles.defaultContentMargins"); return default; } }
         internal static global::UnityEngine.GUIStyle frameBox { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorStyles.frameBox"); return default; } }
         internal static global::UnityEngine.GUIStyle helpBoxLabel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorStyles.helpBoxLabel"); return default; } }
@@ -46768,7 +46767,6 @@ namespace UnityEditor.UIElements
     unsafe partial class InspectorElement
     {
         [global::Unbound.Stub] internal static string GetInspectorTrackerName(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.GetInspectorTrackerName"); return default; }
-        [global::Unbound.Stub] internal static bool SetWideModeForWidth(global::UnityEngine.UIElements.VisualElement displayElement) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.SetWideModeForWidth"); return default; }
         internal static bool disabledThrottling { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.disabledThrottling"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.disabledThrottling"); } }
         internal string trackerName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.trackerName"); return default; } }
         internal global::UnityEditor.EditorGUIUtility.ComparisonViewMode comparisonViewMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.comparisonViewMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.InspectorElement.comparisonViewMode"); } }

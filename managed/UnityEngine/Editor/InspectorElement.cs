@@ -267,24 +267,57 @@ namespace UnityEditor.UIElements
             return element;
         }
 
-        // The container the Editor draws the editor's OnInspectorGUI in. Unbound does not run IMGUI
-        // containers in a panel, so the editor's IMGUI is reported instead of drawn.
+        /// <summary>Wide mode for a view as wide as the first element with a width from
+        /// <paramref name="displayElement"/> up (over 330 points), and that width as the view's;
+        /// without one, wide mode. Returns the wide mode it replaced.</summary>
+        internal static bool SetWideModeForWidth(VisualElement displayElement)
+        {
+            bool wideMode = EditorGUIUtility.wideMode;
+            float width = 0f;
+            while (displayElement != null && (float.IsNaN(width) || width == 0f))
+            {
+                width = displayElement.layout.width;
+                displayElement = displayElement.hierarchy.parent;
+            }
+            if (!float.IsNaN(width) && width > 0f)
+            {
+                EditorGUIUtility.wideMode = width > 330f;
+                EditorGUIUtility.currentViewWidth = width;
+            }
+            else EditorGUIUtility.wideMode = true;
+            return wideMode;
+        }
+
+        // The container the editor's OnInspectorGUI runs in: in the inspector's margins when the
+        // editor uses them, as wide as the inspector, in hierarchy mode.
         VisualElement CreateInspectorElementUsingIMGUI(Editor targetEditor)
         {
             AddToClassList(targetEditor is GenericInspector ? iMGUIDefaultVariantUssClassName : iMGUICustomVariantUssClassName);
-            Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.InspectorElement (IMGUI of {targetEditor.GetType().Name})");
             var inspector = m_InspectorElement as IMGUIContainer ?? new IMGUIContainer();
             inspector.onGUIHandler = () =>
             {
                 if (targetEditor.target == null || !targetEditor.serializedObject.isValid) return;
+                bool hierarchyMode = EditorGUIUtility.hierarchyMode;
+                EditorGUIUtility.hierarchyMode = true;
+                bool wideMode = SetWideModeForWidth(inspector);
                 try
                 {
-                    targetEditor.OnInspectorGUI();
+                    GUILayout.BeginVertical(targetEditor.UseDefaultMargins() ? EditorStyles.inspectorDefaultMargins : GUIStyle.none);
+                    try
+                    {
+                        targetEditor.OnInspectorGUI();
+                    }
+                    catch (Exception exception)
+                    {
+                        if (GUIUtility.ShouldRethrowException(exception)) throw;
+                        Debug.LogException(exception);
+                    }
+                    GUILayout.EndVertical();
                 }
-                catch (Exception exception)
+                finally
                 {
-                    if (GUIUtility.ShouldRethrowException(exception)) throw;
-                    Debug.LogException(exception);
+                    EditorGUIUtility.wideMode = wideMode;
+                    EditorGUIUtility.hierarchyMode = hierarchyMode;
                 }
             };
             inspector.style.overflow = Overflow.Visible;

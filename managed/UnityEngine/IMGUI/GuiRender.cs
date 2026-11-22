@@ -32,6 +32,34 @@ namespace UnityEngine
             s_Inverse = Matrix4x4.identity;
         }
 
+        /// <summary>Starts the GUI of a UI Toolkit IMGUIContainer: its coordinates start at
+        /// <paramref name="origin"/> and <paramref name="clip"/> (absolute) is all it shows. Not a
+        /// group: an event already in the container's coordinates stays as it is.</summary>
+        internal static void BeginContainer(Vector2 origin, Rect clip)
+        {
+            s_Stack.Clear();
+            s_Stack.Add(new Entry { Rect = clip, Visible = clip, Offset = origin });
+            s_Matrix = Matrix4x4.identity;
+            s_Inverse = Matrix4x4.identity;
+        }
+
+        /// <summary>The clips and matrix of a GUI pass that another one interrupts.</summary>
+        internal struct State
+        {
+            internal object Stack;
+            internal Matrix4x4 Matrix, Inverse;
+        }
+
+        internal static State Save() => new State { Stack = s_Stack.ToArray(), Matrix = s_Matrix, Inverse = s_Inverse };
+
+        internal static void Restore(State state)
+        {
+            s_Stack.Clear();
+            s_Stack.AddRange((Entry[])state.Stack);
+            s_Matrix = state.Matrix;
+            s_Inverse = state.Inverse;
+        }
+
         internal static int Depth => s_Stack.Count;
 
         internal static bool enabled => s_Stack.Count > 0;

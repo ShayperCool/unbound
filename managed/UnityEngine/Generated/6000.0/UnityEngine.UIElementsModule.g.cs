@@ -1247,7 +1247,6 @@ namespace UnityEngine.UIElements
     unsafe partial class FocusController
     {
         [global::Unbound.Stub] internal void ValidateInternalState(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.ValidateInternalState"); }
-        [global::Unbound.Stub] internal void SyncIMGUIFocus(int imguiKeyboardControlID, global::UnityEngine.UIElements.Focusable imguiContainerHavingKeyboardControl, bool forceSwitch) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.SyncIMGUIFocus"); }
     }
     unsafe partial class Focusable
     {
@@ -1392,19 +1391,12 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal bool useOwnerObjectGUIState;
         [global::Unbound.Stub] internal static readonly string ussFoldoutChildDepthClassName;
         [global::Unbound.Stub] internal static readonly global::System.Collections.Generic.List<string> ussFoldoutChildDepthClassNames;
-        [global::Unbound.Stub] public void MarkDirtyLayout() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.MarkDirtyLayout"); }
         [global::Unbound.Stub] internal bool SendEventToIMGUI(global::UnityEngine.UIElements.EventBase evt, bool canAffectFocus = true, bool verifyBounds = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.SendEventToIMGUI"); return default; }
-        [global::Unbound.Stub] internal bool HandleIMGUIEvent(global::UnityEngine.Event e, bool canAffectFocus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.HandleIMGUIEvent"); return default; }
         [global::Unbound.Stub] internal bool HandleIMGUIEvent(global::UnityEngine.Event e, global::System.Action onGUIHandler, bool canAffectFocus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.HandleIMGUIEvent"); return default; }
-        [global::Unbound.Stub] internal override void HandleEventBubbleUpDisabled(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.HandleEventBubbleUpDisabled"); }
-        [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.HandleEventBubbleUp"); }
-        [global::Unbound.Stub] protected internal override global::UnityEngine.Vector2 DoMeasure(float desiredWidth, global::UnityEngine.UIElements.VisualElement.MeasureMode widthMode, float desiredHeight, global::UnityEngine.UIElements.VisualElement.MeasureMode heightMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.DoMeasure"); return default; }
         [global::Unbound.Stub] protected virtual void Dispose(bool disposeManaged) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.Dispose"); }
         internal global::UnityEngine.ObjectGUIState guiState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.guiState"); return default; } }
         internal global::UnityEngine.Rect lastWorldClip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.lastWorldClip"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.lastWorldClip"); } }
         public bool cullingEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.cullingEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.cullingEnabled"); } }
-        internal bool focusOnlyIfHasFocusableControls { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.focusOnlyIfHasFocusableControls"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.focusOnlyIfHasFocusableControls"); } }
-        public override bool canGrabFocus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.canGrabFocus"); return default; } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
@@ -2076,7 +2068,6 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class MouseDownEvent
     {
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.MouseDownEvent GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseDownEvent.GetPooled"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.MouseDownEvent GetPooled(global::UnityEngine.UIElements.PointerDownEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseDownEvent.GetPooled"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.MouseDownEvent GetPooled(global::UnityEngine.UIElements.PointerMoveEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseDownEvent.GetPooled"); return default; }
     }
@@ -2093,7 +2084,6 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class MouseUpEvent
     {
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.MouseUpEvent GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseUpEvent.GetPooled"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.MouseUpEvent GetPooled(global::UnityEngine.UIElements.PointerUpEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseUpEvent.GetPooled"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.MouseUpEvent GetPooled(global::UnityEngine.UIElements.PointerMoveEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseUpEvent.GetPooled"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.MouseUpEvent GetPooled(global::UnityEngine.UIElements.PointerCancelEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseUpEvent.GetPooled"); return default; }

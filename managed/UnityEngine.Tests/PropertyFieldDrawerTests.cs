@@ -114,7 +114,7 @@ namespace UnityEngine.Tests
 
         // The test assembly is not a game assembly, so its drawers go into the dispatch table
         // directly, for the duration of a test.
-        sealed class DrawerTable : System.IDisposable
+        internal sealed class DrawerTable : System.IDisposable
         {
             static readonly System.Reflection.FieldInfo s_Table = typeof(Editor).Assembly.GetType("UnityEditor.DrawerDispatch")
                 .GetField("s_Table", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
@@ -271,15 +271,16 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BuiltInDrawersAreBuiltAndWhatIsNotDrawnIsReported()
+        public void BuiltInDrawersAreBuiltAnIMGUIDrawerRunsInAContainerAndWhatIsNotDrawnIsReported()
         {
             using var f = new Fixture();
             Assert.NotNull(f.Field("ratio").Q<Slider>());
             var counted = f.Field("counted");
             Assert.Equal("Section", counted.Q<Label>(null, "unity-header-drawer__label").text);
 
-            // A drawer with only IMGUI gets the Editor's IMGUI container, which Unbound does not
-            // draw: that is reported. A UnityEvent, whose Editor drawer Unbound lacks, too.
+            // A drawer with only IMGUI runs in the Editor's IMGUI container, which takes the
+            // drawer's height in the inspector's margins (tests/projects/imguicontainer property).
+            // A UnityEvent, whose Editor drawer Unbound lacks, is reported.
             using var table = new DrawerTable((typeof(ThrowingDrawn), typeof(ImguiOnlyDrawer)));
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
             var target = ScriptableObject.CreateInstance<ImguiSample>();
@@ -289,7 +290,7 @@ namespace UnityEngine.Tests
             {
                 const string imgui = "UnityEditor.UIElements.PropertyField (IMGUI of ImguiOnlyDrawer)";
                 const string unityEvent = "UnityEditor.UIElements.PropertyField (drawer of UnityEvent)";
-                int imguiBefore = Hits(imgui), eventBefore = Hits(unityEvent);
+                int eventBefore = Hits(unityEvent), drawnBefore = ImguiOnlyDrawer.drawn;
                 var imguiField = new PropertyField(so.FindProperty("imguiOnly"));
                 var eventField = new PropertyField(so.FindProperty("onClick"));
                 panel.visualTree.Add(imguiField);
@@ -300,7 +301,10 @@ namespace UnityEngine.Tests
                 Tick(panel);
                 Assert.IsType<IMGUIContainer>(imguiField.hierarchy[0]);
                 Assert.True(imguiField.ClassListContains("unity-property-field__imgui-container-property"));
-                Assert.Equal(imguiBefore + 1, Hits(imgui));
+                Assert.True(ImguiOnlyDrawer.drawn > drawnBefore);
+                Assert.Equal(37f, ImguiOnlyDrawer.position.height);
+                Assert.Equal(41f, imguiField.hierarchy[0].layout.height);
+                Assert.Equal(0, Hits(imgui));
                 Assert.Equal(eventBefore + 1, Hits(unityEvent));
             }
             finally
@@ -324,7 +328,14 @@ namespace UnityEngine.Tests
 
     public class ImguiOnlyDrawer : PropertyDrawer
     {
-        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) { }
+        internal static int drawn;
+        internal static Rect position;
+        public override float GetPropertyHeight(SerializedProperty property, GUIContent label) => 37f;
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        {
+            drawn++;
+            ImguiOnlyDrawer.position = position;
+        }
     }
 
     [CustomPropertyDrawer(typeof(PropertyFieldDrawerTests.ThrowingDrawn))]

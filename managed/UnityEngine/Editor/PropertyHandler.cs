@@ -48,6 +48,70 @@ namespace UnityEditor
             PropertyDrawers != null && nestingLevel < PropertyDrawers.Count ? PropertyDrawers[nestingLevel] : null;
     }
 
+    /// <summary>The drawers being drawn or measured with IMGUI: a drawer that draws or measures
+    /// its own property again gets the next drawer of it (the next attribute's, then the
+    /// default), as a PropertyField nested in a drawer does; a PropertyField's IMGUI starts at its
+    /// own nesting level.</summary>
+    internal static class DrawerNesting
+    {
+        struct Entry
+        {
+            public int Target;
+            public string Path;
+            public int Level;
+        }
+
+        static readonly List<Entry> s_Stack = new List<Entry>();
+
+        static int TargetOf(SerializedProperty property)
+        {
+            var target = property.serializedObject?.targetObject;
+            return target != null ? target.GetInstanceID() : 0;
+        }
+
+        /// <summary>The level of the drawer a call for this property draws or measures with.</summary>
+        internal static int LevelFor(SerializedProperty property)
+        {
+            int target = TargetOf(property);
+            string path = property.propertyPath;
+            for (int i = s_Stack.Count - 1; i >= 0; i--)
+                if (s_Stack[i].Target == target && s_Stack[i].Path == path) return s_Stack[i].Level + 1;
+            return 0;
+        }
+
+        /// <summary>Marks a property's drawer at <paramref name="level"/> as drawing or measuring it
+        /// until disposed.</summary>
+        internal static Scope Enter(SerializedProperty property, int level)
+        {
+            s_Stack.Add(new Entry { Target = TargetOf(property), Path = property.propertyPath, Level = level });
+            return new Scope(s_Stack.Count);
+        }
+
+        internal readonly struct Scope : IDisposable
+        {
+            readonly int m_Depth;
+
+            public Scope(int depth) => m_Depth = depth;
+
+            public void Dispose()
+            {
+                if (s_Stack.Count >= m_Depth) s_Stack.RemoveRange(m_Depth - 1, s_Stack.Count - m_Depth + 1);
+            }
+        }
+
+        /// <summary>A drawer the game's code wrote (the engine's own drawers have UI Toolkit GUI
+        /// only; IMGUI draws their attributes itself).</summary>
+        internal static bool IsGameDrawer(GUIDrawer drawer) => drawer != null && drawer.GetType().Assembly != typeof(UnityEngine.Object).Assembly;
+
+        /// <summary>The game drawer an IMGUI call for this property draws with, or null.</summary>
+        internal static PropertyDrawer GameDrawerFor(SerializedProperty property, out int level)
+        {
+            level = LevelFor(property);
+            var drawer = DrawerDispatch.For(property).DrawerAt(level);
+            return IsGameDrawer(drawer) ? drawer : null;
+        }
+    }
+
     internal static class DrawerDispatch
     {
         readonly struct DrawerEntry

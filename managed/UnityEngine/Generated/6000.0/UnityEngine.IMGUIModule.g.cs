@@ -181,10 +181,8 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static global::UnityEngine.GUILayoutUtility.LayoutCache GetLayoutCache(int instanceID, bool isWindow) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.GetLayoutCache"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUILayoutUtility.LayoutCache SelectIDList(int instanceID, bool isWindow) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.SelectIDList"); return default; }
         [global::Unbound.Stub] internal static void RemoveSelectedIdList(int instanceID, bool isWindow) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.RemoveSelectedIdList"); }
-        [global::Unbound.Stub] internal static void BeginContainer(global::UnityEngine.GUILayoutUtility.LayoutCache cache) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.BeginContainer"); }
         [global::Unbound.Stub] internal static void BeginWindow(int windowID, global::UnityEngine.GUIStyle style, global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.BeginWindow"); }
         [global::Unbound.Stub] internal static void LayoutFromEditorWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.LayoutFromEditorWindow"); }
-        [global::Unbound.Stub] internal static void LayoutFromContainer(float w, float h) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.LayoutFromContainer"); }
         [global::Unbound.Stub] internal static float LayoutFromInspector(float width) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.LayoutFromInspector"); return default; }
         [global::Unbound.Stub] internal static void EndLayoutArea() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.EndLayoutArea"); }
         [global::Unbound.Stub] internal static global::UnityEngine.GUILayoutGroup DoBeginLayoutArea(global::UnityEngine.GUIStyle style, global::System.Type layoutType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUILayoutUtility.DoBeginLayoutArea"); return default; }
@@ -301,10 +299,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static void Internal_EndContainer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.Internal_EndContainer"); }
         [global::Unbound.Stub] internal static void UpdateUndoName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.UpdateUndoName"); }
         [global::Unbound.Stub] internal static int CheckForTabEvent(global::UnityEngine.Event evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.CheckForTabEvent"); return default; }
-        [global::Unbound.Stub] internal static void SetKeyboardControlToFirstControlId() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.SetKeyboardControlToFirstControlId"); }
-        [global::Unbound.Stub] internal static void SetKeyboardControlToLastControlId() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.SetKeyboardControlToLastControlId"); }
-        [global::Unbound.Stub] internal static bool HasFocusableControls() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.HasFocusableControls"); return default; }
-        [global::Unbound.Stub] internal static bool OwnsId(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.OwnsId"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Vector3 Internal_MultiplyPoint(global::UnityEngine.Vector3 point, global::UnityEngine.Matrix4x4 transform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.Internal_MultiplyPoint"); return default; }
         [global::Unbound.Stub] internal static void SetDidGUIWindowsEatLastEvent(bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.SetDidGUIWindowsEatLastEvent"); }
         [global::Unbound.Stub] internal static void TakeCapture() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.TakeCapture"); }

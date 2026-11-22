@@ -878,6 +878,60 @@ namespace UnityEngine
             s_SavedCaches.Clear();
         }
 
+        /// <summary>The layout of a GUI pass that an IMGUIContainer's pass interrupts.</summary>
+        internal struct OuterLayout
+        {
+            internal LayoutCache Current;
+            internal LayoutCache[] Saved;
+            internal int Owner;
+        }
+
+        internal static OuterLayout SaveOuter() =>
+            new OuterLayout { Current = current, Saved = s_SavedCaches.Count > 0 ? s_SavedCaches.ToArray() : null, Owner = s_Owner };
+
+        internal static void RestoreOuter(OuterLayout outer)
+        {
+            current = outer.Current;
+            s_Owner = outer.Owner;
+            s_SavedCaches.Clear();
+            // ToArray lists a stack from its top.
+            if (outer.Saved != null)
+                for (int i = outer.Saved.Length - 1; i >= 0; i--) s_SavedCaches.Push(outer.Saved[i]);
+        }
+
+        /// <summary>Starts a UI Toolkit IMGUIContainer's layout in its own cache: built anew in
+        /// Layout, walked again otherwise.</summary>
+        internal static void BeginContainer(LayoutCache cache)
+        {
+            s_SavedCaches.Clear();
+            current = cache;
+            if (IsLayout)
+            {
+                current.topLevel = new GUILayoutGroup();
+                current.groups.Clear();
+                current.groups.Push(current.topLevel);
+                current.windows = new GUILayoutGroup();
+            }
+            else
+            {
+                current.topLevel.ResetCursor();
+                current.groups.Clear();
+                current.groups.Push(current.topLevel);
+                current.windows.ResetCursor();
+            }
+        }
+
+        /// <summary>Lays a container's Layout event tree out over the container's size.</summary>
+        internal static void LayoutFromContainer(float w, float h)
+        {
+            var top = current.topLevel;
+            top.CalcWidth();
+            top.SetHorizontal(0f, w);
+            top.CalcHeight();
+            top.SetVertical(0f, h);
+            LayoutFreeGroup(current.windows);
+        }
+
         internal static bool HasWindow(int windowID) => s_StoredWindows.ContainsKey(WindowKey(windowID));
 
         static int WindowKey(int windowID) => unchecked(s_Owner * 31 + windowID);

@@ -182,6 +182,15 @@ namespace UnityEngine.UIElements
 
         internal int imguiKeyboardControl { get; set; }
 
+        /// <summary>The panel's focus follows IMGUI's keyboard control: the container whose control
+        /// has the keyboard is focused (or any container, <paramref name="forceSwitch"/>), and
+        /// nothing is while no control has it.</summary>
+        internal void SyncIMGUIFocus(int imguiKeyboardControlID, Focusable imguiContainerHavingKeyboardControl, bool forceSwitch)
+        {
+            imguiKeyboardControl = imguiKeyboardControlID;
+            SwitchFocus(forceSwitch || imguiKeyboardControl != 0 ? imguiContainerHavingKeyboardControl : null, FocusChangeDirection.unspecified);
+        }
+
         public void IgnoreEvent(EventBase evt)
         {
             evt.processedByFocusController = true;

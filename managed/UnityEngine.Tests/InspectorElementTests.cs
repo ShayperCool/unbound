@@ -31,7 +31,8 @@ namespace UnityEngine.Tests
 
         public class ImguiEditor : Editor
         {
-            public override void OnInspectorGUI() { }
+            internal static int drawn;
+            public override void OnInspectorGUI() => drawn++;
         }
 
         static void Tick(BaseRuntimePanel panel)
@@ -103,7 +104,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ACustomEditorsGUIIsTheInspectorsAndItsIMGUIIsReported()
+        public void ACustomEditorsGUIIsTheInspectorsAndItsIMGUIRunsInAContainer()
         {
             // The IMGUI container's measured classes.
             using var release = TestRelease.Pin(TestRelease.Measured);
@@ -115,7 +116,7 @@ namespace UnityEngine.Tests
             var custom = uie.Q<Label>("custom");
             Assert.True(custom.ClassListContains(InspectorElement.customInspectorUssClassName));
 
-            int reported = Hits("UnityEditor.UIElements.InspectorElement (IMGUI of ImguiEditor)");
+            int drawn = ImguiEditor.drawn;
             var imguiEditor = Editor.CreateEditor(f.Target, typeof(ImguiEditor));
             var imgui = f.Show(new InspectorElement(imguiEditor));
             var container = Assert.IsType<IMGUIContainer>(imgui.hierarchy[2]);
@@ -123,7 +124,9 @@ namespace UnityEngine.Tests
             Assert.Equal(Overflow.Visible, container.style.overflow.value);
             Assert.True(imgui.ClassListContains(InspectorElement.iMGUICustomVariantUssClassName));
             Assert.True(imgui.ClassListContains(InspectorElement.iMGUIInspectorVariantUssClassName));
-            Assert.Equal(reported + 1, Hits("UnityEditor.UIElements.InspectorElement (IMGUI of ImguiEditor)"));
+            // Measuring the container ran the editor's OnInspectorGUI, and nothing was reported.
+            Assert.True(ImguiEditor.drawn > drawn);
+            Assert.Equal(0, Hits("UnityEditor.UIElements.InspectorElement (IMGUI of ImguiEditor)"));
             Object.DestroyImmediate(uieEditor);
             Object.DestroyImmediate(imguiEditor);
         }
@@ -241,22 +244,20 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void TheIMGUIDefaultInspectorIsTheGenericInspectorsIMGUIReportedAndRebuiltOnEachBind()
+        public void TheIMGUIDefaultInspectorIsTheGenericInspectorsIMGUIMeasuredAndKeptOnEachBind()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
             using var f = new Fixture();
-            string member = "UnityEditor.UIElements.InspectorElement (IMGUI of GenericInspector)";
-            int before = Hits(member);
             var inspector = f.Show(new InspectorElement(new SerializedObject(f.Target), InspectorElement.DefaultInspectorFramework.IMGUI));
             Assert.Equal(new[] { "unity-inspector-element", InspectorElement.iMGUIDefaultVariantUssClassName, InspectorElement.iMGUIInspectorVariantUssClassName }, inspector.GetClasses().ToArray());
             var container = Assert.IsType<IMGUIContainer>(inspector.hierarchy[2]);
             Assert.False(container.ClassListContains(InspectorElement.customInspectorUssClassName));
-            Assert.Equal(before + 1, Hits(member));
+            // The generic inspector's IMGUI gave the container its height.
+            Assert.True(container.layout.height > 0f);
             inspector.Bind(new SerializedObject(f.Target));
             Tick(f.Panel);
             Assert.Same(container, inspector.hierarchy[2]);
             Assert.Equal(3, inspector.hierarchy.childCount);
-            Assert.Equal(before + 2, Hits(member));
         }
 
         [Fact]

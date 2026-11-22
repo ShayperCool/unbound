@@ -409,22 +409,52 @@ namespace UnityEditor.UIElements
                 var element = decorator.CreatePropertyGUI();
                 if (element == null)
                 {
-                    element = IMGUIFallback(decorator.GetType());
-                    element.style.height = decorator.GetHeight();
+                    // Its IMGUI in a container of its height.
+                    IMGUIContainer container = null;
+                    container = new IMGUIContainer(() =>
+                    {
+                        var position = new Rect { height = decorator.GetHeight(), width = container.rect.width };
+                        decorator.OnGUI(position);
+                        container.style.height = position.height;
+                    });
+                    container.style.height = decorator.GetHeight();
+                    element = container;
                 }
                 m_DecoratorDrawersContainer.Add(element);
             }
         }
 
-        VisualElement CreatePropertyIMGUIContainer(PropertyDrawer drawer) => IMGUIFallback(drawer.GetType());
-
-        // The IMGUI container the Editor draws a drawer's OnGUI in. Unbound does not run IMGUI
-        // containers in a panel, so the drawer's IMGUI is reported instead of drawn.
-        static IMGUIContainer IMGUIFallback(Type drawer)
+        /// <summary>The container a drawer without UI Toolkit GUI draws in: the property's IMGUI
+        /// field from this field's drawer on (EditorGUILayout.PropertyField), in the inspector's
+        /// horizontal margins, applied when changed (tests/projects/imguicontainer property.*).</summary>
+        VisualElement CreatePropertyIMGUIContainer(PropertyDrawer drawer) => new IMGUIContainer(() =>
         {
-            Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.PropertyField (IMGUI of {drawer.Name})");
-            return new IMGUIContainer(() => { });
-        }
+            var property = m_SerializedProperty;
+            if (property == null || !property.isValid || !property.serializedObject.isValid) return;
+            bool wideMode = InspectorElement.SetWideModeForWidth(this);
+            bool hierarchyMode = EditorGUIUtility.hierarchyMode;
+            EditorGUIUtility.hierarchyMode = true;
+            float labelWidth = EditorGUIUtility.labelWidth;
+            try
+            {
+                GUILayout.BeginVertical(EditorStyles.inspectorHorizontalDefaultMargins);
+                EditorGUI.BeginChangeCheck();
+                property.serializedObject.Update();
+                var shown = m_Label == null ? null : m_Label.Length == 0 ? GUIContent.none : new GUIContent(m_Label);
+                // The IMGUI field starts at this field's drawer.
+                using (DrawerNesting.Enter(property, m_DrawNestingLevel - 1))
+                    EditorGUILayout.PropertyField(property, shown, true);
+                property.serializedObject.ApplyModifiedProperties();
+                if (EditorGUI.EndChangeCheck()) DispatchPropertyChangedEvent();
+                GUILayout.EndVertical();
+            }
+            finally
+            {
+                EditorGUIUtility.wideMode = wideMode;
+                EditorGUIUtility.hierarchyMode = hierarchyMode;
+                EditorGUIUtility.labelWidth = labelWidth;
+            }
+        });
 
         // Every value change inside a drawer's GUI reaches the PropertyField as one change event a
         // frame later.

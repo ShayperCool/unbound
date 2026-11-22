@@ -118,6 +118,8 @@ namespace UnityEngine.UIElements
             AddToClassList(ussClassName);
             focusable = true;
             m_ContextType = ContextType.Editor;
+            requireMeasureFunction = true;
+            generateVisualContent += OnGenerateVisualContent;
         }
 
         public Action onGUIHandler
@@ -129,8 +131,15 @@ namespace UnityEngine.UIElements
             }
             set
             {
-                if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured) m_OnGUIHandler = value;
-                else Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.onGUIHandler");
+                if (!Unbound.Runtime.Compat.DefaultConstructorStateMeasured)
+                {
+                    Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.onGUIHandler");
+                    return;
+                }
+                if (m_OnGUIHandler == value) return;
+                m_OnGUIHandler = value;
+                IncrementVersion(VersionChangeType.Layout);
+                IncrementVersion(VersionChangeType.Repaint);
             }
         }
 

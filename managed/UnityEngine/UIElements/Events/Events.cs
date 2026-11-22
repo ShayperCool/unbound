@@ -901,6 +901,8 @@ namespace UnityEngine.UIElements
         protected override void Init() { base.Init(); LocalInit(); }
         void LocalInit() => propagation = EventPropagation.BubblesOrTricklesDown | EventPropagation.SkipDisabledElements;
         public MouseDownEvent() { LocalInit(); }
+
+        public new static MouseDownEvent GetPooled(Event systemEvent) => MouseEventBase<MouseDownEvent>.GetPooled(systemEvent);
     }
 
     public partial class MouseUpEvent : MouseEventBase<MouseUpEvent>
@@ -908,6 +910,8 @@ namespace UnityEngine.UIElements
         protected override void Init() { base.Init(); LocalInit(); }
         void LocalInit() => propagation = EventPropagation.BubblesOrTricklesDown | EventPropagation.SkipDisabledElements;
         public MouseUpEvent() { LocalInit(); }
+
+        public new static MouseUpEvent GetPooled(Event systemEvent) => MouseEventBase<MouseUpEvent>.GetPooled(systemEvent);
     }
 
     [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)2)] public partial class MouseMoveEvent : MouseEventBase<MouseMoveEvent>

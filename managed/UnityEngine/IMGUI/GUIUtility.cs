@@ -85,6 +85,35 @@ namespace UnityEngine
                 return id;
             }
 
+            /// <summary>Whether a control of this list can take keyboard focus.</summary>
+            public bool HasFocusable
+            {
+                get
+                {
+                    for (int i = 0; i < m_Entries.Count; i++)
+                        if (m_Entries[i].Focusable) return true;
+                    return false;
+                }
+            }
+
+            public bool Owns(int id)
+            {
+                for (int i = 0; i < m_Entries.Count; i++)
+                    if (m_Entries[i].Id == id) return true;
+                return false;
+            }
+
+            /// <summary>The first (or last) control that can take keyboard focus, or 0.</summary>
+            public int EdgeFocusable(bool last)
+            {
+                for (int n = 0; n < m_Entries.Count; n++)
+                {
+                    var entry = m_Entries[last ? m_Entries.Count - 1 - n : n];
+                    if (entry.Focusable) return entry.Id;
+                }
+                return 0;
+            }
+
             public bool CanHaveKeyboardFocus(int id)
             {
                 for (int i = 0; i < m_Entries.Count; i++)
@@ -105,6 +134,82 @@ namespace UnityEngine
             if (!s_IdLists.TryGetValue(scope, out var list))
                 s_IdLists[scope] = list = new ControlIdList();
             return list;
+        }
+
+        /// <summary>Whether the current OnGUI scope has a control that can take keyboard focus.</summary>
+        internal static bool HasFocusableControls() => s_CurrentIdList.HasFocusable;
+
+        /// <summary>Whether the current OnGUI scope made this control ID.</summary>
+        internal static bool OwnsId(int id) => s_CurrentIdList.Owns(id);
+
+        /// <summary>Gives keyboard focus to the current scope's first control that can take it.</summary>
+        internal static void SetKeyboardControlToFirstControlId() => keyboardControl = s_CurrentIdList.EdgeFocusable(false);
+
+        /// <summary>Gives keyboard focus to the current scope's last control that can take it.</summary>
+        internal static void SetKeyboardControlToLastControlId() => keyboardControl = s_CurrentIdList.EdgeFocusable(true);
+
+        /// <summary>Drops a scope's control IDs (an IMGUIContainer that left its panel).</summary>
+        internal static void ForgetIdList(int scope) => s_IdLists.Remove(scope);
+
+        /// <summary>The GUI pass a UI Toolkit IMGUIContainer's pass interrupts (a container
+        /// measured or sent an event from inside an OnGUI).</summary>
+        internal struct OuterGUI
+        {
+            internal bool Saved;
+            ControlIdList m_IdList;
+            GUIClip.State m_Clip;
+            GUILayoutUtility.OuterLayout m_Layout;
+            GUISkin m_Skin;
+            bool m_Exiting;
+
+            internal static OuterGUI Save() => new OuterGUI
+            {
+                Saved = true, m_IdList = s_CurrentIdList, m_Clip = GUIClip.Save(), m_Layout = GUILayoutUtility.SaveOuter(),
+                m_Skin = GUI.UserSkin, m_Exiting = guiIsExiting,
+            };
+
+            internal void Restore()
+            {
+                if (!Saved) return;
+                s_CurrentIdList = m_IdList;
+                GUIClip.Restore(m_Clip);
+                GUILayoutUtility.RestoreOuter(m_Layout);
+                GUI.skin = m_Skin;
+                guiIsExiting = m_Exiting;
+            }
+        }
+
+        /// <summary>Starts an IMGUIContainer's handler call: default skin and colors, its own
+        /// control IDs and layout cache, its coordinates from <paramref name="origin"/> and
+        /// <paramref name="clip"/> as all it shows. Inside an OnGUI (<paramref name="nested"/>) that
+        /// pass's state is kept for <see cref="EndContainerGUI"/>.</summary>
+        internal static OuterGUI BeginContainerGUI(int scope, GUILayoutUtility.LayoutCache cache, Vector2 origin, Rect clip, bool nested)
+        {
+            var outer = nested ? OuterGUI.Save() : default;
+            ResetGlobalState();
+            guiIsExiting = false;
+            s_CurrentIdList = IdListFor(scope);
+            s_CurrentIdList.BeginOnGUI();
+            GUIClip.BeginContainer(origin, clip);
+            GUILayoutUtility.BeginContainer(cache);
+            return outer;
+        }
+
+        /// <summary>Ends an IMGUIContainer's handler call; after a Layout event its layout is
+        /// computed over <paramref name="layoutSize"/>.</summary>
+        internal static void EndContainerGUI(OuterGUI outer, Rect layoutSize, bool reportClips)
+        {
+            try
+            {
+                if (Event.current != null && Event.current.type == EventType.Layout)
+                    GUILayoutUtility.LayoutFromContainer(layoutSize.width, layoutSize.height);
+                if (reportClips) ReportUnpoppedClips();
+            }
+            finally
+            {
+                ResetAfterGUI();
+                outer.Restore();
+            }
         }
 
         internal static void ResetControlIdListsForTests()
@@ -369,15 +474,25 @@ namespace UnityEngine
             {
                 if (layoutType != 0 && Event.current != null && Event.current.type == EventType.Layout)
                     GUILayoutUtility.Layout();
-                if (GUIClip.Depth > 1)
-                    Debug.LogError("GUI Error: You are pushing more GUIClips than you are popping. Make sure they are balanced.");
+                ReportUnpoppedClips();
             }
             finally
             {
-                GUIClip.Begin(new Rect(0, 0, Screen.width, Screen.height));
-                GUILayoutUtility.End();
-                GUIContent.ClearStaticCache();
+                ResetAfterGUI();
             }
+        }
+
+        static void ReportUnpoppedClips()
+        {
+            if (GUIClip.Depth > 1)
+                Debug.LogError("GUI Error: You are pushing more GUIClips than you are popping. Make sure they are balanced.");
+        }
+
+        static void ResetAfterGUI()
+        {
+            GUIClip.Begin(new Rect(0, 0, Screen.width, Screen.height));
+            GUILayoutUtility.End();
+            GUIContent.ClearStaticCache();
         }
 
         internal static void EndGUIAfterException()

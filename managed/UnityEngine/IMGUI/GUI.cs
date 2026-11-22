@@ -102,6 +102,9 @@ namespace UnityEngine
         public static bool enabled { get => s_Enabled; set => s_Enabled = value; }
         public static int depth { get => s_Depth; set => s_Depth = value; }
 
+        /// <summary>The skin a script set, null while the default one is used.</summary>
+        internal static GUISkin UserSkin => s_Skin == GUIUtility.GetDefaultSkin() ? null : s_Skin;
+
         public static GUISkin skin
         {
             get
