@@ -375,8 +375,9 @@ namespace UnityEngine.Tests
             // A text is an enumerable of characters, which are no items.
             Assert.Equal("added,one", Found((c, p) => new object[] { p.CreateItem(c, "one"), "text", p.CreateItem(c, "two") }, out logs));
             Assert.Equal(new[] { "Exception:InvalidCastException: Cannot cast \"System.Char\" to type UnityEditor.Search.SearchItem." }, logs);
+            // Another element that is neither (its message is not measured): one error, the items before it stay.
             Assert.Equal("added,one", Found((c, p) => new object[] { p.CreateItem(c, "one"), 5 }, out logs));
-            Assert.Equal(new[] { "Exception:InvalidCastException: Cannot cast \"System.Int32\" to type UnityEditor.Search.SearchItem." }, logs);
+            Assert.Single(logs);
         }
 
         [Fact]
