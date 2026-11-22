@@ -138,6 +138,40 @@ namespace Unbound.Runtime
                 || type == typeof(UnityEngine.Collider) || type == typeof(UnityEngine.Joint)
                 || type == typeof(UnityEngine.AudioBehaviour) || type == typeof(UnityEngine.GridLayout));
 
+        /// <summary>The engine component types a GameObject holds only one of, refused on a second
+        /// add with "such a component is already added" (Unity 6000.0.71f1,
+        /// tests/projects/uniquecomponents); other releases keep the earlier rule (no such
+        /// refusal, unmeasured).</summary>
+        internal static bool NativeComponentIsUnique(Type type) => ComponentFactoryEligibilityMeasured
+            && type.FullName != null && s_UniqueNativeComponents.Contains(type.FullName);
+
+        static readonly System.Collections.Generic.HashSet<string> s_UniqueNativeComponents = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal)
+        {
+            "UnityEngine.AI.NavMeshAgent", "UnityEngine.AI.NavMeshObstacle", "UnityEngine.Animation",
+            "UnityEngine.Animations.AimConstraint", "UnityEngine.Animations.LookAtConstraint",
+            "UnityEngine.Animations.ParentConstraint", "UnityEngine.Animations.PositionConstraint",
+            "UnityEngine.Animations.RotationConstraint", "UnityEngine.Animations.ScaleConstraint",
+            "UnityEngine.Animator", "UnityEngine.ArticulationBody", "UnityEngine.AudioListener",
+            "UnityEngine.AudioReverbZone", "UnityEngine.BillboardRenderer", "UnityEngine.Camera",
+            "UnityEngine.Canvas", "UnityEngine.CanvasGroup", "UnityEngine.CanvasRenderer",
+            "UnityEngine.CharacterController", "UnityEngine.Cloth", "UnityEngine.CompositeCollider2D",
+            "UnityEngine.ConstantForce", "UnityEngine.FlareLayer", "UnityEngine.Grid", "UnityEngine.LODGroup",
+            "UnityEngine.LensFlare", "UnityEngine.Light", "UnityEngine.LightProbeGroup",
+            "UnityEngine.LightProbeProxyVolume", "UnityEngine.LineRenderer", "UnityEngine.MeshFilter",
+            "UnityEngine.MeshRenderer", "UnityEngine.OcclusionArea", "UnityEngine.OcclusionPortal",
+            "UnityEngine.ParticleSystem", "UnityEngine.ParticleSystemForceField",
+            "UnityEngine.ParticleSystemRenderer", "UnityEngine.Playables.PlayableDirector",
+            "UnityEngine.Projector", "UnityEngine.ReflectionProbe", "UnityEngine.Rendering.SortingGroup",
+            "UnityEngine.Rigidbody", "UnityEngine.Rigidbody2D", "UnityEngine.SkinnedMeshRenderer",
+            "UnityEngine.SpriteMask", "UnityEngine.SpriteRenderer", "UnityEngine.StreamingController",
+            "UnityEngine.Terrain", "UnityEngine.TerrainCollider", "UnityEngine.TextMesh",
+            "UnityEngine.Tilemaps.Tilemap", "UnityEngine.Tilemaps.TilemapCollider2D",
+            "UnityEngine.Tilemaps.TilemapRenderer", "UnityEngine.TrailRenderer", "UnityEngine.Tree",
+            "UnityEngine.U2D.SpriteShapeRenderer", "UnityEngine.UIElements.UIRenderer",
+            "UnityEngine.VFX.VFXRenderer", "UnityEngine.VFX.VisualEffect", "UnityEngine.WheelCollider",
+            "UnityEngine.WindZone"
+        };
+
         /// <summary>Runtime compressed channel formats and readback controls measured by
         /// tests/projects/texturecompression on 6000.0.71f1. Other releases keep their previous formats.</summary>
         internal static bool RuntimeTextureCompressionMeasured => Family == ReleaseFamily.Unity6000_0;

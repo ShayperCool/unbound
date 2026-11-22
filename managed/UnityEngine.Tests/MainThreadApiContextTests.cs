@@ -188,12 +188,14 @@ namespace UnityEngine.Tests
             var material = new Material(shader) { name = "Pipeline default" };
             pipeline.Material = material;
             var go = new GameObject("Material controls");
+            // A GameObject holds one MeshRenderer (tests/projects/uniquecomponents).
+            var otherObject = new GameObject("Other material controls");
             try
             {
                 QualitySettings.renderPipeline = null;
                 UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline = pipeline;
                 var renderer = go.AddComponent<MeshRenderer>();
-                var other = go.AddComponent<MeshRenderer>();
+                var other = otherObject.AddComponent<MeshRenderer>();
                 Assert.Null(renderer.sharedMaterial);
                 Assert.NotSame(material, renderer.material);
                 Assert.Equal("Pipeline default (Instance)", renderer.material.name);
@@ -209,6 +211,7 @@ namespace UnityEngine.Tests
                 UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline = previous;
                 QualitySettings.renderPipeline = quality;
                 Object.DestroyImmediate(go);
+                Object.DestroyImmediate(otherObject);
                 Object.DestroyImmediate(material);
                 Object.DestroyImmediate(shader);
                 Object.DestroyImmediate(pipeline);

@@ -81,9 +81,11 @@ namespace Unbound.Runtime
                 Debug.LogError("AddComponent with MonoBehaviour is not allowed. Create a class that derives from MonoBehaviour and add it instead.", go);
                 return null;
             }
-            // A base class the object already has a component of: measured for Component,
-            // Behaviour and Transform only; other classes keep their earlier diagnostics.
-            if (measured && (type == typeof(Component) || type == typeof(Behaviour) || type == typeof(Transform))
+            // A base class the object already has a component of (measured for Component,
+            // Behaviour and Transform), or a second engine component of a kind an object holds
+            // one of (tests/projects/uniquecomponents); other classes keep their earlier diagnostics.
+            if (measured && (type == typeof(Component) || type == typeof(Behaviour) || type == typeof(Transform)
+                    || Compat.NativeComponentIsUnique(type))
                 && go.FindComponent(type) != null)
             {
                 Log.Engine(LogType.Log, $"Can't add component '{type.Name}' to {go.name} because such a component is already added to the game object!", go);
@@ -114,7 +116,10 @@ namespace Unbound.Runtime
             }
             if (Disallowed(go, type, out var existing))
             {
-                string message = $"The component '{type.Name}' can't be added to '{go.name}' because it already contains the same component ({existing.GetType().Name}).";
+                // A second 2D effector conflicts with the first (tests/projects/uniquecomponents).
+                string message = Compat.ComponentFactoryEligibilityMeasured && typeof(Effector2D).IsAssignableFrom(type)
+                    ? $"Can't add component '{type.Name}' to {go.name} because it conflicts with the existing '{existing.GetType().Name}' derived component!"
+                    : $"The component '{type.Name}' can't be added to '{go.name}' because it already contains the same component ({existing.GetType().Name}).";
                 // Component rejection reaches Application callbacks independently of the public logger.
                 // Measured on 6000.0.71f1 by tests/projects/componentlogs.
                 if (Compat.ComponentFactoryEligibilityMeasured)
