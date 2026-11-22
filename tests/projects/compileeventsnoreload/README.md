@@ -3,8 +3,9 @@
 The compileevents probe (its project, `../compileevents`) with one change in
 `ProjectSettings/EditorSettings.asset`: Enter Play Mode Options on with Disable Domain Reload
 (`m_EnterPlayModeOptions: 1`). Unity 6000.0.71f1, recorded with the macOS Editor in batch mode
-(two byte-identical captures); the gate runs the engine with `--watch` and compares every value
-exactly.
+(two byte-identical captures); the rounds' `internal` rows (see compileevents) were added from two
+byte-identical Linux Editor captures in which every earlier row is unchanged. The gate runs the
+engine with `--watch` and compares every value exactly.
 
 Measured: entering Play mode reloads no domain, so the domain the rounds start in is the one the
 Editor loaded at its start (`start.load`: its editor scripts' load, `[DidReloadScripts]`,

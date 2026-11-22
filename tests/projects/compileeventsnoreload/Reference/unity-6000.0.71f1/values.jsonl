@@ -6,6 +6,7 @@
 {"k":"round1.notRequired","v":"Library/ScriptAssemblies/Other.dll"}
 {"k":"round1.contexts","v":"Bee.BeeDriver.ActiveBuild"}
 {"k":"round1.contextShared","v":"True"}
+{"k":"round1.internal","v":"Library/ScriptAssemblies/Assembly-CSharp-Editor.dll errors=False probeDefine=False messages=0 after=assemblyCompilationFinished:same || Library/ScriptAssemblies/Assembly-CSharp.dll errors=False probeDefine=False messages=1 after=assemblyCompilationFinished:same"}
 {"k":"round2.state","v":"state defined=False standalone= android="}
 {"k":"round2.playMode","v":""}
 {"k":"round2.order","v":"compilationStarted,assembly,compilationFinished"}
@@ -13,6 +14,7 @@
 {"k":"round2.notRequired","v":"Library/ScriptAssemblies/Assembly-CSharp-Editor.dll,Library/ScriptAssemblies/Other.dll"}
 {"k":"round2.contexts","v":"Bee.BeeDriver.ActiveBuild"}
 {"k":"round2.contextShared","v":"True"}
+{"k":"round2.internal","v":"Library/ScriptAssemblies/Assembly-CSharp.dll errors=True probeDefine=False messages=1 after=assemblyCompilationFinished:same"}
 {"k":"round3.state","v":"state defined=False standalone= android="}
 {"k":"round3.playMode","v":""}
 {"k":"round3.order","v":"compilationStarted,assembly,compilationFinished,beforeAssemblyReload,initializeOnLoad,didReloadScripts,afterAssemblyReload"}
@@ -20,6 +22,7 @@
 {"k":"round3.notRequired","v":"Library/ScriptAssemblies/Other.dll"}
 {"k":"round3.contexts","v":"Bee.BeeDriver.ActiveBuild"}
 {"k":"round3.contextShared","v":"True"}
+{"k":"round3.internal","v":"Library/ScriptAssemblies/Assembly-CSharp-Editor.dll errors=False probeDefine=False messages=0 after=assemblyCompilationFinished:same || Library/ScriptAssemblies/Assembly-CSharp.dll errors=False probeDefine=False messages=1 after=assemblyCompilationFinished:same"}
 {"k":"round4.state","v":"state defined=False standalone= android="}
 {"k":"round4.playMode","v":""}
 {"k":"round4.order","v":"compilationStarted,assembly,compilationFinished,beforeAssemblyReload,initializeOnLoad,didReloadScripts,afterAssemblyReload"}
@@ -27,6 +30,7 @@
 {"k":"round4.notRequired","v":"Library/ScriptAssemblies/Assembly-CSharp-Editor.dll,Library/ScriptAssemblies/Assembly-CSharp.dll,Library/ScriptAssemblies/Other.dll"}
 {"k":"round4.contexts","v":"Bee.BeeDriver.ActiveBuild"}
 {"k":"round4.contextShared","v":"True"}
+{"k":"round4.internal","v":""}
 {"k":"round5.state","v":"state defined=False standalone= android="}
 {"k":"round5.playMode","v":""}
 {"k":"round5.order","v":"compilationStarted,assembly,compilationFinished,beforeAssemblyReload,initializeOnLoad,didReloadScripts,afterAssemblyReload"}
@@ -34,6 +38,7 @@
 {"k":"round5.notRequired","v":"Library/ScriptAssemblies/Assembly-CSharp-Editor.dll,Library/ScriptAssemblies/Assembly-CSharp.dll,Library/ScriptAssemblies/Other.dll"}
 {"k":"round5.contexts","v":"Bee.BeeDriver.ActiveBuild"}
 {"k":"round5.contextShared","v":"True"}
+{"k":"round5.internal","v":""}
 {"k":"round6.state","v":"state defined=True standalone=PROBE_DEFINE android="}
 {"k":"round6.playMode","v":""}
 {"k":"round6.order","v":"compilationStarted,assembly,compilationFinished,beforeAssemblyReload,initializeOnLoad,didReloadScripts,afterAssemblyReload"}
@@ -41,6 +46,7 @@
 {"k":"round6.notRequired","v":""}
 {"k":"round6.contexts","v":"Bee.BeeDriver.ActiveBuild"}
 {"k":"round6.contextShared","v":"True"}
+{"k":"round6.internal","v":"Library/ScriptAssemblies/Assembly-CSharp-Editor.dll errors=False probeDefine=True messages=0 after=assemblyCompilationFinished:same || Library/ScriptAssemblies/Assembly-CSharp.dll errors=False probeDefine=True messages=1 after=assemblyCompilationFinished:same || Library/ScriptAssemblies/Other.dll errors=False probeDefine=True messages=0 after=assemblyCompilationFinished:same"}
 {"k":"round7.state","v":"state defined=True standalone=PROBE_DEFINE android=OTHER_DEFINE"}
 {"k":"round7.playMode","v":""}
 {"k":"round7.order","v":""}
@@ -48,6 +54,7 @@
 {"k":"round7.notRequired","v":""}
 {"k":"round7.contexts","v":""}
 {"k":"round7.contextShared","v":"False"}
+{"k":"round7.internal","v":""}
 {"k":"round8.state","v":"state defined=True standalone=PROBE_DEFINE android=OTHER_DEFINE"}
 {"k":"round8.playMode","v":""}
 {"k":"round8.order","v":""}
@@ -55,4 +62,5 @@
 {"k":"round8.notRequired","v":""}
 {"k":"round8.contexts","v":""}
 {"k":"round8.contextShared","v":"False"}
+{"k":"round8.internal","v":""}
 {"k":"complete","v":true}
