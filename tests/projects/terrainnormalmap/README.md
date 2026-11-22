@@ -26,9 +26,11 @@ Measured in the Unity 6000.0.71f1 Editor (Linux, OpenGL Core, NVIDIA; two identi
   the changed samples and their neighbours change), not when it is made.
 
 Unbound makes the texture on the CPU by that rule and copies it in (its mip levels from the
-first); every value matches within the step. Unmeasured: other graphics devices, a terrain loaded
-with instancing on (Unbound makes the texture at the first query or render), a terrain disabled or
-its TerrainData replaced while instanced, holes.
+first); every value matches within the step. Its renderer does not sample the texture, so Unbound
+makes it when a script first asks for it (it is hidden: nothing else sees it) and refreshes the
+whole of it at a render after the heights changed. Unmeasured: other graphics devices, a terrain
+disabled, its TerrainData replaced or its heightmap resolution changed while instanced (Unbound
+makes a new texture at the next render), holes.
 
     python3 tests/projects/terrainnormalmap/run.py record --label A   # Editor capture (GPU)
     python3 tests/projects/terrainnormalmap/run.py record --label B

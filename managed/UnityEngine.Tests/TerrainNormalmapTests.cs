@@ -89,15 +89,21 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>Height changes reach the normal map when the terrain is next rendered.</summary>
+        /// <summary>Height changes reach the normal map when the terrain is next rendered; making
+        /// and refreshing it leave the script's active render texture active.</summary>
         [Fact]
         public void HeightChangesWaitForTheNextRender()
         {
             var (go, terrain, data) = Make(null);
+            var target = new RenderTexture(4, 4, 0);
+            var previous = RenderTexture.active;
             try
             {
+                RenderTexture.active = target;
                 terrain.drawInstanced = true;
                 var map = terrain.normalmapTexture;
+                Assert.Same(target, RenderTexture.active);
+                var before = (Color32[])terrain.NormalmapTexelsIfMade.Clone();
                 int made = data.m_HeightsVersion;
                 data.SetHeights(10, 12, new float[,] { { 0.25f } });
                 Assert.Same(map, terrain.normalmapTexture);
@@ -105,10 +111,38 @@ namespace UnityEngine.Tests
                 terrain.UpdateNormalmap();
                 Assert.Same(map, terrain.normalmapTexture);
                 Assert.Equal(data.m_HeightsVersion, terrain.m_NormalmapVersion);
+                Assert.Same(target, RenderTexture.active);
+                // Beside the raised sample (its own Sobel gradient is zero).
+                Assert.NotEqual(before[12 * 33 + 11], terrain.NormalmapTexelsIfMade[12 * 33 + 11]);
             }
             finally
             {
+                RenderTexture.active = previous;
+                Object.DestroyImmediate(target);
                 Object.DestroyImmediate(go);
+                Object.DestroyImmediate(data);
+            }
+        }
+
+        /// <summary>Unbound makes the map when a script first asks for it: an instanced terrain
+        /// nobody asks about has none to keep up to date.</summary>
+        [Fact]
+        public void TheMapIsMadeWhenAScriptAsksForIt()
+        {
+            var (go, terrain, data) = Make(null);
+            try
+            {
+                terrain.drawInstanced = true;
+                terrain.UpdateNormalmap();
+                Assert.Null(terrain.NormalmapIfMade);
+                Assert.NotNull(terrain.normalmapTexture);
+                Assert.NotNull(terrain.NormalmapIfMade);
+                Object.DestroyImmediate(go);
+                Assert.Null(terrain.normalmapTexture);
+            }
+            finally
+            {
+                if (go != null) Object.DestroyImmediate(go);
                 Object.DestroyImmediate(data);
             }
         }

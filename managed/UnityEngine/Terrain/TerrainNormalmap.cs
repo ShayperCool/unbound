@@ -15,20 +15,28 @@ namespace UnityEngine
     /// one). Height changes reach it when the terrain is next rendered, not when they are made.
     /// The Editor draws it on its GPU: one value in about seven is one 8-bit step from this rule
     /// (the probe compares within that step). The other devices and releases are unmeasured.
+    /// Unbound's own renderer does not sample it: Unbound makes it when a script first asks for it
+    /// and keeps it up to date from then on (nothing else can see it: it is hidden), so instanced
+    /// terrains nobody asks about cost nothing.
     /// </summary>
     public sealed partial class Terrain
     {
         RenderTexture m_Normalmap;
         Texture2D m_NormalmapSource;
+        Color32[] m_NormalmapTexels;
         TerrainData m_NormalmapData;
         internal int m_NormalmapVersion;
+        /// <summary>The normal map and its texels, when made (tests).</summary>
+        internal RenderTexture NormalmapIfMade => m_Normalmap;
+        internal Color32[] NormalmapTexelsIfMade => m_NormalmapTexels;
 
         /// <summary>The normal map of an instanced terrain (null otherwise; see the class).</summary>
         public RenderTexture normalmapTexture
         {
             get
             {
-                if (!m_DrawInstanced) return null;
+                // A destroyed terrain has none (and makes none that nothing would release).
+                if (this == null || !m_DrawInstanced) return null;
                 if (m_Normalmap == null) MakeNormalmap();
                 return m_Normalmap;
             }
@@ -38,16 +46,15 @@ namespace UnityEngine
         {
             if (m_DrawInstanced == value) return;
             m_DrawInstanced = value;
-            if (value) MakeNormalmap();
-            else ReleaseNormalmap();
+            if (!value) ReleaseNormalmap();
         }
 
         /// <summary>Before the terrain is rendered: the heights changed since the normal map was
-        /// made reach it.</summary>
+        /// made reach it (once a script has it).</summary>
         internal void UpdateNormalmap()
         {
-            if (!m_DrawInstanced || m_TerrainData == null) return;
-            if (m_Normalmap == null || !ReferenceEquals(m_NormalmapData, m_TerrainData)
+            if (!m_DrawInstanced || m_TerrainData == null || m_Normalmap == null) return;
+            if (!ReferenceEquals(m_NormalmapData, m_TerrainData)
                 || m_Normalmap.width != m_TerrainData.heightmapResolution)
                 MakeNormalmap();
             else if (m_NormalmapVersion != m_TerrainData.m_HeightsVersion)
@@ -89,9 +96,15 @@ namespace UnityEngine
         {
             var data = m_TerrainData;
             int resolution = m_Normalmap.width;
-            m_NormalmapSource.SetPixelData(NormalmapTexels(data, resolution), 0);
+            if (m_NormalmapTexels == null || m_NormalmapTexels.Length != resolution * resolution)
+                m_NormalmapTexels = new Color32[resolution * resolution];
+            NormalmapTexels(data, resolution, m_NormalmapTexels);
+            m_NormalmapSource.SetPixelData(m_NormalmapTexels, 0);
             m_NormalmapSource.Apply(false);
+            // Blit makes its destination the active render texture: the script's stays active.
+            var active = RenderTexture.active;
             Graphics.Blit(m_NormalmapSource, m_Normalmap);
+            RenderTexture.active = active;
             m_Normalmap.GenerateMips();
             m_NormalmapVersion = data.m_HeightsVersion;
         }
@@ -102,6 +115,7 @@ namespace UnityEngine
             if (m_NormalmapSource != null) Object.DestroyImmediate(m_NormalmapSource);
             m_Normalmap = null;
             m_NormalmapSource = null;
+            m_NormalmapTexels = null;
             m_NormalmapData = null;
         }
 
@@ -110,6 +124,12 @@ namespace UnityEngine
         internal static Color32[] NormalmapTexels(TerrainData data, int resolution)
         {
             var texels = new Color32[resolution * resolution];
+            NormalmapTexels(data, resolution, texels);
+            return texels;
+        }
+
+        static void NormalmapTexels(TerrainData data, int resolution, Color32[] texels)
+        {
             var size = data.size;
             float cells = Mathf.Max(1, resolution - 1);
             float scaleX = size.y / (size.x / cells), scaleZ = size.y / (size.z / cells);
@@ -124,7 +144,6 @@ namespace UnityEngine
                     texels[y * resolution + x] = new Color32(Channel(n.x), Channel(n.y), Channel(n.z), 255);
                 }
             }
-            return texels;
         }
 
         /// <summary>A normal component as the Editor stores it: 8 bits of n * 0.5 + 0.5.</summary>
