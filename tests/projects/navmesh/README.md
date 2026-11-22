@@ -253,3 +253,28 @@ are climber vertical velocity at frames 21, 85 and 88, walker vertical
 velocity at 142, and left's path flag at 222. Each of those frames
 also differed in the previous 212-frame comparison. The baked reference,
 comparator and tolerances are unchanged.
+
+## Baked surface height
+
+The surface-height profile samples twelve positions on the baked NavMesh.
+It also moves an agent to each horizontal position from a nearby start and
+records the exact height from both operations. The controls include flat
+ground, an oblique slope and two points on the far side of a detail-triangle
+edge. The nearer point still takes the earlier triangle's height. The farther
+point takes the adjacent triangle's height.
+
+The Unity 6.0 API describes sampling the nearest point within range by
+projecting along the surface instance's vertical axis, without testing
+obstructions. It also documents that Move applies a relative offset and
+adjusts an existing path. The interpolation and the edge rule were measured
+on Unity 6000.0.71f1. [NavMesh.SamplePosition](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmesh/sampleposition),
+[NavMeshAgent.Move](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/move).
+
+    python3 tests/projects/navmesh/surface_height.py editor --release 6000.0.71f1 --label L
+    python3 tests/projects/navmesh/surface_height.py publish --release 6000.0.71f1 --label L
+    UNBOUND_CLI=.../unbound python3 tests/projects/navmesh/surface_height.py gate --release 6000.0.71f1
+
+Both Editor runs completed and wrote identical captures. The profile records
+133 values, including the completion marker. The previous interpolation differs
+in 22 exact height fields. Other release families use their existing,
+unmeasured interpolation.

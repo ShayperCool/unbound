@@ -296,6 +296,7 @@ namespace Unbound.Runtime
                         {
                             exactStraightPathMerge = Compat.NavMeshStraightPathExactMergeMeasured,
                             projectPointLinkEnds = Compat.NavMeshPointLinkProjectionMeasured,
+                            dotProductDetailHeight = Compat.NavMeshDotProductHeightMeasured,
                         },
                     };
                     surface.Mesh.Init(param, DtDetour.DT_VERTS_PER_POLYGON);

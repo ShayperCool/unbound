@@ -328,6 +328,10 @@ namespace Unbound.Runtime
         /// endpoints (navlinks wall movement, Unity 6000.0.71f1).</summary>
         internal static bool NavMeshWallProjectionMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Detail surface height uses dot-product barycentric weights with a small edge
+        /// tolerance (navmesh surface height, Unity 6000.0.71f1).</summary>
+        internal static bool NavMeshDotProductHeightMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Enabling an agent starts its reported velocity at zero, measured by
         /// tests/projects/navlinks on 6000.0.71f1. Other releases retain the previous,
         /// unmeasured velocity report until the next update.</summary>

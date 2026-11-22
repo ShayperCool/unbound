@@ -225,6 +225,33 @@ namespace DotRecast.Detour
             return false;
         }
 
+        /// <summary>Interpolates the detail surface in horizontal coordinates. Points just beyond
+        /// a triangle's edge can use its plane (Unity 6000.0.71f1, navmesh surface height).</summary>
+        public static bool DotProductTriangleHeight(RcVec3f p, RcVec3f a, RcVec3f b, RcVec3f c, out float height)
+        {
+            const float BarycentricTolerance = 0.0001f;
+            var toC = c - a;
+            var toB = b - a;
+            var offset = p - a;
+            float cc = toC.Dot2D(toC);
+            float bb = toB.Dot2D(toB);
+            float cb = toC.Dot2D(toB);
+            float pc = offset.Dot2D(toC);
+            float pb = offset.Dot2D(toB);
+            float inverse = 1f / (cc * bb - cb * cb);
+            float u = (bb * pc - cb * pb) * inverse;
+            float v = (cc * pb - cb * pc) * inverse;
+            // A zero-area triangle has no finite coordinates and fails these comparisons.
+            if (u >= -BarycentricTolerance && v >= -BarycentricTolerance && u + v <= 1f + BarycentricTolerance)
+            {
+                height = a.Y + u * toC.Y + v * toB.Y;
+                return true;
+            }
+
+            height = 0f;
+            return false;
+        }
+
         public static RcVec2f ProjectPoly(RcVec3f axis, Span<float> poly, int npoly)
         {
             float rmin, rmax;

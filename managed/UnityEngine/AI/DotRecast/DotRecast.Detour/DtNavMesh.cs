@@ -52,6 +52,7 @@ namespace DotRecast.Detour
         public bool exactStraightPathMerge;
         /// <summary>Unbound: bind point links to the chosen polygon's detail triangles.</summary>
         public bool projectPointLinkEnds;
+        public bool dotProductDetailHeight;
 
         /// Unbound: the surfaces (NavMesh data instances), in order of their ids, and how many
         /// tiles belong to none.
@@ -1623,7 +1624,7 @@ namespace DotRecast.Detour
                     Span<RcVec3f> v = tempV;
                     ReadDetailTriangle(tile.data, poly, pd, t, v);
 
-                    if (DtUtils.ClosestHeightPointTriangle(pos, v[0], v[1], v[2], out var h))
+                    if (TryDetailHeight(pos, v, out var h))
                     {
                         return h;
                     }
@@ -1644,7 +1645,7 @@ namespace DotRecast.Detour
                         v[k + 1].Z = tile.data.verts[poly.verts[j + k] * 3 + 2];
                     }
 
-                    if (DtUtils.ClosestHeightPointTriangle(pos, v[0], v[1], v[2], out var h))
+                    if (TryDetailHeight(pos, v, out var h))
                     {
                         return h;
                     }
@@ -1657,6 +1658,11 @@ namespace DotRecast.Detour
             // ok.
             return ClosestPointOnDetailEdges(tile, poly, pos, false).Y;
         }
+
+        bool TryDetailHeight(RcVec3f position, Span<RcVec3f> triangle, out float height) =>
+            dotProductDetailHeight
+                ? DtUtils.DotProductTriangleHeight(position, triangle[0], triangle[1], triangle[2], out height)
+                : DtUtils.ClosestHeightPointTriangle(position, triangle[0], triangle[1], triangle[2], out height);
 
         static void ReadDetailTriangle(DtMeshData data, DtPoly poly, DtPolyDetail detail, int triangle,
             Span<RcVec3f> vertices)
