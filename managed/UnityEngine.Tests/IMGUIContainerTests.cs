@@ -319,6 +319,113 @@ namespace UnityEngine.Tests
             Assert.DoesNotContain(logs.Entries, e => e.Contains("GUI Error") || e.StartsWith("Exception"));
         }
 
+        // A pass starts with the skin of its container's context: the Editor's for the Editor
+        // context, the game's for the Player context (tests/projects/imguicontainer auto.* measures
+        // the Editor context's). Without an installation the Editor's skin is an empty one, still
+        // its own object.
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AnEditorContainerRunFromAGamePassHasTheEditorsSkinAndGivesTheGamesBack(bool userSkin)
+        {
+            using var logs = new Logs();
+            using var f = new Fixture();
+            var editorSkin = Unbound.Runtime.EditorGuiSkins.Current;
+            var gameSkin = GUIUtility.GetDefaultSkin(0);
+            Assert.NotSame(gameSkin, editorSkin);
+            var own = userSkin ? ScriptableObject.CreateInstance<GUISkin>() : null;
+            GUISkin inside = null, insideMode0 = null, before = null, after = null;
+            int modeInside = -1, modeAfter = -1;
+            var inner = f.Add(() =>
+            {
+                inside = GUI.skin;
+                modeInside = GUIUtility.s_SkinMode;
+                insideMode0 = GUIUtility.GetDefaultSkin(0);
+            });
+            bool nested = false;
+            var outer = f.Add(() =>
+            {
+                if (own != null) GUI.skin = own;
+                before = GUI.skin;
+                if (nested) inner.HandleIMGUIEvent(new Event { type = EventType.KeyDown, keyCode = KeyCode.A }, true);
+                after = GUI.skin;
+                modeAfter = GUIUtility.s_SkinMode;
+            });
+            outer.contextType = ContextType.Player;
+            f.Tick();
+            nested = true;
+            Send(outer, KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.B }), out _);
+
+            Assert.Same(editorSkin, inside);
+            Assert.Equal(1, modeInside);
+            Assert.Same(gameSkin, insideMode0);
+            Assert.Same(own ?? gameSkin, before);
+            Assert.Same(own ?? gameSkin, after);
+            Assert.Equal(0, modeAfter);
+            // After the game's pass its skin is still the one it had: the default, or its own.
+            Assert.Equal(0, GUIUtility.s_SkinMode);
+            Assert.Same(own ?? gameSkin, GUI.skin);
+            GUI.skin = null;
+            if (own != null) Object.DestroyImmediate(own);
+        }
+
+        [Fact]
+        public void AnEditorContainerThatThrowsInsideAGamePassGivesTheGamesSkinBack()
+        {
+            using var logs = new Logs();
+            using var f = new Fixture();
+            var gameSkin = GUIUtility.GetDefaultSkin(0);
+            var inner = f.Add(() =>
+            {
+                if (Event.current.type != EventType.Layout) throw new InvalidOperationException("inner");
+            });
+            GUISkin after = null;
+            int modeAfter = -1;
+            bool nested = false, thrown = false;
+            var outer = f.Add(() =>
+            {
+                if (!nested) return;
+                try
+                {
+                    inner.HandleIMGUIEvent(new Event { type = EventType.KeyDown, keyCode = KeyCode.A }, true);
+                }
+                catch (InvalidOperationException)
+                {
+                    thrown = true;
+                }
+                after = GUI.skin;
+                modeAfter = GUIUtility.s_SkinMode;
+            });
+            outer.contextType = ContextType.Player;
+            f.Tick();
+            nested = true;
+            Send(outer, KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.B }), out _);
+            Assert.True(thrown);
+            Assert.Same(gameSkin, after);
+            Assert.Equal(0, modeAfter);
+        }
+
+        [Fact]
+        public void AfterAnEditorContainersOwnPassTheGamesSkinIsTheDefaultAgain()
+        {
+            using var logs = new Logs();
+            using var f = new Fixture();
+            GUISkin inside = null;
+            var container = f.Add(() => inside = GUI.skin);
+            Assert.Equal(ContextType.Editor, container.contextType);
+            f.Tick();
+            Assert.Same(Unbound.Runtime.EditorGuiSkins.Current, inside);
+            Assert.Equal(0, GUIUtility.s_SkinMode);
+            Assert.Same(GUIUtility.GetDefaultSkin(0), GUI.skin);
+
+            // A container of the Player context has the game's skin in its pass.
+            inside = null;
+            container.contextType = ContextType.Player;
+            container.MarkDirtyLayout();
+            f.Tick();
+            Assert.Same(GUIUtility.GetDefaultSkin(0), inside);
+        }
+
         [Fact]
         public void AnExceptionInALayoutPassIsLoggedAndUnpoppedClipsAreReported()
         {
