@@ -157,6 +157,8 @@ public class NavLinksProbe : MonoBehaviour
         var linkEnd = new Vector3(3.25f, -0.1f, 0.25f);
         RecordLinkProjection("slope", origin, linkStart, linkEnd,
             new Vector3(-5f, 0f, 0f), new Vector3(6.5f, 0.4f, 0.25f));
+        RecordLinkProjection("slopeStart", origin, linkEnd, linkStart,
+            new Vector3(6.5f, 0.4f, 0.25f), new Vector3(-5f, 0f, 0f));
         NavMesh.RemoveNavMeshData(instance);
         DestroyImmediate(data);
     }

@@ -11,7 +11,7 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1]))
 from editor_runner import EditorJob, LAUNCHER, result_problem, run_parallel, summary
-from probe_paths import private_label, project_copy, reference_root, run_root
+from probe_paths import private_label, project_copy, reference_root, run_root, unity_version
 from value_probe import engine_cli
 
 REPEATS = ('native1', 'native2')
@@ -22,11 +22,18 @@ def stimulus(out):
     return {'NAVLINKS_OUT': str(out/OUTPUT), 'NAVLINKS_PROJECTION': '1'}
 
 
+def copy_project(destination, *, package_cache=True):
+    project = project_copy(HERE, destination, package_cache=package_cache)
+    version = project/'ProjectSettings/ProjectVersion.txt'
+    version.write_text(f'm_EditorVersion: {unity_version()}\n')
+    return project
+
+
 def editor(root):
     jobs = []
     for repeat in REPEATS:
         out = root/repeat
-        project = project_copy(HERE, out/'project', package_cache=False)
+        project = copy_project(out/'project', package_cache=False)
         jobs.append(EditorJob(project, out/'editor.log', out, ['-executeMethod', 'ProbeRunner.Record'],
                               batch=True, env=stimulus(out), timeout=600, label=f'projection-{repeat}'))
     failed = False
@@ -53,7 +60,7 @@ def publish(root, target):
 
 
 def gate(root, target):
-    project = project_copy(HERE, root/'project')
+    project = copy_project(root/'project')
     command = [str(engine_cli()), 'run', '-p', str(project), '--headless', '20', '--no-watch']
     if LAUNCHER.is_file():
         command = [str(LAUNCHER), '--kind', 'engine-cpu', *command]

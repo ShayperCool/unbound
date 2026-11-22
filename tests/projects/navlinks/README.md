@@ -340,7 +340,7 @@ reference rows remain an unchanged byte prefix, SHA-256 `368aa077937bd6083df76e8
 mechanisms use Compat for 6000.0.71f1; other releases retain their previous,
 unmeasured reports and cancellation of the completed destination request.
 
-The strict original count falls from 258 to 255. The remaining cases are
+At Q462 the strict original count fell from 258 to 255. At that point the cases were
 `crosstile` 118, `endatlink` 81, `areamask` 54, and one stale report each in `disableagent` and `targets`. Every missing, extra or failing value remains in the strict comparison.
 No reference row, comparator or tolerance was changed to remove a discrepancy.
 
@@ -359,8 +359,9 @@ flat, adjacent, and sloped polygons. It includes a destination at the authored
 link end, fractional offsets, radius snapping, higher endpoints, traversal in
 both directions, and a wide link as a control. The horizontal coordinates are
 also recorded as float bit patterns. A projected end can differ from the
-destination by one float and appear as a separate corner. The sloped control
-distinguishes three-dimensional projection from a height lookup at the
+destination by one float and appear as a separate corner. The slope is
+measured at both the authored start and end of a link. Those controls
+distinguish three-dimensional projection from a height lookup at the
 authored horizontal position.
 
 ```
@@ -369,8 +370,9 @@ python3 tests/projects/navlinks/projection.py publish --release 6000.0.71f1 --la
 UNBOUND_CLI=.../unbound python3 tests/projects/navlinks/projection.py gate --release 6000.0.71f1
 ```
 
-The two independent Editor captures agree in every row. The profile uses the
-existing path comparator and keeps the original broad capture unchanged.
+Two independent Editor captures agree on all 240 values. The profile uses the
+existing comparator and keeps the original broad capture unchanged. All 81
+`endatlink` differences are resolved, with 174 other original values remaining.
 The Unity 6.0 API describes the ordered corners of a calculated path. Exact
 point-link projection is measured here, including the control with no
 projection change to a wide link.
