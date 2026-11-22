@@ -33,7 +33,8 @@ namespace Unbound.Runtime
             Checked = 8,
             Focus = 0x2000,
             Hover = 0x10000,
-            /// <summary>Any other pseudo-class (`:root`, `:disabled`, ...): one bit each.</summary>
+            /// <summary>`:root`; the bits above it are other pseudo-classes (`:disabled`, ...),
+            /// which no GUI style reads.</summary>
             OtherFirst = 0x100000,
         }
 
@@ -487,8 +488,9 @@ namespace Unbound.Runtime
             return state == State.None ? State.Normal : state;
         }
 
-        /// <summary>A bit of its own for a pseudo-class GUI styles have no state for, so that its
-        /// values stay apart from the states styles read.</summary>
+        /// <summary>A bit for a pseudo-class GUI styles have no state for, so that its values
+        /// stay apart from the states styles read (the first ten each have their own, further
+        /// ones share the last).</summary>
         State OtherState(string name)
         {
             if (!m_OtherStates.TryGetValue(name, out int bit))
