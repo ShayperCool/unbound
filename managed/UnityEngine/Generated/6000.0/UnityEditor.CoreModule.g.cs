@@ -9116,8 +9116,7 @@ namespace UnityEditor
         internal static global::UnityEngine.Vector2 knobSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorStyles.knobSize"); return default; } }
         internal static global::UnityEngine.Vector2 miniKnobSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorStyles.miniKnobSize"); return default; } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class EditorTextSettings : global::UnityEngine.TextCore.Text.TextSettings
+    unsafe partial class EditorTextSettings
     {
         [global::Unbound.Stub] public global::UnityEditor.BlurryTextCaching blurryTextCaching;
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.EditorTextRenderingMode currentEditorTextRenderingMode;
@@ -9131,8 +9130,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal override global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> GetFallbackFontAssets(int textPixelSize = -1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorTextSettings.GetFallbackFontAssets"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset>(); }
         [global::Unbound.Stub] internal static void UpdateLocalizationFontAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorTextSettings.UpdateLocalizationFontAsset"); }
         [global::Unbound.Stub] internal static void UpdateDefaultTextStyleSheet() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorTextSettings.UpdateDefaultTextStyleSheet"); }
-        [global::Unbound.Stub] public EditorTextSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorTextSettings.ctor"); }
-        internal static global::UnityEditor.EditorTextSettings defaultTextSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorTextSettings.defaultTextSettings"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class EditorToolGUI

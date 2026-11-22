@@ -66,9 +66,13 @@ namespace UnityEngine
 
         internal int hash => string.IsNullOrEmpty(m_Text) ? 0 : unchecked(m_Text.GetHashCode() * 37);
 
+        /// <summary>The character every text is generated with at its end, so that the cursor
+        /// has a place after the last character and on an empty last line.</summary>
+        internal static string k_ZeroWidthSpace = "\u200b";
+
         internal string textWithWhitespace
         {
-            get => string.IsNullOrEmpty(m_Text) ? "\u200B" : m_Text + "\u200B";
+            get => string.IsNullOrEmpty(m_Text) ? k_ZeroWidthSpace : m_Text + k_ZeroWidthSpace;
             set => m_Text = value;
         }
 
@@ -174,7 +178,7 @@ namespace UnityEngine
     /// <summary>
     /// The look of a UnityGUI element: backgrounds per state (normal, hover, active, focused and
     /// their "on" variants) drawn nine-sliced by <see cref="border"/>, and text and image laid out
-    /// inside <see cref="padding"/>. Text goes through the legacy text generator.
+    /// inside <see cref="padding"/> (GUIStyle.Text.cs).
     /// </summary>
     [Serializable]
     public sealed partial class GUIStyle
@@ -300,11 +304,7 @@ namespace UnityEngine
         internal Vector2 Internal_clipOffset { get; set; }
 
         /// <summary>The font this style draws with: its own, else the current skin's, else the built-in one.</summary>
-        internal Font ResolvedFont => m_Font != null ? m_Font : GUISkin.current != null && GUISkin.current.font != null ? GUISkin.current.font : BuiltinGuiSkin.Font;
-
-        /// <summary>The font's line spacing in whole pixels, truncated as Font.lineHeight is
-        /// (measured: 14 for LegacyRuntime's 14.95 at 13 px, tests/projects/imguiskin).</summary>
-        public float lineHeight => Mathf.Floor(GuiText.LineHeight(ResolvedFont, m_FontSize, m_FontStyle));
+        internal Font ResolvedFont => m_Font != null ? m_Font : GetDefaultFont();
 
         public bool isHeightDependantOnWidth => m_FixedHeight == 0f && m_WordWrap && m_ImagePosition != ImagePosition.ImageOnly;
 
@@ -345,7 +345,7 @@ namespace UnityEngine
         public void Draw(Rect position, GUIContent content, bool isHover, bool isActive, bool on, bool hasKeyboardFocus)
         {
             if (!IsRepaint()) return;
-            DrawStyle(position, content, isHover, isActive, on, hasKeyboardFocus && showKeyboardFocus, -1, -1, -1);
+            DrawStyle(position, content, isHover, isActive, on, hasKeyboardFocus && showKeyboardFocus, -1, -1);
         }
 
         public void Draw(Rect position, GUIContent content, int controlID) => Draw(position, content, controlID, false);
@@ -360,7 +360,7 @@ namespace UnityEngine
             bool isHover = hover && (hot == 0 || hot == controlID) && GuiDispatch.MouseInView;
             bool isActive = controlID != 0 && hot == controlID;
             bool focus = controlID != 0 && GUIUtility.keyboardControl == controlID && showKeyboardFocus;
-            DrawStyle(position, content, isHover, isActive, on, focus, -1, -1, -1);
+            DrawStyle(position, content, isHover, isActive, on, focus, -1, -1);
         }
 
         public void DrawCursor(Rect position, GUIContent content, int controlID, int character)
@@ -380,7 +380,7 @@ namespace UnityEngine
             bool isHover = position.Contains(Event.current.mousePosition) && (hot == 0 || hot == controlID);
             bool focus = GUIUtility.keyboardControl == controlID;
             DrawStyle(position, content, isHover, hot == controlID, false, focus,
-                Math.Min(firstSelectedCharacter, lastSelectedCharacter), Math.Max(firstSelectedCharacter, lastSelectedCharacter), -1);
+                Math.Min(firstSelectedCharacter, lastSelectedCharacter), Math.Max(firstSelectedCharacter, lastSelectedCharacter));
             if (focus && firstSelectedCharacter == lastSelectedCharacter) DrawCursorAt(position, content, lastSelectedCharacter);
         }
 
@@ -393,268 +393,7 @@ namespace UnityEngine
             }
             if (!IsRepaint()) return;
             bool focus = GUIUtility.keyboardControl == controlID;
-            DrawStyle(position, content, position.Contains(Event.current.mousePosition), false, false, focus, -1, -1, -1);
-        }
-
-        void DrawCursorAt(Rect position, GUIContent content, int index)
-        {
-            if (GUISkin.current != null)
-            {
-                float speed = GUISkin.current.settings.cursorFlashSpeed;
-                if (speed > 0f && (Time.realtimeSinceStartup * speed) % 1f > 0.5f) return;
-            }
-            var at = GetCursorPixelPosition(position, content, index);
-            var color = GUISkin.current != null ? GUISkin.current.settings.cursorColor : Color.white;
-            GuiRender.FillRect(new Rect(at.x, at.y, 1f, lineHeight), GUI.color * color);
-        }
-
-        /// <summary>Draws the background then the content; a selection range highlights characters.</summary>
-        void DrawStyle(Rect position, GUIContent content, bool isHover, bool isActive, bool on, bool focus, int selectFrom, int selectTo, int unused)
-        {
-            var state = StateFor(isHover, isActive, on, focus);
-            var enabledAlpha = GUI.enabled ? 1f : 0.5f;
-            bool mixedCheckbox = m_Name == UnityEditor.InspectorTogglePaint.MixedStyleName;
-            bool inspectorCheckbox = (mixedCheckbox || m_Name == "toggle" || m_Name == "Toggle") && m_Normal.background == null
-                && Compat.InspectorGuiStylesMeasured && Native.IsReady;
-            if (inspectorCheckbox)
-                UnityEditor.InspectorTogglePaint.Draw(position, isHover, isActive, on, focus, mixedCheckbox, enabledAlpha);
-            else if (state.background != null)
-            {
-                var bg = GUI.color * GUI.backgroundColor;
-                bg.a *= enabledAlpha;
-                GuiRender.DrawSliced(m_Overflow.Add(position), state.background, m_Border, bg);
-            }
-            if (content == null) return;
-            var inner = m_Padding.Remove(position);
-            inner.position += m_ContentOffset + Internal_clipOffset;
-            var textColor = state.textColor * GUI.color * GUI.contentColor;
-            textColor.a *= enabledAlpha;
-            var imageColor = GUI.color * GUI.contentColor;
-            imageColor.a *= enabledAlpha;
-            bool clip = m_TextClipping == TextClipping.Clip;
-            if (clip) GuiRender.PushClip(m_Padding.Remove(position));
-            try
-            {
-                LayoutContent(inner, content, out var imageRect, out var textRect);
-                if (content.image != null && m_ImagePosition != ImagePosition.TextOnly)
-                    GuiRender.DrawTexture(imageRect, content.image, new Rect(0, 0, 1, 1), imageColor);
-                if (!string.IsNullOrEmpty(content.text) && m_ImagePosition != ImagePosition.ImageOnly)
-                {
-                    if (selectFrom >= 0 && selectTo > selectFrom)
-                        DrawSelection(textRect, content.text, selectFrom, selectTo);
-                    GuiText.Draw(textRect, content.text, this, textColor);
-                }
-            }
-            finally
-            {
-                if (clip) GuiRender.PopClip();
-            }
-        }
-
-        void DrawSelection(Rect textRect, string text, int from, int to)
-        {
-            var color = GUISkin.current != null ? GUISkin.current.settings.selectionColor : new Color(0.24f, 0.49f, 0.91f, 0.6f);
-            var layout = GuiText.Layout(textRect, text, this);
-            float height = lineHeight;
-            to = Math.Min(to, layout.characterCount - 1);
-            for (int i = from; i < to; )
-            {
-                var start = GuiText.CursorAt(textRect, layout, i);
-                int j = i + 1;
-                while (j < to && Mathf.Approximately(GuiText.CursorAt(textRect, layout, j).y, start.y)) j++;
-                var end = GuiText.CursorAt(textRect, layout, j);
-                float right = Mathf.Approximately(end.y, start.y) ? end.x : start.x + GuiText.CharWidth(layout, j - 1);
-                GuiRender.FillRect(new Rect(start.x, start.y, Math.Max(1f, right - start.x), height), GUI.color * color);
-                i = j;
-            }
-        }
-
-        /// <summary>Where the image and the text go inside the content rect.</summary>
-        void LayoutContent(Rect inner, GUIContent content, out Rect imageRect, out Rect textRect)
-        {
-            imageRect = default;
-            textRect = inner;
-            var image = content.image;
-            if (image == null || m_ImagePosition == ImagePosition.TextOnly) return;
-            float iw = image.width, ih = image.height;
-            bool hasText = !string.IsNullOrEmpty(content.text) && m_ImagePosition != ImagePosition.ImageOnly;
-            var textSize = hasText ? GuiText.Size(content.text, this, 0f) : Vector2.zero;
-            float availW = inner.width, availH = inner.height;
-            if (m_ImagePosition == ImagePosition.ImageLeft) availW -= textSize.x;
-            else if (m_ImagePosition == ImagePosition.ImageAbove) availH -= textSize.y;
-            float scale = Math.Min(1f, Math.Min(availW > 0 ? availW / Math.Max(1f, iw) : 0f, availH > 0 ? availH / Math.Max(1f, ih) : 0f));
-            iw *= scale;
-            ih *= scale;
-            float h = (int)m_Alignment % 3 / 2f;
-            float v = (int)m_Alignment / 3 / 2f;
-            switch (m_ImagePosition)
-            {
-                case ImagePosition.ImageLeft:
-                {
-                    float total = iw + textSize.x;
-                    float x = inner.x + (inner.width - total) * h;
-                    imageRect = new Rect(x, inner.y + (inner.height - ih) * v, iw, ih);
-                    textRect = new Rect(x + iw, inner.y, Math.Max(0f, inner.xMax - x - iw), inner.height);
-                    break;
-                }
-                case ImagePosition.ImageAbove:
-                {
-                    float total = ih + textSize.y;
-                    float y = inner.y + (inner.height - total) * v;
-                    imageRect = new Rect(inner.x + (inner.width - iw) * h, y, iw, ih);
-                    textRect = new Rect(inner.x, y + ih, inner.width, Math.Max(0f, inner.yMax - y - ih));
-                    break;
-                }
-                default:
-                    imageRect = new Rect(inner.x + (inner.width - iw) * h, inner.y + (inner.height - ih) * v, iw, ih);
-                    break;
-            }
-        }
-
-        public Vector2 GetCursorPixelPosition(Rect position, GUIContent content, int cursorStringIndex)
-        {
-            var inner = m_Padding.Remove(position);
-            inner.position += m_ContentOffset;
-            LayoutContent(inner, content, out _, out var textRect);
-            var text = content?.text ?? "";
-            var layout = GuiText.Layout(textRect, text, this);
-            return GuiText.CursorAt(textRect, layout, Mathf.Clamp(cursorStringIndex, 0, text.Length));
-        }
-
-        public int GetCursorStringIndex(Rect position, GUIContent content, Vector2 cursorPixelPosition)
-        {
-            var inner = m_Padding.Remove(position);
-            inner.position += m_ContentOffset;
-            LayoutContent(inner, content, out _, out var textRect);
-            var text = content?.text ?? "";
-            var layout = GuiText.Layout(textRect, text, this);
-            return GuiText.IndexAt(textRect, layout, text.Length, cursorPixelPosition, lineHeight);
-        }
-
-        internal int GetNumCharactersThatFitWithinWidth(string text, float width)
-        {
-            if (string.IsNullOrEmpty(text)) return 0;
-            for (int n = 1; n <= text.Length; n++)
-                if (GuiText.Size(text.Substring(0, n), this, 0f).x > width) return n - 1;
-            return text.Length;
-        }
-
-        /// <summary>The size of the content with padding, or the fixed size.</summary>
-        public Vector2 CalcSize(GUIContent content)
-        {
-            var size = ContentSize(content, 0f);
-            size.x += m_Padding.horizontal;
-            size.y += m_Padding.vertical;
-            if (m_FixedWidth != 0f) size.x = m_FixedWidth;
-            if (m_FixedHeight != 0f) size.y = m_FixedHeight;
-            return new Vector2(Mathf.Ceil(size.x), Mathf.Ceil(size.y));
-        }
-
-        Vector2 ContentSize(GUIContent content, float wrapWidth)
-        {
-            var text = content?.text;
-            var image = content?.image;
-            Vector2 textSize = Vector2.zero, imageSize = Vector2.zero;
-            if (m_ImagePosition != ImagePosition.ImageOnly)
-                textSize = string.IsNullOrEmpty(text) ? new Vector2(0f, lineHeight) : GuiText.Size(text, this, wrapWidth);
-            if (image != null && m_ImagePosition != ImagePosition.TextOnly)
-                imageSize = new Vector2(image.width, image.height);
-            switch (m_ImagePosition)
-            {
-                case ImagePosition.ImageLeft:
-                    return new Vector2(textSize.x + imageSize.x, Math.Max(textSize.y, imageSize.y));
-                case ImagePosition.ImageAbove:
-                    return new Vector2(Math.Max(textSize.x, imageSize.x), textSize.y + imageSize.y);
-                case ImagePosition.ImageOnly:
-                    return imageSize;
-                default:
-                    return textSize;
-            }
-        }
-
-        public Vector2 CalcScreenSize(Vector2 contentSize) => new Vector2(
-            m_FixedWidth != 0f ? m_FixedWidth : Mathf.Ceil(contentSize.x + m_Padding.left + m_Padding.right),
-            m_FixedHeight != 0f ? m_FixedHeight : Mathf.Ceil(contentSize.y + m_Padding.top + m_Padding.bottom));
-
-        /// <summary>The height of the content laid out in <paramref name="width"/> (word wrapped
-        /// when the style wraps).</summary>
-        public float CalcHeight(GUIContent content, float width)
-        {
-            if (m_FixedHeight != 0f) return m_FixedHeight;
-            if (Compat.ImguiTextCoreCalcHeightMeasured && Native.IsReady)
-                return CalcHeightTextCore(content, width);
-            float inner = width - m_Padding.horizontal;
-            if (content?.image != null && m_ImagePosition == ImagePosition.ImageLeft) inner -= content.image.width;
-            var size = ContentSize(content, m_WordWrap ? Math.Max(1f, inner) : 0f);
-            return Mathf.Ceil(size.y + m_Padding.vertical);
-        }
-
-        float CalcHeightTextCore(GUIContent content, float width)
-        {
-            if (content == null) throw new ArgumentNullException(nameof(content));
-            var image = content.image;
-            float imageWidth = 0f;
-            float imageHeight = 0f;
-            if (image != null)
-            {
-                imageWidth = image.width;
-                imageHeight = image.height;
-            }
-
-            const float MeasureMaxHeight = 1000f;
-            float measureWidth = width;
-            if (m_WordWrap && m_ImagePosition == ImagePosition.ImageLeft && image != null)
-            {
-                float iconWidth = UnityEditor.EditorGUIUtility.GetIconSize().x;
-                if (iconWidth != 0f)
-                {
-                    measureWidth -= iconWidth;
-                }
-                else if (imageWidth > 0f && imageHeight > 0f)
-                {
-                    float scale = Mathf.Clamp01(Mathf.Min(width / imageWidth, MeasureMaxHeight / imageHeight));
-                    measureWidth -= Mathf.Floor(imageWidth * scale + 0.5f);
-                }
-            }
-
-            bool hasText = !string.IsNullOrEmpty(content.text);
-            float textHeight = 0f;
-            if (m_ImagePosition != ImagePosition.ImageOnly && hasText)
-            {
-                if (IMGUITextHandle.TryMeasurePreferredSize(this, new TextCore.Text.RenderedText(content.text, "\u200B"), new Rect(0f, 0f, measureWidth, MeasureMaxHeight), out var preferred))
-                    textHeight = preferred.y;
-                else
-                    textHeight = GuiText.Size(content.text, this, m_WordWrap ? Math.Max(1f, measureWidth - m_Padding.horizontal) : 0f).y;
-            }
-
-            float height = m_ImagePosition switch
-            {
-                ImagePosition.ImageLeft => Mathf.Max(textHeight, imageHeight),
-                ImagePosition.ImageAbove => textHeight + imageHeight,
-                ImagePosition.ImageOnly => imageHeight,
-                ImagePosition.TextOnly => textHeight,
-                _ => 0f,
-            };
-
-            if (m_ImagePosition != ImagePosition.ImageOnly && image == null && !hasText)
-                height = lineHeight;
-
-            return height + m_Padding.top + m_Padding.bottom;
-        }
-
-        /// <summary>The narrowest and widest the content can be: a wrapping style can shrink to its
-        /// longest word.</summary>
-        public void CalcMinMaxWidth(GUIContent content, out float minWidth, out float maxWidth)
-        {
-            var size = CalcSize(content);
-            maxWidth = size.x;
-            minWidth = size.x;
-            if (m_FixedWidth != 0f || !m_WordWrap || string.IsNullOrEmpty(content?.text)) return;
-            float word = 0f;
-            foreach (var part in content.text.Split(new[] { ' ', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries))
-                word = Math.Max(word, GuiText.Size(part, this, 0f).x);
-            float image = content.image != null && m_ImagePosition == ImagePosition.ImageLeft ? content.image.width : 0f;
-            minWidth = Math.Min(maxWidth, Mathf.Ceil(word + image + m_Padding.horizontal));
+            DrawStyle(position, content, position.Contains(Event.current.mousePosition), false, false, focus, -1, -1);
         }
 
         public override string ToString() => $"GUIStyle '{m_Name}'";
@@ -742,7 +481,7 @@ namespace UnityEngine
             set
             {
                 m_Font = value;
-                if (current == this) GuiText.Invalidate();
+                if (current == this) GUIStyle.SetDefaultFont(m_Font);
             }
         }
 
@@ -885,7 +624,7 @@ namespace UnityEngine
         internal void MakeCurrent()
         {
             current = this;
-            GuiText.Invalidate();
+            GUIStyle.SetDefaultFont(m_Font);
         }
     }
 }

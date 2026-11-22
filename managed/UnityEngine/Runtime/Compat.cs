@@ -392,10 +392,10 @@ namespace Unbound.Runtime
         /// in Unity 6000.0.71f1 (tests/projects/imguiskin and editortogglegroup).</summary>
         internal static bool UsedGUILayoutMeasured => Family == ReleaseFamily.Unity6000_0;
 
-        /// <summary>IMGUI wrapped height calculation through TextCore without ceiling rounding,
-        /// measured in tests/projects/editortogglegroup and tests/projects/imguiskin on Unity
-        /// 6000.0.71f1. Other families retain the unmeasured legacy text measurement.</summary>
-        internal static bool ImguiTextCoreCalcHeightMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>Font assets of OS fonts take no pair adjustment, ligature or mark records
+        /// (Unity 6000.0.71f1 Editor on Linux, tests/projects/imguiskin). Not measured on macOS
+        /// or in other families, where such assets keep reading their face's records.</summary>
+        internal static bool OsFontAssetsTakeNoFontFeatures => OperatingSystem.IsLinux() && Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Explicit GUI texture draws keep their tint alpha inside disabled groups,
         /// measured in tests/projects/editordrawrect on Unity 6000.0.71f1.</summary>

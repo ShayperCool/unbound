@@ -44,10 +44,28 @@ namespace UnityEngine.TextCore.Text
                     m_FontFeatureTable.AddMarkCandidate(record);
         }
 
-        void UpdateGSUBFontFeaturesForNewGlyphIndex(uint index) => AddLigatureSubstitutionRecords(FontEngine.GetLigatureSubstitutionRecords(index));
-        internal void UpdateLigatureSubstitutionRecords() => AddLigatureSubstitutionRecords(FontEngine.GetLigatureSubstitutionRecords(m_GlyphIndexListNewlyAdded));
+        /// <summary>A font asset of an OS font takes no font feature records: after its glyphs
+        /// are added it has no pair adjustment, ligature or mark records, and its text is laid out
+        /// without them (matches the Unity 6000.0.71f1 Editor on Linux, tests/projects/imguiskin
+        /// calcText/imguiAsset and calcText/width rows; macOS and other families are not measured
+        /// and keep reading them).</summary>
+        internal bool TakesNoFontFeatures => m_AtlasPopulationMode == AtlasPopulationMode.DynamicOS && Compat.OsFontAssetsTakeNoFontFeatures;
+
+        void UpdateGSUBFontFeaturesForNewGlyphIndex(uint index)
+        {
+            if (TakesNoFontFeatures) return;
+            AddLigatureSubstitutionRecords(FontEngine.GetLigatureSubstitutionRecords(index));
+        }
+
+        internal void UpdateLigatureSubstitutionRecords()
+        {
+            if (TakesNoFontFeatures) return;
+            AddLigatureSubstitutionRecords(FontEngine.GetLigatureSubstitutionRecords(m_GlyphIndexListNewlyAdded));
+        }
+
         internal void UpdateDiacriticalMarkAdjustmentRecords()
         {
+            if (TakesNoFontFeatures) return;
             AddMarkToBaseAdjustmentRecords(FontEngine.GetMarkToBaseAdjustmentRecords(m_GlyphIndexListNewlyAdded));
             AddMarkToMarkAdjustmentRecords(FontEngine.GetMarkToMarkAdjustmentRecords(m_GlyphIndexListNewlyAdded));
         }

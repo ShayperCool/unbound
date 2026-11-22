@@ -1250,6 +1250,7 @@ namespace UnityEngine.TextCore.Text
 
         internal void ImportFontFeatures()
         {
+            if (TakesNoFontFeatures) return;
             if (LoadFontFace() != FontEngineError.Success) return;
             var pairs = FontEngine.GetAllPairAdjustmentRecords();
             if (pairs != null) AddPairAdjustmentRecords(pairs);
@@ -1263,6 +1264,7 @@ namespace UnityEngine.TextCore.Text
         /// <summary>Reads the kerning pairs whose first glyph was added since the last update.</summary>
         internal void UpdateGlyphAdjustmentRecords()
         {
+            if (TakesNoFontFeatures) return;
             LoadFontFace();
             var pairs = FontEngine.GetPairAdjustmentRecords(m_GlyphIndexListNewlyAdded);
             if (pairs != null) AddPairAdjustmentRecords(pairs);

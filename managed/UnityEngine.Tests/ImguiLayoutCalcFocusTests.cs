@@ -527,6 +527,7 @@ namespace UnityEngine.Tests
             textSettings.m_FontReferences.Add(new UnityEngine.TextCore.Text.TextSettings.FontReferenceMap(font, fontAsset));
             var prevGetter = IMGUITextHandle.GetEditorTextSettings;
             IMGUITextHandle.GetEditorTextSettings = () => textSettings;
+            IMGUITextHandle.ResetForTests();
             try
             {
                 style.font = font;
@@ -550,6 +551,7 @@ namespace UnityEngine.Tests
             finally
             {
                 IMGUITextHandle.GetEditorTextSettings = prevGetter;
+                IMGUITextHandle.ResetForTests();
                 Object.DestroyImmediate(fontAsset);
                 Object.DestroyImmediate(textSettings);
                 Object.DestroyImmediate(font);
@@ -601,13 +603,8 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void CalcHeightCompatGateFollowsMeasuredReleaseFamily()
+        public void CalcHeightOfAFixedHeightStyleIsItsFixedHeight()
         {
-            using (TestRelease.Pin("6000.0.71f1"))
-                Assert.True(Compat.ImguiTextCoreCalcHeightMeasured);
-            using (TestRelease.Pin(TestRelease.Unmeasured))
-                Assert.False(Compat.ImguiTextCoreCalcHeightMeasured);
-
             var fixedStyle = new GUIStyle { fixedHeight = 34f };
             Assert.Equal(34f, fixedStyle.CalcHeight(new GUIContent("abc"), 83f));
         }

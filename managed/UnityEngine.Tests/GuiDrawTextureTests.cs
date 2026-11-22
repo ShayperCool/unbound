@@ -5,6 +5,9 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Unbound.Runtime;
+using UnityEngine.TextCore;
+using UnityEngine.TextCore.LowLevel;
+using UnityEngine.TextCore.Text;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -158,29 +161,74 @@ namespace UnityEngine.Tests
             Assert.Equal(6f, ((float[])second.Properties[RadiusesId])[0]);
         }
 
-        /// <summary>Glyphs and textures are separate draws with their own shaders, stored
+        /// <summary>Text and textures are separate draws with their own shaders, stored
         /// unconverted in a linear project, so IMGUI blends in gamma space there
-        /// (tests/projects/urpoverlayui imgui).</summary>
+        /// (tests/projects/urpoverlayui imgui). A bitmap glyph atlas draws with the IMGUI text
+        /// shader, a distance field atlas with its font asset's own material; glyph quads keep
+        /// their place in the rect the text was generated for (y down), their colours, and the
+        /// second texture coordinates that mark bold glyphs.</summary>
         [Fact]
-        public void GlyphsAndTexturesAreSeparateDrawsStoredUnconvertedInLinear()
+        public void TextAndTexturesAreSeparateDrawsStoredUnconvertedInLinear()
         {
             using var f = new Fixture();
             var texture = f.Texture(606);
+            var bitmapMaterial = Fixture.Material(3000, 901);
+            bitmapMaterial.mainTexture = f.Texture(607, TextureFormat.Alpha8);
+            var fieldMaterial = Fixture.Material(3000, 902);
+            fieldMaterial.mainTexture = f.Texture(608, TextureFormat.Alpha8);
+            var colorMaterial = Fixture.Material(3000, 903);
+            colorMaterial.mainTexture = f.Texture(609, TextureFormat.RGBA32);
+            var text = new TextInfo
+            {
+                meshInfo = new[]
+                {
+                    GlyphQuad(bitmapMaterial, GlyphRenderMode.SMOOTH, new Color32(255, 0, 0, 255), 1f),
+                    GlyphQuad(fieldMaterial, GlyphRenderMode.SDFAA, new Color32(0, 255, 0, 128), -1f),
+                    GlyphQuad(colorMaterial, GlyphRenderMode.COLOR, new Color32(0, 0, 255, 255), 1f),
+                    // A mesh without vertices or without an atlas draws nothing.
+                    new MeshInfo { material = fieldMaterial, vertexData = new TextCoreVertex[4], vertexCount = 0, glyphRenderMode = GlyphRenderMode.SDFAA },
+                    new MeshInfo { material = null, vertexData = new TextCoreVertex[4], vertexCount = 4, glyphRenderMode = GlyphRenderMode.SDFAA },
+                },
+            };
             f.Repaint(() =>
             {
                 GuiRender.DrawTexture(new Rect(10f, 10f, 20f, 20f), texture, new Rect(0f, 0f, 1f, 1f), Color.white);
-                GuiRender.DrawGlyphs(new Vector2(10f, 10f), new[]
-                {
-                    new UIVertex { position = new Vector3(0f, 0f), color = Color.white },
-                    new UIVertex { position = new Vector3(4f, 0f), color = Color.white },
-                    new UIVertex { position = new Vector3(4f, -4f), color = Color.white },
-                    new UIVertex { position = new Vector3(0f, -4f), color = Color.white },
-                }, texture, Color.white);
+                GuiRender.DrawText(new Vector2(10f, 30f), text);
             });
             var items = f.Collect();
-            Assert.Equal(new[] { f.Materials[0], f.Materials[1] }, items.Select(i => i.Material).ToArray());
+            Assert.Equal(new[] { f.Materials[0], f.Materials[1], fieldMaterial, f.Materials[0] }, items.Select(i => i.Material).ToArray());
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             Assert.All(items, i => Assert.Equal(linear, i.GammaImgui));
+
+            // The first glyph quad follows the texture's four vertices: top left, top right,
+            // bottom right, bottom left, at the origin plus the vertex positions.
+            var positions = f.Positions();
+            Assert.Equal(new Vector3(11f, 32f), positions[4]);
+            Assert.Equal(new Vector3(15f, 32f), positions[5]);
+            Assert.Equal(new Vector3(15f, 38f), positions[6]);
+            Assert.Equal(new Vector3(11f, 38f), positions[7]);
+            var colors = f.List<Color32>("s_Colors");
+            Assert.Equal(new Color32(255, 0, 0, 255), colors[4]);
+            Assert.Equal(new Color32(0, 255, 0, 128), colors[8]);
+            var uvs2 = f.List<Vector2>("s_Uvs2");
+            Assert.Equal(positions.Count, uvs2.Count);
+            Assert.True(uvs2[0].y > 0f);
+            Assert.True(uvs2[4].y > 0f);
+            Assert.True(uvs2[8].y < 0f);
+        }
+
+        /// <summary>One glyph quad as TextCore fills it: bottom left, top left, top right, bottom right.</summary>
+        static MeshInfo GlyphQuad(Material material, GlyphRenderMode mode, Color32 color, float uv2y)
+        {
+            TextCoreVertex Vertex(float x, float y, float u, float v) =>
+                new TextCoreVertex { position = new Vector3(x, y, 0f), uv0 = new Vector2(u, v), uv2 = new Vector2(0f, uv2y), color = color };
+            return new MeshInfo
+            {
+                material = material,
+                glyphRenderMode = mode,
+                vertexCount = 4,
+                vertexData = new[] { Vertex(1f, 8f, 0f, 0f), Vertex(1f, 2f, 0f, 1f), Vertex(5f, 2f, 1f, 1f), Vertex(5f, 8f, 1f, 0f) },
+            };
         }
 
         /// <summary>Isolates GuiRender's batches, GUI state and the IMGUI materials (stand-ins, one
@@ -215,13 +263,16 @@ namespace UnityEngine.Tests
                 }
             }
 
-            internal Texture2D Texture(ulong handle)
+            internal Texture2D Texture(ulong handle, TextureFormat format = TextureFormat.RGBA32)
             {
                 var texture = (Texture2D)Activator.CreateInstance(typeof(Texture2D), true);
                 texture.m_Width = texture.m_Height = 4;
                 texture.m_NativeHandle = handle;
+                Field(typeof(Texture2D), "m_Format").SetValue(texture, format);
                 return texture;
             }
+
+            internal List<T> List<T>(string name) => (List<T>)Field(typeof(GuiRender), name).GetValue(null);
 
             /// <summary>Runs <paramref name="draw"/> as a Repaint over a 200 x 100 screen.</summary>
             internal void Repaint(Action draw)
@@ -243,7 +294,7 @@ namespace UnityEngine.Tests
 
             internal List<Vector3> Positions() => (List<Vector3>)Field(typeof(GuiRender), "s_Positions").GetValue(null);
 
-            static Material Material(int queue, ulong handle)
+            internal static Material Material(int queue, ulong handle)
             {
                 var shader = Shader.Create("IMGUI fixture", queue);
                 var info = new ShaderPassInfo { Found = true, DrawnShader = shader.name };

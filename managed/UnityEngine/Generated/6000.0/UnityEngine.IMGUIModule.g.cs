@@ -126,7 +126,6 @@ namespace UnityEngine
     }
     unsafe partial class GUIContent
     {
-        [global::Unbound.Stub] internal static string k_ZeroWidthSpace;
         [global::Unbound.Stub] internal void SetTextWithoutNotify(string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.SetTextWithoutNotify"); }
         internal event global::System.Action OnTextChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.OnTextChanged"); } [global::Unbound.Stub] remove { } }
     }
@@ -235,16 +234,12 @@ namespace UnityEngine
         [global::Unbound.Stub] internal global::UnityEngine.Vector2 Internal_GetTextRectOffset(global::UnityEngine.Rect screenRect, global::UnityEngine.GUIContent content, global::UnityEngine.Vector2 textSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.Internal_GetTextRectOffset"); return default; }
         [global::Unbound.Stub] internal static void SetMouseTooltip(string tooltip, global::UnityEngine.Rect screenRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.SetMouseTooltip"); }
         [global::Unbound.Stub] internal static bool IsTooltipActive(string tooltip) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.IsTooltipActive"); return default; }
-        [global::Unbound.Stub] internal static void SetDefaultFont(global::UnityEngine.Font font) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.SetDefaultFont"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.Font GetDefaultFont() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.GetDefaultFont"); return default; }
         [global::Unbound.Stub] internal static void Internal_DestroyTextGenerator(int meshInfoId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.Internal_DestroyTextGenerator"); }
         [global::Unbound.Stub] internal static void Internal_CleanupAllTextGenerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.Internal_CleanupAllTextGenerator"); }
         [global::Unbound.Stub] internal static void CleanupRoots() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.CleanupRoots"); }
         [global::Unbound.Stub] internal void InternalOnAfterDeserialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.InternalOnAfterDeserialize"); }
         [global::Unbound.Stub] internal void DrawWithTextSelection(global::UnityEngine.Rect position, global::UnityEngine.GUIContent content, bool isActive, bool hasKeyboardFocus, int firstSelectedCharacter, int lastSelectedCharacter, bool drawSelectionAsComposition, global::UnityEngine.Color selectionColor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.DrawWithTextSelection"); }
         [global::Unbound.Stub] internal global::UnityEngine.Rect[] GetHyperlinkRects(global::UnityEngine.IMGUITextHandle handle, global::UnityEngine.Rect content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.GetHyperlinkRects"); return global::System.Array.Empty<global::UnityEngine.Rect>(); }
-        [global::Unbound.Stub] internal global::UnityEngine.Vector2 CalcSizeWithConstraints(global::UnityEngine.GUIContent content, global::UnityEngine.Vector2 constraints) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.CalcSizeWithConstraints"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Vector2 GetPreferredSize(string content, global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.GetPreferredSize"); return default; }
         [global::Unbound.Stub] internal static void GetMeshInfo(global::UnityEngine.GUIStyle style, global::UnityEngine.Color color, string content, global::UnityEngine.Rect rect, ref global::UnityEngine.TextCore.Text.MeshInfoBindings[] meshInfos, ref global::UnityEngine.Vector2 dimensions, ref int generationId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.GetMeshInfo"); }
         [global::Unbound.Stub] internal static void GetDimensions(global::UnityEngine.GUIStyle style, global::UnityEngine.Color color, string content, global::UnityEngine.Rect rect, ref global::UnityEngine.Vector2 dimensions) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.GetDimensions"); }
         [global::Unbound.Stub] internal static void GetLineHeight(global::UnityEngine.GUIStyle style, ref float lineHeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.GetLineHeight"); }
@@ -327,7 +322,6 @@ namespace UnityEngine
     }
     unsafe partial class IMGUITextHandle
     {
-        [global::Unbound.Stub] internal int GetNumCharactersThatFitWithinWidth(float width) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.GetNumCharactersThatFitWithinWidth"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Rect[] GetHyperlinkRects(global::UnityEngine.Rect content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.GetHyperlinkRects"); return global::System.Array.Empty<global::UnityEngine.Rect>(); }
     }
     [global::Unbound.Stub]

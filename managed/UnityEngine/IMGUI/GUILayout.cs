@@ -1057,7 +1057,19 @@ namespace UnityEngine
                 }
                 else
                 {
-                    var size = style.CalcSize(content);
+                    // A maximum given as an option also bounds the content's own size (its image shrinks).
+                    var constraints = Vector2.zero;
+                    if (options != null)
+                    {
+                        foreach (var option in options)
+                        {
+                            if (option.type == GUILayoutOption.Type.maxWidth) constraints.x = (float)option.value;
+                            else if (option.type == GUILayoutOption.Type.maxHeight) constraints.y = (float)option.value;
+                        }
+                    }
+                    var size = style.CalcSizeWithConstraints(content, constraints);
+                    size.x = Mathf.Ceil(size.x);
+                    size.y = Mathf.Ceil(size.y);
                     current.groups.Peek().Add(new GUILayoutEntry(size.x, size.x, size.y, size.y, style, options));
                 }
                 return kDummyRect;

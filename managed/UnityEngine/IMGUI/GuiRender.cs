@@ -127,6 +127,38 @@ namespace UnityEngine
 
         internal static Vector2 ScreenToGUI(Vector2 screen) => Clip((Vector2)s_Inverse.MultiplyPoint(screen));
 
+        /// <summary>How far past a device pixel a coordinate still rounds down to it.</summary>
+        const float PixelSnapOffset = 0.48f;
+
+        /// <summary>A GUI point on the device's pixel grid, as a style's content is placed: its
+        /// screen position rounds to whole pixels at <see cref="PixelSnapOffset"/>, x from the
+        /// screen's left and y from its bottom (so a half pixel moves right and down). Matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/imguiskin text-paint.png.</summary>
+        internal static Vector2 SnapToPixels(Vector2 local)
+        {
+            float scale = GUIUtility.pixelsPerPoint;
+            float height = Screen.height;
+            if (!(scale > 0f) || !(height > 0f)) return local;
+            var screen = GUIToScreen(local) * scale;
+            return ScreenToGUI(new Vector2(SnapFromLeft(screen.x), SnapFromBottom(screen.y, height)) / scale);
+        }
+
+        /// <summary>A screen x in pixels on the pixel grid.</summary>
+        internal static float SnapFromLeft(float x) => Mathf.Floor(x + PixelSnapOffset);
+
+        /// <summary>A screen y in pixels (down from the top of a screen <paramref name="height"/>
+        /// pixels high) on the pixel grid, rounded as measured from the bottom.</summary>
+        internal static float SnapFromBottom(float y, float height) => height - Mathf.Floor(height - y + PixelSnapOffset);
+
+        /// <summary>A rect on the device's pixel grid: its top left snapped, then its bottom right
+        /// that far from the snapped corner, snapped as well.</summary>
+        internal static Rect SnapToPixels(Rect local)
+        {
+            var min = SnapToPixels(local.position);
+            var max = SnapToPixels(min + local.size);
+            return new Rect(min, max - min);
+        }
+
         /// <summary>An absolute rect through the matrix: its bounds on the screen.</summary>
         internal static Rect ToScreen(Rect absolute)
         {
@@ -145,146 +177,8 @@ namespace UnityEngine
 namespace Unbound.Runtime
 {
     using UnityEngine;
-
-    /// <summary>Text of UnityGUI styles through the legacy text generator, cached per layout.</summary>
-    internal static class GuiText
-    {
-        struct Key : IEquatable<Key>
-        {
-            internal string Text;
-            internal Font Font;
-            internal int Size;
-            internal FontStyle Style;
-            internal TextAnchor Anchor;
-            internal bool Wrap;
-            internal bool Rich;
-            internal Vector2 Extents;
-
-            public bool Equals(Key o) => Text == o.Text && ReferenceEquals(Font, o.Font) && Size == o.Size && Style == o.Style &&
-                                         Anchor == o.Anchor && Wrap == o.Wrap && Rich == o.Rich && Extents == o.Extents;
-
-            public override bool Equals(object obj) => obj is Key k && Equals(k);
-
-            public override int GetHashCode() => HashCode.Combine(Text, Font?.GetInstanceID() ?? 0, Size, Style, Anchor, Wrap, Rich, Extents);
-        }
-
-        const int CacheLimit = 1024;
-        static readonly Dictionary<Key, TextGenerator> s_Cache = new Dictionary<Key, TextGenerator>();
-
-        internal static void Invalidate() => s_Cache.Clear();
-
-        internal static float LineHeight(Font font, int size, FontStyle style)
-        {
-            if (font == null) return 0f;
-            int px = font.PixelSize(size);
-            return font.LineSpacingAt(px);
-        }
-
-        static TextGenerator Generate(string text, GUIStyle style, Vector2 extents, bool wrap, TextAnchor anchor)
-        {
-            var font = style.ResolvedFont;
-            var key = new Key
-            {
-                Text = text ?? "",
-                Font = font,
-                Size = style.fontSize,
-                Style = style.fontStyle,
-                Anchor = anchor,
-                Wrap = wrap,
-                Rich = style.richText,
-                Extents = extents,
-            };
-            if (s_Cache.TryGetValue(key, out var generator)) return generator;
-            if (s_Cache.Count >= CacheLimit) s_Cache.Clear();
-            generator = new TextGenerator(Math.Max(8, key.Text.Length));
-            generator.Populate(key.Text, new TextGenerationSettings
-            {
-                font = font,
-                color = Color.white,
-                fontSize = style.fontSize,
-                lineSpacing = 1f,
-                richText = style.richText,
-                scaleFactor = 1f,
-                fontStyle = style.fontStyle,
-                textAnchor = anchor,
-                updateBounds = true,
-                verticalOverflow = VerticalWrapMode.Overflow,
-                horizontalOverflow = wrap ? HorizontalWrapMode.Wrap : HorizontalWrapMode.Overflow,
-                generationExtents = extents,
-                // Vertices relative to the top left corner, y up.
-                pivot = new Vector2(0f, 1f),
-                generateOutOfBounds = true,
-            });
-            s_Cache[key] = generator;
-            return generator;
-        }
-
-        /// <summary>The size of the text, wrapped at <paramref name="wrapWidth"/> when positive.</summary>
-        internal static Vector2 Size(string text, GUIStyle style, float wrapWidth)
-        {
-            bool wrap = wrapWidth > 0f && style.wordWrap;
-            var g = Generate(text, style, new Vector2(wrap ? wrapWidth : 0f, 0f), wrap, TextAnchor.UpperLeft);
-            float height = Math.Max(g.rectExtents.height, style.lineHeight);
-            return new Vector2(g.rectExtents.width, height);
-        }
-
-        /// <summary>The text laid out in a rect as the style draws it.</summary>
-        internal static TextGenerator Layout(Rect rect, string text, GUIStyle style) =>
-            Generate(text, style, new Vector2(Math.Max(0f, rect.width), Math.Max(0f, rect.height)), style.wordWrap, style.alignment);
-
-        internal static void Draw(Rect rect, string text, GUIStyle style, Color color)
-        {
-            var layout = Layout(rect, text, style);
-            var font = style.ResolvedFont;
-            var texture = font?.material != null ? font.material.mainTexture : null;
-            if (texture == null) return;
-            GuiRender.DrawGlyphs(rect.position, layout.verts, texture, color);
-        }
-
-        /// <summary>The top left of the cursor before character <paramref name="index"/>.</summary>
-        internal static Vector2 CursorAt(Rect rect, TextGenerator layout, int index)
-        {
-            var chars = layout.characters;
-            if (chars.Count == 0) return rect.position;
-            var c = chars[Mathf.Clamp(index, 0, chars.Count - 1)];
-            return new Vector2(rect.x + c.cursorPos.x, rect.y - c.cursorPos.y);
-        }
-
-        internal static float CharWidth(TextGenerator layout, int index)
-        {
-            var chars = layout.characters;
-            return index >= 0 && index < chars.Count ? chars[index].charWidth : 0f;
-        }
-
-        /// <summary>The cursor index nearest a point: the line under it, then the nearest gap.</summary>
-        internal static int IndexAt(Rect rect, TextGenerator layout, int length, Vector2 point, float lineHeight)
-        {
-            var chars = layout.characters;
-            int count = Math.Min(chars.Count, length + 1);
-            if (count == 0) return 0;
-            // The line: the last whose top is above the point.
-            float lineTop = rect.y - chars[0].cursorPos.y;
-            for (int i = 0; i < count; i++)
-            {
-                float top = rect.y - chars[i].cursorPos.y;
-                if (top <= point.y + 0.01f) lineTop = Math.Max(lineTop, top);
-            }
-            int best = 0;
-            float bestDistance = float.MaxValue;
-            for (int i = 0; i < count; i++)
-            {
-                float top = rect.y - chars[i].cursorPos.y;
-                if (!Mathf.Approximately(top, lineTop)) continue;
-                float d = Math.Abs(rect.x + chars[i].cursorPos.x - point.x);
-                if (d < bestDistance)
-                {
-                    bestDistance = d;
-                    best = i;
-                }
-            }
-            return best;
-        }
-    }
+    using UnityEngine.TextCore;
+    using UnityEngine.TextCore.Text;
 
     /// <summary>
     /// What UnityGUI draws in a frame: textured, tinted quads in screen pixels, each with the clip
@@ -307,6 +201,9 @@ namespace Unbound.Runtime
             /// <summary>Hidden/Internal-GUIRoundedRect: one GUI.DrawTexture with border widths or
             /// corner radiuses, its parameters per draw.</summary>
             Rounded,
+            /// <summary>Text from a signed distance field atlas, drawn with its font asset's own
+            /// material (Hidden/TextCore/Distance Field SSD).</summary>
+            DistanceFieldText,
         }
 
         struct Batch
@@ -314,6 +211,8 @@ namespace Unbound.Runtime
             internal Texture Texture;
             internal Rect Clip;
             internal Kind Kind;
+            /// <summary>The material of a <see cref="Kind.DistanceFieldText"/> batch: its font asset's.</summary>
+            internal Material Material;
             internal List<int> Indices;
             /// <summary>A rounded draw: its vertices are in GUI coordinates (the shader measures its
             /// rect there), placed on the screen by <see cref="ToScreen"/> (GUI.matrix and the clip
@@ -326,6 +225,10 @@ namespace Unbound.Runtime
         static readonly List<Vector3> s_Positions = new List<Vector3>();
         static readonly List<Color32> s_Colors = new List<Color32>();
         static readonly List<Vector2> s_Uvs = new List<Vector2>();
+        /// <summary>The second texture coordinates, which only text reads: a negative y marks a
+        /// bold glyph of a distance field font.</summary>
+        static readonly List<Vector2> s_Uvs2 = new List<Vector2>();
+        static readonly Vector2 s_RegularGlyph = new Vector2(0f, 1f);
         static readonly List<Batch> s_Batches = new List<Batch>();
         static readonly Stack<List<int>> s_Spare = new Stack<List<int>>();
         static readonly List<Rect> s_ExtraClips = new List<Rect>();
@@ -341,6 +244,7 @@ namespace Unbound.Runtime
             s_Positions.Clear();
             s_Colors.Clear();
             s_Uvs.Clear();
+            s_Uvs2.Clear();
             foreach (var b in s_Batches)
             {
                 b.Indices.Clear();
@@ -380,26 +284,31 @@ namespace Unbound.Runtime
 
         /// <summary>The batch the next triangles go to: the last one when it has the same texture,
         /// clip and shader, else a new one after it (draw order is call order).</summary>
-        static List<int> BatchFor(Texture texture, Kind kind)
+        static List<int> BatchFor(Texture texture, Kind kind, Material material = null)
         {
             var clip = CurrentClip();
             if (s_Batches.Count > 0)
             {
                 var last = s_Batches[s_Batches.Count - 1];
-                if (last.Texture == texture && last.Clip == clip && last.Kind == kind) return last.Indices;
+                if (last.Texture == texture && last.Clip == clip && last.Kind == kind && ReferenceEquals(last.Material, material)) return last.Indices;
             }
             var indices = s_Spare.Count > 0 ? s_Spare.Pop() : new List<int>();
-            s_Batches.Add(new Batch { Texture = texture, Clip = clip, Kind = kind, Indices = indices });
+            s_Batches.Add(new Batch { Texture = texture, Clip = clip, Kind = kind, Material = material, Indices = indices });
             return indices;
         }
 
         /// <summary>A quad from local corners (top left, top right, bottom right, bottom left) and
         /// the matching texture coordinates.</summary>
         static void Quad(Texture texture, Vector2 tl, Vector2 tr, Vector2 br, Vector2 bl,
-            Vector2 uvTl, Vector2 uvTr, Vector2 uvBr, Vector2 uvBl, Color32 color, Kind kind = Kind.Texture)
+            Vector2 uvTl, Vector2 uvTr, Vector2 uvBr, Vector2 uvBl, Color32 color, Kind kind = Kind.Texture) =>
+            Quad(texture, tl, tr, br, bl, uvTl, uvTr, uvBr, uvBl, color, color, color, color, s_RegularGlyph, kind, null);
+
+        static void Quad(Texture texture, Vector2 tl, Vector2 tr, Vector2 br, Vector2 bl,
+            Vector2 uvTl, Vector2 uvTr, Vector2 uvBr, Vector2 uvBl, Color32 colorTl, Color32 colorTr, Color32 colorBr, Color32 colorBl,
+            Vector2 uv2, Kind kind, Material material)
         {
             if (CurrentClip().width <= 0f) return;
-            var indices = BatchFor(texture, kind);
+            var indices = BatchFor(texture, kind, material);
             int start = s_Positions.Count;
             s_Positions.Add(GUIClip.GUIToScreen(tl));
             s_Positions.Add(GUIClip.GUIToScreen(tr));
@@ -409,7 +318,11 @@ namespace Unbound.Runtime
             s_Uvs.Add(uvTr);
             s_Uvs.Add(uvBr);
             s_Uvs.Add(uvBl);
-            for (int i = 0; i < 4; i++) s_Colors.Add(color);
+            s_Colors.Add(colorTl);
+            s_Colors.Add(colorTr);
+            s_Colors.Add(colorBr);
+            s_Colors.Add(colorBl);
+            for (int i = 0; i < 4; i++) s_Uvs2.Add(uv2);
             indices.Add(start);
             indices.Add(start + 1);
             indices.Add(start + 2);
@@ -467,6 +380,7 @@ namespace Unbound.Runtime
             s_Uvs.Add(new Vector2(uv.xMin, uv.yMin));
             Color32 tint = color;
             for (int i = 0; i < 4; i++) s_Colors.Add(tint);
+            for (int i = 0; i < 4; i++) s_Uvs2.Add(s_RegularGlyph);
             var indices = s_Spare.Count > 0 ? s_Spare.Pop() : new List<int>();
             indices.Add(start);
             indices.Add(start + 1);
@@ -526,24 +440,57 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>Glyph quads of the text generator (relative to <paramref name="origin"/>, y up),
-        /// tinted by their own color times <paramref name="color"/>.</summary>
-        internal static void DrawGlyphs(Vector2 origin, IList<UIVertex> verts, Texture fontTexture, Color color)
+        /// <summary>The glyph quads of a generated text, whose vertices are in the rect the text
+        /// was generated for (y down from its top); <paramref name="origin"/> is that rect's top
+        /// left in GUI coordinates. Each font material is its own batch: a distance field atlas
+        /// draws with the font asset's material, a bitmap one as glyph alpha, a colour one (emoji)
+        /// as a texture.</summary>
+        internal static void DrawText(Vector2 origin, TextInfo textInfo)
         {
-            for (int i = 0; i + 3 < verts.Count; i += 4)
+            var meshes = textInfo?.meshInfo;
+            if (meshes == null) return;
+            for (int m = 0; m < meshes.Length; m++)
             {
-                var v0 = verts[i];
-                var v1 = verts[i + 1];
-                var v2 = verts[i + 2];
-                var v3 = verts[i + 3];
-                Color tint = (Color)v0.color * color;
-                Quad(fontTexture,
-                    new Vector2(origin.x + v0.position.x, origin.y - v0.position.y),
-                    new Vector2(origin.x + v1.position.x, origin.y - v1.position.y),
-                    new Vector2(origin.x + v2.position.x, origin.y - v2.position.y),
-                    new Vector2(origin.x + v3.position.x, origin.y - v3.position.y),
-                    v0.uv0, v1.uv0, v2.uv0, v3.uv0, tint, Kind.Text);
+                var vertices = meshes[m].vertexData;
+                int count = meshes[m].vertexCount & ~3;
+                if (count == 0 || vertices == null) continue;
+                var material = meshes[m].material;
+                var atlas = material != null ? material.mainTexture as Texture2D : null;
+                if (atlas == null) continue;
+                Kind kind;
+                if (!TextGeneratorUtilities.IsBitmapRendering(meshes[m].glyphRenderMode) && atlas.format == TextureFormat.Alpha8)
+                {
+                    kind = Kind.DistanceFieldText;
+                    PrepareTextMaterial(material);
+                }
+                else
+                {
+                    kind = atlas.format == TextureFormat.Alpha8 ? Kind.Text : Kind.Texture;
+                    material = null;
+                }
+                // A quad's vertices: bottom left, top left, top right, bottom right.
+                for (int i = 0; i < count; i += 4)
+                {
+                    ref var bl = ref vertices[i];
+                    ref var tl = ref vertices[i + 1];
+                    ref var tr = ref vertices[i + 2];
+                    ref var br = ref vertices[i + 3];
+                    Quad(atlas,
+                        origin + (Vector2)tl.position, origin + (Vector2)tr.position, origin + (Vector2)br.position, origin + (Vector2)bl.position,
+                        tl.uv0, tr.uv0, br.uv0, bl.uv0, tl.color, tr.color, br.color, bl.color, bl.uv2, kind, material);
+                }
             }
+        }
+
+        static readonly HashSet<int> s_PreparedTextMaterials = new HashSet<int>();
+
+        /// <summary>A font asset's material draws in IMGUI without a clip texture (Unbound clips by
+        /// the draws' clip rects, as for the IMGUI shaders of <see cref="GuiMaterial"/>).</summary>
+        static void PrepareTextMaterial(Material material)
+        {
+            if (!s_PreparedTextMaterials.Add(material.GetInstanceID())) return;
+            material.SetTexture("_GUIClipTexture", Texture2D.whiteTexture);
+            material.SetMatrix("unity_GUIClipTextureMatrix", Matrix4x4.zero);
         }
 
         /// <summary>The frame's draws, over everything (the overlay camera spans the screen in pixels
@@ -573,6 +520,7 @@ namespace Unbound.Runtime
             s_Mesh.vertices = positions;
             s_Mesh.colors32 = s_Colors.ToArray();
             s_Mesh.uv = s_Uvs.ToArray();
+            s_Mesh.uv2 = s_Uvs2.ToArray();
             s_Mesh.subMeshCount = s_Batches.Count;
             for (int i = 0; i < s_Batches.Count; i++)
                 s_Mesh.SetTriangles(s_Batches[i].Indices, i, true);
@@ -632,7 +580,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Batches.Count; i++)
             {
                 var b = s_Batches[i];
-                var material = GuiMaterial(b.Kind);
+                var material = b.Material != null ? b.Material : GuiMaterial(b.Kind);
                 into.Add(new FrameBuilder.DrawItem
                 {
                     Mesh = mesh,
