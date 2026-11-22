@@ -774,31 +774,48 @@ namespace Unbound.Runtime
         }
     }
 
+    /// <summary>How curves and gradients are laid out in serialized text (YAML and JSON alike).</summary>
+    internal static class BuiltinLayout
+    {
+        /// <summary>The number of key slots a gradient stores, and the scale of its key times.</summary>
+        internal const int GradientSlots = 8;
+        internal const float GradientTimeScale = 65535f;
+
+        internal static int KeyTime(float time) => (int)Math.Round(Mathf.Clamp01(time) * GradientTimeScale);
+
+        /// <summary>A curve's infinity modes as stored (the reader's inverse): 0 ping-pong, 1 loop,
+        /// 2 clamp.</summary>
+        internal static int Infinity(WrapMode mode) => mode == WrapMode.PingPong ? 0 : mode == WrapMode.Loop ? 1 : 2;
+    }
+
     internal static class BuiltinReaders
     {
         internal static AnimationCurve AnimationCurve(YNode node)
         {
             var keys = new List<Keyframe>();
             foreach (var k in node.Get("m_Curve")?.Seq() ?? Array.Empty<YNode>())
-            {
-                var key = new Keyframe(k.Float("time"), k.Float("value"), k.Float("inSlope"), k.Float("outSlope"), k.Float("inWeight", 1f / 3f), k.Float("outWeight", 1f / 3f));
-                key.weightedMode = (WeightedMode)k.Int("weightedMode");
-#pragma warning disable CS0618
-                key.tangentMode = k.Int("tangentMode");
-#pragma warning restore CS0618
-                keys.Add(key);
-            }
-            var curve = new AnimationCurve(keys.ToArray())
-            {
-                preWrapMode = WrapModeOf(node.Int("m_PreInfinity", 2)),
-                postWrapMode = WrapModeOf(node.Int("m_PostInfinity", 2)),
-            };
-            return curve;
+                keys.Add(Keyframe(k.Float));
+            return AnimationCurve(keys, node.Int("m_PreInfinity", 2), node.Int("m_PostInfinity", 2));
         }
+
+        /// <summary>A curve key from its stored members (the same in YAML and JSON text).</summary>
+        internal static Keyframe Keyframe(Func<string, float, float> number)
+        {
+            var key = new Keyframe(number("time", 0f), number("value", 0f), number("inSlope", 0f), number("outSlope", 0f), number("inWeight", 1f / 3f), number("outWeight", 1f / 3f));
+            key.weightedMode = (WeightedMode)(int)number("weightedMode", 0f);
+#pragma warning disable CS0618
+            key.tangentMode = (int)number("tangentMode", 0f);
+#pragma warning restore CS0618
+            return key;
+        }
+
+        /// <summary>A curve from its keys and its stored infinity modes.</summary>
+        internal static AnimationCurve AnimationCurve(List<Keyframe> keys, int preInfinity, int postInfinity) =>
+            new AnimationCurve(keys.ToArray()) { preWrapMode = WrapModeOf(preInfinity), postWrapMode = WrapModeOf(postInfinity) };
 
         /// <summary>Curves store their infinity modes as the engine's internal enum: 0 ping-pong,
         /// 1 loop, 2 clamp (the default).</summary>
-        static WrapMode WrapModeOf(int infinity)
+        internal static WrapMode WrapModeOf(int infinity)
         {
             switch (infinity)
             {
@@ -808,19 +825,26 @@ namespace Unbound.Runtime
             }
         }
 
-        internal static Gradient Gradient(YNode node)
+        internal static Gradient Gradient(YNode node) => Gradient(node.Int, key => node.Color(key, UnityEngine.Color.white));
+
+        /// <summary>A gradient from its stored members (the same in YAML and JSON text):
+        /// `key0`..`key7`, whose colours are the colour keys' and whose alphas the alpha keys',
+        /// their times `ctime*` and `atime*` in 1/65535 (<see cref="BuiltinLayout.GradientTimeScale"/>),
+        /// `m_Mode`, `m_ColorSpace` and the numbers of keys.</summary>
+        internal static Gradient Gradient(Func<string, int, int> integer, Func<string, Color> key)
         {
-            int colorCount = node.Int("m_NumColorKeys", 2);
-            int alphaCount = node.Int("m_NumAlphaKeys", 2);
+            // A gradient holds no more keys than it has slots, whatever the text says.
+            int colorCount = Math.Clamp(integer("m_NumColorKeys", 2), 0, BuiltinLayout.GradientSlots);
+            int alphaCount = Math.Clamp(integer("m_NumAlphaKeys", 2), 0, BuiltinLayout.GradientSlots);
             var colors = new GradientColorKey[colorCount];
             var alphas = new GradientAlphaKey[alphaCount];
             for (int i = 0; i < Math.Max(colorCount, alphaCount); i++)
             {
-                var key = node.Color($"key{i}", UnityEngine.Color.white);
-                if (i < colorCount) colors[i] = new GradientColorKey(new Color(key.r, key.g, key.b, 1f), node.Int($"ctime{i}") / 65535f);
-                if (i < alphaCount) alphas[i] = new GradientAlphaKey(key.a, node.Int($"atime{i}") / 65535f);
+                var stored = key($"key{i}");
+                if (i < colorCount) colors[i] = new GradientColorKey(new Color(stored.r, stored.g, stored.b, 1f), integer($"ctime{i}", 0) / BuiltinLayout.GradientTimeScale);
+                if (i < alphaCount) alphas[i] = new GradientAlphaKey(stored.a, integer($"atime{i}", 0) / BuiltinLayout.GradientTimeScale);
             }
-            var g = new Gradient { mode = (GradientMode)node.Int("m_Mode"), colorSpace = (ColorSpace)node.Int("m_ColorSpace", (int)ColorSpace.Uninitialized) };
+            var g = new Gradient { mode = (GradientMode)integer("m_Mode", 0), colorSpace = (ColorSpace)integer("m_ColorSpace", (int)ColorSpace.Uninitialized) };
             g.SetKeys(colors, alphas);
             return g;
         }

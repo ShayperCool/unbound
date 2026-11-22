@@ -842,9 +842,7 @@ namespace Unbound.Runtime
                 }
             }
 
-            /// <summary>A curve's infinity modes as stored (the reader's inverse): 0 ping-pong, 1 loop,
-            /// 2 clamp.</summary>
-            static int Infinity(WrapMode mode) => mode == WrapMode.PingPong ? 0 : mode == WrapMode.Loop ? 1 : 2;
+            static int Infinity(WrapMode mode) => BuiltinLayout.Infinity(mode);
 
             void Curve(AnimationCurve curve, int level)
             {
@@ -874,9 +872,7 @@ namespace Unbound.Runtime
                 Line(level, "m_RotationOrder", "4");
             }
 
-            /// <summary>The number of key slots a gradient stores, and the scale of its key times.</summary>
-            const int GradientSlots = 8;
-            const float GradientTimeScale = 65535f;
+            const int GradientSlots = BuiltinLayout.GradientSlots;
 
             void GradientBlock(Gradient g, int level)
             {
@@ -899,7 +895,7 @@ namespace Unbound.Runtime
                 Line(level, "m_NumAlphaKeys", alphas.Length.ToString(CultureInfo.InvariantCulture));
             }
 
-            static int KeyTime(float time) => (int)Math.Round(Mathf.Clamp01(time) * GradientTimeScale);
+            static int KeyTime(float time) => BuiltinLayout.KeyTime(time);
 
             string Flow(object value, Type type, Shape shape)
             {

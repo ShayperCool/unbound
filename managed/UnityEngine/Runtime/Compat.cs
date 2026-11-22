@@ -71,6 +71,11 @@ namespace Unbound.Runtime
         /// <summary>JSON string transfer measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous embedded-null handling.</summary>
         internal static bool JsonStringTransferMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>JsonUtility's number text and how it reads numbers are measured for the
+        /// 6000.0 family (tests/projects/builtinserial `json.numbers*`: <see cref="JsonNumbers"/>);
+        /// other families keep the earlier handling, the shortest text that reads back and the
+        /// nearest double.</summary>
+        internal static bool JsonNumberTextMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>The USS importer checks values against the release's property syntaxes and the
         /// style pass checks var() substitutions against them (measured for the 6000.0 family:
         /// tests/projects/ussvalidation); other families get no importer check and keep the earlier

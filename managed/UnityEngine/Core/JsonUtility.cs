@@ -401,11 +401,74 @@ namespace UnityEngine
                         if (depth > 10) { m_Out.Append("{}"); break; }
                         WriteObject(value ?? SerializationRules.Create(type), value?.GetType() ?? type, depth, shape == Shape.GuiStyleState);
                         break;
+                    case Shape.Gradient: WriteGradient((Gradient)value ?? new Gradient()); break;
+                    case Shape.AnimationCurve: WriteCurve((AnimationCurve)value ?? new AnimationCurve()); break;
                     default:
-                        // AnimationCurve, Gradient: not written by Unbound yet.
                         m_Out.Append("{}");
                         break;
                 }
+            }
+
+            /// <summary>A gradient as the Editor writes it (tests/projects/builtinserial
+            /// `json.curveGradient`): the colour keys' colours with the alpha keys' alphas in eight
+            /// slots, their times in 1/65535, the mode, colour space and numbers of keys.</summary>
+            void WriteGradient(Gradient g)
+            {
+                var colors = g.colorKeys;
+                var alphas = g.alphaKeys;
+                const int Slots = BuiltinLayout.GradientSlots;
+                var fields = new (string, object)[1 + 3 * Slots + 4];
+                fields[0] = ("serializedVersion", "2");
+                for (int i = 0; i < Slots; i++)
+                {
+                    var rgb = i < colors.Length ? colors[i].color : default;
+                    fields[1 + i] = ("key" + i, new Color(rgb.r, rgb.g, rgb.b, i < alphas.Length ? alphas[i].alpha : 0f));
+                    fields[1 + Slots + i] = ("ctime" + i, i < colors.Length ? BuiltinLayout.KeyTime(colors[i].time) : 0);
+                    fields[1 + 2 * Slots + i] = ("atime" + i, i < alphas.Length ? BuiltinLayout.KeyTime(alphas[i].time) : 0);
+                }
+                fields[1 + 3 * Slots] = ("m_Mode", (int)g.mode);
+                fields[2 + 3 * Slots] = ("m_ColorSpace", (int)g.colorSpace);
+                fields[3 + 3 * Slots] = ("m_NumColorKeys", colors.Length);
+                fields[4 + 3 * Slots] = ("m_NumAlphaKeys", alphas.Length);
+                Fields(fields);
+            }
+
+            /// <summary>A curve as the Editor writes it (tests/projects/builtinserial
+            /// `json.curveGradient`): its keys, then its stored infinity modes.</summary>
+            void WriteCurve(AnimationCurve curve)
+            {
+                m_Out.Append('{');
+                m_Indent++;
+                bool first = true;
+                Key("serializedVersion", ref first);
+                WriteString("2");
+                Key("m_Curve", ref first);
+                var keys = curve.keys;
+                m_Out.Append('[');
+                m_Indent++;
+                for (int i = 0; i < keys.Length; i++)
+                {
+                    if (i > 0) m_Out.Append(',');
+                    NewLine();
+                    var k = keys[i];
+#pragma warning disable CS0618
+                    int tangentMode = k.tangentMode;
+#pragma warning restore CS0618
+                    Fields(("serializedVersion", "3"), ("time", k.time), ("value", k.value), ("inSlope", k.inTangent), ("outSlope", k.outTangent),
+                        ("tangentMode", tangentMode), ("weightedMode", (int)k.weightedMode), ("inWeight", k.inWeight), ("outWeight", k.outWeight));
+                }
+                m_Indent--;
+                if (keys.Length > 0) NewLine();
+                m_Out.Append(']');
+                Key("m_PreInfinity", ref first);
+                m_Out.Append(BuiltinLayout.Infinity(curve.preWrapMode).ToString(CultureInfo.InvariantCulture));
+                Key("m_PostInfinity", ref first);
+                m_Out.Append(BuiltinLayout.Infinity(curve.postWrapMode).ToString(CultureInfo.InvariantCulture));
+                Key("m_RotationOrder", ref first);
+                m_Out.Append('4');
+                m_Indent--;
+                NewLine();
+                m_Out.Append('}');
             }
 
             void Fields(params (string Name, object Value)[] fields)
@@ -422,6 +485,7 @@ namespace UnityEngine
                         case string s: WriteString(s); break;
                         case Vector3 v: Fields(("x", v.x), ("y", v.y), ("z", v.z)); break;
                         case Vector3Int v: Fields(("x", v.x), ("y", v.y), ("z", v.z)); break;
+                        case Color c: Fields(("r", c.r), ("g", c.g), ("b", c.b), ("a", c.a)); break;
                         case IFormattable n: m_Out.Append(n.ToString(null, CultureInfo.InvariantCulture)); break;
                     }
                 }
@@ -435,10 +499,13 @@ namespace UnityEngine
                 if (double.IsNaN(value)) { m_Out.Append("NaN"); return; }
                 if (double.IsPositiveInfinity(value)) { m_Out.Append("Infinity"); return; }
                 if (double.IsNegativeInfinity(value)) { m_Out.Append("-Infinity"); return; }
+                if (Compat.JsonNumberTextMeasured) { JsonNumbers.Append(m_Out, value); return; }
                 var text = value.ToString("R", CultureInfo.InvariantCulture);
-                if (text.IndexOfAny(new[] { '.', 'E', 'e' }) < 0) text += ".0";
+                if (text.IndexOfAny(s_NotWhole) < 0) text += ".0";
                 m_Out.Append(text);
             }
+
+            static readonly char[] s_NotWhole = { '.', 'E', 'e' };
 
             void WriteString(string s)
             {
@@ -679,6 +746,20 @@ namespace UnityEngine
                         var target = SerializationRules.IsGuiWrapper(type) ? SerializationRules.Create(type) : existing ?? SerializationRules.Create(type);
                         return ReadFields(target, target.GetType(), node, depth, shape == Shape.GuiStyleState);
                     }
+                    // The whole value is read from the text (what text names only some members
+                    // leaves is not repeatable in the Editor: not measured).
+                    case Shape.Gradient:
+                        if (node.Kind != JsonKind.Object) return existing;
+                        return BuiltinReaders.Gradient((key, missing) => node.Get(key) is JsonNode n ? (int)n.Number : missing,
+                            key => node.Get(key) is JsonNode c ? new Color(F(c, "r"), F(c, "g"), F(c, "b"), F(c, "a")) : Color.white);
+                    case Shape.AnimationCurve:
+                    {
+                        if (node.Kind != JsonKind.Object) return existing;
+                        var keys = new List<Keyframe>();
+                        foreach (var k in node.Get("m_Curve")?.Items ?? new List<JsonNode>())
+                            keys.Add(BuiltinReaders.Keyframe((key, missing) => k.Get(key) is JsonNode n ? (float)n.Number : missing));
+                        return BuiltinReaders.AnimationCurve(keys, (int)(node.Get("m_PreInfinity")?.Number ?? 2), (int)(node.Get("m_PostInfinity")?.Number ?? 2));
+                    }
                     default:
                         return existing;
                 }
@@ -699,6 +780,8 @@ namespace UnityEngine
             internal bool Bool;
             /// <summary>A number's or string's text.</summary>
             internal string Text = "";
+            /// <summary>A number's value as read from its text (<see cref="JsonNumbers.TryRead"/>).</summary>
+            internal double Value;
             internal List<JsonNode> Items;
             internal List<(string Key, JsonNode Value)> Members;
 
@@ -723,6 +806,7 @@ namespace UnityEngine
                         case "Infinity": return double.PositiveInfinity;
                         case "-Infinity": return double.NegativeInfinity;
                     }
+                    if (Kind == JsonKind.Number) return Value;
                     return double.TryParse(Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0;
                 }
             }
@@ -779,9 +863,21 @@ namespace UnityEngine
                     }
                     i++;
                     while (i < s.Length && (char.IsDigit(s[i]) || s[i] == '.' || s[i] == 'e' || s[i] == 'E' || s[i] == '+' || s[i] == '-')) i++;
-                    return new JsonNode { Kind = JsonKind.Number, Text = s.Substring(start, i - start) };
+                    string text = s.Substring(start, i - start);
+                    double number;
+                    // Text that is not one number (a leading zero, two points) and releases whose
+                    // reading is not measured keep the nearest double of what parses, else 0.
+                    if (!Compat.JsonNumberTextMeasured) Nearest(text, out number);
+                    else if (!JsonNumbers.TryRead(text, out number, out int read)) throw Error("Number too big to be stored in double.");
+                    else if (read != text.Length) Nearest(text, out number);
+                    return new JsonNode { Kind = JsonKind.Number, Text = text, Value = number };
                 }
                 throw Error("Invalid value.");
+            }
+
+            static void Nearest(string text, out double value)
+            {
+                if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value)) value = 0;
             }
 
             static void Expect(string s, ref int i, string word)
