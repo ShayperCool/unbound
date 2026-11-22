@@ -60,7 +60,7 @@ namespace UnityEngine.Tests
             Assert.False(copy.isReadable);
             Assert.Equal(bytes, copy.GetRawTextureData());
             Assert.Throws<ArgumentException>(() => copy.GetPixels());
-            source.Reinitialize(1, 1);
+            Assert.True(source.ReplaceImage(1, 1, TextureFormat.RGBA32, false));
             Assert.Equal(bytes, copy.GetRawTextureData());
             Object.DestroyImmediate(source);
             Assert.Equal(bytes, copy.GetRawTextureData());
