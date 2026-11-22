@@ -410,6 +410,16 @@ namespace UnityEditor
     {
         public MonoImporter() { }
 
+        /// <summary>The order the script's .meta file gives it (the Script Execution Order
+        /// settings), 0 without one; a [DefaultExecutionOrder] attribute does not count, and a
+        /// null script throws (matches the Unity 6000.0.71f1 Editor, tests/projects/monoimporter).</summary>
+        public static int GetExecutionOrder(MonoScript script)
+        {
+            if (script == null) throw new ArgumentNullException(nameof(script));
+            var type = script.GetClass();
+            return type != null && ScriptMessages.ExecutionOrders.TryGetValue(type, out var order) ? order : 0;
+        }
+
         /// <summary>The scripts of the runtime (non-editor) assemblies.</summary>
         public static MonoScript[] GetAllRuntimeMonoScripts()
         {
