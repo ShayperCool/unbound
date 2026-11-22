@@ -386,8 +386,7 @@ namespace Unbound.Runtime
         /// <summary>Carving holes changed: the tiles the changed holes (their outlines before and
         /// after) reach are cut again and replaced in their meshes, the others are kept with their
         /// polygon references. A NavMesh waiting for a rebuild is rebuilt whole instead.</summary>
-        internal static void HolesChanged(IReadOnlyList<NavMeshCarving.Footprint> removed,
-            IReadOnlySet<NavMeshCarving.Footprint> addedHoles)
+        internal static void HolesChanged(List<NavMeshCarving.Footprint> removed, HashSet<NavMeshCarving.Footprint> addedHoles)
         {
             if (s_Dirty)
             {
