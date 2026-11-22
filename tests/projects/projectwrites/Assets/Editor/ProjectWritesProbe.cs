@@ -236,6 +236,7 @@ public static class ProjectWritesProbe
         Guard("12.buildsettings", BuildSettings);
         Guard("13.save", Save);
         Guard("14.unsaved", Unsaved);
+        Guard("14.remove", RemoveObject);
         Guard("15.manifest", Manifest);
     }
 
@@ -307,6 +308,77 @@ public static class ProjectWritesProbe
         Snap("04.create.saved", "Assets/Made/Data.asset");
         Snap("04.create.saved", "Assets/Made/Data.asset.meta");
         Put("04.create.saved.all", string.Join(",", AssetDatabase.LoadAllAssetsAtPath("Assets/Made/Data.asset").Select(o => o.name + ":" + o.GetType().Name).OrderBy(s => s, StringComparer.Ordinal)));
+    }
+
+    /// <summary>What an object says of itself as part, or no part, of an asset.</summary>
+    static string Membership(UnityEngine.Object o) =>
+        "alive=" + (o != null) + (o == null ? "" : "|path=" + AssetDatabase.GetAssetPath(o) + "|contains=" + AssetDatabase.Contains(o) + "|main=" + AssetDatabase.IsMainAsset(o)
+            + "|sub=" + AssetDatabase.IsSubAsset(o) + "|persistent=" + EditorUtility.IsPersistent(o) + "|dirty=" + EditorUtility.IsDirty(o) + "|hideFlags=" + o.hideFlags + "|name=" + o.name);
+
+    static string All(string path) =>
+        string.Join(",", AssetDatabase.LoadAllAssetsAtPath(path).Select(o => o == null ? "<null>" : o.name + ":" + o.GetType().Name).OrderBy(s => s, StringComparer.Ordinal));
+
+    /// <summary>RemoveObjectFromAsset: an added object taken out again, what the file has before
+    /// and after the next save, a reference to the removed object, removing twice, adding it
+    /// back, an object that is no part of an asset, and the main object.</summary>
+    static void RemoveObject()
+    {
+        const string path = "Assets/Made/Removal.asset";
+        var main = ScriptableObject.CreateInstance<ProjectWritesData>();
+        main.number = 21;
+        AssetDatabase.CreateAsset(main, path);
+        // One added object: the file ids of added objects are random and order the documents.
+        var first = ScriptableObject.CreateInstance<ProjectWritesData>();
+        first.name = "First";
+        AssetDatabase.AddObjectToAsset(first, main);
+        main.other = first;
+        EditorUtility.SetDirty(main);
+        AssetDatabase.SaveAssets();
+        Snap("14.remove.before", path);
+        Put("14.remove.before.first", Membership(first));
+
+        AssetDatabase.RemoveObjectFromAsset(first);
+        Put("14.remove.removed.first", Membership(first));
+        Put("14.remove.removed.main", Membership(main));
+        Put("14.remove.removed.all", All(path));
+        Put("14.remove.removed.reference", main.other == first);
+        Snap("14.remove.removed", path);
+        AssetDatabase.SaveAssets();
+        Snap("14.remove.saved", path);
+        Put("14.remove.saved.first", Membership(first));
+        Put("14.remove.saved.all", All(path));
+
+        AssetDatabase.RemoveObjectFromAsset(first);
+        Put("14.remove.again.first", Membership(first));
+        var loose = ScriptableObject.CreateInstance<ProjectWritesData>();
+        Put("14.remove.loose.created", Membership(loose));
+        loose.name = "Loose";
+        Put("14.remove.loose.before", Membership(loose));
+        AssetDatabase.RemoveObjectFromAsset(loose);
+        Put("14.remove.loose", Membership(loose));
+        try { AssetDatabase.RemoveObjectFromAsset(null); Put("14.remove.null", "returns"); }
+        catch (Exception e) { Put("14.remove.null", e.GetType().Name + ": " + e.Message.Split('\n')[0]); }
+
+        AssetDatabase.AddObjectToAsset(first, main);
+        Put("14.remove.readded.first", Membership(first));
+        Put("14.remove.readded.all", All(path));
+        AssetDatabase.SaveAssets();
+        Snap("14.remove.readded", path);
+        Put("14.remove.readded.saved.first", Membership(first));
+        Put("14.remove.readded.saved.all", All(path));
+
+        AssetDatabase.RemoveObjectFromAsset(main);
+        Put("14.remove.main", Membership(main));
+        Put("14.remove.main.first", Membership(first));
+        Put("14.remove.main.all", All(path));
+        Put("14.remove.main.mainAsset", AssetDatabase.LoadMainAssetAtPath(path) == null ? "null" : AssetDatabase.LoadMainAssetAtPath(path).name);
+        Snap("14.remove.main", path);
+        AssetDatabase.SaveAssets();
+        Snap("14.remove.main.saved", path);
+        Put("14.remove.main.saved.first", Membership(first));
+        Put("14.remove.main.saved.all", All(path));
+        Put("14.remove.main.saved.mainAsset", AssetDatabase.LoadMainAssetAtPath(path) == null ? "null" : AssetDatabase.LoadMainAssetAtPath(path).name);
+        Put("14.remove.main.saved.guid", AssetDatabase.AssetPathToGUID(path) == "" ? "none" : "kept");
     }
 
     static void CopyMoveRename()
