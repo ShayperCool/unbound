@@ -646,6 +646,7 @@
 {"key":"UnityEditor.CreateGameObjectHierarchyEventArgs/Property/UnityEditor.CreateGameObjectHierarchyEventArgs/instanceId","status":"value","value":"0"}
 {"key":"UnityEditor.CreateGameObjectHierarchyEventArgs/Property/UnityEditor.CreateGameObjectHierarchyEventArgs/scene","status":"value","value":"UnityEngine.SceneManagement.Scene{buildIndex=-1;handle=0;isDirty=false;isLoaded=false;isSubScene=true;name=null;path=null;rootCount=0}"}
 {"key":"UnityEditor.CustomEditor/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.CustomPreviewAttribute/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.CustomPropertyDrawer/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.DecoratorDrawer/@factory","status":"excluded","value":"abstract"}
 {"key":"UnityEditor.DefaultAsset/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
@@ -1071,6 +1072,8 @@
 {"key":"UnityEditor.ObjectChangeEvents/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.ObjectFactory/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.ObjectNames/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.ObjectPreview/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.ObjectPreview/Property/UnityEditor.ObjectPreview/target","status":"getter-threw","value":"System.NullReferenceException"}
 {"key":"UnityEditor.ObjectReferenceKeyframe/@factory","status":"value","value":"struct"}
 {"key":"UnityEditor.ObjectReferenceKeyframe/Field/UnityEditor.ObjectReferenceKeyframe/time","status":"value","value":"0"}
 {"key":"UnityEditor.ObjectReferenceKeyframe/Field/UnityEditor.ObjectReferenceKeyframe/value","status":"value","value":"null"}

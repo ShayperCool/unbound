@@ -1399,6 +1399,12 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.CustomPreviewAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
       "type": "UnityEditor.CustomPropertyDrawer"
     },
     {
@@ -1928,6 +1934,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.ObjectNames"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ObjectPreview"
     },
     {
       "category": "struct",
