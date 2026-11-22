@@ -509,7 +509,8 @@ namespace UnityEditor
         /// more than they hold (the values before their first). Matches the Unity 6000.0.71f1
         /// Editor, tests/projects/animatorapi <c>clip.*.stats</c>, <c>stats.*</c>, <c>typed.stats</c>.
         /// Unmeasured: dense curves (a model's compressed clips) and Humanoid muscle clips, whose
-        /// sizes follow the same sum here.</summary>
+        /// sizes follow the same sum here, and the sizes of other release families
+        /// (<see cref="Compat.CompiledClipSizeMeasured"/>: the same sum, reported once).</summary>
         internal static AnimationClipStats GetAnimationClipStats(AnimationClip clip)
         {
             var stats = new AnimationClipStats();
@@ -571,6 +572,8 @@ namespace UnityEditor
             stats.totalCurves += stats.pptrCurves;
             stats.streamCurves = stats.totalCurves - stats.constantCurves - stats.denseCurves;
             if (stats.totalCurves == 0) return stats;
+            if (!Compat.CompiledClipSizeMeasured)
+                Stubs.Ignored("AnimationClipStats.size", "is the sum measured for Unity 6000.0: this release's compiled clip sizes are unmeasured");
             stats.clips = 1;
             stats.size = k_ClipBytes + k_CurveBytes * stats.totalCurves + k_ConstantBytes * stats.constantCurves
                 + k_FrameBytes * (times.Count + (floatStream ? 1 : 0)) + k_KeyBytes * streamKeys;

@@ -35,6 +35,12 @@ namespace Unbound.Runtime
         // An importer's SerializedObject over its native type tree, measured on 6000.0.71f1
         // (tests/projects/importerserialized). Elsewhere it reflects over the managed importer.
         internal static bool ImporterTypeTreesMeasured => Family == ReleaseFamily.Unity6000_0;
+
+        // The memory AnimationUtility.GetAnimationClipStats reports for a compiled clip: its fixed
+        // part and the bytes of a curve, a constant, a streamed key time and a streamed key,
+        // measured on 6000.0.71f1 (tests/projects/animatorapi stats.*). Elsewhere the same sum is
+        // answered and said to be unmeasured.
+        internal static bool CompiledClipSizeMeasured => Family == ReleaseFamily.Unity6000_0;
         internal static readonly (int ClassId, int Flags)[] BuiltinAnnotations = { (20, 3), (41, 2), (58, 2), (59, 2), (60, 2), (61, 2), (64, 2), (65, 2), (66, 2), (68, 2), (70, 2), (82, 3), (95, 2), (108, 3), (111, 2), (119, 3), (123, 1), (135, 2), (136, 2), (137, 2), (143, 2), (144, 2), (145, 2), (146, 2), (153, 2), (167, 2), (182, 3), (183, 2), (192, 2), (193, 2), (195, 2), (198, 1), (205, 2), (208, 2), (215, 3), (220, 1), (223, 2), (224, 2), (231, 2), (232, 2), (233, 2), (234, 2), (235, 2), (251, 2), (253, 2), (254, 2), (255, 2), (256, 2), (257, 2), (259, 3), (330, 3), (19719996, 2), (156049354, 2), (893571522, 2), (2083052967, 3) };
 
         /// <summary>Editor name lookup uses the class table measured for the release's family

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unbound.Tests;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -24,6 +25,8 @@ namespace UnityEngine.Tests
         readonly ILogHandler m_PreviousHandler;
         readonly bool m_PreviousLogEnabled;
         readonly LogType m_PreviousFilter;
+        // Measured on 6000.0: the sizes are that family's.
+        readonly IDisposable m_Release;
 
         public AnimationCurveRulesTests()
         {
@@ -33,6 +36,7 @@ namespace UnityEngine.Tests
             m_Logger.logHandler = new CaptureHandler(m_PreviousHandler, m_Logs);
             m_Logger.logEnabled = true;
             m_Logger.filterLogType = LogType.Log;
+            m_Release = TestRelease.Pin(TestRelease.Measured);
         }
 
         sealed class CaptureHandler : ILogHandler
@@ -63,6 +67,7 @@ namespace UnityEngine.Tests
             }
             finally
             {
+                m_Release.Dispose();
                 m_Logger.logHandler = m_PreviousHandler;
                 m_Logger.logEnabled = m_PreviousLogEnabled;
                 m_Logger.filterLogType = m_PreviousFilter;
@@ -254,6 +259,29 @@ namespace UnityEngine.Tests
             Float(source, "f", Keys(0, 0, 1, 1));
             var copy = Keep(Object.Instantiate(source));
             Assert.Equal((2628, 0), (Stats(source).size, Stats(copy).size));
+        }
+
+        /// <summary>Another release family answers the same sum and says its sizes are unmeasured.</summary>
+        [Fact]
+        public void AnotherFamilysClipSizeIsSaidToBeUnmeasured()
+        {
+            static int Said() => Unbound.Runtime.Stubs.HitReport().Where(h => h.Key == "AnimationClipStats.size").Select(h => h.Value).SingleOrDefault();
+            m_Expected.Add("Unbound: AnimationClipStats.size");
+            var clip = Clip();
+            Float(clip, "f", Keys(0, 0, 1, 1));
+            int before = Said();
+            Assert.Equal(2628, Stats(clip).size);
+            Assert.Equal(before, Said());
+            using (TestRelease.Pin(TestRelease.Unmeasured))
+            {
+                Assert.Equal((2628, 1), (Stats(clip).size, Stats(clip).streamCurves));
+                Assert.Equal(before + 2, Said());
+                // An uncompiled clip has no size to speak of.
+                var written = Clip("Written");
+                written.SetCurve("", typeof(Typed), "f", Keys(0, 0, 1, 1));
+                Assert.Equal(0, Stats(written).size);
+                Assert.Equal(before + 2, Said());
+            }
         }
 
         // ------------------------------------------------------------------ object curves
