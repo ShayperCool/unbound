@@ -22,10 +22,10 @@ use crate::{
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet, hash_map::Entry},
     path::{Path, PathBuf},
 };
-use unbound_compat::{CompileMode, Feature, Profile};
+use unbound_compat::{CompileMode, Feature, MeasuredFamily, Profile};
 
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
@@ -469,6 +469,9 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
         out
     };
     let logged_duplicates = std::cell::RefCell::new(HashSet::new());
+    let logged_unresolved_ties = std::cell::RefCell::new(HashSet::new());
+    let measured_plugin_ties =
+        editor_mode && input.profile.version.measured_family() == Some(MeasuredFamily::Unity6000_0);
     // The managed plugins an assembly with these defines may reference.
     let available = |defines: &[String]| -> Vec<&Plugin> {
         let (kept, ignored) = one_per_file_name(
@@ -476,6 +479,19 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
                 .plugins
                 .iter()
                 .filter(|p| !p.analyzer && plugin_ok(p, defines)),
+            measured_plugin_ties,
+            |kept, other| {
+                if logged_unresolved_ties
+                    .borrow_mut()
+                    .insert(other.file.clone())
+                {
+                    tracing::warn!(
+                        "Managed plugins '{}' and '{}' have the same assembly name and version and lack distinct asset GUIDs. Relative reference order follows their paths.",
+                        kept.path,
+                        other.path
+                    );
+                }
+            },
         );
         for (used, dropped) in ignored {
             if logged_duplicates.borrow_mut().insert(dropped.file.clone()) {
@@ -638,11 +654,16 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
 /// that declare one assembly name the highest version comes first, the others after every first
 /// one (the Editor logs those of a lower version), and of several with one file name the first
 /// is taken. Copies of one assembly under different file names are all referenced (the Editor
-/// then fails with CS1704, as the compile here does). Which of several of the same version and
-/// file name the Editor takes is not specified (it changed with the project's other plugins);
-/// here the first by path. Returns the plugins and each lower version with the one first.
+/// then fails with CS1704, as the compile here does). The initial Editor graph in
+/// tests/projects/pluginties prefers auto-referenced copies and then the lowest asset GUID
+/// among those copies, when file name, assembly name and version match. Copies that all
+/// require explicit references keep path order. Missing or shared GUIDs among auto-referenced
+/// copies retain path order with a diagnostic, since the Editor can allocate new GUIDs on import. Returns the plugins and each lower version with the
+/// copy selected over it.
 fn one_per_file_name<'p>(
     candidates: impl Iterator<Item = &'p Plugin>,
+    measured_plugin_ties: bool,
+    mut unresolved_tie: impl FnMut(&Plugin, &Plugin),
 ) -> (Vec<&'p Plugin>, Vec<(&'p Plugin, &'p Plugin)>) {
     let mut first: Vec<&Plugin> = Vec::new();
     let mut later: Vec<&Plugin> = Vec::new();
@@ -671,13 +692,101 @@ fn one_per_file_name<'p>(
             later.push(plugin);
         }
     }
-    let mut file_names = HashSet::new();
-    let plugins = first
-        .into_iter()
-        .chain(later)
-        .filter(|p| file_names.insert(p.file_name()))
-        .collect();
+    let mut file_slots = HashMap::new();
+    let mut plugins: Vec<&Plugin> = Vec::new();
+    for plugin in first.into_iter().chain(later) {
+        match file_slots.entry(plugin.file_name()) {
+            Entry::Vacant(entry) => {
+                entry.insert(plugins.len());
+                plugins.push(plugin);
+            }
+            Entry::Occupied(entry) => {
+                let selected = &mut plugins[*entry.get()];
+                if !measured_plugin_ties
+                    || plugin.identity.is_none()
+                    || plugin.identity != selected.identity
+                {
+                    continue;
+                }
+                match (plugin.explicitly_referenced, selected.explicitly_referenced) {
+                    (false, true) => *selected = plugin,
+                    (true, _) => {}
+                    (false, false) => match (plugin.guid, selected.guid) {
+                        (Some(candidate), Some(current)) if candidate < current => {
+                            *selected = plugin;
+                        }
+                        (Some(candidate), Some(current)) if candidate != current => {}
+                        _ => unresolved_tie(selected, plugin),
+                    },
+                }
+            }
+        }
+    }
+    if measured_plugin_ties {
+        for (used, _) in &mut lower {
+            let selected = plugins[file_slots[used.file_name()]];
+            if selected.identity == used.identity
+                && selected.explicitly_referenced == used.explicitly_referenced
+            {
+                *used = selected;
+            }
+        }
+    }
     (plugins, lower)
+}
+
+#[cfg(test)]
+mod plugin_tie_tests {
+    use super::*;
+    use crate::{assembly_identity::AssemblyIdentity, plugins::plugin_from_meta};
+
+    fn plugin(path: &str, guid: &str) -> Plugin {
+        let meta = unbound_yaml::parse_value(&format!("guid: {guid}")).unwrap();
+        let mut plugin = plugin_from_meta(Path::new(path), path.to_owned(), &meta);
+        plugin.identity = Some(AssemblyIdentity {
+            name: "Plugin".into(),
+            version: [1, 0, 0, 0],
+        });
+        plugin
+    }
+
+    #[test]
+    fn plugin_tie_preserves_path_order_when_unmeasured() {
+        let asset = plugin("Assets/Plugin.dll", "20000000000000000000000000000000");
+        let package = plugin(
+            "Packages/example/Plugin.dll",
+            "10000000000000000000000000000000",
+        );
+        let candidates = [&asset, &package];
+        let (selected, _) = one_per_file_name(candidates.into_iter(), false, |_, _| unreachable!());
+        assert_eq!(selected[0].path, asset.path);
+        let (selected, _) = one_per_file_name(candidates.into_iter(), true, |_, _| unreachable!());
+        assert_eq!(selected[0].path, package.path);
+    }
+
+    #[test]
+    fn plugin_tie_diagnoses_an_unresolved_pair() {
+        let guid = "10000000000000000000000000000000";
+        let asset = plugin("Assets/Plugin.dll", guid);
+        for package in [
+            plugin("Packages/example/Plugin.dll", guid),
+            plugin(
+                "Packages/example/Plugin.dll",
+                "00000000000000000000000000000000",
+            ),
+        ] {
+            let mut diagnosed = false;
+            let (selected, ignored) =
+                one_per_file_name([&asset, &package].into_iter(), true, |kept, other| {
+                    assert_eq!(kept.path, asset.path);
+                    assert_eq!(other.path, package.path);
+                    diagnosed = true;
+                });
+            assert!(diagnosed);
+            assert_eq!(selected[0].path, asset.path);
+            assert!(ignored.is_empty());
+        }
+    }
 }
 
 /// The line the Editor logs for a plugin it leaves out for a newer one of the same name.

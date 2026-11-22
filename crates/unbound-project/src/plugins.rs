@@ -1,12 +1,13 @@
 //! Precompiled plugin DLLs and their `PluginImporter` settings.
 use std::path::{Path, PathBuf};
-use unbound_yaml::Value;
+use unbound_yaml::{Guid, Value};
 
 #[derive(Debug, Clone)]
 pub struct Plugin {
     pub file: PathBuf,
     /// `Assets/...` or `Packages/<name>/...`
     pub path: String,
+    pub(crate) guid: Option<Guid>,
     /// Referenced only by assemblies that list it in `precompiledReferences`.
     pub explicitly_referenced: bool,
     pub define_constraints: Vec<String>,
@@ -114,6 +115,7 @@ pub fn native_editor_plugin_from_meta(file: &Path, meta: &Value) -> bool {
     let plugin = Plugin {
         file: file.to_path_buf(),
         path: String::new(),
+        guid: None,
         explicitly_referenced: false,
         define_constraints: Vec::new(),
         analyzer: false,
@@ -209,11 +211,7 @@ pub fn read_plugin(file: &Path, path: String, mutable: bool) -> Option<Plugin> {
 }
 
 pub fn plugin_from_meta(file: &Path, path: String, meta: &Value) -> Plugin {
-    let labels: Vec<&str> = meta
-        .get("labels")
-        .and_then(Value::as_seq)
-        .map(|l| l.iter().filter_map(Value::as_str).collect())
-        .unwrap_or_default();
+    let (guid, labels) = crate::assetdb::meta_header(meta);
     let importer = managed_importer(&meta);
     let explicitly_referenced = importer
         .get("isExplicitlyReferenced")
@@ -232,9 +230,10 @@ pub fn plugin_from_meta(file: &Path, path: String, meta: &Value) -> Plugin {
     Plugin {
         file: file.to_path_buf(),
         path,
+        guid: guid.filter(|guid| !guid.is_zero()),
         explicitly_referenced,
         define_constraints,
-        analyzer: labels.contains(&"RoslynAnalyzer"),
+        analyzer: labels.iter().any(|label| label == "RoslynAnalyzer"),
         identity: None,
         importer,
     }
