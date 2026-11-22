@@ -27,13 +27,19 @@ namespace UnityEngine.Tests
     public class CoreApisTests
     {
         [Fact]
-        public void PoseComposesThroughQuaternionOperators()
+        public void PoseCompositionMatchesTheMeasuredRotation()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var a = new Pose(new Vector3(1, 2, 3), new Quaternion(0.1f, 0.2f, 0.3f, 0.9273618f));
             var lhs = new Pose(new Vector3(-1, 0.5f, 4), new Quaternion(-0.5f, 0.5f, -0.5f, -0.5f));
             var by = a.GetTransformedBy(lhs);
             Assert.Equal(lhs.position + lhs.rotation * a.position, by.position);
-            Assert.Equal(lhs.rotation * a.rotation, by.rotation);
+            // The rotation of pose1 by pose2 in the coreapis reference.
+            Assert.Equal(new Quaternion(
+                BitConverter.UInt32BitsToSingle(0xBE87012E),
+                BitConverter.UInt32BitsToSingle(0x3EED6795),
+                BitConverter.UInt32BitsToSingle(0xBF438097),
+                BitConverter.UInt32BitsToSingle(0xBEBA3462)), by.rotation);
             Assert.Equal(a.rotation * Vector3.forward, a.forward);
             Assert.Equal("((1.00, 2.00, 3.00), (0.10000, 0.20000, 0.30000, 0.92736))", a.ToString());
             Assert.Equal("((1.0, 2.0, 3.0), (0.1, 0.2, 0.3, 0.9))", a.ToString("F1"));
