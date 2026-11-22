@@ -1,5 +1,10 @@
 {
-  "commands": ["python3 tests/projects/factoryinstances/run.py gate"],
+  "commands": [
+    "python3 tests/projects/factoryinstances/run.py gate"
+  ],
   "summary": "factoryinstances: [0-9]+/[0-9]+ values match.*",
-  "engine_paths": ["managed/UnityEngine/Editor/ObjectFactory.cs"]
+  "engine_paths": [
+    "managed/UnityEngine/Editor/ObjectFactory.cs",
+    "managed/UnityEngine/Runtime/Compat.cs"
+  ]
 }

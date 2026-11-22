@@ -1,33 +1,58 @@
 {"k":"UnityEditor.Animations.AnimatorTransitionBase","v":"throws ArgumentException: UnityEditor.Animations.AnimatorTransitionBase constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEditor.BrokenPrefabAsset","v":"throws ArgumentException: UnityEditor.BrokenPrefabAsset constructor is not accessible which prevent this type from being used in ObjectFactory."}
 {"k":"UnityEditor.Build.Reporting.BuildReport","v":"throws ArgumentException: UnityEditor.Build.Reporting.BuildReport constructor is not accessible which prevent this type from being used in ObjectFactory."}
 {"k":"UnityEditor.DefaultAsset","v":"throws ArgumentException: UnityEditor.DefaultAsset constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEditor.EditorBuildSettings","v":"throws ArgumentException: UnityEditor.EditorBuildSettings constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEditor.EditorSettings","v":"throws ArgumentException: UnityEditor.EditorSettings constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEditor.EditorUserBuildSettings","v":"throws ArgumentException: UnityEditor.EditorUserBuildSettings constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEditor.EditorUserSettings","v":"throws ArgumentException: UnityEditor.EditorUserSettings constructor is not accessible which prevent this type from being used in ObjectFactory."}
 {"k":"UnityEditor.LightingDataAsset","v":"throws ArgumentException: UnityEditor.LightingDataAsset constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEditor.PlayerSettings","v":"throws ArgumentException: UnityEditor.PlayerSettings constructor is not accessible which prevent this type from being used in ObjectFactory."}
 {"k":"UnityEditor.Presets.Preset","v":"UnityEditor.Presets.Preset|''|0"}
 {"k":"UnityEditor.SceneAsset","v":"throws ArgumentException: UnityEditor.SceneAsset constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEditor.VersionControlSettings","v":"throws ArgumentException: UnityEditor.VersionControlSettings constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEditorInternal.AssemblyDefinitionAsset","v":"throws ArgumentException: UnityEditorInternal.AssemblyDefinitionAsset constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEditorInternal.AssemblyDefinitionReferenceAsset","v":"throws ArgumentException: UnityEditorInternal.AssemblyDefinitionReferenceAsset constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEditorInternal.PackageManifest","v":"throws ArgumentException: UnityEditorInternal.PackageManifest constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEngine.AssetBundle","v":"throws ArgumentException: UnityEngine.AssetBundle constructor is not accessible which prevent this type from being used in ObjectFactory."}
 {"k":"UnityEngine.AssetBundleManifest","v":"throws ArgumentException: UnityEngine.AssetBundleManifest constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEngine.Audio.AudioMixer","v":"throws ArgumentException: The type UnityEngine.Audio.AudioMixer is not supported by the ObjectFactory."}
 {"k":"UnityEngine.Audio.AudioMixerGroup","v":"throws ArgumentException: UnityEngine.Audio.AudioMixerGroup constructor is not accessible which prevent this type from being used in ObjectFactory."}
 {"k":"UnityEngine.Audio.AudioMixerSnapshot","v":"throws ArgumentException: UnityEngine.Audio.AudioMixerSnapshot constructor is not accessible which prevent this type from being used in ObjectFactory."}
 {"k":"UnityEngine.AudioClip","v":"throws ArgumentException: UnityEngine.AudioClip constructor is not accessible which prevent this type from being used in ObjectFactory."}
 {"k":"UnityEngine.Avatar","v":"throws ArgumentException: UnityEngine.Avatar constructor is not accessible which prevent this type from being used in ObjectFactory."}
 {"k":"UnityEngine.ComputeShader","v":"throws ArgumentException: UnityEngine.ComputeShader constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"state.UnityEngine.Cubemap","v":"0x0|88|mips=1|readable=True|apply=ok"}
 {"k":"UnityEngine.Cubemap","v":"UnityEngine.Cubemap|''|0"}
+{"k":"state.UnityEngine.CubemapArray","v":"0x0|cubemaps=0|None|mips=1|readable=True|apply=ok"}
 {"k":"UnityEngine.CubemapArray","v":"UnityEngine.CubemapArray|''|0"}
+{"k":"state.UnityEngine.CustomRenderTexture","v":"256x256|R8G8B8A8_UNorm|mips=1|readable=True|material=null"}
 {"k":"UnityEngine.CustomRenderTexture","v":"UnityEngine.CustomRenderTexture|''|0"}
 {"k":"UnityEngine.LightProbes","v":"throws ArgumentException: UnityEngine.LightProbes constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEngine.LightmapSettings","v":"throws ArgumentException: UnityEngine.LightmapSettings constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"state.UnityEngine.Material","v":"shader=Hidden/InternalErrorShader"}
 {"k":"UnityEngine.Material","v":"UnityEngine.Material|''|0"}
 {"k":"UnityEngine.Motion","v":"throws ArgumentException: UnityEngine.Motion constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEngine.MovieTexture","v":"throws ArgumentException: 'type' parameter is not a valid UnityEngine.Object type : MovieTexture"}
 {"k":"UnityEngine.ProceduralMaterial","v":"throws ArgumentException: 'type' parameter is not a valid UnityEngine.Object type : ProceduralMaterial"}
-{"k":"UnityEngine.Rendering.GraphicsSettings","v":"throws ArgumentException: UnityEngine.Rendering.GraphicsSettings constructor is not accessible which prevent this type from being used in ObjectFactory."}
-{"k":"UnityEngine.Rendering.RayTracingShader","v":"throws ArgumentException: UnityEngine.Rendering.RayTracingShader constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEngine.ProceduralTexture","v":"throws ArgumentException: 'type' parameter is not a valid UnityEngine.Object type : ProceduralTexture"}
+{"k":"UnityEngine.QualitySettings","v":"throws ArgumentException: UnityEngine.QualitySettings constructor is not accessible which prevent this type from being used in ObjectFactory."}
 {"k":"UnityEngine.RenderSettings","v":"throws ArgumentException: UnityEngine.RenderSettings constructor is not accessible which prevent this type from being used in ObjectFactory."}
 {"k":"UnityEngine.RenderTexture","v":"throws ArgumentException: UnityEngine.RenderTexture constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEngine.Rendering.GraphicsSettings","v":"throws ArgumentException: UnityEngine.Rendering.GraphicsSettings constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEngine.Rendering.RayTracingShader","v":"throws ArgumentException: UnityEngine.Rendering.RayTracingShader constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"UnityEngine.RuntimeAnimatorController","v":"throws ArgumentException: The type UnityEngine.RuntimeAnimatorController is not supported by the ObjectFactory."}
 {"k":"UnityEngine.Shader","v":"throws ArgumentException: UnityEngine.Shader constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"state.UnityEngine.SparseTexture","v":"0x0|None|mips=1|readable=True"}
 {"k":"UnityEngine.SparseTexture","v":"UnityEngine.SparseTexture|''|0"}
 {"k":"UnityEngine.SpeedTreeWindAsset","v":"UnityEngine.SpeedTreeWindAsset|''|0"}
 {"k":"UnityEngine.Sprite","v":"throws ArgumentException: UnityEngine.Sprite constructor is not accessible which prevent this type from being used in ObjectFactory."}
 {"k":"UnityEngine.Texture","v":"throws ArgumentException: UnityEngine.Texture constructor is not accessible which prevent this type from being used in ObjectFactory."}
+{"k":"state.UnityEngine.Texture2D","v":"0x0|88|mips=1|readable=True|apply=ok"}
 {"k":"UnityEngine.Texture2D","v":"UnityEngine.Texture2D|''|0"}
+{"k":"state.UnityEngine.Texture2DArray","v":"0x0|depth=0|None|mips=1|readable=True|apply=ok"}
 {"k":"UnityEngine.Texture2DArray","v":"UnityEngine.Texture2DArray|''|0"}
+{"k":"state.UnityEngine.Texture3D","v":"0x0|depth=0|None|mips=1|readable=True|apply=ok"}
 {"k":"UnityEngine.Texture3D","v":"UnityEngine.Texture3D|''|0"}
 {"k":"UnityEngine.Video.VideoClip","v":"throws ArgumentException: UnityEngine.Video.VideoClip constructor is not accessible which prevent this type from being used in ObjectFactory."}
 {"k":"complete","v":true}
