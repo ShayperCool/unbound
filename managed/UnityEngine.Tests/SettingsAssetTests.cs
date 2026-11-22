@@ -207,6 +207,8 @@ namespace UnityEngine.Tests
                 RenderingLayerMask.s_Names = new[] { "Default" };
                 // A removed name is saved the same way (control outside the probe: add, remove, save).
                 Assert.True(UnityEditor.Rendering.RenderPipelineEditorUtility.TryAddRenderingLayerName("Gone"));
+                AssetDatabase.SaveAssets();
+                Assert.Contains("  - Gone\n", Text("ProjectSettings/TagManager.asset"));
                 Assert.True(UnityEditor.Rendering.RenderPipelineEditorUtility.TryRemoveLastRenderingLayerName());
                 AssetDatabase.SaveAssets();
                 Assert.Contains("  m_RenderingLayers:\n  - Default\n", Text("ProjectSettings/TagManager.asset"));
