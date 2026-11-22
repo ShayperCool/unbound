@@ -20,7 +20,8 @@ namespace UnityEditor
     /// link that points nowhere counts as a destination that exists. In Unbound's project view (see
     /// <see cref="DeleteFileOrDirectory"/>) a path naming one of the view's own links, or a new
     /// name beside them, names the project's own entry: it is copied, moved or made there and the
-    /// view gets or loses its link; destinations and moved sources that land on what
+    /// view gets or loses its link (a project entry the view has no link for counts as an existing
+    /// destination; the Packages folder is not moved); destinations and moved sources that land on what
     /// DeleteFileOrDirectory refuses are refused and reported the same way.
     /// </summary>
     public partial class FileUtil
