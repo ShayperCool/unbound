@@ -245,8 +245,6 @@ namespace UnityEngine.VFX
             return s_Seeds.S3;
         }
 
-        /// <summary>A GPU buffer of the asset's compiled graph, made when first used and made
-        /// anew (its contents lost) when more elements are asked for than it has.</summary>
         /// <summary>A ring of an asset's temporary buffer: one buffer per frame it keeps, and the
         /// frame it was last asked for.</summary>
         sealed class TemporaryRing
@@ -309,6 +307,8 @@ namespace UnityEngine.VFX
             m_Temporary.Clear();
         }
 
+        /// <summary>A GPU buffer of the asset's compiled graph, made when first used and made
+        /// anew (its contents lost) when more elements are asked for than it has.</summary>
         internal GraphicsBuffer GpuBuffer(int index, int minCount)
         {
             var buffer = m_GpuBuffers[index];

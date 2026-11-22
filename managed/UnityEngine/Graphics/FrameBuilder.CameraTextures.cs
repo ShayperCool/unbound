@@ -220,10 +220,11 @@ namespace Unbound.Runtime
             GfxStream.Restore(saved);
         }
 
-        /// <summary>Whether a draw has object motion (a mesh renderer, an effect's renderer, or a skinned mesh renderer
-        /// without active cloth, not a draw set up by a script, whose motion is not the camera's),
-        /// with its previous matrix and whether it moved since the matrices were last kept
-        /// (<see cref="EndFrameMotion"/>) or forces no motion. A renderer is taken to be still the
+        /// <summary>Whether a draw has object motion (a mesh renderer, an effect's renderer, or a
+        /// skinned mesh renderer without active cloth, not a draw set up by a script, whose
+        /// motion is not the camera's), with its previous matrix and whether it moved since the
+        /// matrices were last kept (<see cref="EndFrameMotion"/>) or forces no motion; an
+        /// effect's renderer always moves (its particles do). A renderer is taken to be still the
         /// first time it is drawn and through the rest of that frame. On the Editor's OpenGL Core device (the one Unbound reports) a
         /// bone-skinned mesh moves as its object matrix (<see cref="Renderer.MotionMatrix"/>, its
         /// root bone's) does and its bones' deformation adds no motion, with or without
