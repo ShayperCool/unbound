@@ -695,6 +695,28 @@
 {"key":"UnityEditor.EditorPrefs/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.EditorSettings/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.EditorStyles/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.EditorTextSettings/@factory","status":"value","value":"scriptable"}
+{"key":"UnityEditor.EditorTextSettings/Field/UnityEditor.EditorTextSettings/blurryTextCaching","status":"value","value":"null"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:0"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.Object/name","status":"value","value":"string:"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/clearDynamicDataOnBuild","status":"value","value":"true"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/defaultColorGradientPresetsPath","status":"value","value":"string:Text Color Gradients/"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/defaultFontAsset","status":"value","value":"null"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/defaultFontAssetPath","status":"value","value":"string:Fonts & Materials/"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/defaultSpriteAsset","status":"value","value":"null"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/defaultSpriteAssetPath","status":"value","value":"string:Sprite Assets/"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/defaultStyleSheet","status":"value","value":"null"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/displayWarnings","status":"value","value":"false"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/emojiFallbackTextAssets","status":"value","value":"null"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/enableEmojiSupport","status":"value","value":"false"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/fallbackFontAssets","status":"value","value":"null"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/fallbackSpriteAssets","status":"value","value":"null"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/lineBreakingRules","status":"value","value":"UnityEngine.TextCore.Text.UnicodeLineBreakingRules{followingCharacters=null;leadingCharacters=null;lineBreakingRules=null;useModernHangulLineBreakingRules=false}"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/matchMaterialPreset","status":"value","value":"false"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/missingCharacterUnicode","status":"value","value":"0"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/missingSpriteCharacterUnicode","status":"value","value":"0"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/styleSheetsResourcePath","status":"value","value":"string:Text Style Sheets/"}
+{"key":"UnityEditor.EditorTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/version","status":"value","value":"null"}
 {"key":"UnityEditor.EditorTools.ToolManager/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.EditorUserBuildSettings/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.EditorUserSettings/@factory","status":"excluded","value":"no-public-parameterless-constructor"}

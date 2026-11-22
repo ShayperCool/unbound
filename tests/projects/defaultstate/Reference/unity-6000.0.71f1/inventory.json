@@ -1570,6 +1570,12 @@
       "type": "UnityEditor.EditorStyles"
     },
     {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.EditorTextSettings"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "static",
