@@ -193,6 +193,8 @@ namespace UnityEngine.Tests
                 IMGUIContainerTests.Send(container, KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.A }), out _);
                 SampleEditor.ReadSerializedObject = false;
                 Assert.Equal(3, logs.Entries.Count(e => e == "Error:The serializedObject should not be used inside OnSceneGUI or OnPreviewGUI. Use the target property directly instead."));
+                // The serialized object is made from `targets` on its first read: one more of that error.
+                Assert.Equal(7, logs.Entries.Count(e => e.Contains("The targets array should not be used")));
                 Assert.NotNull(three.serializedObject);
                 Assert.Equal(3, logs.Entries.Count(e => e.Contains("The serializedObject should not be used")));
                 Assert.True(Editor.m_AllowMultiObjectAccess);
