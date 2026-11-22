@@ -584,9 +584,9 @@ namespace UnityEditor
 
         /// <summary>A prefab's contents saved to its own file, or a plain hierarchy over a prefab
         /// that exists (its root and the root's Transform keep their ids, measured for ReplacePrefab:
-        /// tests/projects/scenesave replace.prefab); to a new path, a plain hierarchy or a prefab's
-        /// contents make a new prefab and an instance's root makes a variant of its prefab
-        /// (<see cref="PrefabAssets.Create"/>, <see cref="PrefabAssets.CreateVariant"/>).</summary>
+        /// tests/projects/scenesave replace.prefab); to a new path, a plain hierarchy (holding
+        /// instances or not) or a prefab's contents make a new prefab and an instance's root makes a
+        /// variant of its prefab (<see cref="PrefabAssets.Create"/>).</summary>
         public static GameObject SaveAsPrefabAsset(GameObject instanceRoot, string assetPath, out bool success)
         {
             success = false;
@@ -596,11 +596,11 @@ namespace UnityEditor
             if (file == null)
             {
                 bool variant = contents == null && IsPartOfAnyPrefab(instanceRoot);
-                if (!variant) RequirePlain(instanceRoot, path);
-                else if (IsOutermostPrefabInstanceRoot(instanceRoot) && !IsPartOfPrefabAsset(instanceRoot)) RequireOverridesOnly(instanceRoot, path);
-                else throw new NotSupportedException($"Unbound makes new prefabs of plain GameObjects, prefab contents and prefab instance roots in scenes only (not {instanceRoot.name} to {path})");
+                if (variant && (!IsOutermostPrefabInstanceRoot(instanceRoot) || IsPartOfPrefabAsset(instanceRoot)))
+                    throw new NotSupportedException($"Unbound makes new prefabs of plain GameObjects, prefab contents and prefab instance roots in scenes only (not {instanceRoot.name} to {path})");
+                if (variant) RequireVariantSource(instanceRoot, path);
                 RequireNewPrefabPath(path);
-                file = variant ? PrefabAssets.CreateVariant(path, instanceRoot) : PrefabAssets.Create(path, instanceRoot);
+                file = PrefabAssets.Create(path, instanceRoot);
                 success = file != null;
             }
             else if (contents != null && contents.File == file) success = PrefabContents.Save(contents);
@@ -628,7 +628,6 @@ namespace UnityEditor
             var path = PrefabPath(instanceRoot, assetPath, connect: true);
             if (PrefabAssets.FileAt(path) != null || PrefabContents.Of(instanceRoot) != null || IsPartOfAnyPrefab(instanceRoot))
                 throw new NotSupportedException($"Unbound saves and connects a plain GameObject to a new prefab only (not {instanceRoot.name} to {path})");
-            RequirePlain(instanceRoot, path);
             RequireNewPrefabPath(path);
             var file = PrefabAssets.Create(path, instanceRoot);
             if (file == null) return null;
@@ -701,25 +700,15 @@ namespace UnityEditor
                 throw new NotSupportedException($"Unbound does not overwrite {path}: the file there is no prefab it can load");
         }
 
-        /// <summary>A new prefab's hierarchy holds no prefab instance (nested prefabs in a new prefab
-        /// are not measured).</summary>
-        static void RequirePlain(GameObject root, string path)
+        /// <summary>A new variant's instance has its prefab and holds no other instance (a variant of a
+        /// missing prefab, and other instances inside a new variant, are not measured).</summary>
+        static void RequireVariantSource(GameObject instanceRoot, string path)
         {
-            foreach (var t in root.GetComponentsInChildren<Transform>(true))
-                if (PrefabLinks.Of(t.m_GameObject)?.Instance != null)
-                    throw new NotSupportedException($"Unbound does not make new prefabs holding prefab instances yet ({t.m_GameObject.name} in {path})");
-        }
-
-        /// <summary>A new variant's instance overrides properties only (added or removed components and
-        /// added GameObjects in a new variant are not measured).</summary>
-        static void RequireOverridesOnly(GameObject instanceRoot, string path)
-        {
-            if (PrefabLinks.Of(instanceRoot).Instance.SourceMissing)
+            var own = PrefabLinks.Of(instanceRoot).Instance;
+            if (own.SourceMissing)
                 throw new NotSupportedException($"Unbound does not make new prefab variants of instances whose prefab is missing ({instanceRoot.name} to {path})");
-            if (GetAddedComponents(instanceRoot).Count > 0 || GetRemovedComponents(instanceRoot).Count > 0 || GetAddedGameObjects(instanceRoot).Count > 0)
-                throw new NotSupportedException($"Unbound makes new prefab variants of instances that override properties only, not of {instanceRoot.name} with added or removed objects ({path})");
             foreach (var t in instanceRoot.GetComponentsInChildren<Transform>(true))
-                if (PrefabLinks.Of(t.m_GameObject)?.Instance is PrefabInstanceData data && data != PrefabLinks.Of(instanceRoot).Instance)
+                if (PrefabLinks.Of(t.m_GameObject)?.Instance is PrefabInstanceData data && data != own)
                     throw new NotSupportedException($"Unbound does not make new prefab variants of instances holding other prefab instances yet ({t.m_GameObject.name} in {path})");
         }
 

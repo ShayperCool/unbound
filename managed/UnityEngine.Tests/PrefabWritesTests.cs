@@ -365,7 +365,7 @@ namespace UnityEngine.Tests
             instance.transform.localPosition = new Vector3(8f, 0f, 0f);
             var data = PrefabLinks.Of(instance).Instance;
             data.FileId = 55;
-            var text = PrefabAssets.NewVariantText("Assets/ThingVariant.prefab", instance);
+            var text = PrefabAssets.NewPrefabText("Assets/ThingVariant.prefab", instance);
             var docs = UnityYamlText.Parse(text);
             var doc = Assert.Single(docs);
             Assert.Equal("PrefabInstance", doc.ClassName);
@@ -413,6 +413,46 @@ namespace UnityEngine.Tests
             Assert.Contains("label", Paths().Split(','));
         }
 
+        /// <summary>A new prefab holding an instance writes it as a new instance of the file: its
+        /// PrefabInstance under the outer Transform with its overrides, the added component and
+        /// GameObject listed and written, the instance keeping its own document id (prefab-nested
+        /// Outer.prefab); a variant lists its removed component (RichVariant.prefab).</summary>
+        [Fact]
+        public void NewPrefabsWriteTheInstancesTheyHold()
+        {
+            var outer = new GameObject("Outer");
+            m_Made.Add(outer);
+            var nested = Instance();
+            nested.transform.SetParent(outer.transform, false);
+            nested.transform.localPosition = new Vector3(1f, 2f, 3f);
+            nested.AddComponent<SphereCollider>().radius = 4f;
+            var extra = new GameObject("Extra");
+            extra.transform.SetParent(nested.transform, false);
+            var data = PrefabLinks.Of(nested).Instance;
+            data.FileId = 77;
+            var docs = UnityYamlText.Parse(PrefabAssets.NewPrefabText("Assets/Outer.prefab", outer));
+            var instance = Assert.Single(docs, d => d.ClassName == "PrefabInstance");
+            Assert.NotEqual(77L, instance.FileId);
+            Assert.Equal(77L, data.FileId);
+            var outerTransform = docs.Find(d => d.ClassName == "Transform" && d.Body.Get("m_Father").Raw == "{fileID: 0}");
+            var modification = instance.Body.Get("m_Modification");
+            Assert.Equal("{fileID: " + outerTransform.FileId + "}", modification.Get("m_TransformParent").Raw);
+            var addedComponent = Assert.Single(modification.Get("m_AddedComponents").Items);
+            var sphere = docs.Find(d => d.ClassName == "SphereCollider");
+            Assert.Equal("{fileID: " + sphere.FileId + "}", addedComponent.Get("addedObject").Raw);
+            var addedObject = Assert.Single(modification.Get("m_AddedGameObjects").Items);
+            var extraTransform = docs.Find(d => d.ClassName == "Transform" && d.FileId == SceneFiles.ParseFileId(addedObject.Get("addedObject")));
+            var stand = docs.Find(d => d.FileId == SceneFiles.ParseFileId(extraTransform.Body.Get("m_Father")));
+            Assert.EndsWith(" stripped", stand.Header);
+            Assert.Equal("Outer", docs.Find(d => d.ClassName == "GameObject" && !d.Header.EndsWith(" stripped") && d.Body.Get("m_Name").Text != "Extra").Body.Get("m_Name").Text);
+
+            var variantSource = Instance();
+            Object.DestroyImmediate(variantSource.transform.Find("Part").GetComponent<BoxCollider>());
+            var variant = UnityYamlText.Parse(PrefabAssets.NewPrefabText("Assets/RichVariant.prefab", variantSource));
+            var removed = Assert.Single(Assert.Single(variant, d => d.ClassName == "PrefabInstance").Body.Get("m_Modification").Get("m_RemovedComponents").Items);
+            Assert.Equal("{fileID: 202, guid: " + m_Guid + ", type: 3}", removed.Raw);
+        }
+
         /// <summary>Unity's argument checks (part of an instance, a folder at the path, a null path,
         /// connecting under StreamingAssets or a persistent object), and new prefabs that are not
         /// measured failing loudly before anything is written: a hierarchy holding an instance, a
@@ -431,15 +471,11 @@ namespace UnityEngine.Tests
         {
             var plain = new GameObject("Plain");
             m_Made.Add(plain);
-            var nested = Instance();
-            nested.transform.SetParent(plain.transform, false);
-            Assert.StartsWith("Unbound does not make new prefabs holding prefab instances yet (Thing in Assets/Plain.prefab)",
-                Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAsset(plain, "Assets/Plain.prefab")).Message);
-            Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAssetAndConnect(plain, "Assets/Plain.prefab", InteractionMode.AutomatedAction));
-            var added = Instance();
-            added.AddComponent<SphereCollider>();
-            Assert.Contains("with added or removed objects",
-                Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAsset(added, "Assets/Variant.prefab")).Message);
+            // A variant of an instance holding another instance is not measured.
+            var holding = Instance();
+            Instance().transform.SetParent(holding.transform, false);
+            Assert.StartsWith("Unbound does not make new prefab variants of instances holding other prefab instances yet",
+                Assert.Throws<NotSupportedException>(() => PrefabUtility.SaveAsPrefabAsset(holding, "Assets/Variant.prefab")).Message);
             // Unity's own argument checks, before the path's (its PrefabUtility C#).
             var part = Instance().transform.Find("Part").gameObject;
             Assert.Equal("Can't save part of a Prefab instance as a Prefab",
@@ -489,7 +525,6 @@ namespace UnityEngine.Tests
             Assert.Equal("Given path is not valid: 'Assets/Bad.asset'",
                 Assert.Throws<ArgumentException>(() => PrefabUtility.CreatePrefab("Assets/Bad.asset", fresh, ReplacePrefabOptions.ConnectToPrefab)).Message);
 #pragma warning restore CS0618
-            Assert.False(File.Exists(Path.Combine(m_Project, "Assets/Plain.prefab")));
             Assert.False(File.Exists(Path.Combine(m_Project, "Assets/Variant.prefab")));
             Assert.True(fresh.name == "Fresh" && !PrefabUtility.IsPartOfAnyPrefab(fresh));
         }

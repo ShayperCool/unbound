@@ -91,12 +91,17 @@ namespace Unbound.Runtime
         }
 
         /// <summary>
-        /// A new prefab asset made of a hierarchy that is no prefab's (a plain one, or a prefab's
-        /// loaded contents): its objects copied into new asset objects, the root named after the
-        /// file, every object under a random file id, then the file imported (the PrefabImporter's
-        /// <c>.meta</c>) and loaded from it (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/scenesave edit Made.prefab, prefab-api Created.prefab, prefab-writes
-        /// ThingCopy.prefab). Null, with the reason logged, when it cannot be written.
+        /// A new prefab asset made of a scene's hierarchy, written as it is: a plain hierarchy or a
+        /// prefab's contents (a copy, its root named after the file, a random file id per object),
+        /// one holding prefab instances (each written as a new instance of the file: its
+        /// modifications, added and removed objects) or an instance's root (a variant of its prefab:
+        /// its PrefabInstance, the root named after the file); references to scene objects outside
+        /// it are none. The file is then imported (the PrefabImporter's <c>.meta</c>) and loaded
+        /// from it; the hierarchy keeps its name and its instances their documents' ids (matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/scenesave edit Made.prefab, prefab-api
+        /// Created.prefab, prefab-writes ThingCopy.prefab, ThingVariant.prefab, prefab-nested
+        /// Outer.prefab, RichVariant.prefab, VariantOfVariant.prefab). Null, with the reason
+        /// logged, when it cannot be written.
         /// </summary>
         internal static LoadedFile Create(string path, GameObject source)
         {
@@ -104,59 +109,24 @@ namespace Unbound.Runtime
             return text == null ? null : Imported(path, text);
         }
 
-        /// <summary>The text of <see cref="Create"/>'s file (a reference to a scene object outside the
-        /// hierarchy is none: an asset holds no scene object); null with the reason logged.</summary>
+        /// <summary>The text of <see cref="Create"/>'s file; null with the reason logged.</summary>
         internal static string NewPrefabText(string path, GameObject source)
         {
-            var root = PrefabContents.NewAssetGameObject(source.m_Name, source.transform.GetType());
+            var instances = new List<(PrefabInstanceData Data, long FileId)>();
+            foreach (var t in source.GetComponentsInChildren<Transform>(true))
+                if (PrefabLinks.Of(t.m_GameObject)?.Instance is PrefabInstanceData data && !instances.Exists(i => i.Data == data))
+                    instances.Add((data, data.FileId));
+            var name = source.m_Name;
+            source.m_Name = Path.GetFileNameWithoutExtension(path);
+            foreach (var (data, _) in instances) data.FileId = 0;
             try
             {
-                var map = new Dictionary<Object, Object>(ReferenceEqualityComparer.Instance)
-                {
-                    [source] = root,
-                    [source.transform] = root.m_Transform,
-                };
-                PrefabContents.Sync(source, root, map, new ValueReferences());
-                root.m_Name = Path.GetFileNameWithoutExtension(path);
-                return WriteNew(path, root);
+                return WriteNew(path, source);
             }
             finally
             {
-                Object.DestroyImmediate(root, true);
-            }
-        }
-
-        /// <summary>
-        /// A new prefab variant: a file holding the instance's PrefabInstance alone, its
-        /// modifications as the instance has them with the root named after the file, under a random
-        /// file id and with no parent (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
-        /// prefab-writes ThingVariant.prefab: an instance root with property overrides). The instance
-        /// stays an instance of its prefab. Null, with the reason logged, when it cannot be written.
-        /// </summary>
-        internal static LoadedFile CreateVariant(string path, GameObject instanceRoot)
-        {
-            var text = NewVariantText(path, instanceRoot);
-            return text == null ? null : Imported(path, text);
-        }
-
-        /// <summary>The text of <see cref="CreateVariant"/>'s file; null with the reason logged.</summary>
-        internal static string NewVariantText(string path, GameObject instanceRoot)
-        {
-            var data = PrefabLinks.Of(instanceRoot).Instance;
-            var name = instanceRoot.m_Name;
-            long fileId = data.FileId;
-            // Written as a new instance of the file (a random id of its own); the scene's instance
-            // keeps its name and its document's id.
-            instanceRoot.m_Name = Path.GetFileNameWithoutExtension(path);
-            data.FileId = 0;
-            try
-            {
-                return WriteNew(path, instanceRoot);
-            }
-            finally
-            {
-                instanceRoot.m_Name = name;
-                data.FileId = fileId;
+                source.m_Name = name;
+                foreach (var (data, fileId) in instances) data.FileId = fileId;
             }
         }
 
@@ -429,7 +399,7 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A prefab asset's new GameObject with its transform (a <paramref name="transformType"/>).</summary>
-        internal static GameObject NewAssetGameObject(string name, Type transformType)
+        static GameObject NewAssetGameObject(string name, Type transformType)
         {
             GameObject made;
             using (ObjectRegistry.AsAssets()) made = new GameObject(name, bare: true) { m_IsPrefabAsset = true, IsPersistentAsset = true };
