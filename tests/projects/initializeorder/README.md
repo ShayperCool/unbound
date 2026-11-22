@@ -30,7 +30,8 @@ Editor's own: the probe sorts them).
 
 Residual (`residuals.json`): `loaded.postprocess`. Unbound keeps no post-processed artifacts and
 replays an asset's postprocessors when it first loads it in a session; for a load during the domain
-load the replay runs after the load, with the deferred imports.
+load the replay runs after the load, with the deferred imports (its preprocessors still run as it
+loads).
 
 ```sh
 python3 tests/projects/initializeorder/run.py record --label a

@@ -112,6 +112,9 @@ namespace UnityEditor
             // entering Play mode reloads the domain (tests/projects/compileevents start.load).
             if (enteringPlayMode)
             {
+                // The Editor sends these before its reload, outside the domain load: their imports
+                // run at once.
+                DomainLoading = false;
                 EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
                 // A session restarted for a script edit continues that reload (its old session raised
                 // beforeAssemblyReload). Options that keep the domain do not come here (BeforePlayMode).
@@ -120,6 +123,7 @@ namespace UnityEditor
             try
             {
                 PlayModeDomainLoading = enteringPlayMode;
+                DomainLoading = true;
                 DidReloadScriptsMethods();
             }
             finally
@@ -143,8 +147,10 @@ namespace UnityEditor
             AssetPostprocessing.DomainLoaded(RunDeferredImports());
         }
 
-        /// <summary>While the editor domain loads (its initializers, [InitializeOnLoadMethod] and
-        /// [DidReloadScripts] methods), imports wait until the load has ended.</summary>
+        /// <summary>While the editor domain's load callbacks run (its initializers,
+        /// [InitializeOnEnterPlayMode], [InitializeOnLoadMethod] and [DidReloadScripts] methods, not
+        /// ExitingEditMode or beforeAssemblyReload, which the Editor sends before its reload),
+        /// imports wait until the load has ended.</summary>
         internal static bool DomainLoading { get; private set; }
 
         /// <summary>The work the domain load put off, in the order asked: imports, and the

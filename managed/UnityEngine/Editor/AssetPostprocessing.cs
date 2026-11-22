@@ -329,14 +329,15 @@ namespace UnityEditor
 
         // ------------------------------------------------------------------ postprocessing at load
         // An asset loaded while the editor domain loads is postprocessed once the load has ended
-        // (EditorInitialization.DeferPostprocess); a model's or prefab's hierarchy postprocessing
+        // (EditorInitialization.DeferPostprocess; skipped for an object destroyed by then); its
+        // preprocessors still run as it loads, and a model's or prefab's hierarchy postprocessing
         // stays with its load, since it shapes what the load returns.
 
         /// <summary>A texture's postprocessors as it loads: OnPostprocessTexture with the texture
         /// readable (pixels it sets are uploaded), then OnPostprocessSprites with its sprites.</summary>
         internal static void PostprocessTexture(string path, Texture2D texture, Sprite[] sprites)
         {
-            if (EditorInitialization.DeferPostprocess(() => PostprocessTexture(path, texture, sprites))) return;
+            if (EditorInitialization.DeferPostprocess(() => { if (texture != null) PostprocessTexture(path, texture, sprites); })) return;
             using var callbacks = AssetDatabaseRuntime.ImportCallbacks(AssetDatabase.AssetPathToGUID(path));
             var hooks = Hooks("OnPostprocessTexture", typeof(Texture2D));
             var spriteHooks = Hooks("OnPostprocessSprites", typeof(Texture2D), typeof(Sprite[]));
@@ -514,7 +515,7 @@ namespace UnityEditor
         /// (pixels it sets are not uploaded: unmeasured).</summary>
         internal static void PostprocessCubemap(string path, Cubemap cubemap)
         {
-            if (EditorInitialization.DeferPostprocess(() => PostprocessCubemap(path, cubemap))) return;
+            if (EditorInitialization.DeferPostprocess(() => { if (cubemap != null) PostprocessCubemap(path, cubemap); })) return;
             using var callbacks = AssetDatabaseRuntime.ImportCallbacks(AssetDatabase.AssetPathToGUID(path));
             var hooks = Hooks("OnPostprocessCubemap", typeof(Cubemap));
             if (hooks.Count > 0) AssetPostprocessorHooks.Run(hooks, Session(path), new object[] { cubemap });
@@ -525,7 +526,7 @@ namespace UnityEditor
         /// has no name yet (the Editor names it after the callback).</summary>
         internal static void PostprocessAudio(string path, AudioClip clip)
         {
-            if (EditorInitialization.DeferPostprocess(() => PostprocessAudio(path, clip))) return;
+            if (EditorInitialization.DeferPostprocess(() => { if (clip != null) PostprocessAudio(path, clip); })) return;
             using var callbacks = AssetDatabaseRuntime.ImportCallbacks(AssetDatabase.AssetPathToGUID(path));
             var hooks = Hooks("OnPostprocessAudio", typeof(AudioClip));
             if (hooks.Count == 0)
