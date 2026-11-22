@@ -458,9 +458,10 @@ When a move stops against an edge, the projected position uses a weighted sum
 of the two endpoints. Single-precision rounding can put this result one
 representable float away from a projection using the endpoint difference.
 The wall movement profile records the exact position bits as well as the
-positions in world units. It covers the original diagonal wall, a translated
-copy and the opposite wall. Interior moves, a vertex hit and a move past the
-vertex are also recorded.
+positions in world units. It exercises a diagonal wall, the same nominal
+moves in a second baked lane at a different origin, and the opposite wall.
+The controls also include an interior move, a vertex hit and an interior
+point beyond the vertex.
 
 Unity documents that Move applies a relative offset and adjusts an existing
 path. The arithmetic used at a wall is measured on Unity 6000.0.71f1.

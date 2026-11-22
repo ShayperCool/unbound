@@ -242,3 +242,14 @@ blocked-agent differences in the broad capture, so all 253 of its values match.
 The control covers a complete ground path with a replaced prefix. A new
 hole in any tile of that prefix, an intact prefix before the edit, partial
 paths and off-mesh routes use the existing replan.
+
+## Weighted edge projection
+
+Moves clipped to a wall use the weighted sum of its endpoints in the
+measured Unity 6000.0.71f1 profile. The earlier position drift along the
+walker's first diagonal edge changed the velocity chosen near a later
+vertex. With the projection corrected, the remaining five differences
+are climber vertical velocity at frames 21, 85 and 88, walker vertical
+velocity at 142, and left's path flag at 222. Each of those frames
+also differed in the previous 212-frame comparison. The baked reference,
+comparator and tolerances are unchanged.

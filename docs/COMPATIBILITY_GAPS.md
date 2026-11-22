@@ -225,7 +225,7 @@ scenarios. All 1453 added navlinks orientation, endpoint, stopping and transform
 records and all 608 values in 44 added navmesh prediction, finite-input and
 large-obstacle scenarios match.
 
-The six-probe regression gate retains strict raw failures: navmesh 212 frame
+The earlier six-probe regression gate retained strict raw failures: navmesh 212 frame
 scenarios, navlinks 255 values, 3 avoidance configurations, navpath placed routes
 23/163, wide-link offsets 2/167 and post avoidance 17/578, and navbaked height agents
 14/816 (navpath `carve.rules` 2/551 are recorded in the carving row). Imported height queries remain 103/103; runtime height generation remains
