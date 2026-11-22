@@ -451,3 +451,23 @@ Two independent Editor runs produced the same reference. The overlap
 profile matches all 20 records and 240 values. The previous planar
 correction differs in 48 values across the near, diagonal and
 different-priority cases.
+
+## Movement constrained to a NavMesh edge
+
+When a move stops against an edge, the projected position uses a weighted sum
+of the two endpoints. Single-precision rounding can put this result one
+representable float away from a projection using the endpoint difference.
+The wall movement profile records the exact position bits as well as the
+positions in world units. It covers the original diagonal wall, a translated
+copy and the opposite wall. Interior moves, a vertex hit and a move past the
+vertex are also recorded.
+
+Unity documents that Move applies a relative offset and adjusts an existing
+path. The arithmetic used at a wall is measured on Unity 6000.0.71f1.
+[NavMeshAgent.Move](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/move).
+
+```
+python3 tests/projects/navlinks/projection.py editor --profile wallmove --release 6000.0.71f1 --label L
+python3 tests/projects/navlinks/projection.py publish --profile wallmove --release 6000.0.71f1 --label L
+UNBOUND_CLI=.../unbound python3 tests/projects/navlinks/projection.py gate --profile wallmove --release 6000.0.71f1
+```

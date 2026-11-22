@@ -37,6 +37,7 @@ namespace DotRecast.Detour.Crowd
         public int maxTopologyOptimizationIterations = 32; // Max number of sliced path finding iterations executed per topology optimization per agent
         public float collisionResolveFactor = 0.7f;
         public bool resolveAgentOverlapsIn3D;
+        public bool weightedWallProjection;
         public int maxObstacleAvoidanceCircles = DtCrowdConst.DT_CROWDAGENT_MAX_NEIGHBOURS; // Max number of neighbour agents to consider in obstacle avoidance processing
         public int maxObstacleAvoidanceSegments = DtLocalBoundary.MAX_LOCAL_SEGS; // Max number of neighbour segments to consider in obstacle avoidance processing
 

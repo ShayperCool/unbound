@@ -1134,6 +1134,7 @@ namespace Unbound.Runtime
                     measuredBrakingPlan = Compat.NavMeshBrakingPlanMeasured,
                     joinMovedCorridorStart = Compat.NavMeshCorridorJoinMeasured,
                     resolveAgentOverlapsIn3D = Compat.NavMeshAgentOverlap3DMeasured,
+                    weightedWallProjection = Compat.NavMeshWallProjectionMeasured,
                 };
                 crowd = new DtCrowd(config, surface.Mesh, i => AreaFilter.Of(-1));
                 crowd.tryEnterConnection = polyRef => TryEnterLink(surface, polyRef);

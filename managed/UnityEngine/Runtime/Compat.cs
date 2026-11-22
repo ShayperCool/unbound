@@ -324,6 +324,10 @@ namespace Unbound.Runtime
         /// positions onto the NavMesh (navlinks, Unity 6000.0.71f1).</summary>
         internal static bool NavMeshAgentOverlap3DMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Movement constrained to a NavMesh wall uses a weighted sum of the edge's
+        /// endpoints (navlinks wall movement, Unity 6000.0.71f1).</summary>
+        internal static bool NavMeshWallProjectionMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Enabling an agent starts its reported velocity at zero, measured by
         /// tests/projects/navlinks on 6000.0.71f1. Other releases retain the previous,
         /// unmeasured velocity report until the next update.</summary>

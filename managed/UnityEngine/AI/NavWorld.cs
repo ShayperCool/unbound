@@ -339,7 +339,7 @@ namespace Unbound.Runtime
             }
             foreach (var surface in s_Surfaces.Values)
             {
-                surface.Query = new DtNavMeshQuery(surface.Mesh);
+                surface.Query = new DtNavMeshQuery(surface.Mesh, Compat.NavMeshWallProjectionMeasured);
                 if (Compat.NavMeshCarvingCorridorMeasured)
                     surface.RemovedCarvingTiles.EnsureCapacity(surface.Tiles.Count);
                 var polyDump = Environment.GetEnvironmentVariable("UNBOUND_NAVMESH_POLYS");

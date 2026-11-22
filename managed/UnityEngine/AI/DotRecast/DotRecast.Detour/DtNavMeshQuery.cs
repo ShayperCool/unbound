@@ -41,6 +41,7 @@ namespace DotRecast.Detour
         protected readonly DtNodePool m_nodePool; //< Pointer to node pool. 
         protected readonly DtNodeQueue m_openList; //< Pointer to open list queue. 
         readonly Queue<DtNode> m_moveQueue = new Queue<DtNode>();
+        readonly bool m_WeightedWallProjection;
 
         //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -59,9 +60,10 @@ namespace DotRecast.Detour
         /// A portal may be treated as a wall based on the dtQueryFilter used for a query.
         ///
         /// @see dtNavMesh, dtQueryFilter, #dtAllocNavMeshQuery(), #dtAllocNavMeshQuery()
-        public DtNavMeshQuery(DtNavMesh nav)
+        public DtNavMeshQuery(DtNavMesh nav, bool weightedWallProjection = false)
         {
             m_nav = nav;
+            m_WeightedWallProjection = weightedWallProjection;
             m_nodePool = new DtNodePool();
             m_openList = new DtNodeQueue();
             m_tinyNodePool = new DtNodePool();
@@ -1995,7 +1997,11 @@ namespace DotRecast.Detour
                         if (distSqr < bestDist)
                         {
                             // Update nearest distance.
-                            bestPos = RcVec.Lerp(verts, vj, vi, tseg);
+                            // A move blocked by an edge uses the weighted sum of its endpoints
+                            // in the measured profile (tests/projects/navlinks wall movement).
+                            bestPos = m_WeightedWallProjection
+                                ? RcVec3f.Lerp(verts.ToVec3(vj), verts.ToVec3(vi), tseg)
+                                : RcVec.Lerp(verts, vj, vi, tseg);
                             bestDist = distSqr;
                             bestNode = curNode;
                         }
