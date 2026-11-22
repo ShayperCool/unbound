@@ -36,6 +36,7 @@ enum Pending {
 trait Rendering: Send + 'static {
     fn apply(&mut self, upload: Upload);
     fn execute(&mut self, commands: Vec<Command>);
+    fn shader_warmup(&mut self, request: ShaderWarmupRequest) -> Result<String, String>;
 }
 
 impl Rendering for UnityRenderer {
@@ -45,6 +46,10 @@ impl Rendering for UnityRenderer {
 
     fn execute(&mut self, commands: Vec<Command>) {
         UnityRenderer::execute(self, commands);
+    }
+
+    fn shader_warmup(&mut self, request: ShaderWarmupRequest) -> Result<String, String> {
+        UnityRenderer::shader_warmup(self, request)
     }
 }
 
@@ -292,9 +297,8 @@ impl<R: Rendering> Worker<R> {
     }
 }
 
-#[derive(Default)]
-struct Inner {
-    worker: Option<Arc<Worker>>,
+struct Inner<R = UnityRenderer> {
+    worker: Option<Arc<Worker<R>>>,
     pending: Vec<Pending>,
     /// Where `.shader` files are, for the resolver.
     shader_roots: Vec<PathBuf>,
@@ -304,7 +308,18 @@ struct Inner {
     resolver: Option<Resolver>,
 }
 
-impl Inner {
+impl<R> Default for Inner<R> {
+    fn default() -> Self {
+        Self {
+            worker: None,
+            pending: Vec::new(),
+            shader_roots: Vec::new(),
+            resolver: None,
+        }
+    }
+}
+
+impl<R> Inner<R> {
     fn resolver(&mut self) -> &mut Resolver {
         let roots = &self.shader_roots;
         self.resolver.get_or_insert_with(|| {
@@ -317,9 +332,13 @@ impl Inner {
     }
 }
 
+/// The backend of the engine's renderer (see the module's description and [`Backend`]).
 #[derive(Default)]
-pub struct GpuBackend {
-    inner: Mutex<Inner>,
+pub struct GpuBackend(Backend<UnityRenderer>);
+
+/// Where uploads, command batches and calls to the renderer run (a stand-in renderer in tests).
+struct Backend<R: Rendering> {
+    inner: Mutex<Inner<R>>,
     /// A native plugin works with the device (it loaded, a plugin event was issued, or a native
     /// texture pointer was handed out): from then on uploads and command batches run on the
     /// calling game thread (the renderer lent to it, in order), as they did before the render
@@ -331,7 +350,17 @@ pub struct GpuBackend {
     going_direct: Mutex<()>,
 }
 
-impl Drop for GpuBackend {
+impl<R: Rendering> Default for Backend<R> {
+    fn default() -> Self {
+        Self {
+            inner: Mutex::new(Inner::default()),
+            direct: Default::default(),
+            going_direct: Mutex::new(()),
+        }
+    }
+}
+
+impl<R: Rendering> Drop for Backend<R> {
     fn drop(&mut self) {
         let worker = self
             .inner
@@ -354,7 +383,7 @@ impl GpuBackend {
     /// built-in shaders).
     pub fn with_shader_roots(shader_roots: Vec<PathBuf>) -> Self {
         let backend = Self::default();
-        backend.inner.lock().unwrap().shader_roots = shader_roots;
+        backend.0.inner.lock().unwrap().shader_roots = shader_roots;
         backend
     }
 
@@ -362,7 +391,7 @@ impl GpuBackend {
     /// built-in pipeline as a new one is: the pipeline tag among the pending commands reaches it
     /// in order when they run. `shader_roots` are used when the backend was made without any.
     pub fn take_resolver(&self, shader_roots: &[PathBuf]) -> Resolver {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.0.inner.lock().unwrap();
         if inner.resolver.is_none() && inner.shader_roots.is_empty() {
             inner.shader_roots = shader_roots.to_vec();
         }
@@ -374,10 +403,20 @@ impl GpuBackend {
 
     /// Hands the backend its renderer, drains what waited for it, and starts the render thread.
     pub fn install(&self, renderer: UnityRenderer) {
-        unbound_runtime::plugin_api::while_rendering(|| self.install_holding(renderer));
+        unbound_runtime::plugin_api::while_rendering(|| self.0.install(renderer));
     }
 
-    fn install_holding(&self, mut renderer: UnityRenderer) {
+    /// Waits until every upload and command submitted before this call has finished executing on
+    /// the render thread (for frame-exact screenshots/snapshots, plugin context handoff, and
+    /// clean shutdown).
+    pub fn flush(&self) {
+        self.0.flush();
+    }
+}
+
+impl<R: Rendering> Backend<R> {
+    /// Runs what waited for the renderer, in order, then starts the render thread with it.
+    fn install(&self, mut renderer: R) {
         let mut inner = self.inner.lock().unwrap();
         for pending in std::mem::take(&mut inner.pending) {
             match pending {
@@ -393,12 +432,12 @@ impl GpuBackend {
         inner.worker = Some(Worker::spawn(renderer));
     }
 
-    /// Waits until every upload and command submitted before this call has finished executing on
-    /// the render thread (for frame-exact screenshots/snapshots, plugin context handoff, and
-    /// clean shutdown).
-    pub fn flush(&self) {
-        let worker = self.inner.lock().unwrap().worker.clone();
-        if let Some(worker) = worker {
+    fn worker(&self) -> Option<Arc<Worker<R>>> {
+        self.inner.lock().unwrap().worker.clone()
+    }
+
+    fn flush(&self) {
+        if let Some(worker) = self.worker() {
             worker.flush();
         }
     }
@@ -419,61 +458,9 @@ impl GpuBackend {
         }
     }
 
-    fn is_direct(&self) -> bool {
-        self.direct.load(std::sync::atomic::Ordering::Acquire)
-    }
-
-    /// Runs everything on the calling game thread from now on (see `direct`), once what was
-    /// queued before has finished.
-    fn go_direct(&self) {
-        if self.is_direct() {
-            return;
-        }
-        let _switching = self.going_direct.lock().unwrap_or_else(|e| e.into_inner());
-        if !self.is_direct() {
-            self.flush();
-            self.direct
-                .store(true, std::sync::atomic::Ordering::Release);
-        }
-    }
-}
-
-impl RenderBackend for GpuBackend {
-    fn upload_mesh(&self, handle: u64, mesh: owned::Mesh) {
-        self.upload(Upload::UploadMesh(handle, mesh));
-    }
-
-    fn release_mesh(&self, handle: u64) {
-        self.upload(Upload::ReleaseMesh(handle));
-    }
-
-    fn upload_texture(&self, handle: u64, texture: owned::Texture) {
-        self.upload(Upload::UploadTexture(handle, texture));
-    }
-
-    fn release_texture(&self, handle: u64) {
-        self.upload(Upload::ReleaseTexture(handle));
-    }
-
-    fn texture_mip_bias(&self, handle: u64, bias: f32) {
-        self.upload(Upload::TextureMipBias(handle, bias));
-    }
-
-    fn texture_sampler(&self, handle: u64, properties: [i32; 5]) {
-        self.upload(Upload::TextureSampler(handle, properties));
-    }
-
-    fn update_material(&self, handle: u64, material: owned::Material) {
-        self.upload(Upload::UpdateMaterial(handle, material));
-    }
-
-    fn release_material(&self, handle: u64) {
-        self.upload(Upload::ReleaseMaterial(handle));
-    }
-
-    fn submit_commands(&self, commands: Vec<Command>) {
-        // The game thread keeps the plugins' OpenGL context current between script calls.
-        crate::render::gl_interop::mark_render_thread();
+    /// A command batch: queued for the render thread, or run on the caller once direct (a batch
+    /// with a plugin event makes it direct first).
+    fn submit(&self, commands: Vec<Command>) {
         // A plugin event, also one waiting for the device: the plugin works with it from now on.
         if commands.iter().any(|c| matches!(c, Command::Plugin(_))) {
             self.go_direct();
@@ -501,13 +488,102 @@ impl RenderBackend for GpuBackend {
         }
     }
 
+    /// Native device work on the renderer (a native pointer handed to a plugin): on the caller,
+    /// direct from now on. None without a renderer or when it stopped.
+    fn lend<T>(&self, op: impl FnOnce(&mut R) -> T) -> Option<T> {
+        let worker = self.worker()?;
+        self.go_direct();
+        worker.with_renderer_on_caller(op)
+    }
+
+    /// A plugin loading, queried or shutting down: rendering runs on the game thread from now
+    /// on, and on OpenGL Core the work runs with the plugins' context current.
+    fn plugin_context(&self, work: &mut dyn FnMut()) {
+        self.go_direct();
+        // Only OpenGL Core has a context of the plugins' to make current (the other devices'
+        // plugins use the device's own interface): the work alone elsewhere.
+        if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore {
+            return work();
+        }
+        // Flush any queued texture/target uploads before the plugin inspects the GL share group.
+        self.flush();
+        // The renderer is not held meanwhile: the plugin may call back into the engine.
+        let mut ran = false;
+        let _ = crate::render::gl_interop::with(|_| {
+            ran = true;
+            work();
+        });
+        if !ran {
+            work();
+        }
+    }
+
+    fn is_direct(&self) -> bool {
+        self.direct.load(std::sync::atomic::Ordering::Acquire)
+    }
+
+    /// Runs everything on the calling game thread from now on (see `direct`), once what was
+    /// queued before has finished.
+    fn go_direct(&self) {
+        if self.is_direct() {
+            return;
+        }
+        let _switching = self.going_direct.lock().unwrap_or_else(|e| e.into_inner());
+        if !self.is_direct() {
+            self.flush();
+            self.direct
+                .store(true, std::sync::atomic::Ordering::Release);
+        }
+    }
+}
+
+impl RenderBackend for GpuBackend {
+    fn upload_mesh(&self, handle: u64, mesh: owned::Mesh) {
+        self.0.upload(Upload::UploadMesh(handle, mesh));
+    }
+
+    fn release_mesh(&self, handle: u64) {
+        self.0.upload(Upload::ReleaseMesh(handle));
+    }
+
+    fn upload_texture(&self, handle: u64, texture: owned::Texture) {
+        self.0.upload(Upload::UploadTexture(handle, texture));
+    }
+
+    fn release_texture(&self, handle: u64) {
+        self.0.upload(Upload::ReleaseTexture(handle));
+    }
+
+    fn texture_mip_bias(&self, handle: u64, bias: f32) {
+        self.0.upload(Upload::TextureMipBias(handle, bias));
+    }
+
+    fn texture_sampler(&self, handle: u64, properties: [i32; 5]) {
+        self.0.upload(Upload::TextureSampler(handle, properties));
+    }
+
+    fn update_material(&self, handle: u64, material: owned::Material) {
+        self.0.upload(Upload::UpdateMaterial(handle, material));
+    }
+
+    fn release_material(&self, handle: u64) {
+        self.0.upload(Upload::ReleaseMaterial(handle));
+    }
+
+    fn submit_commands(&self, commands: Vec<Command>) {
+        // The game thread keeps the plugins' OpenGL context current between script calls.
+        crate::render::gl_interop::mark_render_thread();
+        self.0.submit(commands);
+    }
+
     fn read_buffer(&self, buffer: u64, offset: u64, size: u64) -> Option<Vec<u8>> {
-        let worker = self.inner.lock().unwrap().worker.clone()?;
+        let worker = self.0.inner.lock().unwrap().worker.clone()?;
         worker.call(move |r| r.read_buffer(buffer, offset, size))?
     }
 
     fn graphics_fence(&self, insert: bool) -> Result<u64, String> {
         let worker = self
+            .0
             .inner
             .lock()
             .unwrap()
@@ -521,7 +597,7 @@ impl RenderBackend for GpuBackend {
 
     fn shader_passes(&self, shader: &str) -> Result<String, String> {
         let worker = {
-            let mut inner = self.inner.lock().unwrap();
+            let mut inner = self.0.inner.lock().unwrap();
             if let Some(w) = &inner.worker {
                 Some(Arc::clone(w))
             } else {
@@ -559,7 +635,7 @@ impl RenderBackend for GpuBackend {
 
     fn shader_warmup(&self, request: ShaderWarmupRequest) -> Result<String, String> {
         let worker = {
-            let mut inner = self.inner.lock().unwrap();
+            let mut inner = self.0.inner.lock().unwrap();
             if let Some(w) = &inner.worker {
                 Some(Arc::clone(w))
             } else {
@@ -584,6 +660,7 @@ impl RenderBackend for GpuBackend {
         keywords: &[String],
     ) -> Result<[u32; 3], String> {
         let worker = self
+            .0
             .inner
             .lock()
             .unwrap()
@@ -599,45 +676,20 @@ impl RenderBackend for GpuBackend {
     }
 
     fn with_plugin_context(&self, work: &mut dyn FnMut()) {
-        // A plugin is loading, queried or shutting down: rendering runs on the game thread from now on.
-        self.go_direct();
-        // Only OpenGL Core has a context of the plugins' to make current (the other devices'
-        // plugins use the device's own interface): the work alone elsewhere.
-        if unbound_runtime::graphics_device::get() != unbound_compat::GraphicsDevice::OpenGLCore {
-            return work();
-        }
-        // Flush any queued texture/target uploads before the plugin inspects the GL share group.
-        self.flush();
-        // The renderer is not held meanwhile: the plugin may call back into the engine.
-        let mut ran = false;
-        let _ = crate::render::gl_interop::with(|_| {
-            ran = true;
-            work();
-        });
-        if !ran {
-            work();
-        }
+        self.0.plugin_context(work);
     }
 
     fn native_texture(&self, texture: u64, depth: bool) -> u64 {
-        let Some(worker) = self.inner.lock().unwrap().worker.clone() else {
-            return 0;
-        };
         // A native pointer is for a plugin's own device work.
-        self.go_direct();
-        worker
-            .with_renderer_on_caller(|r| r.native_texture(texture, depth))
+        self.0
+            .lend(|r| r.native_texture(texture, depth))
             .unwrap_or(0)
     }
 
     #[cfg(target_os = "macos")]
     fn render_buffer_texture(&self, texture: u64, image: u8) -> u64 {
-        let Some(worker) = self.inner.lock().unwrap().worker.clone() else {
-            return 0;
-        };
-        self.go_direct();
-        worker
-            .with_renderer_on_caller(|r| r.metal_render_buffer_texture(texture, image))
+        self.0
+            .lend(|r| r.metal_render_buffer_texture(texture, image))
             .unwrap_or(0)
     }
 
@@ -647,21 +699,16 @@ impl RenderBackend for GpuBackend {
         native: u64,
         info: &unbound_runtime::render_protocol::ExternalTextureInfo,
     ) -> Result<(), String> {
-        let worker = self
-            .inner
-            .lock()
-            .unwrap()
-            .worker
-            .clone()
-            .ok_or_else(|| "the renderer is not up yet".to_string())?;
-        self.go_direct();
-        worker
-            .with_renderer_on_caller(|r| r.external_texture(texture, native, info))
+        if self.0.worker().is_none() {
+            return Err("the renderer is not up yet".to_string());
+        }
+        self.0
+            .lend(|r| r.external_texture(texture, native, info))
             .ok_or_else(|| "the renderer has stopped".to_string())?
     }
 
     fn read_pixels(&self, texture: u64, rect: [i32; 4], float: bool) -> Option<Vec<u8>> {
-        let worker = self.inner.lock().unwrap().worker.clone()?;
+        let worker = self.0.inner.lock().unwrap().worker.clone()?;
         worker.call(move |r| r.read_pixels(texture, rect, float))?
     }
 
@@ -674,7 +721,7 @@ impl RenderBackend for GpuBackend {
         float: bool,
         current_attachment: bool,
     ) -> Option<Vec<u8>> {
-        let worker = self.inner.lock().unwrap().worker.clone()?;
+        let worker = self.0.inner.lock().unwrap().worker.clone()?;
         worker
             .call(move |r| r.read_texture(texture, mip, layer, rect, float, current_attachment))?
     }
@@ -725,7 +772,7 @@ SubShader {
                 .is_err()
         );
         backend.submit_commands(vec![Command::ColorSpace(0)]);
-        let inner = backend.inner.lock().unwrap();
+        let inner = backend.0.inner.lock().unwrap();
         assert!(matches!(
             &inner.pending[..],
             [
@@ -853,6 +900,129 @@ SubShader {
                 }
             }
         }
+
+        fn shader_warmup(&mut self, _request: ShaderWarmupRequest) -> Result<String, String> {
+            self.0
+                .lock()
+                .unwrap()
+                .push(("warmup".into(), std::thread::current().id()));
+            Ok("{}".into())
+        }
+    }
+
+    type Log = Arc<Mutex<Vec<(String, std::thread::ThreadId)>>>;
+
+    fn recording() -> (Backend<Recorder>, Log) {
+        let log = Log::default();
+        let backend = Backend::default();
+        backend.install(Recorder(Arc::clone(&log)));
+        (backend, log)
+    }
+
+    fn plugin_event() -> Command {
+        Command::Plugin(unbound_runtime::render_commands::PluginCall::Event { callback: 0, id: 0 })
+    }
+
+    /// What ran, in order, and whether on the calling thread (else on the render thread).
+    fn ran(log: &Log) -> Vec<(String, bool)> {
+        let caller = std::thread::current().id();
+        let log = log.lock().unwrap();
+        log.iter()
+            .map(|(name, thread)| (name.clone(), *thread == caller))
+            .collect()
+    }
+
+    fn on(entries: &[(&str, bool)]) -> Vec<(String, bool)> {
+        entries
+            .iter()
+            .map(|(name, caller)| (name.to_string(), *caller))
+            .collect()
+    }
+
+    /// Uploads and batches run on the render thread until a batch with a plugin event; that
+    /// batch and everything after it run on the calling thread, in order.
+    #[test]
+    fn a_plugin_event_moves_rendering_to_the_caller() {
+        let (backend, log) = recording();
+        backend.upload(Upload::ReleaseMesh(1));
+        backend.submit(vec![Command::ColorSpace(1)]);
+        backend.submit(vec![plugin_event(), Command::ColorSpace(2)]);
+        backend.upload(Upload::ReleaseMesh(2));
+        backend.submit(vec![Command::ColorSpace(3)]);
+        backend.flush();
+        assert_eq!(
+            ran(&log),
+            on(&[
+                ("upload", false),
+                ("commands 1", false),
+                ("commands 2", true),
+                ("upload", true),
+                ("commands 3", true),
+            ])
+        );
+    }
+
+    /// A native pointer handed out (native texture, external texture, render buffer) moves
+    /// rendering to the caller as well.
+    #[test]
+    fn a_native_pointer_moves_rendering_to_the_caller() {
+        let (backend, log) = recording();
+        backend.submit(vec![Command::ColorSpace(1)]);
+        assert_eq!(backend.lend(|_| 7), Some(7));
+        backend.upload(Upload::ReleaseMesh(1));
+        backend.submit(vec![Command::ColorSpace(2)]);
+        backend.flush();
+        assert_eq!(
+            ran(&log),
+            on(&[
+                ("commands 1", false),
+                ("upload", true),
+                ("commands 2", true)
+            ])
+        );
+    }
+
+    /// A plugin's load, query or shutdown moves rendering to the caller.
+    #[test]
+    fn a_plugin_context_moves_rendering_to_the_caller() {
+        let (backend, log) = recording();
+        backend.submit(vec![Command::ColorSpace(1)]);
+        let mut called = false;
+        backend.plugin_context(&mut || called = true);
+        assert!(called);
+        backend.submit(vec![Command::ColorSpace(2)]);
+        backend.flush();
+        assert_eq!(
+            ran(&log),
+            on(&[("commands 1", false), ("commands 2", true)])
+        );
+    }
+
+    /// A plugin event issued before the renderer exists: everything after the renderer is
+    /// installed runs on the caller (what waited runs where the renderer is installed).
+    #[test]
+    fn a_plugin_event_before_the_renderer_moves_its_rendering_to_the_caller() {
+        let log = Log::default();
+        let backend = Backend::default();
+        backend.submit(vec![plugin_event(), Command::ColorSpace(1)]);
+        backend.install(Recorder(Arc::clone(&log)));
+        backend.upload(Upload::ReleaseMesh(1));
+        backend.submit(vec![Command::ColorSpace(2)]);
+        backend.flush();
+        assert_eq!(
+            ran(&log),
+            on(&[("commands 1", true), ("upload", true), ("commands 2", true)])
+        );
+    }
+
+    /// Without any plugin work everything stays on the render thread.
+    #[test]
+    fn without_plugins_rendering_stays_on_the_render_thread() {
+        let (backend, log) = recording();
+        backend.upload(Upload::ReleaseMesh(1));
+        backend.submit(vec![Command::ColorSpace(1)]);
+        backend.flush();
+        assert_eq!(ran(&log), on(&[("upload", false), ("commands 1", false)]));
     }
 
     /// A lent renderer runs the caller's work on the calling thread, after everything queued
