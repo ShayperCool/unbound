@@ -170,6 +170,13 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
   share their sort), other primitives, lit outputs, strips, meshes and Shader Graph outputs
   (`tests/projects/vfxlit`, `tests/projects/vfxstrips`), and motion vectors of outputs other
   than opaque quads, which are drawn, not measured here.
+- Motion vectors beyond `Moving`'s one still camera, effect at rest and particles three frames
+  old: several cameras on one effect, a moving camera (URP sets the view-projection the
+  output-update kernel reads in its motion vectors pass, after the effects' camera commands),
+  an effect whose transform moves, particles born in the frame drawn, an effect culled for some
+  frames and seen again, its first frame (new buffers are not cleared), a camera rendered twice
+  in a frame, projection jitter, XR, and how long a camera's buffers are kept unused (Unbound's
+  own choice).
 - Sorting on a device whose compute groups share less than 32 KB of memory; effects over each
   other at one distance.
 - Several instances of one asset in one batch: Unbound runs each effect as a batch of its own.
