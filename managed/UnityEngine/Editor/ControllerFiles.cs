@@ -138,11 +138,14 @@ namespace Unbound.Runtime
                 if (m.MachineTransitions.Count == 0) Line(1, "m_StateMachineTransitions", "{}");
                 else
                 {
-                    // Transitions out of sub-state machines, by their source in the order each source's
-                    // first transition was made, each source's in the order made (controller-assets
-                    // basic.saved).
+                    // Transitions out of sub-state machines, by their source's instance id (newest made
+                    // first among machines made in the session), each source's in the order made
+                    // (controller-assets basic.saved: three sources made and given transitions in
+                    // different orders).
                     Key("m_StateMachineTransitions", 1);
-                    foreach (var (source, transitions) in m.MachineTransitions)
+                    var sources = new System.Collections.Generic.List<(AnimatorStateMachine Source, System.Collections.Generic.List<AnimatorTransitionBase> Transitions)>(m.MachineTransitions);
+                    sources.Sort((a, b) => (a.Source != null ? a.Source.GetInstanceID() : 0).CompareTo(b.Source != null ? b.Source.GetInstanceID() : 0));
+                    foreach (var (source, transitions) in sources)
                     {
                         Item("first", Reference(source), 1);
                         References("second", transitions, 2);

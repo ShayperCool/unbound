@@ -36,7 +36,7 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(machine); }
         }
 
-        /// <summary>Transitions out of sub-state machines, by source in the order made, and a synced
+        /// <summary>Transitions out of sub-state machines, by source instance id, and a synced
         /// layer's motions and behaviours are written in the forms measured (controller-assets
         /// basic.saved, layered.saved; animatorapi model.file.C).</summary>
         [Fact]
@@ -52,11 +52,11 @@ namespace UnityEngine.Tests
                 machine.AddStateMachineTransition(sub, run);
                 Assert.True(UnityYamlWriter.WritesNew(machine));
                 Assert.Contains("  m_StateMachineTransitions:\n  - first: {fileID: 0}\n    second:\n    - {fileID: 0}\n  m_StateMachineBehaviours: []\n", Write(machine, 1));
-                // A second source, its first transition made later: after the first source
-                // (controller-assets basic.saved).
+                // A second source, made later and given its transition later: written first, the
+                // sources by instance id (controller-assets basic.saved).
                 var other = machine.AddStateMachine("Other");
                 machine.AddStateMachineTransition(other, run);
-                Assert.Contains("  m_StateMachineTransitions:\n  - first: {fileID: 3}\n    second:\n    - {fileID: 0}\n  - first: {fileID: 4}\n", UnityYamlWriter.Write(new Object[] { machine, sub, other },
+                Assert.Contains("  m_StateMachineTransitions:\n  - first: {fileID: 4}\n    second:\n    - {fileID: 0}\n  - first: {fileID: 3}\n", UnityYamlWriter.Write(new Object[] { machine, sub, other },
                     new Dictionary<Object, long>(ReferenceEqualityComparer.Instance) { [machine] = 1, [sub] = 3, [other] = 4 }));
 
                 controller.AddLayer("Base Layer");
