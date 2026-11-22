@@ -3382,6 +3382,12 @@
       "type": "UnityEngine.Animations.DiscreteEvaluationAttribute"
     },
     {
+      "category": "struct",
+      "module": "UnityEngine.AnimationModule",
+      "status": "candidate",
+      "type": "UnityEngine.Animations.GenericBinding"
+    },
+    {
       "category": "component",
       "module": "UnityEngine.AnimationModule",
       "status": "candidate",

@@ -77,17 +77,6 @@
   },
   {
     "case": "clip-assets",
-    "key": "editor.bindings",
-    "reference": [
-      "|Transform|localEulerAnglesRaw.y; Child|Transform|m_LocalPosition.z; |MeshRenderer|material._Color.r; Body|SkinnedMeshRenderer|blendShape.Smile; |SpriteRenderer|m_SortingOrder|discrete"
-    ],
-    "actual": [
-      "|Transform|localEulerAnglesRaw.y; |MeshRenderer|material._Color.r; |SpriteRenderer|m_SortingOrder; Body|SkinnedMeshRenderer|blendShape.Smile; Child|Transform|m_LocalPosition.z"
-    ],
-    "reason": "AnimationUtility.GetCurveBindings of a clip made by script: the Editor lists its float curves of other classes first, then its Transform vector curves by kind (rotation, Euler angles, position, scale), each in the order set (with SetEditorCurve, the curves as set, discrete ones marked); Unbound orders them by path, Transform curves first. The API's order is left for its own task (Q690 writes the clip's file)."
-  },
-  {
-    "case": "clip-assets",
     "key": "events.bindings",
     "reference": [
       "|Holder|ratio; |Transform|m_LocalPosition.x; |Transform|m_LocalPosition.y; |Transform|m_LocalPosition.z"
