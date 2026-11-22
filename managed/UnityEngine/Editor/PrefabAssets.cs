@@ -114,8 +114,17 @@ namespace Unbound.Runtime
         {
             var instances = new List<(PrefabInstanceData Data, long FileId)>();
             foreach (var t in source.GetComponentsInChildren<Transform>(true))
-                if (PrefabLinks.Of(t.m_GameObject)?.Instance is PrefabInstanceData data && !instances.Exists(i => i.Data == data))
-                    instances.Add((data, data.FileId));
+            {
+                if (PrefabLinks.Of(t.m_GameObject)?.Instance is not PrefabInstanceData data) continue;
+                // Not measured, refused: an instance placed under another instance's object (how the
+                // outer one lists it), one whose file lists GameObjects removed from it (kept nowhere else).
+                var parent = t.parent == null ? null : PrefabLinks.Of(t.parent.m_GameObject)?.Instance;
+                if (parent != null && parent != data && t != source.transform)
+                    throw new NotSupportedException($"Unbound does not make new prefabs holding an instance under another instance's object yet ({t.name} in {path})");
+                if (data.RemovedGameObjects > 0)
+                    throw new NotSupportedException($"Unbound does not make new prefabs of instances with removed GameObjects yet ({t.name} in {path})");
+                if (!instances.Exists(i => i.Data == data)) instances.Add((data, data.FileId));
+            }
             var name = source.m_Name;
             source.m_Name = Path.GetFileNameWithoutExtension(path);
             foreach (var (data, _) in instances) data.FileId = 0;

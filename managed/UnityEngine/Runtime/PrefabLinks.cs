@@ -17,6 +17,9 @@ namespace Unbound.Runtime
         /// <summary>The engine made the instance's objects as placeholders: its prefab is missing or
         /// could not load (a variant whose parent is missing).</summary>
         internal bool SourceMissing;
+        /// <summary>How many of its prefab's GameObjects its file lists as removed (the instance was
+        /// expanded without them; Unbound keeps no other record of them).</summary>
+        internal int RemovedGameObjects;
         /// <summary>The PrefabInstance's modifications as its file has them, in order: the source
         /// object they target, the property path, the value as text, an object reference as read.</summary>
         internal readonly List<(ObjectRef Target, string Path, string Value, ObjectRef Reference)> Stored = new List<(ObjectRef, string, string, ObjectRef)>();
@@ -125,6 +128,7 @@ namespace Unbound.Runtime
                 SourceGuid = body.Ref("m_SourcePrefab").Guid,
                 InAsset = inAsset,
                 SourceMissing = body.TryGet(MissingPrefabName, out _),
+                RemovedGameObjects = System.Linq.Enumerable.Count(body.Get("m_Modification")?.Get("m_RemovedGameObjects")?.Seq() ?? Array.Empty<YNode>()),
             };
             foreach (var m in body.Get("m_Modification")?.Get("m_Modifications")?.Seq() ?? Array.Empty<YNode>())
             {

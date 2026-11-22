@@ -453,11 +453,37 @@ namespace UnityEngine.Tests
             Assert.Equal("{fileID: 202, guid: " + m_Guid + ", type: 3}", removed.Raw);
         }
 
+        /// <summary>New prefabs whose instances are not measured are refused or not written: an
+        /// instance under another instance's object, an instance whose file lists removed
+        /// GameObjects, a GameObject added among an instance's own children.</summary>
+        [Fact]
+        public void NewPrefabsWithUnmeasuredInstancesAreRefused()
+        {
+            var outer = new GameObject("Outer");
+            m_Made.Add(outer);
+            var first = Instance();
+            first.transform.SetParent(outer.transform, false);
+            var second = Instance();
+            second.transform.SetParent(first.transform.Find("Part"), false);
+            Assert.StartsWith("Unbound does not make new prefabs holding an instance under another instance's object yet",
+                Assert.Throws<NotSupportedException>(() => PrefabAssets.NewPrefabText("Assets/Outer.prefab", outer)).Message);
+            second.transform.SetParent(outer.transform, false);
+            PrefabLinks.Of(second).Instance.RemovedGameObjects = 1;
+            Assert.StartsWith("Unbound does not make new prefabs of instances with removed GameObjects yet",
+                Assert.Throws<NotSupportedException>(() => PrefabAssets.NewPrefabText("Assets/Outer.prefab", outer)).Message);
+            PrefabLinks.Of(second).Instance.RemovedGameObjects = 0;
+            var early = new GameObject("Early");
+            early.transform.SetParent(first.transform, false);
+            early.transform.SetSiblingIndex(0);
+            Assert.Null(PrefabAssets.NewPrefabText("Assets/Outer.prefab", outer));
+            early.transform.SetSiblingIndex(first.transform.childCount - 1);
+            Assert.NotNull(PrefabAssets.NewPrefabText("Assets/Outer.prefab", outer));
+        }
+
         /// <summary>Unity's argument checks (part of an instance, a folder at the path, a null path,
         /// connecting under StreamingAssets or a persistent object), and new prefabs that are not
-        /// measured failing loudly before anything is written: a hierarchy holding an instance, a
-        /// variant of an instance with an added component, connecting an instance or onto a prefab
-        /// that exists.</summary>
+        /// measured failing loudly before anything is written: a variant of an instance holding another
+        /// instance, connecting an instance or onto a prefab that exists.</summary>
         [Fact]
         public void UnmeasuredNewPrefabsAreRefused()
         {

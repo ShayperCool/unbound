@@ -25,8 +25,10 @@ namespace Unbound.Runtime
     /// GameObjects record each written field that differs from their source prefab's as a
     /// modification (as the Editor's own setters record them), its scripts only after
     /// PrefabUtility.RecordPrefabInstancePropertyModifications (measured: a script change alone is
-    /// not saved); components added to an instance are listed in m_AddedComponents with a stripped
-    /// document of their GameObject.
+    /// not saved); components and GameObjects added to an instance are listed in m_AddedComponents
+    /// and m_AddedGameObjects (the file's entries kept, a new one after the prefab's objects) and
+    /// written on stripped documents of their GameObject or parent Transform. In a prefab file new
+    /// stand-ins and added components take random ids (prefab-nested).
     /// </summary>
     internal static class SceneFiles
     {
@@ -365,10 +367,13 @@ namespace Unbound.Runtime
                 /// <summary>Its modification list is written from the stored modifications.</summary>
                 internal bool Rebuild;
                 internal readonly List<(long Target, string Path, YText Value, YText Reference)> Changes = new List<(long, string, YText, YText)>();
-                internal readonly List<(long SourceGameObject, long Added)> AddedComponents = new List<(long, long)>();
+                /// <summary>Components added to the instance's GameObjects: the source GameObject, the
+                /// component's id and whether it comes after every component of the prefab's.</summary>
+                internal readonly List<(long SourceGameObject, long Added, bool Last)> AddedComponents = new List<(long, long, bool)>();
                 /// <summary>GameObjects added under the instance's objects: the source Transform of
-                /// their parent and their Transform's id.</summary>
-                internal readonly List<(long SourceTransform, long Added)> AddedGameObjects = new List<(long, long)>();
+                /// their parent, their Transform's id and whether they come after every child of the
+                /// prefab's.</summary>
+                internal readonly List<(long SourceTransform, long Added, bool Last)> AddedGameObjects = new List<(long, long, bool)>();
             }
 
             internal SceneWriter(WriteTarget target)
@@ -769,10 +774,17 @@ namespace Unbound.Runtime
                     if (state != null)
                     {
                         Modifications(state, go, link);
-                        foreach (var c in components)
+                        for (int i = 0; i < components.Count; i++)
                         {
+                            var c = components[i];
                             var componentLink = Link(c);
-                            if (componentLink == null) AddedComponent(state, c, go, link);
+                            if (componentLink == null)
+                            {
+                                bool last = true;
+                                for (int j = i + 1; j < components.Count; j++)
+                                    if (Link(components[j]) != null) last = false;
+                                AddedComponent(state, c, go, link, last);
+                            }
                             else Modifications(state, c, componentLink);
                         }
                     }
@@ -785,7 +797,12 @@ namespace Unbound.Runtime
                     // parent's source Transform (matches the Unity 6000.0.71f1 Editor,
                     // tests/projects/scenesave prefab-nested Outer.prefab, RichVariant.prefab).
                     if (link != null && Link(child.gameObject) == null && Link(t) is PrefabLink transformLink && Instance(link.Instance, go) is InstanceState owner)
-                        owner.AddedGameObjects.Add((transformLink.SourceFileId, m_Ids[child]));
+                    {
+                        bool last = true;
+                        for (int j = i + 1; j < t.childCount; j++)
+                            if (Link(t.GetChild(j).gameObject)?.Instance == link.Instance) last = false;
+                        owner.AddedGameObjects.Add((transformLink.SourceFileId, m_Ids[child], last));
+                    }
                     WriteHierarchy(child);
                 }
             }
@@ -974,9 +991,9 @@ namespace Unbound.Runtime
                 return PrefabValues.Fields(o, Sourced, m_Ids, m_Locations);
             }
 
-            void AddedComponent(InstanceState state, Component c, GameObject go, PrefabLink goLink)
+            void AddedComponent(InstanceState state, Component c, GameObject go, PrefabLink goLink, bool last)
             {
-                state.AddedComponents.Add((goLink.SourceFileId, m_Ids[c]));
+                state.AddedComponents.Add((goLink.SourceFileId, m_Ids[c], last));
                 // Written as any component, on the stand-in of its GameObject (engine components:
                 // prefab-nested Outer.prefab, RichVariant.prefab).
                 WriteComponent(c, go);
@@ -1025,14 +1042,8 @@ namespace Unbound.Runtime
                     if (state.Rebuild) RebuildModifications(state, list);
                     foreach (var change in state.Changes) SetModification(list, change, state.Data.SourceGuid);
                     var added = YText.Seq();
-                    foreach (var (sourceGo, component) in state.AddedComponents)
-                    {
-                        var entry = YText.Map();
-                        entry.Add("targetCorrespondingSourceObject", FlowValue($"{{fileID: {sourceGo}, guid: {SourceGuid(state)}, type: 3}}"));
-                        entry.Add("insertIndex", Raw("-1"));
-                        entry.Add("addedObject", FlowValue("{fileID: " + component + "}"));
-                        added.Items.Add(entry);
-                    }
+                    foreach (var (sourceGo, component, last) in state.AddedComponents)
+                        added.Items.Add(AddedEntry(modification.Get("m_AddedComponents"), sourceGo, component, last, state, "components"));
                     // The file's entries for components Unbound did not load (a missing script) stay;
                     // a loaded one is listed while it is added (one applied to the prefab is the
                     // prefab's now, tests/projects/scenesave BaseApplied).
@@ -1044,13 +1055,13 @@ namespace Unbound.Runtime
                     if (added.Items.Count == 0) added.Flow = true;
                     modification.Set("m_AddedComponents", added);
                     var addedObjects = YText.Seq();
-                    foreach (var (sourceTransform, transform) in state.AddedGameObjects)
+                    foreach (var (sourceTransform, transform, last) in state.AddedGameObjects)
+                        addedObjects.Items.Add(AddedEntry(modification.Get("m_AddedGameObjects"), sourceTransform, transform, last, state, "GameObjects"));
+                    // The file's entries for GameObjects Unbound did not load stay.
+                    foreach (var item in modification.Get("m_AddedGameObjects")?.Items ?? new List<YText>())
                     {
-                        var entry = YText.Map();
-                        entry.Add("targetCorrespondingSourceObject", FlowValue($"{{fileID: {sourceTransform}, guid: {SourceGuid(state)}, type: 3}}"));
-                        entry.Add("insertIndex", Raw("-1"));
-                        entry.Add("addedObject", FlowValue("{fileID: " + transform + "}"));
-                        addedObjects.Items.Add(entry);
+                        long id = ParseFileId(item.Get("addedObject"));
+                        if (!m_Known.Contains(id) && m_Source.ContainsKey(id)) addedObjects.Items.Add(item.Clone());
                     }
                     if (addedObjects.Items.Count == 0) addedObjects.Flow = true;
                     modification.Set("m_AddedGameObjects", addedObjects);
@@ -1089,6 +1100,22 @@ namespace Unbound.Runtime
                     if (listed.Add(fileId)) list.Items.Add(FlowValue($"{{fileID: {fileId}, guid: {guid}, type: 3}}"));
                 list.Flow = list.Items.Count == 0;
                 modification.Set("m_RemovedComponents", list);
+            }
+
+            /// <summary>An instance's entry for an added object: the file's when it has one (its
+            /// place kept as written), else a new one placed after the prefab's objects (insertIndex
+            /// -1, measured: prefab-nested, Base); a new one placed among them is not measured and
+            /// fails the save.</summary>
+            YText AddedEntry(YText fileList, long target, long added, bool last, InstanceState state, string what)
+            {
+                foreach (var item in fileList?.Items ?? new List<YText>())
+                    if (ParseFileId(item.Get("addedObject")) == added && m_Known.Contains(added)) return item.Clone();
+                if (!last) m_Unwritten.Add($"{what} added among a prefab instance's own (their place is not measured)");
+                var entry = YText.Map();
+                entry.Add("targetCorrespondingSourceObject", FlowValue($"{{fileID: {target}, guid: {SourceGuid(state)}, type: 3}}"));
+                entry.Add("insertIndex", Raw("-1"));
+                entry.Add("addedObject", FlowValue("{fileID: " + added + "}"));
+                return entry;
             }
 
             static string SourceGuid(InstanceState state) => state.Document.Body.Get("m_SourcePrefab")?.Get("guid")?.Text ?? "";
