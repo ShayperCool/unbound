@@ -288,7 +288,7 @@ namespace UnityEngine
             var backend = AudioBackend.Current;
             m_SharedData = new SharedClipData(backend, m_Handle);
             backend.CreateClip(m_Handle, lengthSamples, channels, frequency, m_Stream);
-            m_OwnsStartupMemory = backend.ConsumeUserClipStartup();
+            m_OwnsStartupMemory = backend.ConsumeUserClipStartup() && !backend.ProjectSettings.DisableAudio;
             if (m_Stream)
             {
                 s_WithCallbacks[m_Handle] = this;

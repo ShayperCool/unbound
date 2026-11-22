@@ -1,9 +1,11 @@
 # Script-created clip startup memory
 
-Five fresh Unity 6000.0.71f1 sessions cover a one-frame mono PCM clip, stereo callback PCM,
-stereo streaming, an audio reset before creation and an audio reset with the first clip alive.
-Two independent captures agree on 25 values across the profiles. The fixture borrows a scene and configuration from
-`formatmapping`.
+Six Unity 6000.0.71f1 profiles cover a one-frame mono PCM clip, stereo callback PCM,
+stereo streaming, audio reset before creation and with the first clip alive, and disabled audio.
+There are 28 values from two agreeing macOS batch-mode Editor runs per profile. The Linux GPU
+Editor reference in `appfacts` independently records 1,028 bytes on first creation and after
+writing sample data. The reset and disabled-audio profiles are measured on macOS. The fixture
+borrows a scene and configuration from `formatmapping`.
 
 The first script-created clip reports 88 additional bytes across the three creation modes.
 Reading the audio configuration and loading an imported clip leave that first-creation state
@@ -13,6 +15,8 @@ clips at the ordinary total. A successful reset consumes first-creation state be
 configuration callback creates a clip. If the first clip already exists, the retained difference
 between it and an identical second clip remains 88 bytes after reset. The probe measures this
 difference independently of the remaining per-object total after sample storage is released.
+Disabled audio gives a zero difference. Its two absolute size discrepancies remain in the
+strict report.
 
 The Scripting API describes the native-memory result, clip creation and the callback from a
 successful reset. The ownership and byte count are observations of this release.
@@ -24,10 +28,11 @@ successful reset. The ownership and byte count are observations of this release.
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1
 python3 tests/projects/clipstartupmemory/run.py record --profile PCM --label first
 python3 tests/projects/clipstartupmemory/run.py record --profile PCM --label second
-python3 tests/projects/clipstartupmemory/run.py publish --profile PCM first-PCM second-PCM
+python3 tests/projects/clipstartupmemory/run.py publish --profile PCM first second
 python3 tests/projects/clipstartupmemory/run.py gate
 ```
 
-Repeat the recording commands for Callback, Stream, Reset and ResetOwner. The gate compares
-every profile exactly. Imported clip sizes, totals of clips after reset and other Unity families
-retain their previous behavior.
+Repeat the recording commands for Callback, Stream, Reset, ResetOwner and Disabled. Publishing
+checks the selected profile, the recorded release and two independent Editor runs. The gate
+compares every profile exactly. Imported clip sizes, absolute totals of clips after reset and
+other Unity families retain their previous behavior.

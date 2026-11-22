@@ -51,6 +51,17 @@ public static class ClipStartupMemory
             Object.DestroyImmediate(second);
             Object.DestroyImmediate(first);
         }
+        else if (profile == "Disabled")
+        {
+            var first = AudioClip.Create("first", 1, 1, 44100, false);
+            var second = AudioClip.Create("second", 1, 1, 44100, false);
+            long firstBytes = Size(first), secondBytes = Size(second);
+            Put("disabled.first.bytes", firstBytes);
+            Put("disabled.second.bytes", secondBytes);
+            Put("disabled.delta", firstBytes - secondBytes);
+            Object.DestroyImmediate(second);
+            Object.DestroyImmediate(first);
+        }
         else
         {
             bool mono = profile == "PCM";

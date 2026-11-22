@@ -1,0 +1,4 @@
+{
+  "disabled.first.bytes": "The Editor reports 504 bytes for an AudioClip with audio disabled. Unbound still creates the usual backing data. The startup charge is tracked independently by disabled.delta.",
+  "disabled.second.bytes": "The Editor reports 504 bytes for an AudioClip with audio disabled. Unbound still creates the usual backing data."
+}

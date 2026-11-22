@@ -1,6 +1,6 @@
 {
   "commands": ["python3 tests/projects/clipstartupmemory/run.py gate"],
-  "summary": "clipstartupmemory (PCM|Callback|Stream|Reset|ResetOwner): .*",
+  "summary": "clipstartupmemory (PCM|Callback|Stream|Reset|ResetOwner|Disabled): .*",
   "engine_paths": [
     "tests/projects/clipstartupmemory/",
     "tests/projects/formatmapping/Assets/Scenes/",
