@@ -18,6 +18,8 @@
     "managed/Unbound.Host/Game.cs",
     "crates/unbound-project/src/settings.rs",
     "crates/unbound-runtime/src/config.rs",
-    "crates/unbound-runtime/src/state.rs"
+    "crates/unbound-runtime/src/state.rs",
+    "managed/UnityEngine/Editor/ScriptCompilation.cs",
+    "tests/projects/compileevents/"
   ]
 }
