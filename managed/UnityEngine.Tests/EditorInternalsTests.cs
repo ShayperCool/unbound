@@ -6,8 +6,26 @@ namespace UnityEngine.Tests
 {
     /// <summary>InternalEditorUtility members that editor scripts use (tests/projects/editorinternals
     /// records the Editor's): the Inspector's expanded state and the layer popups' masks.</summary>
-    public class EditorInternalsTests
+    public class EditorInternalsTests : System.IDisposable
     {
+        // The layer table is the project's: the tests use the built-in layers and put back what
+        // was there.
+        readonly string[] m_Layers = Unbound.Runtime.TagManager.Layers;
+
+        public EditorInternalsTests()
+        {
+            var layers = new string[32];
+            for (int i = 0; i < layers.Length; i++) layers[i] = "";
+            layers[0] = "Default";
+            layers[1] = "TransparentFX";
+            layers[2] = "Ignore Raycast";
+            layers[4] = "Water";
+            layers[5] = "UI";
+            Unbound.Runtime.TagManager.Layers = layers;
+        }
+
+        public void Dispose() => Unbound.Runtime.TagManager.Layers = m_Layers;
+
         public class Collapsible : MonoBehaviour { }
 
         public class OtherCollapsible : MonoBehaviour { }
@@ -106,6 +124,19 @@ namespace UnityEngine.Tests
         {
             Assert.Equal(new[] { "Default", "TransparentFX", "Ignore Raycast", "Water", "UI" }, InternalEditorUtility.layers);
             Assert.Equal(concatenated, InternalEditorUtility.LayerMaskToConcatenatedLayersMask(mask));
+        }
+
+        // A control with another table: a project's own layer after a gap.
+        [Fact]
+        public void AProjectsOwnLayerTakesTheNextBit()
+        {
+            Unbound.Runtime.TagManager.Layers[9] = "Mine";
+            Assert.Equal(1 << 9, InternalEditorUtility.ConcatenatedLayersMaskToLayerMask(32).value);
+            Assert.Equal(55 | 1 << 9, InternalEditorUtility.ConcatenatedLayersMaskToLayerMask(-1).value);
+            Assert.Equal(32, InternalEditorUtility.LayerMaskToConcatenatedLayersMask(1 << 9));
+            // Layers 6 to 8 have no name: they count as UI; layer 10 as the project's.
+            Assert.Equal(16, InternalEditorUtility.LayerMaskToConcatenatedLayersMask(1 << 8));
+            Assert.Equal(32, InternalEditorUtility.LayerMaskToConcatenatedLayersMask(1 << 10));
         }
 
         [Fact]
