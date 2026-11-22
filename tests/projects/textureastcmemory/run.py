@@ -83,7 +83,10 @@ def main():
     if args.labels:
         parser.error('use --label for record and gate')
     if sys.platform != 'linux':
-        parser.error('record and gate require the Linux OpenGL Core device')
+        if args.mode == 'gate':
+            print('textureastcmemory: skipped (the reference uses the Linux OpenGL Core device)')
+            return 0
+        parser.error('record requires the Linux OpenGL Core device')
     label = private_label() if args.label is None else args.label
     profiles = (args.profile,) if args.profile else PROFILES
     return max([run(args.mode, label, profile) for profile in profiles])

@@ -16,4 +16,4 @@ python3 tests/projects/textureastcmemory/run.py publish --profile Ordinary first
 python3 tests/projects/textureastcmemory/run.py gate
 ```
 
-Publishing checks two independent sealed captures per profile. Engine runs use disposable projects and compare every value exactly.
+Publishing checks two independent sealed captures per profile. Linux engine runs use disposable projects and compare every value exactly. The gate reports a skip on other platforms.
