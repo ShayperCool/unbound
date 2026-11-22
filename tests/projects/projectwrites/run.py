@@ -123,6 +123,74 @@ def crlf_texture_meta():
 
 
 CRLF['Assets/Crlf/Tex.png.meta'] = crlf_texture_meta()
+
+
+def package(entries):
+    """A .unitypackage: a gzipped tar of one folder per GUID with `pathname` and, where given,
+    `asset` and `asset.meta`; the same bytes in every run."""
+    import gzip
+    import io
+    import tarfile
+    raw = io.BytesIO()
+    with tarfile.open(fileobj=raw, mode='w', format=tarfile.USTAR_FORMAT) as tar:
+        def add(name, data=None):
+            info = tarfile.TarInfo(name)
+            info.mtime = 0
+            if data is None:
+                info.type, info.mode = tarfile.DIRTYPE, 0o755
+                tar.addfile(info)
+            else:
+                info.size, info.mode = len(data), 0o644
+                tar.addfile(info, io.BytesIO(data))
+        for guid, (pathname, asset, meta) in entries.items():
+            add(guid + '/')
+            if asset is not None:
+                add(guid + '/asset', asset)
+            if meta is not None:
+                add(guid + '/asset.meta', meta)
+            add(guid + '/pathname', pathname.encode())
+    packed = io.BytesIO()
+    with gzip.GzipFile(fileobj=packed, mode='wb', mtime=0) as archive:
+        archive.write(raw.getvalue())
+    return packed.getvalue()
+
+
+def text_meta(guid, user_data=''):
+    return (f'fileFormatVersion: 2\nguid: {guid}\nTextScriptImporter:\n  externalObjects: {{}}\n  userData: {user_data}\n'
+            '  assetBundleName: \n  assetBundleVariant: \n').encode()
+
+
+def folder_meta(guid):
+    return (f'fileFormatVersion: 2\nguid: {guid}\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {{}}\n  userData: \n'
+            '  assetBundleName: \n  assetBundleVariant: \n').encode()
+
+
+# For the ImportPackage step: assets of the project the package meets, and the packages, outside
+# the project's asset folders. Pack: a new folder with its .meta, a new file with a .meta (its
+# userData set), a new file without one, a file in a folder the package does not list, a file
+# whose GUID an asset of the project has at another path (Assets/Target/SameGuid.txt), and a file
+# at the path of an asset with another GUID (Assets/Target/SamePath.txt). Second: one new file.
+# Broken: no archive.
+TARGETS = {
+    'Assets/Target/SameGuid.txt': b'project\n',
+    'Assets/Target/SameGuid.txt.meta': text_meta('b1000000000000000000000000000001'),
+    'Assets/Target/SamePath.txt': b'project\n',
+    'Assets/Target/SamePath.txt.meta': text_meta('b1000000000000000000000000000002'),
+}
+PACKAGES = {
+    'Incoming/Pack.unitypackage': package({
+        'a1000000000000000000000000000001': ('Assets/Pack', None, folder_meta('a1000000000000000000000000000001')),
+        'a1000000000000000000000000000002': ('Assets/Pack/Note.txt', b'packed\n', text_meta('a1000000000000000000000000000002', 'packed')),
+        'a1000000000000000000000000000003': ('Assets/Pack/Bare.txt', b'bare\n', None),
+        'a1000000000000000000000000000004': ('Assets/Pack/Deep/Inner.txt', b'inner\n', text_meta('a1000000000000000000000000000004')),
+        'b1000000000000000000000000000001': ('Assets/Pack/SameGuid.txt', b'same guid\n', text_meta('b1000000000000000000000000000001', 'same')),
+        'a1000000000000000000000000000005': ('Assets/Target/SamePath.txt', b'same path\n', text_meta('a1000000000000000000000000000005', 'path')),
+    }),
+    'Incoming/Second.unitypackage': package({
+        'a2000000000000000000000000000001': ('Assets/Second.txt', b'second\n', text_meta('a2000000000000000000000000000001')),
+    }),
+    'Incoming/Broken.unitypackage': b'not an archive\n',
+}
 PARTS = ('Assets', 'Packages', 'ProjectSettings')
 GUID = re.compile(rb'\b[0-9a-f]{32}\b')
 TIME = re.compile(rb'timeCreated: [0-9]+')
@@ -139,11 +207,15 @@ def stage(out):
     """The probe's project for one run, as both hosts get it; returns (project, initial files)."""
     project = value_probe.assemble(PROBE, out)
     (project/'Packages/packages-lock.json').unlink(missing_ok=True)
-    startup = {**STARTUP, **{path: (PROJECTS/source).read_bytes() for path, source in COPIED.items()}, **CRLF}
+    startup = {**STARTUP, **{path: (PROJECTS/source).read_bytes() for path, source in COPIED.items()}, **CRLF, **TARGETS}
     for path, data in startup.items():
         (project/path).parent.mkdir(parents=True, exist_ok=True)
         (project/path).write_bytes(data)
-    return project, files(project)
+    initial = files(project)
+    for path, data in PACKAGES.items():
+        (project/path).parent.mkdir(parents=True, exist_ok=True)
+        (project/path).write_bytes(data)
+    return project, initial
 
 
 def files(project):

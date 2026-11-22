@@ -237,6 +237,8 @@ public static class ProjectWritesProbe
         Guard("13.save", Save);
         Guard("14.unsaved", Unsaved);
         Guard("14.remove", RemoveObject);
+        // Play mode imports no package; Edit mode's import is recorded before these steps (PackageStart).
+        if (mode == "play") Guard("14.package", PackageInPlayMode);
         Guard("15.manifest", Manifest);
     }
 
@@ -379,6 +381,115 @@ public static class ProjectWritesProbe
         Put("14.remove.main.saved.all", All(path));
         Put("14.remove.main.saved.mainAsset", AssetDatabase.LoadMainAssetAtPath(path) == null ? "null" : AssetDatabase.LoadMainAssetAtPath(path).name);
         Put("14.remove.main.saved.guid", AssetDatabase.AssetPathToGUID(path) == "" ? "none" : "kept");
+    }
+
+    static readonly List<string> s_PackageEvents = new List<string>();
+    static readonly List<string> s_PackageLogs = new List<string>();
+    static bool s_PackageHooked;
+    const string PackNote = "Assets/Pack/Note.txt";
+
+    /// <summary>Whether an import ended (completed, failed or cancelled) since the last PackageRows.</summary>
+    public static bool PackageEnded { get; private set; }
+
+    static void HookPackages()
+    {
+        if (s_PackageHooked) return;
+        s_PackageHooked = true;
+        // What an event's subscriber finds: is the packed file written and imported by then?
+        string State() => "(file=" + System.IO.File.Exists(PackNote) + ",guid=" + (AssetDatabase.AssetPathToGUID(PackNote) != "") + ")";
+        AssetDatabase.importPackageStarted += name => s_PackageEvents.Add("started:" + name + State());
+        AssetDatabase.importPackageCompleted += name => { s_PackageEvents.Add("completed:" + name + State()); PackageEnded = true; };
+        AssetDatabase.importPackageCancelled += name => { s_PackageEvents.Add("cancelled:" + name); PackageEnded = true; };
+        AssetDatabase.importPackageFailed += (name, error) => { s_PackageEvents.Add("failed:" + name + ":" + error); PackageEnded = true; };
+        AssetDatabase.onImportPackageItemsCompleted += items => s_PackageEvents.Add("items:" + string.Join(",", items.OrderBy(i => i, StringComparer.Ordinal)));
+    }
+
+    static void PackageLog(string condition, string stack, LogType type) => s_PackageLogs.Add(type + ": " + condition.Split('\n')[0]);
+
+    static void PackageFile(string step, string path)
+    {
+        Snap(step, path);
+        Snap(step, path + ".meta");
+        var guid = AssetDatabase.AssetPathToGUID(path);
+        Put(step + "." + path + ".guid", guid.StartsWith("a1000000", StringComparison.Ordinal) || guid.StartsWith("b1000000", StringComparison.Ordinal) || guid == "" ? guid : "another");
+        var asset = AssetDatabase.LoadMainAssetAtPath(path);
+        Put(step + "." + path + ".loaded", asset == null ? "null" : asset.GetType().Name + (asset is TextAsset text ? ":" + text.text : ""));
+    }
+
+    static readonly string[] s_PackageFiles =
+    {
+        "Assets/Pack", PackNote, "Assets/Pack/Bare.txt", "Assets/Pack/Deep", "Assets/Pack/Deep/Inner.txt", "Assets/Pack/SameGuid.txt",
+        "Assets/Target/SameGuid.txt", "Assets/Target/SamePath.txt", "Assets/Second.txt",
+    };
+
+    /// <summary>The events and logs since the last call and the files the packages name, as they are now.</summary>
+    public static void PackageRows(string step)
+    {
+        Put(step + ".ended", PackageEnded);
+        Put(step + ".events", string.Join(" | ", s_PackageEvents));
+        Put(step + ".logs", string.Join(" | ", s_PackageLogs));
+        s_PackageEvents.Clear();
+        s_PackageLogs.Clear();
+        PackageEnded = false;
+        foreach (var file in s_PackageFiles) PackageFile(step, file);
+        Put(step + ".sameGuid.path", AssetDatabase.GUIDToAssetPath("b1000000000000000000000000000001"));
+        Put(step + ".samePath.oldGuid.path", AssetDatabase.GUIDToAssetPath("b1000000000000000000000000000002"));
+        Put(step + ".samePath.newGuid.path", AssetDatabase.GUIDToAssetPath("a1000000000000000000000000000005"));
+    }
+
+    /// <summary>Edit mode, before the other steps (ProjectWritesEditTests drives the waits):
+    /// ImportPackage without its window. Each call here is followed by PackageRows right away
+    /// and again once the import ended or 30 editor updates passed.</summary>
+    public static void PackageCall(string mode, string step)
+    {
+        s_Mode = mode;
+        HookPackages();
+        Application.logMessageReceived -= PackageLog;
+        Application.logMessageReceived += PackageLog;
+        try
+        {
+            switch (step)
+            {
+                case "14.package": AssetDatabase.ImportPackage("Incoming/Pack.unitypackage", false); break;
+                // Again, over a packed file changed since and another deleted.
+                case "14.package.again":
+                    Write(PackNote, "edited\n");
+                    AssetDatabase.DeleteAsset("Assets/Pack/Bare.txt");
+                    AssetDatabase.ImportPackage("Incoming/Pack.unitypackage", false);
+                    break;
+                case "14.package.missing": AssetDatabase.ImportPackage("Incoming/Missing.unitypackage", false); break;
+                case "14.package.broken": AssetDatabase.ImportPackage("Incoming/Broken.unitypackage", false); break;
+                case "14.package.null": AssetDatabase.ImportPackage(null, false); break;
+                case "14.package.empty": AssetDatabase.ImportPackage("", false); break;
+                // An absolute path, and the window asked for (batch mode shows none).
+                case "14.package.interactive": AssetDatabase.ImportPackage(Path.GetFullPath("Incoming/Second.unitypackage"), true); break;
+            }
+            Put(step + ".call", "returns");
+        }
+        catch (Exception e) { Put(step + ".call", e.GetType().Name + ": " + e.Message.Split('\n')[0]); }
+        // A failed import has ended by now; its rows keep that for the wait.
+        bool ended = PackageEnded;
+        PackageRows(step);
+        PackageEnded = ended;
+    }
+
+    public static readonly string[] PackageSteps =
+    {
+        "14.package", "14.package.again", "14.package.missing", "14.package.broken", "14.package.null", "14.package.empty", "14.package.interactive",
+    };
+
+    public static void PackageEnd() => Application.logMessageReceived -= PackageLog;
+
+    static void PackageInPlayMode()
+    {
+        HookPackages();
+        AssetDatabase.ImportPackage("Incoming/Pack.unitypackage", false);
+        Put("14.package.events", string.Join(" | ", s_PackageEvents));
+        s_PackageEvents.Clear();
+        Snap("14.package", PackNote);
+        AssetDatabase.ImportPackage("Incoming/Missing.unitypackage", false);
+        Put("14.package.missing.events", string.Join(" | ", s_PackageEvents));
+        s_PackageEvents.Clear();
     }
 
     static void CopyMoveRename()

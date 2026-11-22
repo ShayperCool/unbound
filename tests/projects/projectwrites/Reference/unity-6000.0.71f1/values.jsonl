@@ -243,6 +243,10 @@
 {"k": "play.14.remove.main.saved.mainAsset", "v": "First"}
 {"k": "play.14.remove.main.saved.guid", "v": "kept"}
 {"k": "play.14.remove.logs", "v": "Warning: Main Object Name 'First' does not match filename 'Removal'"}
+{"k": "play.14.package.events", "v": "failed:Pack:Failed to unpack package contents"}
+{"k": "play.14.package.Assets/Pack/Note.txt", "v": "<none>"}
+{"k": "play.14.package.missing.events", "v": "failed:Missing:Failed to unpack package contents"}
+{"k": "play.14.package.logs", "v": "Error: Failed to import package with error: Cannot import package in play mode. | Error: Failed to import package with error: Cannot import package in play mode. | Error: Failed to import package with error: Cannot import package in play mode. | Error: Failed to import package with error: Cannot import package in play mode."}
 {"k": "play.15.manifest.called.Packages/packages-lock.json.gone", "v": ""}
 {"k": "play.15.manifest.called.Packages/packages-lock.json.added", "v": ""}
 {"k": "play.15.manifest.called.Packages/packages-lock.json.sha256", "v": "fac745abe2fae061ca6a2982a8ecf4a7f2596cfe8577a7fc69e54f5d7441d3a4"}
@@ -340,6 +344,7 @@
 {"k": "play.exit.Assets/Startup/Unknown.xyz.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Unknown.xyz>\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "play.exit.Assets/Startup/Upper.mask.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Upper.mask>\nNativeFormatImporter:\n  externalObjects: {}\n  mainObjectFileID: 0\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "play.exit.Assets/Startup/Variants.shadervariants.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Variants.shadervariants>\nNativeFormatImporter:\n  externalObjects: {}\n  mainObjectFileID: 0\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "play.exit.Assets/Target.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "play.exit.Assets/Tests.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Tests>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "play.exit.Assets/Tests/ProjectWrites.Tests.asmdef.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Tests/ProjectWrites.Tests.asmdef>\nAssemblyDefinitionImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "play.exit.Assets/Tests/ProjectWritesEditTests.cs.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Tests/ProjectWritesEditTests.cs>"}
@@ -364,6 +369,559 @@
 {"k": "play.exit.ProjectSettings/ProjectVersion.txt.added", "v": "m_EditorVersionWithRevision: 6000.0.71f1 (907bc2d768b5)"}
 {"k": "play.exit.ProjectSettings/ProjectVersion.txt.crlf", "v": "false"}
 {"k": "play.exit.guids", "v": "all 32 lowercase hex"}
+{"k": "edit.14.package.call", "v": "returns"}
+{"k": "edit.14.package.ended", "v": "false"}
+{"k": "edit.14.package.events", "v": "started:Pack(file=False,guid=False)"}
+{"k": "edit.14.package.logs", "v": ""}
+{"k": "edit.14.package.Assets/Pack", "v": "<none>"}
+{"k": "edit.14.package.Assets/Pack.meta", "v": "<none>"}
+{"k": "edit.14.package.Assets/Pack.guid", "v": ""}
+{"k": "edit.14.package.Assets/Pack.loaded", "v": "null"}
+{"k": "edit.14.package.Assets/Pack/Note.txt", "v": "<none>"}
+{"k": "edit.14.package.Assets/Pack/Note.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.Assets/Pack/Note.txt.guid", "v": ""}
+{"k": "edit.14.package.Assets/Pack/Note.txt.loaded", "v": "null"}
+{"k": "edit.14.package.Assets/Pack/Bare.txt", "v": "<none>"}
+{"k": "edit.14.package.Assets/Pack/Bare.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.Assets/Pack/Bare.txt.guid", "v": ""}
+{"k": "edit.14.package.Assets/Pack/Bare.txt.loaded", "v": "null"}
+{"k": "edit.14.package.Assets/Pack/Deep", "v": "<none>"}
+{"k": "edit.14.package.Assets/Pack/Deep.meta", "v": "<none>"}
+{"k": "edit.14.package.Assets/Pack/Deep.guid", "v": ""}
+{"k": "edit.14.package.Assets/Pack/Deep.loaded", "v": "null"}
+{"k": "edit.14.package.Assets/Pack/Deep/Inner.txt", "v": "<none>"}
+{"k": "edit.14.package.Assets/Pack/Deep/Inner.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.Assets/Pack/Deep/Inner.txt.guid", "v": ""}
+{"k": "edit.14.package.Assets/Pack/Deep/Inner.txt.loaded", "v": "null"}
+{"k": "edit.14.package.Assets/Pack/SameGuid.txt", "v": "<none>"}
+{"k": "edit.14.package.Assets/Pack/SameGuid.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.Assets/Pack/SameGuid.txt.guid", "v": ""}
+{"k": "edit.14.package.Assets/Pack/SameGuid.txt.loaded", "v": "null"}
+{"k": "edit.14.package.Assets/Target/SameGuid.txt", "v": "project\n"}
+{"k": "edit.14.package.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.Assets/Target/SameGuid.txt.guid", "v": "b1000000000000000000000000000001"}
+{"k": "edit.14.package.Assets/Target/SameGuid.txt.loaded", "v": "TextAsset:project\n"}
+{"k": "edit.14.package.Assets/Target/SamePath.txt", "v": "project\n"}
+{"k": "edit.14.package.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.Assets/Target/SamePath.txt.guid", "v": "b1000000000000000000000000000002"}
+{"k": "edit.14.package.Assets/Target/SamePath.txt.loaded", "v": "TextAsset:project\n"}
+{"k": "edit.14.package.Assets/Second.txt", "v": "<none>"}
+{"k": "edit.14.package.Assets/Second.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.Assets/Second.txt.guid", "v": ""}
+{"k": "edit.14.package.Assets/Second.txt.loaded", "v": "null"}
+{"k": "edit.14.package.sameGuid.path", "v": "Assets/Target/SameGuid.txt"}
+{"k": "edit.14.package.samePath.oldGuid.path", "v": "Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.samePath.newGuid.path", "v": ""}
+{"k": "edit.14.package.later.ended", "v": "true"}
+{"k": "edit.14.package.later.events", "v": "completed:Pack(file=True,guid=True) | items:Assets/Pack,Assets/Pack/Bare.txt,Assets/Pack/Deep/Inner.txt,Assets/Pack/Note.txt,Assets/Target/SameGuid.txt,Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.later.logs", "v": "Warning: Overriding existing asset with new GUID from package, this may break links within your project to package assets (Assets/Target/SamePath.txt)"}
+{"k": "edit.14.package.later.Assets/Pack", "v": "<none>"}
+{"k": "edit.14.package.later.Assets/Pack.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.later.Assets/Pack.guid", "v": "a1000000000000000000000000000001"}
+{"k": "edit.14.package.later.Assets/Pack.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.later.Assets/Pack/Note.txt", "v": "packed\n"}
+{"k": "edit.14.package.later.Assets/Pack/Note.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Note.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: packed\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.later.Assets/Pack/Note.txt.guid", "v": "a1000000000000000000000000000002"}
+{"k": "edit.14.package.later.Assets/Pack/Note.txt.loaded", "v": "TextAsset:packed\n"}
+{"k": "edit.14.package.later.Assets/Pack/Bare.txt", "v": "bare\n"}
+{"k": "edit.14.package.later.Assets/Pack/Bare.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Bare.txt>\n"}
+{"k": "edit.14.package.later.Assets/Pack/Bare.txt.guid", "v": "a1000000000000000000000000000003"}
+{"k": "edit.14.package.later.Assets/Pack/Bare.txt.loaded", "v": "TextAsset:bare\n"}
+{"k": "edit.14.package.later.Assets/Pack/Deep", "v": "<none>"}
+{"k": "edit.14.package.later.Assets/Pack/Deep.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.later.Assets/Pack/Deep.guid", "v": "another"}
+{"k": "edit.14.package.later.Assets/Pack/Deep.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.later.Assets/Pack/Deep/Inner.txt", "v": "inner\n"}
+{"k": "edit.14.package.later.Assets/Pack/Deep/Inner.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep/Inner.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.later.Assets/Pack/Deep/Inner.txt.guid", "v": "a1000000000000000000000000000004"}
+{"k": "edit.14.package.later.Assets/Pack/Deep/Inner.txt.loaded", "v": "TextAsset:inner\n"}
+{"k": "edit.14.package.later.Assets/Pack/SameGuid.txt", "v": "<none>"}
+{"k": "edit.14.package.later.Assets/Pack/SameGuid.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.later.Assets/Pack/SameGuid.txt.guid", "v": ""}
+{"k": "edit.14.package.later.Assets/Pack/SameGuid.txt.loaded", "v": "null"}
+{"k": "edit.14.package.later.Assets/Target/SameGuid.txt", "v": "same guid\n"}
+{"k": "edit.14.package.later.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: same\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.later.Assets/Target/SameGuid.txt.guid", "v": "b1000000000000000000000000000001"}
+{"k": "edit.14.package.later.Assets/Target/SameGuid.txt.loaded", "v": "TextAsset:same guid\n"}
+{"k": "edit.14.package.later.Assets/Target/SamePath.txt", "v": "same path\n"}
+{"k": "edit.14.package.later.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: path\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.later.Assets/Target/SamePath.txt.guid", "v": "a1000000000000000000000000000005"}
+{"k": "edit.14.package.later.Assets/Target/SamePath.txt.loaded", "v": "TextAsset:same path\n"}
+{"k": "edit.14.package.later.Assets/Second.txt", "v": "<none>"}
+{"k": "edit.14.package.later.Assets/Second.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.later.Assets/Second.txt.guid", "v": ""}
+{"k": "edit.14.package.later.Assets/Second.txt.loaded", "v": "null"}
+{"k": "edit.14.package.later.sameGuid.path", "v": "Assets/Target/SameGuid.txt"}
+{"k": "edit.14.package.later.samePath.oldGuid.path", "v": ""}
+{"k": "edit.14.package.later.samePath.newGuid.path", "v": "Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.again.call", "v": "returns"}
+{"k": "edit.14.package.again.ended", "v": "false"}
+{"k": "edit.14.package.again.events", "v": "started:Pack(file=True,guid=True)"}
+{"k": "edit.14.package.again.logs", "v": ""}
+{"k": "edit.14.package.again.Assets/Pack", "v": "<none>"}
+{"k": "edit.14.package.again.Assets/Pack.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.again.Assets/Pack.guid", "v": "a1000000000000000000000000000001"}
+{"k": "edit.14.package.again.Assets/Pack.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.again.Assets/Pack/Note.txt", "v": "edited\n"}
+{"k": "edit.14.package.again.Assets/Pack/Note.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Note.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: packed\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.again.Assets/Pack/Note.txt.guid", "v": "a1000000000000000000000000000002"}
+{"k": "edit.14.package.again.Assets/Pack/Note.txt.loaded", "v": "TextAsset:packed\n"}
+{"k": "edit.14.package.again.Assets/Pack/Bare.txt", "v": "<none>"}
+{"k": "edit.14.package.again.Assets/Pack/Bare.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.again.Assets/Pack/Bare.txt.guid", "v": "a1000000000000000000000000000003"}
+{"k": "edit.14.package.again.Assets/Pack/Bare.txt.loaded", "v": "null"}
+{"k": "edit.14.package.again.Assets/Pack/Deep", "v": "<none>"}
+{"k": "edit.14.package.again.Assets/Pack/Deep.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.again.Assets/Pack/Deep.guid", "v": "another"}
+{"k": "edit.14.package.again.Assets/Pack/Deep.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.again.Assets/Pack/Deep/Inner.txt", "v": "inner\n"}
+{"k": "edit.14.package.again.Assets/Pack/Deep/Inner.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep/Inner.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.again.Assets/Pack/Deep/Inner.txt.guid", "v": "a1000000000000000000000000000004"}
+{"k": "edit.14.package.again.Assets/Pack/Deep/Inner.txt.loaded", "v": "TextAsset:inner\n"}
+{"k": "edit.14.package.again.Assets/Pack/SameGuid.txt", "v": "<none>"}
+{"k": "edit.14.package.again.Assets/Pack/SameGuid.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.again.Assets/Pack/SameGuid.txt.guid", "v": ""}
+{"k": "edit.14.package.again.Assets/Pack/SameGuid.txt.loaded", "v": "null"}
+{"k": "edit.14.package.again.Assets/Target/SameGuid.txt", "v": "same guid\n"}
+{"k": "edit.14.package.again.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: same\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.again.Assets/Target/SameGuid.txt.guid", "v": "b1000000000000000000000000000001"}
+{"k": "edit.14.package.again.Assets/Target/SameGuid.txt.loaded", "v": "TextAsset:same guid\n"}
+{"k": "edit.14.package.again.Assets/Target/SamePath.txt", "v": "same path\n"}
+{"k": "edit.14.package.again.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: path\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.again.Assets/Target/SamePath.txt.guid", "v": "a1000000000000000000000000000005"}
+{"k": "edit.14.package.again.Assets/Target/SamePath.txt.loaded", "v": "TextAsset:same path\n"}
+{"k": "edit.14.package.again.Assets/Second.txt", "v": "<none>"}
+{"k": "edit.14.package.again.Assets/Second.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.again.Assets/Second.txt.guid", "v": ""}
+{"k": "edit.14.package.again.Assets/Second.txt.loaded", "v": "null"}
+{"k": "edit.14.package.again.sameGuid.path", "v": "Assets/Target/SameGuid.txt"}
+{"k": "edit.14.package.again.samePath.oldGuid.path", "v": ""}
+{"k": "edit.14.package.again.samePath.newGuid.path", "v": "Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.again.later.ended", "v": "true"}
+{"k": "edit.14.package.again.later.events", "v": "completed:Pack(file=True,guid=True) | items:Assets/Pack,Assets/Pack/Bare.txt,Assets/Pack/Deep,Assets/Pack/Deep/Inner.txt,Assets/Pack/Note.txt,Assets/Target/SameGuid.txt,Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.again.later.logs", "v": ""}
+{"k": "edit.14.package.again.later.Assets/Pack", "v": "<none>"}
+{"k": "edit.14.package.again.later.Assets/Pack.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.again.later.Assets/Pack.guid", "v": "a1000000000000000000000000000001"}
+{"k": "edit.14.package.again.later.Assets/Pack.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.again.later.Assets/Pack/Note.txt", "v": "packed\n"}
+{"k": "edit.14.package.again.later.Assets/Pack/Note.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Note.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: packed\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.again.later.Assets/Pack/Note.txt.guid", "v": "a1000000000000000000000000000002"}
+{"k": "edit.14.package.again.later.Assets/Pack/Note.txt.loaded", "v": "TextAsset:packed\n"}
+{"k": "edit.14.package.again.later.Assets/Pack/Bare.txt", "v": "bare\n"}
+{"k": "edit.14.package.again.later.Assets/Pack/Bare.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Bare.txt>\n"}
+{"k": "edit.14.package.again.later.Assets/Pack/Bare.txt.guid", "v": "a1000000000000000000000000000003"}
+{"k": "edit.14.package.again.later.Assets/Pack/Bare.txt.loaded", "v": "TextAsset:bare\n"}
+{"k": "edit.14.package.again.later.Assets/Pack/Deep", "v": "<none>"}
+{"k": "edit.14.package.again.later.Assets/Pack/Deep.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.again.later.Assets/Pack/Deep.guid", "v": "another"}
+{"k": "edit.14.package.again.later.Assets/Pack/Deep.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.again.later.Assets/Pack/Deep/Inner.txt", "v": "inner\n"}
+{"k": "edit.14.package.again.later.Assets/Pack/Deep/Inner.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep/Inner.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.again.later.Assets/Pack/Deep/Inner.txt.guid", "v": "a1000000000000000000000000000004"}
+{"k": "edit.14.package.again.later.Assets/Pack/Deep/Inner.txt.loaded", "v": "TextAsset:inner\n"}
+{"k": "edit.14.package.again.later.Assets/Pack/SameGuid.txt", "v": "<none>"}
+{"k": "edit.14.package.again.later.Assets/Pack/SameGuid.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.again.later.Assets/Pack/SameGuid.txt.guid", "v": ""}
+{"k": "edit.14.package.again.later.Assets/Pack/SameGuid.txt.loaded", "v": "null"}
+{"k": "edit.14.package.again.later.Assets/Target/SameGuid.txt", "v": "same guid\n"}
+{"k": "edit.14.package.again.later.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: same\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.again.later.Assets/Target/SameGuid.txt.guid", "v": "b1000000000000000000000000000001"}
+{"k": "edit.14.package.again.later.Assets/Target/SameGuid.txt.loaded", "v": "TextAsset:same guid\n"}
+{"k": "edit.14.package.again.later.Assets/Target/SamePath.txt", "v": "same path\n"}
+{"k": "edit.14.package.again.later.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: path\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.again.later.Assets/Target/SamePath.txt.guid", "v": "a1000000000000000000000000000005"}
+{"k": "edit.14.package.again.later.Assets/Target/SamePath.txt.loaded", "v": "TextAsset:same path\n"}
+{"k": "edit.14.package.again.later.Assets/Second.txt", "v": "<none>"}
+{"k": "edit.14.package.again.later.Assets/Second.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.again.later.Assets/Second.txt.guid", "v": ""}
+{"k": "edit.14.package.again.later.Assets/Second.txt.loaded", "v": "null"}
+{"k": "edit.14.package.again.later.sameGuid.path", "v": "Assets/Target/SameGuid.txt"}
+{"k": "edit.14.package.again.later.samePath.oldGuid.path", "v": ""}
+{"k": "edit.14.package.again.later.samePath.newGuid.path", "v": "Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.missing.call", "v": "returns"}
+{"k": "edit.14.package.missing.ended", "v": "true"}
+{"k": "edit.14.package.missing.events", "v": "failed:Missing:Failed to unpack package contents"}
+{"k": "edit.14.package.missing.logs", "v": "Error: Failed to import package with error: Couldn't decompress package | Error: Failed to import package with error: Couldn't decompress package"}
+{"k": "edit.14.package.missing.Assets/Pack", "v": "<none>"}
+{"k": "edit.14.package.missing.Assets/Pack.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.missing.Assets/Pack.guid", "v": "a1000000000000000000000000000001"}
+{"k": "edit.14.package.missing.Assets/Pack.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.missing.Assets/Pack/Note.txt", "v": "packed\n"}
+{"k": "edit.14.package.missing.Assets/Pack/Note.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Note.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: packed\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.missing.Assets/Pack/Note.txt.guid", "v": "a1000000000000000000000000000002"}
+{"k": "edit.14.package.missing.Assets/Pack/Note.txt.loaded", "v": "TextAsset:packed\n"}
+{"k": "edit.14.package.missing.Assets/Pack/Bare.txt", "v": "bare\n"}
+{"k": "edit.14.package.missing.Assets/Pack/Bare.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Bare.txt>\n"}
+{"k": "edit.14.package.missing.Assets/Pack/Bare.txt.guid", "v": "a1000000000000000000000000000003"}
+{"k": "edit.14.package.missing.Assets/Pack/Bare.txt.loaded", "v": "TextAsset:bare\n"}
+{"k": "edit.14.package.missing.Assets/Pack/Deep", "v": "<none>"}
+{"k": "edit.14.package.missing.Assets/Pack/Deep.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.missing.Assets/Pack/Deep.guid", "v": "another"}
+{"k": "edit.14.package.missing.Assets/Pack/Deep.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.missing.Assets/Pack/Deep/Inner.txt", "v": "inner\n"}
+{"k": "edit.14.package.missing.Assets/Pack/Deep/Inner.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep/Inner.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.missing.Assets/Pack/Deep/Inner.txt.guid", "v": "a1000000000000000000000000000004"}
+{"k": "edit.14.package.missing.Assets/Pack/Deep/Inner.txt.loaded", "v": "TextAsset:inner\n"}
+{"k": "edit.14.package.missing.Assets/Pack/SameGuid.txt", "v": "<none>"}
+{"k": "edit.14.package.missing.Assets/Pack/SameGuid.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.missing.Assets/Pack/SameGuid.txt.guid", "v": ""}
+{"k": "edit.14.package.missing.Assets/Pack/SameGuid.txt.loaded", "v": "null"}
+{"k": "edit.14.package.missing.Assets/Target/SameGuid.txt", "v": "same guid\n"}
+{"k": "edit.14.package.missing.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: same\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.missing.Assets/Target/SameGuid.txt.guid", "v": "b1000000000000000000000000000001"}
+{"k": "edit.14.package.missing.Assets/Target/SameGuid.txt.loaded", "v": "TextAsset:same guid\n"}
+{"k": "edit.14.package.missing.Assets/Target/SamePath.txt", "v": "same path\n"}
+{"k": "edit.14.package.missing.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: path\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.missing.Assets/Target/SamePath.txt.guid", "v": "a1000000000000000000000000000005"}
+{"k": "edit.14.package.missing.Assets/Target/SamePath.txt.loaded", "v": "TextAsset:same path\n"}
+{"k": "edit.14.package.missing.Assets/Second.txt", "v": "<none>"}
+{"k": "edit.14.package.missing.Assets/Second.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.missing.Assets/Second.txt.guid", "v": ""}
+{"k": "edit.14.package.missing.Assets/Second.txt.loaded", "v": "null"}
+{"k": "edit.14.package.missing.sameGuid.path", "v": "Assets/Target/SameGuid.txt"}
+{"k": "edit.14.package.missing.samePath.oldGuid.path", "v": ""}
+{"k": "edit.14.package.missing.samePath.newGuid.path", "v": "Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.missing.later.ended", "v": "true"}
+{"k": "edit.14.package.missing.later.events", "v": ""}
+{"k": "edit.14.package.missing.later.logs", "v": ""}
+{"k": "edit.14.package.missing.later.Assets/Pack", "v": "<none>"}
+{"k": "edit.14.package.missing.later.Assets/Pack.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.missing.later.Assets/Pack.guid", "v": "a1000000000000000000000000000001"}
+{"k": "edit.14.package.missing.later.Assets/Pack.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Note.txt", "v": "packed\n"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Note.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Note.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: packed\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Note.txt.guid", "v": "a1000000000000000000000000000002"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Note.txt.loaded", "v": "TextAsset:packed\n"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Bare.txt", "v": "bare\n"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Bare.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Bare.txt>\n"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Bare.txt.guid", "v": "a1000000000000000000000000000003"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Bare.txt.loaded", "v": "TextAsset:bare\n"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Deep", "v": "<none>"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Deep.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Deep.guid", "v": "another"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Deep.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Deep/Inner.txt", "v": "inner\n"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Deep/Inner.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep/Inner.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Deep/Inner.txt.guid", "v": "a1000000000000000000000000000004"}
+{"k": "edit.14.package.missing.later.Assets/Pack/Deep/Inner.txt.loaded", "v": "TextAsset:inner\n"}
+{"k": "edit.14.package.missing.later.Assets/Pack/SameGuid.txt", "v": "<none>"}
+{"k": "edit.14.package.missing.later.Assets/Pack/SameGuid.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.missing.later.Assets/Pack/SameGuid.txt.guid", "v": ""}
+{"k": "edit.14.package.missing.later.Assets/Pack/SameGuid.txt.loaded", "v": "null"}
+{"k": "edit.14.package.missing.later.Assets/Target/SameGuid.txt", "v": "same guid\n"}
+{"k": "edit.14.package.missing.later.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: same\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.missing.later.Assets/Target/SameGuid.txt.guid", "v": "b1000000000000000000000000000001"}
+{"k": "edit.14.package.missing.later.Assets/Target/SameGuid.txt.loaded", "v": "TextAsset:same guid\n"}
+{"k": "edit.14.package.missing.later.Assets/Target/SamePath.txt", "v": "same path\n"}
+{"k": "edit.14.package.missing.later.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: path\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.missing.later.Assets/Target/SamePath.txt.guid", "v": "a1000000000000000000000000000005"}
+{"k": "edit.14.package.missing.later.Assets/Target/SamePath.txt.loaded", "v": "TextAsset:same path\n"}
+{"k": "edit.14.package.missing.later.Assets/Second.txt", "v": "<none>"}
+{"k": "edit.14.package.missing.later.Assets/Second.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.missing.later.Assets/Second.txt.guid", "v": ""}
+{"k": "edit.14.package.missing.later.Assets/Second.txt.loaded", "v": "null"}
+{"k": "edit.14.package.missing.later.sameGuid.path", "v": "Assets/Target/SameGuid.txt"}
+{"k": "edit.14.package.missing.later.samePath.oldGuid.path", "v": ""}
+{"k": "edit.14.package.missing.later.samePath.newGuid.path", "v": "Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.broken.call", "v": "returns"}
+{"k": "edit.14.package.broken.ended", "v": "true"}
+{"k": "edit.14.package.broken.events", "v": "failed:Broken:Failed to unpack package contents"}
+{"k": "edit.14.package.broken.logs", "v": "Error: Failed to import package with error: Couldn't decompress package | Error: Failed to import package with error: Couldn't decompress package"}
+{"k": "edit.14.package.broken.Assets/Pack", "v": "<none>"}
+{"k": "edit.14.package.broken.Assets/Pack.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.broken.Assets/Pack.guid", "v": "a1000000000000000000000000000001"}
+{"k": "edit.14.package.broken.Assets/Pack.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.broken.Assets/Pack/Note.txt", "v": "packed\n"}
+{"k": "edit.14.package.broken.Assets/Pack/Note.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Note.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: packed\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.broken.Assets/Pack/Note.txt.guid", "v": "a1000000000000000000000000000002"}
+{"k": "edit.14.package.broken.Assets/Pack/Note.txt.loaded", "v": "TextAsset:packed\n"}
+{"k": "edit.14.package.broken.Assets/Pack/Bare.txt", "v": "bare\n"}
+{"k": "edit.14.package.broken.Assets/Pack/Bare.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Bare.txt>\n"}
+{"k": "edit.14.package.broken.Assets/Pack/Bare.txt.guid", "v": "a1000000000000000000000000000003"}
+{"k": "edit.14.package.broken.Assets/Pack/Bare.txt.loaded", "v": "TextAsset:bare\n"}
+{"k": "edit.14.package.broken.Assets/Pack/Deep", "v": "<none>"}
+{"k": "edit.14.package.broken.Assets/Pack/Deep.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.broken.Assets/Pack/Deep.guid", "v": "another"}
+{"k": "edit.14.package.broken.Assets/Pack/Deep.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.broken.Assets/Pack/Deep/Inner.txt", "v": "inner\n"}
+{"k": "edit.14.package.broken.Assets/Pack/Deep/Inner.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep/Inner.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.broken.Assets/Pack/Deep/Inner.txt.guid", "v": "a1000000000000000000000000000004"}
+{"k": "edit.14.package.broken.Assets/Pack/Deep/Inner.txt.loaded", "v": "TextAsset:inner\n"}
+{"k": "edit.14.package.broken.Assets/Pack/SameGuid.txt", "v": "<none>"}
+{"k": "edit.14.package.broken.Assets/Pack/SameGuid.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.broken.Assets/Pack/SameGuid.txt.guid", "v": ""}
+{"k": "edit.14.package.broken.Assets/Pack/SameGuid.txt.loaded", "v": "null"}
+{"k": "edit.14.package.broken.Assets/Target/SameGuid.txt", "v": "same guid\n"}
+{"k": "edit.14.package.broken.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: same\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.broken.Assets/Target/SameGuid.txt.guid", "v": "b1000000000000000000000000000001"}
+{"k": "edit.14.package.broken.Assets/Target/SameGuid.txt.loaded", "v": "TextAsset:same guid\n"}
+{"k": "edit.14.package.broken.Assets/Target/SamePath.txt", "v": "same path\n"}
+{"k": "edit.14.package.broken.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: path\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.broken.Assets/Target/SamePath.txt.guid", "v": "a1000000000000000000000000000005"}
+{"k": "edit.14.package.broken.Assets/Target/SamePath.txt.loaded", "v": "TextAsset:same path\n"}
+{"k": "edit.14.package.broken.Assets/Second.txt", "v": "<none>"}
+{"k": "edit.14.package.broken.Assets/Second.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.broken.Assets/Second.txt.guid", "v": ""}
+{"k": "edit.14.package.broken.Assets/Second.txt.loaded", "v": "null"}
+{"k": "edit.14.package.broken.sameGuid.path", "v": "Assets/Target/SameGuid.txt"}
+{"k": "edit.14.package.broken.samePath.oldGuid.path", "v": ""}
+{"k": "edit.14.package.broken.samePath.newGuid.path", "v": "Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.broken.later.ended", "v": "true"}
+{"k": "edit.14.package.broken.later.events", "v": ""}
+{"k": "edit.14.package.broken.later.logs", "v": ""}
+{"k": "edit.14.package.broken.later.Assets/Pack", "v": "<none>"}
+{"k": "edit.14.package.broken.later.Assets/Pack.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.broken.later.Assets/Pack.guid", "v": "a1000000000000000000000000000001"}
+{"k": "edit.14.package.broken.later.Assets/Pack.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Note.txt", "v": "packed\n"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Note.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Note.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: packed\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Note.txt.guid", "v": "a1000000000000000000000000000002"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Note.txt.loaded", "v": "TextAsset:packed\n"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Bare.txt", "v": "bare\n"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Bare.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Bare.txt>\n"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Bare.txt.guid", "v": "a1000000000000000000000000000003"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Bare.txt.loaded", "v": "TextAsset:bare\n"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Deep", "v": "<none>"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Deep.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Deep.guid", "v": "another"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Deep.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Deep/Inner.txt", "v": "inner\n"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Deep/Inner.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep/Inner.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Deep/Inner.txt.guid", "v": "a1000000000000000000000000000004"}
+{"k": "edit.14.package.broken.later.Assets/Pack/Deep/Inner.txt.loaded", "v": "TextAsset:inner\n"}
+{"k": "edit.14.package.broken.later.Assets/Pack/SameGuid.txt", "v": "<none>"}
+{"k": "edit.14.package.broken.later.Assets/Pack/SameGuid.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.broken.later.Assets/Pack/SameGuid.txt.guid", "v": ""}
+{"k": "edit.14.package.broken.later.Assets/Pack/SameGuid.txt.loaded", "v": "null"}
+{"k": "edit.14.package.broken.later.Assets/Target/SameGuid.txt", "v": "same guid\n"}
+{"k": "edit.14.package.broken.later.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: same\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.broken.later.Assets/Target/SameGuid.txt.guid", "v": "b1000000000000000000000000000001"}
+{"k": "edit.14.package.broken.later.Assets/Target/SameGuid.txt.loaded", "v": "TextAsset:same guid\n"}
+{"k": "edit.14.package.broken.later.Assets/Target/SamePath.txt", "v": "same path\n"}
+{"k": "edit.14.package.broken.later.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: path\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.broken.later.Assets/Target/SamePath.txt.guid", "v": "a1000000000000000000000000000005"}
+{"k": "edit.14.package.broken.later.Assets/Target/SamePath.txt.loaded", "v": "TextAsset:same path\n"}
+{"k": "edit.14.package.broken.later.Assets/Second.txt", "v": "<none>"}
+{"k": "edit.14.package.broken.later.Assets/Second.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.broken.later.Assets/Second.txt.guid", "v": ""}
+{"k": "edit.14.package.broken.later.Assets/Second.txt.loaded", "v": "null"}
+{"k": "edit.14.package.broken.later.sameGuid.path", "v": "Assets/Target/SameGuid.txt"}
+{"k": "edit.14.package.broken.later.samePath.oldGuid.path", "v": ""}
+{"k": "edit.14.package.broken.later.samePath.newGuid.path", "v": "Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.null.call", "v": "returns"}
+{"k": "edit.14.package.null.ended", "v": "true"}
+{"k": "edit.14.package.null.events", "v": "failed::Failed to unpack package contents"}
+{"k": "edit.14.package.null.logs", "v": "Error: Failed to import package with error: Couldn't decompress package | Error: Failed to import package with error: Couldn't decompress package"}
+{"k": "edit.14.package.null.Assets/Pack", "v": "<none>"}
+{"k": "edit.14.package.null.Assets/Pack.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.null.Assets/Pack.guid", "v": "a1000000000000000000000000000001"}
+{"k": "edit.14.package.null.Assets/Pack.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.null.Assets/Pack/Note.txt", "v": "packed\n"}
+{"k": "edit.14.package.null.Assets/Pack/Note.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Note.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: packed\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.null.Assets/Pack/Note.txt.guid", "v": "a1000000000000000000000000000002"}
+{"k": "edit.14.package.null.Assets/Pack/Note.txt.loaded", "v": "TextAsset:packed\n"}
+{"k": "edit.14.package.null.Assets/Pack/Bare.txt", "v": "bare\n"}
+{"k": "edit.14.package.null.Assets/Pack/Bare.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Bare.txt>\n"}
+{"k": "edit.14.package.null.Assets/Pack/Bare.txt.guid", "v": "a1000000000000000000000000000003"}
+{"k": "edit.14.package.null.Assets/Pack/Bare.txt.loaded", "v": "TextAsset:bare\n"}
+{"k": "edit.14.package.null.Assets/Pack/Deep", "v": "<none>"}
+{"k": "edit.14.package.null.Assets/Pack/Deep.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.null.Assets/Pack/Deep.guid", "v": "another"}
+{"k": "edit.14.package.null.Assets/Pack/Deep.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.null.Assets/Pack/Deep/Inner.txt", "v": "inner\n"}
+{"k": "edit.14.package.null.Assets/Pack/Deep/Inner.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep/Inner.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.null.Assets/Pack/Deep/Inner.txt.guid", "v": "a1000000000000000000000000000004"}
+{"k": "edit.14.package.null.Assets/Pack/Deep/Inner.txt.loaded", "v": "TextAsset:inner\n"}
+{"k": "edit.14.package.null.Assets/Pack/SameGuid.txt", "v": "<none>"}
+{"k": "edit.14.package.null.Assets/Pack/SameGuid.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.null.Assets/Pack/SameGuid.txt.guid", "v": ""}
+{"k": "edit.14.package.null.Assets/Pack/SameGuid.txt.loaded", "v": "null"}
+{"k": "edit.14.package.null.Assets/Target/SameGuid.txt", "v": "same guid\n"}
+{"k": "edit.14.package.null.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: same\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.null.Assets/Target/SameGuid.txt.guid", "v": "b1000000000000000000000000000001"}
+{"k": "edit.14.package.null.Assets/Target/SameGuid.txt.loaded", "v": "TextAsset:same guid\n"}
+{"k": "edit.14.package.null.Assets/Target/SamePath.txt", "v": "same path\n"}
+{"k": "edit.14.package.null.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: path\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.null.Assets/Target/SamePath.txt.guid", "v": "a1000000000000000000000000000005"}
+{"k": "edit.14.package.null.Assets/Target/SamePath.txt.loaded", "v": "TextAsset:same path\n"}
+{"k": "edit.14.package.null.Assets/Second.txt", "v": "<none>"}
+{"k": "edit.14.package.null.Assets/Second.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.null.Assets/Second.txt.guid", "v": ""}
+{"k": "edit.14.package.null.Assets/Second.txt.loaded", "v": "null"}
+{"k": "edit.14.package.null.sameGuid.path", "v": "Assets/Target/SameGuid.txt"}
+{"k": "edit.14.package.null.samePath.oldGuid.path", "v": ""}
+{"k": "edit.14.package.null.samePath.newGuid.path", "v": "Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.null.later.ended", "v": "true"}
+{"k": "edit.14.package.null.later.events", "v": ""}
+{"k": "edit.14.package.null.later.logs", "v": ""}
+{"k": "edit.14.package.null.later.Assets/Pack", "v": "<none>"}
+{"k": "edit.14.package.null.later.Assets/Pack.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.null.later.Assets/Pack.guid", "v": "a1000000000000000000000000000001"}
+{"k": "edit.14.package.null.later.Assets/Pack.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.null.later.Assets/Pack/Note.txt", "v": "packed\n"}
+{"k": "edit.14.package.null.later.Assets/Pack/Note.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Note.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: packed\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.null.later.Assets/Pack/Note.txt.guid", "v": "a1000000000000000000000000000002"}
+{"k": "edit.14.package.null.later.Assets/Pack/Note.txt.loaded", "v": "TextAsset:packed\n"}
+{"k": "edit.14.package.null.later.Assets/Pack/Bare.txt", "v": "bare\n"}
+{"k": "edit.14.package.null.later.Assets/Pack/Bare.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Bare.txt>\n"}
+{"k": "edit.14.package.null.later.Assets/Pack/Bare.txt.guid", "v": "a1000000000000000000000000000003"}
+{"k": "edit.14.package.null.later.Assets/Pack/Bare.txt.loaded", "v": "TextAsset:bare\n"}
+{"k": "edit.14.package.null.later.Assets/Pack/Deep", "v": "<none>"}
+{"k": "edit.14.package.null.later.Assets/Pack/Deep.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.null.later.Assets/Pack/Deep.guid", "v": "another"}
+{"k": "edit.14.package.null.later.Assets/Pack/Deep.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.null.later.Assets/Pack/Deep/Inner.txt", "v": "inner\n"}
+{"k": "edit.14.package.null.later.Assets/Pack/Deep/Inner.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep/Inner.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.null.later.Assets/Pack/Deep/Inner.txt.guid", "v": "a1000000000000000000000000000004"}
+{"k": "edit.14.package.null.later.Assets/Pack/Deep/Inner.txt.loaded", "v": "TextAsset:inner\n"}
+{"k": "edit.14.package.null.later.Assets/Pack/SameGuid.txt", "v": "<none>"}
+{"k": "edit.14.package.null.later.Assets/Pack/SameGuid.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.null.later.Assets/Pack/SameGuid.txt.guid", "v": ""}
+{"k": "edit.14.package.null.later.Assets/Pack/SameGuid.txt.loaded", "v": "null"}
+{"k": "edit.14.package.null.later.Assets/Target/SameGuid.txt", "v": "same guid\n"}
+{"k": "edit.14.package.null.later.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: same\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.null.later.Assets/Target/SameGuid.txt.guid", "v": "b1000000000000000000000000000001"}
+{"k": "edit.14.package.null.later.Assets/Target/SameGuid.txt.loaded", "v": "TextAsset:same guid\n"}
+{"k": "edit.14.package.null.later.Assets/Target/SamePath.txt", "v": "same path\n"}
+{"k": "edit.14.package.null.later.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: path\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.null.later.Assets/Target/SamePath.txt.guid", "v": "a1000000000000000000000000000005"}
+{"k": "edit.14.package.null.later.Assets/Target/SamePath.txt.loaded", "v": "TextAsset:same path\n"}
+{"k": "edit.14.package.null.later.Assets/Second.txt", "v": "<none>"}
+{"k": "edit.14.package.null.later.Assets/Second.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.null.later.Assets/Second.txt.guid", "v": ""}
+{"k": "edit.14.package.null.later.Assets/Second.txt.loaded", "v": "null"}
+{"k": "edit.14.package.null.later.sameGuid.path", "v": "Assets/Target/SameGuid.txt"}
+{"k": "edit.14.package.null.later.samePath.oldGuid.path", "v": ""}
+{"k": "edit.14.package.null.later.samePath.newGuid.path", "v": "Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.empty.call", "v": "returns"}
+{"k": "edit.14.package.empty.ended", "v": "true"}
+{"k": "edit.14.package.empty.events", "v": "failed::Failed to unpack package contents"}
+{"k": "edit.14.package.empty.logs", "v": "Error: Failed to import package with error: Couldn't decompress package | Error: Failed to import package with error: Couldn't decompress package"}
+{"k": "edit.14.package.empty.Assets/Pack", "v": "<none>"}
+{"k": "edit.14.package.empty.Assets/Pack.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.empty.Assets/Pack.guid", "v": "a1000000000000000000000000000001"}
+{"k": "edit.14.package.empty.Assets/Pack.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.empty.Assets/Pack/Note.txt", "v": "packed\n"}
+{"k": "edit.14.package.empty.Assets/Pack/Note.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Note.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: packed\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.empty.Assets/Pack/Note.txt.guid", "v": "a1000000000000000000000000000002"}
+{"k": "edit.14.package.empty.Assets/Pack/Note.txt.loaded", "v": "TextAsset:packed\n"}
+{"k": "edit.14.package.empty.Assets/Pack/Bare.txt", "v": "bare\n"}
+{"k": "edit.14.package.empty.Assets/Pack/Bare.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Bare.txt>\n"}
+{"k": "edit.14.package.empty.Assets/Pack/Bare.txt.guid", "v": "a1000000000000000000000000000003"}
+{"k": "edit.14.package.empty.Assets/Pack/Bare.txt.loaded", "v": "TextAsset:bare\n"}
+{"k": "edit.14.package.empty.Assets/Pack/Deep", "v": "<none>"}
+{"k": "edit.14.package.empty.Assets/Pack/Deep.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.empty.Assets/Pack/Deep.guid", "v": "another"}
+{"k": "edit.14.package.empty.Assets/Pack/Deep.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.empty.Assets/Pack/Deep/Inner.txt", "v": "inner\n"}
+{"k": "edit.14.package.empty.Assets/Pack/Deep/Inner.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep/Inner.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.empty.Assets/Pack/Deep/Inner.txt.guid", "v": "a1000000000000000000000000000004"}
+{"k": "edit.14.package.empty.Assets/Pack/Deep/Inner.txt.loaded", "v": "TextAsset:inner\n"}
+{"k": "edit.14.package.empty.Assets/Pack/SameGuid.txt", "v": "<none>"}
+{"k": "edit.14.package.empty.Assets/Pack/SameGuid.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.empty.Assets/Pack/SameGuid.txt.guid", "v": ""}
+{"k": "edit.14.package.empty.Assets/Pack/SameGuid.txt.loaded", "v": "null"}
+{"k": "edit.14.package.empty.Assets/Target/SameGuid.txt", "v": "same guid\n"}
+{"k": "edit.14.package.empty.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: same\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.empty.Assets/Target/SameGuid.txt.guid", "v": "b1000000000000000000000000000001"}
+{"k": "edit.14.package.empty.Assets/Target/SameGuid.txt.loaded", "v": "TextAsset:same guid\n"}
+{"k": "edit.14.package.empty.Assets/Target/SamePath.txt", "v": "same path\n"}
+{"k": "edit.14.package.empty.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: path\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.empty.Assets/Target/SamePath.txt.guid", "v": "a1000000000000000000000000000005"}
+{"k": "edit.14.package.empty.Assets/Target/SamePath.txt.loaded", "v": "TextAsset:same path\n"}
+{"k": "edit.14.package.empty.Assets/Second.txt", "v": "<none>"}
+{"k": "edit.14.package.empty.Assets/Second.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.empty.Assets/Second.txt.guid", "v": ""}
+{"k": "edit.14.package.empty.Assets/Second.txt.loaded", "v": "null"}
+{"k": "edit.14.package.empty.sameGuid.path", "v": "Assets/Target/SameGuid.txt"}
+{"k": "edit.14.package.empty.samePath.oldGuid.path", "v": ""}
+{"k": "edit.14.package.empty.samePath.newGuid.path", "v": "Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.empty.later.ended", "v": "true"}
+{"k": "edit.14.package.empty.later.events", "v": ""}
+{"k": "edit.14.package.empty.later.logs", "v": ""}
+{"k": "edit.14.package.empty.later.Assets/Pack", "v": "<none>"}
+{"k": "edit.14.package.empty.later.Assets/Pack.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.empty.later.Assets/Pack.guid", "v": "a1000000000000000000000000000001"}
+{"k": "edit.14.package.empty.later.Assets/Pack.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Note.txt", "v": "packed\n"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Note.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Note.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: packed\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Note.txt.guid", "v": "a1000000000000000000000000000002"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Note.txt.loaded", "v": "TextAsset:packed\n"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Bare.txt", "v": "bare\n"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Bare.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Bare.txt>\n"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Bare.txt.guid", "v": "a1000000000000000000000000000003"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Bare.txt.loaded", "v": "TextAsset:bare\n"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Deep", "v": "<none>"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Deep.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Deep.guid", "v": "another"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Deep.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Deep/Inner.txt", "v": "inner\n"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Deep/Inner.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep/Inner.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Deep/Inner.txt.guid", "v": "a1000000000000000000000000000004"}
+{"k": "edit.14.package.empty.later.Assets/Pack/Deep/Inner.txt.loaded", "v": "TextAsset:inner\n"}
+{"k": "edit.14.package.empty.later.Assets/Pack/SameGuid.txt", "v": "<none>"}
+{"k": "edit.14.package.empty.later.Assets/Pack/SameGuid.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.empty.later.Assets/Pack/SameGuid.txt.guid", "v": ""}
+{"k": "edit.14.package.empty.later.Assets/Pack/SameGuid.txt.loaded", "v": "null"}
+{"k": "edit.14.package.empty.later.Assets/Target/SameGuid.txt", "v": "same guid\n"}
+{"k": "edit.14.package.empty.later.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: same\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.empty.later.Assets/Target/SameGuid.txt.guid", "v": "b1000000000000000000000000000001"}
+{"k": "edit.14.package.empty.later.Assets/Target/SameGuid.txt.loaded", "v": "TextAsset:same guid\n"}
+{"k": "edit.14.package.empty.later.Assets/Target/SamePath.txt", "v": "same path\n"}
+{"k": "edit.14.package.empty.later.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: path\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.empty.later.Assets/Target/SamePath.txt.guid", "v": "a1000000000000000000000000000005"}
+{"k": "edit.14.package.empty.later.Assets/Target/SamePath.txt.loaded", "v": "TextAsset:same path\n"}
+{"k": "edit.14.package.empty.later.Assets/Second.txt", "v": "<none>"}
+{"k": "edit.14.package.empty.later.Assets/Second.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.empty.later.Assets/Second.txt.guid", "v": ""}
+{"k": "edit.14.package.empty.later.Assets/Second.txt.loaded", "v": "null"}
+{"k": "edit.14.package.empty.later.sameGuid.path", "v": "Assets/Target/SameGuid.txt"}
+{"k": "edit.14.package.empty.later.samePath.oldGuid.path", "v": ""}
+{"k": "edit.14.package.empty.later.samePath.newGuid.path", "v": "Assets/Target/SamePath.txt"}
+{"k": "edit.14.package.interactive.call", "v": "returns"}
+{"k": "edit.14.package.interactive.ended", "v": "false"}
+{"k": "edit.14.package.interactive.events", "v": "started:Second(file=True,guid=True)"}
+{"k": "edit.14.package.interactive.logs", "v": ""}
+{"k": "edit.14.package.interactive.Assets/Pack", "v": "<none>"}
+{"k": "edit.14.package.interactive.Assets/Pack.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.interactive.Assets/Pack.guid", "v": "a1000000000000000000000000000001"}
+{"k": "edit.14.package.interactive.Assets/Pack.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.interactive.Assets/Pack/Note.txt", "v": "packed\n"}
+{"k": "edit.14.package.interactive.Assets/Pack/Note.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Note.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: packed\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.interactive.Assets/Pack/Note.txt.guid", "v": "a1000000000000000000000000000002"}
+{"k": "edit.14.package.interactive.Assets/Pack/Note.txt.loaded", "v": "TextAsset:packed\n"}
+{"k": "edit.14.package.interactive.Assets/Pack/Bare.txt", "v": "bare\n"}
+{"k": "edit.14.package.interactive.Assets/Pack/Bare.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Bare.txt>\n"}
+{"k": "edit.14.package.interactive.Assets/Pack/Bare.txt.guid", "v": "a1000000000000000000000000000003"}
+{"k": "edit.14.package.interactive.Assets/Pack/Bare.txt.loaded", "v": "TextAsset:bare\n"}
+{"k": "edit.14.package.interactive.Assets/Pack/Deep", "v": "<none>"}
+{"k": "edit.14.package.interactive.Assets/Pack/Deep.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.interactive.Assets/Pack/Deep.guid", "v": "another"}
+{"k": "edit.14.package.interactive.Assets/Pack/Deep.loaded", "v": "DefaultAsset"}
+{"k": "edit.14.package.interactive.Assets/Pack/Deep/Inner.txt", "v": "inner\n"}
+{"k": "edit.14.package.interactive.Assets/Pack/Deep/Inner.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep/Inner.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.interactive.Assets/Pack/Deep/Inner.txt.guid", "v": "a1000000000000000000000000000004"}
+{"k": "edit.14.package.interactive.Assets/Pack/Deep/Inner.txt.loaded", "v": "TextAsset:inner\n"}
+{"k": "edit.14.package.interactive.Assets/Pack/SameGuid.txt", "v": "<none>"}
+{"k": "edit.14.package.interactive.Assets/Pack/SameGuid.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.interactive.Assets/Pack/SameGuid.txt.guid", "v": ""}
+{"k": "edit.14.package.interactive.Assets/Pack/SameGuid.txt.loaded", "v": "null"}
+{"k": "edit.14.package.interactive.Assets/Target/SameGuid.txt", "v": "same guid\n"}
+{"k": "edit.14.package.interactive.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: same\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.interactive.Assets/Target/SameGuid.txt.guid", "v": "b1000000000000000000000000000001"}
+{"k": "edit.14.package.interactive.Assets/Target/SameGuid.txt.loaded", "v": "TextAsset:same guid\n"}
+{"k": "edit.14.package.interactive.Assets/Target/SamePath.txt", "v": "same path\n"}
+{"k": "edit.14.package.interactive.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: path\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.14.package.interactive.Assets/Target/SamePath.txt.guid", "v": "a1000000000000000000000000000005"}
+{"k": "edit.14.package.interactive.Assets/Target/SamePath.txt.loaded", "v": "TextAsset:same path\n"}
+{"k": "edit.14.package.interactive.Assets/Second.txt", "v": "<none>"}
+{"k": "edit.14.package.interactive.Assets/Second.txt.meta", "v": "<none>"}
+{"k": "edit.14.package.interactive.Assets/Second.txt.guid", "v": ""}
+{"k": "edit.14.package.interactive.Assets/Second.txt.loaded", "v": "null"}
+{"k": "edit.14.package.interactive.sameGuid.path", "v": "Assets/Target/SameGuid.txt"}
+{"k": "edit.14.package.interactive.samePath.oldGuid.path", "v": ""}
+{"k": "edit.14.package.interactive.samePath.newGuid.path", "v": "Assets/Target/SamePath.txt"}
 {"k": "edit.00.open.Assets/Startup.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.00.open.Assets/Startup/Tex.png.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Tex.png>\nTextureImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 13\n  mipmaps:\n    mipMapMode: 0\n    enableMipMap: 1\n    sRGBTexture: 1\n    linearTexture: 0\n    fadeOut: 0\n    borderMipMap: 0\n    mipMapsPreserveCoverage: 0\n    alphaTestReferenceValue: 0.5\n    mipMapFadeDistanceStart: 1\n    mipMapFadeDistanceEnd: 3\n  bumpmap:\n    convertToNormalMap: 0\n    externalNormalMap: 0\n    heightScale: 0.25\n    normalMapFilter: 0\n    flipGreenChannel: 0\n  isReadable: 0\n  streamingMipmaps: 0\n  streamingMipmapsPriority: 0\n  vTOnly: 0\n  ignoreMipmapLimit: 0\n  grayScaleToAlpha: 0\n  generateCubemap: 6\n  cubemapConvolution: 0\n  seamlessCubemap: 0\n  textureFormat: 1\n  maxTextureSize: 2048\n  textureSettings:\n    serializedVersion: 2\n    filterMode: 1\n    aniso: 1\n    mipBias: 0\n    wrapU: 0\n    wrapV: 0\n    wrapW: 0\n  nPOTScale: 1\n  lightmap: 0\n  compressionQuality: 50\n  spriteMode: 0\n  spriteExtrude: 1\n  spriteMeshType: 1\n  alignment: 0\n  spritePivot: {x: 0.5, y: 0.5}\n  spritePixelsToUnits: 100\n  spriteBorder: {x: 0, y: 0, z: 0, w: 0}\n  spriteGenerateFallbackPhysicsShape: 1\n  alphaUsage: 1\n  alphaIsTransparency: 0\n  spriteTessellationDetail: -1\n  textureType: 0\n  textureShape: 1\n  singleChannelComponent: 0\n  flipbookRows: 1\n  flipbookColumns: 1\n  maxTextureSizeSet: 0\n  compressionQualitySet: 0\n  textureFormatSet: 0\n  ignorePngGamma: 0\n  applyGammaDecoding: 0\n  swizzle: 50462976\n  cookieLightType: 0\n  platformSettings:\n  - serializedVersion: 4\n    buildTarget: DefaultTexturePlatform\n    maxTextureSize: 2048\n    resizeAlgorithm: 0\n    textureFormat: -1\n    textureCompression: 1\n    compressionQuality: 50\n    crunchedCompression: 0\n    allowsAlphaSplitting: 0\n    overridden: 0\n    ignorePlatformSupport: 0\n    androidETC2FallbackOverride: 0\n    forceMaximumCompressionQuality_BC6H_BC7: 0\n  - serializedVersion: 4\n    buildTarget: Standalone\n    maxTextureSize: 2048\n    resizeAlgorithm: 0\n    textureFormat: -1\n    textureCompression: 1\n    compressionQuality: 50\n    crunchedCompression: 0\n    allowsAlphaSplitting: 0\n    overridden: 0\n    ignorePlatformSupport: 0\n    androidETC2FallbackOverride: 0\n    forceMaximumCompressionQuality_BC6H_BC7: 0\n  spriteSheet:\n    serializedVersion: 2\n    sprites: []\n    outline: []\n    customData: \n    physicsShape: []\n    bones: []\n    spriteID: \n    internalID: 0\n    vertices: []\n    indices: \n    edges: []\n    weights: []\n    secondaryTextures: []\n    spriteCustomMetadata:\n      entries: []\n    nameFileIdTable: {}\n  mipmapLimitGroupName: \n  pSDRemoveMatte: 0\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.00.open.Assets/Startup/Tex.png.meta.platforms", "v": "the installed modules"}
@@ -658,6 +1216,14 @@
 {"k": "edit.exit.Assets/New/Tex.png.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/New/Tex.png>\nTextureImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 13\n  mipmaps:\n    mipMapMode: 0\n    enableMipMap: 0\n    sRGBTexture: 1\n    linearTexture: 0\n    fadeOut: 0\n    borderMipMap: 0\n    mipMapsPreserveCoverage: 0\n    alphaTestReferenceValue: 0.5\n    mipMapFadeDistanceStart: 1\n    mipMapFadeDistanceEnd: 3\n  bumpmap:\n    convertToNormalMap: 0\n    externalNormalMap: 0\n    heightScale: 0.25\n    normalMapFilter: 0\n    flipGreenChannel: 0\n  isReadable: 1\n  streamingMipmaps: 0\n  streamingMipmapsPriority: 0\n  vTOnly: 0\n  ignoreMipmapLimit: 0\n  grayScaleToAlpha: 0\n  generateCubemap: 6\n  cubemapConvolution: 0\n  seamlessCubemap: 0\n  textureFormat: 1\n  maxTextureSize: 2048\n  textureSettings:\n    serializedVersion: 2\n    filterMode: 1\n    aniso: 1\n    mipBias: 0\n    wrapU: 1\n    wrapV: 1\n    wrapW: 1\n  nPOTScale: 1\n  lightmap: 0\n  compressionQuality: 50\n  spriteMode: 0\n  spriteExtrude: 1\n  spriteMeshType: 1\n  alignment: 0\n  spritePivot: {x: 0.5, y: 0.5}\n  spritePixelsToUnits: 100\n  spriteBorder: {x: 0, y: 0, z: 0, w: 0}\n  spriteGenerateFallbackPhysicsShape: 1\n  alphaUsage: 1\n  alphaIsTransparency: 0\n  spriteTessellationDetail: -1\n  textureType: 0\n  textureShape: 1\n  singleChannelComponent: 0\n  flipbookRows: 1\n  flipbookColumns: 1\n  maxTextureSizeSet: 0\n  compressionQualitySet: 0\n  textureFormatSet: 0\n  ignorePngGamma: 0\n  applyGammaDecoding: 0\n  swizzle: 50462976\n  cookieLightType: 0\n  platformSettings:\n  - serializedVersion: 4\n    buildTarget: DefaultTexturePlatform\n    maxTextureSize: 2048\n    resizeAlgorithm: 0\n    textureFormat: -1\n    textureCompression: 1\n    compressionQuality: 50\n    crunchedCompression: 0\n    allowsAlphaSplitting: 0\n    overridden: 0\n    ignorePlatformSupport: 0\n    androidETC2FallbackOverride: 0\n    forceMaximumCompressionQuality_BC6H_BC7: 0\n  - serializedVersion: 4\n    buildTarget: Standalone\n    maxTextureSize: 2048\n    resizeAlgorithm: 0\n    textureFormat: -1\n    textureCompression: 1\n    compressionQuality: 50\n    crunchedCompression: 0\n    allowsAlphaSplitting: 0\n    overridden: 0\n    ignorePlatformSupport: 0\n    androidETC2FallbackOverride: 0\n    forceMaximumCompressionQuality_BC6H_BC7: 0\n  spriteSheet:\n    serializedVersion: 2\n    sprites: []\n    outline: []\n    customData: \n    physicsShape: []\n    bones: []\n    spriteID: \n    internalID: 0\n    vertices: []\n    indices: \n    edges: []\n    weights: []\n    secondaryTextures: []\n    spriteCustomMetadata:\n      entries: []\n    nameFileIdTable: {}\n  mipmapLimitGroupName: \n  pSDRemoveMatte: 0\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/New/Twin.txt", "v": "even\n"}
 {"k": "edit.exit.Assets/New/Twin.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/New/Twin.txt>\nlabels:\n- outside\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.exit.Assets/Pack.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.exit.Assets/Pack/Bare.txt", "v": "bare\n"}
+{"k": "edit.exit.Assets/Pack/Bare.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Bare.txt>\n"}
+{"k": "edit.exit.Assets/Pack/Deep.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.exit.Assets/Pack/Deep/Inner.txt", "v": "inner\n"}
+{"k": "edit.exit.Assets/Pack/Deep/Inner.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Deep/Inner.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.exit.Assets/Pack/Note.txt", "v": "packed\n"}
+{"k": "edit.exit.Assets/Pack/Note.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Pack/Note.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: packed\n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/Scenes.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Scenes>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/Scripts.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Scripts>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/Scripts/ProjectWrites.Runtime.asmdef.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Scripts/ProjectWrites.Runtime.asmdef>\nAssemblyDefinitionImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
@@ -707,6 +1273,11 @@
 {"k": "edit.exit.Assets/Startup/Unknown.xyz.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Unknown.xyz>\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/Startup/Upper.mask.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Upper.mask>\nNativeFormatImporter:\n  externalObjects: {}\n  mainObjectFileID: 0\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/Startup/Variants.shadervariants.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Variants.shadervariants>\nNativeFormatImporter:\n  externalObjects: {}\n  mainObjectFileID: 0\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.exit.Assets/Target.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.exit.Assets/Target/SameGuid.txt", "v": "same guid\n"}
+{"k": "edit.exit.Assets/Target/SameGuid.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SameGuid.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: same\n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.exit.Assets/Target/SamePath.txt", "v": "same path\n"}
+{"k": "edit.exit.Assets/Target/SamePath.txt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Target/SamePath.txt>\nTextScriptImporter:\n  externalObjects: {}\n  userData: path\n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/Tests.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Tests>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/Tests/ProjectWrites.Tests.asmdef.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Tests/ProjectWrites.Tests.asmdef>\nAssemblyDefinitionImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/Tests/ProjectWritesEditTests.cs.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Tests/ProjectWritesEditTests.cs>"}
