@@ -102,6 +102,14 @@ shadow (it stops the sky's light like any renderer) and 64 Indirect Samples:
 - `Spare`: a sun and an ambient colour over the coloured scene and a roof of two submeshes with
   one material: the submesh without a material is in the lightmap, and no ray meets it (it
   casts no shadow, bounces nothing, counts in no validity and lets the sky through).
+- `SpareEmpty`: `Spare`'s sun and sky over the coloured scene and a roof of three submeshes
+  whose renderer has three material slots, a blue one, an empty one and a red one: the empty
+  slot's submesh stops no ray either, and its material images draw it white (as
+  Default-Material), where a submesh past the slots is left out of them.
+- `SkyRealtime`, `SkyRealtimeBaked`: `Sky` with Realtime Global Illumination on as well, the
+  environment's light kept in the realtime lightmaps (the Lighting Settings' default,
+  [LightingSettings.realtimeEnvironmentLighting](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightingSettings-realtimeEnvironmentLighting.html))
+  or in the baked ones: the bake's sky is black in the first, as in `Sky` in the second.
 
 The scenes above them have the default sky (`Bare`, `Charts`, `Samples`, `Shapes`: the default
 skybox, with the default Lighting Settings' picked directions) or none (a black sky: one picked
@@ -196,7 +204,8 @@ ambient colour or gradient as six faces of one colour each (the gradient's sky c
 ground colour down, its equator colour on the four sides), a skybox drawn into six faces of
 128 texels a side on the sky mesh (an octahedron split three times and twice more towards the
 horizon: the procedural sky computes its colours per vertex, so the mesh shows), its
-gamma-encoded values times the ambient intensity.
+gamma-encoded values times the ambient intensity; a black sky where the realtime lightmaps
+take the environment's light (`LightingSettings.realtimeEnvironmentLighting`).
 
 Not baked by Unbound yet: ambient occlusion, directionality and the
 shadowmask; without a graphics device, the indirect light (said). Not baked (said, each once per

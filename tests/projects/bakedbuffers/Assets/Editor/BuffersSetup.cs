@@ -550,6 +550,47 @@ public static class BuffersSetup
         Save(scene, "Spare");
     }
 
+    /// <summary>The ambient colour's scene with Realtime Global Illumination on as well, the
+    /// environment's light kept in the realtime lightmaps (the Lighting Settings' default) or
+    /// in the baked ones (LightingSettings.realtimeEnvironmentLighting).</summary>
+    static void RealtimeSkies()
+    {
+        foreach (var (name, realtime) in new[] { ("SkyRealtime", true), ("SkyRealtimeBaked", false) })
+            SkyScene(name, 64, 2, false, () =>
+            {
+                FlatSky();
+                var settings = Lightmapping.lightingSettings;
+                settings.realtimeGI = true;
+                settings.realtimeEnvironmentLighting = realtime;
+            });
+    }
+
+    /// <summary>Spare's sun and sky and a roof of three submeshes side by side whose renderer
+    /// has three material slots, the middle one empty, between a blue and a red material.</summary>
+    static void SpareEmpty()
+    {
+        var scene = Coloured("SpareEmpty", 64, 2);
+        Lightmapping.lightingSettings.environmentSampleCount = 64;
+        FlatSky();
+        WhiteSun();
+        var corners = new[]
+        {
+            P(-1, 0, -1), P(-1, 0, 1), P(-0.4f, 0, 1), P(-0.4f, 0, -1),
+            P(-0.3f, 0, -1), P(-0.3f, 0, 1), P(0.3f, 0, 1), P(0.3f, 0, -1),
+            P(0.4f, 0, -1), P(0.4f, 0, 1), P(1, 0, 1), P(1, 0, -1),
+        };
+        var uvs = new[]
+        {
+            U(0, 0), U(0, 1), U(0.3f, 1), U(0.3f, 0),
+            U(0.35f, 0), U(0.35f, 1), U(0.65f, 1), U(0.65f, 0),
+            U(0.7f, 0), U(0.7f, 1), U(1, 1), U(1, 0),
+        };
+        var submeshes = new[] { new[] { 0, 1, 2, 0, 2, 3 }, new[] { 4, 5, 6, 4, 6, 7 }, new[] { 8, 9, 10, 8, 10, 11 } };
+        var roof = WithMesh("Roof", MeshAsset("SpareEmpty", "Roof", corners, submeshes, uvs), P(0.3f, 1.7f, 2.2f), Vector3.zero);
+        roof.GetComponent<MeshRenderer>().sharedMaterials = new[] { Mat("BounceBlue", new Color(0.2f, 0.3f, 0.9f)), null, Mat("BounceRed", new Color(0.9f, 0.1f, 0.1f)) };
+        Save(scene, "SpareEmpty");
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -562,6 +603,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
