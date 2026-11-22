@@ -185,6 +185,15 @@ namespace UnityEngine.Tests
                 Assert.Equal((" / ", "Rec / "), Kind(() => { Undo.RecordObject(a.transform, "Rec"); a.transform.position = Vector3.right; }));
                 Assert.Equal((" / ", " / "), Kind(() => Undo.RecordObject(a.transform, "No Change")));
                 Assert.Equal((" / ", "Record Modification / "), Kind(() => { Undo.RecordObject(a.transform, ""); a.transform.position = Vector3.left; }));
+                // An unchanged record between two changed ones of the flush does not part them.
+                Assert.Equal((" / ", "Last / "), Kind(() =>
+                {
+                    Undo.RecordObject(a.transform, "First");
+                    a.transform.position = Vector3.one * 5f;
+                    Undo.RecordObject(a, "Unchanged");
+                    Undo.RecordObject(b.transform, "Last");
+                    b.transform.position = Vector3.one * 5f;
+                }));
                 // Complete registrations are listed at once, a hierarchy as one entry.
                 Assert.Equal(("Complete / ", "Complete / "), Kind(() => { Undo.RegisterCompleteObjectUndo(a.transform, "Complete"); a.transform.position = Vector3.forward; }));
                 Assert.Equal(("Hierarchy / ", "Hierarchy / "), Kind(() => { Undo.RegisterFullObjectHierarchyUndo(a, "Hierarchy"); a.transform.position = Vector3.back; }));

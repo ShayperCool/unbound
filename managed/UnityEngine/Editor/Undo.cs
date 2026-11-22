@@ -204,7 +204,10 @@ namespace UnityEditor
         /// through Undo a selection clear and its own; other operations are one each. Matches the
         /// Unity 6000.0.71f1 Editor, tests/projects/scenesave scene-api-rest undo.*. Not measured:
         /// selection changes, a group named after its records were listed, created objects that
-        /// are no GameObject, records of several objects registered complete in one call.
+        /// are no GameObject, records of several objects registered complete in one call, a
+        /// destroyed component, and a group flushed more than once with nothing between (two
+        /// entries here: the measured groups had one flush each, so one entry per flush is not
+        /// told apart from one per run of records).
         /// </summary>
         internal static void GetRecords(List<string> undoRecords, List<string> redoRecords)
         {
@@ -231,8 +234,11 @@ namespace UnityEditor
             int batch = Operation.OwnEntries;
             foreach (var operation in group.Operations)
             {
+                // A record that is not listed (unchanged, or not flushed yet) does not part the
+                // records of one flush around it.
+                if (operation.Batch == Operation.Unlisted) continue;
                 if (operation.Batch == Operation.OwnEntries) operation.List(entries);
-                else if (operation.Batch != Operation.Unlisted)
+                else
                 {
                     string name = string.IsNullOrEmpty(operation.Name) ? UnnamedRecord : operation.Name;
                     if (operation.Batch == batch) entries[^1] = name;
@@ -303,7 +309,10 @@ namespace UnityEditor
         {
             if (objectToUndo == null) return;
             // Records made before it are listed before it (scenesave scene-api-rest
-            // undo.kind.recordThenCreated).
+            // undo.kind.recordThenCreated, whose record had changed by then). Only their naming
+            // and listing is brought forward: whether the Editor also flushes them here
+            // (willFlushUndoRecord, dirtiness), and what it lists of a record whose object
+            // changes only afterwards (nothing here), is not measured.
             PublishRecords();
             var operation = CreatedOperation.Of(objectToUndo, name);
             operation.NameRank = 2;
