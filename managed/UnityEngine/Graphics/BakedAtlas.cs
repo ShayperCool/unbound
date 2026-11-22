@@ -112,7 +112,7 @@ namespace UnityEngine
         }
 
         /// <summary>The scene's MeshRenderers made from its file, by their file IDs (the bake puts
-        /// them in the Editor's order natively).</summary>
+        /// them in the order of the Editor's bake natively).</summary>
         static List<(MeshRenderer Renderer, long FileId)> FromFile(LoadedFile file)
         {
             var found = new List<(MeshRenderer, long)>();

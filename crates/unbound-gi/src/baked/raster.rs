@@ -3,8 +3,8 @@
 //! (tests/projects/bakedbuffers). The rasterization is conservative: a texel the triangle only
 //! touches is covered too, sampled at the centre of what the triangle covers of it. Each texel
 //! keeps the triangle that covers most of it; a triangle that holds the texel's centre covers
-//! all of it, and of triangles covering it equally the last one drawn stays. All arithmetic is
-//! in `f32` in the Editor's order, so that the same triangles give the same texels.
+//! all of it, and of triangles covering it equally the last one drawn stays. The operations are
+//! in `f32` in the order that gives the reference's texels exactly.
 
 /// A texel of a triangle: its column and row, and the weights of the triangle's corners at the
 /// point it is sampled at, in the order of [`Texel::corners`].
@@ -249,7 +249,8 @@ pub fn triangle(
         return;
     }
     // The gradients of the corners' weights. The second corner's is taken as the weight of the
-    // corner the first one was before a swap, in the Editor's form for each case.
+    // corner the first one was before a swap, written out for each case (the reference's
+    // texels depend on the operations' order).
     let (first, second) = if swapped { (0f32, 1f32) } else { (1f32, 0f32) };
     let (e1y, e2y, e1x, e2x) = (
         e1[1] * inverse,

@@ -5,8 +5,8 @@
 //! Lightmap) shaped as its UV bounds; renderers are sorted by their scene, their Lightmap
 //! Parameters, their place in space and their size, packed in that order into binary-tree
 //! atlases of the Max Lightmap Size, first fit, and the last atlas of each group is made as
-//! small as it can be. All arithmetic is in `f32` in the Editor's order, so that the same
-//! inputs give the same layout.
+//! small as it can be. The operations are in `f32` in the order that gives the reference's
+//! layouts exactly.
 use super::spooky;
 use anyhow::{Result, bail, ensure};
 
@@ -155,8 +155,8 @@ pub fn uv_bounds(uvs: &[[f32; 2]]) -> [f32; 4] {
     let (mut min, mut max) = (*first, *first);
     for uv in &uvs[1..] {
         for k in 0..2 {
-            // In this form a value that is not a number replaces the bound (until a number
-            // follows), as in the Editor.
+            // In this form a value that is not a number replaces the bound until a number
+            // follows.
             min[k] = if min[k] <= uv[k] { min[k] } else { uv[k] };
             max[k] = if uv[k] <= max[k] { max[k] } else { uv[k] };
         }

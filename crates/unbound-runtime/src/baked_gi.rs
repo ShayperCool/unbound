@@ -173,52 +173,96 @@ fn world_normal(m: &[f32; 16], n: [f32; 3]) -> [f32; 3] {
     }
 }
 
-/// Writes the texel buffers of each lightmap: `buffers.json` (each lightmap's size, samples per
-/// texel side and renderers, by their number in the bake), and per lightmap `occupancy<N>.u8`
-/// (how many of each texel's samples have a surface), `chartIndex<N>.i32` (each texel's chart)
-/// and `normal<N>.f32` (per sample the world normal and the sample's number, or
-/// [`gbuffer::EMPTY`] without a surface).
-fn write_buffers(
-    folder: &Path,
-    lightmaps: &[(gbuffer::GBuffer, Vec<usize>)],
-    renderers: &[&Renderer],
-) -> Result<()> {
-    std::fs::create_dir_all(folder).with_context(|| format!("creating {}", folder.display()))?;
-    let write = |name: String, bytes: Vec<u8>| {
-        let path = folder.join(name);
+/// The files of a bake's texel buffers in `folder`: `buffers.json` (each lightmap's size,
+/// samples per texel side and renderers, by their number in the bake), and per lightmap
+/// `occupancy<N>.u8` (how many of each texel's samples have a surface: none or all of them),
+/// `chartIndex<N>.i32` (each texel's chart) and `normal<N>.f32` (per sample the world normal and
+/// the sample's number, or [`gbuffer::EMPTY`] without a surface).
+struct Buffers<'a> {
+    folder: &'a Path,
+    lightmaps: Vec<Json>,
+}
+
+impl<'a> Buffers<'a> {
+    const DESCRIPTION: &'static str = "buffers.json";
+    const PER_LIGHTMAP: [(&'static str, &'static str); 3] = [
+        ("occupancy", ".u8"),
+        ("chartIndex", ".i32"),
+        ("normal", ".f32"),
+    ];
+
+    /// Starts a bake's buffers in the folder, without those an earlier bake left there.
+    fn start(folder: &'a Path) -> Result<Buffers<'a>> {
+        std::fs::create_dir_all(folder)
+            .with_context(|| format!("creating {}", folder.display()))?;
+        for entry in
+            std::fs::read_dir(folder).with_context(|| format!("reading {}", folder.display()))?
+        {
+            let entry = entry?;
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            let ours = name == Self::DESCRIPTION
+                || Self::PER_LIGHTMAP.iter().any(|(prefix, suffix)| {
+                    name.strip_prefix(prefix)
+                        .and_then(|rest| rest.strip_suffix(suffix))
+                        .is_some_and(|number| {
+                            !number.is_empty() && number.bytes().all(|b| b.is_ascii_digit())
+                        })
+                });
+            if ours {
+                std::fs::remove_file(entry.path())
+                    .with_context(|| format!("removing {}", entry.path().display()))?;
+            }
+        }
+        Ok(Buffers {
+            folder,
+            lightmaps: Vec::new(),
+        })
+    }
+
+    fn write(&self, name: String, bytes: Vec<u8>) -> Result<()> {
+        let path = self.folder.join(name);
         std::fs::write(&path, bytes).with_context(|| format!("writing {}", path.display()))
-    };
-    for (index, (g, members)) in lightmaps.iter().enumerate() {
-        write(format!("occupancy{index}.u8"), g.occupancy.clone())?;
-        write(
+    }
+
+    /// The next lightmap: its texels, and its renderers by their number in the bake.
+    fn lightmap(
+        &mut self,
+        g: &gbuffer::GBuffer,
+        members: &[usize],
+        renderers: &[&Renderer],
+    ) -> Result<()> {
+        let index = self.lightmaps.len();
+        self.write(format!("occupancy{index}.u8"), g.occupancy.clone())?;
+        self.write(
             format!("chartIndex{index}.i32"),
             g.charts.iter().flat_map(|c| c.to_le_bytes()).collect(),
         )?;
         let normals = g.normals.iter().zip(&g.positions).flat_map(|(n, p)| {
+            let local = [n[0], n[1], n[2]];
             let world = if p[3] < 0.0 {
-                [n[0], n[1], n[2]]
+                local
             } else {
-                world_normal(
-                    &renderers[members[p[3] as usize]].local_to_world,
-                    [n[0], n[1], n[2]],
-                )
+                world_normal(&renderers[members[p[3] as usize]].local_to_world, local)
             };
             [world[0], world[1], world[2], n[3]]
         });
-        write(
+        self.write(
             format!("normal{index}.f32"),
             normals.flat_map(|v| v.to_le_bytes()).collect(),
         )?;
-    }
-    let description = json!({
-        "lightmaps": lightmaps.iter().map(|(g, members)| json!({
+        self.lightmaps.push(json!({
             "width": g.width, "height": g.height, "supersampling": g.supersampling, "instances": members,
-        })).collect::<Vec<_>>(),
-    });
-    write(
-        "buffers.json".into(),
-        serde_json::to_vec_pretty(&description)?,
-    )
+        }));
+        Ok(())
+    }
+
+    fn finish(self) -> Result<()> {
+        self.write(
+            Self::DESCRIPTION.into(),
+            serde_json::to_vec_pretty(&json!({ "lightmaps": self.lightmaps }))?,
+        )
+    }
 }
 
 /// The bake: each lightmap's size, each renderer's lightmap and scale and offset in the order
@@ -274,6 +318,12 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             let mesh = &meshes[r.mesh];
             let triangles: Vec<[u32; 3]> = mesh.submeshes.iter().flatten().copied().collect();
             let area = atlas::surface_area(&mesh.positions, &triangles, &r.local_to_world);
+            // What the Editor makes of such a mesh is not measured.
+            ensure!(
+                mesh.lightmap_uvs().iter().flatten().all(|v| v.is_finite()),
+                "'{}': a lightmap UV of its mesh is infinite or not a number, which the bake does not support",
+                r.name
+            );
             let uv_bounds = atlas::uv_bounds(mesh.lightmap_uvs());
             ensure!(
                 uv_bounds[2] > 0.0 && uv_bounds[3] > 0.0,
@@ -311,40 +361,36 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 ready[r.mesh] = Some(made);
             }
         }
-        let lightmaps = layout
-            .lightmaps
-            .iter()
-            .enumerate()
-            .map(|(index, size)| {
-                let members: Vec<usize> = (0..taken.len())
-                    .filter(|&k| layout.placements[k].lightmap == index as u32)
-                    .collect();
-                let placed: Vec<gbuffer::Instance> = members
-                    .iter()
-                    .enumerate()
-                    .map(|(place, &k)| gbuffer::Instance {
-                        mesh: ready[request.renderers[taken[k]].mesh]
-                            .as_ref()
-                            .expect("made above"),
-                        scale_offset: layout.placements[k].scale_offset,
-                        index: place as i32,
-                    })
-                    .collect();
-                // The renderers of a lightmap share their Lightmap Parameters.
-                let supersampling = members
-                    .first()
-                    .map_or(1, |&k| instances[k].parameters.supersampling);
-                let g = gbuffer::gbuffer(
-                    size[0] as usize,
-                    size[1] as usize,
-                    supersampling as usize,
-                    &placed,
-                );
-                (g, members)
-            })
-            .collect::<Vec<(gbuffer::GBuffer, Vec<usize>)>>();
+        // One lightmap at a time: its texels are written and let go before the next.
         let baked: Vec<&Renderer> = taken.iter().map(|&i| &request.renderers[i]).collect();
-        write_buffers(&folder.join(&request.scene), &lightmaps, &baked)?;
+        let folder = folder.join(&request.scene);
+        let mut written = Buffers::start(&folder)?;
+        for (index, size) in layout.lightmaps.iter().enumerate() {
+            let members: Vec<usize> = (0..taken.len())
+                .filter(|&k| layout.placements[k].lightmap == index as u32)
+                .collect();
+            let placed: Vec<gbuffer::Instance> = members
+                .iter()
+                .enumerate()
+                .map(|(place, &k)| gbuffer::Instance {
+                    mesh: ready[baked[k].mesh].as_ref().expect("made above"),
+                    scale_offset: layout.placements[k].scale_offset,
+                    index: place as i32,
+                })
+                .collect();
+            // The renderers of a lightmap share their Lightmap Parameters.
+            let supersampling = members
+                .first()
+                .map_or(1, |&k| instances[k].parameters.supersampling);
+            let g = gbuffer::gbuffer(
+                size[0] as usize,
+                size[1] as usize,
+                supersampling as usize,
+                &placed,
+            );
+            written.lightmap(&g, &members, &baked)?;
+        }
+        written.finish()?;
     }
 
     let mut placements = vec![Json::Null; request.renderers.len()];
@@ -465,19 +511,31 @@ mod tests {
             )
             .is_err()
         );
-        // Not a number arrives as it is.
-        let mut uvs = UNIT;
-        uvs[6] = f32::NAN;
-        let error = bake(
-            request(
-                vec![quad_mesh(&uvs, &BACK)],
-                vec![renderer("nan", 1, 0, 1.0, 0.0)],
-            ),
-            None,
-        )
-        .err()
-        .unwrap();
-        assert!(error.to_string().contains("'nan'"), "{error}");
+        // Not a number and infinite arrive as they are and are refused, wherever they are in
+        // the mesh (a later number would hide one from the UVs' bounds) and whether or not the
+        // texels are written.
+        for (vertex, value) in [
+            (3, f32::NAN),
+            (1, f32::NAN),
+            (1, f32::INFINITY),
+            (0, f32::NEG_INFINITY),
+        ] {
+            let mut uvs = UNIT;
+            uvs[2 * vertex] = value;
+            let error = bake(
+                request(
+                    vec![quad_mesh(&uvs, &BACK)],
+                    vec![renderer("odd", 1, 0, 1.0, 0.0)],
+                ),
+                None,
+            )
+            .err()
+            .unwrap();
+            assert!(
+                error.to_string().contains("'odd'") && error.to_string().contains("not a number"),
+                "{vertex} {value}: {error}"
+            );
+        }
     }
 
     #[test]
@@ -559,6 +617,27 @@ mod tests {
             i32::from_le_bytes(charts[4 * 10..][..4].try_into().unwrap()),
             -1
         );
+        // A bake of fewer lightmaps leaves none of the earlier one's files, and no other file
+        // of the folder is touched.
+        std::fs::write(scene.join("occupancy7.u8"), [1]).unwrap();
+        std::fs::write(scene.join("normal12.f32"), [1]).unwrap();
+        std::fs::write(scene.join("occupancy.u8.txt"), [1]).unwrap();
+        let mut turned = renderer("turned", 1, 0, 1.0, 0.0);
+        turned["probeLit"] = json!(true);
+        bake(
+            request(vec![quad_mesh(&UNIT, &BACK)], vec![turned]),
+            Some(&folder),
+        )
+        .unwrap();
+        let mut left: Vec<String> = std::fs::read_dir(&scene)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().into_string().unwrap())
+            .collect();
+        left.sort();
+        assert_eq!(left, ["buffers.json", "occupancy.u8.txt"]);
+        let description: Json =
+            serde_json::from_slice(&std::fs::read(scene.join("buffers.json")).unwrap()).unwrap();
+        assert_eq!(description["lightmaps"], json!([]));
         let _ = std::fs::remove_dir_all(&folder);
     }
 

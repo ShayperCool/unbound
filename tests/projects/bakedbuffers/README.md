@@ -74,7 +74,9 @@ turns them into world space in an order of operations Unbound does not repeat).
 capture's own bake input (kept in the run folder, not in Git) to the
 `cargo run -p unbound-gi --example baked_gbuffer` tool and compares its texels with the capture's.
 
-Not measured: several open scenes, renderers of prefab instances (their order in the bake),
+Not measured: the points and the triangles' own normals the texels' samples stand for (the
+Editor writes neither; Unbound derives them with the interpolated normals, for the bake's
+lighting to come), several open scenes, renderers of prefab instances (their order in the bake),
 Anti-aliasing Samples below 1, meshes with UVs that are not numbers or with other vertex formats
 the Editor refuses, triangles so thin that they cover no measurable part of any texel, Terrains,
 the Progressive GPU lightmapper, macOS.

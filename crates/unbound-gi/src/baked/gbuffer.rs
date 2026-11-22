@@ -215,7 +215,8 @@ pub struct GBuffer {
     pub plane_normals: Vec<[f32; 4]>,
     /// Per texel: its chart, -1 for none.
     pub charts: Vec<i32>,
-    /// Per texel: how many of its samples have a surface.
+    /// Per texel: how many of its samples have a surface, once those without one have
+    /// borrowed one: none, or all of them.
     pub occupancy: Vec<u8>,
 }
 
