@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using UnityEngine;
 using UnityEngine.Profiling;
-using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
 public sealed class ComponentMemory : MonoBehaviour
@@ -61,24 +60,6 @@ public sealed class ComponentMemory : MonoBehaviour
         filter.sharedMesh = null;
         Measure("filter.cleared", filter);
 
-        var light = owner.AddComponent<Light>();
-        Measure("light.add", light);
-        light.type = LightType.Spot;
-        light.range = 23;
-        light.shadows = LightShadows.Soft;
-        Measure("light.spot", light);
-        light.type = LightType.Directional;
-        Measure("light.directional", light);
-        using (var commands = new CommandBuffer())
-        {
-            light.AddCommandBuffer(LightEvent.BeforeShadowMap, commands);
-            Measure("light.commandBuffer", light);
-            light.RemoveCommandBuffer(LightEvent.BeforeShadowMap, commands);
-            Measure("light.commandBufferRemoved", light);
-        }
-        light.enabled = false;
-        Measure("light.disabled", light);
-
         var behaviour = owner.AddComponent<ComponentMemory>();
         var empty = owner.AddComponent<EmptyMemoryBehaviour>();
         Measure("behaviour.fields", behaviour);
@@ -92,7 +73,6 @@ public sealed class ComponentMemory : MonoBehaviour
         var clone = Object.Instantiate(owner);
         Measure("clone.collider", clone.GetComponent<BoxCollider>());
         Measure("clone.filter", clone.GetComponent<MeshFilter>());
-        Measure("clone.light", clone.GetComponent<Light>());
         Measure("clone.behaviour", clone.GetComponent<ComponentMemory>());
 
         Object.DestroyImmediate(clone);
