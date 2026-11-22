@@ -271,8 +271,8 @@ namespace UnityEngine.Tests
             f.Tick();
             Assert.Throws<InvalidOperationException>(() => IMGUIContainerTests.Send(container, KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.A }), out _));
             Assert.True(Editor.m_AllowMultiObjectAccess);
-            // The square's group was closed.
-            Assert.Equal(1, GUIClip.Depth);
+            // The square's group was closed: the container found no clip left pushed.
+            Assert.DoesNotContain(logs.Entries, e => e.Contains("GUI Error"));
             foreach (var t in targets) Object.DestroyImmediate(t);
         }
 
@@ -314,6 +314,52 @@ namespace UnityEngine.Tests
             {
                 Object.DestroyImmediate(editor);
                 Object.DestroyImmediate(target);
+            }
+        }
+
+        const string Table = """
+            [
+              {"guid":"00000000000000001000000000000000","path":"Assets","kind":"folder","importer":"DefaultImporter","labels":[]},
+              {"guid":"11111111111111111111111111111111","path":"Assets/Things","kind":"folder","importer":"DefaultImporter","labels":[]},
+              {"guid":"44444444444444444444444444444444","path":"Assets/Scenes/Main.unity","kind":"scene","importer":"DefaultImporter","labels":[]},
+              {"guid":"55555555555555555555555555555555","path":"Assets/Look.GUISkin","kind":"yaml","importer":"NativeFormatImporter","labels":[]},
+              {"guid":"88888888888888888888888888888888","path":"Assets/Things/Clip.anim","kind":"yaml","importer":"NativeFormatImporter","labels":[]}
+            ]
+            """;
+
+        // Written from the Editor's public source (not measured): what an asset's file is comes
+        // before its type.
+        [Fact]
+        public void TheTypeNameOfAnAssetIsWhatItsFileIs()
+        {
+            AssetDatabase.List(Table);
+            var folder = DefaultAsset.Create("Things", HideFlags.NotEditable);
+            var scene = DefaultAsset.Create("Main", HideFlags.NotEditable);
+            var skin = ScriptableObject.CreateInstance<GUISkin>();
+            var clip = new AnimationClip { name = "Clip" };
+            var loose = new AnimationClip();
+            try
+            {
+                Unbound.Runtime.AssetDatabaseRuntime.Adopt("11111111111111111111111111111111", "Assets/Things", folder, DefaultAsset.FileId);
+                Unbound.Runtime.AssetDatabaseRuntime.Adopt("44444444444444444444444444444444", "Assets/Scenes/Main.unity", scene, DefaultAsset.FileId);
+                Unbound.Runtime.AssetDatabaseRuntime.Adopt("55555555555555555555555555555555", "Assets/Look.GUISkin", skin, 11400000);
+                Unbound.Runtime.AssetDatabaseRuntime.Adopt("88888888888888888888888888888888", "Assets/Things/Clip.anim", clip, 7400000);
+                Assert.Equal("Folder", ObjectNames.GetTypeName(folder));
+                Assert.Equal("Scene", ObjectNames.GetTypeName(scene));
+                // The extension in any case.
+                Assert.Equal("GUI Skin", ObjectNames.GetTypeName(skin));
+                // Any other asset, and an object that is no asset, by their type.
+                Assert.Equal("AnimationClip", ObjectNames.GetTypeName(clip));
+                Assert.Equal("AnimationClip", ObjectNames.GetTypeName(loose));
+                // Several folders are titled as folders.
+                var editor = Editor.CreateEditor(new Object[] { folder, folder });
+                Assert.Equal("2 Folders", editor.targetTitle);
+                Object.DestroyImmediate(editor);
+            }
+            finally
+            {
+                AssetDatabase.Invalidate();
+                Object.DestroyImmediate(loose);
             }
         }
 
