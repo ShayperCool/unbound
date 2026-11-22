@@ -118,5 +118,41 @@ namespace UnityEngine.Tests
                 aIsVariant: true, aGuid: "90000002000000000000000000000004",
                 bIsVariant: true, bGuid: "10000008000000000000000000000004") < 0);
         }
+
+        sealed class WarningCapture : ILogHandler
+        {
+            internal readonly System.Collections.Generic.List<string> Warnings = new System.Collections.Generic.List<string>();
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning) Warnings.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
+            }
+            public void LogException(Exception exception, Object context) { }
+        }
+
+        [Fact]
+        public void APackIsStoredOnlyWhenCompleteAndOverNoUnsavedChanges()
+        {
+            var previous = Debug.unityLogger.logHandler;
+            var capture = new WarningCapture();
+            Debug.unityLogger.logHandler = capture;
+            try
+            {
+                Assert.True(SpriteAtlasPacking.MayStorePack("A", complete: true, unsavedChanges: false));
+                Assert.Empty(capture.Warnings);
+                Assert.False(SpriteAtlasPacking.MayStorePack("B", complete: false, unsavedChanges: false));
+                Assert.False(SpriteAtlasPacking.MayStorePack("C", complete: true, unsavedChanges: true));
+                Assert.Equal(2, capture.Warnings.Count);
+                Assert.Contains("sprite atlas B is packed only in part", capture.Warnings[0]);
+                Assert.Contains("sprite atlas C has unsaved changes", capture.Warnings[1]);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
+            // A pack whose JSON does not say it is complete is not.
+            Assert.True(SpriteAtlasPacking.PackJsonIsComplete("{\"guid\":\"a\",\"complete\":true}"));
+            Assert.False(SpriteAtlasPacking.PackJsonIsComplete("{\"guid\":\"a\",\"complete\":false}"));
+            Assert.False(SpriteAtlasPacking.PackJsonIsComplete("{\"guid\":\"a\"}"));
+        }
     }
 }

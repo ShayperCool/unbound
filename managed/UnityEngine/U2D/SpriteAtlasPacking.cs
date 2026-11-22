@@ -87,7 +87,8 @@ namespace UnityEngine.U2D
             public string Tag { get; set; }
             public bool IncludeInBuild { get; set; }
             public bool Tight { get; set; }
-            public bool Complete { get; set; } = true;
+            /// <summary>Absent counts as incomplete: such a pack is never stored.</summary>
+            public bool Complete { get; set; }
             public string Master { get; set; }
             public float Scale { get; set; }
             public List<PageJson> Pages { get; set; }
@@ -527,13 +528,22 @@ namespace UnityEngine.U2D
         }
 
         /// <summary>Whether a pack may be stored into the atlas's file: not when Unbound left some of
-        /// its packables, textures or its master out, which it then reports.</summary>
-        static bool StorablePack(Atlas atlas)
+        /// its packables, textures or its master out, nor over unsaved changes (unmeasured), which
+        /// it then reports.</summary>
+        internal static bool MayStorePack(string atlasName, bool complete, bool unsavedChanges)
         {
-            if (atlas.Complete) return true;
-            Debug.LogWarning($"Unbound: sprite atlas {atlas.Name} is packed only in part (see the packing warnings); its stored packed sprites are left as they are");
-            return false;
+            if (!complete)
+                Debug.LogWarning($"Unbound: sprite atlas {atlasName} is packed only in part (see the packing warnings); its stored packed sprites are left as they are");
+            else if (unsavedChanges)
+                Debug.LogWarning($"Unbound: sprite atlas {atlasName} has unsaved changes; entering Play mode does not store its pack");
+            return complete && !unsavedChanges;
         }
+
+        static bool StorablePack(Atlas atlas) => MayStorePack(atlas.Name, atlas.Complete, unsavedChanges: false);
+
+        /// <summary>Whether a pack's JSON says it is complete (for tests).</summary>
+        internal static bool PackJsonIsComplete(string atlasJson) =>
+            JsonSerializer.Deserialize<AtlasJson>(atlasJson, s_Options)?.Complete == true;
 
         /// <summary>A packed atlas's sprites as its `.spriteatlas` stores them: their keys, references
         /// and names (from the pack, so no sprite is loaded), in packed order.</summary>
@@ -562,20 +572,21 @@ namespace UnityEngine.U2D
         internal static void PackV1ForPlayMode()
         {
             if (UnityEditor.EditorSettings.SpritePackerModeValue != UnityEditor.EditorSettings.SpritePackerModeAlwaysOnAtlas || !Native.IsReady) return;
-            Load();
+            // Every entry packs the atlases as they are now: the first through the Play-mode pack,
+            // later ones again.
+            if (s_Atlases == null) Load();
+            else if (!RepackForPlayMode()) return;
             if (s_Cancelled || s_Atlases == null) return;
             var variants = new List<SpriteAtlas>();
             foreach (var packed in new List<Atlas>(s_Atlases.Values))
             {
                 var path = UnityEditor.AssetDatabase.GUIDToAssetPath(packed.Guid);
                 var atlas = string.IsNullOrEmpty(path) ? null : UnityEditor.AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
-                if (atlas == null || atlas.IsFromImporter || !StorablePack(packed)) continue;
-                // Unsaved edits are not stored with a pack of the file as it was (unmeasured).
-                if (UnityEditor.EditorUtility.IsDirty(atlas))
-                {
-                    Debug.LogWarning($"Unbound: sprite atlas {atlas.name} has unsaved changes; entering Play mode does not store its pack");
-                    continue;
-                }
+                if (atlas == null || atlas.IsFromImporter) continue;
+                // A variant takes its master's tag: not while the master has unsaved changes.
+                var master = atlas.isVariant ? atlas.MasterAtlas : null;
+                bool unsaved = HasUnsavedChanges(atlas) || (master != null && HasUnsavedChanges(master));
+                if (!MayStorePack(atlas.name, packed.Complete, unsaved)) continue;
                 if (atlas.isVariant)
                 {
                     variants.Add(atlas);
@@ -587,10 +598,39 @@ namespace UnityEngine.U2D
                 UnityEditor.EditorUtility.SetDirty(atlas);
                 AssetFiles.SaveDirty(atlas, unchangedStays: true);
                 UnityEditor.EditorUtility.ClearDirty(atlas);
+                s_ClampedOnEntry.Remove(atlas);
                 atlas.InvalidateCachedSprites();
             }
             foreach (var variant in variants)
-                if (variant.ClampVariantScale()) UnityEditor.EditorUtility.SetDirty(variant);
+                if (variant.ClampVariantScale())
+                {
+                    UnityEditor.EditorUtility.SetDirty(variant);
+                    s_ClampedOnEntry.Add(variant);
+                }
+        }
+
+        /// <summary>Variants a Play-mode entry left dirty by clamping their scale: not unsaved edits
+        /// at the next entry.</summary>
+        static readonly HashSet<SpriteAtlas> s_ClampedOnEntry = new HashSet<SpriteAtlas>(ReferenceEqualityComparer.Instance);
+
+        static bool HasUnsavedChanges(SpriteAtlas atlas) =>
+            UnityEditor.EditorUtility.IsDirty(atlas) && !s_ClampedOnEntry.Contains(atlas);
+
+        /// <summary>Packs the Play-mode atlases again (a later Play-mode entry) and takes the result;
+        /// false when the packing was cancelled.</summary>
+        static bool RepackForPlayMode()
+        {
+            var paths = new List<string>();
+            foreach (var guid in s_PlayModePacked)
+                if (UnityEditor.AssetDatabase.GUIDToAssetPath(guid) is string path && path.Length > 0) paths.Add(path);
+            if (paths.Count == 0) return true;
+            var payload = JsonSerializer.Serialize(new { paths }, s_Options);
+            var json = JsonSerializer.Deserialize<Json>(Native.Call("sprite-atlases-pack", payload), s_Options);
+            if (json?.Cancelled != null || json?.Atlases == null) return false;
+            foreach (var a in json.Atlases)
+                s_Atlases[a.Guid] = BuildAtlas(a);
+            RebuildSpriteTables();
+            return true;
         }
 
         static int CountBuiltInAtlasesContaining((string, long) key)

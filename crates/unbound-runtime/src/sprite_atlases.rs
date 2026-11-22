@@ -395,8 +395,9 @@ impl Importer for AtlasImporter<'_> {
     const KIND: &'static str = "sprite-atlases";
     // 2: warnings for skipped packables and compressed variant masters.
     // 3: compressed pages keep their block format (the size fallback resolves per page).
-    // 4: each packed sprite keeps its name; an atlas tells whether its pack is complete.
-    const VERSION: u32 = 4;
+    // 4: each packed sprite keeps its name.
+    // 5: an atlas tells whether its pack is complete.
+    const VERSION: u32 = 5;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<PathBuf>> {
         let bytes = std::fs::read(source)?;
