@@ -1383,6 +1383,7 @@ mod bounced {
                     max_bounces: 1,
                     min_bounces: 1,
                     pushoff: 0.0001,
+                    environment_samples: 0,
                 },
             }
         }
@@ -1408,6 +1409,7 @@ mod bounced {
                 surfaces: &self.surfaces,
                 materials: &self.materials,
                 lights: &self.lights,
+                sky: None,
             };
             let samples = Samples::new(&vec![0; BLUE_NOISE_BYTES]).unwrap();
             let lit = indirect::indirect(&g, &receivers, &world, &samples, self.settings);

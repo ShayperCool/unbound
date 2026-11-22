@@ -27,6 +27,7 @@ use unbound_gi::baked::gbuffer::{Instance, Mesh, gbuffer};
 use unbound_gi::baked::indirect::{self, Material, Settings, Surface, Texture, World};
 use unbound_gi::baked::light::{Kind, Light, Mode};
 use unbound_gi::baked::sampling::Samples;
+use unbound_gi::baked::sky::{Importance, Sky};
 use unbound_gi::baked::trace::Scene;
 
 struct Input<'a>(&'a [u8]);
@@ -161,6 +162,7 @@ fn main() {
         max_bounces: r.u32(),
         min_bounces: r.u32(),
         pushoff,
+        environment_samples: 0,
     };
     let lights: Vec<Light> = lights
         .into_iter()
@@ -200,6 +202,32 @@ fn main() {
         }
         materials.push(Material { albedo, emissive });
     }
+    // The sky, if the file goes on: u32 Environment Samples, u32 side of a face, six faces
+    // (+x, -x, +y, -y, +z, -z; 4 f32 per texel, rows from the first), u32 directions picked
+    // by brightness (0: none), f32 the sky's summed brightness, then the directions (3 f32
+    // each) and the light over the chance of each (3 f32).
+    let mut settings = settings;
+    let sky = (!r.0.is_empty()).then(|| {
+        settings.environment_samples = r.u32();
+        let side = r.u32() as usize;
+        let faces: [Texture; 6] = std::array::from_fn(|_| Texture {
+            width: side,
+            height: side,
+            texels: (0..side * side).map(|_| r.floats()).collect(),
+        });
+        let count = r.u32() as usize;
+        let integral = r.f32();
+        let directions: Vec<[f32; 3]> = (0..count).map(|_| r.floats()).collect();
+        let weighted: Vec<[f32; 3]> = (0..count).map(|_| r.floats()).collect();
+        Sky {
+            faces,
+            importance: (count > 0).then_some(Importance {
+                directions,
+                weighted,
+                integral,
+            }),
+        }
+    });
     let blue = std::fs::read(&args[3]).expect("the blue noise data");
     let samples = Samples::new(&blue).expect("the blue noise data's size");
     let scene = Scene::new(surfaces.iter().map(|s| s.corners));
@@ -209,11 +237,17 @@ fn main() {
         surfaces: &surfaces,
         materials: &materials,
         lights: &lights,
+        sky: sky.as_ref(),
     };
     let bounced = indirect::indirect(&g, &receivers, &world, &samples, settings);
     std::fs::write(
         out.join("irradianceIndirect.f32"),
         floats(&bounced.irradiance),
+    )
+    .unwrap();
+    std::fs::write(
+        out.join("irradianceEnvironment.f32"),
+        floats(&bounced.environment),
     )
     .unwrap();
     std::fs::write(

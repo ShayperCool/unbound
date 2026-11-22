@@ -748,6 +748,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                         surfaces: &b.surfaces,
                         materials: &b.materials,
                         lights: &baked_lights,
+                        sky: None,
                     },
                     &b.samples,
                     indirect::Settings {
@@ -755,6 +756,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                         max_bounces: b.settings.1,
                         min_bounces: b.settings.2,
                         pushoff: parameters.pushoff,
+                        environment_samples: 0,
                     },
                 )
             });

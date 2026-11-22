@@ -14,6 +14,7 @@ use super::direct::{Receiver, normal_matrix, point, world_normal};
 use super::gbuffer::GBuffer;
 use super::light::{Light, Tables};
 use super::sampling::{self, Samples};
+use super::sky::Sky;
 use super::trace::{Ray, Scene};
 use rayon::prelude::*;
 
@@ -104,6 +105,8 @@ pub struct Settings {
     pub min_bounces: u32,
     /// How far a ray starts off its triangle.
     pub pushoff: f32,
+    /// Environment Samples as asked for.
+    pub environment_samples: u32,
 }
 
 /// The indirect light of a lightmap.
@@ -112,6 +115,8 @@ pub struct Indirect {
     pub irradiance: Vec<[f32; 4]>,
     /// Per texel the part of its rays that met a surface's back first.
     pub validity: Vec<f32>,
+    /// Per texel the light its samples take straight from the sky, as `irradiance`.
+    pub environment: Vec<[f32; 4]>,
 }
 
 fn dot(a: [f32; 3], b: [f32; 3]) -> f32 {
@@ -137,6 +142,8 @@ pub struct World<'a> {
     pub surfaces: &'a [Surface],
     pub materials: &'a [Material],
     pub lights: &'a [Light],
+    /// The environment's light, if the scene has any.
+    pub sky: Option<&'a Sky>,
 }
 
 struct Path<'a> {
@@ -153,12 +160,14 @@ struct Path<'a> {
 impl Path<'_> {
     /// The three numbers of a sample at a dimension of the sequence.
     fn numbers(&self, index: u32, dimension: usize) -> [f32; 3] {
+        self.numbers_of(index, dimension, self.distribution)
+    }
+
+    /// The same with the blue noise distribution of another sample count.
+    fn numbers_of(&self, index: u32, dimension: usize, distribution: usize) -> [f32; 3] {
         let (x, y) = self.texel;
         if index < BLUE_NOISE_SAMPLES {
-            std::array::from_fn(|k| {
-                self.samples
-                    .blue(index, dimension + k, x, y, self.distribution)
-            })
+            std::array::from_fn(|k| self.samples.blue(index, dimension + k, x, y, distribution))
         } else {
             let rotation = self.samples.rotation(x, y, self.width, dimension);
             std::array::from_fn(|k| {
@@ -241,6 +250,18 @@ impl Path<'_> {
             for k in 0..3 {
                 sum[k] += emissive[k] * throughput[k];
             }
+            // The sky's light on the surface, unless the path ends here anyway.
+            if depth + 1 < self.settings.max_bounces
+                && let Some(sky) = world.sky
+                && let Some((direction, light)) = sky.arriving(smooth, geometric, numbers)
+                && !world
+                    .casters
+                    .occluded(&Ray { origin, direction }, f32::INFINITY)
+            {
+                for k in 0..3 {
+                    sum[k] += light[k] * reflected[k];
+                }
+            }
             let mut goes_on = true;
             if depth + 1 >= self.settings.min_bounces {
                 let chance = reflected[0].max(reflected[1]).max(reflected[2]);
@@ -277,24 +298,25 @@ pub fn indirect(
         .map(|r| normal_matrix(&r.local_to_world))
         .collect();
     let s = g.supersampling;
+    let unlit = |used: &u8| [0.0, 0.0, 0.0, if *used == 0 { 0.0 } else { 1.0 }];
     if settings.max_bounces == 0 {
-        // No bounce: no ray is sent, and none counts against a texel.
+        // No bounce: no ray is sent, to a surface or to the sky, and none counts against a
+        // texel.
         return Indirect {
-            irradiance: g
-                .occupancy
-                .iter()
-                .map(|&used| [0.0, 0.0, 0.0, if used == 0 { 0.0 } else { 1.0 }])
-                .collect(),
+            irradiance: g.occupancy.iter().map(unlit).collect(),
             validity: vec![0.0; g.width * g.height],
+            environment: g.occupancy.iter().map(unlit).collect(),
         };
     }
     let count = sampling::sample_count(settings.samples, s as u32);
     let distribution = sampling::distribution(count);
-    let texels: Vec<([f32; 4], f32)> = (0..g.width * g.height)
+    let sky_count = sampling::sample_count(settings.environment_samples, s as u32);
+    let sky_distribution = sampling::distribution(sky_count);
+    let texels: Vec<([f32; 4], f32, [f32; 4])> = (0..g.width * g.height)
         .into_par_iter()
         .map(|texel| {
             if g.occupancy[texel] == 0 {
-                return ([0.0; 4], 0.0);
+                return ([0.0; 4], 0.0, [0.0; 4]);
             }
             let (tx, ty) = (texel % g.width, texel / g.width);
             let path = Path {
@@ -307,20 +329,16 @@ pub fn indirect(
                 distribution,
             };
             let place = samples.rotation(tx, ty, g.width, 0)[0];
-            let mut sum = [0f32; 3];
-            let (mut rays, mut behind) = (0u32, 0u32);
-            for index in 0..count {
-                // Which of the texel's samples the ray starts from.
+            // Where a ray of the texel starts: one of its samples, picked by the ray's number;
+            // its point pushed off its triangle, its shading normal and its triangle's.
+            let start = |index: u32| -> Option<([f32; 3], [f32; 3], [f32; 3])> {
                 let pick = sampling::fraction(samples.sobol(index, 2) + place);
                 let k = ((s * s) as f32 * pick).floor() as usize % (s * s);
                 let sample = g.width * s * (ty * s + k / s) + tx * s + k % s;
                 let local = g.positions[sample];
-                let Some(receiver) = (local[3] >= 0.0)
+                let receiver = (local[3] >= 0.0)
                     .then(|| local[3] as usize)
-                    .filter(|&i| i < receivers.len())
-                else {
-                    break;
-                };
+                    .filter(|&i| i < receivers.len())?;
                 let matrix = &receivers[receiver].local_to_world;
                 let position = point(matrix, [local[0], local[1], local[2]]);
                 let (smooth, plane) = (g.normals[sample], g.plane_normals[sample]);
@@ -328,6 +346,14 @@ pub fn indirect(
                 let plane = world_normal(&normals[receiver], [plane[0], plane[1], plane[2]]);
                 let origin: [f32; 3] =
                     std::array::from_fn(|c| position[c] + plane[c] * settings.pushoff);
+                Some((origin, smooth, plane))
+            };
+            let mut sum = [0f32; 3];
+            let (mut rays, mut behind) = (0u32, 0u32);
+            for index in 0..count {
+                let Some((origin, smooth, plane)) = start(index) else {
+                    break;
+                };
                 let numbers = path.numbers(index, 0);
                 let direction = sampling::around(smooth, [numbers[0], numbers[1]]);
                 rays += 1;
@@ -339,18 +365,42 @@ pub fn indirect(
                     behind += 1;
                 }
             }
-            if rays == 0 {
-                return ([0.0, 0.0, 0.0, 1.0], 0.0);
+            // The sky's light straight on the texel's samples.
+            let mut sky_sum = [0f32; 3];
+            let mut sky_rays = 0u32;
+            if let Some(sky) = world.sky {
+                for index in 0..sky_count {
+                    let Some((origin, smooth, plane)) = start(index) else {
+                        break;
+                    };
+                    sky_rays += 1;
+                    let numbers = path.numbers_of(index, 0, sky_distribution);
+                    if let Some((direction, light)) = sky.arriving(smooth, plane, numbers)
+                        && !world
+                            .casters
+                            .occluded(&Ray { origin, direction }, f32::INFINITY)
+                    {
+                        for c in 0..3 {
+                            sky_sum[c] += light[c];
+                        }
+                    }
+                }
             }
-            let scale = 1.0 / rays as f32;
-            (
-                [sum[0] * scale, sum[1] * scale, sum[2] * scale, 1.0],
-                behind as f32 * scale,
-            )
+            let mean = |sum: [f32; 3], rays: u32| {
+                let scale = if rays == 0 { 0.0 } else { 1.0 / rays as f32 };
+                [sum[0] * scale, sum[1] * scale, sum[2] * scale, 1.0]
+            };
+            let validity = if rays == 0 {
+                0.0
+            } else {
+                behind as f32 * (1.0 / rays as f32)
+            };
+            (mean(sum, rays), validity, mean(sky_sum, sky_rays))
         })
         .collect();
     Indirect {
         irradiance: texels.iter().map(|t| t.0).collect(),
         validity: texels.iter().map(|t| t.1).collect(),
+        environment: texels.iter().map(|t| t.2).collect(),
     }
 }

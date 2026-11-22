@@ -11,6 +11,7 @@ pub mod levels;
 pub mod light;
 pub mod raster;
 pub mod sampling;
+pub mod sky;
 mod spooky;
 pub mod trace;
 
