@@ -80,17 +80,40 @@ namespace UnityEditor
         public static string GetPhysicalPath(string path)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
+            return TryGetPackagePath(path, out var physical) ? physical : path;
+        }
+
+        /// <summary>The file a <c>Packages/name/...</c> path names in a registered package's
+        /// folder; false for any other path.</summary>
+        static bool TryGetPackagePath(string path, out string physical)
+        {
+            physical = null;
             var normalized = path.Replace('\\', '/');
-            if (!normalized.StartsWith("Packages/", StringComparison.Ordinal)) return path;
+            if (!normalized.StartsWith("Packages/", StringComparison.Ordinal)) return false;
             var rest = normalized.Substring("Packages/".Length);
             int slash = rest.IndexOf('/');
             var name = slash < 0 ? rest : rest.Substring(0, slash);
             foreach (var package in PackageManager.PackageInfo.GetAllRegisteredPackages())
             {
                 if (package.name != name || string.IsNullOrEmpty(package.resolvedPath)) continue;
-                return slash < 0 ? package.resolvedPath : Path.Combine(package.resolvedPath, rest.Substring(slash + 1)).Replace('\\', '/');
+                physical = slash < 0 ? package.resolvedPath : Path.Combine(package.resolvedPath, rest.Substring(slash + 1)).Replace('\\', '/');
+                return true;
             }
-            return path;
+            return false;
+        }
+
+        /// <summary>The absolute path of a project path: <c>Packages/name/...</c> in the package's
+        /// folder, an absolute path as it is, any other path under the project folder (empty: the
+        /// project folder itself). The path is joined as given, without resolving "." or ".." or
+        /// turning backslashes (matches the Unity 6000.0.71f1 Editor, tests/projects/editorhooks).
+        /// A null path throws (the Editor crashes on it).</summary>
+        internal static string PathToAbsolutePath(string path)
+        {
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (TryGetPackagePath(path, out var physical)) return physical;
+            if (Path.IsPathRooted(path)) return path;
+            var project = UnityEngine.ProjectInfo.ProjectPath.Replace('\\', '/').TrimEnd('/');
+            return path.Length == 0 ? project : project + "/" + path;
         }
 
         /// <summary>The project path of a file: inside a package's folder <c>Packages/name/...</c>,

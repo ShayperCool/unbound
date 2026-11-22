@@ -7,7 +7,7 @@ using Object = UnityEngine.Object;
 
 namespace UnityEditor
 {
-    /// <summary>The Editor application as Play mode code sees it: always playing; update and
+    /// <summary>The Editor application as Play mode code sees it: always playing; tick, update and
     /// delayCall run in the frame, as the Editor runs them.</summary>
     public sealed partial class EditorApplication
     {
@@ -55,12 +55,48 @@ namespace UnityEditor
             RunEditorCallbacks();
         }
 
+        /// <summary>The Editor's internal per-update event: each of its updates raises it before
+        /// update and delayCall (matches the Unity 6000.0.71f1 Editor, tests/projects/editorhooks).
+        /// A field-like event, so threads may add to it (CallDelayed from a worker thread).</summary>
+        internal static event CallbackFunction tick;
+
+        /// <summary>Runs <paramref name="action"/> on the main thread from the first Editor update
+        /// at least <paramref name="delaySeconds"/> after the call (0: the next update's tick);
+        /// the returned action cancels it. Callable from any thread.</summary>
+        internal static Action CallDelayed(CallbackFunction action, double delaySeconds = 0d)
+        {
+            var start = DateTime.UtcNow;
+            CallbackFunction delayed = null;
+            delayed = () =>
+            {
+                if ((DateTime.UtcNow - start).TotalSeconds < delaySeconds) return;
+                tick -= delayed;
+                action();
+            };
+            tick += delayed;
+            if (delaySeconds == 0d) SignalTick();
+            return () => tick -= delayed;
+        }
+
+        /// <summary>Wakes an idle Editor for its next tick; Unbound's frames never idle.</summary>
+        [Unbound.EditorFaithful("Unbound runs its Editor updates every frame, so nothing waits for a signal")]
+        internal static void SignalTick() { }
+
         static void RunEditorCallbacks()
         {
             Undo.FlushDirtiness();
             ObjectChangeEvents.Publish();
             try { InternalUpdate?.Invoke(); }
             catch (Exception e) { Debug.LogException(e); }
+            var ticks = tick;
+            if (ticks != null)
+            {
+                foreach (CallbackFunction call in ticks.GetInvocationList())
+                {
+                    try { call(); }
+                    catch (Exception e) { Debug.LogException(e); }
+                }
+            }
             if (update != null)
             {
                 foreach (CallbackFunction call in update.GetInvocationList())

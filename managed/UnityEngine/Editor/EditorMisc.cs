@@ -268,18 +268,34 @@ namespace UnityEditor
                 BuildTarget.StandaloneOSX => "MacStandaloneSupport",
                 _ => null,
             };
-            var root = Path.GetFullPath(Path.Combine(UnityInstallInfo.DataPath, "PlaybackEngines"));
-            var path = folder == null ? null : Path.Combine(root, folder);
-            if (path != null && Directory.Exists(path)) return path;
-            if (folder != null && OperatingSystem.IsMacOS())
-            {
-                var beside = Path.GetFullPath(Path.Combine(UnityInstallInfo.DataPath, "..", "..", "PlaybackEngines", folder));
-                if (Directory.Exists(beside)) return beside;
-            }
+            if (folder != null)
+                foreach (var root in PlaybackEngineRoots())
+                {
+                    var path = Path.Combine(root, folder);
+                    if (Directory.Exists(path)) return path;
+                }
             // The Linux Editor's own player support ships inside it.
-            if (target == BuildTarget.StandaloneLinux64) return Path.Combine(root, "LinuxStandaloneSupport");
+            if (target == BuildTarget.StandaloneLinux64) return Path.Combine(PlaybackEngineRoots()[0], "LinuxStandaloneSupport");
             if (assertUnsupportedPlatforms) Debug.LogError($"Unable to find the playback engine of {target}: its module is not installed.");
             return "";
+        }
+
+        /// <summary>Where the installation keeps platform support folders: <c>Data/PlaybackEngines</c>
+        /// and, on macOS, the modules' folder beside <c>Unity.app</c>.</summary>
+        static string[] PlaybackEngineRoots()
+        {
+            var inside = Path.GetFullPath(Path.Combine(UnityInstallInfo.DataPath, "PlaybackEngines"));
+            return OperatingSystem.IsMacOS()
+                ? new[] { inside, Path.GetFullPath(Path.Combine(UnityInstallInfo.DataPath, "..", "..", "PlaybackEngines")) }
+                : new[] { inside };
+        }
+
+        /// <summary>Every platform support folder the installation has.</summary>
+        internal static IEnumerable<string> InstalledPlaybackEngineFolders()
+        {
+            foreach (var root in PlaybackEngineRoots())
+                if (Directory.Exists(root))
+                    foreach (var folder in Directory.GetDirectories(root)) yield return folder;
         }
 
         /// <summary>Whether this installation builds the target: the Editor's own standalone

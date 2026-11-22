@@ -25,6 +25,39 @@ namespace UnityEditor.Scripting.ScriptCompilation
 
     internal partial class EditorCompilation : IEditorCompilation
     {
+        /// <summary>Each compiled assembly of a recompilation, right after CompilationPipeline's
+        /// assemblyCompilationFinished of it, with the same messages; its HasCompileErrors tells
+        /// whether the compilation failed (package editor code, Burst's loader, reads it; matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/compileevents).</summary>
+        public event Action<ScriptAssembly, UnityEditor.Compilation.CompilerMessage[]> assemblyCompilationFinished;
+
+        /// <summary>Raises <see cref="assemblyCompilationFinished"/> for a compiled assembly of a
+        /// recompilation: the assembly as compiled, with the round's defines when the compilation
+        /// gives them. A handler that throws is logged and the others still run (Unbound's choice:
+        /// such a handler is unmeasured).</summary>
+        internal void RaiseAssemblyCompilationFinished(string name, string[] defines, bool compilationFailed, UnityEditor.Compilation.CompilerMessage[] messages)
+        {
+            var handlers = assemblyCompilationFinished;
+            if (handlers == null) return;
+            var description = GameDomain.Descriptions.FirstOrDefault(a => a.Name == name && a.PluginGuid == null);
+            var assembly = description != null ? ToScriptAssembly(description) : new ScriptAssembly
+            {
+                Filename = name + ".dll",
+                OutputDirectory = "Library/ScriptAssemblies",
+                ScriptAssemblyReferences = Array.Empty<ScriptAssembly>(),
+                References = Array.Empty<string>(),
+                Defines = Array.Empty<string>(),
+                Files = Array.Empty<string>(),
+            };
+            if (defines != null) assembly.Defines = defines;
+            assembly.HasCompileErrors = compilationFailed;
+            foreach (Action<ScriptAssembly, UnityEditor.Compilation.CompilerMessage[]> handler in handlers.GetInvocationList())
+            {
+                try { handler(assembly, messages); }
+                catch (Exception e) { UnityEngine.Debug.LogException(e); }
+            }
+        }
+
         /// <summary>The script assemblies Unbound compiled for the Editor (all of them: Editor Play
         /// mode compiles editor and runtime assemblies).</summary>
         public ScriptAssembly[] GetAllEditorScriptAssemblies(EditorScriptCompilationOptions additionalOptions) =>
@@ -74,6 +107,8 @@ namespace UnityEditor.Scripting.ScriptCompilation
         public string[] Files { get; set; }
         public string RootNamespace { get; set; }
         public string AsmDefPath { get; set; }
+        /// <summary>Whether the compilation that compiled it failed.</summary>
+        public bool HasCompileErrors { get; set; }
         public string FullPath => OutputDirectory + "/" + Filename;
     }
 

@@ -474,19 +474,24 @@ namespace UnityEditor.Compilation
             internal readonly string Name;
             internal readonly bool Compiled;
             internal readonly CompilerMessage[] Messages;
+            /// <summary>The defines it was compiled with; null when not known.</summary>
+            internal readonly string[] Defines;
 
-            internal CompiledAssembly(string name, bool compiled, CompilerMessage[] messages)
+            internal CompiledAssembly(string name, bool compiled, CompilerMessage[] messages, string[] defines = null)
             {
                 Name = name;
                 Compiled = compiled;
                 Messages = messages ?? Array.Empty<CompilerMessage>();
+                Defines = defines;
             }
         }
 
         /// <summary>
         /// A recompilation of the scripts, as the Editor reports one (matches the Unity 6000.0.71f1
         /// Editor, tests/projects/compileevents): compilationStarted with the build's context, each
-        /// compiled assembly's started and finished events (output path, its errors and warnings),
+        /// compiled assembly's started and finished events (output path, its errors and warnings)
+        /// followed by the Editor compilation's own finished event of it (its HasCompileErrors set
+        /// when any assembly of the compilation failed),
         /// assemblyCompilationNotRequired for each assembly that did not need compiling, then
         /// compilationFinished with the same context. Unbound raises it when its hot reload
         /// recompiles; an edit it patches in place reloads no assembly (the Editor reloads the
@@ -495,6 +500,9 @@ namespace UnityEditor.Compilation
         internal static void RaiseCompilation(IReadOnlyList<CompiledAssembly> assemblies)
         {
             var context = new Bee.BeeDriver.ActiveBuild();
+            bool failed = false;
+            foreach (var assembly in assemblies)
+                if (assembly.Compiled && Array.Exists(assembly.Messages, m => m.type == CompilerMessageType.Error)) failed = true;
             Raise(compilationStarted, context);
             foreach (var assembly in assemblies)
             {
@@ -513,6 +521,7 @@ namespace UnityEditor.Compilation
                         try { callback(path, assembly.Messages); }
                         catch (Exception e) { UnityEngine.Debug.LogException(e); }
                     }
+                UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.Instance.RaiseAssemblyCompilationFinished(assembly.Name, assembly.Defines, failed, assembly.Messages);
             }
             Raise(compilationFinished, context);
         }

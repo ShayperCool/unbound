@@ -60,7 +60,7 @@ internal static class HotReload
         var response = new HotReloadResponse();
         var compiled = compiler.Compile(request.Compile);
         response.Compile = compiled;
-        RaiseCompilationEvents(compiled, request.Reload);
+        RaiseCompilationEvents(compiled, request.Reload, request.Compile);
         if (compiled.Failed > 0)
         {
             response.Status = "compile-errors";
@@ -168,14 +168,16 @@ internal static class HotReload
     /// (an edit undone), with their errors, then warnings; every other assembly of the request
     /// (unchanged, or skipped after a failed reference) as not required. A compilation scripts
     /// asked for (<paramref name="requested"/>) is reported when nothing compiled too.</summary>
-    internal static void RaiseCompilationEvents(CompileResponse compiled, bool requested = false)
+    internal static void RaiseCompilationEvents(CompileResponse compiled, bool requested = false, CompileRequest? request = null)
     {
         static bool Compiled(AssemblyResult a) => a.Status == "compiled" || a.Status == "failed" || a.Status == "cached";
         if (!requested && !compiled.Assemblies.Any(Compiled)) return;
         static UnityEditor.Compilation.CompilerMessage Message(DiagnosticInfo d, bool error) =>
             UnityEditor.Compilation.CompilationPipeline.Message(error, d.Id, d.Message, d.File, d.Line, d.Column);
+        var defines = request?.Assemblies.ToDictionary(s => s.Name, s => s.Defines.ToArray());
         var assemblies = compiled.Assemblies.Select(a => new UnityEditor.Compilation.CompilationPipeline.CompiledAssembly(a.Name, Compiled(a),
-            Compiled(a) ? a.Errors.Select(d => Message(d, true)).Concat(a.WarningList.Select(d => Message(d, false))).ToArray() : null)).ToList();
+            Compiled(a) ? a.Errors.Select(d => Message(d, true)).Concat(a.WarningList.Select(d => Message(d, false))).ToArray() : null,
+            defines != null && defines.TryGetValue(a.Name, out var compiledDefines) ? compiledDefines : null)).ToList();
         UnityEditor.Compilation.CompilationPipeline.RaiseCompilation(assemblies);
     }
 
