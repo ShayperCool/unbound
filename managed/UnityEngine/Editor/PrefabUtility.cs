@@ -335,7 +335,7 @@ namespace UnityEditor
         public static void RecordPrefabInstancePropertyModifications(Object targetObject)
         {
             PrefabRecords.Record(targetObject);
-            PrefabRecordTiming.Recorded(PrefabLinks.Of(targetObject)?.Instance);
+            PrefabInstances.Record(PrefabLinks.Of(targetObject)?.Instance);
         }
     }
 }

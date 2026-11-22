@@ -214,7 +214,12 @@ namespace UnityEngine
         /// <summary>Keeps the Euler angles the Inspector shows: GetLocalEulerAngles answers the
         /// angles nearest them; the rotation and localEulerAngles stay (measured:
         /// tests/projects/runtimeapis transform.after_hint.*).</summary>
-        internal void SetLocalEulerHint(Vector3 euler) => m_LocalEulerAnglesHint = euler;
+        internal void SetLocalEulerHint(Vector3 euler)
+        {
+            m_LocalEulerAnglesHint = euler;
+            // The pose after the last change holds the hint too (prefab instances' taken pose).
+            m_PoseAfterChange.EulerHint = euler;
+        }
 
         // ------------------------------------------------------------------ world state
 

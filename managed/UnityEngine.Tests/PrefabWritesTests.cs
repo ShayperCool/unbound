@@ -101,6 +101,45 @@ namespace UnityEngine.Tests
 
         string FileText() => File.ReadAllText(Path.Combine(m_Project, AssetPath));
 
+        static string PositionX(GameObject instance) =>
+            Array.Find(PrefabUtility.GetPropertyModifications(instance), m => m.propertyPath == "m_LocalPosition.x" && m.target is Transform)?.value;
+
+        /// <summary>GetPropertyModifications in Edit mode answers a Transform's change once an update
+        /// has passed (its pose at the last update until then), and at once after a record, a later
+        /// change in the same update answering the recorded pose (tests/projects/scenesave
+        /// modification-timing; record-then-change follows the Scripting API's "record those changes").</summary>
+        [Fact]
+        public void ModificationsTakeATransformsChangeAtTheNextUpdateOrARecord()
+        {
+            bool playing = EditorSession.IsPlaying;
+            EditorSession.IsPlaying = false;
+            try { TakeAtTheNextUpdateOrARecord(); }
+            finally { EditorSession.IsPlaying = playing; }
+        }
+
+        void TakeAtTheNextUpdateOrARecord()
+        {
+            var instance = Instance();
+            var t = instance.transform;
+            PrefabRecordTiming.FrameBoundary();
+            t.localPosition = new Vector3(4f, 0f, 0f);
+            Assert.Equal("0", PositionX(instance));
+            PrefabRecordTiming.FrameBoundary();
+            Assert.Equal("4", PositionX(instance));
+            t.localPosition = new Vector3(5f, 0f, 0f);
+            Assert.Equal("4", PositionX(instance));
+            PrefabRecordTiming.FrameBoundary();
+            Assert.Equal("5", PositionX(instance));
+
+            t.localPosition = new Vector3(6f, 0f, 0f);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(t);
+            Assert.Equal("6", PositionX(instance));
+            t.localPosition = new Vector3(7f, 0f, 0f);
+            Assert.Equal("6", PositionX(instance));
+            PrefabRecordTiming.FrameBoundary();
+            Assert.Equal("7", PositionX(instance));
+        }
+
         [Fact]
         public void ValuesAreSetByTheirPropertyPaths()
         {

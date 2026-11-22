@@ -593,7 +593,7 @@ namespace UnityEditor
             var path = PrefabPath(instanceRoot, assetPath, connect: false);
             // Saving an instance takes its changes into its modifications (scenesave prefab-nested
             // variant.before.mods, variant.after.mods).
-            PrefabRecordTiming.Recorded(PrefabLinks.Of(instanceRoot)?.Instance);
+            PrefabInstances.Record(PrefabLinks.Of(instanceRoot)?.Instance);
             var file = PrefabAssets.FileAt(path);
             var contents = PrefabContents.Of(instanceRoot);
             if (file == null)
@@ -815,7 +815,7 @@ namespace UnityEditor
             PrefabInstances.Merge(data, snapshot);
             // The instance it becomes holds its values as taken (unmeasured: convert.* rows read
             // the modifications after an update).
-            PrefabRecordTiming.Recorded(data);
+            PrefabInstances.Record(data);
             Dirty(plainGameObject, mode);
         }
 

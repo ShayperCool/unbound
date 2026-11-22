@@ -176,7 +176,7 @@ namespace UnityEditor
                     if (Unbound.Runtime.PrefabLinks.Of(target) is Unbound.Runtime.PrefabLink link)
                     {
                         Unbound.Runtime.PrefabRecords.Record(target);
-                        Unbound.Runtime.PrefabRecordTiming.Recorded(link.Instance);
+                        Unbound.Runtime.PrefabInstances.Record(link.Instance);
                     }
                     if (recordUndo) ObjectChangeEvents.NoteProperties(target);
                 }

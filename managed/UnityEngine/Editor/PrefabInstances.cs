@@ -98,10 +98,25 @@ namespace Unbound.Runtime
         /// Edit mode only at the next Editor update or a record point (modification-timing
         /// transform.direct, transform.frame, save.*); until then they hold its pose at the last
         /// update (or, changed for the first time, the value recorded before). Other engine
-        /// components' changes are taken at once (their timing is unmeasured).</summary>
+        /// components' changes, a RectTransform's included, are taken at once (their timing is
+        /// unmeasured).</summary>
         static bool Taken(Object o, PrefabInstanceData data) =>
-            o is not Transform t || EditorApplication.isPlaying
+            o is not Transform t || t is RectTransform || EditorApplication.isPlaying
             || t.m_ChangeStamp < Math.Max(PrefabRecordTiming.TransformsTaken, data.RecordStamp);
+
+        /// <summary>A record point: the instance takes its changes now, each of its Transforms'
+        /// pose too (a later change in the same update answers the recorded pose).</summary>
+        internal static void Record(PrefabInstanceData data)
+        {
+            if (data == null) return;
+            PrefabRecordTiming.Recorded(data);
+            foreach (var o in ObjectsOf(data))
+                if (o is Transform t)
+                {
+                    t.m_TakenPose = t.CurrentPose();
+                    t.m_HasTakenPose = true;
+                }
+        }
 
         /// <summary>A Transform's pose at the last update put in place for a moment (without a change
         /// of its own), and its live pose put back after.</summary>
@@ -113,6 +128,8 @@ namespace Unbound.Runtime
 
             TakenPose(Transform t)
             {
+                // A transform job finishing during the swap would write under the taken pose.
+                Transform.SyncJobs();
                 m_Transform = t;
                 m_Live = t.CurrentPose();
                 t.SetPoseQuietly(t.m_TakenPose);

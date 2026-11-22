@@ -751,7 +751,7 @@ namespace Unbound.Runtime
                 yield return new NativeField
                 {
                     Name = "m_LocalEulerAnglesHint", Type = typeof(Vector3), Shape = Shape.Vector3, TypeName = "Vector3",
-                    Get = o => ((Transform)o).m_LocalEulerAnglesHint, Set = (o, v) => ((Transform)o).m_LocalEulerAnglesHint = (Vector3)v,
+                    Get = o => ((Transform)o).m_LocalEulerAnglesHint, Set = (o, v) => ((Transform)o).SetLocalEulerHint((Vector3)v),
                 };
             }
             else if (target is Collider)
