@@ -51,6 +51,27 @@ namespace Unbound.Tests
             }
         }
 
+        // The sky Lightmapping.Bake takes (tests/projects/bakedbuffers Sky, SkyRealtime,
+        // SkyRealtimeBaked): the ambient colour, unless Realtime Global Illumination keeps the
+        // environment's light in its own lightmaps.
+        [Theory]
+        [InlineData(false, true, true)]
+        [InlineData(true, true, false)]
+        [InlineData(true, false, true)]
+        public void ABakesSkyIsBlackWhereTheRealtimeLightmapsTakeTheEnvironment(bool realtimeGI, bool realtimeEnvironment, bool lit) =>
+            WithAmbient(() =>
+            {
+                RenderSettings.ambientMode = AmbientMode.Flat;
+                RenderSettings.ambientSkyColor = new Color(0.4f, 0.6f, 0.9f);
+                var settings = new LightingSettings { bakedGI = true, realtimeGI = realtimeGI, realtimeEnvironmentLighting = realtimeEnvironment };
+                var sky = BakedAtlas.SkyOf(settings);
+                Assert.Equal(6 * 128 * 128 * 3, sky.Length);
+                var linear = new Color(0.4f, 0.6f, 0.9f).linear;
+                var want = lit ? new[] { linear.r, linear.g, linear.b } : new[] { 0f, 0f, 0f };
+                for (int i = 0; i < sky.Length; i += 3)
+                    Assert.Equal(want, new[] { sky[i], sky[i + 1], sky[i + 2] });
+            });
+
         static void AssertFace(int face, Color gamma)
         {
             var linear = gamma.linear;

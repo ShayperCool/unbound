@@ -59,9 +59,11 @@ namespace UnityEngine
         /// Draws a renderer's submeshes with their materials' meta passes, its lightmap UVs
         /// scaled and offset by <paramref name="scaleOffset"/>. A material's emission is drawn
         /// where <paramref name="emits"/> says so. <paramref name="purpose"/> names what the
-        /// image is for in the notes about a renderer or material that cannot be drawn.
+        /// image is for in the notes about a renderer or material that cannot be drawn. A submesh
+        /// whose material slot is empty is drawn with <paramref name="emptySlot"/>, or not at all
+        /// without one; a submesh past the renderer's slots is not drawn.
         /// </summary>
-        internal static void DrawRenderer(Renderer renderer, Mesh mesh, Vector4 scaleOffset, bool emissive, Func<Material, bool> emits, string purpose, Action<string, string> warn)
+        internal static void DrawRenderer(Renderer renderer, Mesh mesh, Vector4 scaleOffset, bool emissive, Func<Material, bool> emits, string purpose, Action<string, string> warn, Material emptySlot = null)
         {
             if (renderer == null) return;
             if (mesh == null)
@@ -76,7 +78,7 @@ namespace UnityEngine
             int submeshes = Math.Min(materials.Length, mesh.subMeshCount);
             for (int i = 0; i < submeshes; i++)
             {
-                var material = materials[i];
+                var material = materials[i] ?? emptySlot;
                 if (material == null) continue;
                 if (emissive && !emits(material)) continue;
                 int pass = MetaPass(material);

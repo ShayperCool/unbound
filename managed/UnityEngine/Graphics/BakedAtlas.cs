@@ -185,6 +185,23 @@ namespace UnityEngine
         /// UVs at the size the layout (<paramref name="layout"/>, the bake's answer) gives it.
         /// Null, said, where they cannot be made: the direct light is baked alone.
         /// </summary>
+        /// <summary>The sky a bake takes: the ambient source's six faces of
+        /// <see cref="SkyFaceSize"/> texels a side, black where the environment's light goes to
+        /// the realtime lightmaps instead (Realtime Global Illumination on, and
+        /// LightingSettings.realtimeEnvironmentLighting: matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/bakedbuffers SkyRealtime, SkyRealtimeBaked).</summary>
+        internal static float[] SkyOf(LightingSettings settings) =>
+            settings.realtimeEnvironmentLighting
+                ? new float[6 * SkyFaceSize * SkyFaceSize * 3]
+                : RealtimeGI.SkyFaces(SkyFaceSize);
+
+        /// <summary>What the bake's material images draw a submesh whose material slot is empty
+        /// with: white as Default-Material draws it (matches the Unity 6000.0.71f1 Editor in the
+        /// built-in render pipeline, tests/projects/bakedbuffers SpareEmpty; a project with a
+        /// render pipeline asset is not measured). The submesh stops no ray all the same.</summary>
+        static Material EmptySlotMaterial() =>
+            BuiltinShaders.Resolve(BuiltinShaders.ExtraGuid, BuiltinShaders.DefaultMaterialFileId) as Material;
+
         static object Indirect(string path, LightingSettings settings, List<(MeshRenderer renderer, long fileId)> placed, string layout)
         {
             string blueNoise = Path.Combine(UnityEditor.EditorApplication.applicationContentsPath ?? "", BlueNoiseData);
@@ -221,7 +238,7 @@ namespace UnityEngine
                     {
                         foreach (var (target, emissive) in new[] { (albedo, false), (emission, true) })
                             GIMaterialImages.Draw(target, width, height, emissive, linear, settings.albedoBoost, realtimeUVs: false,
-                                () => GIMaterialImages.DrawRenderer(renderer, mesh, scaleOffset, emissive, s_Emits, "the bake of baked lightmaps", s_Warn));
+                                () => GIMaterialImages.DrawRenderer(renderer, mesh, scaleOffset, emissive, s_Emits, "the bake of baked lightmaps", s_Warn, EmptySlotMaterial()));
                         var albedoBytes = Native.ReadPixels(albedo.EnsureCreated(), 0, 0, width, height, false);
                         var emissionBytes = Native.ReadPixels(emission.EnsureCreated(), 0, 0, width, height, true);
                         if (albedoBytes == null || emissionBytes == null)
@@ -251,8 +268,7 @@ namespace UnityEngine
                 foreach (var copy in withUVs.Values)
                     if (copy != null) Object.DestroyImmediate(copy);
             }
-            // The sky: the ambient source's six faces.
-            var sky = RealtimeGI.SkyFaces(SkyFaceSize);
+            var sky = SkyOf(settings);
             var skyBytes = new byte[sky.Length * sizeof(float)];
             Buffer.BlockCopy(sky, 0, skyBytes, 0, skyBytes.Length);
             return new
