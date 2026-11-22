@@ -417,6 +417,8 @@ namespace UnityEditor
         /// imported.during). A loaded asset is not imported again.</summary>
         public static void ImportAsset(string path, ImportAssetOptions options)
         {
+            // Asked for while the editor domain loads: it runs once the load has ended.
+            if (EditorInitialization.DeferImport(path, options)) return;
             // A file or folder the database does not list yet is imported: its .meta written
             // (tests/projects/projectwrites 02.import).
             var normalized = path?.Replace('\\', '/').TrimEnd('/');

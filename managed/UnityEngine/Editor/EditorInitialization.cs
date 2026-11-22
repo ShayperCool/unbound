@@ -82,18 +82,30 @@ namespace UnityEditor
         internal static void LoadEditorDomain(bool enteringPlayMode = false)
         {
             MainView.Open();
+            DomainLoading = true;
             try
             {
                 PlayModeDomainLoading = enteringPlayMode;
-                ForEachType(type =>
+                // [InitializeOnLoad] classes by assembly: the assemblies by name, each after those
+                // its code references (matches the Unity 6000.0.71f1 Editor,
+                // tests/projects/initializeorder order.initializers).
+                foreach (var assembly in InDependencyOrder(GameDomain.Assemblies()))
                 {
-                    if (!Has(type, InitializeOnLoad)) return;
-                    try { RuntimeHelpers.RunClassConstructor(type.TypeHandle); }
-                    catch (TypeInitializationException e) { Debug.LogException(e.InnerException ?? e); }
-                    catch (Exception e) { Debug.LogException(e); }
-                });
+                    foreach (var type in TypesOf(assembly))
+                    {
+                        if (!Has(type, InitializeOnLoad)) continue;
+                        try { RuntimeHelpers.RunClassConstructor(type.TypeHandle); }
+                        catch (TypeInitializationException e) { Debug.LogException(e.InnerException ?? e); }
+                        catch (Exception e) { Debug.LogException(e); }
+                    }
+                }
                 if (enteringPlayMode) EnterPlayModeMethods();
                 ForEachStaticMethod(InitializeOnLoadMethod, method => Invoke(method));
+            }
+            catch
+            {
+                DomainLoading = false;
+                throw;
             }
             finally { PlayModeDomainLoading = false; }
             // The Editor sends it before the domain reloads, in Edit mode, then beforeAssemblyReload when
@@ -110,7 +122,11 @@ namespace UnityEditor
                 PlayModeDomainLoading = enteringPlayMode;
                 DidReloadScriptsMethods();
             }
-            finally { PlayModeDomainLoading = false; }
+            finally
+            {
+                PlayModeDomainLoading = false;
+                DomainLoading = false;
+            }
             // Every load of the editor domain ends with afterAssemblyReload, after its load callbacks,
             // [DidReloadScripts] included (and so after Play mode entry's ExitingEditMode, which the
             // Editor sends before the reload): the Editor's start, its Play mode entry, and a session
@@ -121,7 +137,85 @@ namespace UnityEditor
             // natively), then every domain load calls OnPostprocessAllAssets (didDomainReload),
             // before the runtime initializers (tests/projects/assetpostprocessors timeline).
             AssetPostprocessing.PrepareImports();
-            AssetPostprocessing.DomainLoaded();
+            // Imports asked for while the domain loaded run now, after afterAssemblyReload, and
+            // the domain load's OnPostprocessAllAssets lists the assets they imported (matches the
+            // Unity 6000.0.71f1 Editor, tests/projects/initializeorder game.sequence).
+            AssetPostprocessing.DomainLoaded(RunDeferredImports());
+        }
+
+        /// <summary>While the editor domain loads (its initializers, [InitializeOnLoadMethod] and
+        /// [DidReloadScripts] methods), imports wait until the load has ended.</summary>
+        internal static bool DomainLoading { get; private set; }
+
+        /// <summary>The work the domain load put off, in the order asked: imports, and the
+        /// postprocessing of assets it loaded.</summary>
+        static readonly List<Action> s_Deferred = new List<Action>();
+        static readonly List<string> s_DeferredImported = new List<string>();
+
+        /// <summary>Keeps an import asked for while the domain loads; false at any other time.</summary>
+        internal static bool DeferImport(string path, ImportAssetOptions options)
+        {
+            if (!DomainLoading) return false;
+            s_Deferred.Add(() =>
+            {
+                AssetDatabase.ImportAsset(path, options);
+                if ((options & ImportAssetOptions.ForceUpdate) != 0 && !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(path)) && !s_DeferredImported.Contains(path))
+                    s_DeferredImported.Add(path);
+            });
+            return true;
+        }
+
+        /// <summary>Keeps the postprocessing of an asset Unbound loads while the domain loads (its
+        /// replay of the asset's import: the Editor loads imported assets without postprocessing),
+        /// so its postprocessors see every initializer's state, where the Editor runs the imports a
+        /// load asks for; false at any other time.</summary>
+        internal static bool DeferPostprocess(Action postprocess)
+        {
+            if (!DomainLoading) return false;
+            s_Deferred.Add(postprocess);
+            return true;
+        }
+
+        /// <summary>Runs the work the domain load put off, in the order asked; the paths of the
+        /// assets its imports imported (forced imports of existing assets).</summary>
+        static string[] RunDeferredImports()
+        {
+            if (s_Deferred.Count == 0) return Array.Empty<string>();
+            var work = s_Deferred.ToArray();
+            s_Deferred.Clear();
+            s_DeferredImported.Clear();
+            foreach (var action in work)
+            {
+                try { action(); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+            var imported = s_DeferredImported.ToArray();
+            s_DeferredImported.Clear();
+            return imported;
+        }
+
+        /// <summary>The assemblies by name (ordinal), each moved after those it references among
+        /// them (the references its compiled code keeps); a reference cycle is broken where it
+        /// closes.</summary>
+        internal static List<Assembly> InDependencyOrder(IReadOnlyList<Assembly> given)
+        {
+            var assemblies = new List<Assembly>(given);
+            assemblies.Sort((a, b) => string.CompareOrdinal(a.GetName().Name, b.GetName().Name));
+            var byName = new Dictionary<string, int>(assemblies.Count);
+            for (int i = 0; i < assemblies.Count; i++) byName[assemblies[i].GetName().Name] = i;
+            var state = new byte[assemblies.Count];
+            var result = new List<Assembly>(assemblies.Count);
+            void Visit(int index)
+            {
+                if (state[index] != 0) return;
+                state[index] = 1;
+                foreach (var reference in assemblies[index].GetReferencedAssemblies())
+                    if (reference.Name != null && byName.TryGetValue(reference.Name, out var other)) Visit(other);
+                state[index] = 2;
+                result.Add(assemblies[index]);
+            }
+            for (int i = 0; i < assemblies.Count; i++) Visit(i);
+            return result;
         }
 
         /// <summary>The editor domain's load callbacks run as Play mode is entered (in the Editor,
@@ -280,12 +374,13 @@ namespace UnityEditor
         static void ForEachType(Action<Type> action)
         {
             foreach (var assembly in GameDomain.Assemblies())
-            {
-                Type[] types;
-                try { types = assembly.GetTypes(); }
-                catch (ReflectionTypeLoadException e) { types = Array.FindAll(e.Types, t => t != null); }
-                foreach (var type in types) action(type);
-            }
+                foreach (var type in TypesOf(assembly)) action(type);
+        }
+
+        static Type[] TypesOf(Assembly assembly)
+        {
+            try { return assembly.GetTypes(); }
+            catch (ReflectionTypeLoadException e) { return Array.FindAll(e.Types, t => t != null); }
         }
 
         static void ForEachStaticMethod(string attribute, Action<MethodInfo> action)
