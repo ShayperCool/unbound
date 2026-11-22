@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record or check how point link endpoints attach to the navigation surface."""
+"""Record or check the point-link projection and agent staleness controls."""
 import argparse
 import filecmp
 import os
@@ -16,10 +16,15 @@ from value_probe import engine_cli
 
 REPEATS = ('native1', 'native2')
 OUTPUT = 'values.jsonl'
+PROFILES = {
+    'projection': ('NAVLINKS_PROJECTION', 'point-projection.jsonl', 20),
+    'staleness': ('NAVLINKS_STALE', 'path-staleness.jsonl', 30000),
+}
 
 
-def stimulus(out):
-    return {'NAVLINKS_OUT': str(out/OUTPUT), 'NAVLINKS_PROJECTION': '1'}
+def stimulus(out, profile):
+    return {'NAVLINKS_OUT': str(out/OUTPUT),
+            **{variable: str(int(name == profile)) for name, (variable, _, _) in PROFILES.items()}}
 
 
 def copy_project(destination, *, package_cache=True):
@@ -29,13 +34,13 @@ def copy_project(destination, *, package_cache=True):
     return project
 
 
-def editor(root):
+def editor(root, profile):
     jobs = []
     for repeat in REPEATS:
         out = root/repeat
         project = copy_project(out/'project', package_cache=False)
         jobs.append(EditorJob(project, out/'editor.log', out, ['-executeMethod', 'ProbeRunner.Record'],
-                              batch=True, env=stimulus(out), timeout=600, label=f'projection-{repeat}'))
+                              batch=True, env=stimulus(out, profile), timeout=600, label=f'{profile}-{repeat}'))
     failed = False
     for job, result in zip(jobs, run_parallel(jobs)):
         print(summary(result))
@@ -59,13 +64,14 @@ def publish(root, target):
     return 0
 
 
-def gate(root, target):
+def gate(root, target, profile):
     project = copy_project(root/'project')
-    command = [str(engine_cli()), 'run', '-p', str(project), '--headless', '20', '--no-watch']
+    frames = PROFILES[profile][2]
+    command = [str(engine_cli()), 'run', '-p', str(project), '--headless', str(frames), '--no-watch']
     if LAUNCHER.is_file():
         command = [str(LAUNCHER), '--kind', 'engine-cpu', *command]
     with (root/'engine.log').open('w') as log:
-        result = subprocess.run(command, env={**os.environ, **stimulus(root)},
+        result = subprocess.run(command, env={**os.environ, **stimulus(root, profile)},
                                 stdout=log, stderr=subprocess.STDOUT, timeout=600)
     if result.returncode:
         raise RuntimeError(f'Unbound exited {result.returncode}, see {log.name}')
@@ -77,18 +83,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=('editor', 'publish', 'gate'))
     parser.add_argument('--release', required=True)
-    parser.add_argument('--label', default=private_label('point-projection'))
+    parser.add_argument('--profile', choices=PROFILES, default='projection')
+    parser.add_argument('--label')
     args = parser.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
-    root = run_root(HERE, args.label).resolve()
-    target = reference_root(HERE)/'point-projection.jsonl'
+    root = run_root(HERE, args.label or private_label(args.profile)).resolve()
+    target = reference_root(HERE)/PROFILES[args.profile][1]
     if args.mode != 'publish':
         root.mkdir(parents=True)
     if args.mode == 'editor':
-        return editor(root)
+        return editor(root, args.profile)
     if args.mode == 'publish':
         return publish(root, target)
-    return gate(root, target)
+    return gate(root, target, args.profile)
 
 
 if __name__ == '__main__':

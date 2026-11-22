@@ -18,7 +18,7 @@ using UnityEngine.AI;
 /// occupied/activated flags. Scripted actions happen in Update, some a number of frames after
 /// the frame the lane's first agent was first seen on its link (<c>onlink+k</c>).
 /// </summary>
-public class NavLinksProbe : MonoBehaviour
+public partial class NavLinksProbe : MonoBehaviour
 {
     const int Frames = 400;
 
@@ -82,6 +82,13 @@ public class NavLinksProbe : MonoBehaviour
 
     void Start()
     {
+        if (Environment.GetEnvironmentVariable("NAVLINKS_STALE") == "1")
+        {
+            m_Done = true;
+            StartCoroutine(RecordStaleControls());
+            return;
+        }
+
         if (Environment.GetEnvironmentVariable("NAVLINKS_PROJECTION") == "1")
         {
             RecordLinkProjectionControls();
