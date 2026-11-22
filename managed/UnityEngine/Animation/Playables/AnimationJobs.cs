@@ -54,6 +54,9 @@ namespace Unbound.Runtime.Playables
         {
             internal int Channel;
             internal bool IsObject;
+            /// <summary>A script's discrete field: its channel holds the integer's bits
+            /// (<see cref="FieldGroup.Discrete"/>), which GetInt and SetInt read and write.</summary>
+            internal bool Discrete;
             /// <summary>A stream has read or written the handle, or resolved it (PropertyStreamHandle.IsResolved).</summary>
             internal bool Resolved;
             /// <summary>The path and name of a Transform property, which a property handle
@@ -1502,9 +1505,17 @@ namespace UnityEngine.Animations
             c.Stream.Set(ch);
         }
 
-        public int GetInt(AnimationStream stream) => (int)Math.Round(GetFloat(stream));
+        public int GetInt(AnimationStream stream)
+        {
+            float value = GetFloat(stream);
+            return stream.Context.Handles.Properties[handleIndex].Discrete ? BitConverter.SingleToInt32Bits(value) : (int)Math.Round(value);
+        }
 
-        public void SetInt(AnimationStream stream, int value) => SetFloat(stream, value);
+        public void SetInt(AnimationStream stream, int value)
+        {
+            if (!Channel(stream, out var c, out _)) return;
+            SetFloat(stream, c.Handles.Properties[handleIndex].Discrete ? BitConverter.Int32BitsToSingle(value) : value);
+        }
 
         public bool GetBool(AnimationStream stream) => GetFloat(stream) >= 0.5f;
 
@@ -1592,14 +1603,18 @@ namespace UnityEngine.Animations
         internal uint valid;
         internal int handleIndex;
 
-        float Value(AnimationStream stream)
+        float Value(AnimationStream stream) => Value(stream, out _);
+
+        float Value(AnimationStream stream, out bool discrete)
         {
             using var engine = MainThreadCheck.Engine();
+            discrete = false;
             var handles = AnimatorHandles.Get(valid);
             if (handles == null || handleIndex < 0 || handleIndex >= handles.SceneProperties.Count)
                 throw new InvalidOperationException("The PropertySceneHandle is invalid. Please use proper function to create the handle.");
             var g = handles.SceneProperties[handleIndex];
             if (g == null || !g.Alive || g.IsObject) return 0f;
+            discrete = g is FieldGroup { Discrete: true };
             var buffer = new float[Math.Max(1, g.Width)];
             g.Read(buffer, 0);
             return buffer[0];
@@ -1618,7 +1633,11 @@ namespace UnityEngine.Animations
         [global::System.@ObsoleteAttribute("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism", true)] [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetFloat(AnimationStream stream, float value) { }
 
-        public int GetInt(AnimationStream stream) => (int)Math.Round(Value(stream));
+        public int GetInt(AnimationStream stream)
+        {
+            float value = Value(stream, out bool discrete);
+            return discrete ? BitConverter.SingleToInt32Bits(value) : (int)Math.Round(value);
+        }
 
         [global::System.@ObsoleteAttribute("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism", true)] [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetInt(AnimationStream stream, int value) { }
@@ -1668,7 +1687,8 @@ namespace UnityEngine.Animations
                 return new PropertyStreamHandle { m_AnimatorBindingsVersion = handles.Id, handleIndex = handles.Properties.Count - 1 };
             }
             int channel = animator.StreamBindings.BindChannel(CurveBinding.ForType(path, property, type), isObjectReference);
-            handles.Properties.Add(new AnimatorHandles.StreamProperty { Channel = channel, IsObject = isObjectReference, BoundPath = path, BoundType = type, BoundProperty = property });
+            bool discrete = channel >= 0 && !isObjectReference && animator.StreamBindings.FloatOwner[channel] is FieldGroup { Discrete: true };
+            handles.Properties.Add(new AnimatorHandles.StreamProperty { Channel = channel, IsObject = isObjectReference, Discrete = discrete, BoundPath = path, BoundType = type, BoundProperty = property });
             return new PropertyStreamHandle { m_AnimatorBindingsVersion = handles.Id, handleIndex = handles.Properties.Count - 1 };
         }
 

@@ -157,7 +157,8 @@ namespace Unbound.Runtime
                 }
                 int ch = channels[i];
                 if (ch < 0 || (mask != null && !mask[ch])) continue;
-                float value = bound.Clip.LoopPose(i, curve.Evaluate(time), phase);
+                // A discrete curve's value is an integer's bits: its last key's as they are.
+                float value = bound.Stepped != null && bound.Stepped[i] ? curve.EvaluateStepped(time) : bound.Clip.LoopPose(i, curve.Evaluate(time), phase);
                 if (goalSlots != null && goalSlots[i] != BoundClip.NoSlot)
                 {
                     if (goalSlots[i] >= 0) goals.Take(goalSlots[i], value);
@@ -284,7 +285,7 @@ namespace Unbound.Runtime
         /// <summary>AnimationClip.SampleAnimation: the clip alone, at full weight.</summary>
         internal static void SampleOnce(AnimationClip clip, GameObject go, float time)
         {
-            var bindings = s_SampleBindings.GetValue(go, g => new AnimationBindings(g));
+            var bindings = s_SampleBindings.GetValue(go, g => new AnimationBindings(g, curvesOnly: true));
             var bound = bindings.Bind(clip);
             var pose = new AnimationPose();
             pose.Reset(bindings.FloatCount, bindings.ObjectCount);

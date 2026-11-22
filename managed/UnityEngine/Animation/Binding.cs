@@ -352,11 +352,18 @@ namespace Unbound.Runtime
     }
 
     /// <summary>A serialized field of a script (or an engine object's own field), by its property
-    /// path (`m_Color.r`): numbers, bools and enums are one float channel each.</summary>
+    /// path (`m_Color.r`): numbers, bools and enums are one float channel each. A script's
+    /// discrete field (<see cref="IsDiscrete"/>) travels in its channel as the integer's bits, not
+    /// as a number: a curve's key of 1.0 sets 1065353216, and a key written as the bits of 2 sets
+    /// 2 (matches the Unity 6000.0.71f1 Editor, tests/projects/animatorapi <c>typed.*</c> mode,
+    /// mode2, mode3, counted). Unmeasured: enums that are not 32 bits wide, and such a channel
+    /// blended at a partial weight (the bits are blended as a number here).</summary>
     internal sealed class FieldGroup : PropertyGroup
     {
         readonly FieldInfo[] m_Chain;
         readonly Type m_Leaf;
+        /// <summary>The field holds its integer's bits (a script's discrete field).</summary>
+        internal readonly bool Discrete;
 
         internal FieldGroup(Object target, FieldInfo[] chain)
         {
@@ -365,7 +372,21 @@ namespace Unbound.Runtime
             m_Leaf = chain[chain.Length - 1].FieldType;
             IsObject = typeof(Object).IsAssignableFrom(m_Leaf);
             Width = IsObject ? 0 : 1;
+            Discrete = target is MonoBehaviour && IsDiscrete(chain[chain.Length - 1]);
         }
+
+        /// <summary>A field whose curves are discrete integer curves: an enum, or an int with
+        /// <see cref="UnityEngine.Animations.DiscreteEvaluationAttribute"/>.</summary>
+        internal static bool IsDiscrete(FieldInfo field) =>
+            field.FieldType.IsEnum || (field.FieldType == typeof(int) && field.IsDefined(typeof(UnityEngine.Animations.DiscreteEvaluationAttribute), true));
+
+        /// <summary>Whether an object curve binds a script's field of this declared type: fields
+        /// typed UnityEngine.Object itself, MonoBehaviour, ScriptableObject or a script class are
+        /// left alone, whatever the curve's values; engine classes (Component and Behaviour too,
+        /// then with script values as well) are set. Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/animatorapi <c>typed.animator.*</c>.</summary>
+        internal static bool BindsObjectField(Type type) =>
+            type != typeof(Object) && !typeof(MonoBehaviour).IsAssignableFrom(type) && !typeof(ScriptableObject).IsAssignableFrom(type);
 
         internal static bool IsAnimatable(Type t) =>
             t == typeof(float) || t == typeof(double) || t == typeof(int) || t == typeof(uint) || t == typeof(bool) || t.IsEnum ||
@@ -420,8 +441,9 @@ namespace Unbound.Runtime
             return true;
         }
 
-        static float ToFloat(object v)
+        float ToFloat(object v)
         {
+            if (Discrete) return BitConverter.Int32BitsToSingle(v is int n ? n : v is Enum e ? EnumBits(e) : 0);
             switch (v)
             {
                 case null: return 0f;
@@ -432,12 +454,21 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>An enum's value in 32 bits (wider ones lose their high bits: unmeasured).</summary>
+        static int EnumBits(Enum e) =>
+            Type.GetTypeCode(e.GetType()) == TypeCode.UInt64 ? unchecked((int)Convert.ToUInt64(e)) : unchecked((int)Convert.ToInt64(e));
+
         object FromFloat(float v)
         {
             var t = m_Leaf;
             if (t == typeof(float)) return v;
             if (t == typeof(bool)) return AnimationBindings.AnimatedBool(v);
             if (t == typeof(double)) return (double)v;
+            if (Discrete)
+            {
+                int bits = BitConverter.SingleToInt32Bits(v);
+                return t.IsEnum ? Enum.ToObject(t, bits) : bits;
+            }
             // Integers round half up (0.5 is 1, 2.5 is 3: measured).
             long n = (long)Math.Floor(v + 0.5f);
             if (t.IsEnum) return Enum.ToObject(t, n);
@@ -542,9 +573,18 @@ namespace Unbound.Runtime
         /// caches which clips feed it by.</summary>
         internal int ClipEpoch;
 
-        internal AnimationBindings(GameObject root)
+        /// <summary>The bindings of a legacy Animation or of AnimationClip.SampleAnimation, which
+        /// sample a clip's curves as they are: object curves are not applied and discrete curves
+        /// interpolate like any other, where an Animator applies and steps them (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/animatorapi <c>typed.legacy.*</c>,
+        /// <c>typed.legacySample.*</c>, <c>typed.sample.*</c>, <c>typed.mode.*</c> against
+        /// <c>typed.animator.*</c>).</summary>
+        internal readonly bool CurvesOnly;
+
+        internal AnimationBindings(GameObject root, bool curvesOnly = false)
         {
             Root = root;
+            CurvesOnly = curvesOnly;
         }
 
         internal BoundClip Bind(AnimationClip clip)
@@ -600,11 +640,13 @@ namespace Unbound.Runtime
                     i += 2;
                     continue;
                 }
-                bound.Float[i] = BindCurve(curve.Binding, objectValued: false, clip, create, bound);
+                int channel = bound.Float[i] = BindCurve(curve.Binding, objectValued: false, clip, create, bound);
+                if (!CurvesOnly && channel >= 0 && FloatOwner[channel] is FieldGroup { Discrete: true })
+                    (bound.Stepped ??= new bool[clip.m_Curves.Count])[i] = true;
             }
             bound.Object = new int[clip.m_ObjectCurves.Count];
             for (int i = 0; i < clip.m_ObjectCurves.Count; i++)
-                bound.Object[i] = BindCurve(clip.m_ObjectCurves[i].Binding, objectValued: true, clip, create);
+                bound.Object[i] = CurvesOnly ? -1 : BindCurve(clip.m_ObjectCurves[i].Binding, objectValued: true, clip, create);
             return bound;
         }
 
@@ -844,6 +886,9 @@ namespace Unbound.Runtime
         /// (-1 elsewhere); null when the clip has none.</summary>
         internal int[] EulerRotation;
         internal int[] Object;
+        /// <summary>Per curve, whether it holds its last key's value until the next (a discrete
+        /// field's curve under an Animator); null when the clip has none.</summary>
+        internal bool[] Stepped;
         /// <summary>The additive reference pose (<see cref="AnimationBindings.AdditiveReference"/>).</summary>
         internal float[] Reference;
         internal int ReferenceFloatCount = -1;
@@ -1157,6 +1202,8 @@ namespace Unbound.Runtime
             if (chain != null && typeof(Object).IsAssignableFrom(chain[chain.Length - 1].FieldType))
             {
                 var mb = component as MonoBehaviour;
+                // A script's field of a type the Editor does not bind keeps its value, with no message.
+                if (mb != null && !FieldGroup.BindsObjectField(chain[chain.Length - 1].FieldType)) return default;
                 return Make(component, "field:" + attribute, 0, () => new FieldGroup(component, chain) { Script = mb });
             }
             Unsupported(clip, binding);

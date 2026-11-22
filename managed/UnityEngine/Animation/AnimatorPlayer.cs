@@ -241,7 +241,9 @@ namespace Unbound.Runtime
             foreach (var original in Graph.Clips)
             {
                 var clip = Controller.MapClip(original);
-                if (clip != null && !clip.m_Legacy) Bindings.Bind(clip);
+                if (clip == null || clip.m_Legacy) continue;
+                clip.Compile();
+                Bindings.Bind(clip);
             }
         }
 

@@ -84,6 +84,18 @@ namespace UnityEngine
         /// settings, events) has built the clip's binding table since it was made; SetCurve alone
         /// does not (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave clip-assets).</summary>
         internal bool m_BindingsBuilt;
+        /// <summary>Whether the Editor has compiled the clip's curves for an Animator, which is what
+        /// AnimationUtility.GetAnimationClipStats describes (<see cref="Compile"/>). A clip read from
+        /// its file is; AnimationClip.SetCurve and ClearCurves leave it without, and a copy starts
+        /// without (matches the Unity 6000.0.71f1 Editor, tests/projects/animatorapi
+        /// <c>stats.setCurve*</c>, <c>stats.cleared*</c>, <c>stats.copy*</c>, <c>stats.legacy*</c>).</summary>
+        internal bool m_Compiled;
+
+        /// <summary>The Editor compiles the clip: an AnimationUtility edit (an editor or object
+        /// reference curve, clip settings, events), an Animator taking it, its file read. A clip
+        /// that is legacy then is not compiled (one made legacy afterwards keeps what it had;
+        /// unmeasured: an edit of a compiled clip made legacy since).</summary>
+        internal void Compile() => m_Compiled = !m_Legacy;
         internal float m_SampleRate = 60f;
         /// <summary>A Humanoid model clip under a reducing animation compression: the error (a
         /// fraction) its converted curves are reduced with (<see cref="Unbound.Runtime.Humanoid.HumanClipReduction"/>);
@@ -474,6 +486,7 @@ namespace UnityEngine
                 if (axes != null) KeyVectorTogether(relativePath, head, attribute, axes, type);
             }
             m_EditorCurves = null;
+            m_Compiled = false;
             m_Version++;
             if (eulerRemoval) m_KeptSettingsRange = (m_Version, keptStart, keptStop);
         }
@@ -892,6 +905,7 @@ namespace UnityEngine
             m_Curves.Clear();
             m_EditorCurves = null;
             m_ObjectCurves.Clear();
+            m_Compiled = false;
             m_Version++;
         }
 
@@ -1075,6 +1089,25 @@ namespace Unbound.Runtime
 
         AnimationCurve m_SegmentsOf;
         KeySegments m_Segments;
+
+        /// <summary>The value of the last key at or before a time (the first key's before it): a
+        /// discrete curve as an Animator plays it (tests/projects/animatorapi
+        /// <c>typed.animator.*</c> mode2, mode3, counted). A player clip's compiled curve is
+        /// sampled as it is.</summary>
+        internal float EvaluateStepped(float time)
+        {
+            if (Sampled != null) return Sampled.Evaluate(time);
+            int n = Curve?.length ?? 0;
+            if (n == 0) return 0f;
+            int low = 0, high = n - 1;
+            while (low < high)
+            {
+                int middle = (low + high + 1) / 2;
+                if (Curve[middle].time <= time) low = middle;
+                else high = middle - 1;
+            }
+            return Curve[low].value;
+        }
 
         /// <summary>The curve's value at a time on the clip, as the Animator samples it: a player
         /// clip's compiled curve, else the keys' cubic segments (<see cref="KeySegments"/>).</summary>
@@ -1462,6 +1495,7 @@ namespace Unbound.Runtime
                 });
             }
             clip.m_Events.Sort((a, b) => a.m_Time.CompareTo(b.m_Time));
+            clip.Compile();
             clip.m_Version++;
         }
 

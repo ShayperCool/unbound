@@ -1008,7 +1008,7 @@ namespace UnityEngine
         {
             var states = States;
             if (advance) UpdateQueue();
-            m_Bindings ??= new AnimationBindings(m_GameObject);
+            m_Bindings ??= new AnimationBindings(m_GameObject, curvesOnly: true);
 
             m_Playing.Clear();
             if (advance) SyncLayerTimes(states);
@@ -1144,7 +1144,7 @@ namespace UnityEngine
         /// <summary>Clips bound after the first frame may add channels: poses grow with them.</summary>
         internal void EnsureBound()
         {
-            if (m_Bindings == null && m_GameObject != null) m_Bindings = new AnimationBindings(m_GameObject);
+            if (m_Bindings == null && m_GameObject != null) m_Bindings = new AnimationBindings(m_GameObject, curvesOnly: true);
             foreach (var s in States)
                 if (s.m_Clip != null) m_Bindings.Bind(s.m_Clip);
         }
