@@ -226,7 +226,32 @@ public sealed partial class ImguiSkinProbe
         }
         finally { GUILayout.EndArea(); }
 
-        // 2) At the root OnGUI layout level (outside BeginArea and any explicit group).
+        // 2) BeginArea called while Event.current.type == EventType.Used (before an arranged BeginArea).
+        if (phase == "Repaint")
+        {
+            var current = Event.current;
+            try
+            {
+                current.type = EventType.MouseDown;
+                current.Use();
+                GUILayout.BeginArea(new Rect(30, 30, 90, 60));
+                try
+                {
+                    Write("usedArea/insideNumeric", GUILayoutUtility.GetRect(50, 12));
+                    Write("usedArea/insideLast", GUILayoutUtility.GetLastRect());
+                }
+                finally { GUILayout.EndArea(); }
+            }
+            finally { current.type = EventType.Repaint; }
+        }
+        GUILayout.BeginArea(new Rect(18, 22, 130, 70));
+        try
+        {
+            Write("usedArea/afterFirst", GUILayoutUtility.GetRect(25, 9, m_CalcPlainStyle));
+        }
+        finally { GUILayout.EndArea(); }
+
+        // 3) At the root OnGUI layout level (outside BeginArea and any explicit group).
         Write("root/before", GUILayoutUtility.GetRect(16, 6, m_CalcPlainStyle));
         if (phase == "Repaint")
         {
@@ -347,6 +372,43 @@ public sealed partial class ImguiSkinProbe
 
         HorizontalParentCase("hNarrow30", 30);
         HorizontalParentCase("hTall80", 80);
+
+        // Directly height-constrained horizontal group so SetVertical runs with available < minHeight (30 < 45).
+        void ConstrainedHorizontalCase(string name, float height)
+        {
+            var constrainedStyle = new GUIStyle { fixedHeight = height };
+            GUILayout.BeginArea(new Rect(0, 0, 260, 120));
+            try
+            {
+                GUILayout.BeginHorizontal(constrainedStyle);
+                try
+                {
+                    Write(name + "/stretchY", GUILayoutUtility.GetRect(15, 15, 45, 65, stretchY));
+                    Write(name + "/fixedY", GUILayoutUtility.GetRect(15, 15, 45, 65, fixedY));
+                    Write(name + "/maxHeightY", GUILayoutUtility.GetRect(15, 15, 45, 65, stretchY, GUILayout.MaxHeight(55)));
+                }
+                finally { GUILayout.EndHorizontal(); }
+                Write(name + "/group", GUILayoutUtility.GetLastRect());
+            }
+            finally { GUILayout.EndArea(); }
+        }
+
+        ConstrainedHorizontalCase("hConstrained30", 30);
+        ConstrainedHorizontalCase("hConstrained80", 80);
+
+        // MinWidth on a group raises an unset maxWidth to minWidth, clearing stretchWidth.
+        GUILayout.BeginArea(new Rect(0, 0, 200, 80));
+        try
+        {
+            GUILayout.BeginHorizontal(GUILayout.MinWidth(50));
+            try
+            {
+                Write("minWidthGroup/child", GUILayoutUtility.GetRect(30, 120, 12, 12, stretchX));
+            }
+            finally { GUILayout.EndHorizontal(); }
+            Write("minWidthGroup/group", GUILayoutUtility.GetLastRect());
+        }
+        finally { GUILayout.EndArea(); }
     }
 
     void RecordCalcHeightAndFallbacks(string phase)

@@ -175,9 +175,11 @@ namespace UnityEngine.Tests
             var tex = new Texture2D(4, 4);
             try
             {
-                var t1 = GUIContent.Temp(tex);
+                var t1 = GUIContent.Temp("first");
+                t1.image = tex;
                 Assert.Same(tex, t1.image);
                 var t2 = GUIContent.Temp("plain");
+                Assert.Same(t1, t2);
                 Assert.Null(t2.image);
             }
             finally { Object.DestroyImmediate(tex); }
@@ -336,6 +338,180 @@ namespace UnityEngine.Tests
                 GUILayoutUtility.GetRect(41, 14, plain);
             });
             Assert.Equal(41f, first.width);
+        }
+
+        [Fact]
+        public void MinWidthMinHeightOnGroupsAndRepeatedScrollViewCalcHeightMatchUnity()
+        {
+            var stretchX = new GUIStyle { stretchWidth = true, stretchHeight = false };
+            var stretchY = new GUIStyle { stretchWidth = false, stretchHeight = true };
+
+            // Matches Unity 6000.0.71f1 (imguiskin minWidthGroup): MinWidth(50) on a group raises its
+            // unset maxWidth from 0 to 50, so CalcWidth clears stretchWidth and caps the group at 50.
+            var parentCol = new GUILayoutGroup { isVertical = true };
+            var minWidthRow = new GUILayoutGroup(GUIStyle.none, new[] { GUILayout.MinWidth(50) }) { isVertical = false };
+            var growChild = new GUILayoutEntry(30, 120, 12, 12, stretchX, null);
+            minWidthRow.Add(growChild);
+            parentCol.Add(minWidthRow);
+            parentCol.CalcWidth();
+            Assert.Equal(0, minWidthRow.stretchWidth);
+            Assert.Equal(50f, minWidthRow.maxWidth);
+            parentCol.SetHorizontal(0, 200);
+            Assert.Equal(50f, minWidthRow.rect.width);
+            Assert.Equal(50f, growChild.rect.width);
+
+            // Symmetric MinHeight on a vertical group raises its unset maxHeight to 50 and clears stretchHeight.
+            var parentRow = new GUILayoutGroup { isVertical = false };
+            var minHeightCol = new GUILayoutGroup(GUIStyle.none, new[] { GUILayout.MinHeight(50) }) { isVertical = true };
+            var tallChild = new GUILayoutEntry(20, 20, 30, 120, stretchY, null);
+            minHeightCol.Add(tallChild);
+            parentRow.Add(minHeightCol);
+            parentRow.CalcWidth();
+            parentRow.SetHorizontal(0, 100);
+            parentRow.CalcHeight();
+            Assert.Equal(0, minHeightCol.stretchHeight);
+            Assert.Equal(50f, minHeightCol.maxHeight);
+            parentRow.SetVertical(0, 200);
+            Assert.Equal(50f, minHeightCol.rect.height);
+            Assert.Equal(50f, tallChild.rect.height);
+
+            // Leaf entry with MinWidth exceeding its initial maxWidth keeps maxWidth >= minWidth.
+            var leaf = new GUILayoutEntry(10, 50, 12, 12, new GUIStyle(), new[] { GUILayout.MinWidth(80) });
+            Assert.Equal(80f, leaf.minWidth);
+            Assert.Equal(80f, leaf.maxWidth);
+
+            // Repeated CalcHeight() inside GUIScrollGroup updates growing child minHeight/maxHeight/calcMaxHeight.
+            var scroll = new GUIScrollGroup
+            {
+                isVertical = true,
+                verticalScrollbar = new GUIStyle { fixedWidth = 15f },
+                horizontalScrollbar = new GUIStyle { fixedHeight = 15f },
+                allowHorizontalScroll = false,
+                allowVerticalScroll = true,
+            };
+            var nested = new GUILayoutGroup(GUIStyle.none, null) { isVertical = true };
+            var growing = new DynamicHeightEntry(20, 40, stretchY);
+            nested.Add(growing);
+            scroll.Add(nested);
+
+            scroll.CalcWidth();
+            scroll.SetHorizontal(0, 100);
+            scroll.CalcHeight();
+            Assert.True(nested.stretchHeight > 0);
+            Assert.Equal(40f, nested.maxHeight);
+
+            growing.CurrentHeight = 120f;
+            scroll.CalcHeight();
+            Assert.Equal(120f, nested.minHeight);
+            Assert.Equal(120f, nested.maxHeight);
+            Assert.Equal(120f, scroll.calcMaxHeight);
+        }
+
+        sealed class DynamicHeightEntry : GUILayoutEntry
+        {
+            public float CurrentHeight;
+            public DynamicHeightEntry(float minH, float initialH, GUIStyle style) : base(20, 20, minH, initialH, style) =>
+                CurrentHeight = initialH;
+            public override void CalcHeight() => minHeight = maxHeight = CurrentHeight;
+        }
+
+        [Fact]
+        public void TryConvertStyleToSettingsResetsDirtiedTextHandleSettings()
+        {
+            var tgs = UnityEngine.TextCore.Text.TextHandle.settings;
+            tgs.extraPadding = 1.25f;
+            tgs.emojiFallbackSupport = false;
+            tgs.fontWeight = UnityEngine.TextCore.Text.TextFontWeight.Heavy;
+            tgs.isEditorRenderingModeBitmap = true;
+            tgs.pixelsPerPoint = 3f;
+            tgs.parseControlCharacters = true;
+            tgs.isRightToLeft = true;
+            tgs.isPlaceholder = true;
+            tgs.characterSpacing = 4f;
+            tgs.wordSpacing = 5f;
+            tgs.paragraphSpacing = 6f;
+            tgs.shouldConvertToLinearSpace = true;
+
+            var style = new GUIStyle { fontSize = 12, wordWrap = true, richText = false };
+            // Even when no native font asset is loaded (returns false), or when a font is absent,
+            // verify a real font asset resets every dirtied field on TextHandle.settings.
+            var font = new Font("TestResetFont");
+            var textSettings = ScriptableObject.CreateInstance<UnityEngine.TextCore.Text.TextSettings>();
+            var fontAsset = ScriptableObject.CreateInstance<UnityEngine.TextCore.Text.FontAsset>();
+            textSettings.m_FontReferences.Add(new UnityEngine.TextCore.Text.TextSettings.FontReferenceMap(font, fontAsset));
+            var prevGetter = IMGUITextHandle.GetEditorTextSettings;
+            IMGUITextHandle.GetEditorTextSettings = () => textSettings;
+            try
+            {
+                style.font = font;
+                bool ok = IMGUITextHandle.TryConvertStyleToSettings(
+                    tgs, style, Color.white, new UnityEngine.TextCore.Text.RenderedText("hello", "\u200B"), new Rect(0, 0, 80, 100));
+                Assert.True(ok);
+                Assert.Equal(6f, tgs.extraPadding);
+                Assert.True(tgs.emojiFallbackSupport);
+                Assert.Equal(UnityEngine.TextCore.Text.TextFontWeight.Regular, tgs.fontWeight);
+                Assert.False(tgs.isEditorRenderingModeBitmap);
+                Assert.Equal(GUIUtility.pixelsPerPoint, tgs.pixelsPerPoint);
+                Assert.False(tgs.parseControlCharacters);
+                Assert.False(tgs.isRightToLeft);
+                Assert.False(tgs.isPlaceholder);
+                Assert.Equal(0f, tgs.characterSpacing);
+                Assert.Equal(0f, tgs.wordSpacing);
+                Assert.Equal(0f, tgs.paragraphSpacing);
+                Assert.False(tgs.shouldConvertToLinearSpace);
+                Assert.True(tgs.isIMGUI);
+            }
+            finally
+            {
+                IMGUITextHandle.GetEditorTextSettings = prevGetter;
+                Object.DestroyImmediate(fontAsset);
+                Object.DestroyImmediate(textSettings);
+                Object.DestroyImmediate(font);
+            }
+        }
+
+        [Fact]
+        public void UsedEventBeginAreaDoesNotMutateWindowsOrAdvanceCursor()
+        {
+            using var _ = TestRelease.Pin(TestRelease.Measured);
+            const int scope = 9105;
+            var style = new GUIStyle { stretchWidth = false };
+            Rect insideUsed = Rect.zero;
+            Rect afterUsedArea = Rect.zero;
+            int windowsBeforeUsed = 0;
+            int windowsAfterUsed = 0;
+
+            RunOnGuiPass(scope, EventType.Layout, () =>
+            {
+                GUILayout.BeginArea(new Rect(18, 22, 130, 70));
+                try { GUILayoutUtility.GetRect(25, 9, style); }
+                finally { GUILayout.EndArea(); }
+            });
+
+            RunOnGuiPass(scope, EventType.Repaint, () =>
+            {
+                windowsBeforeUsed = GUILayoutUtility.current.windows.entries.Count;
+                var ev = Event.current;
+                try
+                {
+                    ev.type = EventType.MouseDown;
+                    ev.Use();
+                    GUILayout.BeginArea(new Rect(30, 30, 90, 60));
+                    try { insideUsed = GUILayoutUtility.GetRect(50, 12); }
+                    finally { GUILayout.EndArea(); }
+                }
+                finally { ev.type = EventType.Repaint; }
+                windowsAfterUsed = GUILayoutUtility.current.windows.entries.Count;
+
+                GUILayout.BeginArea(new Rect(18, 22, 130, 70));
+                try { afterUsedArea = GUILayoutUtility.GetRect(25, 9, style); }
+                finally { GUILayout.EndArea(); }
+            });
+
+            Assert.Equal(1, windowsBeforeUsed);
+            Assert.Equal(1, windowsAfterUsed);
+            Assert.Equal(new Rect(0, 0, 1, 1), insideUsed);
+            Assert.Equal(new Rect(0, 0, 25, 9), afterUsedArea);
         }
 
         [Fact]

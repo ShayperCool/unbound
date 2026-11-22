@@ -70,18 +70,21 @@ logging an error, contrasting with `GUIContent.none` and tooltip-only content. P
 `"Style.DrawPrefixLabel may not be called with GUIContent that is null."` on Repaint only.
 
 The Used-event outside-group controls run directly inside `GUILayout.BeginArea` (with no nested
-horizontal or vertical group) and at the root `OnGUI` layout level, checking `GetRect` (numeric and
-content overloads), `GetAspectRect`, `GetLastRect`, `EditorGUILayout.LabelField` and
+horizontal or vertical group), around a `GUILayout.BeginArea`/`EndArea` called while the event is
+already `Used`, and at the root `OnGUI` layout level, checking `GetRect` (numeric and content
+overloads), `GetAspectRect`, `GetLastRect`, `EditorGUILayout.LabelField` and
 `EditorGUILayout.PrefixLabel` after `Event.Use()`, then restoring Repaint to confirm the arranged
 cursor did not advance and that the root top-level group caps its width to `Mathf.Min(Screen.width /
 pixelsPerPoint, topLevel.maxWidth)`.
 
-The narrow-parent layout controls check stretchable, fixed, `ExpandWidth(false)`/`ExpandHeight(false)`
-and `MaxWidth`/`MaxHeight` entries and nested horizontal/vertical groups under narrow (`100`, `30`)
-and wide (`200`, `80`) parents. A stretchable child takes the parent's available width or height
-without clamping up to its minimum size; a non-stretchable child clamps to `[min, max]`; a group with
-`maxWidth == 0` (or `maxHeight == 0`) propagates its children's and style's stretchability, while a
-non-zero max option clears stretchability.
+The narrow-parent layout controls check stretchable, fixed, `ExpandWidth(false)`/`ExpandHeight(false)`,
+`MinWidth` and `MaxWidth`/`MaxHeight` entries and nested horizontal/vertical groups under narrow
+(`100`, `30`) and wide (`200`, `80`) parents, including a fixed-height (`30` and `80`) horizontal
+group so `SetVertical` runs with `available < minHeight`. A stretchable child takes the parent's
+available width or height without clamping up to its minimum size; a non-stretchable child clamps to
+`[min, max]`; a group with `maxWidth == 0` (or `maxHeight == 0`) propagates its children's and
+style's stretchability, while a non-zero `maxWidth`/`maxHeight` (including `MinWidth` raising an
+unset `maxWidth` to `minWidth`) or fixed size clears stretchability.
 
 The `GUIStyle.CalcHeight` and Linux OS fallback controls record `Font.GetOSFallbacks()` on Linux, the
 `LegacyRuntime` TextCore `FontAsset` face metrics (`FreeSans`, honoring `OS/2` `USE_TYPO_METRICS`),
