@@ -76,7 +76,10 @@ On the 6000.0 family, Unbound repairs measured groups before startup indexing
 and compilation using the authored metadata. Each replacement uses an atomic
 rename from the project cache. An interrupted import starts again from the GUIDs
 currently on disk. The gate compares the reference paths, emitted diagnostics
-and metadata bytes, and checks graph inspection after import.
+and metadata bytes, and checks graph inspection after import. The ordinary
+profile includes an opaque `Library/SourceAssetDB` file in its disposable
+project. It must match the same fresh-import reference and preserve the file
+byte for byte.
 
 Quoted tokens, mixed asset types, aliased paths, groups outside the measured
 package sources, and failed reads or writes produce a diagnostic and retain

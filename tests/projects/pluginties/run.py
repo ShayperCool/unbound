@@ -442,13 +442,21 @@ def gate(run, release):
     return 0
 
 
-def gate_conflicts(run, release, linked_assets=False):
+def gate_conflicts(run, release, linked_assets=False, *, existing_unity_database=False):
     project = run/'project'
     before = generate(project, release, conflicts=True, linked_assets=linked_assets)
+    database = project/'Library'/'SourceAssetDB'
+    database_contents = b'opaque Unity asset database contents for the import control\n'
+    if existing_unity_database:
+        database.parent.mkdir(exist_ok=True)
+        database.write_bytes(database_contents)
     cli = engine_cli()
     cache = run/'cache'
     with registry_package(project) as config:
-        return compare_import(run, project, release, before, cli, cache, config, linked_assets)
+        result = compare_import(run, project, release, before, cli, cache, config, linked_assets)
+    if existing_unity_database and database.read_bytes() != database_contents:
+        raise RuntimeError('plugin GUID import modified the Unity asset database')
+    return result
 
 
 def fallback_project(project, release, second_asset, second_guid, guid):
@@ -565,7 +573,7 @@ def main():
     if args.conflicts:
         return gate_conflicts(run, args.release, args.linked_assets)
     return (gate(run, args.release)
-            or gate_conflicts(run/'guid-import', args.release)
+            or gate_conflicts(run/'guid-import', args.release, existing_unity_database=True)
             or gate_conflicts(run/'linked-assets', args.release, linked_assets=True)
             or gate_fallbacks(run/'fallbacks', args.release))
 
