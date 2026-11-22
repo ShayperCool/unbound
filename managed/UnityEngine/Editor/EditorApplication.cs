@@ -61,16 +61,6 @@ namespace UnityEditor
             ObjectChangeEvents.Publish();
             try { InternalUpdate?.Invoke(); }
             catch (Exception e) { Debug.LogException(e); }
-            var calls = delayCall;
-            delayCall = null;
-            if (calls != null)
-            {
-                foreach (CallbackFunction call in calls.GetInvocationList())
-                {
-                    try { call(); }
-                    catch (Exception e) { Debug.LogException(e); }
-                }
-            }
             if (update != null)
             {
                 foreach (CallbackFunction call in update.GetInvocationList())
@@ -79,6 +69,18 @@ namespace UnityEditor
                     try { call(); }
                     catch (Exception e) { Debug.LogException(e); }
                     if (Trace.PerfOn) Trace.Perf("EditorApplication.update " + call.Method.DeclaringType?.FullName + "." + call.Method.Name, start);
+                }
+            }
+            // delayCall runs after update: one registered by an update handler runs in the same
+            // update (matches the Unity 6000.0.71f1 Editor, tests/projects/editorhooks frame1).
+            var calls = delayCall;
+            delayCall = null;
+            if (calls != null)
+            {
+                foreach (CallbackFunction call in calls.GetInvocationList())
+                {
+                    try { call(); }
+                    catch (Exception e) { Debug.LogException(e); }
                 }
             }
         }
