@@ -6,6 +6,9 @@
 {"key": "config.overwrite.value", "value": "Material:MatEdit"}
 {"key": "config.names", "value": "com.probe.asset,com.probe.data"}
 {"key": "config.removeMissing", "value": false}
+{"key": "config.notPersisted", "value": "throws Exception: Cannot add non-persisted config object with name 'com.probe.transient'."}
+{"key": "config.null", "value": "throws Exception: Cannot add null config object with name 'com.probe.null'."}
+{"key": "config.namesAfterRefused", "value": "com.probe.asset,com.probe.data"}
 {"key": "config.beforeSave.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
 {"key": "config.saved.file", "value": "754918cc780b0de9f63f27d1848ef2a25ff1610b2ab3519fe0252f15c9c177cd"}
 {"key": "config.remove", "value": true}

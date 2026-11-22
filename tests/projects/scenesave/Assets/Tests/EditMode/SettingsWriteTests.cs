@@ -37,6 +37,11 @@ public class SettingsWriteTests
         EditorBuildSettings.AddConfigObject("com.probe.asset", data, false);
         ProbeLog.Row("config.names", string.Join(",", EditorBuildSettings.GetConfigObjectNames().OrderBy(n => n, System.StringComparer.Ordinal)));
         ProbeLog.Row("config.removeMissing", EditorBuildSettings.RemoveConfigObject("com.probe.none"));
+        var transient = ScriptableObject.CreateInstance<ProbeData>();
+        ProbeLog.Try("config.notPersisted", () => { EditorBuildSettings.AddConfigObject("com.probe.transient", transient, true); return "done"; });
+        ProbeLog.Try("config.null", () => { EditorBuildSettings.AddConfigObject("com.probe.null", null, true); return "done"; });
+        ProbeLog.Row("config.namesAfterRefused", string.Join(",", EditorBuildSettings.GetConfigObjectNames().OrderBy(n => n, System.StringComparer.Ordinal)));
+        Object.DestroyImmediate(transient);
         ProbeLog.Row("config.beforeSave.file", ProbeLog.Hash(BuildSettings));
         AssetDatabase.SaveAssets();
         ProbeLog.Snapshot("config.saved.file", BuildSettings);
