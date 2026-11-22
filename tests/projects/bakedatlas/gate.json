@@ -2,5 +2,12 @@
   "commands": [
     "python3 tests/projects/bakedatlas/bake_atlas.py check"
   ],
-  "summary": "bakedatlas: \\d+/\\d+ records match.*"
+  "summary": "bakedatlas: \\d+/\\d+ records match.*",
+  "engine_paths": [
+    "crates/unbound-gi/src/baked",
+    "crates/unbound-runtime/src/baked_gi.rs",
+    "managed/UnityEngine/Graphics/BakedAtlas.cs",
+    "managed/UnityEngine/Graphics/RealtimeGIBake.cs",
+    "managed/UnityEngine/Graphics/LightingSettings.cs"
+  ]
 }
