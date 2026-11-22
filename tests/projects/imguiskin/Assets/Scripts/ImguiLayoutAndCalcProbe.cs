@@ -673,6 +673,34 @@ public sealed partial class ImguiSkinProbe
             foreach (var t in new[] { "fi", "ffl", "e\u0301", "a\u0308\u0301" })
                 Put("calcText/width/features/" + string.Join("-", t.Select(c => ((int)c).ToString("X4", Inv))), F(bare.CalcSize(new GUIContent(t)).x));
 
+            // Fonts other than the default: a project font, and fonts no text can be generated
+            // with (one without a face, one naming a family that is not installed). Sizes, and
+            // what measuring and drawing them logs.
+            void FontCase(string name, Font font)
+            {
+                var capture = new LogCapture();
+                var previous = Debug.unityLogger.logHandler;
+                Debug.unityLogger.logHandler = capture;
+                string values;
+                try
+                {
+                    var style = new GUIStyle { font = font, fontSize = 14 };
+                    var wrapping = new GUIStyle(style) { wordWrap = true };
+                    var size = style.CalcSize(new GUIContent("Hello World"));
+                    style.CalcMinMaxWidth(new GUIContent("Hello World"), out float minWidth, out float maxWidth);
+                    float height = wrapping.CalcHeight(wrapContent, 83f);
+                    values = $"[{F(style.lineHeight)},{F(size.x)},{F(size.y)},{F(minWidth)},{F(maxWidth)},{F(height)}]";
+                    style.Draw(new Rect(0, 0, 100, 20), new GUIContent("Hello World"), false, false, false, false);
+                    style.Draw(new Rect(0, 0, 100, 20), new GUIContent("Hello World"), false, false, false, false);
+                }
+                finally { Debug.unityLogger.logHandler = previous; }
+                Put("calcText/font/" + name, values);
+                Put("calcText/font/" + name + "/log", "[" + string.Join(",", capture.Entries.Select(Json)) + "]");
+            }
+            FontCase("project", Resources.Load<Font>("ProbeSerif"));
+            FontCase("empty", new Font());
+            FontCase("unknownFamily", new Font("No Such Font Family"));
+
             // The font asset IMGUI generates the default font's text with: its face and the
             // metrics of a few glyphs (the widths above are sums of these advances).
             RecordImguiFontAsset();

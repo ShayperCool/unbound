@@ -2,5 +2,11 @@
   "The Editor answers NaN: its offset of the text inside the position is not a number in this capture (first Repaint of a Play mode Game view), so GUIStyle.GetCursorPixelPosition is not one either. Unbound answers the position. The text handle's own cursor positions (calcText/cursor/handle) match. Follow-up: measure the call inside a drawn text field.": [
     "calcText/cursor/public",
     "calcText/cursor/text"
+  ],
+  "A font no font asset can be made for: the Editor's line height and heights are 0 and nothing of the text is generated, as in Unbound, but its width answers are what the text measured before left behind (69 is the project font row's width), and it tries the font and logs its two or three lines again with every text. Unbound answers 0 and tries and logs once per font. Drawing such a text in the Editor shows the glyphs of the text generated before it; Unbound draws nothing. Not chased: the answers depend on unrelated earlier text.": [
+    "calcText/font/empty",
+    "calcText/font/empty/log",
+    "calcText/font/unknownFamily",
+    "calcText/font/unknownFamily/log"
   ]
 }

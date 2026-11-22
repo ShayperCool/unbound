@@ -117,6 +117,14 @@ its face, glyph metrics and the number of pair, ligature and mark records, which
 such characters were drawn). `constraint/*` gives non-wrapping content `MaxWidth` and
 `MaxHeight` options ([`GUILayout.MaxWidth`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUILayout.MaxWidth.html)).
 
+`calcText/font/*` measures and draws other fonts: a project font (Liberation Serif, see
+FONT-LICENSE.txt) and two fonts no font asset can be made for (one without a face, one naming a
+family that is not installed), with what the Editor logs. The project font's rows and its cells
+of `text-paint.png` compare. For the other two the Editor's line height and heights are 0; its
+widths are leftovers of the text measured before, it logs with every text, and drawing such a
+text showed the glyphs of the text generated before it. Those four rows are listed in
+`residuals.json`; no image cell records that drawing.
+
 The cursor controls draw a text field's content and ask for cursor positions.
 [`GUIStyle.GetCursorPixelPosition`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUIStyle.GetCursorPixelPosition.html)
 answers NaN in this capture (`cursor/public`; `cursor/text` shows that the text's offset inside

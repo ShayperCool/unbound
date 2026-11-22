@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>Draws texts of the game skin every Repaint and writes the Game view's pixels of that
 /// region once, at the end of a later frame: IMGUI text as it is rasterized (sizes, a bold and a
-/// tinted style, wrapping, alignments, a clipped and a disabled text), and images placed left of,
+/// tinted style, wrapping, alignments, a clipped and a disabled text, a project font), and images placed left of,
 /// above and without text: aligned, scaled into their room, and at an icon size.</summary>
 public sealed class ImguiTextPaint : MonoBehaviour
 {
@@ -15,7 +15,7 @@ public sealed class ImguiTextPaint : MonoBehaviour
     string m_Dir;
     Texture2D m_Back;
     Texture2D m_Small, m_Large;
-    GUIStyle m_Plain, m_Big, m_Bold, m_Wrap, m_Centered, m_Right, m_Tinted, m_Clipped;
+    GUIStyle m_Plain, m_Big, m_Bold, m_Wrap, m_Centered, m_Right, m_Tinted, m_Clipped, m_Serif, m_SerifBold;
     GUIStyle m_ImageLeft, m_ImageLeftCentered, m_ImageLeftMiddle, m_ImageAbove, m_ImageLeftWrap, m_ImageOnly;
 
     public bool Done { get; private set; }
@@ -52,6 +52,9 @@ public sealed class ImguiTextPaint : MonoBehaviour
             m_Right = new GUIStyle(m_Plain) { alignment = TextAnchor.LowerRight };
             m_Tinted = new GUIStyle(m_Plain) { normal = { textColor = new Color(1f, 0.8f, 0.2f, 0.75f) } };
             m_Clipped = new GUIStyle(m_Plain) { clipping = TextClipping.Clip };
+            var serif = Resources.Load<Font>("ProbeSerif");
+            m_Serif = new GUIStyle(m_Plain) { font = serif, fontSize = 14 };
+            m_SerifBold = new GUIStyle(m_Serif) { fontStyle = FontStyle.BoldAndItalic };
             m_Small = Quadrants(20);
             m_Large = Quadrants(40);
             m_ImageLeft = new GUIStyle(m_Plain) { imagePosition = ImagePosition.ImageLeft };
@@ -70,6 +73,9 @@ public sealed class ImguiTextPaint : MonoBehaviour
         Draw(m_Right, new Rect(160, 26, 156, 24), "Lower right");
         Draw(m_Tinted, new Rect(160, 50, 156, 16), "Tinted AV To fi");
         Draw(m_Clipped, new Rect(160, 68, 60, 16), "Clipped at the rect");
+        // A project font, regular and in a style it has no face for.
+        Draw(m_Serif, new Rect(98, 70, 60, 18), "Serif gy");
+        Draw(m_SerifBold, new Rect(98, 90, 60, 18), "BoldIt");
         bool enabled = GUI.enabled;
         GUI.enabled = false;
         Draw(GUI.skin.label, new Rect(160, 86, 156, 22), "Disabled label");
