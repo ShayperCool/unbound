@@ -15,8 +15,8 @@ does not bake lightmaps yet: its bake writes the layout to
 Library/Unbound/BakedGI/<scene GUID>/atlas.json, from which the candidate takes each renderer's
 index, scale and offset and the lightmaps' sizes. A renderer without a lightmap (index outside
 0..65534 in the Editor, absent from the layout in Unbound) is recorded as `none`; 65534 is a
-renderer with Scale In Lightmap 0, which takes its place without a lightmap. Every record is
-compared exactly."""
+renderer laid out without a lightmap (Scale In Lightmap 0, or lit by light probes), compared with
+its scale and offset. Every record is compared exactly."""
 import argparse
 import json
 import os
