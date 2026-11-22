@@ -25,6 +25,8 @@ public sealed partial class ImguiSkinProbe : MonoBehaviour
     bool m_Done;
     bool m_RecordedLayout;
     bool m_RecordedRepaint;
+    bool m_RecordedPass2Layout;
+    bool m_RecordedPass2Repaint;
     ReorderableList m_ListA;
     ReorderableList m_ListB;
     int m_ListAId;
@@ -54,20 +56,34 @@ public sealed partial class ImguiSkinProbe : MonoBehaviour
             RecordListFocus("Layout");
             RecordPropertyScopes("Layout");
             RecordEditorLayoutGroups("Layout");
+            RecordLayoutAndCalc("Layout");
+            RecordFocusIdPass1("Layout");
         }
-        else if (Event.current.type == EventType.Repaint && !m_RecordedRepaint)
+        else if (Event.current.type == EventType.Repaint && m_RecordedLayout && !m_RecordedRepaint)
         {
             m_RecordedRepaint = true;
             RecordPropertyHooks("Repaint");
             RecordListFocus("Repaint");
             RecordPropertyScopes("Repaint");
             RecordEditorLayoutGroups("Repaint");
+            RecordLayoutAndCalc("Repaint");
+            RecordFocusIdPass1("Repaint");
+        }
+        else if (Event.current.type == EventType.Layout && m_RecordedRepaint && !m_RecordedPass2Layout)
+        {
+            m_RecordedPass2Layout = true;
+            RecordFocusIdPass2("Layout");
+        }
+        else if (Event.current.type == EventType.Repaint && m_RecordedPass2Layout && !m_RecordedPass2Repaint)
+        {
+            m_RecordedPass2Repaint = true;
+            RecordFocusIdPass2("Repaint");
         }
     }
 
     void Update()
     {
-        if (m_Done || ((!m_RecordedLayout || !m_RecordedRepaint) && Time.frameCount < 600)) return;
+        if (m_Done || ((!m_RecordedLayout || !m_RecordedRepaint || !m_RecordedPass2Layout || !m_RecordedPass2Repaint) && Time.frameCount < 600)) return;
         m_Done = true;
         RecordListFocus("Update");
         Put("onGUI", Json(m_Skin != null ? "called" : "not called"));

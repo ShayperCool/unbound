@@ -42,8 +42,8 @@ and a click below the label. It also records secondary clicks and text editing s
 The overloads without an ID use the next control. The probe exercises a text field,
 a passive button, an image-only prefix, and a reused GUIContent whose text changes
 before the next control. It also records a pending label that reaches the next pass.
-The explicit style transfers focus on the first text field. In the later field's
-focus comparison, Unity retains the previous control and Unbound focuses the field.
+The explicit style transfers focus on the first text field, and a reused control ID
+after the layout changes preserves its initial focus eligibility.
 [Unity 6000.0 `GUI.GetNameOfFocusedControl`](https://docs.unity.cn/6000.0/Documentation/ScriptReference/GUI.GetNameOfFocusedControl.html)
 
 The `HandlePrefixLabel` controls place the label outside the total rectangle and
@@ -64,8 +64,8 @@ the value column at two label widths and when the prefix is empty or only has a
 tooltip. An explicit style moves the value by its padding. The automatic controls
 compare single-line and wrapping rows. Width and height options are exercised
 with a style whose own height differs from the requested height. Independent
-`GUIStyle.CalcHeight` and `GUILayout` controls reproduce the wrapped height and
-narrow group width differences listed in `residuals.json`. A separate input
+`GUIStyle.CalcHeight` and `GUILayout` controls check wrapped text heights and
+narrow horizontal group widths alongside the `LabelField` rows. A separate input
 step calls a wrapping label after consuming MouseDown and checks the call
 returns with the event still Used.
 [Unity 6000.0 `EditorGUI.LabelField`](https://docs.unity3d.com/cn/6000.0/ScriptReference/EditorGUI.LabelField.html)
