@@ -64,6 +64,7 @@ public sealed class StackMessages : StackMessagesBase
             return;
         }
 
+        if (phase != "late") return;
         Put("update.calls", s_Updates.ToString());
         Rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(s_Output, "values.jsonl"), Rows);

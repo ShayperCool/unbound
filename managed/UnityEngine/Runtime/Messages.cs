@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using UnityEngine;
@@ -98,12 +99,8 @@ namespace Unbound.Runtime
             var image = Find(type, "OnRenderImage", new[] { typeof(RenderTexture), typeof(RenderTexture) });
             if (image != null)
             {
-                var target = Expression.Parameter(typeof(MonoBehaviour));
-                var source = Expression.Parameter(typeof(RenderTexture));
-                var destination = Expression.Parameter(typeof(RenderTexture));
-                var call = Expression.Call(Expression.Convert(target, image.DeclaringType), image, source, destination);
-                m.OnRenderImage = Expression.Lambda<Action<MonoBehaviour, RenderTexture, RenderTexture>>(call,
-                    tailCall: true, parameters: new[] { target, source, destination }).Compile();
+                m.OnRenderImage = Compile<Action<MonoBehaviour, RenderTexture, RenderTexture>>(
+                    image, typeof(void), typeof(RenderTexture), typeof(RenderTexture));
                 m.OpaqueImageEffect = image.IsDefined(typeof(ImageEffectOpaque), false);
             }
             m.OnApplicationFocus = BoolAction(type, "OnApplicationFocus");
@@ -113,7 +110,7 @@ namespace Unbound.Runtime
                 if (typeof(IEnumerator).IsAssignableFrom(start.ReturnType))
                     m.StartCoroutine = Compile<Func<MonoBehaviour, IEnumerator>>(start, typeof(IEnumerator));
                 else
-                    m.Start = Compile<Action<MonoBehaviour>>(start, null);
+                    m.Start = Compile<Action<MonoBehaviour>>(start, typeof(void));
             }
             m.ExecutionOrder = OrderOf(type);
             WarnNotSent(type);
@@ -214,26 +211,44 @@ namespace Unbound.Runtime
         static Action<MonoBehaviour> Action(Type type, string name)
         {
             var method = Find(type, name, Type.EmptyTypes);
-            return method == null ? null : Compile<Action<MonoBehaviour>>(method, null);
+            return method == null ? null : Compile<Action<MonoBehaviour>>(method, typeof(void));
         }
 
         static Action<MonoBehaviour, bool> BoolAction(Type type, string name)
         {
             var method = Find(type, name, new[] { typeof(bool) });
-            if (method == null) return null;
-            var target = Expression.Parameter(typeof(MonoBehaviour));
-            var value = Expression.Parameter(typeof(bool));
-            var call = Expression.Call(Expression.Convert(target, method.DeclaringType), method, value);
-            return Expression.Lambda<Action<MonoBehaviour, bool>>(call, tailCall: true, parameters: new[] { target, value }).Compile();
+            return method == null ? null : Compile<Action<MonoBehaviour, bool>>(method, typeof(void), typeof(bool));
         }
 
-        static T Compile<T>(MethodInfo method, Type returnType) where T : Delegate
+        static T Compile<T>(MethodInfo method, Type returnType, params Type[] argumentTypes) where T : Delegate
         {
-            var target = Expression.Parameter(typeof(MonoBehaviour));
-            Expression call = Expression.Call(Expression.Convert(target, method.DeclaringType), method);
-            if (returnType != null && call.Type != returnType)
-                call = Expression.Convert(call, returnType);
-            return Expression.Lambda<T>(call, tailCall: true, parameters: new[] { target }).Compile();
+            var parameters = new ParameterExpression[argumentTypes.Length + 1];
+            parameters[0] = Expression.Parameter(typeof(MonoBehaviour));
+            for (int i = 0; i < argumentTypes.Length; i++)
+                parameters[i + 1] = Expression.Parameter(argumentTypes[i]);
+            var receiver = Expression.Convert(parameters[0], method.DeclaringType);
+            IEnumerable<Expression> arguments = parameters.Skip(1);
+
+            Expression call;
+            if (method.ReturnType == returnType)
+            {
+                call = Expression.Call(receiver, method, arguments);
+            }
+            else
+            {
+                // Adapting the result needs the wrapper's frame after the call. Invoke a cached
+                // open delegate here so the JIT cannot inline the script into the wrapper.
+                var signature = new Type[parameters.Length + 1];
+                signature[0] = method.DeclaringType;
+                argumentTypes.CopyTo(signature, 1);
+                signature[^1] = method.ReturnType;
+                var callback = method.CreateDelegate(Expression.GetDelegateType(signature));
+                call = Expression.Invoke(Expression.Constant(callback), arguments.Prepend(receiver));
+                if (returnType != typeof(void))
+                    call = Expression.Convert(call, returnType);
+            }
+
+            return Expression.Lambda<T>(call, tailCall: true, parameters: parameters).Compile();
         }
     }
 

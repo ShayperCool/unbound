@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Record the actual script frame in direct and inherited Unity messages."""
 import argparse
+import os
 from pathlib import Path
 import sys
 
@@ -61,6 +62,9 @@ def main():
         value_probe.record(PROBE, 'RecordStackMessages.Record', CAPTURE, str(out), batch=True,
                            macos_batch=True, base=BASE)
         return 0
+    # Check the optimizing JIT even when the local Editor preference requests Debug scripts.
+    os.environ['UNBOUND_CODE_OPTIMIZATION'] = 'release'
+    os.environ['DOTNET_TieredCompilation'] = '0'
     return value_probe.gate(PROBE, CAPTURE, str(out), 0, ['--headless', '8'], base=BASE)
 
 
