@@ -103,7 +103,7 @@ namespace UnityEngine.AI
             get => m_AreaMask;
             set
             {
-                if (m_AreaMask != value) m_OwnPathStale = true;
+                if (m_AreaMask != value) AreaSettingsChanged();
                 m_AreaMask = value;
             }
         }
@@ -173,7 +173,7 @@ namespace UnityEngine.AI
             }
             if (areaIndex < 0 || areaIndex >= 32) return;
             // The agent's own area costs changed: its path is stale (unmeasured).
-            if (m_AreaCosts[areaIndex] != areaCost) m_OwnPathStale = true;
+            if (m_AreaCosts[areaIndex] != areaCost) AreaSettingsChanged();
             m_AreaCosts[areaIndex] = areaCost;
         }
 
@@ -201,7 +201,7 @@ namespace UnityEngine.AI
                     s_WithOwnAreaCosts.RemoveAt(i);
                     continue;
                 }
-                if (agent.m_AreaCosts[areaIndex] != cost) agent.m_OwnPathStale = true;
+                if (agent.m_AreaCosts[areaIndex] != cost) agent.AreaSettingsChanged();
                 agent.m_AreaCosts[areaIndex] = cost;
             }
         }
@@ -446,15 +446,21 @@ namespace UnityEngine.AI
         // every agent's path stale at once; a newly applied path clears staleness, including
         // a route repaired after a link on it is deactivated at the next update; one
         // without a destination (never given, ResetPath, Warp) is not stale from its next agent
-        // update; the agent's own areaMask and area costs make its path stale until its next
-        // destination; a stale partial path is searched again near its end (RepathStalePartial).
-        // Unbound's choices (unmeasured): area cost changes count as link changes; only a changed
-        // value counts; NavMesh data added or removed does not.
+        // update. Area mask and cost changes invalidate a reported route, including the current
+        // route while another is pending (navlinks staleArea). A stale partial path is searched
+        // again near its end (RepathStalePartial). Other release families are unmeasured.
         bool m_OwnPathStale;
         int m_PathStaleVersion;
 
         public bool isPathStale =>
             m_Crowd != null && (m_OwnPathStale || m_PathStaleVersion != NavWorld.PathStaleVersion);
+
+        // Area changes can invalidate a route reported this frame, including the route
+        // followed while another request is pending (navlinks staleArea, Unity 6000.0.71f1).
+        internal void AreaSettingsChanged()
+        {
+            if (!Compat.NavMeshAreaStalenessMeasured || ReportsPath) m_OwnPathStale = true;
+        }
 
         /// <summary>A new path was applied: it is not stale.</summary>
         internal void PathRenewed() => CatchUpStaleness();
@@ -1570,6 +1576,11 @@ namespace Unbound.Runtime
         internal static void SyncQuery(NavMeshAgent agent)
         {
             if (Compat.NavMeshAgentQuerySyncMeasured) SyncPosition(agent);
+        }
+
+        internal static void MarkAreaCostsStale()
+        {
+            foreach (var agent in s_Agents) agent.AreaSettingsChanged();
         }
 
         static void SyncPosition(NavMeshAgent agent)

@@ -87,8 +87,8 @@ namespace Unbound.Runtime
         internal static int TileVersion;
         /// <summary>Changes on every change of the meshes (a rebuild or tiles cut again).</summary>
         internal static int Changes => Version + TileVersion;
-        /// <summary>Bumped by the NavMesh changes that make every agent's path stale
-        /// (NavMeshAgent.isPathStale): area costs changed, links enabled, disabled or activated.</summary>
+        /// <summary>World changes that make each agent's path stale. The measured 6000.0 family
+        /// uses this version for link changes and tracks area changes per route.</summary>
         internal static int PathStaleVersion;
 
         internal static void MarkPathsStale() => PathStaleVersion++;

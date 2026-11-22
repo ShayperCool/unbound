@@ -403,13 +403,20 @@ python3 tests/projects/navlinks/projection.py publish --profile staleness --rele
 UNBOUND_CLI=.../unbound python3 tests/projects/navlinks/projection.py gate --profile staleness --release 6000.0.71f1
 ```
 
-Two independent Editor runs agree on all 2,819 values. Both frame-130
+Two independent Editor runs agree on all 3,104 values. Both frame-130
 stale values now match in the original profile. The remaining 172 values
 come from `crosstile` and `areamask`.
 
-Unity documents link changes and position coupling. The exact timing of
-these query side effects is measured for the 6000.0 family. Idle area-mask
-and per-agent cost changes are a separate open case.
+A no-op transform write on a cloned parent preserves the pending state
+just as on the original parent. Area mask, per-agent cost and global
+cost changes mark a reported route stale. The controls distinguish a
+pending first request from a pending replacement for an active route,
+and cover same-frame path assignment, arrival, ResetPath and a
+subsequent link change.
+
+Unity documents link and area changes and position coupling. The timing
+of these query and area-change effects is measured for the 6000.0
+family.
 [isPathStale](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/ispathstale),
 [nextPosition](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/nextposition),
 [updatePosition](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/updateposition).

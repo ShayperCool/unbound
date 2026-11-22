@@ -316,6 +316,10 @@ namespace Unbound.Runtime
         /// This can refresh a standing corridor's staleness (navlinks, Unity 6000.0.71f1).</summary>
         internal static bool NavMeshAgentQuerySyncMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Area changes invalidate reported routes, including one followed during
+        /// a new request (navlinks, Unity 6000.0.71f1).</summary>
+        internal static bool NavMeshAreaStalenessMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Enabling an agent starts its reported velocity at zero, measured by
         /// tests/projects/navlinks on 6000.0.71f1. Other releases retain the previous,
         /// unmeasured velocity report until the next update.</summary>
