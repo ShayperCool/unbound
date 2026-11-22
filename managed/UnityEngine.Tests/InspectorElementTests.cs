@@ -105,6 +105,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void ACustomEditorsGUIIsTheInspectorsAndItsIMGUIIsReported()
         {
+            // The IMGUI container's measured classes.
+            using var release = TestRelease.Pin(TestRelease.Measured);
             using var f = new Fixture();
             var uieEditor = Editor.CreateEditor(f.Target, typeof(UieEditor));
             var uie = f.Show(new InspectorElement(uieEditor));
@@ -197,6 +199,34 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(other);
         }
 
+        public class AudioFiltered : MonoBehaviour
+        {
+            public int gain = 1;
+            void OnAudioFilterRead(float[] data, int channels) { }
+        }
+
+        [Fact]
+        public void AnEngineTypeWithoutItsEditorAndAnAudioFiltersMeterAreReported()
+        {
+            using var f = new Fixture();
+            var engineObject = ScriptableObject.CreateInstance<PanelSettings>();
+            string member = "UnityEditor.UIElements.InspectorElement (inspector of UnityEngine.UIElements.PanelSettings)";
+            int before = Hits(member);
+            var inspector = f.Show(new InspectorElement(engineObject));
+            Assert.Equal(before + 1, Hits(member));
+            Assert.Equal(2, inspector.hierarchy.childCount);
+            Assert.Equal(new[] { "unity-inspector-element" }, inspector.GetClasses().ToArray());
+            Object.DestroyImmediate(engineObject);
+
+            var go = new GameObject("filtered");
+            var filtered = go.AddComponent<AudioFiltered>();
+            int meter = Hits("UnityEditor.GenericInspector (OnAudioFilterRead level meter)");
+            var gui = Editor.CreateEditor(filtered).CreateInspectorGUI();
+            Assert.Equal(meter + 1, Hits("UnityEditor.GenericInspector (OnAudioFilterRead level meter)"));
+            Assert.Equal("PropertyField:gain", gui[1].name);
+            Object.DestroyImmediate(go);
+        }
+
         [Fact]
         public void AFieldBoundOffItsPanelTakesItsValueInTheBindingsPhase()
         {
@@ -236,6 +266,7 @@ namespace UnityEngine.Tests
             updater.UpdateVisualTree();
             Assert.Equal(200f, box.layout.width);
             Assert.Equal(3, geometry);
+            Assert.Throws<System.IndexOutOfRangeException>(() => updater.UpdateVisualTreePhase(VisualTreeUpdatePhase.Count));
         }
     }
 }

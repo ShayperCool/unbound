@@ -193,6 +193,15 @@ namespace UnityEditor.UIElements
             }
             m_Editor = GetOrCreateEditor(bindObject);
             if (m_Editor == null) return;
+            if (m_Editor is GenericInspector && IsEngineType(type))
+            {
+                // The Editor inspects most engine types with their own editors, which Unbound
+                // does not have: reported instead of shown as a generic inspector.
+                ClearInspectorElement();
+                m_InspectorElement = null;
+                Unbound.Runtime.Stubs.NotImplemented($"UnityEditor.UIElements.InspectorElement (inspector of {type.FullName})");
+                return;
+            }
             if (m_Editor is GenericInspector)
             {
                 if (!sameType || m_InspectorElement == null || m_DefaultInspectorFramework == DefaultInspectorFramework.IMGUI)
@@ -212,6 +221,9 @@ namespace UnityEditor.UIElements
             if (m_InspectorElement != null && m_InspectorElement.parent != this)
                 hierarchy.Add(m_InspectorElement);
         }
+
+        // A type of the engine itself (not of a script or package assembly).
+        static bool IsEngineType(Type type) => type != null && type.Assembly == typeof(Object).Assembly;
 
         Editor GetOrCreateEditor(SerializedObject serializedObject)
         {

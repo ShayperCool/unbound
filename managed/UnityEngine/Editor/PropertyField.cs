@@ -237,6 +237,9 @@ namespace UnityEditor.UIElements
             if (property != null) bindingPath = property.propertyPath;
         }
 
+        // The class of the inspector window's main container (Unity's PropertyEditor).
+        const string k_InspectorMainContainerClassName = "unity-inspector-main-container";
+
         // A field inside an inspector is marked as an inspector property while it is on a panel.
         void OnAttachToPanel(AttachToPanelEvent evt)
         {
@@ -244,7 +247,7 @@ namespace UnityEditor.UIElements
             for (var ancestor = parent; ancestor != null; ancestor = ancestor.parent)
             {
                 if (ancestor.ClassListContains(InspectorElement.ussClassName)) AddToClassList(inspectorElementUssClassName);
-                if (ancestor.ClassListContains("unity-inspector-main-container")) break;
+                if (ancestor.ClassListContains(k_InspectorMainContainerClassName)) break;
             }
         }
 

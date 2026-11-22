@@ -202,14 +202,20 @@ namespace UnityEditor
         public GenericInspector() { }
 
         /// <summary>The default inspector: a container of the targets' PropertyFields
-        /// (InspectorElement.FillDefaultInspector).</summary>
+        /// (InspectorElement.FillDefaultInspector). The Editor adds a level meter after them for a
+        /// MonoBehaviour with OnAudioFilterRead, which Unbound does not have: reported.</summary>
         public override UnityEngine.UIElements.VisualElement CreateInspectorGUI()
         {
             if (serializedObject == null) return null;
             var root = new UnityEngine.UIElements.VisualElement();
             UnityEditor.UIElements.InspectorElement.FillDefaultInspector(root, serializedObject, this);
+            if (target is MonoBehaviour behaviour && behaviour != null && HasAudioFilter(behaviour.GetType()))
+                Stubs.NotImplemented("UnityEditor.GenericInspector (OnAudioFilterRead level meter)");
             return root;
         }
+
+        static bool HasAudioFilter(Type type) =>
+            type.GetMethod("OnAudioFilterRead", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(float[]), typeof(int) }, null) != null;
     }
 
     public partial class MaterialEditor : Editor

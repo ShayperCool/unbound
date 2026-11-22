@@ -761,6 +761,8 @@ namespace UnityEngine.UIElements
 
         public void UpdateVisualTreePhase(VisualTreeUpdatePhase phase)
         {
+            // The Editor indexes its updaters with the phase.
+            if (phase < VisualTreeUpdatePhase.ViewData || phase >= VisualTreeUpdatePhase.Count) throw new IndexOutOfRangeException();
             switch (phase)
             {
                 case VisualTreeUpdatePhase.Bindings:
