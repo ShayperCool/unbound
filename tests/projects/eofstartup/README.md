@@ -24,6 +24,12 @@ the Update of frame 2 starts and resumes in frame 2 (`made.<point>.*`; `before.*
 resumes before the first Update: none). Outside the reference,
 the same rows came out with `Time.captureFramerate` set at startup and without the runner opening
 and focusing the Game view.
+
+`--pipeline urp` runs the same scripts and scenes under the Universal Render Pipeline (the
+project settings, packages and pipeline assets of `tests/projects/stpmotion`; reference
+`unity-<release>.urp.jsonl`, two identical captures): every end-of-frame row is the built-in
+pipeline's, also in the first frame; only the `Camera.onPostRender` counters are 0, which that
+pipeline does not send.
 The counters check every frame through frame 9, so skipping more than startup or
 adding a delay to every newly started coroutine fails the comparison.
 
@@ -35,7 +41,8 @@ switching away from Game view freezes these coroutines and that batch-mode Edito
 execution does not resume them. Neither page guarantees a resume in the first
 Play frame. The additive post-render counter tests the documented camera-before-EOF
 guarantee with values that change before the waiter resumes. Receiver order is
-not compared. SRP, multiple Game views and other releases are unmeasured here.
+not compared. Other pipelines than these two, multiple Game views and other releases are
+unmeasured here.
 
 All values are small integer counters. The shared JSONL comparator's numerical
 comparison rejects any unequal counter. Existing destroycontract references and

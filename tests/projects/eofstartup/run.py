@@ -6,6 +6,9 @@
     run.py unbound --release R [--label L]     runs Unbound and compares with Reference/
                                                (integer counters compared exactly)
 
+--pipeline urp runs the probe under the Universal Render Pipeline (reference
+Reference/unity-R.urp.jsonl); the default is the built-in pipeline.
+
 Run output goes to $XDG_CACHE_HOME/unbound/validation/runs/eofstartup/<label>.
 """
 import argparse
@@ -27,20 +30,37 @@ REPEATS = ('native1', 'native2')
 COMPARE = PROBE.parent / 'modelroot/compare.py'
 
 
-def prepare(project, release):
+# The Universal Render Pipeline variant takes another probe's project settings, packages and
+# pipeline assets (a Forward renderer without features), and names this probe's scenes in them.
+URP_BASE = REPO / 'tests/projects/stpmotion'
+URP_ASSETS = ('Settings', 'Settings.meta', 'DefaultVolumeProfile.asset', 'DefaultVolumeProfile.asset.meta',
+              'UniversalRenderPipelineGlobalSettings.asset', 'UniversalRenderPipelineGlobalSettings.asset.meta')
+URP_SCENE = '    guid: 9b1c2d3e4f5a46b7a8c9d0e1f2a3b4c5\n'
+PROBE_SCENE = '    guid: 918218a655aae758ab18756903d05e42\n'
+
+
+def prepare(project, release, pipeline='builtin'):
     if project.exists():
         raise SystemExit(f'project already exists: {project}')
-    base = REPO / 'tests/projects/lifecycle'
+    base = URP_BASE if pipeline == 'urp' else REPO / 'tests/projects/lifecycle'
     for part in ('ProjectSettings', 'Packages'):
         shutil.copytree(base / part, project / part)
     shutil.copytree(PROBE / 'Assets', project / 'Assets')
     # Register the additive scene in the copied build settings.
     settings = project / 'ProjectSettings/EditorBuildSettings.asset'
-    settings.write_text(settings.read_text().replace('  m_configObjects:',
-        '  - enabled: 1\n    path: Assets/Scenes/Extra.unity\n    guid: fa2c7063cfc24e6a905c49b3c0564ecc\n  m_configObjects:'))
+    text = settings.read_text()
+    if pipeline == 'urp':
+        if text.count(URP_SCENE) != 1:
+            raise SystemExit(f'{settings}: the base project names another scene')
+        text = text.replace(URP_SCENE, PROBE_SCENE).replace('  m_configObjects: {}', '  m_configObjects:')
+        for name in URP_ASSETS:
+            source = URP_BASE / 'Assets' / name
+            (shutil.copytree if source.is_dir() else shutil.copyfile)(source, project / 'Assets' / name)
+    settings.write_text(text.replace('  m_configObjects:',
+        '  - enabled: 1\n    path: Assets/Scenes/Extra.unity\n    guid: fa2c7063cfc24e6a905c49b3c0564ecc\n  m_configObjects:' + (' {}' if pipeline == 'urp' else ''), 1))
     (project / 'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: ' + release + '\n')
-    dependencies = {}
-    (project / 'Packages/manifest.json').write_text(json.dumps({'dependencies': dependencies}))
+    if pipeline != 'urp':
+        (project / 'Packages/manifest.json').write_text(json.dumps({'dependencies': {}}))
 
 
 def capture_problem(directory):
@@ -82,16 +102,17 @@ def main():
     p.add_argument('mode', choices=('editor', 'publish', 'unbound'))
     p.add_argument('--release', required=True)
     p.add_argument('--label', default='run-' + str(time.time_ns()))
+    p.add_argument('--pipeline', choices=('builtin', 'urp'), default='builtin')
     args = p.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
     work.mkdir(parents=True, exist_ok=True)
-    reference = PROBE / 'Reference' / ('unity-' + args.release + '.jsonl')
+    reference = PROBE / 'Reference' / ('unity-' + args.release + ('.urp' if args.pipeline == 'urp' else '') + '.jsonl')
     if args.mode == 'editor':
         jobs = []
         for repeat in REPEATS:
             project, out = work / 'projects' / repeat, work / repeat
-            prepare(project, args.release)
+            prepare(project, args.release, args.pipeline)
             jobs.append(job(project, out, args.release))
         for result in [run(job) for job in jobs]:
             print(summary(result))
@@ -112,7 +133,7 @@ def main():
             stream.write(first.read_bytes())
         return 0
     project = work / 'projects/unbound'
-    prepare(project, args.release)
+    prepare(project, args.release, args.pipeline)
     out = work / 'unbound'
     out.mkdir()
     cli = os.environ.get('UNBOUND', os.environ.get('UNBOUND_CLI', str(REPO / 'target/release/unbound')))
