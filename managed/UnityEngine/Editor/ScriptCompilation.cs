@@ -33,8 +33,8 @@ namespace UnityEditor.Scripting.ScriptCompilation
 
         /// <summary>Raises <see cref="assemblyCompilationFinished"/> for a compiled assembly of a
         /// recompilation: the assembly as compiled, with the round's defines when the compilation
-        /// gives them. A handler that throws is logged and the others still run (Unbound's choice:
-        /// such a handler is unmeasured).</summary>
+        /// gives them. A handler that throws is logged and the others still run, as for the
+        /// pipeline's events (Unbound's choice: the Editor's own call stops at the first throw).</summary>
         internal void RaiseAssemblyCompilationFinished(string name, string[] defines, bool compilationFailed, UnityEditor.Compilation.CompilerMessage[] messages)
         {
             var handlers = assemblyCompilationFinished;

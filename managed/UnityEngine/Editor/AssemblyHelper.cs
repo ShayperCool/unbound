@@ -13,8 +13,9 @@ namespace UnityEditor
         /// assemblies' folder and Library/ScriptAssemblies (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/editorhooks). The Editor's precompiled assemblies are UnityEditor.Graphs
         /// (in Managed) and each installed platform's Editor extensions (its playback engine folder
-        /// holding a UnityEditor.*.Extensions.dll), read from the installation; the project's and
-        /// packages' precompiled plug-ins join them (unmeasured: the probe has none).
+        /// holding a UnityEditor.*.Extensions.dll), read from the installation; the folders of the
+        /// project's and packages' precompiled plug-ins join them as absolute paths (unmeasured:
+        /// the probe has none, so their form and place are Unbound's choice).
         /// </summary>
         public static string[] GetDefaultAssemblySearchPaths()
         {

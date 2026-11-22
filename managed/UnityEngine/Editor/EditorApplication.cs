@@ -57,7 +57,9 @@ namespace UnityEditor
 
         /// <summary>The Editor's internal per-update event: each of its updates raises it before
         /// update and delayCall (matches the Unity 6000.0.71f1 Editor, tests/projects/editorhooks).
-        /// A field-like event, so threads may add to it (CallDelayed from a worker thread).</summary>
+        /// A field-like event, so threads may add to it (CallDelayed from a worker thread). A
+        /// handler that throws is logged and the others still run, as for update (Unbound's
+        /// choice: the Editor's own call stops at the first throw).</summary>
         internal static event CallbackFunction tick;
 
         /// <summary>Runs <paramref name="action"/> on the main thread from the first Editor update
