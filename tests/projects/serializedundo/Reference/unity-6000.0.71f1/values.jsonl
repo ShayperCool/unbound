@@ -30,20 +30,30 @@
 {"k":"records.beforeFlush","v":"group=29|name=Modified Level in Alpha|events="}
 {"k":"records.flushed","v":"group=29|name=Second Record|events="}
 {"k":"records.undone","v":"a=10|c=3|group=30|name=Modified Level in Alpha|events=undo:Second Record"}
-{"k":"priority.recordThenAdd","v":"group=31|name=Add UndoBehaviour|events="}
-{"k":"priority.addThenRecord","v":"group=32|name=Add UndoBehaviour|events="}
-{"k":"priority.createThenRecord","v":"group=33|name=C3|events="}
-{"k":"priority.recordThenCreate","v":"group=34|name=C4|events="}
-{"k":"priority.createThenApply","v":"group=35|name=C5|events="}
-{"k":"priority.applyThenCreate","v":"group=36|name=C6|events="}
-{"k":"priority.createThenAdd","v":"group=37|name=C7|events="}
-{"k":"priority.addThenCreate","v":"group=38|name=C8|events="}
-{"k":"priority.createThenCreate","v":"group=39|name=C10|events="}
-{"k":"multi.applied","v":"a=60|b=60|group=40|name=C10|events="}
-{"k":"multi.undone","v":"a=16|b=4|group=41|name=C10|events=undo:Modified Count in 2 Objects"}
-{"k":"component.applied","v":"offset=(1.00, 9.00, 3.00)|group=42|name=C10|events="}
-{"k":"component.undone","v":"offset=(1.00, 2.00, 3.00)|group=43|name=C10|events=undo:Modified Offset.y in Holder"}
-{"k":"component.redone","v":"offset=(1.00, 9.00, 3.00)|group=44|name=Modified Offset.y in Holder|events=redo:Modified Offset.y in Holder"}
+{"k":"structural.deleteLast","v":"count=10|title=w|numbers=5,6|f=0.5|group=31|name=Modified Numbers.Array.size in Alpha|events="}
+{"k":"structural.deleteLast.undone","v":"count=10|title=w|numbers=5,6,7|f=0.5|group=32|name=Modified Level in Alpha|events=undo:Modified Numbers.Array.size in Alpha"}
+{"k":"structural.deleteFirst","v":"count=10|title=w|numbers=6,7|f=0.5|group=33|name=Modified Numbers.Array in Alpha|events="}
+{"k":"structural.deleteFirst.undone","v":"count=10|title=w|numbers=5,6,7|f=0.5|group=34|name=Modified Level in Alpha|events=undo:Modified Numbers.Array in Alpha"}
+{"k":"structural.insert","v":"count=10|title=w|numbers=5,6,6,7|f=0.5|group=35|name=Modified Numbers.Array in Alpha|events="}
+{"k":"structural.insert.undone","v":"count=10|title=w|numbers=5,6,7|f=0.5|group=36|name=Modified Level in Alpha|events=undo:Modified Numbers.Array in Alpha"}
+{"k":"structural.move","v":"count=10|title=w|numbers=6,7,5|f=0.5|group=37|name=Modified Numbers in Alpha|events="}
+{"k":"structural.move.undone","v":"count=10|title=w|numbers=5,6,7|f=0.5|group=38|name=Modified Level in Alpha|events=undo:Modified Numbers in Alpha"}
+{"k":"structural.boxed","v":"count=10|title=w|numbers=5,60,7|f=0.5|group=39|name=Modified Numbers.Array.data[1] in Alpha|events="}
+{"k":"structural.boxed.undone","v":"count=10|title=w|numbers=5,6,7|f=0.5|group=40|name=Modified Level in Alpha|events=undo:Modified Numbers.Array.data[1] in Alpha"}
+{"k":"priority.recordThenAdd","v":"group=41|name=Add UndoBehaviour|events="}
+{"k":"priority.addThenRecord","v":"group=42|name=Add UndoBehaviour|events="}
+{"k":"priority.createThenRecord","v":"group=43|name=C3|events="}
+{"k":"priority.recordThenCreate","v":"group=44|name=C4|events="}
+{"k":"priority.createThenApply","v":"group=45|name=C5|events="}
+{"k":"priority.applyThenCreate","v":"group=46|name=C6|events="}
+{"k":"priority.createThenAdd","v":"group=47|name=C7|events="}
+{"k":"priority.addThenCreate","v":"group=48|name=C8|events="}
+{"k":"priority.createThenCreate","v":"group=49|name=C10|events="}
+{"k":"multi.applied","v":"a=60|b=60|group=50|name=C10|events="}
+{"k":"multi.undone","v":"a=16|b=4|group=51|name=C10|events=undo:Modified Count in 2 Objects"}
+{"k":"component.applied","v":"offset=(1.00, 9.00, 3.00)|group=52|name=C10|events="}
+{"k":"component.undone","v":"offset=(1.00, 2.00, 3.00)|group=53|name=C10|events=undo:Modified Offset.y in Holder"}
+{"k":"component.redone","v":"offset=(1.00, 9.00, 3.00)|group=54|name=Modified Offset.y in Holder|events=redo:Modified Offset.y in Holder"}
 {"k":"stale.afterUndo","v":"so=70|a=16"}
 {"k":"stale.updated","v":"so=16"}
 {"k":"logs","v":[]}

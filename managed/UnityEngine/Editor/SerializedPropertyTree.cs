@@ -269,6 +269,10 @@ namespace Unbound.Runtime
         internal bool Dirty;
         /// <summary>Replaced as a whole (array resized, value assigned): written back entirely.</summary>
         internal bool Replaced;
+        /// <summary>An array an element edit replaced: the property the Editor names the edit by (its
+        /// container for an insert or a delete, its size for a delete of the last element, the array
+        /// for a move: tests/projects/serializedundo structural.*); null otherwise.</summary>
+        internal string EditPath;
         /// <summary>Leaf: the buffered value. Composite class: the instance it was read from.
         /// ManagedReference: the referenced object.</summary>
         internal object Value;
@@ -1165,6 +1169,7 @@ namespace Unbound.Runtime
             if (!node.Dirty && !node.Replaced) return;
             node.Dirty = false;
             node.Replaced = false;
+            node.EditPath = null;
             foreach (var child in node.Children) ClearDirty(child);
         }
 
@@ -1289,6 +1294,7 @@ namespace Unbound.Runtime
             container.Children.Insert(index + 1, element);
             Reindex(container);
             MarkReplaced(array);
+            array.EditPath = array.Path + ".Array";
             return true;
         }
 
@@ -1305,6 +1311,7 @@ namespace Unbound.Runtime
             container.Children.RemoveAt(index + 1);
             Reindex(container);
             MarkReplaced(array);
+            array.EditPath = array.Path + (index == count - 1 ? ".Array.size" : ".Array");
             return true;
         }
 
@@ -1320,6 +1327,7 @@ namespace Unbound.Runtime
             container.Children.Insert(dst + 1, element);
             Reindex(container);
             MarkReplaced(array);
+            array.EditPath = array.Path;
             return true;
         }
 
@@ -1342,8 +1350,10 @@ namespace Unbound.Runtime
             }
             else
             {
+                string editPath = array.EditPath;
                 while (array.ArrayCount < size) InsertElement(array, array.ArrayCount);
                 array.Replaced = wasReplaced;
+                array.EditPath = editPath;
             }
             MarkResized(array);
             return true;

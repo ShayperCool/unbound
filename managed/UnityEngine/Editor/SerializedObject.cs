@@ -283,10 +283,11 @@ namespace UnityEditor
             return list;
         }
 
-        /// <summary>"Modified {property} in {object}": the one property whose value changed (its
-        /// path, nicified), else their count ("3 properties"); the target's name, else the count of
-        /// targets ("2 Objects"). An array's size counts, the elements it adds or removes do not
-        /// (measured: tests/projects/serializedundo).</summary>
+        /// <summary>"Modified {property} in {object}": the one property edited (its path, nicified),
+        /// else their count ("3 properties"); the target's name, else the count of targets ("2
+        /// Objects"). A property is a value that changed (an array's size counts, the elements it
+        /// adds or removes do not), or an array an element edit replaced, named as the Editor names
+        /// it (measured: tests/projects/serializedundo).</summary>
         string UndoName(List<Change> changes)
         {
             Object first = null;
@@ -297,14 +298,32 @@ namespace UnityEditor
                 first ??= target;
                 targets++;
             }
+            var changedValues = new HashSet<string>();
+            foreach (var change in changes)
+                if (ReferenceEquals(change.Target, first) && change.Existed && !Equals(change.Before, change.After)) changedValues.Add(change.Path);
             string path = null;
             int count = 0;
-            foreach (var change in changes)
+            void Walk(SerializedNode node)
             {
-                if (!ReferenceEquals(change.Target, first) || !change.Existed || Equals(change.Before, change.After)) continue;
-                path = change.Path;
-                count++;
+                if (!node.Dirty && !node.Replaced) return;
+                if (node.Parent != null && node.Replaced)
+                {
+                    path = node.EditPath ?? node.Path;
+                    count++;
+                    return;
+                }
+                if (node.Children.Count == 0)
+                {
+                    if (changedValues.Contains(node.Path))
+                    {
+                        path = node.Path;
+                        count++;
+                    }
+                    return;
+                }
+                foreach (var child in node.Children) Walk(child);
             }
+            Walk(m_UnboundRoot);
             string property = count == 1 ? ObjectNames.NicifyVariableName(path) : count + " properties";
             string objects = targets > 1 ? targets + " Objects" : first != null ? first.name : "";
             return "Modified " + property + " in " + objects;

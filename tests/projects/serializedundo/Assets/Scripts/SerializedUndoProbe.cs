@@ -240,6 +240,27 @@ public class SerializedUndoProbe : MonoBehaviour
         Put("records.undone", $"a={a.count}|c={c.count}|{Group()}");
         UnityEngine.Object.DestroyImmediate(c);
 
+        // Structural edits of an array: delete the last element, delete the first, insert, move.
+        void Structural(string key, Action<SerializedProperty> edit)
+        {
+            Undo.IncrementCurrentGroup();
+            a.numbers = new List<int> { 5, 6, 7 };
+            so.Update();
+            edit(so.FindProperty("numbers"));
+            so.ApplyModifiedProperties();
+            Undo.FlushUndoRecordObjects();
+            Put("structural." + key, $"{Values(a)}|{Group()}");
+            Undo.PerformUndo();
+            Put("structural." + key + ".undone", $"{Values(a)}|{Group()}");
+        }
+        Structural("deleteLast", p => p.DeleteArrayElementAtIndex(2));
+        Structural("deleteFirst", p => p.DeleteArrayElementAtIndex(0));
+        Structural("insert", p => p.InsertArrayElementAtIndex(1));
+        Structural("move", p => p.MoveArrayElement(0, 2));
+        Structural("boxed", p => p.GetArrayElementAtIndex(1).boxedValue = 60);
+        a.numbers = new List<int> { 5, 6 };
+        so.Update();
+
         // Which record names a group: records of objects, created objects, added components and
         // an apply, in both orders.
         var host = new GameObject("Host");

@@ -366,13 +366,9 @@ namespace UnityEditor
             for (int i = 0; i < s_Undo.Count; i++)
             {
                 if (s_Undo[i].Index < groupIndex) continue;
-                if (into == null)
-                {
-                    // The collapsed group keeps its name (tests/projects/editor undo.f2).
-                    into = s_Undo[i];
-                    into.Name ??= into.PublishedName;
-                    continue;
-                }
+                if (into == null) { into = s_Undo[i]; continue; }
+                // A group that takes later groups keeps its name (tests/projects/editor undo.f2).
+                into.Name ??= into.PublishedName;
                 into.Operations.AddRange(s_Undo[i].Operations);
                 into.Name ??= s_Undo[i].Name;
                 s_Undo.RemoveAt(i--);

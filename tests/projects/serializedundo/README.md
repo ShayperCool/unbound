@@ -8,6 +8,8 @@ with the current group, its name (`Undo.GetCurrentGroupName`) and the `Undo.undo
 - `none.applied`: an apply without changes.
 - `many.*`, `size.*`, `element.*`, `sizeOnly.*`, `grow.*`, `name.*`: the record's name for several
   properties, an array element, an array's size growing and shrinking, a camel-case and an `m_` field.
+- `structural.*`: an array's last element deleted, its first deleted, an element inserted, one moved,
+  and an element's `boxedValue` set: the record's name, and the undo.
 - `twice.*`, `split.*`: two applies in one group and in two groups.
 - `without.*`: `ApplyModifiedPropertiesWithoutUndo` between recorded applies.
 - `mixed.*`, `named.*`, `records.*`: an apply after `Undo.RecordObject` in one group, in a group

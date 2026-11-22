@@ -127,6 +127,41 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AnArraysElementEditIsNamedByTheArrayPropertyTheEditorNames()
+        {
+            Undo.ClearAll();
+            var a = Make("Alpha");
+            try
+            {
+                var so = new SerializedObject(a);
+                foreach (var (edit, name, after) in new (System.Action<SerializedProperty>, string, int[])[]
+                {
+                    (p => p.DeleteArrayElementAtIndex(2), "Numbers.Array.size", new[] { 5, 6 }),
+                    (p => p.DeleteArrayElementAtIndex(0), "Numbers.Array", new[] { 6, 7 }),
+                    (p => p.InsertArrayElementAtIndex(1), "Numbers.Array", new[] { 5, 6, 6, 7 }),
+                    (p => p.MoveArrayElement(0, 2), "Numbers", new[] { 6, 7, 5 }),
+                })
+                {
+                    Undo.IncrementCurrentGroup();
+                    a.numbers = new List<int> { 5, 6, 7 };
+                    so.Update();
+                    edit(so.FindProperty("numbers"));
+                    so.ApplyModifiedProperties();
+                    Undo.FlushUndoRecordObjects();
+                    Assert.Equal($"Modified {name} in Alpha", Undo.GetCurrentGroupName());
+                    Assert.Equal(after, a.numbers);
+                    Undo.PerformUndo();
+                    Assert.Equal(new[] { 5, 6, 7 }, a.numbers);
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(a);
+                Undo.ClearAll();
+            }
+        }
+
+        [Fact]
         public void AnUndoRestoresOnlyWhatTheApplyChanged()
         {
             Undo.ClearAll();
