@@ -1,6 +1,0 @@
-{
-  "World collision in Collision2D mode is not implemented in Unbound (it reports the module as unsupported); the Editor reports the BoxCollider2D hit": [
-    "collide/Static2D",
-    "collide/ToStatic2D"
-  ]
-}
