@@ -80,7 +80,7 @@ namespace UnityEngine.Tests
             Assert.False(PerCamera(byStep));
             // No output drawn reads the system's list: nothing sorts it.
             Assert.Equal((null, null), GlobalSortOf(true, 5));
-            // Without its keys the sort is not made (and its outputs say why they are not drawn).
+            // Without its keys the sort is not made (nor is its output: VFXOutput.Refusal).
             Assert.Equal((null, null), GlobalSortOf(true, 2, keys: false));
         }
     }
