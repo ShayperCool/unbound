@@ -5,7 +5,8 @@ under URP 17: how the outputs of the probe's own small graphs are drawn, recorde
 script in the Unity Editor and in Unbound. The `vfx` probe covers the import, the API and the
 simulation, and the outputs that draw every particle a system has room for; this one covers the
 outputs that draw through an indirect buffer, sorted outputs, the order of an effect's
-outputs, triangle and octagon outputs, and an output's motion vectors.
+outputs, triangle and octagon outputs, an output's motion vectors, and outputs that share their
+sort.
 
 The Editor records in a window (not in batch mode): in batch mode no camera ever sees an effect.
 
@@ -70,6 +71,17 @@ the other additive and blue; and one system with an opaque and an additive outpu
 graph's API names them alike; the Editor's window gives them letters). Each draws with its own
 shader (`draw/TwinA`, `draw/TwinB`, `draw/AlikeOutputs` at frame 12, made at frame 6).
 
+Shared sorts (`Global*.vfx`): the compiler sorts once for a system the outputs that share their
+sort (two or more sorted outputs of one criterion that draw from the system's list): a kernel
+writes each particle's key from that list, and the keys are sorted through the system's two
+sort buffers back into it, for each camera when the key depends on the camera. Each graph is
+`Sort*`'s thirty alpha-blended quads drawn again by a second output, smaller and white, sorted
+alike: `GlobalDistance` by distance (for each camera), `GlobalYoungest` youngest in front (at
+each step; thirty a second living 0.3 to 1.5 seconds), `GlobalKeyed` by a random key of each
+particle's own, whose kernel the package's template leaves reading the graph's values it does
+not declare: the Editor says it does not compile, counts the particles and draws neither output.
+`GlobalMixed` adds a third output, tiny and black, sorted by depth: it sorts its own list.
+
 Moving (`MovingVectors.vfx`, `MovingPlain.vfx`): twenty opaque quads (size 0.25) burst at once in
 a strip at the left and flying right at 6 units a second, the one graph's output writing motion
 vectors (`generateMotionVector`), the other's not. Their stages' cameras post-process with a
@@ -118,6 +130,8 @@ others with a start seed of 11 and gives it orthographic cameras of its own, eac
   then drawn. Its alive count is -1 until the first count read back after it is seen.
 - `MovingVectors`, `MovingPlain` (frames 9 and 10, made at frame 6): the quads under object
   motion blur, with and without the output's motion vectors.
+- `GlobalDistance`, `GlobalKeyed`, `GlobalMixed` (frames 9 and 12, made at frame 6): `front` and
+  `offset`, each camera's own order; `GlobalYoungest` (frames 36 and 48): the order by age.
 
 The last row is `capture/graphs imported while playing`; it must be empty for a capture to be
 complete (Assets/Editor/ProbeRunner.cs waits five editor updates before playing, as the packages
@@ -166,10 +180,12 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
   overlapping quads whose order shows.
 - Quads seen at an angle: crossing quads are ties of depth that the Editor's own graphs decide
   differently (the three routes of one graph in one capture).
-- A system that sorts one list for all its outputs (the compiler's global sort, for outputs that
-  share their sort), other primitives, lit outputs, strips, meshes and Shader Graph outputs
-  (`tests/projects/vfxlit`, `tests/projects/vfxstrips`), and motion vectors of outputs other
-  than opaque quads, which are drawn, not measured here.
+- Other primitives, lit outputs, strips, meshes and Shader Graph outputs (`tests/projects/vfxlit`,
+  `tests/projects/vfxstrips`), and motion vectors of outputs other than opaque quads, which are
+  drawn, not measured here.
+- A global sort longer than one pass of the sort (merged through the scratch list), of a custom
+  key whose kernel compiles, or reversed; a strip system's global sort, which Unbound refuses
+  loudly.
 - Motion vectors beyond `Moving`'s one still camera, effect at rest and particles three frames
   old: several cameras on one effect, a moving camera (URP sets the view-projection the
   output-update kernel reads in its motion vectors pass, after the effects' camera commands),
