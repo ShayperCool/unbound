@@ -189,7 +189,9 @@ namespace Unbound.Runtime
         /// <summary>The kernels whose list an output draws, and of those that make no list,
         /// all when <paramref name="unlisted"/>, else those that keep the last frames a drawn
         /// output reads (its motion vectors' temporary buffers); the others are released, and
-        /// their lists taken out of <paramref name="lists"/>.</summary>
+        /// their lists taken out of <paramref name="lists"/>. A kernel that makes a list and
+        /// keeps last frames serves the one output that draws that list, so its list decides
+        /// (a kernel kept whose list is not drawn would fill a list nothing empties).</summary>
         Kernel[] KeepDrawn(List<Kernel> kernels, bool unlisted, List<int> lists)
         {
             var kept = new List<Kernel>(kernels.Count);
