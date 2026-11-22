@@ -4,9 +4,11 @@ using UnityEngine;
 using UnityEngine.Rendering;
 public partial class NativeGfxVulkanProbe
 {
-    [DllImport(Plugin)] static extern void NativeGfxVk_SetDevice(int index, IntPtr pointer);
+    [DllImport(Plugin, EntryPoint = "NativeGfxVk_SetDevice")] static extern void NativeGfxVk_SetDeviceNow(int index, IntPtr pointer);
+    static void NativeGfxVk_SetDevice(int index, IntPtr pointer) { WaitForRenderThread(); NativeGfxVk_SetDeviceNow(index, pointer); }
     [DllImport(Plugin)] static extern IntPtr NativeGfxVk_DeviceEvent();
-    [DllImport(Plugin)] static extern void NativeGfxVk_SetDeviceBuffer(IntPtr pointer);
+    [DllImport(Plugin, EntryPoint = "NativeGfxVk_SetDeviceBuffer")] static extern void NativeGfxVk_SetDeviceBufferNow(IntPtr pointer);
+    static void NativeGfxVk_SetDeviceBuffer(IntPtr pointer) { WaitForRenderThread(); NativeGfxVk_SetDeviceBufferNow(pointer); }
     void DeviceLogged(string key, Action action)
     {
         logs.Clear(); action(); Value(key + ".logs", L(logs)); logs.Clear();

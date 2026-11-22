@@ -7,8 +7,10 @@ using UnityEngine.Rendering;
 public partial class NativeGfxVulkanProbe
 {
     [DllImport(Plugin)] static extern IntPtr NativeGfxVk_ByIdBlit();
-    [DllImport(Plugin)] static extern void NativeGfxVk_ByIdPointer(IntPtr pointer);
-    [DllImport(Plugin)] static extern int NativeGfxVk_ByIdRecord(byte[] buffer, int capacity);
+    [DllImport(Plugin, EntryPoint = "NativeGfxVk_ByIdPointer")] static extern void NativeGfxVk_ByIdPointerNow(IntPtr pointer);
+    static void NativeGfxVk_ByIdPointer(IntPtr pointer) { WaitForRenderThread(); NativeGfxVk_ByIdPointerNow(pointer); }
+    [DllImport(Plugin, EntryPoint = "NativeGfxVk_ByIdRecord")] static extern int NativeGfxVk_ByIdRecordNow(byte[] buffer, int capacity);
+    static int NativeGfxVk_ByIdRecord(byte[] buffer, int capacity) { WaitForRenderThread(); return NativeGfxVk_ByIdRecordNow(buffer, capacity); }
 
     /// <summary>Recorded last (`byId.*`): a custom blit's source texture ID given to
     /// AccessTextureByID, for ARGB32 and ARGBHalf 7x3 targets of 1, 2, 4 and 8 samples with and

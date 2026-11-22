@@ -22,13 +22,36 @@ public partial class NativeGfxVulkanProbe : MonoBehaviour
     const string Plugin = "NativeGfxVulkan";
     [DllImport(Plugin)] static extern IntPtr NativeGfxVk_Event();
     [DllImport(Plugin)] static extern int NativeGfxVk_EventBase();
-    [DllImport(Plugin)] static extern void NativeGfxVk_SetTexture(int index, IntPtr pointer);
-    [DllImport(Plugin)] static extern void NativeGfxVk_SetRenderBuffer(int index, IntPtr pointer);
-    [DllImport(Plugin)] static extern void NativeGfxVk_SetBuffer(IntPtr pointer);
-    [DllImport(Plugin)] static extern void NativeGfxVk_Step(string step);
+    // Multithreaded captures (run.py --mt): before the script changes or reads what the plugin's
+    // callbacks use, the render thread has run the callbacks issued so far (GetNativeTexturePtr
+    // synchronizes with it: Unity 6000.0 Scripting API), so that the records do not depend on how
+    // far the render thread lags behind.
+    static bool? s_WaitsForRenderThread;
+    static Texture2D s_SyncTexture;
+    static void WaitForRenderThread()
+    {
+        s_WaitsForRenderThread ??= Environment.GetEnvironmentVariable("NATIVEGFX_MT") == "1";
+        if (s_WaitsForRenderThread != true) return;
+        if (s_SyncTexture == null)
+        {
+            s_SyncTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+            s_SyncTexture.Apply();
+        }
+        s_SyncTexture.GetNativeTexturePtr();
+    }
+    [DllImport(Plugin, EntryPoint = "NativeGfxVk_SetTexture")] static extern void NativeGfxVk_SetTextureNow(int index, IntPtr pointer);
+    static void NativeGfxVk_SetTexture(int index, IntPtr pointer) { WaitForRenderThread(); NativeGfxVk_SetTextureNow(index, pointer); }
+    [DllImport(Plugin, EntryPoint = "NativeGfxVk_SetRenderBuffer")] static extern void NativeGfxVk_SetRenderBufferNow(int index, IntPtr pointer);
+    static void NativeGfxVk_SetRenderBuffer(int index, IntPtr pointer) { WaitForRenderThread(); NativeGfxVk_SetRenderBufferNow(index, pointer); }
+    [DllImport(Plugin, EntryPoint = "NativeGfxVk_SetBuffer")] static extern void NativeGfxVk_SetBufferNow(IntPtr pointer);
+    static void NativeGfxVk_SetBuffer(IntPtr pointer) { WaitForRenderThread(); NativeGfxVk_SetBufferNow(pointer); }
+    [DllImport(Plugin, EntryPoint = "NativeGfxVk_Step")] static extern void NativeGfxVk_StepNow(string step);
+    static void NativeGfxVk_Step(string step) { WaitForRenderThread(); NativeGfxVk_StepNow(step); }
     [DllImport(Plugin)] static extern IntPtr NativeGfxVk_ShapeEvent();
-    [DllImport(Plugin)] static extern void NativeGfxVk_SetShape(int index, IntPtr pointer);
-    [DllImport(Plugin)] static extern int NativeGfxVk_Record(byte[] buffer, int capacity);
+    [DllImport(Plugin, EntryPoint = "NativeGfxVk_SetShape")] static extern void NativeGfxVk_SetShapeNow(int index, IntPtr pointer);
+    static void NativeGfxVk_SetShape(int index, IntPtr pointer) { WaitForRenderThread(); NativeGfxVk_SetShapeNow(index, pointer); }
+    [DllImport(Plugin, EntryPoint = "NativeGfxVk_Record")] static extern int NativeGfxVk_RecordNow(byte[] buffer, int capacity);
+    static int NativeGfxVk_Record(byte[] buffer, int capacity) { WaitForRenderThread(); return NativeGfxVk_RecordNow(buffer, capacity); }
 
     // The plugin's events after its reserved base (render pass precondition).
     const int DontCare = 0, Outside = 1, Inside = 2, OutsideState = 3, AccessInside = 4, LeaveInside = 5;

@@ -317,8 +317,7 @@ def publish(labels):
 
 
 def verify(candidate):
-    return subprocess.run([sys.executable, str(ROOT/'compare.py'), str(reference()), str(candidate), "--device", DEVICE,
-                           *(['--mt'] if MT else [])]).returncode
+    return subprocess.run([sys.executable, str(ROOT/'compare.py'), str(reference()), str(candidate), "--device", DEVICE]).returncode
 
 
 def main():
