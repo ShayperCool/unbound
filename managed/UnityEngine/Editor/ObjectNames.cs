@@ -36,6 +36,10 @@ namespace UnityEditor
 
         internal static bool IsScriptObject(Object obj) => obj is MonoBehaviour || obj is ScriptableObject;
 
+        /// <summary>An object whose class a script defines on top of an engine class: a script
+        /// object or a scripted importer.</summary>
+        internal static bool ExtendsANativeType(Object obj) => IsScriptObject(obj) || obj is UnityEditor.AssetImporters.ScriptedImporter;
+
         /// <summary>The engine class of an object: "MonoBehaviour" for every script object.</summary>
         public static string GetClassName(Object obj)
         {
@@ -47,6 +51,7 @@ namespace UnityEditor
         static string ObjectTypeName(Object o, bool multiObjectEditing)
         {
             if (o is GameObject) return o.name;
+            if (o is TagManager) return "Tags & Layers";
             if (o is Component)
             {
                 if (o is MonoBehaviour) return o.GetType().Name + " (Script)";
@@ -62,8 +67,7 @@ namespace UnityEditor
             {
                 // An importer of a script is titled after the script; not done.
                 if (o is MonoImporter) Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.GetInspectorTitle (MonoImporter)");
-                // A scripted importer is a script's class.
-                return o is UnityEditor.AssetImporters.ScriptedImporter ? o.GetType().Name + " (Script)" : o.GetType().Name;
+                return ExtendsANativeType(o) ? o.GetType().Name + " (Script)" : o.GetType().Name;
             }
             return o.name + " (" + o.GetType().Name + ")";
         }
@@ -90,7 +94,7 @@ namespace UnityEditor
             string lower = path.ToLower();
             if (lower.EndsWith(".unity")) return "Scene";
             if (lower.EndsWith(".guiskin")) return "GUI Skin";
-            if (System.IO.Directory.Exists(path)) return "Folder";
+            if (path.Length != 0 && AssetDatabase.IsValidFolder(path)) return "Folder";
             if (obj.GetType() == typeof(Object)) return System.IO.Path.GetExtension(lower) + " File";
             return obj.GetType().Name;
         }

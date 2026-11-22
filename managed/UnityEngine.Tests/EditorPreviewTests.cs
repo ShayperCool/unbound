@@ -19,6 +19,8 @@ namespace UnityEngine.Tests
             public string third = "3";
         }
 
+        public class TwoWords : ScriptableObject { }
+
         public class PlainBehaviour : MonoBehaviour { }
 
         [AddComponentMenu("Tests/Fancy Name")]
@@ -44,7 +46,12 @@ namespace UnityEngine.Tests
         public class SampleEditor : Editor
         {
             internal static readonly List<string> Calls = new List<string>();
-            public override void OnPreviewGUI(Rect r, GUIStyle background) => Calls.Add($"{r.width}:{background.name}:{target.name}:{targets.Length}");
+            internal static bool ReadSerializedObject;
+            public override void OnPreviewGUI(Rect r, GUIStyle background)
+            {
+                Calls.Add($"{r.width}:{background.name}:{target.name}:{targets.Length}");
+                if (ReadSerializedObject) Assert.NotNull(serializedObject);
+            }
             internal void Excluding(params string[] names) => DrawPropertiesExcluding(serializedObject, names);
         }
 
@@ -120,6 +127,13 @@ namespace UnityEngine.Tests
                 one.ReloadPreviewInstances();
                 Assert.Equal("3 Samples", three.GetPreviewTitle().text);
                 Assert.Equal("3 Samples", three.targetTitle);
+                // The preview's title keeps the class name; the editor's puts it in words.
+                var worded = new Object[] { ScriptableObject.CreateInstance<TwoWords>(), ScriptableObject.CreateInstance<TwoWords>() };
+                var wordedEditor = Editor.CreateEditor(worded);
+                Assert.Equal("2 TwoWordss", wordedEditor.GetPreviewTitle().text);
+                Assert.Equal("2 Two Wordss", wordedEditor.targetTitle);
+                Object.DestroyImmediate(wordedEditor);
+                foreach (var w in worded) Object.DestroyImmediate(w);
 
                 // The index wraps: after the last target the first again.
                 var walk = new List<string>();
@@ -173,12 +187,69 @@ namespace UnityEngine.Tests
                 Assert.Same(targets[0], three.target);
                 // Reading `targets` inside such a preview is an error, once per target here.
                 Assert.Equal(3, logs.Entries.Count(e => e == "Error:The targets array should not be used inside OnSceneGUI or OnPreviewGUI. Use the single target property instead."));
+                Assert.DoesNotContain(logs.Entries, e => e.Contains("The serializedObject should not be used"));
+                // So is reading the serialized object.
+                SampleEditor.ReadSerializedObject = true;
+                IMGUIContainerTests.Send(container, KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.A }), out _);
+                SampleEditor.ReadSerializedObject = false;
+                Assert.Equal(3, logs.Entries.Count(e => e == "Error:The serializedObject should not be used inside OnSceneGUI or OnPreviewGUI. Use the target property directly instead."));
+                Assert.NotNull(three.serializedObject);
+                Assert.Equal(3, logs.Entries.Count(e => e.Contains("The serializedObject should not be used")));
                 Assert.True(Editor.m_AllowMultiObjectAccess);
                 Assert.DoesNotContain(logs.Entries, e => e.StartsWith("Exception") || e.Contains("GUI Error"));
             }
             finally
             {
                 Object.DestroyImmediate(three);
+                foreach (var t in targets) Object.DestroyImmediate(t);
+            }
+        }
+
+        // Not measured in the Editor: written from its public source.
+        [Fact]
+        public void ADoubleClickOnATargetOfSeveralSelectsIt()
+        {
+            using var f = new IMGUIContainerTests.Fixture();
+            var targets = Samples("Alpha", "Beta", "Gamma");
+            var many = new Recording();
+            many.Initialize(targets);
+            var area = new Rect(4f, 6f, 300f, 200f);
+            Vector2 at = default;
+            int clicks = 2;
+            var container = f.Add(() =>
+            {
+                if (Event.current.type != EventType.MouseDown) return;
+                Event.current.clickCount = clicks;
+                Event.current.mousePosition = at;
+                many.DrawPreview(area);
+            });
+            container.style.height = 300f;
+            f.Tick();
+            var previous = Selection.objects;
+            try
+            {
+                void Click()
+                {
+                    Selection.objects = new Object[0];
+                    Unbound.Runtime.GuiEvents.MousePosition = container.worldBound.center;
+                    IMGUIContainerTests.Send(container, MouseDownEvent.GetPooled(new Event { type = EventType.MouseDown, mousePosition = container.worldBound.center, clickCount = 1 }), out _);
+                }
+                // The second of three squares of 82 points spans x from 112 to 195.
+                at = new Vector2(150f, 100f);
+                Click();
+                Assert.Equal(new Object[] { targets[1] }, Selection.objects);
+                // Between two squares, and a single click: nothing.
+                at = new Vector2(105f, 100f);
+                Click();
+                Assert.Empty(Selection.objects);
+                at = new Vector2(150f, 100f);
+                clicks = 1;
+                Click();
+                Assert.Empty(Selection.objects);
+            }
+            finally
+            {
+                Selection.objects = previous;
                 foreach (var t in targets) Object.DestroyImmediate(t);
             }
         }
@@ -198,6 +269,8 @@ namespace UnityEngine.Tests
             f.Tick();
             Assert.Throws<InvalidOperationException>(() => IMGUIContainerTests.Send(container, KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.A }), out _));
             Assert.True(Editor.m_AllowMultiObjectAccess);
+            // The square's group was closed.
+            Assert.Equal(1, GUIClip.Depth);
             foreach (var t in targets) Object.DestroyImmediate(t);
         }
 

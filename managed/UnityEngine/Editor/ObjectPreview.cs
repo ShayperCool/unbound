@@ -86,7 +86,7 @@ namespace UnityEditor
         static string PreviewTitle(Object[] targets, Object target)
         {
             if (targets.Length == 1) return target.name;
-            string type = ObjectNames.IsScriptObject(target) ? target.GetType().Name : ObjectNames.NicifyVariableName(ObjectNames.GetClassName(target));
+            string type = ObjectNames.ExtendsANativeType(target) ? target.GetType().Name : ObjectNames.NicifyVariableName(ObjectNames.GetClassName(target));
             return targets.Length + " " + type + "s";
         }
 
@@ -162,9 +162,11 @@ namespace UnityEditor
                     }
                     finally
                     {
+                        // Also after a preview that throws: the editors stay usable (the Editor's
+                        // behaviour after such an exception is not measured).
                         Editor.m_AllowMultiObjectAccess = true;
+                        GUI.EndGroup();
                     }
-                    GUI.EndGroup();
                     r.y = square.yMax;
                     r.height = 16;
                     GUI.Label(r, targets[i].name, Style("PreMiniLabel"));

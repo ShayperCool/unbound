@@ -42,7 +42,15 @@ namespace UnityEditor
             }
         }
 
-        public SerializedObject serializedObject => m_SerializedObject ??= m_Targets.Length > 0 && m_Targets.All(t => t != null) ? new SerializedObject(m_Targets, m_Context) : null;
+        public SerializedObject serializedObject
+        {
+            get
+            {
+                if (!m_AllowMultiObjectAccess)
+                    Debug.LogError("The serializedObject should not be used inside OnSceneGUI or OnPreviewGUI. Use the target property directly instead.");
+                return m_SerializedObject ??= m_Targets.Length > 0 && m_Targets.All(t => t != null) ? new SerializedObject(m_Targets, m_Context) : null;
+            }
+        }
 
         public bool hasUnsavedChanges { get; protected set; }
 
