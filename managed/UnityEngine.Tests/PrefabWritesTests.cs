@@ -510,6 +510,47 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>An instance's file entry for another instance placed under its object (that
+        /// instance's root Transform, as files list nested instances) stays through a save while that
+        /// instance is saved.</summary>
+        [Fact]
+        public void ASaveKeepsTheEntryOfAnInstancePlacedUnderAnother()
+        {
+            var holder = new GameObject("Holder");
+            m_Made.Add(holder);
+            var outer = Instance();
+            outer.transform.SetParent(holder.transform, false);
+            var inner = Instance();
+            inner.transform.SetParent(holder.transform, false);
+            var target = new SceneFiles.WriteTarget
+            {
+                Path = "Assets/Holder.prefab",
+                FileIds = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance),
+                StrippedIds = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance),
+                Roots = new List<GameObject> { holder },
+            };
+            var outerData = PrefabLinks.Of(outer).Instance;
+            outerData.FileId = 0;
+            PrefabLinks.Of(inner).Instance.FileId = 0;
+            var docs = UnityYamlText.Parse(SceneFiles.Write(target));
+            // The file lists the inner instance's root Transform (a stand-in) under the outer instance.
+            const long InnerRoot = 999;
+            target.FileIds[inner.transform] = InnerRoot;
+            var outerDoc = docs.Find(d => d.FileId == outerData.FileId);
+            var entry = YText.Map();
+            entry.Add("targetCorrespondingSourceObject", SceneFiles.FlowValue("{fileID: 101, guid: " + m_Guid + ", type: 3}"));
+            entry.Add("insertIndex", YText.Scalar("-1"));
+            entry.Add("addedObject", SceneFiles.FlowValue("{fileID: " + InnerRoot + "}"));
+            var list = YText.Seq();
+            list.Items.Add(entry);
+            outerDoc.Body.Get("m_Modification").Set("m_AddedGameObjects", list);
+            var stand = new YTextDocument { Header = "--- !u!4 &" + InnerRoot + " stripped", ClassId = 4, FileId = InnerRoot, ClassName = "Transform", Body = YText.Map() };
+            docs.Add(stand);
+            var file = Path.Combine(m_Project, "Assets", "Holder.prefab");
+            File.WriteAllText(file, UnityYamlText.Write(docs));
+            Assert.Contains("addedObject: {fileID: " + InnerRoot + "}", SceneFiles.Write(target));
+        }
+
         /// <summary>New prefabs whose instances are not measured are refused or not written: an
         /// instance under another instance's object, an instance whose file lists removed
         /// GameObjects, a GameObject added among an instance's own children.</summary>
