@@ -6,8 +6,8 @@ using UnityEngine;
 
 /// <summary>
 /// Records, in Play mode, what MonoImporter.GetExecutionOrder answers for scripts ordered by their
-/// .meta file, by DefaultExecutionOrder, by both and by neither, for a script of an engine class and
-/// for null.
+/// .meta file, by DefaultExecutionOrder, by both and by neither, for a behaviour's script and for
+/// null.
 /// </summary>
 static class MonoImporterProbe
 {
@@ -25,8 +25,8 @@ static class MonoImporterProbe
         }
         Put("order.null", Try(() => MonoImporter.GetExecutionOrder(null).ToString()));
         var go = new GameObject("Probe");
-        var engineScript = MonoScript.FromMonoBehaviour(go.AddComponent<MetaOrdered>());
-        Put("order.fromBehaviour", Try(() => MonoImporter.GetExecutionOrder(engineScript).ToString()));
+        var behaviourScript = MonoScript.FromMonoBehaviour(go.AddComponent<MetaOrdered>());
+        Put("order.fromBehaviour", Try(() => MonoImporter.GetExecutionOrder(behaviourScript).ToString()));
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         Directory.CreateDirectory(directory);
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
