@@ -175,7 +175,7 @@ namespace DotRecast.Detour.Crowd
         public void SetNavMesh(DtNavMesh nav)
         {
             _navMesh = nav;
-            _navQuery = new DtNavMeshQuery(nav, config.weightedWallProjection);
+            _navQuery = new DtNavMeshQuery(nav, _config.weightedWallProjection);
         }
 
         public DtNavMesh GetNavMesh()
