@@ -310,6 +310,43 @@ public sealed class EditorLayoutProbe : MonoBehaviour
         }
         GUILayout.EndArea();
 
+        // 2c. A background style whose name has scrollbar styles in the skin takes those:
+        // "<name>VerticalScrollbar" and "<name>HorizontalScrollbar". Their sizes show in how far
+        // the view scrolls (the content less the room the bars leave).
+        GUILayout.BeginArea(new Rect(0, 0, 420, 220));
+        {
+            var previousSkin = GUI.skin;
+            var skin = ScriptableObject.CreateInstance<GUISkin>();
+            skin.customStyles = new[]
+            {
+                new GUIStyle { name = "ProbeNamedVerticalScrollbar", fixedWidth = 31 },
+                new GUIStyle { name = "ProbeNamedHorizontalScrollbar", fixedHeight = 17 },
+                new GUIStyle { name = "ProbeHalfVerticalScrollbar", fixedWidth = 23 },
+            };
+            GUI.skin = skin;
+            Vector2 namedPos, halfPos, plainPos;
+            try
+            {
+                namedPos = EditorGUILayout.BeginScrollView(new Vector2(500f, 500f), new GUIStyle { name = "ProbeNamed" }, GUILayout.Width(100), GUILayout.Height(80));
+                GUILayoutUtility.GetRect(200, 200, GUIStyle.none);
+                EditorGUILayout.EndScrollView();
+                // Only a vertical scrollbar style of that name: the horizontal one is the skin's.
+                halfPos = EditorGUILayout.BeginScrollView(new Vector2(500f, 500f), new GUIStyle { name = "ProbeHalf" }, GUILayout.Width(100), GUILayout.Height(80));
+                GUILayoutUtility.GetRect(200, 200, GUIStyle.none);
+                EditorGUILayout.EndScrollView();
+                plainPos = EditorGUILayout.BeginScrollView(new Vector2(500f, 500f), new GUIStyle { name = "ProbeNoSuch" }, GUILayout.Width(100), GUILayout.Height(80));
+                GUILayoutUtility.GetRect(200, 200, GUIStyle.none);
+                EditorGUILayout.EndScrollView();
+            }
+            finally
+            {
+                GUI.skin = previousSkin;
+                UnityEngine.Object.DestroyImmediate(skin);
+            }
+            if (record) Put("scroll/barsByStyleName", VecArr(namedPos), VecArr(halfPos), VecArr(plainPos));
+        }
+        GUILayout.EndArea();
+
         // 3. Separator & Space in vertical and horizontal groups
         GUILayout.BeginArea(new Rect(0, 0, 420, 220));
         {

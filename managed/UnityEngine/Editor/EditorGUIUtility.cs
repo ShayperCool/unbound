@@ -128,15 +128,15 @@ namespace UnityEditor
             return obj;
         }
 
-        /// <summary>Highlights an object in the Hierarchy and Project windows that show it. Without
-        /// such a window nothing happens, also in the Editor (no exception, no log:
-        /// tests/projects/editorlayout util/pingObject); Unbound has none.</summary>
+        /// <summary>Highlights an object in the Hierarchy and Project windows that show it. The
+        /// Editor answers with no exception and no log (tests/projects/editorlayout
+        /// util/pingObject); Unbound has no such window to highlight in.</summary>
         public static void PingObject(Object obj)
         {
             if (obj != null) PingObject(obj.GetInstanceID());
         }
 
-        [Unbound.EditorFaithful("highlights the object in open Hierarchy and Project windows; with none open nothing happens (tests/projects/editorlayout util/pingObject)")]
+        [Unbound.EditorFaithful("highlights the object in the Hierarchy and Project windows, which Unbound does not have; no exception and no log, as in the Editor (tests/projects/editorlayout util/pingObject)")]
         public static void PingObject(int targetInstanceID) { }
 
         internal static float CalcContextWidth()
