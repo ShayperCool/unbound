@@ -16,8 +16,6 @@ frames drawn by a pipeline's own shaders are not compared). For tests/projects/r
 renderer covers the same realtime lightmap texels as in the Editor and the lightmaps of the light
 cases match within the comparator's tolerance but for a few isolated texels, as its frames do (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
 drawn only in part. Not supported yet, each with a warning ([Open](#open) lists the main ones):
-automatic charts whose choices the precompute's rounding decides and the system's data cannot
-tell apart ([Automatic charts](#automatic-charts)),
 light types other than point, spot and directional (the scene's realtime GI is then not drawn: its
 renderers take light probes again; area lights are baked only), light probes whose probe set cannot be read or placed (they light nothing; the
 lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
@@ -734,8 +732,20 @@ cluster's points on the renderer, the mean surface point and normal of the texel
 its material from against the mean of its points and of their normals, the two sets brought
 together by the rigid motion that fits them best, measured by the points alone and by points
 and normals together (a normal's difference counting as that many metres). The layout taken is
-the one whose remaining difference by one measure is at most half any other's and 0.05 m
-smaller, where the other measure does not so take another. (A cluster that spans faces folded
+the one whose remaining difference by one measure is at most half any other's and smaller by
+a twentieth of the part's size (the diagonal of its bounds; at least 0.1 mm), where the other
+measure does not so take another. Where the data does not tell them apart (a part too small for
+the system's clusters to sample its faces apart), the first of them is drawn, the arithmetic
+here's own way when it fits, with a warning that names the renderer and the number of ways:
+which the precompute made is then not known, and the lighting of its charts of one size may be
+exchanged. Such a layout is made again in each session (not cached), so the warning is given in
+each. `RoomSmall` is the Room so too with a cube of 0.45 turned 25 degrees about Y (117 ways fit
+its chart mask; its faces lie in clusters that sample them alike), a 6 cm cube turned (15, 30,
+10) (56 ways; no cluster samples it) and the wedge's mesh at 5 cm turned (10, 30, 0) (one way):
+the Editor's GI cache has the first way for the 0.45 cube and the wedge, and another of the 56
+for the 6 cm cube, whose round of joined faces is a tie of projected areas that the Editor's
+rounding settles otherwise; its lightmap is within the comparator's tolerance all the same
+(`roomsmall-base`, `roomsmall-moved`). (A cluster that spans faces folded
 into one chart has a blurred mean normal, and the points tell; congruent faces the normals
 tell.) Unbound's own bake (no Editor data) takes the first. `RoomRounding` is the Room so too
 with a 1.6 x 0.1 x 1.2 m slab modelled turned 45 degrees about Y (faces at a right angle but
@@ -754,10 +764,8 @@ that fits the mask (the slab by its points, 0.08 against 0.43 m; the box by poin
 What Unbound cannot make as the Editor does is refused. Each refusal is a warning that names
 the renderer, and its system is then not drawn:
 
-- Ways of taking the rounding's choices that the system's data cannot tell apart: two that
-  fit the chart mask with none clearly closest to the clusters (a renderer with fewer than three
-  cluster groups cannot tell: a cube of 0.45 turned 25 degrees about Y fits its chart mask 117
-  ways and lies in one cluster), or more than 256 ways (a small cube turned about two axes).
+- More than 256 ways of taking the rounding's choices (a small cube turned about two axes
+  in its mesh): they are not all made.
 - Renderers that share their mesh, chart settings and instance matrix to thousandths with one
   whose matrix is another and lays the charts out otherwise (an unturned twin of a turned
   renderer, say): which matrix the shared geometry was made of is not known.
@@ -1175,8 +1183,9 @@ The main things the runtime over Unity's precomputed data does not make yet, eac
 loudly or recorded above with its scope (each section lists the rest of what it does not
 measure):
 
-- Automatic charts: ways of taking the choices the precompute's rounding decides that the
-  system's chart mask and clusters cannot tell apart, a Max Angle of a right angle or more,
+- Automatic charts: which of the ways of taking the choices the precompute's rounding decides
+  that the system's chart mask and clusters cannot tell apart the Editor took (the first is
+  drawn, with a warning), more than 256 such ways, a Max Angle of a right angle or more,
   renderers sharing a geometry whose layouts differ by the matrix it is made of, a zero or
   mirrored scale up the hierarchy, a Scale In Lightmap of 0 and meshes without normals
   ([Automatic charts](#automatic-charts)).
