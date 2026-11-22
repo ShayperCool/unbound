@@ -1,0 +1,15 @@
+{
+  "commands": ["python3 tests/projects/texturecreationerrors/run.py gate"],
+  "summary": "texturecreationerrors (Gamma|Linear): .*",
+  "engine_paths": [
+    "tests/projects/texturecreationerrors/",
+    "tests/projects/formatmapping/Assets/Scenes/",
+    "tests/projects/formatmapping/Assets/Scenes.meta",
+    "tests/projects/formatmapping/Packages/",
+    "tests/projects/formatmapping/ProjectSettings/",
+    "managed/UnityEngine/Graphics/Texture2D.cs",
+    "managed/UnityEngine/Graphics/Texture2D.Blocks.cs",
+    "managed/UnityEngine/Graphics/GraphicsFormats.cs",
+    "managed/UnityEngine/Runtime/Compat.cs"
+  ]
+}

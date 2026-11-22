@@ -120,13 +120,17 @@ namespace UnityEngine
             return false;
         }
 
-        void Init(int width, int height, TextureFormat format, int mipCount, bool linear)
+        void Init(int width, int height, TextureFormat format, int mipCount, bool linear, bool constructor = true)
         {
             CheckMainThreadCreation("SupportsTextureFormatNative");
             if (!SidesValid(width, height)) throw new UnityException("Failed to create texture because of invalid parameters.");
             // Block formats need block-sized sides (checked before anything changes).
-            if (!BlockSized(format, width, height))
+            bool measuredCreation = constructor && Compat.TextureBlockSizeDiagnosticsMeasured;
+            if (!BlockSized(format, width, height, checkPunchthrough: measuredCreation))
+            {
+                if (measuredCreation) LogBlockCreationError(format, linear);
                 throw new UnityException("Failed to create texture because of invalid parameters.");
+            }
             ReleaseStore();
             m_Width = width;
             m_Height = height;
@@ -440,7 +444,7 @@ namespace UnityEngine
             // A block format refuses sides that are not block-sized, leaving the texture as it was
             // (tests/projects/texturecompression reinit.odd).
             if (!BlockSized(format, width, height)) return false;
-            Init(width, height, format, hasMipMap ? -1 : 1, m_Linear);
+            Init(width, height, format, hasMipMap ? -1 : 1, m_Linear, constructor: false);
             return true;
         }
 
@@ -448,8 +452,9 @@ namespace UnityEngine
         {
             MainThreadCheck.Check("Reinitialize");
             if (!SidesValid(width, height)) return false;
-            if (!BlockSized(TextureFormatOf(format), width, height)) return false;
-            Init(width, height, TextureFormatOf(format), hasMipMap ? -1 : 1, !GraphicsFormatUtility.IsSRGBFormat(format));
+            var textureFormat = TextureFormatOf(format);
+            if (!BlockSized(textureFormat, width, height)) return false;
+            Init(width, height, textureFormat, hasMipMap ? -1 : 1, !GraphicsFormatUtility.IsSRGBFormat(format), constructor: false);
             return true;
         }
 

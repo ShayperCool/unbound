@@ -139,3 +139,7 @@ values are facts of the Linux capture's machine; on macOS many more differ by de
 stack byte counts also follow the length of the project path the probe runs from, so their
 values change with the checkout; a new failing key on Linux, or a change outside those four
 counts, is a regression.
+
+The block-alignment diagnostic for an invalid compressed Texture2D constructor size now matches
+the `size.texture2d.logs` row. The companion `tests/projects/texturecreationerrors` probe records
+which formats reject each size and where the diagnostic is delivered in Gamma and Linear.

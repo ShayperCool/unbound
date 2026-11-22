@@ -1,6 +1,7 @@
 using System;
 using System.Text.Json;
 using Unbound.Runtime;
+using UnityEngine.Experimental.Rendering;
 
 namespace UnityEngine
 {
@@ -442,10 +443,53 @@ namespace UnityEngine
             return copied;
         }
 
-        /// <summary>Whether a texture of `format` may have these sides: a block format's must be
-        /// multiples of 4 for BC/ETC; ASTC accepts odd sides (texturecompression new.ASTC*Odd).</summary>
-        static bool BlockSized(TextureFormat format, int width, int height) =>
-            BlockFormats.BlockBytes(format) == 0 || BlockFormats.IsAstc(format) || (width % 4 == 0 && height % 4 == 0);
+        const int BlockSideAlignment = 4;
+
+        /// <summary>BC and ETC require block-aligned sides; ASTC accepts odd sides.</summary>
+        static bool BlockSized(TextureFormat format, int width, int height, bool checkPunchthrough = false)
+        {
+            if (width % BlockSideAlignment == 0 && height % BlockSideAlignment == 0) return true;
+            if (BlockFormats.IsAstc(format)) return true;
+            // Punchthrough uses fallback storage and still needs block-aligned constructor dimensions.
+            return BlockFormats.BlockBytes(format) == 0 && (!checkPunchthrough || format != TextureFormat.ETC2_RGBA1);
+        }
+
+        /// <summary>The constructor's diagnostic uses the effective color space
+        /// (Unity 6000.0.71f1, tests/projects/texturecreationerrors).</summary>
+        static void LogBlockCreationError(TextureFormat format, bool linear)
+        {
+            bool srgb = !linear && QualitySettings.activeColorSpace == ColorSpace.Linear;
+            GraphicsFormat graphics = GraphicsFormatUtility.Texture2DGraphicsFormat(format, srgb);
+            // ETC has no sRGB graphics format. The validation names its ETC2 counterpart.
+            if (graphics == GraphicsFormat.RGB_ETC_UNorm && srgb)
+                graphics = GraphicsFormat.RGB_ETC2_SRGB;
+            string name = BlockDiagnosticFormatName(graphics);
+            if (name != null)
+                Log.Engine(LogType.Error,
+                    $"Compressed GraphicsFormat {name} requires a texture size that is a multiple of {BlockSideAlignment}", null);
+        }
+
+        // Display names recorded for the compressed formats whose alignment diagnostics were measured.
+        static string BlockDiagnosticFormatName(GraphicsFormat format)
+        {
+            string name = GraphicsFormatUtility.GetLinearFormat(format) switch
+            {
+                GraphicsFormat.RGBA_DXT1_UNorm => "RGB Compressed DXT1|BC1",
+                GraphicsFormat.RGBA_DXT5_UNorm => "RGBA Compressed DXT5|BC3",
+                GraphicsFormat.R_BC4_UNorm => "R Compressed BC4",
+                GraphicsFormat.RG_BC5_UNorm => "RG Compressed BC5",
+                GraphicsFormat.RGBA_BC7_UNorm => "RGBA Compressed BC7",
+                GraphicsFormat.RGB_ETC_UNorm => "RGB Compressed ETC",
+                GraphicsFormat.RGB_ETC2_UNorm => "RGB Compressed ETC2",
+                GraphicsFormat.RGB_A1_ETC2_UNorm => "RGBA Compressed ETC2 punchthrough",
+                GraphicsFormat.RGBA_ETC2_UNorm => "RGBA Compressed ETC2",
+                GraphicsFormat.R_EAC_UNorm => "R Compressed EAC",
+                GraphicsFormat.RG_EAC_UNorm => "RG Compressed EAC",
+                _ => null,
+            };
+            if (format == GraphicsFormat.RGB_BC6H_UFloat) return "RGB Compressed BC6H UFloat";
+            return name == null ? null : name + (GraphicsFormatUtility.IsSRGBFormat(format) ? " sRGB" : " UNorm");
+        }
 
         /// <summary>Level <paramref name="mip"/>'s blocks of a block-compressed texture, readable or
         /// not (Texture2D.PackTextures copies them, as Graphics.CopyTexture does); empty when the
@@ -463,7 +507,8 @@ namespace UnityEngine
 
         /// <summary>Makes the texture one of these sides, format and number of levels, keeping its
         /// colour space (Texture2D.PackTextures' atlas).</summary>
-        internal void InitLevels(int width, int height, TextureFormat format, int mipCount) => Init(width, height, format, mipCount, m_Linear);
+        internal void InitLevels(int width, int height, TextureFormat format, int mipCount) =>
+            Init(width, height, format, mipCount, m_Linear, constructor: false);
 
         /// <summary>Bytes of a source level of a block-compressed texture.</summary>
         int SourceLevelSize(int mip) =>

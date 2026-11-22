@@ -1,0 +1,175 @@
+{"k":"DXT1.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"DXT1.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"DXT5.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"DXT5.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"DXT1Crunched.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1Crunched.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1Crunched.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1Crunched.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1Crunched.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"DXT1Crunched.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1Crunched.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1Crunched.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1Crunched.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT1Crunched.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"DXT5Crunched.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5Crunched.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5Crunched.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5Crunched.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5Crunched.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"DXT5Crunched.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5Crunched.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5Crunched.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5Crunched.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed DXT5|BC3 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"DXT5Crunched.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"BC4.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed BC4 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC4.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed BC4 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC4.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed BC4 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC4.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed BC4 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC4.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"BC4.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed BC4 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC4.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed BC4 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC4.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed BC4 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC4.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed BC4 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC4.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"BC5.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed BC5 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC5.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed BC5 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC5.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed BC5 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC5.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed BC5 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC5.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"BC5.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed BC5 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC5.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed BC5 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC5.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed BC5 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC5.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed BC5 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC5.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"BC6H.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed BC6H UFloat requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC6H.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed BC6H UFloat requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC6H.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed BC6H UFloat requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC6H.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed BC6H UFloat requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC6H.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"BC6H.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed BC6H UFloat requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC6H.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed BC6H UFloat requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC6H.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed BC6H UFloat requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC6H.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed BC6H UFloat requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC6H.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"BC7.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed BC7 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC7.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed BC7 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC7.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed BC7 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC7.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed BC7 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC7.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"BC7.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed BC7 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC7.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed BC7 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC7.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed BC7 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC7.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed BC7 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"BC7.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ETC_RGB4.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ETC_RGB4.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ETC2_RGB.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGB.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGB.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGB.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGB.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ETC2_RGB.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGB.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGB.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGB.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGB.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ETC2_RGBA1.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 punchthrough UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA1.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 punchthrough UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA1.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 punchthrough UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA1.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 punchthrough UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA1.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ETC2_RGBA1.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 punchthrough UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA1.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 punchthrough UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA1.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 punchthrough UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA1.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 punchthrough UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA1.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ETC2_RGBA8.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ETC2_RGBA8.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ETC_RGB4Crunched.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4Crunched.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4Crunched.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4Crunched.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4Crunched.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ETC_RGB4Crunched.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4Crunched.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4Crunched.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4Crunched.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed ETC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC_RGB4Crunched.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ETC2_RGBA8Crunched.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8Crunched.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8Crunched.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8Crunched.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8Crunched.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ETC2_RGBA8Crunched.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8Crunched.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8Crunched.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8Crunched.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGBA Compressed ETC2 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"ETC2_RGBA8Crunched.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"EAC_R.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"EAC_R.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat R Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_R.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"EAC_RG.srgb.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG.srgb.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG.srgb.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG.srgb.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"EAC_RG.linear.new.1x1","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG.linear.new.4x7","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG.linear.new.7x4","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG.linear.new.30x18","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RG Compressed EAC UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"EAC_RG.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ASTC_6x6.srgb.new.1x1","v":"1x1 | app=[] logger=[]"}
+{"k":"ASTC_6x6.srgb.new.4x7","v":"4x7 | app=[] logger=[]"}
+{"k":"ASTC_6x6.srgb.new.7x4","v":"7x4 | app=[] logger=[]"}
+{"k":"ASTC_6x6.srgb.new.30x18","v":"30x18 | app=[] logger=[]"}
+{"k":"ASTC_6x6.srgb.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"ASTC_6x6.linear.new.1x1","v":"1x1 | app=[] logger=[]"}
+{"k":"ASTC_6x6.linear.new.4x7","v":"4x7 | app=[] logger=[]"}
+{"k":"ASTC_6x6.linear.new.7x4","v":"7x4 | app=[] logger=[]"}
+{"k":"ASTC_6x6.linear.new.30x18","v":"30x18 | app=[] logger=[]"}
+{"k":"ASTC_6x6.linear.new.8x8","v":"8x8 | app=[] logger=[]"}
+{"k":"side.zero","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Texture must have width greater than 0.] logger=[]"}
+{"k":"RGBA32.new.7x4","v":"7x4 | app=[] logger=[]"}
+{"k":"RGBA_DXT1_UNorm.new","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"RGBA_DXT1_SRGB.new","v":"UnityException: Failed to create texture because of invalid parameters. | app=[Error: Compressed GraphicsFormat RGB Compressed DXT1|BC1 UNorm requires a texture size that is a multiple of 4] logger=[]"}
+{"k":"complete","v":true}

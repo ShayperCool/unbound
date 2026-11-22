@@ -234,6 +234,9 @@ namespace Unbound.Runtime
         /// <summary>Runtime compressed channel formats and readback controls measured by
         /// tests/projects/texturecompression on 6000.0.71f1. Other releases keep their previous formats.</summary>
         internal static bool RuntimeTextureCompressionMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>Texture2D constructor block alignment measured by texturecreationerrors.
+        /// Other release families keep their previous unmeasured constructor behavior.</summary>
+        internal static bool TextureBlockSizeDiagnosticsMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>The null Transform message of Pose.GetTransformedBy in coreapis on 6000.0.71f1.
         /// Other releases keep the previous runtime exception.</summary>
         internal static bool PoseNullTransformMeasured => Family == ReleaseFamily.Unity6000_0;
