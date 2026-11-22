@@ -55,13 +55,22 @@ fn corner_angle(x: f32, y: f32) -> f32 {
 }
 
 impl Importance {
+    /// The one direction of a sky without light: up, bringing nothing.
+    fn dark() -> Importance {
+        Importance {
+            directions: vec![[0.0, 1.0, 0.0]],
+            weighted: vec![[0.0; 3]],
+            integral: 0.0,
+        }
+    }
+
     /// Picks `count` directions over the sky by its brightness: directions drawn evenly over
     /// the sphere are kept by the chance of the sky's brightness there over its greatest. A
-    /// black sky has none.
-    pub fn of(faces: &[Texture; 6], count: usize) -> Option<Importance> {
+    /// sky without light has one direction that brings nothing.
+    pub fn of(faces: &[Texture; 6], count: usize) -> Importance {
         let side = faces[0].width;
         if side == 0 || faces.iter().any(|f| f.width != side || f.height != side) {
-            return None;
+            return Importance::dark();
         }
         // The sky's brightness over the sphere: each texel's by the solid angle it covers.
         let step = 1.0 / side as f32;
@@ -83,7 +92,7 @@ impl Importance {
             }
         }
         if !(integral > 0.0) {
-            return None;
+            return Importance::dark();
         }
         let mut shift = Shift::new();
         let mut draw = |shift: &mut Shift| -> ([f32; 3], [f32; 3]) {
@@ -113,11 +122,11 @@ impl Importance {
             directions.push(direction);
             weighted.push(color.map(|v| scale * v));
         }
-        Some(Importance {
+        Importance {
             directions,
             weighted,
             integral,
-        })
+        }
     }
 }
 
@@ -248,5 +257,166 @@ impl Sky {
             let weight = 2.0 * share(by_cosine, by_sky);
             (dot(direction, triangle) > 0.0).then(|| (direction, color.map(|v| weight * v)))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn face(color: [f32; 3]) -> Texture {
+        Texture::uniform([color[0], color[1], color[2], 1.0])
+    }
+
+    /// A sky whose faces are of the colours given, towards +x, -x, +y, -y, +z and -z.
+    fn sky(colors: [[f32; 3]; 6]) -> Sky {
+        Sky {
+            faces: colors.map(face),
+            importance: None,
+        }
+    }
+
+    const SIX: [[f32; 3]; 6] = [
+        [1.0, 0.0, 0.0],
+        [2.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 2.0, 0.0],
+        [0.0, 0.0, 1.0],
+        [0.0, 0.0, 2.0],
+    ];
+
+    #[test]
+    fn a_direction_reads_the_face_it_points_most_at() {
+        let sky = sky(SIX);
+        assert_eq!(sky.color([3.0, 1.0, -2.0]), SIX[0]);
+        assert_eq!(sky.color([-3.0, 1.0, -2.0]), SIX[1]);
+        assert_eq!(sky.color([0.5, 1.0, -0.5]), SIX[2]);
+        assert_eq!(sky.color([0.5, -1.0, -0.5]), SIX[3]);
+        assert_eq!(sky.color([0.0, 0.1, 0.2]), SIX[4]);
+        assert_eq!(sky.color([0.0, 0.1, -0.2]), SIX[5]);
+    }
+
+    #[test]
+    fn a_faces_rows_run_down_and_its_columns_as_a_cube_map_lays_them() {
+        // The face towards +x: its columns run towards -z, its rows towards -y.
+        let mut faces = SIX.map(face);
+        faces[0] = Texture {
+            width: 2,
+            height: 2,
+            texels: vec![
+                [1.0, 0.0, 0.0, 1.0],
+                [2.0, 0.0, 0.0, 1.0],
+                [3.0, 0.0, 0.0, 1.0],
+                [4.0, 0.0, 0.0, 1.0],
+            ],
+        };
+        let sky = Sky {
+            faces,
+            importance: None,
+        };
+        assert_eq!(sky.color([1.0, 0.5, 0.5])[0], 1.0);
+        assert_eq!(sky.color([1.0, 0.5, -0.5])[0], 2.0);
+        assert_eq!(sky.color([1.0, -0.5, 0.5])[0], 3.0);
+        assert_eq!(sky.color([1.0, -0.5, -0.5])[0], 4.0);
+    }
+
+    #[test]
+    fn the_picking_generator_starts_from_zero() {
+        let mut shift = Shift::new();
+        assert_eq!(shift.words, [0, 1, 0x6c07_8966, 0x714a_cb3f]);
+        let first = shift.next();
+        // x = 0 leaves w ^ (w >> 19).
+        let word = 0x714a_cb3fu32 ^ (0x714a_cb3fu32 >> 19);
+        assert_eq!(first, (word & 0x7f_ffff) as f32 * (1.0 / 8_388_607.0));
+        assert!((0..1000).all(|_| (0.0..=1.0).contains(&shift.next())));
+    }
+
+    #[test]
+    fn a_sky_without_light_has_one_direction_that_brings_nothing() {
+        let dark = Importance::of(&[[0.0; 3]; 6].map(face), 16);
+        assert_eq!(dark.directions, vec![[0.0, 1.0, 0.0]]);
+        assert_eq!(dark.weighted, vec![[0.0; 3]]);
+        assert_eq!(dark.integral, 0.0);
+    }
+
+    #[test]
+    fn directions_are_picked_where_the_sky_is_bright() {
+        // Light on the face towards +y alone, of 4 x 4 texels.
+        let lit = Texture {
+            width: 4,
+            height: 4,
+            texels: vec![[0.5, 3.0, 1.0, 1.0]; 16],
+        };
+        let dark = || Texture {
+            width: 4,
+            height: 4,
+            texels: vec![[0.0, 0.0, 0.0, 1.0]; 16],
+        };
+        let faces = [dark(), dark(), lit, dark(), dark(), dark()];
+        let picked = Importance::of(&faces, 200);
+        // A sixth of the sphere, of brightness 3.
+        let sixth = 4.0 * PI / 6.0;
+        assert!(
+            (picked.integral - 3.0 * sixth).abs() < 1e-4,
+            "{}",
+            picked.integral
+        );
+        assert_eq!((picked.directions.len(), picked.weighted.len()), (200, 200));
+        for (direction, weighted) in picked.directions.iter().zip(&picked.weighted) {
+            assert!((dot(*direction, *direction) - 1.0).abs() < 1e-5);
+            // Within the lit face, or beside it where the reading blends the faces' edges.
+            assert!(direction[1] > 0.5, "{direction:?}");
+            // The light over the chance of the direction: its brightness is the sum.
+            assert!((brightness(*weighted) - picked.integral).abs() < 1e-3);
+        }
+        // The same sky gives the same directions.
+        assert_eq!(Importance::of(&faces, 200).directions, picked.directions);
+    }
+
+    #[test]
+    fn a_sample_looks_around_its_normal_and_not_behind_its_triangle() {
+        let sky = sky(SIX);
+        let up = [0.0, 1.0, 0.0];
+        let (direction, light) = sky.arriving(up, up, [0.0, 0.0, 0.0]).unwrap();
+        assert!(dot(direction, up) > 0.0);
+        assert_eq!(light, sky.color(direction));
+        // A shading normal tilted far from the triangle's: directions behind the triangle
+        // bring nothing.
+        let tilted = [0.0, 0.0, 1.0];
+        let behind = (0..64).any(|k| {
+            sky.arriving(tilted, [0.0, 0.0, -1.0], [k as f32 / 64.0, 0.37, 0.0])
+                .is_some()
+        });
+        assert!(!behind);
+    }
+
+    #[test]
+    fn a_picked_direction_and_a_drawn_one_share_the_light_by_their_chances() {
+        let faces = [[2.0; 3]; 6].map(face);
+        let sky = Sky {
+            importance: Some(Importance::of(&faces, 8)),
+            faces,
+        };
+        let importance = sky.importance.as_ref().unwrap();
+        let up = [0.0, 1.0, 0.0];
+        let whole = 1.0 / (4.0 * PI);
+        // The third number above a half picks a direction: the first number's place among
+        // them.
+        let (direction, light) = sky.arriving(up, up, [0.3, 0.0, 0.75]).unwrap_or_default();
+        let expected = importance.directions[2];
+        if dot(expected, up) > 0.0 {
+            assert_eq!(direction, expected);
+            let cosine = dot(expected, up);
+            let want =
+                2.0 * whole / (whole + cosine / PI) * importance.weighted[2][0] * cosine / PI;
+            assert!((light[0] - want).abs() <= 1e-5 * want, "{light:?} {want}");
+        } else {
+            assert_eq!((direction, light), ([0.0; 3], [0.0; 3]));
+        }
+        // Else a direction drawn by the cosine, weighed against the picking.
+        let (direction, light) = sky.arriving(up, up, [0.3, 0.6, 0.25]).unwrap();
+        let cosine = dot(direction, up);
+        let want = 2.0 * (cosine / PI) / (cosine / PI + whole) * 2.0;
+        assert!((light[0] - want).abs() <= 1e-4 * want, "{light:?} {want}");
     }
 }

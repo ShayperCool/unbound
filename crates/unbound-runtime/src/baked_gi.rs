@@ -13,6 +13,7 @@ use unbound_gi::baked::direct::{self, MixedMode, Receiver};
 use unbound_gi::baked::indirect::{self, Material, Surface, Texture, World};
 use unbound_gi::baked::light::{Kind, Light, Mode};
 use unbound_gi::baked::sampling::Samples;
+use unbound_gi::baked::sky::{IMPORTANCE_DIRECTIONS, Importance, Sky};
 use unbound_gi::baked::trace::Scene;
 use unbound_gi::baked::{atlas, gbuffer, levels};
 
@@ -56,6 +57,54 @@ struct IndirectData {
     blue_noise: String,
     /// Each renderer's material images, in the renderers' order.
     materials: Vec<MaterialData>,
+    /// The sky, if the bake takes light from it.
+    #[serde(default)]
+    environment: Option<EnvironmentData>,
+}
+
+/// The sky of the bake: Environment Samples, whether directions are picked where it is bright
+/// (the Lighting Settings' environment importance sampling), and its six faces (+x, -x, +y,
+/// -y, +z, -z) of `side` texels a side, three 32-bit floats a texel, rows from the top of a
+/// face as a cube map has it, base64.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EnvironmentData {
+    samples: u32,
+    importance_sampling: bool,
+    side: usize,
+    faces: String,
+}
+
+impl EnvironmentData {
+    fn sky(&self) -> Result<Sky> {
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(&self.faces)
+            .context("the sky's faces")?;
+        let texels = self.side.checked_mul(self.side).context("the sky's side")?;
+        ensure!(
+            self.side > 0 && Some(bytes.len()) == texels.checked_mul(6 * 12),
+            "a sky of 6 faces of {} texels a side has {} bytes",
+            self.side,
+            bytes.len()
+        );
+        let mut values = bytes
+            .chunks_exact(4)
+            .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]));
+        let faces: [Texture; 6] = std::array::from_fn(|_| Texture {
+            width: self.side,
+            height: self.side,
+            texels: (0..texels)
+                .map(|_| {
+                    let mut next = || values.next().unwrap_or(0.0);
+                    [next(), next(), next(), 1.0]
+                })
+                .collect(),
+        });
+        let importance = self
+            .importance_sampling
+            .then(|| Importance::of(&faces, IMPORTANCE_DIRECTIONS));
+        Ok(Sky { faces, importance })
+    }
 }
 
 /// A renderer's albedo and emission over its lightmap UVs' bounds, drawn by its materials' meta
@@ -226,6 +275,10 @@ struct Renderer {
     mesh: usize,
     /// Column-major.
     local_to_world: [f32; 16],
+    /// Per submesh whether the renderer has a material for it (a submesh past the list has
+    /// none). Without the list every submesh has one.
+    #[serde(default)]
+    has_material: Option<Vec<bool>>,
     scale_in_lightmap: f32,
     /// The most detailed LOD level it is in, if it is in a LOD Group.
     lod_level: Option<u32>,
@@ -238,6 +291,18 @@ struct Renderer {
     #[serde(default = "yes")]
     receives_shadows: bool,
     parameters: Parameters,
+}
+
+impl Renderer {
+    /// Whether rays meet the submesh: one without a material is not there for them, for a
+    /// shadow, a bounce or the sky (matches the Unity 6000.0.71f1 Editor,
+    /// tests/projects/bakedbuffers `Spare`).
+    fn stops_rays(&self, submesh: usize) -> bool {
+        match &self.has_material {
+            Some(has) => has.get(submesh).copied().unwrap_or(false),
+            None => true,
+        }
+    }
 }
 
 fn yes() -> bool {
@@ -341,7 +406,9 @@ impl SourceMesh {
 /// the sample's number, or [`gbuffer::EMPTY`] without a surface), `irradianceDirect<N>.f32`
 /// (per texel the direct light's red, green and blue and 1, zeros for an unused texel) and,
 /// where the indirect light is baked, `irradianceIndirect<N>.f32` (the same of the indirect
-/// light) and `validity<N>.f32` (per texel the part of its rays that met a back face).
+/// light), `irradianceEnvironment<N>.f32` (the same of the sky's light straight on the texel)
+/// and `validity<N>.f32` (per texel the part of its rays that met a back face); and of a bake
+/// with a sky `sky.f32` and, where directions are picked by its brightness, `skyDirections.f32`.
 struct Buffers<'a> {
     folder: &'a Path,
     lightmaps: Vec<Json>,
@@ -349,12 +416,17 @@ struct Buffers<'a> {
 
 impl<'a> Buffers<'a> {
     const DESCRIPTION: &'static str = "buffers.json";
-    const PER_LIGHTMAP: [(&'static str, &'static str); 6] = [
+    /// The sky's faces (+x, -x, +y, -y, +z, -z; three floats a texel, rows from a face's top).
+    const SKY: &'static str = "sky.f32";
+    /// The directions picked by the sky's brightness: three floats each, then their light.
+    const SKY_DIRECTIONS: &'static str = "skyDirections.f32";
+    const PER_LIGHTMAP: [(&'static str, &'static str); 7] = [
         ("occupancy", ".u8"),
         ("chartIndex", ".i32"),
         ("normal", ".f32"),
         ("irradianceDirect", ".f32"),
         ("irradianceIndirect", ".f32"),
+        ("irradianceEnvironment", ".f32"),
         ("validity", ".f32"),
     ];
 
@@ -369,6 +441,8 @@ impl<'a> Buffers<'a> {
             let name = entry.file_name();
             let name = name.to_string_lossy();
             let ours = name == Self::DESCRIPTION
+                || name == Self::SKY
+                || name == Self::SKY_DIRECTIONS
                 || Self::PER_LIGHTMAP.iter().any(|(prefix, suffix)| {
                     name.strip_prefix(prefix)
                         .and_then(|rest| rest.strip_suffix(suffix))
@@ -440,6 +514,15 @@ impl<'a> Buffers<'a> {
                     .collect(),
             )?;
             self.write(
+                format!("irradianceEnvironment{index}.f32"),
+                bounced
+                    .environment
+                    .iter()
+                    .flatten()
+                    .flat_map(|v| v.to_le_bytes())
+                    .collect(),
+            )?;
+            self.write(
                 format!("validity{index}.f32"),
                 bounced
                     .validity
@@ -475,6 +558,8 @@ struct Bounce {
     scene: Scene,
     /// Indirect Samples, Max Bounces, Min Bounces.
     settings: (u32, u32, u32),
+    /// The sky and Environment Samples.
+    sky: Option<(Sky, u32)>,
 }
 
 /// An image for the buffers' description: its size and its texels' four numbers, rows from the
@@ -636,7 +721,9 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             let count = mesh.positions.len() as u32;
             mesh.submeshes
                 .iter()
-                .flatten()
+                .enumerate()
+                .filter(|(submesh, _)| r.stops_rays(*submesh))
+                .flat_map(|(_, triangles)| triangles)
                 .filter(move |t| t.iter().all(|&v| v < count))
                 .map(move |t| t.map(world))
         }));
@@ -670,6 +757,9 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                         - m[4] * (m[1] * m[10] - m[2] * m[9])
                         + m[8] * (m[1] * m[6] - m[2] * m[5]);
                     for (submesh, triangles) in mesh.submeshes.iter().enumerate() {
+                        if !r.stops_rays(submesh) {
+                            continue;
+                        }
                         let double_sided =
                             images.double_sided.get(submesh).copied().unwrap_or(false);
                         surfaces.extend(triangles.iter().map(|t| Surface {
@@ -694,6 +784,11 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     materials,
                     scene,
                     settings: (data.samples, data.max_bounces, data.min_bounces),
+                    sky: data
+                        .environment
+                        .as_ref()
+                        .map(|e| e.sky().map(|sky| (sky, e.samples)))
+                        .transpose()?,
                 })
             })
             .transpose()?;
@@ -748,7 +843,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                         surfaces: &b.surfaces,
                         materials: &b.materials,
                         lights: &baked_lights,
-                        sky: None,
+                        sky: b.sky.as_ref().map(|s| &s.0),
                     },
                     &b.samples,
                     indirect::Settings {
@@ -756,7 +851,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                         max_bounces: b.settings.1,
                         min_bounces: b.settings.2,
                         pushoff: parameters.pushoff,
-                        environment_samples: 0,
+                        environment_samples: b.sky.as_ref().map_or(0, |s| s.1),
                     },
                 )
             });
@@ -769,8 +864,38 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 "materials": b.materials.iter().map(|m| json!({
                     "albedo": described_image(&m.albedo), "emissive": described_image(&m.emissive),
                 })).collect::<Vec<_>>(),
+                // The sky: its faces are in `sky.f32`, the directions picked by its brightness
+                // and their light in `skyDirections.f32`.
+                "sky": b.sky.as_ref().map(|(sky, samples)| json!({
+                    "samples": samples, "side": sky.faces[0].width,
+                    "directions": sky.importance.as_ref().map_or(0, |i| i.directions.len()),
+                    "brightness": sky.importance.as_ref().map_or(0.0, |i| i.integral),
+                })),
             })
         });
+        if let Some((sky, _)) = bounce.as_ref().and_then(|b| b.sky.as_ref()) {
+            written.write(
+                Buffers::SKY.into(),
+                sky.faces
+                    .iter()
+                    .flat_map(|face| face.texels.iter())
+                    .flat_map(|t| [t[0], t[1], t[2]])
+                    .flat_map(f32::to_le_bytes)
+                    .collect(),
+            )?;
+            if let Some(importance) = &sky.importance {
+                written.write(
+                    Buffers::SKY_DIRECTIONS.into(),
+                    importance
+                        .directions
+                        .iter()
+                        .zip(&importance.weighted)
+                        .flat_map(|(d, w)| [d[0], d[1], d[2], w[0], w[1], w[2]])
+                        .flat_map(f32::to_le_bytes)
+                        .collect(),
+                )?;
+            }
+        }
         written.finish(
             request.mixed_mode,
             json!(
@@ -1382,6 +1507,94 @@ mod tests {
         std::fs::write(&blue_noise, [0u8; 10]).unwrap();
         let error = run(both, &blue_noise, false).unwrap_err().to_string();
         assert!(error.contains("10 bytes"), "{error}");
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    #[test]
+    fn the_skys_light_is_baked_and_a_submesh_without_a_material_lets_it_through() {
+        let folder =
+            std::env::temp_dir().join(format!("unbound-baked-gi-sky-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&folder);
+        std::fs::create_dir_all(&folder).unwrap();
+        let blue_noise = folder.join("bluenoisedata");
+        std::fs::write(
+            &blue_noise,
+            vec![0u8; unbound_gi::baked::sampling::BLUE_NOISE_BYTES],
+        )
+        .unwrap();
+        // A floor facing up (z) under a wide ceiling, and a sky of one colour.
+        let floor = json!({
+            "positions": floats(&[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0]),
+            "normals": floats(&[0.0, 0.0, 1.0].repeat(4)),
+            "uv": floats(&[]),
+            "uv2": floats(&UNIT),
+            "submeshes": [encoded(&[0u32, 1, 2, 0, 2, 3], u32::to_le_bytes)],
+        });
+        let ceiling = json!({
+            "positions": floats(&[-50.0, -50.0, 2.0, -50.0, 50.0, 2.0, 50.0, 50.0, 2.0, 50.0, -50.0, 2.0]),
+            "normals": floats(&[0.0, 0.0, -1.0].repeat(4)),
+            "uv": floats(&[]),
+            "uv2": floats(&UNIT),
+            "submeshes": [encoded(&[0u32, 1, 2, 0, 2, 3], u32::to_le_bytes)],
+        });
+        let black =
+            json!({ "width": 1, "height": 1, "data": encoded(&[0u8, 0, 0, 255], u8::to_le_bytes) });
+        let dark = json!({ "width": 1, "height": 1, "data": floats(&[0.0, 0.0, 0.0, 1.0]) });
+        let run = |has_material: Json, faces: &[f32]| -> Result<Json> {
+            let mut covering = renderer("ceiling", 22, 1, 0.0, 0.0);
+            if !has_material.is_null() {
+                covering["hasMaterial"] = has_material;
+            }
+            let image = json!({ "albedo": black, "emissive": dark, "doubleSided": [false] });
+            let value = json!({
+                "maxSize": 64, "padding": 2, "resolution": 4.0, "fixedSize": false,
+                "scene": "10000000200000003000000040000000",
+                "meshes": [floor, ceiling],
+                "renderers": [renderer("floor", 11, 0, 1.0, 0.0), covering],
+                "indirect": {
+                    "samples": 16, "maxBounces": 1, "minBounces": 1,
+                    "blueNoise": blue_noise.to_string_lossy(), "materials": [image, image],
+                    "environment": { "samples": 16, "importanceSampling": false, "side": 1, "faces": floats(faces) },
+                },
+            });
+            bake(serde_json::from_value(value).unwrap(), Some(&folder))
+        };
+        let dump = folder.join("10000000200000003000000040000000");
+        let even = [1.0f32, 2.0, 3.0].repeat(6);
+        // The lightmap's used texels and those with the sky's colour (the ceiling keeps one
+        // texel, which faces down and sees the sky past the small floor).
+        let lit = |out: &Json| -> (usize, usize) {
+            let lightmap = out["placements"][0]["lightmap"].as_u64().unwrap();
+            let light = read_floats(&dump.join(format!("irradianceEnvironment{lightmap}.f32")));
+            let used = light.chunks_exact(4).filter(|t| t[3] == 1.0);
+            let under = |t: &&[f32]| {
+                (t[0] - 1.0).abs() < 1e-5 && (t[1] - 2.0).abs() < 1e-5 && (t[2] - 3.0).abs() < 1e-5
+            };
+            (used.clone().count(), used.filter(under).count())
+        };
+        // The ceiling stops the sky, with a material named or with no word of materials.
+        for has_material in [json!([true]), Json::Null] {
+            let (used, under) = lit(&run(has_material, &even).unwrap());
+            assert!(used > 4 && under <= 1, "{used} {under}");
+        }
+        let description: Json =
+            serde_json::from_slice(&std::fs::read(dump.join("buffers.json")).unwrap()).unwrap();
+        assert_eq!(description["indirect"]["sky"]["samples"], json!(16));
+        assert_eq!(description["indirect"]["sky"]["side"], json!(1));
+        assert_eq!(description["indirect"]["sky"]["directions"], json!(0));
+        assert_eq!(read_floats(&dump.join("sky.f32")), even);
+        // Without a material for its submesh (none in the list, or the list short of it) it
+        // lets the sky through.
+        for has_material in [json!([false]), json!([])] {
+            let (used, under) = lit(&run(has_material, &even).unwrap());
+            assert!(used > 4 && under == used, "{used} {under}");
+        }
+        // Faces of another size than said are refused.
+        let error = format!("{:#}", run(Json::Null, &even[..15]).unwrap_err());
+        assert!(
+            error.contains("a sky of 6 faces of 1 texels a side"),
+            "{error}"
+        );
         let _ = std::fs::remove_dir_all(&folder);
     }
 

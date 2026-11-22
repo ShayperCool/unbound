@@ -10,15 +10,16 @@
 //! (4 f32), u32 submeshes, per submesh u32 triangles and their indices (3 u32 each); then u32
 //! instances, per instance u32 mesh, 4 f32 lightmap scale and offset, i32 place in the lightmap,
 //! 16 f32 local-to-world matrix (column-major), u32 receives shadows. The file may go on with
-//! the scene to light the texels from: u32 shadow casters, per caster u32 mesh and 16 f32
-//! matrix; u32 lights, per light u32 kind (0 directional, 1 point, 2 spot), u32 mode (1 mixed,
+//! the scene to light the texels from: u32 shadow casters, per caster u32 mesh, 16 f32 matrix,
+//! u32 submeshes and per submesh u32 whether it has a material; u32 lights, per light u32 kind (0 directional, 1 point, 2 spot), u32 mode (1 mixed,
 //! 2 baked), 3 f32 colour, 3 f32 position, 3 f32 forward axis, f32 range, f32 cone angle, u32
 //! casts shadows; u32 lighting mode of mixed lights (0 baked indirect, 1 subtractive, 2
 //! shadowmask); f32 pushoff. Then `irradianceDirect.f32` is written too. With the blue noise
 //! data of a Unity installation (`Resources/GI/SamplingData/bluenoisedata`) as third argument
 //! the file may go on with the indirect light: u32 Indirect Samples, Max Bounces, Min Bounces;
 //! per light 3 f32 indirect colour; u32 renderers of the bake, per renderer u32 mesh, 16 f32
-//! matrix, u32 mirrored, u32 submeshes and per submesh u32 double sided, then its albedo and its
+//! matrix, u32 mirrored, u32 submeshes and per submesh u32 0 for a material, 1 for a double
+//! sided one, 2 for none, then its albedo and its
 //! emission image (u32 width, height, 4 f32 per texel, rows from the first). Then
 //! `irradianceIndirect.f32` and `validity.f32` are written.
 use std::path::Path;
@@ -119,7 +120,14 @@ fn main() {
         let mesh = &meshes[r.u32() as usize];
         let m: [f32; 16] = r.floats();
         let world = |v: u32| direct::point(&m, mesh.positions[v as usize]);
-        triangles.extend(mesh.submeshes.iter().flatten().map(|t| t.map(world)));
+        let drawn: Vec<bool> = (0..r.u32()).map(|_| r.u32() != 0).collect();
+        let submeshes = mesh.submeshes.iter().enumerate();
+        triangles.extend(
+            submeshes
+                .filter(|(submesh, _)| drawn.get(*submesh).copied().unwrap_or(false))
+                .flat_map(|(_, triangles)| triangles)
+                .map(|t| t.map(world)),
+        );
     }
     let lights: Vec<Light> = (0..r.u32())
         .map(|_| {
@@ -178,7 +186,7 @@ fn main() {
         let m: [f32; 16] = r.floats();
         let mirrored = r.u32() != 0;
         let rows = direct::normal_matrix(&m);
-        let double_sided: Vec<bool> = (0..r.u32()).map(|_| r.u32() != 0).collect();
+        let sides: Vec<u32> = (0..r.u32()).map(|_| r.u32()).collect();
         let mut texture = || {
             let (width, height) = (r.u32() as usize, r.u32() as usize);
             Texture {
@@ -189,11 +197,14 @@ fn main() {
         };
         let (albedo, emissive) = (texture(), texture());
         for (submesh, triangles) in mesh.submeshes.iter().enumerate() {
+            let Some(&sides) = sides.get(submesh).filter(|&&sides| sides < 2) else {
+                continue;
+            };
             for t in triangles {
                 surfaces.push(Surface {
                     material: materials.len() as u32,
                     mirrored,
-                    double_sided: double_sided.get(submesh).copied().unwrap_or(false),
+                    double_sided: sides == 1,
                     corners: t.map(|v| direct::point(&m, mesh.positions[v as usize])),
                     normals: t.map(|v| direct::world_normal(&rows, mesh.normals[v as usize])),
                     uvs: t.map(|v| mesh.uvs[v as usize]),
@@ -228,7 +239,7 @@ fn main() {
         });
         let importance = match (given, std::env::var_os("UNBOUND_OWN_DIRECTIONS")) {
             (Some(given), Some(_)) => {
-                let own = Importance::of(&faces, count).expect("a sky with light");
+                let own = Importance::of(&faces, count);
                 let apart = |a: &[[f32; 3]], b: &[[f32; 3]]| {
                     a.iter()
                         .zip(b)

@@ -250,12 +250,13 @@ impl Path<'_> {
             for k in 0..3 {
                 sum[k] += emissive[k] * throughput[k];
             }
-            // The sky's light on the surface, unless the path ends here anyway.
+            // The sky's light on the surface, unless the path ends here anyway. Any renderer
+            // in the way stops it, also one that casts no shadows.
             if depth + 1 < self.settings.max_bounces
                 && let Some(sky) = world.sky
                 && let Some((direction, light)) = sky.arriving(smooth, geometric, numbers)
                 && !world
-                    .casters
+                    .scene
                     .occluded(&Ray { origin, direction }, f32::INFINITY)
             {
                 for k in 0..3 {
@@ -377,7 +378,7 @@ pub fn indirect(
                     let numbers = path.numbers_of(index, 0, sky_distribution);
                     if let Some((direction, light)) = sky.arriving(smooth, plane, numbers)
                         && !world
-                            .casters
+                            .scene
                             .occluded(&Ray { origin, direction }, f32::INFINITY)
                     {
                         for c in 0..3 {

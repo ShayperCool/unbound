@@ -1153,6 +1153,7 @@ mod bounced {
     use crate::baked::indirect::{self, Material, Settings, Surface, Texture, World};
     use crate::baked::light::{Kind, Light, Mode};
     use crate::baked::sampling::{self, BLUE_NOISE_BYTES, BlueNoiseSize, Samples, Twister};
+    use crate::baked::sky::{Importance, Sky};
     use crate::baked::trace::{Ray, Scene};
 
     const IDENTITY: [f32; 16] = [
@@ -1365,6 +1366,7 @@ mod bounced {
         materials: Vec<Material>,
         lights: Vec<Light>,
         casters: Vec<[[f32; 3]; 3]>,
+        sky: Option<Sky>,
         settings: Settings,
     }
 
@@ -1378,6 +1380,7 @@ mod bounced {
                 }],
                 lights: Vec::new(),
                 casters: Vec::new(),
+                sky: None,
                 settings: Settings {
                     samples: 16,
                     max_bounces: 1,
@@ -1390,6 +1393,12 @@ mod bounced {
 
         /// The floor's one texel: its light and its validity.
         fn run(&self) -> ([f32; 4], f32) {
+            let (light, validity, _) = self.run_under_the_sky();
+            (light, validity)
+        }
+
+        /// The floor's one texel: its indirect light, its validity and the sky's light on it.
+        fn run_under_the_sky(&self) -> ([f32; 4], f32, [f32; 4]) {
             let mesh = floor();
             let instances = [Instance {
                 mesh: &mesh,
@@ -1409,12 +1418,70 @@ mod bounced {
                 surfaces: &self.surfaces,
                 materials: &self.materials,
                 lights: &self.lights,
-                sky: None,
+                sky: self.sky.as_ref(),
             };
             let samples = Samples::new(&vec![0; BLUE_NOISE_BYTES]).unwrap();
             let lit = indirect::indirect(&g, &receivers, &world, &samples, self.settings);
-            (lit.irradiance[0], lit.validity[0])
+            (lit.irradiance[0], lit.validity[0], lit.environment[0])
         }
+    }
+
+    /// A sky of one colour, with or without directions picked by its brightness.
+    fn even_sky(color: [f32; 3], picked: bool) -> Sky {
+        let face = || Texture::uniform([color[0], color[1], color[2], 1.0]);
+        let faces = [face(), face(), face(), face(), face(), face()];
+        let importance = picked.then(|| Importance::of(&faces, 64));
+        Sky { faces, importance }
+    }
+
+    #[test]
+    fn a_texel_under_an_even_sky_takes_its_colour_unless_something_is_in_the_way() {
+        for picked in [false, true] {
+            let mut open = Bake::new(ceiling(0), [1.0; 3], [0.0; 3]);
+            open.surfaces.clear();
+            open.sky = Some(even_sky([1.0, 2.0, 3.0], picked));
+            open.settings.environment_samples = 64;
+            let (light, validity, sky) = open.run_under_the_sky();
+            assert_eq!((light, validity), ([0.0, 0.0, 0.0, 1.0], 0.0));
+            // Looking around by the cosine an even sky gives its colour whatever the
+            // direction. With picked directions a sample's light depends on its direction (the
+            // mean over many samples is the colour): here the colour's hue and its order.
+            let tolerance = if picked { 1.0 } else { 1e-5 };
+            assert!(
+                (0..3).all(|k| (sky[k] - (k + 1) as f32).abs() <= tolerance * (k + 1) as f32),
+                "{picked} {sky:?}"
+            );
+            assert!(
+                sky[0] > 0.0
+                    && (sky[1] - 2.0 * sky[0]).abs() < 1e-4
+                    && (sky[2] - 3.0 * sky[0]).abs() < 1e-4
+            );
+            // No ray is sent without a bounce, to the sky either.
+            open.settings.max_bounces = 0;
+            assert_eq!(open.run_under_the_sky().2, [0.0, 0.0, 0.0, 1.0]);
+            // Whatever is in the way stops the sky's light, also what casts no shadow (the
+            // ceiling is not among the casters).
+            let mut covered = Bake::new(ceiling(0), [1.0; 3], [0.0; 3]);
+            covered.sky = Some(even_sky([1.0, 2.0, 3.0], picked));
+            covered.settings.environment_samples = 64;
+            assert_eq!(covered.run_under_the_sky().2, [0.0, 0.0, 0.0, 1.0]);
+        }
+    }
+
+    #[test]
+    fn a_surface_sends_back_the_skys_light_while_the_path_may_go_on() {
+        // The ceiling's front faces down, where nothing is between it and the sky.
+        let mut bake = Bake::new(ceiling(0), [0.5, 0.25, 1.0], [0.0; 3]);
+        bake.sky = Some(even_sky([2.0, 2.0, 2.0], false));
+        bake.settings.max_bounces = 2;
+        let (light, validity) = bake.run();
+        assert!(
+            near(light, [1.0, 0.5, 2.0]) && validity == 0.0,
+            "{light:?} {validity}"
+        );
+        // At the path's last surface the sky is not asked.
+        bake.settings.max_bounces = 1;
+        assert_eq!(bake.run(), ([0.0, 0.0, 0.0, 1.0], 0.0));
     }
 
     fn near(a: [f32; 4], b: [f32; 3]) -> bool {

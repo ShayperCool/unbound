@@ -158,6 +158,10 @@ namespace UnityEngine
         /// (tests/projects/bakedbuffers).</summary>
         const string BuffersVariable = "UNBOUND_BAKED_GI_BUFFERS";
 
+        /// <summary>The side of the faces of the sky a bake takes
+        /// (tests/projects/bakedbuffers sky).</summary>
+        const int SkyFaceSize = 128;
+
         /// <summary>Where a Unity installation keeps the blue noise data its bakes sample with.</summary>
         const string BlueNoiseData = "Resources/GI/SamplingData/bluenoisedata";
 
@@ -247,6 +251,10 @@ namespace UnityEngine
                 foreach (var copy in withUVs.Values)
                     if (copy != null) Object.DestroyImmediate(copy);
             }
+            // The sky: the ambient source's six faces.
+            var sky = RealtimeGI.SkyFaces(SkyFaceSize);
+            var skyBytes = new byte[sky.Length * sizeof(float)];
+            Buffer.BlockCopy(sky, 0, skyBytes, 0, skyBytes.Length);
             return new
             {
                 samples = settings.indirectSampleCount,
@@ -254,6 +262,13 @@ namespace UnityEngine
                 minBounces = Math.Min(settings.minBounces, settings.maxBounces),
                 blueNoise,
                 materials,
+                environment = new
+                {
+                    samples = settings.environmentSampleCount,
+                    importanceSampling = settings.environmentImportanceSampling,
+                    side = SkyFaceSize,
+                    faces = Convert.ToBase64String(skyBytes),
+                },
             };
         }
 
@@ -428,11 +443,16 @@ namespace UnityEngine
                     var matrix = new float[16];
                     for (int c = 0; c < 4; c++)
                         for (int r = 0; r < 4; r++) matrix[4 * c + r] = m[r, c];
+                    // A submesh without a material is not drawn: the bake's rays pass it.
+                    var slots = renderer.sharedMaterials;
+                    var hasMaterial = new bool[slots.Length];
+                    for (int k = 0; k < slots.Length; k++) hasMaterial[k] = slots[k] != null;
                     renderers.Add(new
                     {
                         name = renderer.name,
                         fileId,
                         mesh = index,
+                        hasMaterial,
                         localToWorld = matrix,
                         scaleInLightmap = renderer.scaleInLightmap,
                         lodLevel = levels.TryGetValue(renderer, out var level) ? (int?)level : null,

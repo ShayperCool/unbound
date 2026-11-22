@@ -152,25 +152,43 @@ namespace UnityEngine
             if (!s_EnvironmentStale && key.Equals(s_EnvironmentKey)) return;
             s_EnvironmentStale = false;
             s_EnvironmentKey = key;
-            if (key.Sky != null) RenderSkyFaces(key.Intensity);
-            else
-            {
-                var color = key.Color.linear;
-                bool gradient = key.Mode == AmbientMode.Trilight;
-                for (int face = 0; face < 6; face++)
-                    FillFace(face, !gradient || face == 2 ? color : face == 3 ? key.Ground.linear : key.Equator.linear);
-            }
+            FillFaces(key, FaceSize, s_Faces);
             s_EnvironmentVersion++;
         }
 
-        static void FillFace(int face, Color c)
+        /// <summary>The faces of the ambient source as it is now, <paramref name="size"/> texels
+        /// a side: what a bake of baked lightmaps takes as its sky, at 128 (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/bakedbuffers sky).</summary>
+        internal static float[] SkyFaces(int size)
         {
-            int at = face * FaceTexels * 3;
-            for (int i = 0; i < FaceTexels; i++)
+            var faces = new float[6 * size * size * 3];
+            FillFaces(EnvironmentKey.Current(), size, faces);
+            return faces;
+        }
+
+        /// <summary>Fills six faces of <paramref name="size"/> texels a side from an ambient
+        /// source.</summary>
+        static void FillFaces(EnvironmentKey key, int size, float[] faces)
+        {
+            if (key.Sky != null)
             {
-                s_Faces[at + 3 * i] = c.r;
-                s_Faces[at + 3 * i + 1] = c.g;
-                s_Faces[at + 3 * i + 2] = c.b;
+                RenderSkyFaces(key.Intensity, size, faces);
+                return;
+            }
+            var color = key.Color.linear;
+            bool gradient = key.Mode == AmbientMode.Trilight;
+            for (int face = 0; face < 6; face++)
+                FillFace(faces, size, face, !gradient || face == 2 ? color : face == 3 ? key.Ground.linear : key.Equator.linear);
+        }
+
+        static void FillFace(float[] faces, int size, int face, Color c)
+        {
+            int at = face * size * size * 3;
+            for (int i = 0; i < size * size; i++)
+            {
+                faces[at + 3 * i] = c.r;
+                faces[at + 3 * i + 1] = c.g;
+                faces[at + 3 * i + 2] = c.b;
             }
         }
 
@@ -191,26 +209,29 @@ namespace UnityEngine
         /// ambient intensity scales the gamma-encoded colors. In a gamma-space project the sky
         /// draws gamma-encoded colors, which are taken as such (tests/projects/realtimegi
         /// `--color-space gamma`, `room-sky`).</summary>
-        static void RenderSkyFaces(float intensity)
+        static void RenderSkyFaces(float intensity, int size, float[] faces)
         {
             bool gamma = DynamicGI.SkyIsGammaEncoded;
-            if (s_SkyReadback == null)
-                s_SkyReadback = new Texture2D(FaceSize, FaceSize, TextureFormat.RGBAFloat, false, true) { hideFlags = HideFlags.HideAndDontSave };
+            if (s_SkyReadback == null || s_SkyReadback.width != size)
+            {
+                if (s_SkyReadback != null) Object.DestroyImmediate(s_SkyReadback);
+                s_SkyReadback = new Texture2D(size, size, TextureFormat.RGBAFloat, false, true) { hideFlags = HideFlags.HideAndDontSave };
+            }
             for (int face = 0; face < 6; face++)
             {
                 var axes = s_FaceAxes[face];
-                DynamicGI.RenderSky(FaceSize, -axes.Back, -axes.Down, s_SkyReadback);
+                DynamicGI.RenderSky(size, -axes.Back, -axes.Down, s_SkyReadback);
                 var pixels = s_SkyReadback.GetPixelData<Color>(0);
-                int at = face * FaceTexels * 3;
-                for (int y = 0; y < FaceSize; y++)
-                    for (int x = 0; x < FaceSize; x++)
+                int at = face * size * size * 3;
+                for (int y = 0; y < size; y++)
+                    for (int x = 0; x < size; x++)
                     {
                         // The image reads back from its bottom row, the face from its top.
-                        var c = pixels[(FaceSize - 1 - y) * FaceSize + x];
-                        int i = at + 3 * (y * FaceSize + x);
-                        s_Faces[i] = Scaled(c.r, intensity, gamma);
-                        s_Faces[i + 1] = Scaled(c.g, intensity, gamma);
-                        s_Faces[i + 2] = Scaled(c.b, intensity, gamma);
+                        var c = pixels[(size - 1 - y) * size + x];
+                        int i = at + 3 * (y * size + x);
+                        faces[i] = Scaled(c.r, intensity, gamma);
+                        faces[i + 1] = Scaled(c.g, intensity, gamma);
+                        faces[i + 2] = Scaled(c.b, intensity, gamma);
                     }
             }
         }
