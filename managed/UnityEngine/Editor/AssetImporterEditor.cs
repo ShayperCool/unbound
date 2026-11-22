@@ -20,9 +20,11 @@ namespace UnityEditor
 
     public partial class AssetImporter
     {
-        internal ImporterSettingsCopy CopySettings() => new ImporterSettingsCopy
+        /// <summary><paramref name="withTree"/>: also a copy of the section, which
+        /// <see cref="RestoreSettings"/> needs and a comparison does not.</summary>
+        internal ImporterSettingsCopy CopySettings(bool withTree = true) => new ImporterSettingsCopy
         {
-            Tree = MetaSettings.Clone(m_Settings),
+            Tree = withTree ? MetaSettings.Clone(m_Settings) : null,
             TreeText = m_Settings == null ? "" : MetaSettings.ToJson(m_Settings),
             UserData = m_UserData,
             BundleName = m_AssetBundleName,
@@ -113,7 +115,7 @@ namespace UnityEditor.AssetImporters
         internal static bool IsEqual(Object target)
         {
             if (!s_Saved.TryGetValue(target.GetInstanceID(), out var saved)) return false;
-            if (target is AssetImporter importer && !importer.CopySettings().Same(saved.Settings)) return false;
+            if (target is AssetImporter importer && !importer.CopySettings(withTree: false).Same(saved.Settings)) return false;
             return StateOf(saved.Extra) == saved.ExtraState;
         }
 
@@ -133,6 +135,9 @@ namespace UnityEditor.AssetImporters
         /// unsaved.apply and extra.applyRevertGUI).</summary>
         static void Changed(Saved saved)
         {
+            // An editor that failed in OnEnable never releases what it took: once destroyed it
+            // is only dropped here.
+            saved.Editors.RemoveAll(editor => editor == null);
             foreach (var editor in saved.Editors.ToArray()) editor.RefreshUnsavedChanges();
         }
     }
@@ -158,13 +163,24 @@ namespace UnityEditor.AssetImporters
         {
             internal ExtraDataSerializedObject(Object[] objs, AssetImporterEditor editor) : base(objs) { }
 
-            public new void Update() => base.Update();
+            /// <summary>The extra data objects are gone once the importer's last editor was
+            /// disabled; an editor that still applies then (its unsaved changes are saved after
+            /// that) is told so and nothing is applied (matches the Unity 6000.0.71f1 Editor,
+            /// tests/projects/importereditor extraButtons.destroyUnsaved).</summary>
+            bool Alive()
+            {
+                if (targetObject != null) return true;
+                Debug.LogError("SerializedObject target has been destroyed.");
+                return false;
+            }
 
-            public new void UpdateIfRequiredOrScript() => base.UpdateIfRequiredOrScript();
+            public new void Update() { if (Alive()) base.Update(); }
 
-            public new void ApplyModifiedProperties() => base.ApplyModifiedProperties();
+            public new void UpdateIfRequiredOrScript() { if (Alive()) base.UpdateIfRequiredOrScript(); }
 
-            public new void SetIsDifferentCacheDirty() => base.SetIsDifferentCacheDirty();
+            public new void ApplyModifiedProperties() { if (Alive()) base.ApplyModifiedProperties(); }
+
+            public new void SetIsDifferentCacheDirty() { if (Alive()) base.SetIsDifferentCacheDirty(); }
         }
 
         const string ApplyText = "Apply", RevertText = "Revert";
@@ -215,6 +231,9 @@ namespace UnityEditor.AssetImporters
 
         internal void RefreshUnsavedChanges() => hasUnsavedChanges = HasModified();
 
+        /// <summary>False without an asset editor (tests/projects/importereditor settings.members);
+        /// with one, which only an Inspector gives, true unless the importer is hidden from
+        /// inspectors (the Scripting API's description; not measured).</summary>
         protected virtual bool needsApplyRevert => !m_InstantApply && (target.hideFlags & HideFlags.HideInInspector) == 0;
 
         [Unbound.EditorFaithful("Unity's base implementation (tests/projects/importereditor settings.members)")]
@@ -286,6 +305,9 @@ namespace UnityEditor.AssetImporters
             // Without a completed base OnEnable there is no list of held importers (the Editor's
             // fails on it likewise, and so leaves what was taken).
             if (m_TargetsInstanceID == null) throw new NullReferenceException(NoObject);
+            // The saved settings and extra data are given up before the unsaved changes are saved:
+            // the save applies without the extra data, and what it saves stays for the importer's
+            // next editor (tests/projects/importereditor extraButtons.destroyUnsaved, outside.later.*).
             foreach (int instanceID in m_TargetsInstanceID) ImporterSavedSettings.Release(instanceID, this);
             if (hasUnsavedChanges) SaveChanges();
         }

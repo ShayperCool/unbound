@@ -29,6 +29,8 @@ namespace UnityEngine.Tests
         class TestEditor : ScriptedImporterEditor
         {
             internal static readonly List<string> Calls = new List<string>();
+            internal int Asked;
+            public override bool HasModified() { Asked++; return base.HasModified(); }
             protected override void Apply() { Calls.Add("Apply"); base.Apply(); }
             public override void SaveChanges() { Calls.Add("SaveChanges"); base.SaveChanges(); }
             internal Object AssetTarget => assetTarget;
@@ -54,6 +56,31 @@ namespace UnityEngine.Tests
                 Initialized++;
                 ((TestExtra)extraData).extra = 40 + targetIndex;
             }
+        }
+
+        sealed class ExtraButtonsEditor : TestEditor
+        {
+            protected override Type extraDataType => typeof(TestExtra);
+            protected override bool needsApplyRevert => true;
+            protected override void InitializeExtraDataInstance(Object extraData, int targetIndex) { }
+        }
+
+        class FlagEditor : Editor
+        {
+            internal void SetUnsaved() => hasUnsavedChanges = true;
+        }
+
+        sealed class NoBaseSaveEditor : FlagEditor
+        {
+            public override void SaveChanges() { }
+            public override void DiscardChanges() { }
+        }
+
+        sealed class ReferenceImporter : ScriptedImporter
+        {
+            public int number = 3;
+            [SerializeReference] public object managed = new Version(1, 2);
+            public override void OnImportAsset(AssetImportContext ctx) { }
         }
 
         sealed class UninitializedExtraEditor : TestEditor
@@ -357,15 +384,111 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void TheBaseEditorHasNoUnsavedChangesLeftAfterSavingOrDiscarding()
+        public void TheBaseSaveAndDiscardResetTheUnsavedFlagAndOverridesThatSkipThemDoNot()
         {
-            var editor = ScriptableObject.CreateInstance<Editor>();
-            m_Objects.Add(editor);
+            var editor = Make<FlagEditor>(Importer());
             Assert.Null(editor.saveChangesMessage);
-            Assert.False(editor.hasUnsavedChanges);
+            editor.SetUnsaved();
             editor.SaveChanges();
+            Assert.False(editor.hasUnsavedChanges);
+            editor.SetUnsaved();
             editor.DiscardChanges();
             Assert.False(editor.hasUnsavedChanges);
+
+            var skipping = Make<NoBaseSaveEditor>(Importer("Assets/B.test"));
+            skipping.SetUnsaved();
+            skipping.SaveChanges();
+            Assert.True(skipping.hasUnsavedChanges);
+            skipping.DiscardChanges();
+            Assert.True(skipping.hasUnsavedChanges);
+        }
+
+        [Fact]
+        public void AnEditorDestroyedWithUnsavedChangesSavesAfterGivingUpItsExtraData()
+        {
+            var importer = Importer();
+            var editor = Make<ExtraButtonsEditor>(importer);
+            var extra = (TestExtra)editor.ExtraDataTarget;
+            extra.extra = 77;
+            importer.number = 73;
+            // The buttons are GUI: outside one the call fails after it set the flag.
+            Assert.Throws<NullReferenceException>(() => editor.CallApplyRevertGUI());
+            Assert.True(editor.hasUnsavedChanges);
+            m_Logs.Clear();
+            TestEditor.Calls.Clear();
+            Object.DestroyImmediate(editor);
+            Assert.Equal(new[] { "SaveChanges", "Apply" }, TestEditor.Calls);
+            Assert.True(extra == null);
+            Assert.Contains("Error:SerializedObject target has been destroyed.", m_Logs);
+
+            // What that save applied stays saved for the importer's next editor.
+            importer.number = 74;
+            var later = Make<TestEditor>(importer);
+            Assert.True(later.HasModified());
+            later.DiscardChanges();
+            Assert.Equal(73, importer.number);
+        }
+
+        [Fact]
+        public void ADestroyedEditorThatFailedInOnEnableIsNoLongerAsked()
+        {
+            var importer = Importer();
+            var failed = Make<UninitializedExtraEditor>(importer);
+            Object.DestroyImmediate(failed);
+            int asked = failed.Asked;
+            var editor = Make<TestEditor>(importer);
+            importer.number = 9;
+            m_Logs.Clear();
+            editor.CallApply();
+            editor.DiscardChanges();
+            Assert.Empty(m_Logs);
+            Assert.Equal(9, importer.number);
+            Assert.Equal(asked, failed.Asked);
+        }
+
+        [Fact]
+        public void FieldsTheWriterCannotWriteLeaveTheFilesFieldsAndAreReported()
+        {
+            var importer = (ReferenceImporter)ObjectConstruction.CreateWithBacking(typeof(ReferenceImporter));
+            m_Objects.Add(importer);
+            importer.m_AssetPath = "Assets/Thing.reference";
+            importer.number = 22;
+            var root = UnityYamlText.ParseTopLevel("ScriptedImporter:\n  externalObjects: {}\n  userData: \n  number: 3\n");
+            var handler = new Recorder();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = handler;
+            try
+            {
+                Assert.False(importer.WriteCustomMeta(root.Get("ScriptedImporter")));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
+            Assert.Equal("ScriptedImporter:\n  externalObjects: {}\n  userData: \n  number: 3\n", UnityYamlText.WriteTopLevel(root));
+            Assert.Equal(new[] { "Error:Unbound: the fields of the importer of 'Assets/Thing.reference' are not written into its .meta: its [SerializeReference] fields are not written yet" }, handler.Logs);
+        }
+
+        [Fact]
+        public void ChangedUserDataMarksAScriptedImporterDirtyAndNoOther()
+        {
+            var scripted = Importer();
+            scripted.userData = "";
+            Assert.False(EditorUtility.IsDirty(scripted));
+            scripted.userData = "x";
+            Assert.True(EditorUtility.IsDirty(scripted));
+            var texture = AssetImporter.FromMeta("Assets/T.png", "b123456789abcdef0123456789abcdef", "TextureImporter",
+                TestYaml.DocumentBody("TextureImporter:\n  externalObjects: {}\n  serializedVersion: 13\n  userData: \n"));
+            m_Objects.Add(texture);
+            texture.userData = "x";
+            Assert.False(EditorUtility.IsDirty(texture));
+        }
+
+        sealed class Recorder : ILogHandler
+        {
+            internal readonly List<string> Logs = new List<string>();
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) => Logs.Add(logType + ":" + string.Format(format, args));
+            public void LogException(Exception exception, Object context) => Logs.Add("Exception:" + exception.Message);
         }
     }
 }

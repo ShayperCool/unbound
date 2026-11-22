@@ -40,7 +40,7 @@ namespace UnityEditor
                 CheckImporterState("set_userData");
                 // Changed user data leaves the importer dirty (matches the Unity 6000.0.71f1
                 // Editor, tests/projects/importereditor importer.userData).
-                if (NormalizeString(value) != m_UserData && !string.IsNullOrEmpty(m_AssetPath) && m_Loaded) EditorUtility.SetDirty(this);
+                if (UserDataMarksDirty && m_Loaded && NormalizeString(value) != m_UserData) EditorUtility.SetDirty(this);
                 m_UserData = NormalizeString(value);
             }
         }
@@ -48,6 +48,10 @@ namespace UnityEditor
         /// <summary>Set once the importer has the settings of its .meta: what is set before is
         /// the loading itself, not a change.</summary>
         internal bool m_Loaded;
+
+        /// <summary>Whether changed user data leaves the importer dirty: so for the importers it
+        /// is measured for, whose .meta is written by the dirty mark; the others' is unmeasured.</summary>
+        internal virtual bool UserDataMarksDirty => false;
 
         public string assetBundleName
         {
@@ -191,15 +195,32 @@ namespace UnityEditor.AssetImporters
         /// (tests/projects/importereditor importer.reimportFieldClean and applyRevert.saveField).</summary>
         internal override void Reimported() => ReloadSettings();
 
+        /// <summary>The fields as the file's entries. Fields Unbound cannot write as the Editor
+        /// does (managed references, whose data is a block of its own; a reference to an asset it
+        /// cannot locate; a type its writer does not know) leave the file's fields as they are,
+        /// and that is reported: the rest of the .meta is still written.</summary>
         internal override bool WriteCustomMeta(YText section)
         {
             var text = new System.Text.StringBuilder("ScriptedImporter:\n");
-            new UnityYamlWriter.Writer(text, new Dictionary<Object, long>()).Fields(this, GetType(), 1);
-            var fields = UnityYamlText.ParseTopLevel(text.ToString()).Get("ScriptedImporter");
-            if (fields == null || fields.Kind != YKind.Map) return false;
+            var writer = new UnityYamlWriter.Writer(text, new Dictionary<Object, long>(), null, null, new AssetDatabaseRuntime.Locations());
+            string problem = null;
+            try { writer.Fields(this, GetType(), 1); }
+            catch (NotSupportedException e) { problem = e.Message; }
+            if (problem == null && writer.HasManagedReferences) problem = "its [SerializeReference] fields are not written yet";
+            if (problem == null && text.ToString().Contains(UnityYamlWriter.Writer.UnlocatedReference)) problem = "it refers to an asset Unbound cannot locate";
+            var fields = problem == null ? UnityYamlText.ParseTopLevel(text.ToString()).Get("ScriptedImporter") : null;
+            if (problem == null && (fields == null || fields.Kind != YKind.Map)) return false;
+            if (problem != null)
+            {
+                Debug.LogError($"{Log.DiagnosticPrefix}the fields of the importer of '{assetPath}' are not written into its .meta: {problem}");
+                return false;
+            }
             for (int i = 0; i < fields.Keys.Count; i++) section.Set(fields.Keys[i], fields.Values[i]);
             return true;
         }
+
+        /// <summary>Measured for scripted importers (tests/projects/importereditor importer.userData).</summary>
+        internal override bool UserDataMarksDirty => true;
     }
 
     /// <summary>What a ScriptedImporter fills while it imports: the asset's objects and main object.</summary>

@@ -564,6 +564,10 @@ namespace Unbound.Runtime
             /// [SerializeReference] fields: the null entry, then each referenced object by
             /// ascending id with its type and data (written first, so references found inside the
             /// data are listed too).</summary>
+            /// <summary>Whether a field written so far is a managed reference, whose data
+            /// <see cref="References"/> writes.</summary>
+            internal bool HasManagedReferences => m_HasManagedReferences;
+
             internal void References(int level)
             {
                 if (!m_HasManagedReferences) return;
