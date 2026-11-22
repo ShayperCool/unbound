@@ -151,7 +151,7 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(mesh); }
         }
 
-        /// <summary>The engine's own applies (a font atlas, a terrain's alphamaps, an import, LoadImage)
+        /// <summary>The engine's own applies (a font atlas, a terrain's alphamaps, an import)
         /// do not dirty an asset texture; a script's Apply does. Under a release family without the
         /// measurement, edits of an asset this session did not make dirty nothing and its document
         /// is kept as read.</summary>

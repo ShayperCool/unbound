@@ -398,7 +398,8 @@ namespace UnityEngine
             // this session or read from its file; SetPixel alone does not mark it (matches the Unity
             // 6000.0.71f1 Editor, tests/projects/scenesave engine-assets alphaEdit, native-saves
             // texture.dirtySetPixel, texture.dirty).
-            // The engine's own applies (font atlases, terrain alphamaps, imports) mark nothing.
+            // The engine's own applies (font atlases, terrain alphamaps, imports) mark nothing; a script's,
+            // LoadImage's among them, mark the asset.
             if (IsPersistentAsset && !m_QuietApply && (Compat.ReadAssetSavesMeasured || UnityEditor.AssetDatabase.CreatedThisSession(this)))
                 UnityEditor.EditorUtility.SetDirty(this);
             if (makeNoLongerReadable)
