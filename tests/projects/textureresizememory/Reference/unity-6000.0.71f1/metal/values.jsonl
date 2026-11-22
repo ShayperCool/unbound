@@ -39,4 +39,16 @@
 {"k":"explicit.result","v":"True"}
 {"k":"explicit.resized","v":"1200"}
 {"k":"explicit.uploaded","v":"1440"}
+{"k":"compress.rgba.resized","v":"2496"}
+{"k":"compress.rgba.format","v":"DXT5"}
+{"k":"compress.rgba.compressed","v":"1728"}
+{"k":"compress.rgba.applied","v":"1728"}
+{"k":"compress.dxt1.resized","v":"1152"}
+{"k":"compress.dxt1.format","v":"DXT1"}
+{"k":"compress.dxt1.compressed","v":"1152"}
+{"k":"compress.dxt1.applied","v":"1344"}
+{"k":"unreadable.textureFormat.before","v":"4032"}
+{"k":"unreadable.textureFormat.after","v":"4032"}
+{"k":"unreadable.graphicsFormat.before","v":"4032"}
+{"k":"unreadable.graphicsFormat.after","v":"4032"}
 {"k":"complete","v":true}
