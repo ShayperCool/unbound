@@ -4419,13 +4419,13 @@
 {"k":"sim/override timing/f005 3 end of frame","v":"40e00000 41100000"}
 {"k":"draw/many/f005","v":"alive=20000 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/textured/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
-{"k":"draw/cylinder/f005","v":"alive=48 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh/f005","v":"alive=5 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh stride/f005","v":"alive=5 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh wide/f005","v":"alive=5 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh locked/f005","v":"alive=5 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh surface/f005","v":"alive=5 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh surface wide/f005","v":"alive=5 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/cylinder/f005","v":"alive=48 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"camera/needed/f006","v":"main Depth, ortho None, scene None"}
 {"k":"sim/time/f006","v":"3d088889"}
 {"k":"sim/rate/f006","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -11021,10 +11021,10 @@
 {"k":"events/events throwing/f020/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"bundle/effect/f020","v":"culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/loop end/f020","v":"alive=12 culled=0 awake=1 renderer enabled=1 visible=1"}
-{"k":"draw/collide/f020","v":"alive=45 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/soft/f020","v":"alive=8 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/soft ortho/f020","v":"alive=8 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/soft no depth/f020","v":"alive=8 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/collide/f020","v":"alive=45 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"camera/values/play/frame","v":"1"}
 {"k":"camera/values/play/m00","v":"3f800000,00000000,00000000,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,3f800000,00000000,453b8000,00000000,c1200000,3f800000"}
 {"k":"camera/values/play/f00","v":"3f32b8c2"}

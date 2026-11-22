@@ -96,6 +96,7 @@ public sealed class VfxProbe : MonoBehaviour
             BeginMeshOperations();
             BeginNoise();
             m_EventReads = Effect("event reads", "Assets/OpGraphs/OpsEvent.vfx", new Vector3(0f, 10f, 0f));
+            BeginShapes();
         }
         catch (Exception e)
         {
@@ -189,6 +190,12 @@ public sealed class VfxProbe : MonoBehaviour
         Draw("hdr", "DrawHdr", 40);
         // Curves that loop after their last key only, sampled just below their end.
         Draw("loop end", "DrawLoopEnd", 20);
+    }
+
+    /// <summary>The shape controls, after every other stage (a stage's place comes from how
+    /// many there are before it).</summary>
+    void BeginShapes()
+    {
         // A cone of two equal radii.
         Draw("cylinder", "DrawCylinder", 5);
         // Killed inside a sphere whose frame changes: flat from frame 6, uneven from frame 14,
