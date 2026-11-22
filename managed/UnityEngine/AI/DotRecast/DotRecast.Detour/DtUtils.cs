@@ -236,12 +236,20 @@ namespace DotRecast.Detour
             float cc = toC.Dot2D(toC);
             float bb = toB.Dot2D(toB);
             float cb = toC.Dot2D(toB);
+            float scale = cc * bb;
+            float determinant = scale - cb * cb;
+            // Near collinearity can round the difference of the two products to either
+            // sign. Use the cross-product calculation when the difference is within
+            // eight single-precision spacings at one, scaled to the size of the products.
+            const float CancellationLimit = 8f / (1 << 23);
+            if (!(determinant > scale * CancellationLimit))
+                return ClosestHeightPointTriangle(p, a, b, c, out height);
+
             float pc = offset.Dot2D(toC);
             float pb = offset.Dot2D(toB);
-            float inverse = 1f / (cc * bb - cb * cb);
+            float inverse = 1f / determinant;
             float u = (bb * pc - cb * pb) * inverse;
             float v = (cc * pb - cb * pc) * inverse;
-            // A zero-area triangle has no finite coordinates and fails these comparisons.
             if (u >= -BarycentricTolerance && v >= -BarycentricTolerance && u + v <= 1f + BarycentricTolerance)
             {
                 height = a.Y + u * toC.Y + v * toB.Y;

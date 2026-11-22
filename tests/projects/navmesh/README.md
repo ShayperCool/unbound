@@ -277,4 +277,7 @@ on Unity 6000.0.71f1. [NavMesh.SamplePosition](https://docs.unity.com/en-us/engi
 Both Editor runs completed and wrote identical captures. The profile records
 133 values, including the completion marker. The previous interpolation differs
 in 22 exact height fields. Other release families use their existing,
-unmeasured interpolation.
+unmeasured interpolation. When cancellation obscures a nearly collinear
+triangle's weights, Unbound retains its cross-product calculation. Managed
+tests cover a thin triangle and two zero-area triangles preceding a valid
+slope. Those cases are unmeasured in Unity.
