@@ -18,7 +18,7 @@ namespace UnityEngine
             // A clone uploads its ordinary source snapshot even before the source's Apply.
             // The accounting for clones of pending ASTC storage is unmeasured.
             bool pendingAstcStorage = m_AstcMemoryPendingUpload
-                || (m_ResizeMemoryPendingApply && BlockFormats.IsAstc(m_Format));
+                || (m_ResizeMemoryPendingApply && BlockFormats.IsAstc(format));
             var copy = new Texture2D
             {
                 m_Width = m_Width,

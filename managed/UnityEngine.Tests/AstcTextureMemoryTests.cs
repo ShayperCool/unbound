@@ -206,6 +206,30 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Theory]
+        [InlineData(TextureFormat.ASTC_4x4, TextureFormat.RGBA32)]
+        [InlineData(TextureFormat.ASTC_HDR_4x4, TextureFormat.RGBAHalf)]
+        public void CloningPendingAstcStorageKeepsTheUnmeasuredPath(TextureFormat format, TextureFormat fallback)
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var source = new Texture2D(8, 8, TextureFormat.RGBA32, false, true);
+            Texture2D copy = null;
+            try
+            {
+                Assert.True(source.Reinitialize(8, 8, format, false));
+                Assert.Equal(format, source.format);
+                Assert.Equal(fallback, source.m_Format);
+                Assert.True(source.m_ResizeMemoryPendingApply);
+                copy = Object.Instantiate(source);
+                Assert.False(copy.m_ScriptTextureStorage);
+            }
+            finally
+            {
+                Object.DestroyImmediate(copy);
+                Object.DestroyImmediate(source);
+            }
+        }
+
         [Fact]
         public void UnmeasuredReleaseDoesNotClaimTheWorkspace()
         {
