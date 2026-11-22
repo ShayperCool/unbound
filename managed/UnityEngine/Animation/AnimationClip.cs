@@ -72,6 +72,14 @@ namespace UnityEngine
         internal List<ClipCurve> m_Curves = new List<ClipCurve>();
         internal List<ClipObjectCurve> m_ObjectCurves = new List<ClipObjectCurve>();
         internal List<AnimationEvent> m_Events = new List<AnimationEvent>();
+        /// <summary>Whether AnimationUtility.SetEditorCurve has been used on the clip: its file then
+        /// lists its float curves as editor curves too (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/scenesave clip-assets Editor.anim, Materials.anim).</summary>
+        internal bool m_EditorCurvesSynced;
+        /// <summary>Whether an AnimationUtility edit (an editor or object reference curve, clip
+        /// settings, events) has built the clip's binding table since it was made; SetCurve alone
+        /// does not (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave clip-assets).</summary>
+        internal bool m_BindingsBuilt;
         internal float m_SampleRate = 60f;
         /// <summary>A Humanoid model clip under a reducing animation compression: the error (a
         /// fraction) its converted curves are reduced with (<see cref="Unbound.Runtime.Humanoid.HumanClipReduction"/>);
@@ -544,7 +552,7 @@ namespace UnityEngine
                 {
                     float value = ComponentDefault(head);
                     var keys = new Keyframe[times.Count];
-                    for (int i = 0; i < keys.Length; i++) keys[i] = new Keyframe(times[i], value);
+                    for (int i = 0; i < keys.Length; i++) keys[i] = AddedKey(times[i], value, 0f);
                     m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForType(path, head + "." + axes[a], type), Curve = new AnimationCurve(keys) });
                     continue;
                 }
@@ -559,7 +567,7 @@ namespace UnityEngine
                     // keys its default (SetCurveKeys.*.empty, .emptyScale, .emptyScaleAfter).
                     float value = c == set ? 0f : ComponentDefault(head);
                     merged = new Keyframe[times.Count];
-                    for (int i = 0; i < merged.Length; i++) merged[i] = new Keyframe(times[i], value);
+                    for (int i = 0; i < merged.Length; i++) merged[i] = AddedKey(times[i], value, 0f);
                 }
                 else
                 {
@@ -602,6 +610,39 @@ namespace UnityEngine
         /// scale, 0 for the others, a rotation's w too (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/editorui SetCurveKeys.*.aloneScale, .aloneRotation: a rotation keyed by
         /// its y alone plays as half a turn about y).</summary>
+        /// <summary>A key a vector's component gets at another component's time: weights of a
+        /// third, as the Editor's clip files hold them (tests/projects/scenesave clip-assets
+        /// Merged.anim; weights shape no unweighted segment).</summary>
+        static Keyframe AddedKey(float time, float value, float slope) =>
+            new Keyframe(time, value, slope, slope) { inWeight = 1f / 3f, outWeight = 1f / 3f };
+
+        /// <summary>The components of a Transform vector curve keyed at their union's times: a
+        /// missing one (null or without keys) at its default, each other one at the others' times
+        /// as SetCurve keys it.</summary>
+        internal static Keyframe[][] KeyedTogether(string head, AnimationCurve[] components)
+        {
+            var times = new List<float>();
+            foreach (var c in components)
+                if (c != null && c.length > 0) times = MergeKeyTimes(times, c.keys, tolerant: false);
+            var result = new Keyframe[components.Length][];
+            for (int a = 0; a < components.Length; a++)
+            {
+                var c = components[a];
+                if (c == null || c.length == 0)
+                {
+                    var keys = new Keyframe[times.Count];
+                    for (int i = 0; i < keys.Length; i++) keys[i] = AddedKey(times[i], ComponentDefault(head), 0f);
+                    result[a] = keys;
+                    continue;
+                }
+                var own = c.keys;
+                bool same = own.Length == times.Count;
+                for (int i = 0; same && i < own.Length; i++) same = own[i].time == times[i];
+                result[a] = same ? own : KeysAtTimes(own, times);
+            }
+            return result;
+        }
+
         static float ComponentDefault(string head) => head == "m_LocalScale" ? 1f : 0f;
 
         /// <summary>Key times within this many seconds of one another count as one when a vector's
@@ -654,12 +695,9 @@ namespace UnityEngine
                 }
                 if (j < own.Length && Math.Abs(own[j].time - t) <= KeyTimeTolerance) continue;
                 if (t < first.time || t > last.time)
-                    all.Add(new Keyframe(t, t < first.time ? first.value : last.value, 0f, 0f));
+                    all.Add(AddedKey(t, t < first.time ? first.value : last.value, 0f));
                 else
-                {
-                    float slope = SlopeAt(shape, t);
-                    all.Add(new Keyframe(t, shape.Evaluate(t), slope, slope));
-                }
+                    all.Add(AddedKey(t, shape.Evaluate(t), SlopeAt(shape, t)));
             }
             while (j < own.Length) all.Add(own[j++]);
             all.Sort((a, b) => a.time.CompareTo(b.time));
@@ -669,7 +707,7 @@ namespace UnityEngine
             var result = new Keyframe[times.Count];
             for (int i = 0; i < result.Length; i++)
             {
-                result[i] = i < all.Count ? all[i] : new Keyframe(times[i], last.value, 0f, 0f);
+                result[i] = i < all.Count ? all[i] : AddedKey(times[i], last.value, 0f);
                 result[i].time = times[i];
             }
             return result;
@@ -861,6 +899,8 @@ namespace UnityEngine
             {
                 m_Curves = new List<ClipCurve>(m_Curves),
                 m_ObjectCurves = new List<ClipObjectCurve>(m_ObjectCurves),
+                m_EditorCurvesSynced = m_EditorCurvesSynced,
+                m_BindingsBuilt = m_BindingsBuilt,
                 m_SampleRate = m_SampleRate,
                 m_TakeStart = m_TakeStart,
                 m_HumanKeyReduction = m_HumanKeyReduction,
@@ -1000,6 +1040,10 @@ namespace Unbound.Runtime
     {
         internal CurveBinding Binding;
         internal AnimationCurve Curve;
+        /// <summary>How the curve was set, as its file's flags: 0 by SetCurve, 16 by
+        /// AnimationUtility.SetEditorCurve, 1 a discrete curve (tests/projects/scenesave
+        /// clip-assets).</summary>
+        internal int Flags;
         /// <summary>A player clip's curve (its muscle clip's segments or samples) instead of keys.</summary>
         internal SampledCurve Sampled;
         internal bool QuaternionStart;

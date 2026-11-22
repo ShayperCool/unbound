@@ -76,6 +76,7 @@ namespace UnityEditor
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             clip.m_ObjectCurves.RemoveAll(c => c.Binding.Path == (binding.path ?? "") && c.Binding.Attribute == binding.propertyName && c.Binding.Matches(binding.type));
+            clip.m_BindingsBuilt = true;
             if (keyframes != null)
             {
                 var sorted = (ObjectReferenceKeyframe[])keyframes.Clone();

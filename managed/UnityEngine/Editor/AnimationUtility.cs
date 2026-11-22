@@ -141,8 +141,12 @@ namespace UnityEditor
             if (curve != null)
             {
                 var copy = new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
-                clip.m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(binding.path ?? "", binding.propertyName, binding.type), Curve = copy });
+                // Its file's flags: 1 for a discrete curve, else 16 (tests/projects/scenesave clip-assets
+                // Editor.anim).
+                clip.m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(binding.path ?? "", binding.propertyName, binding.type), Curve = copy, Flags = binding.isDiscreteCurve ? 1 : 16 });
             }
+            clip.m_BindingsBuilt = true;
+            clip.m_EditorCurvesSynced = true;
             clip.m_Version++;
             CurveWasModified(clip, binding, curve != null ? CurveModifiedType.CurveModified : CurveModifiedType.CurveDeleted);
         }
@@ -290,6 +294,7 @@ namespace UnityEditor
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             if (srcClipInfo == null) throw new ArgumentNullException(nameof(srcClipInfo));
+            clip.m_BindingsBuilt = true;
             clip.m_HasRange = true;
             clip.m_StartTime = srcClipInfo.startTime;
             clip.m_StopTime = srcClipInfo.stopTime;
@@ -344,6 +349,7 @@ namespace UnityEditor
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             clip.events = events ?? Array.Empty<AnimationEvent>();
+            clip.m_BindingsBuilt = true;
             // The clip changed as a whole; the binding names no curve but has the Object type (measured).
             CurveWasModified(clip, new EditorCurveBinding { type = typeof(Object) }, CurveModifiedType.ClipModified);
         }
