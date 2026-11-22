@@ -165,7 +165,11 @@ pub fn replace_guid(text: &str, old: Guid, new: Guid) -> anyhow::Result<String> 
     for line in text.split_inclusive('\n') {
         if let Some(value) = line.strip_prefix("guid:") {
             let token = value.trim();
-            anyhow::ensure!(Guid::parse(token) == Some(old), "the .meta GUID changed");
+            anyhow::ensure!(
+                token.bytes().all(|byte| byte.is_ascii_hexdigit())
+                    && Guid::parse(token) == Some(old),
+                "the .meta has no matching plain GUID token"
+            );
             let start = offset + "guid:".len() + value.len() - value.trim_start().len();
             return Ok(format!(
                 "{}{new}{}",

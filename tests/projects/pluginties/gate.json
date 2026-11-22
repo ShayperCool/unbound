@@ -4,6 +4,8 @@
   "engine_paths": [
     "crates/unbound-project/src/assemblies.rs",
     "crates/unbound-project/src/plugins.rs",
-    "crates/unbound-project/src/compile.rs"
+    "crates/unbound-project/src/compile.rs",
+    "crates/unbound-runtime/src/editor_asset_guids.rs",
+    "crates/unbound-runtime/src/plugin_import.rs"
   ]
 }

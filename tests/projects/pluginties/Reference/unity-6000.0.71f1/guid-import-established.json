@@ -1,0 +1,63 @@
+{
+  "references": [
+    [
+      "Assembly-CSharp",
+      "Assets/A/ProbeTieRegistryLosesReference.dll"
+    ],
+    [
+      "Assembly-CSharp",
+      "Packages/com.example.guid-registry/ProbeTieRegistryKeepsReference.dll"
+    ],
+    [
+      "Assembly-CSharp-Editor",
+      "Assets/A/ProbeTieRegistryLosesReference.dll"
+    ],
+    [
+      "Assembly-CSharp-Editor",
+      "Packages/com.example.guid-registry/ProbeTieRegistryKeepsReference.dll"
+    ],
+    [
+      "Probe.Automatic",
+      "Assets/A/ProbeTieRegistryLosesReference.dll"
+    ],
+    [
+      "Probe.Automatic",
+      "Packages/com.example.guid-registry/ProbeTieRegistryKeepsReference.dll"
+    ],
+    [
+      "Probe.Explicit",
+      "Assets/A/ProbeTieRegistryLosesReference.dll"
+    ],
+    [
+      "Probe.Explicit",
+      "Packages/com.example.guid-registry/ProbeTieRegistryKeepsReference.dll"
+    ]
+  ],
+  "metas": [
+    {
+      "path": "Assets/A/ProbeTieRegistryKeepsReference.dll.meta",
+      "authored_sha256": "ec5ee2229f326620e6b0fdc1fd5212852d60a6f6106f8605e66b2541f59ab0fa",
+      "reopened_sha256": "ec5ee2229f326620e6b0fdc1fd5212852d60a6f6106f8605e66b2541f59ab0fa",
+      "registered_uses_authored_guid": false
+    },
+    {
+      "path": "Assets/A/ProbeTieRegistryLosesReference.dll.meta",
+      "authored_sha256": "aac7690508bca22549c4369f550bc061566fa1710e768113e4a31592cefded3a",
+      "reopened_sha256": "aac7690508bca22549c4369f550bc061566fa1710e768113e4a31592cefded3a",
+      "registered_uses_authored_guid": false
+    },
+    {
+      "path": "Packages/com.example.guid-registry/ProbeTieRegistryKeepsReference.dll.meta",
+      "authored_sha256": "ec5ee2229f326620e6b0fdc1fd5212852d60a6f6106f8605e66b2541f59ab0fa",
+      "reopened_sha256": "ec5ee2229f326620e6b0fdc1fd5212852d60a6f6106f8605e66b2541f59ab0fa",
+      "registered_uses_authored_guid": true
+    },
+    {
+      "path": "Packages/com.example.guid-registry/ProbeTieRegistryLosesReference.dll.meta",
+      "authored_sha256": "aac7690508bca22549c4369f550bc061566fa1710e768113e4a31592cefded3a",
+      "reopened_sha256": "aac7690508bca22549c4369f550bc061566fa1710e768113e4a31592cefded3a",
+      "registered_uses_authored_guid": true
+    }
+  ],
+  "new_guid_diagnostics": []
+}

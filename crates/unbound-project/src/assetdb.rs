@@ -259,6 +259,13 @@ pub fn read_meta_guid(meta: &Path) -> Option<Guid> {
         .and_then(|guid| Guid::parse(guid.trim()))
 }
 
+/// Reads the authored GUID for collision checks, including one that needs YAML reserialization.
+pub(crate) fn authored_meta_guid(meta: &Path) -> Option<Guid> {
+    let text = std::fs::read_to_string(meta).ok()?;
+    let scalar = text.as_str().scalar("guid")?;
+    Guid::parse(scalar).or_else(|| meta_header(&unbound_yaml::parse_value(&text).ok()?).0)
+}
+
 /// The database metadata reader, shared with field coverage. The file scanner retains its
 /// lightweight envelope reader; diagnostics supply tracked nodes to the same field accesses.
 pub fn meta_header(value: &unbound_yaml::Value) -> (Option<Guid>, Vec<String>) {

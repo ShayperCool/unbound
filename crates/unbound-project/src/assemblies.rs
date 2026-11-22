@@ -754,7 +754,7 @@ fn select_equal_version<'p>(
         }
         // Each textual pair spells the low hex digit before the high one
         // for the ordering measured by tests/projects/pluginties.
-        let order = guid.0.to_be_bytes().map(|byte| byte.rotate_left(4));
+        let order = crate::plugins::guid_order_bytes(guid);
         if lowest_order.is_none_or(|current| order < current) {
             lowest = candidate;
             lowest_order = Some(order);

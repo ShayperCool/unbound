@@ -255,10 +255,14 @@ impl RuntimeState {
             let fresh = unbound_assets::new_meta::new_guid();
             // Written again with LF, as the Editor writes a .meta (tests/projects/projectwrites 06.crlf).
             let text = std::fs::read_to_string(&meta)?.replace("\r\n", "\n");
-            std::fs::write(
-                &meta,
-                unbound_assets::new_meta::replace_guid(&text, guid, fresh)?,
-            )?;
+            let (line, rest) = text
+                .match_indices("guid: ")
+                .map(|(at, _)| at)
+                .find(|&at| at == 0 || text.as_bytes()[at - 1] == b'\n')
+                .map(|at| text.split_at(at))
+                .context("no guid line")?;
+            let after = rest.find(['\r', '\n']).unwrap_or(rest.len());
+            std::fs::write(&meta, format!("{line}guid: {fresh}{}", &rest[after..]))?;
             conflict = Some((guid, owner));
             guid = fresh;
         }

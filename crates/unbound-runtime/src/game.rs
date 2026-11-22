@@ -249,8 +249,8 @@ impl Game {
         backend: Option<Arc<dyn RenderBackend>>,
     ) -> Result<Self> {
         let mut project = Project::open(&project.root)?;
-        crate::repair_plugin_guid_conflicts(&project)?;
         apply_define_overrides(&mut project.settings);
+        let plugins = crate::prepare_plugins(&project);
         let runtime = ManagedRuntime::start()?;
         let runtime_state = state::initialize(&project)?;
         // Play-mode sessions pack the atlases (sprite_atlases); an Edit-mode session can enter
@@ -272,7 +272,7 @@ impl Game {
         if let Some(backend) = backend {
             state::set_backend(backend);
         }
-        let config = crate::config::prepare(&project, &runtime, options)?;
+        let config = crate::config::prepare(&project, &runtime, options, &plugins)?;
         let (start, frame, shutdown) = unsafe {
             (
                 runtime.function::<StartFn>("Unbound.Host.Game, Unbound.Host", "Start")?,
@@ -356,9 +356,12 @@ impl Game {
         if !changes.scripts.is_empty() || changes.graph || requested {
             let started = Instant::now();
             apply_define_overrides(&mut self.project.settings);
-            let graph = self
-                .project
-                .script_graph(self.options.mode, &self.options.target)?;
+            let plugins = crate::inspect_plugins(&self.project);
+            let graph = self.project.script_graph_with_plugins(
+                self.options.mode,
+                &self.options.target,
+                &plugins,
+            )?;
             // The same assemblies as the initial compile (editor ones in Editor Play mode).
             let editor = self.options.mode == unbound_compat::CompileMode::EditorPlayMode;
             let request = self.project.compile_request(

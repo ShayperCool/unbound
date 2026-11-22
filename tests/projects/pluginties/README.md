@@ -52,41 +52,46 @@ the complete record and compiles the project, including the Editor assembly.
 Pass `--conflicts` to record and publish the fresh-import cases. Unity gives
 each mutable DLL a fresh GUID when they share a GUID on first import.
 Registry and local tarball packages retain their original GUIDs. The
-collision log names the conflicting paths. An embedded DLL colliding with
-a local tarball reports a current owner. The same collision with a registry
-package reports both metadata paths. The rewrite replaces only the plain
-GUID token, including when the metadata uses CRLF. This uses Unity's unique
-asset IDs and the Package Manager's distinction between mutable folders and
-immutable packages.
-[Asset metadata](https://docs.unity.com/en-us/engine/6000.0/manual/assets-and-media/import-assets/asset-metadata),
+rewrite replaces the plain GUID token and preserves the other bytes,
+including CRLF. The batch diagnostic names the other metadata paths.
+An earlier import can establish an owner before a later file arrives, and
+the diagnostic then names the current owner. The local-tarball and embedded
+package controls record that import history. [Asset metadata](https://docs.unity.com/en-us/engine/6000.0/manual/assets-and-media/import-assets/asset-metadata),
 [Package sources](https://docs.unity.com/en-us/engine/6000.0/manual/packages-list/packages/upm-concepts).
 
-The three-copy controls show that a batch diagnostic names the other
-mutable files before the immutable package. A current-owner diagnostic
-names the established owner.
+Both the ordinary and linked Assets profiles cover the same two- and three-copy
+groups. The order of diagnostic peer paths varied across independent linked
+captures. The comparison checks every peer path and owner label as an unordered
+list. Complete logs and assigned GUIDs stay in each run directory.
 
-The gate also runs the two-copy cases with `Assets` linked to a sibling
-directory. Both Editor repeats for that profile agree in the reference.
-Three-way peer listing order varied in separate linked-root captures.
+The fresh profiles check that every graph reference follows the assigned GUIDs.
+The archive keeps the reference with the early GUID and loses it with the late
+GUID. The other pairs can select either copy. The reference preserves their
+assembly and DLL names, diagnostic text, GUID ownership and a hash of each
+metadata file with its GUID token replaced. The project compiles with the
+registry DLL's package-only API, then compiles again with identical metadata.
+A private loopback registry serves the synthetic package.
 
-The import profiles check that every graph
-reference follows the newly assigned GUIDs. The archive keeps the reference
-with the early GUID and loses it with the late GUID. The remaining pairs
-can select either copy on a fresh import. The reference preserves their
-assembly and DLL names, the exact conflict diagnostics, GUID ownership and
-hashes of every metadata file with its GUID token replaced. The raw captures
-include the assigned GUIDs and complete reference paths. The project must
-compile with the registry DLL's package-only API, then compile again with
-identical metadata. A private loopback registry serves the synthetic package.
+Pass `--conflicts --established` to record or replay reopening an imported
+project. The runner restores the authored Assets metadata and recorded file
+timestamps after the first import. On reopening, the Editor leaves all four
+metadata files byte-for-byte unchanged and emits no GUID reassignment message.
+The registry paths retain the authored GUIDs in the database, and the Assets
+paths retain their distinct registered GUIDs. The early registry GUID selects
+the registry DLL and the late registry GUID selects the Assets DLL.
+[AssetDatabase.AssetPathToGUID](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AssetDatabase.AssetPathToGUID.html),
+[AssetDatabase.GUIDToAssetPath](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AssetDatabase.GUIDToAssetPath.html).
 
-Unbound performs the measured repair before startup indexing and compilation
-on the 6000.0 family. An interrupted repair resumes from the project cache,
-including after a project directory move. A changed metadata link stops the
-pending write so the original target can be restored.
-Graph inspection reads the current metadata and reports unresolved ties.
-Quoted GUIDs use a different metadata rewrite in Unity. Unbound reports
-that case and preserves the prior compile behavior. Unmeasured groups with
-multiple immutable owners, aliased metadata or an existing Unity source
-asset database stop the repair with a diagnostic. The existing database
-can change the owner and the conflict warning. Incremental registration
-remains outside this import profile.
+On the 6000.0 family, Unbound repairs measured fresh groups before startup
+indexing and compilation. Each replacement uses an atomic rename from the
+project cache. An interrupted import starts again from the GUIDs currently
+on disk. Graph inspection stays read-only. On Linux with liblmdb, the script
+graph uses the registered GUIDs for a measured established Assets and registry
+pair once the path and GUID lookups agree. That replay compares the reference
+paths, emitted diagnostics, and complete metadata bytes.
+
+Quoted tokens, mixed asset types, aliased paths, groups outside the measured
+package sources, and failed reads or writes produce a diagnostic and retain
+the previous reference-selection rule for unresolved GUIDs. Asset database
+registration beyond managed DLL selection, incremental refresh, and other
+established-database formats and hosts remain outside this profile.

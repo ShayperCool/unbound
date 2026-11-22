@@ -150,9 +150,14 @@ fn mobile_target_hint(compiled: &CompileResponse, target: &str) -> Option<String
 }
 
 /// Compiles the game and builds the configuration the managed engine starts from.
-pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOptions) -> Result<Json> {
+pub fn prepare(
+    project: &Project,
+    runtime: &ManagedRuntime,
+    options: &GameOptions,
+    plugins: &[unbound_project::plugins::Plugin],
+) -> Result<Json> {
     let start = Instant::now();
-    let graph = project.script_graph(options.mode, &options.target)?;
+    let graph = project.script_graph_with_plugins(options.mode, &options.target, plugins)?;
     // Play mode runs inside the Editor, which has every editor assembly loaded (importers, editor
     // windows, [InitializeOnLoad] code); a player has none.
     let editor = options.mode == CompileMode::EditorPlayMode;

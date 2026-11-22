@@ -37,5 +37,6 @@ pub use game::{
     DEFINES_VARIABLE, FrameInput, Game, KeyEvent, restart_in_debug, restart_requested,
     scripting_define_overrides,
 };
-pub use plugin_import::repair_plugin_guid_conflicts;
+mod editor_asset_guids;
+pub use plugin_import::{inspect_plugins, prepare_plugins};
 pub use scripted::ScriptedInput;

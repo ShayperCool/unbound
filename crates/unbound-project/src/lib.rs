@@ -474,7 +474,29 @@ impl Project {
 
     /// Every managed plugin DLL of the project and its packages.
     pub fn plugins(&self) -> Vec<plugins::Plugin> {
+        self.discover_plugins(None).0
+    }
+
+    /// Lists managed DLLs and the authored GUIDs in their asset namespace, using one walk.
+    pub fn plugin_assets(
+        &self,
+        is_folder_plugin: fn(&Path) -> bool,
+    ) -> (
+        Vec<plugins::Plugin>,
+        BTreeMap<unbound_yaml::Guid, Vec<String>>,
+    ) {
+        self.discover_plugins(Some(is_folder_plugin))
+    }
+
+    fn discover_plugins(
+        &self,
+        is_folder_plugin: Option<fn(&Path) -> bool>,
+    ) -> (
+        Vec<plugins::Plugin>,
+        BTreeMap<unbound_yaml::Guid, Vec<String>>,
+    ) {
         let mut dlls = Vec::new();
+        let mut metas = Vec::new();
         // The Editor imports a file without a `.meta` (writing one) where files can change: the
         // project's Assets and embedded and local folder packages; in a package it keeps in its
         // cache such a file is ignored.
@@ -495,16 +517,26 @@ impl Project {
                 });
             for entry in walker.flatten() {
                 let path = entry.path();
-                if entry.file_type().is_file()
-                    && path
-                        .extension()
-                        .is_some_and(|e| e.eq_ignore_ascii_case("dll"))
+                if !entry.file_type().is_file() {
+                    continue;
+                }
+                let relative = path.strip_prefix(dir).unwrap_or(path);
+                if path
+                    .extension()
+                    .is_some_and(|e| e.eq_ignore_ascii_case("dll"))
                 {
-                    let relative = path.strip_prefix(dir).unwrap_or(path);
                     dlls.push((
                         path.to_path_buf(),
                         format!("{virtual_path}/{}", relative.to_string_lossy()),
                         mutable,
+                    ));
+                } else if relative.extension().is_some_and(|ext| ext == "meta")
+                    && is_folder_plugin.is_some_and(|test| !relative.ancestors().skip(1).any(test))
+                    && path.with_extension("").exists()
+                {
+                    metas.push((
+                        path.to_owned(),
+                        format!("{virtual_path}/{}", relative.with_extension("").display()),
                     ));
                 }
             }
@@ -514,7 +546,17 @@ impl Project {
             .filter_map(|(file, path, mutable)| plugins::read_plugin(&file, path, mutable))
             .collect();
         plugins.sort_by(|a, b| a.path.cmp(&b.path));
-        plugins
+        let mut guids = BTreeMap::<_, Vec<_>>::new();
+        if plugins.iter().any(|plugin| plugin.guid.is_some()) {
+            let authored: Vec<_> = metas
+                .into_par_iter()
+                .filter_map(|(file, path)| Some((assetdb::authored_meta_guid(&file)?, path)))
+                .collect();
+            for (guid, path) in authored {
+                guids.entry(guid).or_default().push(path);
+            }
+        }
+        (plugins, guids)
     }
 
     /// The native libraries the Editor would load on this machine (`.so`; `.bundle`, `.dylib` on
@@ -563,6 +605,15 @@ impl Project {
     }
 
     pub fn script_graph(&self, mode: CompileMode, target_group: &str) -> Result<Graph> {
+        self.script_graph_with_plugins(mode, target_group, &self.plugins())
+    }
+
+    pub fn script_graph_with_plugins(
+        &self,
+        mode: CompileMode,
+        target_group: &str,
+        plugins: &[plugins::Plugin],
+    ) -> Result<Graph> {
         let mut roots = vec![assemblies::ScriptRoot {
             dir: self.root.join("Assets"),
             virtual_path: "Assets".into(),
@@ -582,7 +633,6 @@ impl Project {
             .iter()
             .map(|p| (p.name.clone(), p.version.clone()))
             .collect();
-        let plugins = self.plugins();
         let guid_of = |file: &Path| {
             assetdb::read_meta_guid(Path::new(&format!("{}.meta", file.display())))
                 .map(|g| g.to_string())
@@ -614,7 +664,7 @@ impl Project {
             mode,
             target_group,
             package_versions: &package_versions,
-            plugins: &plugins,
+            plugins,
             asmdef_guid: &guid_of,
         })?;
         (graph.excluded_modules, graph.disabled_modules) =

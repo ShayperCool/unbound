@@ -27,7 +27,7 @@ namespace Unbound.Compiler;
 public sealed partial class CompilerService
 {
     /// <summary>Bump when the outputs of the same inputs would differ.</summary>
-    const string FormatVersion = "unbound-compiler-6";
+    const string FormatVersion = "unbound-compiler-7";
 
     static readonly string CompilerIdentity =
         typeof(CSharpCompilation).Assembly.GetName().Version + "/" + FormatVersion;

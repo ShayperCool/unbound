@@ -2,6 +2,11 @@
 use std::path::{Path, PathBuf};
 use unbound_yaml::{Guid, Value};
 
+/// A GUID's bytes in the order used by the Editor's plugin reference graph.
+pub fn guid_order_bytes(guid: Guid) -> [u8; 16] {
+    guid.0.to_be_bytes().map(|byte| byte.rotate_left(4))
+}
+
 #[derive(Debug, Clone)]
 pub struct Plugin {
     pub file: PathBuf,

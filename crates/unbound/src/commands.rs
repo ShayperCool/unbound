@@ -375,7 +375,8 @@ pub fn info(args: &ProjectArgs) -> Result<()> {
 pub fn graph(args: &ProjectArgs, as_json: bool, compare_bee: Option<&Path>) -> Result<()> {
     let start = Instant::now();
     let project = open(args)?;
-    let graph = project.script_graph(mode(args), &args.target)?;
+    let plugins = unbound_runtime::inspect_plugins(&project);
+    let graph = project.script_graph_with_plugins(mode(args), &args.target, &plugins)?;
     let took = start.elapsed();
     for warning in &graph.warnings {
         tracing::warn!("{warning}");
@@ -621,8 +622,8 @@ fn report(
 pub fn compile(args: &ProjectArgs, editor_assemblies: bool, repeat: u32) -> Result<()> {
     let start = Instant::now();
     let project = open(args)?;
-    unbound_runtime::repair_plugin_guid_conflicts(&project)?;
-    let graph = project.script_graph(mode(args), &args.target)?;
+    let plugins = unbound_runtime::prepare_plugins(&project);
+    let graph = project.script_graph_with_plugins(mode(args), &args.target, &plugins)?;
     let request = project.compile_request(
         &graph,
         mode(args),
@@ -1112,7 +1113,8 @@ fn users(assemblies: &[String]) -> String {
 pub fn api_gaps(args: &ProjectArgs, top: usize, as_json: bool) -> Result<()> {
     let start = Instant::now();
     let project = open(args)?;
-    let graph = project.script_graph(mode(args), &args.target)?;
+    let plugins = unbound_runtime::inspect_plugins(&project);
+    let graph = project.script_graph_with_plugins(mode(args), &args.target, &plugins)?;
     for warning in &graph.warnings {
         tracing::warn!("{warning}");
     }

@@ -1,501 +1,536 @@
-//! GUID conflicts discovered when opening a project's precompiled plugins.
+//! Resolve authored GUID conflicts for the managed DLL compilation graph.
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashSet},
-    fs::{self, OpenOptions},
+    collections::{BTreeMap, HashMap, HashSet},
+    fs::{self, File, OpenOptions},
     io::Write,
     path::{Path, PathBuf},
 };
 use unbound_assets::new_meta::{is_folder_plugin, meta_path, new_guid, replace_guid};
-use unbound_project::{
-    PackageSource, Project,
-    assetdb::{meta_header, read_meta_guid},
-    plugins::Plugin,
-};
+use unbound_project::{PackageSource, Project, plugins::Plugin};
 use unbound_yaml::Guid;
 
-/// Contains the outstanding writes of a group, including writes that may already have completed.
-/// Keeping the plan until the last rename lets the next import resume after a permissions error
-/// or interruption, even when the first rename eliminated the duplicate.
-const PENDING: &str = "plugin-guid-import-v4.pending.json";
+use crate::editor_asset_guids::EditorAssetGuids;
 
-#[derive(Deserialize, Serialize)]
-struct Rewrite {
-    asset: String,
-    /// The canonical target, relative inside the project and pinned by its absolute path when
-    /// a writable asset root itself points outside the project.
-    target: PathBuf,
-    old: Guid,
-    new: Guid,
-    diagnostic: String,
+struct PluginAssets {
+    plugins: Vec<Plugin>,
+    guids: BTreeMap<Guid, Vec<String>>,
 }
 
-struct WritableRoot {
-    path: String,
-    dir: PathBuf,
+impl PluginAssets {
+    fn scan(project: &Project) -> Self {
+        let (plugins, guids) = project.plugin_assets(is_folder_plugin);
+        Self { plugins, guids }
+    }
+
+    fn has_conflicts(&self) -> bool {
+        self.plugins.iter().any(|plugin| {
+            plugin
+                .guid
+                .and_then(|guid| self.guids.get(&guid))
+                .is_some_and(|paths| paths.len() > 1 && paths.contains(&plugin.path))
+        })
+    }
 }
 
-/// Import DLL metadata before indexing assets or building the compilation graph. Read-only
-/// graph inspection never writes project files.
-pub fn repair_plugin_guid_conflicts(project: &Project) -> Result<()> {
+/// Plugin metadata is imported before compiling or starting a project.
+pub fn prepare_plugins(project: &Project) -> Vec<Plugin> {
+    select_plugins(project, true)
+}
+
+/// Inspection and hot reload can use registered GUIDs without authoring metadata.
+pub fn inspect_plugins(project: &Project) -> Vec<Plugin> {
+    select_plugins(project, false)
+}
+
+fn select_plugins(project: &Project, import: bool) -> Vec<Plugin> {
     if project.version.measured_family() != Some(unbound_compat::MeasuredFamily::Unity6000_0) {
-        return Ok(());
+        return project.plugins();
+    }
+    let database = project.root.join("Library/SourceAssetDB");
+    let established = has_editor_database(&database);
+    if !import && !established {
+        return project.plugins();
+    }
+    let found = PluginAssets::scan(project);
+    if !found.has_conflicts() {
+        return found.plugins;
     }
     let library = project.library_dir();
-    let pending = library.join(PENDING);
-    let plugins = project.plugins();
-    if !pending.exists()
-        && plugin_groups(&plugins)
-            .values()
-            .all(|group| group.len() == 1)
-    {
-        return Ok(());
+    if established {
+        let registered = EditorAssetGuids::open(&database, &library);
+        return resolve_groups(project, found, |guid, entries, reserved| {
+            registered
+                .as_ref()
+                .map_err(|error| anyhow::anyhow!("{error:#}"))?
+                .resolve(guid, entries, reserved)
+        });
     }
+    // Serialize only the exceptional import, with a fresh scan under the lock. No import
+    // state is carried from one scan to the next.
+    let _lock = match import_lock(&library) {
+        Ok(lock) => lock,
+        Err(error) => {
+            tracing::warn!("Skipping plugin GUID repair: {error:#}");
+            return found.plugins;
+        }
+    };
+    let found = PluginAssets::scan(project);
+    resolve_groups(project, found, |guid, entries, reserved| {
+        anyhow::ensure!(
+            !has_editor_database(&database),
+            "the project has an established Unity asset database"
+        );
+        let plan = plan_group(guid, entries, reserved, &library)?;
+        let mut applied = Vec::new();
+        for replacement in plan {
+            match replacement.apply() {
+                Ok(change) => applied.push(change),
+                Err(error) => {
+                    warn_group(guid, entries.iter().map(|entry| entry.path), &error);
+                    break;
+                }
+            }
+        }
+        Ok(applied)
+    })
+}
 
-    fs::create_dir_all(&library)?;
-    let lock = OpenOptions::new()
+fn has_editor_database(database: &Path) -> bool {
+    !matches!(fs::symlink_metadata(database), Err(error) if error.kind() == std::io::ErrorKind::NotFound)
+}
+
+fn import_lock(library: &Path) -> Result<File> {
+    fs::create_dir_all(library)?;
+    let file = OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(false)
         .open(library.join("plugin-guid-import.lock"))?;
-    lock.lock().context("locking plugin metadata import")?;
-    let previous_editor_database = project.root.join("Library/SourceAssetDB").exists();
-    let editable: Vec<_> = project
-        .asset_root_dirs()
-        .into_iter()
-        .filter(|(dir, _)| {
-            *dir == project.assets
-                || project
+    file.lock().context("locking plugin metadata import")?;
+    Ok(file)
+}
+
+fn resolve_groups(
+    project: &Project,
+    mut found: PluginAssets,
+    mut resolve: impl FnMut(Guid, &[Entry<'_>], &mut HashSet<Guid>) -> Result<Vec<(usize, Guid)>>,
+) -> Vec<Plugin> {
+    let by_path: HashMap<_, _> = found
+        .plugins
+        .iter()
+        .enumerate()
+        .map(|(index, plugin)| (plugin.path.as_str(), (index, plugin)))
+        .collect();
+    let mut reserved: HashSet<_> = found.guids.keys().copied().collect();
+    reserved.insert(unbound_project::assetdb::ASSETS_ROOT_GUID);
+    let mut changes = Vec::new();
+    for (&guid, paths) in &found.guids {
+        let mut members = paths.iter().filter_map(|path| {
+            let &(index, plugin) = by_path.get(path.as_str())?;
+            (plugin.guid == Some(guid)).then_some((index, plugin))
+        });
+        let Some(first) = members.next() else {
+            continue;
+        };
+        if paths.len() < 2 {
+            continue;
+        }
+        let group: Vec<_> = std::iter::once(first).chain(members).collect();
+        let result = if group.len() != paths.len() {
+            Err(anyhow::anyhow!("the group includes other asset types"))
+        } else {
+            entries_for(project, &group).and_then(|entries| resolve(guid, &entries, &mut reserved))
+        };
+        match result {
+            Ok(resolved) => changes.extend(resolved),
+            Err(error) => warn_group(guid, paths.iter().map(String::as_str), &error),
+        }
+    }
+    for (index, guid) in changes {
+        found.plugins[index].guid = Some(guid);
+    }
+    found.plugins
+}
+
+fn warn_group<'a>(guid: Guid, paths: impl Iterator<Item = &'a str>, error: &anyhow::Error) {
+    let mut paths: Vec<_> = paths.collect();
+    paths.sort_unstable();
+    tracing::warn!(
+        "Plugin GUID [{guid}] shared by {}: {error:#}",
+        paths.join(", ")
+    );
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum Source {
+    Assets,
+    Package(PackageSource),
+}
+
+impl Source {
+    fn writable(self) -> bool {
+        matches!(self, Self::Assets | Self::Package(PackageSource::Embedded))
+    }
+}
+
+pub(super) struct Entry<'a> {
+    pub index: usize,
+    pub path: &'a str,
+    pub source: Source,
+    root: &'a Path,
+    relative: &'a Path,
+}
+
+fn entries_for<'a>(project: &'a Project, group: &[(usize, &'a Plugin)]) -> Result<Vec<Entry<'a>>> {
+    group
+        .iter()
+        .map(|&(index, plugin)| {
+            let (source, root, relative) = if let Some(asset) = plugin.path.strip_prefix("Assets/")
+            {
+                (Source::Assets, &project.assets, asset)
+            } else {
+                let (name, asset) = plugin
+                    .path
+                    .strip_prefix("Packages/")
+                    .and_then(|path| path.split_once('/'))
+                    .context("invalid plugin asset path")?;
+                let package = project
                     .packages
                     .iter()
-                    .any(|p| p.root == *dir && p.source == PackageSource::Embedded)
-        })
-        .filter_map(|(dir, path)| {
-            Some(WritableRoot {
-                path,
-                dir: dir.canonicalize().ok()?,
+                    .find(|package| package.name == name)
+                    .context("the package is no longer resolved")?;
+                (Source::Package(package.source), &package.root, asset)
+            };
+            Ok(Entry {
+                index,
+                path: &plugin.path,
+                source,
+                root,
+                relative: Path::new(relative),
             })
         })
-        .collect();
-    match fs::read(&pending) {
-        Ok(bytes) => {
-            anyhow::ensure!(
-                !previous_editor_database,
-                "cannot resume plugin GUID repair after Unity opened the project"
-            );
-            let rewrites: Vec<Rewrite> = serde_json::from_slice(&bytes)
-                .with_context(|| format!("reading interrupted import {}", pending.display()))?;
-            resume(&project.root, &pending, &editable, &rewrites)?;
-        }
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => return Err(error.into()),
-    }
-
-    // Read again inside the lock. A different process may have completed an import after the
-    // first scan, and all GUIDs read here are reserved before we allocate any replacements.
-    let plugins = project.plugins();
-    let groups = plugin_groups(&plugins);
-    let mut reserved = groups.keys().copied().collect();
-    let mut rewrites = Vec::new();
-    for (guid, group) in groups.into_iter().filter(|(_, group)| group.len() > 1) {
-        plan_group(
-            project,
-            guid,
-            &group,
-            &editable,
-            &mut reserved,
-            &mut rewrites,
-        )?;
-    }
-    if !rewrites.is_empty() {
-        replace_file(&pending, &serde_json::to_vec(&rewrites)?, None)?;
-        resume(&project.root, &pending, &editable, &rewrites)?;
-    }
-    Ok(())
-}
-
-fn plugin_groups(plugins: &[Plugin]) -> BTreeMap<Guid, Vec<&Plugin>> {
-    let mut groups = BTreeMap::<_, Vec<_>>::new();
-    for plugin in plugins {
-        let mut segments = plugin.path.split('/');
-        if segments.next() == Some("Packages") {
-            segments.next(); // Package name, not an asset folder.
-        }
-        if let Some(guid) = plugin.guid
-            && !segments.any(|segment| is_folder_plugin(Path::new(segment)))
-        {
-            groups.entry(guid).or_default().push(plugin);
-        }
-    }
-    groups
-}
-
-struct Entry<'a> {
-    plugin: &'a Plugin,
-    meta: PathBuf,
-    source: Option<PackageSource>,
+        .collect()
 }
 
 impl Entry<'_> {
-    fn writable(&self) -> bool {
-        matches!(self.source, None | Some(PackageSource::Embedded))
+    pub(super) fn metadata(&self) -> Result<PathBuf> {
+        anyhow::ensure!(
+            self.relative
+                .components()
+                .all(|part| matches!(part, std::path::Component::Normal(_))),
+            "invalid plugin path {}",
+            self.path
+        );
+        // Resolve the declared root, including a symlinked Assets directory. An asset or
+        // metadata link within the root can refer to another asset's source and is unmeasured.
+        let root = self.root.canonicalize()?;
+        let asset = root.join(self.relative);
+        let meta = meta_path(&asset);
+        anyhow::ensure!(
+            asset.canonicalize()? == asset && meta.canonicalize()? == meta,
+            "a plugin or metadata path aliases another file"
+        );
+        Ok(meta)
+    }
+}
+
+struct PendingMetadata {
+    index: usize,
+    path: PathBuf,
+    original: String,
+    temp: StagedFile,
+    guid: Guid,
+    diagnostic: String,
+}
+
+impl PendingMetadata {
+    fn apply(self) -> Result<(usize, Guid)> {
+        anyhow::ensure!(
+            fs::read_to_string(&self.path)? == self.original,
+            "{} changed while preparing its metadata",
+            self.path.display()
+        );
+        fs::rename(&self.temp.0, &self.path)
+            .with_context(|| format!("writing {}", self.path.display()))?;
+        tracing::warn!("{}", self.diagnostic);
+        Ok((self.index, self.guid))
+    }
+}
+
+pub(super) struct StagedFile(pub PathBuf);
+
+impl StagedFile {
+    pub fn create(library: &Path) -> Result<(Self, File)> {
+        let path = library.join(format!("plugin-import-{}.tmp", new_guid()));
+        let file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)?;
+        Ok((Self(path), file))
+    }
+}
+
+impl Drop for StagedFile {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.0);
     }
 }
 
 fn plan_group(
-    project: &Project,
     guid: Guid,
-    group: &[&Plugin],
-    editable: &[WritableRoot],
+    entries: &[Entry<'_>],
     reserved: &mut HashSet<Guid>,
-    rewrites: &mut Vec<Rewrite>,
-) -> Result<()> {
-    let mut entries = Vec::new();
-    let mut paths = HashSet::new();
-    for plugin in group {
-        let meta = meta_path(&plugin.file).canonicalize()?;
-        let source = plugin
-            .path
-            .strip_prefix("Packages/")
-            .map(|path| {
-                let name = path.split('/').next().unwrap_or_default();
-                project
-                    .packages
-                    .iter()
-                    .find(|candidate| candidate.name == name)
-                    .map(|package| package.source)
-                    .with_context(|| format!("no resolved package for {}", plugin.path))
-            })
-            .transpose()?;
-        anyhow::ensure!(
-            paths.insert(meta.clone()),
-            "plugin GUID [{guid}] aliases one metadata file at {}",
-            meta.display()
-        );
-        let entry = Entry {
-            plugin,
-            meta,
-            source,
-        };
-        if entry.writable() {
-            anyhow::ensure!(
-                editable
-                    .iter()
-                    .any(|root| entry.meta.starts_with(&root.dir)),
-                "{} resolves outside the project's writable asset roots",
-                plugin.path
-            );
-        }
-        entries.push(entry);
-    }
-    entries.sort_by_key(|entry| !entry.writable());
-    let mut immutable = entries.iter().filter(|entry| !entry.writable());
+    library: &Path,
+) -> Result<Vec<PendingMetadata>> {
+    let mut immutable = entries.iter().filter(|entry| !entry.source.writable());
     let owner = immutable.next();
-    let previous_editor_database = project.root.join("Library/SourceAssetDB").exists();
     anyhow::ensure!(
         immutable.next().is_none()
             && owner.is_none_or(|entry| matches!(
                 entry.source,
-                Some(PackageSource::Registry | PackageSource::LocalTarball)
-            ))
-            && !previous_editor_database,
-        "Unbound cannot resolve plugin GUID [{guid}] shared by {}. Open the project in Unity to resolve the GUID conflict before compiling.",
-        entries
-            .iter()
-            .map(|entry| entry.plugin.path.as_str())
-            .collect::<Vec<_>>()
-            .join(", ")
+                Source::Package(PackageSource::Registry | PackageSource::LocalTarball)
+            )),
+        "this package-source combination is unmeasured"
     );
-    if let Some(entry) = entries
-        .iter()
-        .find(|entry| read_meta_guid(&entry.meta) != Some(guid))
-    {
-        // The Editor reserializes metadata without a plain GUID token. Preserve the
-        // existing compilation for these files until that format can be written.
-        tracing::warn!(
-            "{}: plugin GUID [{guid}] requires an unmeasured metadata rewrite",
-            entry.plugin.path
-        );
-        return Ok(());
-    }
-
-    // Unity 6000.0.71f1 imports Assets and registry packages in the initial batch. In the
-    // embedded-package scan, a local tarball has already claimed its GUID. Both branches are
-    // recorded under tests/projects/pluginties. In a fresh group with no immutable owner,
-    // every writable participant is reassigned.
-    for entry in entries.iter().filter(|entry| entry.writable()) {
-        let known_owner = owner.is_some_and(|other| {
-            other.source == Some(PackageSource::LocalTarball)
-                && entry.source == Some(PackageSource::Embedded)
-        });
-        let suffix = if known_owner { "" } else { ".meta" };
-        let owner_label = if known_owner { " (current owner)" } else { "" };
-        let others = entries
-            .iter()
-            .filter(|other| {
-                if known_owner {
-                    owner.is_some_and(|owner| other.meta == owner.meta)
-                } else {
-                    other.meta != entry.meta
-                }
-            })
-            .map(|other| format!("  '{}{suffix}'{owner_label}\n", other.plugin.path))
-            .collect::<String>();
+    let mut seen = HashSet::new();
+    let mut plan = Vec::new();
+    for entry in entries {
+        let path = entry
+            .metadata()
+            .with_context(|| format!("reading {}", entry.path))?;
+        anyhow::ensure!(seen.insert(path.clone()), "two paths share a .meta file");
+        let original = fs::read_to_string(&path)?;
         let new = std::iter::repeat_with(new_guid)
             .find(|&candidate| reserved.insert(candidate))
             .expect("there are unused GUIDs");
-        let diagnostic = format!(
-            "GUID [{guid}] for asset '{}{suffix}' conflicts with:\n{others}Assigning a new guid.",
-            entry.plugin.path
+        // Validate the plain GUID token for every member before publishing any change.
+        let text = replace_guid(&original, guid, new)
+            .with_context(|| format!("{} needs an unmeasured metadata rewrite", entry.path))?;
+        if !entry.source.writable() {
+            continue;
+        }
+        let metadata = fs::metadata(&path)?;
+        let parent = fs::metadata(path.parent().context("metadata has no parent")?)?;
+        anyhow::ensure!(
+            !metadata.permissions().readonly() && !parent.permissions().readonly(),
+            "{} is read-only",
+            path.display()
         );
-        rewrites.push(Rewrite {
-            asset: entry.plugin.path.clone(),
-            target: entry
-                .meta
-                .strip_prefix(&project.root)
-                .unwrap_or(&entry.meta)
-                .into(),
-            old: guid,
-            new,
-            diagnostic,
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt as _;
+            anyhow::ensure!(
+                metadata.dev() == fs::metadata(library)?.dev(),
+                "{} is not on the project cache filesystem",
+                path.display()
+            );
+        }
+        let (temp, mut output) = StagedFile::create(library)?;
+        output.write_all(text.as_bytes())?;
+        output.set_permissions(metadata.permissions())?;
+        output.sync_all()?;
+        plan.push(PendingMetadata {
+            index: entry.index,
+            path,
+            original,
+            temp,
+            guid: new,
+            diagnostic: conflict_message(guid, entry, entries, owner),
         });
     }
-    Ok(())
+    Ok(plan)
 }
 
-fn resume(
-    project: &Path,
-    pending: &Path,
-    editable: &[WritableRoot],
-    rewrites: &[Rewrite],
-) -> Result<()> {
-    for rewrite in rewrites {
-        let meta = editable
-            .iter()
-            .find_map(|root| {
-                let relative =
-                    Path::new(rewrite.asset.strip_prefix(&root.path)?.strip_prefix('/')?);
-                relative
-                    .components()
-                    .all(|part| matches!(part, std::path::Component::Normal(_)))
-                    .then(|| meta_path(&root.dir.join(relative)))
-            })
-            .with_context(|| format!("{} is no longer a writable project asset", rewrite.asset))?;
-        let expected = if rewrite.target.is_absolute() {
-            rewrite.target.clone()
-        } else {
-            anyhow::ensure!(
-                rewrite
-                    .target
-                    .components()
-                    .all(|part| matches!(part, std::path::Component::Normal(_))),
-                "invalid saved metadata target for {}",
-                rewrite.asset
-            );
-            project.join(&rewrite.target)
-        };
-        let path = match meta.canonicalize() {
-            Ok(path) => path,
-            Err(error)
-                if error.kind() == std::io::ErrorKind::NotFound
-                    && !expected.exists()
-                    && !meta.is_symlink() =>
-            {
-                continue;
-            }
-            Err(error) => {
-                return Err(error)
-                    .with_context(|| format!("resolving metadata for {}", rewrite.asset));
-            }
-        };
-        anyhow::ensure!(
-            path == expected && editable.iter().any(|root| path.starts_with(&root.dir)),
-            "{} changed its metadata target during plugin import",
-            rewrite.asset
-        );
-        let text = fs::read_to_string(&path)?;
-        let metadata = unbound_yaml::parse_value(&text)?;
-        if meta_header(&metadata).0 != Some(rewrite.old) {
-            continue; // This write already completed or the GUID was deliberately changed.
-        }
-        let replacement = replace_guid(&text, rewrite.old, rewrite.new)
-            .with_context(|| format!("reassigning GUID in {}", path.display()))?;
-        replace_file(&path, replacement.as_bytes(), Some(&text))?;
-        tracing::warn!("{}", rewrite.diagnostic);
-    }
-    fs::remove_file(pending)?;
-    Ok(())
-}
-
-fn replace_file(path: &Path, replacement: &[u8], original: Option<&str>) -> Result<()> {
-    let temporary = path.with_file_name(format!(".{}.tmp", new_guid()));
-    let mut output = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&temporary)
-        .with_context(|| format!("preparing a write to {}", path.display()))?;
-    let commit = (|| -> Result<()> {
-        output.write_all(replacement)?;
-        if let Some(original) = original {
-            let permissions = fs::metadata(path)?.permissions();
-            anyhow::ensure!(!permissions.readonly(), "the .meta file is read-only");
-            output.set_permissions(permissions)?;
-            anyhow::ensure!(
-                fs::read_to_string(path)? == original,
-                "the .meta file changed"
-            );
-        }
-        output.sync_all()?;
-        drop(output);
-        fs::rename(&temporary, path)?;
-        Ok(())
-    })();
-    if commit.is_err() {
-        let _ = fs::remove_file(&temporary);
-    }
-    commit.with_context(|| format!("writing {}", path.display()))
+fn conflict_message(
+    guid: Guid,
+    entry: &Entry<'_>,
+    entries: &[Entry<'_>],
+    owner: Option<&Entry<'_>>,
+) -> String {
+    // The shorter form names the prior owner when it was already imported. The fresh
+    // local-tarball/embedded cases in pluginties are the measured instances of that history.
+    let registered = owner.filter(|owner| {
+        owner.source == Source::Package(PackageSource::LocalTarball)
+            && entry.source == Source::Package(PackageSource::Embedded)
+    });
+    let (suffix, owner_label) = if registered.is_some() {
+        ("", " (current owner)")
+    } else {
+        (".meta", "")
+    };
+    let mut peers: Vec<_> = entries
+        .iter()
+        .filter(|peer| {
+            registered.map_or(peer.index != entry.index, |owner| peer.index == owner.index)
+        })
+        .map(|peer| peer.path)
+        .collect();
+    peers.sort_unstable();
+    let others = peers
+        .into_iter()
+        .map(|peer| format!("  '{peer}{suffix}'{owner_label}\n"))
+        .collect::<String>();
+    format!(
+        "GUID [{guid}] for asset '{}{suffix}' conflicts with:\n{others}Assigning a new guid.",
+        entry.path
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn interrupted_group_retries_the_remaining_metadata_write() -> Result<()> {
-        let dir = std::env::temp_dir().join(format!("unbound-plugin-repair-{}", new_guid()));
-        fs::create_dir(&dir)?;
-        let dir = dir.canonicalize()?;
-        let first = dir.join("first.dll.meta");
-        let second = dir.join("second.dll.meta");
-        let pending = dir.join(PENDING);
-        let guid = Guid(1);
-        let original = format!("fileFormatVersion: 2\r\nguid: {guid}\r\n");
-        fs::write(&first, &original)?;
-        fs::write(&second, &original)?;
-        let permissions = fs::metadata(&second)?.permissions();
-        let mut readonly = permissions.clone();
-        readonly.set_readonly(true);
-        fs::set_permissions(&second, readonly)?;
-        let rewrites = [
-            ("Assets/first.dll", Guid(2)),
-            ("Assets/second.dll", Guid(3)),
-        ]
-        .map(|(asset, new)| Rewrite {
-            asset: asset.into(),
-            target: meta_path(Path::new(asset.strip_prefix("Assets/").unwrap())),
-            old: guid,
-            new,
-            diagnostic: String::new(),
-        });
-        fs::write(&pending, serde_json::to_vec(&rewrites)?)?;
-        let editable = [WritableRoot {
-            path: "Assets".into(),
-            dir: dir.clone(),
-        }];
-        assert!(resume(&dir, &pending, &editable, &rewrites).is_err());
-        assert_eq!(read_meta_guid(&first), Some(Guid(2)));
-        assert_eq!(fs::read_to_string(&second)?, original);
-        let moved = dir.with_extension("moved");
-        fs::rename(&dir, &moved)?;
-        let pending = moved.join(PENDING);
-        let first = moved.join("first.dll.meta");
-        let second = moved.join("second.dll.meta");
-        let editable = [WritableRoot {
-            path: "Assets".into(),
-            dir: moved.clone(),
-        }];
-        fs::set_permissions(&second, permissions)?;
-        let rewrites: Vec<Rewrite> = serde_json::from_slice(&fs::read(&pending)?)?;
-        resume(&moved, &pending, &editable, &rewrites)?;
-        assert_eq!(read_meta_guid(&first), Some(Guid(2)));
-        assert_eq!(read_meta_guid(&second), Some(Guid(3)));
-        assert!(!pending.exists());
-        fs::remove_dir_all(moved)?;
-        Ok(())
+    struct Files {
+        root: PathBuf,
+        library: PathBuf,
     }
 
-    #[cfg(unix)]
-    #[test]
-    fn interrupted_repair_rejects_a_retargeted_metadata_link() -> Result<()> {
-        use std::os::unix::fs::symlink;
+    impl Files {
+        fn new() -> Result<Self> {
+            let root = std::env::temp_dir().join(format!("unbound-plugin-import-{}", new_guid()));
+            let library = root.join("Library/Unbound");
+            fs::create_dir_all(&library)?;
+            Ok(Self { root, library })
+        }
 
-        let dir = std::env::temp_dir().join(format!("unbound-plugin-retarget-{}", new_guid()));
-        let assets = dir.join("Assets");
-        fs::create_dir_all(&assets)?;
-        let dir = dir.canonicalize()?;
-        let assets = dir.join("Assets");
-        let original = assets.join("original.dll.meta");
-        let alias = assets.join("alias.dll.meta");
-        let victim = assets.join("notes.txt.meta");
-        let pending = dir.join(PENDING);
-        let guid = Guid(1);
-        let plugin_text = format!("fileFormatVersion: 2\nguid: {guid}\nPluginImporter: {{}}\n");
-        let victim_text = format!("fileFormatVersion: 2\nguid: {guid}\nTextScriptImporter: {{}}\n");
-        fs::write(&original, &plugin_text)?;
-        fs::write(&victim, &victim_text)?;
-        symlink(&original, &alias)?;
-        let permissions = fs::metadata(&original)?.permissions();
-        let mut readonly = permissions.clone();
-        readonly.set_readonly(true);
-        fs::set_permissions(&original, readonly)?;
-        let rewrites = [Rewrite {
-            asset: "Assets/alias.dll".into(),
-            target: "Assets/original.dll.meta".into(),
-            old: guid,
-            new: Guid(2),
-            diagnostic: String::new(),
-        }];
-        fs::write(&pending, serde_json::to_vec(&rewrites)?)?;
-        let editable = [WritableRoot {
-            path: "Assets".into(),
-            dir: assets,
-        }];
-        assert!(resume(&dir, &pending, &editable, &rewrites).is_err());
+        fn plugin<'a>(&'a self, index: usize, source: Source, path: &'a str) -> Result<Entry<'a>> {
+            let relative = Path::new(path);
+            let file = self.root.join(relative);
+            fs::create_dir_all(file.parent().context("test plugin has no parent")?)?;
+            fs::write(&file, "plugin")?;
+            fs::write(meta_path(&file), authored())?;
+            Ok(Entry {
+                index,
+                source,
+                path,
+                root: &self.root,
+                relative,
+            })
+        }
+    }
 
-        fs::remove_file(&alias)?;
-        symlink(&victim, &alias)?;
-        let error = resume(&dir, &pending, &editable, &rewrites).unwrap_err();
-        assert!(error.to_string().contains("changed its metadata target"));
-        assert_eq!(fs::read_to_string(&victim)?, victim_text);
-        assert_eq!(fs::read_to_string(&original)?, plugin_text);
-        assert!(pending.exists());
+    impl Drop for Files {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.root);
+        }
+    }
 
-        fs::remove_file(&alias)?;
-        symlink(dir.join("missing.meta"), &alias)?;
-        assert!(resume(&dir, &pending, &editable, &rewrites).is_err());
-        assert!(pending.exists());
-
-        fs::remove_file(&alias)?;
-        symlink(&original, &alias)?;
-        fs::set_permissions(&original, permissions)?;
-        resume(&dir, &pending, &editable, &rewrites)?;
-        assert_eq!(read_meta_guid(&original), Some(Guid(2)));
-        assert_eq!(fs::read_to_string(&victim)?, victim_text);
-        fs::remove_dir_all(dir)?;
-        Ok(())
+    fn authored() -> String {
+        format!(
+            "fileFormatVersion: 2\r\nguid: {}\r\nPluginImporter:\r\n",
+            Guid(1)
+        )
     }
 
     #[test]
-    fn only_dll_metadata_in_the_asset_namespace_participates() {
-        let text = format!("guid: {}\n", Guid(1));
-        let meta = unbound_yaml::parse_value(&text).unwrap();
-        let plugins = [
-            "Assets/Ordinary.dll",
-            "Assets/Device.androidlib/lib/Helper.dll",
-            "Packages/com.example.tools.plugin/Framework.framework/Helper.dll",
-            "Packages/com.example.tools.plugin/Ordinary.dll",
-        ]
-        .map(|path| {
-            unbound_project::plugins::plugin_from_meta(Path::new(path), path.into(), &meta)
-        });
-        let groups = plugin_groups(&plugins);
-        let group = &groups[&Guid(1)];
-        assert_eq!(group.len(), 2);
-        assert_eq!(group[0].path, "Assets/Ordinary.dll");
+    fn fresh_registry_owner_keeps_its_guid_and_writable_copies_change_token_only() -> Result<()> {
+        let files = Files::new()?;
+        let entries = [
+            files.plugin(0, Source::Assets, "Assets/A.dll")?,
+            files.plugin(
+                1,
+                Source::Package(PackageSource::Registry),
+                "Packages/package/B.dll",
+            )?,
+            files.plugin(
+                2,
+                Source::Package(PackageSource::Embedded),
+                "Packages/embedded/C.dll",
+            )?,
+        ];
+        let mut reserved = HashSet::from([Guid(1)]);
+        let plan = plan_group(Guid(1), &entries, &mut reserved, &files.library)?;
         assert_eq!(
-            group[1].path,
-            "Packages/com.example.tools.plugin/Ordinary.dll"
+            plan.iter().map(|change| change.index).collect::<Vec<_>>(),
+            [0, 2]
         );
+        assert!(
+            entries
+                .iter()
+                .all(|entry| fs::read_to_string(entry.metadata().unwrap()).unwrap() == authored())
+        );
+        for rewrite in plan {
+            let (index, assigned) = rewrite.apply()?;
+            let expected = authored().replace(&Guid(1).to_string(), &assigned.to_string());
+            assert_eq!(fs::read_to_string(entries[index].metadata()?)?, expected);
+        }
+        assert_eq!(fs::read_to_string(entries[1].metadata()?)?, authored());
+        assert!(fs::read_dir(&files.library)?.next().is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn all_writable_members_are_reassigned_but_an_unmeasured_source_leaves_all_intact() -> Result<()>
+    {
+        let files = Files::new()?;
+        let mut entries = [
+            files.plugin(0, Source::Assets, "Assets/A.dll")?,
+            files.plugin(1, Source::Assets, "Assets/B.dll")?,
+        ];
+        let mut reserved = HashSet::from([Guid(1)]);
+        assert_eq!(
+            plan_group(Guid(1), &entries, &mut reserved, &files.library)?.len(),
+            2
+        );
+        for source in [
+            PackageSource::Local,
+            PackageSource::Git,
+            PackageSource::BuiltIn,
+        ] {
+            entries[1].source = Source::Package(source);
+            let error = plan_group(Guid(1), &entries, &mut reserved, &files.library)
+                .err()
+                .unwrap();
+            assert!(error.to_string().contains("package-source combination"));
+        }
+        entries[0].source = Source::Package(PackageSource::Registry);
+        entries[1].source = Source::Package(PackageSource::LocalTarball);
+        assert!(plan_group(Guid(1), &entries, &mut reserved, &files.library).is_err());
+        for entry in &entries {
+            assert_eq!(fs::read_to_string(entry.metadata()?)?, authored());
+        }
+        assert!(fs::read_dir(&files.library)?.next().is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn an_unwritable_or_quoted_member_prevents_a_group_write() -> Result<()> {
+        let files = Files::new()?;
+        let entries = [
+            files.plugin(0, Source::Assets, "Assets/First.dll")?,
+            files.plugin(1, Source::Assets, "Assets/Second.dll")?,
+        ];
+        let path = entries[1].metadata()?;
+        let permissions = fs::metadata(&path)?.permissions();
+        let mut readonly = permissions.clone();
+        readonly.set_readonly(true);
+        fs::set_permissions(&path, readonly)?;
+        let mut reserved = HashSet::from([Guid(1)]);
+        let result = plan_group(Guid(1), &entries, &mut reserved, &files.library);
+        fs::set_permissions(&path, permissions)?;
+        assert!(result.err().unwrap().to_string().contains("read-only"));
+
+        let quoted = authored().replace(&Guid(1).to_string(), &format!("'{}'", Guid(1)));
+        fs::write(&path, &quoted)?;
+        let error = plan_group(Guid(1), &entries, &mut reserved, &files.library)
+            .err()
+            .unwrap();
+        assert!(error.to_string().contains("unmeasured metadata rewrite"));
+        assert_eq!(fs::read_to_string(entries[0].metadata()?)?, authored());
+        assert_eq!(fs::read_to_string(&path)?, quoted);
+        assert!(fs::read_dir(&files.library)?.next().is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn established_database_that_cannot_be_read_has_a_fallback() -> Result<()> {
+        let files = Files::new()?;
+        let database = files.root.join("Library/SourceAssetDB");
+        fs::write(&database, "")?;
+        assert!(EditorAssetGuids::open(&database, &files.library).is_err());
+        assert_eq!(fs::read(&database)?, b"");
+        assert!(fs::read_dir(&files.library)?.next().is_none());
+        Ok(())
     }
 }

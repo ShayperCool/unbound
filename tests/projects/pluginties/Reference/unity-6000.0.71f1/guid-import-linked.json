@@ -14,6 +14,10 @@
     ],
     [
       "Assembly-CSharp",
+      "ProbeTieArchiveThreeWay.dll"
+    ],
+    [
+      "Assembly-CSharp",
       "ProbeTieBothEmbedded.dll"
     ],
     [
@@ -31,6 +35,10 @@
     [
       "Assembly-CSharp",
       "ProbeTieEmbeddedWithRegistry.dll"
+    ],
+    [
+      "Assembly-CSharp",
+      "ProbeTieRegistryThreeWay.dll"
     ],
     [
       "Assembly-CSharp-Editor",
@@ -46,6 +54,10 @@
     ],
     [
       "Assembly-CSharp-Editor",
+      "ProbeTieArchiveThreeWay.dll"
+    ],
+    [
+      "Assembly-CSharp-Editor",
       "ProbeTieBothEmbedded.dll"
     ],
     [
@@ -63,6 +75,10 @@
     [
       "Assembly-CSharp-Editor",
       "ProbeTieEmbeddedWithRegistry.dll"
+    ],
+    [
+      "Assembly-CSharp-Editor",
+      "ProbeTieRegistryThreeWay.dll"
     ],
     [
       "Probe.Automatic",
@@ -78,6 +94,10 @@
     ],
     [
       "Probe.Automatic",
+      "ProbeTieArchiveThreeWay.dll"
+    ],
+    [
+      "Probe.Automatic",
       "ProbeTieBothEmbedded.dll"
     ],
     [
@@ -95,6 +115,10 @@
     [
       "Probe.Automatic",
       "ProbeTieEmbeddedWithRegistry.dll"
+    ],
+    [
+      "Probe.Automatic",
+      "ProbeTieRegistryThreeWay.dll"
     ],
     [
       "Probe.Explicit",
@@ -110,6 +134,10 @@
     ],
     [
       "Probe.Explicit",
+      "ProbeTieArchiveThreeWay.dll"
+    ],
+    [
+      "Probe.Explicit",
       "ProbeTieBothEmbedded.dll"
     ],
     [
@@ -127,6 +155,10 @@
     [
       "Probe.Explicit",
       "ProbeTieEmbeddedWithRegistry.dll"
+    ],
+    [
+      "Probe.Explicit",
+      "ProbeTieRegistryThreeWay.dll"
     ]
   ],
   "metas": [
@@ -145,6 +177,13 @@
       "after": "aab5e95f9ae54555c8837a6b7d2fbc2a6fbcd42cd67a76054aa610f89dddb74c"
     },
     {
+      "path": "Assets/A/ProbeTieArchiveThreeWay.dll.meta",
+      "same_guid": false,
+      "distinct_guid": true,
+      "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
+      "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
+    },
+    {
       "path": "Assets/A/ProbeTieBothInAssets.dll.meta",
       "same_guid": false,
       "distinct_guid": true,
@@ -160,6 +199,13 @@
     },
     {
       "path": "Assets/A/ProbeTieRegistryKeepsReference.dll.meta",
+      "same_guid": false,
+      "distinct_guid": true,
+      "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
+      "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
+    },
+    {
+      "path": "Assets/A/ProbeTieRegistryThreeWay.dll.meta",
       "same_guid": false,
       "distinct_guid": true,
       "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
@@ -187,8 +233,22 @@
       "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
     },
     {
+      "path": "Packages/com.example.archive/ProbeTieArchiveThreeWay.dll.meta",
+      "same_guid": true,
+      "distinct_guid": true,
+      "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
+      "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
+    },
+    {
       "path": "Packages/com.example.archive/ProbeTieEmbeddedWithArchive.dll.meta",
       "same_guid": true,
+      "distinct_guid": true,
+      "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
+      "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
+    },
+    {
+      "path": "Packages/com.example.first/ProbeTieArchiveThreeWay.dll.meta",
+      "same_guid": false,
       "distinct_guid": true,
       "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
       "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
@@ -222,6 +282,13 @@
       "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
     },
     {
+      "path": "Packages/com.example.first/ProbeTieRegistryThreeWay.dll.meta",
+      "same_guid": false,
+      "distinct_guid": true,
+      "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
+      "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
+    },
+    {
       "path": "Packages/com.example.guid-registry/ProbeTieEmbeddedWithRegistry.dll.meta",
       "same_guid": true,
       "distinct_guid": true,
@@ -230,6 +297,13 @@
     },
     {
       "path": "Packages/com.example.guid-registry/ProbeTieRegistryKeepsReference.dll.meta",
+      "same_guid": true,
+      "distinct_guid": true,
+      "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
+      "after": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461"
+    },
+    {
+      "path": "Packages/com.example.guid-registry/ProbeTieRegistryThreeWay.dll.meta",
       "same_guid": true,
       "distinct_guid": true,
       "before": "30a170a90e8d38617fb0008a95a07032c0691fee3e3e643ced4c2b854d775461",
@@ -254,6 +328,10 @@
     "GUID [a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4] for asset 'Packages/com.example.first/ProbeTieBothEmbedded.dll.meta' conflicts with:\n  'Packages/com.example.second/ProbeTieBothEmbedded.dll.meta'\nAssigning a new guid.",
     "GUID [a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4] for asset 'Packages/com.example.second/ProbeTieBothEmbedded.dll.meta' conflicts with:\n  'Packages/com.example.first/ProbeTieBothEmbedded.dll.meta'\nAssigning a new guid.",
     "GUID [a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5] for asset 'Packages/com.example.first/ProbeTieEmbeddedWithRegistry.dll.meta' conflicts with:\n  'Packages/com.example.guid-registry/ProbeTieEmbeddedWithRegistry.dll.meta'\nAssigning a new guid.",
+    "GUID [a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6] for asset 'Assets/A/ProbeTieRegistryThreeWay.dll.meta' conflicts with:\n  'Packages/com.example.first/ProbeTieRegistryThreeWay.dll.meta'\n  'Packages/com.example.guid-registry/ProbeTieRegistryThreeWay.dll.meta'\nAssigning a new guid.",
+    "GUID [a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6] for asset 'Packages/com.example.first/ProbeTieRegistryThreeWay.dll.meta' conflicts with:\n  'Assets/A/ProbeTieRegistryThreeWay.dll.meta'\n  'Packages/com.example.guid-registry/ProbeTieRegistryThreeWay.dll.meta'\nAssigning a new guid.",
+    "GUID [a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7] for asset 'Assets/A/ProbeTieArchiveThreeWay.dll.meta' conflicts with:\n  'Packages/com.example.archive/ProbeTieArchiveThreeWay.dll.meta'\n  'Packages/com.example.first/ProbeTieArchiveThreeWay.dll.meta'\nAssigning a new guid.",
+    "GUID [a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7] for asset 'Packages/com.example.first/ProbeTieArchiveThreeWay.dll' conflicts with:\n  'Packages/com.example.archive/ProbeTieArchiveThreeWay.dll' (current owner)\nAssigning a new guid.",
     "GUID [ffffffffffffffffffffffffffffffff] for asset 'Assets/A/ProbeTieArchiveLosesReference.dll.meta' conflicts with:\n  'Packages/com.example.archive/ProbeTieArchiveLosesReference.dll.meta'\nAssigning a new guid."
   ]
 }
