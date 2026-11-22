@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Unbound.Runtime;
@@ -160,15 +161,10 @@ namespace UnityEditor
             internal string ShapeError;
         }
 
-        static Callback[] s_Callbacks;
-        static int s_Generation = -1;
-
-        /// <summary>The [OnOpenAsset] methods of the loaded scripts by ascending order (methods of
-        /// one order as the scripts list them; Unity leaves their order open), found once per
-        /// game domain.</summary>
-        static Callback[] Callbacks()
+        /// <summary>The [OnOpenAsset] methods of the loaded scripts by ascending order; methods of
+        /// one order stay as the scripts list them (Unity leaves their order open).</summary>
+        static List<Callback> Callbacks()
         {
-            if (s_Callbacks != null && s_Generation == GameDomain.Generation) return s_Callbacks;
             var found = new List<Callback>();
             foreach (var method in TypeCache.GetMethodsWithAttribute<OnOpenAssetAttribute>())
             {
@@ -179,16 +175,7 @@ namespace UnityEditor
                     ShapeError = HasShape(method) ? null : ShapeError(method),
                 });
             }
-            // A stable sort: List.Sort is not.
-            var sorted = new Callback[found.Count];
-            for (int i = 0; i < found.Count; i++)
-            {
-                int at = i;
-                while (at > 0 && sorted[at - 1].Order > found[i].Order) { sorted[at] = sorted[at - 1]; at--; }
-                sorted[at] = found[i];
-            }
-            s_Generation = GameDomain.Generation;
-            return s_Callbacks = sorted;
+            return found.OrderBy(callback => callback.Order).ToList();
         }
 
         /// <summary>The shapes the attribute names, in either mode: a static method answering a
