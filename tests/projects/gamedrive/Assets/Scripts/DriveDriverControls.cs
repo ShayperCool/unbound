@@ -182,7 +182,12 @@ public sealed class DriveDriverControls
         camera.orthographicSize = 3f;
         camera.transform.position = new Vector3(0f, 0f, -10f);
         WorldTarget("CameraTarget", camera, raycaster: true);
-        WorldTarget("CanvasOnly", camera, raycaster: false);
+        var assigned = new GameObject("AssignedCanvasCamera", typeof(Camera)).GetComponent<Camera>();
+        assigned.enabled = false;
+        assigned.orthographic = true;
+        assigned.orthographicSize = 5f;
+        assigned.transform.position = new Vector3(2f, 0f, -8f);
+        WorldTarget("CanvasOnly", assigned, raycaster: false);
         WorldTarget("MainCameraOnly", null, raycaster: false);
 
         var root = new GameObject("DetachedDriverRoot");
