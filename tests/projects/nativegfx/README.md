@@ -243,9 +243,9 @@ In this mode, before the Vulkan probe's script changes or reads what the plugin'
 `Texture.GetNativeTexturePtr` (which synchronizes with it, per the Scripting API), or does so right
 after a readback or a native pointer query, which wait as well; so the records do not depend on
 how far the render thread lags behind. The Editor's captures are the same with and without those
-waits: without them its render thread had already run the earlier callbacks at
-`Camera.Render`, `Graphics.ExecuteCommandBuffer`, render texture creation and the next frame, which
-its documentation does not promise. Unbound waits only where the documentation says the Editor does
+waits: without them its render thread had already run the callbacks issued before `Camera.Render`,
+`Graphics.ExecuteCommandBuffer`, a render texture's creation and clear, or the end of a frame by the
+probe's next change of plugin state, which its documentation does not promise. Unbound waits only where the documentation says the Editor does
 (the native pointer getters of textures, render textures and buffers) and at readbacks, so without
 the probe's waits its callbacks can run later (docs/COMPATIBILITY_GAPS.md, "When the render thread
 has run a plugin's callbacks").

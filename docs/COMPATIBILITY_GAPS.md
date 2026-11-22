@@ -361,12 +361,13 @@ that colour delta remains strict and belongs to the existing perceptual-gradient
 - **When the render thread has run a plugin's callbacks (multithreaded rendering).** With
   `-force-gfx-mt` on Vulkan, Unity 6000.0's Scripting API says only that the native pointer getters
   (`Texture.GetNativeTexturePtr`, `RenderTexture.GetNativeDepthBufferPtr`,
-  `GraphicsBuffer`/`ComputeBuffer.GetNativeBufferPtr`) synchronize with the rendering thread;
-  Unbound waits there and at readbacks. In every Editor capture of tests/projects/nativegfx
-  without the probe's own waits (`run.py --mt`), the Editor's render thread had also run the
-  callbacks issued before `Camera.Render`, `Graphics.ExecuteCommandBuffer`, a render texture's
-  creation and the next frame's scripts by the time those returned or began; Unbound's can run them
-  later (a frame-1 callback ran after frame 2's script set the plugin's next step). Which Editor
+  `GraphicsBuffer`/`ComputeBuffer.GetNativeBufferPtr`, `Mesh.GetNativeVertexBufferPtr`; Unbound
+  does not implement the Mesh ones) synchronize with the rendering thread; Unbound waits at the
+  others and at readbacks. In every Editor capture of tests/projects/nativegfx recorded before the
+  probe waited for the render thread itself (`run.py --mt` captures of 2026-11-22), the callbacks
+  issued before `Camera.Render`, `Graphics.ExecuteCommandBuffer`, a render texture's creation and
+  clear, or the end of a frame had run by the probe's next change of plugin state; Unbound's can run
+  them later (a frame-1 callback ran after frame 2's script set the plugin's next step). Which Editor
   call waits is unmeasured and undocumented. A plugin that sets state from a script and reads it in
   a callback issued earlier, without its own synchronization, sees the difference. The probe now
   waits before it changes such state, so its comparison no longer shows it.
