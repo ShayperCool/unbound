@@ -138,7 +138,12 @@ namespace UnityEditor
         /// <summary>Whether the asset's main object was taken out and no save gave it another yet:
         /// LoadMainAssetAtPath answers null then (tests/projects/projectwrites
         /// 14.remove.main.mainAsset).</summary>
-        static bool MainTakenOut(string guid) => s_Created.TryGetValue(guid, out var created) && created.MainRemoved;
+        static bool MainTakenOut(string path)
+        {
+            // Only assets made in this session can be so: no lookup for any other project.
+            if (s_Created.Count == 0) return false;
+            return s_Created.TryGetValue(AssetPathToGUID(path), out var created) && created.MainRemoved;
+        }
 
         /// <summary>Takes an object out of its asset: at once it is an object of no asset, alive
         /// and unchanged, and the asset's listing is without it; the file loses its document with

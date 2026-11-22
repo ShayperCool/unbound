@@ -149,7 +149,7 @@ namespace UnityEditor
         public static T LoadAssetAtPath<T>(string assetPath) where T : Object => LoadAssetAtPath(assetPath, typeof(T)) as T;
 
         public static Object LoadMainAssetAtPath(string assetPath) =>
-            MainTakenOut(AssetPathToGUID(assetPath)) ? null : LoadAssetAtPath(assetPath, typeof(Object));
+            MainTakenOut(assetPath) ? null : LoadAssetAtPath(assetPath, typeof(Object));
 
         public static Object[] LoadAllAssetsAtPath(string assetPath)
         {
