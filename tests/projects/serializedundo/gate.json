@@ -1,0 +1,9 @@
+{
+  "commands": ["python3 tests/projects/serializedundo/run.py gate"],
+  "summary": "serializedundo: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/SerializedObject.cs",
+    "managed/UnityEngine/Editor/Undo.cs",
+    "managed/UnityEngine/Editor/ObjectNames.cs"
+  ]
+}
