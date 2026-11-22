@@ -59,21 +59,45 @@ namespace UnityEngine
         static Unbound.Runtime.GraphicsDeviceProfile Device => Unbound.Runtime.GraphicsDeviceProfile.Current;
 
         /// <summary>Battery charge level in [0, 1] or -1 when unavailable, and battery status.
-        /// Measured on Linux without a battery (-1 and Full: tests/projects/appfacts). On Linux
-        /// machines with a system battery, reads <c>/sys/class/power_supply</c> (skipping
-        /// device-scoped peripheral batteries; unmeasured in the Editor on this battery-less host).
-        /// On macOS, battery reading is not implemented yet and warns.</summary>
+        /// Measured on Linux without a battery (-1 and Full: tests/projects/appfacts). The Linux
+        /// Editor asks SDL for the power state; on a machine with a battery this follows SDL 2's
+        /// reader of <c>/sys/class/power_supply</c> (<see cref="ReadLinuxBattery"/>) and is not
+        /// measured in the Editor (no such machine was available; SDL asks UPower first where it
+        /// runs, which is not done here). On macOS, battery reading is not implemented yet and warns.</summary>
         public static float batteryLevel => ReadBattery().Level;
         public static BatteryStatus batteryStatus => ReadBattery().Status;
 
+        /// <summary>How long a battery reading is reused: the getters are read every frame by
+        /// some games, and each reading opens several files.</summary>
+        const long BatteryReadingMilliseconds = 1000;
+        static (float Level, BatteryStatus Status) s_Battery;
+        static long s_BatteryReadAt = long.MinValue;
+
         static (float Level, BatteryStatus Status) ReadBattery()
         {
-            if (OperatingSystem.IsLinux()) return ReadLinuxBattery("/sys/class/power_supply");
+            if (OperatingSystem.IsLinux())
+            {
+                long now = Environment.TickCount64;
+                if (s_BatteryReadAt == long.MinValue || now - s_BatteryReadAt >= BatteryReadingMilliseconds)
+                {
+                    s_Battery = ReadLinuxBattery("/sys/class/power_supply");
+                    s_BatteryReadAt = now;
+                }
+                return s_Battery;
+            }
             if (OperatingSystem.IsMacOS())
                 Unbound.Runtime.Stubs.Ignored("SystemInfo.batteryLevel/batteryStatus", "do not read the battery on macOS yet: they answer -1 and Full");
             return (-1f, BatteryStatus.Full);
         }
 
+        /// <summary>A power supply directory as SDL 2 reads it (SDL's sysfs power reader, zlib
+        /// licence). Every supply of type Battery counts, except a peripheral's (scope Device).
+        /// One marked not present says "no battery"; else its status says charging, on battery,
+        /// or charged (Full and Not charging), anything else unknown. Its capacity is the percent
+        /// (at most 100), its seconds left are time_to_empty_now, or energy over power while on
+        /// battery. Of several batteries the one with the most seconds left is taken; without
+        /// seconds, the one with the highest percent. The Editor's statuses for SDL's states:
+        /// on battery Discharging, charging Charging, charged and no battery Full, unknown Unknown.</summary>
         internal static (float Level, BatteryStatus Status) ReadLinuxBattery(string powerSupplyRoot)
         {
             string[] dirs;
@@ -86,68 +110,52 @@ namespace UnityEngine
             {
                 return (-1f, BatteryStatus.Full);
             }
-            bool foundSystemBattery = false;
-            bool chosenHasValues = false;
-            int chosenPercent = -1;
-            long chosenSeconds = -1;
-            BatteryStatus chosenStatus = BatteryStatus.Unknown;
-
+            var chosenStatus = BatteryStatus.Full;
+            long chosenPercent = -1, chosenSeconds = -1;
             foreach (var dir in dirs)
             {
-                if (!string.Equals(ReadTrimmed(Path.Combine(dir, "type")), "Battery", StringComparison.Ordinal))
+                if (!string.Equals(ReadTrimmed(Path.Combine(dir, "type")), "Battery", StringComparison.OrdinalIgnoreCase))
                     continue;
-                if (string.Equals(ReadTrimmed(Path.Combine(dir, "scope")), "Device", StringComparison.Ordinal))
+                if (string.Equals(ReadTrimmed(Path.Combine(dir, "scope")), "Device", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                foundSystemBattery = true;
-                var present = ReadTrimmed(Path.Combine(dir, "present"));
+                bool onBattery = false;
                 BatteryStatus status;
-                int percent = -1;
-                long seconds = -1;
-
-                if (string.Equals(present, "0", StringComparison.Ordinal))
+                if (ReadTrimmed(Path.Combine(dir, "present")) == "0")
                 {
                     status = BatteryStatus.Full;
                 }
                 else
                 {
-                    status = ReadTrimmed(Path.Combine(dir, "status")) switch
-                    {
-                        "Charging" => BatteryStatus.Charging,
-                        "Discharging" => BatteryStatus.Discharging,
-                        "Full" or "Not charging" => BatteryStatus.Full,
-                        _ => BatteryStatus.Unknown,
-                    };
-                    if (TryReadLong(Path.Combine(dir, "capacity"), out long cap) && cap >= 0)
-                        percent = (int)Math.Min(cap, 100L);
-                    if (TryReadLong(Path.Combine(dir, "time_to_empty_now"), out long tte) && tte >= 0)
-                        seconds = tte;
-                    else if (TryReadLong(Path.Combine(dir, "energy_now"), out long energyNow) &&
-                             TryReadLong(Path.Combine(dir, "power_now"), out long powerNow) &&
-                             energyNow >= 0 && powerNow > 0)
-                        seconds = (energyNow * 3600L) / powerNow;
-                    else if (TryReadLong(Path.Combine(dir, "charge_now"), out long chargeNow) &&
-                             TryReadLong(Path.Combine(dir, "current_now"), out long currentNow) &&
-                             chargeNow >= 0 && currentNow > 0)
-                        seconds = (chargeNow * 3600L) / currentNow;
+                    var text = ReadTrimmed(Path.Combine(dir, "status"));
+                    onBattery = string.Equals(text, "Discharging", StringComparison.OrdinalIgnoreCase);
+                    if (onBattery) status = BatteryStatus.Discharging;
+                    else if (string.Equals(text, "Charging", StringComparison.OrdinalIgnoreCase)) status = BatteryStatus.Charging;
+                    else if (string.Equals(text, "Full", StringComparison.OrdinalIgnoreCase) || string.Equals(text, "Not charging", StringComparison.OrdinalIgnoreCase))
+                        status = BatteryStatus.Full;
+                    else status = BatteryStatus.Unknown;
                 }
-
-                // Prefer a battery reporting time/capacity; break ties by highest remaining time or capacity.
-                bool better = !chosenHasValues
-                    || (seconds > chosenSeconds)
-                    || (seconds == chosenSeconds && percent > chosenPercent);
-                if (better)
+                long percent = TryReadLong(Path.Combine(dir, "capacity"), out long capacity) ? Math.Min(capacity, 100L) : -1;
+                long seconds = -1;
+                if (TryReadLong(Path.Combine(dir, "time_to_empty_now"), out long left))
                 {
-                    chosenHasValues = true;
-                    chosenStatus = status;
-                    chosenPercent = percent;
-                    chosenSeconds = seconds;
+                    if (left > 0) seconds = left;
                 }
-            }
+                else if (onBattery && TryReadLong(Path.Combine(dir, "energy_now"), out long energy) &&
+                         TryReadLong(Path.Combine(dir, "power_now"), out long power) && energy >= 0 && power > 0)
+                {
+                    seconds = 3600L * energy / power;
+                }
 
-            if (!foundSystemBattery) return (-1f, BatteryStatus.Full);
-            float level = chosenPercent >= 0 ? chosenPercent / 100f : -1f;
-            return (level, chosenStatus);
+                bool choose = seconds < 0 && chosenSeconds < 0
+                    ? (percent < 0 && chosenPercent < 0) || percent > chosenPercent
+                    : seconds > chosenSeconds;
+                if (!choose) continue;
+                chosenSeconds = seconds;
+                chosenPercent = percent;
+                chosenStatus = status;
+            }
+            return (chosenPercent >= 0 ? chosenPercent / 100f : -1f, chosenStatus);
         }
 
         static string ReadTrimmed(string path)

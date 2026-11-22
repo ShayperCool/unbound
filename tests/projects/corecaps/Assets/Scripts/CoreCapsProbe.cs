@@ -237,6 +237,26 @@ public sealed class CoreCapsProbe : MonoBehaviour
         List("dynres.factors.logs", captureLogs);
         captureLogs = null;
 
+        // Additional exact-step, between-step, and infinity float32 quantization controls.
+        captureLogs = new List<string>();
+        ScalableBufferManager.ResizeBuffers(0.35f, 0.2f);
+        Str("dynres.factors.step35_20", Factors());
+        ScalableBufferManager.ResizeBuffers(0.15f, 0.45f);
+        Str("dynres.factors.step15_45", Factors());
+        ScalableBufferManager.ResizeBuffers(0.65f, 0.85f);
+        Str("dynres.factors.step65_85", Factors());
+        ScalableBufferManager.ResizeBuffers(0.73f, 0.04f);
+        Str("dynres.factors.step73_04", Factors());
+        ScalableBufferManager.ResizeBuffers(0.96f, 0.05f);
+        Str("dynres.factors.step96_05", Factors());
+        ScalableBufferManager.ResizeBuffers(0.34999996f, 0.35000002f);
+        Str("dynres.factors.step35straddle", Factors());
+        ScalableBufferManager.ResizeBuffers(float.PositiveInfinity, float.NegativeInfinity);
+        Str("dynres.factors.inf", Factors());
+        ScalableBufferManager.ResizeBuffers(1f, 1f);
+        List("dynres.factors.steps.logs", captureLogs);
+        captureLogs = null;
+
         // RenderTexture scaling and camera/shader observation at (0.5, 0.25).
         var dynamicRt = Keep(new RenderTexture(16, 16, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
             { name = "dynamic", useDynamicScale = true });

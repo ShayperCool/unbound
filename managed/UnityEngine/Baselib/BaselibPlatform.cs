@@ -26,8 +26,9 @@ namespace Unbound.Runtime.Baselib
 
     internal static unsafe class BaselibErrors
     {
-        /// <summary>Sets an error (Baselib writes the state only on failure and never overwrites
-        /// a non-Success code, tests/projects/corecaps <c>baselib.err.set.sticky</c>).</summary>
+        /// <summary>Raises an error as Baselib does (Baselib_ErrorState_RaiseError in the release's
+        /// Baselib_ErrorState.h): a state that already holds an error keeps it, for every caller
+        /// (measured for SetPageState, tests/projects/corecaps <c>baselib.err.set.sticky</c>).</summary>
         internal static void Set(Baselib_ErrorState* state, Baselib_ErrorCode code, long nativeError = 0)
         {
             if (state == null || state->code != Baselib_ErrorCode.Success) return;

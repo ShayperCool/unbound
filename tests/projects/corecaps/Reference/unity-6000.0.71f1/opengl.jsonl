@@ -48,6 +48,14 @@
 {"k":"dynres.factors.nan","v":"1 1"}
 {"k":"dynres.factors.reset","v":"1 1"}
 {"k":"dynres.factors.logs","v":["Assert: Invalid widthScale: 2.000000","Assert: Invalid heightScale: 0.000000","Assert: Invalid widthScale: -1.000000","Assert: Invalid widthScale: -nan"]}
+{"k":"dynres.factors.step35_20","v":"1 1"}
+{"k":"dynres.factors.step15_45","v":"1 1"}
+{"k":"dynres.factors.step65_85","v":"1 1"}
+{"k":"dynres.factors.step73_04","v":"1 1"}
+{"k":"dynres.factors.step96_05","v":"1 1"}
+{"k":"dynres.factors.step35straddle","v":"1 1"}
+{"k":"dynres.factors.inf","v":"1 1"}
+{"k":"dynres.factors.steps.logs","v":["Assert: Invalid widthScale: inf","Assert: Invalid heightScale: -inf"]}
 {"k":"dynres.rt.sizes","v":"16x16 16x16 15x13 15x13"}
 {"k":"dynres.cam.dynamic.allow","v":"pixel 16x16 scaled 16x16 rect (x:0.00, y:0.00, width:16.00, height:16.00)"}
 {"k":"dynres.cam.dynamic.plain","v":"pixel 16x16 scaled 16x16 rect (x:0.00, y:0.00, width:16.00, height:16.00)"}

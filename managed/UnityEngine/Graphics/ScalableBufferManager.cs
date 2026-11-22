@@ -27,9 +27,15 @@ namespace UnityEngine
         {
             Validate(widthScale, "widthScale");
             Validate(heightScale, "heightScale");
-            if (!Unbound.Runtime.GraphicsDeviceProfile.Current.EditorDynamicResolution) return;
+            var device = Unbound.Runtime.GraphicsDeviceProfile.Current;
+            if (!device.EditorDynamicResolution) return;
             s_WidthScale = Quantize(widthScale);
             s_HeightScale = Quantize(heightScale);
+            // The factors are the Vulkan Editor's; what is drawn into and read from a scaled render
+            // texture follows the Metal Editor instead (tests/projects/corecaps residuals-vulkan.json).
+            if (Scaling && device.Type == Rendering.GraphicsDeviceType.Vulkan)
+                Unbound.Runtime.Stubs.Ignored("ScalableBufferManager.ResizeBuffers",
+                    "scales render textures on Vulkan as the Metal Editor does: the Linux Vulkan Editor scales both axes by the width factor, and its ReadPixels and texel-size answers on a scaled render texture differ");
         }
 
         static void Validate(float scale, string name)
@@ -38,20 +44,28 @@ namespace UnityEngine
                 Debug.unityLogger.Log(LogType.Assert, $"Invalid {name}: {Printed(scale)}");
         }
 
-        /// <summary>Quantizes <paramref name="scale"/> to Unity's 20 discrete 0.05 steps
-        /// (<c>1f + i * -0.05f</c> for <c>i</c> in 0..19), picking the smallest step &gt;= scale
-        /// (NaN and &gt;= 1 become 1; &lt;= MinimumScale becomes MinimumScale; measured on Vulkan in
-        /// tests/projects/corecaps <c>dynres.factors.*</c>).</summary>
+        /// <summary>The factor kept for a requested scale: one of 20 steps <c>1f + i * -0.05f</c>.
+        /// The step index is the single-precision quotient <c>(1f - scale) / 0.05f</c> cut to an
+        /// integer; the next smaller step is kept when it still covers the scale, else the
+        /// index's own step. Single precision decides the edges (0.35f keeps 0.4, 0.2f keeps
+        /// 0.2), and a quotient that is no integer (NaN, or past the integers: an infinite or
+        /// huge scale) counts as step 0, so NaN and +infinity keep 1 and -infinity keeps 0.95.
+        /// Matches the Unity 6000.0.71f1 Editor on Vulkan, tests/projects/corecaps
+        /// <c>dynres.factors.*</c>; on Metal only the factors of tests/projects/nativegfx are
+        /// measured.</summary>
         internal static float Quantize(float scale)
         {
-            if (float.IsNaN(scale) || scale >= 1f) return 1f;
-            if (scale <= MinimumScale) return MinimumScale;
-            int step = (int)((1f - scale) / 0.05f);
-            if (step < 0) step = 0;
-            if (step >= ScaleSteps - 1) return MinimumScale;
-            float lower = 1f + (step + 1) * ScaleStepDelta;
-            return lower >= scale ? lower : 1f + step * ScaleStepDelta;
+            int index = StepIndex((1f - scale) / 0.05f);
+            if (index >= ScaleSteps - 1) return MinimumScale;
+            int step = Math.Max(index, 0);
+            float next = 1f + Math.Min(step + 1, ScaleSteps - 1) * ScaleStepDelta;
+            return scale <= next ? next : 1f + step * ScaleStepDelta;
         }
+
+        /// <summary>A quotient cut to an integer; one that has no integer value (NaN, or outside
+        /// the 32-bit range) is the lowest integer.</summary>
+        static int StepIndex(float quotient) =>
+            quotient >= -2147483648f && quotient < 2147483648f ? (int)quotient : int.MinValue;
 
         /// <summary>A float as the Editor's message prints it: six decimals, "nan"/"-nan" and "inf".</summary>
         static string Printed(float value)

@@ -106,10 +106,20 @@ namespace Unbound.Runtime
             };
         }
 
-        /// <summary>Maps a PCI/Vulkan vendor ID to the vendor name reported by SystemInfo.graphicsDeviceVendor.
-        /// Measured for NVIDIA (0x10de) on the Linux Editor (tests/projects/urp device-vulkan.jsonl);
-        /// other vendor IDs and the unknown-ID fallback are unmeasured on this NVIDIA-only machine.</summary>
-        internal static string VendorName(int vendor) => vendor switch
+        /// <summary>The vendor ID measured in the Linux Editor (NVIDIA, tests/projects/urp device-vulkan.jsonl).</summary>
+        const int MeasuredVendor = 0x10de;
+
+        /// <summary>The vendor name SystemInfo.graphicsDeviceVendor gives for a PCI/Vulkan vendor ID.
+        /// Only NVIDIA's is measured; a device of another vendor gets the name listed here (or the
+        /// "Unknown" text) and says once that it is not measured.</summary>
+        internal static string VendorName(int vendor)
+        {
+            if (vendor != MeasuredVendor)
+                Stubs.Ignored("SystemInfo.graphicsDeviceVendor", "names a Vulkan device vendor that was not measured in the Editor (only NVIDIA's name is)");
+            return ListedVendorName(vendor);
+        }
+
+        static string ListedVendorName(int vendor) => vendor switch
         {
             0x0000 => "REFERENCE",
             0x1002 => "ATI",

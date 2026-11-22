@@ -15,7 +15,9 @@ device on an NVIDIA RTX 4060.
   `R8_UNorm`, `None`, `RGBA_DXT1_UNorm`) and 5 sample counts (`1`, `4`, `8`, `0`, `-1`).
 - `dynres.*`: `SystemInfo.supportsDynamicResolution`, `Camera.allowDynamicResolution`,
   `ScalableBufferManager.ResizeBuffers` 20-step 0.05 quantization and validation assertions
-  (including out-of-range, negative, zero, and `NaN` on both OpenGL Core and Vulkan), camera
+  (including out-of-range, negative, zero, and `NaN` on both OpenGL Core and Vulkan; scales on
+  a step, between steps, one float either side of 0.35, under the smallest step, and both
+  infinities tell the step rule from its neighbours: 0.35f keeps 0.4, -infinity keeps 0.95), camera
   `pixelWidth`/`scaledPixelWidth`/`pixelRect` on dynamic, fixed, odd-dimension, and explicit
   (`useDynamicScaleExplicit` + `ApplyDynamicScale`) render textures, plus render/readback/blit
   controls at `(0.5, 0.25)` and `(0.5, 0.5)`.

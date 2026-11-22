@@ -237,108 +237,85 @@ namespace Unbound.Tests
             }
         }
 
-        [Fact]
-        public void VulkanVendorNameCoversKnownPciIdsAndUnknownFallbackWithoutStubWarnings()
+        static int Hits(string member)
         {
-            var capture = new LogCapture();
-            var prev = Debug.unityLogger.logHandler;
-            Debug.unityLogger.logHandler = capture;
-            try
-            {
-                var known = new (int Id, string Name)[]
-                {
-                    (0x0000, "REFERENCE"),
-                    (0x1002, "ATI"),
-                    (0x1010, "Imagination Technologies"),
-                    (0x1023, "Trident"),
-                    (0x102b, "Matrox"),
-                    (0x1039, "SIS"),
-                    (0x104a, "Imagination Technologies"),
-                    (0x10de, "NVIDIA"),
-                    (0x1106, "VIA/S3"),
-                    (0x121a, "3dfx"),
-                    (0x13b5, "ARM"),
-                    (0x1414, "Microsoft"),
-                    (0x144d, "Samsung"),
-                    (0x15ad, "VMWare"),
-                    (0x18ca, "XGI"),
-                    (0x1ab8, "Parallels"),
-                    (0x1d9e, "Anka"),
-                    (0x3d3d, "3dLabs"),
-                    (0x4144564e, "NVIDIA"),
-                    (0x4d4f4351, "Qualcomm"),
-                    (0x5143, "Qualcomm"),
-                    (0x5333, "S3"),
-                    (0x8086, "Intel"),
-                    (0x80ee, "VirtualBox"),
-                };
-                foreach (var (id, expected) in known)
-                    Assert.Equal(expected, VulkanIdentity.VendorName(id));
-
-                Assert.Equal("Unknown (ID=9999)", VulkanIdentity.VendorName(0x9999));
-                Assert.Equal("Unknown (ID=1)", VulkanIdentity.VendorName(0x0001));
-                Assert.Equal("Unknown (ID=abcd)", VulkanIdentity.VendorName(0xabcd));
-                Assert.DoesNotContain(capture.Messages, m => m.Contains("Unbound:"));
-            }
-            finally
-            {
-                Debug.unityLogger.logHandler = prev;
-            }
+            foreach (var hit in Unbound.Runtime.Stubs.HitReport())
+                if (hit.Key == member) return hit.Value;
+            return 0;
         }
 
         [Fact]
-        public void LinuxSysfsBatteryReaderHandlesDesktopPeripheralAndLaptopBatteries()
+        public void OnlyTheMeasuredVulkanVendorIsNamedWithoutANotice()
+        {
+            const string Member = "SystemInfo.graphicsDeviceVendor";
+            int before = Hits(Member);
+            // NVIDIA's name is measured: no notice.
+            Assert.Equal("NVIDIA", VulkanIdentity.VendorName(0x10de));
+            Assert.Equal(before, Hits(Member));
+            // Another vendor is named from the list, an unlisted one by its ID in hexadecimal;
+            // each use says that the name is not measured.
+            Assert.Equal("Intel", VulkanIdentity.VendorName(0x8086));
+            Assert.Equal(before + 1, Hits(Member));
+            Assert.Equal("Unknown (ID=abcd)", VulkanIdentity.VendorName(0xabcd));
+            Assert.Equal("Unknown (ID=1)", VulkanIdentity.VendorName(0x0001));
+            Assert.Equal(before + 3, Hits(Member));
+        }
+
+        [Fact]
+        public void LinuxBatteryIsReadAsSdlReadsThePowerSupplies()
         {
             var root = Path.Combine(Path.GetTempPath(), "unbound-battery-test-" + Guid.NewGuid().ToString("N"));
+            string Supply(string name, params (string File, string Text)[] files)
+            {
+                var dir = Path.Combine(root, name);
+                Directory.CreateDirectory(dir);
+                foreach (var existing in Directory.GetFiles(dir)) File.Delete(existing);
+                foreach (var (file, text) in files) File.WriteAllText(Path.Combine(dir, file), text + "\n");
+                return dir;
+            }
             try
             {
-                // Missing directory: desktop default (-1, Full).
+                // No directory, and only a mains supply: no battery, which the Editor answers as -1 and Full.
+                Assert.Equal((-1f, BatteryStatus.Full), SystemInfo.ReadLinuxBattery(root));
+                Supply("AC0", ("type", "Mains"));
                 Assert.Equal((-1f, BatteryStatus.Full), SystemInfo.ReadLinuxBattery(root));
 
-                // Empty directory & AC-only supply: (-1, Full).
-                Directory.CreateDirectory(Path.Combine(root, "AC0"));
-                File.WriteAllText(Path.Combine(root, "AC0", "type"), "Mains\n");
+                // A peripheral's battery does not count.
+                Supply("hidpp_battery_0", ("type", "Battery"), ("scope", "Device"), ("status", "Discharging"), ("capacity", "42"));
                 Assert.Equal((-1f, BatteryStatus.Full), SystemInfo.ReadLinuxBattery(root));
 
-                // Peripheral device battery (scope=Device): skipped.
-                Directory.CreateDirectory(Path.Combine(root, "hidpp_battery_0"));
-                File.WriteAllText(Path.Combine(root, "hidpp_battery_0", "type"), "Battery\n");
-                File.WriteAllText(Path.Combine(root, "hidpp_battery_0", "scope"), "Device\n");
-                File.WriteAllText(Path.Combine(root, "hidpp_battery_0", "status"), "Discharging\n");
-                File.WriteAllText(Path.Combine(root, "hidpp_battery_0", "capacity"), "42\n");
-                Assert.Equal((-1f, BatteryStatus.Full), SystemInfo.ReadLinuxBattery(root));
-
-                // System battery: charging at 73%.
-                var bat0 = Path.Combine(root, "BAT0");
-                Directory.CreateDirectory(bat0);
-                File.WriteAllText(Path.Combine(bat0, "type"), "Battery\n");
-                File.WriteAllText(Path.Combine(bat0, "present"), "1\n");
-                File.WriteAllText(Path.Combine(bat0, "status"), "Charging\n");
-                File.WriteAllText(Path.Combine(bat0, "capacity"), "73\n");
+                // A system battery: its status and capacity.
+                Supply("BAT0", ("type", "Battery"), ("present", "1"), ("status", "Charging"), ("capacity", "73"));
                 Assert.Equal((0.73f, BatteryStatus.Charging), SystemInfo.ReadLinuxBattery(root));
-
-                // Capacity > 100 clamps to 1.0; Not charging maps to Full.
-                File.WriteAllText(Path.Combine(bat0, "status"), "Not charging\n");
-                File.WriteAllText(Path.Combine(bat0, "capacity"), "105\n");
+                Supply("BAT0", ("type", "Battery"), ("status", "Discharging"), ("capacity", "40"));
+                Assert.Equal((0.4f, BatteryStatus.Discharging), SystemInfo.ReadLinuxBattery(root));
+                // Full and Not charging are both a charged battery; a capacity over 100 is 100.
+                Supply("BAT0", ("type", "Battery"), ("status", "Not charging"), ("capacity", "105"));
                 Assert.Equal((1f, BatteryStatus.Full), SystemInfo.ReadLinuxBattery(root));
-
-                // Absent battery (present=0) maps to (-1, Full).
-                File.WriteAllText(Path.Combine(bat0, "present"), "0\n");
+                // A status that is missing or unheard of is unknown.
+                Supply("BAT0", ("type", "Battery"), ("capacity", "12"));
+                Assert.Equal((0.12f, BatteryStatus.Unknown), SystemInfo.ReadLinuxBattery(root));
+                Supply("BAT0", ("type", "Battery"), ("status", "Recalibrating"), ("capacity", "12"));
+                Assert.Equal((0.12f, BatteryStatus.Unknown), SystemInfo.ReadLinuxBattery(root));
+                // A battery that is not present says "no battery" (Full), whatever its status file says.
+                Supply("BAT0", ("type", "Battery"), ("present", "0"), ("status", "Discharging"));
                 Assert.Equal((-1f, BatteryStatus.Full), SystemInfo.ReadLinuxBattery(root));
 
-                // Two system batteries: picks battery with longer remaining time.
-                File.WriteAllText(Path.Combine(bat0, "present"), "1\n");
-                File.WriteAllText(Path.Combine(bat0, "status"), "Discharging\n");
-                File.WriteAllText(Path.Combine(bat0, "capacity"), "30\n");
-                File.WriteAllText(Path.Combine(bat0, "time_to_empty_now"), "1200\n");
-                var bat1 = Path.Combine(root, "BAT1");
-                Directory.CreateDirectory(bat1);
-                File.WriteAllText(Path.Combine(bat1, "type"), "Battery\n");
-                File.WriteAllText(Path.Combine(bat1, "present"), "1\n");
-                File.WriteAllText(Path.Combine(bat1, "status"), "Discharging\n");
-                File.WriteAllText(Path.Combine(bat1, "capacity"), "85\n");
-                File.WriteAllText(Path.Combine(bat1, "time_to_empty_now"), "5400\n");
-                Assert.Equal((0.85f, BatteryStatus.Discharging), SystemInfo.ReadLinuxBattery(root));
+                // Two batteries: the one with more seconds left, whatever the percents.
+                Supply("BAT0", ("type", "Battery"), ("status", "Discharging"), ("capacity", "90"), ("time_to_empty_now", "1200"));
+                Supply("BAT1", ("type", "Battery"), ("status", "Charging"), ("capacity", "30"), ("time_to_empty_now", "5400"));
+                Assert.Equal((0.3f, BatteryStatus.Charging), SystemInfo.ReadLinuxBattery(root));
+                // Seconds beat a battery that reports none; zero seconds are none.
+                Supply("BAT1", ("type", "Battery"), ("status", "Charging"), ("capacity", "95"), ("time_to_empty_now", "0"));
+                Assert.Equal((0.9f, BatteryStatus.Discharging), SystemInfo.ReadLinuxBattery(root));
+                // Without seconds on either, the higher percent.
+                Supply("BAT0", ("type", "Battery"), ("status", "Discharging"), ("capacity", "90"));
+                Assert.Equal((0.95f, BatteryStatus.Charging), SystemInfo.ReadLinuxBattery(root));
+                // Seconds from energy over power count only while on battery.
+                Supply("BAT0", ("type", "Battery"), ("status", "Discharging"), ("capacity", "20"), ("energy_now", "1000"), ("power_now", "500"));
+                Assert.Equal((0.2f, BatteryStatus.Discharging), SystemInfo.ReadLinuxBattery(root));
+                Supply("BAT0", ("type", "Battery"), ("status", "Charging"), ("capacity", "20"), ("energy_now", "1000"), ("power_now", "500"));
+                Assert.Equal((0.95f, BatteryStatus.Charging), SystemInfo.ReadLinuxBattery(root));
             }
             finally
             {
@@ -346,23 +323,42 @@ namespace Unbound.Tests
             }
         }
 
+        /// <summary>The factor kept for a scale: rows of tests/projects/corecaps dynres.factors.*
+        /// on Vulkan, and what the same rule gives beside them.</summary>
         [Fact]
-        public void ScalableBufferManagerQuantizeHandlesBoundariesAndNonFiniteInputs()
+        public void ScaleFactorsKeepTheStepThatCoversTheScaleInSinglePrecision()
         {
             Assert.Equal(1f, ScalableBufferManager.Quantize(1f));
             Assert.Equal(1f, ScalableBufferManager.Quantize(2f));
-            Assert.Equal(1f, ScalableBufferManager.Quantize(float.PositiveInfinity));
-            Assert.Equal(1f, ScalableBufferManager.Quantize(float.NaN));
-            Assert.Equal(0.0500000119f, ScalableBufferManager.Quantize(0f));
-            Assert.Equal(0.0500000119f, ScalableBufferManager.Quantize(-1f));
-            Assert.Equal(0.0500000119f, ScalableBufferManager.Quantize(float.NegativeInfinity));
+            Assert.Equal(1f, ScalableBufferManager.Quantize(0.99f));
+            Assert.Equal(1f, ScalableBufferManager.Quantize(0.96f));
+            Assert.Equal(0.95f, ScalableBufferManager.Quantize(0.95f));
+            Assert.Equal(0.95f, ScalableBufferManager.Quantize(0.94f));
+            Assert.Equal(0.85f, ScalableBufferManager.Quantize(0.85f));
+            Assert.Equal(0.75f, ScalableBufferManager.Quantize(0.73f));
+            Assert.Equal(0.65f, ScalableBufferManager.Quantize(0.65f));
+            Assert.Equal(0.45f, ScalableBufferManager.Quantize(0.45f));
+            // Single precision decides the edges: 0.35f is over the step named 0.35.
+            Assert.Equal(0.399999976f, ScalableBufferManager.Quantize(0.35f));
+            Assert.Equal(0.399999976f, ScalableBufferManager.Quantize(0.35000002f));
+            Assert.Equal(0.349999964f, ScalableBufferManager.Quantize(0.34999996f));
+            Assert.Equal(0.349999964f, ScalableBufferManager.Quantize(0.33f));
+            Assert.Equal(0.199999988f, ScalableBufferManager.Quantize(0.2f));
+            Assert.Equal(0.149999976f, ScalableBufferManager.Quantize(0.15f));
+            Assert.Equal(0.0999999642f, ScalableBufferManager.Quantize(0.06f));
             Assert.Equal(0.0500000119f, ScalableBufferManager.Quantize(0.05f));
             Assert.Equal(0.0500000119f, ScalableBufferManager.Quantize(0.0500000119f));
-            Assert.Equal(0.0999999642f, ScalableBufferManager.Quantize(0.06f));
-            Assert.Equal(0.349999964f, ScalableBufferManager.Quantize(0.33f));
-            Assert.Equal(0.95f, ScalableBufferManager.Quantize(0.94f));
-            Assert.Equal(0.95f, ScalableBufferManager.Quantize(0.95f));
-            Assert.Equal(1f, ScalableBufferManager.Quantize(0.99f));
+            Assert.Equal(0.0500000119f, ScalableBufferManager.Quantize(0.04f));
+            Assert.Equal(0.0500000119f, ScalableBufferManager.Quantize(0f));
+            Assert.Equal(0.0500000119f, ScalableBufferManager.Quantize(-1f));
+            // A quotient that is no integer counts as step 0: NaN and +infinity keep 1, and
+            // -infinity (measured) or a scale too negative to index keep 0.95.
+            Assert.Equal(1f, ScalableBufferManager.Quantize(float.NaN));
+            Assert.Equal(1f, ScalableBufferManager.Quantize(float.PositiveInfinity));
+            Assert.Equal(1f, ScalableBufferManager.Quantize(3e9f));
+            Assert.Equal(0.95f, ScalableBufferManager.Quantize(float.NegativeInfinity));
+            Assert.Equal(0.95f, ScalableBufferManager.Quantize(-1e30f));
+            Assert.Equal(0.0500000119f, ScalableBufferManager.Quantize(-1e6f));
         }
 
         [Fact]
