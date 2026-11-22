@@ -60,6 +60,16 @@ file the run added, changed or removed.
   TagManager's SerializedObject: each file right after the calls, after `SaveAssets` and at exit.
   The last three cases were recorded in the Linux Editor (batch mode, no graphics: two identical
   captures each).
+- `mesh-bounds` (Edit Mode, `MeshBoundsTests`): a mesh's bounds and each sub-mesh's bounds and
+  vertex range after each of its setters (vertices of the same and another count, `SetVertices`
+  with and without `DontRecalculateBounds`, `SetVertexBufferData`, triangles, `SetTriangles` and
+  `SetIndices` with and without `calculateBounds`, `SetSubMesh`, assigned bounds, `Clear`,
+  `UploadMeshData`) and for half-float positions. Rows only.
+- `native-saves` (Edit Mode, `NativeSaveTests`): assets read from their files (`Assets/Native`: a
+  mesh, a texture, a physics material, an animation clip, a model's mesh and an untouched mesh)
+  changed through their APIs, with their dirty flags, then `SaveAssets`: which files it writes and
+  what the save logs. The last two cases were recorded in the Linux Editor (batch mode, no
+  graphics: two identical captures each).
 - `play-nosave`, `play-save` (Play Mode, `SavePlayTests.NoSave` and `.Save`, each alone): assets
   edited in Play mode, left unsaved or saved by `AssetDatabase.SaveAssets` there; scene saves and
   `MarkSceneDirty` in Play mode.

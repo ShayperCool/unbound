@@ -11,7 +11,8 @@ Cases: `edit` (Edit Mode SaveEditTests), `play-nosave` and `play-save` (Play Mod
 NoSave and Save, each alone), `prefab-api` (Edit Mode PrefabApiTests), `prefab-writes` (Edit Mode
 PrefabWriteTests), `create-assets` (Edit Mode CreateAssetTests), `engine-assets` (Edit Mode
 EngineAssetTests), `prefab-nested` (Edit Mode NestedPrefabTests), `settings-writes` (Edit Mode
-SettingsWriteTests).
+SettingsWriteTests), `mesh-bounds` (Edit Mode MeshBoundsTests), `native-saves` (Edit Mode
+NativeSaveTests).
 """
 import argparse
 import json
@@ -39,6 +40,8 @@ CASES = {
     'engine-assets': ('EditMode', 'EngineAssetTests.EngineAssets'),
     'prefab-nested': ('EditMode', 'NestedPrefabTests.NestedPrefabs'),
     'settings-writes': ('EditMode', 'SettingsWriteTests.SettingsWrites'),
+    'mesh-bounds': ('EditMode', 'MeshBoundsTests.MeshBounds'),
+    'native-saves': ('EditMode', 'NativeSaveTests.NativeSaves'),
 }
 SKIPPED = {'Library', 'Logs', 'Temp', 'UserSettings', 'obj', 'run.py', 'README.md', 'Reference',
            'gate.json', 'scenesave_compare.py', 'test_compare.py', '__pycache__'}

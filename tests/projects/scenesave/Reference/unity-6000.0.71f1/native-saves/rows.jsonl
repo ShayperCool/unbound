@@ -1,0 +1,19 @@
+{"key": "mesh.readable", "value": true}
+{"key": "mesh.dirty", "value": true}
+{"key": "texture.dirtySetPixel", "value": false}
+{"key": "texture.dirty", "value": true}
+{"key": "physic.dirty", "value": true}
+{"key": "clip.dirty", "value": true}
+{"key": "model.readable", "value": true}
+{"key": "save.log", "value": "Log: \nIgnoreFailingMessages:true"}
+{"key": "model.dirtyVertices", "value": true}
+{"key": "model.dirty", "value": true}
+{"key": "save.log", "value": "Log: \nIgnoreFailingMessages:false"}
+{"key": "mesh.file", "value": "588360de805fa15f4d434a90e1778daa73d7b3908348292ce034fb6f6cd50ca3"}
+{"key": "texture.file", "value": "50337bb27472be90a7445ad7a7f08e5c30fd3585dfaef25ba263f580883562fe"}
+{"key": "physic.file", "value": "6135f5a99f4989e64d8d1cedd3b23f27386a56b46ea1446a6095a8396f0dccd1"}
+{"key": "clip.file", "value": "ec3387ce40eded7090d4e5f4f8fdde9c61ef7a635f8db08e4cc4ede5689c18a2"}
+{"key": "model.file", "value": "67b5f2e0ae884771e8798a37169b603531d4d1d80f181ce140eae88a9788debd"}
+{"key": "untouched.file", "value": "b697cc7804eb7788251cfb1c6fac69409673a06ed6c85326ca95d2591c62d441"}
+{"key": "mesh.dirtyAfter", "value": false}
+{"key": "model.dirtyAfter", "value": true}

@@ -1,0 +1,11 @@
+{
+  "case": "native-saves",
+  "exit": 0,
+  "changed": [
+    "Assets/Native/Alpha.asset",
+    "Assets/Native/Bouncy.physicMaterial",
+    "Assets/Native/Move.anim",
+    "Assets/Native/Tri.asset"
+  ],
+  "removed": []
+}
