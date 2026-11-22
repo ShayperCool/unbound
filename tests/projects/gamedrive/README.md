@@ -31,6 +31,9 @@ drawn over everything) and runs two scripts on it:
 * `controls.02` checks that a world-space canvas without a raycaster still projects a named drag
   through its camera. `controls.03` clicks an active child detached from its scene while an
   additive scene load waits for activation.
+* `controls.04` verifies the projected centre and release edge for world-space targets without
+  raycasters, with an assigned Canvas camera and with the main camera. `controls.05` keeps a target
+  active while moving it to a newly created scene and verifies that `gone` waits for deactivation.
 
 A row is what the driver logged for the step (`> ...`) and the events the UI recorded between its
 lines, a run of one event (a drag's moves) once. `final` is the UI's state at the end.

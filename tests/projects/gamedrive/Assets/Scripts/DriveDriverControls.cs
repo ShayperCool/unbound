@@ -23,6 +23,7 @@ public sealed class DriveDriverControls
 
     public IEnumerator Record(Action finished)
     {
+        yield return RecordMigration();
         Build();
         var heldLoad = SceneManager.LoadSceneAsync(0, LoadSceneMode.Additive);
         heldLoad.allowSceneActivation = false;
@@ -39,7 +40,7 @@ public sealed class DriveDriverControls
 
         const string script = "wait:0.2;log:swap;click:Replace;click:Button;tap:0.95,0.05;log:empty;" +
                               "hide:ControlOverlay;tap:0.35,0.06;drag:Rotated:1,0:0.1;drag:CameraTarget:1,0:0.1;" +
-                              "drag:CanvasOnly:1,0:0.1;click:DetachedControl";
+                              "drag:CanvasOnly:1,0:0.1;drag:MainCameraOnly:1,0:0.1;click:DetachedControl";
         var code = 0;
         var done = false;
         var swapAt = int.MaxValue;
@@ -113,6 +114,47 @@ public sealed class DriveDriverControls
         finished();
     }
 
+    IEnumerator RecordMigration()
+    {
+        var target = new GameObject("MovingControl");
+        bool done = false;
+        int deactivateAt = int.MaxValue;
+        void Logged(string line)
+        {
+            if (line == "step 1 log:migrate")
+            {
+                var scene = SceneManager.CreateScene("ControlDestination");
+                SceneManager.MoveGameObjectToScene(target, scene);
+                DriveProbe.Control($"moved active={target.activeInHierarchy} loaded={target.scene.isLoaded}", step: 5);
+                deactivateAt = Time.frameCount + 3;
+            }
+            if (line == "step 2 gone:MovingControl")
+                DriveProbe.Control("gone while active=" + target.activeInHierarchy, step: 5);
+        }
+        void Finished(int code)
+        {
+            DriveProbe.Control("migration exit " + code, step: 5);
+            done = true;
+        }
+        Driver.Logged += Logged;
+        Driver.Finished += Finished;
+        try
+        {
+            Driver.Run(Options("until:MovingControl:0;log:migrate;gone:MovingControl"));
+            while (!done)
+            {
+                if (Time.frameCount >= deactivateAt && target.activeSelf) target.SetActive(false);
+                yield return null;
+            }
+        }
+        finally
+        {
+            Driver.Logged -= Logged;
+            Driver.Finished -= Finished;
+            UnityEngine.Object.Destroy(target);
+        }
+    }
+
     DriveOptions Options(string script) => new DriveOptions
     {
         Out = m_Output, Script = script, Frames = true, Fps = 50, Settle = 0.08f, Timeout = 0.15f, Exit = false,
@@ -135,12 +177,13 @@ public sealed class DriveDriverControls
         rotated.gameObject.AddComponent<DriveGestureResult>();
 
         var camera = new GameObject("InputCamera", typeof(Camera)).GetComponent<Camera>();
-        camera.enabled = false;
+        camera.tag = "MainCamera";
         camera.orthographic = true;
         camera.orthographicSize = 3f;
         camera.transform.position = new Vector3(0f, 0f, -10f);
         WorldTarget("CameraTarget", camera, raycaster: true);
         WorldTarget("CanvasOnly", camera, raycaster: false);
+        WorldTarget("MainCameraOnly", null, raycaster: false);
 
         var root = new GameObject("DetachedDriverRoot");
         var detached = DriveProbe.Box("DetachedControl", root.transform, 0f, 0f, 1f, 1f, Color.white).gameObject;
@@ -176,7 +219,16 @@ public sealed class DriveGestureResult : MonoBehaviour, IPointerDownHandler, IPo
         var camera = e.pressEventCamera;
         if (ProjectionOnly)
         {
-            DriveProbe.Control($"canvas-only drag={e.dragging} noRaycaster={camera == null}", step: 2);
+            if (name == "CanvasOnly")
+                DriveProbe.Control($"canvas-only drag={e.dragging} noRaycaster={camera == null}", step: 2);
+            var canvas = GetComponentInParent<Canvas>();
+            var view = canvas.worldCamera ?? Camera.main;
+            var rect = (RectTransform)transform;
+            Vector2 centre = view.WorldToScreenPoint(rect.TransformPoint(rect.rect.center));
+            Vector2 edge = view.WorldToScreenPoint(rect.TransformPoint(new Vector2(rect.rect.xMax, rect.rect.center.y)));
+            bool pressedAtCentre = Vector2.Distance(e.pressPosition, centre) < 0.1f;
+            bool releasedAtEdge = Vector2.Distance(e.position, edge) < 0.1f;
+            DriveProbe.Control($"{name} centre={pressedAtCentre} edge={releasedAtEdge} noRaycaster={camera == null}", step: 4);
             return;
         }
         var dx = e.position.x - e.pressPosition.x;

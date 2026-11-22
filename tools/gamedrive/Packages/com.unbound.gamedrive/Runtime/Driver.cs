@@ -299,7 +299,9 @@ namespace Unbound.GameDrive
                     Log($"step {m_Index} {label}");
                     return true;
                 case "gone":
-                    if (FindActive(s[1]) != null) return false;
+                    // An absence may be stale if the target just moved into an unlisted
+                    // scene or was detached. Refresh before advancing the script.
+                    if (FindActive(s[1]) != null || FindTarget(s[1], pressable: false, refresh: true) != null) return false;
                     Log($"step {m_Index} {label}");
                     return true;
                 case "log":
@@ -540,14 +542,14 @@ namespace Unbound.GameDrive
 
         /// <summary>Visits loaded scenes in order, then the objects kept across scene loads.
         /// Within a scene, visits each branch in sibling order, with each parent before its children.</summary>
-        GameObject FindTarget(string name, bool pressable)
+        GameObject FindTarget(string name, bool pressable, bool refresh = false)
         {
             GameObject first = null;
             int matches = 0;
             bool isPath = name.IndexOf('/') >= 0;
             var persistentScene = gameObject.scene;
             bool scannedPersistent = false;
-            RefreshScenes();
+            RefreshScenes(refresh);
             foreach (var scene in m_Scenes)
             {
                 if (!scene.IsValid() || !scene.isLoaded) continue;
@@ -556,35 +558,36 @@ namespace Unbound.GameDrive
             }
             if (!scannedPersistent && persistentScene.IsValid() && persistentScene.isLoaded)
                 ScanScene(persistentScene, name, isPath, pressable, ref first, ref matches);
-            if (first == null) return FindDetached(name, isPath, pressable);
+            if (first == null) return FindDetached(name, isPath, pressable, refresh);
             if (matches > 1 && m_Ambiguous.Add(name))
                 Log($"{matches} objects match {name}: the first in the hierarchy is taken, {PathOf(first.transform)}");
             return first;
         }
 
-        void RefreshScenes()
+        void RefreshScenes(bool refresh)
         {
             double now = Now;
-            if (!m_SceneListDirty && now < m_NextSceneRefresh) return;
+            if (!refresh && !m_SceneListDirty && now < m_NextSceneRefresh) return;
             m_NextSceneRefresh = now + SceneRefreshSeconds;
             int count = SceneManager.sceneCount;
             // CreateScene may add an empty scene without raising a load event.
             // Keep the snapshot between polls, including while another scene is waiting to load.
-            if (!m_SceneListDirty && count == m_Scenes.Count) return;
+            if (!refresh && !m_SceneListDirty && count == m_Scenes.Count) return;
             m_SceneListDirty = false;
             m_Scenes.Clear();
             for (int i = 0; i < count; i++) m_Scenes.Add(SceneManager.GetSceneAt(i));
         }
 
-        GameObject FindDetached(string name, bool isPath, bool pressable)
+        GameObject FindDetached(string name, bool isPath, bool pressable, bool refresh)
         {
             double now = Now;
-            if (now >= m_NextDetachedRefresh)
+            if (refresh || now >= m_NextDetachedRefresh)
             {
                 m_NextDetachedRefresh = now + SceneRefreshSeconds;
                 m_Detached.Clear();
                 // A detached transform has no scene root list. Use the allocation-bearing
-                // global query at the polling interval and only when no loaded target matches.
+                // global query only when no loaded target matches. Wait for the next poll
+                // unless a step needs to verify that the target really no longer exists.
                 foreach (var transform in FindObjectsByType<Transform>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
                     if (!transform.gameObject.scene.IsValid()) m_Detached.Add(transform);
             }
@@ -645,11 +648,7 @@ namespace Unbound.GameDrive
             radius = 1f;
             if (target.transform is RectTransform rect)
             {
-                var raycaster = DrivePointer.RaycasterFor(target);
-                var canvas = target.GetComponentInParent<Canvas>()?.rootCanvas;
-                var camera = raycaster != null
-                    ? raycaster.eventCamera
-                    : canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+                var camera = ProjectionCamera(target);
                 var corners = new Vector3[4];
                 rect.GetWorldCorners(corners);
                 Vector2 corner = RectTransformUtility.WorldToScreenPoint(camera, corners[0]);
@@ -660,6 +659,16 @@ namespace Unbound.GameDrive
             }
             var main = Camera.main;
             return main != null ? (Vector2)main.WorldToScreenPoint(target.transform.position) : new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+        }
+
+        static Camera ProjectionCamera(GameObject target)
+        {
+            var raycaster = DrivePointer.RaycasterFor(target);
+            if (raycaster != null) return raycaster.eventCamera;
+            var canvas = target.GetComponentInParent<Canvas>()?.rootCanvas;
+            if (canvas == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay) return null;
+            if (canvas.worldCamera != null || canvas.renderMode == RenderMode.ScreenSpaceCamera) return canvas.worldCamera;
+            return Camera.main ?? throw new InvalidOperationException($"no projection camera for {PathOf(target.transform)}");
         }
 
         /// <summary>Keeps the objects named by hide steps inactive (looked for four times a second).</summary>

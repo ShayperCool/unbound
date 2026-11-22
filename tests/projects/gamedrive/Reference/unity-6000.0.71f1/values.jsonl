@@ -2,6 +2,8 @@
 {"k":"controls.01","v":"finished run received warning=False"}
 {"k":"controls.02","v":"canvas-only drag=True noRaycaster=True"}
 {"k":"controls.03","v":"detached target active=True sceneValid=False | detached target clicked | additive load held=True"}
+{"k":"controls.04","v":"CanvasOnly centre=True edge=True noRaycaster=True | MainCameraOnly centre=True edge=True noRaycaster=True"}
+{"k":"controls.05","v":"moved active=True loaded=True | gone while active=False | migration exit 0"}
 {"k":"frames.00","v":"> wait:0.5 +0 dt=0.0200"}
 {"k":"frames.01","v":"> click:Button down Canvas/Button +10 dt=0.0200 | Button.select | > click:Button up +1 dt=0.0200 | Button.click"}
 {"k":"frames.02","v":"> stick:Stick:0,1:0.25 down Canvas/Stick +11 dt=0.0200 | Button.deselect | Stick.down | Stick.drag | > stick:Stick:0,1:0.25 held +5 dt=0.0200 | > stick:Stick:0,1:0.25 up +13 dt=0.0200 | Stick.up 0.00,1.00"}

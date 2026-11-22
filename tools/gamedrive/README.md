@@ -38,7 +38,8 @@ screen from its bottom left.
 
 Scene events refresh the driver's scene list. It also checks for scenes created without an event
 four times per second. When no loaded target matches, it polls Unity's object search for detached
-targets at the same rate and fails an ambiguous detached match.
+targets at the same rate and fails an ambiguous detached match. A `gone` step checks the current
+scene list and detached objects before accepting a cached miss.
 
 | Step | What it does |
 |---|---|
