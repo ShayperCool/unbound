@@ -246,11 +246,11 @@ namespace UnityEngine.Tests
                     // The scene's own reason comes first (no lightmaps were asked for it).
                     Assert.Contains("untitled", Unwritten(environment, null, true));
                     Assert.Contains("light probes", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true, probes: true));
+                    // Directional lightmaps and the Shadowmask Lighting Mode are written too.
                     environment.directionalityMode = LightmapsMode.CombinedDirectional;
-                    Assert.Contains("directional", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
-                    environment.directionalityMode = LightmapsMode.NonDirectional;
                     environment.mixedBakeMode = MixedLightingMode.Shadowmask;
-                    Assert.Contains("shadowmask", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.directionalityMode = LightmapsMode.NonDirectional;
                     environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
                     environment.lightmapCompression = LightmapCompression.NormalQuality;
                     Assert.Contains("compression", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));

@@ -124,10 +124,12 @@ namespace UnityEngine.Tests
             Assert.Contains("did not make", BakedAtlas.ImagesRefused(false, false, false, true));
             Assert.Contains("without shadows", BakedAtlas.ImagesRefused(false, false, true, false));
             // The answer read: renderers in the bake's order, lights with their outputs.
-            const string answer = "{\"images\":[\"AAEC\"],\"placements\":[{\"lightmap\":0,\"scaleOffset\":[0.5,0.5,0,0]},{\"lightmap\":65534,\"scaleOffset\":[1,1,0,0]}],"
+            const string answer = "{\"images\":[\"AAEC\"],\"directionImages\":[\"AwQ=\"],\"shadowmaskImages\":null,\"placements\":[{\"lightmap\":0,\"scaleOffset\":[0.5,0.5,0,0]},{\"lightmap\":65534,\"scaleOffset\":[1,1,0,0]}],"
                 + "\"order\":[1,0],\"lights\":[{\"fileId\":7,\"bakeType\":1,\"mixedMode\":0,\"channel\":0,\"probeIndex\":1,\"measured\":false}]}";
             var result = BakeResult.Of(answer, new List<(string, long)> { ("A", 11), ("B", 22) });
             Assert.Equal(new byte[] { 0, 1, 2 }, result.Images[0]);
+            Assert.Equal(new byte[] { 3, 4 }, result.Directions[0]);
+            Assert.Empty(result.Shadowmasks);
             Assert.Equal(22, result.Renderers[0].FileId);
             Assert.Equal(65534, result.Renderers[0].Lightmap);
             Assert.False(result.LightsMeasured);

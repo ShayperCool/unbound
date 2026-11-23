@@ -145,12 +145,22 @@ pub struct Environment {
 /// What a bake with baked global illumination adds to its lighting data.
 #[derive(Clone, Debug, Default)]
 pub struct Baked {
-    /// Each lightmap's image (Lightmap-N_comp_light.exr), its .meta's GUID, in order.
-    pub lightmaps: Vec<[u8; 16]>,
+    /// Each lightmap's images, in order.
+    pub lightmaps: Vec<LightmapImages>,
     /// The renderers with a lightmap, in the bake's order.
     pub renderers: Vec<LightmappedRenderer>,
     /// The bake's lights, in its order.
     pub lights: Vec<BakedLight>,
+}
+
+/// A lightmap's images, their .meta's GUIDs: its light (Lightmap-N_comp_light.exr), and where
+/// the bake makes them its directions (Lightmap-N_comp_dir.png) and its shadowmask
+/// (Lightmap-N_comp_shadowmask.png).
+#[derive(Clone, Copy, Debug)]
+pub struct LightmapImages {
+    pub light: [u8; 16],
+    pub directions: Option<[u8; 16]>,
+    pub shadowmask: Option<[u8; 16]>,
 }
 
 /// A renderer's place in the lightmaps (Renderer.lightmapIndex and lightmapScaleOffset).
@@ -231,16 +241,24 @@ pub fn baked(environment: &Environment, baked: &Baked) -> Result<Vec<u8>> {
         kind: ASSET_FILE,
         path: String::new(),
     }];
-    // The lightmaps' images name files of their own, after the scene and before the reflection's.
+    // The lightmaps' images name files of their own, after the scene and before the
+    // reflection's: each lightmap's light, then its directions or shadowmask.
     let mut lightmaps = Vec::new();
-    for guid in &baked.lightmaps {
-        externals.push(ExternalFile {
-            guid: *guid,
-            kind: ASSET_FILE,
-            path: String::new(),
-        });
+    for images in &baked.lightmaps {
         let mut entry = element_default(&types[data_type], "m_Lightmaps")?;
-        entry.set_field("m_Lightmap", pptr(externals.len() as i32, TEXTURE_PATH_ID))?;
+        for (field, guid) in [
+            ("m_Lightmap", Some(images.light)),
+            ("m_DirLightmap", images.directions),
+            ("m_ShadowMask", images.shadowmask),
+        ] {
+            let Some(guid) = guid else { continue };
+            externals.push(ExternalFile {
+                guid,
+                kind: ASSET_FILE,
+                path: String::new(),
+            });
+            entry.set_field(field, pptr(externals.len() as i32, TEXTURE_PATH_ID))?;
+        }
         lightmaps.push(entry);
     }
     set(&mut data, "m_Lightmaps", Value::Seq(lightmaps))?;
@@ -250,7 +268,10 @@ pub fn baked(environment: &Environment, baked: &Baked) -> Result<Vec<u8>> {
         let mut entry = element_default(&types[data_type], "m_LightmappedRendererData")?;
         // As the Editor writes a renderer without realtime GI or terrain: no dynamic lightmap,
         // identity scale and offsets (tests/projects/bakedbuffers lightingData.json).
-        entry.set_field("lightmapIndexDynamic", Value::Scalar(NO_DYNAMIC_LIGHTMAP.into()))?;
+        entry.set_field(
+            "lightmapIndexDynamic",
+            Value::Scalar(NO_DYNAMIC_LIGHTMAP.into()),
+        )?;
         for field in [
             "terrainDynamicUVST",
             "terrainChunkDynamicUVST",
@@ -509,7 +530,18 @@ mod tests {
         let made = baked(
             &environment,
             &Baked {
-                lightmaps: vec![[2; 16], [3; 16]],
+                lightmaps: vec![
+                    LightmapImages {
+                        light: [2; 16],
+                        directions: None,
+                        shadowmask: None,
+                    },
+                    LightmapImages {
+                        light: [3; 16],
+                        directions: None,
+                        shadowmask: None,
+                    },
+                ],
                 renderers: vec![
                     LightmappedRenderer {
                         file_id: 1161936178,

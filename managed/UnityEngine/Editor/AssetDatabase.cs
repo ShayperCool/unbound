@@ -604,6 +604,15 @@ namespace UnityEditor
             Underscore = 2,
         }
 
+        /// <summary>Whether a bake stitches the shadowmask's seams (EditorSettings.asset
+        /// m_ShadowmaskStitching, saved there as the Editor saves settings). A project without the
+        /// key: on (not measured).</summary>
+        public static bool shadowmaskStitching
+        {
+            get => SettingsAssets.Value("EditorSettings", "m_ShadowmaskStitching").Trim() != "0";
+            set => SettingsAssets.Edit("EditorSettings", body => body.Set("m_ShadowmaskStitching", YText.Scalar(value ? "1" : "0")));
+        }
+
         /// <summary>The project's naming scheme for duplicated GameObjects (EditorSettings.asset
         /// m_GameObjectNamingScheme; SpaceParenthesis without one), saved there as the Editor saves
         /// settings.</summary>

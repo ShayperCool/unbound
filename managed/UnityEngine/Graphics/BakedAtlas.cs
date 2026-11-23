@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using Unbound.Runtime;
 
@@ -584,6 +585,7 @@ namespace UnityEngine
                     layoutOnly,
                     indirect,
                     lightmapImages = images && !layoutOnly,
+                    shadowmaskStitching = images && !layoutOnly && UnityEditor.EditorSettings.shadowmaskStitching,
                 });
                 // The request, the bake (a renderer it refuses, named) and the reading of its
                 // answer all fail the scene's layout, said.
@@ -640,6 +642,9 @@ namespace UnityEngine
     internal sealed class BakeResult
     {
         internal byte[][] Images;
+        /// <summary>Each lightmap's directions (Lightmap-N_comp_dir.png) and shadowmask
+        /// (Lightmap-N_comp_shadowmask.png), where the bake made them (else empty).</summary>
+        internal byte[][] Directions, Shadowmasks;
         internal List<(long FileId, int Lightmap, float[] ScaleOffset)> Renderers;
         internal List<(long FileId, int BakeType, int MixedMode, int Channel, int ProbeIndex)> Lights;
         /// <summary>Whether what the lighting data keeps of every light is measured.</summary>
@@ -652,6 +657,11 @@ namespace UnityEngine
             var images = root.GetProperty("images");
             result.Images = new byte[images.GetArrayLength()][];
             for (int i = 0; i < result.Images.Length; i++) result.Images[i] = Convert.FromBase64String(images[i].GetString());
+            byte[][] Decoded(string name) => root.TryGetProperty(name, out var list) && list.ValueKind == JsonValueKind.Array
+                ? list.EnumerateArray().Select(e => Convert.FromBase64String(e.GetString())).ToArray()
+                : Array.Empty<byte[]>();
+            result.Directions = Decoded("directionImages");
+            result.Shadowmasks = Decoded("shadowmaskImages");
             foreach (var (_, fileId, lightmap, scaleOffset) in BakedAtlas.Placed(root, sent))
                 result.Renderers.Add((fileId, lightmap, scaleOffset));
             foreach (var l in root.GetProperty("lights").EnumerateArray())

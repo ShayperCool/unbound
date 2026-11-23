@@ -52,7 +52,7 @@ sys.dont_write_bytecode = True  # nothing is written into the checkout
 import editor_bake  # noqa: E402
 import editor_runner  # noqa: E402
 from probe_paths import editor_path, private_label, project_copy, reference_root, run_root  # noqa: E402
-from baked_files import lighting_data_difference, lighting_data_fields, normalized  # noqa: E402
+from baked_files import image_difference, lighting_data_difference, lighting_data_fields, normalized  # noqa: E402
 
 WORK = run_root(PROBE, 'bakedbuffers')
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
@@ -111,6 +111,10 @@ LIGHT_TOLERANCE = 2e-6
 # A lighting data's numbers against the Editor's (the ambient probe's tolerance,
 # tests/projects/bakeenvironment AMBIENT_TOLERANCE; the lightmaps' scales and offsets within it too).
 LIGHTING_DATA_TOLERANCE = 1e-3
+# The directions' and the shadowmask's 8-bit images a bake writes: two Editor bakes of a scene give
+# texels a level apart (the light they are made of differs within INDIRECT_REPEAT_TOLERANCE).
+IMAGE_REPEAT_TOLERANCE = 1
+IMAGE_TOLERANCE = 1
 # The objects of a bake's lighting data without realtime GI: LightProbes and LightingDataAsset.
 LIGHTING_DATA_CLASSES = {258, 1120}
 
@@ -408,6 +412,10 @@ def native(label):
             (target/'written').mkdir()
             for meta in sorted(written.glob('*.meta')):
                 (target/'written'/meta.name).write_bytes(normalized(meta.name, meta.read_bytes(), written))
+            # The directions' and the shadowmask's images (by their texels: their bytes are
+            # those of the texels).
+            for image in sorted(written.glob('*.png')):
+                shutil.copy2(image, target/'written'/image.name)
         # A whole bake that failed (wholeBake.txt: False, or no answer) makes the capture not one
         # to publish.
         whole = out/'raw'/scene/'wholeBake.txt'
@@ -431,6 +439,8 @@ def repeats(name, first, other):
     by its coefficients the same way."""
     if first == other:
         return True
+    if first and other and name.endswith('.png'):
+        return image_difference(first, other, IMAGE_REPEAT_TOLERANCE) is None
     if first and other and Path(name).name == 'lightingData.json':
         return lighting_data_difference(json.loads(first), json.loads(other), INDIRECT_REPEAT_TOLERANCE) is None
     if first and other and name.endswith('.exr'):
@@ -977,6 +987,9 @@ def compare(label):
                    else 'differs: ' + ' | '.join(l for l in difflib.unified_diff(
                        meta.read_text().splitlines(), normalized(meta.name, got_meta.read_bytes(), mine).decode().splitlines(), lineterm='', n=0)
                        if l[:1] in '+-' and l[:3] not in ('+++', '---'))[:300])
+        for image in sorted((reference_scene/'written').glob('*.png')) if (reference_scene/'written').is_dir() else []:
+            record(scene + '.written/' + image.name, 'not written' if not (mine/image.name).is_file()
+                   else image_difference((mine/image.name).read_bytes(), image.read_bytes(), IMAGE_TOLERANCE))
     print(f'lightmaps: {stitched[0]} texels the Editor stitched along seams')
     keys = {key for key, _ in records}
     for key in sorted(set(known) - keys):

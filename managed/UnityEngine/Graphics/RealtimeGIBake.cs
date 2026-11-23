@@ -259,11 +259,6 @@ namespace UnityEngine
             settings == null ? "a scene without Lighting Settings (the defaults') is not written yet"
             : settings.realtimeGI ? "Unbound writes it for a bake without realtime global illumination"
             : settings.bakedGI && probeGroups ? "the light probes of a bake with baked global illumination are not written yet"
-            // (The Editor also writes the directions' image, Lightmap-N_comp_dir.png, and in the
-            // Shadowmask Lighting Mode the shadowmask's, Lightmap-N_comp_shadowmask.png:
-            // tests/projects/bakedbuffers Directional*, Masks*.)
-            : settings.bakedGI && settings.directionalityMode == LightmapsMode.CombinedDirectional ? "directional lightmaps are not written yet"
-            : settings.bakedGI && settings.mixedBakeMode == MixedLightingMode.Shadowmask ? "the shadowmask of the Shadowmask Lighting Mode is not written yet"
             : settings.bakedGI && settings.lightmapCompression != LightmapCompression.None ? "lightmaps with compression are not measured"
             : folder == null ? "an untitled scene's is not measured"
             : !Compat.BakeFilesMeasured ? $"of Unity {Application.unityVersion} it is not measured (its release family)"
@@ -289,49 +284,84 @@ namespace UnityEngine
         /// <summary>A renderer's lightmap index in the lighting data for none of its own.</summary>
         const int NoLightmap = 0xFFFE;
 
-        /// <summary>The name of a lightmap's image, as the Editor writes it beside the scene.</summary>
-        static string LightmapImage(int index) => $"Lightmap-{index}_comp_light.exr";
+        /// <summary>The names of a lightmap's images, as the Editor writes them beside the scene.</summary>
+        const string LightImage = "light.exr", DirectionsImage = "dir.png", ShadowmaskImage = "shadowmask.png";
+
+        static string LightmapImage(int index, string kind) => $"Lightmap-{index}_comp_{kind}";
 
         /// <summary>Writes the lightmaps' images of a bake with baked global illumination beside
         /// its scene (those an earlier bake left beyond them are deleted), imported as lightmaps;
         /// their GUIDs, the lightmapped renderers and the lights as the lighting data keeps them
         /// (none for a bake of the environment alone).</summary>
-        static (string[] Guids, object[] Renderers, object[] Lights) WriteLightmaps(string folder, BakeResult baked)
+        static (object[] Lightmaps, object[] Renderers, object[] Lights) WriteLightmaps(string folder, BakeResult baked)
         {
-            var guids = new List<string>();
-            for (int i = 0; baked != null && i < baked.Images.Length; i++)
+            var lightmaps = new List<object>();
+            int count = baked?.Images.Length ?? 0;
+            for (int i = 0; i < count; i++)
             {
-                string path = folder + "/" + LightmapImage(i);
-                guids.Add(UnityEditor.AssetDatabase.WriteBakedFile(path, baked.Images[i]));
-                if (UnityEditor.AssetImporter.GetAtPath(path) is UnityEditor.TextureImporter importer)
+                // As the Editor imports a bake's images without lightmap compression
+                // (tests/projects/bakedbuffers written/*.meta): the light as a lightmap, the
+                // directions and the shadowmask linear.
+                string light = WriteLightmapImage(folder + "/" + LightmapImage(i, LightImage), baked.Images[i], UnityEditor.TextureImporterType.Lightmap);
+                string directions = i < baked.Directions.Length
+                    ? WriteLightmapImage(folder + "/" + LightmapImage(i, DirectionsImage), baked.Directions[i], UnityEditor.TextureImporterType.DirectionalLightmap)
+                    : null;
+                string shadowmask = i < baked.Shadowmasks.Length
+                    ? WriteLightmapImage(folder + "/" + LightmapImage(i, ShadowmaskImage), baked.Shadowmasks[i], UnityEditor.TextureImporterType.Shadowmask)
+                    : null;
+                lightmaps.Add(new { light, directions, shadowmask });
+            }
+            // Images an earlier bake left: beyond this bake's lightmaps, and the directions or
+            // shadowmask this bake does not make. (A bake of the environment alone leaves them:
+            // not measured.)
+            if (baked != null)
+                for (int i = 0; ; i++)
                 {
-                    // As the Editor imports a lightmap of a bake without lightmap compression
-                    // (tests/projects/bakedbuffers written/Lightmap-0_comp_light.exr.meta).
-                    importer.textureType = UnityEditor.TextureImporterType.Lightmap;
-                    importer.streamingMipmaps = true;
-                    importer.anisoLevel = 3;
-                    importer.textureCompression = UnityEditor.TextureImporterCompression.Uncompressed;
-                    importer.SaveAndReimport();
+                    bool any = false;
+                    foreach (var kind in new[] { LightImage, DirectionsImage, ShadowmaskImage })
+                    {
+                        string path = folder + "/" + LightmapImage(i, kind);
+                        if (UnityEditor.AssetDatabase.AssetPathToGUID(path).Length == 0) continue;
+                        any = true;
+                        bool made = i < count && (kind == LightImage || (kind == DirectionsImage ? i < baked.Directions.Length : i < baked.Shadowmasks.Length));
+                        if (!made) UnityEditor.AssetDatabase.DeleteAsset(path);
+                    }
+                    if (!any && i >= count) break;
                 }
-            }
-            // (A bake of the environment alone leaves them: not measured.)
-            for (int i = guids.Count; baked != null; i++)
-            {
-                string stale = folder + "/" + LightmapImage(i);
-                if (UnityEditor.AssetDatabase.AssetPathToGUID(stale).Length == 0) break;
-                UnityEditor.AssetDatabase.DeleteAsset(stale);
-            }
-            if (baked == null) return (Array.Empty<string>(), Array.Empty<object>(), Array.Empty<object>());
+            if (baked == null) return (Array.Empty<object>(), Array.Empty<object>(), Array.Empty<object>());
             var renderers = new List<object>();
             // Every renderer of the bake, one without a lightmap of its own (lit by light probes,
             // Scale In Lightmap 0) with the index for none and its own placement
             // (tests/projects/bakedbuffers Shapes lightingData.json).
             foreach (var (fileId, lightmap, scaleOffset) in baked.Renderers)
-                renderers.Add(new { fileId, lightmapIndex = lightmap >= 0 && lightmap < guids.Count ? lightmap : NoLightmap, scaleOffset });
+                renderers.Add(new { fileId, lightmapIndex = lightmap >= 0 && lightmap < count ? lightmap : NoLightmap, scaleOffset });
             var lights = new List<object>();
             foreach (var (fileId, bakeType, mixedMode, channel, probeIndex) in baked.Lights)
                 lights.Add(new { fileId, bakeType, mixedMode, channel, probeIndex });
-            return (guids.ToArray(), renderers.ToArray(), lights.ToArray());
+            return (lightmaps.ToArray(), renderers.ToArray(), lights.ToArray());
+        }
+
+        /// <summary>Writes one of a lightmap's images and imports it as the Editor imports it:
+        /// mipmap streaming, aniso 3, no compression; the directions and the shadowmask linear
+        /// (the directions' alpha from the image). Its GUID.</summary>
+        static string WriteLightmapImage(string path, byte[] bytes, UnityEditor.TextureImporterType type)
+        {
+            string guid = UnityEditor.AssetDatabase.WriteBakedFile(path, bytes);
+            if (UnityEditor.AssetImporter.GetAtPath(path) is UnityEditor.TextureImporter importer)
+            {
+                importer.textureType = type;
+                importer.streamingMipmaps = true;
+                importer.anisoLevel = 3;
+                importer.textureCompression = UnityEditor.TextureImporterCompression.Uncompressed;
+                if (type != UnityEditor.TextureImporterType.Lightmap)
+                {
+                    importer.sRGBTexture = false;
+                    importer.alphaSource = type == UnityEditor.TextureImporterType.DirectionalLightmap
+                        ? UnityEditor.TextureImporterAlphaSource.FromInput : UnityEditor.TextureImporterAlphaSource.None;
+                }
+                importer.SaveAndReimport();
+            }
+            return guid;
         }
 
         /// <summary>What <see cref="BakeEnvironment"/> made: whether the whole environment
@@ -408,7 +438,7 @@ namespace UnityEngine
             }
             else if (UnityEditor.AssetDatabase.AssetPathToGUID(imagePath).Length > 0)
                 UnityEditor.AssetDatabase.DeleteAsset(imagePath);
-            var (lightmapGuids, renderers, lights) = WriteLightmaps(folder, baked);
+            var (lightmaps, renderers, lights) = WriteLightmaps(folder, baked);
             var coefficients = new float[27];
             if (probe is { } sh)
                 for (int c = 0; c < 3; c++)
@@ -420,7 +450,7 @@ namespace UnityEngine
                 lightmapsMode = (int)settings.directionalityMode,
                 ambientProbe = coefficients,
                 reflectionGuid = string.IsNullOrEmpty(imageGuid) ? null : imageGuid,
-                lightmaps = lightmapGuids,
+                lightmaps,
                 renderers,
                 lights,
             }))).RootElement;

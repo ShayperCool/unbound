@@ -13,6 +13,7 @@ use unbound_gi::baked::composite;
 use unbound_gi::baked::direct::{self, MixedMode, Receiver};
 use unbound_gi::baked::directional;
 use unbound_gi::baked::grid::{Bounds, Grid};
+use unbound_gi::baked::images;
 use unbound_gi::baked::indirect::{self, Material, Surface, Texture, World};
 use unbound_gi::baked::light::{Kind, Light, Mode};
 use unbound_gi::baked::probes;
@@ -50,6 +51,9 @@ pub struct BakeRequest {
     /// (Lightmap-N_comp_light.exr), in the reply's `images`.
     #[serde(default)]
     lightmap_images: bool,
+    /// The project stitches the shadowmask's seams (EditorSettings.shadowmaskStitching).
+    #[serde(default)]
+    shadowmask_stitching: bool,
     /// The Lighting Settings' Directional Mode is Directional: the bake keeps where its light
     /// comes from.
     #[serde(default)]
@@ -477,8 +481,11 @@ struct Buffers<'a> {
     /// Where the texel buffers go; none when only the lightmaps' images are asked for.
     folder: Option<&'a Path>,
     lightmaps: Vec<Json>,
-    /// The lightmaps' images (EXR, base64), when asked for.
+    /// The lightmaps' images (EXR, base64), when asked for, and their directions' and
+    /// shadowmasks' (PNG, base64) where the bake makes them.
     images: Option<Vec<String>>,
+    directions: Vec<String>,
+    shadowmasks: Vec<String>,
 }
 
 impl<'a> Buffers<'a> {
@@ -516,6 +523,8 @@ impl<'a> Buffers<'a> {
                 folder: None,
                 lightmaps: Vec::new(),
                 images,
+                directions: Vec::new(),
+                shadowmasks: Vec::new(),
             });
         };
         std::fs::create_dir_all(folder)
@@ -546,6 +555,8 @@ impl<'a> Buffers<'a> {
             folder: Some(folder),
             lightmaps: Vec::new(),
             images,
+            directions: Vec::new(),
+            shadowmasks: Vec::new(),
         })
     }
 
@@ -570,6 +581,7 @@ impl<'a> Buffers<'a> {
         backface_tolerance: f32,
         padding: u32,
         stitched: &[(&[EdgePair], [f32; 4])],
+        shadowmask: Option<bool>,
     ) -> Result<()> {
         let index = self.lightmaps.len();
         self.write(format!("occupancy{index}.u8"), g.occupancy.clone())?;
@@ -689,11 +701,60 @@ impl<'a> Buffers<'a> {
                 f32::MAX,
             );
         }
-        if let Some(images) = &mut self.images {
-            images.push(
+        if let Some(files) = &mut self.images {
+            files.push(
                 base64::engine::general_purpose::STANDARD
                     .encode(lightmap_image(g.width, g.height, &lightmap)),
             );
+            let made = images::Buffers {
+                width: g.width,
+                height: g.height,
+                used: &used,
+                validity: bounced.map(|b| b.validity.as_slice()),
+                direct: &lit.irradiance,
+                indirect: bounced.map(|b| b.irradiance.as_slice()),
+                environment: bounced.map(|b| b.environment.as_slice()),
+            };
+            let png = |image: &[[f32; 4]]| {
+                base64::engine::general_purpose::STANDARD.encode(unbound_assets::png_writer::write(
+                    g.width,
+                    g.height,
+                    &images::to_rgba8(image, g.width, g.height),
+                ))
+            };
+            // The directions (stitched with all four values within [0, 1]) and the shadowmask
+            // (red, green and blue, as high as they go, where the project stitches it).
+            if directional {
+                let mut image = images::directional(
+                    &made,
+                    &lit.directionality,
+                    bounced.map(|b| b.directionality.as_slice()),
+                    backface_tolerance,
+                    padding,
+                );
+                for (pairs, scale_offset) in stitched {
+                    seams::stitch(&mut image, g.width, g.height, pairs, *scale_offset, 4, 1.0);
+                }
+                self.directions.push(png(&image));
+            }
+            if let Some(stitching) = shadowmask {
+                let mut image =
+                    images::shadowmask(&made, &lit.shadowmask, backface_tolerance, padding);
+                if stitching {
+                    for (pairs, scale_offset) in stitched {
+                        seams::stitch(
+                            &mut image,
+                            g.width,
+                            g.height,
+                            pairs,
+                            *scale_offset,
+                            3,
+                            f32::MAX,
+                        );
+                    }
+                }
+                self.shadowmasks.push(png(&image));
+            }
         }
         self.write(
             format!("lightmap{index}.f32"),
@@ -719,7 +780,7 @@ impl<'a> Buffers<'a> {
         lights: Json,
         indirect: Json,
         probes: Json,
-    ) -> Result<Option<Vec<String>>> {
+    ) -> Result<Option<(Vec<String>, Vec<String>, Vec<String>)>> {
         self.write(
             Self::DESCRIPTION.into(),
             serde_json::to_vec_pretty(&json!({
@@ -727,7 +788,7 @@ impl<'a> Buffers<'a> {
                 "probes": probes,
             }))?,
         )?;
-        Ok(self.images)
+        Ok(self.images.map(|i| (i, self.directions, self.shadowmasks)))
     }
 }
 
@@ -1123,6 +1184,9 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 parameters.back_face_tolerance,
                 request.padding.max(0) as u32,
                 &stitched,
+                // (The Shadowmask Lighting Mode with a light on a shadowmask channel.)
+                (mixed == MixedMode::Shadowmask && channels.iter().any(|c| c.is_some()))
+                    .then_some(request.shadowmask_stitching),
             )?;
         }
         let described = bounce.as_ref().map_or(Json::Null, |b| {
@@ -1270,7 +1334,9 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
         "placements": placements,
         "order": taken,
         "invalidNormals": taken.len() != request.renderers.len(),
-        "images": images,
+        "images": images.as_ref().map(|i| &i.0),
+        "directionImages": images.as_ref().map(|i| &i.1),
+        "shadowmaskImages": images.as_ref().map(|i| &i.2),
         "lights": light_outputs,
     }))
 }
@@ -1356,11 +1422,22 @@ pub struct LightingDataRequest {
     /// A bake with baked GI: its lightmaps' images (their GUIDs), its lightmapped renderers
     /// and its lights (as the bake's reply gives them).
     #[serde(default)]
-    lightmaps: Vec<String>,
+    lightmaps: Vec<LightmapImagesData>,
     #[serde(default)]
     renderers: Vec<LightmappedRendererData>,
     #[serde(default)]
     lights: Vec<LightOutputData>,
+}
+
+/// A lightmap's images by their GUIDs: its light, and its directions or shadowmask if made.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LightmapImagesData {
+    light: String,
+    #[serde(default)]
+    directions: Option<String>,
+    #[serde(default)]
+    shadowmask: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -1392,7 +1469,15 @@ pub fn lighting_data_file(request: LightingDataRequest) -> Result<Json> {
         lightmaps: request
             .lightmaps
             .iter()
-            .map(|g| lighting_data::guid_bytes(g))
+            .map(|images| -> Result<lighting_data::LightmapImages> {
+                let guid =
+                    |g: &Option<String>| g.as_deref().map(lighting_data::guid_bytes).transpose();
+                Ok(lighting_data::LightmapImages {
+                    light: lighting_data::guid_bytes(&images.light)?,
+                    directions: guid(&images.directions)?,
+                    shadowmask: guid(&images.shadowmask)?,
+                })
+            })
             .collect::<Result<_>>()?,
         renderers: request
             .renderers

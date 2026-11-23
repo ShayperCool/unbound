@@ -3,7 +3,9 @@ and their `.meta` files), as the probes' references keep them (`written/`): what
 every bake set aside, so that two bakes of a scene give the same files."""
 import json
 from pathlib import Path
+import struct
 import subprocess
+import zlib
 
 # The empty realtime GI archive the lighting data of a bake without realtime GI holds: its size,
 # its header's and its blocks' table's (the bytes between are not set).
@@ -126,3 +128,56 @@ def lighting_data_difference(got, want, tolerance):
             problems.append(f'{path}: {a!r}, expected {b!r}')
     walk(_by_renderer(got), _by_renderer(want), '')
     return '; '.join(problems) or None
+
+
+def read_png(data):
+    """(width, height, rows of RGBA bytes from the top) of an 8-bit RGBA PNG without interlacing
+    (the images a bake writes)."""
+    if data[:8] != b'\x89PNG\r\n\x1a\n':
+        raise ValueError('not a PNG file')
+    at, header, deflated = 8, None, b''
+    while at < len(data):
+        size, kind = struct.unpack('>I4s', data[at:at + 8])
+        body = data[at + 8:at + 8 + size]
+        if kind == b'IHDR':
+            header = struct.unpack('>IIBBBBB', body)
+        elif kind == b'IDAT':
+            deflated += body
+        at += 12 + size
+    width, height, depth, colour, _, _, interlace = header
+    if (depth, colour, interlace) != (8, 6, 0):
+        raise ValueError(f'a PNG of depth {depth}, colour type {colour}, interlace {interlace}')
+    raw, stride = zlib.decompress(deflated), width * 4
+    out, above = bytearray(), bytearray(stride)
+    for y in range(height):
+        kind, row = raw[y * (stride + 1)], bytearray(raw[y * (stride + 1) + 1:(y + 1) * (stride + 1)])
+        for k in range(stride):
+            a = row[k - 4] if k >= 4 else 0
+            b, c = above[k], above[k - 4] if k >= 4 else 0
+            if kind == 1:
+                row[k] = (row[k] + a) & 255
+            elif kind == 2:
+                row[k] = (row[k] + b) & 255
+            elif kind == 3:
+                row[k] = (row[k] + (a + b) // 2) & 255
+            elif kind == 4:
+                pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
+                row[k] = (row[k] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+            elif kind != 0:
+                raise ValueError(f'PNG filter {kind}')
+        out += row
+        above = row
+    return width, height, bytes(out)
+
+
+def image_difference(got, want, tolerance):
+    """None, or how two PNG images (their bytes) differ: in size, or in values of their texels
+    by more than `tolerance` levels (the count, the worst and the first texels)."""
+    (gw, gh, a), (w, h, b) = read_png(got), read_png(want)
+    if (gw, gh) != (w, h):
+        return f'{gw}x{gh}, expected {w}x{h}'
+    texels = sorted({k // 4 for k in range(len(b)) if abs(a[k] - b[k]) > tolerance})
+    if not texels:
+        return None
+    worst = max(abs(x - y) for x, y in zip(a, b))
+    return f'{len(texels)} texels differ (worst {worst} levels, tolerance {tolerance}), first at {texels[:6]}'
