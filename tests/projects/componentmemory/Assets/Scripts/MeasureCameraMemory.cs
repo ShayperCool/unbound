@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -6,7 +7,7 @@ using UnityEngine.Profiling;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
-static class MeasureCameraMemory
+public sealed class MeasureCameraMemory : MonoBehaviour
 {
     [Serializable] sealed class Row { public string k, v; }
 
@@ -22,10 +23,15 @@ static class MeasureCameraMemory
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Capture()
+    static void Begin()
     {
         string output = Environment.GetEnvironmentVariable("CAMERA_MEMORY_OUT");
-        if (string.IsNullOrEmpty(output)) return;
+        if (!string.IsNullOrEmpty(output))
+            new GameObject("Camera memory probe").AddComponent<MeasureCameraMemory>().StartCoroutine(Capture(output));
+    }
+
+    static IEnumerator Capture(string output)
+    {
         var rows = new List<string>();
         void Put(string key, string value) => rows.Add(JsonUtility.ToJson(new Row { k = key, v = value }));
         void Read(string stage, Camera camera) => Put(stage, FormattableString.Invariant(
@@ -147,6 +153,8 @@ static class MeasureCameraMemory
             Read("pipeline.afterConfiguredAdd", camera);
             var request = new RendererMemoryPipeline.FrameRequest();
             bool supported = RenderPipeline.SupportsRenderRequest(camera, request);
+            CheckCall("pipeline.addAfterSupports", () => camera.AddCommandBuffer(CameraEvent.BeforeSkybox, third));
+            Read("pipeline.afterSupports", camera);
             if (supported) RenderPipeline.SubmitRenderRequest(camera, request);
             Put("pipeline.actualFrame", (supported && pipeline.RenderedFrame).ToString());
             Read("pipeline.existing", camera);
@@ -174,8 +182,17 @@ static class MeasureCameraMemory
             QualitySettings.renderPipeline = previousQuality;
             GraphicsSettings.defaultRenderPipeline = previousDefault;
         }
+        CheckCall("pipeline.addBeforeBuiltInFrame", () => camera.AddCommandBuffer(CameraEvent.AfterEverything, third));
+        Read("pipeline.beforeBuiltInFrame", camera);
         camera.targetTexture = target;
         camera.Render();
+        CheckCall("pipeline.removeAfterManualRender", () => camera.RemoveCommandBuffer(CameraEvent.AfterEverything, first));
+        Read("pipeline.afterManualRender", camera);
+        camera.enabled = true;
+        for (int frame = 0; frame < 4 && RenderPipelineManager.currentPipeline != null; frame++) yield return null;
+        Put("pipeline.builtInFrameActive", (RenderPipelineManager.currentPipeline == null).ToString());
+        CheckCall("pipeline.removeAfterBuiltInFrame", () => camera.RemoveCommandBuffer(CameraEvent.AfterEverything, first));
+        camera.enabled = false;
         camera.targetTexture = null;
         Read("pipeline.restoredOldCamera", camera);
         CheckCall("commands.builtInRemoveNull", () => camera.RemoveCommandBuffer(CameraEvent.AfterEverything, null));

@@ -863,7 +863,7 @@ namespace UnityEngine
 
         static bool WarnIfScriptablePipeline(string method)
         {
-            if (!Compat.CameraCommandBuffersMeasured || GraphicsSettings.currentRenderPipeline == null) return false;
+            if (!Compat.CameraCommandBuffersMeasured || RenderPipelineManager.currentPipeline == null) return false;
             Debug.LogWarning($"Your project uses a scriptable render pipeline. You can use Camera.{method} only with the built-in renderer.");
             return true;
         }

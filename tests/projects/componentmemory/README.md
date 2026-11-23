@@ -47,7 +47,8 @@ the destination's existing registrations and allocation.
 
 The profile checks a camera request rendered by an active scriptable pipeline. Its Built-In
 registration and removal calls warn and leave the state intact. The getter warns and returns the
-retained event registrations. A null buffer throws before a pipeline warning. The 6000.0 API
+retained event registrations. The restriction follows the active pipeline instance across
+configuration changes. A null buffer throws before a pipeline warning. The 6000.0 API
 documents the Built-In renderer limitation and removal of every duplicate registration.
 [Built-In command buffer manual](https://docs.unity3d.com/6000.0/Documentation/Manual/GraphicsCommandBuffers.html) · [RemoveCommandBuffer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Camera.RemoveCommandBuffer.html) · [GetCommandBuffers](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Camera.GetCommandBuffers.html)
 
