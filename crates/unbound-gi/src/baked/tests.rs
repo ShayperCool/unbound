@@ -816,6 +816,7 @@ mod lighting {
             indirect_color: [2.0, 1.0, 0.5],
             position: [0.0, 0.0, 4.0],
             forward: [0.0, 0.0, -1.0],
+            right: [-1.0, 0.0, 0.0],
             range: 10.0,
             cone_angle: 60f32.to_radians(),
             casts_shadows: true,
@@ -972,6 +973,73 @@ mod lighting {
     }
 
     #[test]
+    fn a_shadowmask_channel_keeps_what_of_a_texel_its_light_reaches_and_sees() {
+        let mesh = floor();
+        let instances = [Instance {
+            mesh: &mesh,
+            scale_offset: [1.0, 1.0, 0.0, 0.0],
+            index: 0,
+        }];
+        let g = gbuffer::gbuffer(4, 4, 2, &instances);
+        let mut sun = light(Kind::Directional);
+        sun.forward = [0.0, -0.6, -0.8];
+        sun.mode = Mode::Mixed;
+        // A roof over a quarter of the texels' width: x < 0.375.
+        let roof = Scene::new([
+            [[0.0, -2.0, 1.0], [0.375, -2.0, 1.0], [0.375, 4.0, 1.0]],
+            [[0.0, -2.0, 1.0], [0.375, 4.0, 1.0], [0.0, 4.0, 1.0]],
+        ]);
+        let receivers = [Receiver {
+            local_to_world: IDENTITY,
+            receives_shadows: true,
+        }];
+        let masks = |mixed: MixedMode, channel: Option<u8>| {
+            direct::direct(&g, &receivers, &[sun], &[channel], mixed, &roof, 0.0001).shadowmask
+        };
+        let mask = masks(MixedMode::Shadowmask, Some(2));
+        for (texel, value) in mask.iter().enumerate() {
+            // Columns: under the roof, half under it, out of it.
+            let want = match texel % 4 {
+                0 => 0.0,
+                1 => 0.5,
+                _ => 1.0,
+            };
+            assert_eq!(*value, [0.0, 0.0, want, 0.0], "{texel}");
+        }
+        // No shadowmask outside the Shadowmask Lighting Mode, nor for a light without a
+        // channel; its direct light is not baked either way.
+        assert!(
+            masks(MixedMode::IndirectOnly, Some(2))
+                .iter()
+                .all(|v| *v == [0.0; 4])
+        );
+        assert!(
+            masks(MixedMode::Shadowmask, None)
+                .iter()
+                .all(|v| *v == [0.0; 4])
+        );
+        // A spot light whose cone reaches half of a texel's samples, seen by all: the whole
+        // channel, as the part of the reached samples that see it.
+        let mut spot = light(Kind::Spot);
+        spot.mode = Mode::Mixed;
+        spot.position = [0.5, 0.5, 4.0];
+        spot.cone_angle = 4f32.to_radians();
+        spot.range = 10.0;
+        let lit = direct::direct(
+            &g,
+            &receivers,
+            &[spot],
+            &[Some(0)],
+            MixedMode::Shadowmask,
+            &Scene::new([]),
+            0.0001,
+        )
+        .shadowmask;
+        assert!(lit.iter().all(|v| v[0] == 0.0 || v[0] == 1.0), "{lit:?}");
+        assert!(lit.iter().any(|v| v[0] == 1.0));
+    }
+
+    #[test]
     fn texels_take_the_mean_light_of_their_samples_unless_shadowed() {
         let mesh = floor();
         let instances = [Instance {
@@ -995,7 +1063,7 @@ mod lighting {
                 local_to_world: IDENTITY,
                 receives_shadows: receives,
             }];
-            direct::direct(&g, &receivers, &[sun], mixed, scene, 0.0001).irradiance
+            direct::direct(&g, &receivers, &[sun], &[], mixed, scene, 0.0001).irradiance
         };
         let open = lit(
             true,
@@ -1062,13 +1130,22 @@ mod lighting {
             &g,
             &receivers,
             &[sun],
+            &[],
             MixedMode::IndirectOnly,
             &film,
             0.0001,
         )
         .irradiance;
-        let below =
-            direct::direct(&g, &receivers, &[sun], MixedMode::IndirectOnly, &film, 0.0).irradiance;
+        let below = direct::direct(
+            &g,
+            &receivers,
+            &[sun],
+            &[],
+            MixedMode::IndirectOnly,
+            &film,
+            0.0,
+        )
+        .irradiance;
         assert!(above.iter().all(|t| near(t[0], 1.6)) && below.iter().all(|t| t[0] == 0.0));
         // An unused texel has nothing, not even its fourth value.
         let small = [Instance {
@@ -1085,6 +1162,7 @@ mod lighting {
             &partial,
             &receivers,
             &[sun],
+            &[],
             MixedMode::IndirectOnly,
             &Scene::new([]),
             0.0001,
@@ -1118,6 +1196,7 @@ mod lighting {
             &g,
             &receivers,
             &[along_x, light(Kind::Directional)],
+            &[],
             MixedMode::IndirectOnly,
             &Scene::new([]),
             0.0001,
@@ -1130,6 +1209,7 @@ mod lighting {
             &g,
             &receivers,
             &[along_x],
+            &[],
             MixedMode::IndirectOnly,
             &wall,
             0.0001,
@@ -1361,6 +1441,7 @@ mod bounced {
             indirect_color: [2.0, 1.0, 0.5],
             position: [0.0; 3],
             forward: [0.0, 0.0, 1.0],
+            right: [1.0, 0.0, 0.0],
             range: 0.0,
             cone_angle: 1.0,
             casts_shadows: true,

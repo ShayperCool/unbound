@@ -29,6 +29,8 @@ pub struct Light {
     pub position: [f32; 3],
     /// Where it points (its transform's forward axis), of unit length.
     pub forward: [f32; 3],
+    /// Its transform's right axis, of unit length (a spot light's reach is turned by it).
+    pub right: [f32; 3],
     pub range: f32,
     /// A spot light's whole cone angle, in radians.
     pub cone_angle: f32,

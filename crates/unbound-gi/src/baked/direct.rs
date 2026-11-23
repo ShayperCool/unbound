@@ -92,20 +92,30 @@ pub struct Direct {
     pub irradiance: Vec<[f32; 4]>,
     /// Where the light comes from (see [`Toward::encode`]).
     pub directionality: Vec<[f32; 4]>,
+    /// In the Shadowmask Lighting Mode, per channel the part of the texel's samples its mixed
+    /// light reaches that see it (0 where it reaches none); zeros elsewhere.
+    pub shadowmask: Vec<[f32; 4]>,
 }
 
 /// The direct light of every texel of the lightmap. `receivers` are the lightmap's renderers
-/// by their place in it, `pushoff` how far a sample is pushed off its triangle before its rays
-/// start.
+/// by their place in it, `channels` the lights' shadowmask channels, `pushoff` how far a sample
+/// is pushed off its triangle before its rays start.
 pub fn direct(
     g: &GBuffer,
     receivers: &[Receiver],
     lights: &[Light],
+    channels: &[Option<u8>],
     mixed: MixedMode,
     scene: &Scene,
     pushoff: f32,
 ) -> Direct {
     let tables = Tables::new();
+    let masked: Vec<(&Light, usize)> = lights
+        .iter()
+        .zip(channels)
+        .filter(|(l, _)| mixed == MixedMode::Shadowmask && l.mode == Mode::Mixed)
+        .filter_map(|(l, c)| c.map(|c| (l, c as usize)))
+        .collect();
     let lights: Vec<&Light> = lights.iter().filter(|l| bakes_direct(l, mixed)).collect();
     let normals: Vec<[[f32; 3]; 3]> = receivers
         .iter()
@@ -116,13 +126,15 @@ pub fn direct(
         .into_par_iter()
         .map(|texel| {
             if g.occupancy[texel] == 0 {
-                return ([0.0; 4], NONE);
+                return ([0.0; 4], NONE, [0.0; 4]);
             }
             let (tx, ty) = (texel % g.width, texel / g.width);
             let mut sum = [0f32; 3];
             let mut samples = 0u32;
             let mut toward = Toward::default();
             let mut facing = [0f32; 3];
+            // Per shadowmask channel the samples its light reaches, and those that see it.
+            let (mut reached, mut seen) = ([0u32; 4], [0u32; 4]);
             for k in 0..s * s {
                 let (at, receiver) = sample(g, tx, ty, k, receivers.len());
                 let Some(receiver) = receiver else {
@@ -139,6 +151,26 @@ pub fn direct(
                 let origin: [f32; 3] = std::array::from_fn(|c| position[c] + plane[c] * pushoff);
                 for c in 0..3 {
                     facing[c] += smooth[c];
+                }
+                // What of the sample each shadowmask channel's light reaches and sees.
+                for &(light, channel) in &masked {
+                    let Some(arriving) = light.arriving(&tables, light.color, origin, smooth)
+                    else {
+                        continue;
+                    };
+                    let shadowed = light.casts_shadows
+                        && receivers[receiver].receives_shadows
+                        && scene.occluded(
+                            &Ray {
+                                origin,
+                                direction: arriving.direction,
+                            },
+                            arriving.distance,
+                        );
+                    reached[channel] += 1;
+                    if !shadowed {
+                        seen[channel] += 1;
+                    }
                 }
                 for light in &lights {
                     let Some(arriving) = light.arriving(&tables, light.color, origin, smooth)
@@ -163,18 +195,25 @@ pub fn direct(
                 }
             }
             if samples == 0 {
-                return ([0.0; 4], NONE);
+                return ([0.0; 4], NONE, [0.0; 4]);
             }
             let scale = 1.0 / samples as f32;
             (
                 [sum[0] * scale, sum[1] * scale, sum[2] * scale, 1.0],
                 toward.encode(facing, samples),
+                std::array::from_fn(|c| {
+                    if reached[c] == 0 {
+                        0.0
+                    } else {
+                        seen[c] as f32 / reached[c] as f32
+                    }
+                }),
             )
         })
         .collect::<Vec<_>>();
-    let (irradiance, directionality) = texels.into_iter().unzip();
     Direct {
-        irradiance,
-        directionality,
+        irradiance: texels.iter().map(|t| t.0).collect(),
+        directionality: texels.iter().map(|t| t.1).collect(),
+        shadowmask: texels.iter().map(|t| t.2).collect(),
     }
 }

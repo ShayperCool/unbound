@@ -15,6 +15,7 @@ use unbound_gi::baked::grid::{Bounds, Grid};
 use unbound_gi::baked::indirect::{self, Material, Surface, Texture, World};
 use unbound_gi::baked::light::{Kind, Light, Mode};
 use unbound_gi::baked::sampling::Samples;
+use unbound_gi::baked::shadowmask;
 use unbound_gi::baked::sky::{IMPORTANCE_DIRECTIONS, Importance, Sky};
 use unbound_gi::baked::trace::Scene;
 use unbound_gi::baked::{atlas, gbuffer, levels};
@@ -246,6 +247,12 @@ impl LightData {
                 2.0 * (y * z - w * x),
                 1.0 - 2.0 * (x * x + y * y),
             ],
+            // And its right axis.
+            right: [
+                1.0 - 2.0 * (y * y + z * z),
+                2.0 * (x * y + w * z),
+                2.0 * (x * z - w * y),
+            ],
             range: self.range,
             cone_angle: self.spot_angle.to_radians(),
             casts_shadows: self.casts_shadows,
@@ -426,7 +433,7 @@ impl<'a> Buffers<'a> {
     const SKY: &'static str = "sky.f32";
     /// The directions picked by the sky's brightness: three floats each, then their light.
     const SKY_DIRECTIONS: &'static str = "skyDirections.f32";
-    const PER_LIGHTMAP: [(&'static str, &'static str); 9] = [
+    const PER_LIGHTMAP: [(&'static str, &'static str); 10] = [
         ("occupancy", ".u8"),
         ("chartIndex", ".i32"),
         ("normal", ".f32"),
@@ -436,6 +443,7 @@ impl<'a> Buffers<'a> {
         ("validity", ".f32"),
         ("directionalityDirect", ".f32"),
         ("directionalityIndirect", ".f32"),
+        ("shadowmask", ".f32"),
     ];
 
     /// Starts a bake's buffers in the folder, without those an earlier bake left there.
@@ -531,6 +539,14 @@ impl<'a> Buffers<'a> {
                     .collect(),
             }
         };
+        self.write(
+            format!("shadowmask{index}.f32"),
+            lit.shadowmask
+                .iter()
+                .flatten()
+                .flat_map(|v| v.to_le_bytes())
+                .collect(),
+        )?;
         self.write(
             format!("directionalityDirect{index}.f32"),
             toward(Some(&lit.directionality)),
@@ -740,7 +756,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
         // what stops their light: every renderer of the bake that casts shadows.
         let mut lights: Vec<&LightData> = request.lights.iter().collect();
         lights.sort_by_key(|l| atlas::object_key(l.file_id, 0));
-        let baked_lights = lights
+        let mut baked_lights = lights
             .iter()
             .map(|l| l.light())
             .collect::<Result<Vec<Light>>>()?;
@@ -750,6 +766,16 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             2 => MixedMode::Shadowmask,
             other => anyhow::bail!("a Lighting Mode of {other}"),
         };
+        // The mixed lights' shadowmask channels; in the Shadowmask Lighting Mode a mixed light
+        // left without one is baked instead.
+        let channels = shadowmask::channels(&baked_lights);
+        if mixed == MixedMode::Shadowmask {
+            for (light, &channel) in baked_lights.iter_mut().zip(&channels) {
+                if shadowmask::falls_back(light, channel) {
+                    light.mode = Mode::Baked;
+                }
+            }
+        }
         let baked: Vec<&Renderer> = taken.iter().map(|&i| &request.renderers[i]).collect();
         // Which lights a surface of the scene takes at a bounce: the light grid over the box
         // around the bake's renderers.
@@ -876,6 +902,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 &g,
                 &receivers,
                 &baked_lights,
+                &channels,
                 mixed,
                 &scene,
                 parameters.pushoff,
@@ -957,10 +984,14 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 lights
                     .iter()
                     .zip(&baked_lights)
-                    .map(|(data, light)| json!({
+                    .zip(&channels)
+                    .map(|((data, light), channel)| json!({
                         "name": data.name,
                         "type": data.kind,
-                        "mode": data.mode,
+                        // As baked: a mixed light without a shadowmask channel is baked in the
+                        // Shadowmask Lighting Mode.
+                        "mode": match light.mode { Mode::Mixed => 1, Mode::Baked => 2 },
+                        "shadowMaskChannel": channel.map_or(-1, |c| c as i32),
                         "color": light.color,
                         "indirectColor": light.indirect_color,
                         "position": light.position,

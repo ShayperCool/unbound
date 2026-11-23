@@ -29,6 +29,7 @@ use unbound_gi::baked::grid::{Bounds, Grid};
 use unbound_gi::baked::indirect::{self, Material, Settings, Surface, Texture, World};
 use unbound_gi::baked::light::{Kind, Light, Mode};
 use unbound_gi::baked::sampling::Samples;
+use unbound_gi::baked::shadowmask;
 use unbound_gi::baked::sky::{Importance, Sky};
 use unbound_gi::baked::trace::Scene;
 
@@ -146,6 +147,7 @@ fn main() {
                 indirect_color: color,
                 position: r.floats(),
                 forward: r.floats(),
+                right: r.floats(),
                 range: r.f32(),
                 cone_angle: r.f32(),
                 casts_shadows: r.u32() != 0,
@@ -158,8 +160,16 @@ fn main() {
         MixedMode::Shadowmask,
     ][r.u32() as usize];
     let casters = Scene::new(triangles);
+    // The lights' shadowmask channels (-1: none).
+    let assigned = shadowmask::channels(&lights);
+    let channels: Vec<String> = assigned
+        .iter()
+        .map(|c| c.map_or(-1, |c| c as i32).to_string())
+        .collect();
+    std::fs::write(out.join("channels.txt"), channels.join(" ")).unwrap();
     let pushoff = r.f32();
-    let lit = direct::direct(&g, &receivers, &lights, mixed, &casters, pushoff);
+    let lit = direct::direct(&g, &receivers, &lights, &assigned, mixed, &casters, pushoff);
+    std::fs::write(out.join("shadowmask.f32"), floats(&lit.shadowmask)).unwrap();
     std::fs::write(out.join("irradianceDirect.f32"), floats(&lit.irradiance)).unwrap();
     std::fs::write(
         out.join("directionalityDirect.f32"),
