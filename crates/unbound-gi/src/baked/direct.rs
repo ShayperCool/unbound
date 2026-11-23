@@ -124,16 +124,16 @@ pub fn direct(
             let mut toward = Toward::default();
             let mut facing = [0f32; 3];
             for k in 0..s * s {
-                let (sample, receiver) = sample(g, tx, ty, k, receivers.len());
+                let (at, receiver) = sample(g, tx, ty, k, receivers.len());
                 let Some(receiver) = receiver else {
                     continue;
                 };
-                let local = g.positions[sample];
+                let local = g.positions[at];
                 samples += 1;
                 let matrix = &receivers[receiver].local_to_world;
                 let position = point(matrix, [local[0], local[1], local[2]]);
-                let smooth = g.normals[sample];
-                let plane = g.plane_normals[sample];
+                let smooth = g.normals[at];
+                let plane = g.plane_normals[at];
                 let smooth = world_normal(&normals[receiver], [smooth[0], smooth[1], smooth[2]]);
                 let plane = world_normal(&normals[receiver], [plane[0], plane[1], plane[2]]);
                 let origin: [f32; 3] = std::array::from_fn(|c| position[c] + plane[c] * pushoff);
