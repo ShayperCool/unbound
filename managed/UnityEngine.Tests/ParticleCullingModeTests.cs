@@ -481,7 +481,7 @@ namespace UnityEngine.Tests
             var renderer = RendererOf(ps);
             Frames(3);
             Assert.False(renderer.CullingBoundsCoverDraw);
-            // An empty renderer has unknown bounds in the unmeasured profile.
+            // The unmeasured profile still sees these approximate trail bounds.
             int reported = Hits(notCovered);
             Assert.True(CullSees(camera, renderer));
             float time = ps.time;
