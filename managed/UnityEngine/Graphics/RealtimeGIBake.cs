@@ -298,9 +298,13 @@ namespace UnityEngine
                     reflection = true;
                     Warn("bake-reflection:" + what + path, $"{path}: {what} would bake its reflection probes, which Unbound does not make.");
                 }
-                // Adaptive Probe Volumes (a render pipeline's ProbeVolume components): the
-                // Editor's bake writes their Baking Set's cell data.
-                if (!volumes && (settings == null || settings.bakedGI) && obj is MonoBehaviour behaviour && behaviour != null
+                // Adaptive Probe Volumes (a render pipeline's ProbeVolume components, active and
+                // enabled, where the pipeline has them in place of light probe groups:
+                // SupportedRenderingFeatures.overridesLightProbeSystem): the Editor's bake writes
+                // their Baking Set's cell data. (A pipeline says so when it first renders: a bake
+                // on its first scene's load comes before and does not say it.)
+                if (!volumes && (settings == null || settings.bakedGI) && Rendering.SupportedRenderingFeatures.active.overridesLightProbeSystem
+                    && obj is MonoBehaviour behaviour && behaviour != null && behaviour.isActiveAndEnabled
                     && behaviour.GetType().FullName == AdaptiveProbeVolumeType)
                 {
                     volumes = true;

@@ -149,15 +149,30 @@ namespace Unbound.Tests
         public void ABakeOfAdaptiveProbeVolumesIsSaidOnceWhereBakedLightingIsOn()
         {
             var made = new GameObject("Volumes");
+            var features = SupportedRenderingFeatures.active;
             try
             {
                 var file = new LoadedFile { Path = "Assets/Volumes.unity" };
-                file.Objects[1] = made.AddComponent<UnityEngine.Rendering.ProbeVolume>();
-                RealtimeGI.s_Warned.Clear();
-                // Without baked lighting nothing of them is baked.
-                Assert.DoesNotContain(Logged(() => RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = false }, RealtimeGI.ScriptBake)),
-                    l => l.Contains("Adaptive Probe Volumes"));
-                // With it: said, once for two bakes.
+                var volume = made.AddComponent<UnityEngine.Rendering.ProbeVolume>();
+                file.Objects[1] = volume;
+                List<string> Said(LightingSettings settings) =>
+                    Logged(() => RealtimeGI.NoteBakeParts(file, settings, RealtimeGI.ScriptBake)).FindAll(l => l.Contains("Adaptive Probe Volumes"));
+                // A pipeline without them (light probe groups): nothing of them is baked.
+                SupportedRenderingFeatures.active = new SupportedRenderingFeatures { overridesLightProbeSystem = false };
+                Assert.Empty(Said(new LightingSettings { bakedGI = true }));
+                SupportedRenderingFeatures.active = new SupportedRenderingFeatures { overridesLightProbeSystem = true };
+                // Without baked lighting nothing of them is baked either.
+                Assert.Empty(Said(new LightingSettings { bakedGI = false }));
+                // A disabled volume, or one of an inactive object, is not baked.
+                volume.enabled = false;
+                Assert.Empty(Said(new LightingSettings { bakedGI = true }));
+                volume.enabled = true;
+                made.SetActive(false);
+                Assert.Empty(Said(new LightingSettings { bakedGI = true }));
+                made.SetActive(true);
+                // With them, and baked lighting on (a scene without Lighting Settings has it on):
+                // said, once for two bakes.
+                Assert.Single(Said(null));
                 var settings = new LightingSettings { bakedGI = true };
                 Assert.Single(Logged(() =>
                 {
@@ -167,6 +182,7 @@ namespace Unbound.Tests
             }
             finally
             {
+                SupportedRenderingFeatures.active = features;
                 RealtimeGI.s_Warned.Clear();
                 UnityEngine.Object.DestroyImmediate(made);
             }
