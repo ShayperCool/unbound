@@ -7,8 +7,14 @@
     "managed/UnityEngine/Graphics/MeshArrayView.cs",
     "managed/UnityEngine/Graphics/MeshBoneWeights.cs",
     "managed/UnityEngine/Graphics/MeshBoneWeightBuffers.cs",
+    "managed/UnityEngine/Graphics/MeshBuffers.cs",
+    "managed/UnityEngine/Graphics/MeshPackedChannels.cs",
     "managed/UnityEngine/Graphics/MeshSkinWeightData.cs",
     "managed/UnityEngine/Graphics/SkinnedMeshRenderer.cs",
-    "managed/UnityEngine/Graphics/Buffers.cs"
+    "managed/UnityEngine/Graphics/Buffers.cs",
+    "tests/projects/formatmapping/Assets/Scenes/",
+    "tests/projects/formatmapping/Assets/Scenes.meta",
+    "tests/projects/formatmapping/Packages/",
+    "tests/projects/formatmapping/ProjectSettings/"
   ]
 }
