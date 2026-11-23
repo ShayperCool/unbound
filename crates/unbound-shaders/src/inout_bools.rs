@@ -8,7 +8,9 @@
 //! conversions. So each such parameter of a function declared outside any braces becomes
 //! `bool <name>_unbound_in, out bool <name>`, its body starting with `<name> = <name>_unbound_in;`,
 //! and each call of the function passes the argument to both (an argument is an l-value; its
-//! expression is written twice, so one with a side effect, such as `a[i++]`, has it twice).
+//! expression is written twice, so one with a side effect, such as `a[i++]`, has it twice, and
+//! the copy is the argument's text as written: a call of a split function inside it, such as
+//! `b[F(c)]`, is not rewritten in the copy).
 //!
 //! Left as they are (glslang may still crash on a number given to them): functions of a name
 //! another declaration of which has no such parameter at that place (a call cannot be told apart

@@ -1190,9 +1190,10 @@ impl ShaderCompiler {
         let name = file
             .file_name()
             .map_or("shader".into(), |n| n.to_string_lossy().to_string());
-        // Macros expanded once: a program that calls frexp or has an `inout bool` parameter the
-        // rewrite splits compiles rewritten at once (glslang can crash on either, taking the process with it:
-        // [`exponents`], [`inout_bools`]); others compile as they are first.
+        // Macros expanded once: a program that calls frexp or has an `inout bool` parameter
+        // the rewrite splits compiles rewritten at once (glslang can crash on either, taking
+        // the process with it: [`exponents`], [`inout_bools`]); others compile as they are
+        // first.
         let expanded = self
             .compiler
             .preprocess(source, &name, entry, Some(&o))
