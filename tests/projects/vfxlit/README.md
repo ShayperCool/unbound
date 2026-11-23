@@ -211,7 +211,8 @@ adds to that is not separated.
 
 ## Not covered
 
-- Motion vectors of transparent, strip and Shader Graph outputs (lit quads and unlit meshes are
+- Motion vectors of lit mesh, transparent, strip, Shader Graph and cube outputs, and of particles
+  that turn or change size between frames (lit quads and unlit meshes moving sideways are
   measured here, `moving lit`, `moving meshes`; unlit quads in `tests/projects/vfxoutputs`).
   Strips lit by 2D lights and meshes chosen among several by
   their size on screen: not drawn; each says so once for its asset (strips lit by the
