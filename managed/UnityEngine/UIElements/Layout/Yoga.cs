@@ -184,10 +184,18 @@ namespace Unbound.UIElements.Layout
         public bool MeasuresLinesByTheirBases { get; set; }
 
         /// <summary>An absolutely placed child without a width is measured as wide as its content,
-        /// not constrained to its owner's width in a column: a label wider than the room its offset
-        /// leaves keeps one line at its text's width, in a column as in a row; a left and a right
-        /// offset still size it (Unity 6000.0.71f1 Editor, tests/projects/uitkpercent absoluteText).</summary>
+        /// not constrained to its owner's width in a column, and its own max-width / max-height
+        /// constrains the measure pass (AtMost when the dimension is undefined, or capping a
+        /// resolved dimension). A label wider than the room its offset leaves keeps one line at its
+        /// text's width unless max-width or left+right constrains it (Unity 6000.0.71f1 Editor,
+        /// tests/projects/uitkpercent absoluteText).</summary>
         public bool AbsoluteChildrenTakeTheirContentWidth { get; set; }
+
+        /// <summary>When a node's measure function runs (at least one axis is not exact), percentage
+        /// min/max bounds and padding/border inside BoundAxis resolve against the node's own
+        /// available width and height instead of the owner's (Unity 6000.0.71f1 Editor,
+        /// tests/projects/uitkpercent absoluteText.wrapMaxPercent).</summary>
+        public bool BoundsMeasuredNodesByAvailableSize { get; set; }
 
         /// <summary>The configuration of UI Toolkit's layout engine: standard flexbox layout with the
         /// differences each flag above names. Percentage margins, paddings and offsets and the minimum
@@ -204,6 +212,7 @@ namespace Unbound.UIElements.Layout
             ResolvesFlexibleLengthsAsUIToolkit = true,
             MeasuresLinesByTheirBases = true,
             AbsoluteChildrenTakeTheirContentWidth = true,
+            BoundsMeasuredNodesByAvailableSize = true,
         };
 
         /// <summary>To the nearest pixel, halves up (measured: a -3pt margin at 1.25
@@ -1670,16 +1679,61 @@ namespace Unbound.UIElements.Layout
             // If a dimension is still missing, measure the content.
             if (IsUndefined(childWidth) || IsUndefined(childHeight))
             {
-                childWidthMeasureMode = IsUndefined(childWidth) ? YogaMeasureMode.Undefined : YogaMeasureMode.Exactly;
-                childHeightMeasureMode = IsUndefined(childHeight) ? YogaMeasureMode.Undefined : YogaMeasureMode.Exactly;
-
-                // Constrain the child to a defined owner width, so that text wraps inside it
-                // (standard Yoga; not in UI Toolkit, AbsoluteChildrenTakeTheirContentWidth).
-                if (!config.AbsoluteChildrenTakeTheirContentWidth && !isMainAxisRow && IsUndefined(childWidth) && widthMode != YogaMeasureMode.Undefined
-                    && !IsUndefined(width) && width > 0)
+                if (config.AbsoluteChildrenTakeTheirContentWidth)
                 {
-                    childWidth = width;
-                    childWidthMeasureMode = YogaMeasureMode.AtMost;
+                    // UI Toolkit does not constrain an absolute child to its column owner's width;
+                    // instead the child's own max-width / max-height constrains the measure pass
+                    // (AtMost when undefined, or capping a resolved dimension).
+                    float maxWidth = Unwrap(ResolveValue(child.style.MaxDimensions[DimWidth], containingWidth)) + marginRow;
+                    if (IsUndefined(childWidth))
+                    {
+                        if (!IsUndefined(maxWidth))
+                        {
+                            childWidth = maxWidth;
+                            childWidthMeasureMode = YogaMeasureMode.AtMost;
+                        }
+                        else
+                        {
+                            childWidthMeasureMode = YogaMeasureMode.Undefined;
+                        }
+                    }
+                    else
+                    {
+                        childWidth = FloatMin(childWidth, maxWidth);
+                        childWidthMeasureMode = YogaMeasureMode.Exactly;
+                    }
+
+                    float maxHeight = Unwrap(ResolveValue(child.style.MaxDimensions[DimHeight], containingHeight)) + marginColumn;
+                    if (IsUndefined(childHeight))
+                    {
+                        if (!IsUndefined(maxHeight))
+                        {
+                            childHeight = maxHeight;
+                            childHeightMeasureMode = YogaMeasureMode.AtMost;
+                        }
+                        else
+                        {
+                            childHeightMeasureMode = YogaMeasureMode.Undefined;
+                        }
+                    }
+                    else
+                    {
+                        childHeight = FloatMin(childHeight, maxHeight);
+                        childHeightMeasureMode = YogaMeasureMode.Exactly;
+                    }
+                }
+                else
+                {
+                    childWidthMeasureMode = IsUndefined(childWidth) ? YogaMeasureMode.Undefined : YogaMeasureMode.Exactly;
+                    childHeightMeasureMode = IsUndefined(childHeight) ? YogaMeasureMode.Undefined : YogaMeasureMode.Exactly;
+
+                    // Constrain the child to a defined owner width, so that text wraps inside it.
+                    if (!isMainAxisRow && IsUndefined(childWidth) && widthMode != YogaMeasureMode.Undefined
+                        && !IsUndefined(width) && width > 0)
+                    {
+                        childWidth = width;
+                        childWidthMeasureMode = YogaMeasureMode.AtMost;
+                    }
                 }
 
                 LayoutNodeInternal(child, childWidth, childHeight, direction, childWidthMeasureMode,
@@ -1778,14 +1832,17 @@ namespace Unbound.UIElements.Layout
                 // Measure the content under the current constraints.
                 var measuredSize = node.Measure(node, ToPublic(innerWidth), widthMeasureMode, ToPublic(innerHeight), heightMeasureMode);
 
+                float boundWidth = node.config.BoundsMeasuredNodesByAvailableSize ? availableWidth : ownerWidth;
+                float boundHeight = node.config.BoundsMeasuredNodesByAvailableSize ? availableHeight : ownerHeight;
+
                 node.layout.MeasuredDimensions[DimWidth] = BoundAxis(
                     node,
                     YogaFlexDirection.Row,
                     (widthMeasureMode == YogaMeasureMode.Undefined || widthMeasureMode == YogaMeasureMode.AtMost)
                         ? measuredSize.Width + paddingAndBorderAxisRow
                         : availableWidth - marginAxisRow,
-                    ownerWidth,
-                    ownerWidth);
+                    boundWidth,
+                    boundWidth);
 
                 node.layout.MeasuredDimensions[DimHeight] = BoundAxis(
                     node,
@@ -1793,8 +1850,8 @@ namespace Unbound.UIElements.Layout
                     (heightMeasureMode == YogaMeasureMode.Undefined || heightMeasureMode == YogaMeasureMode.AtMost)
                         ? measuredSize.Height + paddingAndBorderAxisColumn
                         : availableHeight - marginAxisColumn,
-                    ownerHeight,
-                    ownerWidth);
+                    boundHeight,
+                    boundWidth);
             }
         }
 

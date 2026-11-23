@@ -471,5 +471,103 @@ namespace UnityEngine.Tests
             root.CalculateLayout();
             Assert.Equal(464f, last.LayoutY);
         }
+
+        /// <summary>Measured in the Editor (tests/projects/uitkpercent absoluteText.*): in UI Toolkit,
+        /// an absolutely placed child without a width is measured unconstrained by its column owner,
+        /// while its own max-width / max-height constrains the measure pass (AtMost when undefined, or
+        /// capping a resolved dimension). Plain Yoga constrains undefined width to the column owner.</summary>
+        [Fact]
+        public void AbsoluteChildrenMeasureUnconstrainedOrByOwnMax()
+        {
+            static (YogaNode child, float seenW, YogaMeasureMode seenWm, float seenH, YogaMeasureMode seenHm) MeasureAbs(
+                YogaConfig config, System.Action<YogaNode> configure)
+            {
+                float seenW = -1, seenH = -1;
+                YogaMeasureMode seenWm = (YogaMeasureMode)(-1), seenHm = (YogaMeasureMode)(-1);
+                var outer = new YogaNode(config) { Width = YogaValue.Point(192), Height = YogaValue.Point(88) };
+                var child = new YogaNode(config) { PositionType = YogaPositionType.Absolute };
+                child.SetPosition(YogaEdge.Left, YogaValue.Point(12));
+                child.SetPosition(YogaEdge.Top, YogaValue.Point(20));
+                child.MeasureFunction = (n, w, wm, h, hm) =>
+                {
+                    seenW = w; seenWm = wm; seenH = h; seenHm = hm;
+                    // Wrapping model: 219x57 on one line, wraps to width x 114 when constrained below 219.
+                    if (wm != YogaMeasureMode.Undefined && w < 219f)
+                        return new YogaSize(w, 114f);
+                    return new YogaSize(219f, 57f);
+                };
+                configure(child);
+                outer.Insert(0, child);
+                outer.CalculateLayout();
+                return (child, seenW, seenWm, seenH, seenHm);
+            }
+
+            // UI Toolkit: undefined width in a column is not constrained to owner width (192).
+            var (unconstrained, uw, uwm, _, uhm) = MeasureAbs(YogaConfig.UIToolkit(), _ => { });
+            Assert.Equal(YogaMeasureMode.Undefined, uwm);
+            Assert.Equal(YogaMeasureMode.Undefined, uhm);
+            Assert.True(float.IsNaN(uw));
+            Assert.Equal((219f, 57f), (unconstrained.LayoutWidth, unconstrained.LayoutHeight));
+
+            // Control: plain Yoga constrains undefined width to owner width (192, AtMost).
+            var plain = YogaConfig.UIToolkit();
+            plain.AbsoluteChildrenTakeTheirContentWidth = false;
+            var (constrained, cw, cwm, _, _) = MeasureAbs(plain, _ => { });
+            Assert.Equal((192f, YogaMeasureMode.AtMost), (cw, cwm));
+            Assert.Equal((192f, 114f), (constrained.LayoutWidth, constrained.LayoutHeight));
+
+            // UI Toolkit: max-width in points constrains measure as AtMost so wrapping text wraps.
+            var (maxPt, mw, mwm, _, _) = MeasureAbs(YogaConfig.UIToolkit(), c => c.MaxWidth = YogaValue.Point(150));
+            Assert.Equal((150f, YogaMeasureMode.AtMost), (mw, mwm));
+            Assert.Equal((150f, 114f), (maxPt.LayoutWidth, maxPt.LayoutHeight));
+
+            // UI Toolkit: percentage max-width resolves against parent's padding box (75% of 192 = 144)
+            // for the measure pass, and BoundAxis in the measured branch resolves the percentage max
+            // against availableWidth (75% of 144 = 108; with 6pt margins, 75% of 150 = 112.5 -> 113).
+            var (maxPct, pw, pwm, _, _) = MeasureAbs(YogaConfig.UIToolkit(), c => c.MaxWidth = YogaValue.Percent(75));
+            Assert.Equal((144f, YogaMeasureMode.AtMost), (pw, pwm));
+            Assert.Equal((108f, 114f), (maxPct.LayoutWidth, maxPct.LayoutHeight));
+
+            // Control: without BoundsMeasuredNodesByAvailableSize, BoundAxis uses ownerWidth (192 -> 144).
+            var ownerBound = YogaConfig.UIToolkit();
+            ownerBound.BoundsMeasuredNodesByAvailableSize = false;
+            var (maxPctOwner, _, _, _, _) = MeasureAbs(ownerBound, c => c.MaxWidth = YogaValue.Percent(75));
+            Assert.Equal((144f, 114f), (maxPctOwner.LayoutWidth, maxPctOwner.LayoutHeight));
+
+            // UI Toolkit: defined width larger than max-width caps the measure width (Exactly at 120).
+            var (overMax, ow, owm, _, _) = MeasureAbs(YogaConfig.UIToolkit(), c =>
+            {
+                c.Width = YogaValue.Point(180);
+                c.MaxWidth = YogaValue.Point(120);
+            });
+            Assert.Equal((120f, YogaMeasureMode.Exactly), (ow, owm));
+            Assert.Equal((120f, 114f), (overMax.LayoutWidth, overMax.LayoutHeight));
+
+            // UI Toolkit: max-height constrains undefined height as AtMost and caps defined height.
+            var (maxH, _, _, mh, mhm) = MeasureAbs(YogaConfig.UIToolkit(), c =>
+            {
+                c.MaxWidth = YogaValue.Point(150);
+                c.MaxHeight = YogaValue.Point(40);
+            });
+            Assert.Equal((40f, YogaMeasureMode.AtMost), (mh, mhm));
+            Assert.Equal((150f, 40f), (maxH.LayoutWidth, maxH.LayoutHeight));
+
+            // Defined height capped to max-height (50% of 88 = 44) for measure, then BoundAxis in the
+            // measured branch applies 50% of availableHeight (44 -> 22); without the flag it stays 44.
+            var (overMaxH, _, _, oh, ohm) = MeasureAbs(YogaConfig.UIToolkit(), c =>
+            {
+                c.Height = YogaValue.Point(80);
+                c.MaxHeight = YogaValue.Percent(50);
+            });
+            Assert.Equal((44f, YogaMeasureMode.Exactly), (oh, ohm));
+            Assert.Equal((219f, 22f), (overMaxH.LayoutWidth, overMaxH.LayoutHeight));
+
+            var (overMaxHOwner, _, _, _, _) = MeasureAbs(ownerBound, c =>
+            {
+                c.Height = YogaValue.Point(80);
+                c.MaxHeight = YogaValue.Percent(50);
+            });
+            Assert.Equal((219f, 44f), (overMaxHOwner.LayoutWidth, overMaxHOwner.LayoutHeight));
+        }
     }
 }
