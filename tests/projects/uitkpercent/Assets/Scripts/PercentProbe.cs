@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
@@ -273,7 +274,73 @@ namespace PercentProbe
             mpLabel.style.paddingTop = Length.Percent(5); mpLabel.style.paddingBottom = Length.Percent(5); mpLabel.style.paddingLeft = Length.Percent(5);
             mpRow.Add(mpLabel);
 
+            // autoColumn*: in a 1000 wide, 400 high row centering its children, a column with an
+            // automatic height holding a label of wrapping text with a 60% basis and an element with a
+            // 40% basis, a 37% height and a 140 maximum height around a 54 high child: 400 wide and
+            // neither growing nor shrinking (unchanged), or next to a 600 wide sibling with a 53% basis
+            // (shrunk), a 30% basis growing (grown), a 40% basis (fits) or a 530 width (width shrunk).
+            var autoColumns = new System.Collections.Generic.List<(string, VisualElement)>();
+            void AutoColumn(string name, float top, Action<VisualElement, VisualElement> place)
+            {
+                var c = Case(root, "autoColumn" + name, 0);
+                c.style.top = top;
+                var row = Box(c, "row", 1000, 400); row.style.flexDirection = FlexDirection.Row; row.style.alignItems = Align.Center;
+                var column = Box(row, "column"); column.style.alignItems = Align.Center;
+                place(row, column);
+                var label = new Label("A label of wrapping text in a column of automatic height") { name = "label" };
+                label.style.width = 380; label.style.fontSize = 40; label.style.whiteSpace = WhiteSpace.Normal;
+                label.style.flexBasis = Length.Percent(60); label.style.flexShrink = 0;
+                column.Add(label);
+                var box = Box(column, "box", 300); box.style.flexBasis = Length.Percent(40);
+                box.style.height = Length.Percent(37); box.style.maxHeight = 140;
+                Box(box, "inner", 50, 54);
+                autoColumns.Add((name, column));
+            }
+            AutoColumn("Unchanged", 4400, (row, column) => column.style.width = 400);
+            AutoColumn("Shrunk", 4900, (row, column) => { Box(row, "sibling", 600, 50).SendToBack(); column.style.flexBasis = Length.Percent(53); column.style.flexShrink = 1; });
+            AutoColumn("Grown", 5400, (row, column) => { Box(row, "sibling", 600, 50).SendToBack(); column.style.flexBasis = Length.Percent(30); column.style.flexGrow = 1; });
+            AutoColumn("Fits", 5900, (row, column) => { Box(row, "sibling", 600, 50).SendToBack(); column.style.flexBasis = Length.Percent(40); column.style.flexShrink = 1; });
+            AutoColumn("WidthShrunk", 6400, (row, column) => { Box(row, "sibling", 600, 50).SendToBack(); column.style.width = 530; column.style.flexShrink = 1; });
+
+            // Flexible lengths: growOverflow, a 1000 wide row with a growing 500 wide child with a 10%
+            // right margin and a 450 wide one (the margins overflow it); growFraction, two 200 bases
+            // growing by 0.25 each; growMax, three 0 bases growing in a 600 wide row, the first at
+            // most 100 wide.
+            var growOverflow = Case(root, "growOverflow", 0);
+            growOverflow.style.top = 6900;
+            var goRow = Box(growOverflow, "row", 1000, 100); goRow.style.flexDirection = FlexDirection.Row;
+            var goA = Box(goRow, "a", 500, 50); goA.style.flexGrow = 1; goA.style.marginRight = Length.Percent(10);
+            var goB = Box(goRow, "b", 450, 50);
+            var growFraction = Case(root, "growFraction", 0);
+            growFraction.style.top = 7000;
+            var gfRow = Box(growFraction, "row", 1000, 100); gfRow.style.flexDirection = FlexDirection.Row;
+            var gfA = Box(gfRow, "a", 200, 50); gfA.style.flexGrow = 0.25f;
+            var gfB = Box(gfRow, "b", 200, 50); gfB.style.flexGrow = 0.25f;
+            var growMax = Case(root, "growMax", 0);
+            growMax.style.top = 7100;
+            var gmRow = Box(growMax, "row", 600, 100); gmRow.style.flexDirection = FlexDirection.Row;
+            var gmA = Box(gmRow, "a", float.NaN, 50); gmA.style.flexBasis = 0; gmA.style.flexGrow = 1; gmA.style.maxWidth = 100;
+            var gmB = Box(gmRow, "b", float.NaN, 50); gmB.style.flexBasis = 0; gmB.style.flexGrow = 1;
+            var gmC = Box(gmRow, "c", float.NaN, 50); gmC.style.flexBasis = 0; gmC.style.flexGrow = 1;
+            // tabsAuto: in a 1592 wide, 300 high container, an absolutely placed row 14% high, between
+            // 70% and 90% wide, growing, of three growing tabs, the first at least 12% wide.
+            var tabsAuto = Case(root, "tabsAuto", 0);
+            tabsAuto.style.top = 7200;
+            var taOuter = Box(tabsAuto, "outer", 1592, 300);
+            var taRow = Box(taOuter, "row"); taRow.style.position = Position.Absolute; taRow.style.flexDirection = FlexDirection.Row;
+            taRow.style.height = Length.Percent(14); taRow.style.minWidth = Length.Percent(70); taRow.style.maxWidth = Length.Percent(90);
+            taRow.style.flexGrow = 1; taRow.style.flexShrink = 1; taRow.style.left = Length.Percent(15);
+            var taTabs = new VisualElement[3];
+            for (int t = 0; t < 3; t++) { taTabs[t] = Box(taRow, "tab" + t); taTabs[t].style.flexGrow = 1; taTabs[t].style.flexShrink = 1; }
+            taTabs[0].style.minWidth = Length.Percent(12);
+
             yield return Frames();
+            foreach (var (name, column) in autoColumns)
+                Put("autoColumn." + name, "column " + State(column) + "|label " + State(column.Q<Label>("label")) + "|box " + State(column.Q("box")));
+            Put("growOverflow", "a " + State(goA) + "|b " + State(goB));
+            Put("growFraction", "a " + State(gfA) + "|b " + State(gfB));
+            Put("growMax", "a " + State(gmA) + "|b " + State(gmB) + "|c " + State(gmC));
+            Put("tabsAuto", "row " + State(taRow) + "|" + string.Join("|", taTabs.Select((e, i) => "tab" + i + " " + State(e))));
             Put("measuredPadding", State(mpLabel) + "|content " + F(mpLabel.contentRect.x) + "," + F(mpLabel.contentRect.y) + "," + F(mpLabel.contentRect.width) + "," + F(mpLabel.contentRect.height));
             Put("measuredMargin", "label " + State(mgLabel) + "|plain " + State(mgPlain));
             Put("shrinkRowMore", "a " + State(srmA) + "|b " + State(srmB));

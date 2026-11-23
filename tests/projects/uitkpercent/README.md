@@ -39,13 +39,20 @@ Margins, paddings, offsets, minimum and maximum:
 - `minOverMax`: a minimum size wins over a smaller maximum (also for an absolutely placed element sized
   in percent); `percentUnderMax`: width, min-width and max-width of 85% give 85% of the owner.
 
-Shrinking with a percentage margin (`shrink*`, `growPercentMargin`): items of a row shrink when their
-sizes and margins overflow it (`shrinkPoints`, `shrinkPercentWidth`, `shrinkRowMore`, the column
-`shrinkColumnPercentMargin`), and grow with a percentage margin counted (`growPercentMargin`); but a
-row whose overflow is smaller than its items' percentage margins does not shrink at all
-(`shrinkAbsolute`, `shrinkRow`, `shrinkBasis`, `shrinkPercentMargin`, `shrinkRowLastMargin`,
-`shrinkRowLeftMargin`: about 16 of overflow from a 2% margin of 1632). Unbound shrinks those rows; they
-are listed in `residuals.json` until the rule is understood.
+Flexible lengths (`shrink*`, `grow*`, `tabsAuto`): whether a line's items grow or shrink is decided
+from the space they consume with percentage margins taken as 0, the space then shared takes the
+margins whole: a row whose overflow is only its items' 2% margin does not shrink (`shrinkAbsolute`,
+`shrinkRow`, `shrinkBasis`, `shrinkPercentMargin`, `shrinkRowLastMargin`, `shrinkRowLeftMargin`), one
+that overflows anyway shrinks by the overflow with the margin (`shrinkRowMore`), and a growing item
+gives back an overflow its margin makes (`growOverflow`). Flex factors summing under 1 share that part
+of the free space (`growFraction`); an item held by its max is frozen there (`growMax`); `tabsAuto` is a
+row between 70% and 90% wide of growing tabs, one at least 12% wide. Point margins, a column and point
+widths are controls (`shrinkPoints`, `shrinkPercentWidth`, `shrinkColumnPercentMargin`).
+
+Percentages of a size not known yet (`autoColumn*`): a column with an automatic height in a row holds a
+60% basis and a 40% basis with a 37% height: laid out once (400 wide, neither growing nor shrinking)
+its children take their content's sizes; when its own size may follow its owner's (it shrinks, grows
+or has a percentage basis) it is laid out again at the height found and the percentages take it.
 
 Other releases are unmeasured.
 

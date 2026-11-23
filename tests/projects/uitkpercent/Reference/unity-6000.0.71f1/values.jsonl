@@ -1,4 +1,13 @@
 {"k":"root","v":"rect=0,0,640,480|basis=NaN"}
+{"k":"autoColumn.Unchanged","v":"column rect=0,93,400,214|basis=400|label rect=9,4,380,154|basis=154|box rect=50,160,300,54|basis=54"}
+{"k":"autoColumn.Shrunk","v":"column rect=600,93,400,214|basis=530|label rect=9,4,380,128|basis=128.4|box rect=50,134,300,86|basis=85.6"}
+{"k":"autoColumn.Grown","v":"column rect=600,93,400,214|basis=300|label rect=9,4,380,128|basis=128.4|box rect=50,134,300,86|basis=85.6"}
+{"k":"autoColumn.Fits","v":"column rect=600,93,400,214|basis=400|label rect=9,4,380,128|basis=128.4|box rect=50,134,300,86|basis=85.6"}
+{"k":"autoColumn.WidthShrunk","v":"column rect=600,93,400,214|basis=530|label rect=9,4,380,128|basis=128.4|box rect=50,134,300,86|basis=85.6"}
+{"k":"growOverflow","v":"a rect=0,0,450,50|basis=500|b rect=550,0,450,50|basis=450"}
+{"k":"growFraction","v":"a rect=0,0,350,50|basis=200|b rect=350,0,350,50|basis=200"}
+{"k":"growMax","v":"a rect=0,0,100,50|basis=0|b rect=100,0,250,50|basis=0|c rect=350,0,250,50|basis=0"}
+{"k":"tabsAuto","v":"row rect=239,0,1114,42|basis=NaN|tab0 rect=0,0,460,42|basis=133.728|tab1 rect=460,0,327,42|basis=0|tab2 rect=787,0,327,42|basis=0"}
 {"k":"measuredPadding","v":"rect=2,4,300,134|basis=300|content 50,50,248,34"}
 {"k":"measuredMargin","v":"label rect=5,8,250,150|basis=250|plain rect=265,8,250,150|basis=250"}
 {"k":"shrinkRowMore","v":"a rect=0,0,752,50|basis=800|b rect=785,0,847,50|basis=900"}
