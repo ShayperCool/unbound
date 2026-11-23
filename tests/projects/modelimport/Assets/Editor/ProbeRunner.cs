@@ -156,3 +156,41 @@ public class MaterialStageAfterArnold : AssetPostprocessor
     public void OnPreprocessMaterialDescription(MaterialDescription description, Material material, AnimationClip[] clips) =>
         MaterialStages.Record(assetPath, material, "afterArnold");
 }
+
+public class BuiltinBlendSeed : AssetPostprocessor
+{
+    public override int GetPostprocessOrder() => 1000;
+
+    public void OnPreprocessMaterialDescription(MaterialDescription description, Material material, AnimationClip[] clips)
+    {
+        if (!ModelImportProbe.RecordBuiltinBlend || assetPath != "Assets/Models/Exotic.fbx") return;
+        var output = Environment.GetEnvironmentVariable("MODEL_IMPORT_PROBE_OUT");
+        if (string.IsNullOrEmpty(output)) return;
+        float mode = material.name switch
+        {
+            "M_ArnoldMax" or "M_LambertBare" => 0,
+            "M_InteractiveCutout" => 1,
+            "M_Bump" => 1.75f,
+            "M_Interactive" or "M_TransparentColor" => 2,
+            "M_ArnoldMaya" or "M_TransparentTex" => 3,
+            "M_SimplifiedPhysical" => -1,
+            "M_Physical" => -0.5f,
+            _ => float.NaN,
+        };
+        if (float.IsNaN(mode)) return;
+        if (material.name == "M_Bump") material.shader = Shader.Find("Standard (Specular setup)");
+        material.SetFloat("_Mode", mode);
+        material.SetFloat("_SrcBlend", 5);
+        material.SetFloat("_DstBlend", 5);
+        material.SetFloat("_ZWrite", 0.25f);
+        material.SetOverrideTag("RenderType", "BlendStudy");
+        material.renderQueue = 3110;
+
+        var key = "blend." + material.name + ".seed";
+        var values = new StringBuilder();
+        foreach (var property in ModelImportProbe.BlendProperties)
+            values.Append(key).Append('.').Append(property).Append('\t')
+                .Append(material.GetFloat(property).ToString("R", System.Globalization.CultureInfo.InvariantCulture)).Append('\n');
+        File.AppendAllText(output + ".stages", values.ToString());
+    }
+}

@@ -16,6 +16,9 @@ public class ModelImportProbe : MonoBehaviour
 {
     public GameObject[] models;
 
+    public static bool RecordBuiltinBlend => Environment.GetEnvironmentVariable("MODEL_IMPORT_BUILTIN_BLEND") == "1";
+    public static readonly string[] BlendProperties = { "_Mode", "_SrcBlend", "_DstBlend", "_ZWrite" };
+
     readonly StringBuilder m_Out = new StringBuilder();
 
     void Add(string key, object value)
@@ -72,15 +75,18 @@ public class ModelImportProbe : MonoBehaviour
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MATERIAL_SLOTS_OUT")) ||
             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MTL_OUT")) ||
             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SMOOTHING_OUT"))) return;
+        bool builtinBlend = RecordBuiltinBlend;
         foreach (var model in models)
         {
+            if (builtinBlend && model.name != "Exotic") continue;
             var instance = Instantiate(model);
             instance.name = model.name;
-            Model(model.name, instance.transform);
+            if (builtinBlend) BuiltinBlend(instance);
+            else Model(model.name, instance.transform);
             DestroyImmediate(instance);
         }
         var path = Environment.GetEnvironmentVariable("MODEL_IMPORT_PROBE_OUT");
-        Stages(path);
+        Stages(path, builtinBlend);
         if (!string.IsNullOrEmpty(path))
         {
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
@@ -99,7 +105,7 @@ public class ModelImportProbe : MonoBehaviour
 
     /// <summary>The import stages the Editor-side MaterialStages recorder wrote beside the output
     /// (the last record of a key: a model imported again records again), by key.</summary>
-    void Stages(string path)
+    void Stages(string path, bool builtinBlend)
     {
         if (string.IsNullOrEmpty(path) || !File.Exists(path + ".stages")) return;
         var stages = new SortedDictionary<string, string>(StringComparer.Ordinal);
@@ -108,7 +114,38 @@ public class ModelImportProbe : MonoBehaviour
             int tab = line.IndexOf('\t');
             if (tab > 0) stages[line.Substring(0, tab)] = line.Substring(tab + 1);
         }
-        foreach (var pair in stages) Add(pair.Key, pair.Value);
+        foreach (var pair in stages)
+            if (!builtinBlend || pair.Key.StartsWith("blend.", StringComparison.Ordinal))
+                Add(pair.Key, pair.Value);
+    }
+
+    void BuiltinBlend(GameObject instance)
+    {
+        var materials = instance.GetComponentsInChildren<Renderer>(true)
+            .SelectMany(renderer => renderer.sharedMaterials)
+            .Where(material => material != null).Distinct()
+            .OrderBy(material => material.name, StringComparer.Ordinal);
+        foreach (var material in materials)
+        {
+            var key = "blend." + material.name + ".loaded";
+            Add(key + ".shader", material.shader.name);
+#if UNITY_EDITOR
+            Add(key + ".asset", UnityEditor.AssetDatabase.GetAssetPath(material));
+#endif
+            // Keep the same observation order as Material. An Editor property query can
+            // validate the material, which also changes its queue, tags and keywords.
+            Add(key + ".rawQueue", material.rawRenderQueue);
+            Add(key + ".RenderType", material.GetTag("RenderType", false));
+            Add(key + ".keywords", material.shaderKeywords.OrderBy(keyword => keyword, StringComparer.Ordinal));
+            Add(key + ".gi", material.globalIlluminationFlags.ToString());
+            foreach (var property in BlendProperties)
+                Add(key + "." + property, material.GetFloat(property));
+            if (material.name == "M_InteractiveCutout")
+            {
+                material.SetFloat("_DstBlend", 5);
+                Add("blend.playEdit._DstBlend", material.GetFloat("_DstBlend"));
+            }
+        }
     }
 
     void Model(string name, Transform root)

@@ -25,7 +25,7 @@ PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 # Profile → color space. URP: the urp probe's pipeline asset, renderer and packages, so that the
 # render pipeline's own material preprocessors run.
-SPACES = {'Gamma': 0, 'Linear': 1, 'URP': 1, 'URPHookRecord': 1}
+SPACES = {'Gamma': 0, 'Linear': 1, 'URP': 1, 'URPHookRecord': 1, 'BuiltinBlend': 0}
 # Profiles staged as URP. URPHookRecord adds Hook/MaterialPostprocessRecord.cs to Assets/Editor:
 # a project postprocessor whose OnPostprocessMaterial reads and records the Exotic materials'
 # state (MaterialStages stage "postprocess"), leaves the others untouched and changes nothing.
@@ -99,22 +99,37 @@ def editor(work):
 
 
 def run_editors(work, display_name):
-    jobs = []
+    jobs = {}
     for space in profiles():
         for repeat in ('native1', 'native2'):
             project = copy_project(work/'projects'/f'{space}-{repeat}', space)
             out = work/repeat/f'{space}.jsonl'
             out.parent.mkdir(parents=True, exist_ok=True)
             env = dict(os.environ, DISPLAY=display_name, MODEL_IMPORT_PROBE_OUT=str(out),
-                       MODEL_IMPORT_DESCRIPTIONS_OUT=str(work/repeat/f'{space}.descriptions.txt'))
+                       MODEL_IMPORT_DESCRIPTIONS_OUT=str(work/repeat/f'{space}.descriptions.txt'),
+                       MODEL_IMPORT_BUILTIN_BLEND='1' if space == 'BuiltinBlend' else '0')
             log = work/repeat/f'{space}.log'
-            jobs.append(subprocess.Popen(
+            jobs[f'{space}/{repeat}'] = subprocess.Popen(
                 [str(LAUNCHER), 'timeout', '-s', 'KILL', '900', 'vglrun', '-d', 'egl', str(editor_path()),
                  '-batchmode', '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record',
-                 '-logFile', str(log)], env=env))
-    codes = [job.wait() for job in jobs]
+                 '-logFile', str(log)], env=env)
+    codes = {key: job.wait() for key, job in jobs.items()}
+    (work/'editor-exits.json').write_text(json.dumps(codes) + '\n')
     print('editor exits', codes)
-    return int(any(codes))
+    return int(any(codes.values()))
+
+
+def validate_builtin_blend(work, capture):
+    exits = json.loads((work/'editor-exits.json').read_text())
+    if any(exits.get(f'BuiltinBlend/{repeat}') != 0 for repeat in ('native1', 'native2')):
+        sys.exit('BuiltinBlend: both Editor repeats must exit normally')
+    rows = [json.loads(line) for line in capture.read_text().splitlines()]
+    keys = {row['k'] for row in rows}
+    seed_blends = [row for row in rows if row['k'].endswith('.seed._DstBlend')]
+    loaded_blends = [row for row in rows if row['k'].endswith('.loaded._DstBlend')]
+    if (len(rows) != len(keys) or len(rows) != 141 or not all(key.startswith('blend.') for key in keys)
+            or len(seed_blends) != 10 or len(loaded_blends) != 10 or 'blend.playEdit._DstBlend' not in keys):
+        sys.exit('BuiltinBlend: incomplete or invalid Editor capture')
 
 
 def publish(work):
@@ -124,6 +139,8 @@ def publish(work):
         a, b = work/'native1'/f'{space}.jsonl', work/'native2'/f'{space}.jsonl'
         if not filecmp.cmp(a, b, shallow=False):
             sys.exit(f'{space}: the two Editor captures differ; not publishing')
+        if space == 'BuiltinBlend':
+            validate_builtin_blend(work, a)
         shutil.copyfile(a, target/f'{space}.jsonl')
         print('published', target/f'{space}.jsonl')
     # The descriptions do not depend on the color space or pipeline.
@@ -146,7 +163,8 @@ def unbound(work):
         out.parent.mkdir(parents=True, exist_ok=True)
         descriptions = work/'unbound'/f'{space}.descriptions.txt'
         descriptions.unlink(missing_ok=True)
-        env = dict(os.environ, MODEL_IMPORT_PROBE_OUT=str(out), MODEL_IMPORT_DESCRIPTIONS_OUT=str(descriptions))
+        env = dict(os.environ, MODEL_IMPORT_PROBE_OUT=str(out), MODEL_IMPORT_DESCRIPTIONS_OUT=str(descriptions),
+                   MODEL_IMPORT_BUILTIN_BLEND='1' if space == 'BuiltinBlend' else '0')
         with (work/'unbound'/f'{space}.log').open('w') as log:
             result = subprocess.run([str(LAUNCHER), 'timeout', '600', cli, 'run', '-p', str(project),
                                      '--no-watch', '--frames', '10', '--size', '64x64'],
