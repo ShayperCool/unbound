@@ -10,7 +10,7 @@ using Object = UnityEngine.Object;
 /// <summary>
 /// Without version control: what AssetDatabase.MakeEditable, CanOpenForEdit and
 /// IsMetaFileOpenForEdit answer (with IsOpenForEdit beside them) for asset, meta, folder, missing,
-/// package, settings, Library, absolute and outside paths, read-only files, objects and lists, and
+/// built-in and registry package, settings, Library, absolute and outside paths, read-only files, objects and lists, and
 /// whether MakeEditable changes a read-only file. With the processors of tests/projects/openforedithooks
 /// in the project, which AssetModificationProcessor callbacks each call reaches and how their
 /// answers are used. Recorded in Play mode.
@@ -47,6 +47,7 @@ public static class OpenForEditProbe
         {
             s_Project = Path.GetDirectoryName(Application.dataPath).Replace('\\', '/');
             if (Calls == null) Plain();
+            else if (Type.GetType("OpenForEditThirdProcessor, Assembly-CSharp-Editor") != null) Order();
             else Hooks();
         }
         catch (Exception e) { Put("run.threw", e.GetType().FullName + ": " + e.Message.Split('\n')[0]); }
@@ -65,6 +66,8 @@ public static class OpenForEditProbe
         ("builtinFile", "Packages/com.unity.modules.audio/package.json"),
         ("builtinMeta", "Packages/com.unity.modules.audio/package.json.meta"),
         ("builtinFolder", "Packages/com.unity.modules.audio"),
+        ("registryFile", "Packages/com.unity.ai.navigation/package.json"),
+        ("registryFolder", "Packages/com.unity.ai.navigation"),
         ("manifest", "Packages/manifest.json"),
         ("settings", "ProjectSettings/ProjectSettings.asset"),
         ("library", "Library/missing"),
@@ -155,8 +158,8 @@ public static class OpenForEditProbe
 
     /// <summary>With the hook processors: per call, its answer and the callbacks it reached.
     /// The processors refuse paths naming "Locked" (list IsOpenForEdit), "Held" (single-path
-    /// IsOpenForEdit, with a message), "NoCan" (CanOpenForEdit), "NoMake" (MakeEditable) and
-    /// "Second" (a second processor's IsOpenForEdit and MakeEditable).</summary>
+    /// IsOpenForEdit, with a message), "NoCan" (CanOpenForEdit) and "NoMake" (MakeEditable); no
+    /// two processors have the same callback, so no row depends on their order.</summary>
     static void Hooks()
     {
         var hookPaths = new[]
@@ -166,7 +169,6 @@ public static class OpenForEditProbe
             ("held", "Assets/Held.txt"),
             ("lockedNoCan", "Assets/LockedNoCan.txt"),
             ("heldNoCan", "Assets/HeldNoCan.txt"),
-            ("second", "Assets/Second.txt"),
             ("noCan", "Assets/NoCan.txt"),
             ("noMake", "Assets/NoMake.txt"),
             ("builtinFile", "Packages/com.unity.modules.audio/package.json"),
@@ -178,7 +180,7 @@ public static class OpenForEditProbe
             Hooked("can." + key, () => { bool yes = AssetDatabase.CanOpenForEdit(path, out var message); return yes + ":" + Clean(message); });
             Hooked("make." + key, () => AssetDatabase.MakeEditable(path));
         }
-        var all = new[] { "Assets/Probe.txt", "Assets/Locked.txt", "Assets/Held.txt", "Assets/LockedNoCan.txt", "Assets/Second.txt", "Assets/NoCan.txt", "Assets/NoMake.txt", "Packages/com.unity.modules.audio/package.json" };
+        var all = new[] { "Assets/Probe.txt", "Assets/Locked.txt", "Assets/Held.txt", "Assets/LockedNoCan.txt", "Assets/NoCan.txt", "Assets/NoMake.txt", "Packages/com.unity.modules.audio/package.json" };
         var list = new List<string> { "stale" };
         Hooked("is.bulk", () => { AssetDatabase.IsOpenForEdit(all, list); return string.Join("|", list); });
         list = new List<string> { "stale" };
@@ -198,6 +200,33 @@ public static class OpenForEditProbe
         Hooked("object.is", () => AssetDatabase.IsOpenForEdit(probe));
         Hooked("object.can", () => AssetDatabase.CanOpenForEdit(probe));
         Hooked("object.meta", () => { bool yes = AssetDatabase.IsMetaFileOpenForEdit(probe, out var message); return yes + ":" + Clean(message); });
+    }
+
+    /// <summary>With two processors having the same callbacks (tests/projects/openforeditorder):
+    /// each refusing one path, answers that do not depend on which is called first, the calls
+    /// (which do) and the order TypeCache lists the processors in.</summary>
+    static void Order()
+    {
+        Check("processors.typeCache", () =>
+        {
+            var names = new List<string>();
+            foreach (var type in TypeCache.GetTypesDerivedFrom<AssetModificationProcessor>())
+                if (type.Name.StartsWith("OpenForEdit")) names.Add(type.Name);
+            return string.Join(",", names);
+        });
+        foreach (var (key, path) in new[] { ("asset", "Assets/Probe.txt"), ("second", "Assets/Second.txt"), ("third", "Assets/Third.txt") })
+        {
+            Hooked("is." + key, () => { bool yes = AssetDatabase.IsOpenForEdit(path, out var message); return yes + ":" + Clean(message); });
+            Hooked("make." + key, () => AssetDatabase.MakeEditable(path));
+        }
+        var list = new List<string> { "stale" };
+        Hooked("is.bulk.second", () => { AssetDatabase.IsOpenForEdit(new[] { "Assets/Probe.txt", "Assets/Second.txt" }, list); return string.Join("|", list); });
+        list = new List<string> { "stale" };
+        Hooked("is.bulk.third", () => { AssetDatabase.IsOpenForEdit(new[] { "Assets/Third.txt", "Assets/Probe.txt" }, list); return string.Join("|", list); });
+        list = new List<string> { "stale" };
+        Hooked("make.bulk.second", () => AssetDatabase.MakeEditable(new[] { "Assets/Second.txt", "Assets/Probe.txt" }, "probe", list) + ":" + string.Join("|", list));
+        list = new List<string> { "stale" };
+        Hooked("make.bulk.accepted", () => AssetDatabase.MakeEditable(new[] { "Assets/Probe.txt" }, "probe", list) + ":" + string.Join("|", list));
     }
 
     static void Hooked(string key, Func<object> read)

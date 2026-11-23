@@ -1,0 +1,23 @@
+{"k":"processors.typeCache","v":"OpenForEditSecondProcessor,OpenForEditThirdProcessor"}
+{"k":"is.asset","v":"True:"}
+{"k":"is.asset.calls","v":"second.IsOpenForEdit([Assets/Probe.txt],[],UseCachedIfPossible) ; third.IsOpenForEdit([Assets/Probe.txt],[],UseCachedIfPossible)"}
+{"k":"make.asset","v":true}
+{"k":"make.asset.calls","v":"second.MakeEditable([Assets/Probe.txt],,[]) ; third.MakeEditable([Assets/Probe.txt],,[])"}
+{"k":"is.second","v":"False:"}
+{"k":"is.second.calls","v":"second.IsOpenForEdit([Assets/Second.txt],[],UseCachedIfPossible)"}
+{"k":"make.second","v":false}
+{"k":"make.second.calls","v":"second.MakeEditable([Assets/Second.txt],,[])"}
+{"k":"is.third","v":"False:"}
+{"k":"is.third.calls","v":"second.IsOpenForEdit([Assets/Third.txt],[],UseCachedIfPossible) ; third.IsOpenForEdit([Assets/Third.txt],[],UseCachedIfPossible)"}
+{"k":"make.third","v":false}
+{"k":"make.third.calls","v":"second.MakeEditable([Assets/Third.txt],,[]) ; third.MakeEditable([Assets/Third.txt],,[])"}
+{"k":"is.bulk.second","v":"Assets/Second.txt"}
+{"k":"is.bulk.second.calls","v":"second.IsOpenForEdit([Assets/Probe.txt,Assets/Second.txt],[],UseCachedIfPossible)"}
+{"k":"is.bulk.third","v":"Assets/Third.txt"}
+{"k":"is.bulk.third.calls","v":"second.IsOpenForEdit([Assets/Third.txt,Assets/Probe.txt],[],UseCachedIfPossible) ; third.IsOpenForEdit([Assets/Third.txt,Assets/Probe.txt],[],UseCachedIfPossible)"}
+{"k":"make.bulk.second","v":"False:stale|Assets/Second.txt"}
+{"k":"make.bulk.second.calls","v":"second.MakeEditable([Assets/Second.txt,Assets/Probe.txt],probe,[stale])"}
+{"k":"make.bulk.accepted","v":"True:"}
+{"k":"make.bulk.accepted.calls","v":"second.MakeEditable([Assets/Probe.txt],probe,[stale]) ; third.MakeEditable([Assets/Probe.txt],probe,[stale])"}
+{"k":"logs","v":""}
+{"k":"complete","v":true}

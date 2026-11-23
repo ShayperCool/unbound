@@ -26,6 +26,14 @@
 {"k":"can.builtinFolder","v":"False:"}
 {"k":"can.force.builtinFolder","v":false}
 {"k":"is.builtinFolder","v":"False:"}
+{"k":"make.registryFile","v":true}
+{"k":"can.registryFile","v":"False:"}
+{"k":"can.force.registryFile","v":false}
+{"k":"is.registryFile","v":"False:"}
+{"k":"make.registryFolder","v":true}
+{"k":"can.registryFolder","v":"False:"}
+{"k":"can.force.registryFolder","v":false}
+{"k":"is.registryFolder","v":"False:"}
 {"k":"make.manifest","v":true}
 {"k":"can.manifest","v":"True:"}
 {"k":"can.force.manifest","v":true}

@@ -58,20 +58,3 @@ public class OpenForEditListProcessor : AssetModificationProcessor
         return OpenForEditHooks.Refuse(paths, outNotEditablePaths, "NoCan");
     }
 }
-
-/// <summary>A second processor with the list IsOpenForEdit and MakeEditable callbacks, both
-/// refusing "Second".</summary>
-public class OpenForEditSecondProcessor : AssetModificationProcessor
-{
-    static bool IsOpenForEdit(string[] paths, List<string> outNotEditablePaths, StatusQueryOptions statusQueryOptions)
-    {
-        OpenForEditHooks.Calls.Add("second.IsOpenForEdit(" + OpenForEditHooks.Show(paths) + "," + OpenForEditHooks.Show(outNotEditablePaths) + "," + statusQueryOptions + ")");
-        return OpenForEditHooks.Refuse(paths, outNotEditablePaths, "Second");
-    }
-
-    static bool MakeEditable(string[] paths, string prompt, List<string> outNotEditablePaths)
-    {
-        OpenForEditHooks.Calls.Add("second.MakeEditable(" + OpenForEditHooks.Show(paths) + "," + (prompt ?? "<null>") + "," + OpenForEditHooks.Show(outNotEditablePaths) + ")");
-        return OpenForEditHooks.Refuse(paths, outNotEditablePaths, "Second");
-    }
-}
