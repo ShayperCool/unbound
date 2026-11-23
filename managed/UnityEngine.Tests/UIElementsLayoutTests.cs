@@ -15,7 +15,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void PercentBasisInAutoRow()
         {
-            var config = new YogaConfig { PercentFlexBasisNeedsExactContainer = true };
+            var config = new YogaConfig { ResolvesPercentagesOfExactSizesOnly = true };
             var root = new YogaNode(config) { FlexDirection = YogaFlexDirection.Row, Width = YogaValue.Point(389) };
             var toggle = new YogaNode(config) { FlexDirection = YogaFlexDirection.Row };
             var label = new YogaNode(config) { Width = YogaValue.Point(150) };
@@ -26,7 +26,7 @@ namespace UnityEngine.Tests
             toggle.Insert(1, input);
             root.Insert(0, toggle);
             root.CalculateLayout();
-            m_Out.WriteLine($"toggle {toggle.LayoutWidth} input {input.LayoutX} {input.LayoutWidth} basis {input.ComputedFlexBasis} {input.FlexBasis} cfg {input.Config.PercentFlexBasisNeedsExactContainer}");
+            m_Out.WriteLine($"toggle {toggle.LayoutWidth} input {input.LayoutX} {input.LayoutWidth} basis {input.ComputedFlexBasis} {input.FlexBasis} cfg {input.Config.ResolvesPercentagesOfExactSizesOnly}");
             Assert.Equal(174f, toggle.LayoutWidth);
             Assert.Equal(150f, input.LayoutX);
             Assert.Equal(24f, input.LayoutWidth);
@@ -227,6 +227,94 @@ namespace UnityEngine.Tests
             Assert.Equal((40f, 10f), (columnChild.LayoutX, columnChild.LayoutY));
         }
 
+        static (YogaNode row, YogaNode[] items) Row(float width, params System.Action<YogaNode>[] items)
+        {
+            var config = YogaConfig.UIToolkit();
+            var row = new YogaNode(config) { Width = YogaValue.Point(width), Height = YogaValue.Point(100), FlexDirection = YogaFlexDirection.Row };
+            var nodes = new YogaNode[items.Length];
+            for (int i = 0; i < items.Length; i++)
+            {
+                nodes[i] = new YogaNode(config) { Height = YogaValue.Point(50), FlexShrink = 0 };
+                items[i](nodes[i]);
+                row.Insert(i, nodes[i]);
+            }
+            row.CalculateLayout();
+            return (row, nodes);
+        }
+
+        /// <summary>Measured in the Editor (tests/projects/uitkpercent shrink*, grow*): whether a line's
+        /// items grow or shrink is decided with percentage margins taken as 0, the space shared takes
+        /// them whole; factors summing under 1 share that part only; an item held by its max is frozen
+        /// there and the rest share what is left.</summary>
+        [Fact]
+        public void FlexibleLengthsAreResolvedAsUIToolkit()
+        {
+            // 522 + 1093 fit 1632 without the 2% margin: no shrinking, the margin overflows.
+            var (_, fits) = Row(1632, a => { a.Width = YogaValue.Point(522); a.FlexShrink = 1; a.SetMargin(YogaEdge.Right, YogaValue.Percent(2)); },
+                b => { b.Width = YogaValue.Point(1093); b.FlexShrink = 1; });
+            Assert.Equal((522f, 1093f, 555f), (fits[0].LayoutWidth, fits[1].LayoutWidth, fits[1].LayoutX));
+            // The same with a 33 point margin shrinks.
+            var (_, points) = Row(1632, a => { a.Width = YogaValue.Point(522); a.FlexShrink = 1; a.SetMargin(YogaEdge.Right, YogaValue.Point(33)); },
+                b => { b.Width = YogaValue.Point(1093); b.FlexShrink = 1; });
+            Assert.Equal((517f, 1082f), (points[0].LayoutWidth, points[1].LayoutWidth));
+            // 800 + 900 overflow 1632 anyway: the shrink takes the margin too.
+            var (_, more) = Row(1632, a => { a.Width = YogaValue.Point(800); a.FlexShrink = 1; a.SetMargin(YogaEdge.Right, YogaValue.Percent(2)); },
+                b => { b.Width = YogaValue.Point(900); b.FlexShrink = 1; });
+            Assert.Equal((752f, 847f, 785f), (more[0].LayoutWidth, more[1].LayoutWidth, more[1].LayoutX));
+            // Growing although the 10% margin overflows: the growing item gives the overflow back.
+            var (_, overflow) = Row(1000, a => { a.Width = YogaValue.Point(500); a.FlexGrow = 1; a.SetMargin(YogaEdge.Right, YogaValue.Percent(10)); },
+                b => b.Width = YogaValue.Point(450));
+            Assert.Equal((450f, 450f), (overflow[0].LayoutWidth, overflow[1].LayoutWidth));
+            // Factors 0.25 + 0.25 share half of the 600 left.
+            var (_, fraction) = Row(1000, a => { a.Width = YogaValue.Point(200); a.FlexGrow = 0.25f; }, b => { b.Width = YogaValue.Point(200); b.FlexGrow = 0.25f; });
+            Assert.Equal((350f, 350f), (fraction[0].LayoutWidth, fraction[1].LayoutWidth));
+            // A max of 100 freezes the first of three equal growers.
+            var (_, max) = Row(600, a => { a.FlexBasis = YogaValue.Point(0); a.FlexGrow = 1; a.MaxWidth = YogaValue.Point(100); },
+                b => { b.FlexBasis = YogaValue.Point(0); b.FlexGrow = 1; }, c => { c.FlexBasis = YogaValue.Point(0); c.FlexGrow = 1; });
+            Assert.Equal((100f, 250f, 250f), (max[0].LayoutWidth, max[1].LayoutWidth, max[2].LayoutWidth));
+        }
+
+        // A column with an automatic height in a 1000x400 row centering its children, holding a child
+        // with a 60% basis around a 154 high one and a child with a 40% basis, 37% height and 140 max
+        // around a 54 high one.
+        static YogaNode[] AutoColumn(System.Action<YogaNode, YogaNode> place)
+        {
+            var config = YogaConfig.UIToolkit();
+            var row = new YogaNode(config) { Width = YogaValue.Point(1000), Height = YogaValue.Point(400), FlexDirection = YogaFlexDirection.Row, AlignItems = YogaAlign.Center };
+            var column = new YogaNode(config) { FlexShrink = 0, AlignItems = YogaAlign.Center };
+            var a = new YogaNode(config) { Width = YogaValue.Point(380), FlexBasis = YogaValue.Percent(60), FlexShrink = 0 };
+            a.Insert(0, new YogaNode(config) { Height = YogaValue.Point(154), FlexShrink = 0 });
+            var b = new YogaNode(config) { Width = YogaValue.Point(300), FlexBasis = YogaValue.Percent(40), Height = YogaValue.Percent(37), MaxHeight = YogaValue.Point(140) };
+            b.Insert(0, new YogaNode(config) { Width = YogaValue.Point(50), Height = YogaValue.Point(54), FlexShrink = 0 });
+            column.Insert(0, a);
+            column.Insert(1, b);
+            place(row, column);
+            row.CalculateLayout();
+            return new[] { column, a, b };
+        }
+
+        /// <summary>Measured in the Editor (tests/projects/uitkpercent autoColumn*): percentages of a size
+        /// a node is not laid out exactly in stay unresolved (its children take their content's), and
+        /// a node whose own size may follow its owner's is laid out again at the size found, which
+        /// resolves them.</summary>
+        [Fact]
+        public void PercentagesOfANonExactSizeWaitForTheFinalSize()
+        {
+            // Neither growing nor shrinking, 400 wide: laid out once, the children keep their content's.
+            var once = AutoColumn((row, column) => { column.Width = YogaValue.Point(400); row.Insert(0, column); });
+            Assert.Equal((208f, 154f, 54f), (once[0].LayoutHeight, once[1].LayoutHeight, once[2].LayoutHeight));
+            // Shrinking next to a sibling: laid out again 208 high, the bases take 60% and 40% of it.
+            var again = AutoColumn((row, column) =>
+            {
+                var config = row.Config;
+                row.Insert(0, new YogaNode(config) { Width = YogaValue.Point(600), Height = YogaValue.Point(50), FlexShrink = 0 });
+                column.FlexBasis = YogaValue.Percent(53);
+                column.FlexShrink = 1;
+                row.Insert(1, column);
+            });
+            Assert.Equal((208f, 125f, 83f), (again[0].LayoutHeight, again[1].LayoutHeight, again[2].LayoutHeight));
+        }
+
         // A 25x20 box (column, or row) holding a middle node over a 50x50 leaf; neither shrinks.
         static YogaNode BoxedMiddle(YogaConfig config, YogaOverflow boxOverflow, YogaOverflow middleOverflow, YogaFlexDirection boxDirection = YogaFlexDirection.Column)
         {
@@ -274,7 +362,7 @@ namespace UnityEngine.Tests
 
         static YogaConfig ScaledConfig() => new YogaConfig
         {
-            PointScaleFactor = 1.25f, RoundEdgesToPixelGrid = true, PercentFlexBasisNeedsExactContainer = true,
+            PointScaleFactor = 1.25f, RoundEdgesToPixelGrid = true, ResolvesPercentagesOfExactSizesOnly = true,
             ScrollKeepsMainAxisContent = true, RoundPositionsFromAbsolute = true, MeasuredNodesRoundAsOthers = true,
         };
 

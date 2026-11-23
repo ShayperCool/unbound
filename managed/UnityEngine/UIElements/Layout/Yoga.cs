@@ -130,9 +130,12 @@ namespace Unbound.UIElements.Layout
         /// layout engine does (measured: at 1.25 pixels per point a 2pt margin lays out as 2.4pt).</summary>
         public bool RoundEdgesToPixelGrid { get; set; }
 
-        /// <summary>A percentage flex basis resolves only within a container of exact main size; otherwise
-        /// the item sizes to its content, as UI Toolkit's layout measures it.</summary>
-        public bool PercentFlexBasisNeedsExactContainer { get; set; }
+        /// <summary>The children's percentages (sizes, flex bases, margins, paddings, offsets) take the
+        /// node's size only in an axis it is laid out exactly in, else they are unresolved: a toggle's
+        /// input (flex: 1 0 0) in a toggle sized by its content contributes its checkmark's width, and a
+        /// 37% high element in a column without an exact height takes its content's (UI Toolkit's
+        /// layout engine: Unity 6000.0.71f1 Editor, tests/projects/uitkpercent autoColumn*).</summary>
+        public bool ResolvesPercentagesOfExactSizesOnly { get; set; }
 
         /// <summary>A node with overflow scroll measured with an at-most main size keeps its content's
         /// main size, as other nodes do, instead of clamping it to the available size; its cross axis
@@ -159,17 +162,33 @@ namespace Unbound.UIElements.Layout
         /// measured at earlier in the same pass).</summary>
         public bool RecomputesFlexBasis { get; set; }
 
+        /// <summary>A node laid out with a non-exact size in an axis, whose own size may follow its
+        /// owner's, is laid out again exactly at the size found when a child has a percentage the
+        /// non-exact size left unresolved, or a percentage offset it could not resolve (UI Toolkit's
+        /// layout engine: Unity 6000.0.71f1 Editor, tests/projects/uitkpercent autoColumn*).</summary>
+        public bool LaysOutAgainForPercentages { get; set; }
+
+        /// <summary>Flexible lengths are resolved as UI Toolkit's layout engine resolves them: the
+        /// CSS loop that freezes items at their min or max violations (instead of two fixed passes),
+        /// whether the items grow or shrink decided from the space the line consumes with percentage
+        /// margins taken as 0, the space distributed with the margins whole, and a container without
+        /// an exact main size taking its min, its max, the available size (when it and its items
+        /// grow) or the line's own size (Unity 6000.0.71f1 Editor, tests/projects/uitkpercent).</summary>
+        public bool ResolvesFlexibleLengthsAsUIToolkit { get; set; }
+
         /// <summary>The configuration of UI Toolkit's layout engine: standard flexbox layout with the
         /// differences each flag above names. Percentage margins, paddings and offsets and the minimum
         /// over a smaller maximum follow UI Toolkit (and CSS) in every configuration, not by flag.</summary>
         internal static YogaConfig UIToolkit() => new YogaConfig
         {
             RoundEdgesToPixelGrid = true,
-            PercentFlexBasisNeedsExactContainer = true,
+            ResolvesPercentagesOfExactSizesOnly = true,
             ScrollKeepsMainAxisContent = true,
             RoundPositionsFromAbsolute = true,
             MeasuredNodesRoundAsOthers = true,
             RecomputesFlexBasis = true,
+            LaysOutAgainForPercentages = true,
+            ResolvesFlexibleLengthsAsUIToolkit = true,
         };
 
         /// <summary>To the nearest pixel, halves up (measured: a -3pt margin at 1.25
@@ -391,6 +410,9 @@ namespace Unbound.UIElements.Layout
         internal readonly YogaValue[] resolvedDimensions = { Yoga.ValueUndefined, Yoga.ValueUndefined };
         internal YogaConfig config;
         internal uint lineIndex;
+        // The flexible length resolution's target main size of the item and its state (FlexState).
+        internal float flexTarget;
+        internal byte flexState;
         internal bool isTextNode;
 
         YogaNode owner;
@@ -944,8 +966,10 @@ namespace Unbound.UIElements.Layout
         /// offsets resolve against the owner's size along their own axis (left and right against its
         /// width, top and bottom against its height) whatever the node's own flex direction, as UI
         /// Toolkit does (plain Yoga took the node's main axis for the owner's: Unity 6000.0.71f1 Editor,
-        /// tests/projects/uitkpercent); percentage margins against its width.</summary>
-        internal void SetLayoutPositionFromStyle(YogaDirection direction, float ownerWidth, float ownerHeight, float marginWidthSize)
+        /// tests/projects/uitkpercent); percentage margins against its width. A percentage offset of an
+        /// undefined owner size leaves the position as it was and answers false: the owner is then
+        /// laid out again at its final size (as UI Toolkit's layout engine).</summary>
+        internal bool SetLayoutPositionFromStyle(YogaDirection direction, float ownerWidth, float ownerHeight, float marginWidthSize)
         {
             // Root nodes are always laid out as LTR, so that they don't get negative positions.
             var directionRespectingRoot = owner != null ? direction : YogaDirection.LTR;
@@ -954,6 +978,8 @@ namespace Unbound.UIElements.Layout
 
             var relativePositionMain = RelativePosition(mainAxis, Yoga.IsRow(mainAxis) ? ownerWidth : ownerHeight);
             var relativePositionCross = RelativePosition(crossAxis, Yoga.IsRow(crossAxis) ? ownerWidth : ownerHeight);
+            if (relativePositionMain.IsUndefined || relativePositionCross.IsUndefined)
+                return false;
 
             layout.Position[(int)Yoga.Leading[(int)mainAxis]] =
                 Yoga.Unwrap(GetLeadingMargin(mainAxis, marginWidthSize) + relativePositionMain);
@@ -963,6 +989,7 @@ namespace Unbound.UIElements.Layout
                 Yoga.Unwrap(GetLeadingMargin(crossAxis, marginWidthSize) + relativePositionCross);
             layout.Position[(int)Yoga.Trailing[(int)crossAxis]] =
                 Yoga.Unwrap(GetTrailingMargin(crossAxis, marginWidthSize) + relativePositionCross);
+            return true;
         }
 
         internal YogaValue MarginLeadingValue(YogaFlexDirection axis)
@@ -1031,6 +1058,57 @@ namespace Unbound.UIElements.Layout
                 return -style.Flex.Value;
             return config.UseWebDefaults ? Yoga.WebDefaultFlexShrink : Yoga.DefaultFlexShrink;
         }
+
+        /// <summary>Whether the node's own size may follow its owner's: a relative node that grows,
+        /// shrinks or has a percentage flex basis, an absolute one placed by both offsets of an axis,
+        /// or one with a percentage size, min, max or padding (as UI Toolkit's layout engine decides
+        /// when a node is laid out again at its final size; Unity 6000.0.71f1 Editor,
+        /// tests/projects/uitkpercent autoColumn*).</summary>
+        internal bool SizeCouldBeAffectedByOwnerSize()
+        {
+            if (style.Display == YogaDisplay.None) return false;
+            if (style.PositionType == YogaPositionType.Absolute)
+            {
+                if ((IsLeadingPositionDefined(YogaFlexDirection.Row) && IsTrailingPosDefined(YogaFlexDirection.Row))
+                    || (IsLeadingPositionDefined(YogaFlexDirection.Column) && IsTrailingPosDefined(YogaFlexDirection.Column)))
+                    return true;
+            }
+            else
+            {
+                if (Factor(style.FlexGrow) != 0 || Factor(style.FlexShrink) != 0 || IsNonZeroPercent(style.FlexBasis))
+                    return true;
+            }
+            return IsPercent(style.Dimensions[Yoga.DimWidth]) || IsPercent(style.Dimensions[Yoga.DimHeight])
+                || IsPercent(style.MinDimensions[Yoga.DimWidth]) || IsPercent(style.MinDimensions[Yoga.DimHeight])
+                || IsPercent(style.MaxDimensions[Yoga.DimWidth]) || IsPercent(style.MaxDimensions[Yoga.DimHeight])
+                || IsPercent(style.Padding[(int)YogaEdge.Left]) || IsPercent(style.Padding[(int)YogaEdge.Top])
+                || IsPercent(style.Padding[(int)YogaEdge.Right]) || IsPercent(style.Padding[(int)YogaEdge.Bottom]);
+        }
+
+        /// <summary>Whether the node has a percentage that its owner's size in a non-exact mode
+        /// leaves unresolved: of the width (size, min, max, any margin or padding) without an exact
+        /// width, of the height (size, min, max) without an exact height, or a non-zero percentage flex
+        /// basis along the owner's main axis without an exact size there.</summary>
+        internal bool HasLoosePercentage(YogaFlexDirection ownerMainAxis, YogaMeasureMode widthMode, YogaMeasureMode heightMode)
+        {
+            if (widthMode != YogaMeasureMode.Exactly
+                && (IsPercent(style.Dimensions[Yoga.DimWidth]) || IsPercent(style.MinDimensions[Yoga.DimWidth]) || IsPercent(style.MaxDimensions[Yoga.DimWidth])
+                    || IsPercent(style.Margin[(int)YogaEdge.Left]) || IsPercent(style.Margin[(int)YogaEdge.Top])
+                    || IsPercent(style.Margin[(int)YogaEdge.Right]) || IsPercent(style.Margin[(int)YogaEdge.Bottom])
+                    || IsPercent(style.Padding[(int)YogaEdge.Left]) || IsPercent(style.Padding[(int)YogaEdge.Top])
+                    || IsPercent(style.Padding[(int)YogaEdge.Right]) || IsPercent(style.Padding[(int)YogaEdge.Bottom])))
+                return true;
+            if (heightMode != YogaMeasureMode.Exactly
+                && (IsPercent(style.Dimensions[Yoga.DimHeight]) || IsPercent(style.MinDimensions[Yoga.DimHeight]) || IsPercent(style.MaxDimensions[Yoga.DimHeight])))
+                return true;
+            return IsNonZeroPercent(style.FlexBasis) && (Yoga.IsRow(ownerMainAxis) ? widthMode : heightMode) != YogaMeasureMode.Exactly;
+        }
+
+        static float Factor(YogaFloatOptional value) => value.IsUndefined ? 0f : value.Value;
+
+        static bool IsPercent(YogaValue value) => value.Unit == YogaUnit.Percent;
+
+        static bool IsNonZeroPercent(YogaValue value) => value.Unit == YogaUnit.Percent && !(Math.Abs(value.Value) < 0.001f);
 
         internal bool IsNodeFlexible() =>
             style.PositionType == YogaPositionType.Relative && (ResolveFlexGrow() != 0 || ResolveFlexShrink() != 0);
@@ -1195,15 +1273,23 @@ namespace Unbound.UIElements.Layout
                 case YogaUnit.Point:
                     return new YogaFloatOptional(value.Value);
                 case YogaUnit.Percent:
-                    // The percentage scale is applied in double precision.
+                    // A percentage of an undefined size is undefined, 0% too (as Yoga's NaN arithmetic
+                    // gives); the percentage scale is applied in double precision.
+                    if (IsUndefined(ownerSize)) return YogaFloatOptional.Undefined;
                     return new YogaFloatOptional((float)(value.Value * ownerSize * 0.01));
                 default:
                     return YogaFloatOptional.Undefined;
             }
         }
 
-        public static YogaFloatOptional ResolveValueMargin(YogaValue value, float ownerSize) =>
-            value.Unit == YogaUnit.Auto ? new YogaFloatOptional(0) : ResolveValue(value, ownerSize);
+        /// <summary>A margin's value: 0 for auto, and for a percentage of an undefined size (as UI
+        /// Toolkit's layout engine takes an unresolved margin).</summary>
+        public static YogaFloatOptional ResolveValueMargin(YogaValue value, float ownerSize)
+        {
+            if (value.Unit == YogaUnit.Auto) return new YogaFloatOptional(0);
+            var resolved = ResolveValue(value, ownerSize);
+            return resolved.IsUndefined && value.Unit == YogaUnit.Percent ? new YogaFloatOptional(0) : resolved;
+        }
 
         // ---- Layout helpers ----
 
@@ -1368,12 +1454,6 @@ namespace Unbound.UIElements.Layout
             YogaMeasureMode childHeightMeasureMode;
 
             var resolvedFlexBasis = ResolveValue(child.ResolveFlexBasisPtr(), mainAxisOwnerSize);
-            // UI Toolkit resolves a percentage flex basis only against a container whose main size is
-            // exact; measured against an indefinite one it sizes to content (as CSS does): a toggle's
-            // input (flex: 1 0 0) contributes its checkmark's width to the toggle's measured width.
-            if (child.config.PercentFlexBasisNeedsExactContainer && child.ResolveFlexBasisPtr().Unit == YogaUnit.Percent
-                && (isMainAxisRow ? widthMode : heightMode) != YogaMeasureMode.Exactly)
-                resolvedFlexBasis = YogaFloatOptional.Undefined;
             bool isRowStyleDimDefined = IsStyleDimDefined(child, YogaFlexDirection.Row, ownerWidth);
             bool isColumnStyleDimDefined = IsStyleDimDefined(child, YogaFlexDirection.Column, ownerHeight);
 
@@ -1803,10 +1883,18 @@ namespace Unbound.UIElements.Layout
         }
 
         static void ComputeFlexBasisForChildren(YogaNode node, float availableInnerWidth, float availableInnerHeight,
+            float percentWidth, float percentHeight,
             YogaMeasureMode widthMeasureMode, YogaMeasureMode heightMeasureMode, YogaDirection direction,
-            YogaFlexDirection mainAxis, YogaConfig config, bool performLayout, ref float totalOuterFlexBasis)
+            YogaFlexDirection mainAxis, YogaConfig config, bool performLayout, ref float totalOuterFlexBasis,
+            ref bool layOutAgain)
         {
             YogaNode singleFlexChild = null;
+            // UI Toolkit lays a node out again at its final size when it was not laid out exactly in
+            // both axes, its own size may follow its owner's, and a child has a percentage that the
+            // non-exact size left unresolved (Unity 6000.0.71f1 Editor, tests/projects/uitkpercent).
+            bool checksPercentages = node.config.LaysOutAgainForPercentages
+                && (widthMeasureMode != YogaMeasureMode.Exactly || heightMeasureMode != YogaMeasureMode.Exactly)
+                && node.SizeCouldBeAffectedByOwnerSize();
             var children = node.Children;
             var measureModeMainDim = IsRow(mainAxis) ? widthMeasureMode : heightMeasureMode;
             // The first child that both grows and shrinks gets a flex basis of 0 instead of being
@@ -1847,8 +1935,12 @@ namespace Unbound.UIElements.Layout
                 {
                     // Set the initial position (relative to the owner).
                     var childDirection = child.ResolveDirection(direction);
-                    child.SetLayoutPositionFromStyle(childDirection, availableInnerWidth, availableInnerHeight, availableInnerWidth);
+                    if (!child.SetLayoutPositionFromStyle(childDirection, percentWidth, percentHeight, percentWidth)
+                        && node.config.LaysOutAgainForPercentages)
+                        layOutAgain = true;
                 }
+                if (checksPercentages && !layOutAgain && child.HasLoosePercentage(mainAxis, widthMeasureMode, heightMeasureMode))
+                    layOutAgain = true;
 
                 if (child.style.PositionType == YogaPositionType.Absolute)
                     continue;
@@ -1860,11 +1952,11 @@ namespace Unbound.UIElements.Layout
                 else
                 {
                     ComputeFlexBasisForChild(node, child, availableInnerWidth, widthMeasureMode, availableInnerHeight,
-                        availableInnerWidth, availableInnerHeight, heightMeasureMode, direction, config);
+                        percentWidth, percentHeight, heightMeasureMode, direction, config);
                 }
 
                 totalOuterFlexBasis += Unwrap(
-                    child.layout.ComputedFlexBasis + child.GetMarginForAxis(mainAxis, availableInnerWidth));
+                    child.layout.ComputedFlexBasis + child.GetMarginForAxis(mainAxis, percentWidth));
             }
         }
 
@@ -1922,7 +2014,11 @@ namespace Unbound.UIElements.Layout
                 if (child.style.Display == YogaDisplay.None || child.style.PositionType == YogaPositionType.Absolute)
                     continue;
                 child.lineIndex = lineCount;
-                float childMarginMainAxis = Unwrap(child.GetMarginForAxis(mainAxis, availableInnerWidth));
+                // UI Toolkit takes percentage margins as 0 here, for the space the line consumes (which
+                // decides whether its items grow or shrink) and for breaking lines; the space
+                // distributed takes them whole (Unity 6000.0.71f1 Editor, tests/projects/uitkpercent shrink*).
+                float childMarginMainAxis = Unwrap(child.GetMarginForAxis(mainAxis,
+                    node.config.ResolvesFlexibleLengthsAsUIToolkit ? 0f : availableInnerWidth));
                 float flexBasisWithMinAndMaxConstraints = Unwrap(BoundAxisWithinMinAndMax(
                     child, mainAxis, Unwrap(child.layout.ComputedFlexBasis), mainAxisOwnerSize));
 
@@ -1969,8 +2065,6 @@ namespace Unbound.UIElements.Layout
             float flexShrinkScaledFactor = 0;
             float flexGrowFactor = 0;
             float deltaFreeSpace = 0;
-            bool isMainAxisRow = IsRow(mainAxis);
-            bool isNodeFlexWrap = node.style.FlexWrap != YogaWrap.NoWrap;
 
             foreach (var currentRelativeChild in values.RelativeChildren)
             {
@@ -2013,77 +2107,199 @@ namespace Unbound.UIElements.Layout
                 }
 
                 deltaFreeSpace += updatedMainSize - childFlexBasis;
+                LayOutFlexItem(node, currentRelativeChild, updatedMainSize, mainAxis, crossAxis, availableInnerMainDim,
+                    availableInnerCrossDim, availableInnerWidth, availableInnerHeight, flexBasisOverflows,
+                    measureModeCrossDim, performLayout, config);
+            }
+            return deltaFreeSpace;
+        }
 
-                float marginMain = Unwrap(currentRelativeChild.GetMarginForAxis(mainAxis, availableInnerWidth));
-                float marginCross = Unwrap(currentRelativeChild.GetMarginForAxis(crossAxis, availableInnerWidth));
+        const byte FlexUnfrozen = 0, FlexFrozen = 1, FlexMinViolation = 2, FlexMaxViolation = 3;
 
-                float childCrossSize;
-                float childMainSize = updatedMainSize + marginMain;
-                YogaMeasureMode childCrossMeasureMode;
-                var childMainMeasureMode = YogaMeasureMode.Exactly;
-
-                if (!currentRelativeChild.style.AspectRatio.IsUndefined)
+        /// <summary>The line's items sized as UI Toolkit resolves flexible lengths (the CSS loop):
+        /// they grow when the line's consumed space (percentage margins as 0) leaves room, else they
+        /// shrink; an item that cannot flex that way, or whose min or max already holds it, is frozen
+        /// at its clamped size; the free space (with the margins whole) is shared by the flex factors
+        /// (shrink factors scaled by the bases), a sum of factors under 1 sharing only that part, and
+        /// the items whose min or max then binds are frozen there until every item is (Unity
+        /// 6000.0.71f1 Editor, tests/projects/uitkpercent).</summary>
+        static void ResolveFlexibleLengthAsUIToolkit(YogaNode node, CollectFlexItemsRowValues values,
+            YogaFlexDirection mainAxis, YogaFlexDirection crossAxis, float availableInnerMainDim,
+            float availableInnerCrossDim, float availableInnerWidth, float percentWidth, float percentHeight,
+            bool flexBasisOverflows, YogaMeasureMode measureModeCrossDim, bool performLayout, YogaConfig config)
+        {
+            var items = values.RelativeChildren;
+            float available = availableInnerMainDim;
+            bool grow = !(values.RemainingFreeSpace <= 0);
+            float sumScaled = 0, sumFactors = 0;
+            int unfrozen = 0;
+            foreach (var item in items)
+            {
+                float basis = Unwrap(item.layout.ComputedFlexBasis);
+                float clamped = BoundAxis(item, mainAxis, basis, available, availableInnerWidth);
+                float factor = grow ? item.ResolveFlexGrow() : item.ResolveFlexShrink();
+                if (IsUndefined(factor)) factor = 0;
+                float scaled = grow ? factor : factor * basis;
+                if (IsUndefined(available) || scaled == 0 || (grow && clamped < basis) || (!grow && basis < clamped))
                 {
-                    childCrossSize = isMainAxisRow
-                        ? (childMainSize - marginMain) / currentRelativeChild.style.AspectRatio.Value
-                        : (childMainSize - marginMain) * currentRelativeChild.style.AspectRatio.Value;
-                    childCrossMeasureMode = YogaMeasureMode.Exactly;
-
-                    childCrossSize += marginCross;
-                }
-                else if (!IsUndefined(availableInnerCrossDim)
-                         && !IsStyleDimDefined(currentRelativeChild, crossAxis, availableInnerCrossDim)
-                         && measureModeCrossDim == YogaMeasureMode.Exactly
-                         && !(isNodeFlexWrap && flexBasisOverflows)
-                         && AlignItem(node, currentRelativeChild) == YogaAlign.Stretch
-                         && currentRelativeChild.MarginLeadingValue(crossAxis).Unit != YogaUnit.Auto
-                         && currentRelativeChild.MarginTrailingValue(crossAxis).Unit != YogaUnit.Auto)
-                {
-                    childCrossSize = availableInnerCrossDim;
-                    childCrossMeasureMode = YogaMeasureMode.Exactly;
-                }
-                else if (!IsStyleDimDefined(currentRelativeChild, crossAxis, availableInnerCrossDim))
-                {
-                    childCrossSize = availableInnerCrossDim;
-                    childCrossMeasureMode = IsUndefined(childCrossSize) ? YogaMeasureMode.Undefined : YogaMeasureMode.AtMost;
+                    item.flexState = FlexFrozen;
+                    item.flexTarget = clamped;
                 }
                 else
                 {
-                    childCrossSize = Unwrap(ResolveValue(
-                            currentRelativeChild.resolvedDimensions[Dim[(int)crossAxis]], availableInnerCrossDim))
-                        + marginCross;
-                    bool isLoosePercentageMeasurement =
-                        currentRelativeChild.resolvedDimensions[Dim[(int)crossAxis]].Unit == YogaUnit.Percent
-                        && measureModeCrossDim != YogaMeasureMode.Exactly;
-                    childCrossMeasureMode = IsUndefined(childCrossSize) || isLoosePercentageMeasurement
-                        ? YogaMeasureMode.Undefined
-                        : YogaMeasureMode.Exactly;
+                    item.flexState = FlexUnfrozen;
+                    item.flexTarget = basis;
+                    sumScaled += scaled;
+                    sumFactors += factor;
+                    unfrozen++;
                 }
-
-                ConstrainMaxSizeForMode(currentRelativeChild, mainAxis, availableInnerMainDim, availableInnerWidth,
-                    ref childMainMeasureMode, ref childMainSize);
-                ConstrainMaxSizeForMode(currentRelativeChild, crossAxis, availableInnerCrossDim, availableInnerWidth,
-                    ref childCrossMeasureMode, ref childCrossSize);
-
-                bool requiresStretchLayout =
-                    !IsStyleDimDefined(currentRelativeChild, crossAxis, availableInnerCrossDim)
-                    && AlignItem(node, currentRelativeChild) == YogaAlign.Stretch
-                    && currentRelativeChild.MarginLeadingValue(crossAxis).Unit != YogaUnit.Auto
-                    && currentRelativeChild.MarginTrailingValue(crossAxis).Unit != YogaUnit.Auto;
-
-                float childWidth = isMainAxisRow ? childMainSize : childCrossSize;
-                float childHeight = !isMainAxisRow ? childMainSize : childCrossSize;
-
-                var childWidthMeasureMode = isMainAxisRow ? childMainMeasureMode : childCrossMeasureMode;
-                var childHeightMeasureMode = !isMainAxisRow ? childMainMeasureMode : childCrossMeasureMode;
-
-                // Lay out the child with its flexed main size.
-                LayoutNodeInternal(currentRelativeChild, childWidth, childHeight, node.layout.Direction,
-                    childWidthMeasureMode, childHeightMeasureMode, availableInnerWidth, availableInnerHeight,
-                    performLayout && !requiresStretchLayout, config);
-                node.layout.HadOverflow = node.layout.HadOverflow | currentRelativeChild.layout.HadOverflow;
             }
-            return deltaFreeSpace;
+
+            float initialFree = FlexFreeSpace(items, mainAxis, available, percentWidth);
+            float free = initialFree;
+            // Each round freezes at least one item.
+            for (int round = 0; unfrozen > 0 && free != 0 && round <= items.Count; round++)
+            {
+                float remaining = free;
+                if (sumFactors < 1)
+                {
+                    float part = initialFree * sumFactors;
+                    if (!(Math.Abs(free) <= Math.Abs(part))) remaining = part;
+                }
+                float totalViolation = 0;
+                foreach (var item in items)
+                {
+                    if (item.flexState == FlexFrozen) continue;
+                    float basis = Unwrap(item.layout.ComputedFlexBasis);
+                    float factor = grow ? item.ResolveFlexGrow() : item.ResolveFlexShrink();
+                    float scaled = grow ? factor : factor * basis;
+                    float target = basis + remaining / sumScaled * scaled;
+                    float clamped = BoundAxis(item, mainAxis, target, available, availableInnerWidth);
+                    item.flexTarget = clamped;
+                    item.flexState = clamped == target ? FlexUnfrozen : clamped > target ? FlexMinViolation : FlexMaxViolation;
+                    if (clamped != target) totalViolation += clamped - target;
+                }
+                sumScaled = 0;
+                sumFactors = 0;
+                unfrozen = 0;
+                foreach (var item in items)
+                {
+                    if (item.flexState == FlexFrozen) continue;
+                    bool freeze = totalViolation == 0
+                        || (totalViolation > 0 && item.flexState == FlexMinViolation)
+                        || (totalViolation < 0 && item.flexState == FlexMaxViolation);
+                    if (freeze)
+                    {
+                        item.flexState = FlexFrozen;
+                        continue;
+                    }
+                    item.flexState = FlexUnfrozen;
+                    float basis = Unwrap(item.layout.ComputedFlexBasis);
+                    float factor = grow ? item.ResolveFlexGrow() : item.ResolveFlexShrink();
+                    sumScaled += grow ? factor : factor * basis;
+                    sumFactors += factor;
+                    unfrozen++;
+                }
+                free = FlexFreeSpace(items, mainAxis, available, percentWidth);
+            }
+
+            values.RemainingFreeSpace = FlexFreeSpace(items, mainAxis, available, percentWidth, allTargets: true);
+            foreach (var item in items)
+                LayOutFlexItem(node, item, item.flexTarget, mainAxis, crossAxis, availableInnerMainDim,
+                    availableInnerCrossDim, percentWidth, percentHeight, flexBasisOverflows,
+                    measureModeCrossDim, performLayout, config);
+        }
+
+        /// <summary>The line's free space: the available size less each item's margins and its target
+        /// (a frozen item's, or every item's when asked) or flex basis.</summary>
+        static float FlexFreeSpace(List<YogaNode> items, YogaFlexDirection mainAxis, float available, float percentWidth,
+            bool allTargets = false)
+        {
+            float free = available;
+            foreach (var item in items)
+            {
+                float size = allTargets || item.flexState == FlexFrozen ? item.flexTarget : Unwrap(item.layout.ComputedFlexBasis);
+                free -= size + Unwrap(item.GetMarginForAxis(mainAxis, percentWidth));
+            }
+            return free;
+        }
+
+        /// <summary>Lays a flex item out with its resolved main size and the cross size the line gives it.</summary>
+        static void LayOutFlexItem(YogaNode node, YogaNode currentRelativeChild, float updatedMainSize,
+            YogaFlexDirection mainAxis, YogaFlexDirection crossAxis, float availableInnerMainDim,
+            float availableInnerCrossDim, float availableInnerWidth, float availableInnerHeight,
+            bool flexBasisOverflows, YogaMeasureMode measureModeCrossDim, bool performLayout, YogaConfig config)
+        {
+            bool isMainAxisRow = IsRow(mainAxis);
+            bool isNodeFlexWrap = node.style.FlexWrap != YogaWrap.NoWrap;
+            float marginMain = Unwrap(currentRelativeChild.GetMarginForAxis(mainAxis, availableInnerWidth));
+            float marginCross = Unwrap(currentRelativeChild.GetMarginForAxis(crossAxis, availableInnerWidth));
+
+            float childCrossSize;
+            float childMainSize = updatedMainSize + marginMain;
+            YogaMeasureMode childCrossMeasureMode;
+            var childMainMeasureMode = YogaMeasureMode.Exactly;
+
+            if (!currentRelativeChild.style.AspectRatio.IsUndefined)
+            {
+                childCrossSize = isMainAxisRow
+                    ? (childMainSize - marginMain) / currentRelativeChild.style.AspectRatio.Value
+                    : (childMainSize - marginMain) * currentRelativeChild.style.AspectRatio.Value;
+                childCrossMeasureMode = YogaMeasureMode.Exactly;
+
+                childCrossSize += marginCross;
+            }
+            else if (!IsUndefined(availableInnerCrossDim)
+                     && !IsStyleDimDefined(currentRelativeChild, crossAxis, availableInnerCrossDim)
+                     && measureModeCrossDim == YogaMeasureMode.Exactly
+                     && !(isNodeFlexWrap && flexBasisOverflows)
+                     && AlignItem(node, currentRelativeChild) == YogaAlign.Stretch
+                     && currentRelativeChild.MarginLeadingValue(crossAxis).Unit != YogaUnit.Auto
+                     && currentRelativeChild.MarginTrailingValue(crossAxis).Unit != YogaUnit.Auto)
+            {
+                childCrossSize = availableInnerCrossDim;
+                childCrossMeasureMode = YogaMeasureMode.Exactly;
+            }
+            else if (!IsStyleDimDefined(currentRelativeChild, crossAxis, availableInnerCrossDim))
+            {
+                childCrossSize = availableInnerCrossDim;
+                childCrossMeasureMode = IsUndefined(childCrossSize) ? YogaMeasureMode.Undefined : YogaMeasureMode.AtMost;
+            }
+            else
+            {
+                childCrossSize = Unwrap(ResolveValue(
+                        currentRelativeChild.resolvedDimensions[Dim[(int)crossAxis]], availableInnerCrossDim))
+                    + marginCross;
+                bool isLoosePercentageMeasurement =
+                    currentRelativeChild.resolvedDimensions[Dim[(int)crossAxis]].Unit == YogaUnit.Percent
+                    && measureModeCrossDim != YogaMeasureMode.Exactly;
+                childCrossMeasureMode = IsUndefined(childCrossSize) || isLoosePercentageMeasurement
+                    ? YogaMeasureMode.Undefined
+                    : YogaMeasureMode.Exactly;
+            }
+
+            ConstrainMaxSizeForMode(currentRelativeChild, mainAxis, availableInnerMainDim, availableInnerWidth,
+                ref childMainMeasureMode, ref childMainSize);
+            ConstrainMaxSizeForMode(currentRelativeChild, crossAxis, availableInnerCrossDim, availableInnerWidth,
+                ref childCrossMeasureMode, ref childCrossSize);
+
+            bool requiresStretchLayout =
+                !IsStyleDimDefined(currentRelativeChild, crossAxis, availableInnerCrossDim)
+                && AlignItem(node, currentRelativeChild) == YogaAlign.Stretch
+                && currentRelativeChild.MarginLeadingValue(crossAxis).Unit != YogaUnit.Auto
+                && currentRelativeChild.MarginTrailingValue(crossAxis).Unit != YogaUnit.Auto;
+
+            float childWidth = isMainAxisRow ? childMainSize : childCrossSize;
+            float childHeight = !isMainAxisRow ? childMainSize : childCrossSize;
+
+            var childWidthMeasureMode = isMainAxisRow ? childMainMeasureMode : childCrossMeasureMode;
+            var childHeightMeasureMode = !isMainAxisRow ? childMainMeasureMode : childCrossMeasureMode;
+
+            // Lay out the child with its flexed main size.
+            LayoutNodeInternal(currentRelativeChild, childWidth, childHeight, node.layout.Direction,
+                childWidthMeasureMode, childHeightMeasureMode, availableInnerWidth, availableInnerHeight,
+                performLayout && !requiresStretchLayout, config);
+            node.layout.HadOverflow = node.layout.HadOverflow | currentRelativeChild.layout.HadOverflow;
         }
 
         // Finds the flexible items whose min or max constraint triggers, and takes their clamped
@@ -2404,12 +2620,21 @@ namespace Unbound.UIElements.Layout
             float availableInnerMainDim = isMainAxisRow ? availableInnerWidth : availableInnerHeight;
             float availableInnerCrossDim = isMainAxisRow ? availableInnerHeight : availableInnerWidth;
 
+            // The size the children's percentages take: in an axis this node is not laid out exactly
+            // in, none (UI Toolkit's layout engine; the node is laid out again at its final size when
+            // that leaves a percentage unresolved).
+            bool percentagesOfExactSizes = config.ResolvesPercentagesOfExactSizesOnly;
+            float percentWidth = percentagesOfExactSizes && widthMeasureMode != YogaMeasureMode.Exactly ? Undefined : availableInnerWidth;
+            float percentHeight = percentagesOfExactSizes && heightMeasureMode != YogaMeasureMode.Exactly ? Undefined : availableInnerHeight;
+
             float totalOuterFlexBasis = 0;
 
             // STEP 3: DETERMINE FLEX BASIS FOR EACH ITEM
 
-            ComputeFlexBasisForChildren(node, availableInnerWidth, availableInnerHeight, widthMeasureMode,
-                heightMeasureMode, direction, mainAxis, config, performLayout, ref totalOuterFlexBasis);
+            bool layOutAgain = false;
+            ComputeFlexBasisForChildren(node, availableInnerWidth, availableInnerHeight, percentWidth, percentHeight,
+                widthMeasureMode, heightMeasureMode, direction, mainAxis, config, performLayout, ref totalOuterFlexBasis,
+                ref layOutAgain);
 
             bool flexBasisOverflows = measureModeMainDim == YogaMeasureMode.Undefined
                 ? false
@@ -2444,8 +2669,25 @@ namespace Unbound.UIElements.Layout
                 // An unknown main size comes from the line itself, leaving no space to distribute.
 
                 bool sizeBasedOnContent = false;
+                if (config.ResolvesFlexibleLengthsAsUIToolkit)
+                {
+                    // Without an exact main size: the min when the line is smaller, the max when it is
+                    // larger, the available size when the items and the container grow, else the line's.
+                    float consumed = collectedFlexItemsValues.SizeConsumedOnCurrentLine;
+                    if (measureModeMainDim != YogaMeasureMode.Exactly)
+                    {
+                        if (!IsUndefined(minInnerMainDim) && consumed < minInnerMainDim)
+                            availableInnerMainDim = minInnerMainDim;
+                        else if (!IsUndefined(maxInnerMainDim) && consumed > maxInnerMainDim)
+                            availableInnerMainDim = maxInnerMainDim;
+                        else if (!(collectedFlexItemsValues.TotalFlexGrowFactors != 0 && node.ResolveFlexGrow() != 0
+                                   && !IsUndefined(availableInnerMainDim)))
+                            availableInnerMainDim = consumed;
+                    }
+                    collectedFlexItemsValues.RemainingFreeSpace = availableInnerMainDim - consumed;
+                }
                 // Without an exact main size, respect the min and max.
-                if (measureModeMainDim != YogaMeasureMode.Exactly)
+                else if (measureModeMainDim != YogaMeasureMode.Exactly)
                 {
                     if (!IsUndefined(minInnerMainDim) && collectedFlexItemsValues.SizeConsumedOnCurrentLine < minInnerMainDim)
                     {
@@ -2473,19 +2715,25 @@ namespace Unbound.UIElements.Layout
                     }
                 }
 
-                if (!sizeBasedOnContent && !IsUndefined(availableInnerMainDim))
+                if (!config.ResolvesFlexibleLengthsAsUIToolkit && !sizeBasedOnContent && !IsUndefined(availableInnerMainDim))
                 {
                     collectedFlexItemsValues.RemainingFreeSpace =
                         availableInnerMainDim - collectedFlexItemsValues.SizeConsumedOnCurrentLine;
                 }
-                else if (collectedFlexItemsValues.SizeConsumedOnCurrentLine < 0)
+                else if (!config.ResolvesFlexibleLengthsAsUIToolkit && collectedFlexItemsValues.SizeConsumedOnCurrentLine < 0)
                 {
                     // Sized by content with a negative consumed size: the node gives its content 0,
                     // so the remaining space is minus the consumed size.
                     collectedFlexItemsValues.RemainingFreeSpace = -collectedFlexItemsValues.SizeConsumedOnCurrentLine;
                 }
 
-                if (!canSkipFlex)
+                if (!canSkipFlex && config.ResolvesFlexibleLengthsAsUIToolkit)
+                {
+                    ResolveFlexibleLengthAsUIToolkit(node, collectedFlexItemsValues, mainAxis, crossAxis,
+                        availableInnerMainDim, availableInnerCrossDim, availableInnerWidth, percentWidth, percentHeight,
+                        flexBasisOverflows, measureModeCrossDim, performLayout, config);
+                }
+                else if (!canSkipFlex)
                 {
                     ResolveFlexibleLength(node, collectedFlexItemsValues, mainAxis, crossAxis, mainAxisOwnerSize,
                         availableInnerMainDim, availableInnerCrossDim, availableInnerWidth, availableInnerHeight,
@@ -2501,7 +2749,7 @@ namespace Unbound.UIElements.Layout
 
                 JustifyMainAxis(node, collectedFlexItemsValues, startOfLineIndex, mainAxis, crossAxis,
                     measureModeMainDim, measureModeCrossDim, mainAxisOwnerSize, ownerWidth, availableInnerMainDim,
-                    availableInnerCrossDim, availableInnerWidth, performLayout);
+                    availableInnerCrossDim, percentWidth, performLayout);
 
                 float containerCrossAxis = availableInnerCrossDim;
                 if (measureModeCrossDim == YogaMeasureMode.Undefined || measureModeCrossDim == YogaMeasureMode.AtMost)
@@ -2539,7 +2787,7 @@ namespace Unbound.UIElements.Layout
                                 child.layout.Position[(int)Pos[(int)crossAxis]] =
                                     node.GetLeadingBorder(crossAxis)
                                     + Unwrap(node.GetLeadingPadding(crossAxis, ownerWidth))
-                                    + Unwrap(child.GetLeadingMargin(crossAxis, availableInnerWidth));
+                                    + Unwrap(child.GetLeadingMargin(crossAxis, percentWidth));
                             }
                         }
                         else
@@ -2559,13 +2807,13 @@ namespace Unbound.UIElements.Layout
                                 {
                                     float childMainSize = child.layout.MeasuredDimensions[Dim[(int)mainAxis]];
                                     float childCrossSize = !child.style.AspectRatio.IsUndefined
-                                        ? Unwrap(child.GetMarginForAxis(crossAxis, availableInnerWidth))
+                                        ? Unwrap(child.GetMarginForAxis(crossAxis, percentWidth))
                                           + (isMainAxisRow
                                               ? childMainSize / child.style.AspectRatio.Value
                                               : childMainSize * child.style.AspectRatio.Value)
                                         : collectedFlexItemsValues.CrossDim;
 
-                                    childMainSize += Unwrap(child.GetMarginForAxis(mainAxis, availableInnerWidth));
+                                    childMainSize += Unwrap(child.GetMarginForAxis(mainAxis, percentWidth));
 
                                     var childMainMeasureMode = YogaMeasureMode.Exactly;
                                     var childCrossMeasureMode = YogaMeasureMode.Exactly;
@@ -2581,12 +2829,12 @@ namespace Unbound.UIElements.Layout
                                     var childHeightMeasureMode = IsUndefined(childHeight) ? YogaMeasureMode.Undefined : YogaMeasureMode.Exactly;
 
                                     LayoutNodeInternal(child, childWidth, childHeight, direction, childWidthMeasureMode,
-                                        childHeightMeasureMode, availableInnerWidth, availableInnerHeight, true, config);
+                                        childHeightMeasureMode, percentWidth, percentHeight, true, config);
                                 }
                             }
                             else
                             {
-                                float remainingCrossDim = containerCrossAxis - DimWithMargin(child, crossAxis, availableInnerWidth);
+                                float remainingCrossDim = containerCrossAxis - DimWithMargin(child, crossAxis, percentWidth);
 
                                 if (child.MarginLeadingValue(crossAxis).Unit == YogaUnit.Auto
                                     && child.MarginTrailingValue(crossAxis).Unit == YogaUnit.Auto)
@@ -2690,14 +2938,14 @@ namespace Unbound.UIElements.Layout
                             {
                                 lineHeight = FloatMax(lineHeight,
                                     child.layout.MeasuredDimensions[Dim[(int)crossAxis]]
-                                    + Unwrap(child.GetMarginForAxis(crossAxis, availableInnerWidth)));
+                                    + Unwrap(child.GetMarginForAxis(crossAxis, percentWidth)));
                             }
                             if (AlignItem(node, child) == YogaAlign.Baseline)
                             {
                                 float ascent = Baseline(child)
-                                    + Unwrap(child.GetLeadingMargin(YogaFlexDirection.Column, availableInnerWidth));
+                                    + Unwrap(child.GetLeadingMargin(YogaFlexDirection.Column, percentWidth));
                                 float descent = child.layout.MeasuredDimensions[DimHeight]
-                                    + Unwrap(child.GetMarginForAxis(YogaFlexDirection.Column, availableInnerWidth))
+                                    + Unwrap(child.GetMarginForAxis(YogaFlexDirection.Column, percentWidth))
                                     - ascent;
                                 maxAscentForCurrentLine = FloatMax(maxAscentForCurrentLine, ascent);
                                 maxDescentForCurrentLine = FloatMax(maxDescentForCurrentLine, descent);
@@ -2721,12 +2969,12 @@ namespace Unbound.UIElements.Layout
                                 {
                                     case YogaAlign.FlexStart:
                                         child.layout.Position[(int)Pos[(int)crossAxis]] =
-                                            currentLead + Unwrap(child.GetLeadingMargin(crossAxis, availableInnerWidth));
+                                            currentLead + Unwrap(child.GetLeadingMargin(crossAxis, percentWidth));
                                         break;
                                     case YogaAlign.FlexEnd:
                                         child.layout.Position[(int)Pos[(int)crossAxis]] =
                                             currentLead + lineHeight
-                                            - Unwrap(child.GetTrailingMargin(crossAxis, availableInnerWidth))
+                                            - Unwrap(child.GetTrailingMargin(crossAxis, percentWidth))
                                             - child.layout.MeasuredDimensions[Dim[(int)crossAxis]];
                                         break;
                                     case YogaAlign.Center:
@@ -2739,7 +2987,7 @@ namespace Unbound.UIElements.Layout
                                     case YogaAlign.Stretch:
                                     {
                                         child.layout.Position[(int)Pos[(int)crossAxis]] =
-                                            currentLead + Unwrap(child.GetLeadingMargin(crossAxis, availableInnerWidth));
+                                            currentLead + Unwrap(child.GetLeadingMargin(crossAxis, percentWidth));
 
                                         // Measure the child again with the line height (it was measured
                                         // with the owner's height).
@@ -2747,12 +2995,12 @@ namespace Unbound.UIElements.Layout
                                         {
                                             float childWidth = isMainAxisRow
                                                 ? child.layout.MeasuredDimensions[DimWidth]
-                                                  + Unwrap(child.GetMarginForAxis(mainAxis, availableInnerWidth))
+                                                  + Unwrap(child.GetMarginForAxis(mainAxis, percentWidth))
                                                 : lineHeight;
 
                                             float childHeight = !isMainAxisRow
                                                 ? child.layout.MeasuredDimensions[DimHeight]
-                                                  + Unwrap(child.GetMarginForAxis(crossAxis, availableInnerWidth))
+                                                  + Unwrap(child.GetMarginForAxis(crossAxis, percentWidth))
                                                 : lineHeight;
 
                                             if (!(FloatsEqual(childWidth, child.layout.MeasuredDimensions[DimWidth])
@@ -2760,7 +3008,7 @@ namespace Unbound.UIElements.Layout
                                             {
                                                 LayoutNodeInternal(child, childWidth, childHeight, direction,
                                                     YogaMeasureMode.Exactly, YogaMeasureMode.Exactly,
-                                                    availableInnerWidth, availableInnerHeight, true, config);
+                                                    percentWidth, percentHeight, true, config);
                                             }
                                         }
                                         break;
@@ -2840,6 +3088,16 @@ namespace Unbound.UIElements.Layout
                             - child.layout.MeasuredDimensions[Dim[(int)crossAxis]];
                     }
                 }
+            }
+
+            if (layOutAgain)
+            {
+                // Again at the size just found, exactly in both axes; that layout places the absolute
+                // children.
+                LayoutNodeInternal(node, node.layout.MeasuredDimensions[DimWidth] + marginAxisRow,
+                    node.layout.MeasuredDimensions[DimHeight] + marginAxisColumn, ownerDirection,
+                    YogaMeasureMode.Exactly, YogaMeasureMode.Exactly, ownerWidth, ownerHeight, performLayout, config);
+                return;
             }
 
             if (performLayout)
