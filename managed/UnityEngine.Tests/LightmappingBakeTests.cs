@@ -217,7 +217,7 @@ namespace UnityEngine.Tests
             var environment = new LightingSettings { bakedGI = false, realtimeGI = false };
             // (The project's own assets: Assets/ here.)
             System.Func<string, bool> own = path => path.StartsWith("Assets/", System.StringComparison.Ordinal);
-            string Unwritten(LightingSettings settings, string folder, bool made) => RealtimeGI.Unwritten(settings, folder, made, own);
+            string Unwritten(LightingSettings settings, string folder, bool made, bool pipeline = false) => RealtimeGI.Unwritten(settings, folder, made, pipeline, own);
             try
             {
                 using (TestRelease.Pin(TestRelease.Measured))
@@ -236,6 +236,8 @@ namespace UnityEngine.Tests
                     // an untitled scene, a scene of a package the project does not hold: not written.
                     Assert.Contains("did not make", Unwritten(environment, "Assets/Scenes/Lit", false));
                     Assert.Contains("untitled", Unwritten(environment, null, true));
+                    // A render pipeline asset's bake (made as the built-in pipeline's): not measured.
+                    Assert.Contains("render pipeline", Unwritten(environment, "Assets/Scenes/Lit", true, pipeline: true));
                     Assert.Contains("own assets", Unwritten(environment, "Packages/com.unity.render-pipelines.core/Samples/Lit", true));
                 }
                 // Another release family: not measured, not written.

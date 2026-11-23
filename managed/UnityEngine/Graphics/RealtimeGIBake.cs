@@ -240,13 +240,15 @@ namespace UnityEngine
 
         /// <summary>Why a bake's lighting data is not written beside its scene's
         /// <paramref name="folder"/> (null: untitled), or null where it is: nothing is written, or
-        /// deleted, where any of it would not be the Editor's. <paramref name="editable"/>: whether
-        /// a path is of the project's own assets (AssetDatabase's answer by default).</summary>
-        internal static string Unwritten(LightingSettings settings, string folder, bool environmentMade, Func<string, bool> editable = null) =>
+        /// deleted, where any of it would not be the Editor's (a render pipeline asset's bake is
+        /// not measured). <paramref name="editable"/>: whether a path is of the project's own
+        /// assets (AssetDatabase's answer by default).</summary>
+        internal static string Unwritten(LightingSettings settings, string folder, bool environmentMade, bool renderPipeline, Func<string, bool> editable = null) =>
             settings == null || settings.bakedGI || settings.realtimeGI
                 ? "Unbound writes it for a bake of the environment alone (baked and realtime global illumination off)"
             : folder == null ? "an untitled scene's is not measured"
             : !Compat.BakeFilesMeasured ? $"of Unity {Application.unityVersion} it is not measured (its release family)"
+            : renderPipeline ? "with a render pipeline asset it is not measured"
             : !environmentMade ? "this bake did not make all of the environment lighting (said)"
             : !(editable ?? UnityEditor.AssetDatabase.Editable)(folder) ? "the scene is not in the project's own assets"
             : null;
@@ -283,7 +285,7 @@ namespace UnityEngine
             string folder = string.IsNullOrEmpty(scene.Path) ? null
                 : scene.Path.Substring(0, scene.Path.Length - System.IO.Path.GetExtension(scene.Path).Length);
             // (Without the native side, as in managed tests, nothing is made or written.)
-            string unwritten = Unwritten(settings, folder, Native.IsReady && environment.Made);
+            string unwritten = Unwritten(settings, folder, Native.IsReady && environment.Made, Rendering.GraphicsSettings.currentRenderPipeline != null);
             if (unwritten != null)
             {
                 string name = folder == null ? "an untitled scene" : scene.Path;
