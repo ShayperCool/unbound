@@ -273,8 +273,13 @@ light within 1e-3 as the indirect light's (times the value above 1), but for the
 light in the Editor's lightmap is not what the rules above make of its own buffers
 (`bake_buffers.py` `composite`): the stitching of seams changes those (along the seams of the
 primitives' UVs, at chart borders and inside charts, as at the sphere's poles), which Unbound
-does not do; they are counted (`lightmaps: N texels the Editor stitched`) and not compared. A
-lightmap made of buffers with a named residual differs where they do (the same residuals).
+does not do; they are counted (`lightmaps: N texels the Editor stitched`) and not compared. The rules are
+the reference's own: a texel whose rays met back faces at most a tenth of the time keeps its
+light (1740 such texels here, all but 37 of them, those by seams, as the rules make them), and
+the scene without seams (`Charts`) has no texel the rules do not make. A bake that keeps no
+light (`SkyRealtime`: no lights, the sky's light in the realtime lightmaps) writes no lightmap
+(Unbound's buffers have one of zeros; not compared). A lightmap made of buffers with a named
+residual differs where they do (the same residuals).
 The Editor's lightmapper process now and then ends without writing a lightmap: the recorder
 runs the whole bake again (up to three times), and a capture still without one is not
 published.
