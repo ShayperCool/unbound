@@ -33,12 +33,38 @@ namespace UnityEngine.UIElements
             if (textInfo?.meshInfo != null)
             {
                 var offset = contentRect.min;
-                for (int i = 0; i < textInfo.meshInfo.Length; i++) DrawMeshInfo(mgc, textInfo.meshInfo[i], offset);
+                var settings = TextCoreSettings(this);
+                for (int i = 0; i < textInfo.meshInfo.Length; i++) DrawMeshInfo(mgc, textInfo.meshInfo[i], offset, settings);
             }
             OnGenerateTextOver(mgc);
         }
 
-        static void DrawMeshInfo(MeshGenerationContext mgc, MeshInfo meshInfo, Vector2 offset)
+        /// <summary>The outline and shadow of an element's distance field text, in TextCore's units
+        /// (UIR's TextCoreSettings): the outline width and the shadow's offset and blur in pixels of
+        /// the element's font size, as fractions of the font asset's atlas padding at its point size,
+        /// each within one padding; an outline of no width has no colour.</summary>
+        internal static Unbound.UIElements.UaTextCoreSettings TextCoreSettings(VisualElement ve)
+        {
+            var fontAsset = UITKTextHandle.GetFontAsset(ve);
+            var style = ve.computedValues;
+            if (fontAsset == null || fontAsset.atlasPadding <= 0 || !(style.fontSize.value > 0f)) return default;
+            float factor = TextHandle.ConvertPixelUnitsToTextCoreRelativeUnits(style.fontSize.value, fontAsset);
+            var shadow = style.textShadow;
+            float outlineWidth = Mathf.Clamp(style.unityTextOutlineWidth * factor, 0f, 1f);
+            var outlineColor = style.unityTextOutlineColor;
+            if (outlineWidth < 1e-5f) outlineColor.a = 0f;
+            return new Unbound.UIElements.UaTextCoreSettings
+            {
+                faceColor = style.color,
+                outlineColor = outlineColor,
+                outlineWidth = outlineWidth,
+                underlayColor = shadow.color,
+                underlayOffset = new Vector2(Mathf.Clamp(shadow.offset.x * factor, -1f, 1f), Mathf.Clamp(shadow.offset.y * factor, -1f, 1f)),
+                underlaySoftness = Mathf.Clamp(shadow.blurRadius * factor, 0f, 1f),
+            };
+        }
+
+        static void DrawMeshInfo(MeshGenerationContext mgc, MeshInfo meshInfo, Vector2 offset, Unbound.UIElements.UaTextCoreSettings settings)
         {
             int count = meshInfo.vertexCount & ~3;
             if (count == 0 || meshInfo.vertexData == null) return;
@@ -52,7 +78,8 @@ namespace UnityEngine.UIElements
             try
             {
                 for (int v = 0; v < count; v++) vertices[v] = ToUIRVertex(meshInfo.vertexData[v], offset);
-                mgc.UaDrawText(new NativeSlice<Vertex>(vertices), atlas, sdfScale);
+                // Outline and shadow belong to distance field text only.
+                mgc.UaDrawText(new NativeSlice<Vertex>(vertices), atlas, sdfScale, settings: sdfScale > 0f ? settings : default);
             }
             finally
             {
