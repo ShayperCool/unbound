@@ -217,7 +217,7 @@ namespace Unbound.Runtime
         /// <summary>The varying the deprecated forward decal output's programs pass (the package's
         /// Shaders/ParticleDecals templates).</summary>
         const string ForwardDecalVarying = "worldToDecal0";
-        internal const string CubeDeviceRefusal = "it is a cube output, whose faces are measured on the OpenGL Core device only";
+        internal const string CubeDeviceRefusal = "it is a cube output, whose texture layout is measured on the OpenGL Core device only";
         internal const string ForwardDecalRefusal = "it is a forward decal output (deprecated), which is not measured yet";
 
         /// <summary>A strip output lit by 2D lights is not drawn until it is measured.</summary>
