@@ -47,6 +47,13 @@ namespace Unbound.Runtime
             ReleaseGpu();
             if (m_Views == 0) Release();
         }
+
+        internal void AbandonMeshOwner()
+        {
+            m_OwnerReleased = true;
+            if (m_Views == 0) Release();
+        }
+
         internal void InvalidateMeshBuffer()
         {
             Released = true;

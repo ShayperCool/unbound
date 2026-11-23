@@ -11,6 +11,19 @@ namespace UnityEngine
             internal GpuBufferStorage Storage;
             internal uint[] Words;
             internal bool Dirty = true;
+
+            ~BoneWeightBuffer()
+            {
+                if (Storage != null)
+                    MainThreadContext.Instance.Post(static state => ((GpuBufferStorage)state).AbandonMeshOwner(), Storage);
+            }
+
+            internal void Release()
+            {
+                Storage?.ReleaseMeshOwner();
+                Storage = null;
+                GC.SuppressFinalize(this);
+            }
         }
 
         BoneWeightBuffer[] m_BoneWeightBuffers;
@@ -100,7 +113,7 @@ namespace UnityEngine
         void ReleaseBoneWeightBuffers()
         {
             if (m_BoneWeightBuffers != null)
-                foreach (var buffer in m_BoneWeightBuffers) buffer?.Storage?.ReleaseMeshOwner();
+                foreach (var buffer in m_BoneWeightBuffers) buffer?.Release();
             m_BoneWeightBuffers = null;
         }
     }
