@@ -317,6 +317,7 @@ namespace UnityEngine
             }
             set
             {
+                MainThreadCheck.Check("get_canAccess");
                 // Fewer vertices than the indices reference (null counts as none): an error, and the
                 // mesh keeps everything it had (6000.0.71f1, tests/projects/blendshapes misuse
                 // "vertices change"; the macOS Editor, outside a committed reference: the vertices
@@ -376,8 +377,8 @@ namespace UnityEngine
             ResizeVertexChannel(ref m_Normals, count);
             ResizeVertexChannel(ref m_Tangents, count);
             ResizeVertexChannel(ref m_Colors, count);
+            if (resized) ChangeBoneWeightVertexCount(count);
             ResizeVertexChannel(ref m_BoneWeights, count);
-            if (resized) ResizeRuntimeBoneWeights(count);
             for (int channel = 0; channel < m_UVs.Length; channel++)
                 ResizeVertexChannel(ref m_UVs[channel], count);
             if (!scriptSet || resized) UpdateBounds();
@@ -930,9 +931,15 @@ namespace UnityEngine
 
         public BoneWeight[] boneWeights
         {
-            get { EnsureModelLoaded(); return m_BoneWeights != null ? (BoneWeight[])m_BoneWeights.Clone() : Array.Empty<BoneWeight>(); }
+            get
+            {
+                MainThreadCheck.Check("GetBoneWeightsImpl");
+                EnsureModelLoaded();
+                return m_BoneWeights != null ? (BoneWeight[])m_BoneWeights.Clone() : Array.Empty<BoneWeight>();
+            }
             set
             {
+                MainThreadCheck.Check("SetBoneWeightsImpl");
                 EnsureModelLoaded();
                 SetLegacyBoneWeights(value);
             }
@@ -964,6 +971,7 @@ namespace UnityEngine
 
         public void Clear([Internal.DefaultValue("true")] bool keepVertexLayout)
         {
+            MainThreadCheck.Check("ClearImpl");
             bool Keep(VertexAttribute attribute) => keepVertexLayout && ChannelPresent(attribute);
             m_HasPositionChannel = Keep(VertexAttribute.Position);
             bool keepNormal = Keep(VertexAttribute.Normal);
@@ -1456,6 +1464,7 @@ namespace UnityEngine
         {
             EndBindposeViews();
             InvalidateBoneWeightArrays();
+            ReleaseBoneWeightBuffers();
             ReleaseGraphicsBufferOwner();
             Native.ReleaseMesh(m_Handle);
             m_Handle = 0;

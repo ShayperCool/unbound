@@ -17,7 +17,8 @@ namespace UnityEngine
             m_Offsets = new int[vertexCount + 1];
         }
 
-        internal ReadOnlySpan<BoneWeight1> ForVertex(int vertex) => Weights.AsSpan(m_Offsets[vertex], Counts[vertex]);
+        internal ReadOnlySpan<BoneWeight1> ForVertex(int vertex) => vertex < Counts.Length
+            ? Weights.AsSpan(m_Offsets[vertex], Counts[vertex]) : default;
 
         internal static MeshSkinWeightData FromNative(ReadOnlySpan<byte> counts, ReadOnlySpan<BoneWeight1> weights, SkinWeights layout)
         {
@@ -36,7 +37,7 @@ namespace UnityEngine
                 {
                     float sum = 0f;
                     foreach (var influence in vertexWeights)
-                        if (influence.weight > 0f) sum += influence.weight;
+                        sum += MathF.Max(influence.weight, 0f);
                     float scale = 1f / sum;
                     foreach (var influence in vertexWeights)
                     {
@@ -54,21 +55,30 @@ namespace UnityEngine
 
         // The unlimited layout stores a 16-bit weight, with the accumulated rounding error
         // applied at the end of the vertex's run. GetAllBoneWeights exposes those decoded values.
+        internal static ushort ToPackedWeight(float weight) => float.IsFinite(weight)
+            ? (ushort)MathF.Round(Math.Clamp(weight, 0f, 1f) * ushort.MaxValue, MidpointRounding.AwayFromZero) : (ushort)0;
+
         static int Quantize(Span<BoneWeight1> weights)
         {
             const int MaxWeight = ushort.MaxValue;
+            const float WeightUnit = 1f / MaxWeight;
             int remainder = MaxWeight;
             for (int i = 0; i < weights.Length; i++)
             {
-                int bits = (int)MathF.Round(Math.Clamp(weights[i].weight, 0f, 1f) * MaxWeight);
-                weights[i].weight = bits / (float)MaxWeight;
+                int bits = ToPackedWeight(weights[i].weight);
+                weights[i].weight = bits * WeightUnit;
                 remainder -= bits;
+            }
+            if (remainder == MaxWeight && !weights.IsEmpty)
+            {
+                weights[0].weight = 1f;
+                return 1;
             }
             for (int i = weights.Length - 1; i >= 0 && remainder != 0; i--)
             {
                 int bits = (int)MathF.Round(weights[i].weight * MaxWeight);
                 int corrected = Math.Clamp(bits + remainder, 0, MaxWeight);
-                weights[i].weight = corrected / (float)MaxWeight;
+                weights[i].weight = corrected * WeightUnit;
                 remainder -= corrected - bits;
             }
             int kept = 0;
@@ -97,18 +107,6 @@ namespace UnityEngine
                 data.m_Offsets[i + 1] = written;
             }
             return data;
-        }
-
-        internal MeshSkinWeightData Resize(int vertexCount)
-        {
-            int retainedVertices = Math.Min(vertexCount, Counts.Length);
-            int retainedWeights = m_Offsets[retainedVertices];
-            var copy = new MeshSkinWeightData(vertexCount, retainedWeights);
-            Array.Copy(Counts, copy.Counts, retainedVertices);
-            Array.Copy(Weights, copy.Weights, retainedWeights);
-            Array.Copy(m_Offsets, copy.m_Offsets, retainedVertices + 1);
-            copy.m_Offsets.AsSpan(retainedVertices + 1).Fill(retainedWeights);
-            return copy;
         }
 
         internal BoneWeight[] LegacyProjection(bool normalize)

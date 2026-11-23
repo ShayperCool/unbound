@@ -256,9 +256,9 @@ namespace UnityEngine
                 m_UVDimensions[c] = Has(attr) ? Array.Find(layout, d => d.attribute == attr).dimension : 0;
             }
             bool hasSkin = Has(VertexAttribute.BlendWeight) || Has(VertexAttribute.BlendIndices);
-            m_BoneWeights = Resize(m_BoneWeights, hasSkin);
-            if (hasSkin) ResizeRuntimeBoneWeights(vertexCount);
+            if (hasSkin) ChangeBoneWeightVertexCount(vertexCount);
             else DropRuntimeBoneWeights();
+            m_BoneWeights = Resize(m_BoneWeights, hasSkin);
             m_Layout = layout;
             m_HasPositionChannel = Has(VertexAttribute.Position);
             ResizePackedChannels(vertexCount, layout);
