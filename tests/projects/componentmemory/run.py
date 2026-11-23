@@ -20,8 +20,9 @@ PROFILES = {
 def directory(label, profile):
     if not label or label in ('.', '..') or Path(label).name != label:
         raise SystemExit(f'{label}: expected a single run directory name')
-    base = run_root(PROBE, '').resolve()
-    out = base/(label if profile is None else f'{label}-{profile}')
+    namespace = PROBE.name if profile is None else f'{PROBE.name}-{profile}'
+    base = run_root(namespace, '').resolve()
+    out = base/label
     if out.resolve() != out or inside_git_checkout(out):
         raise SystemExit(f'{out}: run directory must stay in the probe cache outside any checkout')
     return out

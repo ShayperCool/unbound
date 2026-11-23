@@ -17,6 +17,12 @@ LIGHT_METHOD = run.PROFILES['light'][0]
 
 
 class CaptureSelectionTests(unittest.TestCase):
+    def test_run_labels_do_not_share_between_profiles(self):
+        fixed = run.directory('sample-light', run.PROFILES['fixed'][2])
+        light = run.directory('sample', run.PROFILES['light'][2])
+        self.assertNotEqual(fixed, light)
+        self.assertNotEqual(fixed.parent, light.parent)
+
     def test_fixed_record_cannot_publish_into_the_light_profile(self):
         cache = validation_cache()
         cache.mkdir(parents=True, exist_ok=True)
