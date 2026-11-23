@@ -8,7 +8,8 @@ It writes two records.
   - `Application.isLoadingLevel` around synchronous, asynchronous, held
     (`allowSceneActivation`) and unloading scene operations;
   - stack traces written by `Debug.ExtractStackTraceNoAlloc` at several buffer
-    sizes, with project paths written as `<project>`;
+    sizes, with project paths written as `<project>`. The full-buffer byte counts
+    for the empty and `Assets/` prefixes apply the same UTF-8 byte adjustment;
   - `Profiler.GetRuntimeMemorySizeLong` of the textures, meshes, audio clips,
     render textures, materials and components the probe creates;
   - changes in the graphics driver memory figure, and the temp allocator size;
@@ -136,10 +137,13 @@ recording stubs before their writes to reproduce the former process-start race.
 30 of 555 values differ, all recorded in `docs/COMPATIBILITY_GAPS.md` (appfacts row and the
 rows it names): stack-trace text and byte counts (10), component/GameObject memory (11),
 materials (2), sprites (1), one-sample clips (2) and texture size/creation values (4). Most
-values are facts of the Linux capture's machine; on macOS many more differ by design. Four
-stack byte counts also follow the length of the project path the probe runs from, so their
-values change with the checkout; a new failing key on Linux, or a change outside those four
-counts, is a regression.
+values are facts of the Linux capture's machine; on macOS many more differ by design. The four full-buffer absolute-path byte counts were later measured again in two Linux Editor
+projects with different path lengths, including a non-ASCII directory name. The raw counts
+were 613 and 682. Both became 310 after replacing the path in the reported byte counts,
+and every other reference row stayed byte-identical. The capture keeps the raw returned
+count, sentinel-derived written count and signed UTF-8 adjustment in `stack-counts.jsonl`.
+The text, both counts, truncation cases and project-relative cases still compare exactly.
+The current Linux gate matches 555/555 values.
 
 The block-alignment diagnostic for an invalid compressed Texture2D constructor size now matches
 the `size.texture2d.logs` row. The companion `tests/projects/texturecreationerrors` probe records
