@@ -1210,10 +1210,10 @@ namespace Unbound.Runtime
         // not Unity's path became invalid); the new path is a newly applied path for isPathStale; a
         // path that cannot be planned leaves the agent without a path (PathInvalid, its destination
         // kept), as a failed request does; an agent the new NavMesh cannot place loses its pending
-        // request; an agent that had arrived, whose request had failed, or that has no destination
-        // is given no path (one within its last centimetre of a path still finishes it); a path given
-        // by SetPath is planned again to its last corner; a partial path is planned again to its
-        // old end and stays partial (Unity keeps it; see RepathStalePartial). The rebuild is taken
+        // request; an agent with a failed request or without a destination has no route to restore;
+        // a finishing agent keeps its arrival state. A path given by SetPath is planned again to its
+        // last corner. A stale partial route keeps its old endpoint and partial status, including
+        // after arrival in the measured family (tests/projects/navlinks linkversion). The rebuild is taken
         // in at the next NavMesh query, agent placement or agent update. An agent on an off-mesh
         // link, or completing one, rejoins as before.
         /// <summary>The agents follow NavMesh changes: a rebuild places every agent again, tiles
@@ -1494,8 +1494,8 @@ namespace Unbound.Runtime
         /// that end and stays partial: Unity keeps such a path through a link change and searches it
         /// again only as the agent nears its end (RepathStalePartial; measured, tests/projects/
         /// navlinks inactive: partial and stale in the frame a link opens, complete the next).
-        /// Other changes (NavMesh data, carving) are unmeasured for partial paths: planned again to
-        /// the destination, as before.
+        /// Rejoin preserves the old endpoint whenever a partial route is stale. Partial paths
+        /// during NavMesh data changes and carving remain unmeasured.
         static void PlanAgain(NavMeshAgent agent, Vector3? partialEnd = null)
         {
             var target = partialEnd ?? agent.RequestedDestination;
