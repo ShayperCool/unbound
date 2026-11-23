@@ -807,6 +807,7 @@ namespace Unbound.Runtime
 
         internal void Restore(Object target)
         {
+            Unbound.Runtime.PrefabRecords.Drop(target);
             foreach (var (field, value) in m_Native)
             {
                 try { field.Set(target, SerializedTree.CopyLeaf(value, field.Shape)); }

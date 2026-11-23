@@ -274,10 +274,10 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>A revert writes the instance as recorded: a change made after it without
-        /// recording is not listed.</summary>
+        /// <summary>An engine write to a recorded script (a revert, set modifications, an Undo)
+        /// drops the values its record kept: a removed override is not listed from the record.</summary>
         [Fact]
-        public void AChangeAfterARevertIsListedOnceRecorded()
+        public void AnEngineWriteDropsARecordsValues()
         {
             bool playing = EditorSession.IsPlaying;
             EditorSession.IsPlaying = true;
@@ -287,15 +287,26 @@ namespace UnityEngine.Tests
                 var holder = instance.GetComponent<PrefabTestHolder>();
                 holder.count = 8;
                 PrefabUtility.RecordPrefabInstancePropertyModifications(holder);
-                // Another property changed without recording: not an override after the revert either.
-                holder.label = "unrecorded";
+                Assert.Equal("8", ValueOf(instance, "count"));
                 PrefabUtility.RevertPropertyOverride(new SerializedObject(holder).FindProperty("count"), InteractionMode.AutomatedAction);
                 Assert.Equal(3, holder.count);
-                Assert.Null(ValueOf(instance, "label"));
-                holder.count = 9;
                 Assert.Null(ValueOf(instance, "count"));
+                holder.count = 9;
                 PrefabUtility.RecordPrefabInstancePropertyModifications(holder);
                 Assert.Equal("9", ValueOf(instance, "count"));
+
+                PrefabUtility.SetPropertyModifications(instance, new PropertyModification[0]);
+                Assert.Equal(3, holder.count);
+                Assert.Null(ValueOf(instance, "count"));
+
+                Undo.RecordObject(holder, "count");
+                holder.count = 7;
+                PrefabUtility.RecordPrefabInstancePropertyModifications(holder);
+                Assert.Equal("7", ValueOf(instance, "count"));
+                Undo.FlushUndoRecordObjects();
+                Undo.PerformUndo();
+                Assert.Equal(3, holder.count);
+                Assert.Null(ValueOf(instance, "count"));
             }
             finally
             {

@@ -445,7 +445,7 @@ namespace Unbound.Runtime
         /// <summary>The overrides a record keeps for a script of an instance (null for other objects):
         /// its values now of the properties that differ from the source's or that the instance
         /// stores, what its modifications take until it is recorded again (a revert or an apply
-        /// takes paths away, <see cref="PrefabRecords.Forget"/>).</summary>
+        /// an engine write drops them, <see cref="PrefabRecords.Drop"/>).</summary>
         internal static RecordedValues Record(Object o)
         {
             if (o is not MonoBehaviour || PrefabLinks.Of(o)?.Instance is not PrefabInstanceData data || !TakesChangesWhenRecorded(o)) return null;
@@ -494,6 +494,7 @@ namespace Unbound.Runtime
         {
             using var quiet = PrefabRecordTiming.QuietScope.Begin();
             if (target == null) return false;
+            PrefabRecords.Drop(target);
             var so = new SerializedObject(target);
             var property = so.FindProperty(path);
             if (property == null) return false;

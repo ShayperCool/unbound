@@ -71,7 +71,7 @@ namespace UnityEditor
         {
             var link = PrefabLinks.Of(o);
             if (link == null) return;
-            PrefabRecords.Forget(o, selected);
+            PrefabRecords.Drop(o);
             int removed = data.Stored.RemoveAll(m => !m.Target.IsNull && m.Target.FileId == link.SourceFileId
                 && string.Equals(m.Target.Guid ?? data.SourceGuid, link.SourceGuid, StringComparison.OrdinalIgnoreCase) && selected(m.Path));
             if (removed > 0) data.Edited = true;

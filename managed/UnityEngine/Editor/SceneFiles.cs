@@ -1403,12 +1403,12 @@ namespace Unbound.Runtime
 
         internal static bool IsRecorded(Object o) => o is not null && s_Recorded.TryGetValue(o, out _);
 
-        /// <summary>A revert or an apply took the selected paths of an object's overrides away: its
-        /// record keeps them no longer.</summary>
-        internal static void Forget(Object o, Func<string, bool> selected)
+        /// <summary>The engine wrote a recorded object (an apply, a revert, a merge, set modifications,
+        /// an Undo): its record keeps no values any more, and its overrides are its values now until it
+        /// is recorded again; it stays recorded.</summary>
+        internal static void Drop(Object o)
         {
-            if (o is not null && s_Recorded.TryGetValue(o, out var values) && values is PrefabInstances.RecordedValues recorded)
-                recorded.Values.RemoveAll(v => selected(v.Path));
+            if (o is not null && s_Recorded.TryGetValue(o, out var values) && values != null) s_Recorded.AddOrUpdate(o, null);
         }
 
         /// <summary>The values kept by a script's last record, or null.</summary>

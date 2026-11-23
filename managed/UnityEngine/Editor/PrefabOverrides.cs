@@ -146,6 +146,7 @@ namespace Unbound.Runtime
         internal static void Write(Object target, IEnumerable<(string Path, YText Value)> values, ValueReferences refs)
         {
             using var quiet = PrefabRecordTiming.QuietScope.Begin();
+            PrefabRecords.Drop(target);
             var body = Fields(target, null, refs);
             foreach (var (path, value) in values) SetPath(body, path, value.Clone());
             Read(target, body, refs);
