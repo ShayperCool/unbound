@@ -434,6 +434,18 @@ namespace UnityEngine
 
         public void SetCustomCurve(AudioSourceCurveType type, AnimationCurve curve)
         {
+            bool measured = Compat.AudioSourceCurveStorageMeasured;
+            if (measured)
+            {
+                ThrowIfNullArgument(this, "source");
+                if (m_GameObject is null) throw new ArgumentNullException("source");
+                if (curve == null) throw new ArgumentNullException(nameof(curve));
+                if (curve.length == 0)
+                {
+                    Log.Engine(LogType.Error, "AudioSource.SetCustomCurve must be passed an AnimationCurve with at least 1 element.", this);
+                    return;
+                }
+            }
             var copy = curve == null ? new AnimationCurve()
                 : Compat.AudioSpatialStereoMeasured ? NormalizedDistanceCurve(curve)
                 : new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
@@ -451,6 +463,13 @@ namespace UnityEngine
                     break;
                 case AudioSourceCurveType.Spread:
                     AssignCurve(ref m_SpreadCurve, ref m_SpreadReservedKeys, copy);
+                    break;
+                default:
+                    if (measured)
+                    {
+                        Log.Engine(LogType.Error, "Unknown AudioSourceCurveType passed to AudioSource.SetCustomCurve.", this);
+                        return;
+                    }
                     break;
             }
             m_Dirty = true;
