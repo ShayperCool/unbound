@@ -1207,15 +1207,20 @@ impl ShaderCompiler {
             self.compiler
                 .compile_into_spirv(&fixed, kind, &name, entry, Some(&o))
                 .or_else(|e| {
+                    dump_failed(&fixed, &name, kind);
                     let all = fxc_compatible(&expanded, inout_parameters::Scope::All);
-                    let retried = (all != fixed).then(|| {
-                        self.compiler
-                            .compile_into_spirv(&all, kind, &name, entry, Some(&o))
-                    });
-                    retried.and_then(Result::ok).ok_or_else(|| {
-                        dump_failed(&fixed, &name, kind);
-                        anyhow!("{}: {e}", stage_name(kind))
-                    })
+                    if all == fixed {
+                        return Err(anyhow!("{}: {e}", stage_name(kind)));
+                    }
+                    self.compiler
+                        .compile_into_spirv(&all, kind, &name, entry, Some(&o))
+                        .map_err(|retried| {
+                            dump_failed(&all, &format!("{name}.inout"), kind);
+                            anyhow!(
+                                "{}: {e}; with every scalar and vector `inout` parameter split: {retried}",
+                                stage_name(kind)
+                            )
+                        })
                 })
         };
         let crashes = exponents::calls_frexp(&expanded) || inout_parameters::splits(&expanded);
