@@ -57,6 +57,12 @@ static class MaterialMemory
             copy.SetFloat("_ProbeExtra4", 3f);
             Size(stage + ".copyEdited", copy);
             Size(stage + ".sourceAfterCopyEdit", material);
+            var instance = Object.Instantiate(material);
+            Size(stage + ".populatedInstance", instance);
+            instance.SetFloat("_ProbeExtra4", 4f);
+            Size(stage + ".instanceEdited", instance);
+            Size(stage + ".sourceAfterInstanceEdit", material);
+            Object.DestroyImmediate(instance);
             Object.DestroyImmediate(copy);
             Object.DestroyImmediate(material);
         }
