@@ -54,6 +54,15 @@ Percentages of a size not known yet (`autoColumn*`): a column with an automatic 
 its children take their content's sizes; when its own size may follow its owner's (it shrinks, grows
 or has a percentage basis) it is laid out again at the height found and the percentages take it.
 
+Containers without an exact main size (`centeredRow.*`): in a 984 wide column centring its items, a
+row of an item around content 982.8 (or 300) wide and a fixed 24 wide one is as long as its items'
+bases plus its padding (1006.8, centred at -11.4), while its items grow or shrink to the 984 it was
+given when it and they grow (`grown`, `grownSmall`, `grownPadded`; `fixedHeight*` and `autoHeight` do
+not grow, `stretched` is exact); a vertical ScrollView in such a column keeps its content's height
+(`scrollView`). `percentMinInAutoRow.*`: in a row sized by its content, an item 95% wide with a 95%
+min and max from a 0 basis gives the row no basis (`auto`); in a 1000 wide row (`fixed`) its
+percentages resolve.
+
 Other releases are unmeasured.
 
 ## Usage
