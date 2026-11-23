@@ -1,0 +1,33 @@
+{"k":"default.classes","v":"unity-base-field unity-base-field--no-label unity-object-field"}
+{"k":"default.tree","v":"VisualElement[unity-base-field__input unity-object-field__input]{ObjectFieldDisplay[unity-object-field-display unity-object-field__object]{Image[unity-image unity-object-field-display__icon],Label[unity-text-element unity-label unity-object-field-display__label]},ObjectFieldSelector[unity-object-field__selector]}"}
+{"k":"default.label","v":""}
+{"k":"default.labelClasses","v":"unity-text-element unity-label unity-base-field__label unity-object-field__label"}
+{"k":"default.objectType","v":"UnityEngine.Object"}
+{"k":"default.searchViewFlags","v":"ObjectPicker"}
+{"k":"default.searchContext","v":"null"}
+{"k":"default.value","v":"null"}
+{"k":"default.display","v":"label=None (Object)|image=null"}
+{"k":"default.focusable","v":"True|False|False|True"}
+{"k":"singleLineHeight","v":"18"}
+{"k":"labelled.label","v":"Pick"}
+{"k":"labelled.tree","v":"Label[unity-text-element unity-label unity-base-field__label unity-object-field__label],VisualElement[unity-base-field__input unity-object-field__input]{ObjectFieldDisplay[unity-object-field-display unity-object-field__object]{Image[unity-image unity-object-field-display__icon],Label[unity-text-element unity-label unity-object-field-display__label]},ObjectFieldSelector[unity-object-field__selector]}"}
+{"k":"none.Texture2D","v":"label=None (Texture 2D)|image=null"}
+{"k":"none.GameObject","v":"label=None (Game Object)|image=null"}
+{"k":"none.Transform","v":"label=None (Transform)|image=null"}
+{"k":"none.ScriptableObject","v":"label=None (Scriptable Object)|image=null"}
+{"k":"none.Material","v":"label=None (Material)|image=null"}
+{"k":"go.value","v":"GameObject:Probe Object"}
+{"k":"go.display","v":"label=Probe Object|image=d_GameObject Icon"}
+{"k":"go.asTransform.display","v":"label=Probe Object|image=d_GameObject Icon"}
+{"k":"set.go.forTransform","v":"Transform"}
+{"k":"set.go.forMissingComponent","v":"GameObject"}
+{"k":"texture.display","v":"label=Probe Texture|image=Probe Texture"}
+{"k":"null.display","v":"label=None (Object)|image=null"}
+{"k":"events","v":""}
+{"k":"flags.cleared","v":"None"}
+{"k":"uxml.created","v":"UnityEditor.Search.ObjectField"}
+{"k":"uxml.fields","v":"True|True"}
+{"k":"uxml.unset.objectType","v":"UnityEngine.Object"}
+{"k":"uxml.set.objectType","v":"UnityEngine.Texture2D"}
+{"k":"logs","v":""}
+{"k":"complete","v":true}

@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/searchobjectfield/run.py gate"
+  ],
+  "summary": "searchobjectfield: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/SearchObjectField.cs",
+    "managed/UnityEngine/Editor/ObjectField.cs",
+    "managed/UnityEngine/Editor/EditorGUIState.cs"
+  ]
+}
