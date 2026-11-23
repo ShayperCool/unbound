@@ -862,6 +862,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
     }
 
     let mut images = None;
+    let mut light_outputs = Json::Null;
     if !request.layout_only && (buffers.is_some() || request.lightmap_images) {
         // Each lightmap's renderers in the bake's order, their meshes made ready once. The
         // indirect light's rays meet every renderer of the bake, with or without a lightmap.
@@ -899,6 +900,26 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
         // The mixed lights' shadowmask channels; in the Shadowmask Lighting Mode a mixed light
         // left without one is baked instead.
         let channels = shadowmask::assign(&mut baked_lights, mixed == MixedMode::Shadowmask);
+        // What the bake did with each light, as its lighting data keeps it (Light.bakingOutput),
+        // by the lights' file IDs (tests/projects/bakedbuffers lightingData.json): mixed or
+        // baked as baked, its shadowmask channel, its place in the bake's order, and the
+        // Lighting Mode (a mixed light without shadows: Baked Indirect, seen in Shadowmask).
+        let mut outputs: Vec<(i64, Json)> = lights
+            .iter()
+            .zip(&baked_lights)
+            .zip(&channels)
+            .enumerate()
+            .map(|(index, ((data, light), channel))| {
+                let mixed = light.mode == Mode::Mixed;
+                let mode = if mixed && !light.casts_shadows { 0 } else { request.mixed_mode };
+                (data.file_id, json!({
+                    "fileId": data.file_id, "bakeType": if mixed { 1 } else { 2 }, "mixedMode": mode,
+                    "channel": channel.map_or(-1, |c| c as i32), "probeIndex": index,
+                }))
+            })
+            .collect();
+        outputs.sort_by_key(|(id, _)| *id);
+        light_outputs = Json::Array(outputs.into_iter().map(|(_, o)| o).collect());
         let baked: Vec<&Renderer> = taken.iter().map(|&i| &request.renderers[i]).collect();
         // The seams of each mesh a renderer stitches, found once per mesh in its own space.
         let mut seams_of: std::collections::HashMap<usize, Vec<EdgePair>> = Default::default();
@@ -1245,6 +1266,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
         "order": taken,
         "invalidNormals": taken.len() != request.renderers.len(),
         "images": images,
+        "lights": light_outputs,
     }))
 }
 
@@ -1326,6 +1348,32 @@ pub struct LightingDataRequest {
     lightmaps_mode: i32,
     ambient_probe: Vec<f32>,
     reflection_guid: Option<String>,
+    /// A bake with baked GI: its lightmaps' images (their GUIDs), its lightmapped renderers
+    /// and its lights (as the bake's reply gives them).
+    #[serde(default)]
+    lightmaps: Vec<String>,
+    #[serde(default)]
+    renderers: Vec<LightmappedRendererData>,
+    #[serde(default)]
+    lights: Vec<LightOutputData>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LightmappedRendererData {
+    file_id: i64,
+    lightmap_index: i32,
+    scale_offset: [f32; 4],
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LightOutputData {
+    file_id: i64,
+    bake_type: i32,
+    mixed_mode: i32,
+    channel: i32,
+    probe_index: i32,
 }
 
 pub fn lighting_data_file(request: LightingDataRequest) -> Result<Json> {
@@ -1335,17 +1383,47 @@ pub fn lighting_data_file(request: LightingDataRequest) -> Result<Json> {
         .as_slice()
         .try_into()
         .context("an ambient probe of 27 coefficients")?;
-    let bytes = lighting_data::environment(&lighting_data::Environment {
-        unity_version: request.unity_version,
-        scene_guid: lighting_data::guid_bytes(&request.scene_guid)?,
-        lightmaps_mode: request.lightmaps_mode,
-        ambient_probe,
-        reflection_guid: request
-            .reflection_guid
-            .as_deref()
-            .map(lighting_data::guid_bytes)
-            .transpose()?,
-    })?;
+    let baked = lighting_data::Baked {
+        lightmaps: request
+            .lightmaps
+            .iter()
+            .map(|g| lighting_data::guid_bytes(g))
+            .collect::<Result<_>>()?,
+        renderers: request
+            .renderers
+            .iter()
+            .map(|r| lighting_data::LightmappedRenderer {
+                file_id: r.file_id,
+                lightmap_index: r.lightmap_index,
+                scale_offset: r.scale_offset,
+            })
+            .collect(),
+        lights: request
+            .lights
+            .iter()
+            .map(|l| lighting_data::BakedLight {
+                file_id: l.file_id,
+                bake_type: l.bake_type,
+                mixed_mode: l.mixed_mode,
+                occlusion_mask_channel: l.channel,
+                probe_occlusion_light_index: l.probe_index,
+            })
+            .collect(),
+    };
+    let bytes = lighting_data::baked(
+        &lighting_data::Environment {
+            unity_version: request.unity_version,
+            scene_guid: lighting_data::guid_bytes(&request.scene_guid)?,
+            lightmaps_mode: request.lightmaps_mode,
+            ambient_probe,
+            reflection_guid: request
+                .reflection_guid
+                .as_deref()
+                .map(lighting_data::guid_bytes)
+                .transpose()?,
+        },
+        &baked,
+    )?;
     Ok(json!({ "data": base64::engine::general_purpose::STANDARD.encode(bytes) }))
 }
 

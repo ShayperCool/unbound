@@ -413,20 +413,20 @@ namespace UnityEngine
         /// <summary>Lays out the baked lightmaps of the scene made from <paramref name="file"/> (Lightmapping.Bake in Edit
         /// mode) and writes the layout; nothing when its settings have baked global illumination off or
         /// no renderer of it is lightmapped.</summary>
-        internal static void Lay(LoadedFile file, LightingSettings settings)
+        internal static BakeResult Lay(LoadedFile file, LightingSettings settings, bool images = false)
         {
             settings ??= UnityEditor.Lightmapping.lightingSettingsDefaults;
             string path = file.Path;
             string guid = string.IsNullOrEmpty(file.Guid) && Native.IsReady ? UnityEditor.AssetDatabase.AssetPathToGUID(path) : file.Guid;
             // The layout of an earlier bake is not this one's, whatever this one makes.
             if (!string.IsNullOrEmpty(guid)) Forget(path, guid);
-            if (!settings.bakedGI) return;
+            if (!settings.bakedGI) return null;
             foreach (var obj in file.Objects.Values)
                 if (obj is Terrain terrain && terrain != null && terrain.enabled && terrain.gameObject.activeInHierarchy
                     && (terrain.gameObject.m_StaticEditorFlags & ContributeGI) != 0)
                 {
                     Warn("terrain:" + path, $"{path}: '{terrain.name}' is a lightmapped Terrain, which Unbound's layout of the baked lightmaps (Lightmapping.Bake) does not support; it lays out none for the scene.");
-                    return;
+                    return null;
                 }
             var levels = LodLevels(file);
             var renderers = new List<object>();
@@ -456,12 +456,12 @@ namespace UnityEngine
                     if (string.IsNullOrEmpty(guid))
                     {
                         Warn("guid:" + path, $"{path}: a scene without a GUID; Unbound does not lay out its baked lightmaps (Lightmapping.Bake).");
-                        return;
+                        return null;
                     }
                     if (!(ParametersOf(renderer.m_LightmapParameters, settings, out var why) is Parameters parameters))
                     {
                         Warn("parameters:" + path, $"{path}: '{renderer.name}' has {why}; Unbound does not lay out its baked lightmaps (Lightmapping.Bake).");
-                        return;
+                        return null;
                     }
                     if (!meshIndex.TryGetValue(mesh, out int index))
                     {
@@ -510,7 +510,7 @@ namespace UnityEngine
                     placed.Add((renderer, fileId));
                 }
             }
-            if (renderers.Count == 0) return;
+            if (renderers.Count == 0) return null;
             foreach (var (renderer, _) in placed)
                 if (levels.ContainsKey(renderer))
                 {
@@ -522,6 +522,7 @@ namespace UnityEngine
                 || UnityEditor.PackageManager.PackageInfo.FindForPackageName("com.unity.rendering.hybrid") != null;
             var lightmaps = new List<int[]>();
             List<object> entries;
+            BakeResult result = null;
             try
             {
                 var lights = Lights(file, path);
@@ -541,6 +542,7 @@ namespace UnityEngine
                     probes,
                     layoutOnly,
                     indirect,
+                    lightmapImages = images && !layoutOnly,
                 });
                 // The request, the bake (a renderer it refuses, named) and the reading of its
                 // answer all fail the scene's layout, said.
@@ -551,14 +553,16 @@ namespace UnityEngine
                 // yet but the folder its texel buffers are written to, so without one the
                 // materials are not drawn.
                 object indirect = null;
-                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable(BuffersVariable)))
+                if (images || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(BuffersVariable)))
                     indirect = Indirect(path, settings, placed, Native.Call("baked-gi-bake", Request(true, null)));
-                entries = Read(Native.Call("baked-gi-bake", Request(false, indirect)), paths, lightmaps);
+                var answer = Native.Call("baked-gi-bake", Request(false, indirect));
+                entries = Read(answer, paths, lightmaps);
+                if (images) result = BakeResult.Of(answer, paths);
             }
             catch (Exception e)
             {
                 Warn("failed:" + path, $"{path}: Unbound's layout of its baked lightmaps (Lightmapping.Bake) failed: {e.Message}");
-                return;
+                return null;
             }
             try
             {
@@ -571,6 +575,38 @@ namespace UnityEngine
             {
                 Warn("write:" + path, $"{path}: Unbound could not write the layout of its baked lightmaps: {e.Message}");
             }
+            return result;
+        }
+    }
+
+    /// <summary>What a bake made that its lighting data keeps: each lightmap's image
+    /// (Lightmap-N_comp_light.exr), the bake's renderers in its order with their lightmap and
+    /// scale and offset, and its lights' baking outputs (by their file IDs).</summary>
+    internal sealed class BakeResult
+    {
+        internal byte[][] Images;
+        internal List<(long FileId, int Lightmap, float[] ScaleOffset)> Renderers;
+        internal List<(long FileId, int BakeType, int MixedMode, int Channel, int ProbeIndex)> Lights;
+
+        internal static BakeResult Of(string answer, IReadOnlyList<(string Path, long FileId)> sent)
+        {
+            var root = JsonDocument.Parse(answer).RootElement;
+            var result = new BakeResult { Renderers = new(), Lights = new() };
+            var images = root.GetProperty("images");
+            result.Images = new byte[images.GetArrayLength()][];
+            for (int i = 0; i < result.Images.Length; i++) result.Images[i] = Convert.FromBase64String(images[i].GetString());
+            var placements = root.GetProperty("placements");
+            foreach (var which in root.GetProperty("order").EnumerateArray())
+            {
+                var p = placements[which.GetInt32()];
+                var st = p.GetProperty("scaleOffset");
+                result.Renderers.Add((sent[which.GetInt32()].FileId, p.GetProperty("lightmap").GetInt32(),
+                    new[] { st[0].GetSingle(), st[1].GetSingle(), st[2].GetSingle(), st[3].GetSingle() }));
+            }
+            foreach (var l in root.GetProperty("lights").EnumerateArray())
+                result.Lights.Add((l.GetProperty("fileId").GetInt64(), l.GetProperty("bakeType").GetInt32(), l.GetProperty("mixedMode").GetInt32(),
+                    l.GetProperty("channel").GetInt32(), l.GetProperty("probeIndex").GetInt32()));
+            return result;
         }
     }
 }

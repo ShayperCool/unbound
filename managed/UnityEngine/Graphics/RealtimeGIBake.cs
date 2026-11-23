@@ -89,8 +89,10 @@ namespace UnityEngine
                     NoteBakeParts(file, settings, ScriptBake);
                     SceneLoaded(scene.Handle.Value, default, file, settings, first, bake: true, scriptBake: true);
                     var environment = BakeEnvironment(file);
-                    WriteLightingData(scene, file, settings, environment);
-                    BakedAtlas.Lay(file, settings);
+                    // The lightmaps are made where their lighting data is written.
+                    bool lightmaps = settings != null && settings.bakedGI && !settings.realtimeGI && !HasProbeGroups(file);
+                    var baked = BakedAtlas.Lay(file, settings, images: lightmaps);
+                    WriteLightingData(scene, file, settings, environment, lightmaps ? baked : null);
                     first = false;
                     UnityEditor.SceneManagement.EditorSceneManager.Dirty(scene);
                 }
@@ -243,15 +245,69 @@ namespace UnityEngine
         /// deleted, where any of it would not be the Editor's (a render pipeline asset's bake is
         /// not measured). <paramref name="editable"/>: whether a path is of the project's own
         /// assets (AssetDatabase's answer by default).</summary>
-        internal static string Unwritten(LightingSettings settings, string folder, bool environmentMade, bool renderPipeline, Func<string, bool> editable = null) =>
-            settings == null || settings.bakedGI || settings.realtimeGI
-                ? "Unbound writes it for a bake of the environment alone (baked and realtime global illumination off)"
+        internal static string Unwritten(LightingSettings settings, string folder, bool environmentMade, bool renderPipeline,
+            bool lightmapsMade, bool probeGroups, Func<string, bool> editable = null) =>
+            settings == null ? "a scene without Lighting Settings (the defaults') is not written yet"
+            : settings.realtimeGI ? "Unbound writes it for a bake without realtime global illumination"
+            : settings.bakedGI && probeGroups ? "the light probes of a bake with baked global illumination are not written yet"
+            : settings.bakedGI && !lightmapsMade ? "this bake did not make its lightmaps (said)"
             : folder == null ? "an untitled scene's is not measured"
             : !Compat.BakeFilesMeasured ? $"of Unity {Application.unityVersion} it is not measured (its release family)"
             : renderPipeline ? "with a render pipeline asset it is not measured"
             : !environmentMade ? "this bake did not make all of the environment lighting (said)"
             : !(editable ?? UnityEditor.AssetDatabase.Editable)(folder) ? "the scene is not in the project's own assets"
             : null;
+
+        /// <summary>Whether the scene has light probes a bake would bake (an active light probe
+        /// group with probes).</summary>
+        internal static bool HasProbeGroups(LoadedFile file)
+        {
+            foreach (var obj in file.Objects.Values)
+                if (obj is LightProbeGroup group && group != null && group.isActiveAndEnabled && group.probePositions.Length > 0) return true;
+            return false;
+        }
+
+        /// <summary>A renderer's lightmap index in the lighting data for none of its own.</summary>
+        const int NoLightmap = 0xFFFE;
+
+        /// <summary>The name of a lightmap's image, as the Editor writes it beside the scene.</summary>
+        static string LightmapImage(int index) => $"Lightmap-{index}_comp_light.exr";
+
+        /// <summary>Writes the lightmaps' images of a bake with baked global illumination beside
+        /// its scene (those an earlier bake left beyond them are deleted), imported as lightmaps;
+        /// their GUIDs, the lightmapped renderers and the lights as the lighting data keeps them
+        /// (none for a bake of the environment alone).</summary>
+        static (string[] Guids, object[] Renderers, object[] Lights) WriteLightmaps(string folder, BakeResult baked)
+        {
+            var guids = new List<string>();
+            for (int i = 0; baked != null && i < baked.Images.Length; i++)
+            {
+                string path = folder + "/" + LightmapImage(i);
+                guids.Add(UnityEditor.AssetDatabase.WriteBakedFile(path, baked.Images[i]));
+                if (UnityEditor.AssetImporter.GetAtPath(path) is UnityEditor.TextureImporter importer)
+                {
+                    importer.textureType = UnityEditor.TextureImporterType.Lightmap;
+                    importer.SaveAndReimport();
+                }
+            }
+            for (int i = guids.Count; ; i++)
+            {
+                string stale = folder + "/" + LightmapImage(i);
+                if (UnityEditor.AssetDatabase.AssetPathToGUID(stale).Length == 0) break;
+                UnityEditor.AssetDatabase.DeleteAsset(stale);
+            }
+            if (baked == null) return (Array.Empty<string>(), Array.Empty<object>(), Array.Empty<object>());
+            var renderers = new List<object>();
+            // Every renderer of the bake, one without a lightmap of its own (lit by light probes,
+            // Scale In Lightmap 0) with the index for none and its own placement
+            // (tests/projects/bakedbuffers Shapes lightingData.json).
+            foreach (var (fileId, lightmap, scaleOffset) in baked.Renderers)
+                renderers.Add(new { fileId, lightmapIndex = lightmap >= 0 && lightmap < guids.Count ? lightmap : NoLightmap, scaleOffset });
+            var lights = new List<object>();
+            foreach (var (fileId, bakeType, mixedMode, channel, probeIndex) in baked.Lights)
+                lights.Add(new { fileId, bakeType, mixedMode, channel, probeIndex });
+            return (guids.ToArray(), renderers.ToArray(), lights.ToArray());
+        }
 
         /// <summary>What <see cref="BakeEnvironment"/> made: whether the whole environment
         /// lighting was made as measured (default: not made), and the skybox's faces its default
@@ -280,13 +336,15 @@ namespace UnityEngine
         /// nothing is written or deleted (said once): the lighting data of other bakes is not
         /// written yet. The files are the Editor's but for the GUIDs of the new assets.
         /// </summary>
-        internal static void WriteLightingData(Unbound.Runtime.SceneData scene, LoadedFile file, LightingSettings settings, EnvironmentBake environment)
+        internal static void WriteLightingData(Unbound.Runtime.SceneData scene, LoadedFile file, LightingSettings settings, EnvironmentBake environment,
+            BakeResult baked = null)
         {
             scene.LightingDataWritten = false;
             string folder = string.IsNullOrEmpty(scene.Path) ? null
                 : scene.Path.Substring(0, scene.Path.Length - System.IO.Path.GetExtension(scene.Path).Length);
             // (Without the native side, as in managed tests, nothing is made or written.)
-            string unwritten = Unwritten(settings, folder, Native.IsReady && environment.Made, Rendering.GraphicsSettings.currentRenderPipeline != null);
+            string unwritten = Unwritten(settings, folder, Native.IsReady && environment.Made, Rendering.GraphicsSettings.currentRenderPipeline != null,
+                baked?.Images is { Length: > 0 }, file != null && HasProbeGroups(file));
             if (unwritten != null)
             {
                 string name = folder == null ? "an untitled scene" : scene.Path;
@@ -326,6 +384,7 @@ namespace UnityEngine
             }
             else if (UnityEditor.AssetDatabase.AssetPathToGUID(imagePath).Length > 0)
                 UnityEditor.AssetDatabase.DeleteAsset(imagePath);
+            var (lightmapGuids, renderers, lights) = WriteLightmaps(folder, baked);
             var coefficients = new float[27];
             if (probe is { } sh)
                 for (int c = 0; c < 3; c++)
@@ -337,6 +396,9 @@ namespace UnityEngine
                 lightmapsMode = (int)settings.directionalityMode,
                 ambientProbe = coefficients,
                 reflectionGuid = string.IsNullOrEmpty(imageGuid) ? null : imageGuid,
+                lightmaps = lightmapGuids,
+                renderers,
+                lights,
             }))).RootElement;
             var dataGuid = UnityEditor.AssetDatabase.WriteBakedFile(folder + "/" + LightingDataFile, Convert.FromBase64String(data.GetProperty("data").GetString()), LightingDataFileId);
             if (string.IsNullOrEmpty(dataGuid)) return;

@@ -217,21 +217,25 @@ namespace UnityEngine.Tests
             var environment = new LightingSettings { bakedGI = false, realtimeGI = false };
             // (The project's own assets: Assets/ here.)
             System.Func<string, bool> own = path => path.StartsWith("Assets/", System.StringComparison.Ordinal);
-            string Unwritten(LightingSettings settings, string folder, bool made, bool pipeline = false) => RealtimeGI.Unwritten(settings, folder, made, pipeline, own);
+            string Unwritten(LightingSettings settings, string folder, bool made, bool pipeline = false, bool lightmaps = false, bool probes = false) =>
+                RealtimeGI.Unwritten(settings, folder, made, pipeline, lightmaps, probes, own);
             try
             {
                 using (TestRelease.Pin(TestRelease.Measured))
                 {
                     // Control: an environment bake that made all of it, of a scene in Assets/.
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", made: true));
-                    // Baked or realtime GI on (or the defaults, which have it): not written.
-                    Assert.Contains("environment alone", Unwritten(null, "Assets/Scenes/Lit", true));
-                    environment.bakedGI = true;
-                    Assert.Contains("environment alone", Unwritten(environment, "Assets/Scenes/Lit", true));
-                    environment.bakedGI = false;
+                    // Realtime GI on, or no Lighting Settings: not written.
+                    Assert.Contains("without Lighting Settings", Unwritten(null, "Assets/Scenes/Lit", true));
                     environment.realtimeGI = true;
-                    Assert.Contains("environment alone", Unwritten(environment, "Assets/Scenes/Lit", true));
+                    Assert.Contains("without realtime", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.realtimeGI = false;
+                    // Baked GI: written with its lightmaps, not without them or with light probes.
+                    environment.bakedGI = true;
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    Assert.Contains("lightmaps", Unwritten(environment, "Assets/Scenes/Lit", true));
+                    Assert.Contains("light probes", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true, probes: true));
+                    environment.bakedGI = false;
                     // An environment kept in part (several scenes, gamma, Custom sources, no device),
                     // an untitled scene, a scene of a package the project does not hold: not written.
                     Assert.Contains("did not make", Unwritten(environment, "Assets/Scenes/Lit", false));
