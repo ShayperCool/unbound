@@ -32,6 +32,7 @@ while the bake's input is made is compared too (the Editor's messages while it e
 input; of Unbound's during Lightmapping.Bake, those that are not its own notes of what its bake
 does not make yet)."""
 import argparse
+import difflib
 from array import array
 import json
 import os
@@ -51,6 +52,7 @@ sys.dont_write_bytecode = True  # nothing is written into the checkout
 import editor_bake  # noqa: E402
 import editor_runner  # noqa: E402
 from probe_paths import editor_path, private_label, project_copy, reference_root, run_root  # noqa: E402
+from baked_files import lighting_data_difference, lighting_data_fields, normalized  # noqa: E402
 
 WORK = run_root(PROBE, 'bakedbuffers')
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
@@ -104,6 +106,18 @@ LIGHT_FIELDS = ('type', 'mode', 'color', 'indirectColor', 'position', 'orientati
 # A bake input's light without a shadowmask channel has the largest 32-bit number there.
 NO_CHANNEL = 2**32 - 1
 LIGHT_TOLERANCE = 2e-6
+
+
+# A lighting data's numbers against the Editor's (the ambient probe's tolerance,
+# tests/projects/bakeenvironment AMBIENT_TOLERANCE; the lightmaps' scales and offsets within it too).
+LIGHTING_DATA_TOLERANCE = 1e-3
+# The objects of a bake's lighting data without realtime GI: LightProbes and LightingDataAsset.
+LIGHTING_DATA_CLASSES = {258, 1120}
+
+
+def cli():
+    """The Unbound CLI the runner uses (its engine runs, and dumping a bake's lighting data)."""
+    return os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
 
 
 def scenes():
@@ -382,6 +396,18 @@ def native(label):
             made = out/'raw'/scene/f'Lightmap-{index}_comp_light.exr'
             if made.is_file():
                 shutil.copy2(made, target/f'lightmap{index}.exr')
+        # The lighting data the whole bake wrote beside the scene, as its fields (its bytes change
+        # from bake to bake: tests/baked_files.py), and the .meta files of what it wrote. Not
+        # kept: the lighting data of a bake with realtime GI, which holds the realtime GI's own
+        # objects (named and filled anew by every bake).
+        written = out/'raw'/scene/'written'
+        fields = lighting_data_fields(written/'LightingData.asset', written, cli()) \
+            if (written/'LightingData.asset').is_file() else None
+        if fields is not None and {o['classId'] for o in fields} <= LIGHTING_DATA_CLASSES:
+            (target/'lightingData.json').write_text(json.dumps(fields, indent=1, sort_keys=True) + '\n')
+            (target/'written').mkdir()
+            for meta in sorted(written.glob('*.meta')):
+                (target/'written'/meta.name).write_bytes(normalized(meta.name, meta.read_bytes(), written))
         # A whole bake that failed (wholeBake.txt: False, or no answer) makes the capture not one
         # to publish.
         whole = out/'raw'/scene/'wholeBake.txt'
@@ -405,6 +431,8 @@ def repeats(name, first, other):
     by its coefficients the same way."""
     if first == other:
         return True
+    if first and other and Path(name).name == 'lightingData.json':
+        return lighting_data_difference(json.loads(first), json.loads(other), INDIRECT_REPEAT_TOLERANCE) is None
     if first and other and name.endswith('.exr'):
         a, b = read_exr(first), read_exr(other)
         if a[:2] != b[:2] or a[2].keys() != b[2].keys():
@@ -573,10 +601,10 @@ def engine(label):
         sys.exit(f'refusing to overwrite {out}')
     project = project_copy(PROBE, out/'project')
     (out/'raw').mkdir()
-    cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
+    cli_path = cli()
     env = dict(os.environ, BAKED_BUFFERS_OUT=str(out/'raw'), BAKED_BUFFERS_AUTO='1', UNBOUND_BAKED_GI_BUFFERS=str(out/'buffers'))
     # With a graphics device: the bake draws its renderers' material images.
-    command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '1200', cli, 'test', '-p', str(project),
+    command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '1200', cli_path, 'test', '-p', str(project),
                '--platform', 'EditMode', '--graphics']
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
@@ -926,6 +954,20 @@ def compare(label):
         record(scene + '.materials', material_difference(a['materials'], e['materials']))
         record(scene + '.sky', sky_difference(a['sky'], e['sky']))
         record(scene + '.probes', probes_difference(a['probes'], e['probes']))
+        # The lighting data the bake wrote beside the scene (its fields), and the .meta files of
+        # what it wrote, where the reference keeps them.
+        reference_scene, mine = reference_root(PROBE)/scene, WORK/label/'project/Assets/Scenes'/scene
+        if (reference_scene/'lightingData.json').is_file():
+            want_fields = json.loads((reference_scene/'lightingData.json').read_text())
+            record(scene + '.lightingData', 'not written' if not (mine/'LightingData.asset').is_file() else lighting_data_difference(
+                lighting_data_fields(mine/'LightingData.asset', mine, cli()), want_fields, LIGHTING_DATA_TOLERANCE))
+        for meta in sorted((reference_scene/'written').glob('*.meta')) if (reference_scene/'written').is_dir() else []:
+            got_meta = mine.with_suffix('.meta') if meta.name == 'folder.meta' else mine/meta.name
+            record(scene + '.written/' + meta.name, 'not written' if not got_meta.is_file()
+                   else None if normalized(meta.name, got_meta.read_bytes(), mine) == meta.read_bytes()
+                   else 'differs: ' + ' | '.join(l for l in difflib.unified_diff(
+                       meta.read_text().splitlines(), normalized(meta.name, got_meta.read_bytes(), mine).decode().splitlines(), lineterm='', n=0)
+                       if l[:1] in '+-' and l[:3] not in ('+++', '---'))[:300])
     print(f'lightmaps: {stitched[0]} texels the Editor stitched along seams')
     keys = {key for key, _ in records}
     for key in sorted(set(known) - keys):

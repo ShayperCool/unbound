@@ -158,16 +158,26 @@ public static class BuffersRecord
         var baked = Call(baker, "Bake", null, input, requests, probes, device);
         // The lightmaps the Editor's whole bake (Lightmapping.Bake) makes of the scene's buffers,
         // as it writes them beside the scene (none where the bake keeps no light). Its
-        // lightmapper's process now and then fails (the bake answers false): the bake is run
-        // again, up to three times; its last answer goes to wholeBake.txt.
+        // lightmapper's process now and then fails (the bake answers false, or true without its
+        // files): the bake is run again, up to three times; its last answer goes to wholeBake.txt.
         var written = Path.Combine("Assets/Scenes", scene);
         bool whole = false;
+        // (Under load the bake now and then answers true without having written its files:
+        // run again as for a false answer; every scene here writes some.)
         for (int attempt = 0; attempt < 3 && !whole; attempt++)
-            whole = Lightmapping.Bake();
+            whole = Lightmapping.Bake() && Directory.Exists(written);
         File.WriteAllText(Path.Combine(folder, "wholeBake.txt"), whole ? "True" : "False");
         if (Directory.Exists(written))
+        {
             foreach (var lightmap in Directory.GetFiles(written, "Lightmap-*_comp_light.exr"))
                 File.Copy(lightmap, Path.Combine(folder, Path.GetFileName(lightmap)), true);
+            // Every file the bake wrote there, and the folder's .meta, as written.
+            var kept = Path.Combine(folder, "written");
+            Directory.CreateDirectory(kept);
+            if (File.Exists(written + ".meta")) File.Copy(written + ".meta", Path.Combine(kept, "folder.meta"), true);
+            foreach (var file in Directory.GetFiles(written))
+                File.Copy(file, Path.Combine(kept, Path.GetFileName(file)), true);
+        }
         return "bake " + baked;
     }
 }

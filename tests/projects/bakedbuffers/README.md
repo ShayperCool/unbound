@@ -229,6 +229,15 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
   light the same way, as many rings as the Lighting Settings' padding (alpha 1; the texels
   further out have alpha 0); and the seams of a renderer's UVs are stitched (the texels along
   them and beside them change; every renderer here has Stitch Seams on).
+- `lightingData.json`, the lighting data the whole bake writes beside the scene
+  (`LightingData.asset`) as its fields (`unbound dump`), normalized as `tests/baked_files.py`
+  says (the GUIDs of the assets the bake made, new with every bake): its bytes change from bake
+  to bake (the Editor lists its renderers in another order each time, and the light probes'
+  coefficients differ in their last digits), so two captures are compared by field, the
+  renderers by renderer, numbers within the indirect light's repeat tolerance. Not kept for a
+  bake with realtime GI, whose lighting data holds the realtime GI's own objects (named and
+  filled anew by every bake). `written/`: the `.meta` files of what the bake wrote there and
+  the folder's (`folder.meta`), normalized likewise.
 - `probes.json`, the bake's light probes: their number, their points as the bake has them and
   the samples it gives them (null without probes); `radianceDirect0.shl2` and
   `radianceIndirect0.shl2`, per probe the nine coefficients of the direct light and of the
@@ -282,7 +291,9 @@ the primitives' UVs, inside charts too, as at the sphere's poles): compared alik
 edge (another chart, an unused texel or the image's edge). The rules are
 the reference's own: a texel whose rays met back faces at most a tenth of the time keeps its
 light (1740 such texels here, all but 37 of them, those by seams, as the rules make them), and
-the scene without seams (`Charts`) has no texel the rules do not make. A bake that keeps no
+the scene without seams (`Charts`) has no texel the rules do not make. Unbound's lighting data (written where its bake writes one) is compared with
+`lightingData.json` field by field (the renderers by renderer, numbers within 1e-3 times the
+value above 1, the ambient probe's tolerance), and its `.meta` files with `written/` exactly. A bake that keeps no
 light (`SkyRealtime`: no lights, the sky's light in the realtime lightmaps) writes no lightmap
 (Unbound's buffers have one of zeros; not compared). A lightmap made of buffers with a named
 residual differs where they do (the same residuals).
