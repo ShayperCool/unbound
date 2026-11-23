@@ -315,6 +315,42 @@ namespace UnityEngine.Tests
             Assert.Equal((208f, 125f, 83f), (again[0].LayoutHeight, again[1].LayoutHeight, again[2].LayoutHeight));
         }
 
+        // In a 984x415 column centring its items, a row growing from a 0 basis of an item growing and
+        // shrinking around content `content` wide and a fixed 24 wide one (plus the row's padding).
+        static (YogaNode row, YogaNode a) CenteredRow(YogaConfig config, float content, float padding = 0)
+        {
+            var column = new YogaNode(config) { Width = YogaValue.Point(984), Height = YogaValue.Point(415), AlignItems = YogaAlign.Center };
+            var row = new YogaNode(config) { FlexDirection = YogaFlexDirection.Row, FlexGrow = 1, FlexShrink = 1, FlexBasis = YogaValue.Point(0) };
+            row.SetPadding(YogaEdge.Left, YogaValue.Point(padding));
+            row.SetPadding(YogaEdge.Right, YogaValue.Point(padding));
+            var a = new YogaNode(config) { FlexGrow = 1, FlexShrink = 1 };
+            a.Insert(0, new YogaNode(config) { Width = YogaValue.Point(content), Height = YogaValue.Point(50), FlexShrink = 0 });
+            row.Insert(0, a);
+            row.Insert(1, new YogaNode(config) { Width = YogaValue.Point(24), FlexShrink = 0 });
+            column.Insert(0, row);
+            column.CalculateLayout();
+            return (row, a);
+        }
+
+        /// <summary>Measured in the Editor (tests/projects/uitkpercent centeredRow): a container without
+        /// an exact main size is as long as its items' bases, while they grow or shrink to the space
+        /// it was given.</summary>
+        [Fact]
+        public void ContainersAreAsLongAsTheirItemsBases()
+        {
+            var (row, a) = CenteredRow(YogaConfig.UIToolkit(), 982.8f);
+            Assert.Equal((-11f, 1006f, 960f), (row.LayoutX, row.LayoutWidth, a.LayoutWidth));
+            (row, a) = CenteredRow(YogaConfig.UIToolkit(), 300);
+            Assert.Equal((330f, 324f, 960f), (row.LayoutX, row.LayoutWidth, a.LayoutWidth));
+            (row, a) = CenteredRow(YogaConfig.UIToolkit(), 982.8f, 8);
+            Assert.Equal((-19f, 1022f, 944f), (row.LayoutX, row.LayoutWidth, a.LayoutWidth));
+            // Control: as long as its items after they grow or shrink.
+            var config = YogaConfig.UIToolkit();
+            config.MeasuresLinesByTheirBases = false;
+            (row, a) = CenteredRow(config, 982.8f);
+            Assert.Equal((0f, 984f, 960f), (row.LayoutX, row.LayoutWidth, a.LayoutWidth));
+        }
+
         // A 25x20 box (column, or row) holding a middle node over a 50x50 leaf; neither shrinks.
         static YogaNode BoxedMiddle(YogaConfig config, YogaOverflow boxOverflow, YogaOverflow middleOverflow, YogaFlexDirection boxDirection = YogaFlexDirection.Column)
         {

@@ -176,6 +176,13 @@ namespace Unbound.UIElements.Layout
         /// grow) or the line's own size (Unity 6000.0.71f1 Editor, tests/projects/uitkpercent).</summary>
         public bool ResolvesFlexibleLengthsAsUIToolkit { get; set; }
 
+        /// <summary>A container without an exact main size is as long as its longest line's items
+        /// before they grow or shrink (their bases within their min and max, with their margins as the
+        /// line consumes them), not as its items after: a growing row in a centring column, laid out
+        /// against the column's width, keeps the width of its items' bases (Unity 6000.0.71f1 Editor,
+        /// tests/projects/uitkpercent centeredRow).</summary>
+        public bool MeasuresLinesByTheirBases { get; set; }
+
         /// <summary>The configuration of UI Toolkit's layout engine: standard flexbox layout with the
         /// differences each flag above names. Percentage margins, paddings and offsets and the minimum
         /// over a smaller maximum follow UI Toolkit (and CSS) in every configuration, not by flag.</summary>
@@ -189,6 +196,7 @@ namespace Unbound.UIElements.Layout
             RecomputesFlexBasis = true,
             LaysOutAgainForPercentages = true,
             ResolvesFlexibleLengthsAsUIToolkit = true,
+            MeasuresLinesByTheirBases = true,
         };
 
         /// <summary>To the nearest pixel, halves up (measured: a -3pt margin at 1.25
@@ -2870,7 +2878,9 @@ namespace Unbound.UIElements.Layout
                 }
 
                 totalLineCrossDim += collectedFlexItemsValues.CrossDim;
-                maxLineMainDim = FloatMax(maxLineMainDim, (float)collectedFlexItemsValues.MainDim);
+                maxLineMainDim = FloatMax(maxLineMainDim, config.MeasuresLinesByTheirBases
+                    ? collectedFlexItemsValues.SizeConsumedOnCurrentLine + paddingAndBorderAxisMain
+                    : (float)collectedFlexItemsValues.MainDim);
             }
 
             // STEP 8: MULTI-LINE CONTENT ALIGNMENT
