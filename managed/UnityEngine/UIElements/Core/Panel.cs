@@ -95,7 +95,7 @@ namespace UnityEngine.UIElements
 
         float m_Scale = 1f;
         float m_PixelsPerPoint = 1f;
-        internal readonly YogaConfig uaLayoutConfig = new YogaConfig { RoundEdgesToPixelGrid = true, PercentFlexBasisNeedsExactContainer = true, ScrollKeepsMainAxisContent = true, RoundPositionsFromAbsolute = true, MeasuredNodesRoundAsOthers = true };
+        internal readonly YogaConfig uaLayoutConfig = YogaConfig.UIToolkit();
         internal readonly UaElementUnderPointer uaUnderPointer = new UaElementUnderPointer();
         readonly StyleResolver m_StyleResolver = new StyleResolver();
         internal uint uaVersion;

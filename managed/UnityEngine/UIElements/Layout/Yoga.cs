@@ -151,6 +151,26 @@ namespace Unbound.UIElements.Layout
         /// not floored to 110.4).</summary>
         public bool MeasuredNodesRoundAsOthers { get; set; }
 
+        /// <summary>A flex basis resolved from the item's own flex-basis value is computed again each
+        /// time the item is measured or laid out instead of being kept from an earlier computation, as
+        /// UI Toolkit's layout engine does (Unity 6000.0.71f1 Editor, tests/projects/uitkpercent: a
+        /// 40% basis follows its container's new height and a display: none ancestor shown again; a 50%
+        /// basis inside an element that grows takes the grown height, not the size its content was
+        /// measured at earlier in the same pass).</summary>
+        public bool RecomputesFlexBasis { get; set; }
+
+        /// <summary>The configuration of UI Toolkit's layout engine: standard flexbox layout with the
+        /// differences each flag above names.</summary>
+        internal static YogaConfig UIToolkit() => new YogaConfig
+        {
+            RoundEdgesToPixelGrid = true,
+            PercentFlexBasisNeedsExactContainer = true,
+            ScrollKeepsMainAxisContent = true,
+            RoundPositionsFromAbsolute = true,
+            MeasuredNodesRoundAsOthers = true,
+            RecomputesFlexBasis = true,
+        };
+
         /// <summary>To the nearest pixel, halves up (measured: a -3pt margin at 1.25
         /// pixels per point, -3.75 pixels, lays out as -4 pixels).</summary>
         internal float RoundEdge(float value) =>
@@ -1352,8 +1372,8 @@ namespace Unbound.UIElements.Layout
 
             if (!resolvedFlexBasis.IsUndefined && !IsUndefined(mainAxisSize))
             {
-                // The web flex-basis experiment is off, so a computed flex basis is reused.
-                if (child.layout.ComputedFlexBasis.IsUndefined)
+                // Plain Yoga keeps a computed flex basis (its web flex-basis experiment is off).
+                if (child.layout.ComputedFlexBasis.IsUndefined || child.config.RecomputesFlexBasis)
                 {
                     var paddingAndBorder = new YogaFloatOptional(PaddingAndBorderForAxis(child, mainAxis, ownerWidth));
                     child.layout.ComputedFlexBasis = FloatOptionalMax(resolvedFlexBasis, paddingAndBorder);

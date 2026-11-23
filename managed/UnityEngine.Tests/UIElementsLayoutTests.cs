@@ -32,6 +32,66 @@ namespace UnityEngine.Tests
             Assert.Equal(24f, input.LayoutWidth);
         }
 
+        // A column container of the given height holding a 20-wide child with a 40% flex basis that
+        // neither grows nor shrinks.
+        static (YogaNode container, YogaNode child) PercentBasisColumn(YogaConfig config, float height)
+        {
+            var container = new YogaNode(config) { Width = YogaValue.Point(100), Height = YogaValue.Point(height) };
+            var child = new YogaNode(config) { Width = YogaValue.Point(20), FlexBasis = YogaValue.Percent(40), FlexShrink = 0 };
+            container.Insert(0, child);
+            container.CalculateLayout();
+            return (container, child);
+        }
+
+        /// <summary>Measured in the Editor (tests/projects/uitkpercent): a percentage flex basis is
+        /// resolved again each time, after its container's height changes, after a display: none
+        /// container is shown again, and inside an element that grows (not at the size its content was
+        /// measured at earlier in the pass); plain Yoga keeps the earlier basis.</summary>
+        [Fact]
+        public void APercentFlexBasisIsResolvedEachTime()
+        {
+            var (container, child) = PercentBasisColumn(YogaConfig.UIToolkit(), 400);
+            Assert.Equal(160f, child.LayoutHeight);
+            container.Height = YogaValue.Point(200);
+            container.CalculateLayout();
+            Assert.Equal(80f, child.LayoutHeight);
+            Assert.Equal(80f, child.ComputedFlexBasis);
+
+            // Hidden at its first layout (its child's basis is zeroed), then shown.
+            var config = YogaConfig.UIToolkit();
+            var root = new YogaNode(config) { Width = YogaValue.Point(100), Height = YogaValue.Point(400) };
+            var hidden = new YogaNode(config) { Height = YogaValue.Point(400), FlexShrink = 0, Display = YogaDisplay.None };
+            var deep = new YogaNode(config) { Width = YogaValue.Point(20), FlexBasis = YogaValue.Percent(30), FlexShrink = 0 };
+            hidden.Insert(0, deep);
+            root.Insert(0, hidden);
+            root.CalculateLayout();
+            Assert.Equal(0f, deep.LayoutHeight);
+            Assert.Equal(0f, deep.ComputedFlexBasis);
+            hidden.Display = YogaDisplay.Flex;
+            root.CalculateLayout();
+            Assert.Equal(120f, deep.LayoutHeight);
+
+            // Owner resized by a sibling: the owner itself is not changed.
+            var outer = new YogaNode(config) { Width = YogaValue.Point(50), Height = YogaValue.Point(400) };
+            var fixedSibling = new YogaNode(config) { Height = YogaValue.Point(100), FlexShrink = 0 };
+            var grow = new YogaNode(config) { FlexGrow = 1, FlexShrink = 0 };
+            var percent = new YogaNode(config) { Width = YogaValue.Point(20), FlexBasis = YogaValue.Percent(50), FlexShrink = 0 };
+            grow.Insert(0, percent);
+            outer.Insert(0, fixedSibling);
+            outer.Insert(1, grow);
+            outer.CalculateLayout();
+            Assert.Equal(150f, percent.LayoutHeight);
+            fixedSibling.Height = YogaValue.Point(200);
+            outer.CalculateLayout();
+            Assert.Equal(100f, percent.LayoutHeight);
+
+            // Control: without the flag, the basis of the first pass stays.
+            var (plainContainer, plainChild) = PercentBasisColumn(new YogaConfig(), 400);
+            plainContainer.Height = YogaValue.Point(200);
+            plainContainer.CalculateLayout();
+            Assert.Equal(160f, plainChild.LayoutHeight);
+        }
+
         // A 25x20 box (column, or row) holding a middle node over a 50x50 leaf; neither shrinks.
         static YogaNode BoxedMiddle(YogaConfig config, YogaOverflow boxOverflow, YogaOverflow middleOverflow, YogaFlexDirection boxDirection = YogaFlexDirection.Column)
         {
