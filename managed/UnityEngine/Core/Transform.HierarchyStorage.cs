@@ -10,6 +10,7 @@ namespace UnityEngine
         int m_HierarchyCapacity = 1;
         int m_LegacyHierarchyCapacity = 1;
         bool m_AllocatedHierarchy;
+        bool m_HierarchyStorageReleased;
         int m_ReservedChildSlots;
 
         static bool IsLiveTransform(Transform transform) =>
@@ -21,7 +22,7 @@ namespace UnityEngine
             get
             {
                 if (!Compat.TransformHierarchyStorageMeasured || !IsLiveTransform(this)) return null;
-                var owner = root;
+                var owner = m_HierarchyStorageReleased ? this : root;
                 return IsLiveTransform(owner) ? owner : null;
             }
         }
@@ -39,8 +40,12 @@ namespace UnityEngine
                     m_LegacyHierarchyCapacity = value;
                     return;
                 }
+                if (owner.m_HierarchyStorageReleased)
+                {
+                    Stubs.Ignored("Transform.hierarchyCapacity", "cannot resize a released hierarchy");
+                    return;
+                }
                 int count = owner.m_SubtreeCount;
-                if (count == 0) return; // The branch's hierarchy was released during destruction.
                 if (value < count)
                 {
                     Log.Engine(LogType.Warning,
@@ -48,14 +53,22 @@ namespace UnityEngine
                         this, respectStackTraceSetting: true);
                     // The log callback can change the tree. Keep the original owner and use
                     // its current size so the reservation still holds every transform.
-                    if (!ReferenceEquals(owner, HierarchyStorageOwner)) return;
+                    if (owner.m_HierarchyStorageReleased || !ReferenceEquals(owner, HierarchyStorageOwner)) return;
                     value = Math.Max(value, owner.m_SubtreeCount);
                 }
                 if (value != owner.m_HierarchyCapacity) owner.ResizeHierarchy(value);
             }
         }
 
-        public int hierarchyCount => HierarchyStorageOwner?.m_SubtreeCount ?? CountSubtree();
+        public int hierarchyCount
+        {
+            get
+            {
+                var owner = HierarchyStorageOwner;
+                if (owner == null) return CountSubtree();
+                return owner.m_HierarchyStorageReleased ? 0 : owner.m_SubtreeCount;
+            }
+        }
 
         int CountSubtree()
         {
@@ -97,23 +110,22 @@ namespace UnityEngine
             m_AllocatedHierarchy = true;
         }
 
+        internal void ReleaseHierarchyStorage()
+        {
+            m_HierarchyStorageReleased = true;
+            m_HierarchyCapacity = 0;
+            m_AllocatedHierarchy = false;
+        }
+
         internal void RecordHierarchyParentChange(Transform oldParent, Transform parent, bool destroying = false)
         {
-            if (!Compat.TransformHierarchyStorageMeasured || ReferenceEquals(oldParent, parent)) return;
+            if (!Compat.TransformHierarchyStorageMeasured || m_HierarchyStorageReleased || ReferenceEquals(oldParent, parent)) return;
             for (var ancestor = oldParent; ancestor != null; ancestor = ancestor.m_Parent)
                 ancestor.m_SubtreeCount -= m_SubtreeCount;
 
             if (parent == null)
             {
-                if (destroying)
-                {
-                    // The surviving parent can still observe these transforms during its
-                    // children-changed message, after their shared storage has been released.
-                    m_SubtreeCount = 0;
-                    m_HierarchyCapacity = 0;
-                    m_AllocatedHierarchy = false;
-                }
-                else ResizeHierarchy(m_SubtreeCount);
+                if (!destroying) ResizeHierarchy(m_SubtreeCount);
                 return;
             }
 
@@ -125,7 +137,7 @@ namespace UnityEngine
                 ancestor.m_SubtreeCount += m_SubtreeCount;
                 owner = ancestor;
             }
-            if (owner.m_SubtreeCount > owner.m_HierarchyCapacity)
+            if (!owner.m_HierarchyStorageReleased && owner.m_SubtreeCount > owner.m_HierarchyCapacity)
                 owner.ResizeHierarchy(2 * owner.m_SubtreeCount);
         }
 
@@ -136,6 +148,7 @@ namespace UnityEngine
             m_SubtreeCount = previous.m_SubtreeCount;
             m_ReservedChildSlots = previous.m_ReservedChildSlots;
             m_AllocatedHierarchy = false;
+            m_HierarchyStorageReleased = previous.m_HierarchyStorageReleased;
         }
     }
 }

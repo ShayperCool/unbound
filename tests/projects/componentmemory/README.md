@@ -114,8 +114,9 @@ The before-parent and after-parent callbacks read the old and new hierarchy owne
 During `OnDestroy` the branch still sees its original owner's capacity and count. When the
 surviving parent receives `OnTransformChildrenChanged`, the removed branch reports zero for both
 and still accounts for its own direct child slots. Its wrappers are destroyed when the operation
-finishes. This profile records reads during those callbacks in Unity 6000.0.71f1. Capacity writes
-after release are unmeasured.
+finishes. This profile records reads during those callbacks in Unity 6000.0.71f1. Further relinks
+leave the removed wrappers' storage released in Unbound. Capacity writes during this window
+report that the hierarchy has been released. Unity's behavior for those mutations is unmeasured.
 [MonoBehaviour.OnTransformChildrenChanged](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnTransformChildrenChanged.html)
 
 The measurement also records the below-count warning text, its delivery and stack presence

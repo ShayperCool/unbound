@@ -604,6 +604,10 @@ namespace Unbound.Runtime
                 parent.m_Children.Remove(root.m_Transform);
                 root.m_Transform.m_Parent = null;
                 root.m_Transform.RecordHierarchyParentChange(parent, null, destroying: true);
+                // The notification can still see and move the removed wrappers. Each one has
+                // already lost its packed hierarchy, independently of the links it retains.
+                if (Compat.TransformHierarchyStorageMeasured)
+                    foreach (var go in all) go.m_Transform.ReleaseHierarchyStorage();
                 parent.OnHierarchyChanged();
                 Messaging.SendFast(parent.m_GameObject, "OnTransformChildrenChanged");
             }

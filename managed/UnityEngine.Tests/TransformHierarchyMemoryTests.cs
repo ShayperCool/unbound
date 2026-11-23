@@ -9,6 +9,80 @@ namespace UnityEngine.Tests
 {
     public sealed class TransformHierarchyMemoryTests
     {
+        sealed class ChildRemovalObserver : MonoBehaviour
+        {
+            internal Action OnChange;
+            void OnTransformChildrenChanged() => OnChange?.Invoke();
+        }
+
+        static void RemoveBranch(Action<Transform, Transform> observe)
+        {
+            var parent = new GameObject("Surviving parent");
+            var removed = new GameObject("Removing branch").transform;
+            var leaf = new GameObject("Removing leaf").transform;
+            removed.SetParent(parent.transform, false);
+            leaf.SetParent(removed, false);
+            var observer = parent.AddComponent<ChildRemovalObserver>();
+            observer.OnChange = () => observe(removed, leaf);
+            try
+            {
+                Object.DestroyImmediate(removed.gameObject);
+                Assert.Equal(1, parent.transform.hierarchyCount);
+            }
+            finally
+            {
+                observer.OnChange = null;
+                Object.DestroyImmediate(parent);
+            }
+        }
+
+        [Fact]
+        public void RelinkingDuringRemovalDoesNotRestoreReleasedStorage()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var joining = new GameObject("Temporary child").transform;
+            (int Capacity, int Count) removedAfterDetach = (-1, -1);
+            (int Capacity, int Count) detached = (-1, -1);
+            (int Capacity, int Count) removedAfterAttach = (-1, -1);
+            try
+            {
+                RemoveBranch((removed, leaf) =>
+                {
+                    leaf.SetParent(null, false);
+                    removedAfterDetach = (removed.hierarchyCapacity, removed.hierarchyCount);
+                    detached = (leaf.hierarchyCapacity, leaf.hierarchyCount);
+                    leaf.SetParent(removed, false);
+
+                    joining.SetParent(removed, false);
+                    removedAfterAttach = (removed.hierarchyCapacity, removed.hierarchyCount);
+                    joining.SetParent(null, false);
+                });
+                Assert.Equal((0, 0), removedAfterDetach);
+                Assert.Equal((0, 0), detached);
+                Assert.Equal((0, 0), removedAfterAttach);
+            }
+            finally
+            {
+                if (joining != null) Object.DestroyImmediate(joining.gameObject);
+            }
+        }
+
+        [Fact]
+        public void ResizingDuringRemovalReportsTheReleasedHierarchy()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            using var logs = new RecordedLogs();
+            int capacity = -1;
+            RemoveBranch((removed, _) =>
+            {
+                removed.hierarchyCapacity = 8;
+                capacity = removed.hierarchyCapacity;
+            });
+            Assert.Equal(0, capacity);
+            Assert.Contains(logs.Logged, message => message.StartsWith(
+                "Warning: Unbound: Transform.hierarchyCapacity cannot resize a released hierarchy", StringComparison.Ordinal));
+        }
+
         [Fact]
         public void LoadedPrefabKeepsIndependentCapacityInTheMeasuredFamily()
         {
