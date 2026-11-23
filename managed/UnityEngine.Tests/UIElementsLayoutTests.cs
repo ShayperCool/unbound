@@ -124,6 +124,36 @@ namespace UnityEngine.Tests
             Assert.Equal(140f, percent.LayoutHeight);
         }
 
+        /// <summary>Measured in the Editor (tests/projects/uitkpercent measuredMargin): a node laid out by
+        /// a measure function (a text element) takes its percentage margins and paddings from the
+        /// owner's width like any other node: in a 1000 wide row it is as large as a plain node.</summary>
+        [Fact]
+        public void AMeasuredNodesPercentMarginsTakeTheOwnersWidth()
+        {
+            var config = YogaConfig.UIToolkit();
+            var row = new YogaNode(config) { Width = YogaValue.Point(1000), Height = YogaValue.Point(200), FlexDirection = YogaFlexDirection.Row, AlignItems = YogaAlign.Center };
+            row.SetPadding(YogaEdge.Bottom, YogaValue.Point(50));
+            YogaNode Item(bool measured)
+            {
+                var node = new YogaNode(config) { FlexBasis = YogaValue.Percent(25), FlexShrink = 0, Height = YogaValue.Percent(100) };
+                node.SetMargin(YogaEdge.Top, YogaValue.Percent(2));
+                node.SetMargin(YogaEdge.Left, YogaValue.Percent(0.5f));
+                node.SetMargin(YogaEdge.Right, YogaValue.Percent(0.5f));
+                node.SetMargin(YogaEdge.Bottom, YogaValue.Percent(0.5f));
+                node.SetPadding(YogaEdge.Bottom, YogaValue.Percent(2));
+                node.SetPadding(YogaEdge.Top, YogaValue.Point(10));
+                if (measured) node.MeasureFunction = (n, w, wm, h, hm) => new YogaSize { Width = 20, Height = 15 };
+                return node;
+            }
+            var label = Item(true);
+            var plain = Item(false);
+            row.Insert(0, label);
+            row.Insert(1, plain);
+            row.CalculateLayout();
+            Assert.Equal((5f, 8f, 250f, 150f), (label.LayoutX, label.LayoutY, label.LayoutWidth, label.LayoutHeight));
+            Assert.Equal((265f, 8f, 250f, 150f), (plain.LayoutX, plain.LayoutY, plain.LayoutWidth, plain.LayoutHeight));
+        }
+
         /// <summary>Measured in the Editor (tests/projects/uitkpercent minOverMax): a minimum size wins
         /// over a smaller maximum (150x300 with max 50x100 and min 80x200 is 80x200), also for an
         /// absolutely placed element sized in percentages; a size between them stays.</summary>

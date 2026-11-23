@@ -1650,13 +1650,16 @@ namespace Unbound.UIElements.Layout
             }
         }
 
+        // Percentage margins and paddings take the owner's width, as for other nodes (plain Yoga took the
+        // node's own available width here; UI Toolkit does not: Unity 6000.0.71f1 Editor,
+        // tests/projects/uitkpercent measuredMargin).
         static void WithMeasureFuncSetMeasuredDimensions(YogaNode node, float availableWidth, float availableHeight,
             YogaMeasureMode widthMeasureMode, YogaMeasureMode heightMeasureMode, float ownerWidth, float ownerHeight)
         {
-            float paddingAndBorderAxisRow = PaddingAndBorderForAxis(node, YogaFlexDirection.Row, availableWidth);
-            float paddingAndBorderAxisColumn = PaddingAndBorderForAxis(node, YogaFlexDirection.Column, availableWidth);
-            float marginAxisRow = Unwrap(node.GetMarginForAxis(YogaFlexDirection.Row, availableWidth));
-            float marginAxisColumn = Unwrap(node.GetMarginForAxis(YogaFlexDirection.Column, availableWidth));
+            float paddingAndBorderAxisRow = PaddingAndBorderForAxis(node, YogaFlexDirection.Row, ownerWidth);
+            float paddingAndBorderAxisColumn = PaddingAndBorderForAxis(node, YogaFlexDirection.Column, ownerWidth);
+            float marginAxisRow = Unwrap(node.GetMarginForAxis(YogaFlexDirection.Row, ownerWidth));
+            float marginAxisColumn = Unwrap(node.GetMarginForAxis(YogaFlexDirection.Column, ownerWidth));
 
             // The measure function never gets a negative size.
             float innerWidth = IsUndefined(availableWidth)
