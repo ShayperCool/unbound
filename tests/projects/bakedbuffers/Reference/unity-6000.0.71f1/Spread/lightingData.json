@@ -1,0 +1,558 @@
+[
+ {
+  "classId": 258,
+  "fields": {
+   "m_BakedCoefficients": [],
+   "m_BakedLightOcclusion": [],
+   "m_CorrespondingSourceObject": {
+    "fileID": "0"
+   },
+   "m_Data": {
+    "m_NonTetrahedralizedProbeSetIndexMap": [],
+    "m_Positions": [],
+    "m_ProbeSets": [],
+    "m_Tetrahedralization": {
+     "m_HullRays": [],
+     "m_Tetrahedra": []
+    }
+   },
+   "m_HasBeenEdited": "false",
+   "m_Name": "(Clone)",
+   "m_ObjectHideFlags": "9",
+   "m_PrefabAsset": {
+    "fileID": "0"
+   },
+   "m_PrefabInstance": {
+    "fileID": "0"
+   }
+  },
+  "fileId": 25800002,
+  "type": "LightProbes"
+ },
+ {
+  "classId": 1120,
+  "fields": {
+   "m_AOTextures": [],
+   "m_BakedAmbientProbeInLinear": {
+    "sh[ 0]": "0.0",
+    "sh[ 1]": "0.0",
+    "sh[ 2]": "0.0",
+    "sh[ 3]": "0.0",
+    "sh[ 4]": "0.0",
+    "sh[ 5]": "0.0",
+    "sh[ 6]": "0.0",
+    "sh[ 7]": "0.0",
+    "sh[ 8]": "0.0",
+    "sh[ 9]": "0.0",
+    "sh[10]": "0.0",
+    "sh[11]": "0.0",
+    "sh[12]": "0.0",
+    "sh[13]": "0.0",
+    "sh[14]": "0.0",
+    "sh[15]": "0.0",
+    "sh[16]": "0.0",
+    "sh[17]": "0.0",
+    "sh[18]": "0.0",
+    "sh[19]": "0.0",
+    "sh[20]": "0.0",
+    "sh[21]": "0.0",
+    "sh[22]": "0.0",
+    "sh[23]": "0.0",
+    "sh[24]": "0.0",
+    "sh[25]": "0.0",
+    "sh[26]": "0.0"
+   },
+   "m_BakedReflectionProbeCubemaps": [],
+   "m_BakedReflectionProbes": [],
+   "m_CorrespondingSourceObject": {
+    "fileID": "0"
+   },
+   "m_EnlightenData": "556e69747946530000000008352e782e7800363030302e302e3731663100000000000000004a0000000a00000018000000c300000000000000000000000000001e000100500000000000",
+   "m_EnlightenDataVersion": "112",
+   "m_EnlightenSceneMapping": {
+    "m_Probesets": [],
+    "m_Renderers": [],
+    "m_SystemAtlases": [],
+    "m_Systems": [],
+    "m_TerrainChunks": []
+   },
+   "m_EnlightenSceneMappingRendererIDs": [],
+   "m_LightBakingOutputs": [
+    {
+     "isBaked": "true",
+     "lightmapBakeMode": {
+      "lightmapBakeType": "2",
+      "mixedLightingMode": "0"
+     },
+     "occlusionMaskChannel": "-1",
+     "probeOcclusionLightIndex": "6"
+    },
+    {
+     "isBaked": "true",
+     "lightmapBakeMode": {
+      "lightmapBakeType": "2",
+      "mixedLightingMode": "0"
+     },
+     "occlusionMaskChannel": "-1",
+     "probeOcclusionLightIndex": "5"
+    },
+    {
+     "isBaked": "true",
+     "lightmapBakeMode": {
+      "lightmapBakeType": "2",
+      "mixedLightingMode": "0"
+     },
+     "occlusionMaskChannel": "-1",
+     "probeOcclusionLightIndex": "4"
+    },
+    {
+     "isBaked": "true",
+     "lightmapBakeMode": {
+      "lightmapBakeType": "2",
+      "mixedLightingMode": "0"
+     },
+     "occlusionMaskChannel": "-1",
+     "probeOcclusionLightIndex": "12"
+    },
+    {
+     "isBaked": "true",
+     "lightmapBakeMode": {
+      "lightmapBakeType": "2",
+      "mixedLightingMode": "0"
+     },
+     "occlusionMaskChannel": "-1",
+     "probeOcclusionLightIndex": "9"
+    },
+    {
+     "isBaked": "true",
+     "lightmapBakeMode": {
+      "lightmapBakeType": "2",
+      "mixedLightingMode": "0"
+     },
+     "occlusionMaskChannel": "-1",
+     "probeOcclusionLightIndex": "10"
+    },
+    {
+     "isBaked": "true",
+     "lightmapBakeMode": {
+      "lightmapBakeType": "2",
+      "mixedLightingMode": "0"
+     },
+     "occlusionMaskChannel": "-1",
+     "probeOcclusionLightIndex": "11"
+    },
+    {
+     "isBaked": "true",
+     "lightmapBakeMode": {
+      "lightmapBakeType": "2",
+      "mixedLightingMode": "0"
+     },
+     "occlusionMaskChannel": "-1",
+     "probeOcclusionLightIndex": "8"
+    },
+    {
+     "isBaked": "true",
+     "lightmapBakeMode": {
+      "lightmapBakeType": "2",
+      "mixedLightingMode": "0"
+     },
+     "occlusionMaskChannel": "-1",
+     "probeOcclusionLightIndex": "7"
+    },
+    {
+     "isBaked": "true",
+     "lightmapBakeMode": {
+      "lightmapBakeType": "2",
+      "mixedLightingMode": "0"
+     },
+     "occlusionMaskChannel": "-1",
+     "probeOcclusionLightIndex": "0"
+    },
+    {
+     "isBaked": "true",
+     "lightmapBakeMode": {
+      "lightmapBakeType": "2",
+      "mixedLightingMode": "0"
+     },
+     "occlusionMaskChannel": "-1",
+     "probeOcclusionLightIndex": "3"
+    },
+    {
+     "isBaked": "true",
+     "lightmapBakeMode": {
+      "lightmapBakeType": "2",
+      "mixedLightingMode": "0"
+     },
+     "occlusionMaskChannel": "-1",
+     "probeOcclusionLightIndex": "1"
+    },
+    {
+     "isBaked": "true",
+     "lightmapBakeMode": {
+      "lightmapBakeType": "2",
+      "mixedLightingMode": "0"
+     },
+     "occlusionMaskChannel": "-1",
+     "probeOcclusionLightIndex": "2"
+    }
+   ],
+   "m_LightProbes": {
+    "fileID": "25800002"
+   },
+   "m_LightmappedRendererData": [
+    {
+     "explicitProbeSetHash": {
+      "bytes[0]": "0",
+      "bytes[10]": "0",
+      "bytes[11]": "0",
+      "bytes[12]": "0",
+      "bytes[13]": "0",
+      "bytes[14]": "0",
+      "bytes[15]": "0",
+      "bytes[1]": "0",
+      "bytes[2]": "0",
+      "bytes[3]": "0",
+      "bytes[4]": "0",
+      "bytes[5]": "0",
+      "bytes[6]": "0",
+      "bytes[7]": "0",
+      "bytes[8]": "0",
+      "bytes[9]": "0"
+     },
+     "lightmapIndex": "0",
+     "lightmapIndexDynamic": "65535",
+     "lightmapST": {
+      "w": "0.07018481",
+      "x": "0.031482898",
+      "y": "0.031482898",
+      "z": "0.48424733"
+     },
+     "lightmapSTDynamic": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "terrainChunkDynamicUVST": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "terrainDynamicUVST": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "uvMesh": {
+      "fileID": "0"
+     }
+    },
+    {
+     "explicitProbeSetHash": {
+      "bytes[0]": "0",
+      "bytes[10]": "0",
+      "bytes[11]": "0",
+      "bytes[12]": "0",
+      "bytes[13]": "0",
+      "bytes[14]": "0",
+      "bytes[15]": "0",
+      "bytes[1]": "0",
+      "bytes[2]": "0",
+      "bytes[3]": "0",
+      "bytes[4]": "0",
+      "bytes[5]": "0",
+      "bytes[6]": "0",
+      "bytes[7]": "0",
+      "bytes[8]": "0",
+      "bytes[9]": "0"
+     },
+     "lightmapIndex": "0",
+     "lightmapIndexDynamic": "65535",
+     "lightmapST": {
+      "w": "-0.0003192182",
+      "x": "0.07870725",
+      "y": "0.07870725",
+      "z": "0.4840558"
+     },
+     "lightmapSTDynamic": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "terrainChunkDynamicUVST": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "terrainDynamicUVST": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "uvMesh": {
+      "fileID": "0"
+     }
+    },
+    {
+     "explicitProbeSetHash": {
+      "bytes[0]": "0",
+      "bytes[10]": "0",
+      "bytes[11]": "0",
+      "bytes[12]": "0",
+      "bytes[13]": "0",
+      "bytes[14]": "0",
+      "bytes[15]": "0",
+      "bytes[1]": "0",
+      "bytes[2]": "0",
+      "bytes[3]": "0",
+      "bytes[4]": "0",
+      "bytes[5]": "0",
+      "bytes[6]": "0",
+      "bytes[7]": "0",
+      "bytes[8]": "0",
+      "bytes[9]": "0"
+     },
+     "lightmapIndex": "0",
+     "lightmapIndexDynamic": "65535",
+     "lightmapST": {
+      "w": "0.0",
+      "x": "0.46875",
+      "y": "0.46875",
+      "z": "0.0"
+     },
+     "lightmapSTDynamic": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "terrainChunkDynamicUVST": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "terrainDynamicUVST": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "uvMesh": {
+      "fileID": "0"
+     }
+    },
+    {
+     "explicitProbeSetHash": {
+      "bytes[0]": "0",
+      "bytes[10]": "0",
+      "bytes[11]": "0",
+      "bytes[12]": "0",
+      "bytes[13]": "0",
+      "bytes[14]": "0",
+      "bytes[15]": "0",
+      "bytes[1]": "0",
+      "bytes[2]": "0",
+      "bytes[3]": "0",
+      "bytes[4]": "0",
+      "bytes[5]": "0",
+      "bytes[6]": "0",
+      "bytes[7]": "0",
+      "bytes[8]": "0",
+      "bytes[9]": "0"
+     },
+     "lightmapIndex": "0",
+     "lightmapIndexDynamic": "65535",
+     "lightmapST": {
+      "w": "0.109119624",
+      "x": "0.062965795",
+      "y": "0.062965795",
+      "z": "0.48411962"
+     },
+     "lightmapSTDynamic": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "terrainChunkDynamicUVST": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "terrainDynamicUVST": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "uvMesh": {
+      "fileID": "0"
+     }
+    },
+    {
+     "explicitProbeSetHash": {
+      "bytes[0]": "0",
+      "bytes[10]": "0",
+      "bytes[11]": "0",
+      "bytes[12]": "0",
+      "bytes[13]": "0",
+      "bytes[14]": "0",
+      "bytes[15]": "0",
+      "bytes[1]": "0",
+      "bytes[2]": "0",
+      "bytes[3]": "0",
+      "bytes[4]": "0",
+      "bytes[5]": "0",
+      "bytes[6]": "0",
+      "bytes[7]": "0",
+      "bytes[8]": "0",
+      "bytes[9]": "0"
+     },
+     "lightmapIndex": "0",
+     "lightmapIndexDynamic": "65535",
+     "lightmapST": {
+      "w": "-0.0004469055",
+      "x": "0.110190146",
+      "y": "0.110190146",
+      "z": "0.5776781"
+     },
+     "lightmapSTDynamic": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "terrainChunkDynamicUVST": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "terrainDynamicUVST": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "uvMesh": {
+      "fileID": "0"
+     }
+    }
+   ],
+   "m_LightmappedRendererDataIDs": [
+    {
+     "targetObject": "558567075",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "724549838",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "310702088",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "65647200",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "1807998404",
+     "targetPrefab": "0"
+    }
+   ],
+   "m_Lightmaps": [
+    {
+     "m_DirLightmap": {
+      "fileID": "0"
+     },
+     "m_Lightmap": {
+      "fileID": "2800000",
+      "guid": "(new)",
+      "type": "2"
+     },
+     "m_ShadowMask": {
+      "fileID": "0"
+     }
+    }
+   ],
+   "m_LightmapsMode": "0",
+   "m_Lights": [
+    {
+     "targetObject": "285179",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "187605475",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "332263021",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "589392367",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "707288413",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "898076919",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "989144556",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "1204401379",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "1237694765",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "1272448534",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "1806497323",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "1929542682",
+     "targetPrefab": "0"
+    },
+    {
+     "targetObject": "1963830994",
+     "targetPrefab": "0"
+    }
+   ],
+   "m_Name": "LightingData",
+   "m_ObjectHideFlags": "0",
+   "m_PrefabAsset": {
+    "fileID": "0"
+   },
+   "m_PrefabInstance": {
+    "fileID": "0"
+   },
+   "m_Scene": {
+    "fileID": "102900000",
+    "guid": "7c1106dcda299ad15a7347244bd4631c",
+    "type": "2"
+   }
+  },
+  "fileId": 112000000,
+  "type": "LightingDataAsset"
+ }
+]
