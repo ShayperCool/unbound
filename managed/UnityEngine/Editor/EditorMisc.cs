@@ -244,7 +244,12 @@ namespace UnityEditor
         public static StandaloneBuildSubtarget standaloneBuildSubtarget
         {
             get => s_StandaloneBuildSubtarget;
-            set => s_StandaloneBuildSubtarget = value;
+            set
+            {
+                if (s_StandaloneBuildSubtarget == value) return;
+                s_StandaloneBuildSubtarget = value;
+                PlayerSettings.StandaloneBuildSubtargetChanged();
+            }
         }
     }
 

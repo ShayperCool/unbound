@@ -1,4 +1,7 @@
+using System;
 using System.Globalization;
+using System.Text;
+using UnityEditor.Build;
 using Unbound.Runtime;
 using UnityEngine;
 
@@ -37,8 +40,125 @@ namespace UnityEditor
 
         internal static string StoredText(string key) => SettingsAssets.Value("ProjectSettings", key);
 
+        static string StoredTargetText(string key, string target) =>
+            SettingsAssets.AtPath("ProjectSettings/ProjectSettings.asset")?.Body?.Get(key)?.Get(target)?.Text;
+
+        static void SetTargetText(YText body, string key, string target, string value)
+        {
+            var map = body.Get(key);
+            if (map?.Kind != YKind.Map) map = YText.Map();
+            map.Flow = false;
+            map.Raw = null;
+            SettingsAssets.SetInOrdinalOrder(map, target, YText.Scalar(UnityYamlWriter.Scalar(value ?? "")));
+            body.Set(key, map);
+        }
+
         internal static void Store(string key, int value) =>
             SettingsAssets.Edit("ProjectSettings", body => body.Set(key, YText.Scalar(value.ToString(CultureInfo.InvariantCulture))));
+
+        static NamedBuildTarget ApplicationIdentifierTarget
+        {
+            get
+            {
+                var active = EditorUserBuildSettingsInfo.ActiveGroup;
+                return active == BuildTargetGroup.Standalone && EditorUserBuildSettings.standaloneBuildSubtarget == StandaloneBuildSubtarget.Server
+                    ? NamedBuildTarget.Server : NamedBuildTarget.FromBuildTargetGroup(active);
+            }
+        }
+
+        internal static void StandaloneBuildSubtargetChanged()
+        {
+            // Switching between Player and Server changes the active identifier right away.
+            if (Compat.ProjectBuildIdentityMeasured && EditorUserBuildSettingsInfo.ActiveGroup == BuildTargetGroup.Standalone)
+                ProjectInfo.Identifier = GetApplicationIdentifier(ApplicationIdentifierTarget);
+        }
+
+        public static string applicationIdentifier
+        {
+            get => GetApplicationIdentifier(ApplicationIdentifierTarget);
+            set
+            {
+                if (!Compat.ProjectBuildIdentityMeasured)
+                {
+                    ProjectInfo.Identifier = value;
+                    return;
+                }
+                Debug.LogWarning("PlayerSettings.applicationIdentifier only changes the identifier for the currently active platform. Please use SetApplicationIdentifier to set it for any platform");
+                SetApplicationIdentifier(ApplicationIdentifierTarget, value);
+            }
+        }
+
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+        [Obsolete("Use PlayerSettings.applicationIdentifier instead (UnityUpgradable) -> UnityEditor.PlayerSettings.applicationIdentifier", true)]
+        public static string bundleIdentifier
+        {
+            get
+            {
+                if (Compat.ProjectBuildIdentityMeasured) return applicationIdentifier;
+                Stubs.NotImplemented("UnityEditor.PlayerSettings.bundleIdentifier");
+                return null;
+            }
+            set
+            {
+                if (Compat.ProjectBuildIdentityMeasured) applicationIdentifier = value;
+                else Stubs.NotImplemented("UnityEditor.PlayerSettings.bundleIdentifier");
+            }
+        }
+
+        [Obsolete("Use GetApplicationIdentifier(NamedBuildTarget buildTarget) instead")]
+        public static string GetApplicationIdentifier(BuildTargetGroup targetGroup) =>
+            Compat.ProjectBuildIdentityMeasured
+                ? GetApplicationIdentifier(NamedBuildTarget.FromBuildTargetGroup(targetGroup))
+                : ProjectInfo.Identifier;
+
+        public static string GetApplicationIdentifier(NamedBuildTarget buildTarget)
+        {
+            if (!Compat.ProjectBuildIdentityMeasured || string.IsNullOrEmpty(ProjectInfo.ProjectPath))
+                return ProjectInfo.Identifier;
+            return StoredTargetText("applicationIdentifier", buildTarget.TargetName)
+                ?? NormalizeIdentifier($"com.{ProjectInfo.CompanyName}.{ProjectInfo.ProductName}", buildTarget);
+        }
+
+        [Obsolete("Use SetApplicationIdentifier(NamedBuildTarget buildTarget, string identifier) instead")]
+        public static void SetApplicationIdentifier(BuildTargetGroup targetGroup, string identifier) =>
+            SetApplicationIdentifier(Compat.ProjectBuildIdentityMeasured
+                ? NamedBuildTarget.FromBuildTargetGroup(targetGroup) : NamedBuildTarget.Unknown, identifier);
+
+        public static void SetApplicationIdentifier(NamedBuildTarget buildTarget, string identifier)
+        {
+            if (!Compat.ProjectBuildIdentityMeasured)
+            {
+                Stubs.NotImplemented("UnityEditor.PlayerSettings.SetApplicationIdentifier");
+                return;
+            }
+            if (string.IsNullOrEmpty(buildTarget.TargetName))
+                throw new ArgumentException($"The provided target platform group name ({buildTarget.TargetName}) is not valid.");
+
+            string stored = NormalizeIdentifier(identifier, buildTarget);
+            SettingsAssets.Edit("ProjectSettings", body =>
+            {
+                SetTargetText(body, "applicationIdentifier", buildTarget.TargetName, stored);
+                body.Set("overrideDefaultApplicationIdentifier", YText.Scalar("1"));
+            });
+            if (buildTarget == ApplicationIdentifierTarget)
+                ProjectInfo.Identifier = stored;
+        }
+
+        static string NormalizeIdentifier(string identifier, NamedBuildTarget target)
+        {
+            identifier ??= "";
+            bool android = target == NamedBuildTarget.Android;
+            var result = new StringBuilder(identifier.Length);
+            foreach (byte b in Encoding.UTF8.GetBytes(identifier))
+            {
+                char c = (char)b;
+                if (char.IsAsciiLetterOrDigit(c) || c == '.' || c == (android ? '_' : '-'))
+                    result.Append(c);
+                else if (!android)
+                    result.Append('-');
+            }
+            return result.ToString();
+        }
 
         /// <summary>Whether the Play Mode test runner may run tests in players.</summary>
         internal static bool playModeTestRunnerEnabled
@@ -76,6 +196,21 @@ namespace UnityEditor
 
         public partial class iOS
         {
+            static string s_BuildNumber = "1";
+
+            public static string buildNumber
+            {
+                get => Compat.ProjectBuildIdentityMeasured
+                    ? StoredTargetText("buildNumber", NamedBuildTarget.iOS.TargetName) ?? s_BuildNumber
+                    : s_BuildNumber;
+                set
+                {
+                    s_BuildNumber = value;
+                    if (Compat.ProjectBuildIdentityMeasured)
+                        SettingsAssets.Edit("ProjectSettings", body => SetTargetText(body, "buildNumber", NamedBuildTarget.iOS.TargetName, value));
+                }
+            }
+
             public static iOSSdkVersion sdkVersion
             {
                 get => (iOSSdkVersion)StoredInt("iPhoneSdkVersion", (int)iOSSdkVersion.DeviceSDK);

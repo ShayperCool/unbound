@@ -341,8 +341,15 @@ namespace UnityEditor
             }
             return new Guid(bytes);
         }
-        public static string applicationIdentifier { get => ProjectInfo.Identifier; set => ProjectInfo.Identifier = value; }
-        public static string bundleVersion { get => ProjectInfo.BundleVersion; set => ProjectInfo.BundleVersion = value; }
+        public static string bundleVersion
+        {
+            get => ProjectInfo.BundleVersion;
+            set
+            {
+                ProjectInfo.BundleVersion = value;
+                if (Compat.ProjectBuildIdentityMeasured) Save("bundleVersion", value);
+            }
+        }
         public static bool runInBackground { get => Application.runInBackground; set => Application.runInBackground = value; }
         public static ColorSpace colorSpace
         {
@@ -441,18 +448,21 @@ namespace UnityEditor
         [global::System.@ObsoleteAttribute("Use SetScriptingDefineSymbols(NamedBuildTarget buildTarget, string defines) instead")] public static void SetScriptingDefineSymbolsForGroup(BuildTargetGroup targetGroup, string defines) =>
             SetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(targetGroup), defines);
 
-        [global::System.@ObsoleteAttribute("Use GetApplicationIdentifier(NamedBuildTarget buildTarget) instead")] public static string GetApplicationIdentifier(BuildTargetGroup targetGroup) => ProjectInfo.Identifier;
-
-        public static string GetApplicationIdentifier(UnityEditor.Build.NamedBuildTarget buildTarget) => ProjectInfo.Identifier;
-
         public partial class Android
         {
-            public static int bundleVersionCode { get; set; } = 1;
-        }
+            static int s_BundleVersionCode = 1;
 
-        public partial class iOS
-        {
-            public static string buildNumber { get; set; } = "1";
+            public static int bundleVersionCode
+            {
+                get => Compat.ProjectBuildIdentityMeasured
+                    ? StoredInt("AndroidBundleVersionCode", s_BundleVersionCode)
+                    : s_BundleVersionCode;
+                set
+                {
+                    s_BundleVersionCode = value;
+                    if (Compat.ProjectBuildIdentityMeasured) Store("AndroidBundleVersionCode", value);
+                }
+            }
         }
     }
 

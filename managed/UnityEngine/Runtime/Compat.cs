@@ -53,6 +53,9 @@ namespace Unbound.Runtime
         /// GetUnityDisplayVersionVerbose.</summary>
         internal sealed record EditorBuildFacts(string Branch, int Revision, int Date, string VerboseBuild, string ProductName, string Copyright);
 
+        // Build identity and versions saved through PlayerSettings (scenesave, build-identity).
+        internal static bool ProjectBuildIdentityMeasured => Family == ReleaseFamily.Unity6000_0;
+
         // An importer's SerializedObject over its native type tree, measured on 6000.0.71f1
         // (tests/projects/importerserialized). Elsewhere it reflects over the managed importer.
         internal static bool ImporterTypeTreesMeasured => Family == ReleaseFamily.Unity6000_0;
