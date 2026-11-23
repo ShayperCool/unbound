@@ -60,6 +60,38 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A layer range takes a renderer by its outermost sorting group's layer (up to
+        /// one sorting at the root), else its own (tests/projects/sortinggroup2d).</summary>
+        [Fact]
+        public void ALayerRangeTakesARendererByItsOutermostGroupsLayer()
+        {
+            var root = new GameObject("root");
+            var middle = new GameObject("middle");
+            var leaf = new GameObject("leaf");
+            middle.transform.SetParent(root.transform);
+            leaf.transform.SetParent(middle.transform);
+            var renderer = leaf.AddComponent<SpriteRenderer>();
+            try
+            {
+                Assert.Equal(renderer.sortingLayerID, FrameBuilder.FilteredLayerId(renderer));
+                var inner = middle.AddComponent<UnityEngine.Rendering.SortingGroup>();
+                inner.m_SortingLayerID = 101;
+                Assert.Equal(101, FrameBuilder.FilteredLayerId(renderer));
+                var outer = root.AddComponent<UnityEngine.Rendering.SortingGroup>();
+                outer.m_SortingLayerID = 202;
+                Assert.Equal(202, FrameBuilder.FilteredLayerId(renderer));
+                inner.m_SortAtRoot = true;
+                Assert.Equal(101, FrameBuilder.FilteredLayerId(renderer));
+                inner.m_SortAtRoot = false;
+                outer.enabled = false;
+                Assert.Equal(101, FrameBuilder.FilteredLayerId(renderer));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
         [Fact]
         public void AGroupSortsAsOneUnitByItsOwnOrder()
         {

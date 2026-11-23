@@ -182,6 +182,21 @@ namespace Unbound.Runtime
             return s_GroupScratch.ToArray();
         }
 
+        /// <summary>The sorting layer a renderer list's layer range takes a renderer by: its
+        /// outermost sorting group's (up to one sorting at the root, as <see cref="GroupsOf"/>
+        /// orders them), else its own. A 2D renderer's layer batches thus draw a group's renderers
+        /// with the group (Unity 6000.0.71f1, tests/projects/sortinggroup2d: nested groups too).</summary>
+        internal static int FilteredLayerId(Renderer renderer)
+        {
+            int id = renderer.sortingLayerID;
+            for (var group = SortingGroup.Enclosing(renderer); group != null; group = SortingGroup.NearestFrom(group.transform.m_Parent))
+            {
+                id = group.m_SortingLayerID;
+                if (group.m_SortAtRoot) break;
+            }
+            return id;
+        }
+
         /// <summary>Extra draw sources: canvases. They add draws per camera and overlay draws.</summary>
         internal interface IDrawSource
         {
@@ -1008,7 +1023,7 @@ namespace Unbound.Runtime
                     if (filtering.excludeMotionVectorObjects && renderer.motionVectorGenerationMode == MotionVectorGenerationMode.Object) continue;
                     if (!allLayers)
                     {
-                        int value = SortingLayer.GetLayerValueFromID(renderer.sortingLayerID);
+                        int value = SortingLayer.GetLayerValueFromID(FilteredLayerId(renderer));
                         if (value < layers.lowerBound || value > layers.upperBound) continue;
                     }
                     if (shadows.HasValue)
