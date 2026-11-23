@@ -50,6 +50,20 @@ These are observations of this release and device, not documented guarantees:
   separate destination leaves the source's retained image unchanged. `ReadPixels` reads the
   current pixels, while compute `Texture2D.Load` reads the retained image. The history controls
   write different colors before every operation, so stale and current images are distinct.
+- The Unity 6.0 Scripting API specifies self-resolve when the command's target is
+  omitted and requires matching dimensions and formats for an explicit target.
+  On OpenGL Core in Unity 6000.0.71f1, this command resolves the selected source
+  image into the destination's first image. The controls bind the source at either
+  MRT color index, select a nonzero cube face, array layer and mip, and attach the
+  command buffer to a camera. Shared immediate controls select the same source
+  images. Same-format unequal extents copy the intersection without scaling.
+  An omitted target publishes the retained color of an active ordinary MSAA
+  source. Single-sample and bound-MSAA self-resolves leave their images alone.
+  A supplied self-target checks the current attachment and leaves it alone.
+  A created but inactive source that requires a resolve reports a native
+  assertion. Released images skip the command, and a source recreated before
+  execution contributes the pixels in its new allocation.
+  [CommandBuffer.ResolveAntiAliasedSurface](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.ResolveAntiAliasedSurface.html).
 - An allocated 2D MSAA target has one mip even with `useMipMap = true`. Its reported mip count
   survives release and changing the requested sample count. After release, changing its width, height, descriptor or
   mip settings recomputes it; recreation reports the new allocation. The 3D control retains three levels because volume targets are not

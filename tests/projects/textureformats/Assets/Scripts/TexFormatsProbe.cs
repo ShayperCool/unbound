@@ -694,6 +694,401 @@ public static class TexFormatsProbe
         }
     }
 
+    static string CompletedReadback(AsyncGPUReadbackRequest request) =>
+        request.hasError || !request.done ? Json("error") : Hex(request.GetData<byte>().ToArray());
+
+    static void CommandResolveCamera()
+    {
+        var desc = new RenderTextureDescriptor(8, 8, RenderTextureFormat.ARGB32, 24)
+            { msaaSamples = 4, sRGB = false };
+        var source = Target(desc);
+        source.Create();
+        desc.msaaSamples = 1;
+        var destination = Target(desc);
+        destination.Create();
+        RenderTexture.active = destination;
+        GL.Clear(false, true, Color.green);
+        string Read() =>
+            Readback(AsyncGPUReadback.Request(destination, 0, 0, 1, 0, 1, 0, 1, TextureFormat.RGBA32));
+        Value("rt.commandResolve.camera.before", Read());
+
+        var camera = Own(new GameObject("Resolve camera")).AddComponent<Camera>();
+        camera.enabled = false;
+        camera.targetTexture = source;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = Color.red;
+        camera.cullingMask = 0;
+        using var cb = new CommandBuffer();
+        cb.ResolveAntiAliasedSurface(source, destination);
+        camera.AddCommandBuffer(CameraEvent.AfterEverything, cb);
+        var logs = new List<string>();
+        void OnLog(string message, string _, LogType type) => logs.Add(type + " " + message);
+        Application.logMessageReceived += OnLog;
+        try { camera.Render(); }
+        finally
+        {
+            Application.logMessageReceived -= OnLog;
+            camera.RemoveCommandBuffer(CameraEvent.AfterEverything, cb);
+        }
+        Value("rt.commandResolve.camera.logs", Json(string.Join(" | ", logs)));
+        Value("rt.commandResolve.camera.color", Read());
+        Value("rt.commandResolve.camera.restored", B2(RenderTexture.active == destination));
+    }
+
+    static void CommandResolveInactiveSelf()
+    {
+        foreach (var (name, count, bind) in new[] { ("single", 1, false), ("ordinary", 4, false), ("bound", 4, true) })
+        foreach (bool explicitTarget in new[] { false, true })
+        {
+            string key = "rt.commandResolve.inactiveSelf." + name + (explicitTarget ? ".explicit" : ".implicit");
+            var desc = new RenderTextureDescriptor(8, 8, RenderTextureFormat.ARGB32, 0)
+                { msaaSamples = count, bindMS = bind, sRGB = false };
+            var source = Target(desc);
+            source.Create();
+            desc.msaaSamples = 1;
+            desc.bindMS = false;
+            var other = Target(desc);
+            other.Create();
+            RenderTexture.active = source;
+            GL.Clear(false, true, Color.red);
+            RenderTexture.active = other;
+            GL.Clear(false, true, Color.blue);
+            string Read() => Readback(AsyncGPUReadback.Request(source, 0, 0, 1, 0, 1, 0, 1, TextureFormat.RGBA32));
+            string before = Read();
+            using var cb = new CommandBuffer();
+            if (explicitTarget) cb.ResolveAntiAliasedSurface(source, source);
+            else cb.ResolveAntiAliasedSurface(source);
+            var logs = new List<string>();
+            void OnLog(string message, string _, LogType type) => logs.Add(type + " " + message);
+            Application.logMessageReceived += OnLog;
+            try { Graphics.ExecuteCommandBuffer(cb); }
+            finally { Application.logMessageReceived -= OnLog; }
+            Value(key + ".logs", Json(string.Join(" | ", logs)));
+            Value(key + ".unchanged", B2(before == Read()));
+            Value(key + ".binding", B2(RenderTexture.active == other));
+        }
+    }
+
+    static void CommandResolveSubresources()
+    {
+        foreach (bool command in new[] { false, true })
+        foreach (string mode in new[] { "arrayTo2D", "cubeFace", "mipLevel" })
+        {
+            string key = "rt.commandResolve.subresource." + (command ? "command." : "direct.") + mode;
+            var desc = new RenderTextureDescriptor(8, 8, RenderTextureFormat.ARGB32, 0)
+                { sRGB = false, useMipMap = mode == "mipLevel", autoGenerateMips = false };
+            if (mode.StartsWith("array", StringComparison.Ordinal))
+            {
+                desc.dimension = TextureDimension.Tex2DArray;
+                desc.volumeDepth = 2;
+            }
+            if (mode == "cubeFace") desc.dimension = TextureDimension.Cube;
+            var source = Target(desc);
+            if (mode == "arrayTo2D")
+            {
+                desc.dimension = TextureDimension.Tex2D;
+                desc.volumeDepth = 1;
+            }
+            var destination = Target(desc);
+            Value(key + ".sourceCreated", B2(source.Create()));
+            Value(key + ".destinationCreated", B2(destination.Create()));
+
+            int Mip(int i) => mode == "mipLevel" ? i : 0;
+            CubemapFace Face(int i) => mode == "cubeFace" ? (CubemapFace)i : CubemapFace.Unknown;
+            int Layer(int i) => mode.StartsWith("array", StringComparison.Ordinal) ? i : 0;
+            int ReadLayer(int i) => mode == "mipLevel" ? 0 : i;
+            for (int i = 0; i < 2; ++i)
+            {
+                Graphics.SetRenderTarget(source, Mip(i), Face(i), Layer(i));
+                GL.Clear(false, true, i == 0 ? Color.red : Color.blue);
+                if (mode != "arrayTo2D" || i == 0)
+                {
+                    Graphics.SetRenderTarget(destination, Mip(i), Face(i), Layer(i));
+                    GL.Clear(false, true, Color.green);
+                }
+            }
+
+            string Read(RenderTexture rt, int i, int layer) =>
+                Readback(AsyncGPUReadback.Request(rt, Mip(i), 0, 1, 0, 1, layer, 1, TextureFormat.RGBA32));
+            for (int i = 0; i < 2; ++i)
+                Value(key + ".source" + i, Read(source, i, ReadLayer(i)));
+            int outputs = mode == "arrayTo2D" ? 1 : 2;
+            for (int i = 0; i < outputs; ++i)
+                Value(key + ".before" + i, Read(destination, i, ReadLayer(i)));
+
+            var logs = new List<string>();
+            void OnLog(string message, string _, LogType type) => logs.Add(type + " " + message);
+            Application.logMessageReceived += OnLog;
+            try
+            {
+                if (command)
+                {
+                    using var cb = new CommandBuffer();
+                    cb.SetRenderTarget(source, Mip(1), Face(1), Layer(1));
+                    cb.ResolveAntiAliasedSurface(source, destination);
+                    Graphics.ExecuteCommandBuffer(cb);
+                }
+                else
+                {
+                    Graphics.SetRenderTarget(source, Mip(1), Face(1), Layer(1));
+                    source.ResolveAntiAliasedSurface(destination);
+                }
+            }
+            finally { Application.logMessageReceived -= OnLog; }
+            Value(key + ".logs", Json(string.Join(" | ", logs)));
+            for (int i = 0; i < outputs; ++i)
+                Value(key + "." + i, Read(destination, i, ReadLayer(i)));
+        }
+    }
+
+    static void CommandResolveAttachments()
+    {
+        foreach (string mode in new[]
+        {
+            "firstColor", "secondColor", "widthSmaller", "widthLarger",
+        })
+        {
+            string key = "rt.commandResolve.attachment." + mode;
+            var desc = new RenderTextureDescriptor(8, 8, RenderTextureFormat.ARGB32, 24)
+                { msaaSamples = 4, sRGB = false };
+            var source = Target(desc);
+            var other = Target(desc);
+            source.Create();
+            other.Create();
+            desc.msaaSamples = 1;
+            if (mode == "widthSmaller") desc.width = 4;
+            if (mode == "widthLarger") desc.width = 12;
+            var destination = Target(desc);
+            destination.Create();
+            RenderTexture.active = source;
+            GL.Clear(false, true, Color.red);
+            RenderTexture.active = other;
+            GL.Clear(false, true, Color.blue);
+            RenderTexture.active = destination;
+            GL.Clear(false, true, Color.green);
+
+            using var cb = new CommandBuffer();
+            if (mode == "firstColor") cb.SetRenderTarget(new RenderTargetIdentifier[] { source, other }, source);
+            else if (mode == "secondColor") cb.SetRenderTarget(new RenderTargetIdentifier[] { other, source }, other);
+            else cb.SetRenderTarget(source);
+            cb.ResolveAntiAliasedSurface(source, destination);
+            var logs = new List<string>();
+            void OnLog(string message, string _, LogType type) => logs.Add(type + " " + message);
+            Application.logMessageReceived += OnLog;
+            try { Graphics.ExecuteCommandBuffer(cb); }
+            finally { Application.logMessageReceived -= OnLog; }
+            Value(key + ".logs", Json(string.Join(" | ", logs)));
+            Value(key + ".first", Readback(AsyncGPUReadback.Request(destination, 0, 0, 1, 0, 1, 0, 1, TextureFormat.RGBA32)));
+            Value(key + ".last", Readback(AsyncGPUReadback.Request(destination, 0, desc.width - 1, 1, 0, 1, 0, 1, TextureFormat.RGBA32)));
+            Value(key + ".restored", B2(RenderTexture.active == destination));
+        }
+    }
+
+    static void CommandResolveLifetime()
+    {
+        foreach (string mode in new[]
+        {
+            "singleInactive", "releaseSource", "recreateSource",
+            "releaseDestination", "sourceAlreadyActive",
+        })
+        {
+            string key = "rt.commandResolve.lifetime." + mode;
+            var desc = new RenderTextureDescriptor(8, 8, RenderTextureFormat.ARGB32, 0)
+                { msaaSamples = mode == "singleInactive" ? 1 : 4, sRGB = false };
+            var source = Target(desc);
+            source.Create();
+            desc.msaaSamples = 1;
+            var destination = Target(desc);
+            destination.Create();
+            var other = Target(desc);
+            other.Create();
+            RenderTexture.active = source;
+            GL.Clear(false, true, Color.red);
+            RenderTexture.active = destination;
+            GL.Clear(false, true, Color.green);
+            RenderTexture.active = other;
+            GL.Clear(false, true, Color.blue);
+
+            using var cb = new CommandBuffer();
+            cb.ResolveAntiAliasedSurface(source, destination);
+            if (mode == "releaseSource" || mode == "recreateSource") source.Release();
+            if (mode == "releaseDestination") destination.Release();
+            if (mode == "recreateSource")
+            {
+                source.Create();
+                RenderTexture.active = source;
+                GL.Clear(false, true, Color.yellow);
+            }
+            if (mode == "sourceAlreadyActive") RenderTexture.active = source;
+            var logs = new List<string>();
+            void OnLog(string message, string _, LogType type) => logs.Add(type + " " + message);
+            Application.logMessageReceived += OnLog;
+            try { Graphics.ExecuteCommandBuffer(cb); }
+            finally { Application.logMessageReceived -= OnLog; }
+            Value(key + ".logs", Json(string.Join(" | ", logs)));
+            if (source != null) Value(key + ".sourceCreated", B2(source.IsCreated()));
+            if (destination != null)
+            {
+                Value(key + ".destinationCreated", B2(destination.IsCreated()));
+                if (destination.IsCreated())
+                    Value(key + ".color", Readback(AsyncGPUReadback.Request(destination, 0, 0, 1, 0, 1, 0, 1, TextureFormat.RGBA32)));
+            }
+        }
+    }
+
+    sealed class ResolveLogObserver : ILogHandler
+    {
+        public int Count { get; private set; }
+        public void LogFormat(LogType type, Object context, string format, params object[] args) => Count++;
+        public void LogException(Exception exception, Object context) => Count++;
+    }
+
+    static void CommandResolveEdges()
+    {
+        foreach (var (name, fromSamples, toSamples, fromCreated, toCreated, bindSource) in new[]
+        {
+            ("single", 1, 1, true, true, true),
+            ("multiDestination", 4, 4, true, true, true),
+            ("uncreatedDestination", 4, 1, true, false, true),
+            ("uncreatedSource", 4, 1, false, true, false),
+            ("otherActive", 4, 1, true, true, false),
+        })
+        {
+            string key = "rt.commandResolve.edge." + name;
+            var desc = new RenderTextureDescriptor(8, 8, RenderTextureFormat.ARGB32, 24)
+                { msaaSamples = fromSamples, sRGB = false };
+            var source = Target(desc);
+            desc.msaaSamples = toSamples;
+            var destination = Target(desc);
+            desc.msaaSamples = 1;
+            var other = Target(desc);
+            other.Create();
+            RenderTexture.active = other;
+            GL.Clear(false, true, Color.blue);
+            if (toCreated)
+            {
+                destination.Create();
+                RenderTexture.active = destination;
+                GL.Clear(false, true, Color.green);
+            }
+            if (fromCreated)
+            {
+                source.Create();
+                RenderTexture.active = source;
+                GL.Clear(false, true, Color.red);
+            }
+            RenderTexture.active = other;
+            using var cb = new CommandBuffer();
+            cb.SetRenderTarget(bindSource ? source : other);
+            var during = new List<string>();
+            void OnLog(string condition, string _, LogType type) => during.Add(type + " " + condition);
+            ILogHandler previousHandler = Debug.unityLogger.logHandler;
+            var observer = new ResolveLogObserver();
+            Debug.unityLogger.logHandler = observer;
+            Application.logMessageReceived += OnLog;
+            try
+            {
+                cb.ResolveAntiAliasedSurface(source, destination);
+                Value(key + ".recordLog", Json(string.Join(" | ", during)));
+                during.Clear();
+                Graphics.ExecuteCommandBuffer(cb);
+                Value(key + ".executeLog", Json(string.Join(" | ", during)));
+            }
+            finally
+            {
+                Application.logMessageReceived -= OnLog;
+                Debug.unityLogger.logHandler = previousHandler;
+            }
+            Value(key + ".managedHandlerCalls", observer.Count.ToString(CultureInfo.InvariantCulture));
+            Value(key + ".sourceCreated", B2(source.IsCreated()));
+            Value(key + ".destinationCreated", B2(destination.IsCreated()));
+            Value(key + ".preservesCallerTarget", B2(RenderTexture.active == other));
+            if (destination.IsCreated())
+                Value(key + ".color", Readback(AsyncGPUReadback.Request(destination, 0, 0, 1, 0, 1, 0, 1, TextureFormat.RGBA32)));
+        }
+    }
+
+    static void CommandResolves()
+    {
+        var saved = RenderTexture.active;
+        bool srgb = GL.sRGBWrite;
+        GL.sRGBWrite = false;
+        try
+        {
+            using (var invalid = new CommandBuffer())
+                Try("rt.commandResolve.nullSource", () =>
+                {
+                    invalid.ResolveAntiAliasedSurface(null);
+                    return invalid.sizeInBytes.ToString(CultureInfo.InvariantCulture);
+                });
+            using (var invalid = new CommandBuffer())
+            {
+                string parameter = null;
+                try { invalid.ResolveAntiAliasedSurface(null); }
+                catch (ArgumentNullException e) { parameter = e.ParamName; }
+                Value("rt.commandResolve.nullSourceParameter", Json(parameter ?? ""));
+            }
+
+            foreach (bool bind in new[] { false, true })
+            foreach (string mode in new[] { "external", "implicitSelf", "explicitSelf" })
+            {
+                string key = "rt.commandResolve." + (bind ? "bound." : "ordinary.") + mode;
+                var desc = new RenderTextureDescriptor(8, 8, RenderTextureFormat.ARGB32, 24)
+                    { msaaSamples = 4, bindMS = bind, sRGB = false };
+                var source = Target(desc);
+                Value(key + ".created", B2(source.Create()));
+                desc.msaaSamples = 1;
+                desc.bindMS = false;
+                var destination = Target(desc);
+                destination.Create();
+
+                string Retained(RenderTexture rt) => Readback(AsyncGPUReadback.Request(rt, 0, TextureFormat.RGBA32));
+                string initial = Retained(source);
+                RenderTexture.active = destination;
+                GL.Clear(false, true, new Color32(63, 31, 133, 201));
+                string sentinel = Retained(destination);
+                var currentColor = new Color32(91, 123, 157, 183);
+
+                if (bind) RenderTexture.active = source;
+                var caller = RenderTexture.active;
+                using var cb = new CommandBuffer();
+                if (!bind) cb.SetRenderTarget(source);
+                cb.ClearRenderTarget(true, true, currentColor);
+                string before = null, after = null;
+                cb.RequestAsyncReadback(source, 0, TextureFormat.RGBA32, r => before = CompletedReadback(r));
+                int sizeBefore = cb.sizeInBytes;
+                if (mode == "external") cb.ResolveAntiAliasedSurface(source, destination);
+                else if (mode == "implicitSelf") cb.ResolveAntiAliasedSurface(source);
+                else cb.ResolveAntiAliasedSurface(source, source);
+                Value(key + ".size", (cb.sizeInBytes - sizeBefore).ToString(CultureInfo.InvariantCulture));
+                cb.RequestAsyncReadback(source, 0, TextureFormat.RGBA32, r => after = CompletedReadback(r));
+                Graphics.ExecuteCommandBuffer(cb);
+                AsyncGPUReadback.WaitAllRequests();
+                Value(key + ".beforeReady", B2(before != null && before != Json("error")));
+                Value(key + ".afterReady", B2(after != null && after != Json("error")));
+                Value(key + ".beforeMatchesInitial", B2(before == initial));
+                Value(key + ".insideHistoryUnchanged", B2(before == after));
+                Value(key + ".outsideHistoryUnchanged", B2(Retained(source) == initial));
+                string external = Retained(destination);
+                Value(key + ".destinationUnchanged", B2(external == sentinel));
+                if (mode == "external")
+                    Value(key + ".destinationBytes", external);
+                Value(key + ".callerTargetRestored", B2(RenderTexture.active == caller));
+            }
+            CommandResolveEdges();
+            CommandResolveLifetime();
+            CommandResolveAttachments();
+            CommandResolveSubresources();
+            CommandResolveInactiveSelf();
+            CommandResolveCamera();
+        }
+        finally
+        {
+            RenderTexture.active = saved;
+            GL.sRGBWrite = srgb;
+        }
+    }
+
     static void MsaaMips()
     {
         var d = new RenderTextureDescriptor(4, 4, RenderTextureFormat.ARGB32, 0)
@@ -978,6 +1373,8 @@ public static class TexFormatsProbe
                 Value(byteReadback + ".release", Json(Application.unityVersion));
                 Unorm16Byte();
             }
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore && Runs("rt.commandResolve"))
+                CommandResolves();
             if (Runs("rt.msaaCopies") || Runs("rt.msaaLayers")) MsaaCopiesAndLayers();
             if (Runs("rt.arrayLoad")) ArrayLoad();
             foreach (var format in new[] { RenderTextureFormat.ARGB32, RenderTextureFormat.ARGBFloat })
