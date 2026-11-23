@@ -404,6 +404,52 @@ namespace PercentProbe
                 }
                 wrapCards.Add((name, cards));
             }
+            // absoluteText: a 192 x 88 container (a column, or a row in row*) holding an absolutely
+            // placed 40 point label ("Shadow Ag", about 219 wide) at left 12 (default, nowrap,
+            // wrapping, with right 12, with max-width in points/percent, with width > max-width,
+            // with max-height in points/percent), at left 0, and an absolutely placed box around a
+            // 250 wide child; inFlow, wrapInFlow and inFlowMaxPercent are controls.
+            var absoluteTexts = new System.Collections.Generic.List<(string, VisualElement)>();
+            float atLeft = 0;
+            foreach (var name in new[] {
+                "left", "noWrap", "leftRight", "noLeft", "rowLeft", "box", "inFlow",
+                "wrap", "wrapInFlow", "wrapMaxWidth", "wrapMaxPercent", "wrapWidthOverMax",
+                "wrapMaxHeight", "wrapMaxHeightPercent", "inFlowMaxPercent" })
+            {
+                var atCase = Case(root, "absoluteText." + name, atLeft);
+                atCase.style.top = 10700;
+                atLeft += 300;
+                var atOuter = Box(atCase, "outer", 192, 88);
+                if (name.StartsWith("row")) atOuter.style.flexDirection = FlexDirection.Row;
+                VisualElement item;
+                if (name == "box")
+                {
+                    item = Box(atOuter, "item");
+                    Box(item, "child", 250, 20);
+                }
+                else
+                {
+                    var label = new Label("Shadow Ag") { name = "item" };
+                    label.style.fontSize = 40;
+                    if (name == "noWrap") label.style.whiteSpace = WhiteSpace.NoWrap;
+                    else if (name.StartsWith("wrap") || name == "inFlowMaxPercent") label.style.whiteSpace = WhiteSpace.Normal;
+                    if (name == "wrapMaxWidth" || name == "wrapMaxHeight") label.style.maxWidth = 150;
+                    if (name == "wrapMaxPercent" || name == "inFlowMaxPercent") label.style.maxWidth = Length.Percent(75);
+                    if (name == "wrapWidthOverMax") { label.style.width = 180; label.style.maxWidth = 120; }
+                    if (name == "wrapMaxHeight") label.style.maxHeight = 40;
+                    if (name == "wrapMaxHeightPercent") { label.style.height = 80; label.style.maxHeight = Length.Percent(50); }
+                    atOuter.Add(label);
+                    item = label;
+                }
+                if (name != "inFlow" && name != "wrapInFlow" && name != "inFlowMaxPercent")
+                {
+                    item.style.position = Position.Absolute;
+                    item.style.top = 20;
+                    item.style.left = name == "noLeft" ? 0 : 12;
+                    if (name == "leftRight") item.style.right = 12;
+                }
+                absoluteTexts.Add((name, item));
+            }
             var svCase = Case(root, "centeredRow.scrollView", 0);
             svCase.style.top = 8100;
             var svOuter = Box(svCase, "outer", 1003.5f, 535.5f);
@@ -423,6 +469,8 @@ namespace PercentProbe
             Put("growMax", "a " + State(gmA) + "|b " + State(gmB) + "|c " + State(gmC));
             foreach (var (name, input, drag) in percentMinRows)
                 Put("percentMinInAutoRow." + name, "input " + State(input) + "|drag " + State(drag));
+            foreach (var (name, item) in absoluteTexts)
+                Put("absoluteText." + name, State(item));
             foreach (var (name, cards) in wrapCards)
                 Put("wrapCards." + name, string.Join("|", cards.Select((e, i) => "card" + i + " " + State(e))));
             foreach (var (name, row, a, b) in centeredRows)

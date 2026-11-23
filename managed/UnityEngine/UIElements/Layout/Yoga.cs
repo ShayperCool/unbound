@@ -183,6 +183,12 @@ namespace Unbound.UIElements.Layout
         /// tests/projects/uitkpercent centeredRow).</summary>
         public bool MeasuresLinesByTheirBases { get; set; }
 
+        /// <summary>An absolutely placed child without a width is measured as wide as its content,
+        /// not constrained to its owner's width in a column: a label wider than the room its offset
+        /// leaves keeps one line at its text's width, in a column as in a row; a left and a right
+        /// offset still size it (Unity 6000.0.71f1 Editor, tests/projects/uitkpercent absoluteText).</summary>
+        public bool AbsoluteChildrenTakeTheirContentWidth { get; set; }
+
         /// <summary>The configuration of UI Toolkit's layout engine: standard flexbox layout with the
         /// differences each flag above names. Percentage margins, paddings and offsets and the minimum
         /// over a smaller maximum follow UI Toolkit (and CSS) in every configuration, not by flag.</summary>
@@ -197,6 +203,7 @@ namespace Unbound.UIElements.Layout
             LaysOutAgainForPercentages = true,
             ResolvesFlexibleLengthsAsUIToolkit = true,
             MeasuresLinesByTheirBases = true,
+            AbsoluteChildrenTakeTheirContentWidth = true,
         };
 
         /// <summary>To the nearest pixel, halves up (measured: a -3pt margin at 1.25
@@ -1666,8 +1673,9 @@ namespace Unbound.UIElements.Layout
                 childWidthMeasureMode = IsUndefined(childWidth) ? YogaMeasureMode.Undefined : YogaMeasureMode.Exactly;
                 childHeightMeasureMode = IsUndefined(childHeight) ? YogaMeasureMode.Undefined : YogaMeasureMode.Exactly;
 
-                // Constrain the child to a defined owner width, so that text wraps inside it.
-                if (!isMainAxisRow && IsUndefined(childWidth) && widthMode != YogaMeasureMode.Undefined
+                // Constrain the child to a defined owner width, so that text wraps inside it
+                // (standard Yoga; not in UI Toolkit, AbsoluteChildrenTakeTheirContentWidth).
+                if (!config.AbsoluteChildrenTakeTheirContentWidth && !isMainAxisRow && IsUndefined(childWidth) && widthMode != YogaMeasureMode.Undefined
                     && !IsUndefined(width) && width > 0)
                 {
                     childWidth = width;

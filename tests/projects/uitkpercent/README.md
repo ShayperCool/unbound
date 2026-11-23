@@ -68,6 +68,17 @@ not grow, `stretched` is exact); a vertical ScrollView in such a column keeps it
 min and max from a 0 basis gives the row no basis (`auto`); in a 1000 wide row (`fixed`) its
 percentages resolve.
 
+Absolutely placed content (`absoluteText.*`): in a 192 x 88 column (or row in `rowLeft`), an
+absolutely placed 40 point label ("Shadow Ag") without a width takes its content's width (219)
+rather than being constrained to its column owner's width (`left`, `noWrap`, `noLeft`, `rowLeft`,
+`wrap`), as does an absolutely placed box around a 250 wide child (`box`), while `left` + `right`
+still sizes it (`leftRight`) and in-flow controls wrap or shrink to the column (`inFlow`,
+`wrapInFlow`, `inFlowMaxPercent`). The child's own `max-width` / `max-height` constrains the measure
+pass (`AtMost` when the dimension is undefined: `wrapMaxWidth`, `wrapMaxPercent`, `wrapMaxHeight`;
+capping a defined size to a smaller max: `wrapWidthOverMax`, `wrapMaxHeightPercent`), and a measured
+node bounds percentage min/max against its own available size (`wrapMaxPercent`: 75% of 150 -> 113;
+`wrapMaxHeightPercent`: 50% of 50 -> 25; `inFlowMaxPercent` in-flow control).
+
 Other releases are unmeasured.
 
 ## Usage

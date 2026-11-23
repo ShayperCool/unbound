@@ -11,6 +11,21 @@
 {"k":"growMax","v":"a rect=0,0,100,50|basis=0|b rect=100,0,250,50|basis=0|c rect=350,0,250,50|basis=0"}
 {"k":"percentMinInAutoRow.auto","v":"input rect=0,0,1424,90|basis=0|drag rect=0,0,1352,80|basis=0"}
 {"k":"percentMinInAutoRow.fixed","v":"input rect=0,0,1424,90|basis=1000|drag rect=0,0,1352,80|basis=0"}
+{"k":"absoluteText.left","v":"rect=14,24,219,57|basis=NaN"}
+{"k":"absoluteText.noWrap","v":"rect=14,24,219,57|basis=NaN"}
+{"k":"absoluteText.leftRight","v":"rect=14,24,162,57|basis=NaN"}
+{"k":"absoluteText.noLeft","v":"rect=2,24,219,57|basis=NaN"}
+{"k":"absoluteText.rowLeft","v":"rect=14,24,219,57|basis=NaN"}
+{"k":"absoluteText.box","v":"rect=12,20,250,20|basis=NaN"}
+{"k":"absoluteText.inFlow","v":"rect=2,4,186,57|basis=57"}
+{"k":"absoluteText.wrap","v":"rect=14,24,219,57|basis=NaN"}
+{"k":"absoluteText.wrapInFlow","v":"rect=2,4,186,82|basis=82"}
+{"k":"absoluteText.wrapMaxWidth","v":"rect=14,24,124,105|basis=NaN"}
+{"k":"absoluteText.wrapMaxPercent","v":"rect=14,24,113,105|basis=NaN"}
+{"k":"absoluteText.wrapWidthOverMax","v":"rect=14,24,120,154|basis=NaN"}
+{"k":"absoluteText.wrapMaxHeight","v":"rect=14,24,124,40|basis=NaN"}
+{"k":"absoluteText.wrapMaxHeightPercent","v":"rect=14,24,219,25|basis=NaN"}
+{"k":"absoluteText.inFlowMaxPercent","v":"rect=2,4,113,82|basis=82"}
 {"k":"wrapCards.percent","v":"card0 rect=10,0,320,50|basis=320|card1 rect=350,0,320,50|basis=320|card2 rect=690,0,320,50|basis=320"}
 {"k":"wrapCards.points","v":"card0 rect=10,0,320,50|basis=320|card1 rect=350,0,320,50|basis=320|card2 rect=10,50,320,50|basis=320"}
 {"k":"centeredRow.grown","v":"row rect=-11,0,1006,415|basis=0|a rect=0,0,960,415|basis=982.8|b rect=960,0,24,415|basis=24"}
