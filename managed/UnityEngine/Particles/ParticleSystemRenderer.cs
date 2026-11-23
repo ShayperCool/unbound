@@ -459,16 +459,18 @@ namespace UnityEngine
             {
                 if (!Compat.RenderingMeasured || GraphicsSettings.currentRenderPipeline != null || RenderPipelineManager.currentPipeline != null)
                     return false;
-                if (m_RenderMode != ParticleSystemRenderMode.Billboard
+                bool trailOnly = m_RenderMode == ParticleSystemRenderMode.None;
+                if (!trailOnly && m_RenderMode != ParticleSystemRenderMode.Billboard
                     && (m_RenderMode != ParticleSystemRenderMode.Stretch || m_FreeformStretching))
                     return false;
 
                 var ps = System;
                 if (ps == null || ps.m_Main.simulationSpace == ParticleSystemSimulationSpace.Custom) return false;
                 var trails = ps.m_Trails;
-                if (!trails.enabled && !ps.HasAliveTrails) return true;
+                if (!trails.enabled && !ps.HasAliveTrails) return !trailOnly;
+                // Visibility follows the trail centerline and particle size with renderMode None
+                // as well. Wide and narrow width curves produce the same edges (particleanimvisibility).
                 return trails.mode == ParticleSystemTrailMode.PerParticle && trails.sizeAffectsWidth
-                    && trails.widthOverTrail.mode == ParticleSystemCurveMode.Constant && trails.widthOverTrail.scalar <= 1f
                     && !(ps.m_BoundsFrozen && trails.worldSpace);
             }
         }

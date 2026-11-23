@@ -1,7 +1,7 @@
 # Animation culling with particle renderers
 
 Unity 6000.0.71f1, Built-In Render Pipeline. Two independent windowed Linux Editor runs
-on NVIDIA matched across all 798 rows. The runner closes Scene views and uses a 320×180
+on NVIDIA matched across all 1190 rows. The runner closes Scene views and uses a 320×180
 Game view. The gate compares every visibility, animation clock and pose sample exactly.
 
 An Animator with CullCompletely freezes while its only ParticleSystemRenderer is invisible.
@@ -28,8 +28,16 @@ Separate Editor controls with constant sizes 0.1, 0.5 and 4 recorded world-space
 particle positions or the emitter when empty. The measured moving trail includes its
 earlier points and the moving stretched billboard extends behind its particle. Public
 particle bounds and sizes outside these cases remain open. SRP, mesh particles with
-approximate bounds, ribbons, freeform stretch, custom simulation space, wider or
-size-independent trails and mixed world-space trails while paused are unmeasured.
+approximate bounds, ribbons, freeform stretch, custom simulation space, trails
+with size-independent widths and mixed world-space trails while paused are unmeasured.
+
+Seven trail controls measure renderer mode None with empty and moving systems, and
+with constant or tapered trail widths. Changing the taper multiplier from 1 to 8
+leaves the visibility and animation results unchanged. Trail centerlines above the
+frustum stay invisible at either width, including the wide control with billboards
+enabled. The renderer mode None leaves the Trails module available.
+[ParticleSystemRenderMode.None](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystemRenderMode.None.html),
+[Trails module Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/PartSysTrailsModule.html).
 
 Unity documents the effect of each culling mode, the visibility contribution of shadow
 rendering and Scene view cameras, and minimum particle size as a screen fraction.

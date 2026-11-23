@@ -97,6 +97,24 @@ namespace UnityEngine.Tests
             Assert.True(Animator.AnyRendererVisible(root));
         }
 
+        [Fact]
+        public void ARendererDrawingOnlyCurvedTrailsUsesBuiltInVisibility()
+        {
+            using var pinned = TestRelease.Pin(TestRelease.Measured);
+            var root = new GameObject("ParticleTrails");
+            m_Objects.Add(root);
+            var system = root.AddComponent<ParticleSystem>();
+            var renderer = system.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.None;
+            var trails = system.trails;
+            trails.enabled = true;
+            trails.widthOverTrail = new ParticleSystem.MinMaxCurve(8f, AnimationCurve.Linear(0f, 1f, 1f, 0f));
+
+            Assert.False(Animator.AnyRendererVisible(root));
+            renderer.SetVisible(true);
+            Assert.True(Animator.AnyRendererVisible(root));
+        }
+
         /// <summary>The popup controller's rig (a 0.3 s non-looping state that scales and moves
         /// ContinueText), with a renderer on a second child when <paramref name="withRenderer"/>.</summary>
         (Animator Animator, RectTransform Text, Renderer Renderer) Rig(AnimatorCullingMode mode, bool withRenderer = true)
