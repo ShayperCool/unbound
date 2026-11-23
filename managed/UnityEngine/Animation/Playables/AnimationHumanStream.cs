@@ -774,8 +774,15 @@ namespace Unbound.Runtime.Playables
         /// job left them. The pose is made again from the solved skeleton when next read.</summary>
         internal void SolveIK()
         {
-            // The solve builds a skeleton from the current human pose (humanoid bone.scaleHipsThenSolve).
-            if (m_HipsScaleOverridden) m_SkeletonValid = false;
+            if (m_HipsScaleOverridden)
+            {
+                // Before the human pose takes the scale edit, the solve uses its previous
+                // placement (humanoid bone.scaleHipsThenSolve).
+                if (!m_HumanValid) m_SkeletonValid = false;
+                else
+                    Stubs.Ignored("Humanoid IK after non-uniform hips scale readback",
+                        "solves from the rebased skeleton; parity of the resulting pose is unresolved");
+            }
             UpdateSkeletonPose();
             var s = m_Human.Skeleton;
             Skel.ComputeGlobal(s, m_Local, m_Global);

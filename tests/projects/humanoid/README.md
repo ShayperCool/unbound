@@ -178,6 +178,15 @@ imported without keyframe reduction.
   the stream and survives reading the human pose. Retargeting observes the
   scaled body and keeps the scene hips scale at its authored value.
   The combined SetLocalTRS control also changes the position.
+  Five more controls add 1084 rows. A descendant's world-position write uses the
+  inverse of the same local transforms as its read. A hips TRS call with an
+  unchanged scale leaves a preceding non-uniform spine scale and its descendants
+  in the same frame. The default elbow hint uses the human pose's current placement,
+  including its previously cached value. A solve before a human-pose read uses
+  the placement before the scale edit. The pose from a solve after the read still
+  has an unresolved comparison in the separate diagnostic.
+  [AnimationHumanStream.GetHintPosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationHumanStream.GetHintPosition.html),
+  [AnimationHumanStream.SolveIK](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationHumanStream.SolveIK.html).
   [TransformStreamHandle](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.TransformStreamHandle.html),
   [Humanoid Avatar Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/AvatarCreationandSetup.html).
 
