@@ -40,6 +40,7 @@ namespace UnityEngine
                     return;
                 }
                 int count = owner.m_SubtreeCount;
+                if (count == 0) return; // The branch's hierarchy was released during destruction.
                 if (value < count)
                 {
                     Log.Engine(LogType.Warning,
@@ -104,7 +105,15 @@ namespace UnityEngine
 
             if (parent == null)
             {
-                if (!destroying) ResizeHierarchy(m_SubtreeCount);
+                if (destroying)
+                {
+                    // The surviving parent can still observe these transforms during its
+                    // children-changed message, after their shared storage has been released.
+                    m_SubtreeCount = 0;
+                    m_HierarchyCapacity = 0;
+                    m_AllocatedHierarchy = false;
+                }
+                else ResizeHierarchy(m_SubtreeCount);
                 return;
             }
 
