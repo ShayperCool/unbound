@@ -241,6 +241,11 @@ namespace UnityEngine.AI
                 var extents = AgentExtents(agentTypeID);
                 if (!Nearest(surface, source, extents, filter, out var startRef, out var start)) return null;
                 if (!Nearest(surface, target, extents, filter, out var endRef, out var end)) return null;
+                return Begin(surface, startRef, start, endRef, end, filter);
+            }
+
+            internal static PathSearch Begin(NavWorld.Surface surface, long startRef, Vector3 start, long endRef, Vector3 end, AreaFilter filter)
+            {
                 var search = new PathSearch
                 {
                     m_Surface = surface,

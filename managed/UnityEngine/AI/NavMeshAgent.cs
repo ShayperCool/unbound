@@ -59,6 +59,7 @@ namespace UnityEngine.AI
         internal bool m_ValidateAreaMask;
         // A new agent reports a complete path, also while its first path is pending (measured).
         NavMeshPathStatus m_PathStatus = NavMeshPathStatus.PathComplete;
+        bool m_KeepInvalidPathEnd;
         Vector3 m_WrittenPosition;
         bool m_OnNavMesh;
         int m_WorldVersion = -1;
@@ -366,6 +367,7 @@ namespace UnityEngine.AI
             if (!NavMesh.Nearest(m_Surface, target, NavMesh.AgentReach(m_Radius), Filter, out var polygon, out var mapped))
                 return false;
             m_Destination = mapped;
+            m_KeepInvalidPathEnd = false;
             if (Compat.NavMeshPathAssignmentMeasured && m_PathPending && WalkingOnNavMesh
                 && AgentSystem.TryRetargetPendingPath(this, polygon, out bool requeued))
             {
@@ -552,7 +554,7 @@ namespace UnityEngine.AI
         /// <summary>The current corridor's endpoint, including one given in the call, retained
         /// while a new one is pending and after hasPath changes (measured).</summary>
         public Vector3 pathEndPosition => m_Crowd != null && (Compat.NavMeshCorridorReportingMeasured || FollowingPath)
-            ? NavMesh.V(m_Crowd.corridor.GetTarget()) : m_NextPosition;
+            ? (m_KeepInvalidPathEnd ? m_ReportedDestination : NavMesh.V(m_Crowd.corridor.GetTarget())) : m_NextPosition;
 
         static readonly DtStraightPath[] s_RemainingCorners = new DtStraightPath[DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS];
 
@@ -662,7 +664,7 @@ namespace UnityEngine.AI
         /// (measured: tests/projects/navlinks targets, after a partial path, ResetPath and Warp).</summary>
         void ForgetPath()
         {
-            m_PathStatus = NavMeshPathStatus.PathComplete;
+            SetPathStatus(NavMeshPathStatus.PathComplete);
             m_PathFromCall = false;
             m_HasDestination = false;
             SetPathPending(false);
@@ -887,8 +889,21 @@ namespace UnityEngine.AI
                 m_FollowingOlderResult = false;
             }
         }
-        internal void SetPathStatus(NavMeshPathStatus status) => m_PathStatus = status;
+        internal void SetPathStatus(NavMeshPathStatus status)
+        {
+            m_PathStatus = status;
+            m_KeepInvalidPathEnd = false;
+        }
+
+        internal void RetainInvalidPathEnd(Vector3 end)
+        {
+            SetPathStatus(NavMeshPathStatus.PathInvalid);
+            m_ReportedDestination = end;
+            m_KeepInvalidPathEnd = true;
+        }
+
         internal void SetPathEnd(Vector3 end) => m_ReportedDestination = end;
+        internal void SetRequestedDestination(Vector3 destination) => m_Destination = destination;
         internal bool HasDestination => m_HasDestination;
         internal Vector3 RequestedDestination => m_Destination;
         internal NavMeshPath RequestedPath => m_RequestedPath;
@@ -1077,6 +1092,7 @@ namespace Unbound.Runtime
                 ag.deferPathValidation = false;
                 agent.m_ValidateAreaMask = false;
                 if (!agent.FollowingPath || agent.isOnOffMeshLink) continue;
+                if (validateMask && RepairExcludedGroundEndpoints(agent)) continue;
                 var assignment = agent.PendingAssignment;
                 if (agent.pathPending && assignment == NavMeshAgent.AssignmentRequest.None) continue;
                 var path = ag.corridor.GetPath();
@@ -1110,6 +1126,103 @@ namespace Unbound.Runtime
                     break;
                 }
             }
+        }
+
+        // A changed mask can exclude the ground at either end of a walking corridor.
+        // Snap excluded endpoints with the agent's placement reach, then keep the allowed
+        // section of the corridor or reconnect the new endpoints through allowed ground.
+        // The visible corridor and the queued request still have separate endpoints.
+        static bool RepairExcludedGroundEndpoints(NavMeshAgent agent)
+        {
+            var ag = agent.m_Crowd;
+            var surface = agent.m_Surface;
+            var corridor = ag.corridor.GetPath()[..ag.corridor.GetPathCount()];
+            long startRef = corridor[0], endRef = corridor[^1];
+            bool moveStart = GroundAreaExcluded(surface, startRef, agent.areaMask);
+            bool moveEnd = GroundAreaExcluded(surface, endRef, agent.areaMask);
+            if (!moveStart && !moveEnd) return false;
+
+            var filter = agent.Filter;
+            var reach = NavMesh.AgentReach(agent.radius);
+            var start = NavMesh.V(ag.npos);
+            if (moveStart)
+            {
+                if (!NavMesh.Nearest(surface, start, reach, filter, out startRef, out start))
+                {
+                    InvalidateCorridor(agent);
+                    return true;
+                }
+                ag.npos = NavMesh.V(start);
+                agent.m_NextPosition = start;
+                if (agent.updatePosition) WriteTransform(agent);
+            }
+
+            var end = agent.pathEndPosition;
+            if (moveEnd && !NavMesh.Nearest(surface, end, reach, filter, out endRef, out end))
+            {
+                // The agent can stand here but has no reachable endpoint to follow.
+                ag.corridor.Reset(startRef, NavMesh.V(start));
+                WaitForPath(agent);
+                agent.SetPathEnd(start);
+                agent.CatchUpStaleness();
+                return true;
+            }
+
+            // A queued search reads the current filter when it starts. Remap its request
+            // without changing the public destination that it is still replacing.
+            bool pending = agent.pathPending;
+            if (pending && !PathSearchStarted(agent)
+                && NavMesh.Nearest(surface, agent.RequestedDestination, reach, filter, out _, out var requested))
+                agent.SetRequestedDestination(requested);
+
+            var status = agent.pathStatus;
+            int first = corridor.IndexOf(startRef);
+            int last = corridor.LastIndexOf(endRef);
+            if (first >= 0 && last >= first && CorridorAllowed(surface, corridor.Slice(first, last - first + 1), filter))
+                corridor = corridor.Slice(first, last - first + 1);
+            else
+            {
+                var search = NavMesh.PathSearch.Begin(surface, startRef, start, endRef, end, filter);
+                int budget = int.MaxValue;
+                if (!search.Step(ref budget) || search.Result == null || search.Result.m_Corners.Length == 0)
+                {
+                    InvalidateCorridor(agent);
+                    return true;
+                }
+                corridor = search.Result.m_Polygons;
+                end = search.Result.m_Corners[^1];
+                if (search.Result.status != NavMeshPathStatus.PathComplete) status = search.Result.status;
+            }
+
+            var staleness = agent.Staleness;
+            bool olderResult = agent.m_FollowingOlderResult;
+            ag.corridor.Reset(startRef, NavMesh.V(start));
+            Follow(agent, corridor, corridor.Length, NavMesh.V(end), status, keepRequest: pending);
+            agent.RestoreStaleness(staleness);
+            agent.m_FollowingOlderResult = olderResult;
+            return true;
+        }
+
+        static bool GroundAreaExcluded(NavWorld.Surface surface, long polyRef, int mask) =>
+            surface.Mesh.GetTileAndPolyByRef(polyRef, out _, out var poly).Succeeded()
+            && poly.GetPolyType() == DtPolyTypes.DT_POLYTYPE_GROUND && (mask & (1 << poly.GetArea())) == 0;
+
+        static bool CorridorAllowed(NavWorld.Surface surface, Span<long> corridor, AreaFilter filter)
+        {
+            foreach (long polyRef in corridor)
+                if (!surface.Query.IsValidPolyRef(polyRef, filter)) return false;
+            return true;
+        }
+
+        // Without allowed ground to stand on, the agent stops and keeps the last path reports.
+        static void InvalidateCorridor(NavMeshAgent agent)
+        {
+            var end = agent.pathEndPosition;
+            WaitForPath(agent);
+            agent.m_Velocity = Vector3.zero;
+            agent.SetPathPending(false);
+            agent.RetainInvalidPathEnd(end);
+            agent.CatchUpStaleness();
         }
 
         /// <summary>A partial path made stale (isPathStale) is searched again, before this update's
@@ -1929,7 +2042,8 @@ namespace Unbound.Runtime
 
         /// <summary>The agent follows the corridor <paramref name="polys"/> (its first
         /// <paramref name="count"/>) from where its corridor starts to <paramref name="target"/>.</summary>
-        static void Follow(NavMeshAgent agent, Span<long> polys, int count, RcVec3f target, NavMeshPathStatus status)
+        static void Follow(NavMeshAgent agent, Span<long> polys, int count, RcVec3f target, NavMeshPathStatus status,
+            bool keepRequest = false)
         {
             var crowd = CrowdOf(agent.m_Surface);
             var ag = agent.m_Crowd;
@@ -1942,10 +2056,13 @@ namespace Unbound.Runtime
             ag.targetState = DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID;
             ag.targetReplanTime = 0f;
             ag.targetReplan = false;
-            agent.SetPathPending(false);
+            if (!keepRequest)
+            {
+                agent.SetPathPending(false);
+                agent.SetPathEnd(NavMesh.V(target));
+            }
             agent.SetArrived(false);
             agent.SetPathStatus(status);
-            agent.SetPathEnd(NavMesh.V(target));
             agent.PathRenewed();
             // The corners the agent steers by, for this frame's queries.
             ag.ncorners = ag.corridor.FindCorners(ag.corners, DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS, crowd.GetNavMeshQuery(), crowd.GetFilter(0));

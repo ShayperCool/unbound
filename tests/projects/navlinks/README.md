@@ -549,6 +549,22 @@ exclude an area with and without an alternate route and exclude an
 unrelated area. Unity documents that changing the permitted areas marks
 the path stale. [NavMeshAgent.areaMask](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/areamask).
 
+If the mask excludes the ground at either end, the agent projects the
+excluded endpoint onto permitted ground within its placement reach. It
+keeps the surviving corridor where it can. A point projected outside
+the old corridor reconnects through allowed polygons. A complete repair
+keeps the route's status and staleness. Moving the start also moves the
+agent, without adding the
+projection distance to walking velocity. Without permitted ground for
+the start, the agent stops and reports PathInvalid, with its last
+endpoint as the destination. If only the destination is beyond reach,
+the measured agent reports PathComplete with hasPath false and its
+standing point as the destination. Trimming the reported
+corridor while a request waits preserves its queue position and reported
+destination until that request finishes. The ground controls measure
+walking and stationary agents, both endpoints, placement reach, and a
+second agent already using the update budget.
+
 A second SetDestination updates a queued request in place. Its previous
 public destination stays visible until the search resolves. An active
 search keeps its original result when the new point is on the same
@@ -559,8 +575,8 @@ assignment, and verify when a second agent advances in the queue.
 
 The probe measures walking agents on Unity 6000.0.71f1. Assignments and
 resubmissions during link traversal and after a NavMesh rebuild are
-unmeasured. All 655 records and 8,267 values pass the existing
-tolerances, with a maximum component difference of 0.000012.
+unmeasured. All 850 records and 12,206 values pass the existing
+tolerances, with a maximum component difference of 0.000031.
 
     python3 tests/projects/navlinks/projection.py editor --release 6000.0.71f1 --profile assignment --label L
     python3 tests/projects/navlinks/projection.py publish --release 6000.0.71f1 --profile assignment --label L
