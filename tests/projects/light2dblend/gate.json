@@ -1,0 +1,17 @@
+{
+  "commands": [
+    "python3 tests/projects/light2dblend/run.py gate"
+  ],
+  "summary": "light2dblend: .*",
+  "engine_paths": [
+    "crates/unbound-app/src/render/pipelines.rs",
+    "tests/projects/urp2d/Assets/DefaultVolumeProfile.asset",
+    "tests/projects/urp2d/Assets/DefaultVolumeProfile.asset.meta",
+    "tests/projects/urp2d/Assets/Settings/",
+    "tests/projects/urp2d/Assets/Settings.meta",
+    "tests/projects/urp2d/Assets/UniversalRenderPipelineGlobalSettings.asset",
+    "tests/projects/urp2d/Assets/UniversalRenderPipelineGlobalSettings.asset.meta",
+    "tests/projects/urp2d/Packages/",
+    "tests/projects/urp2d/ProjectSettings/"
+  ]
+}
