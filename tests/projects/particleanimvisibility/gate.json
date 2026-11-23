@@ -1,0 +1,15 @@
+{
+  "commands": [
+    "python3 tests/projects/particleanimvisibility/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\""
+  ],
+  "summary": "particleanimvisibility: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Animation/Animator.cs",
+    "managed/UnityEngine/Graphics/Renderer.cs",
+    "managed/UnityEngine/Particles/ParticleSystemRenderer.cs",
+    "tests/projects/animculling/Assets/Resources/",
+    "tests/projects/animculling/Assets/Scenes/",
+    "tests/projects/animculling/Packages/",
+    "tests/projects/animculling/ProjectSettings/"
+  ]
+}
