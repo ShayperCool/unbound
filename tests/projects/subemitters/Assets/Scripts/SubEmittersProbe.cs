@@ -387,6 +387,46 @@ public class SubEmittersProbe : MonoBehaviour
         DestroyImmediate(ps.gameObject);
     }
 
+    /// <summary>Birth sub-emitters emitting over the distance their parents travel
+    /// (<c>birth/distance/*</c>): parents emitted at x = 0, 1, ... moving +Y at the given speeds,
+    /// a world-space child with rate over distance <paramref name="perUnit"/> (and over time
+    /// <paramref name="perSecond"/>), stepped and recorded as the other scenarios.</summary>
+    static void BirthDistance(string scenario, float perUnit, float perSecond, float[] speeds, bool childEmissionEnabled = true,
+        Action<ParticleSystem> configureParent = null, Action<ParticleSystem> configureChild = null)
+    {
+        var ps = Make(scenario, null, configureParent);
+        var child = Make(scenario + " child", ps.transform, c =>
+        {
+            var m = c.main; m.simulationSpace = ParticleSystemSimulationSpace.World;
+            var em = c.emission;
+            em.rateOverDistance = perUnit;
+            em.rateOverTime = perSecond;
+            em.enabled = childEmissionEnabled;
+            configureChild?.Invoke(c);
+        });
+        var sub = ps.subEmitters; sub.enabled = true;
+        sub.AddSubEmitter(child, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
+        for (int k = 0; k < speeds.Length; k++)
+            ps.Emit(new ParticleSystem.EmitParams { position = new Vector3(k, 0f, 0f), velocity = new Vector3(0f, speeds[k], 0f), startLifetime = 5f }, 1);
+        StepRecord(scenario, ps, child, null, false);
+    }
+
+    static void BirthScenarios()
+    {
+        BirthDistance("birth/distance/ten", 10f, 0f, new[] { 2f });
+        BirthDistance("birth/distance/three", 3f, 0f, new[] { 2f });
+        BirthDistance("birth/distance/both", 10f, 4f, new[] { 2f });
+        BirthDistance("birth/distance/still", 10f, 0f, new[] { 0f });
+        BirthDistance("birth/distance/four", 5f, 0f, new[] { 1f, 2f, 3f, 4f });
+        BirthDistance("birth/distance/disabled", 10f, 0f, new[] { 2f }, false);
+        BirthDistance("birth/distance/multi", 40f, 0f, new[] { 3f });
+        BirthDistance("birth/distance/bothmulti", 25f, 45f, new[] { 2f });
+        BirthDistance("birth/distance/scaled", 10f, 0f, new[] { 1f }, true,
+            p => { p.transform.localScale = new Vector3(1f, 2f, 1f); var m = p.main; m.scalingMode = ParticleSystemScalingMode.Local; });
+        BirthDistance("birth/distance/nonloop", 10f, 0f, new[] { 2f }, true, null,
+            c => { var m = c.main; m.loop = false; m.duration = 0.25f; });
+    }
+
     static void Direction(string scenario, Vector3 direction, Vector3 childRotation, Vector3 parentRotation, Action<ParticleSystem> configure)
     {
         var ps = Make(scenario, null, s => s.transform.rotation = Quaternion.Euler(parentRotation));
@@ -596,6 +636,29 @@ public class SubEmittersProbe : MonoBehaviour
 
         Time.captureDeltaTime = 0f;
         Application.logMessageReceived -= OnLog;
+        BirthScenarios();
+
+        Time.captureDeltaTime = 0.05f;
+        yield return null;
+        var playedDist = Make("birth/distance/played", null, s => { var m = s.main; m.cullingMode = ParticleSystemCullingMode.AlwaysSimulate; });
+        var playedDistChild = Make("birth/distance/played child", playedDist.transform, c =>
+        {
+            var m = c.main; m.simulationSpace = ParticleSystemSimulationSpace.World;
+            var em = c.emission; em.rateOverDistance = 10f; em.rateOverTime = 0f;
+        });
+        var playedDistSub = playedDist.subEmitters; playedDistSub.enabled = true;
+        playedDistSub.AddSubEmitter(playedDistChild, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
+        playedDist.Play();
+        playedDist.Emit(new ParticleSystem.EmitParams { position = Vector3.zero, velocity = new Vector3(0f, 2f, 0f), startLifetime = 5f }, 1);
+        for (int frame = 0; frame < 6; frame++)
+        {
+            yield return null;
+            Record("birth/distance/played/parent/" + I(frame), playedDist.particleCount, Time.deltaTime);
+            RecordParticles("birth/distance/played/child/" + I(frame), playedDistChild);
+        }
+        DestroyImmediate(playedDist.gameObject);
+        Time.captureDeltaTime = 0f;
+
         Record("complete", 1);
         File.WriteAllText(s_Path, s_Out.ToString());
         Debug.Log("sub-emitters complete: " + s_Path);
