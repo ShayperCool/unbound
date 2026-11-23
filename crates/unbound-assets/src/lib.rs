@@ -24,6 +24,7 @@ pub mod color;
 pub mod cpu_time;
 pub mod dilate;
 pub mod exr_writer;
+pub mod png_writer;
 pub mod font;
 mod font_features;
 mod font_freetype;
