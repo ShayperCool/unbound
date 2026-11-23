@@ -160,10 +160,12 @@ def obstacle_separation_problem(path):
             pending.add(f'{key}.pathPending')
     for case in ('shaft', 'lower-cap', 'upper-cap', 'above', 'tall', 'zero-speed',
                  'slow-speed', 'zero-foot', 'short', 'on-axis', 'on-axis-path',
-                 'lower-cap-path', 'above-path', 'cap-graze'):
+                 'lower-cap-path', 'above-path', 'cap-graze', 'near-axis-left', 'near-axis-right'):
         numeric.update(f'{case}.f{frame}.at.{axis}' for frame in (1, 3) for axis in 'xyz')
     for case in ('on-axis-path', 'lower-cap-path', 'above-path', 'cap-graze'):
         numeric.update(f'{case}.f{frame}.desired.{axis}' for frame in (1, 3) for axis in 'xyz')
+    for case in ('scaled-cap-interior', 'cap-interior', 'cap-surface-near', 'cap-surface-far'):
+        numeric.update(f'{case}.f{frame}.at.{axis}' for frame in (1, 2, 3) for axis in 'xyz')
     expected = numeric | statuses | pending | {'release', 'mesh0.triangles', 'mesh0.vertices'}
     if set(records) != expected:
         return (f'missing separation keys {sorted(expected - records.keys())}, '
@@ -210,8 +212,7 @@ def same(a, b):
 
 
 def compare(reference, candidate, prefix, details):
-    """Prints per scenario the values that match and the differences (at most `details` each);
-    returns the number of scenarios with a difference that is not listed in LISTED."""
+    """Report differences, with an optional per-scenario detail limit."""
     bad = 0
     for scenario, values in reference.items():
         if not scenario.startswith(prefix):
@@ -219,6 +220,9 @@ def compare(reference, candidate, prefix, details):
         other = candidate.get(scenario)
         if other is None:
             print(f'{scenario}: missing from the candidate')
+            if details is None:
+                for key, value in values.items():
+                    print(f'  {key}: unity {value!r}  unbound "<missing>"')
             bad += 1
             continue
         keys = [k for k, v in values.items() if not same(v, other.get(k, '<missing>'))]
@@ -229,12 +233,15 @@ def compare(reference, candidate, prefix, details):
         print(f'{scenario}: ' + (f'{len(keys)} of {len(values)} values differ{note}' if keys else f'all {len(values)} values match'))
         for line in lines[:details]:
             print(line)
-        if len(lines) > details:
+        if details is not None and len(lines) > details:
             print(f'  ... {len(lines) - details} more')
         bad += len(keys) > len(listed)
     for scenario in candidate:
         if scenario.startswith(prefix) and scenario not in reference:
             print(f'{scenario}: not in the reference')
+            if details is None:
+                for key, value in candidate[scenario].items():
+                    print(f'  {key}: unity "<missing>"  unbound {value!r}')
             bad += 1
     return bad
 
@@ -258,7 +265,8 @@ def unbound(args):
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=900).returncode
     if code != 0 or not result.exists():
         sys.exit(f'Unbound failed (exit {code}); see {out/"run.log"}')
-    bad = compare(json.loads(profile_reference(args).read_text()), json.loads(result.read_text()), args.scenario, args.details)
+    details = None if args.profile == OBSTACLE_SEPARATION else args.details
+    bad = compare(json.loads(profile_reference(args).read_text()), json.loads(result.read_text()), args.scenario, details)
     print(f'gated: {bad} scenario(s) differ')
     return min(bad, 100)
 
@@ -270,7 +278,7 @@ def main():
     parser.add_argument('--profile', choices=('main', 'layers', OBSTACLE_SEPARATION), default='main',
                         help='main regression set, stacked links or obstacle separation')
     parser.add_argument('--scenario', default='')
-    parser.add_argument('--details', type=int, default=6)
+    parser.add_argument('--details', type=int, default=6, help='detail limit for the main and layers profiles')
     args = parser.parse_args()
     if args.profile != 'main' and args.scenario:
         parser.error('--scenario is supported only by the main profile')

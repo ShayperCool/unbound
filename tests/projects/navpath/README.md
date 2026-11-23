@@ -107,10 +107,14 @@ sampling and contact. A capsule shorter than its diameter has a spherical sectio
 at 0.5 m, the shaft pushes the agent to 1.0 m from the capsule axis. A cap 0.25 m beyond the agent's
 height pushes it to 0.933 m, and a capsule fully above the agent leaves its position unchanged.
 On the capsule axis the contact moves the agent along positive X, including when its destination
-lies along negative Z.
+lies along negative Z. Shaft contact uses the direction of any nonzero offset from the axis.
+When only a cap reaches the agent's height, contact resolves away from the nearest point on
+the cap section's circumference. The scaled capsule control records the first three steps
+while an agent starts inside that section.
 
-The dedicated profile records 639 values. It includes six steering controls and varies the
-capsule height, the agent's speed, cap height, and the presence of a path during contact.
+The dedicated profile records 687 values and prints every difference. It includes six steering
+controls and varies capsule height, scale, agent speed, and starting positions inside and outside
+the cap section.
 The main and stacked-link profiles continue to use their original references.
 
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py editor --profile obstacle-separation --label L

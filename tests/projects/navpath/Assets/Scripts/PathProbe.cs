@@ -1480,23 +1480,25 @@ public class PathProbe : MonoBehaviour
             yield return null;
         }
 
-        foreach (var (name, centerHeight, capsuleHeight, speed, onAxis, route) in
-            new (string, float, float, float, bool, CapsuleRoute)[]
+        foreach (var (name, centerHeight, capsuleHeight, speed, axisOffset, route) in
+            new (string, float, float, float, float?, CapsuleRoute)[]
         {
-            ("shaft", 0f, 2f, 3.5f, false, CapsuleRoute.None),
-            ("lower-cap", -0.75f, 2f, 3.5f, false, CapsuleRoute.None),
-            ("upper-cap", 2.75f, 2f, 3.5f, false, CapsuleRoute.None),
-            ("above", 3.05f, 2f, 3.5f, false, CapsuleRoute.None),
-            ("tall", 0f, 20f, 3.5f, false, CapsuleRoute.None),
-            ("zero-speed", 0f, 2f, 0f, false, CapsuleRoute.None),
-            ("slow-speed", 0f, 2f, 0.01f, false, CapsuleRoute.None),
-            ("zero-foot", 1f, 2f, 0f, false, CapsuleRoute.None),
-            ("short", 0f, 0.4f, 3.5f, false, CapsuleRoute.None),
-            ("on-axis", 0f, 2f, 3.5f, true, CapsuleRoute.None),
-            ("on-axis-path", 0f, 2f, 3.5f, true, CapsuleRoute.AlongZ),
-            ("lower-cap-path", -0.75f, 2f, 3.5f, false, CapsuleRoute.AlongZ),
-            ("above-path", 3.05f, 2f, 3.5f, false, CapsuleRoute.AlongZ),
-            ("cap-graze", -0.75f, 2f, 3.5f, false, CapsuleRoute.GrazeCap),
+            ("shaft", 0f, 2f, 3.5f, null, CapsuleRoute.None),
+            ("lower-cap", -0.75f, 2f, 3.5f, null, CapsuleRoute.None),
+            ("upper-cap", 2.75f, 2f, 3.5f, null, CapsuleRoute.None),
+            ("above", 3.05f, 2f, 3.5f, null, CapsuleRoute.None),
+            ("tall", 0f, 20f, 3.5f, null, CapsuleRoute.None),
+            ("zero-speed", 0f, 2f, 0f, null, CapsuleRoute.None),
+            ("slow-speed", 0f, 2f, 0.01f, null, CapsuleRoute.None),
+            ("zero-foot", 1f, 2f, 0f, null, CapsuleRoute.None),
+            ("short", 0f, 0.4f, 3.5f, null, CapsuleRoute.None),
+            ("on-axis", 0f, 2f, 3.5f, 0f, CapsuleRoute.None),
+            ("on-axis-path", 0f, 2f, 3.5f, 0f, CapsuleRoute.AlongZ),
+            ("lower-cap-path", -0.75f, 2f, 3.5f, null, CapsuleRoute.AlongZ),
+            ("above-path", 3.05f, 2f, 3.5f, null, CapsuleRoute.AlongZ),
+            ("cap-graze", -0.75f, 2f, 3.5f, null, CapsuleRoute.GrazeCap),
+            ("near-axis-left", 0f, 2f, 3.5f, -0.00005f, CapsuleRoute.None),
+            ("near-axis-right", 0f, 2f, 3.5f, 0.00005f, CapsuleRoute.None),
         })
         {
             float floor = 1f / 15f;
@@ -1511,7 +1513,8 @@ public class PathProbe : MonoBehaviour
 
             var mover = new GameObject("mover");
             var start = new Vector3(-0.68f, floor, 0.08f);
-            if (onAxis) start = new Vector3(center.x, floor, center.z);
+            if (axisOffset.HasValue)
+                start = new Vector3(center.x + axisOffset.Value, floor, center.z);
             if (route == CapsuleRoute.GrazeCap) start = new Vector3(-1.51f, floor, 0.85f);
             mover.transform.position = start;
             var agent = mover.AddComponent<NavMeshAgent>();
@@ -1525,6 +1528,43 @@ public class PathProbe : MonoBehaviour
             yield return Frames(2);
             ProbeLog.Value(name + ".f3.at", agent.nextPosition);
             if (route != CapsuleRoute.None) ProbeLog.Value(name + ".f3.desired", agent.desiredVelocity);
+            Destroy(mover);
+            Destroy(post);
+            yield return null;
+        }
+
+        yield return ClippedCapContacts();
+    }
+
+    IEnumerator ClippedCapContacts()
+    {
+        float floor = 1f / 15f;
+        foreach (var (name, centerHeight, scale, startX, startZ) in
+            new (string, float, Vector3, float, float)[]
+        {
+            ("scaled-cap-interior", -0.65f, new Vector3(1.4f, 1.2f, 0.8f), -0.45f, 0f),
+            ("cap-interior", -0.75f, Vector3.one, -0.09f, 0.07f),
+            ("cap-surface-near", -0.75f, Vector3.one, 0.11f - 0.4330627f, 0.07f),
+            ("cap-surface-far", -0.75f, Vector3.one, 0.11f - 0.4331627f, 0.07f),
+        })
+        {
+            var post = new GameObject("post");
+            post.transform.position = new Vector3(0.11f, floor + centerHeight, 0.07f);
+            post.transform.localScale = scale;
+            var obstacle = post.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.radius = 0.5f;
+            obstacle.height = 2f;
+            yield return null;
+
+            var mover = new GameObject("mover");
+            mover.transform.position = new Vector3(startX, floor, startZ);
+            var agent = mover.AddComponent<NavMeshAgent>();
+            for (int frame = 1; frame <= 3; frame++)
+            {
+                yield return null;
+                ProbeLog.Value(name + ".f" + frame + ".at", agent.nextPosition);
+            }
             Destroy(mover);
             Destroy(post);
             yield return null;
