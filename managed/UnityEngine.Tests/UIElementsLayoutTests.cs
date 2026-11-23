@@ -124,6 +124,35 @@ namespace UnityEngine.Tests
             Assert.Equal(140f, percent.LayoutHeight);
         }
 
+        /// <summary>Measured in the Editor (tests/projects/uitkpercent relativeIn*): percentage offsets of
+        /// a relatively placed element take the owner's width for left and right and its height for
+        /// top and bottom, whatever the element's own flex direction.</summary>
+        [Fact]
+        public void PercentOffsetsTakeTheOwnersSizeAlongTheirAxis()
+        {
+            var config = YogaConfig.UIToolkit();
+            var column = new YogaNode(config) { Width = YogaValue.Point(200), Height = YogaValue.Point(400) };
+            var row = new YogaNode(config) { Width = YogaValue.Point(50), Height = YogaValue.Point(50), FlexShrink = 0, FlexDirection = YogaFlexDirection.Row };
+            row.SetPosition(YogaEdge.Left, YogaValue.Percent(10));
+            row.SetPosition(YogaEdge.Top, YogaValue.Percent(5));
+            var end = new YogaNode(config) { Width = YogaValue.Point(50), Height = YogaValue.Point(50), FlexShrink = 0 };
+            end.SetPosition(YogaEdge.Right, YogaValue.Percent(10));
+            end.SetPosition(YogaEdge.Bottom, YogaValue.Percent(5));
+            column.Insert(0, row);
+            column.Insert(1, end);
+            column.CalculateLayout();
+            Assert.Equal((20f, 20f), (row.LayoutX, row.LayoutY));
+            Assert.Equal((-20f, 30f), (end.LayoutX, end.LayoutY));
+
+            var rowOwner = new YogaNode(config) { Width = YogaValue.Point(400), Height = YogaValue.Point(200), FlexDirection = YogaFlexDirection.Row };
+            var columnChild = new YogaNode(config) { Width = YogaValue.Point(50), Height = YogaValue.Point(50), FlexShrink = 0 };
+            columnChild.SetPosition(YogaEdge.Left, YogaValue.Percent(10));
+            columnChild.SetPosition(YogaEdge.Top, YogaValue.Percent(5));
+            rowOwner.Insert(0, columnChild);
+            rowOwner.CalculateLayout();
+            Assert.Equal((40f, 10f), (columnChild.LayoutX, columnChild.LayoutY));
+        }
+
         // A 25x20 box (column, or row) holding a middle node over a 50x50 leaf; neither shrinks.
         static YogaNode BoxedMiddle(YogaConfig config, YogaOverflow boxOverflow, YogaOverflow middleOverflow, YogaFlexDirection boxDirection = YogaFlexDirection.Column)
         {

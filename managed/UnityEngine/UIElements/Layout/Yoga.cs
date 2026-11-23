@@ -939,25 +939,29 @@ namespace Unbound.UIElements.Layout
             return trailingPosition;
         }
 
-        /// <summary>Sets the layout position from the margins and the relative offsets.</summary>
-        internal void SetLayoutPositionFromStyle(YogaDirection direction, float mainSize, float crossSize, float ownerWidth)
+        /// <summary>Sets the layout position from the margins and the relative offsets. Percentage
+        /// offsets resolve against the owner's size along their own axis (left and right against its
+        /// width, top and bottom against its height) whatever the node's own flex direction, as UI
+        /// Toolkit does (plain Yoga took the node's main axis for the owner's: Unity 6000.0.71f1 Editor,
+        /// tests/projects/uitkpercent); percentage margins against its width.</summary>
+        internal void SetLayoutPositionFromStyle(YogaDirection direction, float ownerWidth, float ownerHeight, float marginWidthSize)
         {
             // Root nodes are always laid out as LTR, so that they don't get negative positions.
             var directionRespectingRoot = owner != null ? direction : YogaDirection.LTR;
             var mainAxis = Yoga.ResolveFlexDirection(style.FlexDirection, directionRespectingRoot);
             var crossAxis = Yoga.FlexDirectionCross(mainAxis, directionRespectingRoot);
 
-            var relativePositionMain = RelativePosition(mainAxis, mainSize);
-            var relativePositionCross = RelativePosition(crossAxis, crossSize);
+            var relativePositionMain = RelativePosition(mainAxis, Yoga.IsRow(mainAxis) ? ownerWidth : ownerHeight);
+            var relativePositionCross = RelativePosition(crossAxis, Yoga.IsRow(crossAxis) ? ownerWidth : ownerHeight);
 
             layout.Position[(int)Yoga.Leading[(int)mainAxis]] =
-                Yoga.Unwrap(GetLeadingMargin(mainAxis, ownerWidth) + relativePositionMain);
+                Yoga.Unwrap(GetLeadingMargin(mainAxis, marginWidthSize) + relativePositionMain);
             layout.Position[(int)Yoga.Trailing[(int)mainAxis]] =
-                Yoga.Unwrap(GetTrailingMargin(mainAxis, ownerWidth) + relativePositionMain);
+                Yoga.Unwrap(GetTrailingMargin(mainAxis, marginWidthSize) + relativePositionMain);
             layout.Position[(int)Yoga.Leading[(int)crossAxis]] =
-                Yoga.Unwrap(GetLeadingMargin(crossAxis, ownerWidth) + relativePositionCross);
+                Yoga.Unwrap(GetLeadingMargin(crossAxis, marginWidthSize) + relativePositionCross);
             layout.Position[(int)Yoga.Trailing[(int)crossAxis]] =
-                Yoga.Unwrap(GetTrailingMargin(crossAxis, ownerWidth) + relativePositionCross);
+                Yoga.Unwrap(GetTrailingMargin(crossAxis, marginWidthSize) + relativePositionCross);
         }
 
         internal YogaValue MarginLeadingValue(YogaFlexDirection axis)
@@ -1837,9 +1841,7 @@ namespace Unbound.UIElements.Layout
                 {
                     // Set the initial position (relative to the owner).
                     var childDirection = child.ResolveDirection(direction);
-                    float mainDim = IsRow(mainAxis) ? availableInnerWidth : availableInnerHeight;
-                    float crossDim = IsRow(mainAxis) ? availableInnerHeight : availableInnerWidth;
-                    child.SetLayoutPositionFromStyle(childDirection, mainDim, crossDim, availableInnerWidth);
+                    child.SetLayoutPositionFromStyle(childDirection, availableInnerWidth, availableInnerHeight, availableInnerWidth);
                 }
 
                 if (child.style.PositionType == YogaPositionType.Absolute)
