@@ -190,6 +190,9 @@ namespace UnityEngine
                 o => o.IsNull ? null : resolver.Resolve(o, typeof(ScriptableObject)) as ScriptableObject));
             m_SecondaryTextures = secondary.Length != 0 ? secondary : null;
             m_SecondaryGuids = null;
+            m_OwnSecondaryTextures = null;
+            m_OwnSecondaryGuids = null;
+            m_SecondaryBound = false;
             m_SecondaryProperties = null;
             m_MeshData = null;
             m_Mesh = null;

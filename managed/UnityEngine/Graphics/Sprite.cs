@@ -481,6 +481,50 @@ namespace UnityEngine
             m_ShapeMesh = null;
         }
 
+        /// <summary>The sprite's own secondary textures, kept when an atlas page's replace them.</summary>
+        (string Name, string Guid)[] m_OwnSecondaryGuids;
+        SecondarySpriteTexture[] m_OwnSecondaryTextures;
+        bool m_SecondaryBound;
+
+        /// <summary>The sprite's secondary textures of the <paramref name="packed"/> properties
+        /// replaced by its atlas page's secondary pages (<paramref name="pageOf"/>), the others its
+        /// own; each bind starts again from its own, and none packed restores them. Textures the
+        /// pages replace are not loaded.</summary>
+        internal void BindAtlasSecondary(IReadOnlyList<string> packed, Func<string, Texture2D> pageOf)
+        {
+            if (!m_SecondaryBound)
+            {
+                if (packed.Count == 0) return;
+                m_OwnSecondaryGuids = m_SecondaryGuids;
+                m_OwnSecondaryTextures = m_SecondaryTextures;
+                m_SecondaryBound = true;
+            }
+            m_SecondaryProperties = null;
+            if (packed.Count == 0)
+            {
+                m_SecondaryTextures = m_OwnSecondaryTextures;
+                m_SecondaryGuids = m_OwnSecondaryGuids;
+                return;
+            }
+            int count = m_OwnSecondaryTextures?.Length ?? m_OwnSecondaryGuids?.Length ?? 0;
+            var bound = new SecondarySpriteTexture[count];
+            for (int i = 0; i < count; i++)
+            {
+                string name = m_OwnSecondaryTextures != null ? m_OwnSecondaryTextures[i].name : m_OwnSecondaryGuids[i].Name;
+                Texture2D page = null;
+                foreach (var property in packed)
+                    if (property == name) { page = pageOf(name); break; }
+                Texture2D texture = page;
+                if (texture == null)
+                    texture = m_OwnSecondaryTextures != null
+                        ? m_OwnSecondaryTextures[i].texture
+                        : AssetDatabaseRuntime.LoadMain(m_OwnSecondaryGuids[i].Guid, typeof(Texture2D)) as Texture2D;
+                bound[i] = new SecondarySpriteTexture { name = name, texture = texture };
+            }
+            m_SecondaryTextures = bound;
+            m_SecondaryGuids = null;
+        }
+
         /// <summary>The texture size the sprite's rects are in: a variant atlas's scaled page keeps
         /// its master's rects (measured: tests/projects/spriteatlas).</summary>
         internal Vector2 RectSpace

@@ -22,6 +22,9 @@ const SCRIPTED_SPRITE_EXTENSIONS: &[&str] = &["psb", "svg", "aseprite", "ase"];
 
 /// How the managed side names an atlas page to import: `atlas:<atlas guid>:<page>`.
 pub const PAGE_KEY_PREFIX: &str = "atlas:";
+/// Between a page and the shader property of one of its secondary pages, in their keys and in
+/// the names the Editor gives secondary pages (`<page name>?_NormalMap`).
+const SECONDARY_SEPARATOR: char = '?';
 
 /// The atlases packed for Play mode, by asset path.
 #[derive(Debug, Default)]
@@ -102,13 +105,25 @@ pub fn pack_all(
 pub fn page(set: &AtlasSet, key: &str) -> Result<ImportedTexture> {
     let (guid, page) = key.split_once(':').context("bad atlas page key")?;
     let guid = Guid::parse(guid).context("bad atlas guid")?;
+    let (page, secondary) = match page.split_once(SECONDARY_SEPARATOR) {
+        Some((page, name)) => (page, Some(name)),
+        None => (page, None),
+    };
     let page: usize = page.parse().context("bad atlas page")?;
     let (_, atlas) = set
         .atlases
         .iter()
         .find(|(g, _)| *g == guid)
         .context("no such packed atlas")?;
-    atlas.pages.get(page).cloned().context("no such atlas page")
+    match secondary {
+        None => atlas.pages.get(page).cloned().context("no such atlas page"),
+        Some(name) => atlas
+            .secondary_pages
+            .get(page)
+            .and_then(|pages| pages.iter().find(|(n, _)| n == name))
+            .map(|(_, texture)| texture.clone())
+            .context("no such secondary atlas page"),
+    }
 }
 
 fn guid_text(guid: u128) -> String {
@@ -138,6 +153,11 @@ pub fn to_json(set: &AtlasSet) -> serde_json::Value {
                     "height": page.height,
                     "uvWidth": uv[0],
                     "uvHeight": uv[1],
+                    "secondary": atlas.secondary_pages.get(i).into_iter().flatten().map(|(property, texture)| json!({
+                        "property": property,
+                        "key": format!("{PAGE_KEY_PREFIX}{}:{i}{SECONDARY_SEPARATOR}{property}", guid_text(guid.0)),
+                        "name": texture.name,
+                    })).collect::<Vec<_>>(),
                 })).collect::<Vec<_>>(),
                 "sprites": atlas.sprites.iter().map(|s| json!({
                     "texture": guid_text(s.texture),
@@ -147,6 +167,7 @@ pub fn to_json(set: &AtlasSet) -> serde_json::Value {
                     "rect": s.texture_rect,
                     "uvTransform": s.uv_transform,
                     "rotation": s.rotation,
+                    "secondary": s.secondary,
                 })).collect::<Vec<_>>(),
             })
         })
@@ -170,6 +191,10 @@ pub struct PackedAtlas {
     pub pages: Vec<ImportedTexture>,
     /// Page texture names, as the Editor names them (with Unbound's own hash).
     pub page_names: Vec<String>,
+    /// Each page's secondary pages: the sprites' secondary textures (`_NormalMap`, `_MaskTex`,
+    /// ...) laid out as the page lays out the sprites, by the shader property they bind.
+    #[serde(default)]
+    pub secondary_pages: Vec<Vec<(String, ImportedTexture)>>,
     /// In `SpriteAtlas.GetSprites` order.
     pub sprites: Vec<PackedSprite>,
     /// A sprite is larger than the page: the size the atlas would need.
@@ -192,6 +217,9 @@ pub struct PackedSprite {
     pub texture_rect: [f32; 4],
     pub uv_transform: [f32; 4],
     pub rotation: u8,
+    /// The shader properties of the sprite's secondary textures its page's secondary pages hold.
+    #[serde(default)]
+    pub secondary: Vec<String>,
 }
 
 /// Packs one atlas asset (`.spriteatlas` or `.spriteatlasv2`) through the import cache.
@@ -311,6 +339,48 @@ fn render_mesh(sprite: &SpriteDef) -> (Vec<[f32; 2]>, Vec<u16>) {
     )
 }
 
+/// The secondary textures a texture's `.meta` names (its sprite sheet's `secondaryTextures`).
+fn secondary_guids(meta: &Path) -> Vec<Guid> {
+    let Some(value) = std::fs::read_to_string(meta)
+        .ok()
+        .and_then(|t| unbound_yaml::parse_value(&t).ok())
+    else {
+        return Vec::new();
+    };
+    value
+        .get("TextureImporter")
+        .and_then(|i| i.get("spriteSheet"))
+        .and_then(|s| s.get("secondaryTextures"))
+        .and_then(Value::as_seq)
+        .into_iter()
+        .flatten()
+        .filter_map(|t| Guid::parse(t.get("texture")?.get("guid")?.as_str()?))
+        .collect()
+}
+
+/// The packer's key for a sprite's set of secondary textures (0 without any): sprites of one set
+/// pack together. The Editor packs a sprite without secondary textures before those with them
+/// (tests/projects/spriteatlassecondary); its order of two different sets is not a function of
+/// the sets (swapping sets between sprites reorders them), so this orders them by an FNV-1a
+/// hash of their property names and texture GUIDs.
+fn secondary_hash(textures: &[unbound_assets::sprite::SecondaryTextureDef]) -> u64 {
+    if textures.is_empty() {
+        return 0;
+    }
+    let mut parts: Vec<(&str, &str)> = textures
+        .iter()
+        .map(|t| (t.name.as_str(), t.guid.as_str()))
+        .collect();
+    parts.sort_unstable();
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for (name, guid) in parts {
+        for byte in name.bytes().chain([0]).chain(guid.bytes()).chain([0]) {
+            hash = (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3);
+        }
+    }
+    hash.max(1)
+}
+
 /// The format part of a page's name: the Editor's for the measured formats, else the Unity
 /// TextureFormat number.
 fn compression_name(texture: &ImportedTexture) -> String {
@@ -381,6 +451,13 @@ impl AtlasImporter<'_> {
             let mut texture =
                 unbound_assets::texture::import_pixels(&def.name, sw, sh, texels, page_settings);
             self.textures.store(&mut texture)?;
+            if i == 0 && master.secondary_pages.iter().any(|p| !p.is_empty()) {
+                packed.warnings.push(format!(
+                    "variant atlas {}: its master's secondary pages are not scaled (its sprites keep \
+                     their own secondary textures)",
+                    def.name
+                ));
+            }
             let name = format!("{}-var-{scale:.2}-#{}", master.page_names[i], i + 1);
             texture.name = name.clone();
             packed.page_names.push(name);
@@ -398,7 +475,8 @@ impl Importer for AtlasImporter<'_> {
     // 4: each packed sprite keeps its name.
     // 5: an atlas tells whether its pack is complete.
     // 6: a variant without a master is not packed (its pack is incomplete).
-    const VERSION: u32 = 6;
+    // 7: secondary textures are packed into secondary pages.
+    const VERSION: u32 = 7;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<PathBuf>> {
         let bytes = std::fs::read(source)?;
@@ -424,6 +502,13 @@ impl Importer for AtlasImporter<'_> {
             }
         }
         for (_, file, _) in self.textures(&packables) {
+            // The secondary textures the texture's sprites name are packed too.
+            for guid in secondary_guids(&meta_path(&file)) {
+                if let Some(asset) = self.db.by_guid(guid) {
+                    files.push(meta_path(&asset.file));
+                    files.push(asset.file.clone());
+                }
+            }
             files.push(meta_path(&file));
             files.push(file);
         }
@@ -456,6 +541,7 @@ impl Importer for AtlasImporter<'_> {
             uv_sizes: Vec::new(),
             pages: Vec::new(),
             page_names: Vec::new(),
+            secondary_pages: Vec::new(),
             sprites: Vec::new(),
             oversize: None,
             warnings: Vec::new(),
@@ -529,15 +615,83 @@ impl Importer for AtlasImporter<'_> {
                 }
             }
         }
-        if chosen
-            .iter()
-            .any(|&(t, s)| !textures[t].1.sprites[s].secondary_textures.is_empty())
-        {
+        // The sprites' secondary textures, imported as the build target imports them (each texture
+        // once): packed into secondary pages laid out as the main pages (matches the Unity
+        // 6000.0.71f1 Editor, tests/projects/spriteatlassecondary). A texture that is missing, does
+        // not import, or differs in size or kind from its sprite's texture is not packed: the
+        // sprite keeps its own for that property.
+        if def.secondary_settings {
             packed.warnings.push(format!(
-                "atlas {}: secondary textures are not packed into secondary pages (sprites keep \
-                 their own secondary textures)",
+                "atlas {}: its per-property secondary texture settings are not applied (the \
+                 secondary pages take the atlas's settings and their textures' colour space)",
                 def.name
             ));
+        }
+        let mut imported: std::collections::HashMap<Guid, Option<std::sync::Arc<ImportedTexture>>> =
+            std::collections::HashMap::new();
+        let mut secondary: Vec<Vec<(String, std::sync::Arc<ImportedTexture>)>> = Vec::new();
+        for &(t, s) in &chosen {
+            let texture = &textures[t].1;
+            let mut own = Vec::new();
+            for sec in &texture.sprites[s].secondary_textures {
+                let guid = Guid::parse(&sec.guid);
+                let known = guid.is_some_and(|g| imported.contains_key(&g));
+                let found = match guid {
+                    Some(guid) => imported
+                        .entry(guid)
+                        .or_insert_with(|| {
+                            let Some(asset) = self.db.by_guid(guid) else {
+                                packed.warnings.push(format!(
+                                    "atlas {}: secondary texture {} of {} is missing; it is not \
+                                     packed",
+                                    def.name, sec.name, texture.name
+                                ));
+                                return None;
+                            };
+                            match self.cache.get_or_import(
+                                self.textures,
+                                &asset.file,
+                                &meta_path(&asset.file),
+                            ) {
+                                Ok(texture) => Some(texture),
+                                Err(e) => {
+                                    packed.warnings.push(format!(
+                                        "atlas {}: secondary texture {} does not import ({e:#}); \
+                                         it is not packed",
+                                        def.name,
+                                        asset.file.display()
+                                    ));
+                                    None
+                                }
+                            }
+                        })
+                        .clone(),
+                    None => None,
+                };
+                let Some(found) = found else {
+                    // Reported once per texture (when first looked up); an unreadable GUID per sprite.
+                    if guid.is_none() && !known {
+                        packed.warnings.push(format!(
+                            "atlas {}: secondary texture {} of {} names no asset; it is not packed",
+                            def.name, sec.name, texture.name
+                        ));
+                    }
+                    continue;
+                };
+                if found.width != texture.width
+                    || found.height != texture.height
+                    || found.format != unbound_assets::texture::TextureFormat::Rgba8
+                {
+                    packed.warnings.push(format!(
+                        "atlas {}: secondary texture {} ({}) of {} is not the size or a byte \
+                         format of its texture; it is not packed",
+                        def.name, sec.name, found.name, texture.name
+                    ));
+                    continue;
+                }
+                own.push((sec.name.clone(), found));
+            }
+            secondary.push(own);
         }
         let meshes: Vec<_> = chosen
             .iter()
@@ -586,7 +740,7 @@ impl Importer for AtlasImporter<'_> {
                     name,
                     texture_guid: textures[t].0.0,
                     texture: t,
-                    secondary_hash: 0,
+                    secondary_hash: secondary_hash(&textures[t].1.sprites[s].secondary_textures),
                     texture_size: [texture.width, texture.height],
                     rect,
                     uv_transform: [
@@ -616,8 +770,13 @@ impl Importer for AtlasImporter<'_> {
             // Pages store alpha whatever their texels (an opaque page is unmeasured).
             page_settings.format_alpha = Some(true);
             page_settings.max_size = page_settings.max_size.max(w.max(h));
-            let mut texture =
-                unbound_assets::texture::import_pixels(&def.name, w, h, texels, page_settings);
+            let mut texture = unbound_assets::texture::import_pixels(
+                &def.name,
+                w,
+                h,
+                texels,
+                page_settings.clone(),
+            );
             self.textures.store(&mut texture)?;
             packed.page_names.push(format!(
                 "sactx-{page}-{w}x{h}-{}-{}-{}",
@@ -628,6 +787,41 @@ impl Importer for AtlasImporter<'_> {
             texture.name = packed.page_names[page].clone();
             packed.pages.push(texture);
             packed.uv_sizes.push([w, h]);
+            // The page's secondary pages, one per shader property its sprites have (in the order
+            // the sprites list them); a sprite without one leaves its place empty. A page takes the
+            // atlas's settings and the colour space of its first texture (measured: a linear mask
+            // makes a linear page, an sRGB texture under `_NormalMap` an sRGB one; textures of
+            // both kinds in one page are unmeasured).
+            let mut properties: Vec<(&str, bool)> = Vec::new();
+            for (i, own) in secondary.iter().enumerate() {
+                if layout.placements[i].page != page as u32 {
+                    continue;
+                }
+                for (property, texture) in own {
+                    if !properties.iter().any(|(p, _)| p == property) {
+                        properties.push((property, texture.srgb));
+                    }
+                }
+            }
+            let mut pages = Vec::new();
+            for (property, srgb) in properties {
+                let texels = layout.page_pixels(page as u32, &settings, |i| {
+                    secondary[i]
+                        .iter()
+                        .find(|(p, _)| p == property)
+                        .map_or(&[][..], |(_, t)| t.mips[0].data.as_slice())
+                });
+                let mut own_settings = page_settings.clone();
+                own_settings.srgb = srgb;
+                own_settings.srgb_flag = srgb;
+                let mut texture =
+                    unbound_assets::texture::import_pixels(&def.name, w, h, texels, own_settings);
+                self.textures.store(&mut texture)?;
+                texture.name =
+                    format!("{}{SECONDARY_SEPARATOR}{property}", packed.page_names[page]);
+                pages.push((property.to_string(), texture));
+            }
+            packed.secondary_pages.push(pages);
         }
         for i in sprite_atlas::texture_order(&inputs) {
             let (t, s) = chosen[i];
@@ -641,6 +835,7 @@ impl Importer for AtlasImporter<'_> {
                 texture_rect: layout.texture_rect(i, inputs[i].rect),
                 uv_transform: layout.uv_transform(i, inputs[i].uv_transform),
                 rotation: p.rotation,
+                secondary: secondary[i].iter().map(|(p, _)| p.clone()).collect(),
             });
         }
         Ok(packed)
@@ -664,6 +859,28 @@ mod tests {
         .unwrap();
         def.mesh = mesh;
         def
+    }
+
+    #[test]
+    fn secondary_sets_key_whole_sets_and_none_packs_first() {
+        use unbound_assets::sprite::SecondaryTextureDef as Def;
+        let def = |name: &str, guid: &str| Def {
+            name: name.into(),
+            guid: guid.into(),
+        };
+        let normal = def("_NormalMap", "11111111111111111111111111111111");
+        let mask = def("_MaskTex", "22222222222222222222222222222222");
+        let other = def("_NormalMap", "33333333333333333333333333333333");
+        // No secondary textures sorts before any set.
+        assert_eq!(secondary_hash(&[]), 0);
+        let both = secondary_hash(&[normal.clone(), mask.clone()]);
+        assert!(both > 0);
+        // A set is the same whatever order the sprite lists it in.
+        assert_eq!(secondary_hash(&[mask.clone(), normal.clone()]), both);
+        // Another texture or one property fewer is another set.
+        assert_ne!(secondary_hash(&[other.clone(), mask]), both);
+        assert_ne!(secondary_hash(&[normal.clone()]), secondary_hash(&[other]));
+        assert_ne!(secondary_hash(&[normal]), both);
     }
 
     #[test]
@@ -843,6 +1060,7 @@ mod tests {
             uv_sizes: Vec::new(),
             pages: Vec::new(),
             page_names: Vec::new(),
+            secondary_pages: Vec::new(),
             sprites: Vec::new(),
             oversize: None,
             warnings: Vec::new(),

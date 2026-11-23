@@ -19,7 +19,16 @@ namespace UnityEngine.U2D
     {
         /// <summary>A page texture; its sprites' rects and UVs refer to the UV size (a variant's
         /// master's page size).</summary>
-        sealed class Page { public string Key, Name; public int Width, Height, UvWidth, UvHeight; public Texture2D Texture; }
+        sealed class Page
+        {
+            public string Key, Name;
+            public int Width, Height, UvWidth, UvHeight;
+            public Texture2D Texture;
+            /// <summary>The secondary pages (the sprites' secondary textures laid out as this page),
+            /// by the shader property they bind.</summary>
+            public Page[] Secondary = Array.Empty<Page>();
+            public string Property;
+        }
 
         sealed class Atlas
         {
@@ -44,6 +53,8 @@ namespace UnityEngine.U2D
             public int Page, Rotation;
             public Rect Rect;
             public Vector4 UvTransform;
+            /// <summary>The properties of the sprite's secondary textures its page's secondary pages hold.</summary>
+            public IReadOnlyList<string> Secondary = Array.Empty<string>();
         }
 
         static Dictionary<(string, long), List<Binding>> s_BuiltInBySprite;
@@ -104,6 +115,14 @@ namespace UnityEngine.U2D
             public int Height { get; set; }
             public int UvWidth { get; set; }
             public int UvHeight { get; set; }
+            public List<SecondaryJson> Secondary { get; set; }
+        }
+
+        sealed class SecondaryJson
+        {
+            public string Property { get; set; }
+            public string Key { get; set; }
+            public string Name { get; set; }
         }
 
         sealed class SpriteJson
@@ -115,6 +134,8 @@ namespace UnityEngine.U2D
             public float[] Rect { get; set; }
             public float[] UvTransform { get; set; }
             public int Rotation { get; set; }
+            /// <summary>The properties of the sprite's secondary textures its page's secondary pages hold.</summary>
+            public List<string> Secondary { get; set; }
         }
 
         static readonly JsonSerializerOptions s_Options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -245,7 +266,12 @@ namespace UnityEngine.U2D
             {
                 Guid = a.Guid, Name = a.Name, Tag = a.Tag, Master = a.Master,
                 IncludeInBuild = a.IncludeInBuild, Tight = a.Tight, Complete = a.Complete, Scale = a.Scale,
-                Pages = a.Pages.ConvertAll(p => new Page { Key = p.Key, Name = p.Name, Width = p.Width, Height = p.Height, UvWidth = p.UvWidth, UvHeight = p.UvHeight }).ToArray(),
+                Pages = a.Pages.ConvertAll(p => new Page
+                {
+                    Key = p.Key, Name = p.Name, Width = p.Width, Height = p.Height, UvWidth = p.UvWidth, UvHeight = p.UvHeight,
+                    Secondary = p.Secondary?.ConvertAll(q => new Page { Key = q.Key, Name = q.Name, Property = q.Property, Width = p.Width, Height = p.Height }).ToArray()
+                        ?? Array.Empty<Page>(),
+                }).ToArray(),
             };
             foreach (var s in a.Sprites)
             {
@@ -253,6 +279,7 @@ namespace UnityEngine.U2D
                 {
                     Atlas = atlas, Texture = s.Texture, FileId = s.FileId, Name = s.Name ?? "", Page = s.Page, Rotation = s.Rotation,
                     Rect = new Rect(s.Rect[0], s.Rect[1], s.Rect[2], s.Rect[3]),
+                    Secondary = (IReadOnlyList<string>)s.Secondary ?? Array.Empty<string>(),
                     UvTransform = new Vector4(s.UvTransform[0], s.UvTransform[1], s.UvTransform[2], s.UvTransform[3]),
                 };
                 atlas.Sprites.Add(binding);
@@ -278,6 +305,14 @@ namespace UnityEngine.U2D
             sprite.BindAtlas(PageTexture(page), binding.Rect, binding.UvTransform,
                 binding.Atlas.Tight ? SpritePackingMode.Tight : SpritePackingMode.Rectangle, (SpritePackingRotation)binding.Rotation,
                 new Vector2(page.UvWidth, page.UvHeight), binding.Atlas.Scale, reportAsPacked);
+            // The sprite's packed secondary textures become the page's secondary pages of the same
+            // properties (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteatlassecondary).
+            sprite.BindAtlasSecondary(binding.Secondary, property =>
+            {
+                foreach (var secondary in page.Secondary)
+                    if (secondary.Property == property) return PageTexture(secondary);
+                return null;
+            });
         }
 
         /// <summary>Binds an imported sprite (its texture's GUID and its file id) to its packed atlas

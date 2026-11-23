@@ -26,9 +26,20 @@ pub struct AtlasDefinition {
     pub tight: bool,
     pub alpha_dilation: bool,
     pub alpha_splitting: bool,
+    /// The atlas has per-property secondary texture settings (`secondaryTextureSettings`).
+    pub secondary_settings: bool,
     /// The page textures' settings as a TextureImporter `.meta` would hold them (texture
     /// settings and platform settings), for the texture importer's format selection.
     pub texture_meta: Value,
+}
+
+/// Whether a map or sequence has entries (`{}` and an absent key have none).
+fn has_entries(v: Option<&Value>) -> bool {
+    match v {
+        Some(Value::Map(m)) => !m.is_empty(),
+        Some(Value::Seq(s)) => !s.is_empty(),
+        _ => false,
+    }
 }
 
 fn int(v: &Value, key: &str) -> Option<i64> {
@@ -173,6 +184,7 @@ pub fn read_v1(text: &str) -> Result<AtlasDefinition> {
         tight: int(&packing, "enableTightPacking").unwrap_or(1) != 0,
         alpha_dilation: int(&packing, "enableAlphaDilation").unwrap_or(0) != 0,
         alpha_splitting: int(&packing, "allowAlphaSplitting").unwrap_or(0) != 0,
+        secondary_settings: has_entries(data.get("secondaryTextureSettings")),
         texture_meta: texture_meta(
             data.get("textureSettings").unwrap_or(&Value::Null),
             data.get("platformSettings")
@@ -212,6 +224,7 @@ pub fn read_v2(text: &str, meta: &Value, file_name: &str) -> Result<AtlasDefinit
         tight: int(&packing, "enableTightPacking").unwrap_or(1) != 0,
         alpha_dilation: int(&packing, "enableAlphaDilation").unwrap_or(0) != 0,
         alpha_splitting: int(&packing, "allowAlphaSplitting").unwrap_or(0) != 0,
+        secondary_settings: has_entries(importer.get("secondaryTextureSettings")),
         texture_meta: texture_meta(
             importer.get("textureSettings").unwrap_or(&Value::Null),
             importer
