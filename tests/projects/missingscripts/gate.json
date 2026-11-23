@@ -4,6 +4,8 @@
   ],
   "summary": "missingscripts: .*",
   "engine_paths": [
-    "managed/UnityEngine/Runtime/Loading.cs"
+    "managed/UnityEngine/Runtime/Loading.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Core/Resources.cs"
   ]
 }

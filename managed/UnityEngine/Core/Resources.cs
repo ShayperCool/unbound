@@ -38,11 +38,13 @@ namespace UnityEngine
             {
                 var obj = AssetDatabaseRuntime.LoadMain(entry.Guid, systemTypeInstance);
                 if (obj != null) return obj;
-                // An object of a missing script: said once and given as null (MissingScripts).
-                if (MissingScripts.IsMissing(obj)) return MissingScripts.Loaded(obj);
+                // An object of a missing script: said once and given as null (MissingScripts);
+                // the search goes on.
+                MissingScripts.Loaded(obj);
                 // A sub-asset of the requested type (a sprite of a texture).
                 foreach (var sub in AssetDatabaseRuntime.LoadAll(entry.Guid))
-                    if (systemTypeInstance.IsInstanceOfType(sub) && !AssetDatabaseRuntime.IsTakePreview(sub)) return MissingScripts.Loaded(sub);
+                    if (systemTypeInstance.IsInstanceOfType(sub) && !AssetDatabaseRuntime.IsTakePreview(sub) && MissingScripts.Loaded(sub) is { } found)
+                        return found;
             }
             return null;
         }

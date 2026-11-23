@@ -48,6 +48,16 @@ namespace Unbound.Tests
             Assert.StartsWith("Warning: Unbound does not load the Editor's TreeEditor.TreeData (MonoBehaviour 11400000", warning);
         }
 
+        /// <summary>The Editor's messages are measured for scripts no asset is; Unity's built-in
+        /// scripts exist, and without the native side nothing can be told (both: named loudly).</summary>
+        [Fact]
+        public void OnlyAScriptNoAssetIsTakesTheEditorsMessages()
+        {
+            Assert.False(MissingScripts.NamesNoAsset(DefaultResources));
+            Assert.False(MissingScripts.NamesNoAsset(null));
+            Assert.False(MissingScripts.NamesNoAsset("0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e01"));
+        }
+
         /// <summary>An asset object of a missing script says so the first time a load hands it
         /// out by itself, and is given as null; one reached through its own file's reference first
         /// says nothing later (tests/projects/missingscripts 04.asset, 08.linked).</summary>

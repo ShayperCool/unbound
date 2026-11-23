@@ -39,8 +39,8 @@ namespace Unbound.Runtime
                 if (!Objects.TryGetValue(reference.FileId, out var local)) return null;
                 // Reached through its own file's reference, a missing script's object counts as
                 // loaded: a later load by itself does not say so (tests/projects/missingscripts
-                // 08.linked).
-                MissingScripts.Reached(local);
+                // 08.linked). Such objects are placeholders that compare equal to null.
+                if (local is { m_Destroyed: true }) MissingScripts.Reached(local);
                 return local;
             }
             return AssetDatabaseRuntime.Load(reference.Guid, reference.FileId, expected);
@@ -208,7 +208,7 @@ namespace Unbound.Runtime
                         components.Add((c, doc));
                         continue;
                     }
-                    var asset = CreateAsset(doc, guid);
+                    var asset = CreateAsset(doc, guid, kind);
                     if ((object)asset == null) continue;
                     asset.IsPersistentAsset = isAsset;
                     file.Objects[doc.FileId] = asset;
@@ -415,7 +415,10 @@ namespace Unbound.Runtime
                     // in Edit mode, a bundle) are unmeasured: Unbound names the script once.
                     if (!MissingScripts.ReportEditorOnly(script, doc))
                     {
-                        if (kind == Kind.PrefabAsset) MissingScripts.WarnUnknown();
+                        // The Editor's rule is measured for a script no asset of the project is:
+                        // one Unbound does not resolve though it exists is named, loudly.
+                        if (!MissingScripts.NamesNoAsset(script.Guid)) MissingScripts.Report(script, doc);
+                        else if (kind == Kind.PrefabAsset) MissingScripts.WarnUnknown();
                         else if (!(kind == Kind.Scene && EditorSession.IsPlaying)) MissingScripts.Report(script, doc);
                     }
                     return null;
@@ -426,7 +429,7 @@ namespace Unbound.Runtime
             return engine != null && typeof(Component).IsAssignableFrom(engine) ? engine : null;
         }
 
-        static Object CreateAsset(YDocument doc, string fileGuid)
+        static Object CreateAsset(YDocument doc, string fileGuid, Kind kind)
         {
             if (doc.ClassId == EngineTypes.MonoBehaviourId)
             {
@@ -434,9 +437,13 @@ namespace Unbound.Runtime
                 var type = ScriptOf(script, fileGuid);
                 if (type == null)
                 {
-                    // Said when the object is loaded by itself, not when its file is read
-                    // (MissingScripts.Loaded).
-                    MissingScripts.ReportEditorOnly(script, doc);
+                    // The Editor's own classes are named; a script no asset of the project is
+                    // is said when the object is loaded by itself, not when its file is read
+                    // (MissingScripts.Loaded); in an AssetBundle, or a script that exists but
+                    // Unbound does not resolve, it is named when the file is read.
+                    bool editorOnly = MissingScripts.ReportEditorOnly(script, doc);
+                    bool editorRule = !editorOnly && kind != Kind.Bundle && MissingScripts.NamesNoAsset(script.Guid);
+                    if (!editorOnly && !editorRule) MissingScripts.Report(script, doc);
                     // As in Unity, the asset still exists: an object of the base class that
                     // serialized references keep (its data cannot be read). It compares equal to
                     // null, as a timeline's markers of a missing class are no markers and raise no
@@ -447,7 +454,7 @@ namespace Unbound.Runtime
                     {
                         ReadName(placeholder, doc.Body);
                         placeholder.m_Destroyed = true;
-                        MissingScripts.Mark(placeholder);
+                        if (editorRule) MissingScripts.Mark(placeholder);
                     }
                     return placeholder;
                 }
@@ -593,6 +600,17 @@ namespace Unbound.Runtime
             new System.Runtime.CompilerServices.ConditionalWeakTable<Object, StrongBox<bool>>();
 
         internal static void WarnUnknown() => Debug.LogWarning(UnknownMessage);
+
+        /// <summary>Whether a script's GUID names no asset of the project (nor a built-in one): the
+        /// case the Editor's messages are measured for. Unknown when the native side is not up.</summary>
+        internal static bool NamesNoAsset(string guid)
+        {
+            if (string.IsNullOrEmpty(guid) || !Native.IsReady) return false;
+            // Unity's built-in resources (0000000000000000?000000000000000): the script exists.
+            if (guid.StartsWith("0000000000000000", StringComparison.Ordinal)) return false;
+            try { return string.IsNullOrEmpty(AssetDatabaseRuntime.Info(guid)?.Path); }
+            catch (InvalidOperationException) { return true; }
+        }
 
         internal static void Mark(Object placeholder) => s_Objects.AddOrUpdate(placeholder, new StrongBox<bool>(false));
 
