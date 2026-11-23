@@ -43,6 +43,17 @@ public partial class HumanoidProbe
         Put((s_JobKey ?? "callback") + ".moved." + phase, "[" + V(root.position) + "," + Q(root.rotation) + "]");
     }
 
+    static MuscleHandle[] s_AllMuscleHandles;
+
+    internal static void RecordAllMuscles(AnimationStream stream)
+    {
+        var pose = stream.AsHuman();
+        var handles = s_AllMuscleHandles;
+        var muscles = new float[handles.Length];
+        for (int i = 0; i < handles.Length; i++) muscles[i] = pose.GetMuscle(handles[i]);
+        Put((s_JobKey ?? "job") + ".allMuscles", Floats(muscles));
+    }
+
     internal static void ElbowHintRecord(string tag, AnimationStream stream)
     {
         Put((s_JobKey ?? "job") + ".elbowHint." + tag, V(stream.AsHuman().GetHintPosition(AvatarIKHint.LeftElbow)));
@@ -100,6 +111,8 @@ public partial class HumanoidProbe
     /// pose was read back on the rig's root scaled by 100.</summary>
     static void BoneHandles()
     {
+        s_AllMuscleHandles = new MuscleHandle[MuscleHandle.muscleHandleCount];
+        MuscleHandle.GetMuscleHandles(s_AllMuscleHandles);
         foreach (HumanBoneJob.Mode mode in System.Enum.GetValues(typeof(HumanBoneJob.Mode)))
         {
             var key = "bone." + char.ToLowerInvariant(mode.ToString()[0]) + mode.ToString().Substring(1);
@@ -133,6 +146,12 @@ public partial class HumanoidProbe
                         mixer.SetLayerMaskFromAvatarMask(1, mask);
                         g.Connect(mixer, 0, playable, 0);
                     }
+                    else if (mode == HumanBoneJob.Mode.LayerNoRootRead || mode == HumanBoneJob.Mode.LayerNoRootTurn
+                        || mode == HumanBoneJob.Mode.LayerNoRootBody || mode == HumanBoneJob.Mode.LayerNoRootMuscles
+                        || mode == HumanBoneJob.Mode.LayerNoRootMuscleEdit)
+                        g.Connect(LayerMixer(g, true, "NoRoot"), 0, playable, 0);
+                    else if (mode == HumanBoneJob.Mode.LayerFullRootRead)
+                        g.Connect(LayerMixer(g, true), 0, playable, 0);
                     else
                         g.Connect(clip, 0, playable, 0);
                     playable.SetInputWeight(0, 1f);
@@ -178,7 +197,9 @@ public struct HumanBoneJob : IAnimationJob
         ScaleHipsFirstHint, ScaleHipsUniformThenSolve, ScaleHipsUniformFirstHint, ScaleHipsReadTurnThenHint,
         MaskedHipsTrs, MaskedArmTrs, MaskedHeadGlobal, MasksLayerWithoutHead,
         KinematicRoot, KinematicRootArmEdit, ScriptedRootOffset, ScriptedRootBuiltin, ScriptedRootUnmoved,
-        ScriptedRootOffsetAndTurnBone, ScriptedRootBuiltinWithApplyOff
+        ScriptedRootOffsetAndTurnBone, ScriptedRootBuiltinWithApplyOff,
+        LayerNoRootRead, LayerNoRootTurn, LayerNoRootBody, LayerFullRootRead,
+        BaseMuscles, LayerNoRootMuscles, LayerNoRootMuscleEdit
     }
 
     public Mode mode;
@@ -237,6 +258,7 @@ public struct HumanBoneJob : IAnimationJob
                 head.SetRotation(stream, Quaternion.Euler(0f, 45f, 0f));
                 break;
             case Mode.ScriptedRootOffsetAndTurnBone:
+            case Mode.LayerNoRootTurn:
             case Mode.RotateWorld:
                 head.SetRotation(stream, Quaternion.Euler(0f, 45f, 0f));
                 break;
@@ -321,6 +343,14 @@ public struct HumanBoneJob : IAnimationJob
                 head.GetGlobalTR(stream, out var wp, out var wr);
                 head.SetGlobalTR(stream, wp + new Vector3(10, 0, 0), wr * Quaternion.Euler(0, 0, 30), true);
                 break;
+            case Mode.LayerNoRootMuscleEdit:
+                stream.AsHuman().SetMuscle(new MuscleHandle(BodyDof.SpineFrontBack), .25f);
+                stream.AsHuman().SetMuscle(new MuscleHandle(HumanPartDof.RightArm, ArmDof.ArmDownUp), -.5f);
+                break;
+            case Mode.LayerNoRootBody:
+                var human = stream.AsHuman();
+                human.bodyLocalPosition += new Vector3(.01f, -.02f, .03f);
+                break;
             case Mode.Solve:
                 SolveLeftHand(stream);
                 break;
@@ -337,6 +367,8 @@ public struct HumanBoneJob : IAnimationJob
                 stream.AsHuman().SolveIK();
                 break;
         }
+        if (mode == Mode.BaseMuscles || mode == Mode.LayerNoRootMuscles || mode == Mode.LayerNoRootMuscleEdit)
+            HumanoidProbe.RecordAllMuscles(stream);
         HumanoidProbe.BoneRecord("after", stream, ref this);
         if (mode == Mode.Prop) HumanoidProbe.PropRecord(stream, prop);
         HumanoidProbe.JobRecord("human", stream);
