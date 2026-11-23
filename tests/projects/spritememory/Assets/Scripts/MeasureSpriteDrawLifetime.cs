@@ -218,8 +218,9 @@ static class MeasureSpriteDrawLifetime
             GraphicsSettings.defaultRenderPipeline = pipeline;
             void RunRequest(SpriteMemoryPipeline.Request request)
             {
-                if (RenderPipeline.SupportsRenderRequest(camera, request))
-                    RenderPipeline.SubmitRenderRequest(camera, request);
+                for (int attempt = 0; attempt < 4 && !request.Completed; attempt++)
+                    if (RenderPipeline.SupportsRenderRequest(camera, request))
+                        RenderPipeline.SubmitRenderRequest(camera, request);
             }
             var skipped = new SpriteMemoryPipeline.Request();
             RunRequest(skipped);
