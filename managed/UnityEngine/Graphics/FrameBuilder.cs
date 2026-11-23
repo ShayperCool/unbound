@@ -1627,6 +1627,7 @@ namespace Unbound.Runtime
                     if (!inView && Culler.TrustsBounds(renderer)) continue;
                     try
                     {
+                        if (inView) Sprite.RetainVisibleGeometry(renderer);
                         renderer.CollectDraws(context, s_Items);
                         s_Visible.Add(renderer);
                     }

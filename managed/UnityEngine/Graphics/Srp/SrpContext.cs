@@ -1210,13 +1210,15 @@ namespace Unbound.Runtime
                 if (InsidePlanes(planes, absNormals, renderer.bounds))
                 {
                     data.Visible.Add(renderer);
+                    if (renderer.shadowCastingMode == ShadowCastingMode.ShadowsOnly) continue;
                     // Visible from the culling on, as with the built-in pipeline.
-                    if (renderer.shadowCastingMode != ShadowCastingMode.ShadowsOnly && renderer.MarkRendered() && hasCamera)
+                    if (renderer.MarkRendered() && hasCamera)
                     {
                         // OnBecameVisible scripts may move the camera or change LOD state.
                         lodParams = LODGroup.CameraLodParams.For(camera);
                         lodPass = LODGroup.NextCullPass();
                     }
+                    Sprite.RetainVisibleGeometry(renderer);
                 }
             }
             // Meshes queued with Graphics.DrawMesh and its kin are culled as renderers are, by

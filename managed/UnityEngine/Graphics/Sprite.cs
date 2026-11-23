@@ -34,6 +34,10 @@ namespace UnityEngine
         internal bool m_DrawnWithoutTexture;
         /// <summary>The geometry the particle Shape module samples (see ParticleShapeMesh).</summary>
         Mesh m_ShapeMesh;
+        internal enum GeometryStorage : byte { Unmeasured, Created, Shared, Visible }
+        GeometryStorage m_ProfilerGeometryStorage;
+        internal GeometryStorage ProfilerGeometryStorage => IsPersistentAsset
+            ? GeometryStorage.Unmeasured : m_ProfilerGeometryStorage;
         /// <summary>The secondary textures (an imported sprite's are loaded when first asked for).</summary>
         SecondarySpriteTexture[] m_SecondaryTextures;
         (string Name, string Guid)[] m_SecondaryGuids;
@@ -63,6 +67,11 @@ namespace UnityEngine
             copy.m_MeshData = null;
             // Its own scriptable object list (measured: adding to a copy leaves the original).
             if (m_ScriptableObjects != null) copy.m_ScriptableObjects = new List<ScriptableObject>(m_ScriptableObjects);
+            if (m_ProfilerGeometryStorage != GeometryStorage.Unmeasured)
+            {
+                copy.m_ProfilerGeometryStorage = GeometryStorage.Created;
+                RetainSharedGeometry();
+            }
             return copy;
         }
 
@@ -87,6 +96,8 @@ namespace UnityEngine
                 m_MeshType = meshType,
                 m_Extrude = extrude,
                 m_Name = texture.name,
+                m_ProfilerGeometryStorage = !generateFallbackPhysicsShape && Compat.SpriteGeometryMemoryMeasured
+                    ? GeometryStorage.Created : GeometryStorage.Unmeasured,
             };
             sprite.BuildGeometry();
             // A Tight rect under 32 pixels on a side stays a quad: nothing to trace for its mesh.
@@ -221,7 +232,10 @@ namespace UnityEngine
         {
             var sprite = Create(texture, rect, pivot, pixelsPerUnit, extrude, meshType, border, generateFallbackPhysicsShape);
             if (sprite != null && secondaryTextures != null && secondaryTextures.Length > 0)
+            {
                 sprite.m_SecondaryTextures = (SecondarySpriteTexture[])secondaryTextures.Clone();
+                sprite.m_ProfilerGeometryStorage = GeometryStorage.Unmeasured;
+            }
             return sprite;
         }
 
@@ -608,10 +622,33 @@ namespace UnityEngine
         /// the shape's sampling tables stay built.</summary>
         internal Mesh ParticleShapeMesh()
         {
-            if (m_ShapeMesh != null) return m_ShapeMesh;
-            m_ShapeMesh = GeometryMesh("Sprite shape " + m_Name, colors: false);
-            m_ShapeMesh.m_Dirty = false;
+            if (m_ShapeMesh == null)
+            {
+                m_ShapeMesh = GeometryMesh("Sprite shape " + m_Name, colors: false);
+                m_ShapeMesh.m_Dirty = false;
+            }
+            RetainSharedGeometry();
             return m_ShapeMesh;
+        }
+
+        void RetainSharedGeometry()
+        {
+            if (m_ProfilerGeometryStorage == GeometryStorage.Created)
+                m_ProfilerGeometryStorage = GeometryStorage.Shared;
+        }
+
+        /// <summary>A visible Simple renderer or Sprite-mode mask retains its sprite's camera
+        /// geometry even if no draw is issued (Unity 6000.0.71f1, tests/projects/spritememory).</summary>
+        internal static void RetainVisibleGeometry(Renderer renderer)
+        {
+            Sprite sprite = renderer switch
+            {
+                SpriteRenderer { drawMode: SpriteDrawMode.Simple } draw => draw.sprite,
+                SpriteMask { maskSource: SpriteMask.MaskSource.Sprite } mask => mask.sprite,
+                _ => null,
+            };
+            if (sprite != null && sprite.m_ProfilerGeometryStorage is GeometryStorage.Created or GeometryStorage.Shared)
+                sprite.m_ProfilerGeometryStorage = GeometryStorage.Visible;
         }
 
         /// <summary>A mesh of the sprite's vertices (units from the pivot), UVs (channel 0) and
