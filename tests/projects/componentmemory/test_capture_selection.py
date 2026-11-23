@@ -1,8 +1,11 @@
 """A sealed capture also needs to come from the selected profile's Editor method."""
 import json
 from pathlib import Path
+import sys
 import tempfile
 import unittest
+
+sys.dont_write_bytecode = True
 
 import run
 from probe_paths import validation_cache
