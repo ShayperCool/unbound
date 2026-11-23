@@ -84,7 +84,7 @@ namespace Unbound.Runtime
             if (copy == null || copy.shader != source.shader)
             {
                 if (copy != null) UnityEngine.Object.DestroyImmediate(copy);
-                copy = new Material(source) { hideFlags = HideFlags.HideAndDontSave };
+                copy = new Material(source, measureProfilerAllocation: false) { hideFlags = HideFlags.HideAndDontSave };
             }
             if (copy.GetFloat(s_SrcBlend) != (float)src) copy.SetFloat(s_SrcBlend, (float)src);
             if (copy.GetFloat(s_DstBlend) != (float)dst) copy.SetFloat(s_DstBlend, (float)dst);

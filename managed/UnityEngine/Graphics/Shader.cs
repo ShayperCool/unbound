@@ -575,6 +575,9 @@ namespace UnityEngine
         Dictionary<int, ShaderPropertyInfo> m_ById;
         int m_ByIdCount;
 
+        static readonly string[] s_TextureCompanionSuffixes = { "_ST", "_TexelSize", "_HDR" };
+        internal static ReadOnlySpan<string> TextureCompanionSuffixes => s_TextureCompanionSuffixes;
+
         internal (long Keys, long Words, bool MixedWords)? ProfilerPropertyLayout { get; private set; }
         internal int ProfilerLayoutVersion { get; private set; }
 
@@ -593,7 +596,7 @@ namespace UnityEngine
             // Build the shader's existing lookup here so declared writes reuse it.
             if (PropertyLookup().Count != m_Properties.Count) return null;
             long keys = 0, words = 0;
-            bool mixedWords = false;
+            bool mixedWords = false, hasTextures = false;
             foreach (var property in m_Properties)
             {
                 switch (property.Type)
@@ -613,6 +616,7 @@ namespace UnityEngine
                         words += VectorWords;
                         break;
                     case ShaderPropertyType.Texture:
+                        hasTextures = true;
                         keys += TextureKeys;
                         words += TextureWords;
                         break;
@@ -621,7 +625,21 @@ namespace UnityEngine
                 }
                 mixedWords = true;
             }
+            if (hasTextures && !TextureCompanionSlotsAreDistinct()) return null;
             return (keys, words, mixedWords);
+        }
+
+        bool TextureCompanionSlotsAreDistinct()
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in m_Properties) names.Add(property.Name);
+            foreach (var property in m_Properties)
+            {
+                if (property.Type != ShaderPropertyType.Texture) continue;
+                foreach (var suffix in TextureCompanionSuffixes)
+                    if (names.Contains(property.Name + suffix)) return false;
+            }
+            return true;
         }
 
         /// <summary>The property flagged with <paramref name="flag"/> (MainTexture, MainColor), else

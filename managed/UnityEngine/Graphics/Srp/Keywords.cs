@@ -136,6 +136,7 @@ namespace UnityEngine
                         foreach (var k in value)
                             if (k.m_SpaceInfo == shader.keywordSpace && k.m_SpaceInfo.IndexOf(k.name) >= 0) m_Keywords.Add(k.name);
                 }
+                if (m_Keywords.Count != 0) StopMeasuringPropertyStorage();
                 MarkDirty();
             }
         }

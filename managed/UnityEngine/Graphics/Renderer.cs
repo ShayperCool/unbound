@@ -464,7 +464,7 @@ namespace UnityEngine
                 drawn.ResetToCopyOf(source);
             else
                 using (ObjectRegistry.AsAssets())
-                    drawn = new Material(source) { hideFlags = HideFlags.HideAndDontSave, parent = null };
+                    drawn = new Material(source, measureProfilerAllocation: false) { hideFlags = HideFlags.HideAndDontSave, parent = null };
             foreach (var p in block.m_Values)
             {
                 switch (p.Value)

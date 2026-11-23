@@ -1,6 +1,7 @@
 using System;
 using Unbound.Runtime;
 using UnityEngine.Profiling;
+using UnityEngine.Rendering;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -62,6 +63,80 @@ namespace UnityEngine.Tests
             finally
             {
                 Object.DestroyImmediate(material);
+                Object.DestroyImmediate(shader);
+            }
+        }
+
+        [Theory]
+        [InlineData("Shader \"Tests/MaterialMemory\" { Properties { _T (\"T\", 2D) = \"white\" {} _T_ST (\"ST\", Vector) = (1, 1, 0, 0) } SubShader { Pass {} } }")]
+        [InlineData("Shader \"Tests/MaterialMemory\" { SubShader { Pass { HLSLPROGRAM\n#if 0\nProperties { _Bogus (\"Bogus\", Float) = 1 }\n#endif\nENDHLSL\n} } }")]
+        public void AnAmbiguousPropertyLayoutDoesNotReportAnEstimatedSize(string source)
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var shader = CreateShader(source);
+            var material = new Material(shader);
+            try { Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(material)); }
+            finally
+            {
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(shader);
+            }
+        }
+
+        [Fact]
+        public void AssigningAndClearingLocalKeywordsLeavesTheReservationUnmeasured()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var shader = CreateShader(PlainShader);
+            var material = new Material(shader);
+            try
+            {
+                Assert.Equal(1864, Profiler.GetRuntimeMemorySizeLong(material));
+                var keyword = new LocalKeyword(shader, "MATERIAL_MEMORY_KEYWORD");
+                material.enabledKeywords = new[] { keyword };
+                Assert.True(material.IsKeywordEnabled(keyword));
+                Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(material));
+                material.enabledKeywords = Array.Empty<LocalKeyword>();
+                Assert.False(material.IsKeywordEnabled(keyword));
+                Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(material));
+            }
+            finally
+            {
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(shader);
+            }
+        }
+
+        [Fact]
+        public void APropertyBlockDrawCopyHasNoProfilerModelBeforeOrAfterReset()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            const string source = "Shader \"Tests/MaterialMemory\" { Properties { _Integer (\"I\", Integer) = 2 } SubShader { Pass {} } }";
+            var shader = CreateShader(source);
+            var original = new Material(shader);
+            var owner = new GameObject();
+            try
+            {
+                var renderer = owner.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = original;
+                var block = new MaterialPropertyBlock();
+                block.SetInteger("_Integer", 7);
+                renderer.SetPropertyBlock(block);
+                var copy = renderer.DrawnMaterial(0, original);
+                Assert.NotSame(original, copy);
+                Assert.Equal(7, copy.GetInteger("_Integer"));
+                Assert.Equal(1864, Profiler.GetRuntimeMemorySizeLong(original));
+                Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(copy));
+                block.SetInteger("_Integer", 11);
+                renderer.SetPropertyBlock(block);
+                Assert.Same(copy, renderer.DrawnMaterial(0, original));
+                Assert.Equal(11, copy.GetInteger("_Integer"));
+                Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(copy));
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+                Object.DestroyImmediate(original);
                 Object.DestroyImmediate(shader);
             }
         }

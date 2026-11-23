@@ -41,8 +41,7 @@ namespace UnityEngine
         bool TryGetProfilerPropertyLayout(out (long Keys, long Words, bool MixedWords) layout)
         {
             if (!IsPersistentAsset && m_Parent == null && m_State.m_ProfilerLayoutVersion is { } version && m_Shader != null
-                && m_Shader.ProfilerLayoutVersion == version && m_Shader.ProfilerPropertyLayout is { } current
-                && m_RawBindings.Count == 0)
+                && m_Shader.ProfilerLayoutVersion == version && m_Shader.ProfilerPropertyLayout is { } current)
             {
                 layout = current;
                 return true;

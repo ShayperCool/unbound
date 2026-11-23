@@ -39,7 +39,7 @@ namespace Unbound.Runtime
             if (cached.Copy) UnityEngine.Object.DestroyImmediate(cached.Copy);
             Material copy;
             using (ObjectRegistry.AsAssets())
-                copy = new Material(material) { hideFlags = HideFlags.HideAndDontSave, parent = null };
+                copy = new Material(material, measureProfilerAllocation: false) { hideFlags = HideFlags.HideAndDontSave, parent = null };
             // Preserve existing replacement sorting across the public shader queue reset.
             // Custom-queue replacement ordering has not been measured.
             int queue = copy.rawRenderQueue;

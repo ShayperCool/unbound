@@ -305,7 +305,9 @@ namespace UnityEngine
         /// <summary>A copy; of a variant, a variant of the same parent with the same overrides and
         /// locks (canonical variant.instance and variant.newFrom). It has every setting of the source,
         /// its GI flags and double-sided GI too ("copying all properties", 6000.0).</summary>
-        public Material(Material source)
+        public Material(Material source) : this(source, measureProfilerAllocation: true) { }
+
+        internal Material(Material source, bool measureProfilerAllocation)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             source.Inherit();
@@ -322,7 +324,7 @@ namespace UnityEngine
             m_InheritedVersion = source.m_InheritedVersion;
             // A plain runtime copy starts with its own declared property storage. The source's
             // appended scalar reservation does not carry over (tests/projects/materialmemory).
-            if (source.TryGetProfilerPropertyLayout(out _))
+            if (measureProfilerAllocation && source.TryGetProfilerPropertyLayout(out _))
                 StartMeasuringPropertyStorage();
         }
 
@@ -1098,9 +1100,7 @@ namespace UnityEngine
                         names.Add(p.Name);
                         break;
                     case MaterialPropertyType.Vector when p.Type == ShaderPropertyType.Texture:
-                        names.Add(p.Name + "_ST");
-                        names.Add(p.Name + "_TexelSize");
-                        names.Add(p.Name + "_HDR");
+                        foreach (var suffix in Shader.TextureCompanionSuffixes) names.Add(p.Name + suffix);
                         break;
                 }
             }

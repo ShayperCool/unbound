@@ -217,14 +217,14 @@ namespace Unbound.Runtime
 
         /// <summary>The body of the source's `Properties` block, comments blanked (null: the
         /// source has no `Properties` block, so it declares no properties).</summary>
-        internal static string PropertiesBlock(string source) => PropertiesBlock(source, out _);
+        internal static string PropertiesBlock(string source) => PropertiesBlock(source, out _, out _);
 
-        static string PropertiesBlock(string source, out bool closed)
+        static string PropertiesBlock(string source, out int open, out bool closed)
         {
+            open = -1;
             closed = false;
             source = s_SourceTrivia.Replace(source, m => m.Value[0] == '"'
                 ? m.Value : Regex.Replace(m.Value, @"[^\r\n]", " "));
-            int open = -1;
             foreach (Match m in s_PropertiesBlock.Matches(source))
                 if (m.Value[0] != '"') { open = m.Index + m.Length - 1; break; }
             if (open < 0) return null;
@@ -244,13 +244,33 @@ namespace Unbound.Runtime
             return source.Substring(open + 1, Math.Max(0, end - open - 1));
         }
 
+        // The existing property reader also sees Properties text inside embedded programs.
+        // A profiler layout needs the actual block directly within the Shader declaration.
+        static bool IsShaderPropertiesBlock(string source, int open)
+        {
+            var declaration = s_Name.Match(source);
+            if (!declaration.Success) return false;
+            var token = s_QueueScan.Match(source, declaration.Index + declaration.Length);
+            if (!token.Success || token.Length != 1 || source[token.Index] != '{') return false;
+            int depth = 1;
+            for (token = token.NextMatch(); token.Success && token.Index <= open; token = token.NextMatch())
+            {
+                if (token.Index == open) return depth == 1 && token.Length == 1;
+                if (token.Length != 1) continue;
+                if (source[token.Index] == '{') depth++;
+                else if (source[token.Index] == '}' && --depth == 0) return false;
+            }
+            return false;
+        }
+
         internal static List<ShaderPropertyInfo> Properties(string source) => Properties(source, out _);
 
         internal static List<ShaderPropertyInfo> Properties(string source, out bool layoutKnown)
         {
             var list = new List<ShaderPropertyInfo>();
-            var block = PropertiesBlock(source, out layoutKnown);
+            var block = PropertiesBlock(source, out int opening, out layoutKnown);
             if (block == null) return list;
+            layoutKnown &= IsShaderPropertiesBlock(source, opening);
             int parsedThrough = 0;
             foreach (Match m in s_Property.Matches(block))
             {
