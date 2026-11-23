@@ -85,6 +85,15 @@ public class ModelImportProbe : MonoBehaviour
             else Model(model.name, instance.transform);
             DestroyImmediate(instance);
         }
+        if (builtinBlend)
+        {
+            var material = Resources.Load<Material>("InteractiveValidation");
+            if (!material) throw new InvalidOperationException("Interactive validation asset is missing.");
+            Add("blend.standalone.shader", material.shader.name);
+            BlendMetadata("blend.standalone.before", material);
+            Add("blend.standalone.blend", material.GetFloat("_DstBlend"));
+            BlendMetadata("blend.standalone.after", material);
+        }
         var path = Environment.GetEnvironmentVariable("MODEL_IMPORT_PROBE_OUT");
         Stages(path, builtinBlend);
         if (!string.IsNullOrEmpty(path))

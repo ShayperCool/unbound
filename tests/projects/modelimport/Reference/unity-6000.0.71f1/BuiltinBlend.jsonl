@@ -78,7 +78,7 @@
 {"k":"blend.M_InteractiveCutout.loaded.gi","v":"EmissiveIsBlack"}
 {"k":"blend.M_InteractiveCutout.loaded.afterAction.rawQueue","v":2450}
 {"k":"blend.M_InteractiveCutout.loaded.afterAction.RenderType","v":"TransparentCutout"}
-{"k":"blend.M_InteractiveCutout.loaded.afterAction.keywords","v":["_ALPHATEST_ON"]}
+{"k":"blend.M_InteractiveCutout.loaded.afterAction.keywords","v":["_ALPHATEST_ON","_DETAIL_MULX2","_METALLICGLOSSMAP","_NORMALMAP","_PARALLAXMAP","_SPECGLOSSMAP"]}
 {"k":"blend.M_InteractiveCutout.loaded.afterAction.gi","v":"EmissiveIsBlack"}
 {"k":"blend.M_InteractiveCutout.loaded._Mode","v":1}
 {"k":"blend.M_InteractiveCutout.loaded._SrcBlend","v":1}
@@ -86,7 +86,7 @@
 {"k":"blend.M_InteractiveCutout.loaded._ZWrite","v":1}
 {"k":"blend.M_InteractiveCutout.loaded.afterFloats.rawQueue","v":2450}
 {"k":"blend.M_InteractiveCutout.loaded.afterFloats.RenderType","v":"TransparentCutout"}
-{"k":"blend.M_InteractiveCutout.loaded.afterFloats.keywords","v":["_ALPHATEST_ON"]}
+{"k":"blend.M_InteractiveCutout.loaded.afterFloats.keywords","v":["_ALPHATEST_ON","_DETAIL_MULX2","_METALLICGLOSSMAP","_NORMALMAP","_PARALLAXMAP","_SPECGLOSSMAP"]}
 {"k":"blend.M_InteractiveCutout.loaded.afterFloats.gi","v":"EmissiveIsBlack"}
 {"k":"blend.playEdit._DstBlend","v":5}
 {"k":"blend.M_LambertBare.loaded.shader","v":"Standard"}
@@ -181,6 +181,16 @@
 {"k":"blend.M_TransparentTex.loaded.afterFloats.RenderType","v":"Opaque"}
 {"k":"blend.M_TransparentTex.loaded.afterFloats.keywords","v":[]}
 {"k":"blend.M_TransparentTex.loaded.afterFloats.gi","v":"EmissiveIsBlack"}
+{"k":"blend.standalone.shader","v":"Autodesk Interactive"}
+{"k":"blend.standalone.before.rawQueue","v":2999}
+{"k":"blend.standalone.before.RenderType","v":"Opaque"}
+{"k":"blend.standalone.before.keywords","v":[]}
+{"k":"blend.standalone.before.gi","v":"EmissiveIsBlack"}
+{"k":"blend.standalone.blend","v":0}
+{"k":"blend.standalone.after.rawQueue","v":2450}
+{"k":"blend.standalone.after.RenderType","v":"TransparentCutout"}
+{"k":"blend.standalone.after.keywords","v":["_ALPHATEST_ON"]}
+{"k":"blend.standalone.after.gi","v":"EmissiveIsBlack"}
 {"k":"blend.M_ArnoldMax.seed._DstBlend","v":"5"}
 {"k":"blend.M_ArnoldMax.seed._Mode","v":"0"}
 {"k":"blend.M_ArnoldMax.seed._SrcBlend","v":"5"}

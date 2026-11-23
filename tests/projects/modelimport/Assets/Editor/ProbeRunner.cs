@@ -187,6 +187,22 @@ public class BuiltinBlendSeed : AssetPostprocessor
             if (shader == null) throw new InvalidOperationException("Blend control shader is missing.");
             material.shader = shader;
         }
+        if (material.name == "M_InteractiveCutout")
+        {
+            foreach (var (property, file) in new[]
+            {
+                ("_BumpMap", "Bumps.png"), ("_MetallicGlossMap", "Checker.png"),
+                ("_SpecGlossMap", "Checker.png"), ("_EmissionMap", "Glow.png"),
+                ("_ParallaxMap", "Checker.png"), ("_DetailAlbedoMap", "Checker.png"),
+            })
+            {
+                string texturePath = "Assets/Models/Textures/" + file;
+                context.DependsOnArtifact(texturePath);
+                var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
+                if (texture == null) throw new InvalidOperationException("Blend control texture is missing: " + texturePath);
+                material.SetTexture(property, texture);
+            }
+        }
         material.SetFloat("_Mode", mode);
         material.SetFloat("_SrcBlend", 5);
         material.SetFloat("_DstBlend", 5);
