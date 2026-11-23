@@ -1,5 +1,5 @@
-//! Bob Jenkins' SpookyHash V2 (public domain), the 128-bit hash of a short message (under 192
-//! bytes): what keys the Lightmap Parameters a baked atlas groups by.
+//! Bob Jenkins' SpookyHash V2 (public domain), the 128-bit hash of a message: what keys the
+//! Lightmap Parameters a baked atlas groups by, and a baked light probe set's points.
 
 const SC_CONST: u64 = 0xdead_beef_dead_beef;
 
@@ -117,4 +117,102 @@ pub fn hash128_short(message: &[u8], seed: (u64, u64)) -> (u64, u64) {
     }
     short_end(&mut h);
     (h[0], h[1])
+}
+
+/// The bytes of a long message's blocks.
+const BLOCK: usize = 96;
+/// Messages of at least this many bytes take the long form.
+const LONG: usize = 192;
+
+fn mix(data: &[u64; 12], s: &mut [u64; 12]) {
+    const ROTATIONS: [u32; 12] = [11, 32, 43, 31, 17, 28, 39, 57, 55, 54, 22, 46];
+    for i in 0..12 {
+        s[i] = s[i].wrapping_add(data[i]);
+        s[(i + 2) % 12] ^= s[(i + 10) % 12];
+        s[(i + 11) % 12] ^= s[i];
+        s[i] = s[i].rotate_left(ROTATIONS[i]);
+        s[(i + 11) % 12] = s[(i + 11) % 12].wrapping_add(s[(i + 1) % 12]);
+    }
+}
+
+fn end_partial(h: &mut [u64; 12]) {
+    const ROTATIONS: [u32; 12] = [44, 15, 34, 21, 38, 33, 10, 13, 38, 53, 42, 54];
+    for i in 0..12 {
+        h[(i + 11) % 12] = h[(i + 11) % 12].wrapping_add(h[(i + 1) % 12]);
+        h[(i + 2) % 12] ^= h[(i + 11) % 12];
+        h[(i + 1) % 12] = h[(i + 1) % 12].rotate_left(ROTATIONS[i]);
+    }
+}
+
+fn words(bytes: &[u8]) -> [u64; 12] {
+    std::array::from_fn(|i| u64_at(bytes, 8 * i))
+}
+
+/// SpookyHash V2 `Hash128` of a message with the seeds `seed`: `(hash1, hash2)`.
+pub fn hash128(message: &[u8], seed: (u64, u64)) -> (u64, u64) {
+    if message.len() < LONG {
+        return hash128_short(message, seed);
+    }
+    let mut h: [u64; 12] = std::array::from_fn(|i| match i % 3 {
+        0 => seed.0,
+        1 => seed.1,
+        _ => SC_CONST,
+    });
+    let blocks = message.len() / BLOCK;
+    for b in 0..blocks {
+        mix(&words(&message[b * BLOCK..(b + 1) * BLOCK]), &mut h);
+    }
+    let rest = &message[blocks * BLOCK..];
+    let mut last = [0u8; BLOCK];
+    last[..rest.len()].copy_from_slice(rest);
+    last[BLOCK - 1] = rest.len() as u8;
+    for (v, d) in h.iter_mut().zip(words(&last)) {
+        *v = v.wrapping_add(d);
+    }
+    end_partial(&mut h);
+    end_partial(&mut h);
+    end_partial(&mut h);
+    (h[0], h[1])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const LONG_VECTORS: [(usize, (u64, u64), (u64, u64)); 7] = [
+        (192, (0x0, 0x0), (0x02d13f94b2a31a54, 0x0ea393db758d85d3)),
+        (193, (0x0, 0x0), (0x3000e51613f6e430, 0x226030278b4737a0)),
+        (287, (0x1, 0x2), (0x3d7fc2599fcca286, 0xd06b2e14f6010a6b)),
+        (288, (0x0, 0x0), (0x03d25f35f9d92644, 0x8b6bec13b6c91440)),
+        (
+            300,
+            (0xdeadbeef, 0x12345678),
+            (0xbb00e83cd873b99d, 0x7749f33c8a76a14d),
+        ),
+        (1000, (0x0, 0x0), (0x933a2fd941efd7fe, 0x0e436a670a76d2d8)),
+        (4096, (0x7, 0x9), (0x10d23abbcb7eee55, 0xb231756856637dc1)),
+    ];
+
+    /// A message of `n` bytes: 0, 1, 2, ... (mod 251).
+    fn message(n: usize) -> Vec<u8> {
+        (0..n).map(|i| (i % 251) as u8).collect()
+    }
+
+    #[test]
+    fn long_messages_hash_as_spooky_v2() {
+        // Values of the reference algorithm (Bob Jenkins' SpookyV2.cpp Hash128).
+        for (n, seed, expected) in LONG_VECTORS {
+            assert_eq!(hash128(&message(n), seed), expected, "{n} bytes");
+        }
+    }
+
+    #[test]
+    fn short_messages_take_the_short_form() {
+        for n in [0, 15, 16, 31, 32, 100, 191] {
+            assert_eq!(
+                hash128(&message(n), (1, 2)),
+                hash128_short(&message(n), (1, 2))
+            );
+        }
+    }
 }

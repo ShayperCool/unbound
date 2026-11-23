@@ -15,6 +15,7 @@ pub mod images;
 pub mod indirect;
 pub mod levels;
 pub mod light;
+pub mod light_probes;
 pub mod probes;
 pub mod raster;
 pub mod sampling;
