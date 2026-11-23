@@ -1,13 +1,14 @@
 //! Cubemaps from images (`textureShape: Cube`): the six faces cut from a 6:1 or 1:6 strip or a
-//! 4:3 or 3:4 cross, projected from a latitude-longitude panorama or a sphere map, or the image's
-//! corner square on every face, as `generateCubemap` says (AutoCubemap picks by aspect). The
-//! glossy convolution of their mips is in `specular`.
+//! horizontal or vertical cross (4:3, 3:4, or cells that are not square), projected from a
+//! latitude-longitude panorama or a sphere map, or the image's corner square on every face, as
+//! `generateCubemap` says (AutoCubemap picks by aspect). The glossy convolution of their mips is
+//! in `specular`.
 //!
 //! Faces are in Unity's order (+X, -X, +Y, -Y, +Z, -Z) and orientation: a face of a strip or
 //! cross is the square as the image shows it, top-down (the importer then flips rows as for any
 //! texture); in the vertical cross -Z is upside down. Directions of a face texel follow the
-//! D3D/Vulkan cube convention. The panorama, sphere map and corner square match the Unity
-//! 6000.0.71f1 Editor (tests/projects/cubemapimport).
+//! D3D/Vulkan cube convention. The layouts other than the exact strips and crosses match the
+//! Unity 6000.0.71f1 Editor (tests/projects/cubemapimport).
 use super::{Image, TextureFormat, read_f32};
 use anyhow::Result;
 
@@ -79,7 +80,7 @@ pub(super) fn layout(width: u32, height: u32, mode: i32) -> Result<Layout> {
         .ok_or_else(|| {
             anyhow::anyhow!(
                 "AutoCubemap's mapping of a {width}x{height} image is not measured (aspects \
-                 measured: 0.5-0.67, 0.85, 1.15-1.2, 1.45-1.52 and 2.9-5 the corner square, 0.7-0.8 a \
+                 measured: 0.5-0.67, 50:59, 1.15-1.2, 1.45-1.52 and 2.9-5 the corner square, 0.7-0.8 a \
                  vertical cross, 0.9-1.12 a sphere map, 1.25-1.33 a horizontal cross, 1.55-2.8 a \
                  panorama, and the exact strips); set the texture's Mapping"
             )
@@ -142,8 +143,9 @@ pub(super) fn faces(image: &Image, layout: Layout, size: u32) -> Vec<Image> {
         Layout::HorizontalCross | Layout::VerticalCross => {
             // Cells of whole texels counted from the image's bottom-left (Unity's texture
             // order); each face is the square of the larger cell side from its cell's corner,
-            // reaching right and up, edge texels repeated past the image (tests/projects/
-            // cubemapimport Aspect125Auto, Aspect080Auto, Aspect070Auto).
+            // reaching right and up (tests/projects/cubemapimport Aspect125Auto, Aspect080Auto,
+            // Aspect070Auto). Past the image's edge the edge texels are repeated: unmeasured (the
+            // probe reads no texel there).
             let (cw, ch) = cells(image.width, image.height, layout);
             let rows = if layout == Layout::HorizontalCross {
                 3
