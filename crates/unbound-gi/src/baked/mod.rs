@@ -4,6 +4,7 @@
 //! on them ([`direct`], [`light`], shadowed through [`trace`]) and the light that reaches them
 //! from other surfaces ([`indirect`], with the rays of [`sampling`]).
 pub mod atlas;
+pub mod composite;
 pub mod direct;
 pub mod directional;
 pub mod gbuffer;
