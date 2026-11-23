@@ -174,10 +174,7 @@ namespace UnityEngine.Tests
             return tilemap;
         }
 
-        static Mesh FirstBatch(TilemapRenderer renderer) =>
-            ((List<(Mesh Mesh, Texture Texture, Vector3 Center, Color Tint)>)typeof(TilemapRenderer)
-                .GetField("m_Batches", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-                .GetValue(renderer))[0].Mesh;
+        static Mesh FirstBatch(TilemapRenderer renderer) => renderer.BatchMesh(0);
 
         [Fact]
         public void TilemapChunksCarryTheirCellColorsAsBytesOfTheLinearProduct()

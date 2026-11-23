@@ -28,7 +28,8 @@ namespace UnityEngine.Tilemaps
 
         /// <summary>The meshes drawn, rebuilt when the tilemap, its grid or the settings change, with the
         /// color each one's draw carries (white in Chunk mode, whose vertices carry the colors).</summary>
-        readonly List<(Mesh Mesh, Texture Texture, Vector3 Center, Color Tint)> m_Batches = new List<(Mesh, Texture, Vector3, Color)>();
+        readonly List<(Mesh Mesh, Texture Texture, Dictionary<int, object> Secondary, Vector3 Center, Color Tint)> m_Batches =
+            new List<(Mesh, Texture, Dictionary<int, object>, Vector3, Color)>();
         (int Tilemap, int Grid, SortOrder Order, Mode Mode, ColorSpace Space) m_BuiltFor = (-1, -1, default, default, default);
 
         public TilemapRenderer() { InitializeBillboardDefaults(); }
@@ -77,6 +78,21 @@ namespace UnityEngine.Tilemaps
             return cells;
         }
 
+        /// <summary>The cells one mesh draws, with the texture and secondary textures they share.</summary>
+        sealed class Group
+        {
+            public Texture Texture;
+            public Dictionary<int, object> Secondary;
+            public readonly List<Vector3> Vertices = new List<Vector3>();
+            public readonly List<Vector3> Normals = new List<Vector3>();
+            public readonly List<Vector4> Tangents = new List<Vector4>();
+            public readonly List<Vector2> Uvs = new List<Vector2>();
+            public List<Color32> Colors;
+            public readonly List<int> Triangles = new List<int>();
+            public Vector3 Center;
+            public Color Tint;
+        }
+
         void Rebuild(Tilemap tilemap)
         {
             if (tilemap.HasEditorPreviewCells)
@@ -86,7 +102,7 @@ namespace UnityEngine.Tilemaps
             var tint = tilemap.color;
             var orientation = tilemap.orientationMatrix;
             bool individual = m_Mode == Mode.Individual;
-            var groups = new List<(Texture Texture, List<Vector3> Vertices, List<Vector2> Uvs, List<Color32> Colors, List<int> Triangles, Vector3 Center, Color Tint)>();
+            var groups = new List<Group>();
             foreach (var pair in OrderedCells(tilemap))
             {
                 var cell = pair.Value;
@@ -95,22 +111,40 @@ namespace UnityEngine.Tilemaps
                 var center = tilemap.TileCenterLocal(pair.Key);
                 var model = Matrix4x4.Translate(center) * orientation * cell.Transform;
                 var color = VertexColors.InColorSpace(cell.Color * tint);
+                var secondary = sprite.SecondaryProperties();
                 int g = groups.Count - 1;
-                // Chunk mode batches consecutive cells of one texture; Individual mode draws each
-                // cell on its own.
-                if (individual || g < 0 || groups[g].Texture != sprite.texture)
+                // Chunk mode batches consecutive cells of one texture and one set of secondary
+                // textures (a split where only the secondary textures change is ours: the Editor's
+                // chunking of such cells is unmeasured); Individual mode draws each cell on its own.
+                if (individual || g < 0 || groups[g].Texture != sprite.texture || !SameTextures(groups[g].Secondary, secondary))
                 {
-                    groups.Add((sprite.texture, new List<Vector3>(), new List<Vector2>(), individual ? null : new List<Color32>(), new List<int>(), center,
-                        individual ? color : Color.white));
+                    groups.Add(new Group
+                    {
+                        Texture = sprite.texture,
+                        Secondary = secondary,
+                        Colors = individual ? null : new List<Color32>(),
+                        Center = center,
+                        Tint = individual ? color : Color.white,
+                    });
                     g++;
                 }
                 var group = groups[g];
                 int start = group.Vertices.Count;
                 var vertices = sprite.m_Vertices;
                 var uvs = sprite.m_UV;
+                // A sprite's vertex frame (towards the camera, along +x with a negative handedness;
+                // Sprite.SpriteVertexFrames) turned with the cell, so that normal-mapped 2D lights
+                // light the tile as its sprite renderer twin (matches the Unity 6000.0.71f1 Editor
+                // for a rotated and a mirrored cell, tests/projects/tilemapsecondary tile.*; other
+                // orientations follow the same linear map, unmeasured).
+                var normal = model.MultiplyVector(new Vector3(0f, 0f, -1f)).normalized;
+                var along = model.MultiplyVector(Vector3.right).normalized;
+                var tangent = new Vector4(along.x, along.y, along.z, -1f);
                 for (int i = 0; i < vertices.Length; i++)
                 {
                     group.Vertices.Add(model.MultiplyPoint3x4(vertices[i]));
+                    group.Normals.Add(normal);
+                    group.Tangents.Add(tangent);
                     group.Uvs.Add(uvs[i]);
                     group.Colors?.Add(VertexColors.Bytes(color));
                 }
@@ -121,11 +155,13 @@ namespace UnityEngine.Tilemaps
                 var mesh = new Mesh { name = "Tilemap", hideFlags = HideFlags.HideAndDontSave };
                 if (group.Vertices.Count > 65535) mesh.indexFormat = Rendering.IndexFormat.UInt32;
                 mesh.SetVertices(group.Vertices);
+                mesh.SetNormals(group.Normals);
+                mesh.SetTangents(group.Tangents);
                 mesh.SetUVs(0, group.Uvs);
                 if (group.Colors != null) mesh.SetColors(group.Colors);
                 mesh.SetTriangles(group.Triangles, 0);
                 mesh.UpdateBounds();
-                m_Batches.Add((mesh, group.Texture, group.Center, group.Tint));
+                m_Batches.Add((mesh, group.Texture, group.Secondary, group.Center, group.Tint));
             }
         }
 
@@ -164,6 +200,7 @@ namespace UnityEngine.Tilemaps
                         Color = batch.Tint,
                         Tint = individual ? DrawTint.Vertices : DrawTint.None,
                         MainTexture = texture,
+                        Properties = batch.Secondary,
                         Queue = material.renderQueue,
                         SortingLayer = layer,
                         SortingOrder = m_SortingOrder,
@@ -174,6 +211,20 @@ namespace UnityEngine.Tilemaps
                     });
                 }
             }
+        }
+
+        /// <summary>The mesh of the batch at <paramref name="index"/> (tests).</summary>
+        internal Mesh BatchMesh(int index) => m_Batches[index].Mesh;
+
+        /// <summary>Whether two sprites' secondary textures are the same (an empty set is none).</summary>
+        static bool SameTextures(Dictionary<int, object> a, Dictionary<int, object> b)
+        {
+            int count = b?.Count ?? 0;
+            if ((a?.Count ?? 0) != count) return false;
+            if (count == 0) return true;
+            foreach (var pair in b)
+                if (!a.TryGetValue(pair.Key, out var texture) || !ReferenceEquals(texture, pair.Value)) return false;
+            return true;
         }
 
         internal override void OnEngineDestroy()
