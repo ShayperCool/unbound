@@ -726,8 +726,8 @@ namespace UnityEngine.Profiling
         public static void EndThreadProfiling() { }
 
         /// <summary>The Editor's accounting of the object (see Unbound.Runtime.MemorySizes): textures,
-        /// render textures, meshes, created audio clips, game objects and measured attached components.
-        /// Other kinds warn and answer 0.</summary>
+        /// render textures, meshes, created audio clips, game objects, and measured material, sprite
+        /// and attached component allocations. Unmeasured allocations warn and answer 0.</summary>
         public static long GetRuntimeMemorySizeLong(Object o)
         {
             Object.ThrowIfNullArgument(o, "o");
