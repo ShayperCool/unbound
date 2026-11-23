@@ -156,6 +156,7 @@ namespace Unbound.Runtime
         internal static string Refusal(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task, UnityEngine.Object processor, string sourceRefusal = null)
         {
             if (!IsPlanar(task.type) && task.type != VFXTaskType.ParticleHexahedronOutput && task.type != VFXTaskType.ParticleMeshOutput) return $"{task.type} is not drawn yet (quads, triangles, octagons, cubes and meshes are)";
+            if (task.type == VFXTaskType.ParticleHexahedronOutput && !GraphicsDeviceProfile.Current.EffectCubesMeasured) return CubeDeviceRefusal;
             if ((system.flags & VFXSystemFlag.SystemHasStrips) != 0)
             {
                 // Strips are quads from each particle to the next, drawn for all the strips'
@@ -216,6 +217,7 @@ namespace Unbound.Runtime
         /// <summary>The varying the deprecated forward decal output's programs pass (the package's
         /// Shaders/ParticleDecals templates).</summary>
         const string ForwardDecalVarying = "worldToDecal0";
+        internal const string CubeDeviceRefusal = "it is a cube output, whose faces are measured on the OpenGL Core device only";
         internal const string ForwardDecalRefusal = "it is a forward decal output (deprecated), which is not measured yet";
 
         /// <summary>A strip output lit by 2D lights is not drawn until it is measured.</summary>

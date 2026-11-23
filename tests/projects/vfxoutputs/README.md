@@ -66,7 +66,7 @@ face is edge-on to the camera: more than one draw's 16-bit indices reach, 8192, 
 of 1024 as the vertex program reads them), and `CubeTextured` (six opaque cubes a third of the
 view across, turned every way, an image of four differently coloured quarters laid on each face:
 the program lays it by a face number it gives each corner, which the pixels of a triangle take
-flat, in the OpenGL Core Editor from the triangle's last vertex) with `CubeTexturedTurned` (the
+flat, on OpenGL Core from the triangle's last vertex) with `CubeTexturedTurned` (the
 same turned half a turn more about y, so that the camera sees the cubes' other faces).
 
 `Priority`: two systems over the same particles (one seed), the first with two outputs and the

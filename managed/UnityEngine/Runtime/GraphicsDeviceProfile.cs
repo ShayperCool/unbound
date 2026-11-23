@@ -73,6 +73,12 @@ namespace Unbound.Runtime
         /// <c>procedural.c8</c>); null where unmeasured (such commands are warned about and not
         /// drawn).</summary>
         internal UnityEngine.MeshTopology? ProceduralQuads { get; init; }
+        /// <summary>Whether the Visual Effect Graph's cube outputs are drawn. Their texture lies on
+        /// a pixel by a face number its triangle takes flat from one of its vertices, which the
+        /// device's convention picks (OpenGL Core: the last); the cube's triangles are measured
+        /// on OpenGL Core only (tests/projects/vfxoutputs <c>Cube*</c>), elsewhere such outputs
+        /// are refused (<see cref="Unbound.Runtime.VFXOutput.CubeDeviceRefusal"/>).</summary>
+        internal bool EffectCubesMeasured { get; init; }
         /// <summary>The most samples GetRenderTextureSupportedMSAASampleCount answers.</summary>
         internal int MaxMsaaSamples { get; init; } = 8;
         internal bool DepthFetchInRenderPass { get; init; } = true;
@@ -285,6 +291,7 @@ namespace Unbound.Runtime
             TiledStorageMeasured = true,
             MaxGraphicsBufferBytes = 2L << 30,
             ProceduralQuads = UnityEngine.MeshTopology.Points,
+            EffectCubesMeasured = true,
             PackedTargetsKeepChannelBits = true,
             ScreenCaptureUsesActiveRenderState = true,
             RestoreCommandBufferTargets = true,

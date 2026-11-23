@@ -4,13 +4,13 @@ using UnityEngine;
 namespace Unbound.Runtime
 {
     /// <summary>
-    /// A planar primitive outputs draw for each particle, as the generated vertex programs find
+    /// A primitive outputs draw for each particle (planar, or a cube), as the generated vertex programs find
     /// a particle by their vertex id: its vertices, the triangles over them (the indices of one
     /// primitive), and how many primitives one draw's 16-bit indices reach, beyond which a draw
     /// is made of instances of <see cref="PerInstance"/> (the programs add the instance's place).
     /// A triangle's program reads no instance: triangles are drawn in one draw, with 32-bit
     /// indices. Matches the Unity 6000.0.71f1 Editor (tests/projects/vfx `draw-*`,
-    /// tests/projects/vfxoutputs `Triangle*`, `Octagon*`).
+    /// tests/projects/vfxoutputs `Triangle*`, `Octagon*`, `Cube*`).
     /// </summary>
     internal sealed class Primitive
     {
@@ -24,13 +24,16 @@ namespace Unbound.Runtime
         /// program gives it: x from bit 0, y from bit 1, z from bit 2), two on each face, facing
         /// out of the cube. The program gives each vertex a face number from its corner
         /// (<c>(corner & 7) % 5</c>) and lays the texture on a pixel by the number its triangle
-        /// takes flat: 0 across z, 1 across y, any other across x. The OpenGL Core Editor takes
-        /// it from a triangle's last vertex. Each face is split along the diagonal it is split
-        /// along there, and each triangle ends at a corner whose number lays the texture as there,
-        /// on most faces across another axis than the face's own (tests/projects/vfxoutputs
-        /// `CubeTextured`, `CubeTexturedTurned`). Which of a triangle's two other corners comes
-        /// first is not measured: what a device that takes flat values from a triangle's first
-        /// vertex (Vulkan, Metal) shows is unmeasured.</summary>
+        /// takes flat: 0 across z, 1 across y, any other across x. On OpenGL Core, which takes
+        /// flat values from a triangle's last vertex, these triangles lay the texture as the
+        /// Unity 6000.0.71f1 Editor's images on that device show it, on most faces across
+        /// another axis than the face's own (tests/projects/vfxoutputs `CubeTextured`,
+        /// `CubeTexturedTurned`: every face seen, the images pixel for pixel). With the winding,
+        /// a triangle's last corner fixes its first, but the images do not tell a last corner
+        /// from another that lays the texture alike (one of the same number, or 2, 3 and 4, all
+        /// across x), so what a device taking flat values from the first vertex (Vulkan, Metal)
+        /// shows is not measured, and cube outputs are refused there
+        /// (<see cref="GraphicsDeviceProfile.EffectCubesMeasured"/>).</summary>
         internal static readonly Primitive Hexahedron = new Primitive(8, new ushort[]
         {
             0, 3, 1, 0, 2, 3, // z = 0

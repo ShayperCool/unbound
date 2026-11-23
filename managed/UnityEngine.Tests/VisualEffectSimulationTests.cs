@@ -982,25 +982,26 @@ namespace UnityEngine.Tests
             Assert.Equal(36, cube.Length);
             static Vector3 Corner(int i) => new Vector3(i & 1, (i >> 1) & 1, (i >> 2) & 1) - new Vector3(0.5f, 0.5f, 0.5f);
             var covered = new Dictionary<(int, int), HashSet<int>>();
+            var faceAxis = new int[12];
             for (int t = 0; t < 36; t += 3)
             {
                 var (a, b, c) = (Corner(cube[t]), Corner(cube[t + 1]), Corner(cube[t + 2]));
                 Assert.True(Vector3.Dot(Vector3.Cross(b - a, c - a), (a + b + c) / 3f) > 0f, $"triangle {t / 3} faces in");
                 int axis = System.Linq.Enumerable.Single(System.Linq.Enumerable.Range(0, 3), k => ((cube[t] >> k) & 1) == ((cube[t + 1] >> k) & 1) && ((cube[t] >> k) & 1) == ((cube[t + 2] >> k) & 1));
+                faceAxis[t / 3] = axis;
                 var face = (axis, (cube[t] >> axis) & 1);
                 if (!covered.TryGetValue(face, out var corners)) covered[face] = corners = new HashSet<int>();
                 corners.UnionWith(new int[] { cube[t], cube[t + 1], cube[t + 2] });
             }
             Assert.Equal(6, covered.Count);
             Assert.All(covered.Values, corners => Assert.Equal(4, corners.Count));
-            // The OpenGL Core Editor lays the texture on a triangle by its last corner's face
-            // number (tests/projects/vfxoutputs `CubeTextured*`): across the face's own axis only
-            // on one triangle of each face across x.
-            int across(int t) => Math.Min((cube[t + 2] & 7) % 5, 2) switch { 0 => 2, 1 => 1, _ => 0 };
-            int own(int t) => System.Linq.Enumerable.Single(System.Linq.Enumerable.Range(0, 3), k => ((cube[t] >> k) & 1) == ((cube[t + 1] >> k) & 1) && ((cube[t] >> k) & 1) == ((cube[t + 2] >> k) & 1));
+            // On OpenGL Core a triangle lays the texture by its last corner's face number, as the
+            // Editor's images on that device show (tests/projects/vfxoutputs `CubeTextured*`):
+            // across the face's own axis only on one triangle of each face across x.
+            static int Across(int corner) => ((corner & 7) % 5) switch { 0 => 2, 1 => 1, _ => 0 };
             Assert.Equal(
                 new[] { false, false, false, false, false, false, false, false, true, false, true, false },
-                System.Linq.Enumerable.Select(System.Linq.Enumerable.Range(0, 12), t => across(3 * t) == own(3 * t)));
+                System.Linq.Enumerable.Select(System.Linq.Enumerable.Range(0, 12), t => Across(cube[3 * t + 2]) == faceAxis[t]));
             var cubes = Primitive.Hexahedron.Indices(1);
             Assert.Equal(8192 * 36, cubes.count);
             Assert.Equal((1024u * 36, 10u), (Primitive.Hexahedron.Draw(cubes, 10000).IndexCount, Primitive.Hexahedron.Draw(cubes, 10000).Instances));
@@ -1041,6 +1042,20 @@ namespace UnityEngine.Tests
             Assert.Equal("ParticlePointOutput is not drawn yet (quads, triangles, octagons, cubes and meshes are)", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticlePointOutput }, material));
             Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleTriangleOutput }, material));
             Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleOctagonOutput }, material));
+            // Cubes are drawn on OpenGL Core, where their faces are measured; refused elsewhere.
+            var cubes = new VFXEditorTaskDesc { type = VFXTaskType.ParticleHexahedronOutput };
+            Assert.Null(VFXOutput.Refusal(system, cubes, material));
+            var (device, threading) = (GraphicsDeviceProfile.Current, GraphicsDeviceProfile.CurrentThreadingMode.ToString());
+            try
+            {
+                foreach (var other in new[] { "Vulkan", "Metal" })
+                {
+                    GraphicsDeviceProfile.Select(other);
+                    Assert.Equal(VFXOutput.CubeDeviceRefusal, VFXOutput.Refusal(system, cubes, material));
+                    Assert.Null(VFXOutput.Refusal(system, quads, material));
+                }
+            }
+            finally { GraphicsDeviceProfile.Select(device.Type.ToString(), threading); }
             // Through an indirect buffer: drawn from the list that counts its particles, or from
             // the sorted copy a sort task of its system makes, or from its system's list that the
             // system's global sort orders; not from a list no task makes.
