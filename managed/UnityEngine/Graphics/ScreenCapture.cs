@@ -92,7 +92,17 @@ namespace UnityEngine
             if (width <= 0 || height <= 0) return;
             // Draw one texel per pixel. Sampling decodes an sRGB source and writing encodes an
             // sRGB destination. The source's edge extends when it is smaller than the screen.
-            var active = ActiveCaptureTexture;
+            bool useRenderState = UsesActiveRenderState;
+            var active = useRenderState ? RenderTexture.active : null;
+            ulong destination = useRenderState ? renderTexture.EnsureCreated() : 0;
+            if (useRenderState && destination == 0) return;
+            bool multisampledDestination = useRenderState && renderTexture.antiAliasing > 1;
+            if (useRenderState && (renderTexture.graphicsFormat == GraphicsFormat.None
+                || (multisampledDestination && renderTexture.bindTextureMS)))
+            {
+                Debug.LogError("Invalid surface for grabbing pixels. Verify that the RenderTarget is a valid color surface. Only a single color target may be grabbed.");
+                return;
+            }
             // This draw samples a 2D texture's base color image, even when another mip is bound.
             if (active != null)
             {
@@ -103,31 +113,27 @@ namespace UnityEngine
                     return;
                 }
             }
+            bool wireframe = GL.wireframe;
+            // The copy leaves a multisampled destination alone. In wireframe, the
+            // edges of the copy quad cover no destination pixels.
+            if (multisampledDestination || (useRenderState && wireframe)) return;
             ulong source = active != null ? active.EnsureCreated() : ScreenHandle;
             if (active != null && source == 0) return;
             int copyWidth = active != null ? Math.Min(width, active.width) : Screen.width;
             int copyHeight = active != null ? Math.Min(height, active.height) : Screen.height;
             var saved = GfxStream.Current;
             var savedActive = RenderTexture.ActiveTarget;
-            bool wireframe = GL.wireframe;
             bool srgbWrite = GL.sRGBWrite;
             RenderTexture copy = null;
-            (FilterMode Filter, TextureWrapMode U, TextureWrapMode V, TextureWrapMode W) sampler = default;
             try
             {
                 GfxStream.Scissor(null);
-                GL.sRGBWrite = true;
-                copy = active != null
-                    ? RenderTexture.GetTemporary(copyWidth, copyHeight, 0, active.graphicsFormat)
-                    : RenderTexture.GetTemporary(copyWidth, copyHeight, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
-                if (active != null)
-                {
-                    sampler = (copy.filterMode, copy.wrapModeU, copy.wrapModeV, copy.wrapModeW);
-                    copy.SetSamplerQuietly(FilterMode.Point, TextureWrapMode.Clamp, TextureWrapMode.Clamp,
-                        TextureWrapMode.Clamp, copy.anisoLevel, copy.mipMapBias);
-                    copy.OnSamplerChanged();
-                }
-                else copy.filterMode = FilterMode.Point;
+                if (!useRenderState) GL.sRGBWrite = true;
+                var descriptor = active != null
+                    ? new RenderTextureDescriptor(copyWidth, copyHeight, active.graphicsFormat, 0)
+                    : RenderTexture.TemporaryDescriptor(copyWidth, copyHeight, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB, 1);
+                copy = useRenderState ? RenderTexture.GetTemporaryForScreenshotCopy(descriptor) : RenderTexture.GetTemporary(descriptor);
+                if (!useRenderState) copy.filterMode = FilterMode.Point;
                 ulong staging = copy.EnsureCreated();
                 // Resolve the current color image, including a source with bindTextureMS.
                 if (active != null && active.antiAliasing > 1)
@@ -138,7 +144,7 @@ namespace UnityEngine
                 var material = Immediate.BlitCopy;
                 material.SetTexture(MainTex, copy);
                 if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
-                GfxStream.SetTarget(renderTexture.EnsureCreated());
+                GfxStream.SetTarget(useRenderState ? destination : renderTexture.EnsureCreated());
                 GfxStream.Viewport(new Rect(0, 0, width, height));
                 GfxStream.Camera(Matrix4x4.identity, Immediate.Ortho);
                 s_Properties.Clear();
@@ -150,27 +156,11 @@ namespace UnityEngine
                 try
                 {
                     if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
-                    GL.sRGBWrite = srgbWrite;
+                    if (!useRenderState) GL.sRGBWrite = srgbWrite;
                     RenderTexture.SetActiveQuietly(savedActive);
                     GfxStream.Restore(saved);
                 }
-                finally
-                {
-                    if (copy != null)
-                    {
-                        try
-                        {
-                            if (active != null)
-                            {
-                                // A pooled texture can have been configured by its previous caller.
-                                copy.SetSamplerQuietly(sampler.Filter, sampler.U, sampler.V, sampler.W,
-                                    copy.anisoLevel, copy.mipMapBias);
-                                copy.OnSamplerChanged();
-                            }
-                        }
-                        finally { RenderTexture.ReleaseTemporary(copy); }
-                    }
-                }
+                finally { if (copy != null) RenderTexture.ReleaseTemporary(copy); }
             }
         }
 
@@ -181,9 +171,8 @@ namespace UnityEngine
         // During a screen camera callback the logical screen has not been presented yet.
         static ulong ScreenHandle => RenderTexture.ScreenStandIn?.EnsureCreated() ?? 0;
 
-        static RenderTexture ActiveCaptureTexture =>
-            Compat.RenderingMeasured && GraphicsDeviceProfile.Current.ScreenCaptureReadsActiveTarget
-                ? RenderTexture.active : null;
+        static bool UsesActiveRenderState =>
+            Compat.RenderingMeasured && GraphicsDeviceProfile.Current.ScreenCaptureUsesActiveRenderState;
 
         // A requested screenshot holds what the end-of-frame callbacks drew (tests/projects/screencapture).
         static ScreenCapture() =>
@@ -217,7 +206,7 @@ namespace UnityEngine
             height = screenHeight * superSize;
             if (superSize == 1)
             {
-                if (fromActiveTarget && ActiveCaptureTexture is { } active)
+                if (fromActiveTarget && UsesActiveRenderState && RenderTexture.active is { } active)
                 {
                     // Depth-only and integer attachments have no color bytes to capture.
                     if (active.graphicsFormat == GraphicsFormat.None

@@ -147,6 +147,23 @@ and integer sources. Their returned pixel bytes differed across the Editor
 runs. Unbound puts transparent black in that RGBA32 texture and keeps the
 render texture destination untouched when the source format is rejected.
 
+The copy creates an uncreated destination before testing its surface and
+source. On the measured OpenGL Core device it follows the current
+`GL.sRGBWrite` setting, and a wireframe copy leaves the image unchanged.
+A multisampled destination keeps its pixels in both its current and
+retained images. A depth-only destination or multisampled destination
+with `bindTextureMS` logs the invalid color surface error after creation.
+[GL.sRGBWrite](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/gl/srgbwrite).
+
+The multisample controls check the full retained image for changes across
+the capture. There is a separate readback difference after clearing a
+bound multisampled texture. Before and after capture, the Editor's first
+retained pixel is (0, 0, 0, 0) and Unbound's is the cleared color
+(99, 137, 165, 127). The probe prints both raw reads. Bypassing capture and
+explicitly calling ResolveAntiAliasedSurface both leave this difference
+in the corresponding controls. The original screen references remain
+the comparison for the game view.
+
 The Unity 6.0 API advises waiting for frame rendering to finish for a
 reliable game-view screenshot. It documents binding a render texture through
 `RenderTexture.active` or `Graphics.SetRenderTarget`. The screenshot source
@@ -166,6 +183,6 @@ Use `--space Gamma` for the Gamma repeat. Both Editor
 captures in each color space completed and agree byte for byte. The existing
 game-view references, comparator and tolerances are unchanged.
 
-The active profile matches all 167 values and 53 images in Linear and all
-27 values and 10 images in Gamma. Before the source fix it differed in 28
-Linear images and three assertion records, and four Gamma images.
+The active profile matches all 321 values and 75 images in Linear and all
+27 values and 10 images in Gamma. All 85 images are byte-identical with
+the Editor captures.

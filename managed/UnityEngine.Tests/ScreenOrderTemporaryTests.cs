@@ -48,6 +48,37 @@ namespace Unbound.Tests
         static void Upload(ulong handle, TexturePacket* packet) => s_Flags[handle] = packet->RenderTarget;
 
         [Fact]
+        public void ScreenshotCopiesReuseTheirOwnPointClampedTextures()
+        {
+            var desc = RenderTexture.TemporaryDescriptor(19, 11, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear, 1);
+            var plain = RenderTexture.GetTemporary(desc);
+            plain.filterMode = FilterMode.Trilinear;
+            plain.wrapModeU = TextureWrapMode.Repeat;
+            RenderTexture.ReleaseTemporary(plain);
+            var copy = RenderTexture.GetTemporaryForScreenshotCopy(desc);
+            try
+            {
+                Assert.NotSame(plain, copy);
+                Assert.Equal(FilterMode.Point, copy.filterMode);
+                Assert.Equal(TextureWrapMode.Clamp, copy.wrapModeU);
+                Assert.Equal(TextureWrapMode.Clamp, copy.wrapModeV);
+                Assert.Equal(0, s_Flags[copy.EnsureCreated()] & (1 << 16));
+                RenderTexture.ReleaseTemporary(copy);
+                Assert.Same(copy, RenderTexture.GetTemporaryForScreenshotCopy(desc));
+
+                var again = RenderTexture.GetTemporary(desc);
+                try
+                {
+                    Assert.Same(plain, again);
+                    Assert.Equal(FilterMode.Trilinear, again.filterMode);
+                    Assert.Equal(TextureWrapMode.Repeat, again.wrapModeU);
+                }
+                finally { RenderTexture.ReleaseTemporary(again); }
+            }
+            finally { RenderTexture.ReleaseTemporary(copy); }
+        }
+
+        [Fact]
         public void StandInsAreStoredAsTheScreenAndPooledApart()
         {
             var desc = RenderTexture.TemporaryDescriptor(24, 16, 24, RenderTextureFormat.Default, RenderTextureReadWrite.Default, 4);
