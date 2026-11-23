@@ -82,7 +82,9 @@ stored block is empty. [Renderer.SetPropertyBlock](https://docs.unity3d.com/6000
 [Renderer.GetPropertyBlock](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer.GetPropertyBlock.html)
 
 Out-of-range writes report an Error through the application callback, honoring None and ScriptOnly
-for stack presence. Persistent components, importer-owned copies, copies from an asset, other
-release families, invalid indexed reads and empty-block rendering precedence are outside these controls.
+for stack presence. Clone behavior during importer callbacks and copies of asset components are
+unmeasured. Those copies retain the earlier behavior. Persistent component accounting, other
+release families, invalid indexed reads and empty-block rendering precedence are also outside
+these controls.
 
 Add `--profile renderer` to the record, publish and gate commands above.

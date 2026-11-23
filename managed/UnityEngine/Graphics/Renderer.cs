@@ -809,7 +809,7 @@ namespace UnityEngine
             w.Int("m_SortingOrder", m_SortingOrder);
         }
 
-        internal void CopyRendererData(Renderer source, bool destinationIsImporterAsset = false)
+        internal void CopyRendererData(Renderer source)
         {
             m_Enabled = source.m_Enabled;
             m_Materials = (Material[])source.m_Materials.Clone();
@@ -818,7 +818,9 @@ namespace UnityEngine
             m_CastShadows = source.m_CastShadows;
             m_ReceiveShadows = source.m_ReceiveShadows;
             m_RenderingLayerMask = source.m_RenderingLayerMask;
-            bool copyBlocks = destinationIsImporterAsset || !MeasuresMaterialReservations || !source.MeasuresMaterialReservations;
+            // The runtime clone measurement covers live scene objects. Importers copy components
+            // before placement decides whether their GameObjects are assets, so retain their blocks.
+            bool copyBlocks = !MeasuresMaterialReservations || !source.MeasuresMaterialReservations || ScriptedImports.Importing;
             m_PropertyBlock = copyBlocks ? source.m_PropertyBlock?.Copy() : null;
             m_OwnBlock = m_PropertyBlock;
             m_MaterialBlocks = null;
@@ -1050,21 +1052,19 @@ namespace UnityEngine
             w.Line(1, "m_LightmapParameters", UnityYamlWriter.Writer.ReferenceText(m_LightmapParameters));
         }
 
-        internal override void CopyFrom(Component source, Func<Object, Object> remap) =>
-            CopyFrom((MeshRenderer)source, destinationIsImporterAsset: false);
-
-        internal void CopyFrom(MeshRenderer source, bool destinationIsImporterAsset)
+        internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
-            CopyRendererData(source, destinationIsImporterAsset);
-            stitchLightmapSeams = source.stitchLightmapSeams;
-            scaleInLightmap = source.scaleInLightmap;
-            receiveGI = source.receiveGI;
-            m_PreserveUVs = source.m_PreserveUVs;
-            m_MinimumChartSize = source.m_MinimumChartSize;
-            m_AutoUVMaxDistance = source.m_AutoUVMaxDistance;
-            m_AutoUVMaxAngle = source.m_AutoUVMaxAngle;
-            m_IgnoreNormalsForChartDetection = source.m_IgnoreNormalsForChartDetection;
-            m_LightmapParameters = source.m_LightmapParameters;
+            CopyRendererData((Renderer)source);
+            stitchLightmapSeams = ((MeshRenderer)source).stitchLightmapSeams;
+            var s = (MeshRenderer)source;
+            scaleInLightmap = s.scaleInLightmap;
+            receiveGI = s.receiveGI;
+            m_PreserveUVs = s.m_PreserveUVs;
+            m_MinimumChartSize = s.m_MinimumChartSize;
+            m_AutoUVMaxDistance = s.m_AutoUVMaxDistance;
+            m_AutoUVMaxAngle = s.m_AutoUVMaxAngle;
+            m_IgnoreNormalsForChartDetection = s.m_IgnoreNormalsForChartDetection;
+            m_LightmapParameters = s.m_LightmapParameters;
         }
     }
 

@@ -54,7 +54,7 @@ namespace Unbound.Runtime
             if (sourceGo == null) return Clone(original, null, false, null, null);
             var parent = WithoutPersistentParent(parameters.parent);
             var scene = TargetScene(parent, parameters.scene);
-            var clone = Prepare(original, sourceGo, scene, "(Clone)", parent);
+            var clone = Prepare(original, sourceGo, scene, "(Clone)");
             Place(clone, parent, scene, parameters.worldSpace, !parameters.worldSpace, position, rotation);
             Activate(new[] { clone });
             return clone.Result;
@@ -74,7 +74,7 @@ namespace Unbound.Runtime
         {
             parent = WithoutPersistentParent(parent);
             var scene = TargetScene(parent, default);
-            var clone = Prepare(original, sourceGo, scene, "(Clone)", parent);
+            var clone = Prepare(original, sourceGo, scene, "(Clone)");
             Place(clone, parent, scene, instantiateInWorldSpace, false, position, rotation);
             Activate(new[] { clone });
             return clone.Result;
@@ -87,7 +87,7 @@ namespace Unbound.Runtime
         {
             SceneHandle target = parent != null ? parent.m_GameObject.m_Scene
                 : scene?.Data is SceneData d ? d.Handle : TargetScene(null, default);
-            var clone = Prepare(original, original, target, "", parent);
+            var clone = Prepare(original, original, target, "");
             Place(clone, parent, target, false, false, null, null);
             linked?.Invoke(clone.Map);
             Activate(new[] { clone });
@@ -124,11 +124,9 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Copies the hierarchy of <paramref name="sourceGo"/> and the serialized state of its
-        /// components, references inside it remapped to the copies. <paramref name="parent"/>
-        /// supplies the destination's import ownership during the copy. Nothing is placed or woken.</summary>
-        internal static Prepared Prepare(Object original, GameObject sourceGo, SceneHandle scene, string suffix, Transform parent = null)
+        /// components, references inside it remapped to the copies. Nothing is placed or woken.</summary>
+        internal static Prepared Prepare(Object original, GameObject sourceGo, SceneHandle scene, string suffix)
         {
-            bool importerAsset = PlacesInImporterAsset(parent);
             var map = new Dictionary<Object, Object>(ReferenceEqualityComparer.Instance);
             var pairs = new List<(Component Source, Component Clone)>();
             var source = sourceGo.m_Transform;
@@ -147,10 +145,6 @@ namespace Unbound.Runtime
                     {
                         ((Behaviour)dst).m_Enabled = ((Behaviour)src).m_Enabled;
                         copier.CopyScriptObject(src, dst);
-                    }
-                    else if (importerAsset && dst is MeshRenderer meshRenderer)
-                    {
-                        meshRenderer.CopyFrom((MeshRenderer)src, destinationIsImporterAsset: true);
                     }
                     else
                     {
@@ -176,10 +170,6 @@ namespace Unbound.Runtime
             };
         }
 
-        // A copy an importer makes on its own or under one of its objects is part of the asset.
-        static bool PlacesInImporterAsset(Transform parent) =>
-            ScriptedImports.Importing && (parent == null || parent.m_GameObject.m_IsPrefabAsset);
-
         /// <summary>Puts a prepared copy into its scene or under its parent. With a parent, explicit
         /// coordinates are world coordinates unless <paramref name="localPose"/> (the parent then
         /// applies to them); without explicit coordinates the copied local pose stays unless
@@ -188,7 +178,9 @@ namespace Unbound.Runtime
             Vector3? position, Quaternion? rotation)
         {
             var rootClone = clone.Root;
-            bool asset = PlacesInImporterAsset(parent);
+            // A copy a project's importer makes (on its own or under one of the importer's GameObjects)
+            // is part of the asset, as GameObjects the importer creates are: in no scene, never awake.
+            bool asset = ScriptedImports.Importing && (parent == null || parent.m_GameObject.m_IsPrefabAsset);
             if (asset) scene = default;
             foreach (var (_, dst) in clone.Pairs)
                 if (dst is Transform moved)
