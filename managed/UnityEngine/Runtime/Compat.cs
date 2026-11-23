@@ -561,6 +561,10 @@ namespace Unbound.Runtime
         /// on Unity 6000.0.71f1. Other families retain independent per-transform capacities.</summary>
         internal static bool TransformHierarchyStorageMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Transform local pose normalization and matrix zero signs, measured by transformmatrix
+        /// on Unity 6000.0.71f1. Other families retain the previous unmeasured rounding.</summary>
+        internal static bool TransformLocalPoseMatrixMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Script-created sprite geometry reservations measured by spritememory on 6000.0.71f1.</summary>
         internal static bool SpriteGeometryMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
 

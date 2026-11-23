@@ -338,7 +338,9 @@ namespace UnityEngine
         public void SetLocalPositionAndRotation(Vector3 localPosition, Quaternion localRotation)
         {
             MainThreadCheck.Check("SetLocalPositionAndRotation");
-            m_LocalRotation = QuaternionMath.Normalize(localRotation);
+            m_LocalRotation = Compat.TransformLocalPoseMatrixMeasured
+                ? NormalizeParentingRotation(localRotation)
+                : QuaternionMath.Normalize(localRotation);
             SetLocalPosition(localPosition);
         }
 
@@ -368,11 +370,13 @@ namespace UnityEngine
         {
             SyncJobs();
             if (!m_WorldDirty) return;
-            var matrix = Matrix4x4.TRS(GetLocalPosition(), m_LocalRotation, m_LocalScale);
+            bool measured = Compat.TransformLocalPoseMatrixMeasured;
+            var matrix = Matrix4x4.TRS(GetLocalPosition(), m_LocalRotation, m_LocalScale, measured);
             var rotation = m_LocalRotation;
             for (var ancestor = m_Parent; ancestor != null; ancestor = ancestor.m_Parent)
             {
-                matrix = MultiplyAffine(Matrix4x4.TRS(ancestor.GetLocalPosition(), ancestor.m_LocalRotation, ancestor.m_LocalScale), matrix);
+                var parentMatrix = Matrix4x4.TRS(ancestor.GetLocalPosition(), ancestor.m_LocalRotation, ancestor.m_LocalScale, measured);
+                matrix = MultiplyAffine(parentMatrix, matrix);
                 rotation = MultiplyHierarchyRotation(ancestor.m_LocalRotation, ReflectRotation(rotation, ancestor.m_LocalScale));
             }
             m_LocalToWorld = matrix;

@@ -301,33 +301,36 @@ namespace UnityEngine
             return m;
         }
 
-        public static Matrix4x4 TRS(Vector3 pos, Quaternion q, Vector3 s)
+        public static Matrix4x4 TRS(Vector3 pos, Quaternion q, Vector3 s) =>
+            TRS(pos, q, s, positiveOffDiagonalZero: false);
+
+        internal static Matrix4x4 TRS(Vector3 pos, Quaternion q, Vector3 scale, bool positiveOffDiagonalZero)
         {
-            float x2 = q.x * 2F, y2 = q.y * 2F, z2 = q.z * 2F;
-            float xx = q.x * x2, yy = q.y * y2, zz = q.z * z2;
-            float xy = q.x * y2, xz = q.x * z2, yz = q.y * z2;
-            float wx = q.w * x2, wy = q.w * y2, wz = q.w * z2;
+            var m = Rotate(q);
+            if (positiveOffDiagonalZero)
+            {
+                // The transform basis adds the identity before applying scale. The added zeros
+                // make an exact off-diagonal zero positive, so its final sign comes from the scale.
+                m.m10 += 0f;
+                m.m20 += 0f;
+                m.m01 += 0f;
+                m.m21 += 0f;
+                m.m02 += 0f;
+                m.m12 += 0f;
+            }
 
-            Matrix4x4 m;
-            m.m00 = (1F - (yy + zz)) * s.x;
-            m.m10 = (xy + wz) * s.x;
-            m.m20 = (xz - wy) * s.x;
-            m.m30 = 0F;
-
-            m.m01 = (xy - wz) * s.y;
-            m.m11 = (1F - (xx + zz)) * s.y;
-            m.m21 = (yz + wx) * s.y;
-            m.m31 = 0F;
-
-            m.m02 = (xz + wy) * s.z;
-            m.m12 = (yz - wx) * s.z;
-            m.m22 = (1F - (xx + yy)) * s.z;
-            m.m32 = 0F;
-
+            m.m00 *= scale.x;
+            m.m10 *= scale.x;
+            m.m20 *= scale.x;
+            m.m01 *= scale.y;
+            m.m11 *= scale.y;
+            m.m21 *= scale.y;
+            m.m02 *= scale.z;
+            m.m12 *= scale.z;
+            m.m22 *= scale.z;
             m.m03 = pos.x;
             m.m13 = pos.y;
             m.m23 = pos.z;
-            m.m33 = 1F;
             return m;
         }
 
