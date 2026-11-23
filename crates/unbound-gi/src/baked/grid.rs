@@ -80,9 +80,10 @@ pub struct Pick {
     pub weight: f32,
 }
 
-/// The order of the grid's lights: kind (spot, directional, point), the spot's cone, the
-/// indirect colour's luminance, the colour's, the range; lights alike in all of these keep the
-/// bake's order (the Editor tells them apart by an identity of its own, not measured).
+/// The order of the grid's lights: kind (spot, directional, point), the spot's cone, those
+/// without shadows first, the indirect colour's luminance, the colour's, the range; lights
+/// alike in all of these keep the bake's order (as in the Editor, tests/projects/bakedbuffers
+/// `Masks`, whose row of five alike lights is lit otherwise in any other order).
 fn order(lights: &[Light]) -> Vec<usize> {
     let kind = |l: &Light| match l.kind {
         Kind::Spot => 0,
@@ -99,6 +100,7 @@ fn order(lights: &[Light]) -> Vec<usize> {
         kind(a)
             .cmp(&kind(b))
             .then(cone(a).total_cmp(&cone(b)))
+            .then(a.casts_shadows.cmp(&b.casts_shadows))
             .then(order_luminance(a.indirect_color).total_cmp(&order_luminance(b.indirect_color)))
             .then(order_luminance(a.color).total_cmp(&order_luminance(b.color)))
             .then(a.range.total_cmp(&b.range))
@@ -347,6 +349,7 @@ mod tests {
             indirect_color: color,
             position,
             forward: [0.0, 0.0, 1.0],
+            right: [1.0, 0.0, 0.0],
             range,
             cone_angle: 0.0,
             casts_shadows: true,
@@ -429,6 +432,15 @@ mod tests {
         ];
         // The wider cone's smaller cosine first, the dimmer point first.
         assert_eq!(order(&lights), vec![3, 2, 1, 0]);
+        // A light without shadows before one with them; lights alike keep their order.
+        let mut quiet = point([0.0; 3], 9.0, [1.0; 3]);
+        quiet.casts_shadows = false;
+        let alike = [
+            point([0.0; 3], 5.0, [1.0; 3]),
+            point([1.0; 3], 5.0, [1.0; 3]),
+            quiet,
+        ];
+        assert_eq!(order(&alike), vec![2, 0, 1]);
     }
 
     #[test]
