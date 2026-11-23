@@ -1,4 +1,13 @@
 {
+  "constructorStores": {
+    "branchingConstructors": 1113,
+    "differences": [],
+    "equal": 397,
+    "unknown": 1293,
+    "unmatchedConstructors": 1649,
+    "unmatchedFields": 1878
+  },
+  "release": "6000.0.71f1",
   "types": [
     {
       "category": "class",

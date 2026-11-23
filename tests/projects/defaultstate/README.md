@@ -869,4 +869,5 @@ The project-window helpers (`ProjectWindowCallback.DoCreateAssetWithContent`, `D
 `UxmlSerializedData`) are hand-written now and enter the inventory, as two Unity 6000.0.71f1 batch Editor captures on macOS
 write their 69 rows; every earlier row is unchanged. Three `Search.ObjectField` rows carry that Mac's 2x panel scale
 (queued in `debt.json`). The new types initialize UI Toolkit events and objects earlier, so seven queued `eventTypeId`
-rows and the two TextCore `instanceID` rows record their shifted Unbound values.
+rows record their shifted Unbound values; the two TextCore `instanceID` rows record the Linux values moved
+by the shift measured on macOS (-22; not measured on Linux).
