@@ -331,12 +331,14 @@ namespace Unbound.Runtime
     {
         /// <summary>A diagnostic of Unity's engine side: it reaches the Application callbacks and
         /// the console without passing through <c>Debug.unityLogger</c> (the route componentlogs
-        /// measured for component rejections, Unity 6000.0.71f1). A plain log carries a stack
-        /// trace only when its stack trace type asks for one.</summary>
-        internal static void Engine(UnityEngine.LogType type, string message, UnityEngine.Object context)
+        /// measured for component rejections, Unity 6000.0.71f1). Plain logs and diagnostics
+        /// with measured trace controls honor the configured stack trace setting.</summary>
+        internal static void Engine(UnityEngine.LogType type, string message, UnityEngine.Object context,
+            bool respectStackTraceSetting = false)
         {
-            string trace = type == UnityEngine.LogType.Log && UnityEngine.Application.GetStackTraceLogType(type) == UnityEngine.StackTraceLogType.None
-                ? "" : new System.Diagnostics.StackTrace(1, true).ToString();
+            bool omitTrace = (type == UnityEngine.LogType.Log || respectStackTraceSetting)
+                && UnityEngine.Application.GetStackTraceLogType(type) == UnityEngine.StackTraceLogType.None;
+            string trace = omitTrace ? "" : new System.Diagnostics.StackTrace(1, true).ToString();
             Write(type, message, trace, context);
         }
 

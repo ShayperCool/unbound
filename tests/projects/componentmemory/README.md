@@ -53,4 +53,8 @@ scalar setter. The 6000.0.71f1 measurements capture the empty-curve error and nu
 exception with a populated curve before the call, the two log delivery paths, and validation
 order for unknown curve types, destroyed sources and unattached wrappers. [SetCustomCurve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.SetCustomCurve.html), [GetCustomCurve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.GetCustomCurve.html)
 
+The keyframe controls record positions, values, tangents, weights and wrap modes around each
+rejected write. The Error stack setting includes a stack in ScriptOnly and omits it in None.
+Full native stacks remain unmeasured. [Unity 6000.0 stack trace logging](https://docs.unity3d.com/6000.0/Documentation/Manual/stack-trace.html)
+
 Add `--profile audio` to the record, publish and gate commands above.

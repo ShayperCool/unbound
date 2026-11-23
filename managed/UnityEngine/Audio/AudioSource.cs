@@ -442,7 +442,8 @@ namespace UnityEngine
                 if (curve == null) throw new ArgumentNullException(nameof(curve));
                 if (curve.length == 0)
                 {
-                    Log.Engine(LogType.Error, "AudioSource.SetCustomCurve must be passed an AnimationCurve with at least 1 element.", this);
+                    Log.Engine(LogType.Error, "AudioSource.SetCustomCurve must be passed an AnimationCurve with at least 1 element.", this,
+                            respectStackTraceSetting: true);
                     return;
                 }
             }
@@ -467,7 +468,8 @@ namespace UnityEngine
                 default:
                     if (measured)
                     {
-                        Log.Engine(LogType.Error, "Unknown AudioSourceCurveType passed to AudioSource.SetCustomCurve.", this);
+                        Log.Engine(LogType.Error, "Unknown AudioSourceCurveType passed to AudioSource.SetCustomCurve.", this,
+                            respectStackTraceSetting: true);
                         return;
                     }
                     break;
