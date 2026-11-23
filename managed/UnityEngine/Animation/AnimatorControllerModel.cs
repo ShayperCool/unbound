@@ -59,16 +59,19 @@ namespace Unbound.Runtime
         internal static void AddToAssetOf(Object owner, Object o)
         {
             if (AssetDatabase.GetAssetPath(owner) == "") return;
-            AssetDatabase.AddObjectToAsset(o, owner);
+            // A controller Unbound cannot write whole is kept as read: reported once.
+            if (AssetDatabase.AddsObjectsTo(owner)) AssetDatabase.AddObjectToAsset(o, owner);
+            else Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.AddObjectToAsset");
         }
 
         /// <summary>Makes an asset of an object at a path (AssetDatabase.CreateAsset: the controller's
         /// file is written at once, before its first layer is added: controller-assets basic.created).</summary>
         internal static void CreateAsset(Object o, string path) => AssetDatabase.CreateAsset(o, path);
 
-        /// <summary>An edit of an object of a controller asset made this session dirties it, so that
-        /// SaveAssets writes the file again (controller-assets basic.editedDirty, basic.saved); a
-        /// controller read from its file is kept as read (its writing is not measured).</summary>
+        /// <summary>An edit of an object of a controller asset made this session, or of one read from
+        /// its file that objects were added to (written whole from then on), dirties it, so that
+        /// SaveAssets writes the file again (controller-assets basic.editedDirty, basic.saved); any
+        /// other controller read from its file is kept as read (edits alone are not measured).</summary>
         internal static void Dirty(Object o)
         {
             if (o.IsPersistentAsset && AssetDatabase.CreatedThisSession(o)) EditorUtility.SetDirty(o);

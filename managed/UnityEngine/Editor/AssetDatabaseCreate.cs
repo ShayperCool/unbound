@@ -105,7 +105,7 @@ namespace UnityEditor
             var guid = AssetPathToGUID(GetAssetPath(assetObject));
             if (!s_Created.TryGetValue(guid, out var created) && (created = Adopt(guid)) == null)
             {
-                Debug.LogError($"Unbound adds objects only to assets it created in this session or native assets in Unity's text serialization whose objects it all writes: '{GetAssetPath(assetObject)}' is left as it is.");
+                Debug.LogError($"Unbound adds objects only to assets it created in this session or animator controllers it can write whole: '{GetAssetPath(assetObject)}' is left as it is.");
                 return;
             }
             if (!UnityYamlWriter.WritesNew(objectToAdd))
@@ -126,25 +126,62 @@ namespace UnityEditor
             created.Unsaved = true;
         }
 
-        /// <summary>A native asset read from its file (a controller, say) that objects are added to:
-        /// written whole from its objects from then on, as one CreateAsset made, when it is the
-        /// project's, in Unity's text serialization and Unbound writes every object of it (matches the
-        /// Unity 6000.0.71f1 Editor, tests/projects/scenesave controller-additions); null otherwise.</summary>
+        /// <summary>An animator controller read from its file that objects are added to: written whole
+        /// from its objects from then on, as one CreateAsset made (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/scenesave controller-additions); null when that would lose anything of the
+        /// file (see <see cref="AdoptionRefusal"/>), or for another kind of asset (unmeasured).</summary>
         static CreatedAsset Adopt(string guid)
         {
             var info = AssetDatabaseRuntime.Info(guid);
             var loaded = AssetDatabaseRuntime.LoadFile(guid);
             if (info == null || loaded == null || info.Kind != "yaml" || string.IsNullOrEmpty(info.File)) return null;
+            if (loaded.MainObject is not UnityEditor.Animations.AnimatorController) return null;
             if (!Editable(info.Path) || IsImmutablePackagePath(info.Path) || !File.Exists(info.File)) return null;
-            string text = File.ReadAllText(info.File);
-            if (!text.StartsWith(UnityYamlText.Preamble, StringComparison.Ordinal)
-                && !text.StartsWith(UnityYamlText.Preamble.Replace("\n", "\r\n"), StringComparison.Ordinal)) return null;
-            if (loaded.Objects.Values.Any(o => o is not null && !UnityYamlWriter.WritesNew(o))) return null;
+            if (AdoptionRefusal(File.ReadAllText(info.File), loaded.Objects) != null) return null;
             var created = new CreatedAsset { Path = info.Path, Main = loaded.MainObject, File = loaded };
-            foreach (var pair in loaded.Objects)
-                if (pair.Value is not null) created.Objects[pair.Value] = pair.Key;
+            foreach (var pair in loaded.Objects) created.Objects[pair.Value] = pair.Key;
             s_Created[guid] = created;
             return created;
+        }
+
+        static readonly System.Text.RegularExpressions.Regex s_AssetReference =
+            new System.Text.RegularExpressions.Regex(@"guid: ([0-9a-fA-F]{32})", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        /// <summary>Why a file read as <paramref name="objects"/> cannot be written whole from them,
+        /// or null: it is not in Unity's text serialization; a document has no live object (one the
+        /// load skipped or a missing script's stand-in, which the Editor keeps); an object is one
+        /// Unbound does not write; or it references an asset the database does not have (written
+        /// whole, that reference would be lost).</summary>
+        internal static string AdoptionRefusal(string text, IReadOnlyDictionary<long, Object> objects)
+        {
+            if (!text.StartsWith(UnityYamlText.Preamble, StringComparison.Ordinal)
+                && !text.StartsWith(UnityYamlText.Preamble.Replace("\n", "\r\n"), StringComparison.Ordinal))
+                return "it is not in Unity's text serialization";
+            var docs = UnityYamlText.Parse(text);
+            if (docs.Count != objects.Count) return "Unbound did not read every object of it";
+            foreach (var doc in docs)
+            {
+                if (!objects.TryGetValue(doc.FileId, out var o) || o == null || MissingScripts.IsMissing(o))
+                    return "Unbound did not read every object of it";
+                if (!UnityYamlWriter.WritesNew(o)) return $"Unbound does not write its {o.GetType().Name} objects";
+            }
+            foreach (System.Text.RegularExpressions.Match m in s_AssetReference.Matches(text))
+            {
+                var referenced = m.Groups[1].Value;
+                if (referenced.StartsWith("0000000000000000", StringComparison.Ordinal)) continue;  // built-in resources
+                if (string.IsNullOrEmpty(GUIDToAssetPath(referenced))) return $"it references an asset the project does not have ({referenced})";
+            }
+            return null;
+        }
+
+        /// <summary>Whether objects can be added to the asset: one CreateAsset made, or a controller
+        /// read from its file that is written whole from then on.</summary>
+        internal static bool AddsObjectsTo(Object assetObject)
+        {
+            var path = GetAssetPath(assetObject);
+            if (path.Length == 0) return false;
+            var guid = AssetPathToGUID(path);
+            return s_Created.ContainsKey(guid) || Adopt(guid) != null;
         }
 
         /// <summary>Whether the object was added to an asset that has not been saved since: it is
