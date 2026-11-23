@@ -8,6 +8,14 @@ using Object = UnityEngine.Object;
 static class MeasureAudioSourceMemory
 {
     [Serializable] sealed class Row { public string k, v; }
+
+    sealed class LoggerCapture : ILogHandler
+    {
+        internal readonly List<string> Messages = new();
+        public void LogFormat(LogType type, Object context, string format, params object[] args) =>
+            Messages.Add(type + "/" + string.Format(format, args));
+        public void LogException(Exception error, Object context) => Messages.Add(error.GetType().Name);
+    }
     static readonly List<string> Rows = new();
     static readonly AudioSourceCurveType[] Types = (AudioSourceCurveType[])Enum.GetValues(typeof(AudioSourceCurveType));
 
@@ -63,21 +71,37 @@ static class MeasureAudioSourceMemory
         Object.DestroyImmediate(source.gameObject);
     }
 
-    static void MeasureRejection(AudioSource source, AudioSourceCurveType type, string mode, AnimationCurve curve)
+    static void MeasureRejection(string key, AudioSource source, AudioSourceCurveType type,
+        AnimationCurve curve, bool measurePreservedCurve = true)
     {
-        string key = type + "." + mode;
         var logs = new List<string>();
+        var handler = new LoggerCapture();
+        var previousHandler = Debug.unityLogger.logHandler;
         void OnLog(string message, string trace, LogType logType) => logs.Add(logType + "/" + message);
         Application.logMessageReceived += OnLog;
+        Debug.unityLogger.logHandler = handler;
         try
         {
             source.SetCustomCurve(type, curve);
             Put(key + ".outcome", "returned");
         }
         catch (ArgumentNullException error) { Put(key + ".outcome", error.GetType().Name + "/" + error.ParamName); }
-        finally { Application.logMessageReceived -= OnLog; }
+        catch (MissingReferenceException error) { Put(key + ".outcome", error.GetType().Name + "/" + error.Message); }
+        finally
+        {
+            Debug.unityLogger.logHandler = previousHandler;
+            Application.logMessageReceived -= OnLog;
+        }
         Put(key + ".logs", string.Join("|", logs));
-        Measure(key + ".after", source, type);
+        Put(key + ".handler", string.Join("|", handler.Messages));
+        if (measurePreservedCurve) Measure(key + ".after", source, type);
+    }
+
+    static void MeasureRejectedForms(string context, AudioSource source, AudioSourceCurveType type)
+    {
+        MeasureRejection(context + ".empty", source, type, Curve(0), false);
+        MeasureRejection(context + ".null", source, type, null, false);
+        MeasureRejection(context + ".validCurve", source, type, Curve(6), false);
     }
 
     static void MeasureAuthoredSource()
@@ -92,6 +116,15 @@ static class MeasureAudioSourceMemory
         var shrunkClone = Object.Instantiate(source);
         Measure("scene.shrunkClone", shrunkClone, AudioSourceCurveType.SpatialBlend);
         Object.DestroyImmediate(shrunkClone.gameObject);
+
+        foreach (string name in new[] { "One Key", "Empty Keys" })
+        {
+            var small = GameObject.Find(name).GetComponent<AudioSource>();
+            Measure("scene." + name, small, AudioSourceCurveType.CustomRolloff);
+            var smallClone = Object.Instantiate(small);
+            Measure("scene." + name + ".clone", smallClone, AudioSourceCurveType.CustomRolloff);
+            Object.DestroyImmediate(smallClone.gameObject);
+        }
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -119,10 +152,14 @@ static class MeasureAudioSourceMemory
         {
             input.SetCustomCurve(type, Curve(4));
             Measure(type + ".beforeRejection", input, type);
-            MeasureRejection(input, type, "empty", Curve(0));
-            MeasureRejection(input, type, "null", null);
+            MeasureRejection(type + ".empty", input, type, Curve(0));
+            MeasureRejection(type + ".null", input, type, null);
         }
+        MeasureRejectedForms("unknownType", input, (AudioSourceCurveType)17);
+        Measure("unknownType.after", input, AudioSourceCurveType.Spread);
         Object.DestroyImmediate(input.gameObject);
+        MeasureRejectedForms("destroyed", input, AudioSourceCurveType.Spread);
+        MeasureRejectedForms("unattached", new AudioSource(), AudioSourceCurveType.Spread);
         MeasureAuthoredSource();
 
         Rows.Add("{\"k\":\"complete\",\"v\":true}");

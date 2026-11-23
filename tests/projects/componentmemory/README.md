@@ -40,16 +40,17 @@ with a scriptable render pipeline and other release families remains unmeasured.
 
 The audio profile records attached AudioSources with script-created and scene-authored distances.
 Each measurement stores the key count followed by the reported bytes before and after retrieving
-that curve. The profiler accounts 1288 base bytes for a new source. The rolloff curve has two key
-slots in that cost and the other curves each have one. Each extra slot costs 32 bytes. A source
-retains its per-curve reservation when a curve shrinks or a scalar setter changes it to one key.
-A clone allocates storage for the current keys. AudioClip storage is accounted separately. The
-attached scene fixture starts with different lengths on all four curves and checks a clone after
-shrinking them. Persistent asset components, other release families and copying built-in settings
-through EditorUtility.CopySerialized remain outside this profile.
+that curve. The profiler accounts 1128 bytes plus 32 per reserved key. A new component has
+five default keys across its four curves, for 1288 bytes. Script writes retain each curve's
+reservation when it shrinks or a scalar setter changes it to one key. A clone reserves its
+current keys, and a loaded scene source begins with its authored keys. Empty scene curves use
+the default keys. A clone or a loaded source with four single-key curves costs 1256 bytes.
+AudioClip storage is separate. Persistent asset components, other release families and copying
+built-in settings through EditorUtility.CopySerialized remain outside this profile.
 
 Unity 6000.0 documents distance normalization and the single key returned after a corresponding
-scalar setter. The 6000.0.71f1 measurements also capture the empty-curve error and null-curve
-exception with a populated curve before the call. [SetCustomCurve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.SetCustomCurve.html), [GetCustomCurve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.GetCustomCurve.html)
+scalar setter. The 6000.0.71f1 measurements capture the empty-curve error and null-curve
+exception with a populated curve before the call, the two log delivery paths, and validation
+order for unknown curve types, destroyed sources and unattached wrappers. [SetCustomCurve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.SetCustomCurve.html), [GetCustomCurve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.GetCustomCurve.html)
 
 Add `--profile audio` to the record, publish and gate commands above.
