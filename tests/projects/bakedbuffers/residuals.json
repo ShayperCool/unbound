@@ -5,19 +5,19 @@
   },
   "Renderers of a LOD Group: the Editor's rays tell the group's levels apart (here one sky ray per texel is stopped by a less detailed level's renderer in Unbound and by nothing in the Editor); Unbound's bake does not yet and says so when it bakes (its renderers take and stop light like any other). Follow-up: the levels' rule, measured with lights and bounces. The lightmap made of the buffer differs where it does (and at the texels its light is spread to).": {
     "Shapes.lightmap0.environment": "0 texels differ in being used, 99 values in their light (worst 0.101, tolerance 0.001)",
-    "Shapes.lightmap0.lightmap": "28 texels differ in their light (worst 0.0722, tolerance 0.001), first at [83, 410, 607, 673, 796, 915]"
+    "Shapes.lightmap0.lightmap": "47 texels differ in their light (worst 0.101, tolerance 0.00308), first at [83, 410, 607, 673, 796, 915]"
   },
   "One value of one texel under the gradient sky, whose faces differ in colour: the difference is what one path's sky direction would give if it read the neighbouring face (the red between the sky's and the equator's colour by the red wall's albedo, over the texel's 64 samples). Replaying the Editor's own bake input, sky and picked directions gives the same single difference. Not chased: which face a direction on the edge between two faces reads (of two axes of equal size Unbound takes the later: z before y before x) is not measured. The lightmap made of the buffer differs where it does (and at the texels its light is spread to).": {
     "SkyGradient.lightmap0.indirect": "0 texels differ in being used, 1 values in their light (worst 0.0041, tolerance 0.001)",
-    "SkyGradient.lightmap0.lightmap": "1 texels differ in their light (worst 0.0041, tolerance 0.001), first at [737]"
+    "SkyGradient.lightmap0.lightmap": "1 texels differ in their light (worst 0.0041, tolerance 0.00308), first at [737]"
   },
   "Thirteen point and spot lights over several regions of the light grid: 14 texels around the crate in the middle region (and a few elsewhere) differ as if a path's surface had picked another of its region's lights. Replaying the Editor's own bake input gives the same differences; none of the grid's rules tried otherwise (the regions' box and margin, which lights each lists, the lights' order and power, how many lights each bounce tests) removes them. Not traced; follow-up: the lights a path's surfaces pick in the crate's region, sample by sample, against the Editor's. The lightmap made of the buffer differs where it does (and at the texels its light is spread to).": {
     "Spread.lightmap0.indirect": "0 texels differ in being used, 22 values in their light (worst 0.0176, tolerance 0.001)",
-    "Spread.lightmap0.lightmap": "8 texels differ in their light (worst 0.0176, tolerance 0.001), first at [2826, 3487, 3613, 3616, 3737, 3744]"
+    "Spread.lightmap0.lightmap": "6 texels differ in their light (worst 0.0176, tolerance 0.00308), first at [3487, 3613, 3616, 3737, 4125, 4882]"
   },
   "One texel of the ground under the probes' scene: its indirect light differs by about what one of its 64 paths brings (1.9% of it). Replaying the Editor's own bake input gives the same single difference. Not traced: no rule of the bake is known to differ. The lightmap made of the buffer differs where it does (and at the texels its light is spread to).": {
     "Probes.lightmap0.indirect": "0 texels differ in being used, 3 values in their light (worst 0.015, tolerance 0.001)",
-    "Probes.lightmap0.lightmap": "2 texels differ in their light (worst 0.00676, tolerance 0.001), first at [1233, 1296]"
+    "Probes.lightmap0.lightmap": "1 texels differ in their light (worst 0.00676, tolerance 0.00308), first at [1296]"
   },
   "A probe inside the cube, which stands on the ground: the rays it sends down meet the cube's bottom (from behind) and the ground (from the front) in one plane at the same distance. The Editor counts all 64 rays as meeting a back face; Unbound counts 5 of the downward rays as meeting the ground first. Not chased: which of two surfaces at the same distance a ray meets is not measured.": {
     "ProbesGrid.probes": "validity: 1 values differ (worst 0.0781, tolerance 1e-06)"

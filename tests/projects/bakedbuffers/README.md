@@ -269,20 +269,28 @@ picked directions exactly, each direction, its light and the summed brightness w
 likewise. The light probes' points are compared within 1e-6 and their samples exactly, their
 direct light within 1e-4 and their indirect light within 1e-3 (each times the value above 1),
 their validity within 1e-6. Of the lightmap, which texels hold light (alpha) exactly, and their
-light within 1e-3 as the indirect light's (times the value above 1), but for the texels whose
+light within 3.1e-3 (times the value above 1: the direct light's tolerance and twice the
+indirect light's, for the three buffers summed, and one half-float step); but the texels whose
 light in the Editor's lightmap is not what the rules above make of its own buffers
-(`bake_buffers.py` `composite`): the stitching of seams changes those (along the seams of the
-primitives' UVs, at chart borders and inside charts, as at the sphere's poles), which Unbound
-does not do; they are counted (`lightmaps: N texels the Editor stitched`) and not compared. The rules are
+(`bake_buffers.py` `composite`) are those the stitching of seams changed (along the seams of
+the primitives' UVs, inside charts too, as at the sphere's poles), which Unbound does not do:
+they are compared with what the rules make of the Editor's buffers instead, counted (`lightmaps:
+N texels the Editor stitched`), and must lie within two texels of a chart's edge (another
+chart, an unused texel or the image's edge). The rules are
 the reference's own: a texel whose rays met back faces at most a tenth of the time keeps its
 light (1740 such texels here, all but 37 of them, those by seams, as the rules make them), and
 the scene without seams (`Charts`) has no texel the rules do not make. A bake that keeps no
 light (`SkyRealtime`: no lights, the sky's light in the realtime lightmaps) writes no lightmap
 (Unbound's buffers have one of zeros; not compared). A lightmap made of buffers with a named
 residual differs where they do (the same residuals).
-The Editor's lightmapper process now and then ends without writing a lightmap: the recorder
-runs the whole bake again (up to three times), and a capture still without one is not
-published.
+The Editor's lightmapper process now and then fails (the whole bake answers false): the
+recorder runs the whole bake again (up to three times) and keeps its answer; a capture whose
+whole bake of a scene still failed is not published. Not measured: back-face texels that no
+texel holding its own light reaches (a chart all of whose texels met back faces: Unbound keeps
+their light and spreads none from them), Backface Tolerances other than 0.9 and padding other
+than 2 (the runner refuses another Backface Tolerance), the Lighting Settings' Indirect
+Intensity other than 1 (Unbound's lightmap leaves it out), filtering and denoising, the texels
+beyond the padding.
 
 `residuals.json` names the known differences, each with the exact text the comparison gives it
 (another text, or none, fails the run); the lightmap made of a buffer with a residual differs
