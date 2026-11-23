@@ -318,6 +318,25 @@ public static class StripAuthoring
             Save(graph);
         }
 
+        // Lit strips (`Output ParticleStrip URP Lit Quad`, opaque, no base colour map): one
+        // strip of sixteen at places spread in depth too, so that the lights fall on each
+        // segment differently; `StripLitBent` bends the strip's normals across it (`Normal
+        // Bending`, the output's default factor).
+        foreach (var (name, bent) in new[] { ("StripLit", false), ("StripLitBent", true) })
+        {
+            var graph = NewGraph(name);
+            var lit = Strips(graph, 1, 16);
+            ConstantRate(lit.Spawn, 20f);
+            Scatter(lit.Init, 0.3f, new Vector3(0.8f, 0.8f, 0.8f), 0.6f);
+            SetRandom(lit.Init, "position", new Vector3(-1.2f, -1.2f, -1f), new Vector3(1.2f, 1.2f, 1f));
+            var output = Output<VFXURPLitQuadStripOutput>(graph, lit.Update);
+            output.SetSettingValue("useBaseColorMap", VFXAbstractParticleURPLitOutput.BaseColorMapMode.None);
+            if (bent) output.SetSettingValue("normalBending", true);
+            Input(output, "smoothness").value = 0.4f;
+            Input(output, "metallic").value = 0f;
+            Save(graph);
+        }
+
         // A strip drawn twice: as a strip of quads, and each of its particles as a quad.
         var both = NewGraph("StripBoth");
         var twice = Strips(both, 1, 16);

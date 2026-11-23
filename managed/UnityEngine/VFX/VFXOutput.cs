@@ -200,24 +200,21 @@ namespace Unbound.Runtime
             "UniversalForwardOnly", "UniversalForward", "UniversalGBuffer", "DepthOnly", "DepthNormals", "DepthNormalsOnly", "ShadowCaster", "SceneSelectionPass", "Picking", "Universal2D", "NormalsRendering", "MotionVectors", "Meta",
         };
 
-        /// <summary>The define the graph compiler writes into the shader of an output that the
-        /// pipeline lights.</summary>
-        const string LitDefine = "#define URP_LIT 1";
-
         /// <summary>The pass of a Shader Graph output that 2D lights light (the sprite graphs'
-        /// normals pass), which writes no <see cref="LitDefine"/>.</summary>
+        /// normals pass).</summary>
         const string Lit2DPass = "\"NormalsRendering\"";
 
-        /// <summary>Whether an output's generated shader is lit: by the pipeline's lights or by
-        /// 2D lights. Neither is drawn as strips. Both are measured drawing themselves, a sorted
-        /// list and one that is not sorted (tests/projects/vfxlit: `lit sorted`, `lit listed`;
-        /// `sprite*`, `sprite listed`, the latter culled by each camera's frustum).</summary>
-        static bool IsLit(string source) =>
-            source.Contains(LitDefine, StringComparison.Ordinal) || source.Contains(Lit2DPass, StringComparison.Ordinal);
+        /// <summary>Whether an output's generated shader is lit by 2D lights. Lit outputs, by the
+        /// pipeline's lights or by 2D lights, are measured drawing themselves, a sorted list and
+        /// one that is not sorted (tests/projects/vfxlit: `lit sorted`, `lit listed`; `sprite*`,
+        /// `sprite listed`, the latter culled by each camera's frustum); strips lit by the
+        /// pipeline's lights drawing themselves, with and without bent normals
+        /// (tests/projects/vfxstrips `lit`, `lit bent`). Strips lit by 2D lights are not
+        /// measured.</summary>
+        static bool IsLit2D(string source) => source.Contains(Lit2DPass, StringComparison.Ordinal);
 
-        /// <summary>Strips are measured unlit (tests/projects/vfxstrips): a lit strip output is
-        /// not drawn until it is.</summary>
-        internal const string LitStripRefusal = "it is a lit output of strips, which is not measured yet";
+        /// <summary>A strip output lit by 2D lights is not drawn until it is measured.</summary>
+        internal const string LitStripRefusal = "it is a strip output lit by 2D lights, which is not measured yet";
 
         /// <summary>Per system and task of a compiled graph: what each output's generated
         /// shader does that is not drawn yet (null for a task that is no output, has no shader
@@ -239,7 +236,7 @@ namespace Unbound.Runtime
                     // The list a mesh task counts (sorted into another buffer or not).
                     if (bySize != null && tasks[t].type == VFXTaskType.ParticleMeshOutput && bySize.Contains(Parameter(tasks[t], "indirectIndex", -1)))
                         refusals[s][t] ??= LodRefusal;
-                    if (refusals[s][t] != null || string.IsNullOrEmpty(source) || !IsLit(source)) continue;
+                    if (refusals[s][t] != null || string.IsNullOrEmpty(source) || !IsLit2D(source)) continue;
                     if ((systems[s].flags & VFXSystemFlag.SystemHasStrips) != 0) refusals[s][t] = LitStripRefusal;
                 }
             }

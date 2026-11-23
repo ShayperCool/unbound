@@ -112,6 +112,24 @@ public sealed class StripProbe : MonoBehaviour
             // camera's frustum.
             Draw("listed", "StripListed", 10, 20, 40, 66);
             Draw("culled", "StripCulled", 10, 20, 40, 66);
+            // Lit strips under a sun that casts no shadow (the other stages are unlit) and a
+            // point light of their own, in front and to the right.
+            var sun = new GameObject("sun").AddComponent<Light>();
+            sun.type = LightType.Directional;
+            sun.shadows = LightShadows.None;
+            sun.intensity = 1.1f;
+            sun.transform.rotation = Quaternion.Euler(35f, 25f, 0f);
+            foreach (var (key, graph) in new[] { ("lit", "StripLit"), ("lit bent", "StripLitBent") })
+            {
+                var lit = Draw(key, graph, 10, 20, 40, 66);
+                var lamp = new GameObject("lamp " + key).AddComponent<Light>();
+                lamp.type = LightType.Point;
+                lamp.color = new Color(1f, 0.6f, 0.3f);
+                lamp.range = 4f;
+                lamp.intensity = 2f;
+                lamp.shadows = LightShadows.None;
+                lamp.transform.position = lit.Effect.transform.position + new Vector3(0.8f, 0.6f, -1f);
+            }
             foreach (var stage in m_Stages)
             {
                 m_Names.Clear();

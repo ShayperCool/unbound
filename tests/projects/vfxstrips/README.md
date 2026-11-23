@@ -44,6 +44,10 @@ are `Output ParticleStrip Quad` contexts with an `Orient: Face Camera Position` 
   a compute pass (`Compute Culling`). `StripCulled`: the same strips culled by each camera's
   frustum (`Frustum Culling`, sort off), so each camera draws a list of its own (no segment
   leaves the view here, so none is culled away).
+- `StripLit`: one strip of sixteen lit by the pipeline (`Output ParticleStrip URP Lit Quad`,
+  opaque, no base colour map, smoothness 0.4), its particles spread in depth too.
+  `StripLitBent`: the same with its normals bent across the strip (`Normal Bending`, the
+  output's default factor).
 - `StripIndex`: four strips of eight; the strip a particle goes into is the initialize
   context's `stripIndex`, an exposed property `Strip` of the effect.
 - `StripBoth`: a strip drawn twice: joined, and each of its particles as a quad of its own.
@@ -80,6 +84,8 @@ capacity and whether it sleeps. `systems/<control>` lists the systems' names.
 - `wakes`, `wakes first`, `wakes second`, `wakes third`: four effects of `Waking`, the second
   reinitialized at frame 30, the third at frame 31 and the fourth at frame 32.
 - `listed`, `culled`: `StripListed` and `StripCulled`.
+- `lit`, `lit bent`: `StripLit` and `StripLitBent`, each under a point light of its own; a
+  directional light without shadows lights the scene (the other stages are unlit).
 - `trails alive`, `trails alive keep`: `StripTrailsAlive` and `StripTrailsAliveKeep`, images
   every four frames to frame 32, then at 40, 50 and 66. The heads' alive count includes the dead
   heads kept for their strips (room for four, full at frame 70 in both).
@@ -120,7 +126,9 @@ alive` (whose strip particles die) is exact throughout.
 - Drawn but not measured: alpha blended strips with their sort off through a list (where
   overlapping segments show the order), a sorted quad output of a strip system's particles,
   `Compute Culling` on a strip output itself, several cameras.
-- Lit strip outputs, Shader Graph strip outputs, line strips
+- Lit strips blended over what is behind them or drawn from lists, through the deferred
+  renderer, or with maps (drawn, not measured).
+- Strips lit by 2D lights, Shader Graph strip outputs, line strips
   (`Output ParticleStrip Line`), and any output but quads of a strip system's particles: not
   drawn (the effect says so).
 - Additive strips; a sorted strip under a perspective camera or with another sort criterion
