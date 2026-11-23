@@ -1207,14 +1207,15 @@ impl ShaderCompiler {
             self.compiler
                 .compile_into_spirv(&fixed, kind, &name, entry, Some(&o))
                 .or_else(|e| {
-                    dump_failed(&fixed, &name, kind);
                     let all = fxc_compatible(&expanded, inout_parameters::Scope::All);
                     if all == fixed {
+                        dump_failed(&fixed, &name, kind);
                         return Err(anyhow!("{}: {e}", stage_name(kind)));
                     }
                     self.compiler
                         .compile_into_spirv(&all, kind, &name, entry, Some(&o))
                         .map_err(|retried| {
+                            dump_failed(&fixed, &name, kind);
                             dump_failed(&all, &format!("{name}.inout"), kind);
                             anyhow!(
                                 "{}: {e}; with every scalar and vector `inout` parameter split: {retried}",

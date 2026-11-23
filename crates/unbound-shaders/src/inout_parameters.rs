@@ -20,22 +20,22 @@
 //! the second, every `inout` parameter of a scalar or vector type (`bool`, `int`, `uint`,
 //! `dword`, `half`, `float`, `double` and the minimum precision types, alone or with 1 to 4
 //! components), but for a function a call of which gives such a parameter an argument with a
-//! side effect (`++`, `--`, an assignment, a call of a function with an `out` or `inout`
-//! parameter), which would run twice, and for a name whose declarations disagree at those
-//! places: they keep the first scope's split. Programs that compiled before compile as they
-//! did. Halves and floats are one type to
-//! glslang (`half` is 32-bit here): neither needs the rewrite. A change of the number of
-//! components is not rewritten (glslang finds no matching function; what FXC does with it is not
-//! measured).
+//! possible side effect (`++`, `--`, an assignment, a call of one of the program's functions, a
+//! struct's member function or a method), which would run twice, and for a name whose
+//! declarations disagree at those places: they keep the first scope's split. Programs that
+//! compiled before compile as they did. Halves and floats are one type to glslang (`half` is
+//! 32-bit here): neither needs the rewrite. A change of the number of components is not
+//! rewritten (glslang finds no matching function; what FXC does with it is not measured).
 //!
 //! Left as they are: functions of a name another declaration of which has no such parameter at
 //! the same place (a call cannot be told apart without the arguments' types; a function
 //! overloaded with an `inout bool` and a parameter of another kind at that place, given a
-//! number, still crashes glslang, as does `inout bool1`), names also declared as a struct's member, functions whose
+//! number, still crashes glslang), names also declared as a struct's member, functions whose
 //! parameters hold a template type (`vector<float, 3>`, whose commas this reading does not
 //! follow), in the second scope parameters with a semantic (an entry point's, whose input and
 //! output it names together) but scalar bools, and parameters of matrix, struct, array or
-//! object types.
+//! object types. An `inout bool1` given a number crashes glslang before any rewrite (the first
+//! scope splits scalar bools only).
 
 use crate::scopes::{Kind, Token, edit, matching, text, tokens};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -259,16 +259,17 @@ fn read(source: &str, scope: Scope) -> Reading<'_> {
             all.insert(name, second);
         }
     }
-    // Functions that write an argument (an `out` or `inout` parameter): a call of one inside a
-    // split argument, written twice, would run twice.
-    let writes: BTreeSet<&str> = declarations
-        .iter()
-        .filter(|(_, list)| {
-            list.iter()
-                .any(|d| (d.open + 1..d.close).any(|j| matches!(word(j), Some("out" | "inout"))))
-        })
-        .map(|(&name, _)| name)
-        .collect();
+    // A call inside a split argument that may change state (one of the program's functions,
+    // which can write an argument or a static global, a struct's member function or a method
+    // such as `IncrementCounter`), written twice, would run twice; intrinsics do not.
+    let changes_state = |j: usize| {
+        word(j).is_some_and(|w| declarations.contains_key(w) || members.contains(w))
+            && punct(j + 1) == Some("(")
+            || (word(j).is_some()
+                && punct(j + 1) == Some("(")
+                && j > 0
+                && punct(j - 1) == Some("."))
+    };
     let declared: HashSet<usize> = declarations.values().flatten().map(|d| d.open).collect();
     // Calls: the name, not a member's (after `.` or `::`), then a parenthesised list that is no
     // declaration's; innermost first (by their closing parenthesis).
@@ -296,17 +297,15 @@ fn read(source: &str, scope: Scope) -> Reading<'_> {
         bools
     } else {
         // A name a call of which gives a split parameter an argument with a side effect (an
-        // assignment, an increment or a call of a function that writes an argument) keeps its
-        // first scope's split.
+        // assignment, an increment or a call that may change state) keeps its first scope's
+        // split.
         let mut effects = BTreeSet::new();
         for (name, open, close) in calls_of(&all) {
             let arguments = parts(source, &toks, open, close);
             if all[name].iter().any(|&place| {
                 arguments.get(place).is_some_and(|&(first, end)| {
                     has_side_effect(&source[toks[first].start..toks[end - 1].end])
-                        || (first..end).any(|j| {
-                            word(j).is_some_and(|w| writes.contains(w)) && punct(j + 1) == Some("(")
-                        })
+                        || (first..end).any(&changes_state)
                 })
             }) {
                 effects.insert(name);
@@ -426,16 +425,15 @@ mod tests {
     #[test]
     fn scalar_and_vector_parameters_of_every_type_are_split() {
         // Numbers and vectors, overloads split at the same place, a split function calling
-        // another, a call of a function that writes no argument and a comparison in an
-        // argument.
-        let source = "void I(inout int i, inout min16float3 v) { i += 1; v *= 2; } uint P(uint u) { return u; }\n\
+        // another, an intrinsic call and a comparison in an argument.
+        let source = "void I(inout int i, inout min16float3 v) { i += 1; v *= 2; }\n\
                       void C(inout bool b) { b = !b; } void C(inout float2 f) { f += 2; }\n\
-                      void G(inout uint u) { float x = u; float a[2]; I(u, x); C(x); C(a[P(u) == 1]); C(a[u >= 1]); }\n";
+                      void G(inout uint u) { float x = u; float a[2]; I(u, x); C(x); C(a[min(u, 1u) == 1]); C(a[u >= 1]); }\n";
         assert_eq!(
             inout_parameters(source, Scope::All),
-            "void I(int i_unbound_in, out int i, min16float3 v_unbound_in, out min16float3 v) { i = i_unbound_in; v = v_unbound_in; i += 1; v *= 2; } uint P(uint u) { return u; }\n\
+            "void I(int i_unbound_in, out int i, min16float3 v_unbound_in, out min16float3 v) { i = i_unbound_in; v = v_unbound_in; i += 1; v *= 2; }\n\
              void C(bool b_unbound_in, out bool b) { b = b_unbound_in; b = !b; } void C(float2 f_unbound_in, out float2 f) { f = f_unbound_in; f += 2; }\n\
-             void G(uint u_unbound_in, out uint u) { u = u_unbound_in; float x = u; float a[2]; I(u, u, x, x); C(x, x); C(a[P(u) == 1], a[P(u) == 1]); C(a[u >= 1], a[u >= 1]); }\n"
+             void G(uint u_unbound_in, out uint u) { u = u_unbound_in; float x = u; float a[2]; I(u, u, x, x); C(x, x); C(a[min(u, 1u) == 1], a[min(u, 1u) == 1]); C(a[u >= 1], a[u >= 1]); }\n"
         );
         // The first scope splits none of them (`C`'s overloads differ at the bool's place):
         // the program is not compiled rewritten at once, and compiles as written first.
@@ -475,6 +473,17 @@ mod tests {
              uint R(uint s_unbound_in, out uint s) { s = s_unbound_in; s += 1; return s; }\n\
              void G() { float a[2]; int i = 0; uint s = 0; bool c = true; F(a[i++]); F(a[R(s, s) & 1]); B(c, c, i += 1); H(i, i); }\n"
         );
+        // A struct's member function and a method called in an argument are side effects too.
+        let members = "struct Rng { uint s; uint Next() { s += 1; return s; } };\n\
+                       void F(inout float x) { } void H(inout int n) { }\n\
+                       void G(RWStructuredBuffer<uint> b) { float a[2]; Rng r; int i = 0; F(a[r.Next() & 1]); F(a[b.IncrementCounter() & 1]); H(i); }\n";
+        let split = inout_parameters(members, Scope::All);
+        assert!(
+            split.contains("F(a[r.Next() & 1]);")
+                && split.contains("F(a[b.IncrementCounter() & 1]);"),
+            "{split}"
+        );
+        assert!(split.contains("H(i, i);"), "{split}");
         for (argument, effect) in [
             ("a[i++]", true),
             ("a[--i]", true),
