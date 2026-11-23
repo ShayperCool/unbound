@@ -9,7 +9,7 @@ by object and by instance ID, `IsMainAsset`, `Contains`, its local file ID and
 `ProjectWindowUtil.GetAncestors` of it (as paths). Also the root folders' GUIDs, whether
 `GetAllAssetPaths` lists the roots and `FindAssets` finds them, `GetSubFolders` of `Packages`, a
 registry root, a missing folder, a file and `Assets/Sub` (folders whose names sort apart by case,
-digits and punctuation), and `EditorUtility.NaturalCompare`'s sign for 24 pairs of names.
+digits and punctuation), and `EditorUtility.NaturalCompare`'s sign for 26 pairs of names.
 
 Measured on the Unity 6000.0.71f1 Editor (two identical macOS batch captures; the values depend on
 neither the OS nor the graphics device):
@@ -23,9 +23,10 @@ neither the OS nor the graphics device):
   residual: Unbound gives it the MD4 of its name too).
 - A `package.json` (PackageManifestImporter) loads as `UnityEditorInternal.PackageManifest`, a
   `TextAsset` named "package", `NotEditable`, at local file ID 8385607101436470782 in every package.
-- `GetSubFolders` lists folders in `EditorUtility.NaturalCompare`'s order: characters
-  case-insensitively by code, ASCII digit runs as numbers, then the shorter name, then more leading
-  zeros first; names equal but for case compare equal.
+- `GetSubFolders` lists folders in `EditorUtility.NaturalCompare`'s order: characters by code with
+  ASCII letters in either case equal ("É" sorts before "é"), ASCII digit runs as numbers, then the
+  shorter name, then more leading zeros first; names equal but for ASCII case compare equal.
+- No `FindAssets` search finds a package root, scoped to a package or not (`find.*`).
 
 ```sh
 python3 tests/projects/packagefolders/run.py record --label A     # twice, A and B

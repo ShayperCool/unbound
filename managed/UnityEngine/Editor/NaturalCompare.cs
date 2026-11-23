@@ -4,10 +4,11 @@ namespace UnityEditor
     {
         /// <summary>
         /// The order the Editor lists names in (folders by AssetDatabase.GetSubFolders): characters
-        /// compared case-insensitively by their code (so "_" sorts before letters and "é" after
-        /// "z"), runs of ASCII digits compared as numbers of any length, and, when the names are
-        /// otherwise equal, the shorter one first, then the one whose first differing number has
-        /// more leading zeros ("a02" before "a2"). Names equal but for case compare equal. Matches
+        /// compared by their code with ASCII letters in either case equal (so "_" sorts before
+        /// letters, "é" after "z", and "É" before "é"), runs of ASCII digits compared as numbers of
+        /// any length, and, when the names are otherwise equal, the shorter one first, then the one
+        /// whose first differing number has more leading zeros ("a02" before "a2"). Names equal but
+        /// for ASCII case compare equal. Matches
         /// the Unity 6000.0.71f1 Editor's signs (tests/projects/packagefolders natural.*); its
         /// magnitudes are not measured, and null is taken as an empty name (unmeasured).
         /// </summary>
@@ -37,7 +38,7 @@ namespace UnityEditor
                     }
                     continue;
                 }
-                char x = char.ToLowerInvariant(a[i]), y = char.ToLowerInvariant(b[j]);
+                char x = LowerAscii(a[i]), y = LowerAscii(b[j]);
                 if (x != y) return x < y ? -1 : 1;
                 i++;
                 j++;
@@ -48,5 +49,7 @@ namespace UnityEditor
         }
 
         static bool IsDigit(char c) => c >= '0' && c <= '9';
+
+        static char LowerAscii(char c) => c >= 'A' && c <= 'Z' ? (char)(c + ('a' - 'A')) : c;
     }
 }

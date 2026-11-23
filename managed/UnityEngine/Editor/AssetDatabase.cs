@@ -112,7 +112,9 @@ namespace UnityEditor
             path += "/";
             var folders = Entries.Where(e => e.Kind == "folder" && e.Path.StartsWith(path, StringComparison.OrdinalIgnoreCase) && e.Path.IndexOf('/', path.Length) < 0)
                 .Select(e => e.Path).ToArray();
-            Array.Sort(folders, EditorUtility.NaturalCompare);
+            // Names equal but for case (two folders on a case-sensitive disk) in ordinal order, so
+            // the listing does not depend on the database's order.
+            Array.Sort(folders, (a, b) => EditorUtility.NaturalCompare(a, b) is var order && order != 0 ? order : string.CompareOrdinal(a, b));
             return folders;
         }
 

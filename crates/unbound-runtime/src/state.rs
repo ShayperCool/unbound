@@ -123,7 +123,8 @@ impl RuntimeState {
     }
 
     /// The asset path (`Assets/...`, `Packages/<name>/...`) of a file or folder of the project's
-    /// asset roots (not a root itself: `Assets` and a package's folder are no assets).
+    /// asset roots (not a root itself: `Assets` and a package's root folder, which have no `.meta`
+    /// and are never imported or written).
     fn file_of(&self, asset_path: &str) -> Option<PathBuf> {
         self.asset_roots.iter().find_map(|(dir, root)| {
             let head = asset_path.get(..root.len())?;

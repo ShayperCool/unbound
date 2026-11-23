@@ -100,6 +100,7 @@
 {"k":"guid.registryRoot","v":"136d1afa523dde7a5adb763f51ad12a5"}
 {"k":"allPaths.roots","v":"Packages/com.unity.ai.navigation|Packages/com.unity.modules.audio"}
 {"k":"find.roots","v":"Packages/com.unity.ai.navigation/Editor|Packages/com.unity.ai.navigation/EditorResources|Packages/com.unity.ai.navigation/Gizmos|Packages/com.unity.ai.navigation/Runtime"}
+{"k":"find.unscoped","v":""}
 {"k":"find.packagesFolder","v":""}
 {"k":"subFolders.packages","v":""}
 {"k":"subFolders.order","v":"Assets/Sub/_c|Assets/Sub/A|Assets/Sub/a2|Assets/Sub/b|Assets/Sub/C9|Assets/Sub/C10"}
@@ -130,6 +131,8 @@
 {"k":"natural.0|00","v":1}
 {"k":"natural.a01b|a1a","v":1}
 {"k":"natural.99999999999999999999|1","v":1}
+{"k":"natural.É|é","v":-1}
+{"k":"natural.Ä|b","v":1}
 {"k":"subFolders.registryRoot","v":"Packages/com.unity.ai.navigation/Editor|Packages/com.unity.ai.navigation/EditorResources|Packages/com.unity.ai.navigation/Gizmos|Packages/com.unity.ai.navigation/Runtime"}
 {"k":"logs","v":""}
 {"k":"complete","v":true}

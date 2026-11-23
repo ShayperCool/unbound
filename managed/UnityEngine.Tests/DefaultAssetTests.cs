@@ -102,8 +102,8 @@ namespace UnityEngine.Tests
                 Assert.Equal("Assets", AssetDatabase.GUIDToAssetPath(RootGuid));
                 Assert.True(AssetDatabase.IsValidFolder("Assets"));
                 Assert.True(AssetDatabase.IsValidFolder("assets"));
-                // Packages is a folder without being an asset.
-                Assert.True(AssetDatabase.IsValidFolder("Packages"));
+                // Packages is no folder (tests/projects/packagefolders packages.isValidFolder).
+                Assert.False(AssetDatabase.IsValidFolder("Packages"));
                 Assert.Contains("Assets", AssetDatabase.GetAllAssetPaths());
                 Assert.DoesNotContain("Packages", AssetDatabase.GetAllAssetPaths());
                 Assert.DoesNotContain(RootGuid, AssetDatabase.FindAssets("t:Folder"));

@@ -61,6 +61,7 @@ public static class PackageFoldersProbe
             // Whether package roots are listed with all paths, and found by a folder search.
             Check("allPaths.roots", () => string.Join("|", AssetDatabase.GetAllAssetPaths().Where(p => p == "Packages/com.unity.modules.audio" || p == "Packages/com.unity.ai.navigation" || p == "Packages").OrderBy(p => p, StringComparer.Ordinal)));
             Check("find.roots", () => string.Join("|", AssetDatabase.FindAssets("t:DefaultAsset", new[] { "Packages/com.unity.ai.navigation" }).Select(AssetDatabase.GUIDToAssetPath).Where(p => p.IndexOf('/', "Packages/".Length) < 0 || p.Count(c => c == '/') == 2).OrderBy(p => p, StringComparer.Ordinal)));
+            Check("find.unscoped", () => string.Join("|", AssetDatabase.FindAssets("navigation").Concat(AssetDatabase.FindAssets("modules.audio")).Select(AssetDatabase.GUIDToAssetPath).Where(p => p.Count(c => c == '/') == 1).OrderBy(p => p, StringComparer.Ordinal)));
             Check("find.packagesFolder", () => string.Join("|", AssetDatabase.FindAssets("navigation", new[] { "Packages" }).Select(AssetDatabase.GUIDToAssetPath).Where(p => p.Count(c => c == '/') == 1).OrderBy(p => p, StringComparer.Ordinal)));
             Check("subFolders.packages", () => string.Join("|", AssetDatabase.GetSubFolders("Packages").Where(p => p.Contains("modules.audio") || p.Contains("ai.navigation"))));
             Check("subFolders.order", () => string.Join("|", AssetDatabase.GetSubFolders("Assets/Sub")));
@@ -81,6 +82,7 @@ public static class PackageFoldersProbe
                 ("abc", "ABC"), ("ABC", "abc"), ("a b", "a_b"), ("a-b", "a_b"), ("a.b", "a_b"), ("x1y2", "x1y10"),
                 ("", "a"), ("a", "ab"), ("10", "9"), ("1.5", "1.10"), ("Z", "a"), ("é", "f"), ("a 1", "a1"),
                 ("file10.txt", "file9.txt"), ("0", "00"), ("a01b", "a1a"), ("99999999999999999999", "1"),
+                ("É", "é"), ("Ä", "b"),
             };
             foreach (var (a, b) in pairs)
                 Check("natural." + a + "|" + b, () => Math.Sign(EditorUtility.NaturalCompare(a, b)));
