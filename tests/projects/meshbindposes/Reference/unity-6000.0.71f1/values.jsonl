@@ -72,4 +72,8 @@
 {"k":"thread.count.log","v":""}
 {"k":"thread.list","v":"UnityException: get_bindposeCount can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
 {"k":"thread.list.log","v":""}
+{"k":"validation.staleOnWorker","v":"ObjectDisposedException: The Unity.Collections.NativeArray`1[UnityEngine.Matrix4x4] has been deallocated, it is not allowed to access it"}
+{"k":"validation.staleOnWorker.log","v":""}
+{"k":"validation.staleOnDestroyedMesh","v":"ObjectDisposedException: The Unity.Collections.NativeArray`1[UnityEngine.Matrix4x4] has been deallocated, it is not allowed to access it"}
+{"k":"validation.staleOnDestroyedMesh.log","v":""}
 {"k":"complete","v":true}

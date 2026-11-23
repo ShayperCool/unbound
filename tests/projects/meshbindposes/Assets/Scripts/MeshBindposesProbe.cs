@@ -198,7 +198,12 @@ static class MeshBindposesProbe
         Probe("thread.arraySet", () => OnWorkerThread(() => controls.bindposes = new[] { Pose(17, 19) }));
         Probe("thread.count", () => OnWorkerThread(() => _ = controls.bindposeCount));
         Probe("thread.list", () => OnWorkerThread(() => controls.GetBindposes(new List<Matrix4x4>())));
+        var input = new NativeArray<Matrix4x4>(new[] { Pose(23, 29) }, Allocator.Persistent);
+        var stale = input;
+        input.Dispose();
+        Probe("validation.staleOnWorker", () => OnWorkerThread(() => controls.SetBindposes(stale)));
         Object.DestroyImmediate(controls);
+        Probe("validation.staleOnDestroyedMesh", () => { controls.SetBindposes(stale); return "ok"; });
         rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), rows);
 #if UNITY_EDITOR

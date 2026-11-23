@@ -16,7 +16,8 @@ the source is a slice of the mesh's own storage, Unity 6000.0.71f1 logs an asser
 slice after the log callback. The probe changes the slice's matrices during that callback.
 An empty view remains readable at length zero. A disposed input throws the same exception as a
 default or empty input. The probe also checks the main-thread restriction on each bind-pose
-API before a view can access the mesh's storage.
+API before a view can access the mesh's storage. A stale copy of a disposed input is rejected
+before checking the calling thread or whether the mesh has been destroyed.
 
 ```sh
 python3 tests/projects/meshbindposes/run.py record --release 6000.0.71f1 --label repeat-a
