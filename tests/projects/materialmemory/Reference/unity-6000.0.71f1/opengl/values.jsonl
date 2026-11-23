@@ -19,6 +19,9 @@
 {"k":"f0v0t0.populatedCopy","v":"2072"}
 {"k":"f0v0t0.copyEdited","v":"2104"}
 {"k":"f0v0t0.sourceAfterCopyEdit","v":"2464"}
+{"k":"f0v0t0.populatedInstance","v":"1656"}
+{"k":"f0v0t0.instanceEdited","v":"2104"}
+{"k":"f0v0t0.sourceAfterInstanceEdit","v":"2464"}
 {"k":"f3v0t0.propertyKinds","v":"Float/Float/Float"}
 {"k":"f3v0t0.created","v":"2168"}
 {"k":"f3v0t0.coldCopy","v":"2168"}
@@ -38,6 +41,9 @@
 {"k":"f3v0t0.populatedCopy","v":"2168"}
 {"k":"f3v0t0.copyEdited","v":"2224"}
 {"k":"f3v0t0.sourceAfterCopyEdit","v":"2620"}
+{"k":"f3v0t0.populatedInstance","v":"1656"}
+{"k":"f3v0t0.instanceEdited","v":"2224"}
+{"k":"f3v0t0.sourceAfterInstanceEdit","v":"2620"}
 {"k":"f0v2t0.propertyKinds","v":"Vector/Vector"}
 {"k":"f0v2t0.created","v":"2184"}
 {"k":"f0v2t0.coldCopy","v":"2184"}
@@ -57,6 +63,9 @@
 {"k":"f0v2t0.populatedCopy","v":"2184"}
 {"k":"f0v2t0.copyEdited","v":"2256"}
 {"k":"f0v2t0.sourceAfterCopyEdit","v":"2608"}
+{"k":"f0v2t0.populatedInstance","v":"1656"}
+{"k":"f0v2t0.instanceEdited","v":"2256"}
+{"k":"f0v2t0.sourceAfterInstanceEdit","v":"2608"}
 {"k":"f1v1t1.propertyKinds","v":"Float/Vector/Texture"}
 {"k":"f1v1t1.created","v":"2424"}
 {"k":"f1v1t1.coldCopy","v":"2424"}
@@ -76,6 +85,9 @@
 {"k":"f1v1t1.populatedCopy","v":"2424"}
 {"k":"f1v1t1.copyEdited","v":"2616"}
 {"k":"f1v1t1.sourceAfterCopyEdit","v":"2904"}
+{"k":"f1v1t1.populatedInstance","v":"1656"}
+{"k":"f1v1t1.instanceEdited","v":"2616"}
+{"k":"f1v1t1.sourceAfterInstanceEdit","v":"2904"}
 {"k":"f4v1t2.propertyKinds","v":"Float/Float/Float/Float/Vector/Texture/Texture"}
 {"k":"f4v1t2.created","v":"2784"}
 {"k":"f4v1t2.coldCopy","v":"2784"}
@@ -95,6 +107,9 @@
 {"k":"f4v1t2.populatedCopy","v":"2784"}
 {"k":"f4v1t2.copyEdited","v":"3156"}
 {"k":"f4v1t2.sourceAfterCopyEdit","v":"3300"}
+{"k":"f4v1t2.populatedInstance","v":"1656"}
+{"k":"f4v1t2.instanceEdited","v":"3156"}
+{"k":"f4v1t2.sourceAfterInstanceEdit","v":"3300"}
 {"k":"f16v2t9.propertyKinds","v":"Float/Float/Float/Float/Float/Float/Float/Float/Float/Float/Float/Float/Float/Float/Float/Float/Vector/Vector/Texture/Texture/Texture/Texture/Texture/Texture/Texture/Texture/Texture"}
 {"k":"f16v2t9.created","v":"5072"}
 {"k":"f16v2t9.coldCopy","v":"5072"}
@@ -114,6 +129,9 @@
 {"k":"f16v2t9.populatedCopy","v":"5072"}
 {"k":"f16v2t9.copyEdited","v":"6588"}
 {"k":"f16v2t9.sourceAfterCopyEdit","v":"6732"}
+{"k":"f16v2t9.populatedInstance","v":"1656"}
+{"k":"f16v2t9.instanceEdited","v":"6588"}
+{"k":"f16v2t9.sourceAfterInstanceEdit","v":"6732"}
 {"k":"range.propertyKinds","v":"Range"}
 {"k":"range.created","v":"2104"}
 {"k":"range.coldCopy","v":"2104"}
@@ -133,6 +151,9 @@
 {"k":"range.populatedCopy","v":"2104"}
 {"k":"range.copyEdited","v":"2136"}
 {"k":"range.sourceAfterCopyEdit","v":"2484"}
+{"k":"range.populatedInstance","v":"1656"}
+{"k":"range.instanceEdited","v":"2136"}
+{"k":"range.sourceAfterInstanceEdit","v":"2484"}
 {"k":"int.propertyKinds","v":"Int"}
 {"k":"int.created","v":"2104"}
 {"k":"int.coldCopy","v":"2104"}
@@ -152,6 +173,9 @@
 {"k":"int.populatedCopy","v":"2104"}
 {"k":"int.copyEdited","v":"2136"}
 {"k":"int.sourceAfterCopyEdit","v":"2504"}
+{"k":"int.populatedInstance","v":"1656"}
+{"k":"int.instanceEdited","v":"2136"}
+{"k":"int.sourceAfterInstanceEdit","v":"2504"}
 {"k":"texdims.propertyKinds","v":"Texture/Texture/Texture/Texture"}
 {"k":"texdims.created","v":"3128"}
 {"k":"texdims.coldCopy","v":"3128"}
@@ -171,6 +195,9 @@
 {"k":"texdims.populatedCopy","v":"3128"}
 {"k":"texdims.copyEdited","v":"3672"}
 {"k":"texdims.sourceAfterCopyEdit","v":"3816"}
+{"k":"texdims.populatedInstance","v":"1656"}
+{"k":"texdims.instanceEdited","v":"3672"}
+{"k":"texdims.sourceAfterInstanceEdit","v":"3816"}
 {"k":"unlit.propertyKinds","v":"Color"}
 {"k":"unlit.created","v":"2128"}
 {"k":"unlit.coldCopy","v":"2128"}
@@ -190,6 +217,9 @@
 {"k":"unlit.populatedCopy","v":"2128"}
 {"k":"unlit.copyEdited","v":"2172"}
 {"k":"unlit.sourceAfterCopyEdit","v":"2516"}
+{"k":"unlit.populatedInstance","v":"1656"}
+{"k":"unlit.instanceEdited","v":"2172"}
+{"k":"unlit.sourceAfterInstanceEdit","v":"2516"}
 {"k":"standard.propertyKinds","v":"Color/Texture/Range/Range/Range/Float/Range/Texture/Float/Float/Float/Texture/Range/Texture/Range/Texture/Color/Texture/Texture/Texture/Float/Texture/Float/Float/Float/Float/Float"}
 {"k":"standard.created","v":"5072"}
 {"k":"standard.coldCopy","v":"5072"}
@@ -209,4 +239,7 @@
 {"k":"standard.populatedCopy","v":"5072"}
 {"k":"standard.copyEdited","v":"6588"}
 {"k":"standard.sourceAfterCopyEdit","v":"6732"}
+{"k":"standard.populatedInstance","v":"1656"}
+{"k":"standard.instanceEdited","v":"6588"}
+{"k":"standard.sourceAfterInstanceEdit","v":"6732"}
 {"k":"complete","v":true}

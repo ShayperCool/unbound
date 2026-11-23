@@ -1,15 +1,22 @@
 {
-  "commands": ["python3 tests/projects/materialmemory/run.py gate --release 6000.0.71f1"],
+  "commands": [
+    "python3 tests/projects/materialmemory/run.py gate --release 6000.0.71f1"
+  ],
   "summary": "materialmemory (?:metal|opengl|vulkan): .*",
   "engine_paths": [
     "managed/UnityEngine/Graphics/AssetImporters.cs",
-    "managed/UnityEngine/Graphics/Material.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.CameraTextures.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.Deferred.cs",
     "managed/UnityEngine/Graphics/Material.Profiler.cs",
+    "managed/UnityEngine/Graphics/Material.cs",
+    "managed/UnityEngine/Graphics/Renderer.cs",
     "managed/UnityEngine/Graphics/Shader.cs",
     "managed/UnityEngine/Graphics/ShaderLab.cs",
+    "managed/UnityEngine/Graphics/Srp/Keywords.cs",
     "managed/UnityEngine/Profiling/MemorySizes.cs",
     "managed/UnityEngine/Profiling/Profiling.cs",
     "managed/UnityEngine/Runtime/Compat.cs",
-    "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs"
+    "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs",
+    "managed/UnityEngine/UI/CanvasRenderer.Clipping.cs"
   ]
 }
