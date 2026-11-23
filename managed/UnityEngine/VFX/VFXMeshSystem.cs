@@ -32,9 +32,10 @@ namespace Unbound.Runtime
         /// colour.</summary>
         readonly (int Name, int Expression, VFXValueType Type, bool Color)[] m_Properties;
         readonly MaterialPropertyBlock m_Block = new MaterialPropertyBlock();
-        /// <summary>The value each property was last set to (numbers as a vector, matrices,
-        /// objects), so that a frame sets only what changed.</summary>
-        readonly Vector4[] m_LastVector;
+        /// <summary>The value each property was last set to (numbers as the bits of their four
+        /// words and matrices, compared bit for bit; objects, by reference), so that a frame
+        /// sets only what changed.</summary>
+        readonly uint[] m_LastBits;
         readonly Matrix4x4[] m_LastMatrix;
         readonly object[] m_LastObject;
         readonly bool[] m_Set;
@@ -59,7 +60,7 @@ namespace Unbound.Runtime
                     properties.Add((Shader.PropertyToID(mapping.name), mapping.index, data.ExpressionTypes[mapping.index], color));
                 }
             m_Properties = properties.ToArray();
-            m_LastVector = new Vector4[m_Properties.Length];
+            m_LastBits = new uint[m_Properties.Length * 4];
             m_LastMatrix = new Matrix4x4[m_Properties.Length];
             m_LastObject = new object[m_Properties.Length];
             m_Set = new bool[m_Properties.Length];
@@ -96,6 +97,24 @@ namespace Unbound.Runtime
                     FrameBuilder.AddInstancedDraw(renderer, mesh, subMesh, m_Material, model, 1, m_Block.m_Values, camera, into);
         }
 
+        /// <summary>Whether a property's words differ from the ones it was last set to (or it
+        /// was never set), remembering them.</summary>
+        bool Changed(int property, uint x, uint y, uint z, uint w)
+        {
+            int at = property * 4;
+            if (m_Set[property] && m_LastBits[at] == x && m_LastBits[at + 1] == y && m_LastBits[at + 2] == z && m_LastBits[at + 3] == w) return false;
+            (m_LastBits[at], m_LastBits[at + 1], m_LastBits[at + 2], m_LastBits[at + 3]) = (x, y, z, w);
+            return true;
+        }
+
+        /// <summary>Whether two matrices hold the same bits.</summary>
+        static bool SameBits(in Matrix4x4 a, in Matrix4x4 b)
+        {
+            for (int k = 0; k < 16; k++)
+                if (BitConverter.SingleToUInt32Bits(a[k]) != BitConverter.SingleToUInt32Bits(b[k])) return false;
+            return true;
+        }
+
         /// <summary>The exposed shader properties, from the effect's values of this frame. A
         /// property the shader declares a colour is set as a colour, which a project in linear
         /// colour space takes from gamma to linear, as the Editor sets it (the effect's colour
@@ -108,32 +127,30 @@ namespace Unbound.Runtime
                 switch (type)
                 {
                     case VFXValueType.Float:
-                    case VFXValueType.Float2:
-                    case VFXValueType.Float3:
-                    case VFXValueType.Float4:
                     case VFXValueType.Int32:
                     case VFXValueType.Uint32:
                     {
-                        var value = type switch
-                        {
-                            VFXValueType.Float => new Vector4(values.GetFloat(expression), 0f, 0f, 0f),
-                            VFXValueType.Float2 => values.GetVector(expression, 2),
-                            VFXValueType.Float3 => values.GetVector(expression, 3),
-                            VFXValueType.Float4 => values.GetVector(expression, 4),
-                            _ => new Vector4(BitConverter.UInt32BitsToSingle(values.GetWord(expression)), 0f, 0f, 0f),
-                        };
-                        if (m_Set[i] && m_LastVector[i].Equals(value)) break;
-                        m_LastVector[i] = value;
-                        if (type == VFXValueType.Float) m_Block.SetFloat(name, value.x);
-                        else if (type == VFXValueType.Int32 || type == VFXValueType.Uint32) m_Block.SetInteger(name, (int)BitConverter.SingleToUInt32Bits(value.x));
-                        else if (color && type == VFXValueType.Float4) m_Block.SetColor(name, (Color)value);
+                        uint word = values.GetWord(expression);
+                        if (!Changed(i, word, 0u, 0u, 0u)) break;
+                        if (type == VFXValueType.Float) m_Block.SetFloat(name, BitConverter.UInt32BitsToSingle(word));
+                        else m_Block.SetInteger(name, unchecked((int)word));
+                        break;
+                    }
+                    case VFXValueType.Float2:
+                    case VFXValueType.Float3:
+                    case VFXValueType.Float4:
+                    {
+                        var value = values.GetVector(expression, type == VFXValueType.Float2 ? 2 : type == VFXValueType.Float3 ? 3 : 4);
+                        if (!Changed(i, BitConverter.SingleToUInt32Bits(value.x), BitConverter.SingleToUInt32Bits(value.y),
+                            BitConverter.SingleToUInt32Bits(value.z), BitConverter.SingleToUInt32Bits(value.w))) break;
+                        if (color && type == VFXValueType.Float4) m_Block.SetColor(name, (Color)value);
                         else m_Block.SetVector(name, value);
                         break;
                     }
                     case VFXValueType.Matrix4x4:
                     {
                         var value = values.GetMatrix(expression);
-                        if (m_Set[i] && m_LastMatrix[i].Equals(value)) break;
+                        if (m_Set[i] && SameBits(m_LastMatrix[i], value)) break;
                         m_LastMatrix[i] = value;
                         m_Block.SetMatrix(name, value);
                         break;
@@ -151,7 +168,8 @@ namespace Unbound.Runtime
                         else m_Block.Remove(name);
                         break;
                     }
-                    // A shader property of no other type: nothing the output's slots give.
+                    // Values of other types (a boolean, a curve, a camera's buffer) are not set: not
+                    // measured.
                     default: continue;
                 }
                 m_Set[i] = true;

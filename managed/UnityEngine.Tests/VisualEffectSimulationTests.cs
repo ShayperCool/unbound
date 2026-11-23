@@ -1053,19 +1053,20 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>An effect of one mesh output system: its mesh, transform and mask values, and
-        /// two exposed shader properties (a colour and a vector), all given the same value.</summary>
+        /// three exposed shader properties: a colour and a vector given the same value
+        /// (expressions 3 and 4) and an integer of 0 (expression 5).</summary>
         static VisualEffectAsset SingleMesh(Mesh mesh, Matrix4x4 transform, uint mask, Vector4 value, Object processor)
         {
-            var expressions = new[] { Value(VFXValueType.Mesh), Value(VFXValueType.Matrix4x4), Value(VFXValueType.Uint32), Value(VFXValueType.Float4), Value(VFXValueType.Float4) };
+            var expressions = new[] { Value(VFXValueType.Mesh), Value(VFXValueType.Matrix4x4), Value(VFXValueType.Uint32), Value(VFXValueType.Float4), Value(VFXValueType.Float4), Value(VFXValueType.Int32) };
             var values = new VFXExpressionValueContainerDesc[]
             {
                 new VFXExpressionObjectValueContainerDesc<Mesh> { expressionIndex = 0, instanceID = mesh.GetInstanceID() },
-                Constant(1, transform), Constant(2, mask), Constant(3, value), Constant(4, value),
+                Constant(1, transform), Constant(2, mask), Constant(3, value), Constant(4, value), Constant(5, 0),
             };
             var system = new VFXEditorSystemDesc
             {
                 name = "Mesh", type = VFXSystemType.Mesh,
-                tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.Output, values = new[] { new VFXMapping("_Tint", 3), new VFXMapping("_Offset", 4) } } },
+                tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.Output, values = new[] { new VFXMapping("_Tint", 3), new VFXMapping("_Offset", 4), new VFXMapping("_Count", 5) } } },
                 values = new[] { new VFXMapping("mesh", 0), new VFXMapping("transform", 1), new VFXMapping("subMeshMask", 2) },
             };
             var asset = VisualEffectAsset.Create();
@@ -1080,7 +1081,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void AMeshOutputSystemDrawsItsMeshAtItsTransformWithItsProperties()
         {
-            var shader = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/VfxSingleMesh\" { Properties { _Tint (\"Tint\", Color) = (1,1,1,1) _Offset (\"Offset\", Vector) = (0,0,0,0) } SubShader { Pass { } } }");
+            var shader = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/VfxSingleMesh\" { Properties { _Tint (\"Tint\", Color) = (1,1,1,1) _Offset (\"Offset\", Vector) = (0,0,0,0) _Count (\"Count\", Integer) = 0 } SubShader { Pass { } } }");
             var material = new Material(shader);
             var mesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.right, Vector3.up }, subMeshCount = 3 };
             for (int i = 0; i < 3; i++) mesh.SetTriangles(new[] { 0, 1, 2 }, i);
@@ -1114,6 +1115,28 @@ namespace UnityEngine.Tests
                 draws.Clear();
                 renderer.CollectDraws(camera, draws);
                 Assert.Same(tint, draws[0].Properties[Shader.PropertyToID("_Tint")]);
+                // A value that changed is set again: the colour, and an integer whose bits change
+                // where floats compare equal (0 to the sign bit) or never do (-1 reads as not a number).
+                var tinted = new Vector4(0.1f, 0.9f, 0.3f, 1f);
+                effect.Values.SetVector(3, tinted, 4);
+                int count = Shader.PropertyToID("_Count");
+                object Collected(int property)
+                {
+                    draws.Clear();
+                    renderer.CollectDraws(camera, draws);
+                    return draws[0].Properties[property];
+                }
+                var expectedTint = QualitySettings.activeColorSpace == ColorSpace.Linear ? ((Color)tinted).linear : (Color)tinted;
+                Assert.Equal((Vector4)expectedTint, (Vector4)(Color)Collected(Shader.PropertyToID("_Tint")));
+                Assert.Equal(0, Convert.ToInt32(Collected(count)));
+                effect.Values.SetWord(5, unchecked((uint)-1));
+                var minusOne = Collected(count);
+                Assert.Equal(-1, Convert.ToInt32(minusOne));
+                Assert.Same(minusOne, Collected(count));
+                effect.Values.SetWord(5, 0x80000000u);
+                Assert.Equal(int.MinValue, Convert.ToInt32(Collected(count)));
+                effect.Values.SetWord(5, 0u);
+                Assert.Equal(0, Convert.ToInt32(Collected(count)));
                 Assert.Empty(warnings.Messages);
                 // A system whose shader was not imported draws nothing and says so once.
                 lost = Running(SingleMesh(mesh, transform, ~0u, value, shader));
