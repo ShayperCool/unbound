@@ -196,11 +196,14 @@ imported without keyframe reduction.
   [Humanoid Avatar Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/AvatarCreationandSetup.html).
 
   The masked transform controls add 757 rows from two identical macOS
-  6000.0.71f1 Editor runs. Exposed humanoid bone handles return true for the
+  6000.0.71f1 Editor runs. Humanoid bone handles return true for the
   position and rotation read masks and false for scale. A masked SetLocalTRS
   changes only the scale, and a masked SetGlobalTR leaves both fields as read.
   The head's masks are the same when the AvatarMask excludes it from the
-  playable layer. These controls cover the exposed humanoid handles.
+  playable layer. The controls use an unoptimized hierarchy. Handles on
+  optimized skeleton nodes and handles whose bone transform was destroyed
+  keep the generic masks and masked writes. Those cases and repeated masked
+  scale writes in one job remain unmeasured.
   [TransformStreamHandle](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.TransformStreamHandle.html)
 
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
