@@ -719,7 +719,7 @@ def composite(lightmap, padding):
     whose rays met back faces than the Backface Tolerance allows takes the mean of the light of its
     eight neighbours that hold their own, ring by ring; the texels around the charts likewise, as
     many rings as the padding (alpha 1). It leaves out what the Editor does next: the stitching of
-    seams."""
+    seams (which the runner uses to find the texels stitching changed)."""
     width, height = lightmap['width'], lightmap['height']
     used = lightmap['occupancy']
     out = [0.0] * (4 * width * height)
@@ -756,10 +756,10 @@ def composite(lightmap, padding):
 def lightmap_difference(got, want, padding):
     """The lightmap the bake makes (red, green, blue, alpha per texel) against the Editor's: which
     texels hold light (alpha) exactly, and the light of those within LIGHTMAP_TOLERANCE (times the
-    value above 1). The texels whose light in the Editor's lightmap is not what the rules make of
-    its own buffers (`composite`) are those the stitching of seams changed, which Unbound does not
-    do: they are compared with what the rules make of the Editor's buffers instead, counted, and
-    must lie within SEAM_REACH texels of a chart's edge. (None or the problem, the count.)"""
+    value above 1), the stitched texels too. The texels whose light in the Editor's lightmap is not
+    what the rules make of its own buffers (`composite`) are those the stitching of seams changed:
+    counted, and they must lie within SEAM_REACH texels of a chart's edge. (None or the problem,
+    the count.)"""
     if got is None:
         return 'not baked', 0
     width, height = want['width'], want['height']
@@ -791,13 +791,11 @@ def lightmap_difference(got, want, padding):
             continue
         if editor[3] == 0:
             continue
-        reference = editor[:3]
         if error(rules[4 * k:4 * k + 3], editor[:3]) > LIGHTMAP_TOLERANCE:
             stitched += 1
-            reference = rules[4 * k:4 * k + 3]
             if not by_edge(k):
                 far.append(k)
-        e = error(mine[:3], reference)
+        e = error(mine[:3], editor[:3])
         if e > LIGHTMAP_TOLERANCE:
             off.append(k)
             worst = max(worst, e)
@@ -928,7 +926,7 @@ def compare(label):
         record(scene + '.materials', material_difference(a['materials'], e['materials']))
         record(scene + '.sky', sky_difference(a['sky'], e['sky']))
         record(scene + '.probes', probes_difference(a['probes'], e['probes']))
-    print(f'lightmaps: {stitched[0]} texels the Editor stitched along seams (Unbound does not), compared with the rules\' light')
+    print(f'lightmaps: {stitched[0]} texels the Editor stitched along seams')
     keys = {key for key, _ in records}
     for key in sorted(set(known) - keys):
         print('FAIL', key, 'a residual of no record')

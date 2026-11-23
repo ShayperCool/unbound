@@ -17,6 +17,7 @@ use unbound_gi::baked::indirect::{self, Material, Surface, Texture, World};
 use unbound_gi::baked::light::{Kind, Light, Mode};
 use unbound_gi::baked::probes;
 use unbound_gi::baked::sampling::{self, Samples};
+use unbound_gi::baked::seams::{self, EdgePair};
 use unbound_gi::baked::shadowmask;
 use unbound_gi::baked::sky::{IMPORTANCE_DIRECTIONS, Importance, Sky};
 use unbound_gi::baked::trace::Scene;
@@ -344,6 +345,9 @@ struct Renderer {
     casts_shadows: bool,
     #[serde(default = "yes")]
     receives_shadows: bool,
+    /// Stitch Seams (MeshRenderer.stitchLightmapSeams).
+    #[serde(default)]
+    stitch_seams: bool,
     parameters: Parameters,
 }
 
@@ -546,6 +550,7 @@ impl<'a> Buffers<'a> {
         directional: bool,
         backface_tolerance: f32,
         padding: u32,
+        stitched: &[(&[EdgePair], [f32; 4])],
     ) -> Result<()> {
         let index = self.lightmaps.len();
         self.write(format!("occupancy{index}.u8"), g.occupancy.clone())?;
@@ -639,7 +644,7 @@ impl<'a> Buffers<'a> {
         }
         // The lightmap the bake makes of them.
         let used: Vec<bool> = g.occupancy.iter().map(|&o| o > 0).collect();
-        let lightmap = composite::composite(
+        let mut lightmap = composite::composite(
             &composite::Buffers {
                 width: g.width,
                 height: g.height,
@@ -652,6 +657,19 @@ impl<'a> Buffers<'a> {
             backface_tolerance,
             padding,
         );
+        // Then the seams of the renderers that stitch them: red, green and blue, as high as
+        // they go.
+        for (pairs, scale_offset) in stitched {
+            seams::stitch(
+                &mut lightmap,
+                g.width,
+                g.height,
+                pairs,
+                *scale_offset,
+                3,
+                f32::MAX,
+            );
+        }
         self.write(
             format!("lightmap{index}.f32"),
             lightmap
@@ -848,6 +866,19 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
         // left without one is baked instead.
         let channels = shadowmask::assign(&mut baked_lights, mixed == MixedMode::Shadowmask);
         let baked: Vec<&Renderer> = taken.iter().map(|&i| &request.renderers[i]).collect();
+        // The seams of each mesh a renderer stitches, found once per mesh in its own space.
+        let mut seams_of: std::collections::HashMap<usize, Vec<EdgePair>> = Default::default();
+        for r in baked.iter().filter(|r| r.stitch_seams) {
+            seams_of.entry(r.mesh).or_insert_with(|| {
+                let mesh = &meshes[r.mesh];
+                seams::edge_pairs(
+                    &mesh.positions,
+                    &mesh.normals,
+                    mesh.lightmap_uvs(),
+                    mesh.submeshes.iter().flatten().copied(),
+                )
+            });
+        }
         let groups = probe_points(&request.probes);
         let points = groups.concat();
         // Which lights a surface of the scene or a probe takes at a bounce: the light grid over
@@ -1008,6 +1039,21 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     },
                 )
             });
+            // The renderers whose seams are stitched in this lightmap, in the bake's order (the
+            // Editor stitches them in parallel; where two read the same texels the result is
+            // not measured).
+            let stitched: Vec<(&[EdgePair], [f32; 4])> = members
+                .iter()
+                .filter(|&&k| {
+                    baked[k].stitch_seams && baked[k].scale_in_lightmap > 0.0 && !baked[k].probe_lit
+                })
+                .map(|&k| {
+                    (
+                        seams_of[&baked[k].mesh].as_slice(),
+                        layout.placements[k].scale_offset,
+                    )
+                })
+                .collect();
             written.lightmap(
                 &g,
                 &members,
@@ -1017,6 +1063,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 request.directional,
                 parameters.back_face_tolerance,
                 request.padding.max(0) as u32,
+                &stitched,
             )?;
         }
         let described = bounce.as_ref().map_or(Json::Null, |b| {

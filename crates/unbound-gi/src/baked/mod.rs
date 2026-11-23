@@ -2,7 +2,8 @@
 //! Progressive CPU lightmapper makes of a scene: the layout of its lightmaps ([`atlas`]), each
 //! lightmap's texels ([`gbuffer`], rasterized by [`raster`]), the direct light of its lights
 //! on them ([`direct`], [`light`], shadowed through [`trace`]) and the light that reaches them
-//! from other surfaces ([`indirect`], with the rays of [`sampling`]).
+//! from other surfaces ([`indirect`], with the rays of [`sampling`]), and the lightmap made of them
+//! ([`composite`], its seams stitched by [`seams`]).
 pub mod atlas;
 pub mod composite;
 pub mod direct;
@@ -15,6 +16,7 @@ pub mod light;
 pub mod probes;
 pub mod raster;
 pub mod sampling;
+pub mod seams;
 pub mod shadowmask;
 pub mod sky;
 mod spooky;

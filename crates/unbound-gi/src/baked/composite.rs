@@ -3,9 +3,8 @@
 //! used texel's direct, indirect and sky's light summed; the texels too many of whose rays met a
 //! back face (Lightmap Parameters' Backface Tolerance) given their neighbours' light instead;
 //! and the texels around the charts given their neighbours' light, as many texels out as the
-//! Lighting Settings' padding, so that filtering at a chart's edge reads the chart's light. Not
-//! made: the stitching of seams (texels along a renderer's UV seams and their neighbours), the
-//! texels further out.
+//! Lighting Settings' padding, so that filtering at a chart's edge reads the chart's light. The
+//! seams are stitched afterwards ([`super::seams`]). Not made: the texels further out.
 
 /// Light from these neighbours (the eight around a texel).
 const AROUND: [(isize, isize); 8] = [

@@ -224,7 +224,7 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
   texels then hold light for the next); the texels around the charts take their neighbours'
   light the same way, as many rings as the Lighting Settings' padding (alpha 1; the texels
   further out have alpha 0); and the seams of a renderer's UVs are stitched (the texels along
-  them and beside them change), which Unbound does not do.
+  them and beside them change; every renderer here has Stitch Seams on).
 - `probes.json`, the bake's light probes: their number, their points as the bake has them and
   the samples it gives them (null without probes); `radianceDirect0.shl2` and
   `radianceIndirect0.shl2`, per probe the nine coefficients of the direct light and of the
@@ -273,10 +273,9 @@ light within 3.1e-3 (times the value above 1: the direct light's tolerance and t
 indirect light's, for the three buffers summed, and one half-float step); but the texels whose
 light in the Editor's lightmap is not what the rules above make of its own buffers
 (`bake_buffers.py` `composite`) are those the stitching of seams changed (along the seams of
-the primitives' UVs, inside charts too, as at the sphere's poles), which Unbound does not do:
-they are compared with what the rules make of the Editor's buffers instead, counted (`lightmaps:
-N texels the Editor stitched`), and must lie within two texels of a chart's edge (another
-chart, an unused texel or the image's edge). The rules are
+the primitives' UVs, inside charts too, as at the sphere's poles): compared alike, counted
+(`lightmaps: N texels the Editor stitched`), and they must lie within two texels of a chart's
+edge (another chart, an unused texel or the image's edge). The rules are
 the reference's own: a texel whose rays met back faces at most a tenth of the time keeps its
 light (1740 such texels here, all but 37 of them, those by seams, as the rules make them), and
 the scene without seams (`Charts`) has no texel the rules do not make. A bake that keeps no
