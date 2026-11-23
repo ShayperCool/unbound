@@ -42,7 +42,10 @@ namespace UnityEngine.UIElements
         /// <summary>The outline and shadow of an element's distance field text, in TextCore's units
         /// (UIR's TextCoreSettings): the outline width and the shadow's offset and blur in pixels of
         /// the element's font size, as fractions of the font asset's atlas padding at its point size,
-        /// each within one padding; an outline of no width has no colour.</summary>
+        /// each within one padding. Text with none of the three keeps the default settings, whatever
+        /// its shadow colour. An outline of no width has no colour; on an Alpha8 atlas the outline
+        /// colour is premultiplied by its alpha (the shader adds it to a premultiplied face), the
+        /// shadow colour is not.</summary>
         internal static Unbound.UIElements.UaTextCoreSettings TextCoreSettings(VisualElement ve)
         {
             var fontAsset = UITKTextHandle.GetFontAsset(ve);
@@ -51,16 +54,28 @@ namespace UnityEngine.UIElements
             float factor = TextHandle.ConvertPixelUnitsToTextCoreRelativeUnits(style.fontSize.value, fontAsset);
             var shadow = style.textShadow;
             float outlineWidth = Mathf.Clamp(style.unityTextOutlineWidth * factor, 0f, 1f);
+            float softness = Mathf.Clamp(shadow.blurRadius * factor, 0f, 1f);
+            var offset = new Vector2(Mathf.Clamp(shadow.offset.x * factor, -1f, 1f), Mathf.Clamp(shadow.offset.y * factor, -1f, 1f));
+            if (outlineWidth == 0f && offset == Vector2.zero && softness == 0f) return default;
+            var faceColor = style.color;
             var outlineColor = style.unityTextOutlineColor;
-            if (outlineWidth < 1e-5f) outlineColor.a = 0f;
+            if (outlineWidth < 1e-30f) outlineColor.a = 0f;
+            if (fontAsset.material != null && fontAsset.material.mainTexture is Texture2D atlas && atlas.format != TextureFormat.Alpha8)
+                faceColor = new Color(1f, 1f, 1f, faceColor.a);
+            else
+            {
+                outlineColor.r *= outlineColor.a;
+                outlineColor.g *= outlineColor.a;
+                outlineColor.b *= outlineColor.a;
+            }
             return new Unbound.UIElements.UaTextCoreSettings
             {
-                faceColor = style.color,
+                faceColor = faceColor,
                 outlineColor = outlineColor,
                 outlineWidth = outlineWidth,
                 underlayColor = shadow.color,
-                underlayOffset = new Vector2(Mathf.Clamp(shadow.offset.x * factor, -1f, 1f), Mathf.Clamp(shadow.offset.y * factor, -1f, 1f)),
-                underlaySoftness = Mathf.Clamp(shadow.blurRadius * factor, 0f, 1f),
+                underlayOffset = offset,
+                underlaySoftness = softness,
             };
         }
 

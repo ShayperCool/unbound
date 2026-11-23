@@ -53,7 +53,16 @@ namespace UnityEngine.Tests
                 Assert.Equal(new Vector2(1f, 0f), s.underlayOffset);
                 Assert.Equal(1f, s.underlaySoftness);
                 Assert.Equal(0f, s.outlineWidth);
-                Assert.Equal(new Color(0f, 0f, 1f, 0f), s.outlineColor);
+                Assert.Equal(new Color(0f, 0f, 0f, 0f), s.outlineColor);
+
+                // On a distance field (Alpha8) atlas a translucent outline colour is premultiplied, the shadow's is not.
+                label.style.unityTextOutlineWidth = 0.6f;
+                label.style.unityTextOutlineColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+                label.style.textShadow = new TextShadow { offset = new Vector2(3f, 3f), color = new Color(1f, 0f, 0f, 0.5f) };
+                panel.ApplyStyles();
+                s = TextElement.TextCoreSettings(label);
+                Assert.Equal(new Color(0.25f, 0.25f, 0.25f, 0.5f), s.outlineColor);
+                Assert.Equal(new Color(1f, 0f, 0f, 0.5f), s.underlayColor);
             }
             finally
             {
@@ -63,11 +72,16 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void PlainTextHasTheDefaultSettings()
+        public void TextWithoutOutlineWidthShadowOffsetOrBlurHasTheDefaultSettings()
         {
             var (panel, label, font) = Setup();
             try
             {
+                panel.ApplyStyles();
+                Assert.True(TextElement.TextCoreSettings(label).IsDefault);
+                // A shadow colour without offset or blur (and no outline width) draws nothing.
+                label.style.textShadow = new TextShadow { color = Color.black };
+                label.style.unityTextOutlineColor = Color.red;
                 panel.ApplyStyles();
                 Assert.True(TextElement.TextCoreSettings(label).IsDefault);
             }
