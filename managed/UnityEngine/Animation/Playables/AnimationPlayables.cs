@@ -157,9 +157,10 @@ namespace Unbound.Runtime.Playables
         /// clip's body read whole (<see cref="Unbound.Runtime.Humanoid.HumanRootMotion.ReadRoot"/>:
         /// the identity's components for the RootQ curves it lacks, normalized), so a clip with
         /// some or none of them blends as a rotation (bodyGraph.partial, bodyGraph.w,
-        /// bodyGraph.none, bodyGraph.layerPartial); a goal it has no curve for is the identity
-        /// (which <see cref="AnimationEvaluation.GoalsToMotion"/> then places at the clip's
-        /// body). The muscles and translations it lacks are at rest already
+        /// bodyGraph.none, bodyGraph.layerPartial). Missing goal components come from the clip's
+        /// defaults, mirrored along with the curves, before the goals are placed at the body
+        /// (<see cref="AnimationEvaluation.GoalsToMotion"/>). The muscles and translations it
+        /// lacks are at rest already
         /// (<see cref="ClipSampling.CompleteHuman"/>).</summary>
         void WholeHuman(AnimationEvaluation e, AnimStream into, float clipTime)
         {
@@ -172,7 +173,7 @@ namespace Unbound.Runtime.Playables
                 if (present[curve]) continue;
                 int c = b.HumanChannel(curve);
                 if (c < 0 || c >= into.FloatCount) continue;
-                into.Values[c] = Unbound.Runtime.Humanoid.AnimatorHuman.DefaultValue(curve);
+                into.Values[c] = Clip.HumanGoalDefault(curve);
                 into.Set(c);
             }
         }

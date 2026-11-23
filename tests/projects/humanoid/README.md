@@ -368,7 +368,7 @@ does the same, measured outside the reference), where the Editor's
 stance values step with the distance (body up to 3.3e-3, a straight leg's twist muscle up to
 1.5e-2 by update 28). `stream.stanceInPlace` (recorded last, built in `HumanoidBones.cs`) is
 the same job without root motion applied, so that the Animator stays at the origin: there every
-value matches. `mirror-no-goals`: `apiCurves.mirrorFootIK`, see below.
+value matches.
 `readback-solve-straight-limbs` is bounded instead of listed (its `bounds` and `sums`, see
 compare.py): in `bone.rotateThenSolve` and `bone.solveTwice`, the arm roll muscles 41 and 43 and
 the left foot's 26 and 27 within 1e-2 each, the roll muscles' sum within 1e-4 of the Editor's on
@@ -383,9 +383,18 @@ graph on HumanA, and the mirrored clip with foot IK (`mirrorFootIK`). The Editor
 bindings are the Animator's, the muscles and the body play, and the mirrored clip moves the right
 arm and thumb. These records come from two identical captures of the macOS Editor; the rest of
 those captures differ from the Linux reference in 287 values beyond the comparator's tolerance
-(root motion velocities, IK, the stance drift, one pivot), so only these records were added. With
-foot IK on, the mirrored clip's legs (it has no goal curves) differ from Unbound's: those values
-are the known class `mirror-no-goals`.
+(root motion velocities, IK, the stance drift, one pivot), so only these records were added.
+
+Thirteen additional controls append 115 rows from a matching pair of macOS 6000.0.71f1 Editor
+captures. The sampled goal rotation fills any missing components from the identity before
+mirroring. When the entire rotation is missing, its W moves to Y for feet and to Z for hands.
+Partial foot and hand rotations follow the same mapping. The controls include a fully authored
+foot rotation, a foot position with an omitted rotation, and Foot IK through a clip, a controller
+playable, a mirrored state and an attached controller. The original `mirrorFootIK` control now
+matches within the comparator's existing tolerance and is checked with the other controls.
+Families without measured defaults still report the fallback.
+[Animation tab](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AnimationClip.html),
+[AnimationHumanStream.GetGoalLocalPosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationHumanStream.GetGoalLocalPosition.html).
 
 After changing the rigs, regenerate them (`blender -b --factory-startup --python
 tests/projects/humanoid/make_models.py`), let the Editor configure them in a copy of the project

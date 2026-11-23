@@ -94,35 +94,68 @@ namespace UnityEngine.Tests
             return 0;
         }
 
-        /// <summary>A mirrored humanoid clip without a foot's goal curves reports that played
-        /// with Foot IK its legs differ from the Editor's (tests/projects/humanoid apiCurves.mirrorFootIK;
-        /// the warning itself is logged once per run). Control: the unmirrored clip does not.</summary>
         [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public void AMirroredClipWithoutFootGoalsReportsIt(bool mirror)
+        [InlineData(TestRelease.Measured, true, false)]
+        [InlineData(TestRelease.Unmeasured, true, true)]
+        [InlineData(TestRelease.Unmeasured, false, false)]
+        public void AMirroredClipWithoutFootGoalsReportsUnmeasuredDefaults(string release, bool mirror, bool reports)
         {
+            using var pin = TestRelease.Pin(release);
+            var clip = Clip(false, mirror);
+            m_Created.Add(clip);
             int before = Hits(MirroredWithoutFootGoals);
-            Muscles(Clip(false, mirror));
-            Assert.Equal(mirror ? before + 1 : before, Hits(MirroredWithoutFootGoals));
+            Muscles(clip);
+            Assert.Equal(reports ? before + 1 : before, Hits(MirroredWithoutFootGoals));
         }
 
-        /// <summary>A mirrored clip with one foot's goal curves reports it too (unmeasured); with
-        /// both feet's goals it does not.</summary>
         [Theory]
-        [InlineData(true, false, true)]
-        [InlineData(true, true, false)]
-        public void AMirroredClipReportsWhenAFootLacksItsGoals(bool left, bool right, bool reports)
+        [InlineData(TestRelease.Measured, false, false)]
+        [InlineData(TestRelease.Unmeasured, false, true)]
+        [InlineData(TestRelease.Unmeasured, true, false)]
+        public void AClipWithOneFootGoalReportsItWhenItsMirrorDefaultsAreUnmeasured(
+            string release, bool both, bool reports)
         {
+            using var pin = TestRelease.Pin(release);
             var clip = Clip(false, false);
-            if (left) clip.SetCurve("", typeof(Animator), "LeftFootQ.w", AnimationCurve.Constant(0f, 1f, 1f));
-            if (right) clip.SetCurve("", typeof(Animator), "RightFootT.y", AnimationCurve.Constant(0f, 1f, 0.1f));
+            m_Created.Add(clip);
+            clip.SetCurve("", typeof(Animator), "LeftFootQ.w", AnimationCurve.Constant(0f, 1f, 1f));
+            if (both) clip.SetCurve("", typeof(Animator), "RightFootT.y", AnimationCurve.Constant(0f, 1f, 0.1f));
             var settings = AnimationUtility.GetAnimationClipSettings(clip);
             settings.mirror = true;
             AnimationUtility.SetAnimationClipSettings(clip, settings);
             int before = Hits(MirroredWithoutFootGoals);
             _ = clip.humanMotion;
             Assert.Equal(reports ? before + 1 : before, Hits(MirroredWithoutFootGoals));
+        }
+
+        [Fact]
+        public void APoseStreamMirrorsTheMissingComponentsOfFootAndHandGoalRotations()
+        {
+            using var pin = TestRelease.Pin(TestRelease.Measured);
+            var clip = Clip(false, false);
+            m_Created.Add(clip);
+            clip.SetCurve("", typeof(Animator), "LeftFootQ.y", AnimationCurve.Constant(0f, 1f, .2f));
+            clip.SetCurve("", typeof(Animator), "LeftHandQ.x", AnimationCurve.Constant(0f, 1f, .2f));
+            var settings = AnimationUtility.GetAnimationClipSettings(clip);
+            settings.mirror = true;
+            AnimationUtility.SetAnimationClipSettings(clip, settings);
+
+            var root = AnimationHumanStreamTests.Humanoid(out var animator);
+            m_Created.Add(root);
+            m_Created.Add(animator.avatar);
+            animator.applyRootMotion = false;
+            Quaternion foot = default, hand = default;
+            var graph = AnimationHumanStreamTests.Graph(animator, (stream, _) =>
+            {
+                var pose = stream.AsHuman();
+                foot = pose.GetGoalLocalRotation(AvatarIKGoal.RightFoot);
+                hand = pose.GetGoalLocalRotation(AvatarIKGoal.RightHand);
+            }, clip);
+            try { graph.Evaluate(0f); }
+            finally { graph.Destroy(); }
+
+            Assert.True(Quaternion.Angle(new Quaternion(0f, 1f, 0f, .2f).normalized, foot) < .1f);
+            Assert.True(Quaternion.Angle(new Quaternion(0f, -.2f, 1f, 0f).normalized, hand) < .1f);
         }
 
         /// <summary>Control: a Transform curve set through SetCurve stays a Transform curve, and a

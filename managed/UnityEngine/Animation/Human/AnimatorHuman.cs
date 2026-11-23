@@ -215,7 +215,7 @@ namespace Unbound.Runtime.Humanoid
             {
                 // The body relative to its motion takes the clip's loop pose; a looping clip's body
                 // goes on with its motion across whole cycles (tests/projects/humanoid additiveLoopPose).
-                var x = HumanRootMotion.MotionX(motion, body.t, body.q, motion.HeightFromFeet ? HumanRootMotion.FeetY(m_Current, clip.HumanPresent, body) : 0f);
+                var x = HumanRootMotion.MotionX(motion, body.t, body.q, motion.HeightFromFeet ? HumanRootMotion.FeetY(m_Current, body) : 0f);
                 var relative = HumanRootMotion.LoopBlend(motion, M.InvMul(x, body), time);
                 if (cycle != 0f) x = HumanRootMotion.CycleX(x, motion.MotionStartX, motion.MotionStopX, (int)cycle);
                 body = M.Mul(x, relative);

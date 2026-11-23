@@ -12,8 +12,8 @@ namespace Unbound.Runtime.Humanoid
     /// A clip's goal curves are relative to its body; a controller blends goals in
     /// the motion's frame, each clip's goals placed by that clip's own body (relative to its
     /// motion) before any weight applies, so the states of a transition, a blend tree's clips and
-    /// override layers all blend placed goals (goals.*, footIKTransition). A goal the clip has no
-    /// curve for is the identity, so it is placed at the clip's body.
+    /// override layers all blend placed goals (goals.*, footIKTransition). Missing goal components
+    /// take the clip's defaults before placement, with the same mirror as the curves.
     /// A state's clips (a blend tree's) blend among themselves first and the layer then blends its
     /// states: a goal's rotation is the normalized sum of the state's clips, each in the
     /// hemisphere of the ones before, before a transition blends it with another state's
@@ -66,11 +66,11 @@ namespace Unbound.Runtime.Humanoid
         }
 
         /// <summary>Starts a clip whose body relative to its motion is <paramref name="body"/>:
-        /// its body curves and every goal the identity until the sampler hands their values over.</summary>
-        internal void BeginClip(in Trs body)
+        /// its body curves and goals take the clip's defaults until the sampler writes values.</summary>
+        internal void BeginClip(in Trs body, UnityEngine.AnimationClip clip)
         {
             m_Body = body;
-            for (int i = 0; i < Curves; i++) m_Values[i] = i % Width == Width - 1 ? 1f : 0f;
+            for (int i = 0; i < Curves; i++) m_Values[i] = clip.HumanGoalDefault(First + i);
             for (int i = 0; i < Width; i++) m_BodyValues[i] = i == Width - 1 ? 1f : 0f;
         }
 

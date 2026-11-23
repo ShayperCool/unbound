@@ -49,7 +49,7 @@ namespace UnityEngine.Tests
             var v = new float[HumanClipImport.CurveCount];
             Sample(t, v);
             var body = HumanRootMotion.ReadRoot(v, Present);
-            return HumanRootMotion.MotionX(clip, body.t, body.q, HumanRootMotion.FeetY(v, Present, body));
+            return HumanRootMotion.MotionX(clip, body.t, body.q, HumanRootMotion.FeetY(v, body));
         }
 
         /// <summary>A muscle curve as imported clips bind it (the Animator, path "").</summary>

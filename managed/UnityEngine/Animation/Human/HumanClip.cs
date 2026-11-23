@@ -88,12 +88,24 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>The muscle curves' values at a clip time.</summary>
+        /// <summary>Fills a missing goal component from the identity in the source clip's frame.</summary>
+        internal float HumanGoalDefault(int curve)
+        {
+            if (!m_HumanMirrored || !Compat.HumanClipMirroredGoalDefaults) return AnimatorHuman.DefaultValue(curve);
+            // The mirror mapping is its own inverse. A missing output component takes the
+            // default of the input component it comes from, with the same sign as its keys.
+            int source = HumanClipImport.MirrorCurve[curve];
+            return source < 0 ? -AnimatorHuman.DefaultValue(~source) : AnimatorHuman.DefaultValue(source);
+        }
+
+        /// <summary>The humanoid curve values at a clip time, including defaults for missing curves.</summary>
         internal void SampleHuman(float time, float[] values)
         {
             var curves = HumanCurves;
             for (int i = 0; i < curves.Length; i++)
-                values[i] = curves[i] != null ? curves[i].Evaluate(time) : Unbound.Runtime.Humanoid.AnimatorHuman.DefaultValue(i);
+                values[i] = curves[i] != null ? curves[i].Evaluate(time)
+                    : i >= HumanClipImport.GoalFirst && i < HumanClipImport.MuscleFirst ? HumanGoalDefault(i)
+                    : AnimatorHuman.DefaultValue(i);
         }
 
         /// <summary>The clip's root motion constants (humanoid clips).</summary>
@@ -143,7 +155,7 @@ namespace UnityEngine
             // SampleHuman refreshed the curves for this version: the constants are current if built.
             var motion = m_HumanClipMotion ?? HumanClipMotion;
             var body = HumanRootMotion.ReadRoot(values, present);
-            var x = HumanRootMotion.MotionX(motion, body.t, body.q, motion.HeightFromFeet ? HumanRootMotion.FeetY(values, present, body) : 0f);
+            var x = HumanRootMotion.MotionX(motion, body.t, body.q, motion.HeightFromFeet ? HumanRootMotion.FeetY(values, body) : 0f);
             return (new Vector3(x.t.x, x.t.y, x.t.z), new Quaternion(x.q.x, x.q.y, x.q.z, x.q.w));
         }
 
@@ -189,14 +201,10 @@ namespace UnityEngine
             if (m_HumanMirrored == m_Mirror || (m_HumanAvatar != null && !m_HumanConverted)) return;
             m_HumanMirrored = m_Mirror;
             MirrorHumanCurves();
-            if (m_Mirror) NoteMirroredWithoutFootGoals();
+            if (m_Mirror && !Compat.HumanClipMirroredGoalDefaults) NoteMirroredWithoutFootGoals();
         }
 
-        /// <summary>Says once, when a humanoid clip without a foot's goal curves is mirrored, that
-        /// played with Foot IK it places its legs differently from the Editor (6000.0.71f1, an exploratory capture
-        /// of tests/projects/humanoid apiCurves.mirror with foot IK, kept as the known class
-        /// mirror-no-goals of apiCurves.mirrorFootIK: leg muscles and the body position differ,
-        /// the unmirrored clip matches; the cause is not found).</summary>
+        /// <summary>Reports missing goal defaults for mirrored clips in unmeasured release families.</summary>
         void NoteMirroredWithoutFootGoals()
         {
             bool any = false, left = false, right = false;
@@ -211,7 +219,7 @@ namespace UnityEngine
             // Only the clip without either foot's goals is measured; one foot's goals alone is not.
             if (any && !(left && right))
                 Unbound.Runtime.Stubs.Ignored("AnimationClip mirrored humanoid clip without foot goal curves",
-                    "places its legs differently from the Editor if played with Foot IK (measured without either foot's goals, not matched)");
+                    "uses unmirrored defaults for the missing goal components in this Unity release family; Foot IK can place the legs differently");
         }
 
         AnimationClip m_StateMirrored;
@@ -275,7 +283,7 @@ namespace UnityEngine
             }
             if (changed) m_Version++;
             // A goal rotation's components trade places: one without all four curves mixes in defaults.
-            if (Array.Exists(goalRotations, n => n != 0 && n != 4))
+            if (!Compat.HumanClipMirroredGoalDefaults && Array.Exists(goalRotations, n => n != 0 && n != 4))
                 Unbound.Runtime.Stubs.Ignored("AnimationClip mirrored humanoid goal rotation without all four curves",
                     "a mirrored humanoid clip's goal rotation with some of its curves takes the defaults for the others before mirroring (not measured)");
         }

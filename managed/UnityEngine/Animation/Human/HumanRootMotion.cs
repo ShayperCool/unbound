@@ -85,10 +85,10 @@ namespace Unbound.Runtime.Humanoid
             // feetNoGoals, feetLeftGoal).
             sample(start, values);
             m.StartRootX = HumanRootMotion.ReadRoot(values, present);
-            float startFeet = HumanRootMotion.FeetY(values, present, m.StartRootX);
+            float startFeet = HumanRootMotion.FeetY(values, m.StartRootX);
             sample(stop, values);
             m.StopRootX = HumanRootMotion.ReadRoot(values, present);
-            float stopFeet = HumanRootMotion.FeetY(values, present, m.StopRootX);
+            float stopFeet = HumanRootMotion.FeetY(values, m.StopRootX);
 
             // Based upon the original: the motion starts at the origin (XZ, Y) or facing forward
             // (rotation) and follows the body from there; otherwise it is the body's (center of
@@ -253,13 +253,13 @@ namespace Unbound.Runtime.Humanoid
         }
 
         /// <summary>A goal of a clip's curve values (0 left foot, 1 right foot, 2 left hand, 3 right
-        /// hand): position, normalized rotation, scale 1.</summary>
-        public static Trs ReadGoal(float[] v, bool[] present, int goal)
+        /// hand), after the sampler has filled missing components: position, normalized rotation,
+        /// scale 1.</summary>
+        public static Trs ReadGoal(float[] v, int goal)
         {
             int c = GoalFirst + 7 * goal;
-            float V(int i, float missing) => present[c + i] ? v[c + i] : missing;
-            var t = new F4(V(0, 0f), V(1, 0f), V(2, 0f), 0f);
-            var q = M.QNormalize(new F4(V(3, 0f), V(4, 0f), V(5, 0f), V(6, 1f)));
+            var t = new F4(v[c], v[c + 1], v[c + 2], 0f);
+            var q = M.QNormalize(new F4(v[c + 3], v[c + 4], v[c + 5], v[c + 6]));
             return new Trs(t, q, F4.One3);
         }
 
@@ -278,8 +278,8 @@ namespace Unbound.Runtime.Humanoid
         }
 
         /// <summary>The height of a clip's lowest foot goal (clip space) for the body <paramref name="root"/>.</summary>
-        public static float FeetY(float[] v, bool[] present, in Trs root) =>
-            MathF.Min(M.Mul(root, ReadGoal(v, present, 0)).t.y, M.Mul(root, ReadGoal(v, present, 1)).t.y);
+        public static float FeetY(float[] v, in Trs root) =>
+            MathF.Min(M.Mul(root, ReadGoal(v, 0)).t.y, M.Mul(root, ReadGoal(v, 1)).t.y);
 
         /// <summary>The motion of a body: its position (with the root position Y based upon the feet,
         /// the lowest foot's height <paramref name="feetY"/>) plus the clip's offset, its yaw turned
@@ -380,8 +380,8 @@ namespace Unbound.Runtime.Humanoid
 
             var cur = ReadRoot(current, present);
             var prev = ReadRoot(previous, present);
-            var curX = MotionX(clip, cur.t, cur.q, clip.HeightFromFeet ? FeetY(current, present, cur) : 0f);
-            var prevX = MotionX(clip, prev.t, prev.q, clip.HeightFromFeet ? FeetY(previous, present, prev) : 0f);
+            var curX = MotionX(clip, cur.t, cur.q, clip.HeightFromFeet ? FeetY(current, cur) : 0f);
+            var prevX = MotionX(clip, prev.t, prev.q, clip.HeightFromFeet ? FeetY(previous, prev) : 0f);
 
             // The body relative to the motion.
             var curConj = M.QConj(curX.q);
@@ -415,12 +415,12 @@ namespace Unbound.Runtime.Humanoid
             result.Body = body;
             result.Root = cur;
             result.ClipDeltaTime = clipDt;
-            result.LeftFoot = M.Mul(body, ReadGoal(current, present, 0));
-            result.RightFoot = M.Mul(body, ReadGoal(current, present, 1));
+            result.LeftFoot = M.Mul(body, ReadGoal(current, 0));
+            result.RightFoot = M.Mul(body, ReadGoal(current, 1));
             if (clipDt != 0f)
             {
-                result.LeftFootSlip = Slip(delta, result.LeftFoot, M.Mul(prevBody, ReadGoal(previous, present, 0)));
-                result.RightFootSlip = Slip(delta, result.RightFoot, M.Mul(prevBody, ReadGoal(previous, present, 1)));
+                result.LeftFootSlip = Slip(delta, result.LeftFoot, M.Mul(prevBody, ReadGoal(previous, 0)));
+                result.RightFootSlip = Slip(delta, result.RightFoot, M.Mul(prevBody, ReadGoal(previous, 1)));
             }
         }
 
@@ -442,8 +442,8 @@ namespace Unbound.Runtime.Humanoid
             if (clip.HasRootCurves)
             {
                 var start = ReadRoot(from, present);
-                var startX = MotionX(clip, start.t, start.q, clip.HeightFromFeet ? FeetY(from, present, start) : 0f);
-                var endX = MotionX(clip, root.t, root.q, clip.HeightFromFeet ? FeetY(to, present, root) : 0f);
+                var startX = MotionX(clip, start.t, start.q, clip.HeightFromFeet ? FeetY(from, start) : 0f);
+                var endX = MotionX(clip, root.t, root.q, clip.HeightFromFeet ? FeetY(to, root) : 0f);
                 var conj = M.QConj(endX.q);
                 body = LoopBlend(clip, new Trs(M.QRotate(conj, root.t - endX.t), M.QMul(conj, root.q), F4.One3), toTime);
                 if (clip.LoopTime) endX = CycleX(endX, clip.MotionStartX, clip.MotionStopX, (int)(toCycle - fromCycle));
@@ -452,7 +452,7 @@ namespace Unbound.Runtime.Humanoid
             if (target == 0) return motion;
             if (target == 1) return M.Mul(motion, body);
             int goal = target - 2;
-            var x = M.Mul(body, ReadGoal(to, present, goal));
+            var x = M.Mul(body, ReadGoal(to, goal));
             x.q = M.QNormalize(M.QMul(x.q, HumanIK.GoalOrientationOffset[goal]));
             return M.Mul(motion, x);
         }

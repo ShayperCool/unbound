@@ -1769,7 +1769,7 @@ namespace Unbound.Runtime
                         humanSample = m_HumanClipSamples.Count;
                         m_HumanClipSamples.Add(sample);
                         m_HumanClipShares.Add(weight / m_SamplingStateWeight);
-                        goals.BeginClip(sample.Body);
+                        goals.BeginClip(sample.Body, clip);
                     }
                     ClipSampling.Sample(bound, ClipSampling.ClipTime(clip, time, clip.isLooping), weight, pose, mask, objectMask,
                         layer.Def.Additive ? Bindings.AdditiveReference(bound) : null, loopPose: true, goals);
