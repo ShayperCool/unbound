@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/openforedithooks/run.py gate"
+  ],
+  "summary": "openforedithooks: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/AssetEditability.cs",
+    "managed/UnityEngine/Editor/AssetModificationProcessorInternal.cs",
+    "tests/projects/openforedit/",
+    "tests/projects/animatorapi/ProjectSettings/",
+    "tests/projects/animatorapi/Assets/Scenes/",
+    "tests/projects/animatorapi/Assets/Scenes.meta"
+  ]
+}
