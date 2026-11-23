@@ -91,15 +91,17 @@ def _by_renderer(objects):
     return out
 
 
+# Fields that identify (objects, files): compared exactly, also where they are numbers.
+IDENTIFYING = {'targetObject', 'targetPrefab', 'fileID', 'm_FileID', 'm_PathID', 'guid', 'lightmapIndex', 'lightmapIndexDynamic'}
+
+
 def lighting_data_difference(got, want, tolerance):
-    """None, or how two lighting data's fields (as `lighting_data_fields` gives them) differ: the
-    renderer entries by renderer, numbers within `tolerance` times the value above 1, the rest
-    exactly. (At most a few differences are named.)"""
+    """None, or every way two lighting data's fields (as `lighting_data_fields` gives them)
+    differ: the renderer entries by renderer, identifying fields exactly, other numbers within
+    `tolerance` times the value above 1, the rest exactly."""
     problems = []
 
     def walk(a, b, path):
-        if len(problems) >= 6:
-            return
         if isinstance(b, dict):
             if not isinstance(a, dict) or a.keys() != b.keys():
                 problems.append(f'{path}: keys {sorted(a) if isinstance(a, dict) else a!r}, expected {sorted(b)}')
@@ -112,6 +114,8 @@ def lighting_data_difference(got, want, tolerance):
                 return
             for k, (x, y) in enumerate(zip(a, b)):
                 walk(x, y, f'{path}[{k}]')
+        elif a != b and path.rsplit('/', 1)[-1] in IDENTIFYING:
+            problems.append(f'{path}: {a!r}, expected {b!r}')
         elif a != b:
             try:
                 x, y = float(a), float(b)

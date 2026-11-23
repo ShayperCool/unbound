@@ -135,23 +135,28 @@ namespace UnityEngine
                 Debug.LogWarning("Some meshes have invalid normals and will be ignored by the Global Illumination system.");
             foreach (var size in root.GetProperty("lightmaps").EnumerateArray())
                 lightmaps.Add(new[] { size[0].GetInt32(), size[1].GetInt32() });
+            var entries = new List<object>();
+            foreach (var (path, fileId, lightmap, scaleOffset) in Placed(root, sent))
+                entries.Add(new { path, fileId, lightmap, scaleOffset });
+            return entries;
+        }
+
+        /// <summary>The bake's renderers in its order (of those sent: their paths and file IDs),
+        /// each with its lightmap and scale and offset, from the native bake's answer.</summary>
+        internal static List<(string Path, long FileId, int Lightmap, float[] ScaleOffset)> Placed(JsonElement root, IReadOnlyList<(string Path, long FileId)> sent)
+        {
             var placements = root.GetProperty("placements");
             if (placements.GetArrayLength() != sent.Count) throw new InvalidOperationException($"{placements.GetArrayLength()} placements for {sent.Count} renderers");
-            var entries = new List<object>();
+            var placed = new List<(string, long, int, float[])>();
             foreach (var which in root.GetProperty("order").EnumerateArray())
             {
                 var (path, fileId) = sent[which.GetInt32()];
                 var p = placements[which.GetInt32()];
                 var st = p.GetProperty("scaleOffset");
-                entries.Add(new
-                {
-                    path,
-                    fileId,
-                    lightmap = p.GetProperty("lightmap").GetInt32(),
-                    scaleOffset = new[] { st[0].GetSingle(), st[1].GetSingle(), st[2].GetSingle(), st[3].GetSingle() },
-                });
+                placed.Add((path, fileId, p.GetProperty("lightmap").GetInt32(),
+                    new[] { st[0].GetSingle(), st[1].GetSingle(), st[2].GetSingle(), st[3].GetSingle() }));
             }
-            return entries;
+            return placed;
         }
 
         /// <summary>The folder the bake's texel buffers are written to, when set
@@ -176,7 +181,7 @@ namespace UnityEngine
 
         static readonly Func<Material, bool> s_Emits = Emits;
 
-        static readonly Action<string, string> s_Warn = Warn;
+        static readonly Action<string, string> s_Warn = Approximated;
 
         /// <summary>The sky a bake takes: the ambient source's six faces of
         /// <see cref="SkyFaceSize"/> texels a side, black where the environment's light goes to
@@ -207,7 +212,7 @@ namespace UnityEngine
             string blueNoise = Path.Combine(UnityEditor.EditorApplication.applicationContentsPath ?? "", BlueNoiseData);
             if (!File.Exists(blueNoise))
             {
-                Warn("bluenoise:" + path, $"{path}: the Unity installation has no {BlueNoiseData} ({blueNoise}); Unbound's bake (Lightmapping.Bake) makes no indirect light without it.");
+                Approximated("bluenoise:" + path, $"{path}: the Unity installation has no {BlueNoiseData} ({blueNoise}); Unbound's bake (Lightmapping.Bake) makes no indirect light without it.");
                 return null;
             }
             var placements = JsonDocument.Parse(layout).RootElement.GetProperty("placements");
@@ -243,7 +248,7 @@ namespace UnityEngine
                         var emissionBytes = Native.ReadPixels(emission.EnsureCreated(), 0, 0, width, height, true);
                         if (albedoBytes == null || emissionBytes == null)
                         {
-                            Warn("headless:" + path, $"{path}: Unbound's bake (Lightmapping.Bake) needs a GPU for its materials' meta passes; it makes no indirect light without one.");
+                            Approximated("headless:" + path, $"{path}: Unbound's bake (Lightmapping.Bake) needs a GPU for its materials' meta passes; it makes no indirect light without one.");
                             return null;
                         }
                         var shared = renderer.sharedMaterials;
@@ -353,6 +358,29 @@ namespace UnityEngine
         /// and left out or simplified: area lights, lights whose intensity multiplies their linear
         /// colour (GraphicsSettings.lightsUseLinearIntensity; not measured), cookies (ignored),
         /// soft baked shadows (a Baked Shadow Angle or Radius: baked hard).</summary>
+        /// <summary>Why a bake's lightmaps (and its lighting data) are not written, or null: a
+        /// renderer or light of a prefab instance (how the lighting data names it is not
+        /// measured: its IDs combine the instance's and the prefab's), part of their light left
+        /// out or approximated (said), no indirect light made, a light whose baking output is
+        /// not measured (a mixed light without shadows outside the Shadowmask Lighting Mode).</summary>
+        internal static string ImagesRefused(bool prefabs, bool approximated, bool indirectMade, bool lightsMeasured) =>
+            prefabs ? "a baked renderer or light of a prefab instance: how the lighting data names it is not measured"
+            : approximated || !indirectMade ? "it did not make all of the lightmaps' light (said)"
+            : !lightsMeasured ? "a mixed light without shadows outside the Shadowmask Lighting Mode: what the lighting data keeps of it is not measured"
+            : null;
+
+        /// <summary>Whether the bake under way leaves out or approximates part of its light (a
+        /// light it does not bake as the Editor does, the indirect light it cannot make): its
+        /// lightmaps are then not written into the project.</summary>
+        static bool s_Approximated;
+
+        /// <summary>Says once that the bake leaves out or approximates part of its light.</summary>
+        static void Approximated(string key, string message)
+        {
+            s_Approximated = true;
+            Warn(key, message);
+        }
+
         internal static List<object> Lights(LoadedFile file, string path)
         {
             var lights = new List<object>();
@@ -363,18 +391,18 @@ namespace UnityEngine
                 int kind = light.type == LightType.Directional ? 0 : light.type == LightType.Point ? 1 : light.type == LightType.Spot ? 2 : -1;
                 if (kind < 0)
                 {
-                    Warn("light-type:" + path + pair.Key, $"{path}: '{light.name}' is a {light.type} light, which Unbound's bake (Lightmapping.Bake) does not bake yet.");
+                    Approximated("light-type:" + path + pair.Key, $"{path}: '{light.name}' is a {light.type} light, which Unbound's bake (Lightmapping.Bake) does not bake yet.");
                     continue;
                 }
                 if (UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity)
                 {
-                    Warn("light-linear:" + path, $"{path}: lights whose intensity multiplies their linear colour (GraphicsSettings.lightsUseLinearIntensity) are not baked by Unbound's bake (Lightmapping.Bake) yet.");
+                    Approximated("light-linear:" + path, $"{path}: lights whose intensity multiplies their linear colour (GraphicsSettings.lightsUseLinearIntensity) are not baked by Unbound's bake (Lightmapping.Bake) yet.");
                     continue;
                 }
                 if (light.cookie != null)
-                    Warn("light-cookie:" + path + pair.Key, $"{path}: '{light.name}' has a cookie, which Unbound's bake (Lightmapping.Bake) does not apply yet.");
+                    Approximated("light-cookie:" + path + pair.Key, $"{path}: '{light.name}' has a cookie, which Unbound's bake (Lightmapping.Bake) does not apply yet.");
                 if ((kind == 0 ? light.shadowAngle : light.shadowRadius) > 0f && light.shadows != LightShadows.None)
-                    Warn("light-soft:" + path + pair.Key, $"{path}: '{light.name}' has soft baked shadows (its Baked Shadow {(kind == 0 ? "Angle" : "Radius")}), which Unbound's bake (Lightmapping.Bake) bakes hard yet.");
+                    Approximated("light-soft:" + path + pair.Key, $"{path}: '{light.name}' has soft baked shadows (its Baked Shadow {(kind == 0 ? "Angle" : "Radius")}), which Unbound's bake (Lightmapping.Bake) bakes hard yet.");
                 var t = light.transform;
                 Color direct = light.ScaledColor(light.intensity, linear: true), indirect = light.ScaledColor(light.intensity * light.bounceIntensity, linear: true);
                 Vector3 position = t.position;
@@ -416,6 +444,7 @@ namespace UnityEngine
         internal static BakeResult Lay(LoadedFile file, LightingSettings settings, bool images = false)
         {
             settings ??= UnityEditor.Lightmapping.lightingSettingsDefaults;
+            s_Approximated = false;
             string path = file.Path;
             string guid = string.IsNullOrEmpty(file.Guid) && Native.IsReady ? UnityEditor.AssetDatabase.AssetPathToGUID(path) : file.Guid;
             // The layout of an earlier bake is not this one's, whatever this one makes.
@@ -557,7 +586,21 @@ namespace UnityEngine
                     indirect = Indirect(path, settings, placed, Native.Call("baked-gi-bake", Request(true, null)));
                 var answer = Native.Call("baked-gi-bake", Request(false, indirect));
                 entries = Read(answer, paths, lightmaps);
-                if (images) result = BakeResult.Of(answer, paths);
+                // A renderer or light of a prefab instance: how the lighting data names it is not
+                // measured (its IDs combine the instance's and the prefab's), so none is written.
+                bool prefabs = false;
+                if (images)
+                {
+                    foreach (var (renderer, _) in placed) prefabs |= UnityEditor.PrefabUtility.IsPartOfPrefabInstance(renderer);
+                    foreach (var obj in file.Objects.Values)
+                        if (obj is Light light && light != null && light.lightmapBakeType != LightmapBakeType.Realtime)
+                            prefabs |= UnityEditor.PrefabUtility.IsPartOfPrefabInstance(light);
+                    var made = BakeResult.Of(answer, paths);
+                    string refused = ImagesRefused(prefabs, s_Approximated, indirect != null, made.LightsMeasured);
+                    if (refused != null)
+                        Warn("images:" + path, $"{path}: {refused}; Unbound's bake (Lightmapping.Bake) writes neither the lightmaps nor the lighting data.");
+                    else result = made;
+                }
             }
             catch (Exception e)
             {
@@ -587,6 +630,8 @@ namespace UnityEngine
         internal byte[][] Images;
         internal List<(long FileId, int Lightmap, float[] ScaleOffset)> Renderers;
         internal List<(long FileId, int BakeType, int MixedMode, int Channel, int ProbeIndex)> Lights;
+        /// <summary>Whether what the lighting data keeps of every light is measured.</summary>
+        internal bool LightsMeasured = true;
 
         internal static BakeResult Of(string answer, IReadOnlyList<(string Path, long FileId)> sent)
         {
@@ -595,17 +640,14 @@ namespace UnityEngine
             var images = root.GetProperty("images");
             result.Images = new byte[images.GetArrayLength()][];
             for (int i = 0; i < result.Images.Length; i++) result.Images[i] = Convert.FromBase64String(images[i].GetString());
-            var placements = root.GetProperty("placements");
-            foreach (var which in root.GetProperty("order").EnumerateArray())
-            {
-                var p = placements[which.GetInt32()];
-                var st = p.GetProperty("scaleOffset");
-                result.Renderers.Add((sent[which.GetInt32()].FileId, p.GetProperty("lightmap").GetInt32(),
-                    new[] { st[0].GetSingle(), st[1].GetSingle(), st[2].GetSingle(), st[3].GetSingle() }));
-            }
+            foreach (var (_, fileId, lightmap, scaleOffset) in BakedAtlas.Placed(root, sent))
+                result.Renderers.Add((fileId, lightmap, scaleOffset));
             foreach (var l in root.GetProperty("lights").EnumerateArray())
+            {
+                result.LightsMeasured &= l.GetProperty("measured").GetBoolean();
                 result.Lights.Add((l.GetProperty("fileId").GetInt64(), l.GetProperty("bakeType").GetInt32(), l.GetProperty("mixedMode").GetInt32(),
                     l.GetProperty("channel").GetInt32(), l.GetProperty("probeIndex").GetInt32()));
+            }
             return result;
         }
     }

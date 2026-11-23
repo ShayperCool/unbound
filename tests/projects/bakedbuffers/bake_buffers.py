@@ -961,6 +961,13 @@ def compare(label):
             want_fields = json.loads((reference_scene/'lightingData.json').read_text())
             record(scene + '.lightingData', 'not written' if not (mine/'LightingData.asset').is_file() else lighting_data_difference(
                 lighting_data_fields(mine/'LightingData.asset', mine, cli()), want_fields, LIGHTING_DATA_TOLERANCE))
+        elif (mine/'LightingData.asset').is_file():
+            record(scene + '.lightingData', 'written where the reference keeps none')
+        # Files Unbound wrote that the Editor's bake did not (by their .meta files).
+        kept = {m.name for m in (reference_scene/'written').glob('*.meta')} if (reference_scene/'written').is_dir() else set()
+        extra = sorted(m.name for m in mine.glob('*.meta') if m.name not in kept) if mine.is_dir() else []
+        if extra:
+            record(scene + '.written', f'written where the Editor writes none: {extra}')
         for meta in sorted((reference_scene/'written').glob('*.meta')) if (reference_scene/'written').is_dir() else []:
             got_meta = mine.with_suffix('.meta') if meta.name == 'folder.meta' else mine/meta.name
             record(scene + '.written/' + meta.name, 'not written' if not got_meta.is_file()

@@ -17,8 +17,8 @@ const LIGHT_PROBES_PATH_ID: i64 = 25_800_002;
 const SCENE_ASSET_PATH_ID: i64 = 102_900_000;
 /// The path ID of a cubemap imported from an image (a reflection probe's EXR).
 const CUBEMAP_PATH_ID: i64 = 8_900_000;
-/// A renderer's lightmap index for none.
-const NO_LIGHTMAP: &str = "65535";
+/// A renderer's dynamic (realtime) lightmap index for none.
+const NO_DYNAMIC_LIGHTMAP: &str = "65535";
 /// The path ID of an imported image's texture.
 const TEXTURE_PATH_ID: i64 = 2_800_000;
 /// A project asset in a file's list of external files.
@@ -250,7 +250,7 @@ pub fn baked(environment: &Environment, baked: &Baked) -> Result<Vec<u8>> {
         let mut entry = element_default(&types[data_type], "m_LightmappedRendererData")?;
         // As the Editor writes a renderer without realtime GI or terrain: no dynamic lightmap,
         // identity scale and offsets (tests/projects/bakedbuffers lightingData.json).
-        entry.set_field("lightmapIndexDynamic", Value::Scalar(NO_LIGHTMAP.into()))?;
+        entry.set_field("lightmapIndexDynamic", Value::Scalar(NO_DYNAMIC_LIGHTMAP.into()))?;
         for field in [
             "terrainDynamicUVST",
             "terrainChunkDynamicUVST",

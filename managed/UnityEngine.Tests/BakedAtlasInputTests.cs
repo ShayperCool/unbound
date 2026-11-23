@@ -116,6 +116,25 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ABakesLightmapsAreWrittenOnlyWhenItMadeAllOfTheirLight()
+        {
+            Assert.Null(BakedAtlas.ImagesRefused(prefabs: false, approximated: false, indirectMade: true, lightsMeasured: true));
+            Assert.Contains("prefab", BakedAtlas.ImagesRefused(true, false, true, true));
+            Assert.Contains("did not make", BakedAtlas.ImagesRefused(false, true, true, true));
+            Assert.Contains("did not make", BakedAtlas.ImagesRefused(false, false, false, true));
+            Assert.Contains("without shadows", BakedAtlas.ImagesRefused(false, false, true, false));
+            // The answer read: renderers in the bake's order, lights with their outputs.
+            const string answer = "{\"images\":[\"AAEC\"],\"placements\":[{\"lightmap\":0,\"scaleOffset\":[0.5,0.5,0,0]},{\"lightmap\":65534,\"scaleOffset\":[1,1,0,0]}],"
+                + "\"order\":[1,0],\"lights\":[{\"fileId\":7,\"bakeType\":1,\"mixedMode\":0,\"channel\":0,\"probeIndex\":1,\"measured\":false}]}";
+            var result = BakeResult.Of(answer, new List<(string, long)> { ("A", 11), ("B", 22) });
+            Assert.Equal(new byte[] { 0, 1, 2 }, result.Images[0]);
+            Assert.Equal(22, result.Renderers[0].FileId);
+            Assert.Equal(65534, result.Renderers[0].Lightmap);
+            Assert.False(result.LightsMeasured);
+            Assert.Equal((7L, 1, 0, 0, 1), result.Lights[0]);
+        }
+
+        [Fact]
         public void LightingSettingsReadFixedLightmapSize()
         {
             var settings = new LightingSettings();

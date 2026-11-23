@@ -89,10 +89,11 @@ namespace UnityEngine
                     NoteBakeParts(file, settings, ScriptBake);
                     SceneLoaded(scene.Handle.Value, default, file, settings, first, bake: true, scriptBake: true);
                     var environment = BakeEnvironment(file);
-                    // The lightmaps are made where their lighting data is written.
-                    bool lightmaps = settings != null && settings.bakedGI && !settings.realtimeGI && !HasProbeGroups(file)
-                        && settings.directionalityMode != LightmapsMode.CombinedDirectional && settings.mixedBakeMode != MixedLightingMode.Shadowmask
-                        && settings.lightmapCompression == LightmapCompression.None;
+                    // The lightmaps are made where their lighting data would be written (all else
+                    // given: the decision WriteLightingData makes with what the bake made).
+                    bool lightmaps = settings != null && settings.bakedGI && Native.IsReady
+                        && Unwritten(settings, FolderOf(scene), environment.Made, Rendering.GraphicsSettings.currentRenderPipeline != null,
+                            lightmapsMade: true, HasProbeGroups(file)) == null;
                     var baked = BakedAtlas.Lay(file, settings, images: lightmaps);
                     WriteLightingData(scene, file, settings, environment, lightmaps ? baked : null);
                     first = false;
@@ -266,6 +267,10 @@ namespace UnityEngine
             : !(editable ?? UnityEditor.AssetDatabase.Editable)(folder) ? "the scene is not in the project's own assets"
             : null;
 
+        /// <summary>The folder a bake writes its files to beside the scene (null: untitled).</summary>
+        static string FolderOf(Unbound.Runtime.SceneData scene) => string.IsNullOrEmpty(scene.Path) ? null
+            : scene.Path.Substring(0, scene.Path.Length - System.IO.Path.GetExtension(scene.Path).Length);
+
         /// <summary>Whether the scene has light probes a bake would bake (an active light probe
         /// group with probes).</summary>
         internal static bool HasProbeGroups(LoadedFile file)
@@ -303,7 +308,8 @@ namespace UnityEngine
                     importer.SaveAndReimport();
                 }
             }
-            for (int i = guids.Count; ; i++)
+            // (A bake of the environment alone leaves them: not measured.)
+            for (int i = guids.Count; baked != null; i++)
             {
                 string stale = folder + "/" + LightmapImage(i);
                 if (UnityEditor.AssetDatabase.AssetPathToGUID(stale).Length == 0) break;
@@ -353,8 +359,7 @@ namespace UnityEngine
             BakeResult baked = null)
         {
             scene.LightingDataWritten = false;
-            string folder = string.IsNullOrEmpty(scene.Path) ? null
-                : scene.Path.Substring(0, scene.Path.Length - System.IO.Path.GetExtension(scene.Path).Length);
+            string folder = FolderOf(scene);
             // (Without the native side, as in managed tests, nothing is made or written.)
             string unwritten = Unwritten(settings, folder, Native.IsReady && environment.Made, Rendering.GraphicsSettings.currentRenderPipeline != null,
                 baked?.Images is { Length: > 0 }, file != null && HasProbeGroups(file));
