@@ -8,6 +8,7 @@ namespace UnityEngine
         // Size of this subtree. Only the root owns the packed storage.
         int m_SubtreeCount = 1;
         int m_HierarchyCapacity = 1;
+        int m_LegacyHierarchyCapacity = 1;
         bool m_AllocatedHierarchy;
         int m_ReservedChildSlots;
 
@@ -29,13 +30,13 @@ namespace UnityEngine
 
         public int hierarchyCapacity
         {
-            get => HierarchyStorageOwner?.m_HierarchyCapacity ?? m_HierarchyCapacity;
+            get => HierarchyStorageOwner?.m_HierarchyCapacity ?? m_LegacyHierarchyCapacity;
             set
             {
                 var owner = HierarchyStorageOwner;
                 if (owner == null)
                 {
-                    m_HierarchyCapacity = value;
+                    m_LegacyHierarchyCapacity = value;
                     return;
                 }
                 int count = owner.m_SubtreeCount;
