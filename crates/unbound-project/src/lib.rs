@@ -1119,6 +1119,49 @@ mod tests {
     /// A project on an earlier 6000.0 patch compiles against its own installation, which may
     /// lack engine modules the profile's release has: their defines follow the installation.
     #[test]
+    fn a_project_on_another_patch_than_its_installation_has_its_files_revision() {
+        let scratch = std::env::temp_dir().join(format!(
+            "unbound-revision-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let root = scratch.join("project");
+        std::fs::create_dir_all(root.join("ProjectSettings")).unwrap();
+        let version: UnityVersion = "6000.0.50f1".parse().unwrap();
+        let project = Project {
+            assets: root.join("Assets"),
+            root: root.clone(),
+            version,
+            profile: Profile::for_version(version).unwrap(),
+            // The installation found is the profile's release, without a Hub record.
+            install: UnityInstall {
+                data: scratch.join("install/Editor/Data"),
+                version: "6000.0.71f1".parse().unwrap(),
+            },
+            settings: Settings::default(),
+            packages: Vec::new(),
+            missing_packages: Vec::new(),
+            inexact_packages: Vec::new(),
+        };
+        let file = root.join("ProjectSettings/ProjectVersion.txt");
+        std::fs::write(
+            &file,
+            "m_EditorVersion: 6000.0.50f1\nm_EditorVersionWithRevision: 6000.0.50f1 (abcdef123456)\n",
+        )
+        .unwrap();
+        assert_eq!(project.revision().as_deref(), Some("abcdef123456"));
+        // A file stating another patch's revision gives none.
+        std::fs::write(
+            &file,
+            "m_EditorVersion: 6000.0.49f1\nm_EditorVersionWithRevision: 6000.0.49f1 (0123456789ab)\n",
+        )
+        .unwrap();
+        assert_eq!(project.revision(), None);
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    #[test]
     fn module_defines_follow_the_installation_the_project_compiles_against() {
         let scratch = std::env::temp_dir().join(format!(
             "unbound-module-defines-{}-{:?}",
