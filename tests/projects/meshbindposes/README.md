@@ -11,7 +11,9 @@ Unity 6000.0.71f1 returns a read-only borrowed view. A write that fits the exist
 visible to earlier views of that storage. Disposing a view leaves the mesh and other views
 usable. The capture checks a fresh mesh, mesh cloning, invalid inputs, and the behavior of the
 bind-pose APIs after clearing the geometry or making it unreadable. Unbound invalidates a
-borrowed view when its backing storage is replaced or its mesh is destroyed.
+borrowed view when its backing storage is replaced or its mesh is destroyed or collected. When
+the source is a slice of the mesh's own storage, Unity 6000.0.71f1 logs an assertion and reads the
+slice after the log callback. The probe changes the slice's matrices during that callback.
 
 ```sh
 python3 tests/projects/meshbindposes/run.py record --release 6000.0.71f1 --label repeat-a

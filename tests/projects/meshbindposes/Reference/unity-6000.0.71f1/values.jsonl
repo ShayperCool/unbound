@@ -48,4 +48,8 @@
 {"k":"set.unreadable.log","v":""}
 {"k":"skinning.poseOrder","v":"5,0/1,8/5,1"}
 {"k":"skinning.poseOrder.log","v":""}
+{"k":"alias.offset","v":"created:7,11/13,17"}
+{"k":"alias.offset.log","v":"Assert:vector: assign data may not be data from the vector itself."}
+{"k":"alias.reentrant","v":"1|created:29,31/37,41"}
+{"k":"alias.reentrant.log","v":"Assert:vector: assign data may not be data from the vector itself."}
 {"k":"complete","v":true}

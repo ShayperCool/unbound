@@ -138,6 +138,29 @@ static class MeshBindposesProbe
         Probe("set.unreadable", () => { using var poses = new NativeArray<Matrix4x4>(new[] { Pose(101, 103) }, Allocator.Temp); mesh.SetBindposes(poses); return Describe(mesh); });
         Object.DestroyImmediate(mesh);
         Probe("skinning.poseOrder", BakeWithOrderedPoses);
+        var alias = new Mesh();
+        alias.bindposes = new[] { Pose(2, 3), Pose(7, 11), Pose(13, 17) };
+        Probe("alias.offset", () =>
+        {
+            alias.SetBindposes(alias.GetBindposes().GetSubArray(1, 2));
+            return Describe(alias);
+        });
+        alias.bindposes = new[] { Pose(2, 3), Pose(7, 11), Pose(13, 17) };
+        Probe("alias.reentrant", () =>
+        {
+            int calls = 0;
+            void ReplacePoses(string message, string _, LogType type)
+            {
+                if (type != LogType.Assert || !message.Contains("assign data")) return;
+                calls++;
+                alias.bindposes = new[] { Pose(19, 23), Pose(29, 31), Pose(37, 41) };
+            }
+            Application.logMessageReceived += ReplacePoses;
+            try { alias.SetBindposes(alias.GetBindposes().GetSubArray(1, 2)); }
+            finally { Application.logMessageReceived -= ReplacePoses; }
+            return calls.ToString(CultureInfo.InvariantCulture) + "|" + Describe(alias);
+        });
+        Object.DestroyImmediate(alias);
         rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), rows);
 #if UNITY_EDITOR
