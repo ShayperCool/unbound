@@ -352,12 +352,6 @@ namespace UnityEngine
             return groups;
         }
 
-        /// <summary>The scene's lights that take part in a bake: enabled mixed and baked lights of
-        /// active GameObjects, made from its file, each with its colour as the bake takes it
-        /// (times its intensity, and times its Indirect Multiplier, linear). Said once per scene
-        /// and left out or simplified: area lights, lights whose intensity multiplies their linear
-        /// colour (GraphicsSettings.lightsUseLinearIntensity; not measured), cookies (ignored),
-        /// soft baked shadows (a Baked Shadow Angle or Radius: baked hard).</summary>
         /// <summary>Whether a scene's component takes part in a bake of its baked lightmaps (as the
         /// bake reads them from the scene file): an enabled, active Mesh Renderer contributing to
         /// global illumination, an enabled, active baked or mixed light, a LOD Group, a Terrain or
@@ -393,6 +387,12 @@ namespace UnityEngine
             Warn(key, message);
         }
 
+        /// <summary>The scene's lights that take part in a bake: enabled mixed and baked lights of
+        /// active GameObjects, made from its file, each with its colour as the bake takes it
+        /// (times its intensity, and times its Indirect Multiplier, linear). Said once per scene
+        /// and left out or simplified: area lights, lights whose intensity multiplies their linear
+        /// colour (GraphicsSettings.lightsUseLinearIntensity; not measured), cookies (ignored),
+        /// soft baked shadows (a Baked Shadow Angle or Radius: baked hard).</summary>
         internal static List<object> Lights(LoadedFile file, string path)
         {
             var lights = new List<object>();
