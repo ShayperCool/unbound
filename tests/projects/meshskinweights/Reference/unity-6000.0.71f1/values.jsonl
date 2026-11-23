@@ -136,4 +136,106 @@
 {"k":"fallback.2.before.log","v":""}
 {"k":"fallback.2.reject","v":"FourBones:True:True:created:5:created:1@0.4/2@0.2/3@0.2/4@0.110002287/5@0.08999771|FourBones:True:True:created:4:created:1@0.439566642/2@0.219775692/3@0.219775692/4@0.120881975|0:8:87-70-43-38-43-38-F2-1E-01-00-02-00-03-00-04-00|UNorm16:4:1/UInt16:4:1"}
 {"k":"fallback.2.reject.log","v":"Error:Vertex 0 bone weights are not in descending order! testing !(0.400000006 <= 0.200000003)"}
+{"k":"rounding.7","v":"Unlimited:True:True:created:7:created:2@0.142870218/3@0.142854959/4@0.142854959/5@0.142854959/6@0.142854959/7@0.142854959/8@0.142854959"}
+{"k":"rounding.7.log","v":""}
+{"k":"rounding.7.self","v":"Unlimited:True:True:created:7:created:2@0.142870218/3@0.142854959/4@0.142854959/5@0.142854959/6@0.142854959/7@0.142854959/8@0.142854959"}
+{"k":"rounding.7.self.log","v":""}
+{"k":"rounding.11","v":"Unlimited:True:True:created:11:created:2@0.09091325/3@0.09091325/4@0.09091325/5@0.09091325/6@0.09091325/7@0.09091325/8@0.09091325/9@0.09091325/10@0.09091325/11@0.09091325/12@0.0908674747"}
+{"k":"rounding.11.log","v":""}
+{"k":"rounding.11.self","v":"Unlimited:True:True:created:11:created:2@0.09091325/3@0.09091325/4@0.09091325/5@0.09091325/6@0.09091325/7@0.09091325/8@0.09091325/9@0.09091325/10@0.09091325/11@0.09091325/12@0.0908674747"}
+{"k":"rounding.11.self.log","v":""}
+{"k":"rounding.19","v":"Unlimited:True:True:created:19:created:2@0.0526894033/3@0.05262837/4@0.05262837/5@0.05262837/6@0.05262837/7@0.05262837/8@0.05262837/9@0.05262837/10@0.05262837/11@0.05262837/12@0.05262837/13@0.05262837/14@0.05262837/15@0.05262837/16@0.05262837/17@0.05262837/18@0.05262837/19@0.05262837/20@0.05262837"}
+{"k":"rounding.19.log","v":""}
+{"k":"rounding.19.self","v":"Unlimited:True:True:created:19:created:2@0.0526894033/3@0.05262837/4@0.05262837/5@0.05262837/6@0.05262837/7@0.05262837/8@0.05262837/9@0.05262837/10@0.05262837/11@0.05262837/12@0.05262837/13@0.05262837/14@0.05262837/15@0.05262837/16@0.05262837/17@0.05262837/18@0.05262837/19@0.05262837/20@0.05262837"}
+{"k":"rounding.19.self.log","v":""}
+{"k":"diagnostics.throwingHandler","v":"0|FourBones:True:True:created:4:created:2@0.5333333/3@0.266666651/4@0.133333325/5@0.06666666"}
+{"k":"diagnostics.throwingHandler.log","v":"Error:Vertex 0 bone weights are not in descending order! testing !(0.500000000 <= 0.250000000)"}
+{"k":"descriptors.one.before","v":"none/UInt32:1:1|OneBone:False:True:created:1:created:5@1"}
+{"k":"descriptors.one.before.log","v":""}
+{"k":"descriptors.one.twoRaw","v":"16|Float32:2:1/UInt32:2:1|TwoBones:True:True:created:1:created:5@1"}
+{"k":"descriptors.one.twoRaw.log","v":""}
+{"k":"buffer.layoutValue.2.-1","v":"ArgumentException: Bone Weight buffer for -1 bones per vertex on  is null"}
+{"k":"buffer.layoutValue.2.-1.log","v":"Error:Unknown bonesPerVertex in GetBoneWeights()"}
+{"k":"buffer.layoutValue.2.3","v":"1|32"}
+{"k":"buffer.layoutValue.2.3.log","v":""}
+{"k":"buffer.layoutValue.2.5","v":"ArgumentException: Bone Weight buffer for 5 bones per vertex on  is null"}
+{"k":"buffer.layoutValue.2.5.log","v":""}
+{"k":"buffer.layoutValue.2.256","v":"ArgumentException: Bone Weight buffer for 256 bones per vertex on  is null"}
+{"k":"buffer.layoutValue.2.256.log","v":""}
+{"k":"buffer.layoutValue.2.2147483647","v":"ArgumentException: Bone Weight buffer for 2147483647 bones per vertex on  is null"}
+{"k":"buffer.layoutValue.2.2147483647.log","v":""}
+{"k":"buffer.layoutValue.5.-1","v":"ArgumentException: Bone Weight buffer for -1 bones per vertex on  is null"}
+{"k":"buffer.layoutValue.5.-1.log","v":"Error:Unknown bonesPerVertex in GetBoneWeights()"}
+{"k":"buffer.layoutValue.5.3","v":"1|32"}
+{"k":"buffer.layoutValue.5.3.log","v":""}
+{"k":"buffer.layoutValue.5.5","v":"7|4"}
+{"k":"buffer.layoutValue.5.5.log","v":""}
+{"k":"buffer.layoutValue.5.256","v":"7|4"}
+{"k":"buffer.layoutValue.5.256.log","v":""}
+{"k":"buffer.layoutValue.5.2147483647","v":"7|4"}
+{"k":"buffer.layoutValue.5.2147483647.log","v":""}
+{"k":"raw.0.beforeBake","v":[{"x":4.5,"y":0.0,"z":0.0},{"x":3.0,"y":0.0,"z":0.0},{"x":2.0,"y":1.0,"z":0.0}]}
+{"k":"raw.0.beforeBake.log","v":""}
+{"k":"raw.0.before","v":"FourBones:True:True:created:2/1/1:created:2@0.75/3@0.25/1@1/1@1|3:16:Vertex, Structured:3F400000/3E800000/00000002/00000003/3F800000/00000000/00000001/00000000/3F800000/00000000/00000001/00000000"}
+{"k":"raw.0.before.log","v":""}
+{"k":"raw.0.write","v":"00-00-80-3E-00-00-40-3F-00-00-00-00-00-00-00-00-08-00-00-00-09-00-00-00-0A-00-00-00-0B-00-00-00|FourBones:True:True:created:2/1/1:created:2@0.75/3@0.25/1@1/1@1|8@0.25|3:16:Vertex, Structured:3F400000/3E800000/00000002/00000003/3F800000/00000000/00000001/00000000/3F800000/00000000/00000001/00000000|3:16:Vertex, Structured:3F400000/3E800000/00000002/00000003/3F800000/00000000/00000001/00000000/3F800000/00000000/00000001/00000000"}
+{"k":"raw.0.write.log","v":""}
+{"k":"raw.0.afterBake","v":[{"x":17.5,"y":0.0,"z":0.0},{"x":3.0,"y":0.0,"z":0.0},{"x":2.0,"y":1.0,"z":0.0}]}
+{"k":"raw.0.afterBake.log","v":""}
+{"k":"raw.0.staleCounts","v":"ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
+{"k":"raw.0.staleCounts.log","v":""}
+{"k":"raw.0.staleWeights","v":"ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
+{"k":"raw.0.staleWeights.log","v":""}
+{"k":"raw.2.beforeBake","v":[{"x":4.5,"y":0.0,"z":0.0},{"x":3.0,"y":0.0,"z":0.0},{"x":2.0,"y":1.0,"z":0.0}]}
+{"k":"raw.2.beforeBake.log","v":""}
+{"k":"raw.2.before","v":"TwoBones:True:True:created:2/1/1:created:2@0.75/3@0.25/1@1/1@1|3:16:Vertex, Structured:3F400000/3E800000/00000002/00000003/3F800000/00000000/00000001/00000000/3F800000/00000000/00000001/00000000"}
+{"k":"raw.2.before.log","v":""}
+{"k":"raw.2.write","v":"00-00-80-3E-00-00-40-3F-08-00-00-00-09-00-00-00|TwoBones:True:True:created:2/1/1:created:2@0.75/3@0.25/1@1/1@1|8@0.25|3:16:Vertex, Structured:3F400000/3E800000/00000002/00000003/3F800000/00000000/00000001/00000000/3F800000/00000000/00000001/00000000|3:16:Vertex, Structured:3F400000/3E800000/00000002/00000003/3F800000/00000000/00000001/00000000/3F800000/00000000/00000001/00000000"}
+{"k":"raw.2.write.log","v":""}
+{"k":"raw.2.afterBake","v":[{"x":17.5,"y":0.0,"z":0.0},{"x":3.0,"y":0.0,"z":0.0},{"x":2.0,"y":1.0,"z":0.0}]}
+{"k":"raw.2.afterBake.log","v":""}
+{"k":"raw.2.staleCounts","v":"ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
+{"k":"raw.2.staleCounts.log","v":""}
+{"k":"raw.2.staleWeights","v":"ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
+{"k":"raw.2.staleWeights.log","v":""}
+{"k":"raw.5.beforeBake","v":[{"x":5.874906539916992,"y":0.0,"z":0.0},{"x":3.0,"y":0.0,"z":0.0},{"x":2.0,"y":1.0,"z":0.0}]}
+{"k":"raw.5.beforeBake.log","v":""}
+{"k":"raw.5.before","v":"Unlimited:True:True:created:5/1/1:created:2@0.5000076/3@0.2500038/4@0.1250019/5@0.06250095/6@0.0624856949/1@1/1@1|3:16:Vertex, Structured:3F2AAAAB/3EAAAAAB/00000002/00000003/3F800000/00000000/00000001/00000000/3F800000/00000000/00000001/00000000"}
+{"k":"raw.5.before.log","v":""}
+{"k":"raw.5.write","v":"00-40-FF-BF-00-00-00-00-08-00-09-00-0A-00-0B-00|Unlimited:True:True:created:5/1/1:created:2@0.5000076/3@0.2500038/4@0.1250019/5@0.06250095/6@0.0624856949/1@1/1@1|2@0.533333361|3:16:Vertex, Structured:3F2AAAAB/3EAAAAAB/00000002/00000003/3F800000/00000000/00000001/00000000/3F800000/00000000/00000001/00000000|3:16:Vertex, Structured:3F2AAAAB/3EAAAAAB/00000002/00000003/3F800000/00000000/00000001/00000000/3F800000/00000000/00000001/00000000"}
+{"k":"raw.5.write.log","v":""}
+{"k":"raw.5.afterBake","v":[{"x":5.874906539916992,"y":0.0,"z":0.0},{"x":3.0,"y":0.0,"z":0.0},{"x":2.0,"y":1.0,"z":0.0}]}
+{"k":"raw.5.afterBake.log","v":""}
+{"k":"raw.5.staleCounts","v":"ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
+{"k":"raw.5.staleCounts.log","v":""}
+{"k":"raw.5.staleWeights","v":"ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
+{"k":"raw.5.staleWeights.log","v":""}
+{"k":"bake.dominant.OneBone","v":[{"x":4.0,"y":0.0,"z":0.0},{"x":5.0,"y":0.0,"z":0.0},{"x":4.0,"y":1.0,"z":0.0}]}
+{"k":"bake.dominant.OneBone.log","v":""}
+{"k":"bake.dominant.TwoBones","v":[{"x":4.000999927520752,"y":0.0,"z":0.0},{"x":5.001999855041504,"y":0.0,"z":0.0},{"x":4.002999782562256,"y":1.0,"z":0.0}]}
+{"k":"bake.dominant.TwoBones.log","v":""}
+{"k":"asset.1.before","v":"OneBone:False:True:created:1/1/1:created:2@1/1@1/2@1|none/UInt32:1:1"}
+{"k":"asset.1.before.log","v":""}
+{"k":"asset.1.save","v":"m_Data:"}
+{"k":"asset.1.save.log","v":""}
+{"k":"asset.1.reload","v":"OneBone:False:True:created:1/1/1:created:2@1/1@1/2@1|none/UInt32:1:1"}
+{"k":"asset.1.reload.log","v":""}
+{"k":"asset.2.before","v":"TwoBones:True:True:created:2/1/2:created:2@0.6666667/3@0.333333343/1@1/2@0.75/1@0.25|Float32:2:1/UInt32:2:1"}
+{"k":"asset.2.before.log","v":""}
+{"k":"asset.2.save","v":"m_Data:"}
+{"k":"asset.2.save.log","v":""}
+{"k":"asset.2.reload","v":"TwoBones:True:True:created:2/1/2:created:2@0.6666667/3@0.333333343/1@1/2@0.75/1@0.25|Float32:2:1/UInt32:2:1"}
+{"k":"asset.2.reload.log","v":""}
+{"k":"asset.5.before","v":"Unlimited:True:True:created:5/1/2:created:2@0.333333343/3@0.266666681/4@0.2/5@0.13333334/6@0.06666667/1@1/2@0.7499962/1@0.2500038|UNorm16:4:1/UInt16:4:1"}
+{"k":"asset.5.before.log","v":""}
+{"k":"asset.5.save","v":"m_Data: 04000000090000000a0000000c00000002005555030044440400333305002222060011110100ffff0200ffbf01000040"}
+{"k":"asset.5.save.log","v":""}
+{"k":"asset.5.reload","v":"Unlimited:True:True:created:5/1/2:created:2@0.333333343/3@0.266666681/4@0.2/5@0.13333334/6@0.06666667/1@1/2@0.7499962/1@0.2500038|UNorm16:4:1/UInt16:4:1"}
+{"k":"asset.5.reload.log","v":""}
+{"k":"asset.11.before","v":"Unlimited:True:True:created:11/1/2:created:2@0.1666743/3@0.151522085/4@0.136369884/5@0.121217668/6@0.10606546/7@0.09091325/8@0.07576104/9@0.060608834/10@0.0454566255/11@0.030304417/12@0.0151064321/1@1/2@0.7499962/1@0.2500038|UNorm16:4:1/UInt16:4:1"}
+{"k":"asset.11.before.log","v":""}
+{"k":"asset.11.save","v":"m_Data: 040000000f00000010000000120000000200ab2a0300ca260400e9220500081f0600271b07004617080065130900840f0a00a30b0b00c2070c00de030100ffff0200ffbf01000040"}
+{"k":"asset.11.save.log","v":""}
+{"k":"asset.11.reload","v":"Unlimited:True:True:created:11/1/2:created:2@0.1666743/3@0.151522085/4@0.136369884/5@0.121217668/6@0.10606546/7@0.09091325/8@0.07576104/9@0.060608834/10@0.0454566255/11@0.030304417/12@0.0151064321/1@1/2@0.7499962/1@0.2500038|UNorm16:4:1/UInt16:4:1"}
+{"k":"asset.11.reload.log","v":""}
 {"k":"complete","v":true}

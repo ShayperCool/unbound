@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
-sealed class MeshSkinningProbe : MonoBehaviour
+sealed partial class MeshSkinningProbe : MonoBehaviour
 {
     [Serializable] sealed class Row { public string k, v; }
     [Serializable] sealed class PositionRow { public string k; public Vector3[] v; }
@@ -431,6 +431,10 @@ sealed class MeshSkinningProbe : MonoBehaviour
         }
         CheckBorrowedViews();
         CheckFixedFallback();
+        CheckRoundingAndDiagnostics(Probe);
+        CheckBufferLayouts(Probe);
+        CheckRawChannels(Probe, ProbePositions);
+        CheckAssetReload(Probe);
         rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), rows);
 #if UNITY_EDITOR
