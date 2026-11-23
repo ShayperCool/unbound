@@ -995,7 +995,7 @@ mod lighting {
                 local_to_world: IDENTITY,
                 receives_shadows: receives,
             }];
-            direct::direct(&g, &receivers, &[sun], mixed, scene, 0.0001)
+            direct::direct(&g, &receivers, &[sun], mixed, scene, 0.0001).irradiance
         };
         let open = lit(
             true,
@@ -1065,8 +1065,10 @@ mod lighting {
             MixedMode::IndirectOnly,
             &film,
             0.0001,
-        );
-        let below = direct::direct(&g, &receivers, &[sun], MixedMode::IndirectOnly, &film, 0.0);
+        )
+        .irradiance;
+        let below =
+            direct::direct(&g, &receivers, &[sun], MixedMode::IndirectOnly, &film, 0.0).irradiance;
         assert!(above.iter().all(|t| near(t[0], 1.6)) && below.iter().all(|t| t[0] == 0.0));
         // An unused texel has nothing, not even its fourth value.
         let small = [Instance {
@@ -1086,7 +1088,8 @@ mod lighting {
             MixedMode::IndirectOnly,
             &Scene::new([]),
             0.0001,
-        );
+        )
+        .irradiance;
         assert_eq!(values[3], [0.0; 4]);
         assert!(near(values[0][0], 1.6));
     }
@@ -1118,7 +1121,8 @@ mod lighting {
             MixedMode::IndirectOnly,
             &Scene::new([]),
             0.0001,
-        );
+        )
+        .irradiance;
         assert!(lit.iter().all(|t| near(t[0], 2.0)));
         // A wall just in front of where the matrix puts it shadows it.
         let wall = Scene::new([[[5.5, -9.0, -9.0], [5.5, 9.0, -9.0], [5.5, 0.0, 9.0]]]);
@@ -1129,7 +1133,8 @@ mod lighting {
             MixedMode::IndirectOnly,
             &wall,
             0.0001,
-        );
+        )
+        .irradiance;
         assert!(shadowed.iter().all(|t| t[0] == 0.0 && t[3] == 1.0));
         // Mirrored, its normal turns with it: the matrix's rows for normals carry the sign.
         let mirrored = [

@@ -5,6 +5,7 @@
 //! from other surfaces ([`indirect`], with the rays of [`sampling`]).
 pub mod atlas;
 pub mod direct;
+pub mod directional;
 pub mod gbuffer;
 pub mod grid;
 pub mod indirect;

@@ -160,7 +160,12 @@ fn main() {
     let casters = Scene::new(triangles);
     let pushoff = r.f32();
     let lit = direct::direct(&g, &receivers, &lights, mixed, &casters, pushoff);
-    std::fs::write(out.join("irradianceDirect.f32"), floats(&lit)).unwrap();
+    std::fs::write(out.join("irradianceDirect.f32"), floats(&lit.irradiance)).unwrap();
+    std::fs::write(
+        out.join("directionalityDirect.f32"),
+        floats(&lit.directionality),
+    )
+    .unwrap();
     if r.0.is_empty() || args.len() < 4 {
         return;
     }
@@ -288,6 +293,11 @@ fn main() {
     std::fs::write(
         out.join("irradianceEnvironment.f32"),
         floats(&bounced.environment),
+    )
+    .unwrap();
+    std::fs::write(
+        out.join("directionalityIndirect.f32"),
+        floats(&bounced.directionality),
     )
     .unwrap();
     std::fs::write(

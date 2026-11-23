@@ -10,6 +10,7 @@ use base64::Engine;
 use serde_json::{Value as Json, json};
 use std::path::Path;
 use unbound_gi::baked::direct::{self, MixedMode, Receiver};
+use unbound_gi::baked::directional;
 use unbound_gi::baked::grid::{Bounds, Grid};
 use unbound_gi::baked::indirect::{self, Material, Surface, Texture, World};
 use unbound_gi::baked::light::{Kind, Light, Mode};
@@ -41,6 +42,10 @@ pub struct BakeRequest {
     /// Only the layout is asked for (the sizes of the renderers' material images come with it).
     #[serde(default)]
     layout_only: bool,
+    /// The Lighting Settings' Directional Mode is Directional: the bake keeps where its light
+    /// comes from.
+    #[serde(default)]
+    directional: bool,
     /// What the indirect light is baked with; without it only the direct light is.
     #[serde(default)]
     indirect: Option<IndirectData>,
@@ -421,7 +426,7 @@ impl<'a> Buffers<'a> {
     const SKY: &'static str = "sky.f32";
     /// The directions picked by the sky's brightness: three floats each, then their light.
     const SKY_DIRECTIONS: &'static str = "skyDirections.f32";
-    const PER_LIGHTMAP: [(&'static str, &'static str); 7] = [
+    const PER_LIGHTMAP: [(&'static str, &'static str); 9] = [
         ("occupancy", ".u8"),
         ("chartIndex", ".i32"),
         ("normal", ".f32"),
@@ -429,6 +434,8 @@ impl<'a> Buffers<'a> {
         ("irradianceIndirect", ".f32"),
         ("irradianceEnvironment", ".f32"),
         ("validity", ".f32"),
+        ("directionalityDirect", ".f32"),
+        ("directionalityIndirect", ".f32"),
     ];
 
     /// Starts a bake's buffers in the folder, without those an earlier bake left there.
@@ -474,8 +481,9 @@ impl<'a> Buffers<'a> {
         g: &gbuffer::GBuffer,
         members: &[usize],
         renderers: &[&Renderer],
-        lit: &[[f32; 4]],
+        lit: &direct::Direct,
         bounced: Option<&indirect::Indirect>,
+        directional: bool,
     ) -> Result<()> {
         let index = self.lightmaps.len();
         self.write(format!("occupancy{index}.u8"), g.occupancy.clone())?;
@@ -502,7 +510,34 @@ impl<'a> Buffers<'a> {
         )?;
         self.write(
             format!("irradianceDirect{index}.f32"),
-            lit.iter().flatten().flat_map(|v| v.to_le_bytes()).collect(),
+            lit.irradiance
+                .iter()
+                .flatten()
+                .flat_map(|v| v.to_le_bytes())
+                .collect(),
+        )?;
+        // Where the light comes from, in a directional bake; elsewhere the value of no light.
+        let texels = g.width * g.height;
+        let toward = |values: Option<&[[f32; 4]]>| -> Vec<u8> {
+            match values.filter(|_| directional) {
+                Some(values) => values
+                    .iter()
+                    .flatten()
+                    .flat_map(|v| v.to_le_bytes())
+                    .collect(),
+                None => std::iter::repeat_n(directional::NONE, texels)
+                    .flatten()
+                    .flat_map(|v| v.to_le_bytes())
+                    .collect(),
+            }
+        };
+        self.write(
+            format!("directionalityDirect{index}.f32"),
+            toward(Some(&lit.directionality)),
+        )?;
+        self.write(
+            format!("directionalityIndirect{index}.f32"),
+            toward(bounced.map(|b| b.directionality.as_slice())),
         )?;
         if let Some(bounced) = bounced {
             self.write(
@@ -868,7 +903,14 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     },
                 )
             });
-            written.lightmap(&g, &members, &baked, &lit, bounced.as_ref())?;
+            written.lightmap(
+                &g,
+                &members,
+                &baked,
+                &lit,
+                bounced.as_ref(),
+                request.directional,
+            )?;
         }
         let described = bounce.as_ref().map_or(Json::Null, |b| {
             json!({

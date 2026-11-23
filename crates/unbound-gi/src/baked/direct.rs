@@ -5,6 +5,7 @@
 //! samples, which is the Unity 6000.0.71f1 Editor's Progressive CPU lightmapper's result for
 //! lights with hard shadows where its Direct Samples are a power of two not below the samples
 //! of a texel (tests/projects/bakedbuffers: 16); other counts are not measured.
+use super::directional::{NONE, Toward};
 use super::gbuffer::GBuffer;
 use super::light::{Light, Mode, Tables};
 use super::trace::{Ray, Scene};
@@ -65,9 +66,17 @@ pub fn world_normal(rows: &[[f32; 3]; 3], n: [f32; 3]) -> [f32; 3] {
     }
 }
 
-/// The direct light of every texel of the lightmap: red, green, blue, and 1 for a used texel
-/// (zeros for an unused one). `receivers` are the lightmap's renderers by their place in it,
-/// `pushoff` how far a sample is pushed off its triangle before its rays start.
+/// The direct light of a lightmap's texels.
+pub struct Direct {
+    /// Red, green, blue, and 1 for a used texel (zeros for an unused one).
+    pub irradiance: Vec<[f32; 4]>,
+    /// Where the light comes from (see [`Toward::encode`]).
+    pub directionality: Vec<[f32; 4]>,
+}
+
+/// The direct light of every texel of the lightmap. `receivers` are the lightmap's renderers
+/// by their place in it, `pushoff` how far a sample is pushed off its triangle before its rays
+/// start.
 pub fn direct(
     g: &GBuffer,
     receivers: &[Receiver],
@@ -75,7 +84,7 @@ pub fn direct(
     mixed: MixedMode,
     scene: &Scene,
     pushoff: f32,
-) -> Vec<[f32; 4]> {
+) -> Direct {
     let tables = Tables::new();
     let lights: Vec<&Light> = lights.iter().filter(|l| bakes_direct(l, mixed)).collect();
     let normals: Vec<[[f32; 3]; 3]> = receivers
@@ -83,15 +92,17 @@ pub fn direct(
         .map(|r| normal_matrix(&r.local_to_world))
         .collect();
     let (s, sw) = (g.supersampling, g.width * g.supersampling);
-    (0..g.width * g.height)
+    let texels = (0..g.width * g.height)
         .into_par_iter()
         .map(|texel| {
             if g.occupancy[texel] == 0 {
-                return [0.0; 4];
+                return ([0.0; 4], NONE);
             }
             let (tx, ty) = (texel % g.width, texel / g.width);
             let mut sum = [0f32; 3];
             let mut samples = 0u32;
+            let mut toward = Toward::default();
+            let mut facing = [0f32; 3];
             for k in 0..s * s {
                 let sample = sw * (ty * s + k / s) + tx * s + k % s;
                 let local = g.positions[sample];
@@ -109,6 +120,9 @@ pub fn direct(
                 let smooth = world_normal(&normals[receiver], [smooth[0], smooth[1], smooth[2]]);
                 let plane = world_normal(&normals[receiver], [plane[0], plane[1], plane[2]]);
                 let origin: [f32; 3] = std::array::from_fn(|c| position[c] + plane[c] * pushoff);
+                for c in 0..3 {
+                    facing[c] += smooth[c];
+                }
                 for light in &lights {
                     let Some(arriving) = light.arriving(&tables, light.color, origin, smooth)
                     else {
@@ -127,14 +141,23 @@ pub fn direct(
                         for c in 0..3 {
                             sum[c] += arriving.color[c];
                         }
+                        toward.add(arriving.direction, arriving.color);
                     }
                 }
             }
             if samples == 0 {
-                return [0.0; 4];
+                return ([0.0; 4], NONE);
             }
             let scale = 1.0 / samples as f32;
-            [sum[0] * scale, sum[1] * scale, sum[2] * scale, 1.0]
+            (
+                [sum[0] * scale, sum[1] * scale, sum[2] * scale, 1.0],
+                toward.encode(facing, samples),
+            )
         })
-        .collect()
+        .collect::<Vec<_>>();
+    let (irradiance, directionality) = texels.into_iter().unzip();
+    Direct {
+        irradiance,
+        directionality,
+    }
 }

@@ -513,6 +513,7 @@ namespace UnityEngine
                     renderers,
                     lights,
                     mixedMode = (int)settings.mixedBakeMode,
+                    directional = settings.directionalityMode == LightmapsMode.CombinedDirectional,
                     layoutOnly,
                     indirect,
                 });

@@ -11,6 +11,7 @@
 //! Editor's Progressive CPU lightmapper reads them, which makes a texel's result the Editor's
 //! but for the last bits of its sums (tests/projects/bakedbuffers).
 use super::direct::{Receiver, normal_matrix, point, world_normal};
+use super::directional::{NONE, Toward};
 use super::gbuffer::GBuffer;
 use super::grid::{Grid, Pick};
 use super::light::{Light, Tables};
@@ -118,6 +119,9 @@ pub struct Indirect {
     pub validity: Vec<f32>,
     /// Per texel the light its samples take straight from the sky, as `irradiance`.
     pub environment: Vec<[f32; 4]>,
+    /// Where the indirect and the sky's light come from (see [`Toward::encode`]): a path's
+    /// light from the direction it left the texel in.
+    pub directionality: Vec<[f32; 4]>,
 }
 
 fn dot(a: [f32; 3], b: [f32; 3]) -> f32 {
@@ -181,7 +185,8 @@ impl Path<'_> {
 
     /// Follows a path from a texel's sample: adds the light it brings to `sum` and answers
     /// whether its first surface was met from behind.
-    fn follow(&self, index: u32, mut ray: Ray, sum: &mut [f32; 3]) -> bool {
+    /// `path` takes the same light as `sum`, for this path alone.
+    fn follow(&self, index: u32, mut ray: Ray, sum: &mut [f32; 3], path: &mut [f32; 3]) -> bool {
         let world = self.world;
         let mut throughput = [1f32; 3];
         for depth in 0..self.settings.max_bounces {
@@ -248,7 +253,9 @@ impl Path<'_> {
                     );
                 if !shadowed {
                     for k in 0..3 {
-                        sum[k] += arriving.color[k] * reflected[k] * pick.weight;
+                        let light = arriving.color[k] * reflected[k] * pick.weight;
+                        sum[k] += light;
+                        path[k] += light;
                     }
                 }
             };
@@ -263,6 +270,7 @@ impl Path<'_> {
             let emissive = material.emissive.at(uv);
             for k in 0..3 {
                 sum[k] += emissive[k] * throughput[k];
+                path[k] += emissive[k] * throughput[k];
             }
             // The sky's light on the surface, unless the path ends here anyway. Any renderer
             // in the way stops it, also one that casts no shadows.
@@ -275,6 +283,7 @@ impl Path<'_> {
             {
                 for k in 0..3 {
                     sum[k] += light[k] * reflected[k];
+                    path[k] += light[k] * reflected[k];
                 }
             }
             let mut goes_on = true;
@@ -321,17 +330,18 @@ pub fn indirect(
             irradiance: g.occupancy.iter().map(unlit).collect(),
             validity: vec![0.0; g.width * g.height],
             environment: g.occupancy.iter().map(unlit).collect(),
+            directionality: vec![NONE; g.width * g.height],
         };
     }
     let count = sampling::sample_count(settings.samples, s as u32);
     let distribution = sampling::distribution(count);
     let sky_count = sampling::sample_count(settings.environment_samples, s as u32);
     let sky_distribution = sampling::distribution(sky_count);
-    let texels: Vec<([f32; 4], f32, [f32; 4])> = (0..g.width * g.height)
+    let texels: Vec<([f32; 4], f32, [f32; 4], [f32; 4])> = (0..g.width * g.height)
         .into_par_iter()
         .map(|texel| {
             if g.occupancy[texel] == 0 {
-                return ([0.0; 4], 0.0, [0.0; 4]);
+                return ([0.0; 4], 0.0, [0.0; 4], NONE);
             }
             let (tx, ty) = (texel % g.width, texel / g.width);
             let path = Path {
@@ -365,6 +375,7 @@ pub fn indirect(
             };
             let mut sum = [0f32; 3];
             let (mut rays, mut behind) = (0u32, 0u32);
+            let mut toward = Toward::default();
             for index in 0..count {
                 let Some((origin, smooth, plane)) = start(index) else {
                     break;
@@ -376,9 +387,11 @@ pub fn indirect(
                 if facing <= 0.0 || facing.is_nan() {
                     continue;
                 }
-                if path.follow(index, Ray { origin, direction }, &mut sum) {
+                let mut light = [0f32; 3];
+                if path.follow(index, Ray { origin, direction }, &mut sum, &mut light) {
                     behind += 1;
                 }
+                toward.add(unit(direction), light);
             }
             // The sky's light straight on the texel's samples.
             let mut sky_sum = [0f32; 3];
@@ -398,6 +411,7 @@ pub fn indirect(
                         for c in 0..3 {
                             sky_sum[c] += light[c];
                         }
+                        toward.add(direction, light);
                     }
                 }
             }
@@ -410,12 +424,36 @@ pub fn indirect(
             } else {
                 behind as f32 * (1.0 / rays as f32)
             };
-            (mean(sum, rays), validity, mean(sky_sum, sky_rays))
+            // How much the texel's samples face where the light comes from.
+            let (mut facing, mut faced) = ([0f32; 3], 0u32);
+            for k in 0..s * s {
+                let sample = g.width * s * (ty * s + k / s) + tx * s + k % s;
+                let local = g.positions[sample];
+                let Some(receiver) = (local[3] >= 0.0)
+                    .then(|| local[3] as usize)
+                    .filter(|&i| i < receivers.len())
+                else {
+                    continue;
+                };
+                let n = g.normals[sample];
+                let n = world_normal(&normals[receiver], [n[0], n[1], n[2]]);
+                for c in 0..3 {
+                    facing[c] += n[c];
+                }
+                faced += 1;
+            }
+            (
+                mean(sum, rays),
+                validity,
+                mean(sky_sum, sky_rays),
+                toward.encode(facing, faced),
+            )
         })
         .collect();
     Indirect {
         irradiance: texels.iter().map(|t| t.0).collect(),
         validity: texels.iter().map(|t| t.1).collect(),
         environment: texels.iter().map(|t| t.2).collect(),
+        directionality: texels.iter().map(|t| t.3).collect(),
     }
 }
