@@ -39,6 +39,7 @@ public static class LitAuthoring
         ShaderGraphs();
         ListsMeshesAndLegacyGraphs();
         LegacyDefaultTexture();
+        Decals();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -128,6 +129,22 @@ public static class LitAuthoring
     static Mesh Spike => AssetDatabase.LoadAssetAtPath<Mesh>(ObjectFolder + "/Spike.asset");
 
     // ----------------------------------------------------------------------------- graphs
+
+    /// <summary>Decals of the render pipeline (`Output Particle URP Lit Decal`): boxes a unit
+    /// deep around a wall's plane, each turned about the axis it projects along and of a colour
+    /// of its own, the image whose quarters differ as their base colour map.</summary>
+    static void Decals()
+    {
+        var graph = NewGraph("LitDecal");
+        var (spawn, init, _, output) = System<VFXDecalURPOutput>(graph, 16);
+        Burst(spawn, 5f);
+        SetRandom(init, "position", new Vector3(-1f, -1f, 1.5f), new Vector3(1f, 1f, 1.5f));
+        SetRandom(init, "angle", new Vector3(0f, 0f, 0f), new Vector3(0f, 0f, 90f));
+        Set(init, "size", 0.9f);
+        SetRandom(init, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+        Input(output, "baseColorMap").value = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectFolder + "/Quarters.png");
+        Save(graph);
+    }
 
     /// <summary>Lit quads, drawn by the output itself in the system's order (opaque, or
     /// added to what is behind): turned every way, so that each takes the lights

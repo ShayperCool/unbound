@@ -195,10 +195,16 @@ namespace Unbound.Runtime
         /// `MovingVectors`); a lit output's is admitted with it, not measured. The selection
         /// and picking passes are the Editor's own, and the meta pass of a lit Shader Graph
         /// output is the lightmapper's: no camera draws it (tests/projects/vfxlit `graph
-        /// lit`).</summary>
+        /// lit`). A decal output's (`Output Particle URP Lit Decal`): the pipeline's decal
+        /// feature draws its screen space pass, the technique it takes on OpenGL Core in a
+        /// forward renderer (measured, tests/projects/vfxlit `decal`); its DBuffer, GBuffer and
+        /// emissive passes exclude OpenGL Core (`#pragma exclude_renderers gles3 glcore`), so
+        /// that device drops them, and decal outputs, which draw cubes, are refused on the
+        /// devices that keep them (<see cref="GraphicsDeviceProfile.EffectCubesMeasured"/>).</summary>
         static readonly string[] s_DrawnPasses =
         {
             "UniversalForwardOnly", "UniversalForward", "UniversalGBuffer", "DepthOnly", "DepthNormals", "DepthNormalsOnly", "ShadowCaster", "SceneSelectionPass", "Picking", "Universal2D", "NormalsRendering", "MotionVectors", "Meta",
+            "DecalScreenSpaceProjector", "DBufferProjectorVFX", "DecalGBufferProjector", "DecalProjectorForwardEmissive",
         };
 
         /// <summary>The pass of a Shader Graph output that 2D lights light (the sprite graphs'

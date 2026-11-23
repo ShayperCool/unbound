@@ -1217,8 +1217,12 @@ namespace UnityEngine.Tests
             // An output's motion vectors pass is drawn (tests/projects/vfxoutputs `MovingVectors`).
             Assert.Null(VFXOutput.SourceRefusal(unlit.Replace("\"ShadowCaster\"", "\"MotionVectors\"")));
             Assert.Null(VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"MotionVectors\"")));
-            Assert.Equal("its pass 'DBufferProjectorVFX' is not drawn yet", VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"DBufferProjectorVFX\"")));
-            Assert.Equal("its pass 'DBufferProjectorVFX' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"DepthOnly\"", "\"DBufferProjectorVFX\"")));
+            Assert.Equal("its pass 'DistortionVectors' is not drawn yet", VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"DistortionVectors\"")));
+            Assert.Equal("its pass 'DistortionVectors' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"DepthOnly\"", "\"DistortionVectors\"")));
+            // A decal output's passes: the screen space one drawn on OpenGL Core (tests/projects/
+            // vfxlit `decal`), the others dropped there by their programs' renderer exclusions.
+            foreach (var decalPass in new[] { "DecalScreenSpaceProjector", "DBufferProjectorVFX", "DecalGBufferProjector", "DecalProjectorForwardEmissive" })
+                Assert.Null(VFXOutput.SourceRefusal(unlit.Replace("\"DepthOnly\"", "\"" + decalPass + "\"")));
             // The deprecated forward decal output (cubes drawn by a decal program, whose passes are
             // the ones drawn) is refused by its program.
             Assert.Equal(VFXOutput.ForwardDecalRefusal, VFXOutput.SourceRefusal(unlit.Replace("#define VFX_PRIMITIVE_QUAD 1", "nointerpolation float4 worldToDecal0 : TEXCOORD2;")));
@@ -1250,14 +1254,14 @@ namespace UnityEngine.Tests
             };
             var sources = new[]
             {
-                new VFXShaderSourceDesc { compute = true, source = "Tags { \"LightMode\"=\"DBufferProjectorVFX\" }" },
+                new VFXShaderSourceDesc { compute = true, source = "Tags { \"LightMode\"=\"DistortionVectors\" }" },
                 new VFXShaderSourceDesc { source = unlit },
                 // Another output of the system, named apart (outputs named alike are not drawn).
-                new VFXShaderSourceDesc { source = unlit.Replace("\"ShadowCaster\"", "\"DBufferProjectorVFX\"").Replace("/Output Particle|Unlit Quad", "/Output Particle Decal|Unlit Quad") },
+                new VFXShaderSourceDesc { source = unlit.Replace("\"ShadowCaster\"", "\"DistortionVectors\"").Replace("/Output Particle|Unlit Quad", "/Output Particle Distortion|Unlit Quad") },
             };
             var found = VFXOutput.SourceRefusals(compiled, sources);
             Assert.Empty(found[0]);
-            const string Projected = "its pass 'DBufferProjectorVFX' is not drawn yet";
+            const string Projected = "its pass 'DistortionVectors' is not drawn yet";
             Assert.Equal(new[] { null, null, Projected, null, null }, found[1]);
             // The reason found in the source is the output's when nothing of its task refuses first.
             Assert.Equal(Projected, VFXOutput.Refusal(system, quads, material, Projected));

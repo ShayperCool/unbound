@@ -95,7 +95,7 @@ namespace UnityEngine.VFX
 
         /// <summary>What Unbound draws of an effect (<c>unbound doctor</c> says it of every
         /// effect with an asset; an effect that runs says which of its outputs it leaves out).</summary>
-        internal const string NotDrawn = "of Visual Effect Graph outputs, quads, triangles, octagons and cubes (also through an indirect buffer, sorted or not; quads also joined into strips) and meshes (also through an indirect buffer) are drawn, unlit or lit, also by a Shader Graph and through the 2D renderer: meshes chosen by their size on screen, strips lit by 2D lights, motion vectors, decals, points and lines show nothing yet";
+        internal const string NotDrawn = "of Visual Effect Graph outputs, quads, triangles, octagons and cubes (also through an indirect buffer, sorted or not; quads also joined into strips), meshes (also through an indirect buffer) and the render pipeline's decals are drawn, unlit or lit, also by a Shader Graph and through the 2D renderer: meshes chosen by their size on screen, strips lit by 2D lights, motion vectors, forward decals (deprecated), points and lines show nothing yet";
 
         /// <summary>The outputs said not to be drawn: once per asset, system and reason.</summary>
         static readonly HashSet<(int Asset, string System, string Reason)> s_WarnedOutputs = new HashSet<(int, string, string)>();

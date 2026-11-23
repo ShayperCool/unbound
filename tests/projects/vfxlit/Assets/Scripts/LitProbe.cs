@@ -23,6 +23,10 @@ public sealed class LitProbe : MonoBehaviour
     const int k_DeferredRenderer = 1;
     /// <summary>The pipeline asset's third renderer: the 2D one.</summary>
     const int k_2DRenderer = 2;
+    /// <summary>The pipeline asset's fourth renderer: the forward one with the render
+    /// pipeline's decal feature (its technique chosen for the device: screen space on OpenGL
+    /// Core).</summary>
+    const int k_DecalRenderer = 3;
 
     readonly StringBuilder m_Out = new StringBuilder();
     readonly List<Stage> m_Stages = new List<Stage>();
@@ -183,6 +187,11 @@ public sealed class LitProbe : MonoBehaviour
             // Quads drawn by a lit graph of the render pipeline (its passes include the
             // lightmapper's, which no camera draws), under a point light.
             Lamp(Draw("graph lit", "GraphLit", 5), LightType.Point);
+            // Decals the particles project onto a wall, through the renderer with the decal
+            // feature, under the sun and a point light.
+            var decals = Lamp(Draw("decal", "LitDecal", 5, 12), LightType.Point);
+            Wall(decals);
+            decals.Camera.GetUniversalAdditionalCameraData().SetRenderer(k_DecalRenderer);
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)

@@ -79,12 +79,17 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
   the render pipeline's lit graph (URP Lit, opaque, its default surface) written with its
   support for particles on, its base colour the probe's image through a texture property of its
   own. Such a graph has the lightmapper's pass (`Meta`) besides the passes cameras draw.
+- `LitDecal`: five decals of the render pipeline (`Output Particle URP Lit Decal`), boxes 0.9
+  across centred on a wall's plane, each turned about the axis it projects along and of a
+  colour of its own, the probe's image as their base colour map (with its alpha).
 
 `Assets/Objects/Spike.asset` is a second mesh, of one submesh. The project names its own URP
 global settings (`Assets/UniversalRenderPipelineGlobalSettings.asset`, with its default volume
 profile, mapped in `ProjectSettings/GraphicsSettings.asset`), so the Editor makes none of its own. The pipeline asset
-(`Assets/Settings/ProbeURP.asset`) has three renderers: a forward one, a deferred one
-(`ProbeDeferred.asset`) and a 2D one (`Probe2DRenderer.asset`, the 2D renderer's defaults); main light shadows are on (one cascade, hard), additional lights are
+(`Assets/Settings/ProbeURP.asset`) has four renderers: a forward one, a deferred one
+(`ProbeDeferred.asset`), a 2D one (`Probe2DRenderer.asset`, the 2D renderer's defaults) and a
+forward one with the render pipeline's decal feature (`ProbeDecal.asset`, the feature's
+defaults: its technique chosen for the device, screen space on OpenGL Core); main light shadows are on (one cascade, hard), additional lights are
 per pixel and cast no shadows. The scene has one flat ambient colour and no reflection, and 2D
 lights, which only the 2D renderer draws by: a global one (white, 0.4) and, at the places of
 `sprite point`, `sprite normals`, `sprite classic` and `sprite listed`, a point light of radius two, the one of
@@ -173,6 +178,9 @@ effect's alive count, whether it is culled and awake, its renderer's state).
   quads or two quarters of the image meet differ by at most 3 levels (`image_limits.json`).
 - `lit 2d`, `mesh 2d`: `LitMatte` and `MeshUnlit` through the 2D renderer: the lit quads draw
   nothing there (no pass of theirs is one the 2D renderer draws), the meshes are drawn.
+- `decal`: `LitDecal` projected onto a lit wall through the renderer with the decal feature,
+  under the sun and a point light (frames 5 and 12): the decal feature draws the output's
+  screen space pass; its DBuffer and GBuffer passes exclude OpenGL Core.
 - `capture/graphs imported while playing` must be empty (a capture where it is not stays
   incomplete).
 
@@ -227,6 +235,9 @@ adds to that is not separated.
   Effect target or ones through the 2D renderer, material overrides of a graph that allows
   them; sprites in sorting layers other than the default one, sprite masks, 2D shadows and the
   camera sorting layer texture with effects.
+- Decals through the deferred renderer or the DBuffer technique (whose passes OpenGL Core
+  drops), decals with normal, mask or emissive maps, angle fade, decal layers, a Shader Graph
+  decal, and decals over other effects.
 - Other devices than OpenGL Core in the Editor.
 
 ## Running
