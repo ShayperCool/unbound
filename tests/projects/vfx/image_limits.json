@@ -143,28 +143,10 @@
   "over8": 0,
   "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
  },
- "draw-skinned surface-f008.png": {
-  "mean": 0.01,
-  "worst": 38,
-  "over8": 1,
-  "reason": "A few pixels where a particle quad meets the skinned column's edge differ (the particles stand on the column's vertices, whose positions differ from the Editor's in their low bits: residuals.json); every other pixel is the Editor's."
- },
  "draw-skinned world-f016.png": {
   "mean": 0.059,
   "worst": 60,
   "over8": 4,
-  "reason": "A few pixels where a particle quad meets the skinned column's edge differ (the particles stand on the column's vertices, whose positions differ from the Editor's in their low bits: residuals.json); every other pixel is the Editor's."
- },
- "draw-skinned-f004.png": {
-  "mean": 0.01,
-  "worst": 38,
-  "over8": 1,
-  "reason": "A few pixels where a particle quad meets the skinned column's edge differ (the particles stand on the column's vertices, whose positions differ from the Editor's in their low bits: residuals.json); every other pixel is the Editor's."
- },
- "draw-skinned-f008.png": {
-  "mean": 0.01,
-  "worst": 38,
-  "over8": 1,
-  "reason": "A few pixels where a particle quad meets the skinned column's edge differ (the particles stand on the column's vertices, whose positions differ from the Editor's in their low bits: residuals.json); every other pixel is the Editor's."
+  "reason": "Four pixels at the stage's centre: at frame 16 the Editor draws a dark 2x2 dot there, over the skinned column, that Unbound does not draw; every other pixel is the Editor's, also at frames 4 and 8. Cause not resolved (the system is in world space; its particles land far from the stage, as in the Editor)."
  }
 }

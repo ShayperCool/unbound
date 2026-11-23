@@ -212,8 +212,6 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>The next frame, and its skinning pass (UpdateAllSkinnedMeshes), whatever pass
-        /// other tests left last.</summary>
         /// <summary>The skin buffer holds the vertices in the root bone's space, not the
         /// renderer's, when the two differ (tests/projects/vfx <c>skinned/*/buffer</c>: a root
         /// bone turned and moved from the renderer); drawn and baked, the skin is where it was.
@@ -307,6 +305,43 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>Under a non-uniform scale a skin's normals light the same once its buffer was
+        /// asked for (tests/projects/renderapi <c>skinNormal.*</c>: before, after and the next
+        /// frame draw alike): baked, they are the normals of before.</summary>
+        [Fact]
+        public void AskingForTheBufferKeepsTheNormalsUnderANonUniformScale()
+        {
+            var (root, bone, mesh, renderer) = OneBoneSkin();
+            root.transform.localScale = new Vector3(2f, 3f, 4f);
+            bone.localRotation = Quaternion.Euler(20f, 30f, 40f);
+            mesh.normals = new[] { new Vector3(0f, 0f, -1f), new Vector3(0.6f, 0f, -0.8f), new Vector3(0f, 0.6f, -0.8f) };
+            var before = new Mesh();
+            var after = new Mesh();
+            try
+            {
+                NextSkinningFrame();
+                renderer.BakeMesh(before);
+                using (renderer.GetVertexBuffer()) { }
+                NextSkinningFrame();
+                using (renderer.GetVertexBuffer()) { }
+                renderer.BakeMesh(after);
+                for (int i = 0; i < 3; i++)
+                {
+                    Assert.True((before.normals[i] - after.normals[i]).sqrMagnitude < 1e-10f, before.normals[i].ToString("F6") + " " + after.normals[i].ToString("F6"));
+                    Assert.True((before.vertices[i] - after.vertices[i]).sqrMagnitude < 1e-10f, before.vertices[i].ToString("F6") + " " + after.vertices[i].ToString("F6"));
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(mesh);
+                Object.DestroyImmediate(before);
+                Object.DestroyImmediate(after);
+            }
+        }
+
+        /// <summary>The next frame, and its skinning pass (UpdateAllSkinnedMeshes), whatever pass
+        /// other tests left last.</summary>
         internal static void NextSkinningFrame()
         {
             Time.s_FrameCount++;

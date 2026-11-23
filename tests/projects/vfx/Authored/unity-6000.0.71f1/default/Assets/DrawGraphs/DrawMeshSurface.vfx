@@ -62,7 +62,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Mesh, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"030fe75885da015b398417670d45d052","type":2}}'
+      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"c42800f6472c101a3b3c00f411daf2ea","type":2}}'
     min: -Infinity
     max: Infinity
     enumValues: []
@@ -1000,7 +1000,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Mesh, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"030fe75885da015b398417670d45d052","type":2}}'
+      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"c42800f6472c101a3b3c00f411daf2ea","type":2}}'
     m_Space: -1
   m_Property:
     name: o

@@ -110,7 +110,7 @@ namespace UnityEngine
                 return cloth != null && cloth.enabled && cloth.m_Active && cloth.RenderMesh() != null;
             }
         }
-        Matrix4x4[] m_Matrices = Array.Empty<Matrix4x4>();
+        Matrix4x4[] m_Matrices = Array.Empty<Matrix4x4>(), m_NormalMatrices = Array.Empty<Matrix4x4>();
 
         public SkinnedMeshRenderer()
         {
@@ -238,6 +238,11 @@ namespace UnityEngine
         /// `skinned*`).</summary>
         internal Mesh EffectSkin(bool previous)
         {
+            if (!m_EffectClothWarned && GetComponent<Cloth>() is Cloth cloth && cloth.enabled && cloth.m_Active)
+            {
+                m_EffectClothWarned = true;
+                Debug.LogWarning($"Unbound: an effect samples SkinnedMeshRenderer '{name}', whose Cloth simulates: it reads the cloth's mesh, which is not measured.", this);
+            }
             var target = GraphicsDeviceProfile.Current.VfxMeshBufferTarget;
             if ((m_VertexBufferTarget & target) != target) vertexBufferTarget = m_VertexBufferTarget | target;
             var output = SkinMesh(previous);
@@ -273,6 +278,7 @@ namespace UnityEngine
             return previous ? m_PreviousRoot : m_Root;
         }
 
+        bool m_EffectClothWarned;
         int m_RootFrame = int.MinValue;
         Matrix4x4 m_Root, m_PreviousRoot;
 
@@ -483,12 +489,19 @@ namespace UnityEngine
             var skeleton = m_Bones.Length == 0 ? SkeletonSkin() : null;
             int boneCount = Math.Min(skeleton != null ? m_SkinNodes.Length : m_Bones.Length, bindposes.Length);
             if (m_Matrices.Length != boneCount) m_Matrices = new Matrix4x4[boneCount];
-            // Into world space; once the buffer is asked for, relative to the root bone (each
-            // bone's matrix composed with the root's inverse first, as the Editor's skin keeps
-            // full precision far from the origin: tests/projects/vfx skinned/*/buffer).
+            // Into world space; once the buffer is asked for, into the root bone's space
+            // (tests/projects/vfx skinned/*/buffer): positions and tangents by the root's
+            // inverse, normals by its transpose, which keeps their lighting under a non-uniform
+            // scale (tests/projects/renderapi skinNormal.*). Each bone's world skin matrix is made
+            // first, then taken into the root's space.
             bool rooted = m_GraphicsOutputRequested;
             var toRoot = rooted ? SkinRoot.worldToLocalMatrix : Matrix4x4.identity;
-            var fallback = rooted ? toRoot * transform.localToWorldMatrix : transform.localToWorldMatrix;
+            var normalToRoot = rooted ? SkinRoot.localToWorldMatrix.transpose : Matrix4x4.identity;
+            if (rooted && m_NormalMatrices.Length != boneCount) m_NormalMatrices = new Matrix4x4[boneCount];
+            var normalMatrices = rooted ? m_NormalMatrices : m_Matrices;
+            var fallback = transform.localToWorldMatrix;
+            var normalFallback = rooted ? normalToRoot * fallback : fallback;
+            if (rooted) fallback = toRoot * fallback;
             if (skeleton != null)
             {
                 // Relative to the skin's root node, placed by this renderer's transform (which the
@@ -498,16 +511,18 @@ namespace UnityEngine
                 for (int b = 0; b < boneCount; b++)
                 {
                     int node = m_SkinNodes[b];
-                    var world = node >= 0 ? toWorld * skeleton.Global(node) : rendererToWorld;
-                    m_Matrices[b] = (rooted ? toRoot * world : world) * bindposes[b];
+                    var world = (node >= 0 ? toWorld * skeleton.Global(node) : rendererToWorld) * bindposes[b];
+                    m_Matrices[b] = rooted ? toRoot * world : world;
+                    if (rooted) m_NormalMatrices[b] = normalToRoot * world;
                 }
             }
             else
                 for (int b = 0; b < boneCount; b++)
                 {
                     var bone = m_Bones[b];
-                    var world = bone != null ? bone.localToWorldMatrix : transform.localToWorldMatrix;
-                    m_Matrices[b] = (rooted ? toRoot * world : world) * bindposes[b];
+                    var world = (bone != null ? bone.localToWorldMatrix : transform.localToWorldMatrix) * bindposes[b];
+                    m_Matrices[b] = rooted ? toRoot * world : world;
+                    if (rooted) m_NormalMatrices[b] = normalToRoot * world;
                 }
             int maxBones = MaxBones;
             for (int i = 0; i < positions.Length; i++)
@@ -532,14 +547,14 @@ namespace UnityEngine
                     if (weight <= 0f || index < 0 || index >= boneCount) continue;
                     var m = m_Matrices[index];
                     p += m.MultiplyPoint3x4(v) * weight;
-                    n += m.MultiplyVector(sn) * weight;
+                    n += normalMatrices[index].MultiplyVector(sn) * weight;
                     t += m.MultiplyVector(st) * weight;
                     total += weight;
                 }
                 if (total <= 0f)
                 {
                     p = fallback.MultiplyPoint3x4(v);
-                    n = fallback.MultiplyVector(sn);
+                    n = normalFallback.MultiplyVector(sn);
                     t = fallback.MultiplyVector(st);
                 }
                 else if (total < 0.999f)

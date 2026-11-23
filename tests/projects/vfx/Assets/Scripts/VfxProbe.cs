@@ -778,6 +778,9 @@ public sealed class VfxProbe : MonoBehaviour
     /// <summary>The upper bones of the skinned columns (README.md, "Skinned meshes"), turned in
     /// each update.</summary>
     readonly List<Transform> m_SkinnedBones = new List<Transform>();
+    /// <summary>The root bone of `skinned`'s renderer, which `skinned operations` reads: it moves
+    /// in each update too.</summary>
+    Transform m_MovingRoot;
     readonly List<(string Key, SkinnedMeshRenderer Renderer)> m_Skins = new List<(string, SkinnedMeshRenderer)>();
 
     /// <summary>A column of two by five vertices, two units high, skinned to two bones: the
@@ -858,16 +861,22 @@ public sealed class VfxProbe : MonoBehaviour
             renderer.sharedMaterial = dark;
             m_SkinnedBones.Add(upper);
             m_Skins.Add((key, renderer));
-            if (key == "skinned") Effect("skinned operations", "Assets/OpGraphs/OpsSkinned.vfx", new Vector3(0f, 12f, 0f)).SetSkinnedMeshRenderer("Skin", renderer);
+            if (key == "skinned")
+            {
+                Effect("skinned operations", "Assets/OpGraphs/OpsSkinned.vfx", new Vector3(0f, 12f, 0f)).SetSkinnedMeshRenderer("Skin", renderer);
+                m_MovingRoot = lower;
+            }
             Rec("skinned/" + key + "/target before", ((int)renderer.vertexBufferTarget).ToString(CultureInfo.InvariantCulture));
             effect.SetSkinnedMeshRenderer("Skin", renderer);
         }
     }
 
-    /// <summary>Turns the skinned columns' upper bones by six degrees an update.</summary>
+    /// <summary>Turns the skinned columns' upper bones by six degrees an update, and moves the
+    /// root bone of `skinned` by a fiftieth of a unit to the right.</summary>
     void SkinnedFrame()
     {
         foreach (var bone in m_SkinnedBones) bone.localRotation = Quaternion.Euler(0f, 0f, 6f * m_Frame);
+        if (m_MovingRoot != null) m_MovingRoot.localPosition = new Vector3(0.02f * m_Frame, -1f, 0f);
         // The skin buffer as a script reads it in an update: its layout and its first vertices
         // (the last frame's skin), and the renderer's buffer target once the effect sampled it.
         if (m_Frame == 20)

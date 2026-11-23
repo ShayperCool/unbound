@@ -437,7 +437,9 @@ Each control has a column of two by five vertices skinned to two bones (`Skinned
 `VfxProbe.cs`: the lower half to the first bone, the upper half to the second, the middle row
 to both; first texture coordinates across and up the column), standing beside the effect, the
 renderer turned by 15 degrees and moved from the stage, its root bone (the lower bone) a unit
-below it and turned by -10 degrees; the upper bone turns by six degrees in each update. The
+below it and turned by -10 degrees; the upper bone turns by six degrees in each update, and
+`skinned`'s root bone moves by a fiftieth of a unit to the right in each update (so the root
+transform of the frame before differs from this frame's). The
 renderer draws the column itself (dark grey). The graphs (`DrawSkinned*`) take the renderer as
 the exposed `Skin` and put a particle on vertex `particleId` in every update:
 
@@ -466,11 +468,12 @@ What the Editor does. The renderer's `vertexBufferTarget` gains Structured once 
 samples it (1 before, 17 after). Its skin buffer holds positions and normals (stride 24) in the
 root bone's space, the last frame's skin when read in an update. Both root transforms, local and
 world, are the root bone's world transform (the package's manual describes the local one as
-relative to the renderer): a sample with the local root transform applied is the vertex's world
+relative to the renderer), the frame before's being the last update's (this frame's in the first): a sample with the local root transform applied is the vertex's world
 position (`skinned values`: the colours decode to the world positions of the frame before), so
 the particles of a system in local space whose effect is not at the world's origin are drawn far
 from the column (the `skinned*` images show the column alone). The skin values' low bits and the
-root matrices' last bit differ from Unbound's (`residuals.json`).
+root matrices' last bit differ from Unbound's (`residuals.json`); at frame 16 the Editor draws a
+dark 2x2 dot at the centre of `skinned world` that Unbound does not (`image_limits.json`).
 
 ## Event attributes read in a spawn context
 

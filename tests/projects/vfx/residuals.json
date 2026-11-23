@@ -77,7 +77,7 @@
   "skinned operations/update9/m02",
   "skinned operations/update9/m03"
  ],
- "The skin buffer's values differ from the Editor's in their low bits (at most 2^-13 of the value; the Editor's own values of one skin differ the same way from one stage's place to another's, so its order of composing the bone, root and bind matrices keeps some of the world's rounding). Unbound composes each bone's matrix with the root bone's inverse first; the images and the sampled values (`skinned values`) are the Editor's": [
+ "The skin buffer's values differ from the Editor's in their low bits (at most 2^-13 of the value; the Editor's own values of one skin differ the same way from one stage's place to another's, so its order of composing the bone, root and bind matrices keeps some of the world's rounding). Unbound makes each bone's world skin matrix, then takes it into the root bone's space; the images and the sampled values (`skinned values`) are the Editor's": [
   "skinned/skinned previous/buffer f008",
   "skinned/skinned previous/buffer f016",
   "skinned/skinned streams/buffer f008",
