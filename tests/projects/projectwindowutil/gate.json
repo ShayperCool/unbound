@@ -1,5 +1,14 @@
 {
-  "commands": ["python3 tests/projects/projectwindowutil/run.py gate"],
+  "commands": [
+    "python3 tests/projects/projectwindowutil/run.py gate"
+  ],
   "summary": "projectwindowutil: [0-9]+/[0-9]+ values match.*",
-  "engine_paths": ["managed/UnityEngine/Editor/ProjectWindowUtil.cs"]
+  "engine_paths": [
+    "managed/UnityEngine/Editor/ProjectWindowUtil.cs",
+    "managed/UnityEngine/Editor/ProjectWindowUtilCreate.cs",
+    "managed/UnityEngine/Editor/AssetModificationProcessorInternal.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "managed/UnityEngine/Editor/EditorSceneManager.cs",
+    "managed/UnityEngine/Editor/SceneFiles.cs"
+  ]
 }

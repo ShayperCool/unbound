@@ -105,9 +105,10 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ThePackagesFolderIsTheLastAncestorOfAPackageAsset()
+        public void ThePackagesFolderHasTheInstanceIDIntMaxValue()
         {
-            // As the Project window answers it: Packages has no folder asset.
+            // As the Project window answers it (the last ancestor of a package asset, probe
+            // ancestors.package): Packages has no folder asset.
             Assert.Equal(int.MaxValue, ProjectWindowUtil.FolderInstanceID("Packages"));
         }
 
