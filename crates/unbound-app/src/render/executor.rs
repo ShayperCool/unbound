@@ -4058,17 +4058,19 @@ impl UnityRenderer {
                             .textures
                             .get(&destination)
                             .is_none_or(|t| t.samples == 1)
-                            && let Some(copy) = self.plan_copy(
+                        {
+                            let source_view = self.bound_resolve_source(texture, destination);
+                            if let Some(copy) = self.plan_copy(
                                 texture,
-                                [0, 0],
+                                source_view,
                                 [0, 0, -1, -1],
                                 destination,
                                 [0, 0],
                                 [0, 0],
                                 false,
-                            )
-                        {
-                            passes.push(Op::Copy(copy));
+                            ) {
+                                passes.push(Op::Copy(copy));
+                            }
                         }
                         open = false;
                     }
@@ -5956,6 +5958,26 @@ impl UnityRenderer {
         self.compute_bindings.begin();
         self.compiled.begin_frame();
         *open = false;
+    }
+
+    /// An OpenGL resolve into a 2D target or cubemap reads the bound image of the
+    /// source. The destination is its first image. See tests/projects/textureformats.
+    fn bound_resolve_source(&self, source: u64, destination: u64) -> [i32; 2] {
+        let image = || {
+            let destination = self.textures.get(&destination)?;
+            if !self.is_gles || destination.array || destination.cube_array || destination.volume {
+                return None;
+            }
+            let source = &self.textures.get(&source)?.texture;
+            let target = self.state.target.as_ref()?;
+            std::iter::once(&target.texture)
+                .chain(target.extra.iter().map(|attachment| &attachment.texture))
+                .filter_map(Option::as_ref)
+                .find_map(|(texture, layer, mip)| {
+                    (source == texture).then_some([*layer as i32, *mip as i32])
+                })
+        };
+        image().unwrap_or([0, 0])
     }
 
     /// A copy between two textures (0: the screen), clipped to both; formats must match.

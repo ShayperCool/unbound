@@ -159,6 +159,8 @@ namespace UnityEngine.Rendering
         /// and level (measured: tests/projects/cmdbuffers bind.size.*; runtimeapis
         /// size.set_render_targets2 and 3).</summary>
         const int TargetsCommandSize = 152;
+        // Measured by tests/projects/textureformats rt.commandResolve.*.
+        const int ResolveSurfaceCommandSize = 12;
 
         public int sizeInBytes => m_Size;
 
@@ -708,6 +710,17 @@ namespace UnityEngine.Rendering
             BlitCommand(source, null, dest, null, -1, scale, offset, sourceDepthSlice, destDepthSlice);
         public void Blit(RenderTargetIdentifier source, RenderTargetIdentifier dest, Material mat, int pass, int destDepthSlice) =>
             BlitCommand(source, null, dest, mat, pass, Vector2.one, Vector2.zero, 0, destDepthSlice);
+
+        public void ResolveAntiAliasedSurface(RenderTexture rt, RenderTexture target = null)
+        {
+            if (!Compat.RenderingMeasured || SystemInfo.graphicsDeviceType != GraphicsDeviceType.OpenGLCore)
+            {
+                Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.ResolveAntiAliasedSurface");
+                return;
+            }
+            if (rt == null) throw new ArgumentNullException(nameof(rt));
+            Add(_ => { if (rt != null) rt.WriteCommandResolve(target); }, ResolveSurfaceCommandSize);
+        }
 
         public void CopyTexture(RenderTargetIdentifier src, RenderTargetIdentifier dst) => CopyTexture(src, 0, 0, -1, -1, -1, -1, dst, 0, 0, 0, 0);
         public void CopyTexture(RenderTargetIdentifier src, int srcElement, RenderTargetIdentifier dst, int dstElement) => CopyTexture(src, srcElement, 0, -1, -1, -1, -1, dst, dstElement, 0, 0, 0);

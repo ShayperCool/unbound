@@ -393,7 +393,7 @@ namespace UnityEngine
         public void ResolveAntiAliasedSurface()
         {
             if (Compat.RenderingMeasured && antiAliasing > 1 && IsCreated())
-                GfxStream.ResolveTexture(EnsureCreated(), EnsureCreated());
+                QueueResolve(this);
             GfxStream.Flush();
         }
 
@@ -433,9 +433,43 @@ namespace UnityEngine
             }
             if (s_Active == null && antiAliasing > 1 && IsCreated() && SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore)
                 Debug.LogAssertion(ResolveOfInactiveSource);
-            GfxStream.ResolveTexture(EnsureCreated(), target.EnsureCreated());
+            QueueResolve(target);
             return true;
         }
+
+        // Command buffers resolve the current color attachment without changing the binding.
+        // In OpenGL Core an omitted target resolves an ordinary multisample image into itself.
+        // A supplied target must name a different image. See tests/projects/textureformats.
+        internal void WriteCommandResolve(RenderTexture target)
+        {
+            if (!IsCreated()) return;
+            bool implicitTarget = ReferenceEquals(target, null);
+            if (implicitTarget)
+            {
+                if (bindTextureMS || antiAliasing <= 1) return;
+                target = this;
+            }
+            else if (target == null || !target.IsCreated()) return;
+            var binding = GfxStream.Current;
+            bool isBound = binding.Colors == null
+                ? binding.Color == m_NativeHandle
+                : Array.IndexOf(binding.Colors, m_NativeHandle) >= 0;
+            if (!isBound)
+            {
+                Log.Write(LogType.Assert, ResolveOfInactiveSource, "", null);
+                return;
+            }
+            if (!implicitTarget && target == this) return;
+            if (!implicitTarget && target.dimension is not (TextureDimension.Tex2D or TextureDimension.Cube))
+            {
+                Debug.LogWarning("Resolving into layered or volume render textures is not supported.");
+                return;
+            }
+            QueueResolve(target);
+        }
+
+        void QueueResolve(RenderTexture target) =>
+            GfxStream.ResolveTexture(EnsureCreated(), target.EnsureCreated());
 
         /// <summary>Applies ScalableBufferManager's current factors to a texture marked both
         /// useDynamicScale and useDynamicScaleExplicit, which scales only then (as documented; the
