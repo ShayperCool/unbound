@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
 using Xunit;
@@ -70,20 +71,24 @@ namespace UnityEngine.Tests
             try
             {
                 var light = owner.AddComponent<Light>();
-                const LightEvent evt = LightEvent.BeforeShadowMap;
-                light.AddCommandBuffer(evt, buffer);
-                light.RemoveAllCommandBuffers();
+                RebuildCommands(light, buffer, 1024);
                 long before = System.GC.GetAllocatedBytesForCurrentThread();
-                for (int frame = 0; frame < 64; frame++)
-                {
-                    light.AddCommandBuffer(evt, buffer);
-                    light.RemoveAllCommandBuffers();
-                }
+                RebuildCommands(light, buffer, 64);
                 Assert.Equal(before, System.GC.GetAllocatedBytesForCurrentThread());
             }
             finally
             {
                 Object.DestroyImmediate(owner);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        static void RebuildCommands(Light light, CommandBuffer buffer, int frames)
+        {
+            for (int frame = 0; frame < frames; frame++)
+            {
+                light.AddCommandBuffer(LightEvent.BeforeShadowMap, buffer);
+                light.RemoveAllCommandBuffers();
             }
         }
 
