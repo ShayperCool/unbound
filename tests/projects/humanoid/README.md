@@ -236,6 +236,19 @@ imported without keyframe reduction.
   pose rules. ProcessRootMotion and other graph shapes retain their report.
   [SetLayerMaskFromAvatarMask](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/animations/animationlayermixerplayable/setlayermaskfromavatarmask)
 
+  Six no-input job controls add 948 rows from two matching macOS
+  6000.0.71f1 Editor runs. In an explicit manual evaluation, a single
+  full-weight default-values output of a no-input job applies the default
+  humanoid pose even when the job writes nothing. A scene arm edit is
+  replaced on the next evaluation. The controls also record a pose read
+  in ProcessRootMotion, a bone write, a body and muscle write, and a write
+  at Evaluate(0) followed by a return to the default pose. The Animator
+  has no controller or movement callback, applyRootMotion is off, and
+  its update mode is Normal. Other graph shapes and release families
+  keep the reported fallback.
+  [AnimationScriptPlayable.Create](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationScriptPlayable.Create.html),
+  [AnimationStream.AsHuman](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationStream.AsHuman.html).
+
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
   `ProbeRunner.Leftovers`): HumanA's clip leaving for such a state (Hold) after an exit time of 0.3
   at once (with an extra `Update(0)` before step 12, `noWDAlone`), over 0.2 s (`noWDFade`), at

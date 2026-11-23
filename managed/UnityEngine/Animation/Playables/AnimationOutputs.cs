@@ -55,6 +55,7 @@ namespace Unbound.Runtime.Playables
         /// it: an output that wrote no humanoid curve poses the avatar by default only when its
         /// pose comes from clips alone (the measured case).</summary>
         internal bool ClipSampled, JobRan;
+        internal bool DefaultHumanJobPose;
         /// <summary>The IK values (goal weights, hints, look-at) an animation job left in the
         /// stream's human pose, for the jobs above it.</summary>
         internal readonly Unbound.Runtime.Playables.StreamHumanIK HumanIK = new Unbound.Runtime.Playables.StreamHumanIK();
@@ -88,7 +89,7 @@ namespace Unbound.Runtime.Playables
             FootIK = false;
             GoalsInMotion = false;
             HasMassCenter = false;
-            ClipSampled = JobRan = false;
+            ClipSampled = JobRan = DefaultHumanJobPose = false;
             HumanIK.Clear();
             Owner = null;
             FloatCount = b.FloatCount;
@@ -347,7 +348,8 @@ namespace Unbound.Runtime.Playables
         internal bool UsesMeasuredKinematicJobRoot;
         internal bool UsesMeasuredLayerJobRoot;
         internal PlayableOutputData ScriptedJobOutput;
-        bool m_CanMoveDuringJob, m_JobInterrupted;
+        bool m_ExplicitEvaluation, m_CanMoveDuringJob, m_JobInterrupted;
+        internal bool UsesDefaultHumanJobPose;
         AnimatorRootMotion? m_JobHumanStep;
         /// <summary>How this evaluation's streams carry root motion (set by <see cref="Run"/>).</summary>
         internal RootMotionMode MotionMode;
@@ -397,6 +399,8 @@ namespace Unbound.Runtime.Playables
             e.UsesMeasuredJobVelocities = false;
             e.UsesMeasuredKinematicJobRoot = false;
             e.UsesMeasuredLayerJobRoot = false;
+            e.UsesDefaultHumanJobPose = false;
+            e.m_ExplicitEvaluation = false;
             e.ScriptedJobOutput = null;
             e.m_CanMoveDuringJob = e.m_JobInterrupted = false;
             e.m_JobHumanStep = null;
@@ -797,6 +801,7 @@ namespace Unbound.Runtime.Playables
             animator.m_OutputEvaluations++;
             try
             {
+                e.m_ExplicitEvaluation = explicitEvaluation;
                 e.m_CanMoveDuringJob = explicitEvaluation && !suppressMovement && !deferPhases && Compat.HumanStreamScriptedRoot;
                 pending = Run(e, animator, bindings, outputs, suppressMovement);
                 if (pending == null) return;
@@ -931,6 +936,13 @@ namespace Unbound.Runtime.Playables
                 e.UsesMeasuredLayerJobRoot = Compat.HumanStreamLayerRootPlacement && e.MotionMode == RootMotionMode.Human
                     && o.Graph.UpdateMode == DirectorUpdateMode.Manual && o.Weight == 1f
                     && source == AnimationStreamSource.DefaultValues && JobKind.HasRootMaskedLayerInput(o.Source);
+                e.UsesDefaultHumanJobPose = Compat.HumanStreamDefaultJobPose && e.m_ExplicitEvaluation
+                    && animator.Human != null && animator.m_Player == null && !animator.applyRootMotion
+                    && animator.updateMode == AnimatorUpdateMode.Normal && !MoveCallbacks.Any(animator)
+                    && outputs.Count == 1 && AnimationOutputs.ActiveCount(animator) == 1
+                    && o.Graph.UpdateMode == DirectorUpdateMode.Manual && o.Weight == 1f
+                    && source == AnimationStreamSource.DefaultValues
+                    && o.Source.Kind is JobKind { ProcessInputs: true } && o.Source.Inputs.Count == 0;
                 AnimStream s;
                 // The tree's own weights decide which clips fire events; the output's weight blends
                 // the pose only (6000.0.71f1, animculling weight/0: a clip under an output at
@@ -977,6 +989,7 @@ namespace Unbound.Runtime.Playables
                 if (o.Weight > 0f && s.FootIK) result.FootIK = true;
                 result.ClipSampled |= s.ClipSampled;
                 result.JobRan |= s.JobRan;
+                if (e.UsesDefaultHumanJobPose && s.JobRan) result.DefaultHumanJobPose = true;
                 if (s.HasMassCenter && o.Weight >= 1f)
                 {
                     result.MassCenter ??= new float[Unbound.Runtime.Humanoid.HumanClipImport.CurveCount];
@@ -1011,10 +1024,10 @@ namespace Unbound.Runtime.Playables
             if (!(culled && rootWritten))
                 PoseWriter.WriteStream(result, onlyRoot: culled ? animator.transform : null,
                     skipRoot: preserveRoot || rootWritten ? animator.transform : null);
-            // An output of clips that wrote no humanoid curve poses the avatar by default (measured
-            // without a controller); a controller's own pose and a job's bone writes stay (Unbound's
-            // choice, unmeasured).
-            if (!culled && animator.m_Player == null && result.ClipSampled && !result.JobRan) animator.Human?.DefaultPoseUnlessWritten();
+            // A clip or a measured no-input job poses the avatar even without writes. A job's
+            // humanoid edits have already marked the pose dirty and take precedence.
+            if (!culled && animator.m_Player == null && (result.DefaultHumanJobPose || result.ClipSampled && !result.JobRan))
+                animator.Human?.DefaultPoseUnlessWritten();
             if (!culled) animator.ApplyPlayableHumanPose(playableIK);
         }
 

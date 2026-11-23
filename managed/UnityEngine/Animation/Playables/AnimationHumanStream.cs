@@ -106,9 +106,6 @@ namespace Unbound.Runtime.Playables
             HumanClipImport.PoseFromCurves(m_Values, s_AllPresent, Pose);
             m_CurveRoot = Pose.RootX;
             var sample = stream.BodyMotion;
-            if (!sample.HasMotion)
-                Stubs.Ignored("AnimationHumanStream without humanoid body motion",
-                    "takes the body and goals of a stream without clip body motion below it (a controller playable while no humanoid clip plays, the previous outputs' pose) as its curves hold them (not measured)");
             if (sample.HasMotion)
             {
                 if (stream.GoalsInMotion)

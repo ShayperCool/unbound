@@ -4,6 +4,7 @@ using System.Linq;
 using Unbound.Runtime;
 using Unbound.Runtime.Playables;
 using UnityEngine.Animations;
+using UnityEngine.Experimental.Animations;
 using UnityEngine.Playables;
 using Xunit;
 
@@ -150,6 +151,36 @@ namespace UnityEngine.Tests
             Near(s * 1.25f, afterLocalS);
             Near(wp, afterWorldP);
             Near(wr, afterWorldR);
+        }
+
+        [Theory]
+        [InlineData(TestRelease.Measured, AnimationStreamSource.DefaultValues, true)]
+        [InlineData(TestRelease.Unmeasured, AnimationStreamSource.DefaultValues, false)]
+        [InlineData(TestRelease.Measured, AnimationStreamSource.PreviousInputs, false)]
+        public void ANoInputJobReappliesTheDefaultPoseInTheMeasuredStream(
+            string release, AnimationStreamSource source, bool retargets)
+        {
+            using var pin = TestRelease.Pin(release);
+            const string warning = "AnimationHumanStream without humanoid body motion";
+            int Hits() => Stubs.HitReport().FirstOrDefault(hit => hit.Key == warning).Value;
+
+            var animator = Human();
+            animator.applyRootMotion = false;
+            var arm = animator.GetBoneTransform(HumanBodyBones.LeftLowerArm);
+            var handle = animator.BindStreamTransform(arm);
+            Quaternion defaultRotation = default;
+            var graph = m_Graph = AnimationHumanStreamTests.Graph(animator,
+                (stream, _) => defaultRotation = handle.GetLocalRotation(stream));
+            ((AnimationPlayableOutput)graph.GetOutput(0)).SetAnimationStreamSource(source);
+
+            int before = Hits();
+            graph.Evaluate(0f);
+            var externalRotation = defaultRotation * Quaternion.Euler(0f, 0f, 45f);
+            arm.localRotation = externalRotation;
+            graph.Evaluate(1f / 30f);
+
+            Near(retargets ? defaultRotation : externalRotation, arm.localRotation);
+            Assert.Equal(!retargets, Hits() > before);
         }
 
         public sealed class KinematicMoveCallback : MonoBehaviour

@@ -365,6 +365,9 @@ namespace Unbound.Runtime.Playables
             if (Stream.HasMassCenter && !useLayerRoot)
                 Stubs.Ignored("AnimationHumanStream under a layer without Root",
                     "reads and writes the animated pose; the pose that places the body (layers whose mask keeps Root) is not part of it (not measured)");
+            if (!Stream.BodyMotion.HasMotion && Evaluation?.UsesDefaultHumanJobPose != true)
+                Stubs.Ignored("AnimationHumanStream without humanoid body motion",
+                    "takes the body and goals of a stream without clip body motion below it (a controller playable while no humanoid clip plays, the previous outputs' pose) as its curves hold them (not measured)");
             bool humanMotion = Evaluation != null && Evaluation.MotionMode == RootMotionMode.Human;
             var root = human.StreamRoot(humanMotion, Stream.BodyMotion, Stream.DeltaTime,
                 UseKinematicAnimationRoot, UseMovedAnimationRoot);
