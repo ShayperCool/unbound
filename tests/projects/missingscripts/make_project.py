@@ -88,6 +88,10 @@ def main():
           meta('Data/Linked.asset', NATIVE.replace('MAIN', '11400000')))
     write('Missing/Data/Twice.asset', HEADER + known_data(11400000, 'Twice') + missing_behaviour(5000, 0, 'One')
           + missing_behaviour(6000, 0, 'Two'), meta('Data/Twice.asset', NATIVE.replace('MAIN', '11400000')))
+    # A script reference that names nothing at all.
+    write('Missing/Data/Empty.asset', HEADER + missing_behaviour(11400000, 0, 'Empty').replace(
+        f'{{fileID: 11500000, guid: {MISSING}, type: 3}}', '{fileID: 0}'),
+          meta('Data/Empty.asset', NATIVE.replace('MAIN', '11400000')))
     write('Resources/MissingResource.asset', HEADER + missing_behaviour(11400000, 0, 'MissingResource'),
           meta('Resources/MissingResource.asset', NATIVE.replace('MAIN', '11400000')))
     write('Resources/MissingPrefab.prefab', HEADER + game_object(200, 201, [202], 'MissingPrefab') + missing_behaviour(202, 200),

@@ -40,6 +40,10 @@
 {"k":"09.twice.all","v":"none,none,KnownData:Twice"}
 {"k":"09.twice.loadAllAgain.logs","v":""}
 {"k":"09.twice.allAgain","v":3}
+{"k":"10.empty.load.logs","v":"Warning: The referenced script on this Behaviour (Game Object '<null>') is missing!"}
+{"k":"10.empty.result","v":"none"}
+{"k":"10.empty.loadAll.logs","v":""}
+{"k":"10.empty.all","v":"none"}
 {"k":"07.end.logs","v":""}
 {"k":"07.again","v":true}
 {"k":"complete","v":true}

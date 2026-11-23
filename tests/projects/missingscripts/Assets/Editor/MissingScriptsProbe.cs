@@ -146,6 +146,13 @@ public static class MissingScriptsProbe
         var twiceAgain = AssetDatabase.LoadAllAssetsAtPath("Assets/Missing/Data/Twice.asset");
         Logs("09.twice.loadAllAgain");
         Put("09.twice.allAgain", twiceAgain.Length);
+
+        var empty = AssetDatabase.LoadAssetAtPath<Object>("Assets/Missing/Data/Empty.asset");
+        Logs("10.empty.load");
+        Put("10.empty.result", Describe(empty));
+        var emptyAll = AssetDatabase.LoadAllAssetsAtPath("Assets/Missing/Data/Empty.asset");
+        Logs("10.empty.loadAll");
+        Put("10.empty.all", string.Join(",", emptyAll.Select(Describe)));
         yield return null;
         Logs("07.end");
         Put("07.again", again != null);

@@ -5,7 +5,7 @@ the project has (`make_project.py` writes the assets): a scene's component (the 
 twice), a prefab's component (`Resources.Load`, then `Instantiate` twice), ScriptableObject assets
 (`AssetDatabase.LoadAssetAtPath`, `LoadAllAssetsAtPath`, `Resources.Load`), a missing-script
 sub-asset beside a main object that loads (`Mixed`), one the main object references (`Linked`),
-two in one file (`Twice`), and a component's references to such objects. Each step records the
+two in one file (`Twice`), an asset whose script reference names nothing (`Empty`), and a component's references to such objects. Each step records the
 log messages it raised (type and first line) and what the calls return; values compare exactly.
 
 ```sh
