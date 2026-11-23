@@ -110,5 +110,31 @@ namespace UnityEngine.Tests
             var withoutAvatar = Model(out _);
             Assert.Equal(0f, Played(null, withoutAvatar).x, 4);
         }
+
+        [Fact]
+        public void LayerMasksTakeTransformPathsBelowTheAvatarRoot()
+        {
+            var clip = new AnimationClip();
+            clip.SetCurve("Hips", typeof(Transform), "m_LocalPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 2f));
+            clip.SetCurve("Prop", typeof(Transform), "m_LocalPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 2f));
+            var mask = new AvatarMask { transformCount = 2 };
+            mask.SetTransformPath(0, "Hips");
+            mask.SetTransformActive(0, true);
+            mask.SetTransformPath(1, "Prop");
+            mask.SetTransformActive(1, false);
+            var model = Model(out var avatar);
+            var animator = Holder(model, avatar);
+            var graph = PlayableGraph.Create("masked");
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            var layers = AnimationLayerMixerPlayable.Create(graph, 1);
+            graph.Connect(AnimationClipPlayable.Create(graph, clip), 0, layers, 0);
+            layers.SetInputWeight(0, 1f);
+            layers.SetLayerMaskFromAvatarMask(0, mask);
+            AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(layers);
+            graph.Evaluate(0.5f);
+            Assert.Equal(1f, model.transform.Find("Hips").localPosition.x, 4);
+            Assert.Equal(0f, model.transform.Find("Prop").localPosition.x, 4);
+            graph.Destroy();
+        }
     }
 }

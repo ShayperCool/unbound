@@ -587,9 +587,9 @@ namespace Unbound.Runtime
             CurvesOnly = curvesOnly;
         }
 
-        /// <summary>The transform curve paths start from: an Animator's avatar root (see
-        /// <see cref="Animator.AvatarRootTransform"/>), else the root's own.</summary>
-        Transform PathRoot()
+        /// <summary>The transform curve paths start from, and layer masks' transform paths: an
+        /// Animator's avatar root (see <see cref="Animator.AvatarRootTransform"/>), else the root's own.</summary>
+        internal Transform PathRoot()
         {
             if (Root == null) return null;
             return !CurvesOnly && Root.GetComponent<Animator>() is Animator animator ? animator.AvatarRootTransform() : Root.transform;

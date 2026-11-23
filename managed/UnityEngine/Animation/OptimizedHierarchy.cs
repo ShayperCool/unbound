@@ -236,7 +236,9 @@ namespace Unbound.Runtime
             if (go == null) return;
             var animator = go.GetComponent<Animator>();
             if (animator == null || !animator.isOptimizable || !animator.hasTransformHierarchy) return;
-            var root = animator.avatarRoot;
+            // The Animator's own transform, as the skeleton's bindings take it (a model nested below
+            // the Animator is not optimized below its avatar root: unmeasured).
+            var root = animator.transform;
             var avatar = animator.m_Avatar.Skeleton;
             if (root == null || avatar == null) return;
             exposed ??= Array.Empty<string>();
@@ -280,7 +282,7 @@ namespace Unbound.Runtime
             if (go == null) return;
             var animator = go.GetComponent<Animator>();
             if (animator == null || !animator.isOptimizable) return;
-            var root = animator.avatarRoot;
+            var root = animator.transform;
             var avatar = animator.m_Avatar.Skeleton;
             if (root == null || avatar == null) return;
             var skeleton = avatar.AvatarSkeleton;

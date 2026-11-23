@@ -1900,7 +1900,7 @@ namespace Unbound.Runtime
                 return (cached.Floats, filters ? cached.Objects : null);
             var floats = new bool[Bindings.FloatCount];
             var objects = new bool[Bindings.ObjectCount];
-            var root = Bindings.Root != null ? Bindings.Root.transform : null;
+            var root = Bindings.PathRoot();
             for (int c = 0; c < floats.Length; c++)
             {
                 var owner = Bindings.FloatOwner[c];

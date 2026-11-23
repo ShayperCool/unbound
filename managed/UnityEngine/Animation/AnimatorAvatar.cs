@@ -152,7 +152,7 @@ namespace UnityEngine
 
         /// <summary>Whether the mask lets a layer animate a bound channel group: humanoid curves
         /// follow the body parts; Transform properties the transform paths below
-        /// <paramref name="root"/>; other components' properties are animated whatever the mask says
+        /// <paramref name="root"/> (the bindings' path root, an Animator's avatar root); other components' properties are animated whatever the mask says
         /// about their object.</summary>
         internal bool AllowsGroup(Transform root, Unbound.Runtime.PropertyGroup group)
         {
@@ -210,10 +210,11 @@ namespace UnityEngine
         internal Transform AvatarRootTransform()
         {
             if (m_GameObject == null) return null;
-            if (m_AvatarRoot != null) return m_AvatarRoot;
             var own = m_GameObject.m_Transform;
+            if (m_NoHierarchy) return own;
+            if (m_AvatarRoot != null) return m_AvatarRoot;
             m_AvatarRoot = own;
-            if (!m_NoHierarchy && m_Avatar != null && m_Avatar.isValid && m_Avatar.Skeleton is AvatarConstant c && c.AvatarSkeleton.Count > 1)
+            if (m_Avatar != null && m_Avatar.isValid && m_Avatar.Skeleton is AvatarConstant c && c.AvatarSkeleton.Count > 1)
                 m_AvatarRoot = LocateAvatarRoot(own, c.AvatarSkeleton) ?? own;
             return m_AvatarRoot;
         }
@@ -248,7 +249,8 @@ namespace UnityEngine
 
         /// <summary>How many paths of the skeleton below <paramref name="node"/> exist below
         /// <paramref name="t"/> (its path <paramref name="path"/>): each child node is looked for
-        /// among the children by its path hash, from the child after the last one matched.</summary>
+        /// among the children by its path hash, starting at the child whose index is the number of
+        /// nodes matched so far and wrapping round.</summary>
         static int PathsMatched(Transform t, Skeleton skeleton, int node, string path)
         {
             int score = 0, matched = 0;

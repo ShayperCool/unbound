@@ -528,7 +528,7 @@ namespace Unbound.Runtime.Playables
             if (m_MaskCache.TryGetValue(layer, out var cached) && cached.Mask == mask && cached.Count == e.Bindings.FloatCount) return cached.Channels;
             var b = e.Bindings;
             var channels = new bool[b.FloatCount];
-            var root = b.Root != null ? b.Root.transform : null;
+            var root = b.PathRoot();
             for (int c = 0; c < channels.Length; c++) channels[c] = mask.AllowsGroup(root, b.FloatOwner[c]);
             m_MaskCache[layer] = (mask, b.FloatCount, channels);
             return channels;
