@@ -669,7 +669,8 @@ public static class BuffersSetup
 
     /// <summary>Directional lightmaps (Directional Mode Directional): a sun, a point light and a
     /// spot light over the lit scene, with one bounce; the coloured scene under a sun with two
-    /// bounces; and an ambient colour alone.</summary>
+    /// bounces; an ambient colour alone; and an ambient colour with a sun, two bounces, 16
+    /// indirect and 64 environment samples.</summary>
     static void Directional()
     {
         void Directed() => Lightmapping.lightingSettings.directionalityMode = LightmapsMode.CombinedDirectional;
@@ -687,6 +688,15 @@ public static class BuffersSetup
         WhiteSun();
         Save(bounce, "DirectionalBounce");
         SkyScene("DirectionalSky", 64, 1, false, () => { FlatSky(); Directed(); });
+        // Paths' and the sky's light on the same texels, by unlike numbers of rays (16 and 64),
+        // with picked sky directions.
+        SkyScene("DirectionalMixed", 64, 2, true, () =>
+        {
+            FlatSky();
+            Directed();
+            Lightmapping.lightingSettings.indirectSampleCount = 16;
+            WhiteSun();
+        });
     }
 
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>

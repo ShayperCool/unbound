@@ -73,6 +73,9 @@ a ground, a cube and a sphere, and lights with hard shadows:
   Mode Directional): a sun, a point light and a spot light over the lit scene with one bounce,
   the coloured scene under a sun with two bounces, and an ambient colour alone. A path's light
   comes from the direction the path left the texel in, the sky's straight from its own.
+- `DirectionalMixed`: the coloured scene under a sun and an ambient colour, two bounces, 16
+  indirect and 64 environment samples with picked directions: a texel's paths and its sky
+  samples each weigh as one ray in where its light comes from, whatever their numbers.
 - `Far` (0.5, 128): a ground of 120 m 500 m from the origin, six point lights and a spot light
   near one end under a ceiling: the light grid's box starts from the scene's origin (its
   lights' reach alone would make one region), so the lights fall into two regions along x.
@@ -229,6 +232,10 @@ shadows (a Baked Shadow Angle or Radius: baked hard), lights whose intensity mul
 linear colour (GraphicsSettings.lightsUseLinearIntensity), the levels of LOD Groups (their
 renderers take and stop light like any other; the Editor's rays tell the levels apart). Not done
 and not said: materials that let light through stop it.
+
+Not measured, of where the light comes from: mixed lights in the Shadowmask and Subtractive
+modes, ambient occlusion and emission in a directional bake, a project with a render pipeline
+asset.
 
 Not measured, of the sky's light: a skybox other than the procedural one (a cube map, six
 images, a panorama: drawn the same way), an ambient source that is not the scene's sky
