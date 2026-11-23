@@ -290,6 +290,9 @@ namespace UnityEngine.Tests
         [InlineData("evaluate")]
         [InlineData("disable")]
         [InlineData("destroy")]
+        [InlineData("retarget")]
+        [InlineData("replaceSource")]
+        [InlineData("destroyOutput")]
         public void InterruptedScriptedMovementCannotWriteAStaleJobPose(string interruption)
         {
             using var pin = TestRelease.Pin(TestRelease.Measured);
@@ -301,6 +304,7 @@ namespace UnityEngine.Tests
             int calls = 0;
             var rootAfterMove = new Vector3(4f, 5f, 6f);
             var expectedArm = original;
+            var replacement = interruption == "retarget" ? Human() : null;
             animator.gameObject.AddComponent<ScriptedMoveCallback>().Move = () =>
             {
                 phases.Add("move");
@@ -318,6 +322,16 @@ namespace UnityEngine.Tests
                         break;
                     case "destroy":
                         m_Graph.Destroy();
+                        break;
+                    case "retarget":
+                        ((AnimationPlayableOutput)m_Graph.GetOutput(0)).SetTarget(replacement);
+                        break;
+                    case "replaceSource":
+                        var output = m_Graph.GetOutput(0);
+                        output.SetSourcePlayable(output.GetSourcePlayable().GetInput(0));
+                        break;
+                    case "destroyOutput":
+                        m_Graph.DestroyOutput(m_Graph.GetOutput(0));
                         break;
                 }
             };

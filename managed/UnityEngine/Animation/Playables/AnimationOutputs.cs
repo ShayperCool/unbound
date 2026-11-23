@@ -1595,6 +1595,8 @@ namespace Unbound.Runtime.Playables
 
         public void Stopped(PlayableGraphData graph) { }
 
+        // Evaluate flushes all pending outputs. The early job movement still requires a
+        // Manual graph, whose outputs are queued only by an explicit evaluation.
         public void Flush() => RunAllPending(explicitEvaluation: true);
 
         /// <summary>The pending outputs of one Animator (after its controller wrote).</summary>
