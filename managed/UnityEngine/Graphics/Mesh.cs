@@ -19,7 +19,6 @@ namespace UnityEngine
         internal readonly int[] m_UVDimensions = new int[8];
         internal readonly List<SubMesh> m_SubMeshes = new List<SubMesh> { new SubMesh() };
         internal BoneWeight[] m_BoneWeights;
-        internal Matrix4x4[] m_Bindposes;
         Bounds m_Bounds;
         internal ulong m_Handle;
         internal bool m_Dirty = true;
@@ -153,7 +152,7 @@ namespace UnityEngine
             m_HasPositionChannel = source.m_HasPositionChannel;
             m_IndexBuffer = (int[])source.m_IndexBuffer?.Clone();
             m_BoneWeights = (BoneWeight[])source.m_BoneWeights?.Clone();
-            m_Bindposes = (Matrix4x4[])source.m_Bindposes?.Clone();
+            CopyBindposesFrom(source);
             m_BoneNameHashes = (uint[])source.m_BoneNameHashes?.Clone();
             m_RootBoneNameHash = source.m_RootBoneNameHash;
             m_Bounds = source.m_Bounds;
@@ -948,19 +947,6 @@ namespace UnityEngine
             }
         }
 
-        public Matrix4x4[] bindposes
-        {
-            get { EnsureModelLoaded(); return m_Bindposes != null ? (Matrix4x4[])m_Bindposes.Clone() : Array.Empty<Matrix4x4>(); }
-            set { EnsureModelLoaded(); m_Bindposes = value != null ? (Matrix4x4[])value.Clone() : null; }
-        }
-
-        public void GetBindposes(List<Matrix4x4> bindposes)
-        {
-            bindposes.Clear();
-            EnsureModelLoaded();
-            if (m_Bindposes != null) bindposes.AddRange(m_Bindposes);
-        }
-
         public void GetBoneWeights(List<BoneWeight> boneWeights)
         {
             boneWeights.Clear();
@@ -1463,6 +1449,7 @@ namespace UnityEngine
 
         internal override void OnEngineDestroy()
         {
+            EndBindposeViews();
             ReleaseGraphicsBufferOwner();
             Native.ReleaseMesh(m_Handle);
             m_Handle = 0;

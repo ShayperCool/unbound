@@ -38,7 +38,7 @@ namespace UnityEngine
         Mesh m_RigidSource;
         Vector3[] m_RigidVertices;
         BoneWeight[] m_RigidWeights;
-        Matrix4x4[] m_RigidBindposes;
+        int m_RigidBindposeVersion;
         Bounds m_RigidBoneBounds;
         bool m_Rigid;
 
@@ -298,7 +298,7 @@ namespace UnityEngine
         bool HasShapes => m_Mesh != null && m_Mesh.blendShapeCount > 0 && m_BlendShapeWeights.Exists(w => w != 0f);
 
         bool IsSkinned => m_Mesh != null && m_Mesh.m_BoneWeights != null && m_Mesh.m_BoneWeights.Length == m_Mesh.vertexCount
-            && m_Mesh.m_Bindposes != null && (m_Bones.Length > 0 || SkeletonSkin() != null);
+            && m_Mesh.HasBindposes && (m_Bones.Length > 0 || SkeletonSkin() != null);
 
         // Skinning from an Animator's skeleton (a renderer without bones below an Animator without
         // its transform hierarchy): the mesh's bone paths as the skeleton's nodes.
@@ -314,8 +314,8 @@ namespace UnityEngine
         AnimatorSkeleton SkeletonSkin()
         {
             var mesh = m_Mesh;
-            if (m_Bones.Length != 0 || mesh == null || mesh.m_BoneNameHashes == null || mesh.m_Bindposes == null
-                || mesh.m_BoneNameHashes.Length != mesh.m_Bindposes.Length) return null;
+            if (m_Bones.Length != 0 || mesh == null || mesh.m_BoneNameHashes == null || !mesh.HasBindposes
+                || mesh.m_BoneNameHashes.Length != mesh.BindposeData.Count) return null;
             if (m_SkinAnimator == null || !transform.IsChildOf(m_SkinAnimator.transform))
             {
                 // Without an Animator above, looked for again once a frame (a renderer moved under
@@ -421,7 +421,7 @@ namespace UnityEngine
                 m_Skinned = (Mesh)mesh.CloneObject();
                 m_Skinned.ClearBlendShapes();
                 m_Skinned.m_BoneWeights = null;
-                m_Skinned.m_Bindposes = null;
+                m_Skinned.ResetBindposes();
                 m_Skinned.SetSkinOutputLayout();
                 m_Skinned.vertexBufferTarget = m_VertexBufferTarget;
                 m_Skinned.name = mesh.name + " (Skinned)";
@@ -489,7 +489,7 @@ namespace UnityEngine
         {
             var mesh = m_Mesh;
             var weights = mesh.m_BoneWeights;
-            var bindposes = mesh.m_Bindposes;
+            var bindposes = mesh.BindposeData.AsSpan();
             var skeleton = m_Bones.Length == 0 ? SkeletonSkin() : null;
             int boneCount = Math.Min(skeleton != null ? m_SkinNodes.Length : m_Bones.Length, bindposes.Length);
             if (m_Matrices.Length != boneCount) m_Matrices = new Matrix4x4[boneCount];
@@ -605,17 +605,18 @@ namespace UnityEngine
             var mesh = m_Mesh;
             if (mesh == null || mesh.m_UnmeasuredSkinBoundsMutation) return false;
             if (m_RigidSource != mesh || m_RigidVertices != mesh.m_Vertices ||
-                m_RigidWeights != mesh.m_BoneWeights || m_RigidBindposes != mesh.m_Bindposes)
+                m_RigidWeights != mesh.m_BoneWeights || m_RigidBindposeVersion != mesh.BindposeVersion)
             {
                 m_RigidSource = mesh;
                 m_RigidVertices = mesh.m_Vertices;
                 m_RigidWeights = mesh.m_BoneWeights;
-                m_RigidBindposes = mesh.m_Bindposes;
+                m_RigidBindposeVersion = mesh.BindposeVersion;
+                var bindposes = mesh.BindposeData.AsSpan();
                 m_Rigid = mesh.vertexCount > 0 && m_RigidWeights?.Length == mesh.vertexCount &&
-                    m_RigidBindposes?.Length == 1 && mesh.blendShapeCount == 0;
+                    bindposes.Length == 1 && mesh.blendShapeCount == 0;
                 if (m_Rigid)
                 {
-                    var bind = m_RigidBindposes[0];
+                    var bind = bindposes[0];
                     var lo = Vector3.positiveInfinity;
                     var hi = Vector3.negativeInfinity;
                     for (int i = 0; i < m_RigidVertices.Length; i++)

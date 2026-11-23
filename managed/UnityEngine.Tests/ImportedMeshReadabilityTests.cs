@@ -144,8 +144,8 @@ namespace UnityEngine.Tests
             Assert.Equal(3, before.m_BoneWeights.Length);
             Assert.Equal(before.m_BoneWeights, off.m_BoneWeights);
             Assert.Equal(0.75f, before.m_BoneWeights[1].weight0);
-            Assert.Equal(2, before.m_Bindposes.Length);
-            Assert.Equal(before.m_Bindposes, off.m_Bindposes);
+            Assert.Equal(2, before.bindposes.Length);
+            Assert.Equal(before.bindposes, off.bindposes);
 
             Assert.Equal(1, before.m_BlendShapes.Count);
             Assert.Equal(before.m_BlendShapes.Count, off.m_BlendShapes.Count);

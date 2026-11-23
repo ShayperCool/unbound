@@ -199,7 +199,7 @@ namespace UnityEngine
             m_HasPositionChannel = saved.m_HasPositionChannel;
             m_IndexBuffer = null;
             m_BoneWeights = null;
-            m_Bindposes = null;
+            ResetBindposes();
             m_BoneNameHashes = (uint[])saved.m_BoneNameHashes?.Clone();
             m_RootBoneNameHash = saved.m_RootBoneNameHash;
             m_Bounds = saved.m_Bounds;

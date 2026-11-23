@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Unbound.Runtime;
 using Unbound.Tests;
+using Unity.Collections;
 using UnityEngine.Rendering;
 using Xunit;
 
@@ -72,6 +73,29 @@ namespace UnityEngine.Tests
             return new Mesh { vertices = new[] { new Vector3(-.5f, 0, 0), new Vector3(.5f, 0, 0) },
                 bindposes = new[] { Matrix4x4.identity },
                 boneWeights = new[] { new BoneWeight {weight0=1}, new BoneWeight {weight0=1} } };
+        }
+
+        [Fact]
+        public void ReplacingTheBindPoseRefreshesTheCachedRigidBounds()
+        {
+            var mesh = RigidMesh();
+            var skin = body.AddComponent<SkinnedMeshRenderer>();
+            skin.sharedMesh = mesh;
+            skin.bones = new[] { rig.transform };
+            skin.rootBone = rig.transform;
+            skin.updateWhenOffscreen = true;
+            try
+            {
+                skin.PrepareCullingBounds();
+                Assert.Equal(Vector3.zero, skin.bounds.center);
+                var original = mesh.GetBindposes();
+                using var poses = new NativeArray<Matrix4x4>(new[] { Matrix4x4.Translate(Vector3.right) }, Allocator.Temp);
+                mesh.SetBindposes(poses);
+                Assert.Equal(Matrix4x4.Translate(Vector3.right), original[0]);
+                skin.PrepareCullingBounds();
+                Assert.Equal(Vector3.right, skin.bounds.center);
+            }
+            finally { Object.DestroyImmediate(mesh); }
         }
 
         [Fact]
