@@ -43,6 +43,19 @@ public partial class HumanoidProbe
         Put((s_JobKey ?? "job") + ".elbowHint." + tag, V(stream.AsHuman().GetHintPosition(AvatarIKHint.LeftElbow)));
     }
 
+    internal static void BoneMaskRecord(AnimationStream stream, ref HumanBoneJob job)
+    {
+        var values = new List<string>();
+        string Bool(bool b) => b ? "true" : "false";
+        for (int i = 0; i < s_BoneNames.Length; i++)
+        {
+            var handle = job.Handle(i);
+            values.Add(S(s_BoneNames[i]) + ":[" + Bool(handle.GetPositionReadMask(stream)) + ","
+                + Bool(handle.GetRotationReadMask(stream)) + "," + Bool(handle.GetScaleReadMask(stream)) + "]");
+        }
+        Put((s_JobKey ?? "job") + ".boneMasks", "{" + string.Join(",", values) + "}");
+    }
+
     /// <summary>What a job reads through the stream handle of an object added under the left
     /// hand (bone.prop): validity, the local position (times 100), rotation, and the world
     /// position and rotation.</summary>
@@ -103,7 +116,20 @@ public partial class HumanoidProbe
                         job.BindProp(bound.BindStreamTransform(prop));
                     }
                     var playable = AnimationScriptPlayable.Create(g, job, 1);
-                    g.Connect(AnimationClipPlayable.Create(g, ControllerClip("HumanA")), 0, playable, 0);
+                    var clip = AnimationClipPlayable.Create(g, ControllerClip("HumanA"));
+                    if (mode == HumanBoneJob.Mode.MasksLayerWithoutHead)
+                    {
+                        var mixer = AnimationLayerMixerPlayable.Create(g, 2);
+                        g.Connect(clip, 0, mixer, 1);
+                        mixer.SetInputWeight(1, 1f);
+                        var mask = new AvatarMask();
+                        for (int part = 0; part < (int)AvatarMaskBodyPart.LastBodyPart; part++)
+                            mask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)part, part != (int)AvatarMaskBodyPart.Head);
+                        mixer.SetLayerMaskFromAvatarMask(1, mask);
+                        g.Connect(mixer, 0, playable, 0);
+                    }
+                    else
+                        g.Connect(clip, 0, playable, 0);
                     playable.SetInputWeight(0, 1f);
                     return playable;
                 }, true, setup: animator => bound = animator, velocities: false, localsEvery: 4);
@@ -121,7 +147,8 @@ public struct HumanBoneJob : IAnimationJob
         Read, RotateLocal, RotateWorld, MoveHips, MoveArm, Scale, RotateThenHuman,
         HumanThenRead, Prop, Solve, RotateThenSolve, SolveTwice, ScaleHips, ScaleHipsThenHuman,
         HipsTrs, ScaleHipsWorldWrite, ScaleHipsHints, ScaleHipsThenSolve, ScaleSpineThenSameHips,
-        ScaleHipsFirstHint, ScaleHipsUniformThenSolve, ScaleHipsUniformFirstHint, ScaleHipsReadTurnThenHint
+        ScaleHipsFirstHint, ScaleHipsUniformThenSolve, ScaleHipsUniformFirstHint, ScaleHipsReadTurnThenHint,
+        MaskedHipsTrs, MaskedArmTrs, MaskedHeadGlobal, MasksLayerWithoutHead
     }
 
     public Mode mode;
@@ -158,6 +185,11 @@ public struct HumanBoneJob : IAnimationJob
 
     public void ProcessAnimation(AnimationStream stream)
     {
+        if (mode == Mode.MasksLayerWithoutHead)
+        {
+            HumanoidProbe.BoneMaskRecord(stream, ref this);
+            return;
+        }
         if (mode == Mode.HumanThenRead && stream.isHumanStream)
             stream.AsHuman().SetMuscle(new MuscleHandle(BodyDof.SpineFrontBack), 0.5f);
         HumanoidProbe.BoneRecord("before", stream, ref this);
@@ -239,6 +271,23 @@ public struct HumanBoneJob : IAnimationJob
                 HumanoidProbe.BoneRecord("beforeSameHips", stream, ref this);
                 hips.GetLocalTRS(stream, out var samePosition, out var sameRotation, out var sameScale);
                 hips.SetLocalTRS(stream, samePosition, sameRotation, sameScale, false);
+                break;
+            case Mode.MaskedHipsTrs:
+                HumanoidProbe.BoneMaskRecord(stream, ref this);
+                hips.GetLocalTRS(stream, out var hp, out var hr, out var hs);
+                hips.SetLocalTRS(stream, hp + new Vector3(.001f, .002f, 0), hr * Quaternion.Euler(0, 15, 0),
+                    Vector3.Scale(hs, new Vector3(.8f, 1.25f, 1.1f)), true);
+                break;
+            case Mode.MaskedArmTrs:
+                HumanoidProbe.BoneMaskRecord(stream, ref this);
+                arm.GetLocalTRS(stream, out var ap, out var ar, out var armScale);
+                arm.SetLocalTRS(stream, ap + new Vector3(.001f, 0, 0), ar * Quaternion.Euler(0, 0, 30),
+                    Vector3.Scale(armScale, new Vector3(.8f, 1.25f, 1.1f)), true);
+                break;
+            case Mode.MaskedHeadGlobal:
+                HumanoidProbe.BoneMaskRecord(stream, ref this);
+                head.GetGlobalTR(stream, out var wp, out var wr);
+                head.SetGlobalTR(stream, wp + new Vector3(10, 0, 0), wr * Quaternion.Euler(0, 0, 30), true);
                 break;
             case Mode.Solve:
                 SolveLeftHand(stream);
