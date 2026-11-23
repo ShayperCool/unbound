@@ -61,4 +61,8 @@
 {"k":"stored.fixedBounds.write.log","v":""}
 {"k":"stored.fixedBounds.save","v":"  - m_Min: {x: Infinity, y: Infinity, z: Infinity}/  - m_Min: {x: 0, y: 0, z: 0}/  - m_Min: {x: Infinity, y: Infinity, z: Infinity}/  - m_Min: {x: Infinity, y: Infinity, z: Infinity}/  - m_Min: {x: Infinity, y: Infinity, z: Infinity}/  - m_Min: {x: Infinity, y: Infinity, z: Infinity}/  - m_Min: {x: Infinity, y: Infinity, z: Infinity}/  - m_Min: {x: Infinity, y: Infinity, z: Infinity}/  - m_Min: {x: 1, y: 0, z: 0}/  - m_Min: {x: 1, y: 0, z: 0}/  - m_Min: {x: Infinity, y: Infinity, z: Infinity}/  - m_Min: {x: Infinity, y: Infinity, z: Infinity}"}
 {"k":"stored.fixedBounds.save.log","v":""}
+{"k":"copy.unweighted.newData","v":"None:False:False:default::default:"}
+{"k":"copy.unweighted.newData.log","v":""}
+{"k":"copy.unweighted.snapshot","v":"None:False:False:default::default:"}
+{"k":"copy.unweighted.snapshot.log","v":""}
 {"k":"complete","v":true}

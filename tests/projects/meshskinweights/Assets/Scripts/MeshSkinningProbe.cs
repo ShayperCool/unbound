@@ -114,6 +114,7 @@ sealed partial class MeshSkinningProbe : MonoBehaviour
             CheckMeshCopies(Probe);
             CheckStoredSkinStreams(Probe, ProbePositions);
             CheckEmptyCachesAndBounds(Probe);
+            CheckUnweightedCopies(Probe);
             Finish(output, rows);
             yield break;
         }

@@ -241,4 +241,30 @@ sealed partial class MeshSkinningProbe
             return string.Join("/", Array.FindAll(lines[first..last], line => line.Contains("m_Min:")));
         });
     }
+
+    static void CheckUnweightedCopies(Action<string, Func<string>> probe)
+    {
+        var source = Make(2);
+        foreach (bool fromMesh in new[] { false, true })
+        {
+            var target = Make(2);
+            Apply(target, new byte[] { 5, 1 }, new[] { Weight(2, .5f), Weight(3, .25f), Weight(4, .125f),
+                Weight(5, .0625f), Weight(13, .0625f), Weight(1, 1) });
+            probe("copy.unweighted." + (fromMesh ? "snapshot" : "newData"), () =>
+            {
+                var data = fromMesh ? Mesh.AllocateWritableMeshData(source) : Mesh.AllocateWritableMeshData(1);
+                if (!fromMesh)
+                {
+                    data[0].SetVertexBufferParams(2, new VertexAttributeDescriptor(VertexAttribute.Position));
+                    var vertices = data[0].GetVertexData<Vector3>();
+                    vertices[0] = Vector3.right;
+                    vertices[1] = Vector3.up;
+                }
+                Mesh.ApplyAndDisposeWritableMeshData(data, target);
+                return Shape(target);
+            });
+            Object.DestroyImmediate(target);
+        }
+        Object.DestroyImmediate(source);
+    }
 }

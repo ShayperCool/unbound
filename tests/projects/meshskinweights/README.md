@@ -33,8 +33,8 @@ variable table bytes and the reloaded arrays after an unsaved change. [SetVertex
 A raw upload can copy from either of the mesh's borrowed arrays, and the upload then invalidates
 both views. Writable snapshots of existing meshes preserve their variable table and physical
 stream. The copy checks use distinct source and destination weights and compare against newly
-allocated writable data. Asset controls also compare both representations after a raw edit and
-check fixed bone bounds and one-bone baking after reload. [AllocateWritableMeshData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.AllocateWritableMeshData.html)
+allocated writable data and a source without skin weights. Asset controls compare both
+representations after a raw edit and check fixed bone bounds and one-bone baking after reload. [AllocateWritableMeshData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.AllocateWritableMeshData.html)
 
 The `copies` profile records its own Editor pair. The earlier `legacy.grow` and
 `views.resize.current` rows record zero in a newly grown slot, where later Editor repeats
