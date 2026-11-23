@@ -17,11 +17,16 @@ namespace UnityEditor
 
         static readonly Dictionary<(string Guid, long FileId), LightingDataAsset> s_Assets = new Dictionary<(string, long), LightingDataAsset>();
 
-        LightingDataAsset(string name)
+        LightingDataAsset(string name, string projectGuid)
         {
             IsPersistentAsset = true;
             m_Name = name;
+            ProjectGuid = projectGuid;
         }
+
+        /// <summary>The GUID of the project asset this object is the main object of (the path
+        /// AssetDatabase.GetAssetPath answers); null for the built-in one.</summary>
+        internal string ProjectGuid { get; }
 
         /// <summary>The object of a scene's m_LightingDataAsset reference; null for none.</summary>
         internal static LightingDataAsset Of(ObjectRef reference)
@@ -34,7 +39,7 @@ namespace UnityEditor
             if (path != null && path.Length == 0) return null;
             string name = path == null ? BuiltinName : System.IO.Path.GetFileNameWithoutExtension(path);
             using (ObjectRegistry.AsAssets())
-                asset = new LightingDataAsset(name);
+                asset = new LightingDataAsset(name, path == null ? null : reference.Guid);
             s_Assets[key] = asset;
             return asset;
         }

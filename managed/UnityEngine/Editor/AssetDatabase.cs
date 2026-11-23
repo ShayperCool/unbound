@@ -213,6 +213,7 @@ namespace UnityEditor
         {
             if (assetObject == null) return "";
             if (SettingsAssets.Of(assetObject) is SettingsFile settings) return settings.AssetPath;
+            if (assetObject is LightingDataAsset { ProjectGuid: { } lightingData }) return GUIDToAssetPath(lightingData);
             if (AssetDatabaseRuntime.TryGetLocation(assetObject, out var guid, out _) || BuiltinObjects.TryGetLocation(assetObject, out guid, out _))
                 return BuiltinResourcePath(guid) ?? GUIDToAssetPath(guid);
             if (assetObject is Component c && c.m_GameObject != null && c.m_GameObject.m_IsPrefabAsset)

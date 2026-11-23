@@ -69,5 +69,27 @@ namespace Unbound.Tests
             Assert.Same(asset, LightingDataAsset.Of(builtin));
             Assert.Throws<NotSupportedException>(() => Lightmapping.lightingDataAsset = asset);
         }
+
+        [Fact]
+        public void AProjectLightingDataAssetAnswersItsPath()
+        {
+            // A bake's LightingData.asset beside its scene: the asset database names its file.
+            AssetDatabase.List("""
+                [
+                  {"guid":"00000000000000001000000000000000","path":"Assets","kind":"folder","importer":"DefaultImporter","labels":[]},
+                  {"guid":"5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a","path":"Assets/Scenes/Lit/LightingData.asset","kind":"unknown","importer":"NativeFormatImporter","labels":[]}
+                ]
+                """);
+            try
+            {
+                var asset = LightingDataAsset.Of(new ObjectRef(112000000, "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a", 2));
+                Assert.Equal("LightingData", asset.name);
+                Assert.Equal("Assets/Scenes/Lit/LightingData.asset", AssetDatabase.GetAssetPath(asset));
+            }
+            finally
+            {
+                AssetDatabase.Invalidate();
+            }
+        }
     }
 }
