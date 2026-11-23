@@ -8,6 +8,7 @@ sealed class MaterialPassPipeline : RenderPipelineAsset
     {
         internal Material Material;
         internal int Pass;
+        internal bool FilterOut;
         internal bool Completed;
         internal long AfterCull, AfterDraw, AfterSubmit;
     }
@@ -40,7 +41,7 @@ sealed class MaterialPassPipeline : RenderPipelineAsset
                 overrideMaterial = probe.Material,
                 overrideMaterialPassIndex = probe.Pass
             };
-            var filtering = new FilteringSettings(RenderQueueRange.all, camera.cullingMask);
+            var filtering = new FilteringSettings(RenderQueueRange.all, probe.FilterOut ? 0 : camera.cullingMask);
             context.DrawRenderers(visible, ref drawing, ref filtering);
             probe.AfterDraw = Profiler.GetRuntimeMemorySizeLong(probe.Material);
             context.Submit();

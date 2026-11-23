@@ -1111,7 +1111,7 @@ namespace Unbound.Runtime
                 ApplyPerObjectLights(data, s_Items, order, drawing.mainLightIndex, (drawing.perObjectData & PerObjectData.Lightmaps) != 0);
             if (s_MaterialHandles.Length < count) Array.Resize(ref s_MaterialHandles, Math.Max(count, s_MaterialHandles.Length * 2));
             ulong overrideHandle = overrideMaterial != null ? overrideMaterial.Sync(profileDraw: false) : 0;
-            if (overrideMaterial != null && count > 0) ScriptableRenderContext.ObserveQueuedProfilerMaterial(overrideMaterial);
+            if (overrideMaterial != null) ScriptableRenderContext.ObserveQueuedProfilerMaterial(overrideMaterial);
             for (int i = 0; i < count; i++)
                 s_MaterialHandles[i] = overrideMaterial != null ? overrideHandle
                     : overrideShader != null ? ReplacementMaterial(s_Items[order[i]].Material, overrideShader).Sync(profileDraw: false)

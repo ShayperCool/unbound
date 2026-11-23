@@ -89,10 +89,15 @@ static class MaterialPassControls
                     Size(directKey + ".after", direct);
                     Object.Destroy(direct);
 
+                    RecordDraw(key + ".draw." + pass, pass, filterOut: false);
+                }
+                RecordDraw(key + ".filtered", 0, filterOut: true);
+
+                void RecordDraw(string drawKey, int pass, bool filterOut)
+                {
                     var submitted = Object.Instantiate(source);
-                    string drawKey = key + ".draw." + pass;
                     Size(drawKey + ".cold", submitted);
-                    var request = new MaterialPassPipeline.Request { Material = submitted, Pass = pass };
+                    var request = new MaterialPassPipeline.Request { Material = submitted, Pass = pass, FilterOut = filterOut };
                     RenderPipeline.SubmitRenderRequest(camera, request);
                     put(drawKey + ".complete", request.Completed);
                     put(drawKey + ".culled", request.AfterCull);
