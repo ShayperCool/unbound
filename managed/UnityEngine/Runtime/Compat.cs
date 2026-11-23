@@ -37,6 +37,20 @@ namespace Unbound.Runtime
         // native-saves). Elsewhere only assets made this session are dirtied and written.
         internal static bool ReadAssetSavesMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>The build facts InternalEditorUtility reports (GetUnityBuildBranch,
+        /// GetUnityRevision, GetUnityVersionDate, GetUnityDisplayVersionVerbose, GetUnityProductName,
+        /// GetUnityCopyright), measured on 6000.0.71f1 and answered by every release of its family
+        /// (tests/projects/editorinternals version.*); null for a family without them.</summary>
+        internal static EditorBuildFacts EditorBuild => Family == ReleaseFamily.Unity6000_0 ? s_EditorBuild6000_0 : null;
+
+        static readonly EditorBuildFacts s_EditorBuild6000_0 = new EditorBuildFacts(
+            "6000.0/respin/6000.0.71f1-8308b6469260", 9468866, 1773651634, "8720.19091", "Unity 6.0",
+            "(c) 2005-2026 Unity Technologies. All rights reserved.");
+
+        /// <summary>A release's build facts; <see cref="VerboseBuild"/> follows the release in
+        /// GetUnityDisplayVersionVerbose.</summary>
+        internal sealed record EditorBuildFacts(string Branch, int Revision, int Date, string VerboseBuild, string ProductName, string Copyright);
+
         // An importer's SerializedObject over its native type tree, measured on 6000.0.71f1
         // (tests/projects/importerserialized). Elsewhere it reflects over the managed importer.
         internal static bool ImporterTypeTreesMeasured => Family == ReleaseFamily.Unity6000_0;

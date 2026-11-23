@@ -37,6 +37,57 @@ namespace UnityEditorInternal
             return version;
         }
 
+        /// <summary>The release without its stage and build ("6000.0.71").</summary>
+        public static string GetUnityVersionDigits()
+        {
+            string version = UnityEngine.ProjectInfo.UnityVersion ?? "";
+            int end = 0, dots = 0;
+            while (end < version.Length && (char.IsDigit(version[end]) || version[end] == '.' && ++dots < 3)) end++;
+            return version.Substring(0, end);
+        }
+
+        /// <summary>The release ("6000.0.71f1").</summary>
+        public static string GetUnityDisplayVersion() => UnityEngine.ProjectInfo.UnityVersion;
+
+        /// <summary>The release and its build numbers ("6000.0.71f1.8720.19091").</summary>
+        public static string GetUnityDisplayVersionVerbose()
+        {
+            var facts = BuildFacts(nameof(GetUnityDisplayVersionVerbose));
+            return facts == null ? GetUnityDisplayVersion() : GetUnityDisplayVersion() + "." + facts.VerboseBuild;
+        }
+
+        /// <summary>The build revision ("907bc2d768b5"), as in <see cref="GetFullUnityVersion"/>;
+        /// empty when it is not known.</summary>
+        public static string GetUnityBuildHash()
+        {
+            string revision = UnityEngine.ProjectInfo.UnityRevision;
+            if (string.IsNullOrEmpty(revision)) GetFullUnityVersion();
+            return revision ?? "";
+        }
+
+        public static string GetUnityBuildBranch() => BuildFacts(nameof(GetUnityBuildBranch))?.Branch ?? "";
+
+        public static int GetUnityRevision() => BuildFacts(nameof(GetUnityRevision))?.Revision ?? 0;
+
+        /// <summary>The build's date, in seconds since 1970.</summary>
+        public static int GetUnityVersionDate() => BuildFacts(nameof(GetUnityVersionDate))?.Date ?? 0;
+
+        public static string GetUnityProductName() => BuildFacts(nameof(GetUnityProductName))?.ProductName ?? "";
+
+        public static string GetUnityCopyright() => BuildFacts(nameof(GetUnityCopyright))?.Copyright ?? "";
+
+        internal static readonly HashSet<string> s_UnmeasuredBuildFacts = new HashSet<string>();
+
+        /// <summary>The release family's build facts; for a family without them an error, once per
+        /// member, and null (the members answer empty or 0).</summary>
+        static Unbound.Runtime.Compat.EditorBuildFacts BuildFacts(string member)
+        {
+            var facts = Unbound.Runtime.Compat.EditorBuild;
+            if (facts == null && s_UnmeasuredBuildFacts.Add(member))
+                Debug.LogError($"Unbound: InternalEditorUtility.{member} is not measured for Unity {UnityEngine.ProjectInfo.UnityVersion}: it answers empty (or 0).");
+            return facts;
+        }
+
         // The Inspector's expanded state: one for all objects of a type (a script's class is its
         // type), expanded until collapsed; a material has its own, collapsed until expanded. It
         // lasts for the session (the Editor also keeps it in the project's Library: not done).
