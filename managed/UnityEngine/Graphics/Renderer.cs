@@ -21,11 +21,18 @@ namespace UnityEngine
             get => m_MaterialSlots;
             set
             {
+                int previousCount = m_MaterialSlots.Length;
                 m_MaterialSlots = value;
                 if (!MeasuresMaterialReservations) return;
                 m_ProfilerMaterialSlots = Math.Max(m_ProfilerMaterialSlots, value.Length);
                 if (m_ProfilerIndexedBlockSlots != 0)
                     m_ProfilerIndexedBlockSlots = Math.Max(m_ProfilerIndexedBlockSlots, value.Length);
+                if (value.Length < previousCount && m_MaterialBlocks != null)
+                {
+                    // CoreCLR permits removal while iterating a Dictionary.
+                    foreach (var pair in m_MaterialBlocks)
+                        if (pair.Key >= value.Length) m_MaterialBlocks.Remove(pair.Key);
+                }
             }
         }
         /// <summary>Instances `material`/`materials` made for this renderer.</summary>
@@ -786,10 +793,12 @@ namespace UnityEngine
             m_CastShadows = source.m_CastShadows;
             m_ReceiveShadows = source.m_ReceiveShadows;
             m_RenderingLayerMask = source.m_RenderingLayerMask;
-            m_PropertyBlock = source.m_PropertyBlock?.Copy();
+            // MeshRenderer clones start with materials but no property overrides (componentmemory).
+            bool copyBlocks = !MeasuresMaterialReservations;
+            m_PropertyBlock = copyBlocks ? source.m_PropertyBlock?.Copy() : null;
             m_OwnBlock = m_PropertyBlock;
             m_MaterialBlocks = null;
-            if (source.m_MaterialBlocks != null)
+            if (copyBlocks && source.m_MaterialBlocks != null)
                 foreach (var pair in source.m_MaterialBlocks) (m_MaterialBlocks ??= new Dictionary<int, MaterialPropertyBlock>())[pair.Key] = pair.Value.Copy();
             lightProbeUsage = source.lightProbeUsage;
             reflectionProbeUsage = source.reflectionProbeUsage;
