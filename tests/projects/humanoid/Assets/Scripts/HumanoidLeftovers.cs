@@ -233,6 +233,74 @@ public partial class HumanoidProbe
     }
 
 
+    static void AdditiveEmptyBody()
+    {
+#if UNITY_EDITOR
+        foreach (var mode in new[] { "baseClip", "empty", "emptyHalf", "emptyNoRoot", "emptyZero", "attachedEmpty",
+            "emptyWithoutMotion", "attachedEmptyWithoutMotion" })
+        {
+            var key = "additiveEmptyBody." + mode;
+            float weight = mode == "emptyZero" ? 0f : mode == "emptyHalf" ? .35f : .65f;
+            bool move = !mode.EndsWith("WithoutMotion", StringComparison.Ordinal);
+            Guarded(key, () =>
+            {
+                var controller = new UnityEditor.Animations.AnimatorController();
+                controller.AddLayer("Base Layer");
+                controller.AddLayer("Additive");
+                var layers = controller.layers;
+                layers[1].blendingMode = UnityEditor.Animations.AnimatorLayerBlendingMode.Additive;
+                layers[1].defaultWeight = weight;
+                var baseState = layers[0].stateMachine.AddState("Base");
+                if (mode == "baseClip") baseState.motion = ControllerClip("HumanA");
+                layers[0].stateMachine.defaultState = baseState;
+                var additiveState = layers[1].stateMachine.AddState("Additive");
+                layers[1].stateMachine.defaultState = additiveState;
+                var clip = new AnimationClip();
+                clip.SetCurve("", typeof(Animator), "Left Arm Down-Up", AnimationCurve.Linear(0f, .15f, 1f, .45f));
+                clip.SetCurve("", typeof(Animator), "RootT.x", AnimationCurve.Linear(0f, -.15f, 1f, .45f));
+                clip.SetCurve("", typeof(Animator), "RootT.y", AnimationCurve.Linear(0f, .75f, 1f, 1.1f));
+                clip.SetCurve("", typeof(Animator), "RootQ.w", AnimationCurve.Constant(0f, 1f, 1f));
+                additiveState.motion = clip;
+                if (mode == "emptyNoRoot")
+                {
+                    var mask = new AvatarMask();
+                    for (int part = 0; part < (int)AvatarMaskBodyPart.LastBodyPart; part++)
+                        mask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)part, part != (int)AvatarMaskBodyPart.Root);
+                    layers[1].avatarMask = mask;
+                }
+                controller.layers = layers;
+
+                if (mode.StartsWith("attached", StringComparison.Ordinal))
+                {
+                    var instance = Instantiate(Resources.Load<GameObject>("HumanA"));
+                    var animator = instance.GetComponent<Animator>();
+                    animator.runtimeAnimatorController = controller;
+                    animator.applyRootMotion = move;
+                    animator.SetLayerWeight(1, weight);
+                    using var handler = new HumanPoseHandler(animator.avatar, instance.transform);
+                    for (int step = 0; step <= 28; step++)
+                    {
+                        animator.Update(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);
+                        var stepKey = key + ".step" + step;
+                        Step(stepKey, animator, handler, step % 4 == 0);
+                        Put(stepKey + ".motion", "{\"deltaPosition\":" + V(animator.deltaPosition)
+                            + ",\"deltaRotation\":" + Q(animator.deltaRotation) + "}");
+                    }
+                    Destroy(instance);
+                    return;
+                }
+
+                PlayGraph(key, g =>
+                {
+                    var playable = AnimatorControllerPlayable.Create(g, controller);
+                    playable.SetLayerWeight(1, weight);
+                    return playable;
+                }, move, velocities: false, localsEvery: 4);
+            });
+        }
+#endif
+    }
+
     /// <summary>Reads both sampled foot velocities during a moving clip's animation job.</summary>
     internal static void MirrorFootVelocityRecord(AnimationStream stream)
     {
@@ -244,6 +312,7 @@ public partial class HumanoidProbe
     /// controller and animation jobs. Compare mirroring, Foot IK, goal defaults and movement.</summary>
     static void ApiCurves()
     {
+        AdditiveEmptyBody();
         foreach (var mode in new[] { "setCurve", "editorCurve", "mirror", "mirrorFootIK", "plainFootIK",
             "plainJob", "plainJobFootIK", "mirrorJob", "mirrorJobFootIK", "mirrorJobPartialFoot",
             "mirrorJobPartialHand", "mirrorJobFootPosition", "mirrorJobFullFoot",
