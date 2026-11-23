@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/sortinggroup2d/run.py gate"
+  ],
+  "summary": "sortinggroup2d: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/FrameBuilder.cs"
+  ]
+}
