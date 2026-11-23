@@ -6,8 +6,12 @@
   "engine_paths": [
     "managed/UnityEngine/Graphics/Camera.cs",
     "managed/UnityEngine/Graphics/RenderTexture.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "managed/UnityEngine/Graphics/Srp/SrpCore.cs",
     "tests/projects/urp2d/Packages/",
     "tests/projects/urp2d/ProjectSettings/",
-    "tests/projects/urp2d/Assets/Settings/"
+    "tests/projects/urp2d/Assets/Settings/",
+    "tests/projects/urp2d/Assets/UniversalRenderPipelineGlobalSettings.asset",
+    "tests/projects/urp2d/Assets/DefaultVolumeProfile.asset"
   ]
 }

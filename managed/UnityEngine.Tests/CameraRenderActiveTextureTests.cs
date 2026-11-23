@@ -63,6 +63,7 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>The built-in path (which restores the texture itself): a regression guard.</summary>
         [Fact]
         public void TheTextureActiveBeforeIsActiveAfter()
         {
