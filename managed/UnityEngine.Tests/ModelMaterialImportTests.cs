@@ -138,6 +138,50 @@ namespace UnityEngine.Tests
             for (int i = 0; i < 4; i++) Assert.Equal(expected[i], actual[i], 5);
         }
 
+        [Theory]
+        [InlineData("metadata")]
+        [InlineData("float")]
+        [InlineData("texture")]
+        public void DescriptionMaterialValidatesOnFirstPropertyAccess(string firstAccess)
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            GraphicsSettings.defaultRenderPipeline = null;
+            var shader = Make("DeferredStandard",
+                "_Mode (\"Mode\", Float) = 0 _SrcBlend (\"Source\", Float) = 1 _DstBlend (\"Destination\", Float) = 0"
+                + " _ZWrite (\"Depth\", Float) = 1 _EmissionColor (\"Emission\", Color) = (0,0,0,0)"
+                + " _BumpMap (\"Normal\", 2D) = \"bump\" {} _DetailNormalMap (\"Detail Normal\", 2D) = \"bump\" {}"
+                + " _ParallaxMap (\"Height\", 2D) = \"black\" {} _DetailAlbedoMap (\"Detail\", 2D) = \"white\" {}");
+            shader.m_CustomEditor = "StandardShaderGUI";
+            var material = Own(new Material(shader));
+            material.SetFloat("_Mode", 1.75f);
+            material.SetFloat("_DstBlend", 5f);
+            material.SetTexture("_BumpMap", m_Texture);
+            material.EnableKeyword("_NORMALMAP");
+            material.SetOverrideTag("RenderType", "Imported");
+            material.renderQueue = 3110;
+            MaterialValidation.DeferImportedEditor(material);
+
+            if (firstAccess == "metadata")
+            {
+                Assert.Equal(3110, material.rawRenderQueue);
+                Assert.Equal("Imported", material.GetTag("RenderType", false));
+                Assert.False(material.IsKeywordEnabled("_ALPHATEST_ON"));
+            }
+            if (firstAccess == "texture")
+            {
+                material.SetTexture("_BumpMap", null);
+                Assert.Equal(2450, material.rawRenderQueue);
+                Assert.False(material.IsKeywordEnabled("_NORMALMAP"));
+            }
+            Assert.Equal(0f, material.GetFloat("_DstBlend"));
+            Assert.Equal(2450, material.rawRenderQueue);
+            Assert.Equal("TransparentCutout", material.GetTag("RenderType", false));
+            Assert.True(material.IsKeywordEnabled("_ALPHATEST_ON"));
+
+            material.SetFloat("_DstBlend", 7f);
+            Assert.Equal(7f, material.GetFloat("_DstBlend"));
+        }
+
         [Fact]
         public void ALegacyMaterialUnderAPipelineStartsWithItsDefaultShader()
         {

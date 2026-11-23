@@ -26,10 +26,11 @@ flags or `shaderKeywords` changed nothing; ones calling only `HasProperty`, only
 only `GetColor` made the change. Writes in the callback are not measured.
 
 The `BuiltinBlend` profile seeds conflicting blend factors and depth writes in a late
-`OnPreprocessMaterialDescription` callback. It reads the saved queue, tag, keywords and GI
-flags before reading the float properties in Play mode. All four modes, Standard Specular,
-fractional and out-of-range modes, and a Play mode edit are covered. Use
-`MODEL_IMPORT_PROFILES=BuiltinBlend` to record or replay these 141 observations.
+`OnPreprocessMaterialDescription` callback. It records queue, tag, keywords and GI flags
+before and after property access, writes, rendering, or `SetPass` in Play mode. The controls
+cover all four modes, fractional and out-of-range modes, copies, and a project shader that
+uses Standard's shader editor. Use `MODEL_IMPORT_PROFILES=BuiltinBlend` to record or replay
+the 223 observations.
 
 The same file appears under several importer settings (only the `.meta` differs):
 `materialImportMode` None, "Standard (Legacy)" and "Import via MaterialDescription"; the legacy
@@ -79,12 +80,13 @@ threshold, UV offset with V negated and UV scale when present), with no blend mo
 queue or GI flag, validated by the shader's editor as the material is made (before those values;
 `_QueueControl` 0).
 
-The Autodesk Interactive cutout's preprocessor sets `_DstBlend` to 10. The Play mode material
-reads 0 and its saved queue is 3000. In the `BuiltinBlend` profile, Standard, Standard Specular
-and Autodesk Interactive take blend factors and depth writes from the integer part of their
-mode. An out-of-range mode keeps the imported values. The probe also observes an edit to
-`_DstBlend` in Play mode taking effect. The timing of full ShaderGUI validation when the Editor
-first reads a material property remains a separate compatibility gap.
+The Autodesk Interactive cutout's preprocessor sets `_DstBlend` to 10 and its saved queue
+to 3000. The first property value access in Play mode validates the imported material through
+its shader editor. The cutout then reads `_DstBlend` 0 and queue 2450. Standard and Autodesk
+Interactive use the integer part of the blend mode. An out-of-range mode keeps the imported
+blend and queue values while still updating emission flags. In `BuiltinBlend`, reading a tag
+keeps the saved metadata until the first property read. A write to a float property keeps
+the value supplied by the caller, including a new mode used during validation.
 
 Material animation curves remain unsupported. URP: every value matches (7807/7807). The Editor validates a material
 each time a preprocessor sets its shader and once more after the last one: the description-made

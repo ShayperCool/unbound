@@ -341,7 +341,7 @@ namespace Unbound.Runtime
                 Material = material,
                 Model = model,
                 Color = Color.white,
-                Queue = material.renderQueue,
+                Queue = material.QueueForDraw(),
                 SortingLayer = SortingLayer.GetLayerValueFromID(renderer.m_SortingLayerID),
                 SortingOrder = renderer.m_SortingOrder,
                 Distance = Distance(camera, renderer.bounds.center),
@@ -972,7 +972,7 @@ namespace Unbound.Runtime
         /// draw the list discards.</summary>
         internal static bool CollectingListDrops(Material material) =>
             s_CollectingList is RenderQueueRange range && material != null
-            && OutsideList(material, material.renderQueue, range, s_PassTagScratch);
+            && OutsideList(material, material.QueueForDraw(), range, s_PassTagScratch);
 
         /// <summary>
         /// A renderer list: the culled renderers' draws whose queue, layer, rendering layer and
@@ -1056,7 +1056,7 @@ namespace Unbound.Runtime
                 if (ProceduralMeshes.IsIndirectQuads(q))
                 {
                     // Refused (with the Editor's error) by a list that would draw it.
-                    if (q.Material != null && !OutsideList(q.Material, q.Material.renderQueue, range, s_PassTagScratch)) ProceduralMeshes.RefusesIndirect(MeshTopology.Quads);
+                    if (q.Material != null && !OutsideList(q.Material, q.Material.QueueForDraw(), range, s_PassTagScratch)) ProceduralMeshes.RefusesIndirect(MeshTopology.Quads);
                     continue;
                 }
                 s_Items.Add(QueuedItem(context, q));
@@ -2260,7 +2260,7 @@ namespace Unbound.Runtime
                 Material = q.Material,
                 Model = q.Matrix,
                 Color = Color.white,
-                Queue = q.Material.renderQueue,
+                Queue = q.Material.QueueForDraw(),
                 Distance = Distance(camera, (q.WorldBounds ?? bounds).center),
                 Sequence = s_Sequence++,
                 Properties = q.Properties,

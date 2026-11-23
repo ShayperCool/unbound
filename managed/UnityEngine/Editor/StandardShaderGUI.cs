@@ -27,6 +27,7 @@ namespace UnityEditor
             Specular,
             Metallic,
             Dielectric,
+            AutodeskInteractive,
         }
 
         public StandardShaderGUI() { }
@@ -38,6 +39,14 @@ namespace UnityEditor
             var workflow = Workflow(material.shader);
             SetupMaterialWithBlendMode(material, (BlendMode)material.GetFloat("_Mode"), overrideRenderQueue: false);
             SetMaterialKeywords(material, workflow);
+        }
+
+        internal static void ValidateAutodeskInteractive(Material material)
+        {
+            var mode = (BlendMode)(int)material.GetFloat("_Mode");
+            if (mode is >= BlendMode.Opaque and <= BlendMode.Transparent)
+                SetupMaterialWithBlendMode(material, mode, overrideRenderQueue: true);
+            SetMaterialKeywords(material, WorkflowMode.AutodeskInteractive);
         }
 
         /// <summary>Specular with a specular map and colour, metallic with a metallic map and value.</summary>
@@ -61,27 +70,21 @@ namespace UnityEditor
             switch (blendMode)
             {
                 case BlendMode.Opaque:
-                    SetBlendTagAndKeywords(material, "", null);
+                    States(material, "", BlendFactor.One, BlendFactor.Zero, true, null);
                     max = 2449;
                     break;
                 case BlendMode.Cutout:
-                    SetBlendTagAndKeywords(material, "TransparentCutout", "_ALPHATEST_ON");
+                    States(material, "TransparentCutout", BlendFactor.One, BlendFactor.Zero, true, "_ALPHATEST_ON");
                     (min, max, queue) = (2450, 2500, 2450);
                     break;
                 case BlendMode.Fade:
-                    SetBlendTagAndKeywords(material, "Transparent", "_ALPHABLEND_ON");
+                    States(material, "Transparent", BlendFactor.SrcAlpha, BlendFactor.OneMinusSrcAlpha, false, "_ALPHABLEND_ON");
                     (min, max, queue) = (2501, 3999, 3000);
                     break;
                 case BlendMode.Transparent:
-                    SetBlendTagAndKeywords(material, "Transparent", "_ALPHAPREMULTIPLY_ON");
+                    States(material, "Transparent", BlendFactor.One, BlendFactor.OneMinusSrcAlpha, false, "_ALPHAPREMULTIPLY_ON");
                     (min, max, queue) = (2501, 3999, 3000);
                     break;
-            }
-            if (BlendState(blendMode) is { } state)
-            {
-                material.SetFloat("_SrcBlend", (int)state.Source);
-                material.SetFloat("_DstBlend", (int)state.Destination);
-                material.SetFloat("_ZWrite", state.WriteDepth ? 1f : 0f);
             }
             if (overrideRenderQueue || material.renderQueue < min || material.renderQueue > max)
             {
@@ -95,33 +98,28 @@ namespace UnityEditor
 
         static readonly string[] s_AlphaKeywords = { "_ALPHATEST_ON", "_ALPHABLEND_ON", "_ALPHAPREMULTIPLY_ON" };
 
-        static void SetBlendTagAndKeywords(Material material, string renderType, string alphaKeyword)
+        static void States(Material material, string renderType, BlendFactor source, BlendFactor destination,
+            bool writeDepth, string alphaKeyword)
         {
             material.SetOverrideTag("RenderType", renderType);
+            material.SetFloat("_SrcBlend", (int)source);
+            material.SetFloat("_DstBlend", (int)destination);
+            material.SetFloat("_ZWrite", writeDepth ? 1f : 0f);
             foreach (var keyword in s_AlphaKeywords) SetKeyword(material, keyword, keyword == alphaKeyword);
         }
-
-        internal static (BlendFactor Source, BlendFactor Destination, bool WriteDepth)? BlendState(BlendMode mode)
-            => mode switch
-        {
-            BlendMode.Opaque or BlendMode.Cutout => (BlendFactor.One, BlendFactor.Zero, true),
-            BlendMode.Fade => (BlendFactor.SrcAlpha, BlendFactor.OneMinusSrcAlpha, false),
-            BlendMode.Transparent => (BlendFactor.One, BlendFactor.OneMinusSrcAlpha, false),
-            _ => null,
-        };
 
         static void SetMaterialKeywords(Material material, WorkflowMode workflow)
         {
             SetKeyword(material, "_NORMALMAP", material.GetTexture("_BumpMap") || material.GetTexture("_DetailNormalMap"));
-            if (workflow == WorkflowMode.Specular)
+            if (workflow is WorkflowMode.Specular or WorkflowMode.AutodeskInteractive)
                 SetKeyword(material, "_SPECGLOSSMAP", material.GetTexture("_SpecGlossMap"));
-            else if (workflow == WorkflowMode.Metallic)
+            if (workflow is WorkflowMode.Metallic or WorkflowMode.AutodeskInteractive)
                 SetKeyword(material, "_METALLICGLOSSMAP", material.GetTexture("_MetallicGlossMap"));
             SetKeyword(material, "_PARALLAXMAP", material.GetTexture("_ParallaxMap"));
             SetKeyword(material, "_DETAIL_MULX2", material.GetTexture("_DetailAlbedoMap") || material.GetTexture("_DetailNormalMap"));
             MaterialEditor.FixupEmissiveFlag(material);
             SetKeyword(material, "_EMISSION", (material.globalIlluminationFlags & MaterialGlobalIlluminationFlags.EmissiveIsBlack) == 0);
-            if (material.HasProperty("_SmoothnessTextureChannel"))
+            if (workflow != WorkflowMode.AutodeskInteractive && material.HasProperty("_SmoothnessTextureChannel"))
                 SetKeyword(material, "_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A",
                     (SmoothnessMapChannel)(int)material.GetFloat("_SmoothnessTextureChannel") == SmoothnessMapChannel.AlbedoAlpha);
         }

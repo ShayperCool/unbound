@@ -19,16 +19,38 @@ namespace Unbound.Runtime
     /// a material has what its editor's validation sets (keywords, render queue, tags, values and
     /// GI flags). Unbound validates each material once, when its file has loaded; the Editor
     /// validates it again before the next frame, and a material loaded in Play mode still reads
-    /// its saved keywords, render queue, tags and GI flags until then. Model description imports
-    /// keep their built-in shaders' saved keywords, render queue, tags and GI flags in Play mode,
-    /// with blend factors and depth writes applied separately. Render pipelines' and projects'
-    /// editors validate them as the model imports (<see cref="ModelMaterialImport"/>: URP's model
-    /// materials get their blend states, queue control and GI flags, as its import postprocessing
-    /// gives them).
+    /// its saved keywords, render queue, tags and GI flags until then. A material made by
+    /// a model description import first validates with Standard or Autodesk Interactive's shader
+    /// editor when a property's value is accessed or it is used to draw. Render pipelines' and
+    /// projects' editors validate as the model imports (<see cref="ModelMaterialImport"/>).
     /// </summary>
     internal static class MaterialValidation
     {
         static readonly Dictionary<string, Type> s_Editors = new Dictionary<string, Type>(StringComparer.Ordinal);
+
+        internal enum ImportedEditor { None, Standard, AutodeskInteractive }
+
+        internal static void DeferImportedEditor(Material material)
+        {
+            if (Compat.ImportedMaterialValidationMeasured && material != null)
+                material.PendingImportedEditor = ImportedEditorFor(material.shader);
+        }
+
+        internal static ImportedEditor ImportedEditorFor(Shader shader)
+        {
+            if (shader == null) return ImportedEditor.None;
+            var type = EditorType(CurrentEditor(shader));
+            if (type == typeof(StandardShaderGUI)) return ImportedEditor.Standard;
+            if (type?.FullName == "UnityEditor.AutodeskInteractiveShaderGUI" && type.Assembly == typeof(ShaderGUI).Assembly)
+                return ImportedEditor.AutodeskInteractive;
+            return ImportedEditor.None;
+        }
+
+        internal static void ValidateImported(Material material, ImportedEditor editor)
+        {
+            if (editor == ImportedEditor.Standard) Validate(material);
+            else if (editor == ImportedEditor.AutodeskInteractive) StandardShaderGUI.ValidateAutodeskInteractive(material);
+        }
 
         /// <summary>Validates every material of a loaded project file.</summary>
         internal static void ValidateLoaded(LoadedFile file)

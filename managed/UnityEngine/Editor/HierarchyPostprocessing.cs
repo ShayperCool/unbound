@@ -143,7 +143,7 @@ namespace UnityEditor
                     if (o is Material m && ModelMaterialImport.TakeDeferred(m) is MaterialDescription description)
                     {
                         ModelMaterialImport.Describe(session, description, m);
-                        ModelMaterialImport.ApplyLoadedBlendState(m);
+                        MaterialValidation.DeferImportedEditor(m);
                     }
                 AssetPostprocessing.EndSession(file.Path);
             }
@@ -316,7 +316,7 @@ namespace UnityEditor
                 {
                     bool used = pass.Used.Contains(m);
                     if (!used) ModelMaterialImport.Describe(session, description, m);
-                    if (!used || pass.Made.Contains(m)) ModelMaterialImport.ApplyLoadedBlendState(m);
+                    if (!used || pass.Made.Contains(m)) MaterialValidation.DeferImportedEditor(m);
                 }
                 Object.DestroyImmediate(source, true);
             }
