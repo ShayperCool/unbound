@@ -7,9 +7,10 @@ namespace UnityEngine.Tests
     public sealed class MeshRendererMaterialMemoryTests
     {
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void ImporterClonesKeepRuntimeSourcePropertyBlocks(bool underAssetParent)
+        [InlineData(false, true)]
+        [InlineData(true, true)]
+        [InlineData(true, false)]
+        public void ImporterClonesFollowTheDestinationOwnership(bool hasParent, bool importerOwnsClone)
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
             var owner = new GameObject("Runtime renderer source");
@@ -22,17 +23,19 @@ namespace UnityEngine.Tests
                 block.SetFloat("_ProbeValue", 3.75f);
                 source.SetPropertyBlock(block);
                 source.SetPropertyBlock(block, 0);
+                if (hasParent && !importerOwnsClone) parent = new GameObject("Scene parent");
                 using (ScriptedImports.Scope())
                 {
-                    if (underAssetParent) parent = new GameObject("Importer-owned parent");
+                    if (hasParent && importerOwnsClone) parent = new GameObject("Importer-owned parent");
                     clone = parent == null ? Object.Instantiate(source) : Object.Instantiate(source, parent.transform);
                 }
-                Assert.True(clone.gameObject.m_IsPrefabAsset);
+                Assert.Equal(importerOwnsClone, clone.gameObject.m_IsPrefabAsset);
+                float expected = importerOwnsClone ? 3.75f : 0f;
                 var saved = new MaterialPropertyBlock();
                 clone.GetPropertyBlock(saved);
-                Assert.Equal(3.75f, saved.GetFloat("_ProbeValue"));
+                Assert.Equal(expected, saved.GetFloat("_ProbeValue"));
                 clone.GetPropertyBlock(saved, 0);
-                Assert.Equal(3.75f, saved.GetFloat("_ProbeValue"));
+                Assert.Equal(expected, saved.GetFloat("_ProbeValue"));
             }
             finally
             {

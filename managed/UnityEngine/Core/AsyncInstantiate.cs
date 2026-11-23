@@ -241,7 +241,7 @@ namespace Unbound.Runtime
             op.m_Rotations = rotations.ToArray();
             op.m_Clones = new List<Instantiation.Prepared>(count);
             for (int i = 0; i < count; i++)
-                op.m_Clones.Add(Instantiation.Prepare(original, sourceGo, op.m_Scene, " (Clone)"));
+                op.m_Clones.Add(Instantiation.Prepare(original, sourceGo, op.m_Scene, " (Clone)", parameters.parent));
             // The copies are ready: what is left is the integration.
             op.m_Progress = 0.9f;
             op.m_OnAllowActivation = () => Integrate(op);
