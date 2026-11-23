@@ -1,8 +1,12 @@
 {
-  "commands": ["python3 tests/projects/enginediscrete/run.py gate"],
+  "commands": [
+    "python3 tests/projects/enginediscrete/run.py gate"
+  ],
   "summary": "enginediscrete: .*",
   "engine_paths": [
     "managed/UnityEngine/Animation/Binding.cs",
-    "managed/UnityEngine/Editor/AnimationUtility.cs"
+    "managed/UnityEngine/Editor/AnimationUtility.cs",
+    "tests/projects/modelroot/ProjectSettings/",
+    "tests/projects/uitkpanelutils/Assets/Scenes/"
   ]
 }
