@@ -6,6 +6,10 @@
   "engine_paths": [
     "crates/unbound-assets/src/texture.rs",
     "crates/unbound-assets/src/texture/cubemap.rs",
-    "managed/UnityEngine/Graphics/Cubemap.cs"
+    "managed/UnityEngine/Graphics/Cubemap.cs",
+    "tests/projects/animatorapi/Assets/Scenes/",
+    "tests/projects/animatorapi/Assets/Scenes.meta",
+    "tests/projects/animatorapi/Packages/",
+    "tests/projects/animatorapi/ProjectSettings/"
   ]
 }

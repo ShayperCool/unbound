@@ -1,5 +1,7 @@
 {
-  "commands": ["python3 tests/projects/maskbinding/run.py gate"],
+  "commands": [
+    "python3 tests/projects/maskbinding/run.py gate"
+  ],
   "summary": "maskbinding: .*",
   "engine_paths": [
     "managed/UnityEngine/Core/BitOperationUtils.cs",
@@ -17,6 +19,9 @@
     "managed/UnityEngine/UIElements/Controls/BaseField.cs",
     "managed/UnityEngine/UIElements/Controls/Fields.cs",
     "managed/UnityEngine/UIElements/Core/Panel.cs",
-    "managed/UnityEngine/UIElements/Core/VisualElement.cs"
+    "managed/UnityEngine/UIElements/Core/VisualElement.cs",
+    "tests/projects/uitkbindings/Assets/Scenes/",
+    "tests/projects/uitkbindings/Packages/",
+    "tests/projects/uitkbindings/ProjectSettings/"
   ]
 }

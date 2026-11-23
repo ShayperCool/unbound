@@ -1,0 +1,7 @@
+{
+  "engine_paths": [
+    "tests/projects/editinheritance/compare.py",
+    "tests/projects/editinheritance/run.py",
+    "tests/projects/texturearrays/run.py"
+  ]
+}

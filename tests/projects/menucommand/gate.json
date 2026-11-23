@@ -1,9 +1,15 @@
 {
-  "commands": ["python3 tests/projects/menucommand/run.py gate"],
+  "commands": [
+    "python3 tests/projects/menucommand/run.py gate"
+  ],
   "summary": "menucommand: [0-9]+/[0-9]+ values match.*",
   "engine_paths": [
     "managed/UnityEngine/Editor/Menu.cs",
     "managed/UnityEngine/Editor/MenuCommand.cs",
-    "managed/UnityEngine/Editor/EditorApplication.cs"
+    "managed/UnityEngine/Editor/EditorApplication.cs",
+    "tests/projects/analyticssession/Packages/",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
   ]
 }

@@ -7,5 +7,9 @@
     "python3 tests/projects/physicsccdhinge/run.py gate --geometry-constraints --release \"$UNBOUND_PROBE_UNITY_VERSION\" --cli \"$UNBOUND\"",
     "python3 tests/projects/physicsccdhinge/run.py gate --geometry-rotation --release \"$UNBOUND_PROBE_UNITY_VERSION\" --cli \"$UNBOUND\""
   ],
-  "summary": "physicsccdhinge: .*"
+  "summary": "physicsccdhinge: .*",
+  "engine_paths": [
+    "tests/projects/physics/",
+    "tests/projects/physicsbatch/"
+  ]
 }

@@ -1,3 +1,15 @@
 {
-  "exclusive": true
+  "exclusive": true,
+  "engine_paths": [
+    "tests/projects/colliderskin2d/run.py",
+    "tests/projects/inactive3dloading/",
+    "tests/projects/lifecycle/",
+    "tests/projects/messages/",
+    "tests/projects/physics/",
+    "tests/projects/physicsscenesettings/",
+    "tests/projects/query2dparity/run.py",
+    "tests/projects/query2dties/run.py",
+    "tests/projects/trigger2dlifecycle/",
+    "tests/projects/trigger2dtiming/"
+  ]
 }

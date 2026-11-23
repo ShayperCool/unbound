@@ -6,6 +6,7 @@
     "crates/unbound-app/src/host_keyboard.rs",
     "crates/unbound-runtime/src/keyboard_config.rs",
     "managed/UnityEngine/Input/NativeInput.cs",
-    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs"
+    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs",
+    "tests/projects/editinheritance/run.py"
   ]
 }

@@ -1,4 +1,9 @@
 {
- "commands": ["python3 tests/projects/navcost/run.py check --release \"$UNBOUND_PROBE_UNITY_VERSION\""],
- "summary": "gated: \\d+/\\d+ scenarios match.*"
+  "commands": [
+    "python3 tests/projects/navcost/run.py check --release \"$UNBOUND_PROBE_UNITY_VERSION\""
+  ],
+  "summary": "gated: \\d+/\\d+ scenarios match.*",
+  "engine_paths": [
+    "tests/projects/navmesh/compare.py"
+  ]
 }

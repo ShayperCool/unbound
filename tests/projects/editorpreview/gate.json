@@ -1,11 +1,16 @@
 {
-  "commands": ["python3 tests/projects/editorpreview/run.py gate"],
+  "commands": [
+    "python3 tests/projects/editorpreview/run.py gate"
+  ],
   "summary": "editorpreview: .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/ObjectPreview.cs",
     "managed/UnityEngine/Editor/ObjectNames.cs",
     "managed/UnityEngine/Editor/Editors.cs",
     "managed/UnityEngine/Editor/EditorGUIState.cs",
-    "managed/UnityEngine/UIElements/Core/IMGUIContainerGUI.cs"
+    "managed/UnityEngine/UIElements/Core/IMGUIContainerGUI.cs",
+    "tests/projects/uitkbindings/Assets/Scenes/",
+    "tests/projects/uitkbindings/Packages/",
+    "tests/projects/uitkbindings/ProjectSettings/"
   ]
 }

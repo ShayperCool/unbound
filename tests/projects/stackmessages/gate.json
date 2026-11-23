@@ -7,6 +7,10 @@
     "managed/UnityEngine/Runtime/Messages.cs",
     "managed/UnityEngine/Core/Debug.cs",
     "managed/UnityEngine/Core/StackTraces.cs",
-    "managed/UnityEngine/Core/ExceptionStackTraces.cs"
+    "managed/UnityEngine/Core/ExceptionStackTraces.cs",
+    "tests/projects/formatmapping/Assets/Scenes/",
+    "tests/projects/formatmapping/Assets/Scenes.meta",
+    "tests/projects/formatmapping/Packages/",
+    "tests/projects/formatmapping/ProjectSettings/"
   ]
 }

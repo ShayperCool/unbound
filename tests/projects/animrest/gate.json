@@ -13,6 +13,12 @@
     "managed/UnityEngine/Animation/Playables/AnimatorControllerPlayable.cs",
     "managed/UnityEngine/Editor/AnimationMode.cs",
     "managed/UnityEngine/Editor/AnimationUtility.cs",
-    "managed/UnityEngine/Editor/AnimationUtilityEdits.cs"
+    "managed/UnityEngine/Editor/AnimationUtilityEdits.cs",
+    "tests/projects/animatorapi/Assets/Clips/",
+    "tests/projects/animatorapi/Assets/Scenes/",
+    "tests/projects/animatorapi/Assets/Scripts/ProbeTarget.cs",
+    "tests/projects/animatorapi/Assets/Scripts/ProbeTarget.cs.meta",
+    "tests/projects/animatorapi/Packages/",
+    "tests/projects/animatorapi/ProjectSettings/"
   ]
 }

@@ -4,6 +4,14 @@
   ],
   "summary": "sortinggroup2d: .*",
   "engine_paths": [
-    "managed/UnityEngine/Graphics/FrameBuilder.cs"
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "tests/projects/urp2d/Assets/DefaultVolumeProfile.asset",
+    "tests/projects/urp2d/Assets/DefaultVolumeProfile.asset.meta",
+    "tests/projects/urp2d/Assets/Settings/",
+    "tests/projects/urp2d/Assets/Settings.meta",
+    "tests/projects/urp2d/Assets/UniversalRenderPipelineGlobalSettings.asset",
+    "tests/projects/urp2d/Assets/UniversalRenderPipelineGlobalSettings.asset.meta",
+    "tests/projects/urp2d/Packages/",
+    "tests/projects/urp2d/ProjectSettings/"
   ]
 }

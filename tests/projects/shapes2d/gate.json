@@ -9,6 +9,8 @@
     "managed/UnityEngine/Runtime/XxHash32.cs",
     "managed/UnityEngine/Physics2D/Collider2D.cs",
     "managed/UnityEngine/Physics2D/Physics2DWorld.cs",
-    "managed/UnityEngine/Tilemap/Tilemap.cs"
+    "managed/UnityEngine/Tilemap/Tilemap.cs",
+    "tests/projects/physics/",
+    "tests/projects/query2dparity/compare.py"
   ]
 }

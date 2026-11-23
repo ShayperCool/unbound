@@ -1,3 +1,13 @@
 {
-  "exclusive": true
+  "exclusive": true,
+  "engine_paths": [
+    "tests/projects/canvaslifecycle/",
+    "tests/projects/graphics/",
+    "tests/projects/lifecycle/",
+    "tests/projects/messages/",
+    "tests/projects/physics/",
+    "tests/projects/physicsdefaults/",
+    "tests/projects/physicsscenesettings/",
+    "tests/projects/trigger2dtiming/"
+  ]
 }

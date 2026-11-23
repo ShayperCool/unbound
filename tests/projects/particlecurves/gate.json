@@ -3,5 +3,8 @@
     "python3 tests/projects/particlecurves/test_compare.py",
     "python3 tests/projects/particlecurves/run.py check"
   ],
-  "summary": "\\d+/\\d+ records match.*"
+  "summary": "\\d+/\\d+ records match.*",
+  "engine_paths": [
+    "tests/projects/particletrails/compare.py"
+  ]
 }

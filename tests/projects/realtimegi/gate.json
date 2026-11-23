@@ -6,5 +6,8 @@
     "python3 tests/projects/realtimegi/run.py gate --bake --label gate-bake-$(date +%s%N)",
     "python3 tests/projects/realtimegi/script_bake.py check"
   ],
-  "summary": "realtimegi: \\d+ failing state values.*|scriptbake: \\d+/\\d+ records match.*"
+  "summary": "realtimegi: \\d+ failing state values.*|scriptbake: \\d+/\\d+ records match.*",
+  "engine_paths": [
+    "tests/projects/urp/"
+  ]
 }

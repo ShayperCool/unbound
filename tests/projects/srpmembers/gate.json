@@ -16,6 +16,8 @@
     "managed/UnityEngine/Graphics/Renderer.cs",
     "managed/UnityEngine/Graphics/CommandStream.cs",
     "managed/UnityEngine/Graphics/Srp/Keywords.cs",
-    "managed/UnityEngine/Runtime/MonoExceptions.cs"
+    "managed/UnityEngine/Runtime/MonoExceptions.cs",
+    "tests/projects/lifecycle/",
+    "tests/projects/modelroot/compare.py"
   ]
 }

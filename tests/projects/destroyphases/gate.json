@@ -6,5 +6,9 @@
     "python3 tests/projects/destroyphases/run.py unbound --focus-loop --release $UNBOUND_PROBE_UNITY_VERSION",
     "python3 tests/projects/destroyphases/run.py unbound --completion-loop --release $UNBOUND_PROBE_UNITY_VERSION"
   ],
-  "summary": "[0-9]+/[0-9]+ records match"
+  "summary": "[0-9]+/[0-9]+ records match",
+  "engine_paths": [
+    "tests/projects/humanoid/Assets/Resources/",
+    "tests/projects/lifecycle/"
+  ]
 }

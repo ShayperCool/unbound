@@ -1,5 +1,14 @@
 {
-  "commands": ["python3 tests/projects/filepanels/run.py gate"],
+  "commands": [
+    "python3 tests/projects/filepanels/run.py gate"
+  ],
   "summary": "filepanels: [0-9]+/[0-9]+ values match.*",
-  "engine_paths": ["managed/UnityEngine/Editor/EditorSceneManager.cs", "managed/UnityEngine/Editor/EditorFilePanels.cs"]
+  "engine_paths": [
+    "managed/UnityEngine/Editor/EditorSceneManager.cs",
+    "managed/UnityEngine/Editor/EditorFilePanels.cs",
+    "tests/projects/analyticssession/Packages/",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
+  ]
 }

@@ -1,3 +1,9 @@
 {
-  "exclusive": true
+  "exclusive": true,
+  "engine_paths": [
+    "tests/projects/graphics/",
+    "tests/projects/uirectclipping/",
+    "tests/projects/uitk/",
+    "tests/projects/uitransitions/"
+  ]
 }

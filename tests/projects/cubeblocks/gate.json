@@ -9,6 +9,7 @@
     "crates/unbound-runtime/src/state.rs",
     "managed/UnityEngine/Graphics/Cubemap.cs",
     "managed/UnityEngine/Graphics/Cubemap.Clone.cs",
-    "managed/UnityEngine/Graphics/Texture2D.Blocks.cs"
+    "managed/UnityEngine/Graphics/Texture2D.Blocks.cs",
+    "tests/projects/texturecompression/compare.py"
   ]
 }

@@ -1,16 +1,18 @@
 {
- "commands": [
-  "python3 tests/projects/brg/run.py check",
-  "python3 tests/projects/brg/run.py check --device vulkan"
- ],
- "summary": "\\d+/\\d+ records match.*",
- "engine_paths": [
-  "managed/UnityEngine/Graphics/Srp/BatchRendererGroup.cs",
-  "managed/UnityEngine/Graphics/Srp/BatchCulling.cs",
-  "crates/unbound-app/src/render/dots.rs",
-  "crates/unbound-shaders/src/scopes.rs",
-  "crates/unbound-shaders/src/preprocess.rs",
-  "crates/unbound-shaders/src/fit.rs",
-  "crates/unbound-app/src/render/compiled.rs"
- ]
+  "commands": [
+    "python3 tests/projects/brg/run.py check",
+    "python3 tests/projects/brg/run.py check --device vulkan"
+  ],
+  "summary": "\\d+/\\d+ records match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Srp/BatchRendererGroup.cs",
+    "managed/UnityEngine/Graphics/Srp/BatchCulling.cs",
+    "crates/unbound-app/src/render/dots.rs",
+    "crates/unbound-shaders/src/scopes.rs",
+    "crates/unbound-shaders/src/preprocess.rs",
+    "crates/unbound-shaders/src/fit.rs",
+    "crates/unbound-app/src/render/compiled.rs",
+    "tests/projects/shadergraph/",
+    "tests/projects/urp/Assets/Scripts/"
+  ]
 }

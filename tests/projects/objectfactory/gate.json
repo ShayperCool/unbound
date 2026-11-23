@@ -9,6 +9,9 @@
     "managed/UnityEngine/Core/LayerMask.cs",
     "managed/UnityEngine/Editor/Undo.cs",
     "managed/UnityEngine/Runtime/Compat.cs",
-    "managed/UnityEngine/Editor/GameObjectUtility.cs"
+    "managed/UnityEngine/Editor/GameObjectUtility.cs",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
   ]
 }

@@ -14,6 +14,7 @@
     "managed/UnityEngine/UIElements/StyleSheets/",
     "managed/UnityEngine/Text/TextCoreText/",
     "crates/unbound-runtime/src/editor_resources.rs",
-    "crates/unbound-assets/src/font_features.rs"
+    "crates/unbound-assets/src/font_features.rs",
+    "tests/projects/imguiskin/"
   ]
 }

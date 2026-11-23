@@ -18,6 +18,12 @@
     "managed/UnityEngine/Audio/AudioClip.cs",
     "managed/UnityEngine/Runtime/Loading.cs",
     "crates/unbound-assets/src/cache.rs",
-    "crates/unbound-runtime/src/models.rs"
+    "crates/unbound-runtime/src/models.rs",
+    "tests/projects/modelimport/Assets/Models/Animated.fbx",
+    "tests/projects/modelimport/Assets/Models/Animated.fbx.meta",
+    "tests/projects/modelimport/Assets/Models/Materials.fbx",
+    "tests/projects/modelimport/Assets/Models/Materials.fbx.meta",
+    "tests/projects/speedtree9wind/Assets/Trees/Calm.st9",
+    "tests/projects/speedtree9wind/Assets/Trees/Calm.st9.meta"
   ]
 }

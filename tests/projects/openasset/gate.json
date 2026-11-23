@@ -1,5 +1,25 @@
 {
-  "commands": ["python3 tests/projects/openasset/run.py gate"],
+  "commands": [
+    "python3 tests/projects/openasset/run.py gate"
+  ],
   "summary": "openasset: [0-9]+/[0-9]+ values match.*",
-  "engine_paths": ["managed/UnityEngine/Editor/AssetDatabaseOpen.cs", "managed/UnityEngine/Core/DesktopOpener.cs"]
+  "engine_paths": [
+    "managed/UnityEngine/Editor/AssetDatabaseOpen.cs",
+    "managed/UnityEngine/Core/DesktopOpener.cs",
+    "tests/projects/analyticssession/Packages/",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/defaultasset/Assets/Data/",
+    "tests/projects/defaultasset/Assets/Data.meta",
+    "tests/projects/defaultasset/Assets/Native/",
+    "tests/projects/defaultasset/Assets/Native.meta",
+    "tests/projects/defaultasset/Assets/Scripts.meta",
+    "tests/projects/defaultasset/Assets/Scripts/ProbeData.cs",
+    "tests/projects/defaultasset/Assets/Scripts/ProbeData.cs.meta",
+    "tests/projects/editorcallbacks/Assets/Models/",
+    "tests/projects/editorcallbacks/Assets/Models.meta",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/",
+    "tests/projects/spriteatlaseditor/Assets/Sprites/",
+    "tests/projects/spriteatlaseditor/Assets/Sprites.meta"
+  ]
 }

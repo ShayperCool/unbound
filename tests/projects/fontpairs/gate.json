@@ -11,6 +11,8 @@
     "crates/unbound-assets/src/font_features.rs",
     "crates/unbound-assets/src/font_textcore.rs",
     "crates/unbound-runtime/src/fonts.rs",
-    "crates/unbound-runtime/src/state.rs"
+    "crates/unbound-runtime/src/state.rs",
+    "tests/projects/fontfeatures/Assets/Fonts/Liberation.ttf",
+    "tests/projects/fontfeatures/Assets/Fonts/Liberation.ttf.meta"
   ]
 }

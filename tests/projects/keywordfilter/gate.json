@@ -1,5 +1,12 @@
 {
-  "commands": ["python3 tests/projects/keywordfilter/run.py gate"],
+  "commands": [
+    "python3 tests/projects/keywordfilter/run.py gate"
+  ],
   "summary": "keywordfilter: [0-9]+/[0-9]+ values match.*",
-  "engine_paths": ["managed/UnityEngine/Editor/ShaderKeywordFilterAttributes.cs"]
+  "engine_paths": [
+    "managed/UnityEngine/Editor/ShaderKeywordFilterAttributes.cs",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
+  ]
 }

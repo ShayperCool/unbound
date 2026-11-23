@@ -1,0 +1,8 @@
+{
+  "engine_paths": [
+    "tests/projects/physics/",
+    "tests/projects/physics2dmotion/Sources/ProbeEntry.cs",
+    "tests/projects/query2dties/Reference/",
+    "tests/projects/trigger2dtiming/report.py"
+  ]
+}

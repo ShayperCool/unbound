@@ -1,1 +1,10 @@
-{"commands":["python3 tests/projects/physicsbatch/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\" --cli \"$UNBOUND\""],"summary":"physicsbatch: .*"}
+{
+  "commands": [
+    "python3 tests/projects/physicsbatch/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\" --cli \"$UNBOUND\""
+  ],
+  "summary": "physicsbatch: .*",
+  "engine_paths": [
+    "tests/projects/physics/",
+    "tests/projects/terrain/Assets/Trees/"
+  ]
+}

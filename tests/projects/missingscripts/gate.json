@@ -6,6 +6,10 @@
   "engine_paths": [
     "managed/UnityEngine/Runtime/Loading.cs",
     "managed/UnityEngine/Editor/AssetDatabase.cs",
-    "managed/UnityEngine/Core/Resources.cs"
+    "managed/UnityEngine/Core/Resources.cs",
+    "tests/projects/animatorapi/Assets/Scenes/",
+    "tests/projects/animatorapi/Assets/Scenes.meta",
+    "tests/projects/animatorapi/Packages/",
+    "tests/projects/animatorapi/ProjectSettings/"
   ]
 }

@@ -8,6 +8,9 @@
     "managed/Unbound.Host/Game.cs",
     "managed/UnityEngine/Runtime/Messages.cs",
     "crates/unbound-runtime/src/config.rs",
-    "managed/UnityEngine/Editor/AssetDatabase.cs"
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
   ]
 }

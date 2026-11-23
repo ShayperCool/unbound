@@ -1,4 +1,10 @@
 {
- "commands": ["python3 tests/projects/renderapi/gate.py --release \"$UNBOUND_PROBE_UNITY_VERSION\""],
- "summary": "renderapi gate: .*"
+  "commands": [
+    "python3 tests/projects/renderapi/gate.py --release \"$UNBOUND_PROBE_UNITY_VERSION\""
+  ],
+  "summary": "renderapi gate: .*",
+  "engine_paths": [
+    "tests/projects/lines/compare.py",
+    "tests/projects/urp/"
+  ]
 }

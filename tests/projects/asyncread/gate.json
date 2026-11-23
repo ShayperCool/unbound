@@ -8,6 +8,8 @@
     "managed/UnityEngine/Platform/AsyncReadManagerMetrics.cs",
     "managed/UnityEngine/Profiling/FrameTimingManager.cs",
     "managed/UnityEngine/Jobs/JobSystem.cs",
-    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs"
+    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs",
+    "tests/projects/lifecycle/",
+    "tests/projects/modelroot/compare.py"
   ]
 }

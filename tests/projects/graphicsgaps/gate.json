@@ -13,6 +13,15 @@
     "managed/UnityEngine/Editor/MaterialProperty.cs",
     "managed/UnityEngine/Editor/RenderPipelineEditorUtility.cs",
     "crates/unbound/src/declarations.rs",
-    "crates/unbound-app/src/shaderlab.rs"
+    "crates/unbound-app/src/shaderlab.rs",
+    "tests/projects/rpglobalsettings/Assets/DefaultVolumeProfile.asset",
+    "tests/projects/rpglobalsettings/Assets/DefaultVolumeProfile.asset.meta",
+    "tests/projects/rpglobalsettings/Assets/Scenes/",
+    "tests/projects/rpglobalsettings/Assets/Scenes.meta",
+    "tests/projects/rpglobalsettings/Assets/Settings.meta",
+    "tests/projects/rpglobalsettings/Assets/UniversalRenderPipelineGlobalSettings.asset",
+    "tests/projects/rpglobalsettings/Assets/UniversalRenderPipelineGlobalSettings.asset.meta",
+    "tests/projects/rpglobalsettings/Packages/",
+    "tests/projects/rpglobalsettings/ProjectSettings/"
   ]
 }

@@ -1,0 +1,6 @@
+{
+  "engine_paths": [
+    "tests/projects/physics/",
+    "tests/projects/trigger2dtiming/report.py"
+  ]
+}

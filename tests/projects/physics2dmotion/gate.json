@@ -1,3 +1,11 @@
 {
-  "exclusive": true
+  "exclusive": true,
+  "engine_paths": [
+    "tests/projects/colliderskin2d/",
+    "tests/projects/inactive3dloading/",
+    "tests/projects/lifecycle/",
+    "tests/projects/physics/",
+    "tests/projects/physicsscenesettings/",
+    "tests/projects/trigger2dtiming/"
+  ]
 }

@@ -5,6 +5,10 @@
   "summary": "editortogglegroup: .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/EditorGUIState.cs",
-    "managed/UnityEngine/IMGUI/"
+    "managed/UnityEngine/IMGUI/",
+    "tests/projects/editorstyles/run.py",
+    "tests/projects/imguiskin/Assets/Scenes/",
+    "tests/projects/imguiskin/Packages/",
+    "tests/projects/imguiskin/ProjectSettings/"
   ]
 }

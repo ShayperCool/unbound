@@ -1,9 +1,15 @@
 {
-  "commands": ["python3 tests/projects/uitkpercent/run.py gate"],
+  "commands": [
+    "python3 tests/projects/uitkpercent/run.py gate"
+  ],
   "summary": "uitkpercent: .*",
   "engine_paths": [
     "managed/UnityEngine/UIElements/Layout/Yoga.cs",
     "managed/UnityEngine/UIElements/Core/VisualElementLayout.cs",
-    "managed/UnityEngine/UIElements/Core/Panel.cs"
+    "managed/UnityEngine/UIElements/Core/Panel.cs",
+    "tests/projects/uitkpanelutils/Assets/Resources/",
+    "tests/projects/uitkpanelutils/Assets/Scenes/",
+    "tests/projects/uitkpanelutils/Packages/",
+    "tests/projects/uitkpanelutils/ProjectSettings/"
   ]
 }

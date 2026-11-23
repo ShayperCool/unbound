@@ -1,3 +1,6 @@
 {
-  "exclusive": true
+  "exclusive": true,
+  "engine_paths": [
+    "tests/projects/physics/"
+  ]
 }

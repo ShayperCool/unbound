@@ -6,6 +6,7 @@
   "engine_paths": [
     "managed/UnityEngine/",
     "tests/projects/humanoid/Assets/Resources/HumanA.fbx",
-    "tests/projects/humanoid/Assets/Resources/HumanA.fbx.meta"
+    "tests/projects/humanoid/Assets/Resources/HumanA.fbx.meta",
+    "tests/projects/humanoid/Assets/Resources/"
   ]
 }

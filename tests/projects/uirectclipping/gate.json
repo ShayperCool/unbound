@@ -1,3 +1,11 @@
 {
-  "exclusive": true
+  "exclusive": true,
+  "engine_paths": [
+    "tests/projects/canvaslifecycle/compare.py",
+    "tests/projects/uicolors/compare.py",
+    "tests/projects/uitk/compare.py",
+    "tests/projects/uitransitions/Reference/",
+    "tests/projects/uitransitions/compare.py",
+    "tests/projects/uitransitions/run.py"
+  ]
 }

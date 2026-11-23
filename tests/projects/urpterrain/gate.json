@@ -1,6 +1,12 @@
 {
-  "commands": ["python3 tests/projects/urpterrain/run.py check",
-    "python3 tests/projects/urpterrain/run.py check --color-space gamma --label check-gamma"],
+  "commands": [
+    "python3 tests/projects/urpterrain/run.py check",
+    "python3 tests/projects/urpterrain/run.py check --color-space gamma --label check-gamma"
+  ],
   "summary": "urpterrain: .*",
-  "engine_paths": ["managed/UnityEngine/Terrain/TerrainBaseMap.cs", "managed/UnityEngine/Terrain/TerrainRenderer.cs"]
+  "engine_paths": [
+    "managed/UnityEngine/Terrain/TerrainBaseMap.cs",
+    "managed/UnityEngine/Terrain/TerrainRenderer.cs",
+    "tests/projects/particles/compare_images.py"
+  ]
 }

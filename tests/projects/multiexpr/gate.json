@@ -1,11 +1,16 @@
 {
-  "commands": ["python3 tests/projects/multiexpr/run.py gate"],
+  "commands": [
+    "python3 tests/projects/multiexpr/run.py gate"
+  ],
   "summary": "multiexpr: .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/BindingExtensions.cs",
     "managed/UnityEngine/Editor/SerializedObject.cs",
     "managed/UnityEngine/Editor/Undo.cs",
     "managed/UnityEngine/Core/ExpressionEvaluator.cs",
-    "managed/UnityEngine/UIElements/Controls/NumericFields.cs"
+    "managed/UnityEngine/UIElements/Controls/NumericFields.cs",
+    "tests/projects/uitkbindings/Assets/Scenes/",
+    "tests/projects/uitkbindings/Packages/",
+    "tests/projects/uitkbindings/ProjectSettings/"
   ]
 }

@@ -2,6 +2,8 @@
   "exclusive": true,
   "engine_paths": [
     "managed/UnityEngine/Physics2D/Physics2DWorld.cs",
-    "managed/UnityEngine/Physics2D/Box2D/Dynamics/"
+    "managed/UnityEngine/Physics2D/Box2D/Dynamics/",
+    "tests/projects/physics/",
+    "tests/projects/trigger2dtiming/"
   ]
 }

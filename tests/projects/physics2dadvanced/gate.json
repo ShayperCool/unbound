@@ -1,4 +1,10 @@
 {
-  "commands": ["python3 tests/projects/physics2dadvanced/gate.py"],
-  "summary": "Advanced 2D controls .*"
+  "commands": [
+    "python3 tests/projects/physics2dadvanced/gate.py"
+  ],
+  "summary": "Advanced 2D controls .*",
+  "engine_paths": [
+    "tests/projects/physics/",
+    "tests/projects/trigger2dtiming/report.py"
+  ]
 }

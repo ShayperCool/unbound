@@ -9,7 +9,9 @@
     "managed/UnityEngine/Runtime/SceneRegistry.cs",
     "managed/UnityEngine/Runtime/Compat.cs",
     "managed/UnityEngine/Runtime/Lifecycle.cs",
-    "managed/UnityEngine/Runtime/Instantiation.cs"
+    "managed/UnityEngine/Runtime/Instantiation.cs",
+    "tests/projects/editinheritance/compare.py",
+    "tests/projects/editinheritance/run.py"
   ],
   "summary": "hiddenflags: [0-9]+/[0-9]+ values match"
 }

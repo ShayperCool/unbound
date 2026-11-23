@@ -7,6 +7,8 @@
     "managed/UnityEngine/Runtime/Lifecycle.cs",
     "managed/UnityEngine/Animation/Animator.cs",
     "managed/UnityEngine/Animation/AnimatorAvatar.cs",
-    "managed/UnityEngine/Animation/Human/AvatarBuild.cs"
+    "managed/UnityEngine/Animation/Human/AvatarBuild.cs",
+    "tests/projects/humanoid/",
+    "tests/projects/modelroot/"
   ]
 }

@@ -8,6 +8,10 @@
     "managed/UnityEngine/Runtime/Compat.cs",
     "managed/UnityEngine/Runtime/Components.cs",
     "managed/UnityEngine/Runtime/Instantiation.cs",
-    "managed/UnityEngine/Profiling/MemorySizes.cs"
+    "managed/UnityEngine/Profiling/MemorySizes.cs",
+    "tests/projects/formatmapping/Assets/Scenes/",
+    "tests/projects/formatmapping/Assets/Scenes.meta",
+    "tests/projects/formatmapping/Packages/",
+    "tests/projects/formatmapping/ProjectSettings/"
   ]
 }

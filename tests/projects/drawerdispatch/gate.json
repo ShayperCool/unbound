@@ -1,5 +1,7 @@
 {
-  "commands": ["python3 tests/projects/drawerdispatch/run.py gate"],
+  "commands": [
+    "python3 tests/projects/drawerdispatch/run.py gate"
+  ],
   "summary": "drawerdispatch: .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/PropertyField.cs",
@@ -8,6 +10,9 @@
     "managed/UnityEngine/Editor/EditorGUIState.cs",
     "managed/UnityEngine/Editor/BindingExtensions.cs",
     "managed/UnityEngine/Editor/SerializedPropertyTree.cs",
-    "managed/UnityEngine/Editor/TypeCache.cs"
+    "managed/UnityEngine/Editor/TypeCache.cs",
+    "tests/projects/uitkbindings/Assets/Scenes/",
+    "tests/projects/uitkbindings/Packages/",
+    "tests/projects/uitkbindings/ProjectSettings/"
   ]
 }

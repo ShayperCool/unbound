@@ -1,0 +1,7 @@
+{
+  "engine_paths": [
+    "tests/projects/lightmapuvs/Sources/Multi.fbx",
+    "tests/projects/lightmapuvs/Tools/make_project.py",
+    "tests/projects/urp/"
+  ]
+}

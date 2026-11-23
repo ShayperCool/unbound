@@ -4,6 +4,10 @@
   ],
   "summary": "transformaccess: .*",
   "engine_paths": [
-    "managed/UnityEngine/Jobs/TransformJobs.cs"
+    "managed/UnityEngine/Jobs/TransformJobs.cs",
+    "tests/projects/animatorapi/Assets/Scenes/",
+    "tests/projects/animatorapi/Assets/Scenes.meta",
+    "tests/projects/animatorapi/Packages/",
+    "tests/projects/animatorapi/ProjectSettings/"
   ]
 }

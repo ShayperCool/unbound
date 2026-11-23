@@ -1,4 +1,10 @@
 {
-  "commands": ["python3 tests/projects/cameraexplicitdepth/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\""],
-  "summary": "camerastack: .*"
+  "commands": [
+    "python3 tests/projects/cameraexplicitdepth/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\""
+  ],
+  "summary": "camerastack: .*",
+  "engine_paths": [
+    "tests/projects/camerastack/compare.py",
+    "tests/projects/camerastack/run.py"
+  ]
 }

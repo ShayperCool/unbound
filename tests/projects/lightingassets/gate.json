@@ -2,5 +2,8 @@
   "commands": [
     "python3 tests/projects/lightingassets/run.py gate --label gate-$(date +%s%N)"
   ],
-  "summary": "values: \\d+ records, \\d+ failing, \\d+ recorded residuals|lightingassets: \\d+ failing"
+  "summary": "values: \\d+ records, \\d+ failing, \\d+ recorded residuals|lightingassets: \\d+ failing",
+  "engine_paths": [
+    "tests/projects/particles/compare_images.py"
+  ]
 }

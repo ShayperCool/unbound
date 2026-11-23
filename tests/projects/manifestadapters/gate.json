@@ -6,6 +6,7 @@
   "engine_paths": [
     "managed/UnityEngine/Runtime/AssetAdapters.cs",
     "managed/UnityEngine/Runtime/AssetBundles.cs",
-    "managed/UnityEngine/Runtime/Instantiation.cs"
+    "managed/UnityEngine/Runtime/Instantiation.cs",
+    "tests/projects/assetbundles/Reference/bundles/"
   ]
 }

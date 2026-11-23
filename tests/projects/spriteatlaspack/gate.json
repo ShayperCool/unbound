@@ -1,4 +1,13 @@
 {
-  "commands": ["python3 tests/projects/spriteatlaspack/run.py gate"],
-  "summary": "spriteatlaspack [a-z0-9]+: [0-9]+/[0-9]+ values match.*"
+  "commands": [
+    "python3 tests/projects/spriteatlaspack/run.py gate"
+  ],
+  "summary": "spriteatlaspack [a-z0-9]+: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "tests/projects/analyticssession/Packages/",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/",
+    "tests/projects/spriteatlaseditor/Assets/Sprites/"
+  ]
 }

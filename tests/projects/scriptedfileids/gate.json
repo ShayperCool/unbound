@@ -6,6 +6,8 @@
   "summary": "(scriptedfileids|hierarchyid): .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/ScriptedImporter.cs",
-    "managed/UnityEngine/Runtime/Loading.cs"
+    "managed/UnityEngine/Runtime/Loading.cs",
+    "tests/projects/editinheritance/compare.py",
+    "tests/projects/editinheritance/run.py"
   ]
 }

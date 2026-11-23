@@ -6,7 +6,8 @@
   "summary": "uxmlbaseapi: .*",
   "engine_paths": [
     "managed/UnityEngine/UIElements/Uxml*",
-    "managed/Unbound.ApiTools/"
+    "managed/Unbound.ApiTools/",
+    "tests/projects/lightingassets/"
   ],
   "fast_commands": [
     "python3 -m unittest discover -s tests/projects/uxmlbaseapi -p test_audit.py",

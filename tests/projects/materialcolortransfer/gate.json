@@ -1,3 +1,7 @@
 {
-  "exclusive": true
+  "exclusive": true,
+  "engine_paths": [
+    "tests/projects/cameramsaa/compare.py",
+    "tests/projects/uitk/compare.py"
+  ]
 }

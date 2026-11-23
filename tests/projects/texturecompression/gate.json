@@ -9,6 +9,7 @@
   "engine_paths": [
     "native/crunch/",
     "native/pinned_source.py",
-    "native/unbound_crunch.cpp"
+    "native/unbound_crunch.cpp",
+    "tests/projects/textureimport/make_textures.py"
   ]
 }

@@ -1,3 +1,7 @@
 {
-  "exclusive": true
+  "exclusive": true,
+  "engine_paths": [
+    "tests/projects/physics/",
+    "tests/projects/query2dcontinuation/validate.py"
+  ]
 }

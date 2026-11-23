@@ -7,6 +7,7 @@
     "managed/UnityEngine/Terrain/SpeedTreeWind.cs",
     "managed/UnityEngine/Terrain/SpeedTreeWindSimulation.cs",
     "managed/UnityEngine/Wind/WindZone.cs",
-    "managed/UnityEngine/Editor/SpeedTree9/"
+    "managed/UnityEngine/Editor/SpeedTree9/",
+    "tests/projects/speedtree9/make_trees.py"
   ]
 }

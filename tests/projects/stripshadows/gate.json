@@ -8,6 +8,8 @@
     "managed/UnityEngine/Graphics/LineRenderers.cs",
     "managed/UnityEngine/Graphics/FrameBuilder.cs",
     "managed/UnityEngine/Graphics/Srp/SrpContext.cs",
-    "managed/UnityEngine/Graphics/Srp/ShadowCasterCulling.cs"
+    "managed/UnityEngine/Graphics/Srp/ShadowCasterCulling.cs",
+    "tests/projects/lines/compare.py",
+    "tests/projects/shadergraph/"
   ]
 }

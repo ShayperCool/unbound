@@ -2,5 +2,8 @@
   "commands": [
     "python3 tests/projects/particlemeshshape/run.py check"
   ],
-  "summary": "\\d+/\\d+ records match.*"
+  "summary": "\\d+/\\d+ records match.*",
+  "engine_paths": [
+    "tests/projects/particletrails/compare.py"
+  ]
 }

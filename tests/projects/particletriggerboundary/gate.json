@@ -1,0 +1,6 @@
+{
+  "engine_paths": [
+    "tests/projects/particles/",
+    "tests/projects/particletrigger/verify.py"
+  ]
+}

@@ -1,8 +1,13 @@
 {
-  "commands": ["python3 tests/projects/playersettingsvalues/run.py gate"],
+  "commands": [
+    "python3 tests/projects/playersettingsvalues/run.py gate"
+  ],
   "summary": "playersettingsvalues: .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/PlayerSettingsValues.cs",
-    "managed/UnityEngine/Editor/SettingsAssets.cs"
+    "managed/UnityEngine/Editor/SettingsAssets.cs",
+    "tests/projects/fileutildelete/Assets/Scenes/",
+    "tests/projects/fileutildelete/Packages/",
+    "tests/projects/fileutildelete/ProjectSettings/"
   ]
 }

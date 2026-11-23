@@ -9,6 +9,9 @@
     "managed/UnityEngine/Editor/AssetModificationProcessorInternal.cs",
     "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
     "managed/UnityEngine/Editor/EditorSceneManager.cs",
-    "managed/UnityEngine/Editor/SceneFiles.cs"
+    "managed/UnityEngine/Editor/SceneFiles.cs",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
   ]
 }

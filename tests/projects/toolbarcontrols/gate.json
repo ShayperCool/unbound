@@ -14,6 +14,9 @@
     "managed/UnityEngine/Editor/EditorResources.cs",
     "managed/UnityEngine/UIElements/Uxml/VisualTreeAsset.cs",
     "managed/UnityEngine/UIElements/Controls/ControlUxmlData.cs",
-    "managed/UnityEngine/UIElements/Style/StyleResolver.cs"
+    "managed/UnityEngine/UIElements/Style/StyleResolver.cs",
+    "tests/projects/uitkbindings/Assets/Scenes/",
+    "tests/projects/uitkbindings/Packages/",
+    "tests/projects/uitkbindings/ProjectSettings/"
   ]
 }

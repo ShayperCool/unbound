@@ -1,0 +1,8 @@
+{
+  "engine_paths": [
+    "tests/projects/forces/Reference/",
+    "tests/projects/forces/compare.py",
+    "tests/projects/graphics/",
+    "tests/projects/physics/"
+  ]
+}

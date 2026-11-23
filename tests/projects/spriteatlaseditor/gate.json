@@ -15,6 +15,10 @@
     "managed/UnityEngine/Editor/AssetDatabase.cs",
     "managed/UnityEngine/Editor/SpriteAtlasEditorSettings.cs",
     "managed/UnityEngine/Editor/ImporterMetaFiles.cs",
-    "managed/UnityEngine/Editor/SpriteAtlasImporter.cs"
+    "managed/UnityEngine/Editor/SpriteAtlasImporter.cs",
+    "tests/projects/analyticssession/Packages/",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
   ]
 }

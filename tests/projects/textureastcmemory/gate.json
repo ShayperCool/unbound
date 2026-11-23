@@ -10,6 +10,12 @@
     "managed/UnityEngine/Graphics/Texture2D.Clone.cs",
     "managed/UnityEngine/Graphics/TextureArrays.cs",
     "managed/UnityEngine/Profiling/MemorySizes.cs",
-    "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs"
+    "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs",
+    "tests/projects/formatmapping/Assets/Scenes/",
+    "tests/projects/formatmapping/Assets/Scenes.meta",
+    "tests/projects/formatmapping/Packages/",
+    "tests/projects/formatmapping/ProjectSettings/",
+    "tests/projects/texturecompression/Assets/Textures/OddASTC6NoMips.png",
+    "tests/projects/texturecompression/Assets/Textures/OddASTC6NoMips.png.meta"
   ]
 }

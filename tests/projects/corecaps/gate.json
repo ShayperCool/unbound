@@ -12,6 +12,7 @@
     "managed/UnityEngine/Graphics/Camera.cs",
     "managed/UnityEngine/Graphics/RenderTexture.cs",
     "managed/UnityEngine/Baselib/Binding.cs",
-    "managed/UnityEngine/Baselib/BaselibPlatform.cs"
+    "managed/UnityEngine/Baselib/BaselibPlatform.cs",
+    "tests/projects/lifecycle/"
   ]
 }

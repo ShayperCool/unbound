@@ -7,5 +7,16 @@
     "python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\" --set Rigged",
     "python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\" --set Reduced"
   ],
-  "summary": "FBX node transforms .*"
+  "summary": "FBX node transforms .*",
+  "engine_paths": [
+    "tests/projects/blendshapes/Assets/Resources/Blob.fbx",
+    "tests/projects/blendshapes/Assets/Resources/Blob.fbx.meta",
+    "tests/projects/humanoid/Assets/Resources/HumanA.fbx",
+    "tests/projects/humanoid/Assets/Resources/HumanA.fbx.meta",
+    "tests/projects/lightmapuvs/Tools/make_project.py",
+    "tests/projects/lightmapuvs/compare.py",
+    "tests/projects/lightmapuvs/compare_normals.py",
+    "tests/projects/lightmapuvs/run.py",
+    "tests/projects/modelimport/"
+  ]
 }

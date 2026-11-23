@@ -7,6 +7,7 @@
     "managed/UnityEngine/Editor/EditorLayoutGroups.cs",
     "managed/UnityEngine/Editor/EditorGUIUtility.cs",
     "managed/UnityEngine/Editor/EditorGUIState.cs",
-    "managed/UnityEngine/IMGUI/"
+    "managed/UnityEngine/IMGUI/",
+    "tests/projects/imguiskin/"
   ]
 }

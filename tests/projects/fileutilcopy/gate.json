@@ -1,9 +1,14 @@
 {
-  "commands": ["python3 tests/projects/fileutilcopy/run.py gate"],
+  "commands": [
+    "python3 tests/projects/fileutilcopy/run.py gate"
+  ],
   "summary": "fileutilcopy: .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/FileUtilCopy.cs",
     "managed/UnityEngine/Editor/FileUtilInternal.cs",
-    "managed/UnityEngine/Editor/FileUtil.cs"
+    "managed/UnityEngine/Editor/FileUtil.cs",
+    "tests/projects/fileutildelete/Assets/Scenes/",
+    "tests/projects/fileutildelete/Packages/",
+    "tests/projects/fileutildelete/ProjectSettings/"
   ]
 }

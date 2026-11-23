@@ -1,5 +1,7 @@
 {
-  "commands": ["python3 tests/projects/propertyfield/run.py gate"],
+  "commands": [
+    "python3 tests/projects/propertyfield/run.py gate"
+  ],
   "summary": "propertyfield: .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/SerializedObject.cs",
@@ -11,6 +13,9 @@
     "managed/UnityEngine/UIElements/Controls/NumericFields.cs",
     "managed/UnityEngine/UIElements/Controls/TextField.cs",
     "managed/UnityEngine/UIElements/Core/Panel.cs",
-    "managed/UnityEngine/UIElements/Core/VisualElement.cs"
+    "managed/UnityEngine/UIElements/Core/VisualElement.cs",
+    "tests/projects/uitkbindings/Assets/Scenes/",
+    "tests/projects/uitkbindings/Packages/",
+    "tests/projects/uitkbindings/ProjectSettings/"
   ]
 }

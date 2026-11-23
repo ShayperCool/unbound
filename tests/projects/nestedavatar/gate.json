@@ -10,6 +10,9 @@
     "managed/UnityEngine/Animation/Binding.cs",
     "managed/UnityEngine/Animation/Human/AnimatorHuman.cs",
     "managed/UnityEngine/Animation/Playables/AnimationJobs.cs",
-    "managed/UnityEngine/Animation/Playables/AnimationPlayables.cs"
+    "managed/UnityEngine/Animation/Playables/AnimationPlayables.cs",
+    "tests/projects/humanoid/",
+    "tests/projects/modelroot/",
+    "tests/projects/uitkpanelutils/Assets/Scenes/"
   ]
 }

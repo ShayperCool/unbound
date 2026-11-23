@@ -10,6 +10,9 @@
     "tests/projects/animatorapi/Assets/Scenes/**",
     "tests/projects/animatorapi/Assets/Scenes.meta",
     "tests/projects/animatorapi/Packages/**",
-    "tests/projects/animatorapi/ProjectSettings/**"
+    "tests/projects/animatorapi/ProjectSettings/**",
+    "tests/projects/animatorapi/Assets/Scenes/",
+    "tests/projects/animatorapi/Packages/",
+    "tests/projects/animatorapi/ProjectSettings/"
   ]
 }

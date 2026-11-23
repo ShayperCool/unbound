@@ -6,6 +6,9 @@
   "engine_paths": [
     "managed/UnityEngine/Editor/SearchObjectField.cs",
     "managed/UnityEngine/Editor/ObjectField.cs",
-    "managed/UnityEngine/Editor/EditorGUIState.cs"
+    "managed/UnityEngine/Editor/EditorGUIState.cs",
+    "tests/projects/animatorapi/Assets/Scenes/",
+    "tests/projects/animatorapi/Assets/Scenes.meta",
+    "tests/projects/animatorapi/ProjectSettings/"
   ]
 }

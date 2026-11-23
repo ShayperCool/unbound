@@ -1,5 +1,10 @@
 {
-  "engine_paths": ["managed/UnityEngine/Graphics/Lightmapping.cs", "managed/UnityEngine/Graphics/RealtimeGI.cs",
-    "managed/UnityEngine/Terrain/TerrainRenderer.cs", "managed/UnityEngine/Terrain/Terrain.cs"],
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Lightmapping.cs",
+    "managed/UnityEngine/Graphics/RealtimeGI.cs",
+    "managed/UnityEngine/Terrain/TerrainRenderer.cs",
+    "managed/UnityEngine/Terrain/Terrain.cs",
+    "tests/projects/terrain/"
+  ],
   "exclusive": true
 }

@@ -4,6 +4,8 @@
   ],
   "summary": "scriptedidentity: .*",
   "engine_paths": [
-    "managed/UnityEngine/Editor/ScriptedImporter.cs"
+    "managed/UnityEngine/Editor/ScriptedImporter.cs",
+    "tests/projects/editinheritance/compare.py",
+    "tests/projects/editinheritance/run.py"
   ]
 }

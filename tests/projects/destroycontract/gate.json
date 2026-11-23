@@ -1,0 +1,7 @@
+{
+  "engine_paths": [
+    "tests/projects/coreapis/README.md",
+    "tests/projects/input/Reference/unity-6000.0.71f1.jsonl",
+    "tests/projects/shaderpasscount/"
+  ]
+}

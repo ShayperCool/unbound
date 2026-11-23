@@ -1,8 +1,23 @@
 {
-  "commands": ["python3 tests/projects/importereditor/run.py gate"],
+  "commands": [
+    "python3 tests/projects/importereditor/run.py gate"
+  ],
   "summary": "importereditor: [0-9]+/[0-9]+ values match.*",
-  "engine_paths": ["managed/UnityEngine/Editor/AssetImporterEditor.cs", "managed/UnityEngine/Editor/ScriptedImporter.cs",
-                   "managed/UnityEngine/Editor/ImporterMetaFiles.cs", "managed/UnityEngine/Editor/AssetImporterLookup.cs",
-                   "managed/UnityEngine/Editor/Editors.cs", "managed/UnityEngine/Editor/SerializedPropertyTree.cs",
-                   "managed/UnityEngine/Editor/EditorState.cs", "managed/UnityEngine/Core/JsonUtility.cs"]
+  "engine_paths": [
+    "managed/UnityEngine/Editor/AssetImporterEditor.cs",
+    "managed/UnityEngine/Editor/ScriptedImporter.cs",
+    "managed/UnityEngine/Editor/ImporterMetaFiles.cs",
+    "managed/UnityEngine/Editor/AssetImporterLookup.cs",
+    "managed/UnityEngine/Editor/Editors.cs",
+    "managed/UnityEngine/Editor/SerializedPropertyTree.cs",
+    "managed/UnityEngine/Editor/EditorState.cs",
+    "managed/UnityEngine/Core/JsonUtility.cs",
+    "tests/projects/analyticssession/Packages/",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/",
+    "tests/projects/spriteatlaseditor/Assets/Sprites.meta",
+    "tests/projects/spriteatlaseditor/Assets/Sprites/Single.png",
+    "tests/projects/spriteatlaseditor/Assets/Sprites/Single.png.meta"
+  ]
 }

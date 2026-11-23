@@ -11,6 +11,12 @@
     "managed/UnityEngine/Editor/AssetImporterLookup.cs",
     "managed/UnityEngine/Runtime/Loading.cs",
     "managed/UnityEngine/Runtime/GameDomain.cs",
-    "crates/unbound-project/src/assetdb.rs"
+    "crates/unbound-project/src/assetdb.rs",
+    "tests/projects/analyticssession/Packages/",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/compilesetup/Assets/Plugins/Same/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/",
+    "tests/projects/spriteatlaseditor/Assets/Sprites/"
   ]
 }

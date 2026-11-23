@@ -6,7 +6,10 @@
   "summary": "\\d+ release classes without a reader; 0 problems",
   "engine_paths": [
     "crates/unbound/src/doctor*.rs",
-    "managed/UnityEngine/Runtime/ClassCoverage.cs"
+    "managed/UnityEngine/Runtime/ClassCoverage.cs",
+    "tests/projects/assetbundles/",
+    "tests/projects/flares/Assets/Resources/Uv.png",
+    "tests/projects/flares/Assets/Resources/Uv.png.meta"
   ],
   "fast_commands": [
     "python3 tests/projects/classids/run.py check",

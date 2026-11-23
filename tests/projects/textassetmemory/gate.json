@@ -6,7 +6,9 @@
     "managed/UnityEngine/Profiling/MemorySizes.cs",
     "managed/UnityEngine/Graphics/TextAsset.cs",
     "managed/UnityEngine/Graphics/TextAsset.Clone.cs",
-    "managed/UnityEngine/Runtime/Compat.cs"
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "tests/projects/editinheritance/compare.py",
+    "tests/projects/editinheritance/run.py"
   ],
   "summary": "textassetmemory: [0-9]+/[0-9]+ values match"
 }
