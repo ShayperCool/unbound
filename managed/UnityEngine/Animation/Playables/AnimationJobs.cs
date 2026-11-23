@@ -1071,7 +1071,7 @@ namespace Unbound.Runtime.Playables
                             if (measuredVelocities) BeginAnimationPhase(context, into, inputJob);
                         }
                         context.UseKinematicAnimationRoot = e.UsesMeasuredKinematicJobRoot;
-                        if (e.UsesMeasuredScriptedJobRoot && !context.HasHumanPose)
+                        if (e.ScriptedJobOutput != null && !context.HasHumanPose)
                         {
                             // Keep the slot reserved across nested evaluations, but do not
                             // expose the job's stream to OnAnimatorMove.

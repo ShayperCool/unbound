@@ -345,7 +345,7 @@ namespace Unbound.Runtime.Playables
         internal float OutputWeight = 1f;
         internal bool UsesMeasuredJobVelocities;
         internal bool UsesMeasuredKinematicJobRoot;
-        internal bool UsesMeasuredScriptedJobRoot;
+        internal PlayableOutputData ScriptedJobOutput;
         bool m_CanMoveDuringJob, m_JobInterrupted;
         AnimatorRootMotion? m_JobHumanStep;
         /// <summary>How this evaluation's streams carry root motion (set by <see cref="Run"/>).</summary>
@@ -395,7 +395,7 @@ namespace Unbound.Runtime.Playables
             e.Seek = e.AutomaticFrame = e.RootMotion = e.ReferencePose = e.PlayableIK = e.Replay = false;
             e.UsesMeasuredJobVelocities = false;
             e.UsesMeasuredKinematicJobRoot = false;
-            e.UsesMeasuredScriptedJobRoot = false;
+            e.ScriptedJobOutput = null;
             e.m_CanMoveDuringJob = e.m_JobInterrupted = false;
             e.m_JobHumanStep = null;
             e.OutputWeight = 1f;
@@ -783,7 +783,7 @@ namespace Unbound.Runtime.Playables
         /// <paramref name="deferPhases"/>: the player loop's automatic update, whose movement and
         /// write wait for <see cref="AnimationPhases"/>; explicit evaluations run all at once.
         internal static void Run(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs,
-            bool suppressMovement = false, bool deferPhases = false)
+            bool suppressMovement = false, bool deferPhases = false, bool explicitEvaluation = false)
         {
             if (animator == null || outputs.Count == 0 || animator.AvatarLostToStreamHandles(Animator.AvatarLostLogsPerEvaluation)) return;
             var bindings = animator.StreamBindings;
@@ -795,7 +795,7 @@ namespace Unbound.Runtime.Playables
             animator.m_OutputEvaluations++;
             try
             {
-                e.m_CanMoveDuringJob = !suppressMovement && !deferPhases && Compat.HumanStreamScriptedRoot;
+                e.m_CanMoveDuringJob = explicitEvaluation && !suppressMovement && !deferPhases && Compat.HumanStreamScriptedRoot;
                 pending = Run(e, animator, bindings, outputs, suppressMovement);
                 if (pending == null) return;
                 if (AnimationPhases.Split)
@@ -921,9 +921,11 @@ namespace Unbound.Runtime.Playables
                 bool directManualHumanJob = e.MotionMode == RootMotionMode.Human && o.Graph.UpdateMode == DirectorUpdateMode.Manual
                     && o.Weight == 1f && source == AnimationStreamSource.DefaultValues && JobKind.HasSingleHumanClipInput(o.Source);
                 e.UsesMeasuredKinematicJobRoot = Compat.HumanStreamKinematicBodyRoot && directManualHumanJob;
-                e.UsesMeasuredScriptedJobRoot = e.m_CanMoveDuringJob && directManualHumanJob
+                e.ScriptedJobOutput = e.m_CanMoveDuringJob && directManualHumanJob
                     && ((ClipKind)o.Source.Inputs[0].Node.Kind).Clip.m_Events.Count == 0 && MoveCallbacks.Any(animator)
-                    && animator.updateMode == AnimatorUpdateMode.Normal && animator.GetComponent<Rigidbody>() == null && animator.GetComponent<CharacterController>() == null;
+                    && animator.updateMode == AnimatorUpdateMode.Normal
+                    && animator.GetComponent<Rigidbody>() == null && animator.GetComponent<CharacterController>() == null
+                    ? o : null;
                 AnimStream s;
                 // The tree's own weights decide which clips fire events; the output's weight blends
                 // the pose only (6000.0.71f1, animculling weight/0: a clip under an output at
@@ -1103,6 +1105,7 @@ namespace Unbound.Runtime.Playables
             m_JobInterrupted = true;
             var animator = Animator;
             var human = animator.Human;
+            var output = ScriptedJobOutput;
             int evaluation = animator.m_OutputEvaluations;
             human.ApplyMotion(stream.BodyMotion.HasMotion ? stream.BodyMotion : HumanRootMotion.NoMotion,
                 stream.DeltaTime, out var step);
@@ -1110,7 +1113,9 @@ namespace Unbound.Runtime.Playables
             ApplyHumanRootMotion(animator, step);
             m_JobInterrupted = animator == null || !animator.isActiveAndEnabled
                 || animator.m_OutputEvaluations != evaluation || !ReferenceEquals(human, animator.Human)
-                || animator.m_Player != null || node.Destroyed || node.Graph.Destroyed;
+                || animator.m_Player != null || node.Destroyed || node.Graph.Destroyed
+                || output.Destroyed || !ReferenceEquals(output.Source, node)
+                || output.Engine is not AnimationOutputState state || !ReferenceEquals(state.Target, animator);
             return !m_JobInterrupted;
         }
 
@@ -1590,7 +1595,7 @@ namespace Unbound.Runtime.Playables
 
         public void Stopped(PlayableGraphData graph) { }
 
-        public void Flush() => RunAllPending();
+        public void Flush() => RunAllPending(explicitEvaluation: true);
 
         /// <summary>The pending outputs of one Animator (after its controller wrote).</summary>
         static readonly Stack<List<(PlayableOutputData, double, bool)>> s_FreeLists = new Stack<List<(PlayableOutputData, double, bool)>>();
@@ -1625,7 +1630,7 @@ namespace Unbound.Runtime.Playables
 
         /// <summary>Every pending output (PlayableGraph.Evaluate, and Animators the update skipped).
         /// Evaluations can queue more reentrantly, so each call takes its own batch.</summary>
-        internal static void RunAllPending(bool deferPhases = false)
+        internal static void RunAllPending(bool deferPhases = false, bool explicitEvaluation = false)
         {
             if (s_Pending.Count == 0) return;
             var all = s_FreeBatches.Count > 0 ? s_FreeBatches.Pop() : new List<KeyValuePair<Animator, List<(PlayableOutputData, double, bool)>>>();
@@ -1636,7 +1641,7 @@ namespace Unbound.Runtime.Playables
                 foreach (var pair in all)
                 {
                     if (pair.Key == null) continue;
-                    try { AnimationEvaluation.Run(pair.Key, pair.Value, deferPhases: deferPhases); }
+                    try { AnimationEvaluation.Run(pair.Key, pair.Value, deferPhases: deferPhases, explicitEvaluation: explicitEvaluation); }
                     catch (Exception e) { Debug.LogException(e, pair.Key); }
                 }
             }

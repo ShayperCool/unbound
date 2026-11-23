@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unbound.Runtime;
+using Unbound.Runtime.Playables;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 using Xunit;
@@ -247,11 +248,96 @@ namespace UnityEngine.Tests
                 escaped = stream;
             });
 
-            AnimationHumanStreamTests.Run(m_Graph, 1);
-            Assert.Equal(new[] { "root", "move", "animation" }, phases);
+            AnimationHumanStreamTests.Run(m_Graph, 2);
+            Assert.Equal(new[] { "root", "move", "animation", "root", "move", "animation" }, phases);
             Assert.False(validInMove);
             Assert.True(validInAnimation);
             Assert.False(escaped.isValid);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AVisibilitySampleOrRootPoseReadKeepsTheReportedMovementOrder(bool opensPose)
+        {
+            using var pin = TestRelease.Pin(TestRelease.Measured);
+            const string warning = "AnimationHumanStream root with scripted or physics root motion";
+            int Hits() => Stubs.HitReport().FirstOrDefault(hit => hit.Key == warning).Value;
+            var animator = Human();
+            animator.applyRootMotion = true;
+            animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+            var phases = new List<string>();
+            animator.gameObject.AddComponent<ScriptedMoveCallback>().Move = () => phases.Add("move");
+            m_Graph = AnimationHumanStreamTests.Graph(animator, (stream, _) =>
+            {
+                phases.Add("animation");
+                var body = stream.AsHuman().bodyPosition;
+            }, MakeHumanoidMotionClip(), (stream, _) =>
+            {
+                phases.Add("root");
+                if (opensPose) { var body = stream.AsHuman().bodyPosition; }
+            });
+
+            int before = Hits();
+            if (opensPose) m_Graph.Evaluate(0f);
+            else Assert.True(AnimationOutputs.EvaluateOnVisible(animator, move: true));
+
+            Assert.Equal(new[] { "root", "animation", "move" }, phases);
+            Assert.True(Hits() > before);
+        }
+
+        [Theory]
+        [InlineData("evaluate")]
+        [InlineData("disable")]
+        [InlineData("destroy")]
+        public void InterruptedScriptedMovementCannotWriteAStaleJobPose(string interruption)
+        {
+            using var pin = TestRelease.Pin(TestRelease.Measured);
+            var animator = Human();
+            animator.applyRootMotion = true;
+            var arm = animator.transform.Find("Hips/Spine/Chest/LeftUpperArm");
+            var original = arm.localRotation;
+            var phases = new List<string>();
+            int calls = 0;
+            var rootAfterMove = new Vector3(4f, 5f, 6f);
+            var expectedArm = original;
+            animator.gameObject.AddComponent<ScriptedMoveCallback>().Move = () =>
+            {
+                phases.Add("move");
+                if (++calls != 1) return;
+                animator.transform.position = rootAfterMove;
+                switch (interruption)
+                {
+                    case "evaluate":
+                        m_Graph.Evaluate(0.1f);
+                        expectedArm = arm.localRotation;
+                        rootAfterMove = animator.transform.position;
+                        break;
+                    case "disable":
+                        animator.enabled = false;
+                        break;
+                    case "destroy":
+                        m_Graph.Destroy();
+                        break;
+                }
+            };
+            m_Graph = AnimationHumanStreamTests.Graph(animator, (stream, _) =>
+            {
+                phases.Add("animation");
+                stream.AsHuman().SetMuscle(new MuscleHandle(HumanPartDof.LeftArm, ArmDof.ArmDownUp), 0.65f);
+            }, MakeHumanoidMotionClip(), (_, _) => phases.Add("root"));
+
+            m_Graph.Evaluate(0.1f);
+
+            if (interruption == "evaluate")
+            {
+                Assert.Equal(new[] { "root", "move", "root", "move", "animation" }, phases);
+                Assert.True(Quaternion.Angle(original, expectedArm) > 5f);
+            }
+            else
+                Assert.Equal(new[] { "root", "move" }, phases);
+            Near(rootAfterMove, animator.transform.position);
+            Near(expectedArm, arm.localRotation);
         }
 
         /// <summary>A handle is a bone of the avatar the Animator has when the job runs: one bound
