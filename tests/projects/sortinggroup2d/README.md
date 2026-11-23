@@ -1,7 +1,8 @@
 # Sorting groups across the 2D renderer's layer batches
 
-The 2D renderer (URP 17, the `urp2d` probe's pipeline and settings, its renderer data sorting along
-the custom axis Y) draws one list per batch of sorting layers that share their 2D lights.
+The 2D renderer (URP 17, the `urp2d` probe's pipeline and settings; `Assets/Settings/Probe2DRenderer.asset`
+is a copy of that probe's renderer data with the transparency sort mode set to the custom axis Y,
+so later edits of the original do not reach it) draws one list per batch of sorting layers that share their 2D lights.
 `Assets/Editor/SortingGroup2DProbe.cs` records in Play mode which of two overlapping unit squares
 is drawn on top: A (red) inside a SortingGroup whose sorting layer differs from A's own, B
 (green) outside it, on the sorting layers `Default` and `Objects`, with one global 2D light per
