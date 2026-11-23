@@ -22,6 +22,12 @@ namespace UnityEngine.Tests
                     using (Log.EarlierImport(true)) Debug.LogError("nested");
                     Debug.Log("still earlier");
                 }
+                // A scope left by an exception ends too.
+                try
+                {
+                    using (Log.EarlierImport(true)) throw new System.InvalidOperationException("import failed");
+                }
+                catch (System.InvalidOperationException) { }
                 Debug.LogWarning("after");
                 using (Log.EarlierImport(false)) Debug.LogWarning("in session");
                 Assert.Equal(new[] { "after", "in session" }, heard);
