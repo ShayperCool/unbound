@@ -9,6 +9,7 @@ use anyhow::{Context, Result, ensure};
 use base64::Engine;
 use serde_json::{Value as Json, json};
 use std::path::Path;
+use unbound_gi::baked::composite;
 use unbound_gi::baked::direct::{self, MixedMode, Receiver};
 use unbound_gi::baked::directional;
 use unbound_gi::baked::grid::{Bounds, Grid};
@@ -460,7 +461,9 @@ impl SourceMesh {
 /// (per texel the direct light's red, green and blue and 1, zeros for an unused texel) and,
 /// where the indirect light is baked, `irradianceIndirect<N>.f32` (the same of the indirect
 /// light), `irradianceEnvironment<N>.f32` (the same of the sky's light straight on the texel)
-/// and `validity<N>.f32` (per texel the part of its rays that met a back face); and of a bake
+/// and `validity<N>.f32` (per texel the part of its rays that met a back face); `lightmap<N>.f32`
+/// (the lightmap the bake makes of them, [`composite::composite`]: per texel red, green, blue
+/// and 1 where it holds light); and of a bake
 /// with a sky `sky.f32` and, where directions are picked by its brightness, `skyDirections.f32`.
 struct Buffers<'a> {
     folder: &'a Path,
@@ -480,7 +483,7 @@ impl<'a> Buffers<'a> {
         "probesIndirect.f32",
         "probesValidity.f32",
     ];
-    const PER_LIGHTMAP: [(&'static str, &'static str); 10] = [
+    const PER_LIGHTMAP: [(&'static str, &'static str); 11] = [
         ("occupancy", ".u8"),
         ("chartIndex", ".i32"),
         ("normal", ".f32"),
@@ -491,6 +494,7 @@ impl<'a> Buffers<'a> {
         ("directionalityDirect", ".f32"),
         ("directionalityIndirect", ".f32"),
         ("shadowmask", ".f32"),
+        ("lightmap", ".f32"),
     ];
 
     /// Starts a bake's buffers in the folder, without those an earlier bake left there.
@@ -540,6 +544,8 @@ impl<'a> Buffers<'a> {
         lit: &direct::Direct,
         bounced: Option<&indirect::Indirect>,
         directional: bool,
+        backface_tolerance: f32,
+        padding: u32,
     ) -> Result<()> {
         let index = self.lightmaps.len();
         self.write(format!("occupancy{index}.u8"), g.occupancy.clone())?;
@@ -631,6 +637,29 @@ impl<'a> Buffers<'a> {
                     .collect(),
             )?;
         }
+        // The lightmap the bake makes of them.
+        let used: Vec<bool> = g.occupancy.iter().map(|&o| o > 0).collect();
+        let lightmap = composite::composite(
+            &composite::Buffers {
+                width: g.width,
+                height: g.height,
+                used: &used,
+                direct: &lit.irradiance,
+                indirect: bounced.map(|b| b.irradiance.as_slice()),
+                environment: bounced.map(|b| b.environment.as_slice()),
+                validity: bounced.map(|b| b.validity.as_slice()),
+            },
+            backface_tolerance,
+            padding,
+        );
+        self.write(
+            format!("lightmap{index}.f32"),
+            lightmap
+                .iter()
+                .flatten()
+                .flat_map(|v| v.to_le_bytes())
+                .collect(),
+        )?;
         self.lightmaps.push(json!({
             "width": g.width, "height": g.height, "supersampling": g.supersampling, "instances": members,
         }));
@@ -986,6 +1015,8 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 &lit,
                 bounced.as_ref(),
                 request.directional,
+                parameters.back_face_tolerance,
+                request.padding.max(0) as u32,
             )?;
         }
         let described = bounce.as_ref().map_or(Json::Null, |b| {
