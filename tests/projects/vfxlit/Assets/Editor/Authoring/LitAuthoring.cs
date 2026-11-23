@@ -136,14 +136,17 @@ public static class LitAuthoring
     /// <summary>Points (`Output Particle Point`) and lines (`Output Particle Line`, from each
     /// particle's position to its target position): sixty-four opaque ones at random places, each
     /// a colour of its own, drawn by the output itself or through an indirect buffer (the list
-    /// the update makes); and the same lines drawn as quads a pixel wide (the output's default,
-    /// not native lines).</summary>
+    /// the update makes); the same lines drawn as quads a pixel wide (the output's default, not
+    /// native lines); points and lines of which some have died (lifetimes from 0.05 to 0.3
+    /// seconds: the dead are drawn too, the program puts them nowhere); and lines to an offset
+    /// from each particle (the output's default target, one unit up).</summary>
     static void PointsAndLines()
     {
         foreach (var (name, lines, native, listed) in new[]
         {
             ("PointStill", false, false, false), ("PointList", false, false, true),
             ("LineStill", true, true, false), ("LineList", true, true, true), ("LineSoft", true, false, false),
+            ("PointDying", false, false, false), ("LineDying", true, true, false), ("LineOffset", true, true, false),
         })
         {
             var graph = NewGraph(name);
@@ -154,7 +157,7 @@ public static class LitAuthoring
             {
                 var (lineSpawn, lineInit, _, line) = System<VFXLineOutput>(graph, 64);
                 line.SetSettingValue("useNativeLines", native);
-                line.SetSettingValue("useTargetOffset", false);
+                line.SetSettingValue("useTargetOffset", name == "LineOffset");
                 (spawn, init, output) = (lineSpawn, lineInit, line);
             }
             else
@@ -166,7 +169,16 @@ public static class LitAuthoring
             if (listed) output.SetSettingValue("indirectDraw", true);
             Burst(spawn, 64f);
             SetRandom(init, "position", new Vector3(-1.4f, -1.4f, -0.5f), new Vector3(1.4f, 1.4f, 0.5f));
-            if (lines) SetRandom(init, "targetPosition", new Vector3(-1.4f, -1.4f, -0.5f), new Vector3(1.4f, 1.4f, 0.5f));
+            if (lines && name != "LineOffset") SetRandom(init, "targetPosition", new Vector3(-1.4f, -1.4f, -0.5f), new Vector3(1.4f, 1.4f, 0.5f));
+            if (name.EndsWith("Dying", StringComparison.Ordinal))
+            {
+                var lifetime = Make<SetAttribute>();
+                lifetime.SetSettingValue("attribute", "lifetime");
+                lifetime.SetSettingValue("Random", RandomMode.Uniform);
+                init.AddChild(lifetime);
+                lifetime.inputSlots[0].value = 0.05f;
+                lifetime.inputSlots[1].value = 0.3f;
+            }
             SetRandom(init, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
             Save(graph);
         }

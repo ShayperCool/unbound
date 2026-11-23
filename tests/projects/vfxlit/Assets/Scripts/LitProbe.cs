@@ -201,7 +201,7 @@ public sealed class LitProbe : MonoBehaviour
                 Blurred(Lamp(Draw(graph == "MovingLit" ? "moving lit" : "moving meshes", graph, 9, 10), LightType.Point));
             // Points and lines, drawn directly and through an indirect buffer; lines drawn as
             // quads.
-            foreach (var (key, graph) in new[] { ("points", "PointStill"), ("points listed", "PointList"), ("lines", "LineStill"), ("lines listed", "LineList"), ("lines soft", "LineSoft") })
+            foreach (var (key, graph) in new[] { ("points", "PointStill"), ("points listed", "PointList"), ("lines", "LineStill"), ("lines listed", "LineList"), ("lines soft", "LineSoft"), ("points dying", "PointDying"), ("lines dying", "LineDying"), ("lines offset", "LineOffset") })
                 Draw(key, graph, 5);
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.

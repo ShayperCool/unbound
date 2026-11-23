@@ -83,6 +83,9 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
   lines (from each particle's position to its target position) at random places, each a colour
   of its own, drawn by the output itself or through an indirect buffer (`*List`: the list the
   update makes); lines as native lines, `LineSoft` as quads a pixel wide (the output's default).
+  `PointDying`, `LineDying`: the same with lifetimes from 0.05 to 0.3 seconds, so that the dead
+  of the system's room are drawn too. `LineOffset`: native lines to the output's default target
+  offset (one unit up) rather than the target position.
 - `MovingLit`, `MovingMeshes`: twenty opaque particles moving sideways fast (6 units a second),
   writing motion vectors: quads lit by the render pipeline (no base colour map), and the
   package's default mesh turned each its own way (unlit).
@@ -195,7 +198,8 @@ effect's alive count, whether it is culled and awake, its renderer's state).
 - `moving lit`, `moving meshes`: `MovingLit` and `MovingMeshes` under a point light, their
   cameras with post-processing and a volume of object motion blur (camera and objects, high
   quality, intensity 1) only they read, at frames 9 and 10.
-- `points`, `points listed`, `lines`, `lines listed`, `lines soft`: those graphs at frame 5.
+- `points`, `points listed`, `lines`, `lines listed`, `lines soft`, `points dying`, `lines dying`,
+  `lines offset`: those graphs at frame 5.
 - `decal`: `LitDecal` projected onto a lit wall through the renderer with the decal feature,
   under the sun and a point light (frames 5 and 12): the decal feature draws the output's
   screen space pass; its DBuffer and GBuffer passes exclude OpenGL Core.

@@ -38,7 +38,7 @@ namespace Unbound.Runtime
     /// An output of a particle system: one draw of its particles with the shader the graph
     /// compiled to, whose vertex program finds each particle in the system's buffers by its
     /// vertex id (or, of a mesh, by its instance). Drawn here: planar primitives (quads,
-    /// triangles, octagons: <see cref="Primitive"/>), either all the system has room for (the
+    /// triangles, octagons), cubes, points and lines (<see cref="Primitive"/>), and meshes, either all the system has room for (the
     /// vertex program leaves out the dead ones) or through an indirect buffer: a
     /// list of the particles to draw that the system's kernels make (the update kernel, an
     /// output-update kernel at each step, or one for each camera that sees the effect), sorted
@@ -155,6 +155,7 @@ namespace Unbound.Runtime
         /// (<see cref="SourceRefusal"/>).</summary>
         internal static string Refusal(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task, UnityEngine.Object processor, string sourceRefusal = null)
         {
+            // Every output task kind of this release is drawn; a kind a later one adds is not.
             if (!IsPlanar(task.type) && task.type != VFXTaskType.ParticleHexahedronOutput && task.type != VFXTaskType.ParticleMeshOutput
                 && task.type != VFXTaskType.ParticlePointOutput && task.type != VFXTaskType.ParticleLineOutput)
                 return $"{task.type} is not drawn yet (quads, triangles, octagons, cubes, meshes, points and lines are)";

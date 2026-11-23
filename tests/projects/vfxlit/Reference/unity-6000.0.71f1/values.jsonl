@@ -50,6 +50,9 @@
 {"k":"renderer/lines","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LineStill/System (1)/Output Particle Line"}
 {"k":"renderer/lines listed","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LineList/System (1)/Output Particle Line"}
 {"k":"renderer/lines soft","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LineSoft/System (1)/Output Particle Line"}
+{"k":"renderer/points dying","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/PointDying/System (1)/Output Particle Point"}
+{"k":"renderer/lines dying","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LineDying/System (1)/Output Particle Line"}
+{"k":"renderer/lines offset","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LineOffset/System (1)/Output Particle Line"}
 {"k":"renderer/no asset","v":"cast=Off receive=0 motion=Camera materials=0"}
 {"k":"renderer/asset given","v":"cast=On receive=0 motion=Camera materials=1"}
 {"k":"renderer/asset taken","v":"cast=Off receive=0 motion=Camera materials=0"}
@@ -111,6 +114,9 @@
 {"k":"draw/lines/f005","v":"alive=64 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/lines listed/f005","v":"alive=64 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/lines soft/f005","v":"alive=64 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/points dying/f005","v":"alive=60 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/lines dying/f005","v":"alive=61 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/lines offset/f005","v":"alive=64 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"act/mesh paused/f006","v":"pause=1"}
 {"k":"act/mesh exposed/f006","v":"Mask=1 -> Shape=Wedge Mask=1"}
 {"k":"draw/curve output/f006","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
