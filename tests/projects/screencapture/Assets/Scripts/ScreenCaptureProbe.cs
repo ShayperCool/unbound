@@ -31,7 +31,7 @@ using UnityEngine;
 /// in CaptureScreenshotAsTexture called in Update or with a superSize below one: those calls,
 /// and the render texture capture in Update, are skipped there (<c>.skipped</c>).
 /// </summary>
-public class ScreenCaptureProbe : MonoBehaviour
+public partial class ScreenCaptureProbe : MonoBehaviour
 {
     /// <summary>Set by the Editor runner: ends Play mode and quits with the code.</summary>
     public static Action<int> finished;
@@ -125,15 +125,16 @@ public class ScreenCaptureProbe : MonoBehaviour
         RenderTexture.active = saved;
     }
 
-    void Pixels(string key, Texture2D t)
+    void Pixels(string key, Texture2D t, int width = 0, int height = 0)
     {
-        var pixels = t.GetPixels();
+        var pixels = width == 0 || (width == t.width && height == t.height)
+            ? t.GetPixels() : t.GetPixels(0, 0, width, height);
         using (var w = new BinaryWriter(File.Create(Path.Combine(directory, key + ".rgba"))))
             foreach (var c in pixels) { w.Write(c.r); w.Write(c.g); w.Write(c.b); w.Write(c.a); }
         Value(key + ".pixels", pixels.Length.ToString());
     }
 
-    void Describe(string key, Texture2D t)
+    void Describe(string key, Texture2D t, int width = 0, int height = 0, bool recordPixels = true)
     {
         if (t == null) { Value(key + ".texture", "null"); return; }
         Value(key + ".texture", "{\"size\":[" + t.width + "," + t.height + "],\"format\":" + Q(t.format.ToString())
@@ -141,9 +142,9 @@ public class ScreenCaptureProbe : MonoBehaviour
             + ",\"isReadable\":" + B(t.isReadable) + ",\"isDataSRGB\":" + B(t.isDataSRGB)
             + ",\"filterMode\":" + Q(t.filterMode.ToString()) + ",\"wrapMode\":" + Q(t.wrapMode.ToString())
             + ",\"anisoLevel\":" + t.anisoLevel + ",\"name\":" + Q(t.name) + "}");
-        if (!t.isReadable) return;
+        if (!recordPixels || !t.isReadable) return;
         // A texture can claim to be readable without CPU data.
-        try { Pixels(key, t); }
+        try { Pixels(key, t, width, height); }
         catch (Exception e) { Value(key + ".pixelsException", Q(e.GetType().Name + ": " + e.Message)); }
     }
 
@@ -161,7 +162,7 @@ public class ScreenCaptureProbe : MonoBehaviour
         DestroyImmediate(image);
     }
 
-    void AsTexture(string key, Func<Texture2D> capture)
+    void AsTexture(string key, Func<Texture2D> capture, int width = 0, int height = 0, bool recordPixels = true)
     {
         Frame(key);
         // On disk before the call: the Editor can crash in it.
@@ -171,7 +172,7 @@ public class ScreenCaptureProbe : MonoBehaviour
         try { t = capture(); }
         catch (Exception e) { Value(key + ".exception", Q(e.GetType().Name + ": " + e.Message)); }
         EndLogs(key);
-        Describe(key, t);
+        Describe(key, t, width, height, recordPixels);
         if (t != null) DestroyImmediate(t);
     }
 
@@ -249,7 +250,8 @@ public class ScreenCaptureProbe : MonoBehaviour
     IEnumerator Run()
     {
         int code = 0;
-        var steps = Steps();
+        var steps = Environment.GetEnvironmentVariable("SCREENCAPTURE_ACTIVE") == "1"
+            ? ActiveSteps() : Steps();
         while (true)
         {
             bool more;

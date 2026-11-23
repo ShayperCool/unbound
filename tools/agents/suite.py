@@ -648,6 +648,13 @@ def recipes(release):
                    env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}),
             py('compare.py', '{probe}/Reference/unity-{release}/'+space, f'{{runs}}-{space}/unbound',
                '--report', f'{{work}}/report-{space}.json')]
+    if sys.platform.startswith('linux') and (PROJECTS/'screencapture/Reference'/f'unity-{release}'/'active').is_dir():
+        for space in ('Linear', 'Gamma'):
+            step = driver('run.py', 'gate', '--release', '{release}', '--profile', 'active',
+                          '--space', space, '--label', '{label}-active-'+space,
+                          env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'})
+            step.kind = 'compare'
+            R['screencapture'].append(step)
     R['camerastack'] = []
     for space in ('Linear', 'Gamma'):
         R['camerastack'] += [

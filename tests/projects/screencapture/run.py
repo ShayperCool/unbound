@@ -9,6 +9,8 @@
     run.py check   --release R --label L   validates the two Editor captures without publishing
 
 --space Linear (the authored settings) or Gamma (the copies' color space set to Gamma).
+--profile active records and checks the explicitly bound render texture controls. The default
+profile retains the original screen, render texture and file captures.
 
 Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings under
 $XDG_CACHE_HOME/unbound/validation/runs/screencapture/<label>; nothing is written here except by
@@ -35,6 +37,12 @@ PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 SPACE = 'Linear'
+PROFILE = 'default'
+
+
+def capture_reference():
+    target = reference_root(PROBE)
+    return target/SPACE if PROFILE == 'default' else target/PROFILE/SPACE
 
 
 def copy_project(dest):
@@ -106,7 +114,8 @@ def editor(work):
             project = copy_project(work/'projects'/repeat)
             out = fresh_output(work/repeat)
             name, server = display()
-            env = dict(os.environ, DISPLAY=name, SCREENCAPTURE_PROBE_OUT=str(out), PWD=str(project))
+            env = dict(os.environ, DISPLAY=name, SCREENCAPTURE_PROBE_OUT=str(out), PWD=str(project),
+                       SCREENCAPTURE_ACTIVE=str(int(PROFILE == 'active')))
             env.pop('XAUTHORITY', None)
             job = subprocess.Popen(
                 [str(LAUNCHER), 'timeout', '-s', 'KILL', '1800', 'vglrun', '-d', 'egl', str(editor_path()),
@@ -189,7 +198,7 @@ def gz(source, target):
 
 def publish(work):
     a = agreed(work)
-    target = reference_root(PROBE)/SPACE
+    target = capture_reference()
     if target.exists():
         sys.exit(f'refusing to overwrite reference: {target}')
     target.mkdir(parents=True)
@@ -212,7 +221,7 @@ def extend(work):
     `complete`) and every existing image byte for byte but the window framebuffer reads; nothing
     existing is rewritten."""
     a = agreed(work)
-    target = reference_root(PROBE)/SPACE
+    target = capture_reference()
     old = (target/'values.jsonl').read_text().splitlines()
     new = (a/'values.jsonl').read_text().splitlines()
     if not old or old[-1] != new[-1] or new[:len(old)-1] != old[:-1]:
@@ -238,7 +247,8 @@ def unbound(work):
     cli = os.environ.get('UNBOUND_CLI', str(REPO/'target/release/unbound'))
     project = copy_project(work/'projects'/'unbound')
     out = fresh_output(work/'unbound')
-    env = dict(os.environ, SCREENCAPTURE_PROBE_OUT=str(out))
+    env = dict(os.environ, SCREENCAPTURE_PROBE_OUT=str(out),
+               SCREENCAPTURE_ACTIVE=str(int(PROFILE == 'active')))
     with (out/'unbound.log').open('w') as log:
         result = subprocess.run([str(LAUNCHER), 'timeout', '900', cli, 'run', '-p', str(project),
                                  '--no-watch', '--frames', '600', '--size', '64x32'],
@@ -247,20 +257,30 @@ def unbound(work):
     return result.returncode
 
 
+def gate(work):
+    code = unbound(work)
+    if code:
+        return code
+    return subprocess.run([sys.executable, str(PROBE/'compare.py'), str(capture_reference()),
+                           str(work/'unbound'), '--report', str(work/'compare.json')]).returncode
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'extend', 'unbound', 'check'))
+    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'extend', 'unbound', 'check', 'gate'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     parser.add_argument('--space', choices=('Linear', 'Gamma'), required=True)
+    parser.add_argument('--profile', choices=('default', 'active'), default='default')
     args = parser.parse_args()
-    global SPACE
-    SPACE = args.space
+    global SPACE, PROFILE
+    SPACE, PROFILE = args.space, args.profile
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
-    return {'create': create, 'editor': editor, 'publish': publish, 'extend': extend, 'unbound': unbound, 'check': check}[args.mode](work)
+    return {'create': create, 'editor': editor, 'publish': publish, 'extend': extend, 'unbound': unbound, 'check': check,
+            'gate': gate}[args.mode](work)
 
 
 if __name__ == '__main__':
