@@ -1199,13 +1199,23 @@ impl ShaderCompiler {
             .preprocess(source, &name, entry, Some(&o))
             .map_err(|e| anyhow!("{}: {e}", stage_name(kind)))?
             .as_text();
+        // The rewrite with the first scope of `inout` parameters, then, for a program glslang
+        // still rejects, with the second ([`inout_parameters::Scope`]): a program that compiles
+        // with the first compiles as it did before the second existed.
         let compile_fixed = || {
-            let fixed = fxc_compatible(&expanded);
+            let fixed = fxc_compatible(&expanded, inout_parameters::Scope::Bools);
             self.compiler
                 .compile_into_spirv(&fixed, kind, &name, entry, Some(&o))
-                .map_err(|e| {
-                    dump_failed(&fixed, &name, kind);
-                    anyhow!("{}: {e}", stage_name(kind))
+                .or_else(|e| {
+                    let all = fxc_compatible(&expanded, inout_parameters::Scope::All);
+                    let retried = (all != fixed).then(|| {
+                        self.compiler
+                            .compile_into_spirv(&all, kind, &name, entry, Some(&o))
+                    });
+                    retried.and_then(Result::ok).ok_or_else(|| {
+                        dump_failed(&fixed, &name, kind);
+                        anyhow!("{}: {e}", stage_name(kind))
+                    })
                 })
         };
         let crashes = exponents::calls_frexp(&expanded) || inout_parameters::splits(&expanded);
@@ -1326,13 +1336,13 @@ const FRAMEBUFFER_INPUT_MACROS: &[&str] = &[
 /// swizzles of several elements ([`matrix_swizzles`]), `frexp` and `ldexp` ([`exponents`]),
 /// arguments converted to scalar and vector `inout` parameters ([`inout_parameters`]),
 /// functions declared to return a `const` value ([`plain_returns`]).
-fn fxc_compatible(source: &str) -> String {
+fn fxc_compatible(source: &str, inout: inout_parameters::Scope) -> String {
     buffer_members::buffer_members(&writable_globals(&constructor_statements(
         &flat_bool_varyings(&rename_type_semantics(&drop_empty_declarations(
             &drop_duplicate_overloads(&half_literals(&matrix_swizzles::matrix_swizzles(
                 &exponents::exponent_calls(&buffer_parameters::buffer_parameters(&plain_returns(
                     &opaque_members::opaque_members(&scopes::flatten_scopes(
-                        &inout_parameters::inout_parameters(source),
+                        &inout_parameters::inout_parameters(source, inout),
                     )),
                 ))),
             ))),
@@ -2157,6 +2167,46 @@ float4 vert(float4 position : POSITION) : SV_POSITION
 }
 float4 frag() : SV_Target { return float4(0.2, 0.4, 0.6, 1); }
 "#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        naga::front::wgsl::parse_str(&compiled.vertex).unwrap();
+    }
+
+    /// A program the `inout bool` split alone compiles keeps that rewrite: its other `inout`
+    /// calls, one with a side effect in its argument and one with a call that takes an `inout`
+    /// argument inside, stay as written (split, `i++` would run twice; in the second scope's
+    /// rewrite they are left or copied rewritten).
+    #[test]
+    fn programs_the_bool_split_compiles_keep_their_other_inout_calls() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+void SetAlive(inout bool alive, bool value) { alive = value && alive; }
+uint Rand(inout uint seed) { seed = seed * 1664525u + 1013904223u; return seed; }
+void Grow(inout float value) { value += 1; }
+float4 vert(float4 position : POSITION) : SV_POSITION
+{
+    float alive = position.w;
+    SetAlive(alive, position.x > 0);
+    float values[4] = { 0, 1, 2, 3 };
+    uint seed = (uint)position.y;
+    int i = 0;
+    Grow(values[Rand(seed) & 3u]);
+    Grow(values[i++]);
+    return float4(values[0], values[1] + i, values[2], alive);
+}
+float4 frag() : SV_Target { return float4(0.2, 0.4, 0.6, 1); }
+"#;
+        let expanded = source.replace("#pragma vertex vert\n#pragma fragment frag\n", "");
+        assert_eq!(
+            fxc_compatible(&expanded, inout_parameters::Scope::Bools)
+                .matches("_unbound_in")
+                .count(),
+            2,
+            "only the bool is split"
+        );
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
         let compiled = compiler
             .compile(&program(source, false), &[], false)
