@@ -121,12 +121,12 @@ Row 1 is not recorded (the first frame's end of frame: `tests/projects/vfx/READM
 ## Image limits
 
 Every image is the Editor's pixel for pixel on the machine both ran on (an NVIDIA driver, the
-Linux Editor on OpenGL Core), except `trails alive keep` from frame 8 to frame 28: while its heads
-live, the pixels where a strip's newest end meets its head differ, the Editor showing the head
-and Unbound the strip (a few pixels each; `image_limits.json`). Whether the Editor's strip is
-shorter there or drawn under the head is not resolved (a control without the heads' output
-would tell). From frame 32, when no head is alive, the images are the Editor's, and `trails
-alive` (whose strip particles die) is exact throughout.
+Linux Editor on OpenGL Core). In `trails alive keep` from frame 8 to frame 28, while its heads
+live, the Editor's pixels where a strip's newest end meets its head changed with the scene:
+before the `meshes*` stages joined it, every capture showed the head there (a few pixels each,
+up to 209 levels from Unbound's, which shows the strip); since, four captures show the strip, as
+Unbound does. Which of the two the Editor draws on top there is an order it does not specify,
+and what decides it is not measured.
 
 ## Not covered
 
@@ -149,8 +149,8 @@ alive` (whose strip particles die) is exact throughout.
   its counts would not be asked while that lasts).
 - `stripAlive` with several strip systems spawned from one system (the graph compiler reads
   the first), with sleeping or culled effects, a system with more room than its strip system
-  has strips (the update kernel reads the strip of each dying particle's own index), and the
-  cause of `trails alive keep`'s differing pixels.
+  has strips (the update kernel reads the strip of each dying particle's own index), and what
+  decides whether a head or its strip shows where they meet in `trails alive keep`.
 - The strip tiling mode `Custom`; `Orient` modes other than `Face Camera Position` on a
   strip; a perspective camera.
 - `stripIndex` computed for each particle (linked to an attribute); the attributes

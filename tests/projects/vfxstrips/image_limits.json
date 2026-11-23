@@ -534,40 +534,40 @@
   "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
  },
  "draw-trails alive keep-f008.png": {
-  "mean": 0.03,
-  "worst": 70,
-  "over8": 2,
-  "reason": "While the heads live, the pixels where a strip's newest end meets its head differ: the Editor shows the head there and Unbound the strip. Every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly; the same heads with strips whose particles die (trails alive) match exactly. Not resolved whether the Editor's strip is shorter there or drawn under the head (a control without the heads' output would tell)."
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, which of the two shows is an order the Editor does not specify: it showed the head before the meshes stages joined the scene, the strip (as Unbound) since."
  },
  "draw-trails alive keep-f012.png": {
-  "mean": 0.177,
-  "worst": 209,
-  "over8": 7,
-  "reason": "While the heads live, the pixels where a strip's newest end meets its head differ: the Editor shows the head there and Unbound the strip. Every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly; the same heads with strips whose particles die (trails alive) match exactly. Not resolved whether the Editor's strip is shorter there or drawn under the head (a control without the heads' output would tell)."
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, which of the two shows is an order the Editor does not specify: it showed the head before the meshes stages joined the scene, the strip (as Unbound) since."
  },
  "draw-trails alive keep-f016.png": {
-  "mean": 0.15,
-  "worst": 140,
-  "over8": 7,
-  "reason": "While the heads live, the pixels where a strip's newest end meets its head differ: the Editor shows the head there and Unbound the strip. Every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly; the same heads with strips whose particles die (trails alive) match exactly. Not resolved whether the Editor's strip is shorter there or drawn under the head (a control without the heads' output would tell)."
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, which of the two shows is an order the Editor does not specify: it showed the head before the meshes stages joined the scene, the strip (as Unbound) since."
  },
  "draw-trails alive keep-f020.png": {
-  "mean": 0.185,
-  "worst": 142,
-  "over8": 9,
-  "reason": "While the heads live, the pixels where a strip's newest end meets its head differ: the Editor shows the head there and Unbound the strip. Every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly; the same heads with strips whose particles die (trails alive) match exactly. Not resolved whether the Editor's strip is shorter there or drawn under the head (a control without the heads' output would tell)."
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, which of the two shows is an order the Editor does not specify: it showed the head before the meshes stages joined the scene, the strip (as Unbound) since."
  },
  "draw-trails alive keep-f024.png": {
-  "mean": 0.148,
-  "worst": 173,
-  "over8": 7,
-  "reason": "While the heads live, the pixels where a strip's newest end meets its head differ: the Editor shows the head there and Unbound the strip. Every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly; the same heads with strips whose particles die (trails alive) match exactly. Not resolved whether the Editor's strip is shorter there or drawn under the head (a control without the heads' output would tell)."
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, which of the two shows is an order the Editor does not specify: it showed the head before the meshes stages joined the scene, the strip (as Unbound) since."
  },
  "draw-trails alive keep-f028.png": {
-  "mean": 0.163,
-  "worst": 181,
-  "over8": 7,
-  "reason": "While the heads live, the pixels where a strip's newest end meets its head differ: the Editor shows the head there and Unbound the strip. Every other pixel is the Editor's, the alive counts match, and from frame 32 (no head alive) the image is the Editor's exactly; the same heads with strips whose particles die (trails alive) match exactly. Not resolved whether the Editor's strip is shorter there or drawn under the head (a control without the heads' output would tell)."
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, which of the two shows is an order the Editor does not specify: it showed the head before the meshes stages joined the scene, the strip (as Unbound) since."
  },
  "draw-trails keep-f010.png": {
   "mean": 0,
