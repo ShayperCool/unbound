@@ -42,7 +42,7 @@ namespace Unbound.Runtime
         const long HierarchyPairUnits = 5, ExtraBlockUnits = 8;
         // Script-created sprite geometry (tests/projects/spritememory, Unity 6000.0.71f1).
         const long SpriteHeader = 1368, SpriteSharedGeometryBytes = 580;
-        const long SpriteSourceVertexBytes = 24, SpriteSourceGroupSavingBytes = 16, SpriteSourceVertexGroup = 4;
+        const long SpriteSourceVertexBytes = 20, SpriteSourceRemainderBytes = 4, SpriteSourceVertexGroup = 4;
         const long SpriteCameraVertexBytes = 20, SpriteIndexBytes = 2;
         // Unity 6000.0.71f1, tests/projects/textassetmemory: byte storage changes past 31 bytes.
         const long TextAssetHeader = 160, TextAssetInlineBytes = 31;
@@ -126,7 +126,7 @@ namespace Unbound.Runtime
             if (storage == Sprite.GeometryStorage.Unmeasured) return null;
             long vertices = sprite.ProfilerVertexCount;
             long sourceVertices = vertices * SpriteSourceVertexBytes
-                - vertices / SpriteSourceVertexGroup * SpriteSourceGroupSavingBytes;
+                + vertices % SpriteSourceVertexGroup * SpriteSourceRemainderBytes;
             var cameraGeometry = sprite.ProfilerCameraGeometry;
             long cameraBytes = cameraGeometry.Vertices * SpriteCameraVertexBytes
                 + cameraGeometry.Indices * SpriteIndexBytes;

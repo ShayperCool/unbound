@@ -72,9 +72,10 @@ namespace UnityEngine
             copy.m_MeshData = null;
             // Its own scriptable object list (measured: adding to a copy leaves the original).
             if (m_ScriptableObjects != null) copy.m_ScriptableObjects = new List<ScriptableObject>(m_ScriptableObjects);
-            if (m_ProfilerGeometryStorage != GeometryStorage.Unmeasured)
+            copy.m_ProfilerGeometryStorage = ProfilerGeometryStorage == GeometryStorage.Unmeasured
+                ? GeometryStorage.Unmeasured : GeometryStorage.Created;
+            if (copy.m_ProfilerGeometryStorage == GeometryStorage.Created)
             {
-                copy.m_ProfilerGeometryStorage = GeometryStorage.Created;
                 copy.m_ProfilerIndexSlots = m_Triangles.Length;
                 copy.m_ProfilerCameraGeometry = default;
                 RetainSharedGeometry();
@@ -593,7 +594,7 @@ namespace UnityEngine
             m_MeshData?.Free();
             m_MeshData = null;
             m_Triangles = (ushort[])triangles.Clone();
-            if (m_ProfilerGeometryStorage != GeometryStorage.Unmeasured)
+            if (ProfilerGeometryStorage != GeometryStorage.Unmeasured)
             {
                 m_ProfilerIndexSlots = Math.Max(m_ProfilerIndexSlots, m_Triangles.Length);
                 RetainSharedGeometry();
@@ -647,7 +648,7 @@ namespace UnityEngine
 
         void RetainSharedGeometry()
         {
-            if (m_ProfilerGeometryStorage == GeometryStorage.Created)
+            if (ProfilerGeometryStorage == GeometryStorage.Created)
                 m_ProfilerGeometryStorage = GeometryStorage.Shared;
         }
 
@@ -661,7 +662,7 @@ namespace UnityEngine
                 SpriteMask { maskSource: SpriteMask.MaskSource.Sprite } mask => mask.sprite,
                 _ => null,
             };
-            if (sprite == null || sprite.m_ProfilerGeometryStorage == GeometryStorage.Unmeasured) return;
+            if (sprite == null || sprite.ProfilerGeometryStorage == GeometryStorage.Unmeasured) return;
             sprite.RetainSharedGeometry();
             sprite.m_ProfilerCameraGeometry = (sprite.m_Vertices.Length, sprite.m_Triangles.Length);
         }

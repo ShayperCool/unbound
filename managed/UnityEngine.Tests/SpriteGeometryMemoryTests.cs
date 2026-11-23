@@ -33,6 +33,31 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ACloneOfAPersistentSpriteKeepsTheUnmeasuredLayout()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var texture = new Texture2D(4, 4);
+            var source = Sprite.Create(texture, new Rect(0, 0, 4, 4), Vector2.zero);
+            Sprite clone = null;
+            try
+            {
+                Assert.Equal(1460L, MemorySizes.RuntimeSize(source));
+                source.IsPersistentAsset = true;
+                clone = Object.Instantiate(source);
+                Assert.NotNull(clone);
+                Assert.Null(MemorySizes.RuntimeSize(source));
+                Assert.Null(MemorySizes.RuntimeSize(clone));
+            }
+            finally
+            {
+                source.IsPersistentAsset = false;
+                Object.DestroyImmediate(clone);
+                Object.DestroyImmediate(source);
+                Object.DestroyImmediate(texture);
+            }
+        }
+
+        [Fact]
         public void AnUnmeasuredFamilyRetainsTheUnknownSpriteSize()
         {
             using var release = TestRelease.Pin(TestRelease.Unmeasured);
