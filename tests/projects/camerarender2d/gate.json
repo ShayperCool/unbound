@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/camerarender2d/run.py gate"
+  ],
+  "summary": "camerarender2d: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Camera.cs",
+    "managed/UnityEngine/Graphics/RenderTexture.cs",
+    "tests/projects/urp2d/Packages/",
+    "tests/projects/urp2d/ProjectSettings/",
+    "tests/projects/urp2d/Assets/Settings/"
+  ]
+}
