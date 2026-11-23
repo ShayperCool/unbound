@@ -15,7 +15,6 @@ namespace UnityEngine
         MeshSkinWeightData m_CachedFixedWeights;
         MeshSkinWeightData m_QueriedWeights;
         byte[] m_QueriedBoneCounts;
-        BoneWeight[] m_LegacyWeightsBeforeResize;
         BoneWeight[] m_RawFixedBoneWeights;
         bool m_LegacyProjectionRead;
         MeshArrayView<byte> m_BoneCountsView;
@@ -44,7 +43,7 @@ namespace UnityEngine
         {
             if (RuntimeSkinWeights is { IsPacked: true } packed) return packed;
             if (m_CachedFixedWeights != null) return m_CachedFixedWeights;
-            var fixedWeights = m_RawFixedBoneWeights ?? m_LegacyWeightsBeforeResize ?? m_BoneWeights;
+            var fixedWeights = m_RawFixedBoneWeights ?? m_BoneWeights;
             m_CachedFixedWeights = RuntimeSkinWeights != null && m_RawFixedBoneWeights == null
                 ? RuntimeSkinWeights : fixedWeights is { Length: > 0 } ? MeshSkinWeightData.FromLegacy(fixedWeights) : null;
             return m_CachedFixedWeights;
@@ -341,7 +340,6 @@ namespace UnityEngine
             m_CachedFixedWeights = null;
             m_QueriedWeights = null;
             m_QueriedBoneCounts = null;
-            m_LegacyWeightsBeforeResize = null;
             m_LegacyProjectionRead = false;
         }
 
@@ -349,8 +347,6 @@ namespace UnityEngine
         {
             // Vertex edits resize the per-vertex counts and legacy vertex attributes. The flat
             // skin weight data and existing GPU layouts keep the last weight assignment.
-            if (RuntimeSkinWeights == null && m_BoneWeights != null && m_BoneWeights.Length != vertexCount)
-                m_LegacyWeightsBeforeResize ??= m_BoneWeights;
             if (m_RawFixedBoneWeights != null && m_RawFixedBoneWeights.Length != vertexCount)
                 Array.Resize(ref m_RawFixedBoneWeights, vertexCount);
             ReleaseBoneWeightViews();
@@ -371,9 +367,7 @@ namespace UnityEngine
             InvalidateBoneWeightBuffers();
             RuntimeSkinWeights = source.RuntimeSkinWeights;
             m_RawFixedBoneWeights = (BoneWeight[])source.m_RawFixedBoneWeights?.Clone();
-            m_LegacyProjectionRead = source.m_LegacyProjectionRead;
             m_RuntimeSkinLayout = source.m_RuntimeSkinLayout;
-            m_LegacyWeightsBeforeResize = source.m_LegacyWeightsBeforeResize;
         }
     }
 }
