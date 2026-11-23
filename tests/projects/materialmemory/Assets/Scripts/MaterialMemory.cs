@@ -77,6 +77,34 @@ static class MaterialMemory
                 Size(stage + ".instanceAfterRead", read);
                 Object.DestroyImmediate(read);
             }
+            if (stage == "standard" || stage == "unlit")
+            {
+                var invalid = Object.Instantiate(material);
+                _ = invalid.SetPass(9999);
+                Size(stage + ".instanceAfterInvalidPass", invalid);
+                Object.DestroyImmediate(invalid);
+                var selected = Object.Instantiate(material);
+                _ = selected.SetPass(0);
+                Size(stage + ".instanceAfterValidPass", selected);
+                Object.DestroyImmediate(selected);
+
+                var target = new RenderTexture(4, 4, 0);
+                var previous = RenderTexture.active;
+                var blit = Object.Instantiate(material);
+                Graphics.Blit(null, target, blit);
+                Size(stage + ".instanceAfterNullBlit", blit);
+                Object.DestroyImmediate(blit);
+                var withTexture = Object.Instantiate(material);
+                Graphics.Blit(texture, target, withTexture);
+                Size(stage + ".instanceAfterTextureBlit", withTexture);
+                Object.DestroyImmediate(withTexture);
+                var invalidBlit = Object.Instantiate(material);
+                Graphics.Blit(texture, target, invalidBlit, 9999);
+                Size(stage + ".instanceAfterInvalidBlit", invalidBlit);
+                Object.DestroyImmediate(invalidBlit);
+                RenderTexture.active = previous;
+                Object.DestroyImmediate(target);
+            }
             Object.DestroyImmediate(copy);
             Object.DestroyImmediate(material);
         }
