@@ -62,22 +62,27 @@ Add `--profile audio` to the record, publish and gate commands above.
 ## MeshRenderer material reservations
 
 The renderer profile records live attached MeshRenderers in the Built-In Render Pipeline and
-after a camera request renders through the active scriptable pipeline. A renderer accounts 656 bytes plus four bytes for each reserved
-material slot. Property block storage for individual slots starts on the first non-null indexed
+after a camera request renders through the active scriptable pipeline. A renderer accounts 656
+bytes plus four bytes for each reserved material slot. Property block storage for individual slots starts on the first non-null indexed
 write, including an empty block, and adds eight bytes per reserved slot. Both reservations retain
 capacity when a material list shrinks. Indexed storage grows with the material list while
 active. Clearing its last assigned block or setting zero materials ends that growth until the
 next indexed assignment. Trimming removed indices keeps the storage active if slots remain.
-A scene clone of a runtime renderer starts with its current materials and no property blocks.
+A clone of a runtime renderer starts with its current materials and empty property blocks. The
+controls include synchronous copies of a hidden detached object and asynchronous copies parented
+under both a scene object and a prefab asset. Detached runtime renderers continue to account for
+material assignments and discard trimmed overrides while their scene is invalid.
 Renderer-wide blocks and the referenced mesh, materials and textures have separate costs.
 
 Scene-authored empty and nonempty lists, list and array writes, rendering, clones, renderer-wide
 and indexed overrides, and out-of-range diagnostic paths have separate controls. The Unity 6000.0
 API declares valid material indices from zero through the current material count minus one and
-allows null to clear an override. [Renderer.SetPropertyBlock](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer.SetPropertyBlock.html)
+allows null to clear an override. The indexed getter overwrites a prefilled block even when the
+stored block is empty. [Renderer.SetPropertyBlock](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer.SetPropertyBlock.html),
+[Renderer.GetPropertyBlock](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer.GetPropertyBlock.html)
 
 Out-of-range writes report an Error through the application callback, honoring None and ScriptOnly
-for stack presence. Persistent components, copies made by an importer or from an asset, other release families,
-invalid indexed reads and empty-block rendering precedence retain their earlier behavior.
+for stack presence. Persistent components, importer-owned copies, copies from an asset, other
+release families, invalid indexed reads and empty-block rendering precedence are outside these controls.
 
 Add `--profile renderer` to the record, publish and gate commands above.
