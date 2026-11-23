@@ -93,6 +93,30 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(effect.gameObject); }
         }
 
+        /// <summary>The box a graph gives a system in world space is in the effect's space, as
+        /// for one in local space (the graph compiler takes it there): an effect turned and far
+        /// from the origin keeps it (tests/projects/vfxbounds `manual world`).</summary>
+        [Fact]
+        public void AWorldSpaceSystemsGraphBoxIsInTheEffectsSpace()
+        {
+            Vector3 center = new Vector3(0.1234567f, -0.0288367569f, 0.3f), size = new Vector3(1.1149996f, 1.173260928f, 0.61604631f);
+            var effect = Running(Bounded(center, size, default, VFXSystemFlag.SystemInWorldSpace, false));
+            try
+            {
+                effect.transform.SetPositionAndRotation(new Vector3(2500f, 0f, 0f), Quaternion.Euler(0f, 0f, 30f));
+                effect.UpdateEffect(Thirtieth);
+                Assert.Equal(new Bounds(center, size), effect.GetParticleSystemInfo("Particles").bounds);
+                // The effect's box is taken back from the corners: equal to the last places.
+                Assert.True(effect.RendererBounds(out var bounds));
+                for (int axis = 0; axis < 3; axis++)
+                {
+                    Assert.Equal(center[axis], bounds.center[axis], 1e-6f);
+                    Assert.Equal(size[axis] * 0.5f, bounds.extents[axis], 1e-6f);
+                }
+            }
+            finally { Object.DestroyImmediate(effect.gameObject); }
+        }
+
         [Fact]
         public void BoundsComputedFromParticlesAreTheSystemsBoundsAndStartAsNone()
         {

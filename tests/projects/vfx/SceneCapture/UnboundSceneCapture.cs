@@ -264,7 +264,7 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         for (int i = 0; i < effects.Count; i++)
         {
             var effect = effects[i];
-            m_Out.Append("{\"k\":\"effect/").Append(m_Frame.ToString("000")).Append('/').Append(i).Append("\",\"v\":\"").Append(effect.name)
+            m_Out.Append("{\"k\":\"effect/").Append(m_Frame.ToString("000")).Append('/').Append(i).Append("\",\"v\":\"").Append(JsonText(effect.name))
                 .Append(named ? " at " + Place(effect.transform.position) : "")
                 .Append(" alive=").Append(effect.aliveParticleCount).Append(effect.culled ? " culled" : "");
             names.Clear();
@@ -320,6 +320,9 @@ public sealed class UnboundSceneCapture : MonoBehaviour
 
     static string Vec(Vector4 v) => v.x.ToString("R") + "," + v.y.ToString("R") + "," + v.z.ToString("R") + "," + v.w.ToString("R");
 
+    /// <summary>A name as the text of a JSON string: its quotes and backslashes escaped.</summary>
+    static string JsonText(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
     static string Place(Vector3 p) => p.x.ToString("R") + "," + p.y.ToString("R") + "," + p.z.ToString("R");
 
     /// <summary>Ends a run that cannot go on: no values.jsonl, so the run reports itself
@@ -336,7 +339,7 @@ public sealed class UnboundSceneCapture : MonoBehaviour
     void Bounds()
     {
         if (string.IsNullOrEmpty(m_Settings.boundsOf)) return;
-        var prefixes = m_Settings.boundsOf.Split(',');
+        var prefixes = m_Settings.boundsOf.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
         var rows = new System.Collections.Generic.List<string>();
         var path = new StringBuilder();
         foreach (var renderer in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
@@ -353,7 +356,7 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         rows.Sort(string.CompareOrdinal);
         string frame = m_Frame.ToString("000");
         for (int i = 0; i < rows.Count; i++)
-            m_Out.Append("{\"k\":\"bounds/").Append(frame).Append('/').Append(i).Append("\",\"v\":\"").Append(rows[i]).Append("\"}\n");
+            m_Out.Append("{\"k\":\"bounds/").Append(frame).Append('/').Append(i).Append("\",\"v\":\"").Append(JsonText(rows[i])).Append("\"}\n");
     }
 
     /// <summary>The views' colours at the end of this frame, when it is one the settings name.</summary>

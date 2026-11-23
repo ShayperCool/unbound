@@ -162,12 +162,13 @@ def compare(args):
         if settings_a.get(key) != settings_b.get(key):
             print(f'settings differ: {key}: {settings_a.get(key)!r} in {args.a}, {settings_b.get(key)!r} in {args.b}')
             worst = 1
-    # The effects' rows (alive counts per system at each shot) that differ.
+    # The effects' rows (alive counts per system at each shot) and the renderers' bounds rows
+    # that differ.
     def effect_rows(capture):
         rows = {}
         for line in (capture/'values.jsonl').read_text().splitlines():
             row = json.loads(line)
-            if row.get('k', '').startswith('effect/'):
+            if row.get('k', '').startswith(('effect/', 'bounds/')):
                 rows[row['k']] = row['v']
         return rows
     rows_a, rows_b = effect_rows(first), effect_rows(second)
