@@ -53,6 +53,10 @@ throws before a pipeline warning. The 6000.0 API
 documents the Built-In renderer limitation and removal of every duplicate registration.
 [Built-In command buffer manual](https://docs.unity3d.com/6000.0/Documentation/Manual/GraphicsCommandBuffers.html) · [RemoveCommandBuffer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Camera.RemoveCommandBuffer.html) · [GetCommandBuffers](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Camera.GetCommandBuffers.html)
 
+The receipt also checks sync and async duplicates on two events. Removing from one event
+preserves the other event's registrations. Single-buffer calls reject an invalid event before
+checking the buffer or issuing a pipeline warning.
+
 Use `--profile camera` to select this probe. The runner defaults to Metal on macOS and OpenGL
 Core on Linux, where `--backend vulkan` selects Vulkan. Pass `--backend` explicitly to publish a
 recording made on another host.

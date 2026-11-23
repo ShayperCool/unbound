@@ -815,7 +815,7 @@ namespace UnityEngine
 
         void RegisterCommandBuffer(CameraEvent evt, CommandBuffer buffer, string method)
         {
-            if (buffer == null) throw new NullReferenceException("buffer is null");
+            ValidateCommandBuffer(evt, buffer);
             if (WarnIfScriptablePipeline(method)) return;
             if (!m_CommandBuffers.TryGetValue(evt, out var list))
             {
@@ -832,7 +832,7 @@ namespace UnityEngine
                 if (m_CommandBuffers.TryGetValue(evt, out var legacy)) legacy.Remove(buffer);
                 return;
             }
-            if (buffer == null) throw new NullReferenceException("buffer is null");
+            ValidateCommandBuffer(evt, buffer);
             if (WarnIfScriptablePipeline(nameof(RemoveCommandBuffer))) return;
             if (!m_CommandBuffers.TryGetValue(evt, out var list)) return;
             int remaining = 0;
@@ -860,6 +860,14 @@ namespace UnityEngine
         {
             WarnIfScriptablePipeline(nameof(GetCommandBuffers));
             return m_CommandBuffers.TryGetValue(evt, out var list) ? list.ToArray() : new CommandBuffer[0];
+        }
+
+        static void ValidateCommandBuffer(CameraEvent evt, CommandBuffer buffer)
+        {
+            if (Compat.CameraCommandBuffersMeasured
+                && (evt < CameraEvent.BeforeDepthTexture || evt > CameraEvent.AfterHaloAndLensFlares))
+                throw new ArgumentException($"Invalid CameraEvent value \"{(int)evt}\".", nameof(evt));
+            if (buffer == null) throw new NullReferenceException("buffer is null");
         }
 
         static bool WarnIfScriptablePipeline(string method)

@@ -36,6 +36,8 @@ public sealed class MeasureCameraMemory : MonoBehaviour
         void Put(string key, string value) => rows.Add(JsonUtility.ToJson(new Row { k = key, v = value }));
         void Read(string stage, Camera camera) => Put(stage, FormattableString.Invariant(
             $"{Profiler.GetRuntimeMemorySizeLong(camera)}/{camera.commandBufferCount}"));
+        string BufferNames(Camera camera, CameraEvent evt) =>
+            string.Join("/", Array.ConvertAll(camera.GetCommandBuffers(evt), buffer => buffer.name));
         void CheckCall(string stage, Action call)
         {
             var logger = Debug.unityLogger;
@@ -134,6 +136,34 @@ public sealed class MeasureCameraMemory : MonoBehaviour
 
         var compute = new CommandBuffer { name = "Async empty buffer" };
         compute.SetExecutionFlags(CommandBufferExecutionFlags.AsyncCompute);
+        const CameraEvent lowerEvent = CameraEvent.BeforeDepthTexture;
+        const CameraEvent upperEvent = CameraEvent.AfterHaloAndLensFlares;
+        const CameraEvent belowEvents = (CameraEvent)((int)lowerEvent - 1);
+        const CameraEvent aboveEvents = (CameraEvent)((int)upperEvent + 1);
+        var eventsCamera = new GameObject("Camera event validation").AddComponent<Camera>();
+        eventsCamera.AddCommandBuffer(lowerEvent, first);
+        eventsCamera.AddCommandBuffer(lowerEvent, first);
+        eventsCamera.AddCommandBufferAsync(lowerEvent, compute, ComputeQueueType.Default);
+        eventsCamera.AddCommandBuffer(lowerEvent, second);
+        eventsCamera.AddCommandBufferAsync(lowerEvent, compute, ComputeQueueType.Background);
+        eventsCamera.AddCommandBuffer(upperEvent, first);
+        eventsCamera.AddCommandBufferAsync(upperEvent, compute, ComputeQueueType.Default);
+        Read("events.sharedRegistrations", eventsCamera);
+        Put("events.beforeRemove.lower", BufferNames(eventsCamera, lowerEvent));
+        eventsCamera.RemoveCommandBuffer(lowerEvent, first);
+        Read("events.removedSync", eventsCamera);
+        Put("events.afterSyncRemove.lower", BufferNames(eventsCamera, lowerEvent));
+        eventsCamera.RemoveCommandBuffer(lowerEvent, compute);
+        Read("events.removedAsync", eventsCamera);
+        Put("events.afterAsyncRemove.lower", BufferNames(eventsCamera, lowerEvent));
+        Put("events.afterBothRemovals.upper", BufferNames(eventsCamera, upperEvent));
+        CheckCall("events.invalidAdd", () => eventsCamera.AddCommandBuffer(belowEvents, first));
+        CheckCall("events.invalidAddBeforeNull", () => eventsCamera.AddCommandBuffer(aboveEvents, null));
+        CheckCall("events.invalidAsync", () => eventsCamera.AddCommandBufferAsync(aboveEvents, compute, ComputeQueueType.Default));
+        CheckCall("events.invalidRemove", () => eventsCamera.RemoveCommandBuffer(belowEvents, first));
+        Read("events.afterInvalid", eventsCamera);
+        Object.DestroyImmediate(eventsCamera.gameObject);
+
         camera.AddCommandBufferAsync(CameraEvent.AfterEverything, compute, ComputeQueueType.Default);
         Read("commands.addAsync", camera);
         camera.RemoveCommandBuffer(CameraEvent.AfterEverything, compute);
@@ -175,6 +205,9 @@ public sealed class MeasureCameraMemory : MonoBehaviour
             CheckCall("pipeline.addNull", () => camera.AddCommandBuffer(CameraEvent.AfterEverything, null));
             CheckCall("pipeline.addAsyncNull", () => camera.AddCommandBufferAsync(CameraEvent.AfterEverything, null, ComputeQueueType.Default));
             CheckCall("pipeline.removeNull", () => camera.RemoveCommandBuffer(CameraEvent.AfterEverything, null));
+            CheckCall("pipeline.addInvalidEvent", () => camera.AddCommandBuffer(belowEvents, first));
+            CheckCall("pipeline.addAsyncInvalidBeforeNull", () => camera.AddCommandBufferAsync(aboveEvents, null, ComputeQueueType.Default));
+            CheckCall("pipeline.removeInvalidEvent", () => camera.RemoveCommandBuffer(belowEvents, first));
             Read("pipeline.afterAllCalls", camera);
         }
         finally
