@@ -437,6 +437,18 @@ struct CachedCamera {
     cos_time: [f32; 4],
 }
 
+/// `_Time`, `_SinTime` and `_CosTime` of the time `t`. One function serves the cached camera and
+/// the uncached builtin path, so both give the same bits: the four sines written out in each
+/// place were compiled differently on arm64 macOS and differed in the last bit.
+#[inline(never)]
+fn time_vectors(t: f32) -> ([f32; 4], [f32; 4], [f32; 4]) {
+    (
+        [t / 20.0, t, t * 2.0, t * 3.0],
+        [(t / 8.0).sin(), (t / 4.0).sin(), (t / 2.0).sin(), t.sin()],
+        [(t / 8.0).cos(), (t / 4.0).cos(), (t / 2.0).cos(), t.cos()],
+    )
+}
+
 impl CachedCamera {
     fn compute(id: u64, input: CameraInput, v: &DrawValues) -> Self {
         let flip_z = [
@@ -466,10 +478,7 @@ impl CachedCamera {
             0.0,
             if ortho { 1.0 } else { 0.0 },
         ];
-        let t = v.time;
-        let time_vec = [t / 20.0, t, t * 2.0, t * 3.0];
-        let sin_time = [(t / 8.0).sin(), (t / 4.0).sin(), (t / 2.0).sin(), t.sin()];
-        let cos_time = [(t / 8.0).cos(), (t / 4.0).cos(), (t / 2.0).cos(), t.cos()];
+        let (time_vec, sin_time, cos_time) = time_vectors(v.time);
         Self {
             input,
             id,
@@ -1678,15 +1687,9 @@ fn builtin_value(
             transpose(&inverse(&mul(&v.view, &v.model)))
         }),
         ModelView => mat(mul(&v.view, &v.model)),
-        Time => vec(cam.map_or_else(|| [t / 20.0, t, t * 2.0, t * 3.0], |c| c.time_vec)),
-        SinTime => vec(cam.map_or_else(
-            || [(t / 8.0).sin(), (t / 4.0).sin(), (t / 2.0).sin(), t.sin()],
-            |c| c.sin_time,
-        )),
-        CosTime => vec(cam.map_or_else(
-            || [(t / 8.0).cos(), (t / 4.0).cos(), (t / 2.0).cos(), t.cos()],
-            |c| c.cos_time,
-        )),
+        Time => vec(cam.map_or_else(|| time_vectors(t).0, |c| c.time_vec)),
+        SinTime => vec(cam.map_or_else(|| time_vectors(t).1, |c| c.sin_time)),
+        CosTime => vec(cam.map_or_else(|| time_vectors(t).2, |c| c.cos_time)),
         DeltaTime => vec([1.0 / 60.0, 60.0, 1.0 / 60.0, 60.0]),
         CameraPos => vec(cam.map_or_else(
             || {
