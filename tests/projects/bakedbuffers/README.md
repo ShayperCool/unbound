@@ -219,8 +219,9 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
 - `materials.json`, each instance's albedo and emission images as the bake input has them
   (size and texels, rows from the first), in the bake's order.
 - `lightmap<N>.exr`, the lightmap the Editor's whole bake (`Lightmapping.Bake`, run after the
-  buffers' capture) makes of them, as it writes it beside the scene (`Lightmap-N_comp_light.exr`:
-  red, green, blue and alpha as 32-bit floats, ZIP-compressed, rows from the top). Without filtering (the scenes'
+  buffers' capture) makes of them, as it writes it beside the scene
+  (`Lightmap-N_comp_light.exr`: red, green, blue and alpha as 32-bit floats, ZIP-compressed,
+  rows from the top). Without filtering (the scenes'
   Lighting Settings), each used texel holds its direct, indirect and sky's light summed; a texel
   more of whose rays met back faces than the Lightmap Parameters' Backface Tolerance allows
   takes the mean of the light of its eight neighbours that hold their own, ring by ring (a ring's

@@ -693,8 +693,8 @@ def probes_difference(got, want):
 BACKFACE_TOLERANCE = 0.9
 BACKFACE_LIMIT = struct.unpack('<f', struct.pack('<f', 1.0 - struct.unpack('<f', struct.pack('<f', BACKFACE_TOLERANCE))[0]))[0]
 # A lightmap's light against the Editor's: the sum of three buffers each within its own
-# tolerance (the direct light's, the indirect and sky's light's), stored as half floats (one
-# step is up to 2^-10 of the value).
+# tolerance (the direct light's, the indirect and sky's light's), and 2^-10 of the value (the
+# lightmap was taken for half floats; the Editor's file holds 32-bit floats).
 LIGHTMAP_TOLERANCE = DIRECT_TOLERANCE + 2 * INDIRECT_TOLERANCE + 2 ** -10
 # How far from a chart's edge (another chart or an unused texel) the stitching of seams reaches.
 SEAM_REACH = 2

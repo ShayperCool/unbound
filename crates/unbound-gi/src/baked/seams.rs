@@ -33,7 +33,7 @@ const MAX_STEPS: usize = 50;
 /// an earlier triangle has, with other UVs and the same normal at the shared vertex where this
 /// edge starts (the normals at its other end are not compared). An edge's match is used once; of
 /// two open edges with the same ends in the same direction the later stands (neither measured).
-/// A triangle naming a vertex the mesh lacks is passed over.
+/// An edge naming a vertex the mesh lacks is passed over.
 pub fn edge_pairs(
     positions: &[[f32; 3]],
     normals: &[[f32; 3]],
@@ -338,8 +338,12 @@ mod tests {
     fn light_that_is_not_a_number_is_kept() {
         let (positions, normals, uvs, triangles) = two_quads([0.0, 0.0, -1.0]);
         let pairs = edge_pairs(&positions, &normals, &uvs, triangles);
-        let mut image = vec![[0.5, 0.5, 0.5, 1.0]; 16 * 16];
-        image[4 * 16 + 6] = [f32::NAN, 0.5, 0.5, 1.0];
+        // Green dark on the left chart, bright on the right one.
+        let mut image: Vec<[f32; 4]> = (0..16 * 16)
+            .map(|k| [0.5, if k % 16 < 8 { 0.2 } else { 1.0 }, 0.5, 1.0])
+            .collect();
+        image[4 * 16 + 6][0] = f32::NAN;
+        let before = image.clone();
         stitch(
             &mut image,
             16,
@@ -349,9 +353,11 @@ mod tests {
             3,
             f32::MAX,
         );
-        // Red is solved with a texel that is not a number: it keeps its texels; green and blue
-        // are solved.
+        // Red is solved with a texel that is not a number: it keeps its texels; green is solved
+        // (the two sides come closer).
         assert!(image.iter().all(|t| t[0].is_nan() || t[0] == 0.5));
+        let gap = |img: &[[f32; 4]]| (img[4 * 16 + 6][1] - img[4 * 16 + 9][1]).abs();
+        assert!(gap(&image) < gap(&before));
         assert!(image.iter().all(|t| t[1] < f32::MAX));
     }
 
