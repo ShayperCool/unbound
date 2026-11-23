@@ -52,7 +52,12 @@ widths are controls (`shrinkPoints`, `shrinkPercentWidth`, `shrinkColumnPercentM
 Percentages of a size not known yet (`autoColumn*`): a column with an automatic height in a row holds a
 60% basis and a 40% basis with a 37% height: laid out once (400 wide, neither growing nor shrinking)
 its children take their content's sizes; when its own size may follow its owner's (it shrinks, grows
-or has a percentage basis) it is laid out again at the height found and the percentages take it.
+or has a percentage basis) it is laid out again at the height found and the percentages take it. A
+child placed 10% from the top, absolutely or relatively, also lays the unchanged column out again
+(`autoColumn.OffsetAbsolute`, `autoColumn.OffsetRelative`).
+
+Wrapping (`wrapCards.*`): in a 1000 wide wrapping row, three cards 32% wide with 1% side margins stay
+on one line (lines break with percentage margins as 0); with 10 point margins the third wraps.
 
 Containers without an exact main size (`centeredRow.*`): in a 984 wide column centring its items, a
 row of an item around content 982.8 (or 300) wide and a fixed 24 wide one is as long as its items'

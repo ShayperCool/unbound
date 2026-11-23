@@ -297,6 +297,17 @@ namespace PercentProbe
                 autoColumns.Add((name, column));
             }
             AutoColumn("Unchanged", 4400, (row, column) => column.style.width = 400);
+            // The unchanged column with a 10x10 child placed 10% from the top, absolutely or relatively.
+            AutoColumn("OffsetAbsolute", 9400, (row, column) =>
+            {
+                column.style.width = 400;
+                var badge = Box(column, "badge", 10, 10); badge.style.position = Position.Absolute; badge.style.top = Length.Percent(10);
+            });
+            AutoColumn("OffsetRelative", 9900, (row, column) =>
+            {
+                column.style.width = 400;
+                var badge = Box(column, "badge", 10, 10); badge.style.top = Length.Percent(10);
+            });
             AutoColumn("Shrunk", 4900, (row, column) => { Box(row, "sibling", 600, 50).SendToBack(); column.style.flexBasis = Length.Percent(53); column.style.flexShrink = 1; });
             AutoColumn("Grown", 5400, (row, column) => { Box(row, "sibling", 600, 50).SendToBack(); column.style.flexBasis = Length.Percent(30); column.style.flexGrow = 1; });
             AutoColumn("Fits", 5900, (row, column) => { Box(row, "sibling", 600, 50).SendToBack(); column.style.flexBasis = Length.Percent(40); column.style.flexShrink = 1; });
@@ -374,6 +385,25 @@ namespace PercentProbe
                 pmrDrag.style.width = Length.Percent(95); pmrDrag.style.minWidth = Length.Percent(95); pmrDrag.style.maxWidth = Length.Percent(95);
                 percentMinRows.Add((name, pmrInput, pmrDrag));
             }
+            // wrapCards: a 1000 wide wrapping row of three shrinking 50 high cards 32% wide with 1% (or
+            // 10 point) side margins.
+            var wrapCards = new System.Collections.Generic.List<(string, VisualElement[])>();
+            float wcLeft = 0;
+            foreach (var name in new[] { "percent", "points" })
+            {
+                var wcCase = Case(root, "wrapCards." + name, wcLeft);
+                wcCase.style.top = 10400;
+                wcLeft += 1100;
+                var wcRow = Box(wcCase, "row", 1000, 200); wcRow.style.flexDirection = FlexDirection.Row; wcRow.style.flexWrap = Wrap.Wrap;
+                var cards = new VisualElement[3];
+                for (int c = 0; c < 3; c++)
+                {
+                    cards[c] = Box(wcRow, "card" + c, float.NaN, 50); cards[c].style.width = Length.Percent(32); cards[c].style.flexShrink = 1;
+                    var margin = name == "percent" ? Length.Percent(1) : new Length(10);
+                    cards[c].style.marginLeft = margin; cards[c].style.marginRight = margin;
+                }
+                wrapCards.Add((name, cards));
+            }
             var svCase = Case(root, "centeredRow.scrollView", 0);
             svCase.style.top = 8100;
             var svOuter = Box(svCase, "outer", 1003.5f, 535.5f);
@@ -386,12 +416,15 @@ namespace PercentProbe
 
             yield return Frames();
             foreach (var (name, column) in autoColumns)
-                Put("autoColumn." + name, "column " + State(column) + "|label " + State(column.Q<Label>("label")) + "|box " + State(column.Q("box")));
+                Put("autoColumn." + name, "column " + State(column) + "|label " + State(column.Q<Label>("label")) + "|box " + State(column.Q("box"))
+                    + (column.Q("badge") is VisualElement badge ? "|badge " + State(badge) : ""));
             Put("growOverflow", "a " + State(goA) + "|b " + State(goB));
             Put("growFraction", "a " + State(gfA) + "|b " + State(gfB));
             Put("growMax", "a " + State(gmA) + "|b " + State(gmB) + "|c " + State(gmC));
             foreach (var (name, input, drag) in percentMinRows)
                 Put("percentMinInAutoRow." + name, "input " + State(input) + "|drag " + State(drag));
+            foreach (var (name, cards) in wrapCards)
+                Put("wrapCards." + name, string.Join("|", cards.Select((e, i) => "card" + i + " " + State(e))));
             foreach (var (name, row, a, b) in centeredRows)
                 Put("centeredRow." + name, "row " + State(row) + "|a " + State(a) + "|b " + State(b));
             Put("centeredRow.scrollView", "scroll " + State(scrollView) + "|row " + State(scrollView.Q("unity-content-and-vertical-scroll-container"))
