@@ -475,12 +475,15 @@ namespace UnityEngine
             bool outside = !FrameBuilder.CameraRendering;
             var saved = GfxStream.Current;
             if (outside) GfxStream.Camera(Immediate.ModelView, Immediate.Projection, saved.Flags);
+            var context = new CommandBuffer.Context();
             try
             {
-                buffer.Execute(null);
+                buffer.Execute(context);
             }
             finally
             {
+                if (context.BoundTargets && Compat.RenderingMeasured && GraphicsDeviceProfile.Current.RestoreCommandBufferTargets)
+                    GfxStream.BindTargets(saved);
                 if (outside) GfxStream.Camera(saved.View, saved.Projection, saved.Flags);
                 RenderTexture.SetActiveQuietly(active);
             }

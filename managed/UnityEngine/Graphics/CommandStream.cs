@@ -135,13 +135,17 @@ namespace Unbound.Runtime
         internal static void Restore(in State state)
         {
             if (state.Color != s_State.Color || state.Depth != s_State.Depth || state.Mip != s_State.Mip || state.Slice != s_State.Slice || state.Colors != s_State.Colors)
-            {
-                if (state.Colors != null) SetTargets(state.Colors, state.Depth, state.Mip, state.Slice, state.Layers);
-                else SetTarget(state.Color, state.Depth, state.Mip, state.Slice, state.Layers);
-            }
+                BindTargets(state);
             s_State.Scissor = state.Scissor;
             Viewport(state.Viewport);
             Camera(state.View, state.Projection, state.Flags);
+        }
+
+        /// <summary>Binds the saved targets and their subresources. The viewport becomes the full target.</summary>
+        internal static void BindTargets(in State state)
+        {
+            if (state.Colors != null) BindColorTargets(state.Colors, state.Depth, state.Mip, state.Slice, state.Layers);
+            else SetTarget(state.Color, state.Depth, state.Mip, state.Slice, state.Layers);
         }
 
         /// <summary>Binds the current target again, keeping the viewport: the renderer reads
@@ -149,8 +153,7 @@ namespace Unbound.Runtime
         internal static void RebindTarget()
         {
             var viewport = s_State.Viewport;
-            if (s_State.Colors != null) SetTargets(s_State.Colors, s_State.Depth, s_State.Mip, s_State.Slice, s_State.Layers);
-            else SetTarget(s_State.Color, s_State.Depth, s_State.Mip, s_State.Slice, s_State.Layers);
+            BindTargets(s_State);
             Viewport(viewport);
         }
 
@@ -324,8 +327,14 @@ namespace Unbound.Runtime
                 SetTarget(colors.Length == 0 ? 0 : colors[0], depth, mip, slice, layers);
                 return;
             }
+            BindColorTargets((ulong[])colors.Clone(), depth, mip, slice, layers);
+        }
+
+        // State owns the array, so replaying a saved binding reuses it.
+        static void BindColorTargets(ulong[] colors, ulong depth, int mip, int slice, int layers)
+        {
             s_State.Color = colors[0];
-            s_State.Colors = (ulong[])colors.Clone();
+            s_State.Colors = colors;
             s_State.Depth = depth;
             s_State.Mip = mip;
             s_State.Slice = slice;

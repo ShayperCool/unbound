@@ -29,6 +29,9 @@ namespace Unbound.Runtime
         internal readonly bool ReversedZ;
         internal readonly bool UsesLoadStoreActions;
         internal readonly bool FramebufferReadback;
+        /// <summary>Render-target commands restore the previous subresources and the full viewport
+        /// after execution (OpenGL Core, Unity 6000.0.71f1).</summary>
+        internal bool RestoreCommandBufferTargets { get; init; }
         /// <summary>Synchronous screenshots use the active render texture and the copy observes
         /// the current GL draw state (OpenGL Core, Unity 6000.0.71f1, tests/projects/screencapture).</summary>
         internal bool ScreenCaptureUsesActiveRenderState { get; init; }
@@ -280,6 +283,7 @@ namespace Unbound.Runtime
             ProceduralQuads = UnityEngine.MeshTopology.Points,
             PackedTargetsKeepChannelBits = true,
             ScreenCaptureUsesActiveRenderState = true,
+            RestoreCommandBufferTargets = true,
             // tests/projects/urp CapsProbe `device-opengl.jsonl` (two identical captures, NVIDIA
             // RTX 4060).
             Compressed3DTextures = false,

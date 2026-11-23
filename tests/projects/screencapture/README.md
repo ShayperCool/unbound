@@ -173,9 +173,7 @@ The Unity 6.0 API advises waiting for frame rendering to finish for a
 reliable game-view screenshot. It documents binding a render texture through
 `RenderTexture.active` or `Graphics.SetRenderTarget`. The screenshot source
 rules above are observations for Unity 6000.0.71f1, Linux, OpenGL Core.
-Other release families and graphics devices are unmeasured. Restoring an
-active mip across command-buffer execution is a separate binding gap. The
-Editor restores the previous subresource as well as the texture.
+Other release families and graphics devices are unmeasured.
 [CaptureScreenshotAsTexture](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/screencapture/capturescreenshotastexture),
 [CaptureScreenshotIntoRenderTexture](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/screencapture/capturescreenshotintorendertexture),
 [RenderTexture.active](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/rendertexture/active).
@@ -188,6 +186,31 @@ Use `--space Gamma` for the Gamma repeat. Both Editor
 captures in each color space completed and agree byte for byte. The existing
 game-view references, comparator and tolerances are unchanged.
 
-The active profile matches all 333 values and 75 images in Linear and all
-66 values and 11 images in Gamma. All 86 images are byte-identical with
-the Editor captures.
+## Command-buffer render target restoration
+
+Unity 6.0 documents that executing a command buffer saves and restores the
+active render targets. A render target change defaults the viewport to the
+whole target. [CommandBuffer.SetRenderTarget](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/rendering/commandbuffer/setrendertarget),
+[CommandBuffer.SetViewport](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/rendering/commandbuffer/setviewport).
+
+The active profile's command controls start with a nonzero mip and a
+partial viewport. They draw after Graphics.ExecuteCommandBuffer and read
+the prior mip to observe the restored binding. SetRenderTarget resets the
+viewport to the whole prior subresource even when the buffer selects the
+same mip or returns to it. Both a normal Blit and a Blit from a selected
+array slice also reset the viewport. A viewport-only command leaves the
+viewport it sets. A clear with an array of colors and a CopyTexture both
+preserve the initial viewport, as does the control with no command buffer.
+The layered case verifies that only the bound slice is changed. The
+multiple color attachment case clears the two previously bound textures
+independently after the buffer returns. The depth control changes the
+prior depth attachment between two values so it alternately blocks and
+admits the next draw.
+
+These observations are for Graphics.ExecuteCommandBuffer with the Unity
+6000.0.71f1 Linux OpenGL Core device, in Linear and Gamma. Other graphics
+devices and Unity release families are unmeasured.
+
+The active profile compares 391 values and 106 images in Linear and 122
+values and 40 images in Gamma. All 146 images match the Editor captures
+byte for byte.

@@ -121,6 +121,8 @@ namespace UnityEngine.Rendering
             internal RenderTexture CameraTarget;
             /// <summary>The camera draws to the screen (CameraTarget, if any, stands for it).</summary>
             internal bool Screen;
+            /// <summary>An executed command set the render targets, even if it selected the same images.</summary>
+            internal bool BoundTargets;
         }
 
         /// <summary>Temporaries made by GetTemporaryRT, by property id, until released or the end
@@ -187,10 +189,10 @@ namespace UnityEngine.Rendering
 
         /// <summary>Runs the commands now (Graphics.ExecuteCommandBuffer): temporaries it does not
         /// release are released after.</summary>
-        internal void Execute(Camera camera)
+        internal void Execute(Context context)
         {
-            ExecuteIn(new Context { Camera = camera, CameraTarget = camera != null ? camera.targetTexture : null });
-            if (camera == null) ReleaseNamedTemporaries();
+            ExecuteIn(context);
+            ReleaseNamedTemporaries();
         }
 
         /// <summary>Runs the commands now within a camera's rendering.</summary>
@@ -290,7 +292,11 @@ namespace UnityEngine.Rendering
         }
 
         void SetTarget(RenderTargetIdentifier rt, int mipLevel, CubemapFace cubemapFace, int depthSlice) =>
-            Add(c => BindTarget(Resolve(rt, c), mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice), 36);
+            Add(c =>
+            {
+                BindTarget(Resolve(rt, c), mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice);
+                c.BoundTargets = true;
+            }, 36);
 
         /// <summary>Draws go into <paramref name="color"/> (null: the screen) and its own depth
         /// buffer, which becomes the active render texture.</summary>
@@ -320,6 +326,7 @@ namespace UnityEngine.Rendering
 
         void SetTargets(RenderTargetIdentifier color, RenderTargetIdentifier depth, int mipLevel, CubemapFace cubemapFace, int depthSlice) => Add(c =>
         {
+            c.BoundTargets = true;
             if (color.Type == BuiltinRenderTextureType.None || depth.Type == BuiltinRenderTextureType.None)
             {
                 BindNothing();
@@ -378,6 +385,7 @@ namespace UnityEngine.Rendering
             var handles = new ulong[colors.Length];
             Add(c =>
             {
+                c.BoundTargets = true;
                 if (none)
                 {
                     BindNothing();
@@ -676,6 +684,7 @@ namespace UnityEngine.Rendering
             if (texture != null) properties[s_MainTex] = texture;
             if (scale != Vector2.one || offset != Vector2.zero) properties[s_MainTexST] = new Vector4(scale.x, scale.y, offset.x, offset.y);
             var target = Resolve(dest, c);
+            c.BoundTargets = true;
             if (mat == null && Immediate.BlitArraySlice(texture, target, Math.Max(0, sourceSlice), destSlice, scale, offset))
             {
                 RenderTexture.SetActiveQuietly(target as RenderTexture);
