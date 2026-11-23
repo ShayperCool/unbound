@@ -411,6 +411,7 @@ namespace Unbound.Runtime.Jobs
 
         internal static IntPtr Create(int capacity, int desiredJobCount)
         {
+            // A negative capacity given here is unmeasured (the setter's is kept as it is).
             var data = new TransformAccessArrayData { m_Capacity = Math.Max(0, capacity) };
             data.m_Self = GCHandle.Alloc(data);
             return GCHandle.ToIntPtr(data.m_Self);
@@ -498,8 +499,10 @@ namespace Unbound.Runtime.Jobs
         /// <summary>The job data a transform job reads (freed with the job, and its snapshot with it).</summary>
         internal IntPtr PrepareForJob(bool readOnly)
         {
-            // A negative capacity leaves the job no batch count: the Editor asserts and runs the job
-            // over the transforms all the same (tests/projects/transformaccess negative*).
+            // A negative capacity: the Editor asserts once after the setter (tests/projects/
+            // transformaccess negative*, a step that schedules one job) and runs the job over the
+            // transforms all the same. That the job's scheduling asserts, and read-only jobs too,
+            // is inferred, not measured.
             if (m_Capacity < 0) UnityEngine.Debug.LogAssertion(NoJobCount);
             int count = m_Transforms.Count;
             var snapshot = m_Transforms.ToArray();
