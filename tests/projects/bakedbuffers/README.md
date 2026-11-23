@@ -36,6 +36,9 @@ padding 2):
   (a negative scale), one under a scaled and turned parent, a cube with Scale In Lightmap 0, one
   lit by light probes (not in the lightmap; the others keep their numbers in the bake), a LOD
   Group.
+- `Unstitched` (5, 128): a sphere, a capsule and a cylinder with Stitch Seams off
+  (`MeshRenderer.stitchLightmapSeams`), a sphere with it on and a plane: only that sphere's seams
+  are stitched.
 - `Samples` (6, 64): a cube and a sphere for each of the Anti-aliasing Samples 1, 3, 4, 5, 8, 9,
   16 and 256: a texel gets one sample for 1, 2 × 2 for 3 and 4 × 4 from 4 on (2 gives 2 × 2:
   tests/projects/bakedatlas `Tags`), and the lightmaps come in the order of their groups.
@@ -217,7 +220,7 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
   (size and texels, rows from the first), in the bake's order.
 - `lightmap<N>.exr`, the lightmap the Editor's whole bake (`Lightmapping.Bake`, run after the
   buffers' capture) makes of them, as it writes it beside the scene (`Lightmap-N_comp_light.exr`:
-  red, green, blue and alpha as half floats, rows from the top). Without filtering (the scenes'
+  red, green, blue and alpha as 32-bit floats, ZIP-compressed, rows from the top). Without filtering (the scenes'
   Lighting Settings), each used texel holds its direct, indirect and sky's light summed; a texel
   more of whose rays met back faces than the Lightmap Parameters' Backface Tolerance allows
   takes the mean of the light of its eight neighbours that hold their own, ring by ring (a ring's

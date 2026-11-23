@@ -104,6 +104,19 @@ public static class BuffersSetup
         Save(scene, "Shapes");
     }
 
+    /// <summary>Seamed primitives with Stitch Seams off (MeshRenderer.stitchLightmapSeams), and a
+    /// sphere with it on beside them: only that one's seams are stitched.</summary>
+    static void Unstitched()
+    {
+        var scene = NewScene("Unstitched", 5f, 128);
+        Set(Prim(PrimitiveType.Sphere, "Sphere", new Vector3(0f, 1f, 0f), new Vector3(0f, 25f, 0f), Vector3.one * 1.5f), "m_StitchLightmapSeams", p => p.boolValue = false);
+        Set(Prim(PrimitiveType.Capsule, "Capsule", new Vector3(3f, 1f, 2f), new Vector3(0f, 0f, 30f), Vector3.one), "m_StitchLightmapSeams", p => p.boolValue = false);
+        Set(Prim(PrimitiveType.Cylinder, "Cylinder", new Vector3(-3f, 1f, 2f), new Vector3(90f, 0f, 0f), new Vector3(1f, 2f, 1f)), "m_StitchLightmapSeams", p => p.boolValue = false);
+        Prim(PrimitiveType.Sphere, "Stitched", new Vector3(0f, 1f, 4f), new Vector3(0f, 25f, 0f), Vector3.one * 1.5f);
+        Prim(PrimitiveType.Plane, "Plane", Vector3.zero, Vector3.zero, Vector3.one);
+        Save(scene, "Unstitched");
+    }
+
     /// <summary>A cube and a sphere for each of several Anti-aliasing Samples of Lightmap
     /// Parameters: how many samples a texel gets along each side, and the lightmaps' order.</summary>
     static void Samples()
@@ -903,7 +916,7 @@ public static class BuffersSetup
         {
             var all = new (string Name, Action Make)[]
             {
-                ("Shapes", Shapes), ("Samples", Samples), ("Charts", Charts), ("Bare", Bare), ("Sun", Sun), ("Lamps", Lamps),
+                ("Shapes", Shapes), ("Unstitched", Unstitched), ("Samples", Samples), ("Charts", Charts), ("Bare", Bare), ("Sun", Sun), ("Lamps", Lamps),
                 ("ModeIndirect", () => Modes("ModeIndirect", MixedLightingMode.IndirectOnly)),
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),

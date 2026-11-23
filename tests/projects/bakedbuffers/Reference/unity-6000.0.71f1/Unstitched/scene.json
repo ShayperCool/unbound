@@ -1,0 +1,25 @@
+{
+ "bake": "bake Result type: 'Success'",
+ "messages": [],
+ "instances": [
+  "Sphere",
+  "Capsule",
+  "Plane",
+  "Stitched",
+  "Cylinder"
+ ],
+ "lightmaps": [
+  {
+   "width": 128,
+   "height": 128,
+   "supersampling": 2,
+   "instances": [
+    0,
+    1,
+    2,
+    3,
+    4
+   ]
+  }
+ ]
+}
