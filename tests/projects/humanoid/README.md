@@ -226,6 +226,16 @@ imported without keyframe reduction.
   use the reported fallback.
   [OnAnimatorMove](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnAnimatorMove.html)
 
+  The layer-mask controls add 1361 rows from two matching macOS 6000.0.71f1
+  Editor runs. A ProcessAnimation job above two clips in an override layer
+  mixer uses the layers that keep Root to place the hips. It reads body
+  muscles from those layers and finger muscles from the blended stream.
+  The controls also cover a body position edit, a world bone rotation that
+  rebuilds the pose, and direct body muscle writes to both the placement
+  and animated data. The unmasked and single-clip controls keep the regular
+  pose rules. ProcessRootMotion and other graph shapes retain their report.
+  [SetLayerMaskFromAvatarMask](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/animations/animationlayermixerplayable/setlayermaskfromavatarmask)
+
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
   `ProbeRunner.Leftovers`): HumanA's clip leaving for such a state (Hold) after an exit time of 0.3
   at once (with an extra `Update(0)` before step 12, `noWDAlone`), over 0.2 s (`noWDFade`), at

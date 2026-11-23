@@ -962,6 +962,9 @@ namespace Unbound.Runtime
         /// <summary>Scripted movement before the animation phase of a manual humanoid job (humanoid bone.scriptedRoot*).</summary>
         internal static bool HumanStreamScriptedRoot => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Humanoid job placement under a playable layer that masks Root (humanoid bone.layerNoRoot*).</summary>
+        internal static bool HumanStreamLayerRootPlacement => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Humanoid root motion composed by mixer trees (any input count and nesting, any
         /// input weight sum blended unnormalized, weights changed between evaluations or while
         /// culled), measured by animculling humanMixerMotion/humanMixerShape on

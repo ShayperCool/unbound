@@ -207,11 +207,11 @@ namespace UnityEngine.Tests
             Assert.Equal(report, Hits() > before);
         }
 
-        AnimationClip MakeHumanoidMotionClip()
+        AnimationClip MakeHumanoidMotionClip(float from = -0.2f, float to = 0.2f)
         {
             var clip = new AnimationClip { legacy = true };
             m_Created.Add(clip);
-            clip.SetCurve("", typeof(Animator), "Left Arm Down-Up", AnimationCurve.Linear(0f, -0.2f, 1f, 0.2f));
+            clip.SetCurve("", typeof(Animator), "Left Arm Down-Up", AnimationCurve.Linear(0f, from, 1f, to));
             clip.legacy = false;
             return clip;
         }
@@ -352,6 +352,54 @@ namespace UnityEngine.Tests
                 Assert.Equal(new[] { "root", "move" }, phases);
             Near(rootAfterMove, animator.transform.position);
             Near(expectedArm, arm.localRotation);
+        }
+
+        [Theory]
+        [InlineData(TestRelease.Measured, false, false)]
+        [InlineData(TestRelease.Measured, true, true)]
+        [InlineData(TestRelease.Unmeasured, false, true)]
+        public void AJobReadsBodyMusclesFromTheLayerThatKeepsRoot(string release, bool inRootPhase, bool report)
+        {
+            using var pin = TestRelease.Pin(release);
+            const string warning = "AnimationHumanStream under a layer without Root";
+            int Hits() => Stubs.HitReport().FirstOrDefault(hit => hit.Key == warning).Value;
+            var animator = Human();
+            animator.applyRootMotion = true;
+            var arm = new MuscleHandle(HumanPartDof.LeftArm, ArmDof.ArmDownUp);
+            float value = float.NaN, written = float.NaN;
+            void ReadAndWrite(AnimationStream stream, int frame)
+            {
+                var pose = stream.AsHuman();
+                value = pose.GetMuscle(arm);
+                pose.SetMuscle(arm, 0.25f);
+                written = pose.GetMuscle(arm);
+            }
+
+            AnimationHumanStreamTests.JobBody processAnimation = inRootPhase ? (_, _) => { } : ReadAndWrite;
+            m_Graph = AnimationHumanStreamTests.Graph(animator, processAnimation,
+                MakeHumanoidMotionClip(-0.2f, -0.2f), inRootPhase ? ReadAndWrite : null);
+            var job = m_Graph.GetOutput(0).GetSourcePlayable();
+            var input = job.GetInput(0);
+            m_Graph.Disconnect(job, 0);
+            var mixer = AnimationLayerMixerPlayable.Create(m_Graph, 2);
+            mixer.ConnectInput(0, input, 0, 1f);
+            mixer.ConnectInput(1, AnimationClipPlayable.Create(m_Graph, MakeHumanoidMotionClip(0.8f, 0.8f)), 0, 0.5f);
+            var mask = new AvatarMask();
+            m_Created.Add(mask);
+            for (int part = 0; part < (int)AvatarMaskBodyPart.LastBodyPart; part++)
+                mask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)part, part != (int)AvatarMaskBodyPart.Root);
+            mixer.SetLayerMaskFromAvatarMask(1, mask);
+            job.ConnectInput(0, mixer, 0, 1f);
+
+            int before = Hits();
+            AnimationHumanStreamTests.Run(m_Graph, 1);
+            Assert.True(float.IsFinite(value));
+            Assert.Equal(report, Hits() > before);
+            if (!report)
+            {
+                Assert.Equal(-0.2f, value, 4);
+                Assert.Equal(0.25f, written, 4);
+            }
         }
 
         /// <summary>A handle is a bone of the avatar the Animator has when the job runs: one bound

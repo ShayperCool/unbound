@@ -345,6 +345,7 @@ namespace Unbound.Runtime.Playables
         internal float OutputWeight = 1f;
         internal bool UsesMeasuredJobVelocities;
         internal bool UsesMeasuredKinematicJobRoot;
+        internal bool UsesMeasuredLayerJobRoot;
         internal PlayableOutputData ScriptedJobOutput;
         bool m_CanMoveDuringJob, m_JobInterrupted;
         AnimatorRootMotion? m_JobHumanStep;
@@ -395,6 +396,7 @@ namespace Unbound.Runtime.Playables
             e.Seek = e.AutomaticFrame = e.RootMotion = e.ReferencePose = e.PlayableIK = e.Replay = false;
             e.UsesMeasuredJobVelocities = false;
             e.UsesMeasuredKinematicJobRoot = false;
+            e.UsesMeasuredLayerJobRoot = false;
             e.ScriptedJobOutput = null;
             e.m_CanMoveDuringJob = e.m_JobInterrupted = false;
             e.m_JobHumanStep = null;
@@ -926,6 +928,9 @@ namespace Unbound.Runtime.Playables
                     && animator.updateMode == AnimatorUpdateMode.Normal
                     && animator.GetComponent<Rigidbody>() == null && animator.GetComponent<CharacterController>() == null
                     ? o : null;
+                e.UsesMeasuredLayerJobRoot = Compat.HumanStreamLayerRootPlacement && e.MotionMode == RootMotionMode.Human
+                    && o.Graph.UpdateMode == DirectorUpdateMode.Manual && o.Weight == 1f
+                    && source == AnimationStreamSource.DefaultValues && JobKind.HasRootMaskedLayerInput(o.Source);
                 AnimStream s;
                 // The tree's own weights decide which clips fire events; the output's weight blends
                 // the pose only (6000.0.71f1, animculling weight/0: a clip under an output at

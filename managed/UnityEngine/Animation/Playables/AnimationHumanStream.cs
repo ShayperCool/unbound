@@ -31,6 +31,11 @@ namespace Unbound.Runtime.Playables
         readonly Human m_Human;
         internal readonly HumanPose Pose = new HumanPose();
         readonly HumanPose m_World = new HumanPose();
+        // Layers that keep Root place the body. The blended Pose supplies the remaining
+        // animation, including finger muscles.
+        HumanPose m_LayerPlacement;
+        bool m_UseLayerPlacement, m_LayerPoseRebuilt;
+        ulong m_LayerMusclesWritten;
         readonly SkeletonPose m_Local, m_Global, m_Source, m_W4, m_W5, m_W6, m_W7;
         /// <summary>The skeleton as the bones' stream handles see it, kept apart once the pose was
         /// made again from it: <see cref="m_Local"/> is then re-based for the goal reads.</summary>
@@ -88,7 +93,7 @@ namespace Unbound.Runtime.Playables
         /// <summary>The pose of a stream: its humanoid curves (goals taken relative to the body when
         /// they are in the motion's frame) placed by its body motion as the Animator places them
         /// (<see cref="HumanRootMotion.ApplyToPose"/>), and the IK values an earlier job left in it.</summary>
-        internal void Load(AnimStream stream, in Trs root)
+        internal void Load(AnimStream stream, in Trs root, bool useLayerPlacement = false)
         {
             m_Stream = stream;
             Root = root;
@@ -109,6 +114,15 @@ namespace Unbound.Runtime.Playables
                 if (stream.GoalsInMotion)
                     for (int g = 0; g < GoalCount; g++) Pose.Goals[g].X = M.InvMul(sample.Body, Pose.Goals[g].X);
                 HumanRootMotion.ApplyToPose(Pose, sample);
+            }
+            m_UseLayerPlacement = useLayerPlacement;
+            m_LayerPoseRebuilt = false;
+            m_LayerMusclesWritten = 0;
+            if (m_UseLayerPlacement)
+            {
+                m_LayerPlacement ??= new HumanPose();
+                HumanClipImport.PoseFromCurves(stream.MassCenter, s_AllPresent, m_LayerPlacement);
+                m_LayerPlacement.RootX = Pose.RootX;
             }
             // The stream's buffer keeps the IK values from the job's last run until a job changes
             // them: the jobs of a chain share one buffer, each update starts from it (measured,
@@ -139,7 +153,16 @@ namespace Unbound.Runtime.Playables
             TakeSetGoals();
             stream.HumanIK.StoreFrom(Pose);
             if (stream.Owner != null) (stream.Owner.PersistentHumanIK ??= new StreamHumanIK()).StoreFrom(Pose);
-            if (m_Changed) WriteCurves(stream);
+            if (m_Changed)
+            {
+                WriteCurves(stream);
+                // A pose read back from edited bones already includes the separate placement.
+                if (m_UseLayerPlacement && m_LayerPoseRebuilt) stream.HasMassCenter = false;
+                else if (m_UseLayerPlacement && m_LayerMusclesWritten != 0)
+                    for (int i = 0; i < m_LayerPlacement.DoF.Length; i++)
+                        if ((m_LayerMusclesWritten & (1UL << i)) != 0)
+                            stream.MassCenter[HumanClipImport.MuscleFirst + i] = m_LayerPlacement.DoF[i];
+            }
             m_Stream = null;
         }
 
@@ -223,7 +246,12 @@ namespace Unbound.Runtime.Playables
             m_BonesKept = false;
             m_BonesMoved = false;
             m_HipsScaleEdit = HipsScaleEdit.None;
-            HumanOps.RetargetTo(m_Human, Pose, null, Root, m_World, m_Local, m_Global, true);
+            if (m_UseLayerPlacement && !m_LayerPoseRebuilt)
+            {
+                m_LayerPlacement.RootX = Pose.RootX;
+                HumanOps.RetargetTo(m_Human, m_LayerPlacement, Pose, Root, m_World, m_Local, m_Global, true);
+            }
+            else HumanOps.RetargetTo(m_Human, Pose, null, Root, m_World, m_Local, m_Global, true);
         }
 
         /// <summary>The human pose of the current skeleton pose, when the skeleton changed since: the
@@ -257,6 +285,7 @@ namespace Unbound.Runtime.Playables
             m_Source.X[0] = Trs.Identity;
             if (m_Human.HasTDoF && m_TDoFBase == null) m_TDoFBase = HumanOps.TDoFBase(m_Human, m_W4);
             HumanOps.RetargetFrom(m_Human, m_Source, Pose, m_W4, m_W5, m_W6, m_W7, m_TDoFBase);
+            m_LayerPoseRebuilt = m_UseLayerPlacement;
             float hs = m_Human.Scale;
             var body = Pose.RootX;
             body.t = body.t * hs;
@@ -650,14 +679,26 @@ namespace Unbound.Runtime.Playables
         {
             UpdateHumanPose();
             var dofs = Muscles(muscle, out int index);
-            return dofs != null && (uint)index < (uint)dofs.Length ? dofs[index] : 0f;
+            if (dofs == null || (uint)index >= (uint)dofs.Length) return 0f;
+            // The body's muscles read from the placing layers until a bone edit rebuilds the pose.
+            if (m_UseLayerPlacement && !m_LayerPoseRebuilt && dofs == Pose.DoF)
+                return m_LayerPlacement.DoF[index];
+            return dofs[index];
         }
 
         internal void SetMuscle(UnityEngine.Animations.MuscleHandle muscle, float value)
         {
             UpdateHumanPose();
             var dofs = Muscles(muscle, out int index);
-            if (dofs != null && (uint)index < (uint)dofs.Length) dofs[index] = value;
+            if (dofs != null && (uint)index < (uint)dofs.Length)
+            {
+                dofs[index] = value;
+                if (m_UseLayerPlacement && !m_LayerPoseRebuilt && dofs == Pose.DoF)
+                {
+                    m_LayerPlacement.DoF[index] = value;
+                    m_LayerMusclesWritten |= 1UL << index;
+                }
+            }
             PoseChanged();
         }
 

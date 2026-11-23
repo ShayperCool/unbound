@@ -331,7 +331,7 @@ namespace Unbound.Runtime.Playables
         internal StreamVelocityEdits VelocityEdits;
         /// <summary>The evaluation the stream belongs to.</summary>
         internal AnimationEvaluation Evaluation;
-        internal bool UseKinematicAnimationRoot, UseMovedAnimationRoot;
+        internal bool UseKinematicAnimationRoot, UseMovedAnimationRoot, UseLayerAnimationRoot;
         Unbound.Runtime.Playables.HumanStreamPose m_Human;
         internal bool HasHumanPose => m_Human != null;
 
@@ -361,14 +361,15 @@ namespace Unbound.Runtime.Playables
             if (m_Human != null) return m_Human;
             using var engine = MainThreadCheck.Engine();
             var human = Handles.Animator?.Human ?? throw new InvalidOperationException("Cannot create an AnimationHumanStream for a generic rig.");
-            if (Stream.HasMassCenter)
+            bool useLayerRoot = Stream.HasMassCenter && UseLayerAnimationRoot;
+            if (Stream.HasMassCenter && !useLayerRoot)
                 Stubs.Ignored("AnimationHumanStream under a layer without Root",
                     "reads and writes the animated pose; the pose that places the body (layers whose mask keeps Root) is not part of it (not measured)");
             bool humanMotion = Evaluation != null && Evaluation.MotionMode == RootMotionMode.Human;
             var root = human.StreamRoot(humanMotion, Stream.BodyMotion, Stream.DeltaTime,
                 UseKinematicAnimationRoot, UseMovedAnimationRoot);
             m_Human = human.RentStreamPose();
-            m_Human.Load(Stream, root);
+            m_Human.Load(Stream, root, useLayerRoot);
             return m_Human;
         }
 
@@ -984,11 +985,27 @@ namespace Unbound.Runtime.Playables
         StreamMotion m_RootPhaseMotion;
         StreamVelocityEdits m_AnimationPhaseEdits;
 
-        internal static bool HasSingleHumanClipInput(PlayableNode node)
+        static PlayableNode SingleJobInput(PlayableNode node)
         {
-            if (node.Kind is not JobKind { ProcessInputs: true } || node.Inputs.Count != 1) return false;
+            if (node.Kind is not JobKind { ProcessInputs: true } || node.Inputs.Count != 1) return null;
             var input = node.Inputs[0];
-            return input.Weight == 1f && input.SourcePort == 0 && AnimationEvaluation.HumanMotionClip(input.Node);
+            return input.Weight == 1f && input.SourcePort == 0 ? input.Node : null;
+        }
+
+        internal static bool HasSingleHumanClipInput(PlayableNode node) =>
+            AnimationEvaluation.HumanMotionClip(SingleJobInput(node));
+
+        internal static bool HasRootMaskedLayerInput(PlayableNode node)
+        {
+            var input = SingleJobInput(node);
+            if (input?.Kind is not LayerMixerKind mixer || input.Inputs.Count != 2 || mixer.Masks.Count < 2
+                || mixer.Masks[0] != null || mixer.Masks[1] is not { MasksHumanoidParts: true } mask
+                || mask.m_HumanoidParts[0] || mixer.Additive.Contains(true)) return false;
+            var first = input.Inputs[0];
+            var second = input.Inputs[1];
+            return first.Weight == 1f && second.Weight > 0f && second.Weight <= 1f
+                && first.SourcePort == 0 && second.SourcePort == 0
+                && AnimationEvaluation.HumanMotionClip(first.Node) && AnimationEvaluation.HumanMotionClip(second.Node);
         }
 
         // The measured topology is a chain of full-weight jobs above an empty mixer.
@@ -1071,6 +1088,7 @@ namespace Unbound.Runtime.Playables
                             if (measuredVelocities) BeginAnimationPhase(context, into, inputJob);
                         }
                         context.UseKinematicAnimationRoot = e.UsesMeasuredKinematicJobRoot;
+                        context.UseLayerAnimationRoot = e.UsesMeasuredLayerJobRoot;
                         if (e.ScriptedJobOutput != null && !context.HasHumanPose)
                         {
                             // Keep the slot reserved across nested evaluations, but do not
