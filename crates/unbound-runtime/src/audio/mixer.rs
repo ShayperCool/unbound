@@ -1582,6 +1582,11 @@ pub struct Mixer {
     /// Nothing listens (the virtual device): voices only advance, unless their samples are
     /// asked for (filters, output data).
     pub discard_output: bool,
+    /// Sources catch up without mixing ([`Mixer::advance_virtual`]).
+    catching_up: bool,
+    /// Frames the graph mixed (tests).
+    #[cfg(test)]
+    mixed_frames: u64,
     listener_output_wanted: bool,
     mix: Vec<f32>,
     source_buffer: Vec<f32>,
@@ -1743,6 +1748,9 @@ impl Mixer {
             capture_listener_return: vec![0.0; Self::listener_return_capacity(&config)],
             capture_listener_return_used: false,
             discard_output: false,
+            catching_up: false,
+            #[cfg(test)]
+            mixed_frames: 0,
             listener_output_wanted: false,
             mix: vec![0.0; BLOCK * 2],
             source_buffer: vec![0.0; BLOCK * 2],
@@ -3039,6 +3047,36 @@ impl Mixer {
     }
 
     /// Advances the clock by `frames` without an output device.
+    /// The virtual device's work for `frames` frames of real time (no output device). A device
+    /// mixes on its own thread while the game's frame runs, so a long frame (a stall) costs the
+    /// game nothing; here the frame's real time is mixed as the next frame starts. Beyond the
+    /// last [`Mixer::catch_up_window`] frames it is caught up: every source moves, ends and
+    /// starts as when mixed, sources whose samples scripts read (filters, output data) are
+    /// rendered and call their filters for every dsp buffer, but nothing is mixed and the graph
+    /// (groups, zone, listener components) holds still; the window is then mixed whole, so the
+    /// output data read after it holds mixed audio. A listener script filter or an observed group
+    /// needs every buffer of the mix: then everything is mixed.
+    pub fn advance_virtual(&mut self, frames: usize) {
+        let window = self.catch_up_window();
+        let observed = self.listener_filter && self.callback.is_some()
+            || self.group_nodes.values().any(|node| node.spec.observe);
+        if frames > window && !observed {
+            self.catching_up = true;
+            self.advance(frames - window);
+            self.catching_up = false;
+            self.advance(window);
+        } else {
+            self.advance(frames);
+        }
+    }
+
+    /// The frames a virtual advance mixes whole: half a second and at least the output-data
+    /// ring, in whole dsp buffers.
+    fn catch_up_window(&self) -> usize {
+        let buffer = (self.config.buffer_size as usize).max(1);
+        RING_FRAMES.max(self.config.sample_rate as usize / 2).div_ceil(buffer) * buffer
+    }
+
     pub fn advance(&mut self, frames: usize) {
         let mut done = 0;
         while done < frames {
@@ -3117,11 +3155,12 @@ impl Mixer {
                 node.last_active = self.frames;
             }
         }
-        let need_mix = !self.discard_output
-            || self.listener_filter
+        let need_mix = !self.catching_up
+            && (!self.discard_output
+                || self.listener_filter
             || !self.listener_chain.filters.is_empty()
-            || self.listener_output_wanted
-            || !self.group_nodes.is_empty();
+                || self.listener_output_wanted
+                || !self.group_nodes.is_empty());
         self.mix[..n * 2].fill(0.0);
         for node in self.group_nodes.values_mut() {
             node.buffer[..n * 2].fill(0.0);
@@ -3630,6 +3669,15 @@ impl Mixer {
                     *m += *b;
                 }
             }
+        }
+        if self.catching_up {
+            // The graph holds still while sources catch up (Mixer::advance_virtual).
+            self.frames += n as u64;
+            return DeferredListenerReturn::default();
+        }
+        #[cfg(test)]
+        if need_mix {
+            self.mixed_frames += n as u64;
         }
         for &handle in &self.group_order {
             let root = self.group_nodes[&handle].spec.mixer;
@@ -4605,7 +4653,11 @@ fn render_voice(
             voice.zone_send.end_at = voice.end_at;
             voice.zone_send.looping = looping;
         }
-        let input = if let Some(stream) = &mut voice.stream {
+        // A decoded voice nothing hears (virtual, or its samples unwanted) only moves: every
+        // consumer of its frame is in the output branch below.
+        let input = if out.is_none() && voice.stream.is_none() {
+            [0.0; MAX_INPUT_CHANNELS]
+        } else if let Some(stream) = &mut voice.stream {
             let i = voice.position.floor();
             let frac = (voice.position - i) as f32;
             let i = i as u64;
@@ -5487,6 +5539,80 @@ mod tests {
         assert_eq!(m.source_state(7).position, 0.0);
         // The rest after the end is silent.
         assert_eq!(out[50 * 2], 0.0);
+    }
+
+    /// A virtual advance of 40.96 s (at 1000 Hz, 1024-frame buffers) after a source starts a 60 s
+    /// clip with a script filter, a 5 s clip and one scheduled at 10 s, against the same span
+    /// mixed whole.
+    fn stalled(catch_up: bool, listener_script: bool) -> (Mixer, i64, i64) {
+        use std::cell::Cell;
+        thread_local! {
+            static SOURCE: Cell<i64> = const { Cell::new(0) };
+            static LISTENER: Cell<i64> = const { Cell::new(0) };
+        }
+        extern "C" fn script(kind: i32, _: u64, _: *mut f32, _: i32, _: i32, _: i64) {
+            match kind {
+                callback::SOURCE_FILTER => SOURCE.with(|c| c.set(c.get() + 1)),
+                callback::LISTENER_FILTER => LISTENER.with(|c| c.set(c.get() + 1)),
+                _ => {}
+            }
+        }
+        SOURCE.with(|c| c.set(0));
+        LISTENER.with(|c| c.set(0));
+        let mut m = mixer();
+        m.discard_output = true;
+        m.set_callback(Some(script));
+        m.listener_filter = listener_script;
+        let mut out = [0.0; 4];
+        // The listener's output data is read, so the virtual device mixes.
+        m.output_data(0, 0, &mut out, -1);
+        m.add_clip(1, ramp_clip(60_000, 1000));
+        m.add_clip(2, ramp_clip(5_000, 1000));
+        source_with(&mut m, 7, 1, |p| p.flags = source_flags::FILTER);
+        source_with(&mut m, 8, 2, |_| {});
+        source_with(&mut m, 9, 1, |_| {});
+        play(&mut m, 7, command::PLAY, 0.0);
+        play(&mut m, 8, command::PLAY, 0.0);
+        play(&mut m, 9, command::PLAY, 10.0);
+        let frames = 40 * 1024;
+        if catch_up {
+            m.advance_virtual(frames);
+        } else {
+            m.advance(frames);
+        }
+        (m, SOURCE.with(Cell::get), LISTENER.with(Cell::get))
+    }
+
+    #[test]
+    fn a_stall_is_caught_up_with_every_source_and_filter_as_when_mixed() {
+        let (mut whole, filtered_whole, _) = stalled(false, false);
+        let (mut caught, filtered, _) = stalled(true, false);
+        // Only the window (16384 frames: the output ring, in whole 1024-frame buffers) was mixed.
+        assert_eq!(whole.mixed_frames, 40 * 1024);
+        assert_eq!(caught.mixed_frames, 16 * 1024);
+        assert_eq!(caught.frames, whole.frames);
+        // The filtered source called its script for every buffer of the stall.
+        assert_eq!(filtered, filtered_whole);
+        assert!(filtered >= 40);
+        for handle in [7, 8, 9] {
+            let (a, b) = (whole.source_state(handle), caught.source_state(handle));
+            assert_eq!((a.main, a.position), (b.main, b.position), "source {handle}");
+        }
+        assert_eq!(caught.source_state(8).main, voice_state::NONE);
+        assert_eq!(caught.source_state(9).main, voice_state::PLAYING);
+        // The window was mixed whole: the listener's output data is the same.
+        let (mut a, mut b) = (vec![0.0; 4096], vec![0.0; 4096]);
+        whole.output_data(0, 0, &mut a, -1);
+        caught.output_data(0, 0, &mut b, -1);
+        assert_eq!(a, b);
+        assert!(b.iter().any(|v| *v != 0.0));
+    }
+
+    #[test]
+    fn a_listener_script_filter_is_called_for_every_buffer_of_a_stall() {
+        let (caught, _, heard) = stalled(true, true);
+        assert_eq!(caught.mixed_frames, 40 * 1024);
+        assert_eq!(heard, stalled(false, true).2);
     }
 
     #[test]

@@ -1108,6 +1108,22 @@ virtual device's voices move with its clock: they are mixed as the frame starts 
 `isPlaying` read in a frame have counted that frame's real time, as the Editor's audio thread has by
 the time the frame's scripts run.
 
+A long frame (a stall) is counted whole as well: through a 3 s main-thread stall the Editor's audio
+thread moves `dspTime` by it, runs a playing source's `OnAudioFilterRead` for every buffer of it with
+the source's signal, moves the source by it, ends a shorter clip and starts a scheduled one at its
+time (tests/projects/dspclock `stall.*`). The Editor's thread does that work beside the frame; the
+virtual device does it on the main thread as the next frame starts, and the time it spends mixing is
+itself real time the frame after owes. Where mixing runs slower than real time (a busy machine, a
+first run compiling its shaders) a run would never progress. Beyond the last half second of a
+frame's time (at least the 16384 frames of output data, in whole buffers) the virtual device
+therefore catches up (`Mixer::advance_virtual`): sources move, end and start as when mixed, those
+whose samples scripts read (`OnAudioFilterRead`, `GetOutputData`) are rendered and run their filters
+for every buffer, but nothing is mixed and the graph (mixer groups, reverb zones, listener components)
+holds still; the last half second is then mixed whole, so output data read after it holds mixed audio.
+A listener `OnAudioFilterRead` or an observed group keeps every buffer mixed. Unmeasured: what a
+graph's effects carry from before a catch-up into the half second after it (the Editor's ran
+through the stall).
+
 Limits: the clock does not move within a frame (that needs an audio thread running in real time,
 which runs at a fixed frame rate would no longer reproduce); a project with audio disabled runs the
 clock and its voices as any other; the clock starts at 0 when the game starts (the Editor's counts

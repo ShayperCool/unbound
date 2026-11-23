@@ -645,7 +645,7 @@ impl Engine {
         *owed += delta_time.max(0.0);
         let buffers = (*owed * rate / buffer as f64).floor() as usize;
         if buffers > 0 {
-            mixer.advance(buffers * buffer);
+            mixer.advance_virtual(buffers * buffer);
             *owed -= (buffers * buffer) as f64 / rate;
         }
         self.clock.store(&mixer);
