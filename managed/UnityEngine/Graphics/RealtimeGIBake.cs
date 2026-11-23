@@ -91,7 +91,8 @@ namespace UnityEngine
                     var environment = BakeEnvironment(file);
                     // The lightmaps are made where their lighting data is written.
                     bool lightmaps = settings != null && settings.bakedGI && !settings.realtimeGI && !HasProbeGroups(file)
-                        && settings.directionalityMode != LightmapsMode.CombinedDirectional && settings.mixedBakeMode != MixedLightingMode.Shadowmask;
+                        && settings.directionalityMode != LightmapsMode.CombinedDirectional && settings.mixedBakeMode != MixedLightingMode.Shadowmask
+                        && settings.lightmapCompression == LightmapCompression.None;
                     var baked = BakedAtlas.Lay(file, settings, images: lightmaps);
                     WriteLightingData(scene, file, settings, environment, lightmaps ? baked : null);
                     first = false;
@@ -256,6 +257,7 @@ namespace UnityEngine
             // tests/projects/bakedbuffers Directional*, Masks*.)
             : settings.bakedGI && settings.directionalityMode == LightmapsMode.CombinedDirectional ? "directional lightmaps are not written yet"
             : settings.bakedGI && settings.mixedBakeMode == MixedLightingMode.Shadowmask ? "the shadowmask of the Shadowmask Lighting Mode is not written yet"
+            : settings.bakedGI && settings.lightmapCompression != LightmapCompression.None ? "lightmaps with compression are not measured"
             : settings.bakedGI && !lightmapsMade ? "this bake did not make its lightmaps (said)"
             : folder == null ? "an untitled scene's is not measured"
             : !Compat.BakeFilesMeasured ? $"of Unity {Application.unityVersion} it is not measured (its release family)"
@@ -292,7 +294,12 @@ namespace UnityEngine
                 guids.Add(UnityEditor.AssetDatabase.WriteBakedFile(path, baked.Images[i]));
                 if (UnityEditor.AssetImporter.GetAtPath(path) is UnityEditor.TextureImporter importer)
                 {
+                    // As the Editor imports a lightmap of a bake without lightmap compression
+                    // (tests/projects/bakedbuffers written/Lightmap-0_comp_light.exr.meta).
                     importer.textureType = UnityEditor.TextureImporterType.Lightmap;
+                    importer.streamingMipmaps = true;
+                    importer.anisoLevel = 3;
+                    importer.textureCompression = UnityEditor.TextureImporterCompression.Uncompressed;
                     importer.SaveAndReimport();
                 }
             }

@@ -235,6 +235,7 @@ namespace UnityEngine.Tests
                     environment.bakedGI = true;
                     environment.directionalityMode = LightmapsMode.NonDirectional;
                     environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
+                    environment.lightmapCompression = LightmapCompression.None;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     Assert.Contains("lightmaps", Unwritten(environment, "Assets/Scenes/Lit", true));
                     Assert.Contains("light probes", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true, probes: true));
@@ -244,6 +245,8 @@ namespace UnityEngine.Tests
                     environment.mixedBakeMode = MixedLightingMode.Shadowmask;
                     Assert.Contains("shadowmask", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
+                    environment.lightmapCompression = LightmapCompression.NormalQuality;
+                    Assert.Contains("compression", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.bakedGI = false;
                     // An environment kept in part (several scenes, gamma, Custom sources, no device),
                     // an untitled scene, a scene of a package the project does not hold: not written.

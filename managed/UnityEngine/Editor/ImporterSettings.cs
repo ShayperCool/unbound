@@ -247,6 +247,13 @@ namespace UnityEditor
             set { CheckImporterState("set_filterMode"); SetI("textureSettings.filterMode", (int)value); }
         }
 
+        /// <summary>Mipmap streaming (the .meta's streamingMipmaps).</summary>
+        public bool streamingMipmaps
+        {
+            get { CheckImporterState("get_streamingMipmaps"); return B("streamingMipmaps"); }
+            set { CheckImporterState("set_streamingMipmaps"); SetB("streamingMipmaps", value); }
+        }
+
         public int anisoLevel
         {
             get { CheckImporterState("get_anisoLevel"); return Read(m_Settings, "textureSettings.aniso"); }

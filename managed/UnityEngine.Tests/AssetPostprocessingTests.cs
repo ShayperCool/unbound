@@ -109,6 +109,18 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void StreamingMipmapsReadAndWriteTheMeta()
+        {
+            // A bake's lightmap is imported with mipmap streaming on (bakedbuffers written/).
+            var importer = (TextureImporter)AssetImporter.FromMeta("Assets/L.exr", "a123456789abcdef0123456789abcdef", "TextureImporter",
+                TestYaml.DocumentBody("TextureImporter:\n  streamingMipmaps: 0\n  userData: \n"));
+            Assert.False(importer.streamingMipmaps);
+            importer.streamingMipmaps = true;
+            Assert.True(importer.streamingMipmaps);
+            Assert.Equal(1, MetaSettings.Int(importer.m_Settings, "streamingMipmaps", -1));
+        }
+
+        [Fact]
         public void SetTextureSettingsWritesTheCubemapConvolutionAndSeams()
         {
             // A reflection cube's import (a bake's ReflectionProbe-0.exr): specular convolution
