@@ -565,7 +565,7 @@ namespace UnityEngine
                 ids[i] = BitConverter.Int32BitsToSingle(zones[start + i].Id);
             }
             var mesh = ProceduralMeshes.Get(MeshTopology.Triangles, n * VerticesPerZone).Sync();
-            ulong material = m_Material.Sync();
+            ulong material = m_Material.Sync(profileDraw: false);
             bool selfBound = m_DoubleBuffered && m_Other != null;
             ulong target = selfBound ? m_Other.EnsureCreated() : EnsureCreated();
             // Every slice of a volume draws the batch; the include drops the zones whose slices
@@ -573,6 +573,7 @@ namespace UnityEngine
             for (int face = 0; face < Elements(); face++)
             {
                 if (dimension == TextureDimension.Cube && (m_CubemapFaceMask & (1u << face)) == 0) continue;
+                m_Material.MarkProfilerDrawEmitted();
                 var properties = Variables(face, space);
                 properties[s_Centers] = centers;
                 properties[s_SizesAndRotations] = sizes;

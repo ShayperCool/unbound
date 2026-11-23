@@ -196,7 +196,10 @@ namespace UnityEngine
         internal bool? ProfilerPassAvailable(int pass, bool allPasses)
         {
             if (!allPasses && pass < 0) return false;
-            if (globalRenderPipeline.Length != 0 || ActiveSubShader(null, null) is not { } active) return null;
+            if (globalRenderPipeline.Length != 0 || ActiveSubShader(null, null) is not { } active
+                || active.Lod is not int lod || lod > EffectiveLOD
+                || !Unbound.Runtime.ShaderDeclarations.RunsUnder(Unbound.Runtime.ShaderDeclarations.Tag(active.Tags, "RenderPipeline"), globalRenderPipeline))
+                return null;
             int count = active.Passes.Count;
             if (count == 0 || !allPasses && pass >= count) return false;
             if (!allPasses) return OrdinaryProfilerPass(active.Passes[pass]) ? true : null;

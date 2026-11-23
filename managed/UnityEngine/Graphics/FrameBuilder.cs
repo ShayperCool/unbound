@@ -92,8 +92,6 @@ namespace Unbound.Runtime
         {
             internal ulong Mesh;
             internal int Submesh;
-            // The original material's slot for a draw using a synthetic property-block Material.
-            internal int PropertyBlockSlotPlusOne;
             internal Material Material;
             internal Matrix4x4 Model;
             internal Color Color;
@@ -285,15 +283,12 @@ namespace Unbound.Runtime
                 // A slot without a material, or whose material was destroyed, draws with the error
                 // material, a slot beyond the sub-meshes too (measured for mesh, skinned mesh, sprite
                 // and line renderers and a TextMesh's text: tests/projects/missingmaterial).
-                var source = materials[i];
-                var material = renderer.DrawnMaterial(i, source);
-                int propertyBlockSlot = material != null && !ReferenceEquals(material, source) ? i + 1 : 0;
+                var material = renderer.DrawnMaterial(i, materials[i]);
                 if (material == null) material = Material.Error;
                 into.Add(new DrawItem
                 {
                     Mesh = meshHandle,
                     Submesh = Math.Min(i - firstMaterial, submeshes - 1),
-                    PropertyBlockSlotPlusOne = propertyBlockSlot,
                     Material = material,
                     Model = model,
                     Color = color,
@@ -1115,11 +1110,11 @@ namespace Unbound.Runtime
             if ((drawing.perObjectData & (PerObjectData.LightData | PerObjectData.LightIndices)) != 0)
                 ApplyPerObjectLights(data, s_Items, order, drawing.mainLightIndex, (drawing.perObjectData & PerObjectData.Lightmaps) != 0);
             if (s_MaterialHandles.Length < count) Array.Resize(ref s_MaterialHandles, Math.Max(count, s_MaterialHandles.Length * 2));
-            ulong overrideHandle = overrideMaterial != null ? overrideMaterial.Sync() : 0;
+            ulong overrideHandle = overrideMaterial != null ? overrideMaterial.Sync(profileDraw: false) : 0;
             for (int i = 0; i < count; i++)
                 s_MaterialHandles[i] = overrideMaterial != null ? overrideHandle
-                    : overrideShader != null ? ReplacementMaterial(s_Items[order[i]].Material, overrideShader).Sync()
-                    : s_Items[order[i]].Material.Sync();
+                    : overrideShader != null ? ReplacementMaterial(s_Items[order[i]].Material, overrideShader).Sync(profileDraw: false)
+                    : s_Items[order[i]].Material.Sync(profileDraw: false);
             bool lightmaps = (drawing.perObjectData & PerObjectData.Lightmaps) != 0;
             bool probes = (drawing.perObjectData & PerObjectData.LightProbe) != 0;
             bool proxyVolumes = (drawing.perObjectData & PerObjectData.LightProbeProxyVolume) != 0;
@@ -1167,7 +1162,8 @@ namespace Unbound.Runtime
                 if (motion) NextDrawMotion(item);
                 int drawnPasses = pass == GfxStream.TaggedPasses && item.Material.shader?.PassInfo is { Found: true } listed
                     ? MatchListPasses(listed).Count : 1;
-                EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes, srp: true, proxyVolumes: proxyVolumes, passes: drawnPasses);
+                EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes, srp: true, proxyVolumes: proxyVolumes,
+                    passes: drawnPasses, overrideMaterial: overrideMaterial);
             }
             if (block >= 0) GfxStream.StateOverride(null);
             }
@@ -1283,7 +1279,8 @@ namespace Unbound.Runtime
         /// probes, <see cref="BakedLighting.Apply"/>): its keywords are on for the draw alone.</summary>
         static void EmitDraw(in DrawItem item, ulong material, int pass, bool lightmaps = true, bool probes = true,
             Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null, string extraKeyword3 = null,
-            RenderDispatchContext dispatch = RenderDispatchContext.Unknown, bool srp = false, bool proxyVolumes = true, int passes = 1)
+            RenderDispatchContext dispatch = RenderDispatchContext.Unknown, bool srp = false, bool proxyVolumes = true,
+            int passes = 1, Material overrideMaterial = null)
         {
             using var pooled = DrawPropertyPool.Begin();
             Describe(item);
@@ -1330,8 +1327,11 @@ namespace Unbound.Runtime
                 GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
                 item.ClipEnabled ? item.Clip : (Rect?)null, properties, flipWinding: item.Renderer?.DrawFlipWinding(item.Model) ?? false, tint: item.Tint);
             }
-            if (item.PropertyBlockSlotPlusOne != 0 && item.Material?.m_Handle == material)
-                item.Renderer?.PrepareProfilerBlockDraw(item.PropertyBlockSlotPlusOne - 1, item.Material);
+            if (passes > 0)
+            {
+                var drawn = overrideMaterial != null ? overrideMaterial : item.Material?.m_Handle == material ? item.Material : null;
+                drawn?.MarkProfilerDrawEmitted();
+            }
             if (restoreCanvasClip) GfxStream.Keyword("UNITY_UI_CLIP_RECT", true);
             if (masking) SpriteMasking.After(previousState);
             foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, false);
@@ -2516,7 +2516,7 @@ namespace Unbound.Runtime
         {
             // Materials upload their changes first: an upload hands over what was recorded before it.
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
-            for (int i = from; i < to; i++) s_MaterialHandles[i] = s_Items[i].Material.Sync();
+            for (int i = from; i < to; i++) s_MaterialHandles[i] = s_Items[i].Material.Sync(profileDraw: false);
             try
             {
                 for (int i = from; i < to; i++) EmitItem(i, dispatch);

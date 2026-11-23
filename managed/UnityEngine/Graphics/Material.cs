@@ -185,6 +185,7 @@ namespace UnityEngine
             internal int? m_ProfilerLayoutVersion;
             internal HashSet<int> m_ProfilerAddedFloats;
             internal ProfilerStorage m_ProfilerStorage;
+            internal Material m_ProfilerBlockSource;
         }
         readonly MaterialState m_State = new MaterialState();
 
@@ -1557,6 +1558,7 @@ namespace UnityEngine
         /// the material or the block changed).</summary>
         internal void ResetToCopyOf(Material source)
         {
+            m_State.m_ProfilerBlockSource = null;
             source.Inherit();
             ClearForCopyOf(source);
             m_Tags.Clear();
@@ -1927,7 +1929,7 @@ namespace UnityEngine
 
         internal unsafe ulong Sync(bool profileDraw = true)
         {
-            if (profileDraw) PrepareProfilerDraw();
+            if (profileDraw) MarkProfilerDrawEmitted();
             if (m_Handle == 0) m_Handle = RenderHandles.Next();
             // A maximum LOD changed: the shader goes again when the SubShader it names changed.
             if (m_LodEpoch != Shader.s_LodEpoch)
@@ -2030,6 +2032,7 @@ namespace UnityEngine
 
         internal override void OnEngineDestroy()
         {
+            m_State.m_ProfilerBlockSource = null;
             Native.ReleaseMaterial(m_Handle);
             m_Handle = 0;
         }

@@ -483,15 +483,9 @@ namespace UnityEngine
                     case Matrix4x4[] ms: drawn.SetMatrixArray(p.Key, ms); break;
                 }
             }
+            drawn.TrackProfilerBlockSource(source);
             m_BlockMaterials[index] = (drawn, source, source.m_Version, block, block.m_Version);
             return drawn;
-        }
-
-        internal void PrepareProfilerBlockDraw(int index, Material drawn)
-        {
-            if (m_BlockMaterials == null || (uint)index >= (uint)m_BlockMaterials.Length) return;
-            var cached = m_BlockMaterials[index];
-            if (ReferenceEquals(cached.Drawn, drawn)) cached.Source.PrepareProfilerDraw();
         }
 
         /// <summary>Copies the block's values: later edits of <paramref name="properties"/> draw only

@@ -652,11 +652,12 @@ namespace UnityEngine.Rendering
                 if (camera == null) return;
                 var items = new List<Unbound.Runtime.FrameBuilder.DrawItem>();
                 renderer.CollectDraws(Unbound.Runtime.FrameBuilder.ContextOf(camera), items);
-                ulong handle = material.Sync();
+                ulong handle = material.Sync(profileDraw: false);
                 for (int i = 0; i < items.Count; i++)
                 {
                     var item = items[i];
                     if (items.Count > 1 && i != submeshIndex) continue;
+                    material.MarkProfilerDrawEmitted();
                     if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
                     GfxStream.Draw(item.Mesh, item.Submesh, handle, pass, item.Model, item.Color, item.MainTexture, item.ClipEnabled ? item.Clip : (Rect?)null,
                         Unbound.Runtime.FrameBuilder.WithRenderingLayer(renderer.renderingLayerMask, item.Properties), tint: item.Tint);

@@ -26,6 +26,20 @@ namespace UnityEngine
                 m_State.m_ProfilerStorage = ProfilerStorage.DrawPrepared;
         }
 
+        internal void TrackProfilerBlockSource(Material source)
+        {
+            m_State.m_ProfilerBlockSource = source.m_State.m_ProfilerStorage == ProfilerStorage.Pending ? source : null;
+        }
+
+        internal void MarkProfilerDrawEmitted()
+        {
+            PrepareProfilerDraw();
+            var source = m_State.m_ProfilerBlockSource;
+            if (source is null) return;
+            m_State.m_ProfilerBlockSource = null;
+            source.PrepareProfilerDraw();
+        }
+
         internal void ObserveProfilerPass(int pass, bool allPasses = false)
         {
             if (m_State.m_ProfilerStorage != ProfilerStorage.Pending) return;

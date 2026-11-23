@@ -2,6 +2,7 @@ using System;
 using Unbound.Runtime;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
+using UnityEngine.Tilemaps;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -213,9 +214,9 @@ namespace UnityEngine.Tests
                 var drawn = renderer.DrawnMaterial(0, instance);
                 Assert.Equal(4f, drawn.GetFloat("_Parameter"));
                 Assert.Equal(1416, Profiler.GetRuntimeMemorySizeLong(instance));
-                renderer.PrepareProfilerBlockDraw(0, source);
+                drawn.Sync(profileDraw: false);
                 Assert.Equal(1416, Profiler.GetRuntimeMemorySizeLong(instance));
-                renderer.PrepareProfilerBlockDraw(0, drawn);
+                drawn.MarkProfilerDrawEmitted();
                 Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(instance));
                 Assert.Equal(0.5f, instance.GetFloat("_Parameter"));
                 Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(instance));
@@ -226,6 +227,113 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(instance);
                 Object.DestroyImmediate(source);
                 Object.DestroyImmediate(shader);
+            }
+        }
+
+        [Fact]
+        public void AVisibleTilemapDrawConsumesThePendingMaterialBehindItsBlock()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var shader = CreateShader(PlainShader);
+            var source = new Material(shader);
+            var material = Object.Instantiate(source);
+            var texture = new Texture2D(8, 8);
+            var sprite = Sprite.Create(texture, new Rect(0, 0, 8, 8), Vector2.zero, 8, 0, SpriteMeshType.FullRect);
+            var tile = ScriptableObject.CreateInstance<Tile>();
+            var grid = new GameObject("Grid", typeof(Grid));
+            var owner = new GameObject("Tilemap", typeof(Tilemap), typeof(TilemapRenderer)) { layer = 28 };
+            owner.transform.SetParent(grid.transform, false);
+            var cameraObject = new GameObject("Camera", typeof(Camera));
+            var target = new RenderTexture(8, 8, 16);
+            try
+            {
+                var renderer = owner.GetComponent<TilemapRenderer>();
+                renderer.sharedMaterial = material;
+                var block = new MaterialPropertyBlock();
+                block.SetFloat("_Parameter", 4f);
+                renderer.SetPropertyBlock(block);
+                tile.sprite = sprite;
+                owner.GetComponent<Tilemap>().SetTile(Vector3Int.zero, tile);
+                var camera = cameraObject.GetComponent<Camera>();
+                camera.enabled = false;
+                cameraObject.transform.position = new Vector3(0f, 0f, -5f);
+                camera.targetTexture = target;
+                camera.cullingMask = 0;
+                camera.Render();
+                Assert.Equal(1416, Profiler.GetRuntimeMemorySizeLong(material));
+                camera.cullingMask = 1 << owner.layer;
+                camera.Render();
+                Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(material));
+                Assert.Equal(0.5f, material.GetFloat("_Parameter"));
+                Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(material));
+            }
+            finally
+            {
+                Object.DestroyImmediate(cameraObject);
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(grid);
+                Object.DestroyImmediate(tile);
+                Object.DestroyImmediate(sprite);
+                Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(source);
+                Object.DestroyImmediate(shader);
+            }
+        }
+
+        [Fact]
+        public void ShaderLodCanRejectAnUploadedMaterialBeforeItsFirstDraw()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            const string declarations = "{\"found\":true,\"subshaders_known\":true,\"subshaders\":[{\"tags\":[],\"passes\":[{\"name\":\"P\",\"tags\":[]}],\"lod\":100,\"restricted\":false}]}";
+            const string noPasses = "{\"found\":false,\"known\":true,\"shader\":\"\",\"tags\":{},\"passes\":[]}";
+            const string onePass = "{\"found\":true,\"known\":true,\"shader\":\"Tests/MaterialMemory\",\"tags\":{},\"passes\":[{\"name\":\"P\",\"tags\":{}}]}";
+            ShaderDeclarations.ResetForTests();
+            ShaderPassInfo.ResetForTests();
+            ShaderDeclarations.s_FrameForTests = 1;
+            ShaderDeclarations.s_CallForTests = (_, _) => declarations;
+            ShaderPassInfo.s_CallForTests = name => name.EndsWith("|lod=50", StringComparison.Ordinal) ? noPasses : onePass;
+            var shader = CreateShader(PlainShader);
+            var source = new Material(shader);
+            var material = Object.Instantiate(source);
+            var direct = Object.Instantiate(source);
+            var owner = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var cameraObject = new GameObject("Camera", typeof(Camera));
+            var target = new RenderTexture(8, 8, 16);
+            try
+            {
+                owner.layer = 28;
+                owner.GetComponent<MeshRenderer>().sharedMaterial = material;
+                var camera = cameraObject.GetComponent<Camera>();
+                camera.enabled = false;
+                cameraObject.transform.position = new Vector3(0f, 0f, -5f);
+                camera.targetTexture = target;
+                camera.cullingMask = 1 << owner.layer;
+                shader.maximumLOD = 50;
+                Assert.True(shader.IsLodHidden);
+                camera.Render();
+                Assert.Equal(1416, Profiler.GetRuntimeMemorySizeLong(material));
+                _ = direct.SetPass(0);
+                Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(direct));
+                shader.maximumLOD = 100;
+                Assert.False(shader.IsLodHidden);
+                camera.Render();
+                Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(material));
+            }
+            finally
+            {
+                Immediate.PassMaterial = null;
+                Object.DestroyImmediate(cameraObject);
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(owner);
+                Object.DestroyImmediate(direct);
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(source);
+                Object.DestroyImmediate(shader);
+                ShaderDeclarations.s_CallForTests = null;
+                ShaderDeclarations.s_FrameForTests = null;
+                ShaderDeclarations.ResetForTests();
+                ShaderPassInfo.ResetForTests();
             }
         }
 

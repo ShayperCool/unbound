@@ -346,7 +346,7 @@ namespace Unbound.Runtime
                 if (item.Lighting.Cast == ShadowCastingMode.Off || (light.cullingMask & (1 << item.Layer)) == 0) continue;
                 s_Casters.Add(item);
             }
-            for (int i = 0; i < s_Casters.Count; i++) s_Casters[i].Material.Sync();
+            for (int i = 0; i < s_Casters.Count; i++) s_Casters[i].Material.Sync(profileDraw: false);
         }
 
         internal static bool BuiltinSeesShadowSplit(in DrawItem source, in ShadowSplitData split)

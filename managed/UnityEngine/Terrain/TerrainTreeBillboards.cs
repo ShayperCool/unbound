@@ -279,9 +279,12 @@ namespace UnityEngine
                 {
                     var material = p.ImposterMaterials[i];
                     if (material == null || i >= p.Mesh.subMeshCount) continue;
-                    ulong handle = material.Sync();
+                    ulong handle = material.Sync(profileDraw: false);
                     for (int pass = 0; pass < material.passCount; pass++)
+                    {
+                        material.MarkProfilerDrawEmitted();
                         GfxStream.Draw(mesh, i, handle, pass, Matrix4x4.identity, Color.white);
+                    }
                 }
             }
             GfxStream.Restore(saved);
