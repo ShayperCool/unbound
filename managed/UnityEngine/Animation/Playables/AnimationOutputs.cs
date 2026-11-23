@@ -895,7 +895,7 @@ namespace Unbound.Runtime.Playables
             var result = AnimStream.Rent(bindings);
             var evaluatedPlayer = animator.m_Player;
             var withController = evaluatedPlayer != null && animator.isActiveAndEnabled;
-            e.MotionMode = MotionModeOf(animator, outputs);
+            e.MotionMode = MotionModeOf(animator, outputs, e.m_ExplicitEvaluation);
             motion = RootMotionStep.Zero;
             motionDeltaTime = (float)outputs[0].Dt;
             if (withController)
@@ -1049,8 +1049,10 @@ namespace Unbound.Runtime.Playables
         /// humanoid by generic root motion (<see cref="GenericClipTree"/>). An
         /// AnimatorControllerPlayable with humanoid clips as such an output's source moves the
         /// Animator by its clips' humanoid root motion, as the Animator's own controller does.
-        /// Other humanoid graph shapes warn and carry no motion.</summary>
-        static RootMotionMode MotionModeOf(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs)
+        /// A direct explicit manual output of a mirrored clip, optionally with a single job,
+        /// uses the same root-motion sampler in the measured context. Other graph shapes warn.</summary>
+        static RootMotionMode MotionModeOf(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs,
+            bool explicitEvaluation)
         {
             bool requested = animator.m_ApplyRootMotion || MoveCallbacks.Any(animator);
             if (!animator.isHuman) return requested ? RootMotionMode.Compute : RootMotionMode.Zero;
@@ -1064,7 +1066,8 @@ namespace Unbound.Runtime.Playables
                     // Animation jobs pass their input's humanoid motion on (6000.0.71f1,
                     // tests/projects/humanoid stream.*).
                     var source = BelowJobs(o.Source);
-                    if (HumanMotionClip(source)) return RootMotionMode.Human;
+                    if (HumanMotionClip(source) || requested && CanMoveMirroredClip(animator, o, source, explicitEvaluation))
+                        return RootMotionMode.Human;
                     // A controller with humanoid clips moves the Animator as its own controller
                     // would (6000.0.71f1, tests/projects/humanoid controllerGraph.*).
                     if (o.Source.Kind is ControllerKind { HasHumanClips: true } && !o.Source.HasConnectedOutput()) return RootMotionMode.Human;
@@ -1083,6 +1086,7 @@ namespace Unbound.Runtime.Playables
                     + "with input weights that are not infinite, or of clips without humanoid curves, mixers and layer mixers, "
                     + "or of an AnimatorControllerPlayable with humanoid clips, "
                     + "is supported, without a playing controller, shared nodes or loop overrides; "
+                    + "a mirrored clip or a single job above it moves a humanoid with measured manual output settings; "
                     + "controller playables below mixers or jobs, animation jobs other than ones passing such a source on whole, "
                     + "fractional or multiple outputs remain unsupported");
             return RootMotionMode.Unsupported;
@@ -1117,9 +1121,17 @@ namespace Unbound.Runtime.Playables
             return connected > 0;
         }
 
-        internal static bool HumanMotionClip(PlayableNode node) => node != null && !node.Destroyed
+        static bool CanMoveMirroredClip(Animator animator, PlayableOutputData output, PlayableNode source,
+            bool explicitEvaluation) =>
+            Compat.HumanPlayableMirroredMotion && explicitEvaluation && output.Graph.UpdateMode == DirectorUpdateMode.Manual
+            && HumanMotionClip(source, allowMirrored: true)
+            && (output.Source == source || output.Source.Inputs.Count == 1 && output.Source.Inputs[0].Node == source)
+            && animator.updateMode == AnimatorUpdateMode.Normal && !MoveCallbacks.Any(animator)
+            && animator.GetComponent<Rigidbody>() == null && animator.GetComponent<CharacterController>() == null;
+
+        internal static bool HumanMotionClip(PlayableNode node, bool allowMirrored = false) => node != null && !node.Destroyed
             && node.Kind is ClipKind clip && clip.Clip != null && clip.Clip.HasHumanCurves
-            && clip.Clip.length > 0f && !clip.Clip.HumanClipMotion.Settings.Mirror && !clip.OverrideLoopTime;
+            && clip.Clip.length > 0f && (allowMirrored || !clip.Clip.HumanClipMotion.Settings.Mirror) && !clip.OverrideLoopTime;
 
         // The clip has sampled its movement and this job finished ProcessRootMotion. The
         // animation callback reads after the script moved the root. A recursive evaluation,

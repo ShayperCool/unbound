@@ -395,9 +395,18 @@ matches within the comparator's existing tolerance and is checked with the other
 Five movement controls record both foot velocities in jobs over clips with moving body curves,
 and MatchTarget on the right foot of an attached controller. They compare plain and mirrored
 clips and a mirrored partial foot rotation. The MatchTarget check uses a rotation-only weight
-mask. A separate full capture records the unsupported root movement and its scene differences
-for mirrored clip playables. These job controls check the sampled foot velocities.
+mask. These job controls check the sampled foot velocities.
 Families without measured defaults still report the fallback.
+
+Six playable root-motion controls append 66 rows from a matching pair of macOS 6000.0.71f1
+Editor captures. A mirrored clip moves and turns the Animator when it is the source of a single
+full-weight manual output or the input to one animation job. The controls record root motion,
+final poses, an animated yaw, Foot IK, and the stream pose above a moving clip. The measured
+Animator has no controller, movement script or physics body, the Normal update mode, and
+applyRootMotion enabled. The graph uses explicit evaluation and the DefaultValues stream source.
+Other mirrored playable shapes and release families retain the report.
+[Animator.applyRootMotion](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-applyRootMotion.html),
+[PlayableGraph.Evaluate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableGraph.Evaluate.html).
 [Animation tab](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AnimationClip.html),
 [AnimationHumanStream.GetGoalLocalPosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationHumanStream.GetGoalLocalPosition.html).
 

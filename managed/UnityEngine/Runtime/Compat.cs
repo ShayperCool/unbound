@@ -971,6 +971,9 @@ namespace Unbound.Runtime
         /// <summary>Mirroring a humanoid clip also mirrors the default components of its IK goals.</summary>
         internal static bool HumanClipMirroredGoalDefaults => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Root motion for a mirrored clip in a direct manual humanoid output.</summary>
+        internal static bool HumanPlayableMirroredMotion => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Humanoid root motion composed by mixer trees (any input count and nesting, any
         /// input weight sum blended unnormalized, weights changed between evaluations or while
         /// culled), measured by animculling humanMixerMotion/humanMixerShape on

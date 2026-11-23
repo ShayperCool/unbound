@@ -61,6 +61,39 @@ namespace UnityEngine.Tests
             return graph;
         }
 
+        [Theory]
+        [InlineData(TestRelease.Measured, DirectorUpdateMode.Manual, true)]
+        [InlineData(TestRelease.Unmeasured, DirectorUpdateMode.Manual, false)]
+        [InlineData(TestRelease.Measured, DirectorUpdateMode.GameTime, false)]
+        public void ADirectMirroredClipAppliesRootMotionInTheMeasuredManualOutput(
+            string release, DirectorUpdateMode updateMode, bool applies)
+        {
+            using var pin = TestRelease.Pin(release);
+            const string diagnostic = "Animator root motion of composed playable graph outputs on humanoid avatars";
+            int Hits() => Stubs.HitReport().FirstOrDefault(hit => hit.Key == diagnostic).Value;
+
+            var root = Rig(out var animator, out var avatar);
+            var clip = Clip(turn: false);
+            clip.m_Mirror = true;
+            var graph = Graph(animator, clip, out _);
+            graph.SetTimeUpdateMode(updateMode);
+            try
+            {
+                int before = Hits();
+                graph.Evaluate(0f);
+                graph.Evaluate(0.25f);
+                Near.Equal(applies ? new Vector3(-.5f, 0f, 0f) : Vector3.zero, root.transform.position, 1e-5f);
+                Assert.Equal(!applies, Hits() > before);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(avatar);
+                Object.DestroyImmediate(clip);
+            }
+        }
+
         [Fact]
         public void PausedClipDoesNotRepeatItsLastMotionInterval()
         {
