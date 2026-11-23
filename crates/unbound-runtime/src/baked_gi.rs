@@ -46,6 +46,10 @@ pub struct BakeRequest {
     /// Only the layout is asked for (the sizes of the renderers' material images come with it).
     #[serde(default)]
     layout_only: bool,
+    /// The bake's lightmaps are asked for, as the files the Editor writes beside the scene
+    /// (Lightmap-N_comp_light.exr), in the reply's `images`.
+    #[serde(default)]
+    lightmap_images: bool,
     /// The Lighting Settings' Directional Mode is Directional: the bake keeps where its light
     /// comes from.
     #[serde(default)]
@@ -470,8 +474,11 @@ impl SourceMesh {
 /// and 1 where it holds light); and of a bake
 /// with a sky `sky.f32` and, where directions are picked by its brightness, `skyDirections.f32`.
 struct Buffers<'a> {
-    folder: &'a Path,
+    /// Where the texel buffers go; none when only the lightmaps' images are asked for.
+    folder: Option<&'a Path>,
     lightmaps: Vec<Json>,
+    /// The lightmaps' images (EXR, base64), when asked for.
+    images: Option<Vec<String>>,
 }
 
 impl<'a> Buffers<'a> {
@@ -502,7 +509,15 @@ impl<'a> Buffers<'a> {
     ];
 
     /// Starts a bake's buffers in the folder, without those an earlier bake left there.
-    fn start(folder: &'a Path) -> Result<Buffers<'a>> {
+    fn start(folder: Option<&'a Path>, images: bool) -> Result<Buffers<'a>> {
+        let images = images.then(Vec::new);
+        let Some(folder) = folder else {
+            return Ok(Buffers {
+                folder: None,
+                lightmaps: Vec::new(),
+                images,
+            });
+        };
         std::fs::create_dir_all(folder)
             .with_context(|| format!("creating {}", folder.display()))?;
         for entry in
@@ -528,13 +543,17 @@ impl<'a> Buffers<'a> {
             }
         }
         Ok(Buffers {
-            folder,
+            folder: Some(folder),
             lightmaps: Vec::new(),
+            images,
         })
     }
 
     fn write(&self, name: String, bytes: Vec<u8>) -> Result<()> {
-        let path = self.folder.join(name);
+        let Some(folder) = self.folder else {
+            return Ok(());
+        };
+        let path = folder.join(name);
         std::fs::write(&path, bytes).with_context(|| format!("writing {}", path.display()))
     }
 
@@ -670,6 +689,12 @@ impl<'a> Buffers<'a> {
                 f32::MAX,
             );
         }
+        if let Some(images) = &mut self.images {
+            images.push(
+                base64::engine::general_purpose::STANDARD
+                    .encode(lightmap_image(g.width, g.height, &lightmap)),
+            );
+        }
         self.write(
             format!("lightmap{index}.f32"),
             lightmap
@@ -687,14 +712,22 @@ impl<'a> Buffers<'a> {
     /// Ends the bake's buffers with their description: the lightmaps, the Lighting Mode of
     /// mixed lights, the bake's lights in its order and, where the indirect light is baked, its
     /// settings and each renderer's material images as the bake read them.
-    fn finish(self, mixed_mode: u8, lights: Json, indirect: Json, probes: Json) -> Result<()> {
+    /// Ends the bake's buffers (where they are written) and gives the lightmaps' images.
+    fn finish(
+        self,
+        mixed_mode: u8,
+        lights: Json,
+        indirect: Json,
+        probes: Json,
+    ) -> Result<Option<Vec<String>>> {
         self.write(
             Self::DESCRIPTION.into(),
             serde_json::to_vec_pretty(&json!({
                 "lightmaps": self.lightmaps, "mixedMode": mixed_mode, "lights": lights, "indirect": indirect,
                 "probes": probes,
             }))?,
-        )
+        )?;
+        Ok(self.images)
     }
 }
 
@@ -828,7 +861,8 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
         );
     }
 
-    if let Some(folder) = buffers.filter(|_| !request.layout_only) {
+    let mut images = None;
+    if !request.layout_only && (buffers.is_some() || request.lightmap_images) {
         // Each lightmap's renderers in the bake's order, their meshes made ready once. The
         // indirect light's rays meet every renderer of the bake, with or without a lightmap.
         let mut ready: Vec<Option<gbuffer::Mesh>> = meshes.iter().map(|_| None).collect();
@@ -976,8 +1010,8 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             })
             .transpose()?;
         // One lightmap at a time: its texels are written and let go before the next.
-        let folder = folder.join(&request.scene);
-        let mut written = Buffers::start(&folder)?;
+        let folder = buffers.map(|f| f.join(&request.scene));
+        let mut written = Buffers::start(folder.as_deref(), request.lightmap_images)?;
         for (index, size) in layout.lightmaps.iter().enumerate() {
             let members: Vec<usize> = (0..taken.len())
                 .filter(|&k| layout.placements[k].lightmap == index as u32)
@@ -1156,7 +1190,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             described_probes =
                 json!({ "count": points.len(), "points": points, "samples": counts });
         }
-        written.finish(
+        images = written.finish(
             request.mixed_mode,
             json!(
                 lights
@@ -1210,7 +1244,36 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
         "placements": placements,
         "order": taken,
         "invalidNormals": taken.len() != request.renderers.len(),
+        "images": images,
     }))
+}
+
+/// A lightmap's image as the Editor writes it (Lightmap-N_comp_light.exr): red, green, blue and
+/// alpha as 32-bit floats, ZIP-compressed, rows from the top (the lightmap's last row first).
+fn lightmap_image(width: usize, height: usize, lightmap: &[[f32; 4]]) -> Vec<u8> {
+    use unbound_assets::exr_writer::{Compression, Image, Samples, write};
+    let plane = |c: usize| -> Vec<f32> {
+        (0..height)
+            .rev()
+            .flat_map(|y| (0..width).map(move |x| (y, x)))
+            .map(|(y, x)| lightmap[y * width + x][c])
+            .collect()
+    };
+    let (r, g, b, a) = (plane(0), plane(1), plane(2), plane(3));
+    write(
+        &Image {
+            width,
+            height,
+            channels: &[
+                ("A", Samples::Float(&a)),
+                ("B", Samples::Float(&b)),
+                ("G", Samples::Float(&g)),
+                ("R", Samples::Float(&r)),
+            ],
+            screen_window_width: width as f32,
+        },
+        Compression::Zip,
+    )
 }
 
 /// The image of a bake's default reflection, as the Editor writes it beside the scene
@@ -1347,6 +1410,55 @@ pub fn default_reflection(request: DefaultReflectionRequest) -> Result<Json> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_lightmaps_image_holds_its_texels_from_the_top_row() {
+        // Two by two texels: row 0 (the lightmap's first) dark, row 1 bright.
+        let lightmap = [
+            [0.1, 0.2, 0.3, 1.0],
+            [0.1, 0.2, 0.3, 1.0],
+            [5.0, 6.0, 7.0, 0.0],
+            [5.0, 6.0, 7.0, 0.0],
+        ];
+        let image = super::lightmap_image(2, 2, &lightmap);
+        // One ZIP chunk after the header and its offset: the lines, each channel (A, B, G, R)
+        // as two 32-bit floats; its bytes split and differenced (OpenEXR's predictor).
+        let mut at = 8;
+        while image[at] != 0 {
+            at = image[at..].iter().position(|&b| b == 0).unwrap() + at + 1;
+            at = image[at..].iter().position(|&b| b == 0).unwrap() + at + 1;
+            let size = i32::from_le_bytes(image[at..at + 4].try_into().unwrap()) as usize;
+            at += 4 + size;
+        }
+        let chunk = u64::from_le_bytes(image[at + 1..at + 9].try_into().unwrap()) as usize;
+        let size = i32::from_le_bytes(image[chunk + 4..chunk + 8].try_into().unwrap()) as usize;
+        let mut split = Vec::new();
+        std::io::Read::read_to_end(
+            &mut flate2::read::ZlibDecoder::new(&image[chunk + 8..chunk + 8 + size]),
+            &mut split,
+        )
+        .unwrap();
+        for k in 1..split.len() {
+            split[k] = split[k].wrapping_add(split[k - 1]).wrapping_sub(128);
+        }
+        let half = split.len().div_ceil(2);
+        let bytes: Vec<u8> = (0..split.len())
+            .map(|k| {
+                if k % 2 == 0 {
+                    split[k / 2]
+                } else {
+                    split[half + k / 2]
+                }
+            })
+            .collect();
+        let floats: Vec<f32> = bytes
+            .chunks_exact(4)
+            .map(|b| f32::from_le_bytes(b.try_into().unwrap()))
+            .collect();
+        // The file's first line is the lightmap's last row: A 0 0, B 7 7, G 6 6, R 5 5.
+        assert_eq!(&floats[..8], &[0.0, 0.0, 7.0, 7.0, 6.0, 6.0, 5.0, 5.0]);
+        assert_eq!(&floats[8..], &[1.0, 1.0, 0.3, 0.3, 0.2, 0.2, 0.1, 0.1]);
+    }
+
     use super::*;
 
     fn encoded<T: Copy, const N: usize>(values: &[T], bytes: fn(T) -> [u8; N]) -> String {
@@ -1578,6 +1690,33 @@ mod tests {
         assert_eq!(with["placements"][1], alone["placements"][0]);
         assert_eq!(with["lightmaps"], alone["lightmaps"]);
         assert_eq!(alone["invalidNormals"], json!(false));
+    }
+
+    #[test]
+    fn a_bake_asked_for_its_lightmaps_images_answers_one_per_lightmap() {
+        let mut r = request(
+            vec![quad_mesh(&UNIT, &BACK)],
+            vec![renderer("quad", 1, 0, 1.0, 0.0)],
+        );
+        // Without a buffers folder: the images alone.
+        r.lightmap_images = true;
+        let reply = bake(r, None).unwrap();
+        let images = reply["images"].as_array().unwrap();
+        assert_eq!(images.len(), reply["lightmaps"].as_array().unwrap().len());
+        let image = base64::engine::general_purpose::STANDARD
+            .decode(images[0].as_str().unwrap())
+            .unwrap();
+        assert_eq!(&image[..4], &[0x76, 0x2f, 0x31, 0x01]);
+        // Not asked: none.
+        let reply = bake(
+            request(
+                vec![quad_mesh(&UNIT, &BACK)],
+                vec![renderer("quad", 1, 0, 1.0, 0.0)],
+            ),
+            None,
+        )
+        .unwrap();
+        assert!(reply["images"].is_null());
     }
 
     #[test]
