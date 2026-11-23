@@ -510,7 +510,7 @@ namespace Unbound.Runtime.Playables
         internal readonly List<AvatarMask> Masks = new List<AvatarMask>();
         internal readonly List<bool> Additive = new List<bool>();
         internal bool SingleLayerOptimization = true;
-        readonly Dictionary<int, (AvatarMask Mask, int Count, bool[] Channels)> m_MaskCache = new Dictionary<int, (AvatarMask, int, bool[])>();
+        readonly Dictionary<int, (AvatarMask Mask, int Count, Transform Root, bool[] Channels)> m_MaskCache = new Dictionary<int, (AvatarMask, int, Transform, bool[])>();
 
         internal void Ensure(int layer)
         {
@@ -525,12 +525,12 @@ namespace Unbound.Runtime.Playables
         {
             var mask = layer < Masks.Count ? Masks[layer] : null;
             if (mask == null || !mask.Filters) return null;
-            if (m_MaskCache.TryGetValue(layer, out var cached) && cached.Mask == mask && cached.Count == e.Bindings.FloatCount) return cached.Channels;
             var b = e.Bindings;
-            var channels = new bool[b.FloatCount];
             var root = b.PathRoot();
+            if (m_MaskCache.TryGetValue(layer, out var cached) && cached.Mask == mask && cached.Count == b.FloatCount && cached.Root == root) return cached.Channels;
+            var channels = new bool[b.FloatCount];
             for (int c = 0; c < channels.Length; c++) channels[c] = mask.AllowsGroup(root, b.FloatOwner[c]);
-            m_MaskCache[layer] = (mask, b.FloatCount, channels);
+            m_MaskCache[layer] = (mask, b.FloatCount, root, channels);
             return channels;
         }
 
@@ -569,12 +569,10 @@ namespace Unbound.Runtime.Playables
         {
             var mask = layer < Masks.Count ? Masks[layer] : null;
             if (mask == null || mask.m_Elements.Count == 0) return true;
-            var root = e.Bindings.Root != null ? e.Bindings.Root.transform : null;
+            var root = e.Bindings.PathRoot();
             var t = e.Animator != null ? e.Animator.transform : null;
             if (root == null || t == null) return true;
-            var parts = new List<string>();
-            for (var p = t; p != null && p != root; p = p.m_Parent) parts.Insert(0, p.m_GameObject.m_Name);
-            return mask.Allows(string.Join("/", parts));
+            return mask.Allows(AvatarMask.PathBelow(t, root));
         }
 
         /// <summary>

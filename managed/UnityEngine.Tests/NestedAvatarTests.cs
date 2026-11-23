@@ -112,6 +112,38 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ControllerLayerMasksTakeTransformPathsBelowTheAvatarRoot()
+        {
+            var clip = new AnimationClip { name = "Masked" };
+            clip.SetCurve("Hips", typeof(Transform), "m_LocalPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 2f));
+            clip.SetCurve("Prop", typeof(Transform), "m_LocalPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 2f));
+            // The holder's own transform (not below the avatar root) takes the mask's root entry.
+            clip.SetCurve("", typeof(Transform), "m_LocalPosition.y", AnimationCurve.Linear(0f, 0f, 1f, 2f));
+            var mask = new AvatarMask { transformCount = 3 };
+            mask.SetTransformPath(0, "");
+            mask.SetTransformActive(0, true);
+            mask.SetTransformPath(1, "Hips");
+            mask.SetTransformActive(1, true);
+            mask.SetTransformPath(2, "Prop");
+            mask.SetTransformActive(2, false);
+            var controller = new UnityEditor.Animations.AnimatorController { name = "MaskedLayer" };
+            controller.AddLayer("Base Layer");
+            var layers = controller.layers;
+            layers[0].avatarMask = mask;
+            controller.layers = layers;
+            controller.AddMotion(clip);
+            var model = Model(out var avatar);
+            var animator = Holder(model, avatar);
+            animator.runtimeAnimatorController = controller;
+            animator.enabled = false;
+            animator.Update(0f);
+            animator.Update(0.5f);
+            Assert.Equal(1f, model.transform.Find("Hips").localPosition.x, 4);
+            Assert.Equal(0f, model.transform.Find("Prop").localPosition.x, 4);
+            Assert.Equal(1f, animator.transform.localPosition.y, 4);
+        }
+
+        [Fact]
         public void LayerMasksTakeTransformPathsBelowTheAvatarRoot()
         {
             var clip = new AnimationClip();

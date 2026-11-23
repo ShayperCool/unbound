@@ -239,6 +239,9 @@ namespace Unbound.Runtime
             // The Animator's own transform, as the skeleton's bindings take it (a model nested below
             // the Animator is not optimized below its avatar root: unmeasured).
             var root = animator.transform;
+            if (animator.AvatarRootTransform() != root)
+                Stubs.Ignored("Optimizing a model nested below its Animator",
+                    "optimizes the hierarchy below the Animator's own transform, not below the avatar root the model was found at: the model's transforms outside the skeleton's paths there are removed");
             var avatar = animator.m_Avatar.Skeleton;
             if (root == null || avatar == null) return;
             exposed ??= Array.Empty<string>();

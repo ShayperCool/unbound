@@ -161,9 +161,19 @@ namespace UnityEngine
             if (!(group?.Target is Transform)) return true;
             var t = group.Transform;
             if (t == null || root == null) return true;
+            return Allows(PathBelow(t, root));
+        }
+
+        /// <summary>A transform's mask path: its path below <paramref name="root"/>, the empty path
+        /// (the mask's root entry) for the root itself and for a transform not below it (an
+        /// Animator's own transform above its avatar root, matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/nestedavatar maskedLayer).</summary>
+        internal static string PathBelow(Transform t, Transform root)
+        {
             var parts = new System.Collections.Generic.List<string>();
-            for (var p = t; p != null && p != root; p = p.m_Parent) parts.Insert(0, p.m_GameObject.m_Name);
-            return Allows(string.Join("/", parts));
+            var p = t;
+            for (; p != null && p != root; p = p.m_Parent) parts.Insert(0, p.m_GameObject.m_Name);
+            return p == null ? "" : string.Join("/", parts);
         }
 
         /// <summary>Whether the mask filters anything: transform entries or humanoid body parts.</summary>
