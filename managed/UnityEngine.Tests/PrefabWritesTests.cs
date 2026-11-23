@@ -233,9 +233,66 @@ namespace UnityEngine.Tests
                 Assert.DoesNotContain("label", Paths());
                 PrefabUtility.RecordPrefabInstancePropertyModifications(holder);
                 Assert.Contains("label", Paths());
-                // Set back to the prefab's value (unrecorded): no longer an override.
+            }
+            finally
+            {
+                EditorSession.IsPlaying = playing;
+            }
+        }
+
+        static string ValueOf(GameObject instance, string path)
+        {
+            foreach (var m in PrefabUtility.GetPropertyModifications(instance))
+                if (m.propertyPath == path) return m.value;
+            return null;
+        }
+
+        /// <summary>A stored modification set back to the prefab's value and recorded lists the
+        /// recorded value, as before records were kept.</summary>
+        [Fact]
+        public void AStoredModificationTakesTheRecordedValue()
+        {
+            bool playing = EditorSession.IsPlaying;
+            EditorSession.IsPlaying = true;
+            try
+            {
+                var instance = Instance();
+                var holder = instance.GetComponent<PrefabTestHolder>();
+                // A stored modification (as an instance read from a scene file has).
+                PrefabUtility.SetPropertyModifications(instance, new[]
+                {
+                    new PropertyModification { target = m_Asset.GetComponent<PrefabTestHolder>(), propertyPath = "count", value = "5" },
+                });
+                Assert.Equal("5", ValueOf(instance, "count"));
                 holder.count = 3;
-                Assert.DoesNotContain("count", Paths());
+                PrefabUtility.RecordPrefabInstancePropertyModifications(holder);
+                Assert.Equal("3", ValueOf(instance, "count"));
+            }
+            finally
+            {
+                EditorSession.IsPlaying = playing;
+            }
+        }
+
+        /// <summary>A revert writes the instance as recorded: a change made after it without
+        /// recording is not listed.</summary>
+        [Fact]
+        public void AChangeAfterARevertIsListedOnceRecorded()
+        {
+            bool playing = EditorSession.IsPlaying;
+            EditorSession.IsPlaying = true;
+            try
+            {
+                var instance = Instance();
+                var holder = instance.GetComponent<PrefabTestHolder>();
+                holder.count = 8;
+                PrefabUtility.RecordPrefabInstancePropertyModifications(holder);
+                PrefabUtility.RevertPropertyOverride(new SerializedObject(holder).FindProperty("count"), InteractionMode.AutomatedAction);
+                Assert.Equal(3, holder.count);
+                holder.count = 9;
+                Assert.Null(ValueOf(instance, "count"));
+                PrefabUtility.RecordPrefabInstancePropertyModifications(holder);
+                Assert.Equal("9", ValueOf(instance, "count"));
             }
             finally
             {

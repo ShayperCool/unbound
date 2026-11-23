@@ -1403,6 +1403,20 @@ namespace Unbound.Runtime
 
         internal static bool IsRecorded(Object o) => o is not null && s_Recorded.TryGetValue(o, out _);
 
+        /// <summary>An apply, revert, merge or Undo writing an object: once written, a recorded script
+        /// is recorded again (those leave the values they write as the instance's).</summary>
+        internal static WriteScope Writing(Object o) => new WriteScope(o);
+
+        internal readonly struct WriteScope : IDisposable
+        {
+            readonly Object m_Target;
+            internal WriteScope(Object target) => m_Target = target;
+            public void Dispose()
+            {
+                if (m_Target is MonoBehaviour && s_Recorded.TryGetValue(m_Target, out var values) && values != null) Record(m_Target);
+            }
+        }
+
         /// <summary>The values kept by a script's last record, or null.</summary>
         internal static PrefabInstances.RecordedValues Values(Object o) =>
             o is not null && s_Recorded.TryGetValue(o, out var values) ? values as PrefabInstances.RecordedValues : null;
