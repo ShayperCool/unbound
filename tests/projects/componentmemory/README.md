@@ -62,12 +62,14 @@ Add `--profile audio` to the record, publish and gate commands above.
 ## MeshRenderer material reservations
 
 The renderer profile records live attached MeshRenderers in the Built-In Render Pipeline and
-with a scriptable pipeline. A renderer accounts 656 bytes plus four bytes for each reserved
+after a camera request renders through the active scriptable pipeline. A renderer accounts 656 bytes plus four bytes for each reserved
 material slot. Property block storage for individual slots starts on the first non-null indexed
 write, including an empty block, and adds eight bytes per reserved slot. Both reservations retain
-capacity when a material list shrinks. Shrinking discards indexed values outside the new list,
-and cloning creates fresh material slots and no property blocks. Renderer-wide property blocks
-and the referenced mesh, materials and textures have separate costs.
+capacity when a material list shrinks. Indexed storage grows with the material list while
+active. Clearing its last assigned block or setting zero materials ends that growth until the
+next indexed assignment. Trimming removed indices keeps the storage active if slots remain.
+A scene clone of a runtime renderer starts with its current materials and no property blocks.
+Renderer-wide blocks and the referenced mesh, materials and textures have separate costs.
 
 Scene-authored empty and nonempty lists, list and array writes, rendering, clones, renderer-wide
 and indexed overrides, and out-of-range diagnostic paths have separate controls. The Unity 6000.0

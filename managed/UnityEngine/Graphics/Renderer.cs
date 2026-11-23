@@ -11,6 +11,8 @@ namespace UnityEngine
         internal bool m_Enabled = true;
         Material[] m_MaterialSlots = new Material[1]; // one empty slot when added by script (measured)
         int m_ProfilerMaterialSlots, m_ProfilerIndexedBlockSlots;
+        // The indexed storage can be empty while retaining its earlier reservation.
+        bool m_IndexedBlockStorageActive;
 
         bool MeasuresMaterialReservations => this is MeshRenderer && Compat.MeshRendererMaterialMemoryMeasured
             && !m_Destroyed && !IsPersistentAsset
@@ -27,7 +29,8 @@ namespace UnityEngine
                 m_MaterialSlots = value;
                 if (!MeasuresMaterialReservations) return;
                 m_ProfilerMaterialSlots = Math.Max(m_ProfilerMaterialSlots, value.Length);
-                if (m_ProfilerIndexedBlockSlots != 0)
+                if (value.Length == 0) m_IndexedBlockStorageActive = false;
+                if (m_IndexedBlockStorageActive)
                     m_ProfilerIndexedBlockSlots = Math.Max(m_ProfilerIndexedBlockSlots, value.Length);
                 if (value.Length < (previous?.Length ?? 0) && m_MaterialBlocks != null)
                 {
@@ -410,18 +413,19 @@ namespace UnityEngine
         public bool HasPropertyBlock()
         {
             if (m_PropertyBlock != null && !m_PropertyBlock.isEmpty) return true;
-            if (m_MaterialBlocks != null) foreach (var b in m_MaterialBlocks.Values) if (!b.isEmpty) return true;
+            if (m_MaterialBlocks != null) foreach (var b in m_MaterialBlocks.Values) if (b != null && !b.isEmpty) return true;
             return false;
         }
 
         /// <summary>Property blocks of single material slots: a slot with one draws with it instead
         /// of the renderer's block (measured: tests/projects/builtinrp property_blocks, the two do
         /// not combine).</summary>
+        // A null entry is an explicitly assigned empty indexed block in the measured storage model.
         Dictionary<int, MaterialPropertyBlock> m_MaterialBlocks;
 
         /// <summary>The block material slot <paramref name="index"/> draws under (null: none).</summary>
         internal MaterialPropertyBlock BlockFor(int index) =>
-            m_MaterialBlocks != null && m_MaterialBlocks.TryGetValue(index, out var own) ? own : m_PropertyBlock;
+            m_MaterialBlocks != null && m_MaterialBlocks.TryGetValue(index, out var own) && own != null ? own : m_PropertyBlock;
 
         /// <summary>The renderer's own copy of the block last set with <see cref="SetPropertyBlock(MaterialPropertyBlock)"/>
         /// (kept for the next set while none is set).</summary>
@@ -500,7 +504,8 @@ namespace UnityEngine
 
         public void SetPropertyBlock(MaterialPropertyBlock properties, int materialIndex)
         {
-            if (MeasuresMaterialReservations)
+            bool measured = MeasuresMaterialReservations;
+            if (measured)
             {
                 int materialCount = m_MaterialSlots.Length;
                 if ((uint)materialIndex >= (uint)materialCount)
@@ -510,11 +515,19 @@ namespace UnityEngine
                     return;
                 }
                 if (properties != null)
+                {
+                    m_IndexedBlockStorageActive = true;
                     m_ProfilerIndexedBlockSlots = Math.Max(m_ProfilerIndexedBlockSlots, materialCount);
+                }
             }
-            if (properties == null || properties.isEmpty)
+            if (properties == null || (!measured && properties.isEmpty))
+            {
                 m_MaterialBlocks?.Remove(materialIndex);
-            else if (m_MaterialBlocks != null && m_MaterialBlocks.TryGetValue(materialIndex, out var own))
+                if (measured && (m_MaterialBlocks?.Count ?? 0) == 0) m_IndexedBlockStorageActive = false;
+            }
+            else if (properties.isEmpty)
+                (m_MaterialBlocks ??= new Dictionary<int, MaterialPropertyBlock>())[materialIndex] = null;
+            else if (m_MaterialBlocks != null && m_MaterialBlocks.TryGetValue(materialIndex, out var own) && own != null)
                 own.Assign(properties);
             else
                 (m_MaterialBlocks ??= new Dictionary<int, MaterialPropertyBlock>())[materialIndex] = properties.Copy();
@@ -530,7 +543,7 @@ namespace UnityEngine
         public void GetPropertyBlock(MaterialPropertyBlock properties, int materialIndex)
         {
             properties.Clear();
-            if (m_MaterialBlocks != null && m_MaterialBlocks.TryGetValue(materialIndex, out var own)) properties.CopyFrom(own);
+            if (m_MaterialBlocks != null && m_MaterialBlocks.TryGetValue(materialIndex, out var own) && own != null) properties.CopyFrom(own);
         }
 
         public void GetClosestReflectionProbes(List<Rendering.ReflectionProbeBlendInfo> result) => ReflectionProbe.Closest(this, result);
@@ -812,7 +825,8 @@ namespace UnityEngine
             m_OwnBlock = m_PropertyBlock;
             m_MaterialBlocks = null;
             if (copyBlocks && source.m_MaterialBlocks != null)
-                foreach (var pair in source.m_MaterialBlocks) (m_MaterialBlocks ??= new Dictionary<int, MaterialPropertyBlock>())[pair.Key] = pair.Value.Copy();
+                foreach (var pair in source.m_MaterialBlocks)
+                    if (pair.Value != null) (m_MaterialBlocks ??= new Dictionary<int, MaterialPropertyBlock>())[pair.Key] = pair.Value.Copy();
             lightProbeUsage = source.lightProbeUsage;
             reflectionProbeUsage = source.reflectionProbeUsage;
             motionVectorGenerationMode = source.motionVectorGenerationMode;
