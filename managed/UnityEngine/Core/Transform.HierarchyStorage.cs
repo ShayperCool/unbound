@@ -44,7 +44,10 @@ namespace UnityEngine
                     Log.Engine(LogType.Warning,
                         $"Changing desired transform hierarchy capacity ({value}) to the current transform count ({count})",
                         this, respectStackTraceSetting: true);
-                    value = count;
+                    // The log callback can change the tree. Keep the original owner and use
+                    // its current size so the reservation still holds every transform.
+                    if (!ReferenceEquals(owner, HierarchyStorageOwner)) return;
+                    value = Math.Max(value, owner.m_SubtreeCount);
                 }
                 if (value != owner.m_HierarchyCapacity) owner.ResizeHierarchy(value);
             }

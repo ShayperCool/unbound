@@ -111,7 +111,10 @@ packed structure. Direct child lists double on growth and cloned and loaded list
 actual number of their children.
 
 The measurement also records the below-count warning text, its delivery and stack presence
-options, and what a log callback reads before the capacity changes. Roots and leaves replaced by
+options, and what a log callback reads before the capacity changes. If a warning callback moves
+the caller or changes the tree, Unbound keeps the count and capacity consistent and applies a
+resize only if the caller still has the original owner. This reentrant mutation is outside the
+reference. Roots and leaves replaced by
 a RectTransform preserve the logical hierarchy. The replacement root keeps its direct reservation
 and releases its earlier packed storage.
 
