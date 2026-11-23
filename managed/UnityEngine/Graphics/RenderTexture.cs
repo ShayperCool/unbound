@@ -441,7 +441,7 @@ namespace UnityEngine
         // Command buffers resolve the current color attachment without changing the binding.
         // In OpenGL Core an omitted target resolves an ordinary multisample image into itself.
         // A supplied target must name a different image. See tests/projects/textureformats.
-        internal void WriteCommandResolve(RenderTexture target, bool screenCamera, RenderTexture cameraTarget)
+        internal void WriteCommandResolve(RenderTexture target, CommandBuffer.Context context)
         {
             if (!IsCreated() || !m_AllocatedHasColor) return;
             bool implicitTarget = target == null;
@@ -455,12 +455,13 @@ namespace UnityEngine
             bool isBound = binding.Colors == null
                 ? binding.Color == m_NativeHandle
                 : Array.IndexOf(binding.Colors, m_NativeHandle) >= 0;
+            bool cameraAttachment = context.Screen && context.CameraTarget != null &&
+                binding.Color == context.CameraTarget.m_NativeHandle;
             if (!isBound)
             {
                 Log.Write(LogType.Assert, ResolveOfInactiveSource, "", null);
-                bool backbuffer = binding.Colors == null && (binding.Color == 0
-                    || (ScreenStandIn != null && binding.Color == ScreenStandIn.m_NativeHandle)
-                    || (screenCamera && cameraTarget != null && binding.Color == cameraTarget.m_NativeHandle));
+                bool backbuffer = binding.Colors == null && (binding.Color == 0 || cameraAttachment
+                    || (ScreenStandIn != null && binding.Color == ScreenStandIn.m_NativeHandle));
                 if (!backbuffer) return;
             }
             if (!implicitTarget && target == this) return;
@@ -472,7 +473,16 @@ namespace UnityEngine
             if (isBound)
                 QueueResolve(target);
             else
-                GfxStream.ResolveFramebuffer(binding.Color, target.m_NativeHandle, implicitTarget, screenCamera);
+            {
+                Vector2Int? screenOrigin = null;
+                if (cameraAttachment && context.Camera.rect != new Rect(0f, 0f, 1f, 1f))
+                {
+                    var viewport = FrameBuilder.ScreenDisplayViewport(context.Camera);
+                    screenOrigin = new Vector2Int((int)viewport.x, (int)viewport.y);
+                }
+                GfxStream.ResolveFramebuffer(binding.Color, target.m_NativeHandle, implicitTarget,
+                    context.Screen, screenOrigin);
+            }
         }
 
         void QueueResolve(RenderTexture target) =>

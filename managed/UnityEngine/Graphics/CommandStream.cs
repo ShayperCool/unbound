@@ -1045,12 +1045,18 @@ namespace Unbound.Runtime
             U64(destination);
         }
 
-        internal static void ResolveFramebuffer(ulong source, ulong destination, bool retained, bool screenCamera)
+        internal static void ResolveFramebuffer(ulong source, ulong destination, bool retained,
+            bool screenCamera, Vector2Int? screenOrigin)
         {
             U8(ResolveFramebufferOp);
             U64(source);
             U64(destination);
-            U8((byte)((retained ? 1 : 0) | (screenCamera ? 2 : 0)));
+            U8((byte)((retained ? 1 : 0) | (screenCamera ? 2 : 0) | (screenOrigin.HasValue ? 4 : 0)));
+            if (screenOrigin is Vector2Int origin)
+            {
+                I32(origin.x);
+                I32(origin.y);
+            }
         }
 
         /// <summary>A native plugin's rendering callback, run in stream order. The stream is handed

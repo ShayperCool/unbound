@@ -722,7 +722,7 @@ namespace UnityEngine.Rendering
             Add(context =>
             {
                 if (rt != null)
-                    rt.WriteCommandResolve(target, context.Screen, context.CameraTarget);
+                    rt.WriteCommandResolve(target, context);
             }, ResolveSurfaceCommandSize);
         }
 

@@ -1681,6 +1681,10 @@ namespace Unbound.Runtime
                     scriptSrgbWrite = GL.sRGBWrite;
                     previousDisplayFlag = GfxStream.SetGlFlag(displayFlag, false);
                 }
+                var displayViewport = screenCamera ? ScreenDisplayViewport(camera) : context.Viewport;
+                context.Viewport = displayViewport;
+                int cameraPixelWidth = displayFlag != 0 ? (int)displayViewport.width : camera.scaledPixelWidth;
+                int cameraPixelHeight = displayFlag != 0 ? (int)displayViewport.height : camera.scaledPixelHeight;
                 if (screenCamera && ScalableBufferManager.Scaling && camera.allowDynamicResolution)
                     Unbound.Runtime.Stubs.Ignored("Camera.allowDynamicResolution", "a camera drawing to the screen renders at full size while ScalableBufferManager scales (unmeasured)");
                 // Measured in cameramsaa: an explicit target supplies its samples, including HDR
@@ -1704,13 +1708,13 @@ namespace Unbound.Runtime
                 {
                     // Stored as the screen is, as native plugins drawing in its command buffers
                     // see it (tests/projects/nativegfx plugin.state.color0.screencamera).
-                    screenStandIn = temporaries.Own(RenderTexture.GetTemporary(RenderTexture.TemporaryDescriptor(Math.Max(1, camera.scaledPixelWidth),
-                        Math.Max(1, camera.scaledPixelHeight), 24, RenderTextureFormat.Default, RenderTextureReadWrite.Default, 1), screenOrder: true));
+                    screenStandIn = temporaries.Own(RenderTexture.GetTemporary(RenderTexture.TemporaryDescriptor(Math.Max(1, cameraPixelWidth),
+                        Math.Max(1, cameraPixelHeight), 24, RenderTextureFormat.Default, RenderTextureReadWrite.Default, 1), screenOrder: true));
                     cameraTarget = screenStandIn;
                     RenderTexture.ScreenStandIn = screenStandIn;
                 }
                 RenderTexture sceneTarget = cameraTarget;
-                var viewport = context.Viewport;
+                var viewport = displayViewport;
                 if (effects.Count > 0 || opaqueEffects.Count > 0)
                 {
                     // Native keeps an explicit target's precision and encoding in the effect
@@ -1721,7 +1725,7 @@ namespace Unbound.Runtime
                     var readWrite = hdrIntermediate ? RenderTextureReadWrite.Linear
                         : cameraTarget != null ? (cameraTarget.sRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear)
                         : RenderTextureReadWrite.Default;
-                    sceneTarget = temporaries.Own(RenderTexture.GetTemporary(Math.Max(1, camera.scaledPixelWidth), Math.Max(1, camera.scaledPixelHeight), 24,
+                    sceneTarget = temporaries.Own(RenderTexture.GetTemporary(Math.Max(1, cameraPixelWidth), Math.Max(1, cameraPixelHeight), 24,
                         format, readWrite, cameraSamples));
                     viewport = new Rect(0, 0, sceneTarget.width, sceneTarget.height);
                 }
@@ -1779,8 +1783,8 @@ namespace Unbound.Runtime
                     // A partial screen camera's light buffer has its pixel size, as a forward
                     // intermediate has (measured: tests/projects/camerastack *.part.*.def.persp).
                     bool pixelSize = onScreen && !fullScreen;
-                    int w = pixelSize ? Math.Max(1, camera.scaledPixelWidth) : sceneTarget != null ? sceneTarget.ScaledWidth : Math.Max(1, Screen.width);
-                    int h = pixelSize ? Math.Max(1, camera.scaledPixelHeight) : sceneTarget != null ? sceneTarget.ScaledHeight : Math.Max(1, Screen.height);
+                    int w = pixelSize ? Math.Max(1, cameraPixelWidth) : sceneTarget != null ? sceneTarget.ScaledWidth : Math.Max(1, Screen.width);
+                    int h = pixelSize ? Math.Max(1, cameraPixelHeight) : sceneTarget != null ? sceneTarget.ScaledHeight : Math.Max(1, Screen.height);
                     msaaTarget = temporaries.Own(camera.allowHDR
                         ? RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear)
                         : RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Default));
@@ -1798,8 +1802,8 @@ namespace Unbound.Runtime
                     // blending would clamp each HDR layer before it reaches the next layer.
                     // A partial screen camera's samples too (its edges are antialiased in the Editor).
                     bool pixelSize = needs.Hdr || (onScreen && !fullScreen);
-                    int w = pixelSize ? Math.Max(1, camera.scaledPixelWidth) : sceneTarget != null ? sceneTarget.ScaledWidth : Math.Max(1, Screen.width);
-                    int h = pixelSize ? Math.Max(1, camera.scaledPixelHeight) : sceneTarget != null ? sceneTarget.ScaledHeight : Math.Max(1, Screen.height);
+                    int w = pixelSize ? Math.Max(1, cameraPixelWidth) : sceneTarget != null ? sceneTarget.ScaledWidth : Math.Max(1, Screen.width);
+                    int h = pixelSize ? Math.Max(1, cameraPixelHeight) : sceneTarget != null ? sceneTarget.ScaledHeight : Math.Max(1, Screen.height);
                     // The HDR intermediate can also reduce explicit target samples to one when
                     // quality AA or allowMSAA is off. Resolve before LDR quantization, including
                     // alpha; quantizing each sample first loses a byte at partial coverage.
@@ -1834,7 +1838,7 @@ namespace Unbound.Runtime
                 // On the screen the intermediate starts as the screen under the camera's rect:
                 // Depth only and Don't Clear keep the color earlier cameras drew there.
                 else if (!deferred && msaaTarget != null && !joins && resolveTarget == null && keepsColor)
-                    SeedFromScreen(msaaTarget, camera.pixelRect, !fullScreen);
+                    SeedFromScreen(msaaTarget, displayViewport, !fullScreen);
                 int width = (int)viewport.width, height = (int)viewport.height;
                 // The camera's textures, as the camera asks and as directional shadows need
                 // (measured: tests/projects/builtinrp events.*): depth, then depth and normals.
@@ -1964,7 +1968,7 @@ namespace Unbound.Runtime
                     // An explicit target takes the stretched resolve (above); on the screen a
                     // partial camera only covers its own rect (measured: tests/projects/display).
                     if (resolveTarget == null && camera.rect != new Rect(0f, 0f, 1f, 1f))
-                        Immediate.BlitInto(msaaTarget, null, camera.pixelRect);
+                        Immediate.BlitInto(msaaTarget, null, displayViewport);
                     else
                         Graphics.Blit(msaaTarget, resolveTarget);
                     if (resolveTarget == null && fullScreen)
@@ -2358,7 +2362,7 @@ namespace Unbound.Runtime
         /// (the buffer goes back onto the whole target).</summary>
         static void SeedLightBuffer(Camera camera, bool onScreen, RenderTexture cameraTarget, RenderTexture light, bool partial)
         {
-            if (onScreen) SeedFromScreen(light, camera.pixelRect, partial);
+            if (onScreen) SeedFromScreen(light, ScreenDisplayViewport(camera), partial);
             else if (cameraTarget != null && cameraTarget != light) SeedFromTarget(cameraTarget, light);
         }
 
@@ -2370,6 +2374,18 @@ namespace Unbound.Runtime
             if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
             Graphics.Blit(target, intermediate);
             if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
+        }
+
+        /// <summary>The displayed pixel rectangle of a built-in screen camera. Round each
+        /// endpoint before deriving its extent (tests/projects/textureformats).</summary>
+        internal static Rect ScreenDisplayViewport(Camera camera)
+        {
+            var rect = camera.pixelRect;
+            if (!Compat.RenderingMeasured || SystemInfo.graphicsDeviceType != GraphicsDeviceType.OpenGLCore)
+                return rect;
+            return Rect.MinMaxRect(
+                Mathf.FloorToInt(rect.xMin + .5f), Mathf.FloorToInt(rect.yMin + .5f),
+                Mathf.FloorToInt(rect.xMax + .5f), Mathf.FloorToInt(rect.yMax + .5f));
         }
 
         /// <summary>The screen's pixels under <paramref name="pixelRect"/>, stretched over the

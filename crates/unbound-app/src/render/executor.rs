@@ -703,7 +703,11 @@ struct ChannelCopy {
 
 enum ChannelTransfer {
     Storage(CopyKind),
-    Framebuffer { srgb: bool, encode_srgb: bool },
+    Framebuffer {
+        srgb: bool,
+        encode_srgb: bool,
+        destination_format: wgpu::TextureFormat,
+    },
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -3087,12 +3091,16 @@ impl UnityRenderer {
         &mut self,
         format: wgpu::TextureFormat,
         size: wgpu::Extent3d,
+        sampled: bool,
     ) -> (wgpu::Texture, wgpu::TextureView) {
-        if let Some(entry) = self
-            .repack_textures
-            .iter()
-            .find(|(texture, _)| texture.format() == format && texture.size() == size)
-        {
+        if let Some(entry) = self.repack_textures.iter().find(|(texture, _)| {
+            texture.format() == format
+                && texture.size() == size
+                && texture
+                    .usage()
+                    .contains(wgpu::TextureUsages::TEXTURE_BINDING)
+                    == sampled
+        }) {
             return entry.clone();
         }
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
@@ -3104,7 +3112,7 @@ impl UnityRenderer {
             format,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT
                 | wgpu::TextureUsages::COPY_SRC
-                | if format.is_srgb() {
+                | if sampled {
                     wgpu::TextureUsages::TEXTURE_BINDING
                 } else {
                     wgpu::TextureUsages::empty()
@@ -4177,13 +4185,30 @@ impl UnityRenderer {
                         destination,
                         retained,
                         screen_camera,
+                        screen_origin,
                     } => {
-                        self.prepare_screen_copy(source, destination, &mut passes);
+                        if screen_origin.is_some() {
+                            // The camera's intermediate supplies only its rectangle. Outside it
+                            // the resolve reads the display that the camera is drawn over.
+                            self.prepare_screen_copy(0, destination, &mut passes);
+                            if let Some(copy) = self.plan_framebuffer_resolve(
+                                0,
+                                destination,
+                                retained,
+                                screen_camera,
+                                None,
+                            ) {
+                                passes.push(Op::Copy(copy));
+                            }
+                        } else {
+                            self.prepare_screen_copy(source, destination, &mut passes);
+                        }
                         if let Some(copy) = self.plan_framebuffer_resolve(
                             source,
                             destination,
                             retained,
                             screen_camera,
+                            screen_origin,
                         ) {
                             passes.push(Op::Copy(copy));
                         }
@@ -6102,6 +6127,7 @@ impl UnityRenderer {
         destination: u64,
         retained: bool,
         screen_camera: bool,
+        screen_origin: Option<[i32; 2]>,
     ) -> Option<Copy> {
         let srgb = (self.color_space == 1 && (screen_camera || !self.state.no_srgb_write))
             || (source == 0 && self.state.gamma_framebuffer_srgb);
@@ -6141,23 +6167,57 @@ impl UnityRenderer {
             });
             return None;
         }
-        let size = wgpu::Extent3d {
-            width: src.width().min(dst.width()),
-            height: src.height().min(dst.height()),
-            depth_or_array_layers: 1,
+        let destination_format = if srgb && target.srgb_view.is_some() {
+            format.add_srgb_suffix()
+        } else {
+            format
+        };
+        let (source_origin, destination_origin, size) = match screen_origin {
+            Some([x, y]) => {
+                let (sx, dx, width) =
+                    shifted_copy_axis(x, src.width(), dst.width().min(self.screen_size.0))?;
+                let (sy, dy, height) =
+                    shifted_copy_axis(y, src.height(), dst.height().min(self.screen_size.1))?;
+                (
+                    wgpu::Origin3d { x: sx, y: sy, z: 0 },
+                    wgpu::Origin3d { x: dx, y: dy, z: 0 },
+                    wgpu::Extent3d {
+                        width,
+                        height,
+                        depth_or_array_layers: 1,
+                    },
+                )
+            }
+            None => (
+                wgpu::Origin3d::ZERO,
+                wgpu::Origin3d::ZERO,
+                wgpu::Extent3d {
+                    width: src.width().min(dst.width()),
+                    height: src.height().min(dst.height()),
+                    depth_or_array_layers: 1,
+                },
+            ),
         };
         Some(Copy {
             source: src,
             source_mip: 0,
-            source_origin: wgpu::Origin3d::ZERO,
+            source_origin,
             destination: dst,
             destination_mip: 0,
-            destination_origin: wgpu::Origin3d::ZERO,
+            destination_origin,
             size,
             channels: Some(ChannelCopy {
                 source: view,
-                size,
-                transfer: ChannelTransfer::Framebuffer { srgb, encode_srgb },
+                size: wgpu::Extent3d {
+                    width: source_origin.x + size.width,
+                    height: source_origin.y + size.height,
+                    depth_or_array_layers: 1,
+                },
+                transfer: ChannelTransfer::Framebuffer {
+                    srgb,
+                    encode_srgb,
+                    destination_format,
+                },
             }),
         })
     }
@@ -6526,20 +6586,23 @@ impl UnityRenderer {
                 Op::Copy(c) => {
                     // Texels in another storage are drawn into a level of the destination's first.
                     let repacked = c.channels.as_ref().map(|channels| {
-                        let format = c.destination.format().remove_srgb_suffix();
-                        let (pipeline, group) = match channels.transfer {
+                        let (pipeline, group, format) = match channels.transfer {
                             ChannelTransfer::Storage(kind) => {
                                 let (pipeline, layout) =
                                     self.depth_copy_pipeline(kind, c.source.sample_count(), false);
                                 let group =
                                     Self::channel_copy_group(&device, &layout, &channels.source);
-                                (pipeline, group)
+                                (pipeline, group, c.destination.format().remove_srgb_suffix())
                             }
-                            ChannelTransfer::Framebuffer { srgb, encode_srgb } => {
+                            ChannelTransfer::Framebuffer {
+                                srgb,
+                                encode_srgb,
+                                destination_format,
+                            } => {
                                 let encoded;
                                 let view = if encode_srgb {
                                     let format = wgpu::TextureFormat::Rgba8UnormSrgb;
-                                    encoded = self.repack_texture(format, channels.size);
+                                    encoded = self.repack_texture(format, channels.size, true);
                                     let (pipeline, group) = self.framebuffer_copy_resources(
                                         &channels.source,
                                         format,
@@ -6555,10 +6618,15 @@ impl UnityRenderer {
                                 } else {
                                     FramebufferTransfer::UnormToTexture
                                 };
-                                self.framebuffer_copy_resources(view, format, transfer)
+                                let (pipeline, group) = self.framebuffer_copy_resources(
+                                    view,
+                                    destination_format,
+                                    transfer,
+                                );
+                                (pipeline, group, destination_format)
                             }
                         };
-                        let (texture, target) = self.repack_texture(format, channels.size);
+                        let (texture, target) = self.repack_texture(format, channels.size, false);
                         draw_channel_copy(&mut encoder, &target, &pipeline, &group);
                         texture
                     });
@@ -7170,6 +7238,16 @@ fn truncate_half(value: f32) -> f32 {
     return select(nearest, unpack2x16float(bits - 1u).x, nearest > value);
 }
 "#;
+
+/// The visible part of an image placed at a display coordinate, on one axis.
+fn shifted_copy_axis(origin: i32, source: u32, destination: u32) -> Option<(u32, u32, u32)> {
+    let from = origin.saturating_neg().max(0) as u32;
+    let to = origin.max(0) as u32;
+    let size = source
+        .saturating_sub(from)
+        .min(destination.saturating_sub(to));
+    (size > 0).then_some((from, to, size))
+}
 
 fn draw_channel_copy(
     encoder: &mut wgpu::CommandEncoder,
