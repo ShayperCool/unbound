@@ -22,7 +22,7 @@ PROFILES = {
     'overlap': ('NAVLINKS_OVERLAP', 'crowd-overlap.jsonl', 300),
     'wallmove': ('NAVLINKS_WALL_MOVE', 'wall-movement.jsonl', 500),
     'linkversion': ('NAVLINKS_LINK_VERSION', 'link-version.jsonl', 2000),
-    'assignment': ('NAVLINKS_ASSIGNMENT', 'pending-assignment.jsonl', 1100),
+    'assignment': ('NAVLINKS_ASSIGNMENT', 'pending-assignment.jsonl', 1700),
 }
 
 

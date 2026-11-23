@@ -521,10 +521,13 @@ complete and partial paths, plus agents with no previous path.
 
 A search that already started can finish at its earlier goal. The agent
 keeps the assigned endpoint if both complete routes end on the same
-polygon. A cost change leaves a result from an already-started search
-stale, even when no route was visible during the change. A queued search
-starts with the current costs. Assigning a route while a request is
-pending preserves the staleness reported before the call. The controls
+polygon. A search that spans updates uses the area mask and costs it
+started with. An effective area change leaves its result stale, even
+when no route was visible during the change. A queued search starts with
+the current filter. The controls raise an area's cost before or during
+a search with two routes and record which link the result uses. Assigning
+a route while a request is pending keeps the staleness reported before
+the call. The controls
 distinguish a search in progress from one that has waited behind another
 request. They also cover movement, a second assignment, ResetPath and a
 failed assignment.
@@ -533,15 +536,30 @@ Deactivating a link through the assigned corridor cancels a queued request
 or replans the invalid corridor if the request had already started.
 If the assigned corridor stays valid and an older result later crosses
 a deactivated link, the agent tries to keep that result's endpoint. A
-complete route through another link preserves the earlier destination
-and its staleness. Otherwise the agent replans to the assigned goal.
+complete route through another link preserves the earlier endpoint, path
+status and staleness. Otherwise the agent replans to the assigned goal.
 The controls change links before and after assignment and after the
-older result is published, including a second repair.
+older result is published, including a second repair and an older
+partial path. Excluding an area on the current route triggers the same
+validation at the next update, including with autoRepath disabled in
+the measured cases. An unchanged endpoint and status retain the stale
+flag. When no complete route reaches that endpoint, the new result
+uses the requested destination and clears staleness. The controls
+exclude an area with and without an alternate route and exclude an
+unrelated area. Unity documents that changing the permitted areas marks
+the path stale. [NavMeshAgent.areaMask](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/areamask).
 
-The probe measures agents walking on the NavMesh on Unity 6000.0.71f1.
-Assignments during link traversal and after a NavMesh rebuild are
-unmeasured. Replacing a pending request with another SetDestination is a
-separate open case. All 318 records and 4,362 values pass the existing
+A second SetDestination updates a queued request in place. Its previous
+public destination stays visible until the search resolves. An active
+search keeps its original result when the new point is on the same
+polygon. A different polygon puts the request at the end of the queue,
+including when the requested point is on the agent's current polygon.
+The controls exercise those three cases with and without a SetPath
+assignment, and verify when a second agent advances in the queue.
+
+The probe measures walking agents on Unity 6000.0.71f1. Assignments and
+resubmissions during link traversal and after a NavMesh rebuild are
+unmeasured. All 655 records and 8,267 values pass the existing
 tolerances, with a maximum component difference of 0.000012.
 
     python3 tests/projects/navlinks/projection.py editor --release 6000.0.71f1 --profile assignment --label L

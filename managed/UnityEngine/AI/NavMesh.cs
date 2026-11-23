@@ -231,6 +231,7 @@ namespace UnityEngine.AI
             internal Vector3 Origin => m_Start;
             /// <summary>The polygon the search originally targeted.</summary>
             internal long EndPolygon => m_EndRef;
+            internal int AreaMask => m_Filter.Mask;
             internal int ActivationVersion;
             internal int PathStaleVersion;
             internal bool AgentFilterChanged;
@@ -254,6 +255,14 @@ namespace UnityEngine.AI
                 };
                 search.m_Query.InitSlicedFindPath(startRef, endRef, V(start), V(end), filter, 0);
                 return search;
+            }
+
+            // The query and this search share the filter. Save the costs before
+            // a paused query can observe another frame's changes.
+            internal void SnapshotCosts(float[] buffer)
+            {
+                m_Filter.Costs.CopyTo(buffer, 0);
+                m_Filter.Costs = buffer;
             }
 
             /// <summary>Runs up to the budget's iterations (taking them from it); true when done.</summary>

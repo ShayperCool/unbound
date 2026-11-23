@@ -138,8 +138,10 @@ namespace UnityEngine.Tests
         {
             var agent = Agent(autoTraverse: true);
             Assert.True(agent.SetDestination(LinkEnd));
-            var destination = agent.destination;
             StepOntoLink(agent);
+            // The previous queued goal can remain visible until the search resolves.
+            var destination = agent.destination;
+            Assert.InRange(Dist2D(destination, LinkEnd), 0f, 1e-3f);
             for (int i = 0; i < 300; i++) Step();
             Assert.False(agent.isOnOffMeshLink);
             Assert.False(agent.hasPath);

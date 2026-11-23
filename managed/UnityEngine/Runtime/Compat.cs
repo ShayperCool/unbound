@@ -301,8 +301,9 @@ namespace Unbound.Runtime
         /// releases retain the previous, unmeasured arrival-dependent reports.</summary>
         internal static bool NavMeshCorridorReportingMeasured => Family == ReleaseFamily.Unity6000_0;
 
-        /// <summary>Assigning a path while a destination request is pending (Unity 6000.0.71f1,
-        /// tests/projects/navlinks pending-assignment).</summary>
+        /// <summary>Assigning a path or changing the destination while a request is pending, and
+        /// searches that exceed the update's budget (Unity 6000.0.71f1, tests/projects/navlinks
+        /// pending-assignment).</summary>
         internal static bool NavMeshPathAssignmentMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>A move that leaves the corridor's first polygons joins the polygon it reaches to
