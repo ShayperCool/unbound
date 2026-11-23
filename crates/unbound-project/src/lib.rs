@@ -8,6 +8,7 @@ pub mod compile;
 pub mod editor_archive;
 pub mod git_packages;
 pub mod install;
+pub mod md4;
 pub mod modules;
 pub mod net;
 pub mod packages;

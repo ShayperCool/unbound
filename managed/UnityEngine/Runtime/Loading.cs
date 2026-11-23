@@ -1269,8 +1269,7 @@ namespace Unbound.Runtime
                     return ReloadMesh(mesh, guid, fileId, file);
                 case AudioClip clip:
                     return clip.ReloadImported();
-                // Not a MonoScript (a TextAsset too): unloading scripts is not covered.
-                case TextAsset text when text.GetType() == typeof(TextAsset):
+                case TextAsset text when UnloadsLazily(text):
                     return text.UnloadData();
                 default:
                     return false;
@@ -1360,10 +1359,15 @@ namespace Unbound.Runtime
         /// the kinds kept and for an asset already unloaded.</summary>
         static bool UnloadUnusedOne(Object asset) => asset switch
         {
-            // Not a MonoScript (a TextAsset too): unloading scripts is not covered.
-            TextAsset text when text.GetType() == typeof(TextAsset) => text.UnloadUnused(),
+            TextAsset text when UnloadsLazily(text) => text.UnloadUnused(),
             _ => false,
         };
+
+        /// <summary>An imported text file's TextAsset (a package's PackageManifest too), whose
+        /// bytes are read again at their next use; not a MonoScript or another TextAsset class
+        /// (unloading those is not covered).</summary>
+        static bool UnloadsLazily(TextAsset text) =>
+            text.GetType() == typeof(TextAsset) || text is UnityEditorInternal.PackageManifest;
 
         /// <summary>An asset obtained again is loaded again (an unused-unloaded text asset is listed
         /// once more).</summary>

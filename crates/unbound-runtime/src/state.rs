@@ -1883,8 +1883,8 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
     let asset = db
         .by_guid(Guid::parse(guid).context("bad guid")?)
         .with_context(|| format!("no asset {guid}"))?;
-    // The Assets folder has no .meta: its importer has the default settings.
-    let mut meta = if asset.is_assets_root() {
+    // The Assets folder and package roots have no .meta: their importer has the default settings.
+    let mut meta = if asset.is_root() {
         unbound_yaml::Value::Map(Default::default())
     } else {
         let text = std::fs::read_to_string(format!("{}.meta", asset.file.display()))?;

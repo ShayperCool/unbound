@@ -9176,7 +9176,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static bool WarnPrefab(global::UnityEngine.Object target, string title, string warning, string okButton) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.WarnPrefab"); return default; }
         [global::Unbound.Stub] public static bool IsUnityExtensionsInitialized() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.IsUnityExtensionsInitialized"); return default; }
         [global::Unbound.Stub] public static bool IsValidUnityYAML(string yaml) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.IsValidUnityYAML"); return default; }
-        [global::Unbound.Stub] public static int NaturalCompare(string a, string b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.NaturalCompare"); return default; }
         [global::Unbound.Stub] public static void CompressTexture(global::UnityEngine.Texture2D texture, global::UnityEngine.TextureFormat format, int quality) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.CompressTexture"); }
         [global::Unbound.Stub] public static void CompressCubemapTexture(global::UnityEngine.Cubemap texture, global::UnityEngine.TextureFormat format, int quality) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.CompressCubemapTexture"); }
         [global::Unbound.Stub] internal static int[] RemapInstanceIds(global::UnityEngine.Object[] objects, global::System.Collections.Generic.Dictionary<int, int> idMap) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUtility.RemapInstanceIds"); return global::System.Array.Empty<int>(); }
@@ -49824,10 +49823,6 @@ namespace UnityEditorInternal
         [global::Unbound.Stub] public global::UnityEditorInternal.ObjectMemoryStackInfo[] callerSites;
         [global::Unbound.Stub] public string name;
         [global::Unbound.Stub] public ObjectMemoryStackInfo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ObjectMemoryStackInfo.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PackageManifest : global::UnityEngine.TextAsset
-    {
     }
     [global::Unbound.Stub]
     public unsafe sealed partial class PackageManifestImporter : global::UnityEditor.AssetImporter

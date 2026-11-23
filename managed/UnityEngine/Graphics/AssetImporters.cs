@@ -57,15 +57,23 @@ namespace Unbound.Runtime
             return file;
         }
 
+        /// <summary>A text file: its TextAsset; a package.json (PackageManifestImporter) its
+        /// PackageManifest at that class's file ID.</summary>
         static LoadedFile ImportText(AssetDatabaseRuntime.AssetInfo info)
         {
             TextAsset asset;
+            string name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
+            long size = new System.IO.FileInfo(info.File).Length;
+            bool manifest = UnityEditor.AssetDatabase.ImporterOf(info.Path) == "PackageManifestImporter";
             using (ObjectRegistry.AsAssets())
+            {
+                asset = manifest ? new UnityEditorInternal.PackageManifest(info.File, name, size) : new TextAsset(info.File, name, size);
+                asset.IsPersistentAsset = true;
                 // Imported, so not editable (matches the Unity 6000.0.71f1 Editor, tests/projects/toolapis imported.text).
-                asset = new TextAsset(info.File, System.IO.Path.GetFileNameWithoutExtension(info.Path), new System.IO.FileInfo(info.File).Length)
-                    { IsPersistentAsset = true, hideFlags = HideFlags.NotEditable };
+                asset.hideFlags = HideFlags.NotEditable;
+            }
             var file = new LoadedFile { MainObject = asset };
-            file.Objects[TextAssetFileId] = asset;
+            file.Objects[manifest ? UnityEditorInternal.PackageManifest.FileId : TextAssetFileId] = asset;
             return file;
         }
 

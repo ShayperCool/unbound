@@ -92,22 +92,34 @@ namespace UnityEditor
 
         public static GUID GUIDFromAssetPath(string path) => new GUID(AssetPathToGUID(path));
 
+        /// <summary>A folder asset's path: Assets, a package's root and the folders in them;
+        /// Packages itself is none (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/packagefolders packages.isValidFolder).</summary>
         public static bool IsValidFolder(string path)
         {
             path = path?.Replace('\\', '/').TrimEnd('/');
-            // Packages is a folder of the database without being an asset (GetAllAssetPaths does
-            // not list it, as it lists Assets).
-            if (string.Equals(path, "Packages", StringComparison.OrdinalIgnoreCase)) return true;
             _ = Entries;
             return path != null && s_ByPath.TryGetValue(path, out var e) && e.Kind == "folder";
         }
 
+        /// <summary>The folders directly in a folder, in EditorUtility.NaturalCompare's order;
+        /// none for a path that is no folder (Packages too: tests/projects/packagefolders
+        /// subFolders.*).</summary>
         public static string[] GetSubFolders(string path)
         {
-            path = path.TrimEnd('/') + "/";
-            return Entries.Where(e => e.Kind == "folder" && e.Path.StartsWith(path, StringComparison.OrdinalIgnoreCase) && e.Path.IndexOf('/', path.Length) < 0)
+            path = path.TrimEnd('/');
+            if (!IsValidFolder(path)) return Array.Empty<string>();
+            path += "/";
+            var folders = Entries.Where(e => e.Kind == "folder" && e.Path.StartsWith(path, StringComparison.OrdinalIgnoreCase) && e.Path.IndexOf('/', path.Length) < 0)
                 .Select(e => e.Path).ToArray();
+            Array.Sort(folders, EditorUtility.NaturalCompare);
+            return folders;
         }
+
+        /// <summary>A root folder without a .meta: Assets, or a package's root (Packages/name).</summary>
+        static bool IsRootFolder(string path) =>
+            string.Equals(path, "Assets", StringComparison.OrdinalIgnoreCase)
+            || (path.StartsWith("Packages/", StringComparison.OrdinalIgnoreCase) && path.Length > "Packages/".Length && path.IndexOf('/', "Packages/".Length) < 0);
 
         public static string[] GetAllAssetPaths() => Entries.Select(e => e.Path).ToArray();
 
@@ -292,9 +304,9 @@ namespace UnityEditor
             var result = new List<string>();
             foreach (var e in Entries)
             {
-                // The Assets folder is listed, but no search finds it (tests/projects/defaultasset
-                // folder.assetsRoot.listed).
-                if (string.Equals(e.Path, "Assets", StringComparison.OrdinalIgnoreCase)) continue;
+                // The Assets folder and package roots are listed, but no search finds them
+                // (tests/projects/defaultasset folder.assetsRoot.listed, packagefolders find.*).
+                if (IsRootFolder(e.Path)) continue;
                 if (folders != null && !folders.Any(f => e.Path.StartsWith(f, StringComparison.OrdinalIgnoreCase))) continue;
                 var fileName = e.Kind == "folder" ? System.IO.Path.GetFileName(e.Path) : System.IO.Path.GetFileNameWithoutExtension(e.Path);
                 if (names.Any(n => fileName.IndexOf(n, StringComparison.OrdinalIgnoreCase) < 0)) continue;

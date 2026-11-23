@@ -40,6 +40,29 @@ impl Asset {
     pub fn is_assets_root(&self) -> bool {
         self.guid == ASSETS_ROOT_GUID
     }
+
+    /// A root folder without a `.meta` of its own: `Assets`, or a package's root
+    /// (`Packages/<name>`).
+    pub fn is_root(&self) -> bool {
+        self.is_assets_root() || is_package_root_path(&self.path)
+    }
+}
+
+/// Whether the path is a package's root folder, `Packages/<name>`.
+pub fn is_package_root_path(path: &str) -> bool {
+    path.strip_prefix("Packages/")
+        .is_some_and(|name| !name.is_empty() && !name.contains('/'))
+}
+
+/// The GUID the Editor gives a package's root folder, which has no `.meta`: the MD4 of the
+/// package's name, written as Unity writes GUIDs (each byte's low nibble first). Matches the Unity
+/// 6000.0.71f1 Editor for a built-in package (tests/projects/packagefolders `guid.builtinRoot`); a
+/// registry package's root gets another GUID there, whose derivation is not known.
+pub fn package_root_guid(name: &str) -> Guid {
+    let digest = crate::md4::md4(name.as_bytes());
+    Guid(digest.iter().fold(0u128, |guid, &byte| {
+        (guid << 8) | u128::from((byte & 0x0f) << 4 | byte >> 4)
+    }))
 }
 
 /// A root of the database: a directory and the path Unity gives it.
@@ -94,6 +117,23 @@ impl AssetDb {
                 labels: Vec::new(),
                 importer: Some("DefaultImporter".to_string()),
             });
+        }
+        // So is each package's root folder (GetAllAssetPaths lists it, it loads as a folder),
+        // under a GUID of its name.
+        for root in roots {
+            let Some(name) = root.virtual_path.strip_prefix("Packages/") else {
+                continue;
+            };
+            if is_package_root_path(&root.virtual_path) {
+                db.insert(Asset {
+                    guid: package_root_guid(name),
+                    path: root.virtual_path.clone(),
+                    file: root.dir.to_path_buf(),
+                    is_folder: true,
+                    labels: Vec::new(),
+                    importer: Some("DefaultImporter".to_string()),
+                });
+            }
         }
         for (guid, labels, importer, file, path) in read {
             let Some(guid) = guid else {
@@ -415,17 +455,57 @@ mod db_tests {
         // Unity paths compare case-insensitively.
         assert_eq!(db.by_path("assets").unwrap().guid, ASSETS_ROOT_GUID);
         assert_eq!(db.by_path("Assets/Sub").unwrap().guid, Guid(0xabcd));
-        // A package's root is no asset of its own.
-        assert!(db.by_path("Packages/com.probe").is_none());
-        assert_eq!(db.len(), 2);
-        // Nothing changed on disk: the root, which has no .meta, is neither new nor gone.
-        let roots = [Root {
-            dir: &assets,
-            virtual_path: "Assets".into(),
-        }];
+        // A package's root is a folder asset of its own, under the GUID of its name.
+        assert_eq!(
+            db.by_path("Packages/com.probe").unwrap().guid,
+            package_root_guid("com.probe")
+        );
+        assert_eq!(db.len(), 3);
+        // Nothing changed on disk: the roots, which have no .meta, are neither new nor gone.
+        let roots = [
+            Root {
+                dir: &assets,
+                virtual_path: "Assets".into(),
+            },
+            Root {
+                dir: &package,
+                virtual_path: "Packages/com.probe".into(),
+            },
+        ];
         let (changed, gone) = changes(&db, &roots, |_| false);
         assert!(changed.is_empty() && gone.is_empty());
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_package_root_is_listed_under_the_guid_of_its_name() {
+        // As the Unity 6000.0.71f1 Editor gives com.unity.modules.audio's root
+        // (tests/projects/packagefolders guid.builtinRoot).
+        assert_eq!(
+            package_root_guid("com.unity.modules.audio").to_string(),
+            "2d6ba5cbe47e6ad3c87474c56174d4e0"
+        );
+        let dir =
+            std::env::temp_dir().join(format!("unbound-assetdb-package-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let package = dir.join("com.x.y");
+        std::fs::create_dir_all(package.join("Runtime")).unwrap();
+        std::fs::write(
+            package.join("Runtime.meta"),
+            "fileFormatVersion: 2\nguid: 0000000000000000000000000000abcd\nfolderAsset: yes\n",
+        )
+        .unwrap();
+        let db = AssetDb::scan(&[Root {
+            dir: &package,
+            virtual_path: "Packages/com.x.y".to_string(),
+        }]);
+        let root = db.by_path("Packages/com.x.y").unwrap();
+        assert!(root.is_folder && root.is_root() && !root.is_assets_root());
+        assert_eq!(root.guid, package_root_guid("com.x.y"));
+        assert!(!db.by_path("Packages/com.x.y/Runtime").unwrap().is_root());
+        assert!(!is_package_root_path("Packages/"));
+        assert!(!is_package_root_path("Packages/a/b"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     fn asset(guid: u128, path: &str) -> Asset {
