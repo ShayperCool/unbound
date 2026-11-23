@@ -54,13 +54,12 @@ namespace Unbound.Runtime
 
         /// <summary>Adds an object made for <paramref name="owner"/> to the owner's asset file
         /// (AssetDatabase.AddObjectToAsset: written into it by the next SaveAssets, matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/scenesave controller-assets).</summary>
+        /// 6000.0.71f1 Editor, tests/projects/scenesave controller-assets, and controller-additions
+        /// for a controller read from its file).</summary>
         internal static void AddToAssetOf(Object owner, Object o)
         {
             if (AssetDatabase.GetAssetPath(owner) == "") return;
-            // A controller read from its file is not written yet: reported once, as before.
-            if (AssetDatabase.CreatedThisSession(owner)) AssetDatabase.AddObjectToAsset(o, owner);
-            else Stubs.NotImplemented("UnityEditor.AssetDatabase.AddObjectToAsset");
+            AssetDatabase.AddObjectToAsset(o, owner);
         }
 
         /// <summary>Makes an asset of an object at a path (AssetDatabase.CreateAsset: the controller's

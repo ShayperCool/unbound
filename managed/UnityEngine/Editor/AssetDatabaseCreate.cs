@@ -103,9 +103,9 @@ namespace UnityEditor
                 return;
             }
             var guid = AssetPathToGUID(GetAssetPath(assetObject));
-            if (!s_Created.TryGetValue(guid, out var created))
+            if (!s_Created.TryGetValue(guid, out var created) && (created = Adopt(guid)) == null)
             {
-                Debug.LogError($"Unbound adds objects only to assets it created in this session: '{GetAssetPath(assetObject)}' is left as it is.");
+                Debug.LogError($"Unbound adds objects only to assets it created in this session or native assets in Unity's text serialization whose objects it all writes: '{GetAssetPath(assetObject)}' is left as it is.");
                 return;
             }
             if (!UnityYamlWriter.WritesNew(objectToAdd))
@@ -124,6 +124,27 @@ namespace UnityEditor
             created.Added.Add(objectToAdd);
             EditorUtility.SetDirty(objectToAdd);
             created.Unsaved = true;
+        }
+
+        /// <summary>A native asset read from its file (a controller, say) that objects are added to:
+        /// written whole from its objects from then on, as one CreateAsset made, when it is the
+        /// project's, in Unity's text serialization and Unbound writes every object of it (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/scenesave controller-additions); null otherwise.</summary>
+        static CreatedAsset Adopt(string guid)
+        {
+            var info = AssetDatabaseRuntime.Info(guid);
+            var loaded = AssetDatabaseRuntime.LoadFile(guid);
+            if (info == null || loaded == null || info.Kind != "yaml" || string.IsNullOrEmpty(info.File)) return null;
+            if (!Editable(info.Path) || IsImmutablePackagePath(info.Path) || !File.Exists(info.File)) return null;
+            string text = File.ReadAllText(info.File);
+            if (!text.StartsWith(UnityYamlText.Preamble, StringComparison.Ordinal)
+                && !text.StartsWith(UnityYamlText.Preamble.Replace("\n", "\r\n"), StringComparison.Ordinal)) return null;
+            if (loaded.Objects.Values.Any(o => o is not null && !UnityYamlWriter.WritesNew(o))) return null;
+            var created = new CreatedAsset { Path = info.Path, Main = loaded.MainObject, File = loaded };
+            foreach (var pair in loaded.Objects)
+                if (pair.Value is not null) created.Objects[pair.Value] = pair.Key;
+            s_Created[guid] = created;
+            return created;
         }
 
         /// <summary>Whether the object was added to an asset that has not been saved since: it is
