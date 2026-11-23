@@ -119,7 +119,7 @@ public sealed class StripProbe : MonoBehaviour
             sun.shadows = LightShadows.None;
             sun.intensity = 1.1f;
             sun.transform.rotation = Quaternion.Euler(35f, 25f, 0f);
-            foreach (var (key, graph) in new[] { ("lit", "StripLit"), ("lit bent", "StripLitBent"), ("meshes", "StripMeshes"), ("meshes lit", "StripMeshesLit") })
+            foreach (var (key, graph) in new[] { ("lit", "StripLit"), ("lit bent", "StripLitBent"), ("meshes", "StripMeshes"), ("meshes lit", "StripMeshesLit"), ("meshes culled", "StripMeshesCulled") })
             {
                 var lit = Draw(key, graph, 10, 20, 40, 66);
                 var lamp = new GameObject("lamp " + key).AddComponent<Light>();

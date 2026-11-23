@@ -1215,7 +1215,17 @@ namespace UnityEngine.Tests
             Assert.Null(VFXOutput.Refusal(sortedStrips, Indirect(2, 3), material));
             // A strip system's particles drawn as meshes, as a system without strips draws them
             // (tests/projects/vfxstrips `meshes`); as other primitives, not measured.
-            Assert.Equal(VFXOutput.Refusal(system, meshes, material), VFXOutput.Refusal(stripSystem, meshes, material));
+            Assert.Null(VFXOutput.Refusal(system, meshes, material));
+            Assert.Null(VFXOutput.Refusal(stripSystem, meshes, material));
+            // Through an indirect buffer, from a list culled in a compute pass and sorted
+            // (`meshes culled`).
+            var listedMeshes = new VFXEditorTaskDesc
+            {
+                type = VFXTaskType.ParticleMeshOutput, shaderSourceIndex = 4,
+                parameters = new[] { new VFXMapping("mesh", 1), new VFXMapping("subMeshMask", 2), new VFXMapping("sortPriority", 0), new VFXMapping("indirectDraw", 1), new VFXMapping("indirectIndex", 2) },
+                buffers = new[] { new VFXMapping("graphValuesBuffer", 4), new VFXMapping("indirectBuffer", 3) },
+            };
+            Assert.Null(VFXOutput.Refusal(sortedStrips, listedMeshes, material));
             Assert.Equal("ParticleTriangleOutput of a strip system's particles is not measured yet", VFXOutput.Refusal(stripSystem, new VFXEditorTaskDesc { type = VFXTaskType.ParticleTriangleOutput }, material));
             Assert.Equal("it draws with a material variant (a graph compiled for editing), which is not measured yet", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, usesMaterialVariant = true }, material));
             var previous = new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, temporaryBuffers = new[] { new VFXMappingTemporary() } };

@@ -371,6 +371,24 @@ public static class StripAuthoring
             Save(meshes);
         }
 
+        // Two strips of twelve whose particles are drawn as half transparent meshes (sorted by
+        // default) from a list culled in a compute pass, through an indirect buffer, at places
+        // spread in depth so that overlapping meshes show the order.
+        var culledMeshes = NewGraph("StripMeshesCulled");
+        var meshesListed = Strips(culledMeshes, 2, 12);
+        ConstantRate(meshesListed.Spawn, 20f);
+        Scatter(meshesListed.Init, 0.2f, new Vector3(0.3f, 0.9f, 0.6f), 0.6f);
+        SetRandom(meshesListed.Init, "position", new Vector3(-1.2f, -1.2f, -1f), new Vector3(1.2f, 1.2f, 1f));
+        SetRandom(meshesListed.Init, "angle", new Vector3(0f, 0f, 0f), new Vector3(90f, 90f, 90f));
+        Output<VFXQuadStripOutput>(culledMeshes, meshesListed.Update);
+        var sortedMeshes = Output<VFXMeshOutput>(culledMeshes, meshesListed.Update, false);
+        sortedMeshes.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
+        sortedMeshes.SetSettingValue("computeCulling", true);
+        Set(sortedMeshes, "size", 0.35f);
+        Set(sortedMeshes, "alpha", 0.6f);
+        SetRandom(sortedMeshes, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
+        Save(culledMeshes);
+
         // A strip that widens along itself: each particle's size times its place in the strip.
         var taper = NewGraph("StripTaper");
         var tapered = Strips(taper, 1, 16);

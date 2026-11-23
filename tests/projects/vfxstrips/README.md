@@ -53,6 +53,9 @@ are `Output ParticleStrip Quad` contexts with an `Orient: Face Camera Position` 
 - `StripBoth`: a strip drawn twice: joined, and each of its particles as a quad of its own.
 - `StripMeshes`, `StripMeshesLit`: a strip drawn joined, and each of its particles (each turned
   its own way) as the package's default mesh: unlit, and lit by the render pipeline.
+- `StripMeshesCulled`: two strips of twelve at places spread in depth, drawn joined, and their
+  particles as half transparent meshes of colours of their own (sorted, by default) from a list
+  culled in a compute pass, through an indirect buffer: overlapping meshes show the order.
 - `StripTaper`: each particle's size multiplied by its place in the strip
   (`particleIndexInStrip`), in the output.
 - `StripImage`, `StripImageSegments`, `StripImageSwapped`: strips of eight that draw an image
@@ -88,8 +91,8 @@ capacity and whether it sleeps. `systems/<control>` lists the systems' names.
 - `listed`, `culled`: `StripListed` and `StripCulled`.
 - `lit`, `lit bent`: `StripLit` and `StripLitBent`, each under a point light of its own; a
   directional light without shadows lights the scene (the other stages are unlit).
-- `meshes`, `meshes lit`: `StripMeshes` and `StripMeshesLit`, each under such a point light
-  too (frames 10, 20, 40 and 66).
+- `meshes`, `meshes lit`, `meshes culled`: `StripMeshes`, `StripMeshesLit` and
+  `StripMeshesCulled`, each under such a point light too (frames 10, 20, 40 and 66).
 - `trails alive`, `trails alive keep`: `StripTrailsAlive` and `StripTrailsAliveKeep`, images
   every four frames to frame 32, then at 40, 50 and 66. The heads' alive count includes the dead
   heads kept for their strips (room for four, full at frame 70 in both).
@@ -136,8 +139,10 @@ alive` (whose strip particles die) is exact throughout.
   not measured).
 - Strips lit by 2D lights, line strips
   (`Output ParticleStrip Line`), and any output but quads and meshes of a strip system's
-  particles: not drawn (the effect says so). Meshes of a strip system's particles drawn from a
-  list, sorted, or chosen among several: drawn, not measured.
+  particles: not drawn (the effect says so). Meshes of a strip system's particles from a
+  frustum-culled list or from the list the system's update makes, several meshes of an output,
+  shadows cast by them, a Shader Graph mesh output: drawn, not measured (meshes chosen by their
+  size on screen are not drawn, as for any system).
 - Additive strips; a sorted strip under a perspective camera or with another sort criterion
   than the default; two strips of one sorted output that cross.
 - A batch in which an effect wakes in every frame for longer than three frames (as measured,
