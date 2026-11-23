@@ -117,3 +117,55 @@ images. Retained: reads in Update (`read.update.float`, and in Linear `asTexture
 `rt.update.*`): the Editor returns its window's framebuffer; Unbound returns the last frame. Those
 images also differ from one Editor session to the next (the window's interface greys), so
 `run.py extend` keeps them as recorded.
+
+## Capturing an active render texture
+
+The `active` profile records both immediate screenshot APIs with a render
+texture bound in Update and after the frame. It uses a different source color
+from the game view and checks that the binding survives both calls. The
+additional Linear cases cover an active texture larger and smaller than the
+output, linear byte and floating-point colors, self-capture, bound mip and
+layers, 4x multisampling with and without `bindTextureMS`, and targets without
+readable color bytes. Two command-buffer controls exercise the previously
+bound 2D texture or game view after rendering into a second target.
+
+With this binding, `CaptureScreenshotAsTexture(1)` reads the active mip and
+slice into a screen-sized RGBA32 texture. The source bytes include alpha,
+with floating-point channels quantized to bytes. For a smaller source the
+overlapping rectangle is reproducible across both Editor runs. Unbound
+initializes the other pixels to transparent black. The profile still checks
+the full texture's dimensions and metadata.
+
+`CaptureScreenshotIntoRenderTexture` draws the base image of a 2D source even
+if another mip is bound. It takes one source texel per destination pixel from
+the lower-left corner, clamps past the source edge, and applies each texture's
+color encoding. It keeps alpha and resolves a multisampled color source.
+The measured array, cube, volume and depth-only sources leave the destination
+alone. The measured integer formats report an unsupported format assertion.
+The texture-form metadata and binding are reproducible for both depth-only
+and integer sources. Their returned pixel bytes differed across the Editor
+runs. Unbound puts transparent black in that RGBA32 texture and keeps the
+render texture destination untouched when the source format is rejected.
+
+The Unity 6.0 API advises waiting for frame rendering to finish for a
+reliable game-view screenshot. It documents binding a render texture through
+`RenderTexture.active` or `Graphics.SetRenderTarget`. The screenshot source
+rules above are observations for Unity 6000.0.71f1, Linux, OpenGL Core.
+Other release families and graphics devices are unmeasured. Restoring an
+active mip across command-buffer execution is a separate binding gap. The
+Editor restores the previous subresource as well as the texture.
+[CaptureScreenshotAsTexture](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/screencapture/capturescreenshotastexture),
+[CaptureScreenshotIntoRenderTexture](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/screencapture/capturescreenshotintorendertexture),
+[RenderTexture.active](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/rendertexture/active).
+
+    python3 tests/projects/screencapture/run.py editor --profile active --release 6000.0.71f1 --space Linear --label L
+    python3 tests/projects/screencapture/run.py publish --profile active --release 6000.0.71f1 --space Linear --label L
+    UNBOUND_CLI=.../unbound python3 tests/projects/screencapture/run.py gate --profile active --release 6000.0.71f1 --space Linear --label L
+
+Use `--space Gamma` for the Gamma repeat. Both Editor
+captures in each color space completed and agree byte for byte. The existing
+game-view references, comparator and tolerances are unchanged.
+
+The active profile matches all 167 values and 53 images in Linear and all
+27 values and 10 images in Gamma. Before the source fix it differed in 28
+Linear images and three assertion records, and four Gamma images.

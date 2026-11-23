@@ -29,6 +29,9 @@ namespace Unbound.Runtime
         internal readonly bool ReversedZ;
         internal readonly bool UsesLoadStoreActions;
         internal readonly bool FramebufferReadback;
+        /// <summary>The two synchronous screenshot APIs select an active render texture
+        /// (OpenGL Core, Unity 6000.0.71f1, tests/projects/screencapture).</summary>
+        internal bool ScreenCaptureReadsActiveTarget { get; init; }
         /// <summary>Alpha8 readback uses readable red storage on Vulkan
         /// (6000.0.71f1 NVIDIA, tests/projects/nativegfx readbackValidation.alpha.*).</summary>
         internal readonly Alpha8ReadbackMode Alpha8Readback;
@@ -276,6 +279,7 @@ namespace Unbound.Runtime
             MaxGraphicsBufferBytes = 2L << 30,
             ProceduralQuads = UnityEngine.MeshTopology.Points,
             PackedTargetsKeepChannelBits = true,
+            ScreenCaptureReadsActiveTarget = true,
             // tests/projects/urp CapsProbe `device-opengl.jsonl` (two identical captures, NVIDIA
             // RTX 4060).
             Compressed3DTextures = false,

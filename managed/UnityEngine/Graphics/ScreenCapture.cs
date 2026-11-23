@@ -4,19 +4,21 @@ using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using Unbound.Runtime;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
 namespace UnityEngine
 {
     /// <summary>
     /// Screenshots of the game view (measured in the Play mode Editor: tests/projects/screencapture).
-    /// The texture and render texture forms read the screen when they are called: its stored 8-bit
-    /// bytes (sRGB-encoded in Linear color space) with their alpha. <c>CaptureScreenshotAsTexture</c>
-    /// returns a readable RGBA32 texture with the linear flag and one mip; superSize N renders the
+    /// The texture and render texture forms capture at the time of the call. On the measured
+    /// OpenGL Core device an active render texture supplies the image. Otherwise these methods
+    /// read the screen's stored 8-bit bytes (sRGB-encoded in Linear color space) with their alpha.
+    /// <c>CaptureScreenshotAsTexture</c> returns a readable RGBA32 texture with the linear flag and one mip; superSize N renders the
     /// screen cameras again N * N times at the screen's size, tile (i, j) sampling the screen at
     /// (x + i / N, y + j / N), and interleaves the tiles: pixel x * N + i is tile i's pixel x.
-    /// <c>CaptureScreenshotIntoRenderTexture</c> draws the screen into the target at one texel per
-    /// pixel from its corner (cropped to the smaller size, the rest kept; decoded into linear and float
+    /// <c>CaptureScreenshotIntoRenderTexture</c> draws the captured source into the target at one
+    /// texel per pixel from its corner (cropped to the smaller size, the rest kept; decoded into linear and float
     /// targets). <c>CaptureScreenshot</c> writes the frame's final image, after the end-of-frame
     /// callbacks, as an 8-bit RGB PNG (whatever the name's extension; the last request of a frame
     /// wins; relative names are under the working directory). Stereo modes capture the screen.
@@ -69,7 +71,7 @@ namespace UnityEngine
                 Debug.LogError("No texture data is available to upload.");
                 return Texture2D.EmptyCapture();
             }
-            var bytes = ReadScreen(superSize, out int width, out int height);
+            var bytes = ReadScreen(superSize, out int width, out int height, fromActiveTarget: true);
             var texture = new Texture2D(Math.Max(1, width), Math.Max(1, height), TextureFormat.RGBA32, false, true);
             if (bytes != null && bytes.Length == width * height * 4)
             {
@@ -88,21 +90,51 @@ namespace UnityEngine
             }
             int width = Math.Min(Screen.width, renderTexture.width), height = Math.Min(Screen.height, renderTexture.height);
             if (width <= 0 || height <= 0) return;
-            // The screen's bytes as an sRGB texture, drawn into the target's corner one texel per
-            // pixel: sampling decodes them, an sRGB target encodes them again.
+            // Draw one texel per pixel. Sampling decodes an sRGB source and writing encodes an
+            // sRGB destination. The source's edge extends when it is smaller than the screen.
+            var active = ActiveCaptureTexture;
+            // This draw samples a 2D texture's base color image, even when another mip is bound.
+            if (active != null)
+            {
+                if (active.dimension != TextureDimension.Tex2D || active.graphicsFormat == GraphicsFormat.None) return;
+                if (GraphicsFormatUtility.IsIntegerFormat(active.graphicsFormat))
+                {
+                    Debug.LogAssertion("Unsupported render texture format :4");
+                    return;
+                }
+            }
+            ulong source = active != null ? active.EnsureCreated() : ScreenHandle;
+            if (active != null && source == 0) return;
+            int copyWidth = active != null ? Math.Min(width, active.width) : Screen.width;
+            int copyHeight = active != null ? Math.Min(height, active.height) : Screen.height;
             var saved = GfxStream.Current;
             var savedActive = RenderTexture.ActiveTarget;
             bool wireframe = GL.wireframe;
             bool srgbWrite = GL.sRGBWrite;
             RenderTexture copy = null;
+            (FilterMode Filter, TextureWrapMode U, TextureWrapMode V, TextureWrapMode W) sampler = default;
             try
             {
                 GfxStream.Scissor(null);
                 GL.sRGBWrite = true;
-                copy = RenderTexture.GetTemporary(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
-                copy.filterMode = FilterMode.Point;
-                ulong source = copy.EnsureCreated();
-                GfxStream.CopyTexture(ScreenHandle, 0, 0, new RectInt(0, 0, Screen.width, Screen.height), source, 0, 0, 0, 0);
+                copy = active != null
+                    ? RenderTexture.GetTemporary(copyWidth, copyHeight, 0, active.graphicsFormat)
+                    : RenderTexture.GetTemporary(copyWidth, copyHeight, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+                if (active != null)
+                {
+                    sampler = (copy.filterMode, copy.wrapModeU, copy.wrapModeV, copy.wrapModeW);
+                    copy.SetSamplerQuietly(FilterMode.Point, TextureWrapMode.Clamp, TextureWrapMode.Clamp,
+                        TextureWrapMode.Clamp, copy.anisoLevel, copy.mipMapBias);
+                    copy.OnSamplerChanged();
+                }
+                else copy.filterMode = FilterMode.Point;
+                ulong staging = copy.EnsureCreated();
+                // Resolve the current color image, including a source with bindTextureMS.
+                if (active != null && active.antiAliasing > 1)
+                    GfxStream.ResolveTexture(source, staging);
+                else
+                    GfxStream.CopyTexture(source, 0, 0, new RectInt(0, 0, copyWidth, copyHeight),
+                        staging, 0, 0, 0, 0);
                 var material = Immediate.BlitCopy;
                 material.SetTexture(MainTex, copy);
                 if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
@@ -110,7 +142,7 @@ namespace UnityEngine
                 GfxStream.Viewport(new Rect(0, 0, width, height));
                 GfxStream.Camera(Matrix4x4.identity, Immediate.Ortho);
                 s_Properties.Clear();
-                s_Properties[MainTexST] = new Vector4((float)width / Screen.width, (float)height / Screen.height, 0, 0);
+                s_Properties[MainTexST] = new Vector4((float)width / copyWidth, (float)height / copyHeight, 0, 0);
                 GfxStream.Draw(Immediate.BlitQuad.Sync(), 0, material.Sync(), 0, Matrix4x4.identity, Color.white, properties: s_Properties);
             }
             finally
@@ -122,7 +154,23 @@ namespace UnityEngine
                     RenderTexture.SetActiveQuietly(savedActive);
                     GfxStream.Restore(saved);
                 }
-                finally { if (copy != null) RenderTexture.ReleaseTemporary(copy); }
+                finally
+                {
+                    if (copy != null)
+                    {
+                        try
+                        {
+                            if (active != null)
+                            {
+                                // A pooled texture can have been configured by its previous caller.
+                                copy.SetSamplerQuietly(sampler.Filter, sampler.U, sampler.V, sampler.W,
+                                    copy.anisoLevel, copy.mipMapBias);
+                                copy.OnSamplerChanged();
+                            }
+                        }
+                        finally { RenderTexture.ReleaseTemporary(copy); }
+                    }
+                }
             }
         }
 
@@ -132,6 +180,10 @@ namespace UnityEngine
 
         // During a screen camera callback the logical screen has not been presented yet.
         static ulong ScreenHandle => RenderTexture.ScreenStandIn?.EnsureCreated() ?? 0;
+
+        static RenderTexture ActiveCaptureTexture =>
+            Compat.RenderingMeasured && GraphicsDeviceProfile.Current.ScreenCaptureReadsActiveTarget
+                ? RenderTexture.active : null;
 
         // A requested screenshot holds what the end-of-frame callbacks drew (tests/projects/screencapture).
         static ScreenCapture() =>
@@ -158,12 +210,39 @@ namespace UnityEngine
         }
 
         /// <summary>The screen's bytes (RGBA rows, bottom first) at superSize times its size.</summary>
-        static byte[] ReadScreen(int superSize, out int width, out int height)
+        static byte[] ReadScreen(int superSize, out int width, out int height, bool fromActiveTarget = false)
         {
             int screenWidth = Screen.width, screenHeight = Screen.height;
             width = screenWidth * superSize;
             height = screenHeight * superSize;
-            if (superSize == 1) return Native.ReadPixels(ScreenHandle, 0, 0, width, height, false);
+            if (superSize == 1)
+            {
+                if (fromActiveTarget && ActiveCaptureTexture is { } active)
+                {
+                    // Depth-only and integer attachments have no color bytes to capture.
+                    if (active.graphicsFormat == GraphicsFormat.None
+                        || GraphicsFormatUtility.IsIntegerFormat(active.graphicsFormat)) return null;
+                    // Read the attachment as bound, including its mip and slice.
+                    ulong source = active.EnsureCreated();
+                    if (source == 0) return null;
+                    var bound = GfxStream.Current;
+                    int mip = bound.Color == source ? bound.Mip : 0;
+                    int slice = bound.Color == source ? Math.Max(0, bound.Slice) : 0;
+                    int readWidth = Math.Min(width, Math.Max(1, active.width >> mip));
+                    int readHeight = Math.Min(height, Math.Max(1, active.height >> mip));
+                    var bytes = Native.ReadTexture(source, mip, slice, 0, 0, readWidth, readHeight,
+                        asFloat: false, currentAttachment: true);
+                    if (bytes == null || (readWidth == width && readHeight == height)) return bytes;
+                    if (bytes.Length != readWidth * readHeight * 4) return null;
+                    // The overlapping rectangle is the reproducible part of the capture.
+                    // Keep transparent black in the rest of the screen-sized texture.
+                    var padded = new byte[width * height * 4];
+                    for (int row = 0; row < readHeight; row++)
+                        Buffer.BlockCopy(bytes, row * readWidth * 4, padded, row * width * 4, readWidth * 4);
+                    return padded;
+                }
+                return Native.ReadPixels(ScreenHandle, 0, 0, width, height, false);
+            }
             if (Camera.current != null)
                 throw new NotSupportedException("Unbound: supersized screen capture inside a camera callback is not supported; capture after the camera finishes rendering.");
             WarnOverlays();
