@@ -106,4 +106,34 @@
 {"k":"thread.vertices.log","v":""}
 {"k":"thread.clear","v":"UnityException: ClearImpl can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
 {"k":"thread.clear.log","v":""}
+{"k":"views.weights.readonly","v":"InvalidOperationException: The UNKNOWN_OBJECT_TYPE has been declared as [ReadOnly], but you are writing to it."}
+{"k":"views.weights.readonly.log","v":""}
+{"k":"views.counts.readonly","v":"InvalidOperationException: The UNKNOWN_OBJECT_TYPE has been declared as [ReadOnly], but you are writing to it."}
+{"k":"views.counts.readonly.log","v":""}
+{"k":"views.dispose.sibling","v":"2:5"}
+{"k":"views.dispose.sibling.log","v":""}
+{"k":"views.resize.oldCounts","v":"ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
+{"k":"views.resize.oldCounts.log","v":""}
+{"k":"views.resize.oldWeights","v":"ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
+{"k":"views.resize.oldWeights.log","v":""}
+{"k":"views.resize.current","v":"TwoBones:True:True:created:2/1/1/0:created:5@0.75/7@0.25/6@1/9@1"}
+{"k":"views.resize.current.log","v":""}
+{"k":"views.setter.oldCounts","v":"ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
+{"k":"views.setter.oldCounts.log","v":""}
+{"k":"views.setter.oldWeights","v":"ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
+{"k":"views.setter.oldWeights.log","v":""}
+{"k":"views.setter.self","v":"OneBone:False:True:created:1/1/1/1:created:10@1/11@1/12@1/13@1"}
+{"k":"views.setter.self.log","v":""}
+{"k":"fallback.0.before","v":"Unlimited:True:True:created:5:created:1@0.5000076/2@0.2500038/3@0.1250019/4@0.06250095/5@0.0624856949|0:8:88-88-44-44-22-22-11-11-01-00-02-00-03-00-04-00|UNorm16:4:1/UInt16:4:1"}
+{"k":"fallback.0.before.log","v":""}
+{"k":"fallback.0.reject","v":"FourBones:True:True:created:5:created:1@0.5000076/2@0.2500038/3@0.1250019/4@0.06250095/5@0.0624856949|FourBones:True:True:created:4:created:1@0.5333333/2@0.266666651/3@0.133333325/4@0.06666666|0:8:88-88-44-44-22-22-11-11-01-00-02-00-03-00-04-00|UNorm16:4:1/UInt16:4:1"}
+{"k":"fallback.0.reject.log","v":"Error:Vertex 0 bone weights are not in descending order! testing !(0.500000000 <= 0.250000000)"}
+{"k":"fallback.1.before","v":"Unlimited:True:True:created:6:created:1@0.3100023/2@0.2399939/3@0.2/4@0.11999695/5@0.100007631/6@0.0299992375|0:8:38-5B-9E-46-DA-3A-4F-23-01-00-02-00-03-00-04-00|UNorm16:4:1/UInt16:4:1"}
+{"k":"fallback.1.before.log","v":""}
+{"k":"fallback.1.reject","v":"FourBones:True:True:created:6:created:1@0.3100023/2@0.2399939/3@0.2/4@0.11999695/5@0.100007631/6@0.0299992375|FourBones:True:True:created:4:created:1@0.356328666/2@0.2758526/3@0.229892418/4@0.1379263|0:8:38-5B-9E-46-DA-3A-4F-23-01-00-02-00-03-00-04-00|UNorm16:4:1/UInt16:4:1"}
+{"k":"fallback.1.reject.log","v":"Error:Vertex 0 bone weights are not in descending order! testing !(0.310000002 <= 0.239999995)"}
+{"k":"fallback.2.before","v":"Unlimited:True:True:created:5:created:1@0.4/2@0.2/3@0.2/4@0.110002287/5@0.08999771|0:8:87-70-43-38-43-38-F2-1E-01-00-02-00-03-00-04-00|UNorm16:4:1/UInt16:4:1"}
+{"k":"fallback.2.before.log","v":""}
+{"k":"fallback.2.reject","v":"FourBones:True:True:created:5:created:1@0.4/2@0.2/3@0.2/4@0.110002287/5@0.08999771|FourBones:True:True:created:4:created:1@0.439566642/2@0.219775692/3@0.219775692/4@0.120881975|0:8:87-70-43-38-43-38-F2-1E-01-00-02-00-03-00-04-00|UNorm16:4:1/UInt16:4:1"}
+{"k":"fallback.2.reject.log","v":"Error:Vertex 0 bone weights are not in descending order! testing !(0.400000006 <= 0.200000003)"}
 {"k":"complete","v":true}

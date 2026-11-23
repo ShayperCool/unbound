@@ -361,6 +361,76 @@ sealed class MeshSkinningProbe : MonoBehaviour
         Probe("thread.vertices", () => OnWorkerThread(() => diagnostics.vertices = new Vector3[2]));
         Probe("thread.clear", () => OnWorkerThread(() => diagnostics.Clear()));
         Object.DestroyImmediate(diagnostics);
+        void CheckBorrowedViews()
+        {
+            var mesh = Make(3);
+            Apply(mesh, new byte[] { 2, 1, 1 }, new[] { Weight(5, 0.75f), Weight(7, 0.25f), Weight(6, 1), Weight(9, 1) });
+            var originalCounts = mesh.GetBonesPerVertex();
+            var originalWeights = mesh.GetAllBoneWeights();
+            Probe("views.weights.readonly", () => { originalWeights[0] = Weight(19, 1); return Shape(mesh); });
+            Probe("views.counts.readonly", () => { originalCounts[0] = 3; return Shape(mesh); });
+            Probe("views.dispose.sibling", () =>
+            {
+                mesh.GetAllBoneWeights().Dispose();
+                mesh.GetBonesPerVertex().Dispose();
+                return originalCounts[0] + ":" + originalWeights[0].boneIndex;
+            });
+            mesh.vertices = new Vector3[4];
+            Probe("views.resize.oldCounts", () => originalCounts[0].ToString(Invariant));
+            Probe("views.resize.oldWeights", () => originalWeights[0].boneIndex.ToString(Invariant));
+            Probe("views.resize.current", () => Shape(mesh));
+            var updatedCounts = mesh.GetBonesPerVertex();
+            var updatedWeights = mesh.GetAllBoneWeights();
+            Apply(mesh, new byte[] { 1, 1, 1, 1 }, new[] { Weight(10, 1), Weight(11, 1), Weight(12, 1), Weight(13, 1) });
+            Probe("views.setter.oldCounts", () => updatedCounts[0].ToString(Invariant));
+            Probe("views.setter.oldWeights", () => updatedWeights[0].boneIndex.ToString(Invariant));
+            Probe("views.setter.self", () => { mesh.SetBoneWeights(mesh.GetBonesPerVertex(), mesh.GetAllBoneWeights()); return Shape(mesh); });
+            Object.DestroyImmediate(mesh);
+        }
+        void CheckFixedFallback()
+        {
+            string Packed(Mesh mesh)
+            {
+                int stream = mesh.GetVertexAttributeStream(VertexAttribute.BlendWeight);
+                if (stream < 0) return "none";
+                int offset = mesh.GetVertexAttributeOffset(VertexAttribute.BlendWeight);
+                int indexOffset = mesh.GetVertexAttributeOffset(VertexAttribute.BlendIndices);
+                using var read = Mesh.AcquireReadOnlyMeshData(mesh);
+                var data = read[0].GetVertexData<byte>(stream).ToArray();
+                return offset + ":" + indexOffset + ":" + BitConverter.ToString(data);
+            }
+            var variants = new[]
+            {
+                new[] { 0.5f, 0.25f, 0.125f, 0.0625f, 0.0625f },
+                new[] { 0.31f, 0.24f, 0.2f, 0.12f, 0.1f, 0.03f },
+                new[] { 0.4f, 0.2f, 0.2f, 0.11f, 0.09f },
+            };
+            for (int row = 0; row < variants.Length; row++)
+            {
+                var mesh = Make(1);
+                var weights = variants[row];
+                var input = new BoneWeight1[weights.Length];
+                for (int i = 0; i < input.Length; i++) input[i] = Weight(i + 1, weights[i]);
+                Apply(mesh, new[] { (byte)input.Length }, input);
+                Probe("fallback." + row + ".before", () => Shape(mesh) + "|" + Packed(mesh) + "|" + AttributeShape(mesh));
+                (input[0], input[1]) = (input[1], input[0]);
+                Probe("fallback." + row + ".reject", () =>
+                {
+                    string inCallback = "?";
+                    void Observe(string message, string _, LogType type)
+                    {
+                        if (type == LogType.Error && message.Contains("descending order")) inCallback = Shape(mesh);
+                    }
+                    Application.logMessageReceived += Observe;
+                    try { Apply(mesh, new[] { (byte)input.Length }, input); }
+                    finally { Application.logMessageReceived -= Observe; }
+                    return inCallback + "|" + Shape(mesh) + "|" + Packed(mesh) + "|" + AttributeShape(mesh);
+                });
+                Object.DestroyImmediate(mesh);
+            }
+        }
+        CheckBorrowedViews();
+        CheckFixedFallback();
         rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), rows);
 #if UNITY_EDITOR

@@ -9,7 +9,8 @@ so a four-influence result differs from the unlimited result. [SetBoneWeights](h
 
 Unity 6000.0.71f1 resizes the per-vertex counts as the geometry grows or shrinks and retains
 the flat weight data from the last assignment. The legacy array follows the active vertices.
-The probe also checks a layout change and the state visible inside the conversion diagnostic.
+The probe also checks read-only views, their invalidation after a mutation, and the physical
+vertex attributes and readable weights before, during, and after a rejected layout change.
 
 The GPU checks run after a frame has elapsed so a synchronous readback has a graphics context.
 They compare raw words for every layout, including the unlimited layout's offset table and packed
