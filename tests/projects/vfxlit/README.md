@@ -236,8 +236,10 @@ adds to that is not separated.
   them; sprites in sorting layers other than the default one, sprite masks, 2D shadows and the
   camera sorting layer texture with effects.
 - Decals through the deferred renderer or the DBuffer technique (whose passes OpenGL Core
-  drops), decals with normal, mask or emissive maps, angle fade, decal layers, a Shader Graph
-  decal, and decals over other effects.
+  drops) or through a renderer without the decal feature, the order of overlapping decals (the
+  output sorts by default; the five here do not overlap), decals with normal, mask or emissive
+  maps, angle fade, decal layers, and decals over other effects. The decals stand still: frame
+  12 shows what frame 5 does.
 - Other devices than OpenGL Core in the Editor.
 
 ## Running

@@ -130,8 +130,8 @@ public static class LitAuthoring
 
     // ----------------------------------------------------------------------------- graphs
 
-    /// <summary>Decals of the render pipeline (`Output Particle URP Lit Decal`): boxes a unit
-    /// deep around a wall's plane, each turned about the axis it projects along and of a colour
+    /// <summary>Decals of the render pipeline (`Output Particle URP Lit Decal`): boxes 0.9
+    /// across centred on a wall's plane, each turned about the axis it projects along and of a colour
     /// of its own, the image whose quarters differ as their base colour map.</summary>
     static void Decals()
     {

@@ -1045,6 +1045,19 @@ namespace UnityEngine.Tests
             // Cubes are drawn on OpenGL Core, where their faces are measured; refused elsewhere.
             var cubes = new VFXEditorTaskDesc { type = VFXTaskType.ParticleHexahedronOutput };
             Assert.Null(VFXOutput.Refusal(system, cubes, material));
+            // The render pipeline's decals (cubes whose material has the screen space decal pass,
+            // as the renderer reports the shader's passes) are drawn on OpenGL Core too, and
+            // refused elsewhere for a reason of their own.
+            var decalMaterial = new Material(UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/VfxDecal\" { SubShader { Pass { } } }"));
+            ShaderPassInfo.ResetForTests();
+            ShaderPassInfo.s_CallForTests = name => System.Text.Json.JsonSerializer.Serialize(new
+            {
+                shader = name, found = true, tags = new Dictionary<string, string>(),
+                passes = name.Contains("VfxDecal", StringComparison.Ordinal)
+                    ? new[] { new { name = "DecalScreenSpaceProjector", tags = new Dictionary<string, string> { ["LightMode"] = "DecalScreenSpaceProjector" } } }
+                    : new[] { new { name = "", tags = new Dictionary<string, string> { ["LightMode"] = "UniversalForwardOnly" } } },
+            });
+            Assert.Null(VFXOutput.Refusal(system, cubes, decalMaterial));
             var (device, threading) = (GraphicsDeviceProfile.Current, GraphicsDeviceProfile.CurrentThreadingMode.ToString());
             try
             {
@@ -1052,10 +1065,17 @@ namespace UnityEngine.Tests
                 {
                     GraphicsDeviceProfile.Select(other);
                     Assert.Equal(VFXOutput.CubeDeviceRefusal, VFXOutput.Refusal(system, cubes, material));
+                    Assert.Equal(VFXOutput.DecalDeviceRefusal, VFXOutput.Refusal(system, cubes, decalMaterial));
                     Assert.Null(VFXOutput.Refusal(system, quads, material));
                 }
             }
-            finally { GraphicsDeviceProfile.Select(device.Type.ToString(), threading); }
+            finally
+            {
+                GraphicsDeviceProfile.Select(device.Type.ToString(), threading);
+                ShaderPassInfo.s_CallForTests = null;
+                ShaderPassInfo.ResetForTests();
+                Object.DestroyImmediate(decalMaterial);
+            }
             // Through an indirect buffer: drawn from the list that counts its particles, or from
             // the sorted copy a sort task of its system makes, or from its system's list that the
             // system's global sort orders; not from a list no task makes.

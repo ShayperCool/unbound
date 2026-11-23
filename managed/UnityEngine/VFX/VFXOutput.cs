@@ -156,6 +156,7 @@ namespace Unbound.Runtime
         internal static string Refusal(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task, UnityEngine.Object processor, string sourceRefusal = null)
         {
             if (!IsPlanar(task.type) && task.type != VFXTaskType.ParticleHexahedronOutput && task.type != VFXTaskType.ParticleMeshOutput) return $"{task.type} is not drawn yet (quads, triangles, octagons, cubes and meshes are)";
+            if (task.type == VFXTaskType.ParticleHexahedronOutput && IsDecal(processor) && !GraphicsDeviceProfile.Current.EffectDecalsMeasured) return DecalDeviceRefusal;
             if (task.type == VFXTaskType.ParticleHexahedronOutput && !GraphicsDeviceProfile.Current.EffectCubesMeasured) return CubeDeviceRefusal;
             if ((system.flags & VFXSystemFlag.SystemHasStrips) != 0)
             {
@@ -199,12 +200,12 @@ namespace Unbound.Runtime
         /// feature draws its screen space pass, the technique it takes on OpenGL Core in a
         /// forward renderer (measured, tests/projects/vfxlit `decal`); its DBuffer, GBuffer and
         /// emissive passes exclude OpenGL Core (`#pragma exclude_renderers gles3 glcore`), so
-        /// that device drops them, and decal outputs, which draw cubes, are refused on the
-        /// devices that keep them (<see cref="GraphicsDeviceProfile.EffectCubesMeasured"/>).</summary>
+        /// that device drops them, and decal outputs are refused on the devices that keep them
+        /// (<see cref="GraphicsDeviceProfile.EffectDecalsMeasured"/>).</summary>
         static readonly string[] s_DrawnPasses =
         {
             "UniversalForwardOnly", "UniversalForward", "UniversalGBuffer", "DepthOnly", "DepthNormals", "DepthNormalsOnly", "ShadowCaster", "SceneSelectionPass", "Picking", "Universal2D", "NormalsRendering", "MotionVectors", "Meta",
-            "DecalScreenSpaceProjector", "DBufferProjectorVFX", "DecalGBufferProjector", "DecalProjectorForwardEmissive",
+            DecalScreenSpacePass, "DBufferProjectorVFX", "DecalGBufferProjector", "DecalProjectorForwardEmissive",
         };
 
         /// <summary>The pass of a Shader Graph output that 2D lights light (the sprite graphs'
@@ -223,6 +224,22 @@ namespace Unbound.Runtime
         /// <summary>The varying the deprecated forward decal output's programs pass (the package's
         /// Shaders/ParticleDecals templates).</summary>
         const string ForwardDecalVarying = "worldToDecal0";
+        internal const string DecalDeviceRefusal = "it is a decal output of the render pipeline, measured on the OpenGL Core device only";
+
+        /// <summary>The pass every decal output of the render pipeline has, on every device: the
+        /// one its decal feature draws with the screen space technique.</summary>
+        const string DecalScreenSpacePass = "DecalScreenSpaceProjector";
+
+        /// <summary>Whether an output's material draws the render pipeline's decals.</summary>
+        static bool IsDecal(UnityEngine.Object processor)
+        {
+            var passes = processor is Material material ? ShaderPassInfo.Of(material.shader)?.Passes : null;
+            if (passes == null) return false;
+            foreach (var (_, tags) in passes)
+                if (tags.TryGetValue("LightMode", out var mode) && mode == DecalScreenSpacePass) return true;
+            return false;
+        }
+
         internal const string CubeDeviceRefusal = "it is a cube output, whose texture layout is measured on the OpenGL Core device only";
         internal const string ForwardDecalRefusal = "it is a forward decal output (deprecated), which is not measured yet";
 

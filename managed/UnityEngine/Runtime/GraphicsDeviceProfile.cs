@@ -79,6 +79,13 @@ namespace Unbound.Runtime
         /// on OpenGL Core only (tests/projects/vfxoutputs <c>Cube*</c>), elsewhere such outputs
         /// are refused (<see cref="Unbound.Runtime.VFXOutput.CubeDeviceRefusal"/>).</summary>
         internal bool EffectCubesMeasured { get; init; }
+        /// <summary>Whether the render pipeline's decal outputs of the Visual Effect Graph are
+        /// drawn. The pipeline's decal feature picks its technique by the device, and the
+        /// outputs' DBuffer, GBuffer and emissive passes exclude OpenGL Core: measured there in a
+        /// forward renderer (the screen space technique, tests/projects/vfxlit <c>decal</c>),
+        /// elsewhere such outputs are refused
+        /// (<see cref="Unbound.Runtime.VFXOutput.DecalDeviceRefusal"/>).</summary>
+        internal bool EffectDecalsMeasured { get; init; }
         /// <summary>The most samples GetRenderTextureSupportedMSAASampleCount answers.</summary>
         internal int MaxMsaaSamples { get; init; } = 8;
         internal bool DepthFetchInRenderPass { get; init; } = true;
@@ -292,6 +299,7 @@ namespace Unbound.Runtime
             MaxGraphicsBufferBytes = 2L << 30,
             ProceduralQuads = UnityEngine.MeshTopology.Points,
             EffectCubesMeasured = true,
+            EffectDecalsMeasured = true,
             PackedTargetsKeepChannelBits = true,
             ScreenCaptureUsesActiveRenderState = true,
             RestoreCommandBufferTargets = true,
