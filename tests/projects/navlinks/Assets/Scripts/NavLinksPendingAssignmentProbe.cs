@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.AI;
@@ -42,6 +43,7 @@ public partial class NavLinksProbe
         yield return RecordSearchFilterControls(local);
         yield return RecordPartialRepairControls(local);
         yield return RecordAreaMaskRepairControls(local);
+        yield return RecordGroundAreaRepairControls();
         Finish(0);
     }
 
@@ -361,6 +363,79 @@ public partial class NavLinksProbe
         NavMesh.pathfindingIterationsPerFrame = previousBudget;
         DestroyImmediate(first.gameObject);
         DestroyImmediate(alternate.gameObject);
+    }
+
+    IEnumerator RecordGroundAreaRepairControls()
+    {
+        var cases = new[] { "startExcluded", "endExcluded", "allExcluded", "allExcludedMoving", "unrelated", "queuedMask", "queuedAssignedMask" };
+        var lane = new Lane { Name = "groundMask", O = new Vector3(500f, 0f, 500f) };
+        var sources = new List<NavMeshBuildSource>();
+        foreach (var side in new[] { -1, 1 })
+            sources.Add(new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, area = side < 0 ? 4 : 5,
+                size = new Vector3(16f, 1f, 8f), transform = Matrix4x4.Translate(lane.O + new Vector3(side * 8f, -0.5f, 0f)) });
+        sources.Add(new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, area = 4,
+            size = new Vector3(12f, 1f, 8f), transform = Matrix4x4.Translate(lane.O + new Vector3(36f, -0.5f, 0f)) });
+        var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(0), sources,
+            new Bounds(lane.O + new Vector3(15f, 0f, 0f), new Vector3(66f, 8f, 12f)), Vector3.zero, Quaternion.identity);
+        var instance = NavMesh.AddNavMeshData(data);
+        yield return null;
+        foreach (string mode in cases)
+        {
+            lane.Name = "groundMask." + mode;
+            var from = new Vector3(-7f, 0f, 0f);
+            var to = new Vector3(7f, 0f, 0f);
+            var agent = Agent(lane, "a", from, null, a => {
+                a.speed = mode == "allExcludedMoving" ? 3f : 0f;
+                a.autoRepath = false;
+                a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            });
+            yield return null;
+            if (!agent.SetDestination(lane.O + to)) throw new InvalidOperationException("initial destination rejected");
+            for (int frame = 0; frame < 6 && agent.pathPending; frame++) yield return null;
+            if (!agent.hasPath || agent.pathStatus != NavMeshPathStatus.PathComplete)
+                throw new InvalidOperationException("initial path not complete " + mode);
+            if (mode == "allExcludedMoving")
+                for (int frame = 0; frame < 5; frame++) yield return null;
+            int oldBudget = NavMesh.pathfindingIterationsPerFrame;
+            NavMeshAgent other = null;
+            if (mode.StartsWith("queued"))
+            {
+                other = Agent(lane, "other", from + Vector3.forward, null, a => {
+                    a.speed = 0f;
+                    a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+                });
+                yield return null;
+                NavMesh.pathfindingIterationsPerFrame = 1;
+                other.SetDestination(lane.O + to + Vector3.forward);
+                if (!agent.SetDestination(lane.O + new Vector3(36f, 0f, 0f)))
+                    throw new InvalidOperationException("queued target rejected");
+                if (!agent.pathPending) throw new InvalidOperationException("no queued replacement");
+                if (mode == "queuedAssignedMask")
+                {
+                    var path = new NavMeshPath();
+                    if (!agent.CalculatePath(lane.O + to, path) || !agent.SetPath(path))
+                        throw new InvalidOperationException("assignment rejected");
+                }
+            }
+            for (int frame = 0; frame <= 12; frame++)
+            {
+                if (frame == 1)
+                    agent.areaMask = mode.StartsWith("allExcluded", StringComparison.Ordinal) ? 0 : agent.areaMask & ~(1 << (mode == "startExcluded" ? 4 : mode == "unrelated" ? 6 : 5));
+                Line(lane.Name, "a", frame,
+                    "\"pending\":" + B(agent.pathPending) + ",\"path\":" + B(agent.hasPath) + ",\"stale\":" + B(agent.isPathStale)
+                    + ",\"status\":" + Text(agent.pathStatus.ToString()) + ",\"destination\":" + V(agent.destination)
+                    + ",\"end\":" + V(agent.pathEndPosition) + ",\"mesh\":" + B(agent.isOnNavMesh)
+                    + ",\"pos\":" + V(agent.nextPosition) + ",\"velocity\":" + V(agent.velocity)
+                    + ",\"transform\":" + V(agent.transform.position) + (other == null ? "" : ",\"otherPending\":" + B(other.pathPending)));
+                yield return null;
+            }
+            NavMesh.pathfindingIterationsPerFrame = oldBudget;
+            DestroyImmediate(agent.gameObject);
+            if (other != null) DestroyImmediate(other.gameObject);
+            yield return null;
+        }
+        NavMesh.RemoveNavMeshData(instance);
+        DestroyImmediate(data);
     }
 
     IEnumerator RecordPendingAssignment(Lane local, bool afterUpdate, string mode, bool moving,
