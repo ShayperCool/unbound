@@ -45,7 +45,7 @@ namespace UnityEngine.Tests
 
         /// <summary>A shader with the Standard shader's properties the validation reads, validated by
         /// the Standard shaders' editor.</summary>
-        static Material Standard() => new Material(ShaderUtil.CreateShaderAsset(
+        static Material Standard(string editor = "StandardShaderGUI") => new Material(ShaderUtil.CreateShaderAsset(
             "Shader \"Tests/Standard Validation " + Guid.NewGuid().ToString("N") + "\"\n{\n    Properties\n    {\n"
             + "        _Mode (\"Mode\", Float) = 0\n        _SrcBlend (\"Src\", Float) = 1\n        _DstBlend (\"Dst\", Float) = 0\n"
             + "        _ZWrite (\"ZWrite\", Float) = 1\n        _EmissionColor (\"Emission\", Color) = (0,0,0,1)\n"
@@ -53,7 +53,7 @@ namespace UnityEngine.Tests
             + "        _DetailAlbedoMap (\"Detail\", 2D) = \"grey\" {}\n        _DetailNormalMap (\"Detail Normal\", 2D) = \"bump\" {}\n"
             + "        _ParallaxMap (\"Height\", 2D) = \"black\" {}\n        _MetallicGlossMap (\"Metallic Map\", 2D) = \"white\" {}\n"
             + "        _Metallic (\"Metallic\", Range(0,1)) = 0\n        _SmoothnessTextureChannel (\"Channel\", Float) = 0\n"
-            + "    }\n    SubShader { Pass { } }\n    CustomEditor \"StandardShaderGUI\"\n}"));
+            + "    }\n    SubShader { Pass { } }\n    CustomEditor \"" + editor + "\"\n}"));
 
         static string Keywords(Material m)
         {
@@ -106,6 +106,31 @@ namespace UnityEngine.Tests
             control.GetFloat("_Value");
             control.HasProperty("_Value");
             Assert.Equal("", Keywords(control));
+        }
+
+        [Theory]
+        [InlineData("StandardShaderGUI")]
+        [InlineData("AutodeskInteractiveShaderGUI")]
+        public void ALoadedMaterialKeepsItsSavedMetadataUntilAPropertyRead(string editor)
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var material = Standard(editor);
+            material.SetFloat("_Mode", 1);
+            material.SetFloat("_DstBlend", 10);
+            material.renderQueue = 2999;
+            material.SetOverrideTag("RenderType", "Opaque");
+            var file = new LoadedFile { MainObject = material };
+            file.Objects[1] = material;
+
+            Assert.Empty(CaptureLogs(() => MaterialValidation.ValidateLoaded(file)).Messages);
+            Assert.Equal(2999, material.rawRenderQueue);
+            Assert.Equal("Opaque", material.GetTag("RenderType", false));
+            Assert.Empty(material.shaderKeywords);
+
+            Assert.Equal(0f, material.GetFloat("_DstBlend"));
+            Assert.Equal(2450, material.rawRenderQueue);
+            Assert.Equal("TransparentCutout", material.GetTag("RenderType", false));
+            Assert.Equal(new[] { "_ALPHATEST_ON" }, material.shaderKeywords);
         }
 
         [Fact]

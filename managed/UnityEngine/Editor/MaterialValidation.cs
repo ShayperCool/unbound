@@ -13,18 +13,15 @@ namespace Unbound.Runtime
     /// current editor: the one it names for the active render pipeline, else its
     /// <c>CustomEditor</c>, a <see cref="ShaderGUI"/> class whose full name is that name or
     /// <c>UnityEditor.</c> and that name (the Editor's own, which Unbound makes, and those of
-    /// render pipelines and projects). Measured (tests/projects/materialvalidation, the Unity
-    /// 6000.0.71f1 Editor): the materials of the project's material and prefab files are
-    /// validated, those made by scripts and the built-in resources' are not, and by the next frame
-    /// a material has what its editor's validation sets (keywords, render queue, tags, values and
-    /// GI flags). Unbound ordinarily validates a material when its file has loaded. The Editor
-    /// validates it again before the next frame. A material loaded in Play mode still reads
-    /// its saved keywords, render queue, tags and GI flags until then. A material made by
-    /// a model description import defers its built-in shader editor until the first property
-    /// access or draw. Unsupported shader editors report a warning at that point. An Autodesk
-    /// Interactive material asset also exposes its saved state until first use (modelimport
-    /// BuiltinBlend). Render pipelines' and projects' editors validate as the model imports
-    /// (<see cref="ModelMaterialImport"/>).
+    /// render pipelines and projects). With a built-in shader editor, description-imported
+    /// materials and loaded material assets keep their saved metadata until a property access
+    /// or draw validates them. The Unity 6000.0.71f1 Editor's metadata-only controls retain
+    /// their saved values through three updates in Play mode (tests/projects/modelimport,
+    /// BuiltinBlend). Unsupported editors report on first use. Render pipelines' and
+    /// projects' editors validate as the model imports (<see cref="ModelMaterialImport"/>).
+    /// Loaded assets with project editors validate when Unbound loads them. The Editor
+    /// can also validate them again after a script accesses them (tests/projects/materialvalidation).
+    /// Validation of newly scripted materials and of built-in resources is separate.
     /// </summary>
     internal static class MaterialValidation
     {
@@ -47,8 +44,7 @@ namespace Unbound.Runtime
             foreach (var obj in file.Objects.Values)
             {
                 if (obj is not Material material || !(seen ??= new HashSet<Material>()).Add(material)) continue;
-                if (Compat.DeferredBuiltinMaterialValidationMeasured
-                    && SelectedEditor(material.shader) == typeof(AutodeskInteractiveShaderGUI))
+                if (Compat.DeferredBuiltinMaterialValidationMeasured && UsesBuiltinEditor(material.shader))
                     material.PendingEditorValidation = true;
                 else
                     Validate(material);
