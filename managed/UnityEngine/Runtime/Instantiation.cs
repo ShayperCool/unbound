@@ -131,6 +131,7 @@ namespace Unbound.Runtime
             var pairs = new List<(Component Source, Component Clone)>();
             var source = sourceGo.m_Transform;
             var rootClone = CloneTree(source, null, scene, map, pairs);
+            rootClone.InitializeHierarchyStorage(allocated: false);
             var rootGo = rootClone.m_GameObject;
             rootGo.m_Name = sourceGo.m_Name + suffix;
 
@@ -199,16 +200,14 @@ namespace Unbound.Runtime
                 }
                 else
                 {
-                    rootClone.m_Parent = parent;
-                    parent.m_Children.Add(rootClone);
+                    AttachCloneRoot(rootClone, parent);
                 }
                 if (rotation.HasValue) rootClone.m_LocalRotation = rotation.Value;
                 if (position.HasValue) rootClone.SetLocalPosition(position.Value);
             }
             else
             {
-                rootClone.m_Parent = parent;
-                parent.m_Children.Add(rootClone);
+                AttachCloneRoot(rootClone, parent);
                 if (position.HasValue || rotation.HasValue)
                 {
                     rootClone.KeepWorldPose(position ?? clone.SourcePosition, rotation ?? clone.SourceRotation, clone.SourceLossyScale, parent);
@@ -228,6 +227,13 @@ namespace Unbound.Runtime
             // reflect the completed hierarchy, before callers can edit its Transform again.
             foreach (var (_, dst) in clone.Pairs)
                 if (dst is Rigidbody rb) rb.CaptureInactivePose();
+        }
+
+        static void AttachCloneRoot(Transform root, Transform parent)
+        {
+            root.m_Parent = parent;
+            parent.m_Children.Add(root);
+            root.RecordHierarchyParentChange(null, parent);
         }
 
         /// <summary>Wakes placed copies together: Awake and OnEnable go through the copies object by
@@ -597,6 +603,7 @@ namespace Unbound.Runtime
             {
                 parent.m_Children.Remove(root.m_Transform);
                 root.m_Transform.m_Parent = null;
+                root.m_Transform.RecordHierarchyParentChange(parent, null, destroying: true);
                 parent.OnHierarchyChanged();
                 Messaging.SendFast(parent.m_GameObject, "OnTransformChildrenChanged");
             }

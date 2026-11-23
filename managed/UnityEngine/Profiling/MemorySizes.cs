@@ -37,6 +37,9 @@ namespace Unbound.Runtime
         const long LightBytes = 1176, LightCommandBufferSlotBytes = 12;
         const long AudioSourceBytes = 1128, AudioSourceCurveKeyBytes = 32;
         const long MeshRendererBytes = 656, MeshRendererMaterialSlotBytes = 4, MeshRendererIndexedBlockSlotBytes = 8;
+        const long TransformBytes = 296, RectTransformBytes = 368, TransformChildSlotBytes = 16;
+        const long PackedHierarchyHeader = 176, PackedHierarchySlotBytes = 104, PackedHierarchyExtraBlockBytes = 16;
+        const long HierarchyPairUnits = 5, ExtraBlockUnits = 8;
         // Unity 6000.0.71f1, tests/projects/textassetmemory: byte storage changes past 31 bytes.
         const long TextAssetHeader = 160, TextAssetInlineBytes = 31;
         static readonly object s_AstcFallbackLock = new();
@@ -94,6 +97,7 @@ namespace Unbound.Runtime
                     {
                         BoxCollider when Compat.FixedComponentMemoryMeasured => BoxColliderBytes,
                         MeshFilter when Compat.FixedComponentMemoryMeasured => MeshFilterBytes,
+                        Transform transform when transform.MeasuresHierarchyStorage => TransformSize(transform),
                         MonoBehaviour when Compat.FixedComponentMemoryMeasured => MonoBehaviourBytes,
                         Light light when Compat.LightCommandBufferMemoryMeasured && GraphicsSettings.currentRenderPipeline == null
                             => LightBytes + light.ProfilerCommandBufferSlots * LightCommandBufferSlotBytes,
@@ -106,6 +110,19 @@ namespace Unbound.Runtime
                     };
                 default: return null;
             }
+        }
+
+        static long TransformSize(Transform transform)
+        {
+            long bytes = transform is RectTransform ? RectTransformBytes : TransformBytes;
+            bytes += transform.ProfilerReservedChildSlots * TransformChildSlotBytes;
+            long capacity = transform.ProfilerHierarchyCapacity;
+            if (capacity == 0) return bytes;
+            // The measured packed allocation adds one extra block per completed group of
+            // eight units strictly below the five units reserved for each pair of slots.
+            long pairedSlots = (capacity + 1) / 2;
+            long blocks = (HierarchyPairUnits * pairedSlots - 1) / ExtraBlockUnits;
+            return bytes + PackedHierarchyHeader + PackedHierarchySlotBytes * capacity + PackedHierarchyExtraBlockBytes * blocks;
         }
 
         static long Texture2DSize(Texture2D texture)

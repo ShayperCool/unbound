@@ -328,18 +328,6 @@ namespace UnityEngine
             set => m_HasChanged = value;
         }
 
-        public int hierarchyCapacity { get; set; } = 1;
-
-        public int hierarchyCount
-        {
-            get
-            {
-                int count = 1;
-                foreach (var child in m_Children) count += child.hierarchyCount;
-                return count;
-            }
-        }
-
         public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
         {
             MainThreadCheck.Check("SetPositionAndRotation");
@@ -795,10 +783,12 @@ namespace UnityEngine
         /// <summary>Re-parents without the checks and messages of SetParent (loaders and clones).</summary>
         internal void SetParentRaw(Transform parent)
         {
-            bool parentChanged = !ReferenceEquals(m_Parent, parent);
-            m_Parent?.m_Children.Remove(this);
+            var previous = m_Parent;
+            bool parentChanged = !ReferenceEquals(previous, parent);
+            previous?.m_Children.Remove(this);
             m_Parent = m_PoseParent = parent;
             parent?.m_Children.Add(this);
+            RecordHierarchyParentChange(previous, parent);
             MarkParentChanged(parentChanged);
         }
 

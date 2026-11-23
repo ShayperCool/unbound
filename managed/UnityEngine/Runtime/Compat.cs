@@ -545,6 +545,10 @@ namespace Unbound.Runtime
         /// measured by componentmemory on Unity 6000.0.71f1.</summary>
         internal static bool MeshRendererMaterialMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Runtime Transform hierarchy reservation state, measured by componentmemory
+        /// on Unity 6000.0.71f1. Other families retain independent per-transform capacities.</summary>
+        internal static bool TransformHierarchyStorageMeasured => Family == ReleaseFamily.Unity6000_0;
+
 
         /// <summary>CRT loading, callback delivery and render-cycle scheduling,
         /// tests/projects/crtload on 6000.0.71f1. Other releases retain unmeasured prior behavior.</summary>

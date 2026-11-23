@@ -176,6 +176,7 @@ namespace Unbound.Runtime
                 rect.m_Children.Add(child);
             }
             old.m_Children.Clear();
+            rect.AdoptReplacedHierarchy(old);
             go.m_Components[0] = rect;
             go.m_Transform = rect;
             old.MarkDestroyed();
@@ -403,6 +404,7 @@ namespace Unbound.Runtime
                 }
             }
 
+            t.RecordHierarchyParentChange(oldParent, parent);
             if (worldPositionStays) t.KeepWorldPose(worldPosition, worldRotation, worldScale, parent);
             else t.MarkChanged();
             // At its kept world pose, before its messages, its 2D bodies and colliders go to the new

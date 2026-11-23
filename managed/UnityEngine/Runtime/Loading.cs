@@ -550,7 +550,11 @@ namespace Unbound.Runtime
             foreach (var (go, _) in gameObjects.Values)
                 if (go.m_Transform != null && go.m_Transform.m_Parent == null && !roots.Contains(go.m_Transform))
                     roots.Add(go.m_Transform);
-            foreach (var root in roots) file.Roots.Add(root.m_GameObject);
+            foreach (var root in roots)
+            {
+                root.InitializeHierarchyStorage(allocated: true);
+                file.Roots.Add(root.m_GameObject);
+            }
             if (sceneRoots != null)
             {
                 // SceneRoots entries can name a Transform or a PrefabInstance. Expanded
