@@ -1,0 +1,20 @@
+{
+  "commands": [
+    "python3 tests/projects/tilemapsecondary/run.py gate"
+  ],
+  "summary": "tilemapsecondary: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "managed/UnityEngine/Graphics/Renderer.cs",
+    "managed/UnityEngine/Graphics/Sprite.cs",
+    "managed/UnityEngine/Tilemap/Tilemap.cs",
+    "managed/UnityEngine/Tilemap/TilemapRenderer.cs",
+    "tests/projects/urp2d/Assets/DefaultVolumeProfile.asset",
+    "tests/projects/urp2d/Assets/DefaultVolumeProfile.asset.meta",
+    "tests/projects/urp2d/Assets/Settings/",
+    "tests/projects/urp2d/Assets/Settings.meta",
+    "tests/projects/urp2d/Assets/UniversalRenderPipelineGlobalSettings.asset",
+    "tests/projects/urp2d/Assets/UniversalRenderPipelineGlobalSettings.asset.meta",
+    "tests/projects/urp2d/ProjectSettings/"
+  ]
+}
