@@ -25,6 +25,12 @@ namespace Unbound.Runtime
 
         /// <summary>1: enter Play mode on the next update; -1: leave it.</summary>
         static int s_Request;
+        static bool s_SingleSceneOpenedThisEditorUpdate;
+
+        internal static void NoteSingleSceneOpened() => s_SingleSceneOpenedThisEditorUpdate = true;
+
+        // Requests from an update are applied before the next Edit mode update starts.
+        internal static void BeginEditModeFrame() => s_SingleSceneOpenedThisEditorUpdate = false;
 
         internal static bool WillChange => s_Request != 0 || s_EnteringPlayMode;
 
@@ -108,7 +114,7 @@ namespace Unbound.Runtime
                 SceneManager.Internal_SceneLoaded(new Scene(scene.Handle), SceneManagerInternal.PlayModeEntry);
             PlayerLoopDriver.SendPlayModeStart();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterSceneLoad);
-            PlayerLoopDriver.RestartPlayMode();
+            PlayerLoopDriver.RestartPlayMode(s_SingleSceneOpenedThisEditorUpdate);
         }
 
         static void Unlink(Transform t)

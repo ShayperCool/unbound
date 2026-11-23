@@ -56,11 +56,13 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        [InlineData(1, true)]
-        [InlineData(2, true)]
-        [InlineData(1, false)]
-        [InlineData(2, false)]
-        public void FrameAwaitablesCompleteAfterRenderingAndWaitAcrossSkippedFrames(int interval, bool enteredPlayMode)
+        [InlineData(1, true, false)]
+        [InlineData(2, true, false)]
+        [InlineData(1, false, true)]
+        [InlineData(2, false, true)]
+        [InlineData(1, false, false)]
+        [InlineData(2, false, false)]
+        public void FrameAwaitablesCompleteAfterRenderingAndWaitAcrossSkippedFrames(int interval, bool enteredPlayMode, bool deferFirst)
         {
             var driver = typeof(PlayerLoopDriver);
             var rendering = driver.GetField("s_FrameRendering", PrivateStatic);
@@ -68,7 +70,9 @@ namespace UnityEngine.Tests
             var advance = driver.GetField("s_AdvanceAfterLoop", PrivateStatic);
             var thread = driver.GetField("s_MainThreadId", PrivateStatic);
             var entered = driver.GetField("s_EnteredPlayMode", PrivateStatic);
+            var defer = driver.GetField("s_DeferFirstEndOfFrame", PrivateStatic);
             var savedEntered = entered.GetValue(null);
+            var savedDefer = defer.GetValue(null);
             var savedRendering = rendering.GetValue(null); var savedEnd = end.GetValue(null);
             var savedAdvance = advance.GetValue(null); var savedThread = thread.GetValue(null);
             var release = ProjectInfo.UnityVersion; int frame = Time.s_FrameCount;
@@ -80,6 +84,7 @@ namespace UnityEngine.Tests
                 ProjectInfo.UnityVersion = "6000.0.71f1";
                 thread.SetValue(null, Environment.CurrentManagedThreadId);
                 entered.SetValue(null, enteredPlayMode);
+                defer.SetValue(null, deferFirst);
                 Rendering.OnDemandRendering.s_FrameInterval = interval;
                 Time.s_FrameCount = 5;
                 rendering.SetValue(null, (Action)(() => rendered = true));
@@ -93,10 +98,10 @@ namespace UnityEngine.Tests
                 }
                 Trigger(); Assert.False(resumed);
                 driver.GetMethod("AfterLoop", PrivateStatic).Invoke(null, null);
-                if (!enteredPlayMode || interval == 2)
+                if (deferFirst || interval == 2)
                 {
                     Assert.False(resumed);
-                    if (!enteredPlayMode) Assert.True(rendered);
+                    if (deferFirst) Assert.True(rendered);
                     entered.SetValue(null, true);
                     Time.s_FrameCount = 6; rendered = false;
                     Trigger(); Assert.False(resumed);
@@ -110,6 +115,7 @@ namespace UnityEngine.Tests
                 rendering.SetValue(null, savedRendering); end.SetValue(null, savedEnd);
                 advance.SetValue(null, savedAdvance); thread.SetValue(null, savedThread);
                 entered.SetValue(null, savedEntered);
+                defer.SetValue(null, savedDefer);
                 ProjectInfo.UnityVersion = release; Time.s_FrameCount = frame;
                 Rendering.OnDemandRendering.s_FrameInterval = previousInterval;
             }

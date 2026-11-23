@@ -72,6 +72,7 @@ namespace Unbound.Runtime
         static bool s_QuitDone;
         static bool s_EditorExit;
         static bool s_EnteredPlayMode;
+        static bool s_DeferFirstEndOfFrame;
         static bool s_EndOfFrameAfterLoop;
         static bool s_AdvanceAfterLoop;
         static readonly List<Action> s_FrameCleanup = new List<Action>();
@@ -240,10 +241,11 @@ namespace Unbound.Runtime
             }
             // In the measured Editor, these coroutine resumes follow every public loop leaf.
             // They still see the previous rendered-frame count (destroyphases, coreapis).
-            // The first Play frame renders, but has no end-of-frame completion phase.
-            // Scene loads during Play do not restart this state (tests/projects/eofstartup).
+            // Opening a saved scene in Single mode and entering Play in the same Editor update
+            // defers completion. A scene that was already open can complete in frame zero
+            // (tests/projects/eofstartup).
             if (endOfFrame && UnityEngine.Rendering.OnDemandRendering.RendersThisFrame &&
-                (!Compat.RenderingAfterPublicLoop || s_EnteredPlayMode))
+                (!Compat.RenderingAfterPublicLoop || !s_DeferFirstEndOfFrame || s_EnteredPlayMode))
             {
                 Coroutines.Run(Coroutines.Phase.EndOfFrame);
                 if (Compat.RenderingAfterPublicLoop) AwaitableScheduler.RunEndOfFrame();
@@ -390,16 +392,21 @@ namespace Unbound.Runtime
             UnityEditor.EditorInitialization.LoadEditorDomain();
             if (!string.IsNullOrEmpty(firstScene))
             {
-                try { SceneManagerInternal.LoadPath(firstScene); }
+                try
+                {
+                    SceneManagerInternal.LoadPath(firstScene);
+                    EditorSession.NoteSingleSceneOpened();
+                }
                 catch (Exception e) { Debug.LogException(e); }
             }
             s_Booted = true;
         }
 
         /// <summary>Play mode was entered from Edit mode: EnteredPlayMode follows its first frame.</summary>
-        internal static void RestartPlayMode()
+        internal static void RestartPlayMode(bool deferFirstEndOfFrame)
         {
             s_EnteredPlayMode = false;
+            s_DeferFirstEndOfFrame = deferFirstEndOfFrame;
             UnityEngine.Analytics.AnalyticsSessionInfo.BeginPlaySession();
             AnimationSystem.BeginPlayMode();
             CustomRenderTextureManager.BeginPlayMode();
@@ -408,6 +415,8 @@ namespace Unbound.Runtime
 
         static void Boot(string firstScene, bool unused)
         {
+            // Direct Play opens its startup scene and starts it in the same setup.
+            s_DeferFirstEndOfFrame = !string.IsNullOrEmpty(firstScene);
             AnimationSystem.BeginPlayMode();
             CustomRenderTextureManager.BeginPlayMode();
             var initialScene = string.IsNullOrEmpty(firstScene) ? null : SceneManagerInternal.PreparePlayModeScene(firstScene);
@@ -554,6 +563,7 @@ namespace Unbound.Runtime
         /// <summary>An Edit mode frame: the Editor's own updates and editor callbacks; no scene plays.</summary>
         static unsafe void EditModeFrame(FrameInput* input)
         {
+            EditorSession.BeginEditModeFrame();
             Time.HostFrameOutsidePlay(input->FixedStep);
             UpdateInput();
             MainThreadContext.Instance.RunPending();
