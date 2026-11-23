@@ -178,6 +178,8 @@ impl Grid {
                 reach.max[k] = reach.max[k].max(light.position[k] + light.range);
             }
         }
+        // (A loose test, as the Editor's: boxes apart by less than their sizes pass it and
+        // make a box turned inside out, whose regions no light reaches; not measured.)
         let overlaps = (0..3).all(|k| {
             (scene.min[k] - reach.min[k]).abs()
                 <= (reach.max[k] - reach.min[k]) + (scene.max[k] - scene.min[k])
@@ -243,6 +245,8 @@ impl Grid {
         let mut index = 0usize;
         let mut stride = 1usize;
         for k in 0..3 {
+            // (Rounded towards zero: a point less than a region below the grid falls in its
+            // first region, which no light reaching it can light anyway.)
             let at = ((point[k] - self.min[k]) / self.cell[k]) as i64;
             if at < 0 || at >= self.dims[k] as i64 {
                 return None;
