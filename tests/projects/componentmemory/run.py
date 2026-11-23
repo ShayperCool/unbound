@@ -27,10 +27,14 @@ def directory(label, profile):
     return out
 
 
-def validate_capture(root, release):
+def validate_capture(root, release, method):
     rows = value_probe.read_values(root/'capture'/value_probe.VALUES)
     if rows.get('unity') != release:
         raise SystemExit(f'{root}: expected Editor capture for {release}')
+    receipt = value_probe.editor_runner.load_result(root) or {}
+    command = receipt.get('command')
+    if not isinstance(command, list) or ('-executeMethod', method) not in zip(command, command[1:]):
+        raise SystemExit(f'{root}: expected Editor capture from {method}')
 
 
 def main():
@@ -47,7 +51,7 @@ def main():
         roots = [directory(label, profile) for label in args.labels]
         value_probe.verify_sealed_value_repeats(roots)
         for root in roots:
-            validate_capture(root, args.release)
+            validate_capture(root, args.release, method)
         return value_probe.publish(PROBE, [str(root) for root in roots], profile=profile)
     if args.labels:
         parser.error('use --label for record and gate')
@@ -57,7 +61,7 @@ def main():
     if args.mode == 'record':
         value_probe.record(PROBE, method, variable, str(out),
                            batch=True, macos_batch=True, base=BASE)
-        validate_capture(out, args.release)
+        validate_capture(out, args.release, method)
         value_probe.seal_value_capture(out)
         return 0
     return value_probe.gate(PROBE, variable, str(out), 0, ['--headless', '8'], base=BASE, profile=profile)
