@@ -807,9 +807,16 @@ namespace UnityEngine
             }
         }
 
-        public void AddCommandBuffer(CameraEvent evt, CommandBuffer buffer)
+        public void AddCommandBuffer(CameraEvent evt, CommandBuffer buffer) =>
+            RegisterCommandBuffer(evt, buffer, nameof(AddCommandBuffer));
+
+        public void AddCommandBufferAsync(CameraEvent evt, CommandBuffer buffer, ComputeQueueType queueType) =>
+            RegisterCommandBuffer(evt, buffer, nameof(AddCommandBufferAsync));
+
+        void RegisterCommandBuffer(CameraEvent evt, CommandBuffer buffer, string method)
         {
             if (buffer == null) throw new NullReferenceException("buffer is null");
+            if (WarnIfScriptablePipeline(method)) return;
             if (!m_CommandBuffers.TryGetValue(evt, out var list))
             {
                 list = new List<CommandBuffer>(Compat.CameraCommandBuffersMeasured ? 1 : 0);
@@ -818,19 +825,48 @@ namespace UnityEngine
             list.Add(buffer);
         }
 
-        public void AddCommandBufferAsync(CameraEvent evt, CommandBuffer buffer, ComputeQueueType queueType) => AddCommandBuffer(evt, buffer);
-
         public void RemoveCommandBuffer(CameraEvent evt, CommandBuffer buffer)
         {
-            if (m_CommandBuffers.TryGetValue(evt, out var list)) list.Remove(buffer);
+            if (!Compat.CameraCommandBuffersMeasured)
+            {
+                if (m_CommandBuffers.TryGetValue(evt, out var legacy)) legacy.Remove(buffer);
+                return;
+            }
+            if (buffer == null) throw new NullReferenceException("buffer is null");
+            if (WarnIfScriptablePipeline(nameof(RemoveCommandBuffer))) return;
+            if (!m_CommandBuffers.TryGetValue(evt, out var list)) return;
+            int remaining = list.IndexOf(buffer);
+            if (remaining < 0) return;
+            for (int index = remaining + 1; index < list.Count; index++)
+            {
+                var candidate = list[index];
+                if (!ReferenceEquals(candidate, buffer)) list[remaining++] = candidate;
+            }
+            list.RemoveRange(remaining, list.Count - remaining);
         }
 
-        public void RemoveCommandBuffers(CameraEvent evt) => m_CommandBuffers.Remove(evt);
+        public void RemoveCommandBuffers(CameraEvent evt)
+        {
+            if (!WarnIfScriptablePipeline(nameof(RemoveCommandBuffers))) m_CommandBuffers.Remove(evt);
+        }
 
-        public void RemoveAllCommandBuffers() => m_CommandBuffers.Clear();
+        public void RemoveAllCommandBuffers()
+        {
+            if (!WarnIfScriptablePipeline(nameof(RemoveAllCommandBuffers))) m_CommandBuffers.Clear();
+        }
 
-        public CommandBuffer[] GetCommandBuffers(CameraEvent evt) => m_CommandBuffers.TryGetValue(evt, out var list) ? list.ToArray() : new CommandBuffer[0];
+        public CommandBuffer[] GetCommandBuffers(CameraEvent evt)
+        {
+            WarnIfScriptablePipeline(nameof(GetCommandBuffers));
+            return m_CommandBuffers.TryGetValue(evt, out var list) ? list.ToArray() : new CommandBuffer[0];
+        }
 
+        static bool WarnIfScriptablePipeline(string method)
+        {
+            if (!Compat.CameraCommandBuffersMeasured || GraphicsSettings.currentRenderPipeline == null) return false;
+            Debug.LogWarning($"Your project uses a scriptable render pipeline. You can use Camera.{method} only with the built-in renderer.");
+            return true;
+        }
 
         /// <summary>This camera takes the other's settings, and also its transform's world position
         /// and rotation, local scale and its GameObject's layer (measured on the 6000.0 Editor).</summary>
