@@ -36,6 +36,25 @@ the captures. The Scripting API describes duplicate registrations and their remo
 Add `--profile light` to the commands above to record, publish or check this profile. Light memory
 with a scriptable render pipeline and other release families remains unmeasured.
 
+## Camera command buffer allocation
+
+The camera profile checks attached Cameras under Unity 6000.0.71f1. The base allocation is 4088
+bytes on OpenGL Core and 4064 on Metal. Each camera event starts with one slot and doubles its
+capacity when full. Each reserved slot adds 12 bytes. Removing a buffer removes all its
+registrations at that event, preserves survivor order, and leaves those slots available for reuse.
+Clearing an event or all events releases their reservations. Clones start empty. `CopyFrom` keeps
+the destination's existing registrations and allocation.
+
+The profile checks a camera request rendered by an active scriptable pipeline. Its Built-In
+registration and removal calls warn and leave the state intact. The getter warns and returns the
+retained event registrations. A null buffer throws before a pipeline warning. The 6000.0 API
+documents the Built-In renderer limitation and removal of every duplicate registration.
+[Built-In command buffer manual](https://docs.unity3d.com/6000.0/Documentation/Manual/GraphicsCommandBuffers.html) · [RemoveCommandBuffer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Camera.RemoveCommandBuffer.html) · [GetCommandBuffers](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Camera.GetCommandBuffers.html)
+
+Use `--profile camera` to select this probe. The runner defaults to Metal on macOS and OpenGL
+Core on Linux. Pass `--backend` explicitly to publish a recording made on another host.
+Persistent asset component memory and other release families remain unmeasured.
+
 ## AudioSource distance curve allocation
 
 The audio profile records attached AudioSources with script-created and scene-authored distances.

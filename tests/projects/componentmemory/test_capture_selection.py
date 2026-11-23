@@ -23,7 +23,7 @@ class CaptureSelectionTests(unittest.TestCase):
         self.assertNotEqual(fixed, light)
         self.assertNotEqual(fixed.parent, light.parent)
 
-    def test_fixed_record_cannot_publish_into_the_light_profile(self):
+    def test_capture_metadata_matches_the_selected_method_and_device(self):
         cache = validation_cache()
         cache.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix='component-capture-selection-', dir=cache) as directory:
@@ -32,14 +32,17 @@ class CaptureSelectionTests(unittest.TestCase):
             capture.mkdir()
             (capture/VALUES).write_text(
                 json.dumps({'k': 'unity', 'v': RELEASE}) + '\n'
+                + json.dumps({'k': 'device', 'v': 'OpenGLCore'}) + '\n'
                 + json.dumps({'k': 'complete', 'v': True}) + '\n'
             )
             (root/editor_runner.RESULT).write_text(json.dumps({
                 'command': ['Unity', '-executeMethod', FIXED_METHOD],
             }))
-            run.validate_capture(root, RELEASE, FIXED_METHOD)
+            run.validate_capture(root, RELEASE, FIXED_METHOD, 'OpenGLCore')
             with self.assertRaisesRegex(SystemExit, LIGHT_METHOD):
                 run.validate_capture(root, RELEASE, LIGHT_METHOD)
+            with self.assertRaisesRegex(SystemExit, 'expected Editor capture on Metal'):
+                run.validate_capture(root, RELEASE, FIXED_METHOD, 'Metal')
 
 
 if __name__ == '__main__':
