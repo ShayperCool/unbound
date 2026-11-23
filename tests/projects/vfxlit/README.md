@@ -79,6 +79,9 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
   the render pipeline's lit graph (URP Lit, opaque, its default surface) written with its
   support for particles on, its base colour the probe's image through a texture property of its
   own. Such a graph has the lightmapper's pass (`Meta`) besides the passes cameras draw.
+- `MovingLit`, `MovingMeshes`: twenty opaque particles moving sideways fast (6 units a second),
+  writing motion vectors: quads lit by the render pipeline (no base colour map), and the
+  package's default mesh turned each its own way (unlit).
 - `SingleMesh`: two single mesh outputs (`Output Single Mesh`) of the probe's wedge, turned
   and scaled by their transforms: one through the render pipeline's unlit shader (both
   submeshes, its colour an exposed property of the output), one through its lit shader (the
@@ -185,6 +188,9 @@ effect's alive count, whether it is culled and awake, its renderer's state).
 - `single mesh`: `SingleMesh` under the sun and a point light; the effect has no particle
   system (its alive count is 0 and no system is awake), and its renderer lists both outputs'
   materials.
+- `moving lit`, `moving meshes`: `MovingLit` and `MovingMeshes` under a point light, their
+  cameras with post-processing and a volume of object motion blur (camera and objects, high
+  quality, intensity 1) only they read, at frames 9 and 10.
 - `decal`: `LitDecal` projected onto a lit wall through the renderer with the decal feature,
   under the sun and a point light (frames 5 and 12): the decal feature draws the output's
   screen space pass; its DBuffer and GBuffer passes exclude OpenGL Core.
@@ -205,8 +211,9 @@ adds to that is not separated.
 
 ## Not covered
 
-- A lit output's motion vectors (`LitMoving`: drawn, not shot; an unlit output's are measured
-  in `tests/projects/vfxoutputs`). Strips lit by 2D lights and meshes chosen among several by
+- Motion vectors of transparent, strip and Shader Graph outputs (lit quads and unlit meshes are
+  measured here, `moving lit`, `moving meshes`; unlit quads in `tests/projects/vfxoutputs`).
+  Strips lit by 2D lights and meshes chosen among several by
   their size on screen: not drawn; each says so once for its asset (strips lit by the
   pipeline's lights are drawn: `tests/projects/vfxstrips` `lit`). One mesh
   culled by its size on screen is drawn, not measured. Outputs of three or four

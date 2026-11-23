@@ -41,6 +41,7 @@ public static class LitAuthoring
         LegacyDefaultTexture();
         Decals();
         SingleMeshes();
+        MovingVectors();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -130,6 +131,40 @@ public static class LitAuthoring
     static Mesh Spike => AssetDatabase.LoadAssetAtPath<Mesh>(ObjectFolder + "/Spike.asset");
 
     // ----------------------------------------------------------------------------- graphs
+
+    /// <summary>Opaque particles moving sideways fast, writing motion vectors: quads lit by the
+    /// render pipeline (no base colour map) and meshes (the package's default mesh, turned each
+    /// its own way, unlit).</summary>
+    static void MovingVectors()
+    {
+        foreach (var name in new[] { "MovingLit", "MovingMeshes" })
+        {
+            var graph = NewGraph(name);
+            VFXBasicSpawner spawn;
+            VFXBasicInitialize init;
+            VFXContext output;
+            if (name == "MovingLit")
+            {
+                var (litSpawn, litInit, _, lit) = System<VFXURPLitPlanarPrimitiveOutput>(graph, 64);
+                lit.SetSettingValue("useBaseColorMap", VFXAbstractParticleURPLitOutput.BaseColorMapMode.None);
+                (spawn, init, output) = (litSpawn, litInit, lit);
+            }
+            else
+            {
+                var (meshSpawn, meshInit, _, mesh) = System<VFXMeshOutput>(graph, 64);
+                (spawn, init, output) = (meshSpawn, meshInit, mesh);
+            }
+            output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+            output.SetSettingValue("generateMotionVector", true);
+            Burst(spawn, 20f);
+            SetRandom(init, "position", new Vector3(-1.4f, -1f, 0f), new Vector3(-0.8f, 1f, 0f));
+            SetVector(init, "velocity", new Vector3(6f, 0f, 0f));
+            Set(init, "size", 0.25f);
+            if (name == "MovingMeshes") SetRandom(init, "angle", new Vector3(0f, 0f, 0f), new Vector3(90f, 90f, 90f));
+            SetRandom(init, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+            Save(graph);
+        }
+    }
 
     /// <summary>Meshes an effect draws as they are (`Output Single Mesh`): the probe's wedge
     /// turned and scaled by the output's transform, through the render pipeline's unlit shader

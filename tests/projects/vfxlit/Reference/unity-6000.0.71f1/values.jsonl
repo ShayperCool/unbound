@@ -43,6 +43,8 @@
 {"k":"renderer/graph lit","v":"cast=On receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/GraphLit/System (1)/Output Particle|Shader Graph Quad - Lit"}
 {"k":"renderer/decal","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitDecal/System (1)/Output Particle|URP Lit|Decal"}
 {"k":"renderer/single mesh","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Universal Render Pipeline/Unlit, Universal Render Pipeline/Lit"}
+{"k":"renderer/moving lit","v":"cast=Off receive=0 motion=Object probes=Off reflections=Off materials=Hidden/VFX/MovingLit/System (1)/Output Particle|URP Lit|Quad"}
+{"k":"renderer/moving meshes","v":"cast=Off receive=0 motion=Object probes=Off reflections=Off materials=Hidden/VFX/MovingMeshes/System (1)/Output Particle|Unlit Mesh"}
 {"k":"renderer/no asset","v":"cast=Off receive=0 motion=Camera materials=0"}
 {"k":"renderer/asset given","v":"cast=On receive=0 motion=Camera materials=1"}
 {"k":"renderer/asset taken","v":"cast=Off receive=0 motion=Camera materials=0"}
@@ -107,9 +109,13 @@
 {"k":"act/mesh paused/f008","v":"Shape=Spike -> Shape=Spike"}
 {"k":"draw/mesh exposed/f008","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"act/mesh exposed/f009","v":"Mask=2 -> Shape=Wedge Mask=2"}
+{"k":"draw/moving lit/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving meshes/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/sprite sorting/f010","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh sorted/f010","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh paused/f010","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving lit/f010","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving meshes/f010","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh exposed/f011","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"act/mesh exposed/f012","v":"Mask=0xfffffffe -> Shape=Wedge Mask=4294967294"}
 {"k":"draw/offscreen caster/f012","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}

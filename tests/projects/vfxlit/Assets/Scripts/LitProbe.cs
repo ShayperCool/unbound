@@ -195,6 +195,10 @@ public sealed class LitProbe : MonoBehaviour
             // Meshes drawn as they are by the effect's two single mesh outputs, under the sun
             // and a point light.
             Lamp(Draw("single mesh", "SingleMesh", 5), LightType.Point);
+            // Lit quads and meshes moving sideways under the camera's object motion blur, both
+            // writing motion vectors.
+            foreach (var graph in new[] { "MovingLit", "MovingMeshes" })
+                Blurred(Lamp(Draw(graph == "MovingLit" ? "moving lit" : "moving meshes", graph, 9, 10), LightType.Point));
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)
@@ -338,6 +342,32 @@ public sealed class LitProbe : MonoBehaviour
 
     /// <summary>A light of the stage's own beside its camera (its range ends long before the
     /// next stage).</summary>
+    /// <summary>The layer of the volume only the motion stages' cameras read.</summary>
+    const int k_MotionLayer = 30;
+    VolumeProfile m_MotionProfile;
+
+    /// <summary>The stage's camera with post-processing and a volume of object motion blur
+    /// (camera and objects, high quality, intensity 1) that only it reads.</summary>
+    Stage Blurred(Stage stage)
+    {
+        if (m_MotionProfile == null)
+        {
+            m_MotionProfile = ScriptableObject.CreateInstance<VolumeProfile>();
+            var blur = m_MotionProfile.Add<MotionBlur>();
+            blur.mode.Override(MotionBlurMode.CameraAndObjects);
+            blur.quality.Override(MotionBlurQuality.High);
+            blur.intensity.Override(1f);
+            blur.clamp.Override(0.2f);
+            var volume = new GameObject("motion volume") { layer = k_MotionLayer }.AddComponent<Volume>();
+            volume.isGlobal = true;
+            volume.sharedProfile = m_MotionProfile;
+        }
+        var data = stage.Camera.GetUniversalAdditionalCameraData();
+        data.renderPostProcessing = true;
+        data.volumeLayerMask = 1 << k_MotionLayer;
+        return stage;
+    }
+
     Stage Lamp(Stage stage, LightType type)
     {
         var lamp = new GameObject("lamp " + stage.Key).AddComponent<Light>();
