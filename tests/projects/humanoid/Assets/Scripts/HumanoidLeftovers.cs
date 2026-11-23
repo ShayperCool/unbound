@@ -243,9 +243,15 @@ public partial class HumanoidProbe
     /// transforms' rotations and the human pose.</summary>
     static void ApiCurves()
     {
-        foreach (var mode in new[] { "setCurve", "editorCurve", "mirror", "mirrorFootIK" })
+        foreach (var mode in new[] { "setCurve", "editorCurve", "mirror", "mirrorFootIK", "plainFootIK",
+            "plainJob", "plainJobFootIK", "mirrorJob", "mirrorJobFootIK", "mirrorJobPartialFoot",
+            "mirrorJobPartialHand", "mirrorJobFootPosition", "mirrorJobFullFoot",
+            "mirrorControllerFootIK", "mirrorControllerStateFootIK", "mirrorAttachedFootIK", "plainControllerFootIK" })
         {
             string key = "apiCurves." + mode;
+            bool stateMirror = mode == "mirrorControllerStateFootIK";
+            bool controllerPlayable = mode.Contains("Controller");
+            bool attachedController = mode.Contains("Attached");
             var clip = new AnimationClip { name = key };
             void Set(string name, AnimationCurve curve)
             {
@@ -269,8 +275,22 @@ public partial class HumanoidProbe
             Set("RootQ.y", AnimationCurve.Constant(0f, 1f, turn.y));
             Set("RootQ.z", AnimationCurve.Constant(0f, 1f, turn.z));
             Set("RootQ.w", AnimationCurve.Constant(0f, 1f, turn.w));
+            if (mode == "mirrorJobPartialFoot")
+                Set("LeftFootQ.y", AnimationCurve.Constant(0f, 1f, .2f));
+            if (mode == "mirrorJobPartialHand")
+                Set("LeftHandQ.x", AnimationCurve.Constant(0f, 1f, .2f));
+            if (mode == "mirrorJobFootPosition")
+                Set("LeftFootT.x", AnimationCurve.Constant(0f, 1f, .3f));
+            if (mode == "mirrorJobFullFoot")
+            {
+                var goal = Quaternion.Euler(10f, 20f, 30f);
+                Set("LeftFootQ.x", AnimationCurve.Constant(0f, 1f, goal.x));
+                Set("LeftFootQ.y", AnimationCurve.Constant(0f, 1f, goal.y));
+                Set("LeftFootQ.z", AnimationCurve.Constant(0f, 1f, goal.z));
+                Set("LeftFootQ.w", AnimationCurve.Constant(0f, 1f, goal.w));
+            }
 #if UNITY_EDITOR
-            if (mode.StartsWith("mirror", StringComparison.Ordinal))
+            if (mode.StartsWith("mirror", StringComparison.Ordinal) && !stateMirror)
             {
                 var settings = UnityEditor.AnimationUtility.GetAnimationClipSettings(clip);
                 settings.mirror = true;
@@ -289,14 +309,46 @@ public partial class HumanoidProbe
             graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
             // Without foot IK: the legs follow their (absent) muscle curves, not goals.
             var playable = AnimationClipPlayable.Create(graph, clip);
-            playable.SetApplyFootIK(mode == "mirrorFootIK");
-            AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
-            graph.Play();
+            playable.SetApplyFootIK(mode.EndsWith("FootIK", StringComparison.Ordinal));
+            Playable outputSource = playable;
+            if (mode.Contains("Job"))
+            {
+                var job = AnimationScriptPlayable.Create(graph, new MirrorGoalReadJob(), 1);
+                job.ConnectInput(0, playable, 0, 1f);
+                outputSource = job;
+            }
+#if UNITY_EDITOR
+            if (controllerPlayable || attachedController)
+            {
+                var controller = new UnityEditor.Animations.AnimatorController();
+                controller.AddLayer("Base Layer");
+                var machine = controller.layers[0].stateMachine;
+                var state = machine.AddState("Motion");
+                state.motion = clip;
+                state.mirror = stateMirror;
+                state.iKOnFeet = true;
+                machine.defaultState = state;
+                if (attachedController)
+                {
+                    animator.runtimeAnimatorController = controller;
+                    animator.Play("Motion", 0, 0f);
+                }
+                else outputSource = AnimatorControllerPlayable.Create(graph, controller);
+            }
+#endif
+            if (!attachedController)
+            {
+                AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(outputSource);
+                graph.Play();
+            }
             var handler = new HumanPoseHandler(animator.avatar, instance.transform);
             var hips = animator.GetBoneTransform(HumanBodyBones.Hips);
             for (int step = 0; step < 3; step++)
             {
-                graph.Evaluate(step == 0 ? 0f : step == 1 ? 0.5f : 0.25f);
+                s_JobKey = key + ".step" + step;
+                float dt = step == 0 ? 0f : step == 1 ? 0.5f : 0.25f;
+                if (attachedController) animator.Update(dt);
+                else graph.Evaluate(dt);
                 Rotations(key + ".step" + step + ".rotations", instance.transform, hips);
                 var pose = new HumanPose();
                 handler.GetHumanPose(ref pose);
@@ -307,6 +359,12 @@ public partial class HumanoidProbe
             Destroy(instance);
         }
     }
+}
+
+public struct MirrorGoalReadJob : IAnimationJob
+{
+    public void ProcessRootMotion(AnimationStream stream) {}
+    public void ProcessAnimation(AnimationStream stream) => HumanoidProbe.JobRecord("goals", stream);
 }
 
 /// <summary>Sets human bones' local rotations in OnAnimatorIK (<see cref="HumanoidProbe.s_BoneMode"/>)
