@@ -352,26 +352,22 @@ fn main() {
             |_| vec![probe_points.len()],
             |g| g.split(',').map(|c| c.parse().unwrap()).collect(),
         );
-        let mut probed = indirect::Probes {
-            radiance: Vec::new(),
-            validity: Vec::new(),
-        };
-        let mut start = 0;
-        for size in sizes {
-            let group = indirect::probes(
-                &probe_points[start..start + size],
-                &world,
-                &samples,
-                Settings {
-                    samples: counts[0],
-                    environment_samples: counts[1],
-                    ..settings
-                },
-            );
-            probed.radiance.extend(group.radiance);
-            probed.validity.extend(group.validity);
-            start += size;
-        }
+        let mut rest = probe_points.as_slice();
+        let groups = sizes.iter().map(|&size| {
+            let (group, after) = rest.split_at(size);
+            rest = after;
+            group
+        });
+        let probed = indirect::probes(
+            groups,
+            &world,
+            &samples,
+            Settings {
+                samples: counts[0],
+                environment_samples: counts[1],
+                ..settings
+            },
+        );
         let flat: Vec<f32> = probed
             .radiance
             .iter()

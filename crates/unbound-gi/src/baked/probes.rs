@@ -49,8 +49,9 @@ pub fn add(out: &mut Coefficients, color: [f32; 3], direction: [f32; 3]) {
 /// The direct light of the bake's baked lights at each probe's point: every directional light
 /// and the lights of the point's region of the light grid, unshadowed from the point (which
 /// faces every way). A mixed light's direct light is in no probe, in any Lighting Mode (in the
-/// Subtractive mode too: it is realtime for the objects the probes light); one baked instead
-/// (in the Shadowmask mode, without a channel) is.
+/// Subtractive mode too: it is realtime for the objects the probes light; tests/projects/
+/// bakedbuffers `ProbesMore`, `ProbesSky`); one baked instead (in the Shadowmask mode, without
+/// a channel) is taken as a baked light (not measured).
 pub fn direct(
     positions: &[[f32; 3]],
     lights: &[Light],
@@ -67,7 +68,7 @@ pub fn direct(
                 if light.mode != Mode::Baked {
                     return;
                 }
-                let Some(arriving) = light.arriving(&tables, light.color, p, [0.0; 3]) else {
+                let Some(arriving) = light.arriving_around(&tables, light.color, p) else {
                     return;
                 };
                 let shadowed = light.casts_shadows

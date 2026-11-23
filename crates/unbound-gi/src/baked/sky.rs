@@ -450,6 +450,76 @@ mod tests {
     }
 
     #[test]
+    fn a_point_facing_every_way_takes_the_skys_light_by_either_way_of_drawing() {
+        // Faces of brightness 1 and 2 in turn: over the sphere each channel's mean is a half,
+        // and a probe's sample brings four times the mean (a quarter of 4 pi over pi).
+        let colors = [
+            [1.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 2.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 2.0],
+        ];
+        let even = sky(colors);
+        let faces = colors.map(face);
+        let picked = Sky {
+            importance: Some(Importance::of(&faces, 2048)),
+            faces,
+        };
+        let count = 200_000;
+        for sky in [&even, &picked] {
+            let mut sum = [0.0f64; 3];
+            for k in 0..count {
+                // Well-spread numbers; the third alternates the two ways of drawing.
+                let numbers = [
+                    (k as f64 * 0.618_033_988_75).fract() as f32,
+                    (k as f64 * 0.754_877_666_25).fract() as f32,
+                    if k % 2 == 0 { 0.25 } else { 0.75 },
+                ];
+                let (direction, light) = sky.around_point(numbers);
+                assert!((dot(direction, direction) - 1.0).abs() < 1e-4);
+                for c in 0..3 {
+                    sum[c] += light[c] as f64;
+                }
+            }
+            for c in 0..3 {
+                let mean = sum[c] / count as f64;
+                // (The picked directions follow the sky's brightness only as closely as 2048
+                // of them can: their mean is within a few hundredths.)
+                assert!((mean - 2.0).abs() < 0.05, "channel {c}: {mean}");
+            }
+        }
+        // A picked direction weighs its light against the even drawing by their densities.
+        let importance = picked.importance.as_ref().unwrap();
+        let (direction, light) = picked.around_point([2.5 / 2048.0, 0.0, 0.75]);
+        assert_eq!(direction, importance.directions[2]);
+        let by_sky = brightness(picked.color(direction)) / importance.integral;
+        let evenly = 1.0 / (4.0 * PI);
+        let want = importance.weighted[2].map(|v| 2.0 * by_sky / (by_sky + evenly) * v / PI);
+        for c in 0..3 {
+            assert!(
+                (light[c] - want[c]).abs() <= 1e-5 * want[c].max(1.0),
+                "{light:?} {want:?}"
+            );
+        }
+        // A direction drawn evenly over the sphere, weighed against the picking.
+        let (direction, light) = picked.around_point([0.3, 0.6, 0.25]);
+        let color = picked.color(direction);
+        let by_sky = brightness(color) / importance.integral;
+        let want = color.map(|v| 2.0 * evenly / (evenly + by_sky) * v * 4.0);
+        for c in 0..3 {
+            assert!(
+                (light[c] - want[c]).abs() <= 1e-5 * want[c].max(1.0),
+                "{light:?} {want:?}"
+            );
+        }
+        // Without picking, four times the sky's light whichever way.
+        let (direction, light) = even.around_point([0.3, 0.6, 0.25]);
+        assert_eq!(light, even.color(direction).map(|v| v * 4.0));
+    }
+
+    #[test]
     fn a_direction_taken_after_the_draws_found_no_light_brings_nothing() {
         // One lit texel among 6 x 256 x 256 black ones: most of the draws find black sky,
         // and directions taken after them must not bring an endless or undefined light.

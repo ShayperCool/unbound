@@ -855,6 +855,23 @@ mod lighting {
             sun.arriving(&tables, sun.color, [0.0; 3], [f32::NAN, 0.0, 0.0])
                 .is_none()
         );
+        // A surface's normal without length (normals that cancel out) takes nothing; a point
+        // that faces every way (a light probe's) takes all of it, from point lights too.
+        assert!(
+            sun.arriving(&tables, sun.color, [0.0; 3], [0.0; 3])
+                .is_none()
+        );
+        let around = sun.arriving_around(&tables, sun.color, [0.0; 3]).unwrap();
+        assert_eq!(
+            (around.color, around.direction),
+            ([2.0, 1.0, 0.5], [0.0, 0.0, 1.0])
+        );
+        let bulb = light(Kind::Point);
+        let beside = [bulb.position[0] + 1.0, bulb.position[1], bulb.position[2]];
+        assert!(bulb.arriving(&tables, [1.0; 3], beside, [0.0; 3]).is_none());
+        let lit = bulb.arriving_around(&tables, [1.0; 3], beside).unwrap();
+        assert_eq!(lit.direction, [-1.0, 0.0, 0.0]);
+        assert!(lit.color[0] > 0.0);
     }
 
     #[test]

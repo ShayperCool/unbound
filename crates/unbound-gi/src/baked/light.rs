@@ -152,8 +152,7 @@ fn dot(a: [f32; 3], b: [f32; 3]) -> f32 {
 impl Light {
     /// What the light sends to a point of a surface with the (shading) normal `normal`, before
     /// shadows; `None` where it sends nothing: behind the surface, beyond its range, outside
-    /// its cone. `color` is the light's own or its indirect one. A zero normal (a light probe's
-    /// point, which faces every way) takes the light whatever its direction.
+    /// its cone. `color` is the light's own or its indirect one.
     pub fn arriving(
         &self,
         tables: &Tables,
@@ -161,13 +160,30 @@ impl Light {
         position: [f32; 3],
         normal: [f32; 3],
     ) -> Option<Arriving> {
+        self.arriving_facing(tables, color, position, Some(normal))
+    }
+
+    /// What the light sends to a point that faces every way (a light probe's), before shadows:
+    /// as [`Light::arriving`] without a surface to be behind or slanted to.
+    pub fn arriving_around(
+        &self,
+        tables: &Tables,
+        color: [f32; 3],
+        position: [f32; 3],
+    ) -> Option<Arriving> {
+        self.arriving_facing(tables, color, position, None)
+    }
+
+    fn arriving_facing(
+        &self,
+        tables: &Tables,
+        color: [f32; 3],
+        position: [f32; 3],
+        normal: Option<[f32; 3]>,
+    ) -> Option<Arriving> {
         if self.kind == Kind::Directional {
             let direction = self.forward.map(|v| -v);
-            let facing = if normal == [0.0; 3] {
-                1.0
-            } else {
-                dot(normal, direction)
-            };
+            let facing = normal.map_or(1.0, |n| dot(n, direction));
             // (Not a number is not above zero.)
             return (facing > 0.0).then(|| Arriving {
                 color: color.map(|c| c * facing),
@@ -193,11 +209,7 @@ impl Light {
             });
         }
         let direction = to_light.map(|v| v / distance);
-        let facing = if normal == [0.0; 3] {
-            1.0
-        } else {
-            dot(normal, direction).max(0.0)
-        };
+        let facing = normal.map_or(1.0, |n| dot(n, direction).max(0.0));
         if !(facing > 0.0) {
             return None;
         }

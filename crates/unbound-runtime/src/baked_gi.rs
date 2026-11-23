@@ -1059,18 +1059,20 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     grid: &grid,
                     sky: b.sky.as_ref().map(|s| &s.0),
                 };
-                // Each group's probes are baked by themselves: a probe's numbers are turned by
-                // its place in its group.
-                let (mut radiance, mut validity) = (Vec::new(), Vec::new());
-                for group in &groups {
-                    let probed = indirect::probes(group, &world, &b.samples, settings);
-                    radiance.extend(probed.radiance);
-                    validity.extend(probed.validity);
-                }
-                written.write(Buffers::PROBES[1].into(), flat(&radiance))?;
+                let probed = indirect::probes(
+                    groups.iter().map(Vec::as_slice),
+                    &world,
+                    &b.samples,
+                    settings,
+                );
+                written.write(Buffers::PROBES[1].into(), flat(&probed.radiance))?;
                 written.write(
                     Buffers::PROBES[2].into(),
-                    validity.iter().flat_map(|v| v.to_le_bytes()).collect(),
+                    probed
+                        .validity
+                        .iter()
+                        .flat_map(|v| v.to_le_bytes())
+                        .collect(),
                 )?;
                 counts = json!({ "indirect": settings.samples, "environment": settings.environment_samples });
             }
