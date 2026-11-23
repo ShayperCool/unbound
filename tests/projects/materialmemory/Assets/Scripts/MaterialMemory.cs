@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -6,15 +7,21 @@ using UnityEngine;
 using UnityEngine.Profiling;
 using Object = UnityEngine.Object;
 
-static class MaterialMemory
+sealed class MaterialMemory : MonoBehaviour
 {
     [Serializable] sealed class Row { public string k, v; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Capture()
+    static void Begin()
     {
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MATERIAL_MEMORY_OUT")))
+            new GameObject().AddComponent<MaterialMemory>();
+    }
+
+    IEnumerator Start()
+    {
+        yield return null;
         string output = Environment.GetEnvironmentVariable("MATERIAL_MEMORY_OUT");
-        if (string.IsNullOrEmpty(output)) return;
         var rows = new List<string>();
         void Put(string key, object value) => rows.Add(JsonUtility.ToJson(new Row { k = key, v = Convert.ToString(value, CultureInfo.InvariantCulture) }));
         void Size(string key, Material value) => Put(key, Profiler.GetRuntimeMemorySizeLong(value));
@@ -86,24 +93,24 @@ static class MaterialMemory
                 var selected = Object.Instantiate(material);
                 _ = selected.SetPass(0);
                 Size(stage + ".instanceAfterValidPass", selected);
-                Object.DestroyImmediate(selected);
+                Object.Destroy(selected);
 
                 var target = new RenderTexture(4, 4, 0);
                 var previous = RenderTexture.active;
                 var blit = Object.Instantiate(material);
                 Graphics.Blit(null, target, blit);
                 Size(stage + ".instanceAfterNullBlit", blit);
-                Object.DestroyImmediate(blit);
+                Object.Destroy(blit);
                 var withTexture = Object.Instantiate(material);
                 Graphics.Blit(texture, target, withTexture);
                 Size(stage + ".instanceAfterTextureBlit", withTexture);
-                Object.DestroyImmediate(withTexture);
+                Object.Destroy(withTexture);
                 var invalidBlit = Object.Instantiate(material);
                 Graphics.Blit(texture, target, invalidBlit, 9999);
                 Size(stage + ".instanceAfterInvalidBlit", invalidBlit);
-                Object.DestroyImmediate(invalidBlit);
+                Object.Destroy(invalidBlit);
                 RenderTexture.active = previous;
-                Object.DestroyImmediate(target);
+                Object.Destroy(target);
             }
             Object.DestroyImmediate(copy);
             Object.DestroyImmediate(material);
@@ -113,9 +120,12 @@ static class MaterialMemory
             Probe(name, Shader.Find("Hidden/Storage/" + name));
         Probe("unlit", Shader.Find("Unlit/Color"));
         Probe("standard", Shader.Find("Standard"));
-        Object.DestroyImmediate(texture);
+        Object.Destroy(texture);
         rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), rows);
+        // Keep the Editor alive across a frame boundary so queued blits can complete.
+        yield return null;
+        yield return null;
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
 #else
