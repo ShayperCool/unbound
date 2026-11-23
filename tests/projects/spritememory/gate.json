@@ -1,0 +1,13 @@
+{
+  "commands": ["python3 tests/projects/spritememory/run.py gate --release 6000.0.71f1"],
+  "summary": "spritememory: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Sprite.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "managed/UnityEngine/Graphics/Srp/SrpContext.cs",
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "managed/UnityEngine/Profiling/MemorySizes.cs",
+    "managed/UnityEngine/U2D/SpriteDataAccess.cs",
+    "managed/UnityEngine/Particles/ParticleSystem.MeshShape.cs"
+  ]
+}
