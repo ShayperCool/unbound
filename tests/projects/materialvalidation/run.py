@@ -5,13 +5,11 @@
     run.py publish L1 L2         # two byte-identical captures -> Reference/
     run.py check                 # Unbound against the reference
 
-The reference was recorded with the macOS Editor in batch mode (material validation does not
-depend on the OS or the graphics device). Every record is compared exactly; the reads right after
-a load (`*.load.*`) and the project editors' validation counts (`ProjectGui*._Value`) are
-reported, not gated (see README)."""
+Two repeat captures on Linux agree with the macOS Editor reference. Every record is compared
+exactly. The two project editors' initial keywords and later validation counts are reported
+(see README)."""
 import argparse
 import json
-import re
 import os
 from pathlib import Path
 import shutil
@@ -110,7 +108,12 @@ def rows(path):
     return result
 
 
-REPORTED = re.compile(r'^[A-Za-z]+\.load\.|^ProjectGui(Namespaced)?\._Value$')
+REPORTED = {
+    'ProjectGui.load.keywords',
+    'ProjectGui._Value',
+    'ProjectGuiNamespaced.load.keywords',
+    'ProjectGuiNamespaced._Value',
+}
 
 
 def compare(candidate):
@@ -120,7 +123,7 @@ def compare(candidate):
     for key in sorted(expected.keys() | actual.keys()):
         if key in expected and key in actual and expected[key] == actual[key]:
             continue
-        kind = 'REPORT' if REPORTED.search(key) else 'FAIL'
+        kind = 'REPORT' if key in REPORTED else 'FAIL'
         print(kind, key, 'expected', repr(expected.get(key)), 'actual', repr(actual.get(key)))
         if kind == 'FAIL':
             failed += 1

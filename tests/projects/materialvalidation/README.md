@@ -30,19 +30,17 @@ material made by a script and the built-in default material.
     python3 tests/projects/materialvalidation/run.py publish L1 L2
     python3 tests/projects/materialvalidation/run.py check
 
-The reference is two byte-identical captures of the macOS Editor in batch mode (assumed independent
-of the OS and graphics device, not measured; a windowed Linux Editor with URP does not validate
-URP materials on load, tests/projects/graphqueue, and which condition decides is open). Measured: every material of the project's files is
-validated as its editor says (the Standard editor's blend states, render queue range with its
-logged message, texture keywords, the emissive GI flag and `_EMISSION`; the project's editors by
-either name); the built-in default material (GI flags 5, which the Standard editor would make 1
-with `_EMISSION`) and the script's material are not. Read right after its load in Play mode a
-material shows its saved keywords, render queue, tag and GI flags, but the validated float values;
-two frames later everything its editor sets, and the counting editors show a second validation
-(`_Value` 3 and 21). Exploratory runs outside the probe found the same for materials loaded in
-Edit mode (`AssetDatabase.LoadAssetAtPath`) and read in Play mode.
+The reference was recorded in macOS batch mode. Two independent Linux Editor captures agree
+with all 363 records. The Standard editors set blend states, render queue and its range log,
+texture keywords, the emissive GI flag and `_EMISSION`. The built-in default material and
+the script's material keep their original state. During the first observation, load metadata
+is read before the floats, and the float values already reflect validation. The next observation
+two frames later shows the validated metadata. The `modelimport` BuiltinBlend profile also
+leaves Standard and Autodesk Interactive assets without a property read for three updates
+and sees their saved metadata through those updates.
 
-`run.py check` compares every record exactly; the reads right after the load and the two
-`_Value` records are reported, not gated: Unbound validates each material once, when its file has
-loaded (34 reported values). The materials of a model's import are not validated on load
-(tests/projects/modelimport).
+`run.py check` compares every record exactly. Four project-editor values remain reported.
+Unbound validates these materials when their files load, so their first keyword reads already
+include the validated keyword. The Editor's counting shaders also record another validation
+after the first access, observed two frames later as `_Value` 3 and 21. The timing of
+validation for URP Shader Graph materials remains open (tests/projects/graphqueue).
