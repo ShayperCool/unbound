@@ -11,8 +11,8 @@ Cases: `edit` (Edit Mode SaveEditTests), `play-nosave` and `play-save` (Play Mod
 NoSave and Save, each alone), `prefab-api` (Edit Mode PrefabApiTests), `prefab-writes` (Edit Mode
 PrefabWriteTests), `create-assets` (Edit Mode CreateAssetTests), `engine-assets` (Edit Mode
 EngineAssetTests), `prefab-nested` (Edit Mode NestedPrefabTests), `settings-writes` (Edit Mode
-SettingsWriteTests), `mesh-bounds` (Edit Mode MeshBoundsTests), `native-saves` (Edit Mode
-NativeSaveTests), `clip-assets` (Edit Mode ClipAssetTests), `controller-assets` (Edit Mode
+SettingsWriteTests), `build-identity` (Edit Mode BuildIdentityTests), `mesh-bounds` (Edit Mode
+MeshBoundsTests), `native-saves` (Edit Mode NativeSaveTests), `clip-assets` (Edit Mode ClipAssetTests), `controller-assets` (Edit Mode
 ControllerAssetTests), `controller-additions` (Edit Mode ControllerAdditionTests), `modification-timing` (Edit Mode ModificationTimingTests), `scene-api-rest`
 (Edit Mode SceneApiRestTests).
 """
@@ -42,6 +42,7 @@ CASES = {
     'engine-assets': ('EditMode', 'EngineAssetTests.EngineAssets'),
     'prefab-nested': ('EditMode', 'NestedPrefabTests.NestedPrefabs'),
     'settings-writes': ('EditMode', 'SettingsWriteTests.SettingsWrites'),
+    'build-identity': ('EditMode', 'BuildIdentityTests.Persist'),
     'mesh-bounds': ('EditMode', 'MeshBoundsTests.MeshBounds'),
     'native-saves': ('EditMode', 'NativeSaveTests.NativeSaves'),
     'clip-assets': ('EditMode', 'ClipAssetTests.ClipAssets'),

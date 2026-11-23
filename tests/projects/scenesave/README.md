@@ -60,6 +60,12 @@ file the run added, changed or removed.
   TagManager's SerializedObject: each file right after the calls, after `SaveAssets` and at exit.
   The last three cases were recorded in the Linux Editor (batch mode, no graphics: two identical
   captures each).
+- `build-identity` (Edit Mode, `BuildIdentityTests`) records per-target identifiers, the active
+  and obsolete properties, and the identifier reported by `Application` when switching the
+  Standalone subtarget. It also records the bundle version, Android version code and iOS build
+  number. It checks the file before each `SaveAssets` call, after the saves, and after the last
+  changes are left for Editor exit. Both Linux Editor captures wrote only
+  `ProjectSettings/ProjectSettings.asset` and agreed byte for byte, with LF line endings.
 - `mesh-bounds` (Edit Mode, `MeshBoundsTests`): a mesh's bounds and each sub-mesh's bounds and
   vertex range after each of its setters (vertices of the same and another count, `SetVertices`
   with and without `DontRecalculateBounds`, `SetVertexBufferData`, triangles, `SetTriangles` and
