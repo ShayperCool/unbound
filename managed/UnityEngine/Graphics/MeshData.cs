@@ -166,6 +166,7 @@ namespace UnityEngine
                     ? mesh.m_QueriedPackedWeights : null;
                 // Applying mesh data leaves buffers that were already requested available.
                 mesh.DropRuntimeBoneWeights(keepBuffers: true);
+                mesh.m_BoneWeights = null;
                 mesh.SetVertexBufferParamsInternal(VertexCount, Layout, keepBoneWeightBuffers: true);
                 for (int s = 0; s < 4; s++)
                     if (StreamBytes[s] > 0) mesh.WriteVertices(new ReadOnlySpan<byte>(Streams[s], StreamBytes[s]), 0, s);
