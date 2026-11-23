@@ -2,6 +2,7 @@ using UnityEngine.TextCore;
 using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 using Xunit;
+using TextElement = UnityEngine.UIElements.TextElement;
 
 namespace UnityEngine.Tests
 {
