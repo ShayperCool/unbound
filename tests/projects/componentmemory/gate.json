@@ -5,13 +5,16 @@
     "python3 tests/projects/componentmemory/run.py gate --release 6000.0.71f1 --profile light",
     "python3 tests/projects/componentmemory/run.py gate --release 6000.0.71f1 --profile audio",
     "python3 tests/projects/componentmemory/run.py gate --release 6000.0.71f1 --profile renderer",
-    "python3 tests/projects/componentmemory/run.py gate --release 6000.0.71f1 --profile transform"
+    "python3 tests/projects/componentmemory/run.py gate --release 6000.0.71f1 --profile transform",
+    "python3 tests/projects/componentmemory/run.py gate --release 6000.0.71f1 --profile camera"
   ],
-  "summary": "componentmemory(?: light| audio| renderer| transform)?: .*",
+  "summary": "componentmemory(?: light| audio| renderer| transform| camera-(?:metal|opengl|vulkan))?: .*",
   "engine_paths": [
     "managed/UnityEngine/Profiling/MemorySizes.cs",
     "managed/UnityEngine/Profiling/Profiling.cs",
     "managed/UnityEngine/Runtime/Compat.cs",
+    "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs",
+    "managed/UnityEngine/Graphics/Camera.cs",
     "managed/UnityEngine/Graphics/Light.CommandBuffers.cs",
     "managed/UnityEngine/Audio/AudioSource.cs",
     "managed/UnityEngine/Core/Debug.cs",

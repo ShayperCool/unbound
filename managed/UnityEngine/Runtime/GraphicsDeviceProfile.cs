@@ -308,6 +308,7 @@ namespace Unbound.Runtime
             RenderingThreadingMode.SingleThreaded, GraphicsFormat.D32_SFloat_S8_UInt,
             BatchBufferTarget.RawBuffer, GraphicsCapsTable.Vulkan, VulkanIdentity.Read, framebufferReadback: false, alpha8Readback: Alpha8ReadbackMode.Red)
         {
+            CameraMemoryBytes = 4088,
             ProceduralQuads = UnityEngine.MeshTopology.Triangles,
             PackedTargetsKeepChannelBits = true,
             // tests/projects/urp CapsProbe `device-vulkan.jsonl` (two identical captures, NVIDIA
