@@ -497,6 +497,7 @@ namespace UnityEngine
                         probeLit = renderer.receiveGI != ReceiveGI.Lightmaps,
                         castsShadows = renderer.shadowCastingMode != UnityEngine.Rendering.ShadowCastingMode.Off,
                         receivesShadows = renderer.receiveShadows,
+                        stitchSeams = renderer.stitchLightmapSeams,
                         parameters = new
                         {
                             backFaceTolerance = parameters.BackFaceTolerance,

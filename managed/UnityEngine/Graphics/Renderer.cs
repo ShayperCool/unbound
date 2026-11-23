@@ -1036,6 +1036,8 @@ namespace UnityEngine
             m_AutoUVMaxDistance = body.Float("m_AutoUVMaxDistance", 0.5f);
             m_AutoUVMaxAngle = body.Float("m_AutoUVMaxAngle", 89f);
             m_IgnoreNormalsForChartDetection = body.Bool("m_IgnoreNormalsForChartDetection");
+            // (A file without the key keeps the new renderer's setting.)
+            stitchLightmapSeams = body.Bool("m_StitchLightmapSeams", stitchLightmapSeams);
             m_LightmapParameters = body.Ref("m_LightmapParameters");
         }
 
@@ -1049,6 +1051,7 @@ namespace UnityEngine
             w.Float("m_AutoUVMaxDistance", m_AutoUVMaxDistance);
             w.Float("m_AutoUVMaxAngle", m_AutoUVMaxAngle);
             w.Bool("m_IgnoreNormalsForChartDetection", m_IgnoreNormalsForChartDetection);
+            w.Bool("m_StitchLightmapSeams", stitchLightmapSeams);
             w.Line(1, "m_LightmapParameters", UnityYamlWriter.Writer.ReferenceText(m_LightmapParameters));
         }
 

@@ -91,6 +91,31 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AMeshRendererReadsAndWritesStitchSeams()
+        {
+            // The bake stitches the seams of a renderer with Stitch Seams on (its file's
+            // m_StitchLightmapSeams, which a scene save writes back).
+            var go = new GameObject("stitched");
+            try
+            {
+                var renderer = go.AddComponent<MeshRenderer>();
+                renderer.ReadSerialized(YNode.MakeMap(("m_StitchLightmapSeams", YNode.MakeScalar("0"))), null);
+                Assert.False(renderer.stitchLightmapSeams);
+                var written = SceneFiles.Body(renderer.WriteSerialized, new System.Collections.Generic.Dictionary<Object, long>(ReferenceEqualityComparer.Instance), new AssetDatabaseRuntime.Locations());
+                Assert.Equal("0", written.Get("m_StitchLightmapSeams").Text);
+                renderer.ReadSerialized(YNode.MakeMap(("m_StitchLightmapSeams", YNode.MakeScalar("1"))), null);
+                Assert.True(renderer.stitchLightmapSeams);
+                // A file without the key keeps the setting.
+                renderer.ReadSerialized(YNode.MakeMap(), null);
+                Assert.True(renderer.stitchLightmapSeams);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
         public void LightingSettingsReadFixedLightmapSize()
         {
             var settings = new LightingSettings();
