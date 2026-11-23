@@ -40,8 +40,8 @@ namespace DotRecast.Detour.Crowd
         /// Excludes an obstacle proxy from agent separation steering.
         public bool excludeFromSeparation;
 
-        /// Resolves contact against the upright capsule's section through the agent's height.
-        public bool projectCapsuleContact;
+        /// Uses the measured obstacle rules for an upright capsule.
+        public bool uprightCapsule;
 
         /// the agent path.
         /// Flags that impact steering behavior. (See: #UpdateFlags)

@@ -1112,22 +1112,33 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
-                if (!HeightsOverlap(skip, ag.npos, ag.option.height))
+                bool uprightCapsule = ag.option.uprightCapsule;
+                if (!uprightCapsule && !HeightsOverlap(skip, ag.npos, ag.option.height))
                 {
                     continue;
                 }
 
                 // In 3D, as Unity's agents measure (a neighbour above or below is farther).
                 RcVec3f diff = RcVec3f.Subtract(ag.npos, pos);
-                float radii = skip.option.radius + ag.option.radius;
+                float radius = ag.option.radius;
+                if (uprightCapsule)
+                {
+                    // Obstacle admission ranks the center with the horizontal bounds'
+                    // half-diagonal. The capsule section is tested during avoidance and contact.
+                    diff.Y += ag.option.height * 0.5f;
+                    radius = MathF.Sqrt(radius * radius + radius * radius);
+                }
+                float radii = skip.option.radius + radius;
                 if (moving && RcVec3f.Dot(diff, heading) < -radii)
                 {
                     continue;
                 }
 
                 // Both at full speed (an agent standing with both speeds zero: at once if touching).
-                float gap = diff.Length() - radii, closing = skip.option.reachSpeed + ag.vel.Length();
-                float time = closing > 0f ? gap / closing : gap <= 0f ? 0f : float.PositiveInfinity;
+                float gap = uprightCapsule ? diff.Length() - radius - skip.option.radius : diff.Length() - radii;
+                float closing = skip.option.reachSpeed + ag.vel.Length();
+                float time = closing > 0f || (uprightCapsule && gap < 0f)
+                    ? gap / closing : gap <= 0f ? 0f : float.PositiveInfinity;
                 if (time > horizon)
                 {
                     continue;
@@ -1378,6 +1389,18 @@ namespace DotRecast.Detour.Crowd
             }
         }
 
+        /// <summary>The widest horizontal section of a capsule within the agent's height.</summary>
+        private static bool TryProjectCapsuleRadius(DtCrowdAgent ag, DtCrowdAgent capsule, out float radius)
+        {
+            radius = capsule.option.radius;
+            float bottom = ag.npos.Y - capsule.npos.Y;
+            float gap = MathF.Max(radius - (bottom + ag.option.height),
+                bottom - (capsule.option.height - radius));
+            if (gap > radius) return false;
+            if (gap > 0f) radius = MathF.Sqrt(radius * radius - gap * gap);
+            return true;
+        }
+
         private void PlanVelocity(DtCrowdAgentDebugInfo debug, IList<DtCrowdAgent> agents)
         {
             using var timer = _telemetry.ScopedTimer(DtCrowdTimerLabel.PlanVelocity);
@@ -1407,7 +1430,9 @@ namespace DotRecast.Detour.Crowd
                 for (int j = 0; j < ag.nneis; ++j)
                 {
                     DtCrowdAgent nei = ag.neis[j].agent;
-                    _obstacleQuery.AddCircle(RcVec3f.Subtract(nei.npos, ag.npos), nei.option.radius + ag.option.radius,
+                    float radius = nei.option.radius;
+                    if (nei.option.uprightCapsule && !TryProjectCapsuleRadius(ag, nei, out radius)) continue;
+                    _obstacleQuery.AddCircle(RcVec3f.Subtract(nei.npos, ag.npos), radius + ag.option.radius,
                         nei.vel, AvoidanceShare(ag, nei));
                 }
 
@@ -1500,17 +1525,10 @@ namespace DotRecast.Detour.Crowd
                         float share = nei.option.avoidancePriority < ag.option.avoidancePriority ? 1.0f : 0.5f;
                         RcVec3f diff = RcVec3f.Subtract(ag.npos, nei.npos);
                         float radius = nei.option.radius;
-                        if (nei.option.projectCapsuleContact)
+                        bool uprightCapsule = nei.option.uprightCapsule;
+                        if (uprightCapsule)
                         {
-                            // The contact circle is the widest section of the capsule within the
-                            // agent's height. A cap contributes a smaller circle than the cylinder.
-                            float halfHeight = nei.option.height * 0.5f;
-                            float center = nei.npos.Y + halfHeight;
-                            float halfAxis = MathF.Max(0f, halfHeight - radius);
-                            float gap = MathF.Max(center - halfAxis - (ag.npos.Y + ag.option.height),
-                                ag.npos.Y - (center + halfAxis));
-                            if (gap > radius) continue;
-                            if (gap > 0f) radius = MathF.Sqrt(radius * radius - gap * gap);
+                            if (!TryProjectCapsuleRadius(ag, nei, out radius)) continue;
                             diff.Y = 0f;
                         }
                         else if (!_config.resolveAgentOverlapsIn3D)
@@ -1520,13 +1538,22 @@ namespace DotRecast.Detour.Crowd
 
                         float combinedRadius = ag.option.radius + radius;
                         float dist = diff.LengthSquared();
-                        if (dist > RcMath.Sqr(combinedRadius))
+                        float radiusSquared = RcMath.Sqr(combinedRadius);
+                        if (dist > radiusSquared || (uprightCapsule && dist == radiusSquared))
                         {
                             continue;
                         }
 
                         dist = MathF.Sqrt(dist);
                         float pen = combinedRadius - dist;
+                        if (uprightCapsule && dist <= 0.0001f)
+                        {
+                            // Coincident capsule contact chooses positive X and resolves the full
+                            // penetration, independently of the agent's steering direction.
+                            ag.disp.X += pen * _config.collisionResolveFactor;
+                            w += 1f;
+                            continue;
+                        }
                         if (dist < 0.0001f)
                         {
                             // Agents on top of each other, try to choose diverging separation directions.

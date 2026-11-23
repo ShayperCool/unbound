@@ -628,10 +628,10 @@ namespace Unbound.Runtime
             internal readonly float Top;
             internal readonly Vector3 Velocity;
             internal readonly NavMeshObstacle Owner;
-            internal readonly bool ProjectCapsuleContact;
+            internal readonly bool UprightCapsule;
 
             internal Circle(Vector3 center, float radius, float bottom, float top, Vector3 velocity,
-                NavMeshObstacle owner, bool projectCapsuleContact = false)
+                NavMeshObstacle owner, bool uprightCapsule = false)
             {
                 Center = center;
                 Radius = radius;
@@ -639,7 +639,7 @@ namespace Unbound.Runtime
                 Top = top;
                 Velocity = velocity;
                 Owner = owner;
-                ProjectCapsuleContact = projectCapsuleContact;
+                UprightCapsule = uprightCapsule;
             }
 
             internal float Height => Mathf.Max(0f, Top - Bottom);
@@ -668,8 +668,10 @@ namespace Unbound.Runtime
         static void CollectCircles()
         {
             s_Circles.Clear();
+            bool measuredCapsules = Compat.NavMeshUprightCapsuleAvoidanceMeasured;
             foreach (var obstacle in s_Obstacles)
-                if (obstacle != null && obstacle.isActiveAndEnabled && !IsCarved(obstacle)) AddCircles(obstacle, s_Circles);
+                if (obstacle != null && obstacle.isActiveAndEnabled && !IsCarved(obstacle))
+                    AddCircles(obstacle, s_Circles, measuredCapsules);
         }
 
         /// <summary>Before <paramref name="crowd"/> updates: the enabled obstacles,
@@ -718,7 +720,7 @@ namespace Unbound.Runtime
                     maxSpeed = 0f,
                     separationWeight = 0f,
                     excludeFromSeparation = excludeFromSeparation,
-                    projectCapsuleContact = c.ProjectCapsuleContact,
+                    uprightCapsule = c.UprightCapsule,
                     updateFlags = 0,
                     obstacleAvoidanceType = 0,
                     queryFilterType = 0,
@@ -757,7 +759,7 @@ namespace Unbound.Runtime
                 // Obstacle circles are never walking; agents on links or off the NavMesh do not look
                 // for neighbours.
                 if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING) continue;
-                if (!DtCrowd.HeightsOverlap(ag, position, height)) continue;
+                if (!circle.UprightCapsule && !DtCrowd.HeightsOverlap(ag, position, height)) continue;
                 float reach = DtCrowd.NeighbourReach(ag, horizon);
                 if (prediction)
                 {
@@ -851,7 +853,7 @@ namespace Unbound.Runtime
         const float UprightAxisTolerance = 1e-6f;
 
         /// <summary>The obstacle's shape as circles in the horizontal plane, with its height span.</summary>
-        static void AddCircles(NavMeshObstacle obstacle, List<Circle> into)
+        static void AddCircles(NavMeshObstacle obstacle, List<Circle> into, bool measuredCapsules)
         {
             var t = obstacle.transform;
             var center = t.TransformPoint(obstacle.center);
@@ -861,15 +863,16 @@ namespace Unbound.Runtime
             {
                 float radius = obstacle.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
                 float half = obstacle.height * Mathf.Abs(scale.y) * 0.5f;
-                bool projectContact = false;
-                if (Compat.NavMeshUprightCapsuleContactMeasured && half >= radius)
+                bool uprightCapsule = false;
+                if (measuredCapsules)
                 {
                     Vector3 axis = t.rotation * Vector3.up;
-                    projectContact = Mathf.Abs(axis.x) <= UprightAxisTolerance
+                    uprightCapsule = Mathf.Abs(axis.x) <= UprightAxisTolerance
                         && Mathf.Abs(axis.z) <= UprightAxisTolerance;
+                    if (uprightCapsule) half = Mathf.Max(half, radius);
                 }
                 into.Add(new Circle(center, radius, center.y - half, center.y + half, velocity,
-                    obstacle, projectContact));
+                    obstacle, uprightCapsule));
                 return;
             }
             var rotation = t.rotation;
