@@ -152,3 +152,14 @@ python3 tests/projects/imguiskin/run.py gate
 
 Numbers compare with an absolute tolerance of 1e-6. The platform cursor flash speed (2) is the Linux
 Editor's; macOS is unmeasured.
+
+The popup controls (`popup/*`) call each EditorGUI.Popup and EditorGUILayout.Popup overload in
+Layout and Repaint: the selection each answers (kept, also out of range, negative or with mixed
+values; a missing options list throws `NullReferenceException` after the control's ID is
+taken), the control IDs each takes (one), and the layout ones' rects; and the menu's choice
+coming back as the `PopupMenuChanged` command to the control whose menu it was (the
+selection, `GUI.changed` when it differs or the value was mixed, the command used up, the open
+menu forgotten). The menu itself (EditorUtility.DisplayCustomMenu) and what the popups draw are
+not recorded; Unbound shows no editor menus (said).
+[Unity 6000.0 `EditorGUI.Popup`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUI.Popup.html)
+[Unity 6000.0 `EditorGUILayout.Popup`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUILayout.Popup.html)

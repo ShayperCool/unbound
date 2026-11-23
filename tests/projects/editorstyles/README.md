@@ -20,6 +20,12 @@ states, and the names and sizes of the six scaled background textures. Explicit 
 and unchecked controls retain their values during Repaint.
 [Unity 6000.0 `EditorStyles.toggle`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorStyles-toggle.html)
 
+The popup control (`popup/*`) records `EditorStyles.popup` (named "MiniPopup") the same way:
+its layout, font and text fields and its eight states with their scaled skin images, in both
+themes; the popup keys were added from two agreeing captures to the reference, whose other
+values those captures repeat.
+[Unity 6000.0 `EditorStyles.popup`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorStyles-popup.html)
+
 The 320×180 Gamma Game view capture compares the checkbox pixels under normal, hovered,
 pressed, focused and disabled combinations. It checks hot-control hover suppression, a
 named style and renamed copy, an explicit background override, a short control, clipping,

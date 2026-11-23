@@ -386,8 +386,6 @@ namespace UnityEditor
         public static bool Toggle(bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), GUIContent.none, value);
         public static bool Toggle(string label, bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), new GUIContent(label), value);
         public static bool Toggle(GUIContent label, bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), label, value);
-        public static int Popup(int selectedIndex, string[] displayedOptions, params GUILayoutOption[] options) => EditorGUIControls.Popup(Line(options), GUIContent.none, selectedIndex, displayedOptions);
-        public static int Popup(string label, int selectedIndex, string[] displayedOptions, params GUILayoutOption[] options) => EditorGUIControls.Popup(Line(options), new GUIContent(label), selectedIndex, displayedOptions);
         public static Enum EnumPopup(Enum selected, params GUILayoutOption[] options) => EditorGUIControls.EnumPopup(Line(options), GUIContent.none, selected);
         public static Enum EnumPopup(string label, Enum selected, params GUILayoutOption[] options) => EditorGUIControls.EnumPopup(Line(options), new GUIContent(label), selected);
         public static Enum EnumPopup(GUIContent label, Enum selected, params GUILayoutOption[] options) => EditorGUIControls.EnumPopup(Line(options), label, selected);
@@ -757,13 +755,6 @@ namespace UnityEditor
 
         internal static bool Foldout(Rect position, bool foldout, GUIContent content) => GUI.Toggle(EditorGUI.IndentedRect(position), foldout, content);
 
-        internal static int Popup(Rect position, GUIContent label, int selected, string[] options)
-        {
-            var field = Field(position, label);
-            GUI.Label(field, selected >= 0 && options != null && selected < options.Length ? options[selected] : "");
-            return selected;
-        }
-
         internal static Enum EnumPopup(Rect position, GUIContent label, Enum selected)
         {
             GUI.Label(Field(position, label), selected?.ToString() ?? "");
@@ -1002,6 +993,8 @@ namespace UnityEditor
         static GUIStyle s_DarkBoldLabel;
         static GUIStyle s_LightToggle;
         static GUIStyle s_DarkToggle;
+        static GUIStyle s_LightPopup;
+        static GUIStyle s_DarkPopup;
 
         internal static bool HasInspectorStyles => Compat.InspectorGuiStylesMeasured && Event.current != null;
 
@@ -1075,7 +1068,16 @@ namespace UnityEditor
                 return s_TextArea;
             }
         }
-        public static GUIStyle popup => Style();
+        public static GUIStyle popup
+        {
+            get
+            {
+                if (!HasInspectorStyles) return Style();
+                return EditorGUIUtility.isProSkin
+                    ? s_DarkPopup ??= CreatePopup(dark: true)
+                    : s_LightPopup ??= CreatePopup(dark: false);
+            }
+        }
         public static GUIStyle objectField => Style();
         public static GUIStyle colorField => Style();
         public static GUIStyle layerMaskField => Style();
@@ -1171,6 +1173,44 @@ namespace UnityEditor
             SetToggleState(style.onFocused, skin, " on focus", text);
             style.hover.textColor = style.onHover.textColor = text;
             return style;
+        }
+
+        /// <summary>The popup style, "MiniPopup", as captured by tests/projects/editorstyles
+        /// (both themes): its text colours, the skin's scaled images in the normal, active and
+        /// focused states, a fixed height of 18.</summary>
+        static GUIStyle CreatePopup(bool dark)
+        {
+            Color text = dark ? new Color32(228, 228, 228, 255) : new Color32(9, 9, 9, 255);
+            Color pressed = dark ? new Color32(210, 210, 210, 255) : Color.black;
+            string skin = dark ? "darkskin" : "lightskin";
+            var style = new GUIStyle
+            {
+                name = "MiniPopup",
+                fontSize = 12,
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip,
+                imagePosition = ImagePosition.ImageLeft,
+                border = new RectOffset(6, 14, 0, 0),
+                margin = new RectOffset(3, 3, 2, 2),
+                padding = new RectOffset(4, 16, 0, 1),
+                overflow = dark ? new RectOffset(0, 0, 0, 2) : new RectOffset(0, 0, 0, 1),
+                fixedHeight = 18,
+                stretchWidth = true,
+                richText = false,
+            };
+            style.normal.scaledBackgrounds = new[] { SkinImage(skin, "mini popup@2x") };
+            style.active.scaledBackgrounds = new[] { SkinImage(skin, "mini popup act@2x") };
+            style.focused.scaledBackgrounds = new[] { SkinImage(skin, "mini popup focus@2x") };
+            style.normal.textColor = style.hover.textColor = style.onNormal.textColor = style.onHover.textColor = text;
+            style.active.textColor = style.focused.textColor = style.onActive.textColor = style.onFocused.textColor = pressed;
+            return style;
+        }
+
+        static Texture2D SkinImage(string skin, string name)
+        {
+            string path = $"builtin skins/{skin}/images/{name}.png";
+            return Unbound.UIElements.UiResources.EditorLoad(path) as Texture2D
+                ?? throw new InvalidOperationException($"Unbound: Inspector image '{path}' is unavailable.");
         }
 
         static void SetToggleState(GUIStyleState state, string skin, string suffix, Color text)

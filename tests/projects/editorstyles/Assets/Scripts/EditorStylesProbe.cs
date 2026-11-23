@@ -99,6 +99,7 @@ public sealed partial class EditorStylesProbe : MonoBehaviour
         catch (Exception error) { Put("Repaint/exception", Quote(error.GetType().Name)); }
 
         RecordToggle();
+        RecordPopup();
         RecordLabel();
     }
 
@@ -149,6 +150,18 @@ public sealed partial class EditorStylesProbe : MonoBehaviour
             Put("toggle/valueOnRepaint", $"[{Flag(offValue)},{Flag(onValue)}]");
         }
         catch (Exception error) { Put("toggle/Repaint/exception", Quote(error.GetType().Name)); }
+    }
+
+    void RecordPopup()
+    {
+        try
+        {
+            var style = EditorStyles.popup;
+            Put("popup/Repaint/style", Quote(style.name));
+            Put("popup/shared", Flag(ReferenceEquals(EditorStyles.popup, style)));
+            DescribeStyle("popup/", style, textureInfo: true);
+        }
+        catch (Exception error) { Put("popup/Repaint/exception", Quote(error.GetType().Name)); }
     }
 
     GUIStyle DescribeStyle(string prefix, GUIStyle style, bool textureInfo)

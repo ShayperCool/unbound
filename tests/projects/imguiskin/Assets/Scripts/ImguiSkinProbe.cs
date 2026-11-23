@@ -60,6 +60,7 @@ public sealed partial class ImguiSkinProbe : MonoBehaviour
             RecordEditorLayoutGroups("Layout");
             RecordLayoutAndCalc("Layout");
             RecordFocusIdPass1("Layout");
+            RecordPopups("Layout");
         }
         else if (Event.current.type == EventType.Repaint && m_RecordedLayout && !m_RecordedRepaint)
         {
@@ -70,6 +71,7 @@ public sealed partial class ImguiSkinProbe : MonoBehaviour
             RecordEditorLayoutGroups("Repaint");
             RecordLayoutAndCalc("Repaint");
             RecordFocusIdPass1("Repaint");
+            RecordPopups("Repaint");
         }
         else if (Event.current.type == EventType.Layout && m_RecordedRepaint && !m_RecordedPass2Layout)
         {
