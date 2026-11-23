@@ -82,6 +82,12 @@ public partial class NavLinksProbe : MonoBehaviour
 
     void Start()
     {
+        if (Environment.GetEnvironmentVariable("NAVLINKS_LINK_VERSION") == "1")
+        {
+            m_Done = true;
+            StartCoroutine(RecordLinkVersionStudy());
+            return;
+        }
         if (Environment.GetEnvironmentVariable("NAVLINKS_OVERLAP") == "1")
         {
             m_Done = true;

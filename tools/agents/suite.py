@@ -575,7 +575,7 @@ def recipes(release):
     for name in ('animatoradditive', 'coreapis', 'editorcallbacks', 'humanoid', 'instantiateasync', 'modelclips',
                  'modelroot', 'navlinks'):
         R[name] = guarded(jsonl('values.jsonl'))
-    for profile in ('projection', 'staleness', 'overlap', 'wallmove'):
+    for profile in ('projection', 'staleness', 'overlap', 'wallmove', 'linkversion'):
         step = driver('projection.py', 'gate', '--profile', profile,
                       '--release', '{release}', '--label', f'{{label}}-{profile}')
         step.kind = 'compare'

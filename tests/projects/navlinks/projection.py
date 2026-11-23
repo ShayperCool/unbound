@@ -21,6 +21,7 @@ PROFILES = {
     'staleness': ('NAVLINKS_STALE', 'path-staleness.jsonl', 30000),
     'overlap': ('NAVLINKS_OVERLAP', 'crowd-overlap.jsonl', 300),
     'wallmove': ('NAVLINKS_WALL_MOVE', 'wall-movement.jsonl', 500),
+    'linkversion': ('NAVLINKS_LINK_VERSION', 'link-version.jsonl', 2000),
 }
 
 
