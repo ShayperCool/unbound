@@ -215,6 +215,16 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
   their light (3 + 3 floats each);
 - `materials.json`, each instance's albedo and emission images as the bake input has them
   (size and texels, rows from the first), in the bake's order.
+- `lightmap<N>.exr`, the lightmap the Editor's whole bake (`Lightmapping.Bake`, run after the
+  buffers' capture) makes of them, as it writes it beside the scene (`Lightmap-N_comp_light.exr`:
+  red, green, blue and alpha as half floats, rows from the top). Without filtering (the scenes'
+  Lighting Settings), each used texel holds its direct, indirect and sky's light summed; a texel
+  more of whose rays met back faces than the Lightmap Parameters' Backface Tolerance allows
+  takes the mean of the light of its eight neighbours that hold their own, ring by ring (a ring's
+  texels then hold light for the next); the texels around the charts take their neighbours'
+  light the same way, as many rings as the Lighting Settings' padding (alpha 1; the texels
+  further out have alpha 0); and the seams of a renderer's UVs are stitched (the texels along
+  them and beside them change), which Unbound does not do.
 - `probes.json`, the bake's light probes: their number, their points as the bake has them and
   the samples it gives them (null without probes); `radianceDirect0.shl2` and
   `radianceIndirect0.shl2`, per probe the nine coefficients of the direct light and of the
@@ -228,7 +238,9 @@ the buffers of light, which the Editor sums in an order that varies from bake to
 differ in the last bits, up to 4e-7 here): those have the same used texels and values within
 2e-6 (times the value above 1), the indirect light's within 1e-5 (sums of up to 512 samples of
 several bounces: 3e-6 is the worst seen, in `BounceMany`) and so the sky's light, and the
-first capture's is kept. The light probes' coefficients are compared the same way (the worst
+first capture's is kept. The lightmaps the whole bakes write repeat within 1e-3 (times the
+value above 1: half floats of bakes of their own; the worst seen is 5.2e-4, `Lamps`). The light
+probes' coefficients are compared the same way (the worst
 repeat is 8e-7, of the indirect light).
 Publishing adds what is new and refuses to change what the reference has.
 
@@ -256,10 +268,20 @@ gamma-encoded values (the worst seen is 1.8e-5 at intensity 1 and 4.8e-5 at 2.5)
 picked directions exactly, each direction, its light and the summed brightness within 1e-4
 likewise. The light probes' points are compared within 1e-6 and their samples exactly, their
 direct light within 1e-4 and their indirect light within 1e-3 (each times the value above 1),
-their validity within 1e-6.
+their validity within 1e-6. Of the lightmap, which texels hold light (alpha) exactly, and their
+light within 1e-3 as the indirect light's (times the value above 1), but for the texels whose
+light in the Editor's lightmap is not what the rules above make of its own buffers
+(`bake_buffers.py` `composite`): the stitching of seams changes those (along the seams of the
+primitives' UVs, at chart borders and inside charts, as at the sphere's poles), which Unbound
+does not do; they are counted (`lightmaps: N texels the Editor stitched`) and not compared. A
+lightmap made of buffers with a named residual differs where they do (the same residuals).
+The Editor's lightmapper process now and then ends without writing a lightmap: the recorder
+runs the whole bake again (up to three times), and a capture still without one is not
+published.
 
 `residuals.json` names the known differences, each with the exact text the comparison gives it
-(another text, or none, fails the run):
+(another text, or none, fails the run); the lightmap made of a buffer with a residual differs
+where the buffer does (and where its light is spread to), under the same name:
 
 - `Spread`'s indirect light: 14 texels, mostly around the crate in the middle region of the
   light grid, differ as if a path's surface had picked another of its region's lights; the

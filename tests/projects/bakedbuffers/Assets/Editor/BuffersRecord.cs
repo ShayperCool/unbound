@@ -14,7 +14,9 @@ using UnityEngine;
 /// scene's bake input and lightmap requests (<c>InputExtraction.ExtractFromScene</c>, which is
 /// what <see cref="Lightmapping.Bake"/> starts from), written as the Editor serializes them, and
 /// the Progressive CPU lightmapper's bake of them (<c>LightBaker.Bake</c>), which writes every
-/// buffer of each lightmap unprocessed into <c>&lt;out&gt;/&lt;scene&gt;/lightmapRequest0</c>.
+/// buffer of each lightmap unprocessed into <c>&lt;out&gt;/&lt;scene&gt;/lightmapRequest0</c>; then
+/// its whole bake (<see cref="Lightmapping.Bake"/>) makes the lightmaps of them, whose files
+/// (<c>Lightmap-N_comp_light.exr</c>) go beside them.
 /// The instances' and the lights' names go to <c>instances.txt</c> and <c>lights.txt</c> in the
 /// bake input's order.</para>
 /// <para>With <c>BAKED_BUFFERS_AUTO</c> set (Unbound's <c>unbound test</c>) it starts itself once
@@ -153,6 +155,19 @@ public static class BuffersRecord
         File.WriteAllLines(Path.Combine(folder, "lights.txt"), lights);
         if (!(bool)Call(device.GetType(), "Initialize", device, Enum.Parse(baker.GetNestedType("Backend"), "CPU")))
             return "the CPU lightmapper could not be initialized";
-        return "bake " + Call(baker, "Bake", null, input, requests, probes, device);
+        var baked = Call(baker, "Bake", null, input, requests, probes, device);
+        // The lightmaps the Editor's whole bake (Lightmapping.Bake) makes of the scene's buffers,
+        // as it writes them beside the scene (none where the bake keeps no light). Its
+        // lightmapper's process now and then fails (the bake answers false): the bake is run
+        // again, up to three times; its last answer goes to wholeBake.txt.
+        var written = Path.Combine("Assets/Scenes", scene);
+        bool whole = false;
+        for (int attempt = 0; attempt < 3 && !whole; attempt++)
+            whole = Lightmapping.Bake();
+        File.WriteAllText(Path.Combine(folder, "wholeBake.txt"), whole ? "True" : "False");
+        if (Directory.Exists(written))
+            foreach (var lightmap in Directory.GetFiles(written, "Lightmap-*_comp_light.exr"))
+                File.Copy(lightmap, Path.Combine(folder, Path.GetFileName(lightmap)), true);
+        return "bake " + baked;
     }
 }

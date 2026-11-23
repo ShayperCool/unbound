@@ -94,6 +94,9 @@ REPEAT_TOLERANCE = 2e-6
 # And its indirect light, a sum of many more values (up to 512 samples of several bounces
 # here), within this: the worst seen between two captures is 3e-6 (`BounceMany`).
 INDIRECT_REPEAT_TOLERANCE = 1e-5
+# And the lightmap its whole bake writes (half floats of a bake of its own, run after the
+# buffers'): two Editor bakes give a texel within this (the worst seen is 5.2e-4, `Lamps`).
+LIGHTMAP_REPEAT_TOLERANCE = 1e-3
 # Of a bake input's light: what Unbound's bake takes of it, the numbers within this (relative).
 LIGHT_FIELDS = ('type', 'mode', 'color', 'indirectColor', 'position', 'orientation', 'range', 'coneAngle', 'castsShadows',
                 'shadowMaskChannel')
@@ -234,6 +237,58 @@ def probes_digest(folder):
     return {'count': count, 'points': points, 'samples': {'indirect': samples['indirect'], 'environment': samples['environment']}}
 
 
+def read_exr(data):
+    """An OpenEXR image of scanlines as the Editor writes a lightmap (half or float channels,
+    without compression or with ZIP): (width, height, {channel: values, rows from the top})."""
+    if data[:4] != b'\x76\x2f\x31\x01':
+        raise ValueError('not an OpenEXR image')
+    at, header = 8, {}
+    while data[at] != 0:
+        end = data.index(b'\0', at)
+        name = data[at:end].decode()
+        end2 = data.index(b'\0', end + 1)
+        size = struct.unpack_from('<i', data, end2 + 1)[0]
+        header[name] = data[end2 + 5:end2 + 5 + size]
+        at = end2 + 5 + size
+    at += 1
+    channels, raw, k = [], header['channels'], 0
+    while raw[k] != 0:
+        end = raw.index(b'\0', k)
+        channels.append((raw[k:end].decode(), struct.unpack_from('<i', raw, end + 1)[0]))
+        k = end + 17
+    x0, y0, x1, y1 = struct.unpack('<4i', header['dataWindow'])
+    width, height = x1 - x0 + 1, y1 - y0 + 1
+    lines = {0: 1, 2: 1, 3: 16}[header['compression'][0]]
+    sizes = {1: 2, 2: 4}
+    formats = {1: 'e', 2: 'f'}
+    offsets = struct.unpack_from(f'<{(height + lines - 1) // lines}Q', data, at)
+    out = {name: [0.0] * (width * height) for name, _ in channels}
+    for offset in offsets:
+        y, size = struct.unpack_from('<ii', data, offset)
+        rows = min(lines, y1 + 1 - y)
+        block = data[offset + 8:offset + 8 + size]
+        if size < rows * width * sum(sizes[kind] for _, kind in channels):
+            # ZIP: deflated bytes whose differences were taken and whose halves were interleaved.
+            packed = zlib.decompress(block)
+            undone = bytearray(len(packed))
+            value = 0
+            for i, b in enumerate(packed):
+                value = b if i == 0 else (value + b - 128) & 0xFF
+                undone[i] = value
+            half = (len(undone) + 1) // 2
+            block = bytearray(len(undone))
+            block[0::2] = undone[:half]
+            block[1::2] = undone[half:]
+        k = 0
+        for row in range(rows):
+            base = (y - y0 + row) * width
+            for name, kind in channels:
+                count = width * sizes[kind]
+                out[name][base:base + width] = struct.unpack(f'<{width}{formats[kind]}', bytes(block[k:k + count]))
+                k += count
+    return width, height, out
+
+
 def probe_requests(data):
     """The probe requests of a probe requests file (`probeRequests.bin`): per request its number,
     the place of its first probe among the points and its number of probes. Each request names
@@ -305,6 +360,7 @@ def native(label):
     if code or not (out/'raw/log.txt').is_file():
         return code or 1
     log = dict(line.split(': ', 1) for line in (out/'raw/log.txt').read_text().splitlines() if ': ' in line)
+    missing = []
     for scene in scenes():
         target = out/'reference'/scene
         target.mkdir(parents=True)
@@ -321,6 +377,17 @@ def native(label):
         for index in range(len(scene_digest['lightmaps'])):
             for name in BUFFERS:
                 shutil.copy2(out/'raw'/scene/'lightmapRequest0'/name.format(index), target/name.format(index))
+            # The lightmap the whole bake made of them: none where the bake keeps no light; a
+            # bake that failed (wholeBake.txt: False) makes the capture not one to publish.
+            made = out/'raw'/scene/f'Lightmap-{index}_comp_light.exr'
+            if made.is_file():
+                shutil.copy2(made, target/f'lightmap{index}.exr')
+            whole = out/'raw'/scene/'wholeBake.txt'
+            if whole.is_file() and whole.read_text().strip() != 'True':
+                missing.append(scene)
+    if missing:
+        print(f'the whole bake failed for {missing} (see the editor log)')
+        return 1
     return 0
 
 
@@ -336,6 +403,11 @@ def repeats(name, first, other):
     by its coefficients the same way."""
     if first == other:
         return True
+    if first and other and name.endswith('.exr'):
+        a, b = read_exr(first), read_exr(other)
+        if a[:2] != b[:2] or a[2].keys() != b[2].keys():
+            return False
+        return all(abs(x - y) <= LIGHTMAP_REPEAT_TOLERANCE * max(1.0, abs(x)) for c in a[2] for x, y in zip(a[2][c], b[2][c]))
     if first and other and name.endswith('.shl2'):
         a, b = probe_coefficients(first), probe_coefficients(other)
         tolerance = INDIRECT_REPEAT_TOLERANCE if Path(name).name.startswith('radianceIndirect') else REPEAT_TOLERANCE
@@ -403,6 +475,15 @@ def expected(root):
                 lightmap[part] = values
             # The first of a texel's four validity numbers is the part of its rays.
             lightmap['validity'] = lightmap['validity'][0::4]
+            # The lightmap the whole bake made: red, green, blue and alpha, rows from the first
+            # (the image's rows run from its top).
+            lightmap['lightmap'] = None
+            if (folder/f'lightmap{index}.exr').is_file():
+                width, height, image = read_exr((folder/f'lightmap{index}.exr').read_bytes())
+                if (width, height) != (lightmap['width'], lightmap['height']):
+                    raise ValueError(f'{folder}: lightmap{index} of {width}x{height}')
+                lightmap['lightmap'] = [image[c][(height - 1 - k // width) * width + k % width]
+                                        for k in range(width * height) for c in 'RGBA']
         entry['baked'] = 'Success' in entry['bake']
         entry['lights'] = json.loads((folder/'lights.json').read_text())
         entry['materials'] = json.loads((folder/'materials.json').read_text())
@@ -477,7 +558,7 @@ def actual(out):
                 lightmap['direct'] = numbers(dump/f'irradianceDirect{index}.f32', 'f')
                 for part, name in (('indirect', 'irradianceIndirect'), ('environment', 'irradianceEnvironment'), ('validity', 'validity'),
                                    ('towardDirect', 'directionalityDirect'), ('towardIndirect', 'directionalityIndirect'),
-                                   ('shadowmask', 'shadowmask')):
+                                   ('shadowmask', 'shadowmask'), ('lightmap', 'lightmap')):
                     lightmap[part] = numbers(dump/f'{name}{index}.f32', 'f') if (dump/f'{name}{index}.f32').is_file() else None
                 entry['lightmaps'].append(lightmap)
         result[scene] = entry
@@ -604,6 +685,91 @@ def probes_difference(got, want):
     return '; '.join(problems) or None
 
 
+# The lightmap's padding (the Lighting Settings') and Backface Tolerance (the Lightmap
+# Parameters') of every scene here.
+PADDING = 2
+BACKFACE_TOLERANCE = 0.9
+
+
+def composite(lightmap):
+    """The lightmap the bake makes of a capture's buffers by the measured rules (red, green, blue,
+    alpha per texel): each used texel's direct, indirect and sky's light summed; a texel more of
+    whose rays met back faces than the Backface Tolerance allows takes the mean of the light of its
+    eight neighbours that hold their own, ring by ring; the texels around the charts likewise, as
+    many rings as the padding (alpha 1). It leaves out what the Editor does next: the stitching of
+    seams."""
+    width, height = lightmap['width'], lightmap['height']
+    used = lightmap['occupancy']
+    out = [0.0] * (4 * width * height)
+    holds = [False] * (width * height)
+    for k in range(width * height):
+        if used[k]:
+            for c in range(3):
+                out[4 * k + c] = sum(lightmap[part][4 * k + c] for part in ('direct', 'indirect', 'environment'))
+            out[4 * k + 3] = 1.0
+            holds[k] = not lightmap['validity'][k] > 1.0 - BACKFACE_TOLERANCE
+
+    def spread(waiting, rings):
+        for _ in range(rings):
+            taken = []
+            for k in waiting:
+                x, y = k % width, k // width
+                near = [(y + dy) * width + x + dx for dx in (-1, 0, 1) for dy in (-1, 0, 1)
+                        if (dx or dy) and 0 <= x + dx < width and 0 <= y + dy < height and holds[(y + dy) * width + x + dx]]
+                if near:
+                    taken.append((k, [sum(out[4 * n + c] for n in near) / len(near) for c in range(3)]))
+            if not taken:
+                return
+            done = {k for k, _ in taken}
+            waiting = [k for k in waiting if k not in done]
+            for k, light in taken:
+                out[4 * k:4 * k + 4] = light + [1.0]
+                holds[k] = True
+
+    spread([k for k in range(width * height) if used[k] and not holds[k]], width * height)
+    spread([k for k in range(width * height) if not used[k]], PADDING)
+    return out
+
+
+def lightmap_difference(got, want, tolerance):
+    """The lightmap the bake makes (red, green, blue, alpha per texel) against the Editor's: which
+    texels hold light (alpha) exactly, and the light of those within `tolerance` (times the value
+    above 1); but for the texels whose light in the Editor's lightmap is not what the measured
+    rules make of its own buffers (`composite`): the stitching of seams, which Unbound does not do,
+    changes them; those are counted. (None or the problem, the count.)"""
+    if got is None:
+        return 'not baked', 0
+    width, height = want['width'], want['height']
+    if len(got) != len(want['lightmap']):
+        return f'{len(got) // 4} texels, expected {width * height}', 0
+    theirs, rules = want['lightmap'], composite(want)
+    alpha_off, off, stitched, worst = [], [], 0, 0.0
+
+    def error(a, b):
+        return max(abs(x - y) / max(1.0, abs(y)) for x, y in zip(a, b))
+
+    for k in range(width * height):
+        mine, editor = got[4 * k:4 * k + 4], theirs[4 * k:4 * k + 4]
+        if mine[3] != editor[3]:
+            alpha_off.append(k)
+            continue
+        if editor[3] == 0:
+            continue
+        if error(rules[4 * k:4 * k + 3], editor[:3]) > tolerance:
+            stitched += 1
+            continue
+        e = error(mine[:3], editor[:3])
+        if e > tolerance:
+            off.append(k)
+            worst = max(worst, e)
+    problems = []
+    if alpha_off:
+        problems.append(f'{len(alpha_off)} texels differ in holding light, first at {alpha_off[:6]}')
+    if off:
+        problems.append(f'{len(off)} texels differ in their light (worst {worst:.3g}, tolerance {tolerance:g}), first at {off[:6]}')
+    return '; '.join(problems) or None, stitched
+
+
 def validity_difference(got, want):
     if got is None:
         return 'not baked'
@@ -675,6 +841,8 @@ def compare(label):
     known = residuals()
     records = []
 
+    stitched = [0]
+
     def record(key, problem):
         records.append((key, problem))
         if problem:
@@ -697,7 +865,7 @@ def compare(label):
             mine = a['lightmaps'][index] if index < len(a['lightmaps']) else None
             if mine is None or (mine['width'], mine['height'], mine['supersampling']) != (lightmap['width'], lightmap['height'], lightmap['supersampling']):
                 for part in ('instances', 'occupancy', 'charts', 'normals', 'direct', 'indirect', 'environment', 'validity',
-                             'towardDirect', 'towardIndirect', 'shadowmask'):
+                             'towardDirect', 'towardIndirect', 'shadowmask', 'lightmap'):
                     record(key + part, 'no such lightmap of that size')
                 continue
             names = lambda entry, m: [entry['instances'][i] for i in m['instances']]  # noqa: E731
@@ -712,9 +880,14 @@ def compare(label):
             record(key + 'towardDirect', toward_difference(mine['towardDirect'], lightmap['towardDirect'], DIRECTIONALITY_TOLERANCE))
             record(key + 'towardIndirect', toward_difference(mine['towardIndirect'], lightmap['towardIndirect'], INDIRECT_TOLERANCE))
             record(key + 'shadowmask', toward_difference(mine['shadowmask'], lightmap['shadowmask'], SHADOWMASK_TOLERANCE))
+            if lightmap['lightmap'] is not None:
+                problem, seams = lightmap_difference(mine['lightmap'], lightmap, INDIRECT_TOLERANCE)
+                record(key + 'lightmap', problem)
+                stitched[0] += seams
         record(scene + '.materials', material_difference(a['materials'], e['materials']))
         record(scene + '.sky', sky_difference(a['sky'], e['sky']))
         record(scene + '.probes', probes_difference(a['probes'], e['probes']))
+    print(f'lightmaps: {stitched[0]} texels the Editor stitched along seams (Unbound does not), not compared')
     keys = {key for key, _ in records}
     for key in sorted(set(known) - keys):
         print('FAIL', key, 'a residual of no record')
