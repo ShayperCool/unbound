@@ -73,5 +73,37 @@ namespace UnityEngine.Tests
                 Assert.Null(EditorGUI.PopupCallbackInfo.instance);
             }
         }
+    
+
+        [Fact]
+        public void AClickGivesThePopupKeyboardFocusAndUsesTheEvent()
+        {
+            var click = new Event { type = EventType.MouseDown, button = 0, mousePosition = new Vector2(100, 15) };
+            int id = 0;
+            Pass(click, () =>
+            {
+                id = GUIUtility.GetControlID(FocusType.Passive) + 1;
+                return EditorGUI.Popup(new Rect(10, 10, 200, 18), 1, s_Options, s_Style);
+            });
+            Assert.Equal(EventType.Used, click.type);
+            Assert.Equal(id, GUIUtility.keyboardControl);
+            // Elsewhere, or with another button: neither.
+            GUIUtility.keyboardControl = 0;
+            var away = new Event { type = EventType.MouseDown, button = 0, mousePosition = new Vector2(100, 60) };
+            Pass(away, () => EditorGUI.Popup(new Rect(10, 10, 200, 18), 1, s_Options, s_Style));
+            Assert.Equal(EventType.MouseDown, away.type);
+            Assert.Equal(0, GUIUtility.keyboardControl);
+            EditorGUI.PopupCallbackInfo.instance = null;
+        }
+
+        [Fact]
+        public void AnotherReleaseFamilysPopupSaysSoAndKeepsItsSelection()
+        {
+            // Its inspector styles and control rects are not measured: no style, no layout.
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            int value = Pass(new Event { type = EventType.Layout }, () => EditorGUILayout.Popup(2, s_Options));
+            Assert.Equal(2, value);
+            Assert.Equal(1, Pass(new Event { type = EventType.Repaint }, () => EditorGUI.Popup(new Rect(0, 0, 100, 18), "Pick", 1, s_Options)));
+        }
     }
 }
