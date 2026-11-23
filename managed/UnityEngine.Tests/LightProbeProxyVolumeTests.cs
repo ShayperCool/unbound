@@ -9,6 +9,7 @@ namespace Unbound.Tests
 {
     /// <summary>Light probe proxy volumes as the Unity 6000.0.71f1 Editor builds them
     /// (tests/projects/lppv).</summary>
+    [Collection("RenderSettings state")]
     public class LightProbeProxyVolumeTests
     {
         /// <summary>The probes per axis: the rounded count's nearest power of two, a tie upwards

@@ -23,6 +23,7 @@ namespace Unbound.Tests
     /// <summary>The light probe API's own state: scene probe sets joining and leaving the current
     /// probes, occlusion by shadow mask channel, queries keeping their probes and the property
     /// block probe arrays (the behaviours tests/projects/lightprobes records in the Editor).</summary>
+    [Collection("RenderSettings state")]
     public partial class LightProbesTests
     {
         /// <summary>The 8 probes of tests/projects/lightprobes' Extra bake.</summary>

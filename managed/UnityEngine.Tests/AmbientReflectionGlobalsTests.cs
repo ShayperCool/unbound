@@ -8,6 +8,7 @@ namespace UnityEngine.Tests
     /// the default reflection's decode values (Unity 6000.0.71f1, tests/projects/indirectspec:
     /// Trilight ambient, a half-float default reflection, ambient intensity 1/0.5 x reflection
     /// intensity 1/0.25, both color spaces).</summary>
+    [Collection("RenderSettings state")]
     public class AmbientReflectionGlobalsTests
     {
         sealed class State : System.IDisposable
