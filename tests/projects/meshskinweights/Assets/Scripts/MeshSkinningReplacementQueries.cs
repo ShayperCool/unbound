@@ -126,4 +126,54 @@ sealed partial class MeshSkinningProbe
             Object.DestroyImmediate(target);
         }
     }
+
+    static void CheckRawLayoutQueryCaches(Action<string, Func<string>> probe)
+    {
+        var position = new VertexAttributeDescriptor(VertexAttribute.Position);
+        var weights = new VertexAttributeDescriptor(VertexAttribute.BlendWeight, VertexAttributeFormat.Float32, 2, 1);
+        var indices = new VertexAttributeDescriptor(VertexAttribute.BlendIndices, VertexAttributeFormat.UInt32, 2, 1);
+        foreach (int originalWidth in new[] { 2, 5 })
+        foreach (string prime in new[] { "cold", "counts", "flat" })
+        foreach (string strip in new[] { "raw", "apply", "clear" })
+        foreach (bool readStripped in new[] { false, true })
+        foreach (bool rawSkin in new[] { false, true })
+        {
+            // The Clear control uses the fixed layout. Clearing an unlimited mesh produced
+            // unstable weight-array contents in the exploratory Editor runs.
+            if (originalWidth == 5 && strip == "clear") continue;
+            var mesh = TwoVertexSkin(originalWidth);
+            if (prime == "counts") _ = mesh.GetBonesPerVertex();
+            if (prime == "flat") _ = mesh.GetAllBoneWeights();
+            if (strip == "raw") mesh.SetVertexBufferParams(2, position);
+            else if (strip == "clear") mesh.Clear(false);
+            else
+            {
+                var data = Mesh.AllocateWritableMeshData(1);
+                WriteMeshData(data[0], 2, 0);
+                Mesh.ApplyAndDisposeWritableMeshData(data, mesh);
+            }
+
+            string key = $"replacement.rawLayout.{originalWidth}.{prime}.{strip}.{readStripped}.{rawSkin}";
+            if (readStripped) probe(key + ".stripped", () => Shape(mesh));
+            probe(key + ".reskinned", () =>
+            {
+                if (rawSkin)
+                {
+                    using var data = Mesh.AllocateWritableMeshData(1);
+                    WriteMeshData(data[0], 2, 2);
+                    mesh.SetVertexBufferParams(2, position, weights, indices);
+                    var words = data[0].GetVertexData<uint>(1);
+                    mesh.SetVertexBufferData(words, 0, 0, words.Length, 1);
+                }
+                else
+                {
+                    var data = Mesh.AllocateWritableMeshData(1);
+                    WriteMeshData(data[0], 2, 2);
+                    Mesh.ApplyAndDisposeWritableMeshData(data, mesh);
+                }
+                return Shape(mesh);
+            });
+            Object.DestroyImmediate(mesh);
+        }
+    }
 }

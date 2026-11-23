@@ -116,6 +116,7 @@ sealed partial class MeshSkinningProbe : MonoBehaviour
         {
             yield return null;
             CheckReplacementQueries(Probe);
+            CheckRawLayoutQueryCaches(Probe);
             Finish(output, rows);
             yield break;
         }

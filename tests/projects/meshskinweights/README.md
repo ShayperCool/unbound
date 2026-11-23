@@ -51,7 +51,15 @@ Clones start with the active skin data, including legacy attributes after a raw 
 A later weight assignment on the source leaves the clone's values intact.
 The grown destination controls compare the returned count length
 and the initialized prefix because the Editor repeats disagreed on the additional byte.
+Raw vertex-buffer replacement also preserves the cached queries. The fixed-layout
+controls strip both skin attributes, restore them through a raw write or a MeshData
+apply, and compare the result with a mesh reset through `Clear(false)`. The Editor
+repeats returned inconsistent data when reading an unlimited mesh after that reset.
+Changing the vertex count of a copied MeshData with a packed table can leave its
+geometry and weights with different lengths. Unbound rejects that inconsistent
+replacement before applying it.
 [ApplyAndDisposeWritableMeshData](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/mesh/applyanddisposewritablemeshdata) ·
+[SetVertexBufferParams](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/mesh/setvertexbufferparams) ·
 [Instantiate](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/object/instantiate)
 
 The probe exercises scripted mesh weights. Imported meshes use the influences their importer
