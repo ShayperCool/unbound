@@ -14,5 +14,16 @@
 {"k":"layers.named","v":"Default,TransparentFX,Ignore Raycast,Water,UI"}
 {"k":"layers.fromConcatenated","v":"0>0|1>1|2>2|4>4|8>16|16>32|31>55|32>0|64>0|-1>55|-2147483648>0|5>5"}
 {"k":"layers.toConcatenated","v":"0>0|1>1|2>2|4>4|8>4|16>8|32>16|55>31|64>16|-2147483648>16|-1>31|17>9"}
+{"k":"version.full","v":"6000.0.71f1 (907bc2d768b5)"}
+{"k":"version.digits","v":"6000.0.71"}
+{"k":"version.display","v":"6000.0.71f1"}
+{"k":"version.displayVerbose","v":"6000.0.71f1.8720.19091"}
+{"k":"version.branch","v":"6000.0/respin/6000.0.71f1-8308b6469260"}
+{"k":"version.hash","v":"907bc2d768b5"}
+{"k":"version.revision","v":"9468866"}
+{"k":"version.date","v":"1773651634"}
+{"k":"version.productName","v":"Unity 6.0"}
+{"k":"version.copyright","v":"(c) 2005-2026 Unity Technologies. All rights reserved."}
+{"k":"version.applicationUnityVersion","v":"6000.0.71f1"}
 {"k":"logs","v":""}
 {"k":"complete","v":true}

@@ -122,6 +122,18 @@ namespace EditorInternalsProbe
             int[] masks = { 0, 1, 2, 4, 8, 16, 32, 55, 64, 1 << 31, -1, 17 };
             Put("layers.toConcatenated", string.Join("|", masks.Select(m => m + ">" + Try(() => InternalEditorUtility.LayerMaskToConcatenatedLayersMask(m)))));
 
+            // The release's version and build answers.
+            Put("version.full", Try(() => InternalEditorUtility.GetFullUnityVersion()));
+            Put("version.digits", Try(() => InternalEditorUtility.GetUnityVersionDigits()));
+            Put("version.display", Try(() => InternalEditorUtility.GetUnityDisplayVersion()));
+            Put("version.displayVerbose", Try(() => InternalEditorUtility.GetUnityDisplayVersionVerbose()));
+            Put("version.branch", Try(() => InternalEditorUtility.GetUnityBuildBranch()));
+            Put("version.hash", Try(() => InternalEditorUtility.GetUnityBuildHash()));
+            Put("version.revision", Try(() => InternalEditorUtility.GetUnityRevision()));
+            Put("version.date", Try(() => InternalEditorUtility.GetUnityVersionDate()));
+            Put("version.productName", Try(() => InternalEditorUtility.GetUnityProductName()));
+            Put("version.copyright", Try(() => InternalEditorUtility.GetUnityCopyright()));
+            Put("version.applicationUnityVersion", Application.unityVersion);
             Put("logs", string.Join(" | ", m_Logs));
             m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
             File.WriteAllText(Path.Combine(output, "values.jsonl"), m_Out.ToString());
