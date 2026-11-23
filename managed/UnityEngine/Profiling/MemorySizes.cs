@@ -93,9 +93,8 @@ namespace Unbound.Runtime
                 case RenderTexture rt: return RenderTextureSize(rt);
                 case Mesh m: return MeshSize(m);
                 case Material material when Compat.MaterialScalarMemoryMeasured
-                    && GraphicsDeviceProfile.Current.MaterialMemoryBytes is { } materialBytes
-                    && material.ProfilerPropertyStorageBytes is { } properties:
-                    return materialBytes + properties;
+                    && GraphicsDeviceProfile.Current.MaterialMemoryBytes is { } materialBytes:
+                    return material.ProfilerAllocationBytes(materialBytes);
                 case AudioClip clip: return clip.m_IsAsset ? null : AudioClipSize(clip);
                 case TextAsset text when Compat.TextAssetMemoryMeasured: return TextAssetSize(text);
                 case Sprite sprite when Compat.SpriteGeometryMemoryMeasured: return SpriteSize(sprite);

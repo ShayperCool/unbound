@@ -95,6 +95,7 @@ namespace UnityEngine
         /// property of the shader again (nothing to do while it does).</summary>
         void TouchSheet()
         {
+            RealizeProfilerPropertyStorage();
             ValidateOnAccess();
             var sheet = m_State.m_Sheet;
             if (sheet == null || sheet.FilledFor == m_Shader) return;
@@ -183,6 +184,7 @@ namespace UnityEngine
             internal SavedSheet m_Sheet;
             internal int? m_ProfilerLayoutVersion;
             internal HashSet<int> m_ProfilerAddedFloats;
+            internal ProfilerStorage m_ProfilerStorage;
         }
         readonly MaterialState m_State = new MaterialState();
 
@@ -389,7 +391,13 @@ namespace UnityEngine
             foreach (var item in from) into.Add(item);
         }
 
-        internal Object CloneObject() => new Material(this);
+        internal Object CloneObject()
+        {
+            var clone = new Material(this);
+            if (clone.m_State.m_ProfilerLayoutVersion.HasValue)
+                clone.m_State.m_ProfilerStorage = ProfilerStorage.Pending;
+            return clone;
+        }
 
         /// <summary>A change made through the API: also an Editor change of a material asset, which
         /// the Editor then saves (AssetDatabase.SaveAssets, its exit; measured in
@@ -1033,6 +1041,7 @@ namespace UnityEngine
         /// <summary>Activates a pass for GL drawing and Graphics.DrawMeshNow.</summary>
         public bool SetPass(int pass)
         {
+            PrepareProfilerDraw();
             Unbound.Runtime.Immediate.PassMaterial = this;
             Unbound.Runtime.Immediate.PassIndex = pass;
             return true;
@@ -1051,7 +1060,11 @@ namespace UnityEngine
             return Declared(nameID) != null || m_ScriptSet.Contains(nameID) || ScaleOffsetOf(nameID, out _);
         }
 
-        ShaderPropertyType? Declared(int nameID) => m_Shader?.PropertyById(nameID)?.Type;
+        ShaderPropertyType? Declared(int nameID)
+        {
+            RealizeProfilerPropertyStorage();
+            return m_Shader?.PropertyById(nameID)?.Type;
+        }
 
         bool SetFromScript<T>(int nameID, Dictionary<int, T> values) => m_ScriptSet.Contains(nameID) && values.ContainsKey(nameID);
 
@@ -1060,7 +1073,11 @@ namespace UnityEngine
         bool IsVector(int nameID) =>
             Declared(nameID) is ShaderPropertyType.Color or ShaderPropertyType.Vector || SetFromScript(nameID, m_Vectors) || ScaleOffsetOf(nameID, out _);
         bool IsTexture(int nameID) => Declared(nameID) == ShaderPropertyType.Texture || SetFromScript(nameID, m_Textures);
-        bool IsMatrix(int nameID) => SetFromScript(nameID, m_Matrices);
+        bool IsMatrix(int nameID)
+        {
+            RealizeProfilerPropertyStorage();
+            return SetFromScript(nameID, m_Matrices);
+        }
         /// <summary>Texture getters read every slot the material has, saved for another shader too.</summary>
         bool HasTextureSlot(int nameID) => IsTexture(nameID) || m_Textures.ContainsKey(nameID) || m_TextureNames.Contains(nameID);
 
@@ -1087,6 +1104,7 @@ namespace UnityEngine
         /// _ST, _TexelSize and _HDR vectors (measured, 6000.0).</summary>
         public string[] GetPropertyNames(MaterialPropertyType type)
         {
+            RealizeProfilerPropertyStorage();
             var names = new List<string>();
             if (m_Shader == null) return names.ToArray();
             foreach (var p in m_Shader.m_Properties)
@@ -1128,11 +1146,8 @@ namespace UnityEngine
                 Debug.LogWarning("Unbound: constant buffers bound at an offset are not supported yet; the cbuffer reads the buffer from its start.");
             }
             if (buffer == null) m_Buffers.Remove(nameID);
-            else
-            {
-                m_Buffers[nameID] = buffer;
-                StopMeasuringPropertyStorage();
-            }
+            else m_Buffers[nameID] = buffer;
+            StopMeasuringPropertyStorage();
             MarkDirty();
         }
 
@@ -1412,17 +1427,17 @@ namespace UnityEngine
         public void SetMatrixArray(int nameID, List<Matrix4x4> values) => SetArray(nameID, values);
 
         public float[] GetFloatArray(string name) => GetFloatArray(Shader.PropertyToID(name));
-        public float[] GetFloatArray(int nameID) => PropertyArrays.Get<float>(m_Arrays, nameID);
+        public float[] GetFloatArray(int nameID) => GetArray<float>(nameID);
         public Vector4[] GetVectorArray(string name) => GetVectorArray(Shader.PropertyToID(name));
-        public Vector4[] GetVectorArray(int nameID) => PropertyArrays.Get<Vector4>(m_Arrays, nameID);
+        public Vector4[] GetVectorArray(int nameID) => GetArray<Vector4>(nameID);
         public Color[] GetColorArray(string name) => GetColorArray(Shader.PropertyToID(name));
         public Color[] GetColorArray(int nameID) => Array.ConvertAll(GetVectorArray(nameID) ?? Array.Empty<Vector4>(), v => (Color)v) is { Length: > 0 } c ? c : null;
         public Matrix4x4[] GetMatrixArray(string name) => GetMatrixArray(Shader.PropertyToID(name));
-        public Matrix4x4[] GetMatrixArray(int nameID) => PropertyArrays.Get<Matrix4x4>(m_Arrays, nameID);
+        public Matrix4x4[] GetMatrixArray(int nameID) => GetArray<Matrix4x4>(nameID);
         public void GetFloatArray(string name, List<float> values) => GetFloatArray(Shader.PropertyToID(name), values);
-        public void GetFloatArray(int nameID, List<float> values) => PropertyArrays.Get(m_Arrays, nameID, values);
+        public void GetFloatArray(int nameID, List<float> values) => GetArray(nameID, values);
         public void GetVectorArray(string name, List<Vector4> values) => GetVectorArray(Shader.PropertyToID(name), values);
-        public void GetVectorArray(int nameID, List<Vector4> values) => PropertyArrays.Get(m_Arrays, nameID, values);
+        public void GetVectorArray(int nameID, List<Vector4> values) => GetArray(nameID, values);
         public void GetColorArray(string name, List<Color> values) => GetColorArray(Shader.PropertyToID(name), values);
         public void GetColorArray(int nameID, List<Color> values)
         {
@@ -1432,7 +1447,7 @@ namespace UnityEngine
             if (v != null) values.AddRange(v);
         }
         public void GetMatrixArray(string name, List<Matrix4x4> values) => GetMatrixArray(Shader.PropertyToID(name), values);
-        public void GetMatrixArray(int nameID, List<Matrix4x4> values) => PropertyArrays.Get(m_Arrays, nameID, values);
+        public void GetMatrixArray(int nameID, List<Matrix4x4> values) => GetArray(nameID, values);
 
         static Vector4[] ToVectors(IReadOnlyList<Color> colors)
         {
@@ -1440,6 +1455,18 @@ namespace UnityEngine
             var v = new Vector4[colors.Count];
             for (int i = 0; i < v.Length; i++) v[i] = colors[i];
             return v;
+        }
+
+        T[] GetArray<T>(int nameID)
+        {
+            RealizeProfilerPropertyStorage();
+            return PropertyArrays.Get<T>(m_Arrays, nameID);
+        }
+
+        void GetArray<T>(int nameID, List<T> values)
+        {
+            RealizeProfilerPropertyStorage();
+            PropertyArrays.Get(m_Arrays, nameID, values);
         }
 
         void SetArray<T>(int nameID, IReadOnlyList<T> values)
@@ -1892,6 +1919,7 @@ namespace UnityEngine
 
         internal unsafe ulong Sync()
         {
+            PrepareProfilerDraw();
             if (m_Handle == 0) m_Handle = RenderHandles.Next();
             // A maximum LOD changed: the shader goes again when the SubShader it names changed.
             if (m_LodEpoch != Shader.s_LodEpoch)

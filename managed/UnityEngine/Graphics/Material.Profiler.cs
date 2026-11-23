@@ -10,6 +10,21 @@ namespace UnityEngine
         // The ordinary shader property storage measured in tests/projects/materialmemory.
         const long ProfilerKeyBytes = 12;
         const long ProfilerWordBytes = 4;
+        const long ProfilerInitialPropertyStateBytes = 416;
+
+        enum ProfilerStorage : byte { Initialized, Pending, DrawPrepared }
+
+        void RealizeProfilerPropertyStorage()
+        {
+            if (m_State.m_ProfilerStorage != ProfilerStorage.Initialized)
+                m_State.m_ProfilerStorage = ProfilerStorage.Initialized;
+        }
+
+        internal void PrepareProfilerDraw()
+        {
+            if (m_State.m_ProfilerStorage == ProfilerStorage.Pending)
+                m_State.m_ProfilerStorage = ProfilerStorage.DrawPrepared;
+        }
 
         void StartMeasuringPropertyStorage()
         {
@@ -20,8 +35,10 @@ namespace UnityEngine
 
         void StopMeasuringPropertyStorage()
         {
+            if (!m_State.m_ProfilerLayoutVersion.HasValue) return;
             m_State.m_ProfilerLayoutVersion = null;
             m_State.m_ProfilerAddedFloats = null;
+            m_State.m_ProfilerStorage = ProfilerStorage.Initialized;
         }
 
         void RecordProfilerPropertyWrite(int nameID, ShaderPropertyType type)
@@ -50,18 +67,22 @@ namespace UnityEngine
             return false;
         }
 
-        internal long? ProfilerPropertyStorageBytes
+        internal long? ProfilerAllocationBytes(int initializedBaseBytes)
         {
-            get
+            if (!TryGetProfilerPropertyLayout(out var layout)) return null;
+            switch (m_State.m_ProfilerStorage)
             {
-                if (!TryGetProfilerPropertyLayout(out var layout)) return null;
-                long extra = m_State.m_ProfilerAddedFloats?.Count ?? 0;
-                long keys = layout.Keys + extra;
-                long words = layout.Words + extra;
-                long keySlots = AppendedPropertyCapacity(layout.Keys, keys);
-                long wordSlots = layout.MixedWords ? AppendedPropertyCapacity(layout.Words, words) : words;
-                return (keys + keySlots) * ProfilerKeyBytes + (words + wordSlots) * ProfilerWordBytes;
+                case ProfilerStorage.Pending: return initializedBaseBytes - ProfilerInitialPropertyStateBytes;
+                // A draw can build a different intermediate allocation. A property API read or
+                // write subsequently realizes the ordinary storage.
+                case ProfilerStorage.DrawPrepared: return null;
             }
+            long extra = m_State.m_ProfilerAddedFloats?.Count ?? 0;
+            long keys = layout.Keys + extra;
+            long words = layout.Words + extra;
+            long keySlots = AppendedPropertyCapacity(layout.Keys, keys);
+            long wordSlots = layout.MixedWords ? AppendedPropertyCapacity(layout.Words, words) : words;
+            return initializedBaseBytes + (keys + keySlots) * ProfilerKeyBytes + (words + wordSlots) * ProfilerWordBytes;
         }
 
         static long AppendedPropertyCapacity(long initial, long count)

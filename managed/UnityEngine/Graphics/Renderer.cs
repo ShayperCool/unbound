@@ -453,6 +453,7 @@ namespace UnityEngine
         {
             var block = BlockFor(index);
             if (block == null || block.isEmpty || source == null) return source;
+            source.PrepareProfilerDraw();
             if (m_BlockMaterials == null || m_BlockMaterials.Length <= index)
                 Array.Resize(ref m_BlockMaterials, Math.Max(index + 1, m_Materials.Length));
             var cached = m_BlockMaterials[index];

@@ -168,6 +168,33 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AnInstantiatedMaterialKeepsItsHeaderUntilAPropertyQuery()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var shader = CreateShader(PlainShader);
+            var source = new Material(shader);
+            source.SetFloat("_Parameter", 8f);
+            var instance = Object.Instantiate(source);
+            try
+            {
+                Assert.Equal(1416, Profiler.GetRuntimeMemorySizeLong(instance));
+                instance.renderQueue = 2200;
+                Assert.Same(shader, instance.shader);
+                Assert.Equal(1416, Profiler.GetRuntimeMemorySizeLong(instance));
+                Assert.True(instance.HasFloat("_Parameter"));
+                Assert.Equal(1864, Profiler.GetRuntimeMemorySizeLong(instance));
+                Assert.Equal(8f, instance.GetFloat("_Parameter"));
+                Assert.Equal(1864, Profiler.GetRuntimeMemorySizeLong(source));
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
+                Object.DestroyImmediate(source);
+                Object.DestroyImmediate(shader);
+            }
+        }
+
+        [Fact]
         public void AnUnmeasuredReleaseKeepsMaterialAllocationUnknown()
         {
             using var release = TestRelease.Pin(TestRelease.Unmeasured);
