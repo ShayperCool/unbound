@@ -65,10 +65,15 @@ largest coefficient (the sky is drawn by the graphics device and projected in 32
 the worst seen is 4.5e-4, alike in each sky's scene; a probe of zeros exactly), and the stored
 probe likewise; each level of the default reflection within 2e-3 of the level's largest colour
 value (the first level is the drawn sky as half floats, the worst seen one half-float step; the
-others its convolution, the worst seen 1.46e-3; a black cube exactly). Listed,
-not gated: what the Editor writes into the project (the files, the lighting data the scene then
-names, the reflection's file, format and import settings), which Unbound does not write yet
-(it keeps the bake's environment for the session, its reflection an uncompressed RGBAHalf cube).
+others its convolution, the worst seen 1.46e-3; a black cube exactly). What the bake writes
+into the project is compared too: the files it wrote, the lighting data the scene then names,
+the reflection's file, format and import settings exactly, and the written files themselves
+(`written/`, copied right after the bake) byte for byte. Two exceptions: in `LightingData.asset`
+the 27 floats of the stored probe are compared as `storedProbe`, and of `ReflectionProbe-0.exr`
+the header (magic, version and attributes) is compared, its texels as imported (the cube above).
+`keep` normalizes what changes with every bake: the GUIDs of new assets (in each `.meta`, and
+the reflection's in the lighting data) and the bytes the lighting data's empty realtime GI
+archive leaves unset.
 
 Not measured, each said by Unbound's bake: a Custom ambient or reflection source (Unbound
 keeps that part as the scene had it), gamma colour space projects and several open scenes

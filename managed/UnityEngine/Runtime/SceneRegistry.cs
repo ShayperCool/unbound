@@ -46,6 +46,9 @@ namespace Unbound.Runtime
         /// <summary>The Editor bakes it when it opens it (Lightmapping.bakeOnSceneLoad): its
         /// Lighting Data asset is then a new one Unbound does not name.</summary>
         internal bool BakedOnOpen;
+        /// <summary>A script's bake in Edit mode wrote the scene's lighting data, which
+        /// <see cref="LightingDataRef"/> then names.</summary>
+        internal bool LightingDataWritten;
         /// <summary>The Editor opened the scene (the first scene, the one Play mode starts with,
         /// EditorSceneManager.OpenScene), as opposed to loading it at runtime (SceneManager):
         /// the Editor bakes an opened scene that asks for it (Lightmapping.bakeOnSceneLoad).</summary>

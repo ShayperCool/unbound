@@ -47,9 +47,11 @@ namespace UnityEditor
             get
             {
                 var scene = SceneRegistry.Active;
-                if (scene != null && scene.BakedOnOpen)
+                // (A bake whose lighting data Unbound wrote names it, as the Editor's does.)
+                bool unwritten = scene != null && scene.BakedOnOpen && !scene.LightingDataWritten;
+                if (unwritten)
                     Stubs.Ignored("Lightmapping.lightingDataAsset", "of a scene the Editor baked (when it opened it, or by Lightmapping.Bake) is the Editor's new asset; Unbound answers null");
-                return scene == null || scene.BakedOnOpen ? null : LightingDataAsset.Of(scene.LightingDataRef);
+                return scene == null || unwritten ? null : LightingDataAsset.Of(scene.LightingDataRef);
             }
             set => throw new NotSupportedException("Unbound: assigning Lightmapping.lightingDataAsset (replacing a scene's baked lighting) is not supported.");
         }

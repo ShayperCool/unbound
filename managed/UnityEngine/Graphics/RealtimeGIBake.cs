@@ -79,7 +79,6 @@ namespace UnityEngine
                         continue;
                     }
                     var settings = scene.LightingSettings;
-                    Warn("script-bake-asset:" + scene.Path, $"{scene.Path}: Lightmapping.Bake writes its lighting data (LightingData.asset beside it) in the Editor, which the scene then names; Unbound keeps its own bake for the session (LibraryUnbound/RealtimeGI) and writes none.");
                     var made = new HashSet<Object>(file.Objects.Values);
                     foreach (var root in scene.Roots)
                         foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>(true))
@@ -89,7 +88,8 @@ namespace UnityEngine
                     scene.BakedOnOpen = true;
                     NoteBakeParts(file, settings, ScriptBake);
                     SceneLoaded(scene.Handle.Value, default, file, settings, first, bake: true, scriptBake: true);
-                    BakeEnvironment(file);
+                    var faces = BakeEnvironment(file);
+                    WriteLightingData(scene, file, settings, faces);
                     BakedAtlas.Lay(file, settings);
                     first = false;
                     UnityEditor.SceneManagement.EditorSceneManager.Dirty(scene);
@@ -154,8 +154,11 @@ namespace UnityEngine
         /// part alone). Said once and made: a project with a render pipeline asset. Without a
         /// graphics device nothing is drawn: said once, the environment kept.</para>
         /// </summary>
-        static void BakeEnvironment(LoadedFile file)
+        /// <returns>The skybox's faces the default reflection was made of (its size, and red,
+        /// green and blue floats, face by face), or null where none was made.</returns>
+        static (int Size, float[] Faces)? BakeEnvironment(LoadedFile file)
         {
+            (int Size, float[] Faces)? drawn = null;
             string path = file.Path;
             var (probe, reflection) = RenderSettings.BakedEnvironment(file);
             // Where none is made the scene keeps what it had, also when it loads again (the bake
@@ -164,7 +167,7 @@ namespace UnityEngine
             if (!Native.IsReady)
             {
                 RememberEnvironment(path, probe, reflection);
-                return;
+                return null;
             }
             const string kept = "the scene keeps the environment lighting it had";
             string skipped = !RenderSettings.InEffect(file)
@@ -178,7 +181,7 @@ namespace UnityEngine
             {
                 Warn("bake-environment-kept:" + skipped, skipped);
                 RememberEnvironment(path, probe, reflection);
-                return;
+                return null;
             }
             if (Rendering.GraphicsSettings.currentRenderPipeline != null)
                 Warn("bake-environment-pipeline:" + path, $"{path}: Lightmapping.Bake's environment lighting with a render pipeline asset is not measured; Unbound makes it as the built-in render pipeline's.");
@@ -209,8 +212,11 @@ namespace UnityEngine
                 else
                     try
                     {
-                        reflection = DefaultReflection(RenderSettings.defaultReflectionResolution);
+                        int size = RenderSettings.defaultReflectionResolution;
+                        var faces = SkyboxFaces(size);
+                        reflection = DefaultReflection(size, faces);
                         s_MadeReflections.Add(reflection);
+                        drawn = (size, faces);
                     }
                     catch (InvalidOperationException e)
                     {
@@ -225,6 +231,95 @@ namespace UnityEngine
             if (earlier != null && earlier != reflection && s_MadeReflections.Remove(earlier))
                 Object.DestroyImmediate(earlier);
             RememberEnvironment(path, probe, reflection);
+            return drawn;
+        }
+
+        /// <summary>The image a bake writes its default reflection to, in the scene's folder.</summary>
+        const string ReflectionImage = "ReflectionProbe-0.exr";
+        /// <summary>The lighting data's file and its LightingDataAsset's file ID.</summary>
+        const string LightingDataFile = "LightingData.asset";
+        const long LightingDataFileId = 112000000;
+        /// <summary>The file ID of the cube a reflection's image imports to.</summary>
+        const long ReflectionCubeFileId = 8900000;
+
+        /// <summary>
+        /// The files a script's bake writes beside its scene, as the Unity 6000.0.71f1 Editor writes
+        /// them (tests/projects/bakeenvironment `written/`): the scene's folder (its name), the
+        /// default reflection's image (ReflectionProbe-0.exr, the skybox's faces side by side as
+        /// half floats; imported as a cube convolved for glossy reflection, clamped, trilinear),
+        /// which the scene then reflects, or none (one an earlier bake wrote is deleted), and the
+        /// lighting data (LightingData.asset), which the scene then names. Written for a bake of
+        /// the environment alone (baked and realtime global illumination off); the lighting data
+        /// of other bakes is not written yet (said once). The files are the Editor's but for the
+        /// GUIDs of the new assets.
+        /// </summary>
+        static void WriteLightingData(Unbound.Runtime.SceneData scene, LoadedFile file, LightingSettings settings, (int Size, float[] Faces)? faces)
+        {
+            if (string.IsNullOrEmpty(scene.Path)) return;
+            scene.LightingDataWritten = false;
+            // (Without the native side, as in managed tests, nothing is written either.)
+            if (settings == null || settings.bakedGI || settings.realtimeGI || !Native.IsReady)
+            {
+                Warn("script-bake-asset:" + scene.Path, $"{scene.Path}: Lightmapping.Bake writes its lighting data (LightingData.asset beside it) in the Editor, which the scene then names; Unbound writes it for a bake of the environment alone (baked and realtime global illumination off), and keeps this bake for the session (LibraryUnbound/RealtimeGI) without writing it.");
+                return;
+            }
+            var folder = scene.Path.Substring(0, scene.Path.Length - System.IO.Path.GetExtension(scene.Path).Length);
+            if (!UnityEditor.AssetDatabase.IsValidFolder(folder))
+            {
+                int slash = folder.LastIndexOf('/');
+                UnityEditor.AssetDatabase.CreateFolder(folder.Substring(0, slash), folder.Substring(slash + 1));
+            }
+            var (probe, reflection) = RenderSettings.BakedEnvironment(file);
+            var imagePath = folder + "/" + ReflectionImage;
+            string imageGuid = null;
+            if (faces is { } drawn)
+            {
+                var floats = new byte[drawn.Faces.Length * sizeof(float)];
+                Buffer.BlockCopy(drawn.Faces, 0, floats, 0, floats.Length);
+                var reply = JsonDocument.Parse(Native.Call("baked-gi-reflection-image", JsonSerializer.Serialize(new { size = drawn.Size, faces = Convert.ToBase64String(floats) }))).RootElement;
+                imageGuid = UnityEditor.AssetDatabase.WriteBakedFile(imagePath, Convert.FromBase64String(reply.GetProperty("image").GetString()));
+                if (UnityEditor.AssetImporter.GetAtPath(imagePath) is UnityEditor.TextureImporter importer)
+                {
+                    var import = new UnityEditor.TextureImporterSettings();
+                    importer.ReadTextureSettings(import);
+                    import.textureShape = UnityEditor.TextureImporterShape.TextureCube;
+                    import.generateCubemap = UnityEditor.TextureImporterGenerateCubemap.AutoCubemap;
+                    import.cubemapConvolution = UnityEditor.TextureImporterCubemapConvolution.Specular;
+                    import.seamlessCubemap = true;
+                    import.wrapMode = TextureWrapMode.Clamp;
+                    import.filterMode = FilterMode.Trilinear;
+                    import.aniso = 0;
+                    importer.SetTextureSettings(import);
+                    importer.compressionQuality = 100;
+                    importer.SaveAndReimport();
+                }
+            }
+            else if (UnityEditor.AssetDatabase.AssetPathToGUID(imagePath).Length > 0)
+                UnityEditor.AssetDatabase.DeleteAsset(imagePath);
+            var coefficients = new float[27];
+            if (probe is { } sh)
+                for (int c = 0; c < 3; c++)
+                    for (int k = 0; k < 9; k++) coefficients[9 * c + k] = sh[c, k];
+            var data = JsonDocument.Parse(Native.Call("baked-gi-lighting-data", JsonSerializer.Serialize(new
+            {
+                unityVersion = Application.unityVersion,
+                sceneGuid = UnityEditor.AssetDatabase.AssetPathToGUID(scene.Path),
+                lightmapsMode = (int)settings.directionalityMode,
+                ambientProbe = coefficients,
+                reflectionGuid = string.IsNullOrEmpty(imageGuid) ? null : imageGuid,
+            }))).RootElement;
+            var dataGuid = UnityEditor.AssetDatabase.WriteBakedFile(folder + "/" + LightingDataFile, Convert.FromBase64String(data.GetProperty("data").GetString()), LightingDataFileId);
+            if (string.IsNullOrEmpty(dataGuid)) return;
+            scene.LightingDataRef = new ObjectRef(LightingDataFileId, dataGuid, 2);
+            scene.LightingDataWritten = true;
+            // The scene reflects the written image, as the Editor's does.
+            if (!string.IsNullOrEmpty(imageGuid) && RenderSettings.BakedReflection(imageGuid, ReflectionCubeFileId) is { } imported)
+            {
+                if (reflection != null && s_MadeReflections.Remove(reflection))
+                    Object.DestroyImmediate(reflection);
+                RenderSettings.SetBakedEnvironment(file, probe, imported);
+                RememberEnvironment(scene.Path, probe, imported);
+            }
         }
 
         /// <summary>What a bake does with a part of a scene's environment lighting.</summary>
@@ -250,9 +345,8 @@ namespace UnityEngine
         /// <summary>The skybox's default reflection at <paramref name="size"/> texels a side: its
         /// faces stored as half floats and glossy-convolved, every level down to one texel, in a
         /// readable RGBAHalf cube (the Editor's imported one is BC6H and not readable).</summary>
-        static Cubemap DefaultReflection(int size)
+        static Cubemap DefaultReflection(int size, float[] faces)
         {
-            var faces = SkyboxFaces(size);
             var bytes = new byte[faces.Length * sizeof(float)];
             Buffer.BlockCopy(faces, 0, bytes, 0, bytes.Length);
             var json = Native.Call("baked-gi-default-reflection", JsonSerializer.Serialize(new { size, faces = Convert.ToBase64String(bytes) }));

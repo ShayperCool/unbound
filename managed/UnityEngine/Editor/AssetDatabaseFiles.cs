@@ -136,6 +136,20 @@ namespace UnityEditor
             s_ByGuid[asset.Guid] = entry;
         }
 
+        /// <summary>Writes a file a bake makes at <paramref name="path"/> (one there is replaced,
+        /// its .meta and GUID kept) and imports it; its GUID ("" where the path is not the
+        /// project's own).</summary>
+        internal static string WriteBakedFile(string path, byte[] bytes, long? main = null)
+        {
+            if (!Editable(path))
+            {
+                Refused("Lightmapping.Bake", path);
+                return "";
+            }
+            File.WriteAllBytes(FileOf(path), bytes);
+            return ImportOne(path, main);
+        }
+
         internal static string ImportOne(string path, long? main = null) =>
             Import(new[] { new ImportRequest { Path = path, Main = main } }).FirstOrDefault() ?? "";
 

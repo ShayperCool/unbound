@@ -1255,6 +1255,13 @@ namespace Unbound.Runtime
                     if (classId == RenderSettingsId && m_Target.Scene.IsNewSceneAsset)
                         doc.Body.Set("m_SkyboxMaterial", FlowValue("{fileID: 0}"));
                     if (classId == LightmapSettingsId) LightingSettingsReference(doc.Body);
+                    // A bake that wrote the scene's lighting data names it (as the Editor's
+                    // saved scene does: tests/projects/bakeenvironment EnvBakedNoSky.unity).
+                    if (classId == LightmapSettingsId && m_Target.Scene.LightingDataWritten)
+                    {
+                        var data = m_Target.Scene.LightingDataRef;
+                        doc.Body.Set("m_LightingDataAsset", FlowValue(FormattableString.Invariant($"{{fileID: {data.FileId}, guid: {data.Guid}, type: {data.Type}}}")));
+                    }
                     m_Out[doc.FileId] = doc;
                 }
             }

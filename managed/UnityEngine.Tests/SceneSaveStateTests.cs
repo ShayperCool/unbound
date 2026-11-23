@@ -175,6 +175,32 @@ namespace UnityEngine.Tests
         const string FileWithEmbeddedMesh = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!43 &500\nMesh:\n  m_ObjectHideFlags: 0\n  m_Name: embedded\n  m_Unread: 7\n";
 
         [Fact]
+        public void ASceneWhoseBakeWroteItsLightingDataNamesItWhenSaved()
+        {
+            const string File = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!157 &3\nLightmapSettings:\n  m_ObjectHideFlags: 0\n" +
+                "  m_LightingDataAsset: {fileID: 20201, guid: 0000000000000000f000000000000000, type: 0}\n  m_LightingSettings: {fileID: 0}\n";
+            var previousProject = ProjectInfo.ProjectPath;
+            var (scene, project, previous) = TemporaryScene(File);
+            try
+            {
+                ProjectInfo.ProjectPath = project;
+                EditorSession.IsPlaying = false;
+                scene.LightingDataRef = new ObjectRef(112000000, "50042a4f547431650857c17841b6c382", 2);
+                // Read, not written by a bake: kept as the file has it.
+                Assert.Contains("m_LightingDataAsset: {fileID: 20201, guid: 0000000000000000f000000000000000, type: 0}", SceneFiles.Write(scene));
+                // Written by a bake: named (tests/projects/bakeenvironment EnvBakedNoSky.unity).
+                scene.LightingDataWritten = true;
+                Assert.Contains("m_LightingDataAsset: {fileID: 112000000, guid: 50042a4f547431650857c17841b6c382, type: 2}", SceneFiles.Write(scene));
+            }
+            finally
+            {
+                ProjectInfo.ProjectPath = previousProject;
+                Close(scene, previous);
+                Directory.Delete(project, true);
+            }
+        }
+
+        [Fact]
         public void ASceneSaveKeepsItsEmbeddedObjectsAndRefusesWhatItCannotWrite()
         {
             // Measured on 6000.0 (other families keep their earlier, unmeasured behaviour).

@@ -40,13 +40,9 @@ AMBIENT_TOLERANCE = 1e-3
 # float step); the others its convolution in 32-bit floats, as half floats again (the worst seen
 # is 1.46e-3, one level of each sky's scene).
 CUBE_TOLERANCE = 2e-3
-# Records of what the Editor writes into the project (the lighting data asset and the
-# reflection's image beside the scene, and the reflection's import settings and format there),
-# which Unbound does not write yet (Q687): listed, not gated.
 # The empty realtime GI archive the lighting data of a bake without realtime GI holds: its size,
 # its header's and its blocks' table's (the bytes between are not set).
 ARCHIVE_SIZE, ARCHIVE_HEADER, ARCHIVE_BLOCKS = 74, 50, 10
-REPORTED = ('files', 'lightingData', 'defaultFile', 'defaultFormat', 'import')
 
 
 def scenes():
@@ -240,9 +236,50 @@ def cube_difference(got, want, size):
     return '; '.join(problems) or None
 
 
+def written_files(folder):
+    """{name: bytes} of the files a bake wrote, as kept."""
+    written = folder/'written'
+    return {p.name: p.read_bytes() for p in sorted(written.iterdir())} if written.is_dir() else {}
+
+
+def exr_header(data):
+    """An OpenEXR file's magic, version and attributes (up to the offset table): the texels after
+    them are compared as imported (the scene's `cube`)."""
+    at = 8
+    while data[at] != 0:
+        at = data.index(b'\0', at) + 1  # the name
+        at = data.index(b'\0', at) + 1  # the type
+        size, = struct.unpack_from('<i', data, at)
+        at += 4 + size
+    return data[:at + 1]
+
+
+def file_difference(name, got, want, probe):
+    """How a written file differs from the Editor's: byte for byte, but for the lighting data's
+    ambient probe (its 27 floats where the Editor's file holds `probe`, the scene's stored one,
+    within AMBIENT_TOLERANCE as `storedProbe`) and the reflection's texels (header only)."""
+    if got is None or want is None:
+        return 'not written' if got is None else 'written where the Editor writes none'
+    if name.endswith('.exr'):
+        got, want = exr_header(got), exr_header(want)
+    region = ''
+    if name == 'LightingData.asset' and probe is not None and len(got) == len(want):
+        at = want.find(struct.pack('<27f', *probe))
+        if at >= 0:
+            mine = struct.unpack_from('<27f', got, at)
+            scale = AMBIENT_TOLERANCE * max(abs(v) for v in probe)
+            region = within(list(mine), probe, lambda _: scale, f'x {AMBIENT_TOLERANCE:g} of the largest') or ''
+            got = got[:at] + want[at:at + 108] + got[at + 108:]
+            region = f'ambient probe at {at}: {region}' if region else ''
+    if got == want:
+        return region or None
+    first = next((k for k, (x, y) in enumerate(zip(got, want)) if x != y), min(len(got), len(want)))
+    return f'{len(got)} bytes, expected {len(want)}; first difference at {first}' + (f'; {region}' if region else '')
+
+
 def compare(label):
     want_root, got_root = reference_root(PROBE), WORK/label/'reference'
-    failed = matched = reported = 0
+    failed = matched = 0
     for scene in scenes():
         want, want_cube = read(want_root/scene)
         got, got_cube = read(got_root/scene)
@@ -254,14 +291,19 @@ def compare(label):
                 problem = within([float(v) for v in a.split()], theirs, lambda _: scale, f'x {AMBIENT_TOLERANCE:g} of the largest')
             else:
                 problem = None if a == b else f'expected {b!r} actual {a!r}'
-            if key in REPORTED:
-                if problem:
-                    reported += 1
-                    print('REPORTED', f'{scene}.{key}', problem.replace('\n', ' ')[:400])
-                continue
             if problem:
                 failed += 1
                 print('FAIL', f'{scene}.{key}', problem)
+            else:
+                matched += 1
+        # The files the bake wrote beside the scene, byte for byte (normalized as kept).
+        mine_files, their_files = written_files(got_root/scene), written_files(want_root/scene)
+        stored = [float(v) for v in want['storedProbe'].split()] if 'storedProbe' in want else None
+        for name in sorted(mine_files.keys() | their_files.keys()):
+            problem = file_difference(name, mine_files.get(name), their_files.get(name), stored)
+            if problem:
+                failed += 1
+                print('FAIL', f'{scene}.written/{name}', problem)
             else:
                 matched += 1
         if want_cube is None and got_cube is None:
@@ -273,7 +315,7 @@ def compare(label):
             print('FAIL', f'{scene}.cube', problem)
         else:
             matched += 1
-    print(f'bakeenvironment: {matched}/{matched + failed} records match; {failed} differ; {reported} reported (not written by Unbound)')
+    print(f'bakeenvironment: {matched}/{matched + failed} records match; {failed} differ')
     return int(failed > 0)
 
 

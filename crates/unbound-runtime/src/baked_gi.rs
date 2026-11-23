@@ -1167,6 +1167,91 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
     }))
 }
 
+/// The image of a bake's default reflection, as the Editor writes it beside the scene
+/// (ReflectionProbe-0.exr): the skybox's faces (as [`DefaultReflectionRequest`] gives them) side
+/// by side, +x to -z, red, green and blue as half floats.
+pub fn reflection_image(request: DefaultReflectionRequest) -> Result<Json> {
+    let size = request.size as usize;
+    let floats = faces_of(&request)?;
+    let mut planes = [
+        vec![0u16; 6 * size * size],
+        vec![0u16; 6 * size * size],
+        vec![0u16; 6 * size * size],
+    ];
+    for face in 0..6 {
+        for y in 0..size {
+            for x in 0..size {
+                let from = 3 * (face * size * size + y * size + x);
+                let to = y * 6 * size + face * size + x;
+                // (OpenEXR stores the channels by name: blue, green, red.)
+                for (plane, c) in planes.iter_mut().zip([2, 1, 0]) {
+                    plane[to] = half::f16::from_f32(floats[from + c]).to_bits();
+                }
+            }
+        }
+    }
+    let image = unbound_assets::exr_writer::write_piz(&unbound_assets::exr_writer::Image {
+        width: 6 * size,
+        height: size,
+        channels: &[("B", &planes[0]), ("G", &planes[1]), ("R", &planes[2])],
+    });
+    Ok(json!({ "image": base64::engine::general_purpose::STANDARD.encode(image) }))
+}
+
+/// The lighting data of a bake of the environment alone, as the Editor writes it beside the
+/// scene (LightingData.asset; [`unbound_assets::lighting_data`]).
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LightingDataRequest {
+    unity_version: String,
+    scene_guid: String,
+    lightmaps_mode: i32,
+    ambient_probe: Vec<f32>,
+    reflection_guid: Option<String>,
+}
+
+pub fn lighting_data_file(request: LightingDataRequest) -> Result<Json> {
+    use unbound_assets::lighting_data;
+    let ambient_probe: [f32; 27] = request
+        .ambient_probe
+        .as_slice()
+        .try_into()
+        .context("an ambient probe of 27 coefficients")?;
+    let bytes = lighting_data::environment(&lighting_data::Environment {
+        unity_version: request.unity_version,
+        scene_guid: lighting_data::guid_bytes(&request.scene_guid)?,
+        lightmaps_mode: request.lightmaps_mode,
+        ambient_probe,
+        reflection_guid: request
+            .reflection_guid
+            .as_deref()
+            .map(lighting_data::guid_bytes)
+            .transpose()?,
+    })?;
+    Ok(json!({ "data": base64::engine::general_purpose::STANDARD.encode(bytes) }))
+}
+
+/// The faces of a default reflection request as floats (checked against its size).
+fn faces_of(request: &DefaultReflectionRequest) -> Result<Vec<f32>> {
+    let size = request.size;
+    ensure!(
+        size.is_power_of_two(),
+        "a default reflection of {size} texels a side: its levels halve down to one texel, so its size is a power of two"
+    );
+    let floats: Vec<f32> = base64::engine::general_purpose::STANDARD
+        .decode(&request.faces)?
+        .chunks_exact(4)
+        .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+        .collect();
+    let texels = (size * size) as usize;
+    ensure!(
+        floats.len() == 6 * texels * 3,
+        "the default reflection's faces have {} values for 6 faces of {size} texels a side",
+        floats.len()
+    );
+    Ok(floats)
+}
+
 /// What the bake makes of the sky for the default reflection: the skybox drawn into six faces
 /// of `size` texels a side (linear RGB floats, Unity's face order, rows from the top, base64).
 #[derive(serde::Deserialize)]
@@ -1182,21 +1267,8 @@ pub struct DefaultReflectionRequest {
 /// level and face by face within each level, rows from the top.
 pub fn default_reflection(request: DefaultReflectionRequest) -> Result<Json> {
     let size = request.size;
-    let floats: Vec<f32> = base64::engine::general_purpose::STANDARD
-        .decode(request.faces)?
-        .chunks_exact(4)
-        .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
-        .collect();
+    let floats = faces_of(&request)?;
     let texels = (size * size) as usize;
-    ensure!(
-        size.is_power_of_two(),
-        "a default reflection of {size} texels a side: its levels halve down to one texel, so its size is a power of two"
-    );
-    ensure!(
-        floats.len() == 6 * texels * 3,
-        "the default reflection's faces have {} values for 6 faces of {size} texels a side",
-        floats.len()
-    );
     let stored = |v: f32| half::f16::from_f32(v).to_f32();
     let faces: [Vec<f32>; 6] = std::array::from_fn(|face| {
         floats[face * texels * 3..(face + 1) * texels * 3]
