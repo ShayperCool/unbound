@@ -537,6 +537,10 @@ namespace Unbound.Runtime
         /// <summary>Light command buffer memory measured in componentmemory on Unity 6000.0.71f1.</summary>
         internal static bool LightCommandBufferMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Camera command buffer reservations and pipeline restrictions measured
+        /// by componentmemory on Unity 6000.0.71f1.</summary>
+        internal static bool CameraCommandBuffersMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>AudioSource distance curve reservations and setter validation measured by
         /// componentmemory on Unity 6000.0.71f1.</summary>
         internal static bool AudioSourceCurveStorageMeasured => Family == ReleaseFamily.Unity6000_0;

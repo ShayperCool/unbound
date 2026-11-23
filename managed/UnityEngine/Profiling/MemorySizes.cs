@@ -34,7 +34,7 @@ namespace Unbound.Runtime
         const long GameObjectHeader = 240, GameObjectPerComponent = 24;
         // The attached component itself, measured by tests/projects/componentmemory on Unity 6000.0.71f1.
         const long BoxColliderBytes = 288, MeshFilterBytes = 120, MonoBehaviourBytes = 456;
-        const long LightBytes = 1176, LightCommandBufferSlotBytes = 12;
+        const long LightBytes = 1176, CommandBufferSlotBytes = 12;
         const long AudioSourceBytes = 1128, AudioSourceCurveKeyBytes = 32;
         const long MeshRendererBytes = 656, MeshRendererMaterialSlotBytes = 4, MeshRendererIndexedBlockSlotBytes = 8;
         const long TransformBytes = 296, RectTransformBytes = 368, TransformChildSlotBytes = 16;
@@ -100,7 +100,10 @@ namespace Unbound.Runtime
                         Transform transform when transform.MeasuresHierarchyStorage => TransformSize(transform),
                         MonoBehaviour when Compat.FixedComponentMemoryMeasured => MonoBehaviourBytes,
                         Light light when Compat.LightCommandBufferMemoryMeasured && GraphicsSettings.currentRenderPipeline == null
-                            => LightBytes + light.ProfilerCommandBufferSlots * LightCommandBufferSlotBytes,
+                            => LightBytes + light.ProfilerCommandBufferSlots * CommandBufferSlotBytes,
+                        Camera camera when Compat.CameraCommandBuffersMeasured
+                            && GraphicsDeviceProfile.Current.CameraMemoryBytes is { } cameraBytes
+                            => cameraBytes + camera.ProfilerCommandBufferSlots * CommandBufferSlotBytes,
                         AudioSource source when Compat.AudioSourceCurveStorageMeasured
                             => AudioSourceBytes + source.ProfilerReservedCurveKeys * AudioSourceCurveKeyBytes,
                         MeshRenderer renderer when Compat.MeshRendererMaterialMemoryMeasured

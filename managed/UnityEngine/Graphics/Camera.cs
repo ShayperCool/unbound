@@ -786,6 +786,17 @@ namespace UnityEngine
 
         internal List<CommandBuffer> CommandBuffersAt(CameraEvent evt) => m_CommandBuffers.TryGetValue(evt, out var list) ? list : null;
 
+        // Each event owns its slots until the whole event is cleared.
+        internal long ProfilerCommandBufferSlots
+        {
+            get
+            {
+                long slots = 0;
+                foreach (var list in m_CommandBuffers.Values) slots += list.Capacity;
+                return slots;
+            }
+        }
+
         public int commandBufferCount
         {
             get
@@ -799,7 +810,11 @@ namespace UnityEngine
         public void AddCommandBuffer(CameraEvent evt, CommandBuffer buffer)
         {
             if (buffer == null) throw new NullReferenceException("buffer is null");
-            if (!m_CommandBuffers.TryGetValue(evt, out var list)) m_CommandBuffers[evt] = list = new List<CommandBuffer>();
+            if (!m_CommandBuffers.TryGetValue(evt, out var list))
+            {
+                list = new List<CommandBuffer>(Compat.CameraCommandBuffersMeasured ? 1 : 0);
+                m_CommandBuffers.Add(evt, list);
+            }
             list.Add(buffer);
         }
 

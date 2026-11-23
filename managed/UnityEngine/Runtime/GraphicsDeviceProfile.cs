@@ -65,6 +65,8 @@ namespace Unbound.Runtime
         /// <summary>Software ASTC setup bytes for the first decoding format and for each additional
         /// format, measured by textureastcmemory.</summary>
         internal (int First, int Additional)? AstcFallbackMemoryOverhead { get; init; }
+        /// <summary>Camera allocation without command buffers, measured by componentmemory.</summary>
+        internal int? CameraMemoryBytes { get; init; }
         /// <summary>What a BatchRendererGroup procedural command of MeshTopology.Quads draws its
         /// vertex ids as, the device having no quad primitive: a triangle list on Vulkan, points on
         /// OpenGL Core (measured, Unity 6000.0.71f1 on the NVIDIA driver: tests/projects/brg
@@ -278,6 +280,7 @@ namespace Unbound.Runtime
         {
             Texture2DMemoryOverhead = (880, 936),
             AstcFallbackMemoryOverhead = (3200, 8),
+            CameraMemoryBytes = 4088,
             MaxTiledPixelStorage = int.MaxValue,
             TiledStorageMeasured = true,
             MaxGraphicsBufferBytes = 2L << 30,
@@ -336,6 +339,7 @@ namespace Unbound.Runtime
         {
             BgraLdr = true,
             Texture2DMemoryOverhead = (960, 960),
+            CameraMemoryBytes = 4064,
             MaxMsaaSamples = 4,
             DepthFetchInRenderPass = false,
             MaxTexture3DSize = 2048,
