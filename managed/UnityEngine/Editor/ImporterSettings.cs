@@ -432,6 +432,8 @@ namespace UnityEditor
             Int("textureSettings.wrapV", s => (int)s.wrapModeV, (s, v) => s.wrapModeV = (TextureWrapMode)v),
             Int("textureSettings.wrapW", s => (int)s.wrapModeW, (s, v) => s.wrapModeW = (TextureWrapMode)v),
             Int("generateCubemap", s => (int)s.generateCubemap, (s, v) => s.generateCubemap = (TextureImporterGenerateCubemap)v),
+            Int("cubemapConvolution", s => (int)s.cubemapConvolution, (s, v) => s.cubemapConvolution = (TextureImporterCubemapConvolution)v),
+            Int("seamlessCubemap", s => s.seamlessCubemap ? 1 : 0, (s, v) => s.seamlessCubemap = v != 0),
             Float("spritePixelsToUnits", 100, s => s.spritePixelsPerUnit, (s, v) => s.spritePixelsPerUnit = v),
         };
 

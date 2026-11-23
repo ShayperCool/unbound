@@ -109,6 +109,28 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SetTextureSettingsWritesTheCubemapConvolutionAndSeams()
+        {
+            // A reflection cube's import (a bake's ReflectionProbe-0.exr): specular convolution
+            // and seamless edges reach the .meta, and read back.
+            var importer = (TextureImporter)AssetImporter.FromMeta("Assets/C.exr", "9123456789abcdef0123456789abcdef", "TextureImporter",
+                TestYaml.DocumentBody("TextureImporter:\n  cubemapConvolution: 0\n  seamlessCubemap: 0\n  userData: \n"));
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            Assert.Equal(TextureImporterCubemapConvolution.None, settings.cubemapConvolution);
+            Assert.False(settings.seamlessCubemap);
+            settings.cubemapConvolution = TextureImporterCubemapConvolution.Specular;
+            settings.seamlessCubemap = true;
+            importer.SetTextureSettings(settings);
+            Assert.Equal(1, MetaSettings.Int(importer.m_Settings, "cubemapConvolution", -1));
+            Assert.Equal(1, MetaSettings.Int(importer.m_Settings, "seamlessCubemap", -1));
+            var read = new TextureImporterSettings();
+            importer.ReadTextureSettings(read);
+            Assert.Equal(TextureImporterCubemapConvolution.Specular, read.cubemapConvolution);
+            Assert.True(read.seamlessCubemap);
+        }
+
+        [Fact]
         public void ATypeChangeOnASparseMetaKeepsTheWrapModeAsked()
         {
             // A sprite without wrap keys clamps; made Default it keeps clamping (the type change
