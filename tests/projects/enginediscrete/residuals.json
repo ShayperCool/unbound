@@ -1,0 +1,13 @@
+{
+  "Engine properties the Editor does not animate: Light m_Type and m_Shadows.m_Type, Camera m_ClearFlags, MeshRenderer m_CastShadows and AudioSource m_Priority are not among the Editor's animatable bindings and float curves on them change nothing, while Unbound binds any serialized field of an engine component": [
+    "play.castShadows.float",
+    "play.clearFlags.float",
+    "play.lightType.float",
+    "play.priority.float"
+  ],
+  "AnimationUtility.GetAnimatableBindings lists no object-reference (discrete) bindings and not a SpriteRenderer's m_SortingOrder": [
+    "binding.sortingOrder",
+    "discrete.MeshRenderer",
+    "discrete.SpriteRenderer"
+  ]
+}

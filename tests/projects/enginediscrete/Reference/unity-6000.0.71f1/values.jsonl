@@ -1,0 +1,30 @@
+{"k":"discrete.SpriteRenderer","v":"m_Materials.Array.data[0] m_Sprite"}
+{"k":"discrete.Light","v":""}
+{"k":"discrete.Camera","v":""}
+{"k":"discrete.MeshRenderer","v":"m_Materials.Array.data[0]"}
+{"k":"discrete.AudioSource","v":""}
+{"k":"binding.sortingOrder","v":"float"}
+{"k":"binding.lightType","v":"none"}
+{"k":"binding.shadows","v":"none"}
+{"k":"binding.clearFlags","v":"none"}
+{"k":"binding.castShadows","v":"none"}
+{"k":"binding.priority","v":"none"}
+{"k":"play.sortingOrder.bits","v":"0 0 0 0"}
+{"k":"play.sortingOrder.numbers","v":"0 0 0 0"}
+{"k":"play.sortingOrder.float","v":"0 1 2 3"}
+{"k":"play.lightType.bits","v":"Point Point Point Point"}
+{"k":"play.lightType.numbers","v":"Point Point Point Point"}
+{"k":"play.lightType.float","v":"Point Point Point Point"}
+{"k":"play.shadows.bits","v":"None None None None"}
+{"k":"play.shadows.numbers","v":"None None None None"}
+{"k":"play.shadows.float","v":"None None None None"}
+{"k":"play.clearFlags.bits","v":"Skybox Skybox Skybox Skybox"}
+{"k":"play.clearFlags.numbers","v":"Skybox Skybox Skybox Skybox"}
+{"k":"play.clearFlags.float","v":"Skybox Skybox Skybox Skybox"}
+{"k":"play.castShadows.bits","v":"On On On On"}
+{"k":"play.castShadows.numbers","v":"On On On On"}
+{"k":"play.castShadows.float","v":"On On On On"}
+{"k":"play.priority.bits","v":"128 128 128 128"}
+{"k":"play.priority.numbers","v":"128 128 128 128"}
+{"k":"play.priority.float","v":"128 128 128 128"}
+{"k":"complete","v":true}
