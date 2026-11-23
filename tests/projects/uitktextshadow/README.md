@@ -1,7 +1,7 @@
 # UI Toolkit text shadow and outline
 
 Stages the `uitk` fixture in a fresh cache directory and replaces its interaction run with
-`Assets/Scripts/TextShadowProbe.cs`: twelve labels ("Shadow Ag", 32 points, white, the panel's
+`Assets/Scripts/TextShadowProbe.cs`: fourteen labels ("Shadow Ag", 32 points, white, the panel's
 default font) on a runtime panel, one case per cell of 192 x 88 points on a green fill, rendered at
 panel scale 1 and 1.25 (`shadow-1.png`, `shadow-1.25.png`). `shadow.jsonl` records each label's
 resolved outline and layout.
@@ -10,13 +10,17 @@ Cases: `plain` and `outline-no-width` (an outline colour without width) are cont
 (3, 4, no blur), `shadow-blur` (2.6, 3.9, blur 5.3, a translucent dark colour), `shadow-negative`
 (-4, -3, blur 2), `shadow-far` (30, 30: beyond the atlas padding), `shadow-wide-blur` (blur 40);
 `outline` (2 wide), `outline-shadow`; `face-transparent` (a transparent text colour with a
-shadow); `small` (14 points) and `bold`, each with a shadow.
+shadow); `small` (14 points) and `bold`, each with a shadow; `outline-translucent` (a 50% grey
+outline at half alpha); `shadow-color-only` (an opaque shadow colour without offset or blur under a
+60% white face).
 
 What it shows (Unity 6000.0.71f1): text-shadow and -unity-text-outline are drawn by the distance
 field text shader, the shadow under the face and outline, in units of the font asset's atlas padding
 at its point size: an offset or blur beyond one padding stops there (`shadow-far`,
 `shadow-wide-blur`), so the shadow does not scale with the style past it; the panel scale does not
-change them. A transparent face leaves the shadow outside the glyphs only.
+change them. A transparent face leaves the shadow outside the glyphs only. A translucent outline
+colour is drawn premultiplied by its alpha; a shadow colour without offset or blur (and no outline
+width) draws nothing.
 
 `verify.py` compares each cell inside its edge exactly and the whole images within the recorded
 residual (the cells' outer corner pixels, from the rectangle's anti-aliased edge). The `bold` label
@@ -38,5 +42,5 @@ python3 tests/projects/uitktextshadow/verify.py --release 6000.0.71f1 --candidat
 ## Reference
 
 `Reference/unity-6000.0.71f1`: two byte-identical Linux Editor captures (OpenGL on an NVIDIA GPU);
-`Reference/unity-6000.0.71f1/metal`: two byte-identical macOS Editor captures (Metal). They differ
-only at the cells' outer corner pixels (48 pixels, the recorded residual); `shadow.jsonl` is equal.
+`Reference/unity-6000.0.71f1/metal`: two byte-identical macOS Editor captures (Metal). Each engine
+run is compared with its own platform's reference.

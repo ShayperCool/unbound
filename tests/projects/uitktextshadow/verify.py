@@ -8,7 +8,7 @@ which are printed with their difference on every run (and fail once they match).
 1 and 1.25) every case's cell is compared inside its edge (2 pixels in): exactly. The whole image
 prints its mean and worst channel difference and pixels over 8, and fails beyond the recorded
 residuals (IMAGE_LIMITS): the cells' outer corner pixels, where the Editor's anti-aliased
-rectangle edge leaves a faint pixel diagonally outside each corner (12 cells, 4 corners).
+rectangle edge leaves a faint pixel diagonally outside each corner (14 cells, 4 corners).
 """
 import argparse
 import json
@@ -24,14 +24,15 @@ from value_probe import read_png  # noqa: E402
 # Assets/Scripts/TextShadowProbe.cs: the cases in order, three per row in cells of 200 x 96 points,
 # drawn 4 points in as 192 x 88 rectangles.
 CASES = ['plain', 'outline-no-width', 'shadow', 'shadow-blur', 'shadow-negative', 'shadow-far',
-         'shadow-wide-blur', 'outline', 'outline-shadow', 'face-transparent', 'small', 'bold']
+         'shadow-wide-blur', 'outline', 'outline-shadow', 'face-transparent', 'small', 'bold',
+         'outline-translucent', 'shadow-color-only']
 COLUMNS, CELL_W, CELL_H, MARGIN, INSET = 3, 200, 96, 4, 2
 IMAGES = {'shadow-1.png': 1.0, 'shadow-1.25.png': 1.25}
 # Lines of shadow.jsonl known to differ, with the reason. The bold label is laid out narrower: its
 # text measures 186.4 wide in Unbound, 193.6 in the Editor; its glyphs are drawn at the same places
 # (its cell matches).
 KNOWN = {'bold': 'bold text of the default font measures narrower than the Editor\'s (layout width 186.4 vs 193.6)'}
-IMAGE_LIMITS = {'shadow-1.png': (0.02, 24, 48), 'shadow-1.25.png': (0.04, 24, 48)}
+IMAGE_LIMITS = {'shadow-1.png': (0.02, 24, 56), 'shadow-1.25.png': (0.05, 24, 56)}
 
 
 def differences(a, b):

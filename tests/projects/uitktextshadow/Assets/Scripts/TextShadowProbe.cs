@@ -44,6 +44,9 @@ public static class TextShadowProbe
         new Case("face-transparent", s => { s.color = new Color(1f, 1f, 1f, 0f); s.textShadow = Shadow(3f, 4f, 2f, Color.black); }),
         new Case("small", s => { s.fontSize = 14f; s.textShadow = Shadow(2f, 2f, 1f, Color.black); }),
         new Case("bold", s => { s.unityFontStyleAndWeight = FontStyle.Bold; s.textShadow = Shadow(3f, 3f, 2f, Color.black); }),
+        // A translucent outline colour; a shadow colour without offset or blur.
+        new Case("outline-translucent", s => { s.unityTextOutlineColor = new Color(0.5f, 0.5f, 0.5f, 0.5f); s.unityTextOutlineWidth = 2f; }),
+        new Case("shadow-color-only", s => { s.color = new Color(1f, 1f, 1f, 0.6f); s.textShadow = Shadow(0f, 0f, 0f, new Color(0.9f, 0.1f, 0.1f, 1f)); }),
     };
 
     public static void Run(UIDocument document, RenderTexture target)
