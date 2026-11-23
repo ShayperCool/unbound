@@ -34,10 +34,15 @@ namespace UnityEngine
         internal bool m_DrawnWithoutTexture;
         /// <summary>The geometry the particle Shape module samples (see ParticleShapeMesh).</summary>
         Mesh m_ShapeMesh;
-        internal enum GeometryStorage : byte { Unmeasured, Created, Shared, Visible }
+        internal enum GeometryStorage : byte { Unmeasured, Created, Shared }
         GeometryStorage m_ProfilerGeometryStorage;
+        int m_ProfilerIndexSlots;
+        (int Vertices, int Indices) m_ProfilerCameraGeometry;
         internal GeometryStorage ProfilerGeometryStorage => IsPersistentAsset
             ? GeometryStorage.Unmeasured : m_ProfilerGeometryStorage;
+        internal int ProfilerVertexCount => m_Vertices.Length;
+        internal int ProfilerIndexSlots => m_ProfilerIndexSlots;
+        internal (int Vertices, int Indices) ProfilerCameraGeometry => m_ProfilerCameraGeometry;
         /// <summary>The secondary textures (an imported sprite's are loaded when first asked for).</summary>
         SecondarySpriteTexture[] m_SecondaryTextures;
         (string Name, string Guid)[] m_SecondaryGuids;
@@ -70,6 +75,8 @@ namespace UnityEngine
             if (m_ProfilerGeometryStorage != GeometryStorage.Unmeasured)
             {
                 copy.m_ProfilerGeometryStorage = GeometryStorage.Created;
+                copy.m_ProfilerIndexSlots = m_Triangles.Length;
+                copy.m_ProfilerCameraGeometry = default;
                 RetainSharedGeometry();
             }
             return copy;
@@ -103,6 +110,8 @@ namespace UnityEngine
             // A Tight rect under 32 pixels on a side stays a quad: nothing to trace for its mesh.
             bool tight = meshType == SpriteMeshType.Tight && rect.width >= TightMinimumSide && rect.height >= TightMinimumSide;
             if (tight || generateFallbackPhysicsShape) sprite.Trace(tight, generateFallbackPhysicsShape);
+            if (sprite.m_ProfilerGeometryStorage != GeometryStorage.Unmeasured)
+                sprite.m_ProfilerIndexSlots = sprite.m_Triangles.Length;
             return sprite;
         }
 
@@ -584,6 +593,11 @@ namespace UnityEngine
             m_MeshData?.Free();
             m_MeshData = null;
             m_Triangles = (ushort[])triangles.Clone();
+            if (m_ProfilerGeometryStorage != GeometryStorage.Unmeasured)
+            {
+                m_ProfilerIndexSlots = Math.Max(m_ProfilerIndexSlots, m_Triangles.Length);
+                RetainSharedGeometry();
+            }
             m_GeometryOverridden = true;
             m_Mesh = null;
             m_ShapeMesh = null;
@@ -647,8 +661,9 @@ namespace UnityEngine
                 SpriteMask { maskSource: SpriteMask.MaskSource.Sprite } mask => mask.sprite,
                 _ => null,
             };
-            if (sprite != null && sprite.m_ProfilerGeometryStorage is GeometryStorage.Created or GeometryStorage.Shared)
-                sprite.m_ProfilerGeometryStorage = GeometryStorage.Visible;
+            if (sprite == null || sprite.m_ProfilerGeometryStorage == GeometryStorage.Unmeasured) return;
+            sprite.RetainSharedGeometry();
+            sprite.m_ProfilerCameraGeometry = (sprite.m_Vertices.Length, sprite.m_Triangles.Length);
         }
 
         /// <summary>A mesh of the sprite's vertices (units from the pivot), UVs (channel 0) and

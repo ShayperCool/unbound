@@ -41,7 +41,9 @@ namespace Unbound.Runtime
         const long PackedHierarchyHeader = 176, PackedHierarchySlotBytes = 104, PackedHierarchyExtraBlockBytes = 16;
         const long HierarchyPairUnits = 5, ExtraBlockUnits = 8;
         // Script-created sprite geometry (tests/projects/spritememory, Unity 6000.0.71f1).
-        const long SpriteBytes = 1460, SpriteSharedGeometryBytes = 580, SpriteVisibleGeometryBytes = 672;
+        const long SpriteHeader = 1368, SpriteSharedGeometryBytes = 580;
+        const long SpriteSourceVertexBytes = 24, SpriteSourceGroupSavingBytes = 16, SpriteSourceVertexGroup = 4;
+        const long SpriteCameraVertexBytes = 20, SpriteIndexBytes = 2;
         // Unity 6000.0.71f1, tests/projects/textassetmemory: byte storage changes past 31 bytes.
         const long TextAssetHeader = 160, TextAssetInlineBytes = 31;
         static readonly object s_AstcFallbackLock = new();
@@ -92,14 +94,7 @@ namespace Unbound.Runtime
                 case Mesh m: return MeshSize(m);
                 case AudioClip clip: return clip.m_IsAsset ? null : AudioClipSize(clip);
                 case TextAsset text when Compat.TextAssetMemoryMeasured: return TextAssetSize(text);
-                case Sprite sprite when Compat.SpriteGeometryMemoryMeasured:
-                    return sprite.ProfilerGeometryStorage switch
-                    {
-                        Sprite.GeometryStorage.Created => SpriteBytes,
-                        Sprite.GeometryStorage.Shared => SpriteBytes + SpriteSharedGeometryBytes,
-                        Sprite.GeometryStorage.Visible => SpriteBytes + SpriteVisibleGeometryBytes,
-                        _ => null,
-                    };
+                case Sprite sprite when Compat.SpriteGeometryMemoryMeasured: return SpriteSize(sprite);
                 case GameObject go: return GameObjectHeader + GameObjectPerComponent * go.ProfilerComponentSlots;
                 case Component component when !component.IsPersistentAsset
                     && component.m_GameObject is { IsPersistentAsset: false, m_IsPrefabAsset: false } owner && owner != null:
@@ -123,6 +118,21 @@ namespace Unbound.Runtime
                     };
                 default: return null;
             }
+        }
+
+        static long? SpriteSize(Sprite sprite)
+        {
+            var storage = sprite.ProfilerGeometryStorage;
+            if (storage == Sprite.GeometryStorage.Unmeasured) return null;
+            long vertices = sprite.ProfilerVertexCount;
+            long sourceVertices = vertices * SpriteSourceVertexBytes
+                - vertices / SpriteSourceVertexGroup * SpriteSourceGroupSavingBytes;
+            var cameraGeometry = sprite.ProfilerCameraGeometry;
+            long cameraBytes = cameraGeometry.Vertices * SpriteCameraVertexBytes
+                + cameraGeometry.Indices * SpriteIndexBytes;
+            return SpriteHeader + sourceVertices + sprite.ProfilerIndexSlots * SpriteIndexBytes
+                + (storage == Sprite.GeometryStorage.Shared ? SpriteSharedGeometryBytes : 0)
+                + cameraBytes;
         }
 
         static long TransformSize(Transform transform)
