@@ -868,7 +868,8 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
         let baked: Vec<&Renderer> = taken.iter().map(|&i| &request.renderers[i]).collect();
         // The seams of each mesh a renderer stitches, found once per mesh in its own space.
         let mut seams_of: std::collections::HashMap<usize, Vec<EdgePair>> = Default::default();
-        for r in baked.iter().filter(|r| r.stitch_seams) {
+        let stitches = |r: &Renderer| r.stitch_seams && r.scale_in_lightmap > 0.0 && !r.probe_lit;
+        for r in baked.iter().filter(|r| stitches(r)) {
             seams_of.entry(r.mesh).or_insert_with(|| {
                 let mesh = &meshes[r.mesh];
                 seams::edge_pairs(
@@ -1044,9 +1045,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             // not measured).
             let stitched: Vec<(&[EdgePair], [f32; 4])> = members
                 .iter()
-                .filter(|&&k| {
-                    baked[k].stitch_seams && baked[k].scale_in_lightmap > 0.0 && !baked[k].probe_lit
-                })
+                .filter(|&&k| stitches(baked[k]))
                 .map(|&k| {
                     (
                         seams_of[&baked[k].mesh].as_slice(),

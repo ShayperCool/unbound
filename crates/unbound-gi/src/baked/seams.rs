@@ -31,7 +31,9 @@ const MAX_STEPS: usize = 50;
 /// The seams of a mesh (its local positions, normals and lightmap UVs; its triangles, every
 /// submesh's in order): each triangle edge whose reversed edge (the same two positions, exactly)
 /// an earlier triangle has, with other UVs and the same normal at the shared vertex where this
-/// edge starts. An edge's match is used once.
+/// edge starts (the normals at its other end are not compared). An edge's match is used once; of
+/// two open edges with the same ends in the same direction the later stands (neither measured).
+/// A triangle naming a vertex the mesh lacks is passed over.
 pub fn edge_pairs(
     positions: &[[f32; 3]],
     normals: &[[f32; 3]],
@@ -51,6 +53,10 @@ pub fn edge_pairs(
     for triangle in triangles {
         for k in 0..3 {
             let (v0, v1) = (triangle[k] as usize, triangle[(k + 1) % 3] as usize);
+            let have = |v: usize| v < positions.len() && v < normals.len() && v < uvs.len();
+            if !have(v0) || !have(v1) {
+                continue;
+            }
             let reversed = key(positions[v1], positions[v0]);
             match reversed.and_then(|r| open.remove(&r).map(|o| (r, o))) {
                 None => {
@@ -225,6 +231,10 @@ pub fn stitch(
             r[i] = b[i] - ap[i];
         }
         let mut rr = dot(&r, &r);
+        // (Light that is not a finite number keeps the texels as they are: not measured.)
+        if !rr.is_finite() {
+            continue;
+        }
         if tolerance <= rr {
             p.copy_from_slice(&r);
             for _ in 0..MAX_STEPS {
@@ -315,6 +325,34 @@ mod tests {
         // Another normal at the shared vertex: a hard edge, not stitched.
         let (positions, normals, uvs, triangles) = two_quads([0.0, -1.0, 0.0]);
         assert!(edge_pairs(&positions, &normals, &uvs, triangles).is_empty());
+    }
+
+    #[test]
+    fn a_triangle_naming_a_missing_vertex_is_passed_over() {
+        let (positions, normals, uvs, mut triangles) = two_quads([0.0, 0.0, -1.0]);
+        triangles.push([0, 1, 99]);
+        assert_eq!(edge_pairs(&positions, &normals, &uvs, triangles).len(), 1);
+    }
+
+    #[test]
+    fn light_that_is_not_a_number_is_kept() {
+        let (positions, normals, uvs, triangles) = two_quads([0.0, 0.0, -1.0]);
+        let pairs = edge_pairs(&positions, &normals, &uvs, triangles);
+        let mut image = vec![[0.5, 0.5, 0.5, 1.0]; 16 * 16];
+        image[4 * 16 + 6] = [f32::NAN, 0.5, 0.5, 1.0];
+        stitch(
+            &mut image,
+            16,
+            16,
+            &pairs,
+            [1.0, 1.0, 0.0, 0.0],
+            3,
+            f32::MAX,
+        );
+        // Red is solved with a texel that is not a number: it keeps its texels; green and blue
+        // are solved.
+        assert!(image.iter().all(|t| t[0].is_nan() || t[0] == 0.5));
+        assert!(image.iter().all(|t| t[1] < f32::MAX));
     }
 
     #[test]
