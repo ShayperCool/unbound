@@ -19,8 +19,11 @@ namespace UnityEngine.Tests
         public void Dispose()
         {
             if (!Directory.Exists(m_Root)) return;
-            foreach (var file in Directory.GetFiles(m_Root, "*", SearchOption.AllDirectories))
-                if (new FileInfo(file).LinkTarget == null) File.SetAttributes(file, FileAttributes.Normal);
+            // Links are not followed: a test's link back into its own tree would recurse until the
+            // system's limit on links in a path.
+            var walk = new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint };
+            foreach (var file in Directory.GetFiles(m_Root, "*", walk))
+                File.SetAttributes(file, FileAttributes.Normal);
             Directory.Delete(m_Root, true);
         }
 
