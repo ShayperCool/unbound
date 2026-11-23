@@ -90,3 +90,31 @@ release families, invalid indexed reads and empty-block rendering precedence are
 these controls.
 
 Add `--profile renderer` to the record, publish and gate commands above.
+
+## Transform hierarchy reservations
+
+The transform profile records runtime Transform and RectTransform trees and ordinary scene-authored
+roots. Unity 6000.0 documents a packed structure for each complete hierarchy. Its root and all
+descendants see the shared capacity and count, and attaching more transforms than the capacity
+causes it to grow. The control sets the capacity through a descendant and reads it at the root
+with multiple distinct capacities and actual tree sizes.
+[Transform.hierarchyCapacity](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Transform-hierarchyCapacity.html)
+[Transform.hierarchyCount](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Transform-hierarchyCount.html)
+
+A standalone script-created Transform starts with packed capacity one. A fresh RectTransform and
+a cloned hierarchy carry the logical capacity and allocate packed storage when a resize is needed.
+An authored scene root has packed capacity equal to the number of transforms loaded. The runtime
+grow step reserves twice the required count. Detaching creates an owner with capacity equal to the
+moved subtree's current size. Removing children leaves the previous owner's reservations intact.
+Each transform accounts for its own retained direct child slots even when it does not own the
+packed structure. Direct child lists double on growth and cloned and loaded lists start at the
+actual number of their children.
+
+The measurement also records the below-count warning text, its delivery and stack presence
+options, and what a log callback reads before the capacity changes. Roots and leaves replaced by
+a RectTransform preserve the logical hierarchy. The replacement root keeps its direct reservation
+and releases its earlier packed storage.
+
+Persistent objects, importer-owned trees and other release families are outside this profile's
+runtime reservation controls. Add `--profile transform` to the record, publish and gate commands
+above.

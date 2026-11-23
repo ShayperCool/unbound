@@ -13,11 +13,13 @@ PROBE = Path(__file__).resolve().parent
 BASE = (PROBE.parent/'formatmapping', ['Assets/Scenes', 'Assets/Scenes.meta', 'Packages', 'ProjectSettings'])
 AUDIO_BASE = [BASE, (PROBE/'Fixtures/audio', ['Assets/Scenes/Probe.unity'])]
 RENDERER_BASE = [BASE, (PROBE/'Fixtures/renderer', ['Assets/Scenes/Probe.unity', 'Assets/Resources'])]
+TRANSFORM_BASE = [BASE, (PROBE/'Fixtures/transform', ['Assets/Scenes/Probe.unity'])]
 PROFILES = {
     'fixed': ('RecordComponentMemory.Record', 'COMPONENT_MEMORY_OUT', None, BASE),
     'light': ('RecordLightAllocation.Record', 'LIGHT_ALLOCATION_OUT', 'light', BASE),
     'audio': ('RecordAudioSourceMemory.Record', 'AUDIO_SOURCE_MEMORY_OUT', 'audio', AUDIO_BASE),
     'renderer': ('RecordMeshRendererMemory.Record', 'MESH_RENDERER_MEMORY_OUT', 'renderer', RENDERER_BASE),
+    'transform': ('RecordTransformMemory.Record', 'TRANSFORM_MEMORY_OUT', 'transform', TRANSFORM_BASE),
 }
 
 
