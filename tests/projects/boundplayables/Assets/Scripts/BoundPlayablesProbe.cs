@@ -14,7 +14,7 @@ namespace BoundPlayablesProbe
     /// <summary>
     /// Animator.hasBoundPlayables through an Animator's life: without a controller, with one before
     /// and after its first update and over frames, disabled, inactive, with the controller taken away,
-    /// with a playable graph's output added and destroyed, and an Animator in the scene file.
+    /// and with a playable graph's output added and destroyed.
     /// </summary>
     public class BoundPlayablesProbeBehaviour : MonoBehaviour
     {

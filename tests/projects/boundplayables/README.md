@@ -19,6 +19,10 @@ OS). The gate compares every value exactly.
 made when a valid controller is set on an active hierarchy or when the hierarchy becomes active,
 and released at the end of the frame its controller is taken away.
 
+Unmeasured: an invalid controller (an override without a base, or one whose base is taken away
+later), Edit mode and pause (the release waits for the next Play mode frame), a controller changed
+by reverting or applying a prefab override, and an Animator in a scene file.
+
 The model's controller is the modelroot probe's (`run.py` takes it), the scene the uitkpanelutils
 probe's. Other releases are unmeasured.
 
