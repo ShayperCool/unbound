@@ -1,9 +1,11 @@
 """A sealed capture also needs to come from the selected profile's Editor method."""
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.dont_write_bytecode = True
 
@@ -43,6 +45,21 @@ class CaptureSelectionTests(unittest.TestCase):
                 run.validate_capture(root, RELEASE, LIGHT_METHOD)
             with self.assertRaisesRegex(SystemExit, 'expected Editor capture on Metal'):
                 run.validate_capture(root, RELEASE, FIXED_METHOD, 'Metal')
+
+    def test_camera_gate_selects_the_host_devices(self):
+        cases = [
+            ('linux', [], [('camera-opengl', '--force-glcore'), ('camera-vulkan', '--force-vulkan')], [1, 0]),
+            ('linux', ['--backend', 'vulkan'], [('camera-vulkan', '--force-vulkan')], [0]),
+            ('darwin', [], [('camera-metal', None)], [0]),
+        ]
+        for platform, options, expected, results in cases:
+            with self.subTest(platform=platform, options=options):
+                argv = ['run.py', 'gate', '--release', RELEASE, '--profile', 'camera', *options]
+                with mock.patch.object(sys, 'platform', platform), mock.patch.object(sys, 'argv', argv), \
+                        mock.patch.dict(os.environ), mock.patch.object(run.value_probe, 'gate', side_effect=results) as gate:
+                    self.assertEqual(run.main(), max(results))
+                calls = [(call.kwargs['profile'], next(iter(call.args[4][2:]), None)) for call in gate.call_args_list]
+                self.assertEqual(calls, expected)
 
 
 if __name__ == '__main__':

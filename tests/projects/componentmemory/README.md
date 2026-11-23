@@ -57,9 +57,9 @@ The receipt also checks sync and async duplicates on two events. Removing from o
 preserves the other event's registrations. Single-buffer calls reject an invalid event before
 checking the buffer or issuing a pipeline warning.
 
-Use `--profile camera` to select this probe. The runner defaults to Metal on macOS and OpenGL
-Core on Linux, where `--backend vulkan` selects Vulkan. Pass `--backend` explicitly to publish a
-recording made on another host.
+Use `--profile camera` to select this probe. The gate checks Metal on macOS and both OpenGL
+Core and Vulkan on Linux. Recording defaults to Metal on macOS and OpenGL Core on Linux.
+Pass `--backend` to select one device or to publish a recording made on another host.
 Persistent asset component memory and other release families remain unmeasured.
 
 ## AudioSource distance curve allocation
