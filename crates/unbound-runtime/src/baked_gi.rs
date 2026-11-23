@@ -768,14 +768,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
         };
         // The mixed lights' shadowmask channels; in the Shadowmask Lighting Mode a mixed light
         // left without one is baked instead.
-        let channels = shadowmask::channels(&baked_lights);
-        if mixed == MixedMode::Shadowmask {
-            for (light, &channel) in baked_lights.iter_mut().zip(&channels) {
-                if shadowmask::falls_back(light, channel) {
-                    light.mode = Mode::Baked;
-                }
-            }
-        }
+        let channels = shadowmask::assign(&mut baked_lights, mixed == MixedMode::Shadowmask);
         let baked: Vec<&Renderer> = taken.iter().map(|&i| &request.renderers[i]).collect();
         // Which lights a surface of the scene takes at a bounce: the light grid over the box
         // around the bake's renderers.

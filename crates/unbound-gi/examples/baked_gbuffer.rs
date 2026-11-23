@@ -161,7 +161,8 @@ fn main() {
     ][r.u32() as usize];
     let casters = Scene::new(triangles);
     // The lights' shadowmask channels (-1: none).
-    let assigned = shadowmask::channels(&lights);
+    let mut lights = lights;
+    let assigned = shadowmask::assign(&mut lights, mixed == MixedMode::Shadowmask);
     let channels: Vec<String> = assigned
         .iter()
         .map(|c| c.map_or(-1, |c| c as i32).to_string())

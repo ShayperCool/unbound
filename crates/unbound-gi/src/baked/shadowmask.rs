@@ -264,6 +264,20 @@ pub fn falls_back(light: &Light, channel: Option<u8>) -> bool {
     light.mode == Mode::Mixed && light.casts_shadows && channel.is_none()
 }
 
+/// Gives the lights their channels ([`channels`]) and, in the Shadowmask Lighting Mode,
+/// bakes the mixed lights left without one.
+pub fn assign(lights: &mut [Light], shadowmask_mode: bool) -> Vec<Option<u8>> {
+    let channels = channels(lights);
+    if shadowmask_mode {
+        for (light, &channel) in lights.iter_mut().zip(&channels) {
+            if falls_back(light, channel) {
+                light.mode = Mode::Baked;
+            }
+        }
+    }
+    channels
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -329,6 +343,23 @@ mod tests {
         );
         assert!(!falls_back(&quiet, None) && !falls_back(&baked, None));
         assert!(falls_back(&point(0.0), None) && !falls_back(&point(0.0), Some(1)));
+    }
+
+    #[test]
+    fn mixed_lights_left_without_a_channel_are_baked_in_the_shadowmask_mode_alone() {
+        let row: Vec<Light> = (0..6).map(|k| point(k as f32 * 0.9)).collect();
+        for shadowmask_mode in [true, false] {
+            let mut lights = row.clone();
+            let channels = assign(&mut lights, shadowmask_mode);
+            assert_eq!(channels[4..], [None, None]);
+            let modes: Vec<Mode> = lights.iter().map(|l| l.mode).collect();
+            let left = if shadowmask_mode {
+                Mode::Baked
+            } else {
+                Mode::Mixed
+            };
+            assert_eq!(modes, [[Mode::Mixed; 4].as_slice(), &[left; 2]].concat());
+        }
     }
 
     #[test]

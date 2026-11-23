@@ -98,8 +98,9 @@ pub struct Direct {
 }
 
 /// The direct light of every texel of the lightmap. `receivers` are the lightmap's renderers
-/// by their place in it, `channels` the lights' shadowmask channels, `pushoff` how far a sample
-/// is pushed off its triangle before its rays start.
+/// by their place in it, `channels` the lights' shadowmask channels (one per light, or none at
+/// all for no shadowmask), `pushoff` how far a sample is pushed off its triangle before its
+/// rays start.
 pub fn direct(
     g: &GBuffer,
     receivers: &[Receiver],
@@ -109,6 +110,10 @@ pub fn direct(
     scene: &Scene,
     pushoff: f32,
 ) -> Direct {
+    assert!(
+        channels.is_empty() || channels.len() == lights.len(),
+        "a shadowmask channel per light, or none"
+    );
     let tables = Tables::new();
     let masked: Vec<(&Light, usize)> = lights
         .iter()
@@ -152,41 +157,38 @@ pub fn direct(
                 for c in 0..3 {
                     facing[c] += smooth[c];
                 }
+                // What a light sends the sample, and whether the sample sees it.
+                let receives = receivers[receiver].receives_shadows;
+                let lit = |light: &Light| {
+                    light
+                        .arriving(&tables, light.color, origin, smooth)
+                        .map(|arriving| {
+                            let shadowed = light.casts_shadows
+                                && receives
+                                && scene.occluded(
+                                    &Ray {
+                                        origin,
+                                        direction: arriving.direction,
+                                    },
+                                    arriving.distance,
+                                );
+                            (arriving, !shadowed)
+                        })
+                };
                 // What of the sample each shadowmask channel's light reaches and sees.
                 for &(light, channel) in &masked {
-                    let Some(arriving) = light.arriving(&tables, light.color, origin, smooth)
-                    else {
-                        continue;
-                    };
-                    let shadowed = light.casts_shadows
-                        && receivers[receiver].receives_shadows
-                        && scene.occluded(
-                            &Ray {
-                                origin,
-                                direction: arriving.direction,
-                            },
-                            arriving.distance,
-                        );
-                    reached[channel] += 1;
-                    if !shadowed {
-                        seen[channel] += 1;
+                    if let Some((_, seen_here)) = lit(light) {
+                        reached[channel] += 1;
+                        if seen_here {
+                            seen[channel] += 1;
+                        }
                     }
                 }
                 for light in &lights {
-                    let Some(arriving) = light.arriving(&tables, light.color, origin, smooth)
-                    else {
+                    let Some((arriving, seen_here)) = lit(light) else {
                         continue;
                     };
-                    let shadowed = light.casts_shadows
-                        && receivers[receiver].receives_shadows
-                        && scene.occluded(
-                            &Ray {
-                                origin,
-                                direction: arriving.direction,
-                            },
-                            arriving.distance,
-                        );
-                    if !shadowed {
+                    if seen_here {
                         for c in 0..3 {
                             sum[c] += arriving.color[c];
                         }
