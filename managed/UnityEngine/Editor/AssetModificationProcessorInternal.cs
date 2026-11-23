@@ -23,10 +23,13 @@ namespace UnityEditor
 
         /// <summary>Calls each processor's static OnWillCreateAsset(string); one with other
         /// parameters is skipped with a warning.</summary>
-        internal static void OnWillCreateAsset(string path)
-        {
+        internal static void OnWillCreateAsset(string path) =>
             // Asked each time (asset creation is rare): the classes change when scripts reload.
-            foreach (var processor in TypeCache.GetTypesDerivedFrom<AssetModificationProcessor>())
+            OnWillCreateAsset(path, TypeCache.GetTypesDerivedFrom<AssetModificationProcessor>());
+
+        internal static void OnWillCreateAsset(string path, System.Collections.Generic.IEnumerable<Type> processors)
+        {
+            foreach (var processor in processors)
             {
                 var method = processor.GetMethod("OnWillCreateAsset", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
                 if (method == null) continue;

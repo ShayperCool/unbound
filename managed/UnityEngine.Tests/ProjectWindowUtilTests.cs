@@ -77,6 +77,33 @@ namespace UnityEngine.Tests
             Assert.Equal("Object reference not set to an instance of an object", nullAsset.Message);
         }
 
+        /// <summary>Hears OnWillCreateAsset while a test listens (a private static method, as
+        /// scripts declare it).</summary>
+        public sealed class CreationListener : AssetModificationProcessor
+        {
+            internal static List<string> Heard;
+
+            static void OnWillCreateAsset(string path) => Heard?.Add(path);
+        }
+
+        [Fact]
+        public void AProcessorsOnWillCreateAssetHearsThePath()
+        {
+            CreationListener.Heard = new List<string>();
+            try
+            {
+                // The test assembly is not a game assembly, so its class is passed as TypeCache
+                // would find it in a project.
+                AssetModificationProcessorInternal.OnWillCreateAsset("Assets/Data/Clip.anim", new[] { typeof(CreationListener) });
+                AssetModificationProcessorInternal.OnWillCreateAsset("Assets/Data/Clip.anim.meta", new[] { typeof(CreationListener) });
+                Assert.Equal(new[] { "Assets/Data/Clip.anim", "Assets/Data/Clip.anim.meta" }, CreationListener.Heard);
+            }
+            finally
+            {
+                CreationListener.Heard = null;
+            }
+        }
+
         [Fact]
         public void PathHelpersTrimAndKeepTheOutermostFolders()
         {
