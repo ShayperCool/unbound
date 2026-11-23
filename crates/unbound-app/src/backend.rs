@@ -18,7 +18,7 @@ use std::sync::mpsc::{self, Receiver, SyncSender};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread::JoinHandle;
 use unbound_runtime::render_protocol::{
-    RenderBackend, ShaderWarmupRequest, commands::Command, owned,
+    RenderBackend, ShaderWarmupRequest, TextureReadOptions, commands::Command, owned,
 };
 
 /// Maximum completed frames (`Command::EndFrame`) allowed to be queued ahead of the render thread.
@@ -746,12 +746,10 @@ impl RenderBackend for GpuBackend {
         mip: u32,
         layer: u32,
         rect: [i32; 4],
-        float: bool,
-        current_attachment: bool,
+        options: TextureReadOptions,
     ) -> Option<Vec<u8>> {
         let worker = self.0.inner.lock().unwrap().worker.clone()?;
-        worker
-            .call(move |r| r.read_texture(texture, mip, layer, rect, float, current_attachment))?
+        worker.call(move |r| r.read_texture(texture, mip, layer, rect, options))?
     }
 }
 

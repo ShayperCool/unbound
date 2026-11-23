@@ -1558,9 +1558,21 @@ pub fn rgba8_texel_to_rgba(format: wgpu::TextureFormat, texel: &[u8]) -> Option<
 /// A texel of a normalized 16-bit, 10-10-10-2 or signed normalized 8-bit format as RGBA floats
 /// (a one- or two-channel one reads (r, 0, 0, 1) or (r, g, 0, 1), as the float formats do); none
 /// for other formats or a short texel.
-pub fn norm_texel_to_f32(format: wgpu::TextureFormat, texel: &[u8]) -> Option<[f32; 4]> {
-    let u16_at =
-        |i: usize| f32::from(u16::from_le_bytes([texel[i * 2], texel[i * 2 + 1]])) / 65535.0;
+pub fn norm_texel_to_f32(
+    format: wgpu::TextureFormat,
+    texel: &[u8],
+    unorm16_reciprocal: bool,
+) -> Option<[f32; 4]> {
+    const UNORM16_MAX: f32 = u16::MAX as f32;
+    const UNORM16_RECIPROCAL: f32 = 1.0 / UNORM16_MAX;
+    let u16_at = |i: usize| {
+        let code = f32::from(u16::from_le_bytes([texel[i * 2], texel[i * 2 + 1]]));
+        if unorm16_reciprocal {
+            code * UNORM16_RECIPROCAL
+        } else {
+            code / UNORM16_MAX
+        }
+    };
     let i16_at = |i: usize| {
         (f32::from(i16::from_le_bytes([texel[i * 2], texel[i * 2 + 1]])) / 32767.0).max(-1.0)
     };
@@ -3322,14 +3334,27 @@ mod tests {
         assert_eq!(norm_texels(F::R8Snorm, &data), [0x81]);
         // Read back: -128 reads -1 as -127 does; one-channel formats read (r, 0, 0, 1).
         assert_eq!(
-            norm_texel_to_f32(F::Rgba8Snorm, &[0x80, 0x81, 0x7f, 0]),
+            norm_texel_to_f32(F::Rgba8Snorm, &[0x80, 0x81, 0x7f, 0], false),
             Some([-1.0, -1.0, 1.0, 0.0])
         );
         assert_eq!(
-            norm_texel_to_f32(F::R8Snorm, &[0xc0]),
+            norm_texel_to_f32(F::R8Snorm, &[0xc0], false),
             Some([-64.0 / 127.0, 0.0, 0.0, 1.0])
         );
-        assert_eq!(norm_texel_to_f32(F::Rg8Snorm, &[0x7f]), None);
+        assert_eq!(norm_texel_to_f32(F::Rg8Snorm, &[0x7f], false), None);
+    }
+
+    #[test]
+    fn unorm16_float_readback_rounds_the_reciprocal_before_multiplying() {
+        use wgpu::TextureFormat as F;
+        let pixel = [0u16, 1028, 32768, u16::MAX].map(u16::to_le_bytes).concat();
+        let rgba = norm_texel_to_f32(F::Rgba16Unorm, &pixel, true).unwrap();
+        assert_eq!(
+            rgba.map(f32::to_bits),
+            [0, 0x3c808080, 0x3f000080, 0x3f800000]
+        );
+        let legacy = norm_texel_to_f32(F::Rgba16Unorm, &pixel, false).unwrap();
+        assert_eq!(legacy[1].to_bits(), 0x3c808081);
     }
 
     #[test]
@@ -3386,7 +3411,7 @@ mod tests {
     fn norm_texels_read_back_as_floats() {
         use wgpu::TextureFormat as F;
         let read = |format: F, texel: &[[f32; 4]]| {
-            norm_texel_to_f32(format, &norm_texels(format, &floats(texel))).unwrap()
+            norm_texel_to_f32(format, &norm_texels(format, &floats(texel)), false).unwrap()
         };
         assert_eq!(
             read(F::Rg16Unorm, &[[1.0, 0.0, 0.7, 0.2]]),
@@ -3411,8 +3436,8 @@ mod tests {
             read(F::Rgb10a2Unorm, &[[0.0, 0.0, 0.0, 2.0 / 3.0]])[3],
             2.0 / 3.0
         );
-        assert_eq!(norm_texel_to_f32(F::Rgba8Unorm, &[0; 4]), None);
-        assert_eq!(norm_texel_to_f32(F::Rgba16Unorm, &[0; 4]), None);
+        assert_eq!(norm_texel_to_f32(F::Rgba8Unorm, &[0; 4], false), None);
+        assert_eq!(norm_texel_to_f32(F::Rgba16Unorm, &[0; 4], false), None);
     }
 
     #[test]
@@ -3478,10 +3503,10 @@ mod tests {
             .collect();
         assert_eq!(words, [-32767, -32767, 0, 32767, -32767, -8192, 32767, 0]);
         assert_eq!(
-            norm_texel_to_f32(F::R16Snorm, &(-32768i16).to_le_bytes()),
+            norm_texel_to_f32(F::R16Snorm, &(-32768i16).to_le_bytes(), false),
             Some([-1.0, 0.0, 0.0, 1.0])
         );
-        assert_eq!(norm_texel_to_f32(F::Rg16Snorm, &[0]), None);
+        assert_eq!(norm_texel_to_f32(F::Rg16Snorm, &[0], false), None);
     }
 
     #[test]

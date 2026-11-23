@@ -841,6 +841,16 @@ pub struct ShaderWarmupRequest {
     pub keywords: Vec<String>,
 }
 
+/// How the native renderer reads a texture's color image.
+#[derive(Clone, Copy, Default)]
+pub struct TextureReadOptions {
+    pub float: bool,
+    /// ReadPixels reads the current attachment. Async readback uses retained resolves.
+    pub current_attachment: bool,
+    /// Expand unsigned normalized 16-bit channels by multiplying by a rounded reciprocal.
+    pub unorm16_reciprocal: bool,
+}
+
 /// What executes the protocol. The windowed app installs a GPU renderer; headless runs keep the
 /// default, which only records what it was given.
 pub trait RenderBackend: Send + Sync {
@@ -868,8 +878,7 @@ pub trait RenderBackend: Send + Sync {
         _mip: u32,
         _layer: u32,
         _rect: [i32; 4],
-        _float: bool,
-        _current_attachment: bool,
+        _options: TextureReadOptions,
     ) -> Option<Vec<u8>> {
         None
     }

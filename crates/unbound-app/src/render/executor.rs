@@ -80,6 +80,7 @@ use std::{
     time::Instant,
 };
 use unbound_runtime::render_protocol::{
+    TextureReadOptions,
     commands::{self, Command},
     handle, owned, texture_format,
 };
@@ -7058,21 +7059,12 @@ impl UnityRenderer {
     /// The pixels of a rectangle of a texture (0: this frame's screen) after everything queued:
     /// RGBA rows bottom first, 4 bytes per pixel, or 4 `f32`s when `float`.
     pub fn read_pixels(&mut self, texture: u64, rect: [i32; 4], float: bool) -> Option<Vec<u8>> {
-        self.read_texture_impl(texture, 0, 0, rect, float, false)
-    }
-
-    /// As [`Self::read_pixels`], from a mip level of a layer (an array slice, a cube face or a
-    /// volume's depth slice at that level); `None` when the texture has no such level or layer.
-    pub fn read_texture(
-        &mut self,
-        texture: u64,
-        mip: u32,
-        layer: u32,
-        rect: [i32; 4],
-        float: bool,
-        current_attachment: bool,
-    ) -> Option<Vec<u8>> {
-        self.read_texture_impl(texture, mip, layer, rect, float, !current_attachment)
+        let options = TextureReadOptions {
+            float,
+            current_attachment: true,
+            ..Default::default()
+        };
+        self.read_texture(texture, 0, 0, rect, options)
     }
 
     /// A read of the part of `rect` inside a screen of `size` that no pass has started:
@@ -7084,15 +7076,21 @@ impl UnityRenderer {
         vec![0; w * h * if float { 16 } else { 4 }]
     }
 
-    fn read_texture_impl(
+    /// As [`Self::read_pixels`], from a mip level of a layer (an array slice, a cube face or a
+    /// volume's depth slice at that level); `None` when the texture has no such level or layer.
+    pub fn read_texture(
         &mut self,
         texture: u64,
         mip: u32,
         layer: u32,
         rect: [i32; 4],
-        float: bool,
-        retained_resolve: bool,
+        options: TextureReadOptions,
     ) -> Option<Vec<u8>> {
+        let TextureReadOptions {
+            float,
+            current_attachment,
+            unorm16_reciprocal,
+        } = options;
         let source = if texture == 0 {
             if self.screen_touched {
                 self.screens[self.screen_slot].as_ref()?.texture.clone()
@@ -7118,7 +7116,7 @@ impl UnityRenderer {
                 return None;
             }
             let current = &self.textures.get(&texture)?.texture;
-            if retained_resolve {
+            if !current_attachment {
                 self.resolve_history
                     .get(current)
                     .map_or(current, |history| &history.texture)
@@ -7263,7 +7261,11 @@ impl UnityRenderer {
                         | wgpu::TextureFormat::Rgba16Snorm
                         | wgpu::TextureFormat::Rgba8Snorm => {
                             for pixel in line.chunks_exact(texel as usize) {
-                                let rgba = resources::norm_texel_to_f32(format, pixel)?;
+                                let rgba = resources::norm_texel_to_f32(
+                                    format,
+                                    pixel,
+                                    unorm16_reciprocal,
+                                )?;
                                 for v in rgba {
                                     if float {
                                         out.extend_from_slice(&v.to_le_bytes());

@@ -176,12 +176,14 @@ namespace Unbound.Runtime
         /// volume's depth slice) after every command so far; currentAttachment selects ReadPixels'
         /// current image instead of the retained async resolve;
         /// null without a GPU or when the texture has no such level or layer.</summary>
-        internal static byte[] ReadTexture(ulong texture, int mip, int layer, int x, int y, int width, int height, bool asFloat, bool currentAttachment = false)
+        internal static byte[] ReadTexture(ulong texture, int mip, int layer, int x, int y, int width, int height,
+            bool asFloat, bool currentAttachment = false, bool unorm16Reciprocal = false)
         {
             if (!s_Ready) return null;
             GfxStream.Flush();
             NativeBuffer buffer;
-            if (s_Api.ReadTexture(texture, mip, layer, x, y, width, height, (asFloat ? 1 : 0) | (currentAttachment ? 2 : 0), &buffer) == 0) return null;
+            int flags = (asFloat ? 1 : 0) | (currentAttachment ? 2 : 0) | (unorm16Reciprocal ? 4 : 0);
+            if (s_Api.ReadTexture(texture, mip, layer, x, y, width, height, flags, &buffer) == 0) return null;
             try
             {
                 if (texture == 0 && !ScreenReadFits(buffer.Length, width, height, asFloat)) return null;

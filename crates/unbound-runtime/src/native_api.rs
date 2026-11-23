@@ -12,7 +12,7 @@ use crate::{
     realtime_gi::{GiFrame, GiLight},
     render_protocol::{
         ExternalTextureInfo, ImportedTextureInfo, MaterialPacket, MeshPacket, TexturePacket,
-        commands, handle, owned,
+        TextureReadOptions, commands, handle, owned,
     },
     state,
 };
@@ -108,7 +108,9 @@ use std::ffi::c_void;
 /// 94: `pointer_known` at the end of `FrameInput`.
 /// 95: `ResolveFramebuffer` copies the displayed color into a resolved texture. A camera flag
 /// tracks explicit sRGB writes to the Gamma window framebuffer.
-pub const NATIVE_API_VERSION: u32 = 95;
+/// 96: texture readback flag bit 2 selects reciprocal multiplication for normalized
+/// 16-bit color channels.
+pub const NATIVE_API_VERSION: u32 = 96;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -1052,7 +1054,8 @@ extern "C" fn read_pixels(
 }
 
 #[allow(clippy::too_many_arguments)]
-// Read flags: bit 0 selects float pixels, bit 1 selects the current attachment for ReadPixels.
+// Read flags: bit 0 selects float pixels, bit 1 selects the current attachment for ReadPixels,
+// and bit 2 selects reciprocal multiplication for unsigned normalized 16-bit channels.
 extern "C" fn read_texture(
     texture: u64,
     mip: i32,
@@ -1061,7 +1064,7 @@ extern "C" fn read_texture(
     y: i32,
     width: i32,
     height: i32,
-    float: i32,
+    flags: i32,
     out: *mut NativeBuffer,
 ) -> i32 {
     if let Err(error) = handle::plain(texture, "read_texture") {
@@ -1076,8 +1079,11 @@ extern "C" fn read_texture(
         mip as u32,
         layer as u32,
         [x, y, width, height],
-        float & 1 != 0,
-        float & 2 != 0,
+        TextureReadOptions {
+            float: flags & 1 != 0,
+            current_attachment: flags & 2 != 0,
+            unorm16_reciprocal: flags & 4 != 0,
+        },
     ) {
         Some(pixels) => {
             unsafe { *out = NativeBuffer::from_vec(pixels) };

@@ -389,17 +389,21 @@ namespace Unbound.Runtime
             };
             bool alphaAsRed = alpha && Compat.DeviceTextureReadback && GraphicsDeviceProfile.Current.Alpha8Readback == Alpha8ReadbackMode.Red;
             bool floats = !EightBit(src.graphicsFormat) && !alphaAsRed;
-            // The measured Linux devices expand a single R16 channel to RGB in byte layouts.
-            bool replicateRed = format.IsByte && src.graphicsFormat == GraphicsFormat.R16_UNorm
-                && Compat.DeviceTextureReadback && OperatingSystem.IsLinux()
+            bool measuredLinux = Compat.DeviceTextureReadback && OperatingSystem.IsLinux()
                 && GraphicsDeviceProfile.Current.Type is GraphicsDeviceType.OpenGLCore or GraphicsDeviceType.Vulkan;
+            // The measured Linux devices expand a single R16 channel to RGB in byte layouts.
+            bool replicateRed = measuredLinux && format.IsByte && src.graphicsFormat == GraphicsFormat.R16_UNorm;
+            // Unsigned normalized 16-bit channels expand to f32 with a rounded reciprocal
+            // (tests/projects/textureformats unorm16Readback).
+            bool unorm16Reciprocal = measuredLinux && format.IsFloat32;
             int channels = alphaAsRed ? 1
                 : MissingChannelsReadAsOne(src.graphicsFormat) ? (int)GraphicsFormatUtility.GetComponentCount(src.graphicsFormat) : 4;
             alpha &= !alphaAsRed;
             result.Layers = new byte[depth][];
             for (int layer = 0; layer < depth; layer++)
             {
-                var texels = handle == 0 ? null : Native.ReadTexture(handle, mip, z + layer, x, y, width, height, floats);
+                var texels = handle == 0 ? null : Native.ReadTexture(handle, mip, z + layer, x, y, width, height, floats,
+                    unorm16Reciprocal: unorm16Reciprocal);
                 if (texels == null) return Unavailable(result);
                 if (floats && src is RenderTexture && !format.IsPacked) RenderTexture.QuantizeReadTexels(src.graphicsFormat, texels);
                 result.Layers[layer] = format.Encode(texels, width * height, floats, alpha, channels,
@@ -460,6 +464,7 @@ namespace Unbound.Runtime
         /// not from what reading the target into another format returns).</summary>
         internal bool IsPacked => m_Packed != PackedLayout.None;
         internal bool IsByte => m_Size == sizeof(byte);
+        internal bool IsFloat32 => !IsPacked && m_Size == sizeof(float);
 
         /// <summary>The packed words a request in a packed target's own format reads.</summary>
         internal static ReadbackFormat Packed(GraphicsFormat format) => format switch
