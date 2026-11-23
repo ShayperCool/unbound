@@ -74,6 +74,11 @@ public static class EnvironmentSetup
                 }),
                 // No skybox material.
                 ("EnvNoSky", () => { RenderSettings.skybox = null; }),
+                // Baked with the skybox and then without it (the recorder takes it away).
+                ("EnvSkyThenNone", () => { }),
+                // A render pipeline that bakes neither part (the recorder says so for the bake),
+                // under a sky that is not the default's (intensity 1.7).
+                ("EnvNoBaking", () => { RenderSettings.ambientIntensity = 1.7f; }),
             };
             var only = Environment.GetEnvironmentVariable("ENVIRONMENT_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));

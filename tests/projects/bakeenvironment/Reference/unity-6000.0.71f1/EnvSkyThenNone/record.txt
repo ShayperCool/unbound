@@ -1,0 +1,8 @@
+bake: True
+ambientProbe: 0.0369675867 0 0 0 0 0 0 0 0 0.04214946 0 0 0 0 0 0 0 0 0.05455384 0 0 0 0 0 0 0 0
+storedProbe: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+files: LightingData.asset LightingData.asset.meta
+lightingData: Assets/Scenes/EnvSkyThenNone/LightingData.asset
+default: UnityBlackCube Cubemap 1 levels 1
+defaultFormat: R8G8B8A8_SRGB
+defaultFile: none

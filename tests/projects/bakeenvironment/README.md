@@ -26,13 +26,21 @@ environment alone), the default procedural skybox as the ambient source and the 
 - `EnvSkySun`: the sun higher, turned, coloured and at intensity 2, reflections of 32.
 - `EnvFlat`, `EnvTrilight`: an ambient colour and a gradient with the skybox still there: the
   ambient probe is the colour's or the gradient's, the reflection still the skybox's.
-- `EnvNoSky`: no skybox material: no reflection is drawn; the default reflection is the
-  built-in `Default-Skybox-Cubemap`, the ambient probe the ambient colour.
+- `EnvNoSky`: no skybox material: no reflection is drawn and the stored probe is zero (the
+  ambient probe then gives the ambient colour); the scene keeps the default reflection it had,
+  here the built-in lighting data's `Default-Skybox-Cubemap`.
+- `EnvSkyThenNone`: baked with the skybox, then without it (the recorder takes it away): the
+  reflection the first bake made is gone (the Editor removes its file), and none is left: the
+  black `UnityBlackCube`.
+- `EnvNoBaking`: baked with SupportedRenderingFeatures saying the render pipeline bakes neither
+  the ambient probe nor the default reflection (the recorder sets them for the bake): both are
+  taken away (a zero probe, the black cube), not kept.
 
 ## Capture and comparison
 
 `Assets/Editor/EnvironmentRecord.cs` opens each scene, bakes it and records (per scene
-`record.txt`) the bake's answer, the ambient probe's 27 coefficients, the default
+`record.txt`) the bake's answer, the ambient probe's 27 coefficients and those of the probe
+the bake stored (read in the Custom ambient mode, which gives it as it is), the default
 reflection's name, type, size, levels and format, and what the bake wrote; and (`cube.f32.z`,
 zlib of 32-bit floats of RGBA) every texel of every level of the default reflection, level by
 level and face by face (+x, -x, +y, -y, +z, -z). In the Editor the bake writes
@@ -50,14 +58,20 @@ cube is not read.
 Two captures make the reference; they are identical. `check` compares the bake's answer and the
 default reflection's name, type, size and levels exactly; the ambient probe within 1e-3 of its
 largest coefficient (the sky is drawn by the graphics device and projected in 32-bit floats:
-the worst seen is 4.5e-4, alike in each sky's scene); each level of the default reflection
-within 2e-3 of the level's largest value (the first level is the drawn sky as half floats, the
-worst seen one half-float step; the others its convolution, the worst seen 1.46e-3). Listed,
+the worst seen is 4.5e-4, alike in each sky's scene; a probe of zeros exactly), and the stored
+probe likewise; each level of the default reflection within 2e-3 of the level's largest colour
+value (the first level is the drawn sky as half floats, the worst seen one half-float step; the
+others its convolution, the worst seen 1.46e-3; a black cube exactly). Listed,
 not gated: what the Editor writes into the project (the files, the lighting data the scene then
 names, the reflection's file, format and import settings), which Unbound does not write yet
 (it keeps the bake's environment for the session, its reflection an uncompressed RGBAHalf cube).
 
-Not measured: a Custom reflection source (the bake leaves its cube), a skybox other than the
-procedural one, gamma colour space projects, a render pipeline asset, Environment Reflections
-Compression other than Auto, the bake on a scene's load (`Lightmapping.bakeOnSceneLoad`: still
-said and not made), several open scenes.
+Not measured, each said by Unbound's bake: a Custom ambient or reflection source (Unbound
+keeps that part as the scene had it), gamma colour space projects and several open scenes
+(Unbound makes the environment of the scene whose lighting settings are in effect alone, and
+keeps the others'), a render pipeline asset (made as the built-in pipeline's). Without a
+graphics device Unbound's bake makes no environment lighting (said). Not measured either: a
+skybox other than the procedural one, Environment Reflections Compression other than Auto, the
+bake on a scene's load (`Lightmapping.bakeOnSceneLoad`: still said and not made), a scene loaded
+again after the bake (Unbound gives it the bake's environment, as it gives it the bake's
+realtime GI).

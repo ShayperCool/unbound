@@ -12,7 +12,8 @@ using UnityEngine;
 /// scene of <c>Assets/Scenes</c> in Edit mode, bakes it with <see cref="Lightmapping.Bake"/> and
 /// writes to <c>&lt;out&gt;/&lt;scene&gt;/</c>:
 /// <para><c>record.txt</c>: the bake's answer, the ambient probe (RenderSettings.ambientProbe,
-/// 27 numbers, red, green and blue), the default reflection (ReflectionProbe.defaultTexture:
+/// 27 numbers, red, green and blue) and the probe the bake stored (read in the Custom ambient
+/// mode), the default reflection (ReflectionProbe.defaultTexture:
 /// its name, type, size, levels and format; for one of the project's assets, its file), the
 /// files of the scene's folder (what the bake wrote) and the lighting data the scene names;
 /// <c>cube.f32</c>: every texel of every level of the default reflection, level by level and
@@ -57,12 +58,29 @@ public static class EnvironmentRecord
                 var folder = Path.Combine(root, name);
                 Directory.CreateDirectory(folder);
                 EditorSceneManager.OpenScene(path);
+                // `*ThenNone`: baked with its skybox first, then without one (the bake replaces
+                // the first bake's reflection).
+                if (name.EndsWith("ThenNone", StringComparison.Ordinal))
+                {
+                    Lightmapping.Bake();
+                    RenderSettings.skybox = null;
+                }
+                // `EnvNoBaking`: a render pipeline that bakes neither the ambient probe nor the
+                // default reflection (SupportedRenderingFeatures), for the bake.
+                var features = UnityEngine.Rendering.SupportedRenderingFeatures.active;
+                if (name == "EnvNoBaking")
+                    UnityEngine.Rendering.SupportedRenderingFeatures.active = new UnityEngine.Rendering.SupportedRenderingFeatures
+                        { ambientProbeBaking = false, defaultReflectionProbeBaking = false };
                 var said = new List<string>();
                 Application.LogCallback listen = (message, stack, type) => said.Add(type + ": " + message);
                 Application.logMessageReceived += listen;
                 bool baked;
                 try { baked = Lightmapping.Bake(); }
-                finally { Application.logMessageReceived -= listen; }
+                finally
+                {
+                    Application.logMessageReceived -= listen;
+                    UnityEngine.Rendering.SupportedRenderingFeatures.active = features;
+                }
                 File.WriteAllLines(Path.Combine(folder, "messages.txt"), said);
 
                 var lines = new List<string> { "bake: " + baked };
@@ -71,6 +89,16 @@ public static class EnvironmentRecord
                 for (int c = 0; c < 3; c++)
                     for (int k = 0; k < 9; k++) coefficients.Add(Number(sh[c, k]));
                 lines.Add("ambientProbe: " + string.Join(" ", coefficients));
+                // The probe the bake stored, whatever the ambient source: the Custom mode gives it
+                // as it is.
+                var mode = RenderSettings.ambientMode;
+                RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Custom;
+                var stored = RenderSettings.ambientProbe;
+                RenderSettings.ambientMode = mode;
+                coefficients.Clear();
+                for (int c = 0; c < 3; c++)
+                    for (int k = 0; k < 9; k++) coefficients.Add(Number(stored[c, k]));
+                lines.Add("storedProbe: " + string.Join(" ", coefficients));
                 var sceneFolder = Path.Combine(Path.GetDirectoryName(path), name);
                 var files = Directory.Exists(sceneFolder)
                     ? Directory.GetFiles(sceneFolder).Select(Path.GetFileName).OrderBy(f => f, StringComparer.Ordinal)

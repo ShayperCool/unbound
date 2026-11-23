@@ -174,7 +174,8 @@ def within(got, want, allowed, unit):
     """How many values differ beyond `allowed(reference)`, and the worst in `unit`s."""
     if len(got) != len(want):
         return f'{len(got)} values, expected {len(want)}'
-    errors = [abs(a - b) / allowed(b) for a, b in zip(got, want)]
+    # (Nothing allowed: equal values, as for a probe of zeros.)
+    errors = [abs(a - b) / allowed(b) if allowed(b) > 0 else 0.0 if a == b else float('inf') for a, b in zip(got, want)]
     off = [k for k, e in enumerate(errors) if not e <= 1.0]
     worst = max(errors)
     return f'{len(off)} of {len(want)} values differ (worst {worst:.3g} {unit} at {errors.index(worst)})' if off else None
@@ -189,7 +190,8 @@ def cube_difference(got, want, size):
         side = max(size >> level, 1)
         count = 6 * side * side * 4
         theirs = want[at:at + count]
-        allowed = CUBE_TOLERANCE * max(abs(v) for v in theirs)
+        # (Of the colours: alpha is 1.)
+        allowed = CUBE_TOLERANCE * max(abs(v) for k, v in enumerate(theirs) if k % 4 != 3)
         problem = within(got[at:at + count], theirs, lambda _: allowed, f'x {CUBE_TOLERANCE:g} of the largest')
         if problem:
             problems.append(f'level {level}: {problem}')
@@ -206,7 +208,7 @@ def compare(label):
         got, got_cube = read(got_root/scene)
         for key in sorted(want.keys() | got.keys()):
             a, b = got.get(key), want.get(key)
-            if key == 'ambientProbe' and a is not None and b is not None:
+            if key in ('ambientProbe', 'storedProbe') and a is not None and b is not None:
                 theirs = [float(v) for v in b.split()]
                 scale = AMBIENT_TOLERANCE * max(abs(v) for v in theirs)
                 problem = within([float(v) for v in a.split()], theirs, lambda _: scale, f'x {AMBIENT_TOLERANCE:g} of the largest')
