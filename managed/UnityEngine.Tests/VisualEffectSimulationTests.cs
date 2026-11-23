@@ -1167,7 +1167,13 @@ namespace UnityEngine.Tests
             // What is drawn, and each thing that is not.
             Assert.Null(VFXOutput.Refusal(system, quads, material));
             Assert.Equal("its shader was not imported", VFXOutput.Refusal(system, quads, null));
-            Assert.Equal("ParticlePointOutput is not drawn yet (quads, triangles, octagons, cubes and meshes are)", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticlePointOutput }, material));
+            // Every kind of output task is drawn: points and lines too (tests/projects/vfxlit
+            // `points*`, `lines*`); another task type is not.
+            Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticlePointOutput }, material));
+            Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleLineOutput }, material));
+            Assert.Equal("Initialize is not drawn yet (quads, triangles, octagons, cubes, meshes, points and lines are)", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.Initialize }, material));
+            Assert.Equal((MeshTopology.Points, MeshTopology.Lines), (VFXOutput.PrimitiveOf(VFXTaskType.ParticlePointOutput).Topology, VFXOutput.PrimitiveOf(VFXTaskType.ParticleLineOutput).Topology));
+            Assert.Equal(new uint[] { 0, 1, 2, 3, 4, 5 }, (uint[])VFXOutput.PrimitiveOf(VFXTaskType.ParticleLineOutput).Data(3));
             Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleTriangleOutput }, material));
             Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleOctagonOutput }, material));
             // Cubes are drawn on OpenGL Core, where their faces are measured; refused elsewhere.

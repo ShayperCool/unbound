@@ -42,6 +42,7 @@ public static class LitAuthoring
         Decals();
         SingleMeshes();
         MovingVectors();
+        PointsAndLines();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -131,6 +132,45 @@ public static class LitAuthoring
     static Mesh Spike => AssetDatabase.LoadAssetAtPath<Mesh>(ObjectFolder + "/Spike.asset");
 
     // ----------------------------------------------------------------------------- graphs
+
+    /// <summary>Points (`Output Particle Point`) and lines (`Output Particle Line`, from each
+    /// particle's position to its target position): sixty-four opaque ones at random places, each
+    /// a colour of its own, drawn by the output itself or through an indirect buffer (the list
+    /// the update makes); and the same lines drawn as quads a pixel wide (the output's default,
+    /// not native lines).</summary>
+    static void PointsAndLines()
+    {
+        foreach (var (name, lines, native, listed) in new[]
+        {
+            ("PointStill", false, false, false), ("PointList", false, false, true),
+            ("LineStill", true, true, false), ("LineList", true, true, true), ("LineSoft", true, false, false),
+        })
+        {
+            var graph = NewGraph(name);
+            VFXBasicSpawner spawn;
+            VFXBasicInitialize init;
+            VFXContext output;
+            if (lines)
+            {
+                var (lineSpawn, lineInit, _, line) = System<VFXLineOutput>(graph, 64);
+                line.SetSettingValue("useNativeLines", native);
+                line.SetSettingValue("useTargetOffset", false);
+                (spawn, init, output) = (lineSpawn, lineInit, line);
+            }
+            else
+            {
+                var (pointSpawn, pointInit, _, point) = System<VFXPointOutput>(graph, 64);
+                (spawn, init, output) = (pointSpawn, pointInit, point);
+            }
+            output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+            if (listed) output.SetSettingValue("indirectDraw", true);
+            Burst(spawn, 64f);
+            SetRandom(init, "position", new Vector3(-1.4f, -1.4f, -0.5f), new Vector3(1.4f, 1.4f, 0.5f));
+            if (lines) SetRandom(init, "targetPosition", new Vector3(-1.4f, -1.4f, -0.5f), new Vector3(1.4f, 1.4f, 0.5f));
+            SetRandom(init, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+            Save(graph);
+        }
+    }
 
     /// <summary>Opaque particles moving sideways fast, writing motion vectors: quads lit by the
     /// render pipeline (no base colour map) and meshes (the package's default mesh, turned each

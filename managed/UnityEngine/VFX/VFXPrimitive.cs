@@ -4,13 +4,15 @@ using UnityEngine;
 namespace Unbound.Runtime
 {
     /// <summary>
-    /// A primitive outputs draw for each particle (planar, or a cube), as the generated vertex programs find
-    /// a particle by their vertex id: its vertices, the triangles over them (the indices of one
-    /// primitive), and how many primitives one draw's 16-bit indices reach, beyond which a draw
-    /// is made of instances of <see cref="PerInstance"/> (the programs add the instance's place).
-    /// A triangle's program reads no instance: triangles are drawn in one draw, with 32-bit
+    /// A primitive outputs draw for each particle (planar, a cube, a point or a line), as the
+    /// generated vertex programs find a particle by their vertex id: its vertices, the triangles
+    /// (or points, or lines) over them (the indices of one primitive), and how many primitives one
+    /// draw's 16-bit indices reach, beyond which a draw is made of instances of
+    /// <see cref="PerInstance"/> (the programs add the instance's place). The programs of
+    /// triangles, points and lines read no instance: they are drawn in one draw, with 32-bit
     /// indices. Matches the Unity 6000.0.71f1 Editor (tests/projects/vfx `draw-*`,
-    /// tests/projects/vfxoutputs `Triangle*`, `Octagon*`, `Cube*`).
+    /// tests/projects/vfxoutputs `Triangle*`, `Octagon*`, `Cube*`; tests/projects/vfxlit `points*`,
+    /// `lines*`).
     /// </summary>
     internal sealed class Primitive
     {
@@ -20,6 +22,11 @@ namespace Unbound.Runtime
         internal static readonly Primitive Octagon = new Primitive(8, new ushort[] { 0, 1, 7, 1, 2, 7, 2, 6, 7, 2, 3, 6, 3, 5, 6, 3, 4, 5 }, OctagonsPerInstance);
         /// <summary>One triangle: its three vertices.</summary>
         internal static readonly Primitive Triangle = new Primitive(3, new ushort[] { 0, 1, 2 }, 0);
+        /// <summary>One point (`Output Particle Point`).</summary>
+        internal static readonly Primitive Point = new Primitive(1, new ushort[] { 0 }, 0, MeshTopology.Points);
+        /// <summary>One line from a particle's position to its target position (`Output
+        /// Particle Line` drawn as lines: the program's vertex 0 and 1).</summary>
+        internal static readonly Primitive Line = new Primitive(2, new ushort[] { 0, 1 }, 0, MeshTopology.Lines);
         /// <summary>Twelve triangles over a cube's eight corners (corner i at the offsets the
         /// program gives it: x from bit 0, y from bit 1, z from bit 2), two on each face, facing
         /// out of the cube. The program gives each vertex a face number from its corner
@@ -50,6 +57,8 @@ namespace Unbound.Runtime
         const uint QuadsPerInstance = 2048, OctagonsPerInstance = 1024, HexahedronsPerInstance = 1024;
 
         internal readonly int Vertices;
+        /// <summary>What the indices draw: triangles, or points or lines.</summary>
+        internal readonly MeshTopology Topology;
         readonly ushort[] m_Pattern;
         /// <summary>The primitives one draw takes, and of each instance beyond; 0: no limit,
         /// no instances (32-bit indices made for as many as asked).</summary>
@@ -64,9 +73,10 @@ namespace Unbound.Runtime
         /// <summary>A primitive of <paramref name="vertices"/> drawn by <paramref name="pattern"/>;
         /// with instances of <paramref name="perInstance"/> beyond the most one draw's 16-bit
         /// indices reach, or (0) in one draw of 32-bit indices.</summary>
-        Primitive(int vertices, ushort[] pattern, uint perInstance)
+        Primitive(int vertices, ushort[] pattern, uint perInstance, MeshTopology topology = MeshTopology.Triangles)
         {
             Vertices = vertices;
+            Topology = topology;
             m_Pattern = pattern;
             PerInstance = perInstance;
             // As many as one draw's 16-bit indices reach.

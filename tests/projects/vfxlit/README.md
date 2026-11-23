@@ -79,6 +79,10 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
   the render pipeline's lit graph (URP Lit, opaque, its default surface) written with its
   support for particles on, its base colour the probe's image through a texture property of its
   own. Such a graph has the lightmapper's pass (`Meta`) besides the passes cameras draw.
+- `PointStill`, `PointList`, `LineStill`, `LineList`, `LineSoft`: sixty-four opaque points or
+  lines (from each particle's position to its target position) at random places, each a colour
+  of its own, drawn by the output itself or through an indirect buffer (`*List`: the list the
+  update makes); lines as native lines, `LineSoft` as quads a pixel wide (the output's default).
 - `MovingLit`, `MovingMeshes`: twenty opaque particles moving sideways fast (6 units a second),
   writing motion vectors: quads lit by the render pipeline (no base colour map), and the
   package's default mesh turned each its own way (unlit).
@@ -191,6 +195,7 @@ effect's alive count, whether it is culled and awake, its renderer's state).
 - `moving lit`, `moving meshes`: `MovingLit` and `MovingMeshes` under a point light, their
   cameras with post-processing and a volume of object motion blur (camera and objects, high
   quality, intensity 1) only they read, at frames 9 and 10.
+- `points`, `points listed`, `lines`, `lines listed`, `lines soft`: those graphs at frame 5.
 - `decal`: `LitDecal` projected onto a lit wall through the renderer with the decal feature,
   under the sun and a point light (frames 5 and 12): the decal feature draws the output's
   screen space pass; its DBuffer and GBuffer passes exclude OpenGL Core.

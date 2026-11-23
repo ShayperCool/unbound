@@ -308,10 +308,11 @@ namespace Unbound.Runtime
 
         /// <summary>A renderer's draw without a mesh of its own: the stand-in vertices a vertex
         /// program tells apart by their id, counted and indexed by <paramref name="setup"/>,
-        /// with one material and the draw's own values (an effect's output).</summary>
+        /// with one material and the draw's own values (an effect's output), as triangles, or
+        /// points or lines.</summary>
         internal static void AddProceduralDraw(Renderer renderer, Material material, Matrix4x4 model, DrawSetup setup, Dictionary<int, object> properties,
-            CameraContext camera, List<DrawItem> into) =>
-            AddRendererDraw(renderer, IndexedDraws.StandIn(MeshTopology.Triangles), 0, material, model, setup, properties, camera, into);
+            CameraContext camera, List<DrawItem> into, MeshTopology topology = MeshTopology.Triangles) =>
+            AddRendererDraw(renderer, IndexedDraws.StandIn(topology), 0, material, model, setup, properties, camera, into);
 
         /// <summary>A renderer's draw of <paramref name="instances"/> instances of a submesh
         /// of a mesh that is not the renderer's own, with one material and the draw's own values:

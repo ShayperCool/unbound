@@ -155,7 +155,9 @@ namespace Unbound.Runtime
         /// (<see cref="SourceRefusal"/>).</summary>
         internal static string Refusal(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task, UnityEngine.Object processor, string sourceRefusal = null)
         {
-            if (!IsPlanar(task.type) && task.type != VFXTaskType.ParticleHexahedronOutput && task.type != VFXTaskType.ParticleMeshOutput) return $"{task.type} is not drawn yet (quads, triangles, octagons, cubes and meshes are)";
+            if (!IsPlanar(task.type) && task.type != VFXTaskType.ParticleHexahedronOutput && task.type != VFXTaskType.ParticleMeshOutput
+                && task.type != VFXTaskType.ParticlePointOutput && task.type != VFXTaskType.ParticleLineOutput)
+                return $"{task.type} is not drawn yet (quads, triangles, octagons, cubes, meshes, points and lines are)";
             if (task.type == VFXTaskType.ParticleHexahedronOutput && IsDecal(processor) && !GraphicsDeviceProfile.Current.EffectDecalsMeasured) return DecalDeviceRefusal;
             if (task.type == VFXTaskType.ParticleHexahedronOutput && !GraphicsDeviceProfile.Current.EffectCubesMeasured) return CubeDeviceRefusal;
             if ((system.flags & VFXSystemFlag.SystemHasStrips) != 0)
@@ -351,10 +353,17 @@ namespace Unbound.Runtime
         internal static bool IsPlanar(VFXTaskType type) =>
             type == VFXTaskType.ParticleQuadOutput || type == VFXTaskType.ParticleTriangleOutput || type == VFXTaskType.ParticleOctagonOutput;
 
-        /// <summary>The primitive an output task draws for each particle: a planar one, or a cube.</summary>
-        internal static Primitive PrimitiveOf(VFXTaskType type) =>
-            type == VFXTaskType.ParticleTriangleOutput ? Primitive.Triangle : type == VFXTaskType.ParticleOctagonOutput ? Primitive.Octagon
-            : type == VFXTaskType.ParticleHexahedronOutput ? Primitive.Hexahedron : Primitive.Quad;
+        /// <summary>The primitive an output task draws for each particle: a planar one, a cube, a
+        /// point or a line.</summary>
+        internal static Primitive PrimitiveOf(VFXTaskType type) => type switch
+        {
+            VFXTaskType.ParticleTriangleOutput => Primitive.Triangle,
+            VFXTaskType.ParticleOctagonOutput => Primitive.Octagon,
+            VFXTaskType.ParticleHexahedronOutput => Primitive.Hexahedron,
+            VFXTaskType.ParticlePointOutput => Primitive.Point,
+            VFXTaskType.ParticleLineOutput => Primitive.Line,
+            _ => Primitive.Quad,
+        };
 
         /// <summary>Computes the arguments of an indirect draw from the count its list has now
         /// (after the kernels that make the list for this camera). False when they cannot be.</summary>
@@ -419,7 +428,7 @@ namespace Unbound.Runtime
             var setup = Indirect
                 ? IndexedDraws.Indirect(indices, arguments.Arguments.Handle, VFXIndirectArgs.Offset(m_ArgsEntry))
                 : primitive.Draw(indices, quads);
-            FrameBuilder.AddProceduralDraw(renderer, m_Material, renderer.transform.localToWorldMatrix, setup, m_Block.m_Values, camera, into);
+            FrameBuilder.AddProceduralDraw(renderer, m_Material, renderer.transform.localToWorldMatrix, setup, m_Block.m_Values, camera, into, primitive.Topology);
         }
     }
 }
