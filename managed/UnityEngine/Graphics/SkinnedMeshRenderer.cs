@@ -194,6 +194,19 @@ namespace UnityEngine
         /// particles' positions and normals are the cloth's <c>vertices</c> and <c>normals</c>).</summary>
         GraphicsBuffer SkinBuffer(bool previous)
         {
+            var output = SkinMesh(previous);
+            if (output == null) return null;
+            output.vertexBufferTarget = m_VertexBufferTarget;
+            var buffer = output.GetVertexBuffer(0);
+            output.Sync();
+            return buffer;
+        }
+
+        /// <summary>The mesh whose first stream is the skin output buffer (<see cref="SkinBuffer"/>):
+        /// its layout puts positions, normals and tangents in that stream and the other attributes
+        /// in a second; null while there is no skin yet.</summary>
+        Mesh SkinMesh(bool previous)
+        {
             if (m_Mesh == null) return null;
             Mesh output = null;
             var cloth = GetComponent<Cloth>();
@@ -205,7 +218,7 @@ namespace UnityEngine
                 if (!m_GraphicsOutputRequested)
                 {
                     m_GraphicsOutputRequested = true;
-                    // Skins are in the renderer's space from now on.
+                    // Skins are in the root bone's space from now on (SkinRoot).
                     m_SkinnedEpoch = m_NowFrame = -1;
                     m_BufferUser = s_BufferUsers.Count;
                     s_BufferUsers.Add(this);
@@ -214,11 +227,54 @@ namespace UnityEngine
                 output = Skinning || m_Skinned == null || m_SkinnedEpoch < 0 || m_SkinnedSource != m_Mesh ? Deform() : m_Skinned;
                 if (previous && m_SkinnedPrevious != null && m_PreviousEpoch == m_SkinnedEpoch) output = m_SkinnedPrevious;
             }
-            output.vertexBufferTarget = m_VertexBufferTarget;
-            var buffer = output.GetVertexBuffer(0);
-            output.Sync();
-            return buffer;
+            return output;
         }
+
+        /// <summary>What an effect samples of the renderer (Sample Skinned Mesh, Set Position
+        /// (Skinned Mesh)): the skin output mesh of the frame or of the frame before, whose layout
+        /// and first stream are the skin's; the renderer's vertex buffer gains the target effects'
+        /// programs read (<see cref="GraphicsDeviceProfile.VfxMeshBufferTarget"/>). Null while
+        /// there is no skin yet. Matches the Unity 6000.0.71f1 Editor (tests/projects/vfx
+        /// `skinned*`).</summary>
+        internal Mesh EffectSkin(bool previous)
+        {
+            var target = GraphicsDeviceProfile.Current.VfxMeshBufferTarget;
+            if ((m_VertexBufferTarget & target) != target) vertexBufferTarget = m_VertexBufferTarget | target;
+            var output = SkinMesh(previous);
+            if (output == null) return null;
+            output.vertexBufferTarget = m_VertexBufferTarget;
+            output.Sync();
+            return output;
+        }
+
+        /// <summary>The space of the skin output buffer: the root bone's (the renderer's own
+        /// transform without one). Measured: the Unity 6000.0.71f1 Editor's buffer of a renderer
+        /// whose root bone is turned and moved from it holds the vertices in that bone's space
+        /// (tests/projects/vfx <c>skinned/*/buffer</c>; tests/projects/renderapi measured renderers
+        /// whose root bone is their own transform).</summary>
+        Transform SkinRoot => rootBone != null ? rootBone : transform;
+
+        /// <summary>The root bone's transform an effect applies to the skin it samples, as it is
+        /// now or as it was when last asked in the frame before (the transform of this frame when
+        /// it was not). Measured: the Unity 6000.0.71f1 Editor answers the root bone's world
+        /// transform for both the local and the world root transform (tests/projects/vfx
+        /// <c>skinned operations</c>: a root bone turned and moved from its renderer), though
+        /// the package's manual describes the local one as relative to the renderer. The root is
+        /// the renderer's own transform when it has no root bone.</summary>
+        internal Matrix4x4 EffectRootTransform(bool previous)
+        {
+            int frame = Time.s_FrameCount;
+            if (m_RootFrame != frame)
+            {
+                var root = SkinRoot.localToWorldMatrix;
+                m_PreviousRoot = m_RootFrame == frame - 1 ? m_Root : root;
+                (m_Root, m_RootFrame) = (root, frame);
+            }
+            return previous ? m_PreviousRoot : m_Root;
+        }
+
+        int m_RootFrame = int.MinValue;
+        Matrix4x4 m_Root, m_PreviousRoot;
 
         public float GetBlendShapeWeight(int index) => index >= 0 && index < m_BlendShapeWeights.Count ? m_BlendShapeWeights[index] : 0f;
 
@@ -302,7 +358,7 @@ namespace UnityEngine
 
         /// <summary>The deformed mesh, computed once a skinning pass (<see cref="SkinPass"/>; or
         /// now): the shapes added in the mesh's space, then skinned into world space when the mesh
-        /// has bones (the renderer's space once its buffer is asked for).</summary>
+        /// has bones (the root bone's space once its buffer is asked for: SkinRoot).</summary>
         Mesh Deform(bool now = false, bool reuse = false)
         {
             if (now)
@@ -371,21 +427,6 @@ namespace UnityEngine
             if (IsSkinned)
             {
                 Skin(positions, normals, tangents);
-                if (m_GraphicsOutputRequested)
-                {
-                    var inverse = transform.worldToLocalMatrix;
-                    var normalToLocal = transform.localToWorldMatrix.transpose;
-                    for (int i = 0; i < positions.Length; i++)
-                    {
-                        positions[i] = inverse.MultiplyPoint3x4(positions[i]);
-                        if (normals != null) normals[i] = normalToLocal.MultiplyVector(normals[i]);
-                        if (tangents != null)
-                        {
-                            var t = inverse.MultiplyVector((Vector3)tangents[i]);
-                            tangents[i] = new Vector4(t.x,t.y,t.z,tangents[i].w);
-                        }
-                    }
-                }
             }
             m_Skinned.ShareDrawIndices(mesh);
             m_Skinned.AdoptVertices(positions);
@@ -442,23 +483,31 @@ namespace UnityEngine
             var skeleton = m_Bones.Length == 0 ? SkeletonSkin() : null;
             int boneCount = Math.Min(skeleton != null ? m_SkinNodes.Length : m_Bones.Length, bindposes.Length);
             if (m_Matrices.Length != boneCount) m_Matrices = new Matrix4x4[boneCount];
-            var fallback = transform.localToWorldMatrix;
+            // Into world space; once the buffer is asked for, relative to the root bone (each
+            // bone's matrix composed with the root's inverse first, as the Editor's skin keeps
+            // full precision far from the origin: tests/projects/vfx skinned/*/buffer).
+            bool rooted = m_GraphicsOutputRequested;
+            var toRoot = rooted ? SkinRoot.worldToLocalMatrix : Matrix4x4.identity;
+            var fallback = rooted ? toRoot * transform.localToWorldMatrix : transform.localToWorldMatrix;
             if (skeleton != null)
             {
                 // Relative to the skin's root node, placed by this renderer's transform (which the
                 // Animator keeps at that node's pose when it is exposed).
-                var toWorld = m_SkinRoot > 0 ? fallback * skeleton.Global(m_SkinRoot).inverseDoublePrecision : fallback;
+                var rendererToWorld = transform.localToWorldMatrix;
+                var toWorld = m_SkinRoot > 0 ? rendererToWorld * skeleton.Global(m_SkinRoot).inverseDoublePrecision : rendererToWorld;
                 for (int b = 0; b < boneCount; b++)
                 {
                     int node = m_SkinNodes[b];
-                    m_Matrices[b] = (node >= 0 ? toWorld * skeleton.Global(node) : fallback) * bindposes[b];
+                    var world = node >= 0 ? toWorld * skeleton.Global(node) : rendererToWorld;
+                    m_Matrices[b] = (rooted ? toRoot * world : world) * bindposes[b];
                 }
             }
             else
                 for (int b = 0; b < boneCount; b++)
                 {
                     var bone = m_Bones[b];
-                    m_Matrices[b] = (bone != null ? bone.localToWorldMatrix : fallback) * bindposes[b];
+                    var world = bone != null ? bone.localToWorldMatrix : transform.localToWorldMatrix;
+                    m_Matrices[b] = (rooted ? toRoot * world : world) * bindposes[b];
                 }
             int maxBones = MaxBones;
             for (int i = 0; i < positions.Length; i++)
@@ -668,8 +717,9 @@ namespace UnityEngine
             normals = n != null && n.Length == positions.Length ? n : null;
             if (m_GraphicsOutputRequested)
             {
-                var world = transform.localToWorldMatrix;
-                var normalToWorld = transform.worldToLocalMatrix.transpose;
+                var root = SkinRoot;
+                var world = root.localToWorldMatrix;
+                var normalToWorld = root.worldToLocalMatrix.transpose;
                 for (int i = 0; i < positions.Length; i++)
                 {
                     positions[i] = world.MultiplyPoint3x4(positions[i]);
@@ -717,7 +767,7 @@ namespace UnityEngine
             {
                 return HasShapes || m_GraphicsOutputRequested ? Deform(now, reuse) : m_Mesh;
             }
-            model = m_GraphicsOutputRequested ? transform.localToWorldMatrix : Matrix4x4.identity;
+            model = m_GraphicsOutputRequested ? SkinRoot.localToWorldMatrix : Matrix4x4.identity;
             // forceMatrixRecalculationPerRender "must be set ... to manually render a skinned mesh
             // multiple times within a single update" (the Scripting API): each draw then skins now,
             // apart from the pass's skin (measured: renderapi prevskin.force.forced).
@@ -739,14 +789,14 @@ namespace UnityEngine
             mesh.Clear();
             source.EnsureModelLoaded();
             var vertices = (Vector3[])source.m_Vertices.Clone();
-            var fromSource = skinned ? (m_GraphicsOutputRequested ? toLocal * t.localToWorldMatrix : toLocal) : (useScale ? Matrix4x4.identity : Matrix4x4.Scale(t.lossyScale));
+            var fromSource = skinned ? (m_GraphicsOutputRequested ? toLocal * SkinRoot.localToWorldMatrix : toLocal) : (useScale ? Matrix4x4.identity : Matrix4x4.Scale(t.lossyScale));
             for (int i = 0; i < vertices.Length; i++) vertices[i] = fromSource.MultiplyPoint3x4(vertices[i]);
             mesh.vertices = vertices;
             // Normals and tangents as the matrices take them, not renormalized (as Unity's).
             var normals = source.normals;
             if (normals != null && normals.Length == vertices.Length)
             {
-                var normalFromSource = skinned && m_GraphicsOutputRequested ? toLocal * t.worldToLocalMatrix.transpose : fromSource;
+                var normalFromSource = skinned && m_GraphicsOutputRequested ? toLocal * SkinRoot.worldToLocalMatrix.transpose : fromSource;
                 for (int i = 0; i < normals.Length; i++) normals[i] = normalFromSource.MultiplyVector(normals[i]);
                 mesh.normals = normals;
             }

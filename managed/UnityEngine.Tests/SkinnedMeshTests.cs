@@ -214,6 +214,99 @@ namespace UnityEngine.Tests
 
         /// <summary>The next frame, and its skinning pass (UpdateAllSkinnedMeshes), whatever pass
         /// other tests left last.</summary>
+        /// <summary>The skin buffer holds the vertices in the root bone's space, not the
+        /// renderer's, when the two differ (tests/projects/vfx <c>skinned/*/buffer</c>: a root
+        /// bone turned and moved from the renderer); drawn and baked, the skin is where it was.
+        /// The root bone an effect applies: its world transform, of this frame and of the frame
+        /// before.</summary>
+        [Fact]
+        public void TheSkinBufferIsInTheRootBonesSpace()
+        {
+            var root = new GameObject("root");
+            root.transform.SetPositionAndRotation(new Vector3(0.4f, 0.1f, 0f), Quaternion.Euler(0f, 0f, 15f));
+            var lower = new GameObject("lower").transform;
+            lower.SetParent(root.transform, false);
+            lower.localPosition = new Vector3(0f, -1f, 0f);
+            lower.localRotation = Quaternion.Euler(0f, 0f, -10f);
+            var mesh = new Mesh
+            {
+                vertices = new[] { new Vector3(-0.3f, -1f, 0f), new Vector3(0.3f, -1f, 0f), new Vector3(-0.3f, -0.5f, 0f) },
+                triangles = new[] { 0, 2, 1 },
+                boneWeights = new[] { new BoneWeight { weight0 = 1f }, new BoneWeight { weight0 = 1f }, new BoneWeight { weight0 = 1f } },
+                bindposes = new[] { lower.worldToLocalMatrix * root.transform.localToWorldMatrix },
+            };
+            var renderer = root.AddComponent<SkinnedMeshRenderer>();
+            renderer.sharedMesh = mesh;
+            renderer.bones = new[] { lower };
+            renderer.rootBone = lower;
+            renderer.updateWhenOffscreen = true;
+            var baked = new Mesh();
+            try
+            {
+                Assert.Null(renderer.GetVertexBuffer());
+                NextSkinningFrame();
+                using (renderer.GetVertexBuffer())
+                {
+                    // (-0.3, -1) of the renderer is (-0.3, 0) from the root bone, turned by 10 degrees.
+                    var inRoot = renderer.m_Skinned.vertices[0];
+                    var expected = Quaternion.Euler(0f, 0f, 10f) * new Vector3(-0.3f, 0f, 0f);
+                    Assert.True((inRoot - expected).sqrMagnitude < 1e-10f, inRoot.ToString("F6"));
+                }
+                var drawn = renderer.DrawGeometry(out var model);
+                var world = root.transform.TransformPoint(new Vector3(-0.3f, -1f, 0f));
+                Assert.True((model.MultiplyPoint3x4(drawn.vertices[0]) - world).sqrMagnitude < 1e-10f);
+                renderer.BakeMesh(baked);
+                Assert.True((baked.vertices[0] - new Vector3(-0.3f, -1f, 0f)).sqrMagnitude < 1e-10f, baked.vertices[0].ToString("F6"));
+                // The root bone as an effect applies it: its world transform (tests/projects/vfx
+                // `skinned operations`), not the one relative to the renderer.
+                var before = lower.localToWorldMatrix;
+                Assert.Equal(before, renderer.EffectRootTransform(false));
+                Assert.NotEqual(root.transform.worldToLocalMatrix * before, renderer.EffectRootTransform(false));
+                // Asked for the first time: the frame before's is this frame's.
+                Assert.Equal(before, renderer.EffectRootTransform(true));
+                // The next frame, after the bone moved: the frame before's is the last one asked.
+                lower.localPosition = new Vector3(0f, -2f, 0f);
+                NextSkinningFrame();
+                Assert.Equal(before, renderer.EffectRootTransform(true));
+                Assert.Equal(lower.localToWorldMatrix, renderer.EffectRootTransform(false));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(mesh);
+                Object.DestroyImmediate(baked);
+            }
+        }
+
+        /// <summary>What an effect samples of a renderer (tests/projects/vfx `skinned*`): its skin,
+        /// whose first stream holds positions and normals and whose vertex count is the mesh's;
+        /// once sampled the renderer's vertex buffer has gained the target effects read
+        /// (Vertex and Structured, 1 to 17). No skin before the first pass; a destroyed renderer
+        /// gives none.</summary>
+        [Fact]
+        public void AnEffectSamplesTheSkinAndTheRendererGainsTheTarget()
+        {
+            var (root, bone, mesh, renderer) = OneBoneSkin();
+            try
+            {
+                Assert.Equal(GraphicsBuffer.Target.Vertex, renderer.vertexBufferTarget);
+                Assert.Null(renderer.EffectSkin(false));
+                Assert.Equal(GraphicsBuffer.Target.Vertex | GraphicsBuffer.Target.Structured, renderer.vertexBufferTarget);
+                NextSkinningFrame();
+                var skin = renderer.EffectSkin(false);
+                Assert.NotNull(skin);
+                Assert.Same(skin, renderer.EffectSkin(true));
+                Assert.Equal(mesh.vertexCount, skin.vertexCount);
+                Assert.Equal(0, skin.GetVertexAttributeStream(UnityEngine.Rendering.VertexAttribute.Position));
+                Assert.Equal(GraphicsBuffer.Target.Vertex | GraphicsBuffer.Target.Structured, skin.vertexBufferTarget);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(mesh);
+            }
+        }
+
         internal static void NextSkinningFrame()
         {
             Time.s_FrameCount++;

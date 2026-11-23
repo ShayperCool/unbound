@@ -4182,6 +4182,12 @@
 {"k":"noise/api/GenerateVoroNoise2D/137","v":"42880000,bf000000 3f800000 3f65ec04 bf800000 = nan"}
 {"k":"noise/api/GenerateVoroNoise2D/138","v":"c28a0000,c9742400 3f800000 bf97e12c 3e800000 = nan"}
 {"k":"noise/api/GenerateVoroNoise2D/139","v":"3f800000,c28e0000 3f800000 3c17f680 3f666666 = nan"}
+{"k":"skinned/skinned/target before","v":"1"}
+{"k":"skinned/skinned streams/target before","v":"1"}
+{"k":"skinned/skinned world/target before","v":"1"}
+{"k":"skinned/skinned previous/target before","v":"1"}
+{"k":"skinned/skinned surface/target before","v":"1"}
+{"k":"skinned/skinned values/target before","v":"1"}
 {"k":"camera/needed/f001","v":"main None, ortho None, scene None"}
 {"k":"sim/override timing/f001 1 update","v":"40e00000 none"}
 {"k":"sim/time/f001","v":"3d088889"}
@@ -4380,6 +4386,12 @@
 {"k":"events/events throwing/f004/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"sim/override timing/f004 3 end of frame","v":"40e00000 41100000"}
 {"k":"draw/collide/f004","v":"alive=45 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned/f004","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned streams/f004","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned world/f004","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned previous/f004","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned surface/f004","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned values/f004","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"camera/needed/f005","v":"main Depth, ortho None, scene None"}
 {"k":"sim/override timing/f005 1 update","v":"40e00000 41100000"}
 {"k":"sim/time/f005","v":"3d088889"}
@@ -4501,6 +4513,18 @@
 {"k":"events/events throwing/f007/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events throwing/f007/2","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f008","v":"main Depth, ortho None, scene None"}
+{"k":"skinned/skinned/target f008","v":"17"}
+{"k":"skinned/skinned/buffer f008","v":"count=10 stride=24 be971bce bd5546a0 00000000 00000000 00000000 bf800000 3e976ca0 3d557b50 00000000 00000000 00000000 bf800000 bec39002 3ee17386 00000000 00000000 00000000 bf800000 3e55f0d8 3f0b65e2 00000000 00000000 00000000 bf800000"}
+{"k":"skinned/skinned streams/target f008","v":"17"}
+{"k":"skinned/skinned streams/buffer f008","v":"count=10 stride=24 be973bce bd5566a0 00000000 00000000 00000000 bf800000 3e974ca0 3d555b50 00000000 00000000 00000000 bf800000 bec3b002 3ee16f86 00000000 00000000 00000000 bf800000 3e55b0d8 3f0b63e2 00000000 00000000 00000000 bf800000"}
+{"k":"skinned/skinned world/target f008","v":"17"}
+{"k":"skinned/skinned world/buffer f008","v":"count=10 stride=24 be973bce bd5586a0 00000000 00000000 00000000 bf800000 3e974ca0 3d553b50 00000000 00000000 00000000 bf800000 bec3b002 3ee16b86 00000000 00000000 00000000 bf800000 3e55b0d8 3f0b61e2 00000000 00000000 00000000 bf800000"}
+{"k":"skinned/skinned previous/target f008","v":"17"}
+{"k":"skinned/skinned previous/buffer f008","v":"count=10 stride=24 be973bce bd5586a0 00000000 00000000 00000000 bf800000 3e974ca0 3d553b50 00000000 00000000 00000000 bf800000 bec3b002 3ee16b86 00000000 00000000 00000000 bf800000 3e55b0d8 3f0b61e2 00000000 00000000 00000000 bf800000"}
+{"k":"skinned/skinned surface/target f008","v":"17"}
+{"k":"skinned/skinned surface/buffer f008","v":"count=10 stride=24 be973bce bd5546a0 00000000 00000000 00000000 bf800000 3e974ca0 3d557b50 00000000 00000000 00000000 bf800000 bec3b002 3ee17386 00000000 00000000 00000000 bf800000 3e55b0d8 3f0b65e2 00000000 00000000 00000000 bf800000"}
+{"k":"skinned/skinned values/target f008","v":"17"}
+{"k":"skinned/skinned values/buffer f008","v":"count=10 stride=24 be973bce bd5566a0 00000000 00000000 00000000 bf800000 3e974ca0 3d555b50 00000000 00000000 00000000 bf800000 bec3b002 3ee16f86 00000000 00000000 00000000 bf800000 3e55b0d8 3f0b63e2 00000000 00000000 00000000 bf800000"}
 {"k":"sim/time/f008","v":"3d088889"}
 {"k":"sim/rate/f008","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e6eeeef before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f008","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e6eeeef before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -4533,6 +4557,12 @@
 {"k":"events/events/f008/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events throwing/f008/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events throwing/f008/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"draw/skinned/f008","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned streams/f008","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned world/f008","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned previous/f008","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned surface/f008","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned values/f008","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"camera/needed/f009","v":"main None, ortho None, scene None"}
 {"k":"sim/time/f009","v":"3d088889"}
 {"k":"sim/rate/f009","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e888889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -9530,6 +9560,18 @@
 {"k":"events/events throwing/f015/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
 {"k":"events/events throwing/f015/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f016","v":"main Depth, ortho None, scene None"}
+{"k":"skinned/skinned/target f016","v":"17"}
+{"k":"skinned/skinned/buffer f016","v":"count=10 stride=24 be971bce bd5546a0 00000000 00000000 00000000 bf800000 3e976ca0 3d557b50 00000000 00000000 00000000 bf800000 bec39002 3ee17386 00000000 00000000 00000000 bf800000 3e55f0d8 3f0b65e2 00000000 00000000 00000000 bf800000"}
+{"k":"skinned/skinned streams/target f016","v":"17"}
+{"k":"skinned/skinned streams/buffer f016","v":"count=10 stride=24 be973bce bd5566a0 00000000 00000000 00000000 bf800000 3e974ca0 3d555b50 00000000 00000000 00000000 bf800000 bec3b002 3ee16f86 00000000 00000000 00000000 bf800000 3e55b0d8 3f0b63e2 00000000 00000000 00000000 bf800000"}
+{"k":"skinned/skinned world/target f016","v":"17"}
+{"k":"skinned/skinned world/buffer f016","v":"count=10 stride=24 be973bce bd5586a0 00000000 00000000 00000000 bf800000 3e974ca0 3d553b50 00000000 00000000 00000000 bf800000 bec3b002 3ee16b86 00000000 00000000 00000000 bf800000 3e55b0d8 3f0b61e2 00000000 00000000 00000000 bf800000"}
+{"k":"skinned/skinned previous/target f016","v":"17"}
+{"k":"skinned/skinned previous/buffer f016","v":"count=10 stride=24 be973bce bd5586a0 00000000 00000000 00000000 bf800000 3e974ca0 3d553b50 00000000 00000000 00000000 bf800000 bec3b002 3ee16b86 00000000 00000000 00000000 bf800000 3e55b0d8 3f0b61e2 00000000 00000000 00000000 bf800000"}
+{"k":"skinned/skinned surface/target f016","v":"17"}
+{"k":"skinned/skinned surface/buffer f016","v":"count=10 stride=24 be973bce bd5546a0 00000000 00000000 00000000 bf800000 3e974ca0 3d557b50 00000000 00000000 00000000 bf800000 bec3b002 3ee17386 00000000 00000000 00000000 bf800000 3e55b0d8 3f0b65e2 00000000 00000000 00000000 bf800000"}
+{"k":"skinned/skinned values/target f016","v":"17"}
+{"k":"skinned/skinned values/buffer f016","v":"count=10 stride=24 be973bce bd5566a0 00000000 00000000 00000000 bf800000 3e974ca0 3d555b50 00000000 00000000 00000000 bf800000 bec3b002 3ee16f86 00000000 00000000 00000000 bf800000 3e55b0d8 3f0b63e2 00000000 00000000 00000000 bf800000"}
 {"k":"sim/time/f016","v":"3d088889"}
 {"k":"sim/rate/f016","v":"alive=3 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f000000 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f016","v":"alive=3 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f000000 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -9554,6 +9596,12 @@
 {"k":"events/events late/f016/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events throwing/f016/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events throwing/f016/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"draw/skinned/f016","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned streams/f016","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned world/f016","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned previous/f016","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned surface/f016","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/skinned values/f016","v":"alive=10 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"camera/needed/f017","v":"main Depth, ortho None, scene None"}
 {"k":"sim/time/f017","v":"3d088889"}
 {"k":"sim/rate/f017","v":"alive=3 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f088889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -10996,6 +11044,75 @@
 {"k":"event reads/loop-update19/t","v":"3e6eeeef"}
 {"k":"event reads/loop-update19/l","v":"3f000000"}
 {"k":"event reads/lines","v":"65"}
+{"k":"skinned operations/play/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/play/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/play/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/play/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update1/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update1/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update1/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update1/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update2/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update2/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update2/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update2/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update3/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update3/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update3/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update3/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update4/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update4/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update4/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update4/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update5/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update5/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update5/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update5/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update6/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update6/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update6/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update6/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update7/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update7/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update7/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update7/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update8/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update8/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update8/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update8/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update9/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update9/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update9/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update9/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update10/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update10/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update10/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update10/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update11/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update11/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update11/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update11/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update12/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update12/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update12/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update12/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update13/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update13/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update13/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update13/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update14/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update14/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update14/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update14/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update15/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update15/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update15/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update15/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update16/m00","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update16/m01","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update16/m02","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/update16/m03","v":"3f7f069e,3db27eba,00000000,00000000,bdb27eba,3f7f069e,00000000,00000000,00000000,00000000,3f800000,00000000,452f0a8a,bf5dad50,00000000,3f800000"}
+{"k":"skinned operations/lines","v":"17"}
 {"k":"sim/time/f020","v":"3d088889"}
 {"k":"sim/rate/f020","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f222224 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f020","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f222224 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}

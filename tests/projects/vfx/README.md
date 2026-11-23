@@ -431,6 +431,47 @@ barycentric coordinates, coloured by the mesh's colours sampled there; `mesh loc
 (the particles all at the origin). The programs read the meshes' vertex and index buffers as the
 effects' values hand them over.
 
+## Skinned meshes
+
+Each control has a column of two by five vertices skinned to two bones (`SkinnedColumn` in
+`VfxProbe.cs`: the lower half to the first bone, the upper half to the second, the middle row
+to both; first texture coordinates across and up the column), standing beside the effect, the
+renderer turned by 15 degrees and moved from the stage, its root bone (the lower bone) a unit
+below it and turned by -10 degrees; the upper bone turns by six degrees in each update. The
+renderer draws the column itself (dark grey). The graphs (`DrawSkinned*`) take the renderer as
+the exposed `Skin` and put a particle on vertex `particleId` in every update:
+
+- `skinned`: Set Position (Skinned Mesh), the root bone's local transform applied, coloured
+  by the skin's first texture coordinates sampled there; `skinned streams`: the same graph over
+  a mesh whose positions and normals are in its first stream and its texture coordinates in a
+  second.
+- `skinned world`: the root bone's world transform applied, in a system in world space.
+- `skinned previous`: the position of the frame before (Sample Skinned Mesh,
+  `PreviousPosition`; the renderer's skinned motion vectors are off).
+- `skinned surface`: a point of each triangle (barycentric 0.3, 0.2).
+- `skinned values`: ten particles in a row at the top of the view, particle i at
+  x = 0.25 i - 1.125, coloured by the skin's position at vertex i with the root bone's local
+  transform applied (a quarter of it plus a half per channel), so the image shows the sampled
+  values.
+
+Images at frames 4, 8 and 16. Rows: `skinned/<control>/target before` and `target f008`,
+`f016`, the renderer's `vertexBufferTarget` before the effect is given it and after;
+`skinned/<control>/buffer f008`, `f016`, the renderer's `GetVertexBuffer()` as a script reads
+it in an update (its count, stride and first 24 floats as bits).
+`skinned operations` (`OpsSkinned`, an effect of its own given `skinned`'s renderer): a script
+block (`SkinnedInputs`) reads the root bone's local and world transforms, of this frame and of
+the frame before (`m00`..`m03`), as `mesh operations` does.
+
+What the Editor does. The renderer's `vertexBufferTarget` gains Structured once the effect
+samples it (1 before, 17 after). Its skin buffer holds positions and normals (stride 24) in the
+root bone's space, the last frame's skin when read in an update. Both root transforms, local and
+world, are the root bone's world transform (the package's manual describes the local one as
+relative to the renderer): a sample with the local root transform applied is the vertex's world
+position (`skinned values`: the colours decode to the world positions of the frame before), so
+the particles of a system in local space whose effect is not at the world's origin are drawn far
+from the column (the `skinned*` images show the column alone). The skin values' low bits and the
+root matrices' last bit differ from Unbound's (`residuals.json`).
+
 ## Event attributes read in a spawn context
 
 `OpsEvent`'s spawn context has, in order: a block written as a script (`EventReadsFirst`,

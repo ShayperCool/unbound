@@ -50,6 +50,8 @@ public static class GraphAuthoring
         MeshOperations();
         NoiseOperations();
         DrawnFromMeshes();
+        DrawnFromSkinnedMeshes();
+        SkinnedOperations();
         EventReadings();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -651,6 +653,149 @@ public static class GraphAuthoring
             }
             Save(graph);
         }
+    }
+
+    /// <summary>The graphs of the drawing controls of skinned mesh renderers (README.md, "Skinned
+    /// meshes"): each puts a particle on a vertex of the exposed renderer's skin in every update,
+    /// the vertex given by the particle's id, the root bone's local transform applied
+    /// (`DrawSkinned`, coloured by the skin's first texture coordinates sampled there), the root
+    /// bone's world transform applied in a system in world space (`DrawSkinnedWorld`), the skin of
+    /// the frame before (`DrawSkinnedPrevious`: the position sampled as `PreviousPosition`), and
+    /// at a point of each triangle (`DrawSkinnedSurface`). Opaque quads.</summary>
+    static void DrawnFromSkinnedMeshes()
+    {
+        foreach (var name in new[] { "DrawSkinned", "DrawSkinnedWorld", "DrawSkinnedPrevious", "DrawSkinnedSurface" })
+        {
+            bool world = name == "DrawSkinnedWorld", previous = name == "DrawSkinnedPrevious", surface = name == "DrawSkinnedSurface";
+            var graph = NewGraph(name, DrawFolder);
+            var (spawn, init, update, output) = System(graph, 16);
+            if (world) init.space = VFXSpace.World;
+            output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+            Burst(spawn, false, 10f, 0f);
+            Set(init, "size", 0.15f);
+            var skin = Parameter(graph, typeof(SkinnedMeshRenderer), "Skin").outputSlots[0];
+            var id = Make<VFXAttributeParameter>();
+            id.SetSettingValue("attribute", "particleId");
+            graph.AddChild(id);
+            if (previous)
+            {
+                var sample = Make<SampleMesh>();
+                graph.AddChild(sample);
+                sample.SetSettingValue("source", SampleMesh.SourceType.SkinnedMeshRenderer);
+                sample.SetSettingValue("output", SampleMesh.VertexAttributeFlag.PreviousPosition);
+                Link(skin, Input(sample, "skinnedMesh"));
+                Link(id.outputSlots[0], Input(sample, "vertex"));
+                var place = Make<SetAttribute>();
+                place.SetSettingValue("attribute", "position");
+                update.AddChild(place);
+                Link(sample.outputSlots[0], place.inputSlots[0]);
+            }
+            else
+            {
+                var place = Make<PositionMesh>();
+                place.SetSettingValue("sourceMesh", SampleMesh.SourceType.SkinnedMeshRenderer);
+                place.SetSettingValue("spawnMode", PositionBase.SpawnMode.Custom);
+                place.SetSettingValue("placementMode", surface ? SampleMesh.PlacementMode.Surface : SampleMesh.PlacementMode.Vertex);
+                place.SetSettingValue("applyOrientation", PositionBase.Orientation.None);
+                if (world) place.SetSettingValue("skinnedTransform", SampleMesh.SkinnedRootTransform.ApplyWorldRootTransform);
+                if (surface) place.SetSettingValue("surfaceCoordinates", SampleMesh.SurfaceCoordinates.Barycentric);
+                update.AddChild(place);
+                Link(skin, Input(place, "skinnedMesh"));
+                Link(id.outputSlots[0], Input(place, surface ? "triangle" : "vertex"));
+                if (surface) Input(place, "barycentric").value = new Vector2(0.3f, 0.2f);
+            }
+            if (name == "DrawSkinned")
+            {
+                var sample = Make<SampleMesh>();
+                graph.AddChild(sample);
+                sample.SetSettingValue("source", SampleMesh.SourceType.SkinnedMeshRenderer);
+                sample.SetSettingValue("output", SampleMesh.VertexAttributeFlag.TexCoord0);
+                Link(skin, Input(sample, "skinnedMesh"));
+                Link(id.outputSlots[0], Input(sample, "vertex"));
+                var colour = Make<SetAttribute>();
+                colour.SetSettingValue("attribute", "color");
+                update.AddChild(colour);
+                Link(sample.outputSlots[0], colour.inputSlots[0]);
+            }
+            else SetVector(init, "color", previous ? new Vector3(1f, 0.5f, 0.2f) : world ? new Vector3(0.3f, 0.6f, 1f) : new Vector3(0.9f, 0.9f, 0.3f));
+            graph.GetResource().cullingFlags = VFXCullingFlags.CullNone;
+            Save(graph);
+        }
+
+        // The sampled values themselves: ten particles in a row at the top of the view, the
+        // particle of id i at x = 0.25 i - 1.125, each coloured by the skin's position at vertex
+        // i (the root bone's local transform applied), a quarter of it plus a half per channel.
+        var values = NewGraph("DrawSkinnedValues", DrawFolder);
+        var (valuesSpawn, valuesInit, valuesUpdate, valuesOutput) = System(values, 16);
+        valuesOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        Burst(valuesSpawn, false, 10f, 0f);
+        Set(valuesInit, "size", 0.2f);
+        var valuesSkin = Parameter(values, typeof(SkinnedMeshRenderer), "Skin").outputSlots[0];
+        var valuesId = Make<VFXAttributeParameter>();
+        valuesId.SetSettingValue("attribute", "particleId");
+        values.AddChild(valuesId);
+        VFXSlot Affine(VFXSlot input, float scale, float offset)
+        {
+            var scaled = Make<Multiply>();
+            values.AddChild(scaled);
+            scaled.SetOperandType(0, typeof(float));
+            scaled.SetOperandType(1, typeof(float));
+            Link(input, scaled.inputSlots[0]);
+            scaled.inputSlots[1].value = scale;
+            var shifted = Make<Add>();
+            values.AddChild(shifted);
+            shifted.SetOperandType(0, typeof(float));
+            shifted.SetOperandType(1, typeof(float));
+            Link(scaled.outputSlots[0], shifted.inputSlots[0]);
+            shifted.inputSlots[1].value = offset;
+            return shifted.outputSlots[0];
+        }
+        var row = Make<SetAttribute>();
+        row.SetSettingValue("attribute", "position");
+        valuesInit.AddChild(row);
+        row.inputSlots[0].value = Spaced(row.inputSlots[0], new Vector3(0f, 1.3f, 0f));
+        Link(Affine(valuesId.outputSlots[0], 0.25f, -1.125f), row.inputSlots[0][0]);
+        var sampled = Make<SampleMesh>();
+        values.AddChild(sampled);
+        sampled.SetSettingValue("source", SampleMesh.SourceType.SkinnedMeshRenderer);
+        sampled.SetSettingValue("output", SampleMesh.VertexAttributeFlag.Position);
+        Link(valuesSkin, Input(sampled, "skinnedMesh"));
+        Link(valuesId.outputSlots[0], Input(sampled, "vertex"));
+        var valueColour = Make<SetAttribute>();
+        valueColour.SetSettingValue("attribute", "color");
+        valuesUpdate.AddChild(valueColour);
+        // A position's vector is its slot's first child.
+        var sampledPosition = sampled.outputSlots[0].property.type == typeof(Position) ? sampled.outputSlots[0][0] : sampled.outputSlots[0];
+        for (int channel = 0; channel < 3; channel++)
+            Link(Affine(sampledPosition[channel], 0.25f, 0.5f), valueColour.inputSlots[0][channel]);
+        values.GetResource().cullingFlags = VFXCullingFlags.CullNone;
+        Save(values);
+    }
+
+    /// <summary>The skinned mesh operations' graph (README.md, "Skinned meshes"): a spawn
+    /// context whose script block reads the exposed renderer's root bone transforms (local and
+    /// world, this frame and the frame before; sampling a skin is valid on the GPU only).</summary>
+    static void SkinnedOperations()
+    {
+        var graph = NewGraph("OpsSkinned", OperationFolder);
+        var (spawn, _, _, _) = System(graph, 8);
+        ConstantRate(spawn, 1f);
+        var block = Make<VFXSpawnerCustomWrapper>();
+        block.SetSettingValue("m_customType", new SerializableType(typeof(SkinnedInputs)));
+        spawn.AddChild(block);
+        var skin = Parameter(graph, typeof(SkinnedMeshRenderer), "Skin").outputSlots[0];
+        int matrix = 0;
+        foreach (var (kind, frame) in new[] { (VFXSkinnedTransform.LocalRootBoneTransform, VFXSkinnedMeshFrame.Current), (VFXSkinnedTransform.LocalRootBoneTransform, VFXSkinnedMeshFrame.Previous), (VFXSkinnedTransform.WorldRootBoneTransform, VFXSkinnedMeshFrame.Current), (VFXSkinnedTransform.WorldRootBoneTransform, VFXSkinnedMeshFrame.Previous) })
+        {
+            var root = Make<SkinnedMeshRendererTransform>();
+            graph.AddChild(root);
+            root.SetSettingValue("transform", kind);
+            root.SetSettingValue("frame", frame);
+            Link(skin, Input(root, "skinnedMesh"));
+            Link(root.outputSlots[0], Input(block, "m0" + matrix++));
+        }
+        graph.GetResource().cullingFlags = VFXCullingFlags.CullNone;
+        Save(graph);
     }
 
     /// <summary>The graph of the controls of event attributes read in a spawn context (README.md,

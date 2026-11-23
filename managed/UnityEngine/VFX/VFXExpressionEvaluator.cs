@@ -54,11 +54,10 @@ namespace Unbound.Runtime
                 // The graph compiler refuses the Voronoi noise outside a kernel ("not valid on
                 // the CPU", tests/projects/vfx README, "Noise"): no compiled graph evaluates it.
                 case VFXExpressionOperation.VoroNoise2D:
-                // A skinned mesh renderer's mesh, vertices and root bone are not done yet.
+                    return false;
                 case VFXExpressionOperation.VertexBufferFromSkinnedMeshRenderer:
                 case VFXExpressionOperation.MeshFromSkinnedMeshRenderer:
                 case VFXExpressionOperation.RootBoneTransformFromSkinnedMeshRenderer:
-                    return false;
                 case VFXExpressionOperation.ReadEventAttribute:
                 case VFXExpressionOperation.MeshVertexCount:
                 case VFXExpressionOperation.MeshChannelOffset:
@@ -378,20 +377,36 @@ namespace Unbound.Runtime
                         break;
                     }
                     // The views of a mesh's buffers the programs read, kept while they still
-                    // view them.
+                    // view them. A skinned mesh renderer's are those of its skin, of the frame
+                    // or of the frame before: the skin's layout (positions, normals and tangents
+                    // in its first stream) is the one its mesh's channels are read with.
                     case VFXExpressionOperation.VertexBufferFromMesh:
                     case VFXExpressionOperation.IndexBufferFromMesh:
+                    case VFXExpressionOperation.VertexBufferFromSkinnedMeshRenderer:
                     {
                         var kept = values.GetObject(e) as GraphicsBuffer;
-                        var viewed = values.GetObject(a0) as Mesh;
-                        var view = op == VFXExpressionOperation.VertexBufferFromMesh
-                            ? VFXMeshFunctions.VertexBuffer(viewed, w[p1], kept)
-                            : VFXMeshFunctions.IndexBuffer(viewed, kept);
+                        var view = op switch
+                        {
+                            VFXExpressionOperation.VertexBufferFromMesh => VFXMeshFunctions.VertexBuffer(values.GetObject(a0) as Mesh, w[p1], kept),
+                            VFXExpressionOperation.IndexBufferFromMesh => VFXMeshFunctions.IndexBuffer(values.GetObject(a0) as Mesh, kept),
+                            _ => VFXMeshFunctions.VertexBuffer(Skin(values.GetObject(a0), operands[d + 3] == (int)VFXSkinnedMeshFrame.Previous), w[p1], kept),
+                        };
                         if (ReferenceEquals(view, kept)) break;
                         if (!VFXMeshFunctions.IsNoBuffer(kept)) kept?.Release();
                         values.SetObject(e, view);
                         break;
                     }
+                    case VFXExpressionOperation.MeshFromSkinnedMeshRenderer:
+                        values.SetObject(e, Skin(values.GetObject(a0), false));
+                        break;
+                    // The root bone's world transform, the local root transform's too (measured:
+                    // SkinnedMeshRenderer.EffectRootTransform); without a renderer the identity
+                    // (as the graph compiler folds it).
+                    case VFXExpressionOperation.RootBoneTransformFromSkinnedMeshRenderer:
+                        Store(w, at, values.GetObject(a0) is SkinnedMeshRenderer skin && skin != null
+                            ? skin.EffectRootTransform(operands[d + 2] == (int)VFXSkinnedMeshFrame.Previous)
+                            : Matrix4x4.identity);
+                        break;
                     case VFXExpressionOperation.TransposeMatrix: Store(w, at, Load(w, p0).transpose); break;
                     case VFXExpressionOperation.TransformMatrix: Store(w, at, Load(w, p0) * Load(w, p1)); break;
                     case VFXExpressionOperation.TransformPos:
@@ -687,6 +702,10 @@ namespace Unbound.Runtime
             for (int i = 0; i < 16; i++) m[i] = Float(w[at + i]);
             return m;
         }
+
+        /// <summary>The skin an effect samples of a skinned mesh renderer (none of one destroyed).</summary>
+        static Mesh Skin(object renderer, bool previous) =>
+            renderer is SkinnedMeshRenderer skinned && skinned != null ? skinned.EffectSkin(previous) : null;
 
         static void Store(uint[] w, int at, Matrix4x4 m)
         {

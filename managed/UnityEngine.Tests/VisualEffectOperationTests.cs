@@ -183,6 +183,10 @@ namespace UnityEngine.Tests
                 Value(VFXValueType.Matrix4x4), Op(VFXExpressionOperation.InverseMatrix, 2),
             }, new[] { Constant(0, projection), Constant(2, new Matrix4x4(new Vector4(1f, 2f, 3f, 4f), new Vector4(2f, 4f, 6f, 8f), Vector4.one, new Vector4(0f, 0f, 0f, 1f))) });
             Assert.True(VFXExpressionEvaluator.Supported(VFXExpressionOperation.InverseMatrix));
+            // A skinned mesh renderer's skin, its vertex buffer and its root bone (tests/projects/vfx `skinned*`).
+            Assert.True(VFXExpressionEvaluator.Supported(VFXExpressionOperation.MeshFromSkinnedMeshRenderer));
+            Assert.True(VFXExpressionEvaluator.Supported(VFXExpressionOperation.VertexBufferFromSkinnedMeshRenderer));
+            Assert.True(VFXExpressionEvaluator.Supported(VFXExpressionOperation.RootBoneTransformFromSkinnedMeshRenderer));
             var values = Evaluated(data);
             Assert.Equal(projection.inverse, values.GetMatrix(1));
             var product = projection * values.GetMatrix(1);

@@ -97,6 +97,7 @@ public sealed class VfxProbe : MonoBehaviour
             BeginNoise();
             m_EventReads = Effect("event reads", "Assets/OpGraphs/OpsEvent.vfx", new Vector3(0f, 10f, 0f));
             BeginShapes();
+            BeginSkinned();
         }
         catch (Exception e)
         {
@@ -774,6 +775,127 @@ public sealed class VfxProbe : MonoBehaviour
         }
     }
 
+    /// <summary>The upper bones of the skinned columns (README.md, "Skinned meshes"), turned in
+    /// each update.</summary>
+    readonly List<Transform> m_SkinnedBones = new List<Transform>();
+    readonly List<(string Key, SkinnedMeshRenderer Renderer)> m_Skins = new List<(string, SkinnedMeshRenderer)>();
+
+    /// <summary>A column of two by five vertices, two units high, skinned to two bones: the
+    /// lower half to the first, the upper half to the second, the middle row to both. Its first
+    /// texture coordinates run across and up the column. In one stream, or (<paramref
+    /// name="streams"/>) positions and normals in the first stream, the texture coordinates in a
+    /// second (the bone weights where the mesh puts them).</summary>
+    static Mesh SkinnedColumn(bool streams, Matrix4x4[] bindposes)
+    {
+        var vertices = new List<Vector3>();
+        var normals = new List<Vector3>();
+        var uvs = new List<Vector2>();
+        var weights = new List<BoneWeight>();
+        for (int row = 0; row < 5; row++)
+            for (int column = 0; column < 2; column++)
+            {
+                vertices.Add(new Vector3(column == 0 ? -0.3f : 0.3f, -1f + 0.5f * row, 0f));
+                normals.Add(Vector3.back);
+                uvs.Add(new Vector2(column, row / 4f));
+                weights.Add(row == 2
+                    ? new BoneWeight { boneIndex0 = 1, weight0 = 0.5f, boneIndex1 = 0, weight1 = 0.5f }
+                    : new BoneWeight { boneIndex0 = row < 2 ? 0 : 1, weight0 = 1f });
+            }
+        var mesh = new Mesh { name = streams ? "SkinnedStreams" : "SkinnedColumn" };
+        if (streams)
+            mesh.SetVertexBufferParams(vertices.Count,
+                new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Position, UnityEngine.Rendering.VertexAttributeFormat.Float32, 3, 0),
+                new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Normal, UnityEngine.Rendering.VertexAttributeFormat.Float32, 3, 0),
+                new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.TexCoord0, UnityEngine.Rendering.VertexAttributeFormat.Float32, 2, 1));
+        mesh.SetVertices(vertices);
+        mesh.SetNormals(normals);
+        mesh.SetUVs(0, uvs);
+        var triangles = new List<int>();
+        for (int row = 0; row < 4; row++)
+        {
+            int at = row * 2;
+            triangles.AddRange(new[] { at, at + 2, at + 1, at + 1, at + 2, at + 3 });
+        }
+        mesh.SetTriangles(triangles, 0);
+        mesh.boneWeights = weights.ToArray();
+        mesh.bindposes = bindposes;
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    /// <summary>The skinned mesh renderer controls (README.md, "Skinned meshes"): for each, a
+    /// column skinned to two bones stands beside the effect, turned and moved from the stage, its
+    /// root bone below it turned too; its upper bone turns in each update.</summary>
+    void BeginSkinned()
+    {
+        var dark = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        dark.SetColor("_BaseColor", new Color(0.25f, 0.25f, 0.25f, 1f));
+        foreach (var (key, graph, streams) in new[]
+                 {
+                     ("skinned", "DrawSkinned", false), ("skinned streams", "DrawSkinned", true), ("skinned world", "DrawSkinnedWorld", false),
+                     ("skinned previous", "DrawSkinnedPrevious", false), ("skinned surface", "DrawSkinnedSurface", false),
+                     ("skinned values", "DrawSkinnedValues", false),
+                 })
+        {
+            Draw(key, graph, 4, 8, 16);
+            var effect = m_Stages[m_Stages.Count - 1].Effect;
+            var holder = new GameObject("skin " + key);
+            holder.transform.SetPositionAndRotation(effect.transform.position + new Vector3(0.4f, 0.1f, 0f), Quaternion.Euler(0f, 0f, 15f));
+            var lower = new GameObject("lower").transform;
+            lower.SetParent(holder.transform, false);
+            lower.localPosition = new Vector3(0f, -1f, 0f);
+            lower.localRotation = Quaternion.Euler(0f, 0f, -10f);
+            var upper = new GameObject("upper").transform;
+            upper.SetParent(lower, false);
+            upper.localPosition = new Vector3(0f, 1f, 0f);
+            var renderer = holder.AddComponent<SkinnedMeshRenderer>();
+            var bones = new[] { lower, upper };
+            var bindposes = bones.Select(b => b.worldToLocalMatrix * holder.transform.localToWorldMatrix).ToArray();
+            renderer.sharedMesh = SkinnedColumn(streams, bindposes);
+            renderer.bones = bones;
+            renderer.rootBone = lower;
+            renderer.updateWhenOffscreen = true;
+            renderer.sharedMaterial = dark;
+            m_SkinnedBones.Add(upper);
+            m_Skins.Add((key, renderer));
+            if (key == "skinned") Effect("skinned operations", "Assets/OpGraphs/OpsSkinned.vfx", new Vector3(0f, 12f, 0f)).SetSkinnedMeshRenderer("Skin", renderer);
+            Rec("skinned/" + key + "/target before", ((int)renderer.vertexBufferTarget).ToString(CultureInfo.InvariantCulture));
+            effect.SetSkinnedMeshRenderer("Skin", renderer);
+        }
+    }
+
+    /// <summary>Turns the skinned columns' upper bones by six degrees an update.</summary>
+    void SkinnedFrame()
+    {
+        foreach (var bone in m_SkinnedBones) bone.localRotation = Quaternion.Euler(0f, 0f, 6f * m_Frame);
+        // The skin buffer as a script reads it in an update: its layout and its first vertices
+        // (the last frame's skin), and the renderer's buffer target once the effect sampled it.
+        if (m_Frame == 20)
+        {
+            foreach (var line in OpsInputs.Logs.TryGetValue("skinned operations", out var log) ? log : new List<string>())
+            {
+                var parts = line.Split(' ');
+                foreach (var part in parts)
+                    if (part.Contains("=")) Rec("skinned operations/" + parts[0] + "/" + part.Substring(0, part.IndexOf('=')), part.Substring(part.IndexOf('=') + 1));
+            }
+            Rec("skinned operations/lines", OpsInputs.Logs.TryGetValue("skinned operations", out var all) ? all.Count : -1);
+        }
+        if (m_Frame != 8 && m_Frame != 16) return;
+        foreach (var (key, renderer) in m_Skins)
+        {
+            Rec("skinned/" + key + "/target f" + m_Frame.ToString("000"), ((int)renderer.vertexBufferTarget).ToString(CultureInfo.InvariantCulture));
+            using var buffer = renderer.GetVertexBuffer();
+            if (buffer == null)
+            {
+                Rec("skinned/" + key + "/buffer f" + m_Frame.ToString("000"), "null");
+                continue;
+            }
+            var words = new float[Math.Min(buffer.count * buffer.stride / 4, 24)];
+            buffer.GetData(words);
+            Rec("skinned/" + key + "/buffer f" + m_Frame.ToString("000"), "count=" + buffer.count + " stride=" + buffer.stride + " " + string.Join(" ", words.Select(F)));
+        }
+    }
+
     static string MeshState(Mesh mesh) => "readable=" + (mesh.isReadable ? 1 : 0) + " vertexBufferTarget=" + (int)mesh.vertexBufferTarget + " indexBufferTarget=" + (int)mesh.indexBufferTarget;
 
     /// <summary>From frame 3 one step a frame: the vertex, triangle and index read change and
@@ -1011,6 +1133,7 @@ public sealed class VfxProbe : MonoBehaviour
             MeshOperationFrame();
             NoiseFrame();
             EventReadFrame();
+            SkinnedFrame();
             Simulate();
             if (m_Frame < k_LastFrame) return;
         }
