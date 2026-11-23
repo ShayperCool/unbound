@@ -18,6 +18,9 @@
 {"k":"draw/OctagonStill/f003","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/OctagonList/f003","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/OctagonMany/f003","v":"alive=30000 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/CubeStill/f003","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/CubeList/f003","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/CubeMany/f003","v":"alive=10000 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/UpdateList many/f005","v":"alive=20000 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/ComputeCulled many/f005","v":"alive=20000 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/FrustumCulled many/f005","v":"alive=20000 culled=0 awake=1 renderer enabled=1 visible=1"}

@@ -974,6 +974,23 @@ namespace UnityEngine.Tests
             var data = (uint[])Primitive.Triangle.Data(30000);
             Assert.Equal(new uint[] { 89994, 89995, 89996, 89997, 89998, 89999 }, data[89994..]);
             Assert.Equal(new ushort[] { 0, 2, 1, 1, 2, 3, 4, 6, 5, 5, 6, 7 }, Primitive.Quad.Data(2));
+            // Cubes (tests/projects/vfxoutputs `Cube*`): twelve triangles over eight corners,
+            // as many per draw as 16-bit indices reach, then instances of 1024 (the program's
+            // `(vertexID >> 3) + instanceID * 1024`). Every face faces out: each corner is in
+            // six triangles' worth of faces, each triangle's normal points away from the centre.
+            var cube = (ushort[])Primitive.Hexahedron.Data(1);
+            Assert.Equal(36, cube.Length);
+            static Vector3 Corner(int i) => new Vector3(i & 1, (i >> 1) & 1, (i >> 2) & 1) - new Vector3(0.5f, 0.5f, 0.5f);
+            for (int t = 0; t < 36; t += 3)
+            {
+                var (a, b, c) = (Corner(cube[t]), Corner(cube[t + 1]), Corner(cube[t + 2]));
+                Assert.True(Vector3.Dot(Vector3.Cross(b - a, c - a), (a + b + c) / 3f) > 0f, $"triangle {t / 3} faces in");
+            }
+            // The face toward the camera at negative z is the quad's own.
+            Assert.Contains(System.Linq.Enumerable.Chunk(cube, 6), face => System.Linq.Enumerable.SequenceEqual(face, new ushort[] { 0, 2, 1, 1, 2, 3 }));
+            var cubes = Primitive.Hexahedron.Indices(1);
+            Assert.Equal(8192 * 36, cubes.count);
+            Assert.Equal((1024u * 36, 10u), (Primitive.Hexahedron.Draw(cubes, 10000).IndexCount, Primitive.Hexahedron.Draw(cubes, 10000).Instances));
         }
 
         [Fact]
@@ -1008,7 +1025,7 @@ namespace UnityEngine.Tests
             // What is drawn, and each thing that is not.
             Assert.Null(VFXOutput.Refusal(system, quads, material));
             Assert.Equal("its shader was not imported", VFXOutput.Refusal(system, quads, null));
-            Assert.Equal("ParticlePointOutput is not drawn yet (quads, triangles, octagons and meshes are)", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticlePointOutput }, material));
+            Assert.Equal("ParticlePointOutput is not drawn yet (quads, triangles, octagons, cubes and meshes are)", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticlePointOutput }, material));
             Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleTriangleOutput }, material));
             Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleOctagonOutput }, material));
             // Through an indirect buffer: drawn from the list that counts its particles, or from

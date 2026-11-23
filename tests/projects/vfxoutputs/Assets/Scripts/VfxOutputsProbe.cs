@@ -186,6 +186,9 @@ public sealed class VfxOutputsProbe : MonoBehaviour
             // The other planar primitives (after the stages above: a stage's place is its rank).
             foreach (var name in new[] { "TriangleStill", "TriangleList", "TriangleMany", "OctagonStill", "OctagonList", "OctagonMany" })
                 Front(AddStage(name, name, 3));
+            // Cubes (after the stages above).
+            foreach (var name in new[] { "CubeStill", "CubeList", "CubeMany" })
+                Front(AddStage(name, name, 3));
             StartCoroutine(EndOfFrames());
         }
         catch (Exception e)

@@ -32,6 +32,7 @@ public static class GraphAuthoring
         Sorted();
         Prioritized();
         Primitives();
+        Cubes();
         Alike();
         Moving();
         GloballySorted();
@@ -63,12 +64,15 @@ public static class GraphAuthoring
     static VFXSlot Input(VFXModel model, string name) => ((IVFXSlotContainer)model).inputSlots.First(s => s.name == name);
 
     /// <summary>A spawner, an initialize, an update and a quad output, linked; returns them.</summary>
-    static (VFXBasicSpawner Spawn, VFXBasicInitialize Init, VFXPlanarPrimitiveOutput Output) System(VFXGraph graph, uint capacity)
+    static (VFXBasicSpawner Spawn, VFXBasicInitialize Init, VFXPlanarPrimitiveOutput Output) System(VFXGraph graph, uint capacity) =>
+        System<VFXPlanarPrimitiveOutput>(graph, capacity);
+
+    static (VFXBasicSpawner Spawn, VFXBasicInitialize Init, TOutput Output) System<TOutput>(VFXGraph graph, uint capacity) where TOutput : VFXContext
     {
         var spawn = Make<VFXBasicSpawner>();
         var init = Make<VFXBasicInitialize>();
         var update = Make<VFXBasicUpdate>();
-        var output = Make<VFXPlanarPrimitiveOutput>();
+        var output = Make<TOutput>();
         graph.AddChild(spawn);
         graph.AddChild(init);
         graph.AddChild(update);
@@ -395,6 +399,41 @@ public static class GraphAuthoring
             SetVector(manyInit, "color", new Vector3(0.3f, 0.6f, 1f));
             Save(many);
         }
+    }
+
+    /// <summary>The graphs of cubes (README.md, "Primitives"): `Output Particle Cube`, forty
+    /// opaque cubes turned every way, drawn directly or from the update kernel's list, and more
+    /// cubes than one draw's 16-bit indices reach (8192), turned too, added to what is
+    /// behind.</summary>
+    static void Cubes()
+    {
+        foreach (var listed in new[] { false, true })
+        {
+            var still = NewGraph(listed ? "CubeList" : "CubeStill");
+            var (spawn, init, output) = System<VFXBasicCubeOutput>(still, 64);
+            output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+            if (listed) output.SetSettingValue("indirectDraw", true);
+            Burst(spawn, 40f);
+            SetRandom(init, "position", new Vector3(-1f, -1f, -1f), new Vector3(1f, 1f, 1f));
+            Set(init, "size", 0.35f);
+            SetRandom(init, "angleX", 0f, 90f);
+            SetRandom(init, "angleY", 0f, 90f);
+            SetRandom(init, "angleZ", 0f, 90f);
+            SetRandom(init, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
+            Save(still);
+        }
+        var many = NewGraph("CubeMany");
+        var (manySpawn, manyInit, manyOutput) = System<VFXBasicCubeOutput>(many, 10000);
+        manyOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Additive);
+        Burst(manySpawn, 10000f);
+        SetRandom(manyInit, "position", new Vector3(-1.4f, -1.4f, 0f), new Vector3(1.4f, 1.4f, 0f));
+        Set(manyInit, "size", 0.05f);
+        // Turned every way: no face of a cube is edge-on to the camera.
+        SetRandom(manyInit, "angleX", 10f, 80f);
+        SetRandom(manyInit, "angleY", 10f, 80f);
+        SetRandom(manyInit, "angleZ", 0f, 90f);
+        SetVector(manyInit, "color", new Vector3(0.3f, 0.6f, 1f));
+        Save(many);
     }
 
     /// <summary>Graphs whose generated shaders share a name (README.md, "Alike"): one file name

@@ -59,6 +59,14 @@ own; octagons with a crop factor of 0.3, which pulls their odd corners in), `Tri
 (30000 additive primitives: more than one draw's 16-bit indices reach for octagons, drawn as
 instances of 1024; triangles in one draw).
 
+Cubes (`Assets/OutputGraphs/Cube*.vfx`, `Output Particle Cube`): `CubeStill` (forty opaque cubes,
+each with a place, a depth, a colour and a turn about each axis of its own), `CubeList` (the same
+through the update kernel's list) and `CubeMany` (10000 additive cubes, each turned so that no
+face is edge-on to the camera: more than one draw's 16-bit indices reach, 8192, drawn as instances
+of 1024 as the vertex program reads them). `CubeStill` and `CubeList` are the Editor's pixel for
+pixel; in `CubeMany`, cubes of about a pixel, the brightness of pixels where cubes pile up differs
+(`image_limits.json`; cause not resolved).
+
 `Priority`: two systems over the same particles (one seed), the first with two outputs and the
 second with one, unsorted and alpha blended, each output of a colour of its own and a label of its
 own, with output priorities (`sortPriority`, the asset's output render order) of 2 and 0, then 1.
@@ -116,8 +124,8 @@ others with a start seed of 11 and gives it orthographic cameras of its own, eac
   otherwise) in each frame.
 - `SortKeyed` as the four above; `SortYoungest` (frames 30 and 45); `SortKeyedMany` (frame 5);
   `SortMany` (frame 5, values only).
-- `TriangleStill`, `TriangleList`, `TriangleMany`, `OctagonStill`, `OctagonList`, `OctagonMany`
-  (frame 3).
+- `TriangleStill`, `TriangleList`, `TriangleMany`, `OctagonStill`, `OctagonList`, `OctagonMany`,
+  `CubeStill`, `CubeList`, `CubeMany` (frame 3).
 - `Priority` (frame 3): the outputs drawn by their priority, the lowest first, across systems;
   `PriorityTies` (frame 3): equal ones in their systems' order, then each system's.
 - `Effects` (frame 3): two effects over each other (`SortKeyed`, and `SortDistance` made after it
@@ -167,6 +175,8 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
   be: an output of this kind that casts shadows is not measured, here or in
   `tests/projects/vfxlit`, whose casters draw themselves.)
 - Alpha-blended outputs with sorting off are drawn but not measured here (their order shows).
+- Cubes sorted, through a list made at each step or for each camera, with another cull mode, or
+  edge-on to the camera.
 - Triangles and octagons sorted, through a list made at each step or for each camera, lit, or
   through an indirect buffer beyond 8192 octagons; octagons cropped by more than one half; cull
   modes other than the output's default.

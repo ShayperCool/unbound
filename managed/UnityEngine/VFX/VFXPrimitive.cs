@@ -20,11 +20,44 @@ namespace Unbound.Runtime
         internal static readonly Primitive Octagon = new Primitive(8, new ushort[] { 0, 1, 7, 1, 2, 7, 2, 6, 7, 2, 3, 6, 3, 5, 6, 3, 4, 5 }, OctagonsPerInstance);
         /// <summary>One triangle: its three vertices.</summary>
         internal static readonly Primitive Triangle = new Primitive(3, new ushort[] { 0, 1, 2 }, 0);
+        /// <summary>Twelve triangles over a cube's eight corners (corner i at the offsets the
+        /// program gives it: x from bit 0, y from bit 1, z from bit 2), each face's two
+        /// triangles facing out (<see cref="CubeFaces"/>).</summary>
+        internal static readonly Primitive Hexahedron = new Primitive(8, CubeFaces(), HexahedronsPerInstance);
 
         /// <summary>The primitives of each instance of a draw beyond one draw's indices, as the
         /// generated vertex programs find a particle: <c>(vertexID >> 2) + instanceID * 2048</c>
-        /// for quads, <c>(vertexID >> 3) + instanceID * 1024</c> for octagons.</summary>
-        const uint QuadsPerInstance = 2048, OctagonsPerInstance = 1024;
+        /// for quads, <c>(vertexID >> 3) + instanceID * 1024</c> for octagons and cubes.</summary>
+        const uint QuadsPerInstance = 2048, OctagonsPerInstance = 1024, HexahedronsPerInstance = 1024;
+
+        /// <summary>A cube's faces as triangles over its corners, wound as the quad's are (the
+        /// face toward the camera at negative z is <c>0, 2, 1, 1, 2, 3</c>, the quad's own):
+        /// each triangle's corners in the order whose cross product points out of the cube.</summary>
+        static ushort[] CubeFaces()
+        {
+            var faces = new ushort[36];
+            int at = 0;
+            static Vector3 Corner(int i) => new Vector3(i & 1, (i >> 1) & 1, (i >> 2) & 1);
+            // Each face: the axis it is across and its side; its corners in the quad's order.
+            for (int axis = 0; axis < 3; axis++)
+                for (int side = 0; side < 2; side++)
+                {
+                    // The two other axes, in order.
+                    int u = axis == 0 ? 1 : 0, v = axis == 2 ? 1 : 2;
+                    int Pick(int du, int dv) => (side << axis) | (du << u) | (dv << v);
+                    var quad = new[] { Pick(0, 0), Pick(1, 0), Pick(0, 1), Pick(1, 1) };
+                    var outward = new Vector3(axis == 0 ? side * 2 - 1 : 0, axis == 1 ? side * 2 - 1 : 0, axis == 2 ? side * 2 - 1 : 0);
+                    foreach (var (a, b, c) in new[] { (0, 2, 1), (1, 2, 3) })
+                    {
+                        var (p, q, r) = (quad[a], quad[b], quad[c]);
+                        if (Vector3.Dot(Vector3.Cross(Corner(q) - Corner(p), Corner(r) - Corner(p)), outward) < 0f) (q, r) = (r, q);
+                        faces[at++] = (ushort)p;
+                        faces[at++] = (ushort)q;
+                        faces[at++] = (ushort)r;
+                    }
+                }
+            return faces;
+        }
 
         internal readonly int Vertices;
         readonly ushort[] m_Pattern;

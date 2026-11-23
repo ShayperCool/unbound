@@ -155,7 +155,7 @@ namespace Unbound.Runtime
         /// (<see cref="SourceRefusal"/>).</summary>
         internal static string Refusal(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task, UnityEngine.Object processor, string sourceRefusal = null)
         {
-            if (!IsPlanar(task.type) && task.type != VFXTaskType.ParticleMeshOutput) return $"{task.type} is not drawn yet (quads, triangles, octagons and meshes are)";
+            if (!IsPlanar(task.type) && task.type != VFXTaskType.ParticleHexahedronOutput && task.type != VFXTaskType.ParticleMeshOutput) return $"{task.type} is not drawn yet (quads, triangles, octagons, cubes and meshes are)";
             if ((system.flags & VFXSystemFlag.SystemHasStrips) != 0)
             {
                 // Strips are quads from each particle to the next, drawn for all the strips'
@@ -318,7 +318,8 @@ namespace Unbound.Runtime
 
         /// <summary>The planar primitive an output task draws.</summary>
         internal static Primitive PrimitiveOf(VFXTaskType type) =>
-            type == VFXTaskType.ParticleTriangleOutput ? Primitive.Triangle : type == VFXTaskType.ParticleOctagonOutput ? Primitive.Octagon : Primitive.Quad;
+            type == VFXTaskType.ParticleTriangleOutput ? Primitive.Triangle : type == VFXTaskType.ParticleOctagonOutput ? Primitive.Octagon
+            : type == VFXTaskType.ParticleHexahedronOutput ? Primitive.Hexahedron : Primitive.Quad;
 
         /// <summary>Computes the arguments of an indirect draw from the count its list has now
         /// (after the kernels that make the list for this camera). False when they cannot be.</summary>
