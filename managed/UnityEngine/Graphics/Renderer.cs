@@ -582,6 +582,8 @@ namespace UnityEngine
         /// <summary>The local bounds set through bounds / localBounds, if any.</summary>
         internal Bounds? LocalBoundsOverride => m_LocalBoundsOverride;
 
+        internal bool HasCustomBounds => m_BoundsOverride.HasValue || m_LocalBoundsOverride.HasValue;
+
         internal virtual Bounds GetWorldBounds()
         {
             var local = localBounds;

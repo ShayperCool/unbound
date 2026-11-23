@@ -438,7 +438,7 @@ namespace UnityEngine
         // ------------------------------------------------------------------ culling bounds
 
         Bounds m_CullingBounds;
-        bool m_CullingBoundsCoverDraw;
+        bool m_CullingBoundsCoverDraw, m_ComputedApproximateBounds;
         /// <summary>The system's bounds generation and simulation-to-world matrix the culling
         /// bounds were computed with: frozen bounds follow the emitter's pose since then.</summary>
         int m_CullingBoundsGeneration = -1;
@@ -453,6 +453,9 @@ namespace UnityEngine
 
         internal override Bounds CullingBounds => m_CullingBounds;
 
+        internal bool UsesMeasuredAnimationVisibility => Compat.RenderingMeasured && m_RenderMode != ParticleSystemRenderMode.Mesh
+            && GraphicsSettings.currentRenderPipeline == null && RenderPipelineManager.currentPipeline == null;
+
         internal override bool NothingToDraw => System is ParticleSystem ps && ps.m_DrawPending;
 
         /// <summary>Whether <see cref="CullingBounds"/> cover everything the renderer draws, so
@@ -466,13 +469,9 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>World bounds that cover what the renderer draws, from its live particles (centre
-        /// ± size by the render mode: a quad's half diagonal, the stretched length, the mesh's
-        /// extent, the pivot), or the emitter's position without one, computed once per frame and
-        /// simulation state. Trails, a minimum particle size (a screen size) and stretching by the camera's
-        /// velocity are not bounded: such a renderer keeps its plain bounds and is drawn (and
-        /// visible) whenever a camera draws its layer (Unbound's choice; the bounds Unity culls
-        /// particles by are not measured).</summary>
+        /// <summary>Computes the renderer's visibility bounds once per frame and simulation state.
+        /// The conservative draw bounds include render mode reach, size and pivot. Trails, minimum
+        /// screen size and camera-velocity stretching use approximate visibility bounds.</summary>
         internal override void PrepareCullingBounds()
         {
             var ps = System;
@@ -485,8 +484,13 @@ namespace UnityEngine
                 {
                     // The kept bounds move with the emitter (a local-space system moved while time
                     // stands still; world-space ones stay put).
-                    var moved = ps.SimulationToWorld() * m_CullingBoundsToWorld.inverseDoublePrecision;
-                    m_CullingBounds = m_CullingBoundsCoverDraw ? TransformBounds(m_ComputedCullingBounds, moved) : bounds;
+                    if (m_CullingBoundsCoverDraw || (m_ComputedApproximateBounds && UsesMeasuredApproximateBounds))
+                    {
+                        var moved = ps.SimulationToWorld() * m_CullingBoundsToWorld.inverseDoublePrecision;
+                        m_CullingBounds = TransformBounds(m_ComputedCullingBounds, moved);
+                    }
+                    else
+                        m_CullingBounds = bounds;
                     return;
                 }
                 if (!ps.m_HasBounds && !ps.m_DrawPending) ps.m_HasBounds = true;
@@ -498,9 +502,16 @@ namespace UnityEngine
             m_CullingBoundsCount = ps != null ? ps.m_Count : -1;
             m_CullingBoundsCoverDraw = ps != null && !ps.m_Trails.enabled && !ps.HasAliveTrails && !(m_MinParticleSize > 0f)
                 && !(m_RenderMode == ParticleSystemRenderMode.Stretch && m_CameraVelocityScale != 0f);
+            m_ComputedApproximateBounds = !m_CullingBoundsCoverDraw && ps != null && UsesMeasuredApproximateBounds;
             if (!m_CullingBoundsCoverDraw)
             {
-                m_CullingBounds = bounds;
+                if (m_ComputedApproximateBounds)
+                {
+                    m_CullingBoundsToWorld = ps.SimulationToWorld();
+                    m_CullingBounds = m_ComputedCullingBounds = ApproximateCullingBounds(ps, m_CullingBoundsToWorld);
+                }
+                else
+                    m_CullingBounds = bounds;
                 return;
             }
             float reach;
@@ -518,7 +529,7 @@ namespace UnityEngine
             float speedReach = m_RenderMode == ParticleSystemRenderMode.Stretch ? Mathf.Abs(m_VelocityScale) : 0f;
             var toWorld = ps.SimulationToWorld();
             var scale = ps.EmitterScale();
-            float maxScale = Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
+            float maxScale = LargestAxis(scale);
             // The particles' bounds; a system without one is a point at its emitter (6000.0.71f1,
             // particlerender firstvis/paused/stale: particles out of view, emitter in view, unseen).
             var emitter = m_GameObject.m_Transform.position;
@@ -530,7 +541,7 @@ namespace UnityEngine
                 if (p.IsTrailCarrier) continue;
                 var w = toWorld.MultiplyPoint3x4(p.m_Position);
                 var s = ps.CurrentSize3D(ref p);
-                float r = reach * maxScale * Mathf.Max(Mathf.Abs(s.x), Mathf.Max(Mathf.Abs(s.y), Mathf.Abs(s.z)));
+                float r = reach * maxScale * LargestAxis(s);
                 if (speedReach > 0f) r += speedReach * (p.m_Velocity + p.m_AnimatedVelocity).magnitude;
                 min = Vector3.Min(min, w - new Vector3(r, r, r));
                 max = Vector3.Max(max, w + new Vector3(r, r, r));
@@ -544,6 +555,62 @@ namespace UnityEngine
             m_ComputedCullingBounds = m_CullingBounds;
             m_CullingBoundsToWorld = toWorld;
         }
+
+        bool UsesMeasuredApproximateBounds => UsesMeasuredAnimationVisibility && !HasCustomBounds;
+
+        // The measured bounds enclose particle positions and expand by a uniform margin from the
+        // largest configured start size or sampled live size (particleanimvisibility).
+        Bounds ApproximateCullingBounds(ParticleSystem ps, Matrix4x4 toWorld)
+        {
+            var scale = ps.EmitterScale();
+            float largest = Mathf.Abs(ps.m_Main.startSizeX.MaxValue);
+            if (ps.m_Main.startSize3D)
+                largest = Mathf.Max(largest, Mathf.Max(Mathf.Abs(ps.m_Main.startSizeY.MaxValue), Mathf.Abs(ps.m_Main.startSizeZ.MaxValue)));
+
+            Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue), max = -min;
+            void Include(Vector3 point)
+            {
+                min = Vector3.Min(min, point);
+                max = Vector3.Max(max, point);
+            }
+
+            for (int i = 0; i < ps.m_Count; i++)
+            {
+                ref var particle = ref ps.m_Particles[i];
+                if (particle.IsTrailCarrier) continue;
+                var position = toWorld.MultiplyPoint3x4(particle.m_Position);
+                Include(position);
+                var size = ps.CurrentSize3D(ref particle);
+                largest = Mathf.Max(largest, LargestAxis(size));
+                if (m_RenderMode == ParticleSystemRenderMode.Stretch)
+                {
+                    var velocity = particle.m_Velocity + particle.m_AnimatedVelocity;
+                    var direction = toWorld.MultiplyVector(velocity).normalized;
+                    float length = size.y * Mathf.Abs(scale.x) * m_LengthScale + velocity.magnitude * m_VelocityScale;
+                    Include(position - direction * length);
+                }
+            }
+
+            if (ps.HasAliveTrails)
+            {
+                var trailToWorld = ps.m_Trails.worldSpace ? Matrix4x4.identity : toWorld;
+                foreach (var trail in ps.m_TrailList)
+                {
+                    if (trail == null || trail.Points.Count == 0) continue;
+                    Include(trailToWorld.MultiplyPoint3x4(trail.Head));
+                    foreach (var point in trail.Points)
+                        Include(trailToWorld.MultiplyPoint3x4(point));
+                }
+            }
+
+            if (min.x > max.x) min = max = m_GameObject.m_Transform.position;
+            float margin = Mathf.Max(MinCullingExtent, 2f * VisibilityRadiusPerSize * largest * LargestAxis(scale));
+            return new Bounds((min + max) * .5f, max - min + margin * Vector3.one);
+        }
+
+        static float LargestAxis(Vector3 v) => Mathf.Max(Mathf.Abs(v.x), Mathf.Max(Mathf.Abs(v.y), Mathf.Abs(v.z)));
+
+        const float VisibilityRadiusPerSize = .71f;
 
         /// <summary>The smallest size of particle culling bounds (see PrepareCullingBounds).</summary>
         const float MinCullingExtent = 1e-4f;
@@ -566,14 +633,14 @@ namespace UnityEngine
         {
             var toWorld = ps.SimulationToWorld();
             var scale = ps.EmitterScale();
-            float maxScale = Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
+            float maxScale = LargestAxis(scale);
             Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue), max = -min;
             for (int i = 0; i < ps.m_Count; i++)
             {
                 ref var p = ref ps.m_Particles[i];
                 var w = toWorld.MultiplyPoint3x4(p.m_Position);
                 var s = ps.CurrentSize3D(ref p);
-                float r = 0.5f * maxScale * Mathf.Max(Mathf.Abs(s.x), Mathf.Max(Mathf.Abs(s.y), Mathf.Abs(s.z)));
+                float r = 0.5f * maxScale * LargestAxis(s);
                 min = Vector3.Min(min, w - new Vector3(r, r, r));
                 max = Vector3.Max(max, w + new Vector3(r, r, r));
             }

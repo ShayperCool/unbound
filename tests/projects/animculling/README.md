@@ -74,8 +74,10 @@ and then validates only the four documented rotation-threshold residuals below.
 `compare.py` compares every record (numbers within 1e-4) and lists missing, extra and differing ones.
 Run output stays under `$XDG_CACHE_HOME/unbound/validation/runs/animculling/`.
 
-Unmeasured: other releases, particle/line/trail renderers, controller-only non-transform
-properties under CullUpdateTransforms, the Physics update mode, and the Scene view camera.
+The companion `particleanimvisibility` probe measures particle renderer visibility with minimum
+screen size, trails and camera-velocity stretching. `animatorapi` measures line bounds.
+Standalone TrailRenderers, other releases, controller-only non-transform properties under
+CullUpdateTransforms, the Physics update mode, and Scene view cameras remain unmeasured here.
 
 ## Playable outputs
 

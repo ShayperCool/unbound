@@ -1675,7 +1675,7 @@ namespace UnityEngine
             {
                 if (!renderer.CullingBoundsCoverDraw && CullingSimulates)
                     Unbound.Runtime.Stubs.Ignored("Particle culling without covering bounds",
-                        "may keep simulating offscreen: Unbound cannot bound this system's drawing (trails, a minimum particle size, stretching by camera velocity), so it counts as visible whenever a camera draws its layer");
+                        "uses approximate renderer visibility for simulation culling (trails, a minimum particle size or camera-velocity stretching)");
                 return CullingState.Simulated;
             }
             return frame == m_CullingGraceFrame + 1 ? CullingState.SimulatedOffscreen : CullingState.Culled;

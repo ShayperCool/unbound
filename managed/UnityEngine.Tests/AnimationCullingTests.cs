@@ -72,6 +72,24 @@ namespace UnityEngine.Tests
             return renderer;
         }
 
+        [Theory]
+        [InlineData(TestRelease.Measured, false)]
+        [InlineData(TestRelease.Unmeasured, true)]
+        public void AnInvisibleParticleRendererWithMinimumSizeUsesTheReleaseVisibilityRule(string release, bool expected)
+        {
+            using var pinned = TestRelease.Pin(release);
+            var root = new GameObject("Particles");
+            m_Objects.Add(root);
+            var particles = root.AddComponent<ParticleSystem>();
+            var renderer = particles.GetComponent<ParticleSystemRenderer>();
+            renderer.minParticleSize = .2f;
+
+            Assert.False(renderer.isVisible);
+            Assert.Equal(expected, Animator.AnyRendererVisible(root));
+            renderer.SetVisible(true);
+            Assert.True(Animator.AnyRendererVisible(root));
+        }
+
         /// <summary>The popup controller's rig (a 0.3 s non-looping state that scales and moves
         /// ContinueText), with a renderer on a second child when <paramref name="withRenderer"/>.</summary>
         (Animator Animator, RectTransform Text, Renderer Renderer) Rig(AnimatorCullingMode mode, bool withRenderer = true)
