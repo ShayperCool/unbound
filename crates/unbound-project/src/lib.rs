@@ -428,16 +428,13 @@ impl Project {
         Ok(true)
     }
 
-    /// The project's release with its build revision (`907bc2d768b5`), as the Editor of that
-    /// release knows it: from the installation, else the project's own version file when it names
-    /// the same release. None when neither tells it.
+    /// The build revision of the project's release (`907bc2d768b5`), as the Editor of that
+    /// release knows it: the installation's when it is that release, else the one the project's
+    /// version file states for it. None when neither tells it.
     pub fn revision(&self) -> Option<String> {
-        if self.version != self.install.version {
-            return None;
-        }
         let text =
             std::fs::read_to_string(self.root.join("ProjectSettings/ProjectVersion.txt")).ok();
-        builtin_shaders::revision(&self.install, text.as_deref())
+        builtin_shaders::release_revision(&self.install, self.version, text.as_deref())
     }
 
     pub fn asset_db(&self) -> AssetDb {

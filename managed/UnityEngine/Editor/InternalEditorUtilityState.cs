@@ -19,7 +19,7 @@ namespace UnityEditorInternal
         [Unbound.EditorFaithful("Unbound has no editor views to repaint (as the batch-mode Editor)")]
         public static void RepaintAllViews() { }
 
-        static bool s_WarnedRevision;
+        internal static bool s_WarnedRevision;
 
         /// <summary>The release with its build revision, as the Editor of the release states it
         /// ("6000.0.71f1 (907bc2d768b5)"). Without a known revision (no Hub modules.json beside the
@@ -32,7 +32,7 @@ namespace UnityEditorInternal
             if (!s_WarnedRevision)
             {
                 s_WarnedRevision = true;
-                Debug.LogError($"Unbound: the build revision of Unity {version} is not known (no Hub modules.json beside the Editor and none in ProjectSettings/ProjectVersion.txt): InternalEditorUtility.GetFullUnityVersion answers the release without it.");
+                Debug.LogError($"Unbound: the build revision of Unity {version} is not known (no Hub modules.json beside an installed {version} Editor and none for {version} in ProjectSettings/ProjectVersion.txt): InternalEditorUtility.GetFullUnityVersion answers the release without it, so code that reads the revision out of it (as the performance testing package does) will fail.");
             }
             return version;
         }

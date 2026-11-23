@@ -244,23 +244,41 @@ pub(crate) fn revision(
     install: &UnityInstall,
     project_version_txt: Option<&str>,
 ) -> Option<String> {
-    let hub_dir = install.root()?;
-    if let Ok(text) = std::fs::read_to_string(hub_dir.join("modules.json")) {
-        // ".../download_unity/<revision>/..."
-        if let Some(rest) = text.split("/download_unity/").nth(1)
-            && let Some(rev) = rest.split('/').next()
-            && is_revision(rev)
-        {
-            return Some(rev.to_string());
-        }
+    release_revision(install, install.version, project_version_txt)
+}
+
+/// The build revision of `release`: the installation's (the Hub's `modules.json` next to the
+/// editor) when the installation is that release, else the one a project version file states for
+/// that release (`m_EditorVersionWithRevision`). None when neither tells it.
+pub(crate) fn release_revision(
+    install: &UnityInstall,
+    release: UnityVersion,
+    project_version_txt: Option<&str>,
+) -> Option<String> {
+    if install.version == release
+        && let Some(revision) = install_revision(install)
+    {
+        return Some(revision);
     }
-    let text = project_version_txt?;
+    version_file_revision(project_version_txt?, release)
+}
+
+/// The Hub's record of the installation's revision (".../download_unity/<revision>/...").
+fn install_revision(install: &UnityInstall) -> Option<String> {
+    let text = std::fs::read_to_string(install.root()?.join("modules.json")).ok()?;
+    let rest = text.split("/download_unity/").nth(1)?;
+    let rev = rest.split('/').next()?;
+    is_revision(rev).then(|| rev.to_string())
+}
+
+/// The revision a `ProjectVersion.txt` states, when it states it for `release`.
+fn version_file_revision(text: &str, release: UnityVersion) -> Option<String> {
     let line = text
         .lines()
         .find(|l| l.trim_start().starts_with("m_EditorVersionWithRevision:"))?;
     let (_, value) = line.split_once(':')?;
     let (version, rest) = value.trim().split_once(' ')?;
-    if version.parse::<UnityVersion>().ok()? != install.version {
+    if version.parse::<UnityVersion>().ok()? != release {
         return None;
     }
     let rev = rest.trim().trim_start_matches('(').trim_end_matches(')');
@@ -319,6 +337,25 @@ mod tests {
         );
         let other = "m_EditorVersionWithRevision: 6000.0.70f1 (0123456789ab)\n";
         assert_eq!(revision(&install, Some(other)), None);
+    }
+
+    #[test]
+    fn a_project_on_another_patch_has_the_revision_its_version_file_states() {
+        // The installation found is 71f1 (the profile's), the project is on 50f1.
+        let install = UnityInstall {
+            data: PathBuf::from("/nonexistent/6000.0.71f1/Editor/Data"),
+            version: "6000.0.71f1".parse().unwrap(),
+        };
+        let project: UnityVersion = "6000.0.50f1".parse().unwrap();
+        let txt = "m_EditorVersion: 6000.0.50f1\nm_EditorVersionWithRevision: 6000.0.50f1 (abcdef123456)\n";
+        assert_eq!(
+            release_revision(&install, project, Some(txt)).as_deref(),
+            Some("abcdef123456")
+        );
+        // A file stating another release's revision does not give it.
+        let other = "m_EditorVersionWithRevision: 6000.0.49f1 (0123456789ab)\n";
+        assert_eq!(release_revision(&install, project, Some(other)), None);
+        assert_eq!(release_revision(&install, project, None), None);
     }
 
     #[test]
