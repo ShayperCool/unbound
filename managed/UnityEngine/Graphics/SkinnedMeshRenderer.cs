@@ -218,7 +218,7 @@ namespace UnityEngine
                 if (!m_GraphicsOutputRequested)
                 {
                     m_GraphicsOutputRequested = true;
-                    // Skins are in the root bone's space from now on (SkinRoot).
+                    // The pass's skin is in the root bone's space from now on (SkinRoot).
                     m_SkinnedEpoch = m_NowFrame = -1;
                     m_BufferUser = s_BufferUsers.Count;
                     s_BufferUsers.Add(this);
@@ -364,7 +364,8 @@ namespace UnityEngine
 
         /// <summary>The deformed mesh, computed once a skinning pass (<see cref="SkinPass"/>; or
         /// now): the shapes added in the mesh's space, then skinned into world space when the mesh
-        /// has bones (the root bone's space once its buffer is asked for: SkinRoot).</summary>
+        /// has bones (the pass's skin in the root bone's space once its buffer is asked for:
+        /// SkinRoot; a skin made now stays in world space).</summary>
         Mesh Deform(bool now = false, bool reuse = false)
         {
             if (now)
