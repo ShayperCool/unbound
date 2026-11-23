@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -10,13 +11,23 @@ sealed class RendererMemoryPipeline : RenderPipelineAsset
 {
     sealed class EmptyPipeline : RenderPipeline
     {
-        protected override void Render(ScriptableRenderContext context, Camera[] cameras) { }
+        internal bool RenderedCamera;
+
+        protected override void Render(ScriptableRenderContext context, Camera[] cameras)
+        {
+            context.Submit();
+            RenderedCamera |= cameras.Length != 0;
+        }
     }
 
-    protected override RenderPipeline CreatePipeline() => new EmptyPipeline();
+    EmptyPipeline m_Instance;
+    internal bool RenderedFrame => m_Instance != null && m_Instance.RenderedCamera
+        && ReferenceEquals(RenderPipelineManager.currentPipeline, m_Instance);
+
+    protected override RenderPipeline CreatePipeline() => m_Instance = new EmptyPipeline();
 }
 
-static class MeasureMeshRendererMemory
+public sealed class MeasureMeshRendererMemory : MonoBehaviour
 {
     [Serializable] sealed class Row { public string k, v; }
 
@@ -95,6 +106,71 @@ static class MeasureMeshRendererMemory
         Object.DestroyImmediate(mesh);
         Object.DestroyImmediate(renderer.gameObject);
         Object.DestroyImmediate(instance);
+    }
+
+    static void MeasureAssignAndGetMaterials(Material original)
+    {
+        var renderer = new GameObject("Material API controls").AddComponent<MeshRenderer>();
+        var first = new Material(original);
+        var second = new Material(original);
+        var list = new List<Material> { first, second, original, first };
+        renderer.SetSharedMaterials(list);
+        Read("assignment.sharedListGrowth", renderer);
+        var shared = renderer.sharedMaterials;
+        Put("assignment.sharedListIdentity", (shared[0] == first && shared[1] == second && shared[2] == original && shared[3] == first).ToString());
+        list[0] = second;
+        Put("assignment.sharedListOwnsArray", (renderer.sharedMaterial == first).ToString());
+
+        renderer.SetMaterials(new List<Material> { second, first, original, second, first, original });
+        Read("assignment.instanceListGrowth", renderer);
+        shared = renderer.sharedMaterials;
+        Put("assignment.instanceListIdentity", (shared[0] == second && shared[1] == first && shared[2] == original).ToString());
+        var instances = renderer.materials;
+        var owned = new HashSet<Material>(instances);
+        Put("assignment.getCreatesInstances", (instances[0] != second && instances[1] != first && instances[2] != original).ToString());
+        var instance = instances[0];
+        instances[0] = first;
+        Put("assignment.getReturnsCopy", (renderer.sharedMaterial == instance).ToString());
+
+        renderer.materials = new[] { first, second, original, first, second, original, first, second, original };
+        Read("assignment.arrayGrowth", renderer);
+        shared = renderer.sharedMaterials;
+        Put("assignment.arrayIdentity", (shared[0] == first && shared[1] == second && shared[2] == original).ToString());
+        Object.DestroyImmediate(renderer.gameObject);
+        foreach (var item in owned)
+            if (item != original && item != first && item != second) Object.DestroyImmediate(item);
+        Object.DestroyImmediate(first);
+        Object.DestroyImmediate(second);
+    }
+
+    static void MeasureIndexedReservationLifetime(Material material)
+    {
+        var renderer = new GameObject("Indexed reservation lifetime").AddComponent<MeshRenderer>();
+        var block = new MaterialPropertyBlock();
+        block.SetFloat(Property, 3.75f);
+        renderer.sharedMaterials = Materials(3, material);
+        renderer.SetPropertyBlock(block, 1);
+        Read("indexedLifetime.initial", renderer, 1);
+        renderer.SetPropertyBlock(null, 1);
+        Read("indexedLifetime.clearLast", renderer, 1);
+        renderer.sharedMaterials = Materials(5, material);
+        Read("indexedLifetime.growAfterClear", renderer, 4);
+        renderer.sharedMaterials = Array.Empty<Material>();
+        Read("indexedLifetime.zero", renderer);
+        renderer.sharedMaterials = Materials(8, material);
+        Read("indexedLifetime.growPastZero", renderer, 7);
+        renderer.SetPropertyBlock(block, 7);
+        Read("indexedLifetime.reseed", renderer, 7);
+        Object.DestroyImmediate(renderer.gameObject);
+
+        renderer = new GameObject("Late indexed reservation").AddComponent<MeshRenderer>();
+        renderer.sharedMaterials = Materials(12, material);
+        renderer.sharedMaterials = Materials(2, material);
+        renderer.SetPropertyBlock(block, 1);
+        Read("indexedLate.seedFromShrunkList", renderer, 1);
+        renderer.sharedMaterials = Materials(5, material);
+        Read("indexedLate.growBelowMaterialReservation", renderer, 4);
+        Object.DestroyImmediate(renderer.gameObject);
     }
 
     static void MeasureIndexedBlocks(string prefix, int count, Material material)
@@ -209,31 +285,42 @@ static class MeasureMeshRendererMemory
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Capture()
+    static void Begin()
+    {
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MESH_RENDERER_MEMORY_OUT")))
+            new GameObject("Measure renderer memory").AddComponent<MeasureMeshRendererMemory>();
+    }
+
+    IEnumerator Start()
     {
         string output = Environment.GetEnvironmentVariable("MESH_RENDERER_MEMORY_OUT");
-        if (string.IsNullOrEmpty(output)) return;
         Put("unity", Application.unityVersion);
         var material = new Material(Shader.Find("Unlit/Color"));
         MeasureMaterialSlots(material);
+        MeasureAssignAndGetMaterials(material);
+        MeasureIndexedReservationLifetime(material);
         MeasureIndexErrors(material);
         foreach (int count in new[] { 1, 2, 3, 5, 8, 17 })
             MeasureIndexedBlocks("builtin." + count, count, material);
 
         var pipeline = ScriptableObject.CreateInstance<RendererMemoryPipeline>();
+        var srpCamera = new GameObject("SRP measurement camera").AddComponent<Camera>();
         var previousDefault = GraphicsSettings.defaultRenderPipeline;
         var previousQuality = QualitySettings.renderPipeline;
         try
         {
             QualitySettings.renderPipeline = null;
             GraphicsSettings.defaultRenderPipeline = pipeline;
+            for (int frame = 0; frame < 4 && !pipeline.RenderedFrame; frame++) yield return null;
             Put("srp.active", (GraphicsSettings.currentRenderPipeline != null).ToString());
+            Put("srp.renderedFrame", pipeline.RenderedFrame.ToString());
             MeasureIndexedBlocks("srp.3", 3, material);
         }
         finally
         {
             QualitySettings.renderPipeline = previousQuality;
             GraphicsSettings.defaultRenderPipeline = previousDefault;
+            Object.DestroyImmediate(srpCamera.gameObject);
             Object.DestroyImmediate(pipeline);
         }
         MeasureAuthored();
