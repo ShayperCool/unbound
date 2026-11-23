@@ -31,7 +31,7 @@ namespace Unbound.Runtime.Humanoid
         /// h.deopt.played, h.rt.replayed: a deoptimized humanoid plays on).</summary>
         internal void Rebind()
         {
-            m_Bound = AvatarBinding.Bind(m_Animator.transform, m_Constant);
+            m_Bound = AvatarBinding.Bind(m_Animator.AvatarRootTransform(), m_Constant);
             m_HumanNodes = null;
         }
 
@@ -57,7 +57,7 @@ namespace Unbound.Runtime.Humanoid
         {
             m_Animator = animator;
             m_Constant = constant;
-            m_Bound = AvatarBinding.Bind(animator.transform, constant);
+            m_Bound = AvatarBinding.Bind(animator.AvatarRootTransform(), constant);
             int n = constant.AvatarSkeleton.Count, h = constant.Human.Skeleton.Count;
             m_AvatarPose = new SkeletonPose(n);
             m_W0 = new SkeletonPose(h);

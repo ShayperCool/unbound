@@ -185,7 +185,97 @@ namespace UnityEngine
         public Avatar avatar
         {
             get { MainThreadCheck.Check("get_avatar"); return m_Avatar; }
-            set { MainThreadCheck.Check("set_avatar"); m_Avatar = value; }
+            set
+            {
+                MainThreadCheck.Check("set_avatar");
+                m_Avatar = value;
+                m_AvatarRoot = null;
+            }
+        }
+
+        /// <summary>The avatar root found last (kept until the avatar changes or Rebind).</summary>
+        Transform m_AvatarRoot;
+
+        /// <summary>
+        /// Where the avatar's hierarchy is nested in the Animator's (Scripting API
+        /// Animator.avatarRoot): with a valid avatar, the first transform of the hierarchy in
+        /// depth-first order, the Animator's own first, below which the most of the avatar's
+        /// skeleton paths exist (each path matched name by name from that transform); else, or when
+        /// no path matches, the Animator's own transform. Curves and bones bind below it. Found once
+        /// and kept until the avatar changes or Rebind (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/nestedavatar: a model below its holder, renamed, two levels down, after a
+        /// decoy branch, below a holder holding part of the paths, two copies, a humanoid). An
+        /// Animator without its transform hierarchy keeps its own transform (unmeasured).
+        /// </summary>
+        internal Transform AvatarRootTransform()
+        {
+            if (m_GameObject == null) return null;
+            if (m_AvatarRoot != null) return m_AvatarRoot;
+            var own = m_GameObject.m_Transform;
+            m_AvatarRoot = own;
+            if (!m_NoHierarchy && m_Avatar != null && m_Avatar.isValid && m_Avatar.Skeleton is AvatarConstant c && c.AvatarSkeleton.Count > 1)
+                m_AvatarRoot = LocateAvatarRoot(own, c.AvatarSkeleton) ?? own;
+            return m_AvatarRoot;
+        }
+
+        /// <summary>The first transform in depth-first order with the most skeleton paths below
+        /// it; none when no path matches. The search stops once no later transform could match more
+        /// paths than there are transforms after it.</summary>
+        static Transform LocateAvatarRoot(Transform root, Skeleton skeleton)
+        {
+            var candidates = new List<Transform>();
+            CollectDepthFirst(root, candidates);
+            Transform best = null;
+            int bestScore = 0;
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                int score = PathsMatched(candidates[i], skeleton, 0, "");
+                if (score > bestScore)
+                {
+                    best = candidates[i];
+                    bestScore = score;
+                }
+                if (bestScore >= candidates.Count - 1 - i) break;
+            }
+            return best;
+        }
+
+        static void CollectDepthFirst(Transform t, List<Transform> into)
+        {
+            into.Add(t);
+            for (int i = 0; i < t.m_Children.Count; i++) CollectDepthFirst(t.m_Children[i], into);
+        }
+
+        /// <summary>How many paths of the skeleton below <paramref name="node"/> exist below
+        /// <paramref name="t"/> (its path <paramref name="path"/>): each child node is looked for
+        /// among the children by its path hash, from the child after the last one matched.</summary>
+        static int PathsMatched(Transform t, Skeleton skeleton, int node, string path)
+        {
+            int score = 0, matched = 0;
+            for (int j = node; j < skeleton.Count; j++)
+            {
+                if (skeleton.Parent[j] != node) continue;
+                var child = ChildWithPath(t, path, skeleton.Id[j], matched, out string childPath);
+                if (child == null) continue;
+                score += PathsMatched(child, skeleton, j, childPath) + 1;
+                matched++;
+            }
+            return score;
+        }
+
+        static Transform ChildWithPath(Transform t, string path, uint pathHash, int start, out string childPath)
+        {
+            int count = t.m_Children.Count;
+            for (int k = 0; k < count; k++)
+            {
+                var child = t.m_Children[(start + k) % count];
+                string candidate = path.Length == 0 ? child.name : path + "/" + child.name;
+                if (Unbound.Runtime.HashedBindings.Crc32(candidate) != pathHash) continue;
+                childPath = candidate;
+                return child;
+            }
+            childPath = null;
+            return null;
         }
 
         /// <summary>Whether animation outputs of playable graphs target this Animator.</summary>
@@ -242,7 +332,7 @@ namespace UnityEngine
         {
             if (!(AvatarConstant is { IsHuman: true } c) || m_GameObject == null) return null;
             int node = c.AvatarNodeOf(humanBoneId);
-            return node < 0 ? null : AvatarBinding.Find(m_GameObject.m_Transform, c.AvatarSkeleton.Id[node]);
+            return node < 0 ? null : AvatarBinding.Find(AvatarRootTransform(), c.AvatarSkeleton.Id[node]);
         }
     }
 

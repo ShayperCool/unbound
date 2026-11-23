@@ -587,6 +587,14 @@ namespace Unbound.Runtime
             CurvesOnly = curvesOnly;
         }
 
+        /// <summary>The transform curve paths start from: an Animator's avatar root (see
+        /// <see cref="Animator.AvatarRootTransform"/>), else the root's own.</summary>
+        Transform PathRoot()
+        {
+            if (Root == null) return null;
+            return !CurvesOnly && Root.GetComponent<Animator>() is Animator animator ? animator.AvatarRootTransform() : Root.transform;
+        }
+
         internal BoundClip Bind(AnimationClip clip)
         {
             clip.EnsureHumanCurves();
@@ -753,7 +761,7 @@ namespace Unbound.Runtime
         {
             try
             {
-                var spec = PropertyBinder.Resolve(Root, binding, objectValued, clip);
+                var spec = PropertyBinder.Resolve(Root, PathRoot(), binding, objectValued, clip);
                 if (spec.Factory == null)
                 {
                     // An Animator curve no controller here claims yet (see NowOwned).
@@ -1004,7 +1012,7 @@ namespace Unbound.Runtime
 
         static readonly HashSet<string> s_Warned = new HashSet<string>();
 
-        internal static Spec Resolve(GameObject root, CurveBinding binding, bool objectValued, AnimationClip clip)
+        internal static Spec Resolve(GameObject root, Transform pathRoot, CurveBinding binding, bool objectValued, AnimationClip clip)
         {
             var spec = default(Spec);
             if (root == null) return spec;
@@ -1013,17 +1021,17 @@ namespace Unbound.Runtime
                 var s = ResolveSkeleton(skeleton, node, binding.Attribute);
                 if (s.Factory != null) return s;
             }
-            if (binding.Hashed) return ResolveHashed(root, binding, objectValued, clip);
-            var t = binding.Path.Length == 0 ? root.transform : root.transform.Find(binding.Path);
+            if (binding.Hashed) return ResolveHashed(root, pathRoot, binding, objectValued, clip);
+            var t = binding.Path.Length == 0 ? root.transform : pathRoot.Find(binding.Path);
             if (t == null) return spec; // a missing path is not animated (Unity shows it as missing)
             return Resolve(root, t, binding, binding.Attribute, objectValued, clip);
         }
 
         /// <summary>A player clip's binding: the path by its hash below the root, then the
         /// attribute by its hash among the target's properties (Transforms' are named already).</summary>
-        static Spec ResolveHashed(GameObject root, CurveBinding binding, bool objectValued, AnimationClip clip)
+        static Spec ResolveHashed(GameObject root, Transform pathRoot, CurveBinding binding, bool objectValued, AnimationClip clip)
         {
-            var t = HashedBindings.Find(root.transform, binding.PathHash);
+            var t = binding.PathHash == 0 ? root.transform : HashedBindings.Find(pathRoot, binding.PathHash);
             if (t == null) return default;
             var attribute = binding.Attribute;
             if (attribute.Length == 0)

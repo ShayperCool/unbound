@@ -323,7 +323,7 @@ namespace UnityEngine
             set { MainThreadCheck.Check("set_writeDefaultValuesOnDisable"); m_WriteDefaultValuesOnDisable = value; }
         }
 
-        public Transform avatarRoot { get { MainThreadCheck.Check("get_avatarRoot"); return m_GameObject != null ? m_GameObject.m_Transform : null; } }
+        public Transform avatarRoot { get { MainThreadCheck.Check("get_avatarRoot"); return AvatarRootTransform(); } }
 
         /// <summary>The root motion of the last update, in world space (see AnimatorPlayer.ApplyRootMotion).</summary>
         internal Vector3 m_DeltaPosition;
@@ -648,6 +648,7 @@ namespace UnityEngine
         public void Rebind()
         {
             ResetBindings();
+            m_AvatarRoot = null;
             m_Player = null;
             Skeleton?.BindExposed();
             EnsurePlayer();

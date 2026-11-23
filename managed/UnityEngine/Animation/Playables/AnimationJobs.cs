@@ -1718,7 +1718,7 @@ namespace UnityEngine.Animations
             if (animator == null) throw new ArgumentNullException(nameof(animator));
             if (transform == null) throw new ArgumentNullException(nameof(transform));
             var handles = AnimatorHandles.Of(animator);
-            var spec = PropertyBinder.Resolve(transform.gameObject, CurveBinding.ForType("", property, type), isObjectReference, null);
+            var spec = PropertyBinder.Resolve(transform.gameObject, transform, CurveBinding.ForType("", property, type), isObjectReference, null);
             handles.SceneProperties.Add(spec.Factory?.Invoke());
             return new PropertySceneHandle { valid = handles.Id, handleIndex = handles.SceneProperties.Count - 1 };
         }
