@@ -18,6 +18,7 @@ mod buffer_parameters;
 mod exponents;
 pub mod fetch;
 mod fit;
+mod inout_bools;
 mod matrix_casts;
 mod matrix_swizzles;
 mod opaque_members;
@@ -36,7 +37,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 72;
+pub const FORMAT_VERSION: u32 = 73;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -1189,8 +1190,9 @@ impl ShaderCompiler {
         let name = file
             .file_name()
             .map_or("shader".into(), |n| n.to_string_lossy().to_string());
-        // Macros expanded once: a program that calls frexp compiles rewritten at once (glslang
-        // can crash on one, taking the process with it); others compile as they are first.
+        // Macros expanded once: a program that calls frexp or declares an `inout bool` parameter
+        // compiles rewritten at once (glslang can crash on either, taking the process with it:
+        // [`exponents`], [`inout_bools`]); others compile as they are first.
         let expanded = self
             .compiler
             .preprocess(source, &name, entry, Some(&o))
@@ -1205,7 +1207,8 @@ impl ShaderCompiler {
                     anyhow!("{}: {e}", stage_name(kind))
                 })
         };
-        let artifact = if exponents::calls_frexp(&expanded) {
+        let crashes = exponents::calls_frexp(&expanded) || inout_bools::has_inout_bool(&expanded);
+        let artifact = if crashes {
             compile_fixed()?
         } else {
             match self
@@ -1326,7 +1329,9 @@ fn fxc_compatible(source: &str) -> String {
         &flat_bool_varyings(&rename_type_semantics(&drop_empty_declarations(
             &drop_duplicate_overloads(&half_literals(&matrix_swizzles::matrix_swizzles(
                 &exponents::exponent_calls(&buffer_parameters::buffer_parameters(&plain_returns(
-                    &opaque_members::opaque_members(&scopes::flatten_scopes(source)),
+                    &opaque_members::opaque_members(&scopes::flatten_scopes(
+                        &inout_bools::inout_bools(source),
+                    )),
                 ))),
             ))),
         ))),
