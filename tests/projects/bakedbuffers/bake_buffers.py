@@ -61,7 +61,10 @@ NORMAL_TOLERANCE = 1e-5
 EMPTY = -1.0e6
 UNBOUND_NOTE = 'Unbound'
 BUFFERS = ('occupancy{}.r2d', 'chartIndex{}.int', 'normal{}.r2d', 'irradianceDirect{}.r2d', 'irradianceIndirect{}.r2d',
-           'irradianceEnvironment{}.r2d', 'validity{}.r2d', 'directionalityDirect{}.r2d', 'directionalityIndirect{}.r2d')
+           'irradianceEnvironment{}.r2d', 'validity{}.r2d', 'directionalityDirect{}.r2d', 'directionalityIndirect{}.r2d',
+           'shadowmask{}.r2d')
+# The part of a texel's samples a shadowmask channel's light reaches that see it: counts.
+SHADOWMASK_TOLERANCE = 1e-6
 # Where a texel's light comes from (directional lightmaps): its mean direction and how much its
 # samples face it, each mapped to 0..1. The direct light's follows its light within its last
 # bits (the worst seen is 4.2e-7), the indirect light's its paths, as the indirect light does.
@@ -92,7 +95,10 @@ REPEAT_TOLERANCE = 2e-6
 # here), within this: the worst seen between two captures is 3e-6 (`BounceMany`).
 INDIRECT_REPEAT_TOLERANCE = 1e-5
 # Of a bake input's light: what Unbound's bake takes of it, the numbers within this (relative).
-LIGHT_FIELDS = ('type', 'mode', 'color', 'indirectColor', 'position', 'orientation', 'range', 'coneAngle', 'castsShadows')
+LIGHT_FIELDS = ('type', 'mode', 'color', 'indirectColor', 'position', 'orientation', 'range', 'coneAngle', 'castsShadows',
+                'shadowMaskChannel')
+# A bake input's light without a shadowmask channel has the largest 32-bit number there.
+NO_CHANNEL = 2**32 - 1
 LIGHT_TOLERANCE = 2e-6
 
 
@@ -298,7 +304,8 @@ def expected(root):
                 raise ValueError(f'{folder}: irradianceDirect{index} of {width}x{height}')
             lightmap['direct'] = direct
             for part, name in (('indirect', 'irradianceIndirect'), ('environment', 'irradianceEnvironment'), ('validity', 'validity'),
-                               ('towardDirect', 'directionalityDirect'), ('towardIndirect', 'directionalityIndirect')):
+                               ('towardDirect', 'directionalityDirect'), ('towardIndirect', 'directionalityIndirect'),
+                               ('shadowmask', 'shadowmask')):
                 width, height, channels, values = editor_bake.read_r2d(folder/f'{name}{index}.r2d')
                 if (width, height, channels) != (lightmap['width'], lightmap['height'], 4):
                     raise ValueError(f'{folder}: {name}{index} of {width}x{height}')
@@ -366,7 +373,8 @@ def actual(out):
                 lightmap['normals'] = numbers(dump/f'normal{index}.f32', 'f')
                 lightmap['direct'] = numbers(dump/f'irradianceDirect{index}.f32', 'f')
                 for part, name in (('indirect', 'irradianceIndirect'), ('environment', 'irradianceEnvironment'), ('validity', 'validity'),
-                                   ('towardDirect', 'directionalityDirect'), ('towardIndirect', 'directionalityIndirect')):
+                                   ('towardDirect', 'directionalityDirect'), ('towardIndirect', 'directionalityIndirect'),
+                                   ('shadowmask', 'shadowmask')):
                     lightmap[part] = numbers(dump/f'{name}{index}.f32', 'f') if (dump/f'{name}{index}.f32').is_file() else None
                 entry['lightmaps'].append(lightmap)
         result[scene] = entry
@@ -426,7 +434,9 @@ def light_difference(got, want):
     problems = []
     for mine, theirs in zip(got, want):
         for field in LIGHT_FIELDS:
-            a, b = mine[field], theirs[field]
+            a, b = mine.get(field), theirs[field]
+            if field == 'shadowMaskChannel' and b == NO_CHANNEL:
+                b = -1
             pairs = list(zip(a, b)) if isinstance(b, list) else [(a, b)]
             if isinstance(b, list) and len(a) != len(b) or any(
                     abs(x - y) > LIGHT_TOLERANCE * max(1.0, abs(y)) if isinstance(y, float) else x != y for x, y in pairs):
@@ -454,7 +464,7 @@ def direct_difference(got, want, tolerance=DIRECT_TOLERANCE):
 
 
 def toward_difference(got, want, tolerance):
-    """Where the light of each texel comes from: its four values within the tolerance."""
+    """Four values a texel (where its light comes from, its shadowmask) within the tolerance."""
     if got is None:
         return 'not baked'
     if len(got) != len(want):
@@ -560,7 +570,7 @@ def compare(label):
             mine = a['lightmaps'][index] if index < len(a['lightmaps']) else None
             if mine is None or (mine['width'], mine['height'], mine['supersampling']) != (lightmap['width'], lightmap['height'], lightmap['supersampling']):
                 for part in ('instances', 'occupancy', 'charts', 'normals', 'direct', 'indirect', 'environment', 'validity',
-                             'towardDirect', 'towardIndirect'):
+                             'towardDirect', 'towardIndirect', 'shadowmask'):
                     record(key + part, 'no such lightmap of that size')
                 continue
             names = lambda entry, m: [entry['instances'][i] for i in m['instances']]  # noqa: E731
@@ -574,6 +584,7 @@ def compare(label):
             record(key + 'validity', validity_difference(mine['validity'], lightmap['validity']))
             record(key + 'towardDirect', toward_difference(mine['towardDirect'], lightmap['towardDirect'], DIRECTIONALITY_TOLERANCE))
             record(key + 'towardIndirect', toward_difference(mine['towardIndirect'], lightmap['towardIndirect'], INDIRECT_TOLERANCE))
+            record(key + 'shadowmask', toward_difference(mine['shadowmask'], lightmap['shadowmask'], SHADOWMASK_TOLERANCE))
         record(scene + '.materials', material_difference(a['materials'], e['materials']))
         record(scene + '.sky', sky_difference(a['sky'], e['sky']))
     keys = {key for key, _ in records}

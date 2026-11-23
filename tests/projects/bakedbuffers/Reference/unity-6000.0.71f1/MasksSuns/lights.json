@@ -1,0 +1,190 @@
+{
+ "mixedMode": 2,
+ "lights": [
+  {
+   "color": [
+    0.21404114365577698,
+    0.21404114365577698,
+    0.21404114365577698
+   ],
+   "indirectColor": [
+    0.21404114365577698,
+    0.21404114365577698,
+    0.21404114365577698
+   ],
+   "orientation": [
+    0.3265056014060974,
+    0.6272113919258118,
+    -0.3265056014060974,
+    0.6272113919258118
+   ],
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "range": 0.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 1.0,
+   "innerConeAngle": 1.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 0,
+   "mode": 1,
+   "falloff": 4,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 0,
+   "name": "Sun3"
+  },
+  {
+   "color": [
+    0.21404114365577698,
+    0.21404114365577698,
+    0.21404114365577698
+   ],
+   "indirectColor": [
+    0.21404114365577698,
+    0.21404114365577698,
+    0.21404114365577698
+   ],
+   "orientation": [
+    0.2499999850988388,
+    0.75,
+    -0.4330127239227295,
+    0.4330126643180847
+   ],
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "range": 0.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 1.0,
+   "innerConeAngle": 1.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 0,
+   "mode": 1,
+   "falloff": 4,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 1,
+   "name": "Sun4"
+  },
+  {
+   "color": [
+    0.21404114365577698,
+    0.21404114365577698,
+    0.21404114365577698
+   ],
+   "indirectColor": [
+    0.21404114365577698,
+    0.21404114365577698,
+    0.21404114365577698
+   ],
+   "orientation": [
+    0.36599817872047424,
+    0.45315390825271606,
+    -0.21130914986133575,
+    0.784885585308075
+   ],
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "range": 0.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 1.0,
+   "innerConeAngle": 1.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 0,
+   "mode": 1,
+   "falloff": 4,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 2,
+   "name": "Sun2"
+  },
+  {
+   "color": [
+    0.21404114365577698,
+    0.21404114365577698,
+    0.21404114365577698
+   ],
+   "indirectColor": [
+    0.21404114365577698,
+    0.21404114365577698,
+    0.21404114365577698
+   ],
+   "orientation": [
+    0.3420201539993286,
+    0.0,
+    0.0,
+    0.9396926760673523
+   ],
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "range": 0.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 1.0,
+   "innerConeAngle": 1.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 0,
+   "mode": 1,
+   "falloff": 4,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 3,
+   "name": "Sun0"
+  },
+  {
+   "color": [
+    0.21404114365577698,
+    0.21404114365577698,
+    0.21404114365577698
+   ],
+   "indirectColor": [
+    0.21404114365577698,
+    0.21404114365577698,
+    0.21404114365577698
+   ],
+   "orientation": [
+    0.36964383721351624,
+    0.23911762237548828,
+    -0.0990457683801651,
+    0.8923991322517395
+   ],
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "range": 0.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 1.0,
+   "innerConeAngle": 1.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 0,
+   "mode": 2,
+   "falloff": 4,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Sun1"
+  }
+ ]
+}

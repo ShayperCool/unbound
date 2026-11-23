@@ -699,6 +699,44 @@ public static class BuffersSetup
         });
     }
 
+    /// <summary>Mixed lights for the shadowmask: two suns, five point lights in a row whose
+    /// ranges overlap (two of them get channels, the others are baked in the Shadowmask
+    /// Lighting Mode), a point light far away, two spot lights side by side whose cones do not
+    /// meet, one that reaches a point light, a mixed light without shadows and a baked one; the
+    /// same lights in the Baked Indirect Lighting Mode; and five mixed suns.</summary>
+    static void Masks()
+    {
+        void Lights()
+        {
+            NewLight("SunA", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), Color.white, 1f, LightmapBakeType.Mixed);
+            NewLight("SunB", LightType.Directional, Vector3.zero, new Vector3(30f, 60f, 0f), new Color(1f, 0.8f, 0.6f), 0.5f, LightmapBakeType.Mixed);
+            for (int k = 0; k < 5; k++)
+                NewLight("Row" + k, LightType.Point, new Vector3(-2.03f + k * 0.91f, 1.52f, -1.01f + 0.3f * k), Vector3.zero, Color.white, 1f, LightmapBakeType.Mixed).range = 3f;
+            NewLight("Far", LightType.Point, new Vector3(30.1f, 1.5f, 0.2f), Vector3.zero, Color.white, 1f, LightmapBakeType.Mixed).range = 3f;
+            foreach (var (name, x) in new[] { ("SpotLeft", -3.02f), ("SpotRight", 3.03f) })
+            {
+                var spot = NewLight(name, LightType.Spot, new Vector3(x, 3.01f, 3.02f), new Vector3(90f, 0f, 0f), Color.white, 2f, LightmapBakeType.Mixed);
+                spot.range = 6f;
+                spot.spotAngle = 30f;
+            }
+            var toward = NewLight("SpotToward", LightType.Spot, new Vector3(28.1f, 1.5f, 3.1f), new Vector3(0f, 150f, 0f), Color.white, 2f, LightmapBakeType.Mixed);
+            toward.range = 6f;
+            toward.spotAngle = 40f;
+            NewLight("NoShadow", LightType.Point, new Vector3(0.02f, 2.01f, 2.03f), Vector3.zero, Color.white, 1f, LightmapBakeType.Mixed).shadows = LightShadows.None;
+            NewLight("Bulb", LightType.Point, new Vector3(1.01f, 2.02f, -2.03f), Vector3.zero, Color.white, 1f).range = 4f;
+        }
+        var scene = Lit("Masks", MixedLightingMode.Shadowmask);
+        Lights();
+        Save(scene, "Masks");
+        scene = Lit("MasksIndirect", MixedLightingMode.IndirectOnly);
+        Lights();
+        Save(scene, "MasksIndirect");
+        scene = Lit("MasksSuns", MixedLightingMode.Shadowmask);
+        for (int k = 0; k < 5; k++)
+            NewLight("Sun" + k, LightType.Directional, Vector3.zero, new Vector3(40f + 5f * k, 30f * k, 0f), Color.white, 0.5f, LightmapBakeType.Mixed);
+        Save(scene, "MasksSuns");
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -711,7 +749,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Directional", Directional),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("Directional", Directional),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
