@@ -155,16 +155,16 @@ namespace UnityEngine
             var variable = Hex(body.Get("m_VariableBoneCountWeights")?.Str("m_Data"));
             if (variable.Length > 0)
             {
-                var wide = variable.Length % sizeof(uint) == 0
+                var packedWeights = variable.Length % sizeof(uint) == 0
                     ? MeshSkinWeightData.ReadPackedWords(MemoryMarshal.Cast<byte, uint>(variable.AsSpan())) : null;
-                if (wide == null)
+                if (packedWeights == null)
                     Debug.LogWarning($"Unbound: mesh '{m_Name}' has invalid variable bone weight data; only its fixed vertex weights are available.");
                 else
                 {
                     InvalidateBoneWeightArrays();
-                    RuntimeSkinWeights = wide;
+                    RuntimeSkinWeights = packedWeights;
                     m_RuntimeSkinLayout = SkinWeights.Unlimited;
-                    m_BoneWeights = wide.LegacyProjection();
+                    m_BoneWeights = packedWeights.LegacyProjection();
                     Array.Resize(ref m_BoneWeights, count);
                 }
             }
