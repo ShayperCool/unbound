@@ -2394,3 +2394,48 @@ fn generated_linear_colors_whose_import_changes_them_filter_bytes() {
     .unwrap();
     assert_eq!(texture.mips[1].data, bytes.mips[1].data);
 }
+
+/// A cube's faces given as floats are convolved as the importer convolves a reflection cube read
+/// from an image: every level down to one texel, the same texels.
+#[test]
+fn a_cube_of_faces_is_convolved_as_an_imported_one() {
+    let size = 8u32;
+    let faces: [Vec<f32>; 6] = std::array::from_fn(|face| {
+        (0..size * size)
+            .flat_map(|i| [face as f32 * 0.1 + (i % 3) as f32 * 0.05, 0.25, 0.5, 1.0])
+            .collect()
+    });
+    let levels = convolve_cube(size, &faces);
+    assert_eq!(levels.len(), 4);
+    for (level, faces) in levels.iter().enumerate() {
+        let side = (size >> level) as usize;
+        assert!(faces.iter().all(|f| f.len() == side * side * 4));
+    }
+    // The same faces as a 6:1 strip through the importer's path.
+    let mut data = Vec::new();
+    for y in 0..size as usize {
+        for face in &faces {
+            for x in 0..size as usize {
+                let at = 4 * (y * size as usize + x);
+                data.extend(face[at..at + 4].iter().flat_map(|v| v.to_le_bytes()));
+            }
+        }
+    }
+    let image = Image {
+        width: size * 6,
+        height: size,
+        format: TextureFormat::Rgba32F,
+        data,
+    };
+    let chains = specular::convolve(&cubemap::faces(&image, cubemap::Layout::HorizontalStrip, 0));
+    for (level, faces) in levels.iter().enumerate() {
+        for (face, texels) in faces.iter().enumerate() {
+            let imported: Vec<f32> = chains[face][level]
+                .data
+                .chunks(4)
+                .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+                .collect();
+            assert_eq!(texels, &imported, "level {level} face {face}");
+        }
+    }
+}

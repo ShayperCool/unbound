@@ -3087,6 +3087,35 @@ pub use bcn::{
     BlockFormat, compress_level, compress_runtime_level, decode_bc6h_f32,
     decode_level as decode_blocks, decode_level_as_gpu,
 };
+/// A cube's mip chain as the texture importer convolves a cubemap for glossy reflection
+/// (Convolution Type: Specular): `faces` are six square faces of `size` texels a side, linear
+/// RGBA floats in Unity's order (+x, -x, +y, -y, +z, -z), rows from the top. Every level down
+/// to one texel, level by level, each face's texels in the same layout.
+pub fn convolve_cube(size: u32, faces: &[Vec<f32>; 6]) -> Vec<[Vec<f32>; 6]> {
+    let images: Vec<Image> = faces
+        .iter()
+        .map(|face| Image {
+            width: size,
+            height: size,
+            format: TextureFormat::Rgba32F,
+            data: face.iter().flat_map(|v| v.to_le_bytes()).collect(),
+        })
+        .collect();
+    let chains = specular::convolve(&images);
+    let levels = chains.first().map_or(0, Vec::len);
+    (0..levels)
+        .map(|level| {
+            std::array::from_fn(|face| {
+                chains[face][level]
+                    .data
+                    .chunks_exact(4)
+                    .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+                    .collect()
+            })
+        })
+        .collect()
+}
+
 mod cubemap;
 mod mipmaps;
 mod psd;
