@@ -36,6 +36,8 @@ pub mod model;
 pub mod new_meta;
 pub mod serialized;
 pub mod serialized_writer;
+pub mod lighting_data;
+pub mod exr_writer;
 pub mod serialized_mesh;
 pub mod serialized_texture;
 pub mod speedtree9_textures;
