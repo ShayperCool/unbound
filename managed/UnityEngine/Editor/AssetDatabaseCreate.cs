@@ -137,22 +137,53 @@ namespace UnityEditor
             if (info == null || loaded == null || info.Kind != "yaml" || string.IsNullOrEmpty(info.File)) return null;
             if (loaded.MainObject is not UnityEditor.Animations.AnimatorController) return null;
             if (!Editable(info.Path) || IsImmutablePackagePath(info.Path) || !File.Exists(info.File)) return null;
-            if (AdoptionRefusal(File.ReadAllText(info.File), loaded.Objects) != null) return null;
-            var created = new CreatedAsset { Path = info.Path, Main = loaded.MainObject, File = loaded };
-            foreach (var pair in loaded.Objects) created.Objects[pair.Value] = pair.Key;
+            var stamp = (File.GetLastWriteTimeUtc(info.File), new FileInfo(info.File).Length);
+            if (s_Refused.TryGetValue(guid, out var refused) && refused == stamp) return null;
+            var text = File.ReadAllText(info.File);
+            string reason = AdoptionRefusal(text, loaded.Objects, null);
+            CreatedAsset created = null;
+            if (reason == null)
+            {
+                created = new CreatedAsset { Path = info.Path, Main = loaded.MainObject, File = loaded };
+                foreach (var pair in loaded.Objects) created.Objects[pair.Value] = pair.Key;
+                // Written whole now, the file must keep every reference it has.
+                try { reason = AdoptionRefusal(text, loaded.Objects, created.Text()); }
+                catch (NotSupportedException e) { reason = e.Message; }
+            }
+            if (reason != null)
+            {
+                s_Refused[guid] = stamp;
+                Debug.LogWarning($"{Log.DiagnosticPrefix}'{info.Path}' is kept as read, nothing is added to it: {reason}.");
+                return null;
+            }
             s_Created[guid] = created;
             return created;
         }
 
-        static readonly System.Text.RegularExpressions.Regex s_AssetReference =
-            new System.Text.RegularExpressions.Regex(@"guid: ([0-9a-fA-F]{32})", System.Text.RegularExpressions.RegexOptions.Compiled);
+        /// <summary>The controllers refused (by their file's time and size, so a changed file is
+        /// looked at again).</summary>
+        static readonly Dictionary<string, (DateTime, long)> s_Refused = new Dictionary<string, (DateTime, long)>(StringComparer.OrdinalIgnoreCase);
+
+        static readonly System.Text.RegularExpressions.Regex s_Reference = new System.Text.RegularExpressions.Regex(
+            @"\{fileID: (-?\d+)(?:, guid: ([0-9a-fA-F]{32}), type: -?\d+)?\}", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        /// <summary>The file's references to objects (none excluded), sorted.</summary>
+        static List<string> References(string text)
+        {
+            var found = new List<string>();
+            foreach (System.Text.RegularExpressions.Match m in s_Reference.Matches(text))
+                if (m.Groups[1].Value != "0") found.Add(m.Groups[1].Value + ":" + m.Groups[2].Value.ToLowerInvariant());
+            found.Sort(StringComparer.Ordinal);
+            return found;
+        }
 
         /// <summary>Why a file read as <paramref name="objects"/> cannot be written whole from them,
         /// or null: it is not in Unity's text serialization; a document has no live object (one the
         /// load skipped or a missing script's stand-in, which the Editor keeps); an object is one
-        /// Unbound does not write; or it references an asset the database does not have (written
-        /// whole, that reference would be lost).</summary>
-        internal static string AdoptionRefusal(string text, IReadOnlyDictionary<long, Object> objects)
+        /// Unbound does not write; or, given the file as written whole from them
+        /// (<paramref name="written"/>), a reference of the file is not in it (one Unbound cannot
+        /// resolve, which the Editor keeps as it is, would be written as none).</summary>
+        internal static string AdoptionRefusal(string text, IReadOnlyDictionary<long, Object> objects, string written)
         {
             if (!text.StartsWith(UnityYamlText.Preamble, StringComparison.Ordinal)
                 && !text.StartsWith(UnityYamlText.Preamble.Replace("\n", "\r\n"), StringComparison.Ordinal))
@@ -165,11 +196,15 @@ namespace UnityEditor
                     return "Unbound did not read every object of it";
                 if (!UnityYamlWriter.WritesNew(o)) return $"Unbound does not write its {o.GetType().Name} objects";
             }
-            foreach (System.Text.RegularExpressions.Match m in s_AssetReference.Matches(text))
+            if (written != null)
             {
-                var referenced = m.Groups[1].Value;
-                if (referenced.StartsWith("0000000000000000", StringComparison.Ordinal)) continue;  // built-in resources
-                if (string.IsNullOrEmpty(GUIDToAssetPath(referenced))) return $"it references an asset the project does not have ({referenced})";
+                // The references the whole write would not keep (each counted as often as it occurs).
+                var kept = References(written);
+                var lost = new List<string>();
+                foreach (var reference in References(text))
+                    if (!kept.Remove(reference)) lost.Add(reference);
+                if (lost.Count > 0)
+                    return $"it holds references Unbound cannot write back as they are ({string.Join(", ", lost.Take(3))}{(lost.Count > 3 ? ", ..." : "")})";
             }
             return null;
         }

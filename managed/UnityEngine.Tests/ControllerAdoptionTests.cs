@@ -16,11 +16,8 @@ namespace UnityEngine.Tests
         readonly AnimatorController m_Controller = new AnimatorController();
         readonly AnimatorState m_State = new AnimatorState();
 
-        public ControllerAdoptionTests() => AssetDatabase.List("[{\"guid\":\"0000000000000000000000000000ab01\",\"path\":\"Assets/Clip.anim\",\"kind\":\"yaml\"}]");
-
         public void Dispose()
         {
-            AssetDatabase.Invalidate();
             Object.DestroyImmediate(m_Controller);
             Object.DestroyImmediate(m_State);
         }
@@ -30,26 +27,26 @@ namespace UnityEngine.Tests
         [Fact]
         public void AFileReadWholeWithKnownReferencesIsWritten()
         {
-            Assert.Null(AssetDatabase.AdoptionRefusal(Header + Controller + State, Both()));
+            Assert.Null(AssetDatabase.AdoptionRefusal(Header + Controller + State, Both(), Header + Controller + State));
             var withClip = Header + Controller + State + "  m_Motion: {fileID: 7400000, guid: 0000000000000000000000000000ab01, type: 2}\n";
-            Assert.Null(AssetDatabase.AdoptionRefusal(withClip, Both()));
-            // Built-in resources are always there.
-            var builtin = Header + Controller + State + "  m_Motion: {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}\n";
-            Assert.Null(AssetDatabase.AdoptionRefusal(builtin, Both()));
+            Assert.Null(AssetDatabase.AdoptionRefusal(withClip, Both(), withClip));
         }
 
         [Fact]
         public void AnythingTheWholeWriteWouldLoseIsRefused()
         {
             // A document the load did not make an object of (a skipped one, say).
-            Assert.NotNull(AssetDatabase.AdoptionRefusal(Header + Controller + State, new Dictionary<long, Object> { [9100000] = m_Controller }));
+            Assert.NotNull(AssetDatabase.AdoptionRefusal(Header + Controller + State, new Dictionary<long, Object> { [9100000] = m_Controller }, null));
             // An object that is gone.
-            Assert.NotNull(AssetDatabase.AdoptionRefusal(Header + Controller + State, new Dictionary<long, Object> { [9100000] = m_Controller, [1102000] = null }));
-            // A reference to an asset the project does not have.
+            Assert.NotNull(AssetDatabase.AdoptionRefusal(Header + Controller + State, new Dictionary<long, Object> { [9100000] = m_Controller, [1102000] = null }, null));
+            // A reference written back as none (to an asset or object Unbound cannot find).
             var missing = Header + Controller + State + "  m_Motion: {fileID: 7400000, guid: 0123456789abcdef0123456789abcdef, type: 2}\n";
-            Assert.NotNull(AssetDatabase.AdoptionRefusal(missing, Both()));
+            var cleared = Header + Controller + State + "  m_Motion: {fileID: 0}\n";
+            Assert.NotNull(AssetDatabase.AdoptionRefusal(missing, Both(), cleared));
+            var dangling = Header + Controller + State + "  m_Transitions:\n  - {fileID: 4242}\n";
+            Assert.NotNull(AssetDatabase.AdoptionRefusal(dangling, Both(), Header + Controller + State + "  m_Transitions:\n  - {fileID: 0}\n"));
             // Binary serialization.
-            Assert.NotNull(AssetDatabase.AdoptionRefusal("binary", Both()));
+            Assert.NotNull(AssetDatabase.AdoptionRefusal("binary", Both(), null));
         }
     }
 }
