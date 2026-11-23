@@ -8,7 +8,14 @@ instance ID 0 and a live object's, paths without and with an "assets/" prefix, a
 call's instance ID, path and resource file, whether the action survives, and the selection
 afterwards (a live object's instance ID is recorded as its name). Also a new end action's hide
 flags, the active folder, `GetContainingFolder`, `GetBaseFolders`, `IsFolder` and
-`ShowCreatedAsset`.
+`ShowCreatedAsset`. `create.*`: the asset-creating helpers (`CreateAsset` twice and with null,
+`CreateFolder` twice, `CreateScene`, `CreateAssetWithContent`, `CreateScriptAssetFromTemplateFile`
+with the template `Assets/Data/ScriptTemplate.txt`, a lower-case name, no name, a null and a missing
+template, `CreateScriptAssetWithContent`): what was thrown and logged, the file created (a text
+file's text, a scene's GameObject names, sorted), the object loaded from it, the selection and the
+paths `AssetModificationProcessor.OnWillCreateAsset` heard (`Assets/Scripts/CreationRecorder.cs`);
+`create.lineEndings` the project's line endings for new scripts; `ancestors` `GetAncestors` of a file,
+a folder, a scene object, 0 and `int.MaxValue` (as asset paths).
 
 ```sh
 python3 tests/projects/projectwindowutil/run.py record --label a

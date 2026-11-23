@@ -74,6 +74,8 @@ static class ProjectWindowUtilProbe
             return "object=" + shown + "|null=" + Name(Selection.activeObject);
         });
 
+        RecordCreation(marker);
+
         s_Output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), s_Output.ToString());
         EditorApplication.Exit(0);
@@ -100,6 +102,80 @@ static class ProjectWindowUtilProbe
             });
         });
     }
+
+    // The asset-creating helpers: each runs its end action at once (no Project window); recorded
+    // are what was thrown and logged, the created file (its text for text files), the object
+    // loaded from it, the selection afterwards and the paths OnWillCreateAsset was called with.
+    static void RecordCreation(Object marker)
+    {
+        Check("create.lineEndings", () => EditorSettings.lineEndingsForNewScripts.ToString());
+        Create("create.asset", marker, () => ProjectWindowUtil.CreateAsset(new AnimationClip(), "Data/Clip.anim"), "Assets/Data/Clip.anim");
+        Create("create.assetAgain", marker, () => ProjectWindowUtil.CreateAsset(new AnimationClip(), "Data/Clip.anim"), "Assets/Data/Clip 1.anim");
+        Create("create.assetNull", marker, () => ProjectWindowUtil.CreateAsset(null, "Data/Null.anim"), "Assets/Data/Null.anim");
+        Create("create.folder", marker, () => ProjectWindowUtil.CreateFolder(), "Assets/New Folder");
+        Create("create.folderAgain", marker, () => ProjectWindowUtil.CreateFolder(), "Assets/New Folder 1");
+        Create("create.scene", marker, () => ProjectWindowUtil.CreateScene(), "Assets/New Scene.unity");
+        Create("create.withContent", marker, () => ProjectWindowUtil.CreateAssetWithContent("Data/Text.txt", "one\r\ntwo\rthree\nfour"), "Assets/Data/Text.txt");
+        Create("create.template", marker, () => ProjectWindowUtil.CreateScriptAssetFromTemplateFile("Assets/Data/ScriptTemplate.txt", "Data/My Note.txt"), "Assets/Data/My Note.txt");
+        Create("create.templateLower", marker, () => ProjectWindowUtil.CreateScriptAssetFromTemplateFile("Assets/Data/ScriptTemplate.txt", "Data/note two.txt"), "Assets/Data/note two.txt");
+        Create("create.templateNoName", marker, () => ProjectWindowUtil.CreateScriptAssetFromTemplateFile("Assets/Data/ScriptTemplate.txt", ""), "Assets/ScriptTemplate.txt");
+        Create("create.templateNull", marker, () => ProjectWindowUtil.CreateScriptAssetFromTemplateFile(null, "Data/X.txt"), "Assets/Data/X.txt");
+        Create("create.templateMissing", marker, () => ProjectWindowUtil.CreateScriptAssetFromTemplateFile("Assets/Data/Missing.txt", "Data/Y.txt"), "Assets/Data/Y.txt");
+        Check("create.scriptWithContent", () =>
+        {
+            CreationRecorder.Paths.Clear();
+            CreationRecorder.Recording = true;
+            Object made = null;
+            var logs = Capture(() => made = ProjectWindowUtil.CreateScriptAssetWithContent("Assets/Data/Direct.txt", "a\r\nb"), out var thrown);
+            CreationRecorder.Recording = false;
+            return "throws=" + (thrown == null ? "<none>" : thrown.GetType().Name) + "|logs=" + logs + "|returned=" + Describe(made)
+                + "|" + Created("Assets/Data/Direct.txt") + "|willCreate=" + string.Join(",", CreationRecorder.Paths);
+        });
+        Check("ancestors", () =>
+        {
+            string Paths(int id) => "[" + string.Join(",", ProjectWindowUtil.GetAncestors(id).Select(a => Text(AssetDatabase.GetAssetPath(a))).OrderBy(p => p, StringComparer.Ordinal)) + "]";
+            var file = AssetDatabase.LoadMainAssetAtPath("Assets/Data/Existing.txt");
+            var folder = AssetDatabase.LoadMainAssetAtPath("Assets/Data");
+            return "file=" + Paths(file.GetInstanceID()) + "|folder=" + Paths(folder.GetInstanceID()) + "|scene=" + Paths(marker.GetInstanceID())
+                + "|zero=" + Paths(0) + "|max=" + Paths(int.MaxValue);
+        });
+    }
+
+    static void Create(string key, Object marker, Action create, string path)
+    {
+        Check(key, () =>
+        {
+            Selection.activeObject = marker;
+            CreationRecorder.Paths.Clear();
+            CreationRecorder.Recording = true;
+            var logs = Capture(create, out var thrown);
+            CreationRecorder.Recording = false;
+            return "throws=" + (thrown == null ? "<none>" : thrown.GetType().Name + ":" + thrown.Message) + "|logs=" + logs + "|" + Created(path)
+                + "|selection=" + Describe(Selection.activeObject) + "|willCreate=" + string.Join(",", CreationRecorder.Paths);
+        });
+    }
+
+    // The file or folder at an asset path: whether it exists, a text file's text (a scene's
+    // GameObject names), and the main object loaded from it.
+    static string Created(string path)
+    {
+        string what;
+        if (Directory.Exists(path)) what = "folder";
+        else if (!File.Exists(path)) what = "none";
+        else if (path.EndsWith(".txt", StringComparison.Ordinal)) what = "text=" + File.ReadAllText(path).Replace("\r", "\\r").Replace("\n", "\\n");
+        else if (path.EndsWith(".unity", StringComparison.Ordinal))
+        {
+            var lines = File.ReadAllLines(path);
+            // Sorted: a new scene's objects get random file IDs, which order the file.
+            var names = lines.Select((l, i) => (l, i)).Where(x => x.l == "GameObject:").Select(x => lines.Skip(x.i).First(l => l.StartsWith("  m_Name: ", StringComparison.Ordinal)).Substring(10))
+                .OrderBy(n => n, StringComparer.Ordinal);
+            what = "scene gameObjects=" + string.Join(",", names);
+        }
+        else what = "file";
+        return "created=" + what + "|loaded=" + Describe(AssetDatabase.LoadMainAssetAtPath(path));
+    }
+
+    static string Describe(Object o) => o == null ? "<null>" : o.GetType().Name + ":" + o.name;
 
     static string Name(Object o) => o == null ? "<null>" : o.name;
 
