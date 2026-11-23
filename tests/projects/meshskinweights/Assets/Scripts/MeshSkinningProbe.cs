@@ -435,6 +435,7 @@ sealed partial class MeshSkinningProbe : MonoBehaviour
         CheckBufferLayouts(Probe);
         CheckRawChannels(Probe, ProbePositions);
         CheckAssetReload(Probe);
+        CheckLegacyProjection(Probe);
         rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), rows);
 #if UNITY_EDITOR

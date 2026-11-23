@@ -24,6 +24,8 @@ to get the refreshed contents. [GetBoneWeightBuffer](https://docs.unity3d.com/60
 The advanced vertex-buffer checks replace an explicit skin layout and write both skin attributes.
 The Editor uses the new stream for fixed CPU baking and retains the variable table for unlimited
 skinning. The checks compare both a borrowed buffer and a newly requested view after the write.
+The array and list legacy getters share a fixed projection, and the typed getters cache their own
+view. The probe reads them before and after two stream writes to show when each cache is populated.
 The asset checks save and reload one-, two-, five-, and eleven-influence meshes, comparing the
 variable table bytes and the reloaded arrays after an unsaved change. [SetVertexBufferParams](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.SetVertexBufferParams.html) ·
 [SetVertexBufferData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.SetVertexBufferData.html)

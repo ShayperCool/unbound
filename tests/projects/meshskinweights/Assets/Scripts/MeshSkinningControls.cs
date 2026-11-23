@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Unity.Collections;
 using UnityEditor;
@@ -92,7 +93,7 @@ sealed partial class MeshSkinningProbe
         }
     }
 
-    static string RewriteSkinStream(Mesh mesh)
+    static string RewriteSkinStream(Mesh mesh, int firstIndex = 8)
     {
         int stream = mesh.GetVertexAttributeStream(VertexAttribute.BlendWeight);
         byte[] bytes;
@@ -106,7 +107,7 @@ sealed partial class MeshSkinningProbe
             var weight = packed
                 ? BitConverter.GetBytes((ushort)(i == 0 ? 16384 : i == 1 ? 49151 : 0))
                 : BitConverter.GetBytes(i == 0 ? .25f : i == 1 ? .75f : 0f);
-            var index = packed ? BitConverter.GetBytes((ushort)(8 + i)) : BitConverter.GetBytes(8 + i);
+            var index = packed ? BitConverter.GetBytes((ushort)(firstIndex + i)) : BitConverter.GetBytes(firstIndex + i);
             weight.CopyTo(bytes, weightOffset + i * weight.Length);
             index.CopyTo(bytes, indexOffset + i * index.Length);
         }
@@ -188,6 +189,37 @@ sealed partial class MeshSkinningProbe
             QualitySettings.skinWeights = quality;
             Object.DestroyImmediate(baked);
             Object.DestroyImmediate(root);
+        }
+    }
+
+    static void CheckLegacyProjection(Action<string, Func<string>> probe)
+    {
+        foreach (string firstRead in new[] { "cold", "array", "list" })
+        {
+            var mesh = Make(1);
+            Apply(mesh, new byte[] { 2 }, new[] { Weight(2, .75f), Weight(3, .25f) });
+            string Value(BoneWeight weight) => weight.boneIndex0 + "@" + weight.weight0.ToString("R", Invariant);
+            string ArrayValue() => Value(mesh.boneWeights[0]);
+            string ListValue()
+            {
+                var weights = new List<BoneWeight>();
+                mesh.GetBoneWeights(weights);
+                return Value(weights[0]);
+            }
+            string key = "legacyProjection." + firstRead;
+            if (firstRead == "array") probe(key + ".prime", ArrayValue);
+            if (firstRead == "list") probe(key + ".prime", ListValue);
+            probe(key + ".firstWrite", () =>
+            {
+                RewriteSkinStream(mesh);
+                return ArrayValue() + "|" + ListValue() + "|" + Shape(mesh);
+            });
+            probe(key + ".secondWrite", () =>
+            {
+                RewriteSkinStream(mesh, 10);
+                return ListValue() + "|" + ArrayValue() + "|" + Shape(mesh);
+            });
+            Object.DestroyImmediate(mesh);
         }
     }
 
