@@ -29,6 +29,18 @@
 {"k":"commands.warmCopyTarget","v":"4076/1"}
 {"k":"commands.warmCopyFrom","v":"4076/1"}
 {"k":"commands.warmCopyDestinationBuffer","v":"First reused buffer"}
+{"k":"events.sharedRegistrations","v":"4184/7"}
+{"k":"events.beforeRemove.lower","v":"First reused buffer/First reused buffer/Async empty buffer/Second buffer/Async empty buffer"}
+{"k":"events.removedSync","v":"4184/5"}
+{"k":"events.afterSyncRemove.lower","v":"Async empty buffer/Second buffer/Async empty buffer"}
+{"k":"events.removedAsync","v":"4184/3"}
+{"k":"events.afterAsyncRemove.lower","v":"Second buffer"}
+{"k":"events.afterBothRemovals.upper","v":"First reused buffer/Async empty buffer"}
+{"k":"events.invalidAdd","v":"|ArgumentException: Invalid CameraEvent value \"-1\".\nParameter name: evt"}
+{"k":"events.invalidAddBeforeNull","v":"|ArgumentException: Invalid CameraEvent value \"25\".\nParameter name: evt"}
+{"k":"events.invalidAsync","v":"|ArgumentException: Invalid CameraEvent value \"25\".\nParameter name: evt"}
+{"k":"events.invalidRemove","v":"|ArgumentException: Invalid CameraEvent value \"-1\".\nParameter name: evt"}
+{"k":"events.afterInvalid","v":"4184/3"}
 {"k":"commands.addAsync","v":"4172/3"}
 {"k":"commands.removeAsync","v":"4172/2"}
 {"k":"pipeline.beforeSwitch","v":"4076/1"}
@@ -51,6 +63,9 @@
 {"k":"pipeline.addNull","v":"|NullReferenceException: buffer is null"}
 {"k":"pipeline.addAsyncNull","v":"|NullReferenceException: buffer is null"}
 {"k":"pipeline.removeNull","v":"|NullReferenceException: buffer is null"}
+{"k":"pipeline.addInvalidEvent","v":"|ArgumentException: Invalid CameraEvent value \"-1\".\nParameter name: evt"}
+{"k":"pipeline.addAsyncInvalidBeforeNull","v":"|ArgumentException: Invalid CameraEvent value \"25\".\nParameter name: evt"}
+{"k":"pipeline.removeInvalidEvent","v":"|ArgumentException: Invalid CameraEvent value \"-1\".\nParameter name: evt"}
 {"k":"pipeline.afterAllCalls","v":"4088/2"}
 {"k":"pipeline.addBeforeBuiltInFrame","v":"Warning: Your project uses a scriptable render pipeline. You can use Camera.AddCommandBuffer only with the built-in renderer.|"}
 {"k":"pipeline.beforeBuiltInFrame","v":"4088/2"}
