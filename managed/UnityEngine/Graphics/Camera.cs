@@ -835,8 +835,9 @@ namespace UnityEngine
             if (buffer == null) throw new NullReferenceException("buffer is null");
             if (WarnIfScriptablePipeline(nameof(RemoveCommandBuffer))) return;
             if (!m_CommandBuffers.TryGetValue(evt, out var list)) return;
-            int remaining = list.IndexOf(buffer);
-            if (remaining < 0) return;
+            int remaining = 0;
+            while (remaining < list.Count && !ReferenceEquals(list[remaining], buffer)) remaining++;
+            if (remaining == list.Count) return;
             for (int index = remaining + 1; index < list.Count; index++)
             {
                 var candidate = list[index];
