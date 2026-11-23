@@ -46,11 +46,43 @@ namespace UnityEngine.Tests
                 Assert.Equal(new[] { otherPass }, light.GetCommandBuffers(LightEvent.AfterShadowMapPass));
                 light.CommandBuffersAt(evt, ShadowMapPass.All, selected);
                 Assert.Empty(selected);
+
+                light.AddCommandBuffer(evt, first, ShadowMapPass.AreaLight);
+                light.CommandBuffersAt(evt, ShadowMapPass.All, selected);
+                Assert.Empty(selected);
+                light.CommandBuffersAt(evt, ShadowMapPass.AreaLight, selected);
+                Assert.Equal(new[] { first }, selected);
             }
             finally
             {
                 QualitySettings.renderPipeline = qualityPipeline;
                 GraphicsSettings.defaultRenderPipeline = pipeline;
+                Object.DestroyImmediate(owner);
+            }
+        }
+
+        [Fact]
+        public void ClearingAndReaddingCommandsReusesTheWarmedStorage()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            using var buffer = new CommandBuffer();
+            var owner = new GameObject("Light");
+            try
+            {
+                var light = owner.AddComponent<Light>();
+                const LightEvent evt = LightEvent.BeforeShadowMap;
+                light.AddCommandBuffer(evt, buffer);
+                light.RemoveAllCommandBuffers();
+                long before = System.GC.GetAllocatedBytesForCurrentThread();
+                for (int frame = 0; frame < 64; frame++)
+                {
+                    light.AddCommandBuffer(evt, buffer);
+                    light.RemoveAllCommandBuffers();
+                }
+                Assert.Equal(before, System.GC.GetAllocatedBytesForCurrentThread());
+            }
+            finally
+            {
                 Object.DestroyImmediate(owner);
             }
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unbound.Runtime;
 using UnityEngine.Rendering;
 
 namespace UnityEngine
@@ -8,18 +9,21 @@ namespace UnityEngine
     // map, each of its passes, the screen-space mask), with the map or mask the current target.
     public sealed partial class Light
     {
-        Dictionary<LightEvent, List<(CommandBuffer Buffer, ShadowMapPass Passes)>> m_CommandBuffers;
-        int m_CommandBufferCount;
+        readonly List<(LightEvent Event, CommandBuffer Buffer, ShadowMapPass Passes)> m_CommandBuffers =
+            new List<(LightEvent, CommandBuffer, ShadowMapPass)>();
 
-        public int commandBufferCount => m_CommandBufferCount;
+        public int commandBufferCount => m_CommandBuffers.Count;
+
+        // Models the native event reservations independently of the reused execution list.
+        Dictionary<LightEvent, (int Count, long Slots)> m_ProfilerCommandBuffers;
 
         internal long ProfilerCommandBufferSlots
         {
             get
             {
-                if (m_CommandBuffers == null) return 0;
+                if (m_ProfilerCommandBuffers == null) return 0;
                 long slots = 0;
-                foreach (var entry in m_CommandBuffers) slots += entry.Value.Capacity;
+                foreach (var entry in m_ProfilerCommandBuffers) slots += entry.Value.Slots;
                 return slots;
             }
         }
@@ -29,15 +33,16 @@ namespace UnityEngine
         public void AddCommandBuffer(LightEvent evt, CommandBuffer buffer, ShadowMapPass shadowPassMask)
         {
             if (buffer == null) throw new NullReferenceException("buffer is null");
-            m_CommandBuffers ??= new Dictionary<LightEvent, List<(CommandBuffer, ShadowMapPass)>>();
-            if (!m_CommandBuffers.TryGetValue(evt, out var buffers))
+            m_CommandBuffers.Add((evt, buffer, shadowPassMask));
+            if (Compat.LightCommandBufferMemoryMeasured)
             {
-                // An event starts with one slot and doubles on growth (componentmemory, Unity 6000.0.71f1).
-                buffers = new List<(CommandBuffer, ShadowMapPass)>(1);
-                m_CommandBuffers.Add(evt, buffers);
+                m_ProfilerCommandBuffers ??= new Dictionary<LightEvent, (int, long)>();
+                m_ProfilerCommandBuffers.TryGetValue(evt, out var allocation);
+                allocation.Count++;
+                if (allocation.Count > allocation.Slots)
+                    allocation.Slots = Math.Max(1, allocation.Slots * 2);
+                m_ProfilerCommandBuffers[evt] = allocation;
             }
-            buffers.Add((buffer, shadowPassMask));
-            m_CommandBufferCount++;
         }
 
         // Asynchronous compute queues run in order with the rest here.
@@ -48,30 +53,33 @@ namespace UnityEngine
 
         public void RemoveCommandBuffer(LightEvent evt, CommandBuffer buffer)
         {
-            if (m_CommandBuffers != null && m_CommandBuffers.TryGetValue(evt, out var buffers))
-                m_CommandBufferCount -= buffers.RemoveAll(command => command.Buffer == buffer);
+            int removed = m_CommandBuffers.RemoveAll(c => c.Event == evt && c.Buffer == buffer);
+            if (removed > 0 && m_ProfilerCommandBuffers != null
+                && m_ProfilerCommandBuffers.TryGetValue(evt, out var allocation))
+            {
+                allocation.Count -= removed;
+                m_ProfilerCommandBuffers[evt] = allocation;
+            }
         }
 
         public void RemoveCommandBuffers(LightEvent evt)
         {
-            if (m_CommandBuffers != null && m_CommandBuffers.Remove(evt, out var buffers))
-                m_CommandBufferCount -= buffers.Count;
+            m_CommandBuffers.RemoveAll(c => c.Event == evt);
+            m_ProfilerCommandBuffers?.Remove(evt);
         }
 
         public void RemoveAllCommandBuffers()
         {
-            m_CommandBuffers?.Clear();
-            m_CommandBufferCount = 0;
+            m_CommandBuffers.Clear();
+            m_ProfilerCommandBuffers?.Clear();
         }
 
         public CommandBuffer[] GetCommandBuffers(LightEvent evt)
         {
-            if (m_CommandBuffers == null || !m_CommandBuffers.TryGetValue(evt, out var buffers) || buffers.Count == 0)
-                return Array.Empty<CommandBuffer>();
-            var result = new CommandBuffer[buffers.Count];
-            for (int i = 0; i < buffers.Count; i++)
-                result[i] = buffers[i].Buffer;
-            return result;
+            var list = new List<CommandBuffer>();
+            foreach (var c in m_CommandBuffers)
+                if (c.Event == evt) list.Add(c.Buffer);
+            return list.ToArray();
         }
 
         /// <summary>The buffers that run at an event for a shadow map pass (All for the events
@@ -79,9 +87,8 @@ namespace UnityEngine
         internal void CommandBuffersAt(LightEvent evt, ShadowMapPass pass, List<CommandBuffer> into)
         {
             into.Clear();
-            if (m_CommandBuffers == null || !m_CommandBuffers.TryGetValue(evt, out var buffers)) return;
-            foreach (var command in buffers)
-                if (pass == ShadowMapPass.All || (command.Passes & pass) != 0) into.Add(command.Buffer);
+            foreach (var c in m_CommandBuffers)
+                if (c.Event == evt && (c.Passes & pass) != 0) into.Add(c.Buffer);
         }
     }
 }
