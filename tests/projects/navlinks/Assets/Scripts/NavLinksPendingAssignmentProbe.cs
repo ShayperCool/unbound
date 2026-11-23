@@ -43,7 +43,8 @@ public partial class NavLinksProbe
         yield return RecordSearchFilterControls(local);
         yield return RecordPartialRepairControls(local);
         yield return RecordAreaMaskRepairControls(local);
-        yield return RecordGroundAreaRepairControls();
+        yield return RecordGroundAreaRepairControls(reconnect: false);
+        yield return RecordGroundAreaRepairControls(reconnect: true);
         Finish(0);
     }
 
@@ -365,10 +366,11 @@ public partial class NavLinksProbe
         DestroyImmediate(alternate.gameObject);
     }
 
-    IEnumerator RecordGroundAreaRepairControls()
+    IEnumerator RecordGroundAreaRepairControls(bool reconnect)
     {
-        var cases = new[] { "startExcluded", "endExcluded", "allExcluded", "allExcludedMoving", "unrelated", "queuedMask", "queuedAssignedMask",
-            "startExcludedMoving", "endExcludedMoving", "startOutsideReach", "endOutsideReach", "queuedAllExcluded" };
+        var cases = reconnect ? new[] { "startExcluded", "endExcluded", "unrelated" }
+            : new[] { "startExcluded", "endExcluded", "allExcluded", "allExcludedMoving", "unrelated", "queuedMask", "queuedAssignedMask",
+                "startExcludedMoving", "endExcludedMoving", "startOutsideReach", "endOutsideReach", "queuedAllExcluded" };
         var lane = new Lane { Name = "groundMask", O = new Vector3(500f, 0f, 500f) };
         var sources = new List<NavMeshBuildSource>();
         foreach (var side in new[] { -1, 1 })
@@ -376,13 +378,16 @@ public partial class NavLinksProbe
                 size = new Vector3(16f, 1f, 8f), transform = Matrix4x4.Translate(lane.O + new Vector3(side * 8f, -0.5f, 0f)) });
         sources.Add(new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, area = 4,
             size = new Vector3(12f, 1f, 8f), transform = Matrix4x4.Translate(lane.O + new Vector3(36f, -0.5f, 0f)) });
+        if (reconnect)
+            sources.Add(new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, area = 6,
+                size = new Vector3(32f, 1f, 8f), transform = Matrix4x4.Translate(lane.O + new Vector3(0f, -0.5f, 8f)) });
         var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(0), sources,
-            new Bounds(lane.O + new Vector3(15f, 0f, 0f), new Vector3(66f, 8f, 12f)), Vector3.zero, Quaternion.identity);
+            new Bounds(lane.O + new Vector3(15f, 0f, 0f), new Vector3(66f, 8f, reconnect ? 32f : 12f)), Vector3.zero, Quaternion.identity);
         var instance = NavMesh.AddNavMeshData(data);
         yield return null;
         foreach (string mode in cases)
         {
-            lane.Name = "groundMask." + mode;
+            lane.Name = (reconnect ? "groundReconnect." : "groundMask.") + mode;
             var from = new Vector3(mode == "startOutsideReach" ? -13f : -7f, 0f, 0f);
             var to = new Vector3(mode == "endOutsideReach" ? 13f : 7f, 0f, 0f);
             var agent = Agent(lane, "a", from, null, a => {
