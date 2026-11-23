@@ -1390,14 +1390,16 @@ namespace DotRecast.Detour.Crowd
         }
 
         /// <summary>The widest horizontal section of a capsule within the agent's height.</summary>
-        private static bool TryProjectCapsuleRadius(DtCrowdAgent ag, DtCrowdAgent capsule, out float radius)
+        private static bool TryProjectCapsuleRadius(DtCrowdAgent ag, DtCrowdAgent capsule,
+            out float radius, out bool clippedCap)
         {
             radius = capsule.option.radius;
             float bottom = ag.npos.Y - capsule.npos.Y;
             float gap = MathF.Max(radius - (bottom + ag.option.height),
                 bottom - (capsule.option.height - radius));
+            clippedCap = gap > 0f;
             if (gap > radius) return false;
-            if (gap > 0f) radius = MathF.Sqrt(radius * radius - gap * gap);
+            if (clippedCap) radius = MathF.Sqrt(radius * radius - gap * gap);
             return true;
         }
 
@@ -1431,7 +1433,7 @@ namespace DotRecast.Detour.Crowd
                 {
                     DtCrowdAgent nei = ag.neis[j].agent;
                     float radius = nei.option.radius;
-                    if (nei.option.uprightCapsule && !TryProjectCapsuleRadius(ag, nei, out radius)) continue;
+                    if (nei.option.uprightCapsule && !TryProjectCapsuleRadius(ag, nei, out radius, out _)) continue;
                     _obstacleQuery.AddCircle(RcVec3f.Subtract(nei.npos, ag.npos), radius + ag.option.radius,
                         nei.vel, AvoidanceShare(ag, nei));
                 }
@@ -1492,6 +1494,9 @@ namespace DotRecast.Detour.Crowd
             }
         }
 
+        // Below this distance from a clipped cap's surface, contact uses positive X as its normal.
+        const float CapsuleSurfaceNormalEpsilon = 0.0001f;
+
         private void HandleCollisions(IList<DtCrowdAgent> agents)
         {
             using var timer = _telemetry.ScopedTimer(DtCrowdTimerLabel.HandleCollisions);
@@ -1526,9 +1531,10 @@ namespace DotRecast.Detour.Crowd
                         RcVec3f diff = RcVec3f.Subtract(ag.npos, nei.npos);
                         float radius = nei.option.radius;
                         bool uprightCapsule = nei.option.uprightCapsule;
+                        bool clippedCap = false;
                         if (uprightCapsule)
                         {
-                            if (!TryProjectCapsuleRadius(ag, nei, out radius)) continue;
+                            if (!TryProjectCapsuleRadius(ag, nei, out radius, out clippedCap)) continue;
                             diff.Y = 0f;
                         }
                         else if (!_config.resolveAgentOverlapsIn3D)
@@ -1546,11 +1552,18 @@ namespace DotRecast.Detour.Crowd
 
                         dist = MathF.Sqrt(dist);
                         float pen = combinedRadius - dist;
-                        if (uprightCapsule && dist <= 0.0001f)
+                        if (uprightCapsule)
                         {
-                            // Coincident capsule contact chooses positive X and resolves the full
-                            // penetration, independently of the agent's steering direction.
-                            ag.disp.X += pen * _config.collisionResolveFactor;
+                            // A shaft uses the direction from its axis. A clipped cap pushes
+                            // away from the nearest point on its circumference, which points
+                            // inward when the agent is inside that circle.
+                            var direction = new RcVec3f(1f, 0f, 0f);
+                            if (dist > 0f && (!clippedCap || MathF.Abs(dist - radius) > CapsuleSurfaceNormalEpsilon))
+                            {
+                                float sign = clippedCap && dist < radius ? -1f : 1f;
+                                direction = new RcVec3f(sign * (diff.X / dist), 0f, sign * (diff.Z / dist));
+                            }
+                            ag.disp = RcVec.Mad(ag.disp, direction, pen * _config.collisionResolveFactor);
                             w += 1f;
                             continue;
                         }
