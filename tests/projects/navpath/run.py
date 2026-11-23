@@ -164,7 +164,9 @@ def obstacle_separation_problem(path):
         numeric.update(f'{case}.f{frame}.at.{axis}' for frame in (1, 3) for axis in 'xyz')
     for case in ('on-axis-path', 'lower-cap-path', 'above-path', 'cap-graze'):
         numeric.update(f'{case}.f{frame}.desired.{axis}' for frame in (1, 3) for axis in 'xyz')
-    for case in ('scaled-cap-interior', 'cap-interior', 'cap-surface-near', 'cap-surface-far'):
+    for case in ('scaled-cap-interior', 'cap-interior', 'cap-surface-near', 'cap-surface-far',
+                 'lower-seam', 'lower-shaft-side', 'lower-cap-side', 'upper-seam',
+                 'upper-shaft-side', 'upper-cap-side', 'lower-apex', 'past-lower-apex'):
         numeric.update(f'{case}.f{frame}.at.{axis}' for frame in (1, 2, 3) for axis in 'xyz')
     expected = numeric | statuses | pending | {'release', 'mesh0.triangles', 'mesh0.vertices'}
     if set(records) != expected:
@@ -205,13 +207,15 @@ def publish(args):
     return 0
 
 
-def same(a, b):
+def same(a, b, strict_booleans=False):
+    if strict_booleans and (type(a) is bool or type(b) is bool):
+        return type(a) is type(b) and a == b
     if isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool):
         return abs(a - b) <= TOLERANCE*max(1.0, abs(a))
     return a == b
 
 
-def compare(reference, candidate, prefix, details):
+def compare(reference, candidate, prefix, details, strict_booleans=False):
     """Report differences, with an optional per-scenario detail limit."""
     bad = 0
     for scenario, values in reference.items():
@@ -225,7 +229,7 @@ def compare(reference, candidate, prefix, details):
                     print(f'  {key}: unity {value!r}  unbound "<missing>"')
             bad += 1
             continue
-        keys = [k for k, v in values.items() if not same(v, other.get(k, '<missing>'))]
+        keys = [k for k, v in values.items() if not same(v, other.get(k, '<missing>'), strict_booleans)]
         keys += [k for k in other if k not in values]
         lines = [f'  {k}: unity {values.get(k, "<missing>")!r}  unbound {other.get(k, "<missing>")!r}' for k in keys]
         listed = [k for k in keys if any(k.startswith(p) for p in LISTED.get(scenario, ()))]
@@ -265,8 +269,10 @@ def unbound(args):
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=900).returncode
     if code != 0 or not result.exists():
         sys.exit(f'Unbound failed (exit {code}); see {out/"run.log"}')
-    details = None if args.profile == OBSTACLE_SEPARATION else args.details
-    bad = compare(json.loads(profile_reference(args).read_text()), json.loads(result.read_text()), args.scenario, details)
+    dedicated = args.profile == OBSTACLE_SEPARATION
+    details = None if dedicated else args.details
+    bad = compare(json.loads(profile_reference(args).read_text()), json.loads(result.read_text()),
+                  args.scenario, details, strict_booleans=dedicated)
     print(f'gated: {bad} scenario(s) differ')
     return min(bad, 100)
 

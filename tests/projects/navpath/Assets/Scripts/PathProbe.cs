@@ -1546,6 +1546,14 @@ public class PathProbe : MonoBehaviour
             ("cap-interior", -0.75f, Vector3.one, -0.09f, 0.07f),
             ("cap-surface-near", -0.75f, Vector3.one, 0.11f - 0.4330627f, 0.07f),
             ("cap-surface-far", -0.75f, Vector3.one, 0.11f - 0.4331627f, 0.07f),
+            ("lower-seam", -0.5f, Vector3.one, -0.09f, 0.07f),
+            ("lower-shaft-side", -0.49999994f, Vector3.one, -0.09f, 0.07f),
+            ("lower-cap-side", -0.50000006f, Vector3.one, -0.09f, 0.07f),
+            ("upper-seam", 2.5f, Vector3.one, -0.09f, 0.07f),
+            ("upper-shaft-side", 2.4999998f, Vector3.one, -0.09f, 0.07f),
+            ("upper-cap-side", 2.5000002f, Vector3.one, -0.09f, 0.07f),
+            ("lower-apex", -1f, Vector3.one, 0.11f, 0.07f),
+            ("past-lower-apex", -1.0000001f, Vector3.one, 0.11f, 0.07f),
         })
         {
             var post = new GameObject("post");

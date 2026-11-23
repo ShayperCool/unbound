@@ -110,9 +110,12 @@ On the capsule axis the contact moves the agent along positive X, including when
 lies along negative Z. Shaft contact uses the direction of any nonzero offset from the axis.
 When only a cap reaches the agent's height, contact resolves away from the nearest point on
 the cap section's circumference. The scaled capsule control records the first three steps
-while an agent starts inside that section.
+while an agent starts inside that section. Seam and apex controls cover the exact endpoints
+and neighboring floating-point heights. Projection uses the original capsule center to retain
+those distinctions.
 
-The dedicated profile records 687 values and prints every difference. It includes six steering
+The dedicated profile records 759 values and prints every difference. Boolean records keep
+their type in the comparison. It includes six steering
 controls and varies capsule height, scale, agent speed, and starting positions inside and outside
 the cap section.
 The main and stacked-link profiles continue to use their original references.
