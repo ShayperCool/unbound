@@ -249,7 +249,10 @@ public partial class HumanoidProbe
             "mirrorJobPartialHand", "mirrorJobFootPosition", "mirrorJobFullFoot",
             "mirrorControllerFootIK", "mirrorControllerStateFootIK", "mirrorAttachedFootIK", "plainControllerFootIK",
             "plainJobMovingRoot", "mirrorJobMovingRoot", "mirrorJobMovingRootPartial",
-            "plainAttachedMatchFoot", "mirrorAttachedMatchFoot" })
+            "plainAttachedMatchFoot", "mirrorAttachedMatchFoot",
+            "mirrorClipFullMovingRoot", "mirrorClipFullMovingRootFootIK", "mirrorJobFullMovingRoot",
+            "mirrorJobFullMovingRootTurning", "plainClipFullMovingRootTurning",
+            "mirrorClipFullMovingRootTurningFootIK" })
         {
             string key = "apiCurves." + mode;
             bool stateMirror = mode == "mirrorControllerStateFootIK";
@@ -257,6 +260,7 @@ public partial class HumanoidProbe
             bool attachedController = mode.Contains("Attached");
             bool matchFoot = mode.EndsWith("MatchFoot", StringComparison.Ordinal);
             bool movingRoot = matchFoot || mode.Contains("MovingRoot");
+            bool readFootVelocityOnly = movingRoot && !matchFoot && !mode.Contains("FullMovingRoot");
             var clip = new AnimationClip { name = key };
             void Set(string name, AnimationCurve curve)
             {
@@ -277,9 +281,12 @@ public partial class HumanoidProbe
             Set("RootT.z", movingRoot ? AnimationCurve.Linear(0f, 0f, 1f, .4f) : AnimationCurve.Constant(0f, 1f, 0f));
             var turn = Quaternion.Euler(0f, 20f, 0f);
             Set("RootQ.x", AnimationCurve.Constant(0f, 1f, turn.x));
-            Set("RootQ.y", AnimationCurve.Constant(0f, 1f, turn.y));
+            var endTurn = mode.Contains("Turning") ? Quaternion.Euler(0f, 55f, 0f) : turn;
+            Set("RootQ.y", mode.Contains("Turning") ? AnimationCurve.Linear(0f, turn.y, 1f, endTurn.y)
+                : AnimationCurve.Constant(0f, 1f, turn.y));
             Set("RootQ.z", AnimationCurve.Constant(0f, 1f, turn.z));
-            Set("RootQ.w", AnimationCurve.Constant(0f, 1f, turn.w));
+            Set("RootQ.w", mode.Contains("Turning") ? AnimationCurve.Linear(0f, turn.w, 1f, endTurn.w)
+                : AnimationCurve.Constant(0f, 1f, turn.w));
             if (mode == "mirrorJobPartialFoot" || mode == "mirrorJobMovingRootPartial")
                 Set("LeftFootQ.y", AnimationCurve.Constant(0f, 1f, .2f));
             if (mode == "mirrorJobPartialHand")
@@ -319,7 +326,7 @@ public partial class HumanoidProbe
             if (mode.Contains("Job"))
             {
                 var job = AnimationScriptPlayable.Create(graph,
-                    new MirrorGoalReadJob { footVelocityOnly = movingRoot }, 1);
+                    new MirrorGoalReadJob { footVelocityOnly = readFootVelocityOnly }, 1);
                 job.ConnectInput(0, playable, 0, 1f);
                 outputSource = job;
             }
@@ -358,10 +365,8 @@ public partial class HumanoidProbe
                         AvatarTarget.RightFoot, new MatchTargetWeightMask(Vector3.zero, 1f), .1f, .7f);
                 if (attachedController) animator.Update(dt);
                 else graph.Evaluate(dt);
-                // The moving-job controls record foot velocity in the job. The controller
-                // controls record how MatchTarget changes the scene root and final pose.
-                if (movingRoot && !matchFoot) continue;
-                if (matchFoot)
+                if (readFootVelocityOnly) continue;
+                if (movingRoot)
                     Put(s_JobKey + ".actor", "[" + V(instance.transform.position) + "," + Q(instance.transform.rotation)
                         + "," + V(animator.deltaPosition) + "," + Q(animator.deltaRotation) + "," + B(animator.isMatchingTarget) + "]");
                 Rotations(key + ".step" + step + ".rotations", instance.transform, hips);
