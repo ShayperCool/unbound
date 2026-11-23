@@ -719,7 +719,11 @@ namespace UnityEngine.Rendering
                 return;
             }
             if (rt == null) throw new ArgumentNullException(nameof(rt));
-            Add(_ => { if (rt != null) rt.WriteCommandResolve(target); }, ResolveSurfaceCommandSize);
+            Add(context =>
+            {
+                if (rt != null)
+                    rt.WriteCommandResolve(target, context.Screen, context.CameraTarget);
+            }, ResolveSurfaceCommandSize);
         }
 
         public void CopyTexture(RenderTargetIdentifier src, RenderTargetIdentifier dst) => CopyTexture(src, 0, 0, -1, -1, -1, -1, dst, 0, 0, 0, 0);

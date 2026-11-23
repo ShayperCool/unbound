@@ -916,7 +916,19 @@ namespace UnityEngine
             set
             {
                 s_SrgbWrite = value;
-                GfxStream.SetGlFlag(GfxStream.CameraNoSrgbWrite, !value);
+                bool noSrgb = !value;
+                bool previous = GfxStream.SetGlFlag(GfxStream.CameraNoSrgbWrite, noSrgb);
+                bool rebind = previous != noSrgb &&
+                    QualitySettings.activeColorSpace == ColorSpace.Linear;
+                // The OpenGL Core window framebuffer also honors explicit sRGB writes in Gamma
+                // projects (tests/projects/textureformats). Ordinary Gamma render textures do not.
+                if (QualitySettings.activeColorSpace == ColorSpace.Gamma && Compat.RenderingMeasured &&
+                    SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore)
+                {
+                    bool priorFramebuffer = GfxStream.SetGlFlag(GfxStream.CameraGammaFramebufferSrgb, value);
+                    rebind |= priorFramebuffer != value && GfxStream.Current.Color == 0;
+                }
+                if (rebind) GfxStream.RebindTarget();
             }
         }
 

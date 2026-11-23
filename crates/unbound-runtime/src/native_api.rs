@@ -106,7 +106,9 @@ use std::ffi::c_void;
 /// 93: `gi_automatic_uvs` answers how many ways of laying the charts out fit the system's layout
 /// that its data cannot tell apart (0 when one was taken by the data).
 /// 94: `pointer_known` at the end of `FrameInput`.
-pub const NATIVE_API_VERSION: u32 = 94;
+/// 95: `ResolveFramebuffer` copies the displayed color into a resolved texture. A camera flag
+/// tracks explicit sRGB writes to the Gamma window framebuffer.
+pub const NATIVE_API_VERSION: u32 = 95;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

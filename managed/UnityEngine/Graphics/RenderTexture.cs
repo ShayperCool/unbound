@@ -441,7 +441,7 @@ namespace UnityEngine
         // Command buffers resolve the current color attachment without changing the binding.
         // In OpenGL Core an omitted target resolves an ordinary multisample image into itself.
         // A supplied target must name a different image. See tests/projects/textureformats.
-        internal void WriteCommandResolve(RenderTexture target)
+        internal void WriteCommandResolve(RenderTexture target, bool screenCamera, RenderTexture cameraTarget)
         {
             if (!IsCreated() || !m_AllocatedHasColor) return;
             bool implicitTarget = target == null;
@@ -459,7 +459,8 @@ namespace UnityEngine
             {
                 Log.Write(LogType.Assert, ResolveOfInactiveSource, "", null);
                 bool backbuffer = binding.Colors == null && (binding.Color == 0
-                    || (ScreenStandIn != null && binding.Color == ScreenStandIn.m_NativeHandle));
+                    || (ScreenStandIn != null && binding.Color == ScreenStandIn.m_NativeHandle)
+                    || (screenCamera && cameraTarget != null && binding.Color == cameraTarget.m_NativeHandle));
                 if (!backbuffer) return;
             }
             if (!implicitTarget && target == this) return;
@@ -470,11 +471,8 @@ namespace UnityEngine
             }
             if (isBound)
                 QueueResolve(target);
-            else if (implicitTarget)
-                GfxStream.CopyTexture(binding.Color, 0, 0, new RectInt(0, 0, -1, -1),
-                    m_NativeHandle, 0, 0, 0, 0);
             else
-                GfxStream.ResolveTexture(binding.Color, target.EnsureCreated());
+                GfxStream.ResolveFramebuffer(binding.Color, target.m_NativeHandle, implicitTarget, screenCamera);
         }
 
         void QueueResolve(RenderTexture target) =>

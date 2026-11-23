@@ -1593,6 +1593,9 @@ namespace Unbound.Runtime
             Camera.Internal_SetCurrent(camera);
             camera.UpdateVelocity();
             RenderTexture screenStandIn = null;
+            uint displayFlag = 0;
+            bool previousDisplayFlag = false;
+            bool scriptSrgbWrite = GL.sRGBWrite;
             // The engine's own capture of the sky is not a camera the game renders: scripts get
             // no messages or events for it.
             bool messages = !camera.m_EnvironmentCapture;
@@ -1668,6 +1671,16 @@ namespace Unbound.Runtime
                 var buffers = camera.targetTexture == null ? camera.TargetBufferHandles() : null;
                 var cameraTarget = camera.targetTexture ?? camera.BufferTarget;
                 bool screenCamera = cameraTarget == null && buffers == null;
+                // The built-in screen camera configures its display encoding while leaving the
+                // script's GL.sRGBWrite value alone (tests/projects/textureformats).
+                if (screenCamera && Compat.RenderingMeasured &&
+                    SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore)
+                {
+                    displayFlag = QualitySettings.activeColorSpace == ColorSpace.Linear
+                        ? GfxStream.CameraNoSrgbWrite : GfxStream.CameraGammaFramebufferSrgb;
+                    scriptSrgbWrite = GL.sRGBWrite;
+                    previousDisplayFlag = GfxStream.SetGlFlag(displayFlag, false);
+                }
                 if (screenCamera && ScalableBufferManager.Scaling && camera.allowDynamicResolution)
                     Unbound.Runtime.Stubs.Ignored("Camera.allowDynamicResolution", "a camera drawing to the screen renders at full size while ScalableBufferManager scales (unmeasured)");
                 // Measured in cameramsaa: an explicit target supplies its samples, including HDR
@@ -2018,6 +2031,11 @@ namespace Unbound.Runtime
             }
             finally
             {
+                if (displayFlag != 0 && scriptSrgbWrite == GL.sRGBWrite)
+                {
+                    bool beforeRestore = GfxStream.SetGlFlag(displayFlag, previousDisplayFlag);
+                    if (beforeRestore != previousDisplayFlag) GfxStream.RebindTarget();
+                }
                 EndCameraRendering();
                 camera.m_Rendering = false;
                 camera.m_RenderingInto = null;

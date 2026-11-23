@@ -36,7 +36,9 @@ namespace Unbound.Runtime
             // NativeApi 59.
             DotsDrawOp = 36,
             // NativeApi 85.
-            DrawShapeOp = 37;
+            DrawShapeOp = 37,
+            // NativeApi 94.
+            ResolveFramebufferOp = 38;
 
         /// <summary><see cref="DrawShape"/>'s topology byte for the drawn submesh's own.</summary>
         const byte DrawShapeMeshTopology = 0xFF;
@@ -71,6 +73,8 @@ namespace Unbound.Runtime
         /// <summary>sRGB targets take the colors as they are, not converted (GL.sRGBWrite off).</summary>
         internal const uint CameraNoSrgbWrite = 32;
         internal const uint CameraGizmoDraw = 64;
+        /// <summary>An explicit sRGB write to the OpenGL Core window framebuffer.</summary>
+        internal const uint CameraGammaFramebufferSrgb = 128;
 
         /// <summary>GL's invertCulling, wireframe and sRGBWrite as camera flags: they apply to every
         /// camera setup and matrix change until changed.</summary>
@@ -78,12 +82,15 @@ namespace Unbound.Runtime
 
         /// <summary>Sets a GL flag; the draws that follow see it (the current matrices are sent again
         /// with it).</summary>
-        internal static void SetGlFlag(uint flag, bool on)
+        internal static bool SetGlFlag(uint flag, bool on)
         {
-            uint flags = on ? s_GlFlags | flag : s_GlFlags & ~flag;
-            if (flags == s_GlFlags) return;
-            s_GlFlags = flags;
-            Camera(s_State.View, s_State.Projection, s_State.Flags);
+            bool previous = (s_GlFlags & flag) != 0;
+            if (previous != on)
+            {
+                s_GlFlags = on ? s_GlFlags | flag : s_GlFlags & ~flag;
+                Camera(s_State.View, s_State.Projection, s_State.Flags);
+            }
+            return previous;
         }
 
         /// <summary>Property kinds.</summary>
@@ -1036,6 +1043,14 @@ namespace Unbound.Runtime
             U8(ResolveTextureOp);
             U64(texture);
             U64(destination);
+        }
+
+        internal static void ResolveFramebuffer(ulong source, ulong destination, bool retained, bool screenCamera)
+        {
+            U8(ResolveFramebufferOp);
+            U64(source);
+            U64(destination);
+            U8((byte)((retained ? 1 : 0) | (screenCamera ? 2 : 0)));
         }
 
         /// <summary>A native plugin's rendering callback, run in stream order. The stream is handed

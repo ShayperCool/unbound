@@ -36,6 +36,8 @@ pub mod camera {
     pub const NO_SRGB_WRITE: u32 = 32;
     /// Gizmo draws supply their batch color and transform normals as directions.
     pub const GIZMO: u32 = 64;
+    /// An explicit sRGB write to the OpenGL Core window framebuffer in a Gamma project.
+    pub const GAMMA_FRAMEBUFFER_SRGB: u32 = 128;
 }
 
 /// Whether a draw's color is a renderer's own color (SpriteRenderer.color, a tilemap cell's,
@@ -231,6 +233,13 @@ pub enum Command {
     ResolveTexture {
         texture: u64,
         destination: u64,
+    },
+    /// Copy opaque color from the screen or a camera's intermediate into a resolved image.
+    ResolveFramebuffer {
+        source: u64,
+        destination: u64,
+        retained: bool,
+        screen_camera: bool,
     },
     /// Filter the lower mip levels of a render target.
     GenerateMips {
@@ -499,6 +508,8 @@ mod op {
     pub const DOTS_DRAW: u8 = 36;
     // NativeApi 85.
     pub const DRAW_SHAPE: u8 = 37;
+    // NativeApi 94.
+    pub const RESOLVE_FRAMEBUFFER: u8 = 38;
     pub const MESH_BUFFERS: u8 = 31;
 }
 
@@ -998,6 +1009,17 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 texture: r.texture("ResolveTexture")?,
                 destination: r.texture("ResolveTexture destination")?,
             },
+            op::RESOLVE_FRAMEBUFFER => {
+                let source = r.texture("ResolveFramebuffer source")?;
+                let destination = r.texture("ResolveFramebuffer destination")?;
+                let flags = r.u8()?;
+                Command::ResolveFramebuffer {
+                    source,
+                    destination,
+                    retained: flags & 1 != 0,
+                    screen_camera: flags & 2 != 0,
+                }
+            }
             op::PLUGIN => {
                 let kind = r.u8()?;
                 let callback = r.u64()?;
@@ -1409,6 +1431,18 @@ impl Writer {
                 self.u64(*texture);
                 self.u64(*destination);
             }
+            Command::ResolveFramebuffer {
+                source,
+                destination,
+                retained,
+                screen_camera,
+            } => {
+                self.bytes.push(op::RESOLVE_FRAMEBUFFER);
+                self.u64(*source);
+                self.u64(*destination);
+                self.bytes
+                    .push(u8::from(*retained) | (u8::from(*screen_camera) << 1));
+            }
             Command::GenerateMips { texture } => {
                 self.bytes.push(op::GENERATE_MIPS);
                 self.u64(*texture);
@@ -1564,6 +1598,12 @@ mod tests {
             Command::ResolveTexture {
                 texture: 42,
                 destination: 42,
+            },
+            Command::ResolveFramebuffer {
+                source: 0,
+                destination: 42,
+                retained: true,
+                screen_camera: true,
             },
             Command::GenerateMips { texture: 42 },
             Command::BeginFrame {
@@ -2043,10 +2083,10 @@ mod tests {
     /// zone, 22 render protocols 10/11's 32-bit indices and logical instance IDs, 23 the
     /// Distortion filter kind, 28 render protocol 12's shared arrays and 31 the imported texture's
     /// reported format; 35 adds deferred render-target mips, 36 listener pose snapshots and 37 the downloaded audio decoder;
-    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts, 73 BatchRendererGroup indirect draws, 81 a texture's size before dynamic scaling, 82 screen-ordered textures, 83 the virtual audio clock's frame-start advance, 84 the scripted frame step, 85 a draw's topology and base vertex (`DrawShape`), 86 a target binding nothing, 87 packed targets' channel bits, 88 a draw's renderer color flags, 89 generated textures, 90 the engine's stencil bits in a state override, 91 B8G8R8A8 textures' flag, 92 the job system, 93 automatic realtime UV ways, 94 the frame input's known pointer.
+    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts, 73 BatchRendererGroup indirect draws, 81 a texture's size before dynamic scaling, 82 screen-ordered textures, 83 the virtual audio clock's frame-start advance, 84 the scripted frame step, 85 a draw's topology and base vertex (`DrawShape`), 86 a target binding nothing, 87 packed targets' channel bits, 88 a draw's renderer color flags, 89 generated textures, 90 the engine's stencil bits in a state override, 91 B8G8R8A8 textures' flag, 92 the job system, 93 automatic realtime UV ways, 94 the frame input's known pointer and 95 resolving the framebuffer.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 94);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 95);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

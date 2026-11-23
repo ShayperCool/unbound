@@ -601,7 +601,7 @@ struct Copy {
     destination_mip: u32,
     destination_origin: wgpu::Origin3d,
     size: wgpu::Extent3d,
-    /// Set when the textures keep their texels in different 8-bit storages.
+    /// Set when the color is drawn into the destination storage before copying it.
     channels: Option<ChannelCopy>,
 }
 
@@ -698,7 +698,19 @@ struct ChannelCopy {
     /// The source's level (and slice), viewed as stored.
     source: wgpu::TextureView,
     size: wgpu::Extent3d,
-    kind: CopyKind,
+    transfer: ChannelTransfer,
+}
+
+enum ChannelTransfer {
+    Storage(CopyKind),
+    Framebuffer { srgb: bool, encode_srgb: bool },
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+enum FramebufferTransfer {
+    LinearToDisplay,
+    SrgbToTexture,
+    UnormToTexture,
 }
 
 /// The [`ChannelCopy`] kind from `source` storage into `destination` storage: between R8 and
@@ -996,6 +1008,8 @@ struct State {
     wireframe: bool,
     /// sRGB targets bound from now on store colors unconverted (`NO_SRGB_WRITE`).
     no_srgb_write: bool,
+    /// The OpenGL Core window framebuffer can be sRGB even in a Gamma project.
+    gamma_framebuffer_srgb: bool,
     /// The global depth bias: units, slope factor (`CommandBuffer.SetGlobalDepthBias`).
     depth_bias: [f32; 2],
     gizmo_draw: bool,
@@ -1133,8 +1147,12 @@ pub struct UnityRenderer {
     /// Depth copies the dispatch being planned made four-channel (`fill_depth_copy`): copied
     /// right before it.
     dispatch_fills: Vec<u64>,
-    /// [`Self::repack_texture`]'s textures, oldest first.
-    repack_textures: Vec<wgpu::Texture>,
+    /// [`Self::repack_texture`]'s textures and views, oldest first.
+    repack_textures: Vec<(wgpu::Texture, wgpu::TextureView)>,
+    framebuffer_resolve_layout: Option<wgpu::BindGroupLayout>,
+    framebuffer_resolve_pipelines:
+        HashMap<(wgpu::TextureFormat, FramebufferTransfer), wgpu::RenderPipeline>,
+    framebuffer_resolve_groups: Vec<(wgpu::TextureView, wgpu::BindGroup)>,
     /// The pipelines (and their layouts) that copy a depth buffer into a float color texture:
     /// single-sample and multisampled.
     depth_copy_pipelines: [Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>;
@@ -1304,6 +1322,9 @@ impl UnityRenderer {
             dispatch_reads_depth_target: false,
             dispatch_fills: Vec::new(),
             repack_textures: Vec::new(),
+            framebuffer_resolve_layout: None,
+            framebuffer_resolve_pipelines: Default::default(),
+            framebuffer_resolve_groups: Vec::new(),
             depth_copy_pipelines: std::array::from_fn(|_| None),
             depth_blit_pipelines: HashMap::default(),
             bit_views: HashMap::default(),
@@ -1362,6 +1383,7 @@ impl UnityRenderer {
                 invert_culling: false,
                 wireframe: false,
                 no_srgb_write: false,
+                gamma_framebuffer_srgb: false,
                 depth_bias: [0.0; 2],
                 gizmo_draw: false,
                 state_override: None,
@@ -3065,13 +3087,13 @@ impl UnityRenderer {
         &mut self,
         format: wgpu::TextureFormat,
         size: wgpu::Extent3d,
-    ) -> wgpu::Texture {
-        if let Some(texture) = self
+    ) -> (wgpu::Texture, wgpu::TextureView) {
+        if let Some(entry) = self
             .repack_textures
             .iter()
-            .find(|t| t.format() == format && t.size() == size)
+            .find(|(texture, _)| texture.format() == format && texture.size() == size)
         {
-            return texture.clone();
+            return entry.clone();
         }
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("unbound channel copy"),
@@ -3080,15 +3102,88 @@ impl UnityRenderer {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                | wgpu::TextureUsages::COPY_SRC
+                | if format.is_srgb() {
+                    wgpu::TextureUsages::TEXTURE_BINDING
+                } else {
+                    wgpu::TextureUsages::empty()
+                },
             view_formats: &[],
         });
         // A few shapes at a time (a resized screen leaves its old size behind).
         if self.repack_textures.len() >= REPACK_TEXTURES_KEPT {
             self.repack_textures.remove(0);
         }
-        self.repack_textures.push(texture.clone());
-        texture
+        let entry = (texture.clone(), texture.create_view(&Default::default()));
+        self.repack_textures.push(entry.clone());
+        entry
+    }
+
+    fn framebuffer_copy_resources(
+        &mut self,
+        source: &wgpu::TextureView,
+        format: wgpu::TextureFormat,
+        transfer: FramebufferTransfer,
+    ) -> (wgpu::RenderPipeline, wgpu::BindGroup) {
+        let layout = self
+            .framebuffer_resolve_layout
+            .get_or_insert_with(|| Self::texture_copy_layout(&self.device, false));
+        let pipeline = self
+            .framebuffer_resolve_pipelines
+            .entry((format, transfer))
+            .or_insert_with(|| {
+                let shader = match transfer {
+                    FramebufferTransfer::LinearToDisplay => CHANNEL_COPY_WGSL.into(),
+                    FramebufferTransfer::SrgbToTexture => CHANNEL_COPY_WGSL
+                        .replace("return texel;", "return vec4<f32>(texel.rgb, 1.0);"),
+                    FramebufferTransfer::UnormToTexture => {
+                        let output = match format {
+                            wgpu::TextureFormat::R16Float
+                            | wgpu::TextureFormat::Rg16Float
+                            | wgpu::TextureFormat::Rgba16Float =>
+                                "vec3<f32>(truncate_half(rgb.r), truncate_half(rgb.g), truncate_half(rgb.b))",
+                            _ => "rgb",
+                        };
+                        CHANNEL_COPY_WGSL.replace(
+                            "return texel;",
+                            &format!("let bytes = vec3<u32>(round(clamp(texel.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * 255.0));
+                                      let rgb = vec3<f32>(expand_byte(bytes.r), expand_byte(bytes.g), expand_byte(bytes.b));
+                                      return vec4<f32>({output}, 1.0);"),
+                        ) + FRAMEBUFFER_UNORM_COPY_WGSL
+                    }
+                };
+                Self::texture_copy_pipeline(&self.device, shader, format, layout)
+            });
+        if let Some((_, group)) = self
+            .framebuffer_resolve_groups
+            .iter()
+            .find(|(view, _)| view == source)
+        {
+            return (pipeline.clone(), group.clone());
+        }
+        let group = Self::channel_copy_group(&self.device, layout, source);
+        if self.framebuffer_resolve_groups.len() >= REPACK_TEXTURES_KEPT {
+            self.framebuffer_resolve_groups.remove(0);
+        }
+        self.framebuffer_resolve_groups
+            .push((source.clone(), group.clone()));
+        (pipeline.clone(), group)
+    }
+
+    fn channel_copy_group(
+        device: &wgpu::Device,
+        layout: &wgpu::BindGroupLayout,
+        source: &wgpu::TextureView,
+    ) -> wgpu::BindGroup {
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("unbound channel copy"),
+            layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(source),
+            }],
+        })
     }
 
     /// The pipeline that writes a depth buffer's depth into a float color texture (of four
@@ -3148,68 +3243,67 @@ impl UnityRenderer {
                     )
             }
         };
-        let (sample_type, target_format) = match kind {
-            CopyKind::Depth | CopyKind::DepthMultisampled => (
-                wgpu::TextureSampleType::Float { filterable: false },
-                resources::float_depth_copy_format(device, filled),
-            ),
-            CopyKind::Depth16 | CopyKind::Depth16Multisampled => (
-                wgpu::TextureSampleType::Float { filterable: false },
-                resources::normalized_depth_copy_format(filled).0,
-            ),
-            CopyKind::UintBits => (
-                wgpu::TextureSampleType::Float { filterable: false },
-                wgpu::TextureFormat::Rgba32Uint,
-            ),
-            CopyKind::SintBits => (
-                wgpu::TextureSampleType::Float { filterable: false },
-                wgpu::TextureFormat::Rgba32Sint,
-            ),
-            CopyKind::ToR8 => (
-                wgpu::TextureSampleType::Float { filterable: false },
-                wgpu::TextureFormat::R8Unorm,
-            ),
+        let target_format = match kind {
+            CopyKind::Depth | CopyKind::DepthMultisampled => {
+                resources::float_depth_copy_format(device, filled)
+            }
+            CopyKind::Depth16 | CopyKind::Depth16Multisampled => {
+                resources::normalized_depth_copy_format(filled).0
+            }
+            CopyKind::UintBits => wgpu::TextureFormat::Rgba32Uint,
+            CopyKind::SintBits => wgpu::TextureFormat::Rgba32Sint,
+            CopyKind::ToR8 => wgpu::TextureFormat::R8Unorm,
             CopyKind::ToRgba8
             | CopyKind::SwapRedBlue
             | CopyKind::Packed565
             | CopyKind::Packed5551
-            | CopyKind::Packed4444 => (
-                wgpu::TextureSampleType::Float { filterable: false },
-                wgpu::TextureFormat::Rgba8Unorm,
-            ),
-            CopyKind::ToBgra8 => (
-                wgpu::TextureSampleType::Float { filterable: false },
-                wgpu::TextureFormat::Bgra8Unorm,
-            ),
+            | CopyKind::Packed4444 => wgpu::TextureFormat::Rgba8Unorm,
+            CopyKind::ToBgra8 => wgpu::TextureFormat::Bgra8Unorm,
         };
         let multisampled = matches!(
             kind,
             CopyKind::DepthMultisampled | CopyKind::Depth16Multisampled
         );
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("unbound depth copy"),
-            source: wgpu::ShaderSource::Wgsl(source.into()),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("unbound depth copy"),
+        let layout = Self::texture_copy_layout(device, multisampled);
+        let pipeline = Self::texture_copy_pipeline(device, source, target_format, &layout);
+        let result = (pipeline, layout);
+        self.depth_copy_pipelines[index] = Some(result.clone());
+        result
+    }
+
+    fn texture_copy_layout(device: &wgpu::Device, multisampled: bool) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("unbound texture copy"),
             entries: &[wgpu::BindGroupLayoutEntry {
                 binding: 0,
                 visibility: wgpu::ShaderStages::FRAGMENT,
                 ty: wgpu::BindingType::Texture {
-                    sample_type,
+                    sample_type: wgpu::TextureSampleType::Float { filterable: false },
                     view_dimension: wgpu::TextureViewDimension::D2,
                     multisampled,
                 },
                 count: None,
             }],
+        })
+    }
+
+    fn texture_copy_pipeline(
+        device: &wgpu::Device,
+        source: String,
+        target_format: wgpu::TextureFormat,
+        layout: &wgpu::BindGroupLayout,
+    ) -> wgpu::RenderPipeline {
+        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("unbound texture copy"),
+            source: wgpu::ShaderSource::Wgsl(source.into()),
         });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("unbound depth copy"),
-            bind_group_layouts: &[Some(&layout)],
+            label: Some("unbound texture copy"),
+            bind_group_layouts: &[Some(layout)],
             immediate_size: 0,
         });
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("unbound depth copy"),
+        device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("unbound texture copy"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &module,
@@ -3232,9 +3326,7 @@ impl UnityRenderer {
             multisample: wgpu::MultisampleState::default(),
             multiview_mask: None,
             cache: None,
-        });
-        self.depth_copy_pipelines[index] = Some((pipeline, layout));
-        self.depth_copy_pipelines[index].clone().unwrap()
+        })
     }
 
     /// A `CopyDepth`: the source's sampled depth and the destination's depth attachment (0: the
@@ -3648,7 +3740,12 @@ impl UnityRenderer {
             // A None target: draws and clears go nowhere.
             return None;
         } else if color == 0 {
-            self.screen_target(space)
+            let screen_space = if self.state.gamma_framebuffer_srgb {
+                1
+            } else {
+                space
+            };
+            self.screen_target(screen_space)
         } else {
             let Some(t) = self.textures.get(&color).filter(|t| t.render_target) else {
                 self.warn_once(format!("rt{color}"), || {
@@ -3882,7 +3979,7 @@ impl UnityRenderer {
                         ..Default::default()
                     }),
                     size,
-                    kind,
+                    transfer: ChannelTransfer::Storage(kind),
                 }),
                 source: texture.clone(),
                 source_mip: mip,
@@ -4072,6 +4169,23 @@ impl UnityRenderer {
                             ) {
                                 passes.push(Op::Copy(copy));
                             }
+                        }
+                        open = false;
+                    }
+                    Command::ResolveFramebuffer {
+                        source,
+                        destination,
+                        retained,
+                        screen_camera,
+                    } => {
+                        self.prepare_screen_copy(source, destination, &mut passes);
+                        if let Some(copy) = self.plan_framebuffer_resolve(
+                            source,
+                            destination,
+                            retained,
+                            screen_camera,
+                        ) {
+                            passes.push(Op::Copy(copy));
                         }
                         open = false;
                     }
@@ -4282,6 +4396,8 @@ impl UnityRenderer {
                         self.state.invert_culling = flags & commands::camera::INVERT_CULLING != 0;
                         self.state.wireframe = flags & commands::camera::WIREFRAME != 0;
                         self.state.no_srgb_write = flags & commands::camera::NO_SRGB_WRITE != 0;
+                        self.state.gamma_framebuffer_srgb =
+                            flags & commands::camera::GAMMA_FRAMEBUFFER_SRGB != 0;
                         self.state.gizmo_draw = flags & commands::camera::GIZMO != 0;
                         if flags & commands::camera::BEGIN != 0 {
                             self.grabbed.clear();
@@ -5979,6 +6095,73 @@ impl UnityRenderer {
         }
     }
 
+    /// Copy the active framebuffer's opaque display color into the requested resolve image.
+    fn plan_framebuffer_resolve(
+        &mut self,
+        source: u64,
+        destination: u64,
+        retained: bool,
+        screen_camera: bool,
+    ) -> Option<Copy> {
+        let srgb = (self.color_space == 1 && (screen_camera || !self.state.no_srgb_write))
+            || (source == 0 && self.state.gamma_framebuffer_srgb);
+        let encoded = srgb && !self.state.no_srgb_write;
+        let (src, raw, encoded_view) = if source == 0 {
+            let screen = self.ensure_screen(self.screen_slot);
+            (&screen.texture, &screen.color, Some(&screen.srgb))
+        } else {
+            let texture = self.textures.get(&source)?;
+            (&texture.texture, &texture.view, texture.srgb_view.as_ref())
+        };
+        let encoded_view = encoded_view.filter(|_| encoded);
+        let encode_srgb = srgb && encoded_view.is_none();
+        let view = encoded_view.unwrap_or(raw).clone();
+        let src = src.clone();
+        let target = self.textures.get(&destination)?;
+        let dst = if retained {
+            self.resolve_history.get(&target.texture)?.texture.clone()
+        } else if target.samples == 1 {
+            target.texture.clone()
+        } else {
+            return None;
+        };
+        let format = dst.format().remove_srgb_suffix();
+        if target.depth_only
+            || !target
+                .texture
+                .usage()
+                .contains(wgpu::TextureUsages::RENDER_ATTACHMENT)
+            || !matches!(
+                format.sample_type(None, None),
+                Some(wgpu::TextureSampleType::Float { .. })
+            )
+        {
+            self.warn_once(format!("framebuffer-resolve-{destination}"), || {
+                format!("ResolveAntiAliasedSurface cannot copy framebuffer color into {format:?}: skipped")
+            });
+            return None;
+        }
+        let size = wgpu::Extent3d {
+            width: src.width().min(dst.width()),
+            height: src.height().min(dst.height()),
+            depth_or_array_layers: 1,
+        };
+        Some(Copy {
+            source: src,
+            source_mip: 0,
+            source_origin: wgpu::Origin3d::ZERO,
+            destination: dst,
+            destination_mip: 0,
+            destination_origin: wgpu::Origin3d::ZERO,
+            size,
+            channels: Some(ChannelCopy {
+                source: view,
+                size,
+                transfer: ChannelTransfer::Framebuffer { srgb, encode_srgb },
+            }),
+        })
+    }
+
     /// A copy between two textures (0: the screen), clipped to both; formats must match.
     fn plan_copy(
         &mut self,
@@ -6158,7 +6341,7 @@ impl UnityRenderer {
                 height: sh as u32,
                 depth_or_array_layers: 1,
             },
-            kind,
+            transfer: ChannelTransfer::Storage(kind),
         });
         Some(Copy {
             channels,
@@ -6343,41 +6526,40 @@ impl UnityRenderer {
                 Op::Copy(c) => {
                     // Texels in another storage are drawn into a level of the destination's first.
                     let repacked = c.channels.as_ref().map(|channels| {
-                        let (pipeline, layout) =
-                            self.depth_copy_pipeline(channels.kind, c.source.sample_count(), false);
-                        let texture = self.repack_texture(
-                            c.destination.format().remove_srgb_suffix(),
-                            channels.size,
-                        );
-                        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                            label: Some("unbound channel copy"),
-                            layout: &layout,
-                            entries: &[wgpu::BindGroupEntry {
-                                binding: 0,
-                                resource: wgpu::BindingResource::TextureView(&channels.source),
-                            }],
-                        });
-                        let target = texture.create_view(&Default::default());
-                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                            label: Some("unbound channel copy"),
-                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                                view: &target,
-                                depth_slice: None,
-                                resolve_target: None,
-                                ops: wgpu::Operations {
-                                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                                    store: wgpu::StoreOp::Store,
-                                },
-                            })],
-                            depth_stencil_attachment: None,
-                            timestamp_writes: None,
-                            occlusion_query_set: None,
-                            multiview_mask: None,
-                        });
-                        rp.set_pipeline(&pipeline);
-                        rp.set_bind_group(0, &group, &[]);
-                        rp.draw(0..3, 0..1);
-                        drop(rp);
+                        let format = c.destination.format().remove_srgb_suffix();
+                        let (pipeline, group) = match channels.transfer {
+                            ChannelTransfer::Storage(kind) => {
+                                let (pipeline, layout) =
+                                    self.depth_copy_pipeline(kind, c.source.sample_count(), false);
+                                let group =
+                                    Self::channel_copy_group(&device, &layout, &channels.source);
+                                (pipeline, group)
+                            }
+                            ChannelTransfer::Framebuffer { srgb, encode_srgb } => {
+                                let encoded;
+                                let view = if encode_srgb {
+                                    let format = wgpu::TextureFormat::Rgba8UnormSrgb;
+                                    encoded = self.repack_texture(format, channels.size);
+                                    let (pipeline, group) = self.framebuffer_copy_resources(
+                                        &channels.source,
+                                        format,
+                                        FramebufferTransfer::LinearToDisplay,
+                                    );
+                                    draw_channel_copy(&mut encoder, &encoded.1, &pipeline, &group);
+                                    &encoded.1
+                                } else {
+                                    &channels.source
+                                };
+                                let transfer = if srgb {
+                                    FramebufferTransfer::SrgbToTexture
+                                } else {
+                                    FramebufferTransfer::UnormToTexture
+                                };
+                                self.framebuffer_copy_resources(view, format, transfer)
+                            }
+                        };
+                        let (texture, target) = self.repack_texture(format, channels.size);
+                        draw_channel_copy(&mut encoder, &target, &pipeline, &group);
                         texture
                     });
                     let (source, source_mip, source_origin) = match &repacked {
@@ -6966,6 +7148,55 @@ fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
     return texel;
 }
 "#;
+
+// The OpenGL Core framebuffer copy expands its normalized colors and truncates them when the
+// destination is half precision (Unity 6000.0.71f1, tests/projects/textureformats screenColor).
+const FRAMEBUFFER_UNORM_COPY_WGSL: &str = r#"
+fn expand_byte(byte: u32) -> f32 {
+    if (byte == 0u) {
+        return 0.0;
+    }
+    // Round the integer quotient to a 24-bit significand. GPU reciprocals introduce an extra
+    // rounding step for some of the bytes.
+    let shift = countLeadingZeros(byte);
+    let significand = ((byte << shift) + 127u) / 255u;
+    let exponent = 150u - shift;
+    return bitcast<f32>((exponent << 23u) + significand - (1u << 23u));
+}
+
+fn truncate_half(value: f32) -> f32 {
+    let bits = pack2x16float(vec2<f32>(value, 0.0));
+    let nearest = unpack2x16float(bits).x;
+    return select(nearest, unpack2x16float(bits - 1u).x, nearest > value);
+}
+"#;
+
+fn draw_channel_copy(
+    encoder: &mut wgpu::CommandEncoder,
+    target: &wgpu::TextureView,
+    pipeline: &wgpu::RenderPipeline,
+    group: &wgpu::BindGroup,
+) {
+    let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("unbound channel copy"),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view: target,
+            depth_slice: None,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                store: wgpu::StoreOp::Store,
+            },
+        })],
+        depth_stencil_attachment: None,
+        timestamp_writes: None,
+        occlusion_query_set: None,
+        multiview_mask: None,
+    });
+    pass.set_pipeline(pipeline);
+    pass.set_bind_group(0, group, &[]);
+    pass.draw(0..3, 0..1);
+}
 
 /// The mip level of a target's single-sample texture (texture, layer, level); 0 without one.
 fn level_of(texture: &Option<(wgpu::Texture, u32, u32)>) -> u32 {
