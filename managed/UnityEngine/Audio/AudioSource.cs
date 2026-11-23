@@ -53,16 +53,11 @@ namespace UnityEngine
         internal AnimationCurve m_SpreadCurve = new AnimationCurve(new Keyframe(0f, 0f));
         internal AnimationCurve m_ReverbZoneMixCurve = new AnimationCurve(new Keyframe(0f, 1f));
 
-        // Scene loads and curve assignments retain the largest reservation for each curve.
-        // A new source or clone starts with its own inline keys (componentmemory, 6000.0).
-        const int RolloffInlineKeys = 2, OtherCurveInlineKeys = 1;
+        // Each curve retains the largest key reservation since construction (componentmemory, 6000.0).
         int m_RolloffReservedKeys, m_SpatialBlendReservedKeys, m_SpreadReservedKeys, m_ReverbZoneMixReservedKeys;
 
-        internal long ProfilerExternalCurveSlots =>
-            (long)Math.Max(0, m_RolloffReservedKeys - RolloffInlineKeys)
-            + Math.Max(0, m_SpatialBlendReservedKeys - OtherCurveInlineKeys)
-            + Math.Max(0, m_SpreadReservedKeys - OtherCurveInlineKeys)
-            + Math.Max(0, m_ReverbZoneMixReservedKeys - OtherCurveInlineKeys);
+        internal long ProfilerReservedCurveKeys =>
+            (long)m_RolloffReservedKeys + m_SpatialBlendReservedKeys + m_SpreadReservedKeys + m_ReverbZoneMixReservedKeys;
 
         internal bool m_Paused;
         internal bool m_Dirty = true;
@@ -972,6 +967,17 @@ namespace UnityEngine
             if (m_Handle == 0) return;
             AudioBackend.Current.ReleaseSource(m_Handle);
             m_Handle = 0;
+        }
+
+        internal override void OnAttached()
+        {
+            base.OnAttached();
+            // Loads and clones take their first reservation from the keys they receive.
+            if (!Compat.AudioSourceCurveStorageMeasured || ComponentFactory.IsDeserializing) return;
+            m_RolloffReservedKeys = m_RolloffCurve.length;
+            m_SpatialBlendReservedKeys = m_SpatialBlendCurve.length;
+            m_SpreadReservedKeys = m_SpreadCurve.length;
+            m_ReverbZoneMixReservedKeys = m_ReverbZoneMixCurve.length;
         }
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
