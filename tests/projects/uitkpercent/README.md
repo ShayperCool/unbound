@@ -29,7 +29,8 @@ Margins, paddings, offsets, minimum and maximum:
 
 - `marginPercent`, `paddingPercent`, `marginRow`: 10% margins (or paddings) of an element that grows
   next to a fixed sibling, with a 50% basis child: they take the owner's width on both axes, also for
-  the space the element's children are laid out in.
+  the space the element's children are laid out in. `measuredMargin`: the same for an element laid out
+  by its text (a label), which is as large as a plain element with the same styles.
 - `relativeInColumn`, `relativeInRow`: relatively placed elements with `left`/`top` (and
   `right`/`bottom`) in percent: left and right take the owner's width, top and bottom its height,
   whatever the element's own flex direction.

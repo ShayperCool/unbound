@@ -242,7 +242,27 @@ namespace PercentProbe
             var srfA = Box(srfRow, "a", 522, 50); srfA.style.marginLeft = Length.Percent(2); srfA.style.flexShrink = 1;
             var srfB = Box(srfRow, "b", 1093, 50); srfB.style.flexShrink = 1;
 
+            // measuredMargin: in a 1000 wide, 200 high row with a 50 bottom padding, centering its
+            // children, a label (laid out by its text) and a plain element, each with a 25% basis, a
+            // 100% height, 2% top and 0.5% side and bottom margins, a 2% bottom padding and a 10 top
+            // padding.
+            var measuredMargin = Case(root, "measuredMargin", 0);
+            measuredMargin.style.top = 3600;
+            var mgRow = Box(measuredMargin, "row", 1000, 200); mgRow.style.flexDirection = FlexDirection.Row;
+            mgRow.style.alignItems = Align.Center; mgRow.style.paddingBottom = 50;
+            var mgLabel = new Label("Ab") { name = "label" };
+            var mgPlain = new VisualElement { name = "plain" };
+            foreach (var ve in new[] { mgLabel, mgPlain })
+            {
+                ve.style.flexBasis = Length.Percent(25); ve.style.flexShrink = 0; ve.style.height = Length.Percent(100);
+                ve.style.marginTop = Length.Percent(2); ve.style.marginLeft = Length.Percent(0.5f);
+                ve.style.marginRight = Length.Percent(0.5f); ve.style.marginBottom = Length.Percent(0.5f);
+                ve.style.paddingBottom = Length.Percent(2); ve.style.paddingTop = 10;
+                mgRow.Add(ve);
+            }
+
             yield return Frames();
+            Put("measuredMargin", "label " + State(mgLabel) + "|plain " + State(mgPlain));
             Put("shrinkRowMore", "a " + State(srmA) + "|b " + State(srmB));
             Put("shrinkRowLastMargin", "a " + State(srlA) + "|b " + State(srlB));
             Put("shrinkRowLeftMargin", "a " + State(srfA) + "|b " + State(srfB));
