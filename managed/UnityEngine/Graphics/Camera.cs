@@ -691,14 +691,24 @@ namespace UnityEngine
         // ------------------------------------------------------------------ rendering control
 
         /// <summary>Renders the camera now, into its target texture (the screen when none), as the
-        /// frame's rendering does; it works on a disabled camera too.</summary>
+        /// frame's rendering does; it works on a disabled camera too. The render texture active
+        /// before the call is active again after it, with a scriptable pipeline or the built-in
+        /// one (matches the Unity 6000.0.71f1 Editor, tests/projects/camerarender2d *.activeAfter).</summary>
         public void Render()
         {
-            // A scriptable pipeline renders it as one of its cameras.
-            if (GraphicsSettings.currentRenderPipeline != null && RenderPipelineManager.Render(new List<Camera> { this })) return;
-            // A render outside the frame's (from Start, say) sets up the lighting environment too.
-            FrameBuilder.EmitLightingGlobals();
-            FrameBuilder.RenderCamera(this);
+            var active = RenderTexture.active;
+            try
+            {
+                // A scriptable pipeline renders it as one of its cameras.
+                if (GraphicsSettings.currentRenderPipeline != null && RenderPipelineManager.Render(new List<Camera> { this })) return;
+                // A render outside the frame's (from Start, say) sets up the lighting environment too.
+                FrameBuilder.EmitLightingGlobals();
+                FrameBuilder.RenderCamera(this);
+            }
+            finally
+            {
+                RenderTexture.active = active;
+            }
         }
 
         public bool TryGetCullingParameters(out ScriptableCullingParameters cullingParameters) => TryGetCullingParameters(false, out cullingParameters);
