@@ -71,13 +71,45 @@ static class MeasureAudioSourceMemory
         Object.DestroyImmediate(source.gameObject);
     }
 
-    static void MeasureRejection(string key, AudioSource source, AudioSourceCurveType type,
-        AnimationCurve curve, bool measurePreservedCurve = true)
+    static AnimationCurve RejectionCurve(AudioSourceCurveType type)
     {
+        var keys = new Keyframe[4];
+        for (int index = 0; index < keys.Length; index++)
+            keys[index] = new Keyframe(index * 0.25f, (1 + (int)type) * (1 + index) / 16f,
+                0.125f, 0.25f, 0.375f, 0.5f) { weightedMode = WeightedMode.Both };
+        return new AnimationCurve(keys);
+    }
+
+    static void MeasureStoredCurves(string stage, AudioSource source, AudioSourceCurveType[] types)
+    {
+        if (types == null) return;
+        static int Bits(float value) => BitConverter.SingleToInt32Bits(value);
+        foreach (var type in types)
+        {
+            var curve = source.GetCustomCurve(type);
+            var parts = new List<string> { FormattableString.Invariant($"{(int)curve.preWrapMode},{(int)curve.postWrapMode}") };
+            foreach (var key in curve.keys)
+            {
+                parts.Add(FormattableString.Invariant(
+                    $"{Bits(key.time)},{Bits(key.value)},{Bits(key.inTangent)},{Bits(key.outTangent)},{Bits(key.inWeight)},{Bits(key.outWeight)},{(int)key.weightedMode}"));
+            }
+            Put(stage + "." + type, string.Join("/", parts));
+        }
+    }
+
+    static void MeasureRejection(string key, AudioSource source, AudioSourceCurveType type,
+        AnimationCurve curve, AudioSourceCurveType[] preserved = null, bool measureTrace = false)
+    {
+        MeasureStoredCurves(key + ".beforeKeys", source, preserved);
         var logs = new List<string>();
         var handler = new LoggerCapture();
         var previousHandler = Debug.unityLogger.logHandler;
-        void OnLog(string message, string trace, LogType logType) => logs.Add(logType + "/" + message);
+        bool sawTrace = false;
+        void OnLog(string message, string trace, LogType logType)
+        {
+            logs.Add(logType + "/" + message);
+            sawTrace |= !string.IsNullOrEmpty(trace);
+        }
         Application.logMessageReceived += OnLog;
         Debug.unityLogger.logHandler = handler;
         try
@@ -94,14 +126,31 @@ static class MeasureAudioSourceMemory
         }
         Put(key + ".logs", string.Join("|", logs));
         Put(key + ".handler", string.Join("|", handler.Messages));
-        if (measurePreservedCurve) Measure(key + ".after", source, type);
+        if (measureTrace) Put(key + ".hasStackTrace", sawTrace.ToString());
+        MeasureStoredCurves(key + ".afterKeys", source, preserved);
     }
 
-    static void MeasureRejectedForms(string context, AudioSource source, AudioSourceCurveType type)
+    static void MeasureRejectedForms(string context, AudioSource source, AudioSourceCurveType type,
+        AudioSourceCurveType[] preserved = null)
     {
-        MeasureRejection(context + ".empty", source, type, Curve(0), false);
-        MeasureRejection(context + ".null", source, type, null, false);
-        MeasureRejection(context + ".validCurve", source, type, Curve(6), false);
+        MeasureRejection(context + ".empty", source, type, Curve(0), preserved);
+        MeasureRejection(context + ".null", source, type, null, preserved);
+        MeasureRejection(context + ".validCurve", source, type, Curve(6), preserved);
+    }
+
+    static void MeasureErrorStacks(AudioSource source)
+    {
+        var previous = Application.GetStackTraceLogType(LogType.Error);
+        try
+        {
+            foreach (var mode in new[] { StackTraceLogType.None, StackTraceLogType.ScriptOnly })
+            {
+                Application.SetStackTraceLogType(LogType.Error, mode);
+                MeasureRejection("stack." + mode + ".empty", source, AudioSourceCurveType.Spread, Curve(0), measureTrace: true);
+                MeasureRejection("stack." + mode + ".unknownType", source, (AudioSourceCurveType)17, Curve(6), measureTrace: true);
+            }
+        }
+        finally { Application.SetStackTraceLogType(LogType.Error, previous); }
     }
 
     static void MeasureAuthoredSource()
@@ -150,13 +199,17 @@ static class MeasureAudioSourceMemory
         var input = new GameObject("Invalid input controls").AddComponent<AudioSource>();
         foreach (var type in Types)
         {
-            input.SetCustomCurve(type, Curve(4));
+            input.SetCustomCurve(type, RejectionCurve(type));
             Measure(type + ".beforeRejection", input, type);
-            MeasureRejection(type + ".empty", input, type, Curve(0));
-            MeasureRejection(type + ".null", input, type, null);
+            var preserved = new[] { type };
+            MeasureRejection(type + ".empty", input, type, Curve(0), preserved);
+            Measure(type + ".empty.after", input, type);
+            MeasureRejection(type + ".null", input, type, null, preserved);
+            Measure(type + ".null.after", input, type);
         }
-        MeasureRejectedForms("unknownType", input, (AudioSourceCurveType)17);
+        MeasureRejectedForms("unknownType", input, (AudioSourceCurveType)17, Types);
         Measure("unknownType.after", input, AudioSourceCurveType.Spread);
+        MeasureErrorStacks(input);
         Object.DestroyImmediate(input.gameObject);
         MeasureRejectedForms("destroyed", input, AudioSourceCurveType.Spread);
         MeasureRejectedForms("unattached", new AudioSource(), AudioSourceCurveType.Spread);
