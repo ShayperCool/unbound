@@ -1,0 +1,51 @@
+{"k":"unity","v":"6000.0.71f1"}
+{"k":"fresh","v":"default:"}
+{"k":"fresh.log","v":""}
+{"k":"count.fresh","v":"0"}
+{"k":"set.copy.order","v":"created:2,3/7,11|2,3/7,11|2,3/7,11"}
+{"k":"set.copy.order.log","v":""}
+{"k":"count.assigned","v":"2"}
+{"k":"view.write","v":"InvalidOperationException: The UNKNOWN_OBJECT_TYPE has been declared as [ReadOnly], but you are writing to it."}
+{"k":"view.write.log","v":""}
+{"k":"view.dispose","v":"created:2,3/7,11"}
+{"k":"view.dispose.log","v":""}
+{"k":"view.afterDisposeOther","v":"7,11"}
+{"k":"view.afterDisposeOther.log","v":""}
+{"k":"set.default","v":"ArgumentException: Cannot set bindposes as the native poses array is empty.\nParameter name: poses"}
+{"k":"set.default.log","v":""}
+{"k":"set.emptyAllocated","v":"ArgumentException: Cannot set bindposes as the native poses array is empty.\nParameter name: poses"}
+{"k":"set.emptyAllocated.log","v":""}
+{"k":"view.afterInvalidSetter","v":"7,11"}
+{"k":"view.afterInvalidSetter.log","v":""}
+{"k":"set.selfView","v":"created:2,3/7,11"}
+{"k":"set.selfView.log","v":"Assert:vector: assign data may not be data from the vector itself."}
+{"k":"view.afterSelfView","v":"7,11"}
+{"k":"view.afterSelfView.log","v":""}
+{"k":"set.managed","v":"created:53,59/61,67"}
+{"k":"set.managed.log","v":""}
+{"k":"view.afterManagedSet","v":"61,67"}
+{"k":"view.afterManagedSet.log","v":""}
+{"k":"set.vertices","v":"61,67|created:53,59/61,67"}
+{"k":"set.vertices.log","v":""}
+{"k":"set.clear","v":"61,67|created:53,59/61,67"}
+{"k":"set.clear.log","v":""}
+{"k":"clone.independent","v":"created:71,73|created:53,59/61,67"}
+{"k":"clone.independent.log","v":""}
+{"k":"set.managedEmpty","v":"created:"}
+{"k":"set.managedEmpty.log","v":""}
+{"k":"count.cleared","v":"0"}
+{"k":"view.afterManagedEmpty","v":"61,67"}
+{"k":"view.afterManagedEmpty.log","v":""}
+{"k":"set.managedNull","v":"created:"}
+{"k":"set.managedNull.log","v":""}
+{"k":"view.afterManagedNull","v":"79,83"}
+{"k":"view.afterManagedNull.log","v":""}
+{"k":"set.upload","v":"False|created:89,97"}
+{"k":"set.upload.log","v":""}
+{"k":"view.afterUpload","v":"89,97"}
+{"k":"view.afterUpload.log","v":""}
+{"k":"set.unreadable","v":"created:101,103"}
+{"k":"set.unreadable.log","v":""}
+{"k":"skinning.poseOrder","v":"5,0/1,8/5,1"}
+{"k":"skinning.poseOrder.log","v":""}
+{"k":"complete","v":true}

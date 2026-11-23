@@ -1,0 +1,12 @@
+{
+  "commands": ["python3 tests/projects/meshbindposes/run.py gate --release 6000.0.71f1"],
+  "summary": "meshbindposes: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Mesh.cs",
+    "managed/UnityEngine/Graphics/MeshBindposes.cs",
+    "managed/UnityEngine/Graphics/MeshFromModel.cs",
+    "managed/UnityEngine/Graphics/SkinnedMeshRenderer.cs",
+    "managed/UnityEngine/Collections/AtomicSafetyHandle.cs",
+    "managed/UnityEngine/Collections/NativeArray.cs"
+  ]
+}
