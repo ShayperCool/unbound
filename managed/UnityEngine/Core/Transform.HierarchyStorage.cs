@@ -119,13 +119,13 @@ namespace UnityEngine
 
         internal void RecordHierarchyParentChange(Transform oldParent, Transform parent, bool destroying = false)
         {
-            if (!Compat.TransformHierarchyStorageMeasured || m_HierarchyStorageReleased || ReferenceEquals(oldParent, parent)) return;
+            if (!Compat.TransformHierarchyStorageMeasured || ReferenceEquals(oldParent, parent)) return;
             for (var ancestor = oldParent; ancestor != null; ancestor = ancestor.m_Parent)
                 ancestor.m_SubtreeCount -= m_SubtreeCount;
 
             if (parent == null)
             {
-                if (!destroying) ResizeHierarchy(m_SubtreeCount);
+                if (!destroying && !m_HierarchyStorageReleased) ResizeHierarchy(m_SubtreeCount);
                 return;
             }
 

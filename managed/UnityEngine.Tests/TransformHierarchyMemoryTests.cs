@@ -68,6 +68,31 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void RelinkingAMixedBranchDuringRemovalPreservesTheLiveOwnersCount()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var destination = new GameObject("Live destination").transform;
+            var joining = new GameObject("Temporary live child").transform;
+            try
+            {
+                RemoveBranch((removed, leaf) =>
+                {
+                    joining.SetParent(leaf, false);
+                    leaf.SetParent(destination, false);
+                    joining.SetParent(null, false);
+                    leaf.SetParent(removed, false);
+                });
+                Assert.Equal(0, destination.childCount);
+                Assert.Equal(1, destination.hierarchyCount);
+            }
+            finally
+            {
+                if (joining != null) Object.DestroyImmediate(joining.gameObject);
+                Object.DestroyImmediate(destination.gameObject);
+            }
+        }
+
+        [Fact]
         public void ResizingDuringRemovalReportsTheReleasedHierarchy()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
