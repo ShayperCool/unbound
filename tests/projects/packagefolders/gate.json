@@ -1,0 +1,18 @@
+{
+  "commands": [
+    "python3 tests/projects/packagefolders/run.py gate"
+  ],
+  "summary": "packagefolders: .*",
+  "engine_paths": [
+    "crates/unbound-project/src/assetdb.rs",
+    "crates/unbound-project/src/md4.rs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/NaturalCompare.cs",
+    "managed/UnityEngine/Editor/PackageManifest.cs",
+    "managed/UnityEngine/Graphics/AssetImporters.cs",
+    "managed/UnityEngine/Editor/ProjectWindowUtilCreate.cs",
+    "tests/projects/animatorapi/ProjectSettings/",
+    "tests/projects/animatorapi/Assets/Scenes/",
+    "tests/projects/animatorapi/Assets/Scenes.meta"
+  ]
+}

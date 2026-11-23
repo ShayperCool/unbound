@@ -1,0 +1,5 @@
+{
+  "A registry package's root folder GUID: the Editor's is not the MD4 of the package's name, as a built-in package's is (guid.builtinRoot), and its derivation is not known; Unbound gives every package root the MD4 of its name. Nothing else in the probe depends on the value (its round trip, guidBack, matches).": [
+    "guid.registryRoot"
+  ]
+}

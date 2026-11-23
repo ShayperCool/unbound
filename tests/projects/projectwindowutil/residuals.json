@@ -1,5 +1,0 @@
-{
-  "AssetDatabase.GetAssetPath of a built-in package's package.json (loaded with LoadMainAssetAtPath) answers \"\" in Unbound, so GetAncestors cannot walk up from it; the Packages folder's int.MaxValue itself is unit-tested (ProjectWindowUtilTests). Follow-up: package assets' locations in the asset database.": [
-    "ancestors.package"
-  ]
-}
