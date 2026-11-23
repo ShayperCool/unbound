@@ -471,7 +471,9 @@ const PROBE_MIN_BOUNCES: u32 = 1;
 /// The indirect light at each light probe's point (which faces every way): `settings.samples`
 /// paths leave it evenly over the sphere, each weighing four over their number on the
 /// harmonics in the direction it left in, and `settings.environment_samples` rays look at the
-/// sky; a probe's numbers are the sequence's, turned by its place among the probes.
+/// sky; a probe's numbers are the sequence's, turned by its place among the probes. The bake
+/// takes each Light Probe Group's probes by themselves (tests/projects/bakedbuffers
+/// `ProbesMore`, `ProbesGrid`): `positions` are one group's.
 pub fn probes(
     positions: &[[f32; 3]],
     world: &World,

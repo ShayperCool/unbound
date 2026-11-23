@@ -174,25 +174,35 @@ fn main() {
     std::fs::write(out.join("shadowmask.f32"), floats(&lit.shadowmask)).unwrap();
     // Light probes at the points a file names (three floats each), with the lights' grid over
     // the lightmap's own renderers.
-    if let Ok(path) = std::env::var("PROBES_IN") {
-        let bytes = std::fs::read(path).expect("the probes' points");
-        let values: Vec<f32> = bytes
-            .chunks_exact(4)
-            .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
-            .collect();
-        let positions: Vec<[f32; 3]> = values.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect();
-        let around = Bounds::around(g.positions.iter().zip(0..).filter_map(|(p, _)| {
-            (p[3] >= 0.0).then(|| {
-                let r = &receivers[p[3] as usize];
-                direct::point(&r.local_to_world, [p[0], p[1], p[2]])
-            })
-        }))
+    let probe_points: Vec<[f32; 3]> = std::env::var("PROBES_IN")
+        .map(|path| {
+            let bytes = std::fs::read(path).expect("the probes' points");
+            let values: Vec<f32> = bytes
+                .chunks_exact(4)
+                .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+                .collect();
+            values.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect()
+        })
+        .unwrap_or_default();
+    if !probe_points.is_empty() {
+        let positions = &probe_points;
+        let around = Bounds::around(
+            g.positions
+                .iter()
+                .filter_map(|p| {
+                    (p[3] >= 0.0).then(|| {
+                        let r = &receivers[p[3] as usize];
+                        direct::point(&r.local_to_world, [p[0], p[1], p[2]])
+                    })
+                })
+                .chain(positions.iter().copied()),
+        )
         .unwrap_or(Bounds {
             min: [0.0; 3],
             max: [0.0; 3],
         });
         let grid = Grid::new(&lights, around);
-        let probes = probes::direct(&positions, &lights, &grid, mixed, &casters);
+        let probes = probes::direct(positions, &lights, &grid, &casters);
         let flat: Vec<f32> = probes.iter().flatten().flatten().copied().collect();
         std::fs::write(
             out.join("probesDirect.f32"),
@@ -312,7 +322,13 @@ fn main() {
     let blue = std::fs::read(&args[3]).expect("the blue noise data");
     let samples = Samples::new(&blue).expect("the blue noise data's size");
     let scene = Scene::new(surfaces.iter().map(|s| s.corners));
-    let around = Bounds::around(surfaces.iter().flat_map(|s| s.corners)).unwrap_or(Bounds {
+    let around = Bounds::around(
+        surfaces
+            .iter()
+            .flat_map(|s| s.corners)
+            .chain(probe_points.iter().copied()),
+    )
+    .unwrap_or(Bounds {
         min: [0.0; 3],
         max: [0.0; 3],
     });
@@ -327,25 +343,35 @@ fn main() {
         sky: sky.as_ref(),
     };
     let bounced = indirect::indirect(&g, &receivers, &world, &samples, settings);
-    // The light probes' indirect light, with the probes' sample counts given as "paths,sky".
-    if let (Ok(path), Ok(counts)) = (std::env::var("PROBES_IN"), std::env::var("PROBE_COUNTS")) {
-        let bytes = std::fs::read(path).expect("the probes' points");
-        let values: Vec<f32> = bytes
-            .chunks_exact(4)
-            .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
-            .collect();
-        let positions: Vec<[f32; 3]> = values.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect();
+    // The light probes' indirect light, with the probes' sample counts given as "paths,sky"
+    // and the number of probes of each group (baked by itself) as `PROBE_GROUPS`
+    // ("3,2"; one group of them all without it).
+    if let (false, Ok(counts)) = (probe_points.is_empty(), std::env::var("PROBE_COUNTS")) {
         let counts: Vec<u32> = counts.split(',').map(|c| c.parse().unwrap()).collect();
-        let probed = indirect::probes(
-            &positions,
-            &world,
-            &samples,
-            Settings {
-                samples: counts[0],
-                environment_samples: counts[1],
-                ..settings
-            },
+        let sizes: Vec<usize> = std::env::var("PROBE_GROUPS").map_or_else(
+            |_| vec![probe_points.len()],
+            |g| g.split(',').map(|c| c.parse().unwrap()).collect(),
         );
+        let mut probed = indirect::Probes {
+            radiance: Vec::new(),
+            validity: Vec::new(),
+        };
+        let mut start = 0;
+        for size in sizes {
+            let group = indirect::probes(
+                &probe_points[start..start + size],
+                &world,
+                &samples,
+                Settings {
+                    samples: counts[0],
+                    environment_samples: counts[1],
+                    ..settings
+                },
+            );
+            probed.radiance.extend(group.radiance);
+            probed.validity.extend(group.validity);
+            start += size;
+        }
         let flat: Vec<f32> = probed
             .radiance
             .iter()
