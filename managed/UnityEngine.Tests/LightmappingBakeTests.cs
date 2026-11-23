@@ -238,6 +238,8 @@ namespace UnityEngine.Tests
                     environment.lightmapCompression = LightmapCompression.None;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     Assert.Contains("lightmaps", Unwritten(environment, "Assets/Scenes/Lit", true));
+                    // The scene's own reason comes first (no lightmaps were asked for it).
+                    Assert.Contains("untitled", Unwritten(environment, null, true));
                     Assert.Contains("light probes", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true, probes: true));
                     environment.directionalityMode = LightmapsMode.CombinedDirectional;
                     Assert.Contains("directional", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));

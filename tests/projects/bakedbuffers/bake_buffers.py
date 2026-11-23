@@ -966,6 +966,8 @@ def compare(label):
         # Files Unbound wrote that the Editor's bake did not (by their .meta files).
         kept = {m.name for m in (reference_scene/'written').glob('*.meta')} if (reference_scene/'written').is_dir() else set()
         extra = sorted(m.name for m in mine.glob('*.meta') if m.name not in kept) if mine.is_dir() else []
+        if 'folder.meta' not in kept and mine.with_suffix('.meta').is_file():
+            extra.append('folder.meta')
         if extra:
             record(scene + '.written', f'written where the Editor writes none: {extra}')
         for meta in sorted((reference_scene/'written').glob('*.meta')) if (reference_scene/'written').is_dir() else []:

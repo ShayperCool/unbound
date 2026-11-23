@@ -80,10 +80,14 @@ namespace UnityEngine
                     }
                     var settings = scene.LightingSettings;
                     var made = new HashSet<Object>(file.Objects.Values);
+                    bool added = false;
                     foreach (var root in scene.Roots)
                         foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>(true))
                             if (!made.Contains(renderer))
+                            {
+                                added = true;
                                 Warn("script-bake-added:" + scene.Path + renderer.GetInstanceID(), $"{scene.Path}: '{renderer.name}' was added after the scene loaded; Unbound's bake (Lightmapping.Bake) does not take it.");
+                            }
                     if (!string.IsNullOrEmpty(scene.Path)) s_ScriptBakedScenes.Add(scene.Path);
                     scene.BakedOnOpen = true;
                     NoteBakeParts(file, settings, ScriptBake);
@@ -91,7 +95,8 @@ namespace UnityEngine
                     var environment = BakeEnvironment(file);
                     // The lightmaps are made where their lighting data would be written (all else
                     // given: the decision WriteLightingData makes with what the bake made).
-                    bool lightmaps = settings != null && settings.bakedGI && Native.IsReady
+                    // (A renderer the bake does not take, said above, changes their light: none.)
+                    bool lightmaps = settings != null && settings.bakedGI && Native.IsReady && !added
                         && Unwritten(settings, FolderOf(scene), environment.Made, Rendering.GraphicsSettings.currentRenderPipeline != null,
                             lightmapsMade: true, HasProbeGroups(file)) == null;
                     var baked = BakedAtlas.Lay(file, settings, images: lightmaps);
@@ -259,12 +264,12 @@ namespace UnityEngine
             : settings.bakedGI && settings.directionalityMode == LightmapsMode.CombinedDirectional ? "directional lightmaps are not written yet"
             : settings.bakedGI && settings.mixedBakeMode == MixedLightingMode.Shadowmask ? "the shadowmask of the Shadowmask Lighting Mode is not written yet"
             : settings.bakedGI && settings.lightmapCompression != LightmapCompression.None ? "lightmaps with compression are not measured"
-            : settings.bakedGI && !lightmapsMade ? "this bake did not make its lightmaps (said)"
             : folder == null ? "an untitled scene's is not measured"
             : !Compat.BakeFilesMeasured ? $"of Unity {Application.unityVersion} it is not measured (its release family)"
             : renderPipeline ? "with a render pipeline asset it is not measured"
             : !environmentMade ? "this bake did not make all of the environment lighting (said)"
             : !(editable ?? UnityEditor.AssetDatabase.Editable)(folder) ? "the scene is not in the project's own assets"
+            : settings.bakedGI && !lightmapsMade ? "this bake did not make all of its lightmaps' light (said)"
             : null;
 
         /// <summary>The folder a bake writes its files to beside the scene (null: untitled).</summary>

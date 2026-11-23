@@ -93,5 +93,12 @@
     "ProbesSkyEven.written/Lightmap-0_comp_light.exr.meta": "not written",
     "ProbesSkyEven.written/Lightmap-0_comp_shadowmask.png.meta": "not written",
     "ProbesSkyEven.written/folder.meta": "not written"
+  },
+  "A LOD Group: Unbound's bake does not tell its levels apart yet (the named Shapes residuals above), so it writes neither the lightmaps nor the lighting data of such a scene (said). Follow-up: the levels' rule, then the files.": {
+    "Shapes.lightingData": "not written",
+    "Shapes.written/LightingData.asset.meta": "not written",
+    "Shapes.written/Lightmap-0_comp_light.exr.meta": "not written",
+    "Shapes.written/ReflectionProbe-0.exr.meta": "not written",
+    "Shapes.written/folder.meta": "not written"
   }
 }

@@ -543,7 +543,7 @@ namespace UnityEngine
             foreach (var (renderer, _) in placed)
                 if (levels.ContainsKey(renderer))
                 {
-                    Warn("lod:" + path, $"{path}: '{renderer.name}' is of a LOD Group; Unbound's bake (Lightmapping.Bake) does not tell the levels of LOD Groups apart yet (their renderers take and stop light like any other).");
+                    Approximated("lod:" + path, $"{path}: '{renderer.name}' is of a LOD Group; Unbound's bake (Lightmapping.Bake) does not tell the levels of LOD Groups apart yet (their renderers take and stop light like any other).");
                     break;
                 }
             bool fixedSize = settings.LightmapSizeFixed
