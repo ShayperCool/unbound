@@ -7,14 +7,17 @@ namespace UnityEngine
     {
         internal readonly byte[] Counts;
         internal readonly BoneWeight1[] Weights;
+        internal readonly bool IsPacked;
         readonly int[] m_Offsets;
         internal int WeightCount => m_Offsets[^1];
+        internal const float PackedWeightUnit = 1f / ushort.MaxValue;
 
-        MeshSkinWeightData(int vertexCount, int weightCapacity)
+        MeshSkinWeightData(int vertexCount, int weightCapacity, bool packed = false)
         {
             Counts = new byte[vertexCount];
             Weights = new BoneWeight1[weightCapacity];
             m_Offsets = new int[vertexCount + 1];
+            IsPacked = packed;
         }
 
         internal ReadOnlySpan<BoneWeight1> ForVertex(int vertex) => vertex < Counts.Length
@@ -22,7 +25,7 @@ namespace UnityEngine
 
         internal static MeshSkinWeightData FromNative(ReadOnlySpan<byte> counts, ReadOnlySpan<BoneWeight1> weights, SkinWeights layout)
         {
-            var data = new MeshSkinWeightData(counts.Length, weights.Length);
+            var data = new MeshSkinWeightData(counts.Length, weights.Length, layout == SkinWeights.Unlimited);
             int source = 0, destination = 0;
             for (int vertex = 0; vertex < counts.Length; vertex++)
             {
@@ -61,12 +64,11 @@ namespace UnityEngine
         static int Quantize(Span<BoneWeight1> weights)
         {
             const int MaxWeight = ushort.MaxValue;
-            const float WeightUnit = 1f / MaxWeight;
             int remainder = MaxWeight;
             for (int i = 0; i < weights.Length; i++)
             {
                 int bits = ToPackedWeight(weights[i].weight);
-                weights[i].weight = bits * WeightUnit;
+                weights[i].weight = bits * PackedWeightUnit;
                 remainder -= bits;
             }
             if (remainder == MaxWeight && !weights.IsEmpty)
@@ -78,13 +80,25 @@ namespace UnityEngine
             {
                 int bits = (int)MathF.Round(weights[i].weight * MaxWeight);
                 int corrected = Math.Clamp(bits + remainder, 0, MaxWeight);
-                weights[i].weight = corrected * WeightUnit;
+                weights[i].weight = corrected * PackedWeightUnit;
                 remainder -= corrected - bits;
             }
             int kept = 0;
             for (int i = 0; i < weights.Length; i++)
                 if (weights[i].weight > 0f) weights[kept++] = weights[i];
             return kept;
+        }
+
+        internal static Vector4 QuantizedVertexWeights(Vector4 weights)
+        {
+            Span<BoneWeight1> row = stackalloc BoneWeight1[4];
+            int count = 0;
+            for (int i = 0; i < 4; i++)
+                if (weights[i] > 0f) row[count++] = new BoneWeight1 { boneIndex = i, weight = weights[i] };
+            count = Quantize(row.Slice(0, count));
+            var result = Vector4.zero;
+            for (int i = 0; i < count; i++) result[row[i].boneIndex] = row[i].weight;
+            return result;
         }
 
         internal static MeshSkinWeightData FromLegacy(BoneWeight[] weights)
@@ -109,9 +123,10 @@ namespace UnityEngine
             return data;
         }
 
-        internal BoneWeight[] LegacyProjection(bool normalize)
+        internal BoneWeight[] LegacyProjection()
         {
             var values = new BoneWeight[Counts.Length];
+            Span<float> normalized = stackalloc float[4];
             for (int vertex = 0; vertex < values.Length; vertex++)
             {
                 var row = ForVertex(vertex);
@@ -119,17 +134,38 @@ namespace UnityEngine
                 var b = row.Length > 1 ? row[1] : default;
                 var c = row.Length > 2 ? row[2] : default;
                 var d = row.Length > 3 ? row[3] : default;
-                float sum = a.weight + b.weight + c.weight + d.weight;
-                float scale = normalize && sum > 0f ? 1f / sum : 1f;
+                if (IsPacked)
+                {
+                    normalized.Clear();
+                    NormalizePrefix(row.Slice(0, Math.Min(4, row.Length)), normalized, packed: true);
+                    a.weight = normalized[0];
+                    b.weight = normalized[1];
+                    c.weight = normalized[2];
+                    d.weight = normalized[3];
+                }
                 values[vertex] = new BoneWeight
                 {
-                    boneIndex0 = a.boneIndex, weight0 = a.weight * scale,
-                    boneIndex1 = b.boneIndex, weight1 = b.weight * scale,
-                    boneIndex2 = c.boneIndex, weight2 = c.weight * scale,
-                    boneIndex3 = d.boneIndex, weight3 = d.weight * scale,
+                    boneIndex0 = a.boneIndex, weight0 = a.weight,
+                    boneIndex1 = b.boneIndex, weight1 = b.weight,
+                    boneIndex2 = c.boneIndex, weight2 = c.weight,
+                    boneIndex3 = d.boneIndex, weight3 = d.weight,
                 };
             }
             return values;
+        }
+
+        internal static void NormalizePrefix(ReadOnlySpan<BoneWeight1> row, Span<float> normalized, bool packed)
+        {
+            float total = 0f;
+            for (int i = 0; i < row.Length; i++)
+            {
+                // Packed rows normalize in their integer units before decoding to float.
+                float weight = packed ? ToPackedWeight(row[i].weight) : row[i].weight;
+                normalized[i] = weight;
+                total += weight;
+            }
+            float scale = total != 0f ? 1f / total : 0f;
+            for (int i = 0; i < row.Length; i++) normalized[i] *= scale;
         }
     }
 }

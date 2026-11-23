@@ -62,6 +62,7 @@ namespace UnityEngine
         static void PackFixedWeights(MeshSkinWeightData data, int width, Span<uint> words)
         {
             words.Clear();
+            Span<float> normalized = stackalloc float[4];
             for (int vertex = 0; vertex < data.Counts.Length; vertex++)
             {
                 var influences = data.ForVertex(vertex);
@@ -72,13 +73,11 @@ namespace UnityEngine
                     continue;
                 }
                 var row = influences.Slice(0, Math.Min(width, influences.Length));
-                float total = 0f;
-                foreach (var influence in row) total += influence.weight;
-                float scale = total != 0f ? 1f / total : 0f;
+                MeshSkinWeightData.NormalizePrefix(row, normalized, data.IsPacked);
                 int start = 2 * width * vertex;
                 for (int i = 0; i < row.Length; i++)
                 {
-                    words[start + i] = BitConverter.SingleToUInt32Bits(row[i].weight * scale);
+                    words[start + i] = BitConverter.SingleToUInt32Bits(normalized[i]);
                     words[start + width + i] = unchecked((uint)row[i].boneIndex);
                 }
             }

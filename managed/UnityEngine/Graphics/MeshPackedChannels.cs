@@ -129,6 +129,8 @@ namespace UnityEngine
                 return;
             }
             ReadChannel(d.attribute, vertex, out var f, out var n);
+            if (d.attribute == VertexAttribute.BlendWeight && d.format == VertexAttributeFormat.UNorm16 && RuntimeSkinWeights != null)
+                f = MeshSkinWeightData.QuantizedVertexWeights(f);
             fixed (byte* at = destination)
                 for (int c = 0; c < d.dimension; c++)
                     Write(at + c * size, d.format, f[c], c switch {0 => n.Item1, 1 => n.Item2, 2 => n.Item3, _ => n.Item4});

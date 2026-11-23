@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using Unbound.Runtime;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -107,7 +108,7 @@ namespace UnityEngine
             int convertingWidth = layout == SkinWeights.Unlimited && Compat.RenderingMeasured ? FloatSkinWeightWidth() : 0;
             var data = layout == SkinWeights.None ? null : MeshSkinWeightData.FromNative(counts, influences, layout);
             InvalidateBoneWeightArrays();
-            m_BoneWeights = data?.LegacyProjection(layout == SkinWeights.Unlimited);
+            m_BoneWeights = data?.LegacyProjection();
             RuntimeSkinWeights = data;
             m_RuntimeSkinLayout = layout;
             UpdateSkinWeightLayout(layout);
@@ -140,12 +141,55 @@ namespace UnityEngine
                     float previous = row[i - 1].weight;
                     float current = row[i].weight;
                     if (current <= previous) continue;
-                    if (CurrentSkinWeightLayout == SkinWeights.Unlimited) SetLegacyBoneWeights(m_BoneWeights);
+                    var prior = CurrentSkinWeightLayout == SkinWeights.Unlimited ? RuntimeSkinWeights : null;
+                    if (prior != null)
+                    {
+                        m_Layout ??= Layout();
+                        m_RuntimeSkinLayout = SkinWeights.FourBones;
+                    }
                     Debug.LogError($"Vertex {vertex} bone weights are not in descending order! testing !({WeightText(current)} <= {WeightText(previous)})");
+                    if (prior != null && !m_Destroyed && ReferenceEquals(prior, RuntimeSkinWeights))
+                    {
+                        m_BoneWeights = ReadFixedVertexWeights();
+                        DropRuntimeBoneWeights(keepLayout: true);
+                        Changed(indices: false);
+                    }
                     return false;
                 }
             }
             return true;
+        }
+
+        BoneWeight[] ReadFixedVertexWeights()
+        {
+            VertexAttributeDescriptor weights = default, indices = default;
+            foreach (var descriptor in m_Layout)
+            {
+                if (descriptor.attribute == VertexAttribute.BlendWeight) weights = descriptor;
+                if (descriptor.attribute == VertexAttribute.BlendIndices) indices = descriptor;
+            }
+            if (weights.format != VertexAttributeFormat.UNorm16 || indices.format != VertexAttributeFormat.UInt16 ||
+                weights.dimension != 4 || indices.dimension != 4) return m_BoneWeights;
+
+            var values = new BoneWeight[vertexCount];
+            Span<ushort> packedWeights = stackalloc ushort[4];
+            Span<ushort> packedIndices = stackalloc ushort[4];
+            for (int vertex = 0; vertex < values.Length; vertex++)
+            {
+                PackAttribute(weights, vertex, MemoryMarshal.AsBytes(packedWeights));
+                PackAttribute(indices, vertex, MemoryMarshal.AsBytes(packedIndices));
+                var w = new Vector4(packedWeights[0], packedWeights[1], packedWeights[2], packedWeights[3]) * MeshSkinWeightData.PackedWeightUnit;
+                float total = w.x + w.y + w.z + w.w;
+                if (total != 0f) w *= 1f / total;
+                values[vertex] = new BoneWeight
+                {
+                    boneIndex0 = packedIndices[0], weight0 = w.x,
+                    boneIndex1 = packedIndices[1], weight1 = w.y,
+                    boneIndex2 = packedIndices[2], weight2 = w.z,
+                    boneIndex3 = packedIndices[3], weight3 = w.w,
+                };
+            }
+            return values;
         }
 
         static string WeightText(float weight)
@@ -215,7 +259,9 @@ namespace UnityEngine
             if (RuntimeSkinWeights == null && m_BoneWeights != null && m_BoneWeights.Length != vertexCount)
                 m_LegacyWeightsBeforeResize ??= m_BoneWeights;
             m_BoneCountsView?.Release();
+            m_BoneWeightsView?.Release();
             m_BoneCountsView = null;
+            m_BoneWeightsView = null;
         }
 
         internal void DropRuntimeBoneWeights(bool keepLayout = false)
