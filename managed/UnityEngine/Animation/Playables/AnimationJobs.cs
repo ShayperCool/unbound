@@ -330,6 +330,7 @@ namespace Unbound.Runtime.Playables
         internal StreamVelocityEdits VelocityEdits;
         /// <summary>The evaluation the stream belongs to.</summary>
         internal AnimationEvaluation Evaluation;
+        internal bool UseKinematicAnimationRoot;
         Unbound.Runtime.Playables.HumanStreamPose m_Human;
 
         static readonly List<StreamContext> s_Active = new List<StreamContext> { null };
@@ -361,7 +362,7 @@ namespace Unbound.Runtime.Playables
                 Stubs.Ignored("AnimationHumanStream under a layer without Root",
                     "reads and writes the animated pose; the pose that places the body (layers whose mask keeps Root) is not part of it (not measured)");
             bool humanMotion = Evaluation != null && Evaluation.MotionMode == RootMotionMode.Human;
-            var root = human.StreamRoot(humanMotion, Stream.BodyMotion, Stream.DeltaTime);
+            var root = human.StreamRoot(humanMotion, Stream.BodyMotion, Stream.DeltaTime, UseKinematicAnimationRoot);
             m_Human = human.RentStreamPose();
             m_Human.Load(Stream, root);
             return m_Human;
@@ -979,6 +980,13 @@ namespace Unbound.Runtime.Playables
         StreamMotion m_RootPhaseMotion;
         StreamVelocityEdits m_AnimationPhaseEdits;
 
+        internal static bool HasSingleHumanClipInput(PlayableNode node)
+        {
+            if (node.Kind is not JobKind { ProcessInputs: true } || node.Inputs.Count != 1) return false;
+            var input = node.Inputs[0];
+            return input.Weight == 1f && input.SourcePort == 0 && AnimationEvaluation.HumanMotionClip(input.Node);
+        }
+
         // The measured topology is a chain of full-weight jobs above an empty mixer.
         internal static bool HasEmptyMotionSource(PlayableNode node)
         {
@@ -1053,6 +1061,7 @@ namespace Unbound.Runtime.Playables
                         {
                             if (measuredVelocities) BeginAnimationPhase(context, into, inputJob);
                         }
+                        context.UseKinematicAnimationRoot = e.UsesMeasuredKinematicJobRoot;
                         Dispatch(Job, pointer, (IntPtr)(int)UnityEngine.Animations.JobMethodIndex.ProcessAnimationMethodIndex);
                     }
                 }

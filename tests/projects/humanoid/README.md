@@ -206,6 +206,14 @@ imported without keyframe reduction.
   scale writes in one job remain unmeasured.
   [TransformStreamHandle](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.TransformStreamHandle.html)
 
+  The kinematic controls add 364 rows from two matching macOS 6000.0.71f1
+  captures. A manual job over one humanoid clip reads its bones in
+  ProcessAnimation with a kinematic Rigidbody and no OnAnimatorMove. The
+  rotated-arm control applies the same placement when it writes a bone. The
+  Animator Transform has the frame from before this evaluation's movement.
+  Separate diagnostic captures still show differences in ProcessRootMotion
+  pose reads and in scripts that move the root during OnAnimatorMove.
+
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
   `ProbeRunner.Leftovers`): HumanA's clip leaving for such a state (Hold) after an exit time of 0.3
   at once (with an extra `Update(0)` before step 12, `noWDAlone`), over 0.2 s (`noWDFade`), at

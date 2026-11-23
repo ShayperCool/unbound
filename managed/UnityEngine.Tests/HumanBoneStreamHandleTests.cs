@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Unbound.Runtime;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 using Xunit;
@@ -147,6 +149,35 @@ namespace UnityEngine.Tests
             Near(s * 1.25f, afterLocalS);
             Near(wp, afterWorldP);
             Near(wr, afterWorldR);
+        }
+
+        [Theory]
+        [InlineData(TestRelease.Measured, false)]
+        [InlineData(TestRelease.Unmeasured, true)]
+        public void AManualKinematicHumanoidStreamReportsOnlyAnUnmeasuredFamily(string release, bool report)
+        {
+            using var pin = TestRelease.Pin(release);
+            const string warning = "AnimationHumanStream root with scripted or physics root motion";
+            int Hits() => Stubs.HitReport().FirstOrDefault(hit => hit.Key == warning).Value;
+
+            var animator = Human();
+            animator.gameObject.AddComponent<Rigidbody>().isKinematic = true;
+            animator.applyRootMotion = true;
+            var clip = new AnimationClip { legacy = true };
+            m_Created.Add(clip);
+            clip.SetCurve("", typeof(Animator), "Left Arm Down-Up", AnimationCurve.Linear(0f, -0.2f, 1f, 0.2f));
+            clip.legacy = false;
+            bool sampled = false;
+            m_Graph = AnimationHumanStreamTests.Graph(animator, (stream, _) =>
+            {
+                var body = stream.AsHuman().bodyPosition;
+                sampled = true;
+            }, clip);
+
+            int before = Hits();
+            AnimationHumanStreamTests.Run(m_Graph, 1);
+            Assert.True(sampled);
+            Assert.Equal(report, Hits() > before);
         }
 
         /// <summary>A handle is a bone of the avatar the Animator has when the job runs: one bound

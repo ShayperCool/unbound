@@ -287,19 +287,22 @@ namespace Unbound.Runtime.Humanoid
         /// evaluation whose humanoid root motion moves the root by the built-in root motion has
         /// moved it already (the root motion pass runs before the jobs' animation pass; measured,
         /// 6000.0.71f1 tests/projects/humanoid stream.*); otherwise where it is. Root motion that a
-        /// script (OnAnimatorMove), a Rigidbody or a CharacterController applies is not known yet:
-        /// the root before it, with a warning.</summary>
-        internal Trs StreamRoot(bool humanMotion, in HumanRootMotionSample sample, float deltaTime)
+        /// script (OnAnimatorMove), a Rigidbody or a CharacterController applies uses the root
+        /// before it. Manual ProcessAnimation on a kinematic body matches that placement
+        /// (humanoid bone.kinematicRoot). Other scripted or physics cases still report it.</summary>
+        internal Trs StreamRoot(bool humanMotion, in HumanRootMotionSample sample, float deltaTime, bool useKinematicAnimationRoot)
         {
             var root = AvatarX();
             if (!humanMotion) return root;
             var animator = m_Animator;
             bool hasMove = MoveCallbacks.Any(animator);
             if (!animator.m_ApplyRootMotion && !hasMove) return root;
-            if (hasMove || animator.GetComponent<Rigidbody>() != null || animator.GetComponent<CharacterController>() != null)
+            var body = hasMove ? null : animator.GetComponent<Rigidbody>();
+            if (hasMove || body != null || animator.GetComponent<CharacterController>() != null)
             {
-                Unbound.Runtime.Stubs.Ignored("AnimationHumanStream root with scripted or physics root motion",
-                    "reads and writes world values in the avatar root's frame before this update's root motion when OnAnimatorMove, a Rigidbody or a CharacterController applies it (not measured)");
+                if (!(useKinematicAnimationRoot && !hasMove && body != null && body.isKinematic))
+                    Unbound.Runtime.Stubs.Ignored("AnimationHumanStream root with scripted or physics root motion",
+                        "reads and writes world values in the avatar root's frame before this update's root motion when OnAnimatorMove, a Rigidbody or a CharacterController applies it (not measured)");
                 return root;
             }
             PredictMotion(sample, deltaTime, out var result);

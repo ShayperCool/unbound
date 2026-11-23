@@ -82,13 +82,14 @@ namespace UnityEngine.Tests
             return root;
         }
 
-        internal static PlayableGraph Graph(Animator animator, JobBody body)
+        internal static PlayableGraph Graph(Animator animator, JobBody body, AnimationClip clip = null)
         {
             HumanJob.Body = body;
             HumanJob.Frame = 0;
             var g = PlayableGraph.Create("human-stream");
             g.SetTimeUpdateMode(DirectorUpdateMode.Manual);
-            var job = AnimationScriptPlayable.Create(g, new HumanJob());
+            var job = AnimationScriptPlayable.Create(g, new HumanJob(), clip == null ? 0 : 1);
+            if (clip != null) job.ConnectInput(0, AnimationClipPlayable.Create(g, clip), 0, 1f);
             AnimationPlayableOutput.Create(g, "out", animator).SetSourcePlayable(job);
             g.Play();
             return g;
