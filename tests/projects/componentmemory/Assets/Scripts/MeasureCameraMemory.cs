@@ -10,6 +10,17 @@ static class MeasureCameraMemory
 {
     [Serializable] sealed class Row { public string k, v; }
 
+    sealed class CommandLog : ILogHandler
+    {
+        internal readonly List<string> Entries = new();
+
+        public void LogFormat(LogType type, Object context, string format, params object[] args)
+            => Entries.Add($"{type}: {string.Format(format, args)}");
+
+        public void LogException(Exception exception, Object context)
+            => Entries.Add(exception.GetType().Name);
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Capture()
     {
@@ -19,6 +30,18 @@ static class MeasureCameraMemory
         void Put(string key, string value) => rows.Add(JsonUtility.ToJson(new Row { k = key, v = value }));
         void Read(string stage, Camera camera) => Put(stage, FormattableString.Invariant(
             $"{Profiler.GetRuntimeMemorySizeLong(camera)}/{camera.commandBufferCount}"));
+        void CheckCall(string stage, Action call)
+        {
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            var log = new CommandLog();
+            logger.logHandler = log;
+            string failure = "";
+            try { call(); }
+            catch (Exception error) { failure = $"{error.GetType().Name}: {error.Message}"; }
+            finally { logger.logHandler = previous; }
+            Put(stage, $"{string.Join("|", log.Entries)}|{failure}");
+        }
 
         Put("unity", Application.unityVersion);
         Put("device", SystemInfo.graphicsDeviceType.ToString());
@@ -57,6 +80,7 @@ static class MeasureCameraMemory
 
         var first = new CommandBuffer { name = "First reused buffer" };
         var second = new CommandBuffer { name = "Second buffer" };
+        var third = new CommandBuffer { name = "Third buffer" };
         first.SetGlobalFloat("_ProbeValue", 1f);
         second.SetGlobalFloat("_ProbeValue", 2f);
         for (int index = 1; index <= 9; index++)
@@ -76,6 +100,8 @@ static class MeasureCameraMemory
         Object.DestroyImmediate(other.gameObject);
         camera.RemoveCommandBuffer(CameraEvent.BeforeForwardOpaque, first);
         Read("commands.removeBuffer", camera);
+        camera.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, third);
+        Read("commands.reuseReservedEvent", camera);
         camera.RemoveCommandBuffers(CameraEvent.AfterForwardOpaque);
         Read("commands.removeEvent", camera);
         camera.RemoveAllCommandBuffers();
@@ -85,7 +111,7 @@ static class MeasureCameraMemory
         camera.AddCommandBuffer(orderedEvent, first);
         camera.AddCommandBuffer(orderedEvent, second);
         camera.AddCommandBuffer(orderedEvent, first);
-        camera.AddCommandBuffer(orderedEvent, second);
+        camera.AddCommandBuffer(orderedEvent, third);
         camera.AddCommandBuffer(orderedEvent, first);
         Read("mixed.ordered", camera);
         camera.RemoveCommandBuffer(orderedEvent, first);
@@ -109,7 +135,6 @@ static class MeasureCameraMemory
         camera.RemoveCommandBuffer(CameraEvent.AfterEverything, compute);
         Read("commands.removeAsync", camera);
         camera.RemoveAllCommandBuffers();
-        compute.Release();
         camera.AddCommandBuffer(CameraEvent.AfterEverything, first);
         Read("pipeline.beforeSwitch", camera);
         var pipeline = ScriptableObject.CreateInstance<RendererMemoryPipeline>();
@@ -120,6 +145,8 @@ static class MeasureCameraMemory
         {
             QualitySettings.renderPipeline = null;
             GraphicsSettings.defaultRenderPipeline = pipeline;
+            CheckCall("pipeline.configuredAdd", () => camera.AddCommandBuffer(CameraEvent.AfterEverything, second));
+            Read("pipeline.afterConfiguredAdd", camera);
             var request = new RendererMemoryPipeline.FrameRequest();
             bool supported = RenderPipeline.SupportsRenderRequest(camera, request);
             if (supported) RenderPipeline.SubmitRenderRequest(camera, request);
@@ -127,12 +154,22 @@ static class MeasureCameraMemory
             Read("pipeline.existing", camera);
             createdUnderPipeline = new GameObject("Camera in a scriptable pipeline").AddComponent<Camera>();
             Read("pipeline.new", createdUnderPipeline);
-            try { createdUnderPipeline.AddCommandBuffer(CameraEvent.AfterEverything, second); }
-            catch (Exception error) { Put("pipeline.registerException", error.GetType().Name); }
+            CheckCall("pipeline.add", () => createdUnderPipeline.AddCommandBuffer(CameraEvent.AfterEverything, second));
             Read("pipeline.afterRegister", createdUnderPipeline);
-            try { camera.RemoveCommandBuffer(CameraEvent.AfterEverything, first); }
-            catch (Exception error) { Put("pipeline.removeException", error.GetType().Name); }
+            CheckCall("pipeline.remove", () => camera.RemoveCommandBuffer(CameraEvent.AfterEverything, first));
             Read("pipeline.afterRemove", camera);
+            CheckCall("pipeline.addAsync", () => camera.AddCommandBufferAsync(CameraEvent.AfterEverything, compute, ComputeQueueType.Default));
+            CheckCall("pipeline.get", () =>
+            {
+                var buffers = camera.GetCommandBuffers(CameraEvent.AfterEverything);
+                Put("pipeline.getRetained", string.Join("/", Array.ConvertAll(buffers, buffer => buffer.name)));
+            });
+            CheckCall("pipeline.removeEvent", () => camera.RemoveCommandBuffers(CameraEvent.AfterEverything));
+            CheckCall("pipeline.removeAll", camera.RemoveAllCommandBuffers);
+            CheckCall("pipeline.addNull", () => camera.AddCommandBuffer(CameraEvent.AfterEverything, null));
+            CheckCall("pipeline.addAsyncNull", () => camera.AddCommandBufferAsync(CameraEvent.AfterEverything, null, ComputeQueueType.Default));
+            CheckCall("pipeline.removeNull", () => camera.RemoveCommandBuffer(CameraEvent.AfterEverything, null));
+            Read("pipeline.afterAllCalls", camera);
         }
         finally
         {
@@ -141,14 +178,18 @@ static class MeasureCameraMemory
         }
         camera.Render();
         Read("pipeline.restoredOldCamera", camera);
+        CheckCall("commands.builtInRemoveNull", () => camera.RemoveCommandBuffer(CameraEvent.AfterEverything, null));
+        Read("commands.afterRemoveNull", camera);
         if (createdUnderPipeline != null)
         {
             Read("pipeline.restoredNewCamera", createdUnderPipeline);
             Object.DestroyImmediate(createdUnderPipeline.gameObject);
         }
         Object.DestroyImmediate(pipeline);
+        compute.Release();
         first.Release();
         second.Release();
+        third.Release();
         Object.DestroyImmediate(camera.gameObject);
 
         rows.Add("{\"k\":\"complete\",\"v\":true}");
