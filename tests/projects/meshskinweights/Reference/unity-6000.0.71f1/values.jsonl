@@ -1,0 +1,60 @@
+{"k":"unity","v":"6000.0.71f1"}
+{"k":"empty.views","v":"0:0"}
+{"k":"empty.views.log","v":""}
+{"k":"invalid.default","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"invalid.default.log","v":""}
+{"k":"one.implicitWeights","v":"OneBone:False:True:created:1/1/1:created:2@1/5@1/4@1|none/UInt32:1:1"}
+{"k":"one.implicitWeights.log","v":""}
+{"k":"invalid.countLength","v":"OneBone:False:True:created:1/1/1:created:2@1/5@1/4@1"}
+{"k":"invalid.countLength.log","v":"Error:Mesh.SetBoneWeights() failed: The size of the bonesPerVertex argument must match the size of Mesh.vertices (3) or zero but was 2."}
+{"k":"invalid.weightCount","v":"OneBone:False:True:created:1/1/1:created:2@1/5@1/4@1"}
+{"k":"invalid.weightCount.log","v":"Error:Mesh.SetBoneWeights() failed: Expected 3 bone weights (sum of the elements in bonesPerVertex) but got 2."}
+{"k":"invalid.zeroVertex","v":"OneBone:False:True:created:1/1/1:created:2@1/5@1/4@1"}
+{"k":"invalid.zeroVertex.log","v":"Error:Mesh.SetBoneWeights() failed: Vertex 1 has zero weights."}
+{"k":"two.layout","v":"TwoBones:True:True:created:2/2/1:created:2@0.85/1@0.15/4@0.5/2@0.5/3@1|Float32:2:1/UInt32:2:1"}
+{"k":"two.layout.log","v":""}
+{"k":"two.zeros","v":"TwoBones:True:True:created:0/1/0:created:4@1|Float32:2:1/UInt32:2:1"}
+{"k":"two.zeros.log","v":""}
+{"k":"two.negative","v":"TwoBones:True:True:created:1/1/1:created:2@1/4@1/3@1|Float32:2:1/UInt32:2:1"}
+{"k":"two.negative.log","v":""}
+{"k":"wide.original","v":"Unlimited:True:True:created:5/1/1:created:5@0.5000076/1@0.2500038/2@0.1250019/4@0.06250095/3@0.0624856949/2@1/6@1|UNorm16:4:1/UInt16:4:1"}
+{"k":"wide.original.log","v":"Error:Unsupported conversion of vertex data (format 0 to 4, dimensions 2 to 4)"}
+{"k":"wide.reapplyVertexDescriptors","v":"Unlimited:True:True:created:5/1/1:created:5@0.5000076/1@0.2500038/2@0.1250019/4@0.06250095/3@0.0624856949/2@1/6@1|UNorm16:4:1/UInt16:4:1"}
+{"k":"wide.reapplyVertexDescriptors.log","v":""}
+{"k":"wide.rawIndicesWrite","v":"Unlimited:True:True:created:5/1/1:created:5@0.5000076/1@0.2500038/2@0.1250019/4@0.06250095/3@0.0624856949/2@1/6@1|UNorm16:4:1/UInt16:4:1"}
+{"k":"wide.rawIndicesWrite.log","v":""}
+{"k":"wide.legacyAssignment","v":"FourBones:True:True:created:1/1/1:created:13@1/5@1/11@1|Float32:4:1/UInt32:4:1"}
+{"k":"wide.legacyAssignment.log","v":""}
+{"k":"thread.assign","v":"UnityException: InternalSetBoneWeights can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.assign.log","v":""}
+{"k":"thread.counts","v":"UnityException: HasBoneWeights can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.counts.log","v":""}
+{"k":"thread.weights","v":"UnityException: GetAllBoneWeightsArray can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.weights.log","v":""}
+{"k":"thread.layout","v":"UnityException: GetBoneWeightBufferLayoutInternal can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.layout.log","v":""}
+{"k":"legacy.grow","v":"FourBones:True:True:created:1/1/1/0:created:13@1/5@1/11@1"}
+{"k":"legacy.grow.log","v":""}
+{"k":"legacy.shrink","v":"FourBones:True:True:created:1/1:created:13@1/5@1/11@1"}
+{"k":"legacy.shrink.log","v":""}
+{"k":"legacy.clearKeepingLayout","v":"FourBones:True:True:default::default:"}
+{"k":"legacy.clearKeepingLayout.log","v":""}
+{"k":"legacy.clearLayout","v":"None:False:False:default::default:"}
+{"k":"legacy.clearLayout.log","v":""}
+{"k":"unlimited.255","v":"255:255:254@0.00392156839"}
+{"k":"unlimited.255.log","v":""}
+{"k":"weightValue.equality","v":"True:False:True:1048576007"}
+{"k":"weightValue.equality.log","v":""}
+{"k":"bake.weights","v":"Unlimited:True:True:created:6/2/1:created:0@0.349996179/1@0.229999244/2@0.1600061/3@0.11999695/4@0.08999771/5@0.0500038154/5@0.7000076/1@0.299992383/2@1"}
+{"k":"bake.weights.log","v":""}
+{"k":"bake.auto.OneBone","v":[{"x":0.0,"y":0.0,"z":0.0},{"x":26.0,"y":10.0,"z":0.0},{"x":4.0,"y":11.0,"z":0.0}]}
+{"k":"bake.auto.OneBone.log","v":""}
+{"k":"bake.auto.TwoBones","v":[{"x":0.39655354619026186,"y":2.379321336746216,"z":0.0},{"x":18.800182342529298,"y":8.800030708312989,"z":0.0},{"x":4.0,"y":11.0,"z":0.0}]}
+{"k":"bake.auto.TwoBones.log","v":""}
+{"k":"bake.auto.FourBones","v":[{"x":2.2674412727355959,"y":5.139566898345947,"z":0.0},{"x":18.800182342529298,"y":8.800030708312989,"z":0.0},{"x":4.0,"y":11.0,"z":0.0}]}
+{"k":"bake.auto.FourBones.log","v":""}
+{"k":"bake.auto.Unlimited","v":[{"x":4.640054702758789,"y":6.000030517578125,"z":0.0},{"x":18.800182342529298,"y":8.800030708312989,"z":0.0},{"x":4.0,"y":11.0,"z":0.0}]}
+{"k":"bake.auto.Unlimited.log","v":""}
+{"k":"bake.overrideTwo","v":[{"x":0.39655354619026186,"y":2.379321336746216,"z":0.0},{"x":18.800182342529298,"y":8.800030708312989,"z":0.0},{"x":4.0,"y":11.0,"z":0.0}]}
+{"k":"bake.overrideTwo.log","v":""}
+{"k":"complete","v":true}
