@@ -9,9 +9,18 @@ using Object = UnityEngine.Object;
 
 sealed class RendererMemoryPipeline : RenderPipelineAsset
 {
+    internal sealed class FrameRequest { }
+
     sealed class EmptyPipeline : RenderPipeline
     {
         internal bool RenderedCamera;
+
+        protected override bool IsRenderRequestSupported<RequestData>(Camera camera, RequestData request) => request is FrameRequest;
+
+        protected override void ProcessRenderRequests<RequestData>(ScriptableRenderContext context, Camera camera, RequestData request)
+        {
+            if (request is FrameRequest) Render(context, new[] { camera });
+        }
 
         protected override void Render(ScriptableRenderContext context, Camera[] cameras)
         {
@@ -171,6 +180,33 @@ public sealed class MeasureMeshRendererMemory : MonoBehaviour
         renderer.sharedMaterials = Materials(5, material);
         Read("indexedLate.growBelowMaterialReservation", renderer, 4);
         Object.DestroyImmediate(renderer.gameObject);
+
+        renderer = new GameObject("Empty indexed overrides").AddComponent<MeshRenderer>();
+        renderer.sharedMaterials = Materials(3, material);
+        renderer.SetPropertyBlock(new MaterialPropertyBlock(), 0);
+        renderer.sharedMaterials = Materials(5, material);
+        Read("indexedEmpty.grow", renderer);
+        renderer.SetPropertyBlock(null, 1);
+        renderer.sharedMaterials = Materials(8, material);
+        Read("indexedEmpty.growAfterClearDifferentSlot", renderer);
+        renderer.SetPropertyBlock(null, 0);
+        renderer.sharedMaterials = Materials(11, material);
+        Read("indexedEmpty.growAfterClearSameSlot", renderer);
+        Object.DestroyImmediate(renderer.gameObject);
+
+        renderer = new GameObject("Indexed overrides after trimming").AddComponent<MeshRenderer>();
+        renderer.sharedMaterials = Materials(5, material);
+        renderer.SetPropertyBlock(block, 4);
+        renderer.sharedMaterials = Materials(2, material);
+        Read("indexedTrim.lastOverrideOutsideRange", renderer);
+        renderer.sharedMaterials = Materials(8, material);
+        Read("indexedTrim.growPastLastOverride", renderer, 4);
+        renderer.SetPropertyBlock(block, 7);
+        renderer.sharedMaterials = Array.Empty<Material>();
+        Read("indexedTrim.zeroWhileActive", renderer);
+        renderer.sharedMaterials = Materials(10, material);
+        Read("indexedTrim.growAfterZero", renderer, 7);
+        Object.DestroyImmediate(renderer.gameObject);
     }
 
     static void MeasureIndexedBlocks(string prefix, int count, Material material)
@@ -311,6 +347,10 @@ public sealed class MeasureMeshRendererMemory : MonoBehaviour
         {
             QualitySettings.renderPipeline = null;
             GraphicsSettings.defaultRenderPipeline = pipeline;
+            var request = new RendererMemoryPipeline.FrameRequest();
+            bool acceptsRequest = RenderPipeline.SupportsRenderRequest(srpCamera, request);
+            Put("srp.renderRequestSupported", acceptsRequest.ToString());
+            if (acceptsRequest) RenderPipeline.SubmitRenderRequest(srpCamera, request);
             for (int frame = 0; frame < 4 && !pipeline.RenderedFrame; frame++) yield return null;
             Put("srp.active", (GraphicsSettings.currentRenderPipeline != null).ToString());
             Put("srp.renderedFrame", pipeline.RenderedFrame.ToString());
