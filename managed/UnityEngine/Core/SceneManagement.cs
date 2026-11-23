@@ -832,6 +832,7 @@ namespace UnityEngine.SceneManagement
             t_EditorOpen |= editor;
             try { Perform(data, new LoadSceneParameters(additive ? LoadSceneMode.Additive : LoadSceneMode.Single)); }
             finally { t_EditorOpen = outer; }
+            if (editor && !additive && data.IsLoaded) EditorSession.NoteSingleSceneOpened();
             return new Scene(data.Handle);
         }
 

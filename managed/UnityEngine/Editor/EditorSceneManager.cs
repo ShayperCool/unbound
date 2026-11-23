@@ -172,7 +172,6 @@ namespace UnityEditor.SceneManagement
                 foreach (var data in SceneRegistry.Loaded.ToArray())
                     sceneClosing?.Invoke(new Scene(data.Handle), true);
             var scene = SceneManagerInternal.OpenPath(scenePath, mode != OpenSceneMode.Single);
-            if (mode == OpenSceneMode.Single) EditorSession.NoteSingleSceneOpened();
             sceneOpened?.Invoke(scene, mode);
             return scene;
         }

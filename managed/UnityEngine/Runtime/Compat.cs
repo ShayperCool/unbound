@@ -592,8 +592,9 @@ namespace Unbound.Runtime
         internal static bool SceneFileInstanceIdsMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Automatic rendering follows the public player loop and precedes end-of-frame
-        /// coroutine resumes. Its first Play frame renders without end-of-frame completion. Measured
-        /// by destroyphases and eofstartup on 6000.0.71f1; other releases retain their prior timing.</summary>
+        /// completion. Opening a saved scene alone and entering Play in the same Editor update delays
+        /// the first completion. Measured by destroyphases and eofstartup on 6000.0.71f1.
+        /// Other releases retain their prior timing.</summary>
         internal static bool RenderingAfterPublicLoop => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Simulation mode checks, contact refresh across sub-steps and contact payload

@@ -10,9 +10,15 @@ python3 tests/projects/eofstartup/run.py unbound --release 6000.0.71f1 --label e
 ```
 
 The default opens a saved scene in Single mode and enters Play in the same Editor update.
-`--entry settled` opens the same scene before the wait in the Editor runner. On Unbound it
-uses the Test Framework's Edit Mode session to open the scene and enter Play after an
-Editor update. Both variants count frames from the first Update.
+`--entry settled` opens the same scene before the wait in the Editor runner.
+`--entry edit-immediate` executes the same-update entry from an Edit Mode session in
+Unbound. `--entry restore` restores the saved scene setup then enters Play in the same
+update. The restore control uses one saved, loaded and active scene as required by the Unity
+6.0 API. Both reuse the immediate reference. [OpenScene API][open] · [RestoreSceneManagerSetup API][restore]
+
+Unbound opens Edit Mode for these three
+entries with `unbound test --graphics`. The probe's private copy omits package test
+runners so its recorder owns the Play transition. Every entry counts frames from Update.
 
 The built-in pipeline renders both the screen and the render-texture camera in frame 0.
 Explicit `Camera.Render()` sends its callback before returning. With same-update entry,
@@ -38,10 +44,13 @@ The Unity 6.0 [execution-order Manual][order] and [WaitForEndOfFrame API][wait]
 place waits after camera and GUI rendering. The Scripting API describes Game view
 suspension and batch-mode Editor limits. The additive post-render counter records the
 camera-before-wait guarantee in the built-in pipeline. Frame 0 timing here is measured
-Editor behavior. Other pipelines, multiple Game views and other releases are unmeasured.
+Editor behavior. Other pipelines, multiple Game views and other releases are unmeasured. The windowed
+macOS Editor has a separate first-frame difference recorded in the destroycontract README.
 
 The comparator checks every integer counter exactly. Existing same-update captures
 retain their frame 0 records alongside the settled references.
 
 [order]: https://docs.unity3d.com/6000.0/Documentation/Manual/ExecutionOrder.html
 [wait]: https://docs.unity3d.com/6000.0/Documentation/ScriptReference/WaitForEndOfFrame.html
+[open]: https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SceneManagement.EditorSceneManager.OpenScene.html
+[restore]: https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SceneManagement.EditorSceneManager.RestoreSceneManagerSetup.html
