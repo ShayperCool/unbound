@@ -514,7 +514,7 @@ pub fn create_pipeline(
 }
 
 /// The color outputs a compiled fragment program writes, as a mask of locations: the members of
-/// the struct its `@fragment` entry returns (a single output is location 0).
+/// the struct its `@fragment` entry returns, or its single output's location.
 pub fn fragment_outputs(wgsl: &str) -> u8 {
     fragment_output_kinds(wgsl)
         .iter()
@@ -567,8 +567,16 @@ pub fn fragment_output_kinds(wgsl: &str) -> [Option<OutputKind>; 8] {
         return kinds;
     };
     let result = rest[arrow + 2..open].trim();
-    if let Some(single) = result.strip_prefix("@location(0)") {
-        kinds[0] = kind(single);
+    // A single color output at its location (a 2D light drawn into the light pass's targets, one
+    // per active blend style, writes only the target of its style's place among them).
+    if let Some(after) = result.strip_prefix("@location(") {
+        if let Some(end) = after.find(')')
+            && let Ok(n) = after[..end].trim().parse::<usize>()
+            && n < kinds.len()
+        {
+            kinds[n] = kind(&after[end + 1..]);
+        }
+        // A location past the targets a pass can bind (HLSL has SV_Target0-7 only) writes none.
         return kinds;
     }
     // A single builtin output (`frag_depth`): no colors.
@@ -666,6 +674,24 @@ mod tests {
         assert_eq!(
             super::fragment_outputs("@fragment fn f() -> @location(0) vec4<f32> {}"),
             1
+        );
+        // A single output at another location than the first.
+        assert_eq!(
+            super::fragment_outputs("@fragment fn f() -> @location(1) vec4<f32> {}"),
+            0b10
+        );
+        assert_eq!(
+            super::fragment_output_kinds("@fragment fn f() -> @location(3) vec4<i32> {}")[3],
+            Some(super::OutputKind::Sint)
+        );
+        // Spacing inside the attribute; a location no pass can bind writes nothing.
+        assert_eq!(
+            super::fragment_outputs("@fragment fn f() -> @location( 2 ) vec4<f32> {}"),
+            0b100
+        );
+        assert_eq!(
+            super::fragment_outputs("@fragment fn f() -> @location(8) vec4<f32> {}"),
+            0
         );
         let two = "struct targets {\n @location(0) a: vec4<f32>,\n @location(2) b: vec4<f32>,\n}\n@fragment fn main(x: f32) -> targets { }";
         assert_eq!(super::fragment_outputs(two), 0b101);
