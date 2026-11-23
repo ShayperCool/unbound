@@ -22,41 +22,18 @@
   "A probe inside the cube, which stands on the ground: the rays it sends down meet the cube's bottom (from behind) and the ground (from the front) in one plane at the same distance. The Editor counts all 64 rays as meeting a back face; Unbound counts 5 of the downward rays as meeting the ground first. Not chased: which of two surfaces at the same distance a ray meets is not measured.": {
     "ProbesGrid.probes": "validity: 1 values differ (worst 0.0781, tolerance 1e-06)"
   },
-  "Light probes: the Editor's lighting data of a scene with light probe groups holds the LightProbes object (positions, tetrahedralization, a hash per probe set, coefficients), which Unbound does not write yet; its bake of such a scene writes nothing beside it (said). Follow-up (Q687): the LightProbes object.": {
-    "Probes.lightingData": "not written",
-    "Probes.written/LightingData.asset.meta": "not written",
-    "Probes.written/Lightmap-0_comp_light.exr.meta": "not written",
-    "Probes.written/folder.meta": "not written",
-    "ProbesGrid.lightingData": "not written",
-    "ProbesGrid.written/LightingData.asset.meta": "not written",
-    "ProbesGrid.written/Lightmap-0_comp_light.exr.meta": "not written",
-    "ProbesGrid.written/folder.meta": "not written",
-    "ProbesMore.lightingData": "not written",
-    "ProbesMore.written/LightingData.asset.meta": "not written",
-    "ProbesMore.written/Lightmap-0_comp_light.exr.meta": "not written",
-    "ProbesMore.written/folder.meta": "not written",
-    "ProbesReach.lightingData": "not written",
-    "ProbesReach.written/LightingData.asset.meta": "not written",
-    "ProbesReach.written/Lightmap-0_comp_light.exr.meta": "not written",
-    "ProbesReach.written/folder.meta": "not written",
-    "ProbesSky.lightingData": "not written",
-    "ProbesSky.written/LightingData.asset.meta": "not written",
-    "ProbesSky.written/Lightmap-0_comp_light.exr.meta": "not written",
-    "ProbesSky.written/Lightmap-0_comp_shadowmask.png": "not written",
-    "ProbesSky.written/Lightmap-0_comp_shadowmask.png.meta": "not written",
-    "ProbesSky.written/folder.meta": "not written",
-    "ProbesSkyEven.lightingData": "not written",
-    "ProbesSkyEven.written/LightingData.asset.meta": "not written",
-    "ProbesSkyEven.written/Lightmap-0_comp_light.exr.meta": "not written",
-    "ProbesSkyEven.written/Lightmap-0_comp_shadowmask.png": "not written",
-    "ProbesSkyEven.written/Lightmap-0_comp_shadowmask.png.meta": "not written",
-    "ProbesSkyEven.written/folder.meta": "not written"
-  },
   "A LOD Group: Unbound's bake does not tell its levels apart yet (the named Shapes residuals above), so it writes neither the lightmaps nor the lighting data of such a scene (said). Follow-up: the levels' rule, then the files.": {
     "Shapes.lightingData": "not written",
     "Shapes.written/LightingData.asset.meta": "not written",
     "Shapes.written/Lightmap-0_comp_light.exr.meta": "not written",
     "Shapes.written/ReflectionProbe-0.exr.meta": "not written",
     "Shapes.written/folder.meta": "not written"
+  },
+  "The light probes' cells: the same cells (by their probes), hull, validity and hull rays as the Editor's, which bakes them in an order of its own (that of its construction of the cells, as it inserts the probes and flips cells) and so numbers each cell's corners and neighbors otherwise; Unbound keeps its own order (the interpolation inside the hull is the same blend; tests compare its pass over the cells with the Editor's own cells bit for bit). Not chased: the order is the construction's history, not a rule of the bake.": {
+    "Probes.lightProbes.cellOrder": "12 of 12 cells in another place or corner order, first at [0, 1, 2, 3, 4, 5]",
+    "ProbesGrid.lightProbes.cellOrder": "16 of 16 cells in another place or corner order, first at [0, 1, 2, 3, 4, 5]",
+    "ProbesMore.lightProbes.cellOrder": "8 of 8 cells in another place or corner order, first at [0, 1, 2, 3, 4, 5]",
+    "ProbesSky.lightProbes.cellOrder": "5 of 5 cells in another place or corner order, first at [0, 1, 2, 3, 4]",
+    "ProbesSkyEven.lightProbes.cellOrder": "5 of 5 cells in another place or corner order, first at [0, 1, 2, 3, 4]"
   }
 }

@@ -16,6 +16,7 @@ use unbound_gi::baked::grid::{Bounds, Grid};
 use unbound_gi::baked::images;
 use unbound_gi::baked::indirect::{self, Material, Surface, Texture, World};
 use unbound_gi::baked::light::{Kind, Light, Mode};
+use unbound_gi::baked::light_probes;
 use unbound_gi::baked::probes;
 use unbound_gi::baked::sampling::{self, Samples};
 use unbound_gi::baked::seams::{self, EdgePair};
@@ -73,15 +74,16 @@ pub struct BakeRequest {
 struct ProbeGroupData {
     file_id: i64,
     points: Vec<f32>,
+    /// Its Remove Ringing (on by default, as a new group has it).
+    #[serde(default = "removes_ringing")]
+    dering: bool,
 }
 
 /// The light probes' points as the bake has them, group by group: the groups with probes in
 /// their objects' order in the scene file (their file IDs'), each group's points in its order,
 /// where the bake puts them (tests/projects/bakedbuffers `Probes*`).
 fn probe_points(groups: &[ProbeGroupData]) -> Vec<Vec<[f32; 3]>> {
-    let mut groups: Vec<&ProbeGroupData> = groups.iter().filter(|g| g.points.len() >= 3).collect();
-    groups.sort_by_key(|g| g.file_id);
-    groups
+    probe_groups(groups)
         .iter()
         .map(|g| {
             g.points
@@ -90,6 +92,17 @@ fn probe_points(groups: &[ProbeGroupData]) -> Vec<Vec<[f32; 3]>> {
                 .collect()
         })
         .collect()
+}
+
+fn removes_ringing() -> bool {
+    true
+}
+
+/// The light probe groups with probes, in their objects' order in the scene file.
+fn probe_groups(groups: &[ProbeGroupData]) -> Vec<&ProbeGroupData> {
+    let mut groups: Vec<&ProbeGroupData> = groups.iter().filter(|g| g.points.len() >= 3).collect();
+    groups.sort_by_key(|g| g.file_id);
+    groups
 }
 
 /// How far a light probe's paths start off the surfaces they meet (what the bake asks of its
@@ -924,6 +937,8 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
 
     let mut images = None;
     let mut light_outputs = Json::Null;
+    // The light probes as the lighting data keeps them (where the indirect light is baked).
+    let mut light_probes = Json::Null;
     if !request.layout_only && (buffers.is_some() || request.lightmap_images) {
         // Each lightmap's renderers in the bake's order, their meshes made ready once. The
         // indirect light's rays meet every renderer of the bake, with or without a lightmap.
@@ -1276,6 +1291,16 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                         .collect(),
                 )?;
                 counts = json!({ "indirect": settings.samples, "environment": settings.environment_samples });
+                light_probes = light_probes_data(
+                    &groups,
+                    &probe_groups(&request.probes),
+                    &lit,
+                    &probed.radiance,
+                    (mixed != MixedMode::IndirectOnly).then(|| {
+                        light_probes::occlusion(&points, &baked_lights, &channels, &scene)
+                    }),
+                    light_probes::occluding_lights(&baked_lights, &channels).len(),
+                );
             }
             described_probes =
                 json!({ "count": points.len(), "points": points, "samples": counts });
@@ -1338,7 +1363,60 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
         "directionImages": images.as_ref().map(|i| &i.1),
         "shadowmaskImages": images.as_ref().map(|i| &i.2),
         "lights": light_outputs,
+        "lightProbes": light_probes,
     }))
+}
+
+/// The light probes of a bake as its lighting data keeps them (the LightProbes object): their
+/// points, each group's set (its place among them, its size and its hash), each probe's
+/// coefficients (of its direct light `lit` and its indirect light `bounced`; each group's
+/// Remove Ringing), the probes' occlusion entries where the Lighting Mode has them; and what
+/// of it is not measured: probes within 5 cm of each other, a group without Remove Ringing,
+/// more than one mixed light in the occlusion.
+fn light_probes_data(
+    points: &[Vec<[f32; 3]>],
+    groups: &[&ProbeGroupData],
+    lit: &[probes::Coefficients],
+    bounced: &[probes::Coefficients],
+    occlusion: Option<Vec<light_probes::Occlusion>>,
+    occluding: usize,
+) -> Json {
+    let mut sets = Vec::new();
+    let mut coefficients = Vec::new();
+    let mut offset = 0;
+    for (set, group) in points.iter().zip(groups) {
+        sets.push(json!({
+            "offset": offset, "size": set.len(),
+            "hash": light_probes::set_hash(set),
+        }));
+        for p in offset..offset + set.len() {
+            coefficients.extend(light_probes::coefficients(
+                &lit[p],
+                &bounced[p],
+                group.dering,
+            ));
+        }
+        offset += set.len();
+    }
+    let all = points.concat();
+    let unmeasured = if light_probes::has_duplicates(&all) {
+        Some("light probes within 5 cm of each other")
+    } else if groups.iter().any(|g| !g.dering) {
+        Some("a Light Probe Group without Remove Ringing")
+    } else if occlusion.is_some() && occluding > 1 {
+        Some("the probes' occlusion of more than one mixed light")
+    } else {
+        None
+    };
+    json!({
+        "positions": all,
+        "sets": sets,
+        "coefficients": coefficients,
+        "occlusion": occlusion.unwrap_or_default().iter().map(|o| json!({
+            "lights": o.lights, "channels": o.channels, "occlusion": o.occlusion,
+        })).collect::<Vec<_>>(),
+        "unmeasured": unmeasured,
+    })
 }
 
 /// A lightmap's image as the Editor writes it (Lightmap-N_comp_light.exr): red, green, blue and
@@ -1427,6 +1505,48 @@ pub struct LightingDataRequest {
     renderers: Vec<LightmappedRendererData>,
     #[serde(default)]
     lights: Vec<LightOutputData>,
+    /// Its light probes: as the bake's reply gives them, with their cells.
+    #[serde(default)]
+    light_probes: Option<LightProbesData>,
+}
+
+/// A bake's light probes as the bake's reply gives them (`lightProbes`), with the cells their
+/// points make (inner, then outer) and their hull rays.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LightProbesData {
+    positions: Vec<[f32; 3]>,
+    sets: Vec<ProbeSetData>,
+    /// 27 per probe.
+    coefficients: Vec<f32>,
+    #[serde(default)]
+    occlusion: Vec<ProbeOcclusionData>,
+    tetrahedra: Vec<TetrahedronData>,
+    hull_rays: Vec<[f32; 3]>,
+}
+
+#[derive(serde::Deserialize)]
+struct ProbeSetData {
+    offset: i32,
+    size: i32,
+    hash: [u8; 16],
+}
+
+#[derive(serde::Deserialize)]
+struct ProbeOcclusionData {
+    lights: [i32; 4],
+    channels: [u8; 4],
+    occlusion: [f32; 4],
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TetrahedronData {
+    indices: [i32; 4],
+    neighbors: [i32; 4],
+    /// Three rows of four.
+    matrix: [f32; 12],
+    is_valid: bool,
 }
 
 /// A lightmap's images by their GUIDs: its light, and its directions or shadowmask if made.
@@ -1499,6 +1619,56 @@ pub fn lighting_data_file(request: LightingDataRequest) -> Result<Json> {
                 probe_occlusion_light_index: l.probe_index,
             })
             .collect(),
+        light_probes: request
+            .light_probes
+            .map(|p| -> Result<lighting_data::LightProbes> {
+                ensure!(
+                    p.coefficients.len() == 27 * p.positions.len(),
+                    "{} coefficients for {} light probes",
+                    p.coefficients.len(),
+                    p.positions.len()
+                );
+                Ok(lighting_data::LightProbes {
+                    coefficients: p
+                        .coefficients
+                        .chunks_exact(27)
+                        .map(|c| c.try_into().unwrap())
+                        .collect(),
+                    positions: p.positions,
+                    sets: p
+                        .sets
+                        .iter()
+                        .map(|s| lighting_data::ProbeSet {
+                            offset: s.offset,
+                            size: s.size,
+                            hash: s.hash,
+                        })
+                        .collect(),
+                    occlusion: p
+                        .occlusion
+                        .iter()
+                        .map(|o| lighting_data::ProbeOcclusion {
+                            lights: o.lights,
+                            channels: o.channels,
+                            occlusion: o.occlusion,
+                        })
+                        .collect(),
+                    tetrahedra: p
+                        .tetrahedra
+                        .iter()
+                        .map(|t| lighting_data::Tetrahedron {
+                            indices: t.indices,
+                            neighbors: t.neighbors,
+                            matrix: std::array::from_fn(|r| {
+                                std::array::from_fn(|c| t.matrix[4 * r + c])
+                            }),
+                            valid: t.is_valid,
+                        })
+                        .collect(),
+                    hull_rays: p.hull_rays,
+                })
+            })
+            .transpose()?,
     };
     let bytes = lighting_data::baked(
         &lighting_data::Environment {
@@ -1729,12 +1899,56 @@ mod tests {
     }
 
     #[test]
+    fn the_light_probes_reply_holds_each_sets_place_and_hash_and_says_what_is_not_measured() {
+        let group = |file_id, dering| ProbeGroupData {
+            file_id,
+            points: Vec::new(),
+            dering,
+        };
+        let (a, b) = (group(1, true), group(2, true));
+        let points = vec![vec![[0.0f32; 3], [1.0, 0.0, 0.0]], vec![[0.0, 1.0, 0.0]]];
+        let light = vec![probes::Coefficients::default(); 3];
+        let reply = light_probes_data(&points, &[&a, &b], &light, &light, None, 0);
+        assert_eq!(reply["sets"][1]["offset"], 2);
+        assert_eq!(reply["sets"][1]["size"], 1);
+        assert_eq!(
+            reply["sets"][0]["hash"],
+            json!(light_probes::set_hash(&points[0]))
+        );
+        assert_eq!(reply["coefficients"].as_array().unwrap().len(), 27 * 3);
+        assert_eq!(reply["occlusion"], json!([]));
+        assert!(reply["unmeasured"].is_null());
+        // Probes within 5 cm, a group without Remove Ringing, two mixed lights' occlusion.
+        let close = vec![vec![[0.0f32; 3], [0.01, 0.0, 0.0]], vec![[0.0, 1.0, 0.0]]];
+        let reply = light_probes_data(&close, &[&a, &b], &light, &light, None, 0);
+        assert_eq!(
+            reply["unmeasured"],
+            "light probes within 5 cm of each other"
+        );
+        let plain = group(2, false);
+        let reply = light_probes_data(&points, &[&a, &plain], &light, &light, None, 0);
+        assert_eq!(
+            reply["unmeasured"],
+            "a Light Probe Group without Remove Ringing"
+        );
+        let reply = light_probes_data(&points, &[&a, &b], &light, &light, Some(Vec::new()), 2);
+        assert_eq!(
+            reply["unmeasured"],
+            "the probes' occlusion of more than one mixed light"
+        );
+        // One mixed light's occlusion is measured.
+        let reply = light_probes_data(&points, &[&a, &b], &light, &light, Some(Vec::new()), 1);
+        assert!(reply["unmeasured"].is_null());
+    }
+
+    #[test]
     fn probe_groups_are_baked_in_their_scene_file_order_at_their_cut_points() {
         // tests/projects/bakedbuffers ProbesGrid: the groups by file ID, whatever the order they
         // come in (their order in the hierarchy) or their file IDs' hashes give.
         let group = |file_id, points: &[f32]| ProbeGroupData {
             file_id,
             points: points.to_vec(),
+            dering: true,
         };
         let groups = [
             group(862829824, &[0.5, 9.0, 0.2]),

@@ -222,7 +222,7 @@ namespace UnityEngine.Tests
             var environment = new LightingSettings { bakedGI = false, realtimeGI = false };
             // (The project's own assets: Assets/ here.)
             System.Func<string, bool> own = path => path.StartsWith("Assets/", System.StringComparison.Ordinal);
-            string Unwritten(LightingSettings settings, string folder, bool made, bool pipeline = false, bool lightmaps = false, bool probes = false,
+            string Unwritten(LightingSettings settings, string folder, bool made, bool pipeline = false, bool lightmaps = false, string probes = null,
                 bool shadowmask = true) =>
                 RealtimeGI.Unwritten(settings, folder, made, pipeline, lightmaps, probes, own, shadowmask);
             try
@@ -249,7 +249,8 @@ namespace UnityEngine.Tests
                     Assert.Contains("lightmaps", Unwritten(environment, "Assets/Scenes/Lit", true));
                     // The scene's own reason comes first (no lightmaps were asked for it).
                     Assert.Contains("untitled", Unwritten(environment, null, true));
-                    Assert.Contains("light probes", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true, probes: true));
+                    // Light probes the bake could not write as measured: why.
+                    Assert.Equal("why", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true, probes: "why"));
                     // Directional lightmaps (in the Baked Indirect mode) and the Shadowmask Lighting
                     // Mode (with its shadowmask made) are written too; the two together, directional
                     // lightmaps in the Subtractive mode and the Shadowmask mode without a shadowmask

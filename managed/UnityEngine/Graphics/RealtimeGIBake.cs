@@ -99,7 +99,7 @@ namespace UnityEngine
                     // (A renderer the bake does not take, said above, changes their light: none.)
                     bool lightmaps = settings != null && settings.bakedGI && Native.IsReady && !added
                         && Unwritten(settings, FolderOf(scene), environment.Made, Rendering.GraphicsSettings.currentRenderPipeline != null,
-                            lightmapsMade: true, HasProbeGroups(file)) == null;
+                            lightmapsMade: true, probes: null) == null;
                     var baked = BakedAtlas.Lay(file, settings, images: lightmaps);
                     WriteLightingData(scene, file, settings, environment, lightmaps ? baked : null);
                     first = false;
@@ -255,10 +255,10 @@ namespace UnityEngine
         /// not measured). <paramref name="editable"/>: whether a path is of the project's own
         /// assets (AssetDatabase's answer by default).</summary>
         internal static string Unwritten(LightingSettings settings, string folder, bool environmentMade, bool renderPipeline,
-            bool lightmapsMade, bool probeGroups, Func<string, bool> editable = null, bool shadowmaskMade = true) =>
+            bool lightmapsMade, string probes, Func<string, bool> editable = null, bool shadowmaskMade = true) =>
             settings == null ? "a scene without Lighting Settings (the defaults') is not written yet"
             : settings.realtimeGI ? "Unbound writes it for a bake without realtime global illumination"
-            : settings.bakedGI && probeGroups ? "the light probes of a bake with baked global illumination are not written yet"
+            : settings.bakedGI && probes != null ? probes
             : settings.bakedGI && settings.lightmapCompression != LightmapCompression.None ? "lightmaps with compression are not measured"
             // (What the bake does not make yet, or makes only where measured:
             // tests/projects/bakedbuffers bakes without filtering, ambient occlusion and with an
@@ -288,6 +288,52 @@ namespace UnityEngine
             foreach (var obj in file.Objects.Values)
                 if (obj is LightProbeGroup group && group != null && group.isActiveAndEnabled && group.probePositions.Length > 0) return true;
             return false;
+        }
+
+        /// <summary>The light probes of a bake with baked global illumination as its lighting data
+        /// keeps them (the bake's points, sets, coefficients and occlusion, with the cells made of
+        /// the points, <see cref="ProbeTetrahedralization.Written"/>), or null where it has none;
+        /// <paramref name="why"/> is null, or why they are not written (what of them is not
+        /// measured).</summary>
+        internal static object LightProbesOf(LoadedFile file, BakeResult baked, out string why)
+        {
+            why = null;
+            if (baked == null) return null;
+            if (baked.LightProbes is not JsonElement made)
+            {
+                if (file != null && HasProbeGroups(file)) why = "the bake made no light probes of its own";
+                return null;
+            }
+            if (made.GetProperty("unmeasured") is { ValueKind: JsonValueKind.String } reason)
+            {
+                why = reason.GetString() + " is not measured";
+                return null;
+            }
+            var points = made.GetProperty("positions");
+            var positions = new Vector3[points.GetArrayLength()];
+            for (int i = 0; i < positions.Length; i++)
+                positions[i] = new Vector3(points[i][0].GetSingle(), points[i][1].GetSingle(), points[i][2].GetSingle());
+            var cells = ProbeTetrahedralization.Written(positions);
+            if (cells == null || cells.Degenerate)
+            {
+                why = cells == null ? "light probes all in one plane are not measured"
+                    : "a light probe hull cell without a matrix of its own is not measured";
+                return null;
+            }
+            var tetrahedra = new object[cells.Indices.Length];
+            for (int c = 0; c < tetrahedra.Length; c++)
+                tetrahedra[c] = new { indices = cells.Indices[c], neighbors = cells.Neighbors[c], matrix = cells.Matrices[c], isValid = cells.Valid[c] };
+            var rays = new float[cells.HullRays.Length][];
+            for (int i = 0; i < rays.Length; i++) rays[i] = new[] { cells.HullRays[i].x, cells.HullRays[i].y, cells.HullRays[i].z };
+            return new
+            {
+                positions = points,
+                sets = made.GetProperty("sets"),
+                coefficients = made.GetProperty("coefficients"),
+                occlusion = made.GetProperty("occlusion"),
+                tetrahedra,
+                hullRays = rays,
+            };
         }
 
         /// <summary>A renderer's lightmap index in the lighting data for none of its own.</summary>
@@ -412,8 +458,9 @@ namespace UnityEngine
             scene.LightingDataWritten = false;
             string folder = FolderOf(scene);
             // (Without the native side, as in managed tests, nothing is made or written.)
+            var lightProbes = LightProbesOf(file, baked, out string probes);
             string unwritten = Unwritten(settings, folder, Native.IsReady && environment.Made, Rendering.GraphicsSettings.currentRenderPipeline != null,
-                baked?.Images is { Length: > 0 }, file != null && HasProbeGroups(file),
+                baked?.Images is { Length: > 0 }, probes,
                 shadowmaskMade: settings == null || settings.mixedBakeMode != MixedLightingMode.Shadowmask || baked == null || baked.Shadowmasks.Length == baked.Images.Length);
             if (unwritten != null)
             {
@@ -469,6 +516,7 @@ namespace UnityEngine
                 lightmaps,
                 renderers,
                 lights,
+                lightProbes,
             }))).RootElement;
             var dataGuid = UnityEditor.AssetDatabase.WriteBakedFile(folder + "/" + LightingDataFile, Convert.FromBase64String(data.GetProperty("data").GetString()), LightingDataFileId);
             if (string.IsNullOrEmpty(dataGuid)) return;

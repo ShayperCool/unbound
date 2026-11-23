@@ -93,6 +93,50 @@ def _by_renderer(objects):
     return out
 
 
+def _cells(obj):
+    """The LightProbes object's cells (its tetrahedralization's), or None for another object."""
+    if obj.get('classId') != 258:
+        return None
+    return obj.get('fields', {}).get('m_Data', {}).get('m_Tetrahedralization', {}).get('m_Tetrahedra')
+
+
+def _cell_probes(cell):
+    return [int(cell[f'indices[{k}]']) for k in range(4)]
+
+
+def _by_cell(objects):
+    """The light probes' cells keyed by their probes, with whether each is valid: the order of
+    the cells and of each cell's corners (and so its matrix and its neighbors' numbers) is
+    compared apart (`cell_order_difference`)."""
+    out = json.loads(json.dumps(objects))
+    for obj in out:
+        cells = _cells(obj)
+        if cells is not None:
+            obj['fields']['m_Data']['m_Tetrahedralization']['m_Tetrahedra'] = {
+                ','.join(str(v) for v in sorted(_cell_probes(c))): {'isValid': c['isValid']} for c in cells}
+    return out
+
+
+def cell_order_difference(got, want, tolerance):
+    """None, or how the light probes' cells (of two lighting data's fields) differ in their
+    order: the cells whose place, corners or neighbors differ, and of the others those whose
+    matrix differs by more than `tolerance` times the value above 1."""
+    g = next((c for c in map(_cells, got) if c is not None), None)
+    w = next((c for c in map(_cells, want) if c is not None), None)
+    if g is None or w is None or len(g) != len(w):
+        return None if g == w else f'{len(g or [])} cells, expected {len(w or [])}'
+    neighbors = lambda c: [int(c[f'neighbors[{k}]']) for k in range(4)]  # noqa: E731
+    moved = [k for k, (a, b) in enumerate(zip(g, w)) if _cell_probes(a) != _cell_probes(b) or neighbors(a) != neighbors(b)]
+    off = [k for k, (a, b) in enumerate(zip(g, w)) if k not in moved and any(
+        abs(float(a['matrix'][e]) - float(b['matrix'][e])) > tolerance * max(1.0, abs(float(b['matrix'][e]))) for e in b['matrix'])]
+    parts = []
+    if moved:
+        parts.append(f'{len(moved)} of {len(w)} cells in another place or corner order, first at {moved[:6]}')
+    if off:
+        parts.append(f'{len(off)} matrices of cells in place differ, first at {off[:6]}')
+    return '; '.join(parts) or None
+
+
 # Fields that identify (objects, files): compared exactly, also where they are numbers.
 IDENTIFYING = {'targetObject', 'targetPrefab', 'fileID', 'm_FileID', 'm_PathID', 'guid', 'lightmapIndex', 'lightmapIndexDynamic'}
 
@@ -126,7 +170,7 @@ def lighting_data_difference(got, want, tolerance):
             except (TypeError, ValueError):
                 pass
             problems.append(f'{path}: {a!r}, expected {b!r}')
-    walk(_by_renderer(got), _by_renderer(want), '')
+    walk(_by_cell(_by_renderer(got)), _by_cell(_by_renderer(want)), '')
     return '; '.join(problems) or None
 
 

@@ -151,6 +151,51 @@ pub struct Baked {
     pub renderers: Vec<LightmappedRenderer>,
     /// The bake's lights, in its order.
     pub lights: Vec<BakedLight>,
+    /// The bake's light probes, where it has any.
+    pub light_probes: Option<LightProbes>,
+}
+
+/// A bake's light probes as its LightProbes object keeps them.
+#[derive(Clone, Debug, Default)]
+pub struct LightProbes {
+    /// The probes' points, set by set.
+    pub positions: Vec<[f32; 3]>,
+    /// Each set (a Light Probe Group): its first probe, its count and its hash.
+    pub sets: Vec<ProbeSet>,
+    /// Each probe's coefficients (red's nine, green's, blue's).
+    pub coefficients: Vec<[f32; 27]>,
+    /// Each probe's occlusion of the mixed lights (none in the Baked Indirect mode).
+    pub occlusion: Vec<ProbeOcclusion>,
+    /// The cells the probes' points make (inner, then outer).
+    pub tetrahedra: Vec<Tetrahedron>,
+    /// Each probe's ray out of the hull (zeros inside it).
+    pub hull_rays: Vec<[f32; 3]>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ProbeSet {
+    pub offset: i32,
+    pub size: i32,
+    pub hash: [u8; 16],
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ProbeOcclusion {
+    /// The mixed lights' places in the bake's lights (-1 for none).
+    pub lights: [i32; 4],
+    /// Their shadowmask channels (255 for none).
+    pub channels: [u8; 4],
+    pub occlusion: [f32; 4],
+}
+
+/// A cell of the probes: its probes (an outer cell's fourth -1, or -2 where it has no matrix of
+/// its own), the cells across its faces, its matrix (three rows of four) and whether it is valid.
+#[derive(Clone, Copy, Debug)]
+pub struct Tetrahedron {
+    pub indices: [i32; 4],
+    pub neighbors: [i32; 4],
+    pub matrix: [[f32; 4]; 3],
+    pub valid: bool,
 }
 
 /// A lightmap's images, their .meta's GUIDs: its light (Lightmap-N_comp_light.exr), and where
@@ -366,6 +411,9 @@ pub fn baked(environment: &Environment, baked: &Baked) -> Result<Vec<u8>> {
         Value::Scalar(LIGHT_PROBES_HIDE_FLAGS.into()),
     )?;
     set(&mut probes, "m_Name", Value::Scalar("(Clone)".into()))?;
+    if let Some(light_probes) = &baked.light_probes {
+        write_light_probes(&types[probes_type], &mut probes, light_probes)?;
+    }
     let objects = vec![
         FileObject {
             path_id: LIGHT_PROBES_PATH_ID,
@@ -419,17 +467,106 @@ fn default_value(t: &RawType, i: usize) -> Value {
 
 /// A new element of the top-level array field `field` of type `t`.
 fn element_default(t: &RawType, field: &str) -> Result<Value> {
-    let node = t
-        .children_of(0)
-        .into_iter()
-        .find(|&k| t.field_name(k) == field)
-        .with_context(|| format!("no field `{field}`"))?;
+    let mut node = 0;
+    for name in field.split('/') {
+        node = t
+            .children_of(node)
+            .into_iter()
+            .find(|&k| t.field_name(k) == name)
+            .with_context(|| format!("no field `{field}`"))?;
+    }
     let array = *t.children_of(node).first().context("not an array")?;
     let element = *t
         .children_of(array)
         .get(1)
         .context("an array without elements")?;
     Ok(default_value(t, element))
+}
+
+/// Fills the LightProbes object `probes` (of type `t`) with a bake's light probes.
+fn write_light_probes(t: &RawType, probes: &mut Value, lp: &LightProbes) -> Result<()> {
+    let float = |v: f32| Value::Scalar(format!("{v:?}"));
+    let int = |v: i32| Value::Scalar(v.to_string());
+    let vector = |field: &str, v: [f32; 3]| -> Result<Value> {
+        let mut out = element_default(t, field)?;
+        for (name, c) in ["x", "y", "z"].iter().zip(v) {
+            out.set_field(name, float(c))?;
+        }
+        Ok(out)
+    };
+    let mut sets = Vec::new();
+    for set in &lp.sets {
+        let mut entry = element_default(t, "m_Data/m_ProbeSets")?;
+        entry.set_field("m_Offset", int(set.offset))?;
+        entry.set_field("m_Size", int(set.size))?;
+        let hash = entry.get_mut_field("m_Hash").context("no m_Hash")?;
+        for (k, b) in set.hash.iter().enumerate() {
+            hash.set_field(&format!("bytes[{k}]"), Value::Scalar(b.to_string()))?;
+        }
+        sets.push(entry);
+    }
+    let mut tetrahedra = Vec::new();
+    for cell in &lp.tetrahedra {
+        let mut entry = element_default(t, "m_Data/m_Tetrahedralization/m_Tetrahedra")?;
+        for k in 0..4 {
+            entry.set_field(&format!("indices[{k}]"), int(cell.indices[k]))?;
+            entry.set_field(&format!("neighbors[{k}]"), int(cell.neighbors[k]))?;
+        }
+        let matrix = entry.get_mut_field("matrix").context("no matrix")?;
+        for (r, row) in cell.matrix.iter().enumerate() {
+            for (c, v) in row.iter().enumerate() {
+                matrix.set_field(&format!("e{r}{c}"), float(*v))?;
+            }
+        }
+        entry.set_field("isValid", Value::Scalar(cell.valid.to_string()))?;
+        tetrahedra.push(entry);
+    }
+    let rays = lp
+        .hull_rays
+        .iter()
+        .map(|&r| vector("m_Data/m_Tetrahedralization/m_HullRays", r))
+        .collect::<Result<Vec<_>>>()?;
+    let positions = lp
+        .positions
+        .iter()
+        .map(|&p| vector("m_Data/m_Positions", p))
+        .collect::<Result<Vec<_>>>()?;
+    let mut coefficients = Vec::new();
+    for c in &lp.coefficients {
+        let mut entry = element_default(t, "m_BakedCoefficients")?;
+        for (k, v) in c.iter().enumerate() {
+            entry.set_field(&format!("sh[{k:2}]"), float(*v))?;
+        }
+        coefficients.push(entry);
+    }
+    let mut occlusion = Vec::new();
+    for o in &lp.occlusion {
+        let mut entry = element_default(t, "m_BakedLightOcclusion")?;
+        entry.set_field(
+            "m_ProbeOcclusionLightIndex",
+            Value::Seq(o.lights.iter().map(|&l| int(l)).collect()),
+        )?;
+        entry.set_field(
+            "m_Occlusion",
+            Value::Seq(o.occlusion.iter().map(|&v| float(v)).collect()),
+        )?;
+        entry.set_field(
+            "m_OcclusionMaskChannel",
+            Value::Scalar(o.channels.iter().map(|b| format!("{b:02x}")).collect()),
+        )?;
+        occlusion.push(entry);
+    }
+    let data = probes.get_mut_field("m_Data").context("no m_Data")?;
+    data.set_field("m_ProbeSets", Value::Seq(sets))?;
+    data.set_field("m_Positions", Value::Seq(positions))?;
+    let cells = data
+        .get_mut_field("m_Tetrahedralization")
+        .context("no m_Tetrahedralization")?;
+    cells.set_field("m_Tetrahedra", Value::Seq(tetrahedra))?;
+    cells.set_field("m_HullRays", Value::Seq(rays))?;
+    probes.set_field("m_BakedCoefficients", Value::Seq(coefficients))?;
+    probes.set_field("m_BakedLightOcclusion", Value::Seq(occlusion))?;
+    Ok(())
 }
 
 /// A scene object's identifier (SceneObjectIdentifier) as an element of the array `field`.
@@ -563,6 +700,7 @@ mod tests {
                     occlusion_mask_channel: -1,
                     probe_occlusion_light_index: 0,
                 }],
+                light_probes: None,
             },
         )
         .unwrap();
@@ -684,5 +822,116 @@ mod tests {
             })
             .is_ok()
         );
+    }
+
+    /// The LightProbes object of the Editor's lighting data of a bakedbuffers scene (as
+    /// `unbound dump` gives it).
+    fn reference_probes(scene: &str) -> serde_json::Value {
+        let text = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
+            "../../tests/projects/bakedbuffers/Reference/unity-6000.0.71f1/{scene}/lightingData.json"
+        )))
+        .unwrap();
+        let objects: Vec<serde_json::Value> = serde_json::from_str(&text).unwrap();
+        objects.into_iter().find(|o| o["classId"] == 258).unwrap()["fields"].clone()
+    }
+
+    fn json(value: &Value) -> serde_json::Value {
+        match value {
+            Value::Null => serde_json::Value::Null,
+            Value::Scalar(s) => serde_json::Value::String(s.clone()),
+            Value::Seq(items) => items.iter().map(json).collect(),
+            Value::Map(map) => serde_json::Value::Object(
+                map.iter().map(|(k, v)| (k.to_string(), json(v))).collect(),
+            ),
+        }
+    }
+
+    #[test]
+    fn the_light_probes_are_written_as_the_editor_keeps_them() {
+        // The Editor's own probes, cells and occlusion (Shadowmask mode) given to the writer
+        // come out as the Editor's object, field for field.
+        for scene in ["ProbesSky", "ProbesGrid"] {
+            let want = reference_probes(scene);
+            let n = |v: &serde_json::Value| -> f32 { v.as_str().unwrap().parse().unwrap() };
+            let i = |v: &serde_json::Value| -> i32 { v.as_str().unwrap().parse().unwrap() };
+            let data = &want["m_Data"];
+            let cells = &data["m_Tetrahedralization"];
+            let xyz = |p: &serde_json::Value| [n(&p["x"]), n(&p["y"]), n(&p["z"])];
+            let probes = LightProbes {
+                positions: data["m_Positions"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(xyz)
+                    .collect(),
+                sets: data["m_ProbeSets"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|s| ProbeSet {
+                        offset: i(&s["m_Offset"]),
+                        size: i(&s["m_Size"]),
+                        hash: std::array::from_fn(|k| i(&s["m_Hash"][format!("bytes[{k}]")]) as u8),
+                    })
+                    .collect(),
+                coefficients: want["m_BakedCoefficients"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|c| std::array::from_fn(|k| n(&c[format!("sh[{k:2}]")])))
+                    .collect(),
+                occlusion: want["m_BakedLightOcclusion"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|o| {
+                        let hex = o["m_OcclusionMaskChannel"].as_str().unwrap();
+                        ProbeOcclusion {
+                            lights: std::array::from_fn(|k| i(&o["m_ProbeOcclusionLightIndex"][k])),
+                            channels: std::array::from_fn(|k| {
+                                u8::from_str_radix(&hex[2 * k..2 * k + 2], 16).unwrap()
+                            }),
+                            occlusion: std::array::from_fn(|k| n(&o["m_Occlusion"][k])),
+                        }
+                    })
+                    .collect(),
+                tetrahedra: cells["m_Tetrahedra"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|c| Tetrahedron {
+                        indices: std::array::from_fn(|k| i(&c[format!("indices[{k}]")])),
+                        neighbors: std::array::from_fn(|k| i(&c[format!("neighbors[{k}]")])),
+                        matrix: std::array::from_fn(|r| {
+                            std::array::from_fn(|col| n(&c["matrix"][format!("e{r}{col}")]))
+                        }),
+                        valid: c["isValid"] == "true",
+                    })
+                    .collect(),
+                hull_rays: cells["m_HullRays"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(xyz)
+                    .collect(),
+            };
+            let made = baked(
+                &Environment {
+                    unity_version: "6000.0.71f1".into(),
+                    scene_guid: [1; 16],
+                    lightmaps_mode: 0,
+                    ambient_probe: [0.0; 27],
+                    reflection_guid: None,
+                },
+                &Baked {
+                    light_probes: Some(probes),
+                    ..Baked::default()
+                },
+            )
+            .unwrap();
+            let documents = crate::serialized::documents(&made).unwrap();
+            let written = documents.iter().find(|d| d.class_id == 258).unwrap();
+            assert_eq!(json(&written.body), want, "{scene}");
+        }
     }
 }

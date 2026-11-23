@@ -52,7 +52,7 @@ sys.dont_write_bytecode = True  # nothing is written into the checkout
 import editor_bake  # noqa: E402
 import editor_runner  # noqa: E402
 from probe_paths import editor_path, private_label, project_copy, reference_root, run_root  # noqa: E402
-from baked_files import image_difference, lighting_data_difference, lighting_data_fields, normalized  # noqa: E402
+from baked_files import cell_order_difference, image_difference, lighting_data_difference, lighting_data_fields, normalized  # noqa: E402
 
 WORK = run_root(PROBE, 'bakedbuffers')
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
@@ -969,8 +969,14 @@ def compare(label):
         reference_scene, mine = reference_root(PROBE)/scene, WORK/label/'project/Assets/Scenes'/scene
         if (reference_scene/'lightingData.json').is_file():
             want_fields = json.loads((reference_scene/'lightingData.json').read_text())
-            record(scene + '.lightingData', 'not written' if not (mine/'LightingData.asset').is_file() else lighting_data_difference(
-                lighting_data_fields(mine/'LightingData.asset', mine, cli()), want_fields, LIGHTING_DATA_TOLERANCE))
+            got_fields = lighting_data_fields(mine/'LightingData.asset', mine, cli()) if (mine/'LightingData.asset').is_file() else None
+            record(scene + '.lightingData', 'not written' if got_fields is None else lighting_data_difference(
+                got_fields, want_fields, LIGHTING_DATA_TOLERANCE))
+            # The light probes' cells by their place (the lighting data's record compares them
+            # by their probes).
+            if any(o.get('classId') == 258 and o['fields']['m_Data']['m_Tetrahedralization']['m_Tetrahedra'] for o in want_fields):
+                record(scene + '.lightProbes.cellOrder', 'not written' if got_fields is None else cell_order_difference(
+                    got_fields, want_fields, LIGHTING_DATA_TOLERANCE))
         elif (mine/'LightingData.asset').is_file():
             record(scene + '.lightingData', 'written where the reference keeps none')
         # Files Unbound wrote that the Editor's bake did not (by their .meta files).

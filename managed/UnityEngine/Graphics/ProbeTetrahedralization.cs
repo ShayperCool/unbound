@@ -304,10 +304,9 @@ namespace UnityEngine
                     if (!edges.TryGetValue(e, out var list)) edges[e] = list = new List<int>();
                     list.Add(h);
                 }
-            var rays = new Vector3d[n];
             for (int h = 0; h < hull.Count; h++)
             {
-                var (tri, cell, apex) = hull[h];
+                var (tri, cell, _) = hull[h];
                 var across = new int[3];
                 for (int k = 0; k < 3; k++)
                 {
@@ -319,28 +318,268 @@ namespace UnityEngine
                     I0 = tri[0], I1 = tri[1], I2 = tri[2], I3 = -1,
                     N0 = across[0], N1 = across[1], N2 = across[2], N3 = cell,
                 });
-                // The outward normal (away from the cell's fourth probe), weighted at each corner
-                // by the triangle's angle there.
-                var a = new Vector3d(x[tri[0]], y[tri[0]], z[tri[0]]);
-                var b = new Vector3d(x[tri[1]], y[tri[1]], z[tri[1]]);
-                var c3 = new Vector3d(x[tri[2]], y[tri[2]], z[tri[2]]);
-                var normal = Vector3d.Cross(b - a, c3 - a).Normalized();
-                if (Vector3d.Dot(normal, new Vector3d(x[apex], y[apex], z[apex]) - a) > 0) normal = -normal;
-                var corners = new[] { a, b, c3 };
+            }
+            var outward = new List<int[]>(hull.Count);
+            foreach (var (tri, _, apex) in hull) outward.Add(Outward(p, tri, apex));
+            set.HullRays = HullRays(p, outward);
+            set.Cells = cells.ToArray();
+        }
+
+        /// <summary>A hull triangle with its corners in the order whose (p2 − p0) × (p1 − p0)
+        /// points out of the hull (away from <paramref name="apex"/>, its inner cell's fourth
+        /// probe).</summary>
+        static int[] Outward(Vector3[] p, int[] tri, int apex)
+        {
+            var a = new Vector3d(p[tri[0]].x, p[tri[0]].y, p[tri[0]].z);
+            var e1 = new Vector3d(p[tri[1]].x, p[tri[1]].y, p[tri[1]].z) - a;
+            var e2 = new Vector3d(p[tri[2]].x, p[tri[2]].y, p[tri[2]].z) - a;
+            var toward = new Vector3d(p[apex].x, p[apex].y, p[apex].z) - a;
+            return Vector3d.Dot(Vector3d.Cross(e2, e1), toward) > 0 ? new[] { tri[0], tri[2], tri[1] } : (int[])tri.Clone();
+        }
+
+        /// <summary>A hull triangle's unit normal out of the hull, (p2 − p0) × (p1 − p0) in single
+        /// precision.</summary>
+        static Vector3 OutwardNormal(Vector3[] p, int[] tri)
+        {
+            Vector3 p0 = p[tri[0]], e1 = p[tri[1]] - p0, e2 = p[tri[2]] - p0;
+            float nx = e1.z * e2.y - e1.y * e2.z, ny = e2.z * e1.x - e1.z * e2.x, nz = e2.x * e1.y - e2.y * e1.x;
+            float l = MathF.Sqrt((nx * nx + ny * ny) + nz * nz);
+            return new Vector3(nx / l, ny / l, nz / l);
+        }
+
+        static float Length(Vector3 v) => MathF.Sqrt((v.x * v.x + v.y * v.y) + v.z * v.z);
+
+        /// <summary>Each probe's ray out of the hull (zeros for a probe on no hull triangle), in
+        /// single precision as the Editor's bakes have them (tests/projects/bakedbuffers
+        /// `Probes*`): the sum, over the hull triangles <paramref name="outer"/> in their order
+        /// (each with <see cref="Outward"/>'s corner order), of the triangle's angle at the probe
+        /// (the arc cosine of its unit edges' dot product) times its outward unit normal, then
+        /// of unit length.</summary>
+        internal static Vector3[] HullRays(Vector3[] p, IReadOnlyList<int[]> outer)
+        {
+            var sums = new Vector3[p.Length];
+            foreach (var t in outer)
+            {
+                var normal = OutwardNormal(p, t);
                 for (int k = 0; k < 3; k++)
                 {
-                    var e1 = (corners[(k + 1) % 3] - corners[k]).Normalized();
-                    var e2 = (corners[(k + 2) % 3] - corners[k]).Normalized();
-                    double angle = Math.Acos(Math.Clamp(Vector3d.Dot(e1, e2), -1, 1));
-                    rays[tri[k]] += normal * angle;
+                    Vector3 e1 = p[t[(k + 1) % 3]] - p[t[k]], e2 = p[t[(k + 2) % 3]] - p[t[k]];
+                    float l1 = Length(e1), l2 = Length(e2);
+                    float d = ((e1.x / l1) * (e2.x / l2) + (e2.y / l2) * (e1.y / l1)) + (e1.z / l1) * (e2.z / l2);
+                    float angle = MathF.Acos(Math.Clamp(d, -1f, 1f));
+                    ref var s = ref sums[t[k]];
+                    s = new Vector3(s.x + angle * normal.x, s.y + angle * normal.y, s.z + angle * normal.z);
                 }
             }
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < sums.Length; i++)
             {
-                var r = rays[i].Normalized();
-                set.HullRays[i] = new Vector3((float)r.X, (float)r.Y, (float)r.Z);
+                var s = sums[i];
+                if (s.x == 0f && s.y == 0f && s.z == 0f) continue;
+                float l = Length(s);
+                sums[i] = new Vector3(s.x / l, s.y / l, s.z / l);
             }
-            set.Cells = cells.ToArray();
+            return sums;
+        }
+
+        /// <summary>The cells of probes as a bake's lighting data keeps them (its LightProbes
+        /// object's tetrahedralization): per cell its four probes (an outer cell's fourth -1, or
+        /// -2 where its matrix is degenerate), the cells across its faces, its matrix of three
+        /// rows of four, and whether it is valid; and the probes' hull rays.</summary>
+        internal sealed class WrittenCells
+        {
+            internal int[][] Indices = Array.Empty<int[]>();
+            internal int[][] Neighbors = Array.Empty<int[]>();
+            internal float[][] Matrices = Array.Empty<float[]>();
+            internal bool[] Valid = Array.Empty<bool>();
+            internal Vector3[] HullRays = Array.Empty<Vector3>();
+            /// <summary>Whether an outer cell's matrix is degenerate (not measured).</summary>
+            internal bool Degenerate;
+        }
+
+        /// <summary>The cells of <paramref name="positions"/> as a bake's lighting data keeps them:
+        /// Unbound's tetrahedralization (<see cref="Build"/>; its cells' order and the order of
+        /// their corners are Unbound's, the Editor's come from its own construction) finished as
+        /// <see cref="Finish"/> does. Null for probes that make no cells though there are four
+        /// or more (all in one plane: not measured).</summary>
+        internal static WrittenCells Written(Vector3[] positions)
+        {
+            var set = new ProbeSet { Positions = positions };
+            Build(set);
+            if (set.Cells.Length == 0) return positions.Length < 4 ? new WrittenCells() : null;
+            var inner = new List<int[]>();
+            var outer = new List<int[]>();
+            var adjacent = new List<int>();
+            foreach (var c in set.Cells)
+            {
+                if (c.I3 >= 0) inner.Add(new[] { c.I0, c.I1, c.I2, c.I3 });
+                else
+                {
+                    var tri = new[] { c.I0, c.I1, c.I2 };
+                    var apexCell = set.Cells[c.N3];
+                    int apex = -1;
+                    foreach (var v in new[] { apexCell.I0, apexCell.I1, apexCell.I2, apexCell.I3 })
+                        if (Array.IndexOf(tri, v) < 0) apex = v;
+                    outer.Add(Outward(positions, tri, apex));
+                    adjacent.Add(c.N3);
+                }
+            }
+            return Finish(positions, inner, outer, adjacent);
+        }
+
+        /// <summary>
+        /// The cells of a tetrahedralization as the Editor's bakes keep them
+        /// (tests/projects/bakedbuffers `Probes*`, bit for bit from the Editor's own cells):
+        /// the inner cells <paramref name="inner"/> (det(p0 − p3, p1 − p3, p2 − p3) &lt; 0) with
+        /// <see cref="Matrix"/>'s rows and a fourth column of zeros, valid where the unit edges
+        /// from the fourth probe span at least 0.001 (their triple product), the neighbor k across
+        /// the face opposite probe k; then one outer cell per hull triangle
+        /// <paramref name="outer"/> (corners as <see cref="Outward"/> orders them) with -1 for its
+        /// fourth probe, its neighbor (k + 2) mod 3 the outer cell across its edge (k, k + 1) and
+        /// neighbor 3 its inner cell <paramref name="adjacent"/>, its matrix the cubic's that
+        /// takes a point outside to the triangle along the probes' hull rays (divided by its
+        /// determinant; one at most 1e-5 leaves it undivided and the fourth probe -2), valid.
+        /// Last, the inner cell holding the probes' mean point (summed in order) trades places
+        /// with the first, the neighbors following.
+        /// </summary>
+        internal static WrittenCells Finish(Vector3[] p, IReadOnlyList<int[]> inner, IReadOnlyList<int[]> outer, IReadOnlyList<int> adjacent)
+        {
+            int n = inner.Count, total = n + outer.Count;
+            var w = new WrittenCells
+            {
+                Indices = new int[total][],
+                Neighbors = new int[total][],
+                Matrices = new float[total][],
+                Valid = new bool[total],
+            };
+            var faces = new Dictionary<(int, int, int), List<int>>();
+            var edges = new Dictionary<(int, int), List<int>>();
+            void Add<TKey>(Dictionary<TKey, List<int>> map, TKey key, int cell)
+            {
+                if (!map.TryGetValue(key, out var list)) map[key] = list = new List<int>();
+                list.Add(cell);
+            }
+            for (int c = 0; c < n; c++)
+            {
+                var t = inner[c];
+                w.Indices[c] = (int[])t.Clone();
+                Vector3 p3 = p[t[3]];
+                Matrix(p[t[0]] - p3, p[t[1]] - p3, p[t[2]] - p3, out var r0, out var r1, out var r2);
+                w.Matrices[c] = new[] { r0.x, r0.y, r0.z, 0f, r1.x, r1.y, r1.z, 0f, r2.x, r2.y, r2.z, 0f };
+                w.Valid[c] = InnerValid(p, t);
+                for (int k = 0; k < 4; k++) Add(faces, Opposite(t, k), c);
+            }
+            for (int h = 0; h < outer.Count; h++)
+            {
+                var t = outer[h];
+                w.Indices[n + h] = new[] { t[0], t[1], t[2], -1 };
+                w.Valid[n + h] = true;
+                Add(faces, Sorted(t[0], t[1], t[2]), n + h);
+                for (int k = 0; k < 3; k++) Add(edges, Edge(t[k], t[(k + 1) % 3]), n + h);
+            }
+            int Other(List<int> list, int self)
+            {
+                foreach (var c in list) if (c != self) return c;
+                return -1;
+            }
+            for (int c = 0; c < n; c++)
+            {
+                w.Neighbors[c] = new int[4];
+                for (int k = 0; k < 4; k++) w.Neighbors[c][k] = Other(faces[Opposite(inner[c], k)], c);
+            }
+            w.HullRays = HullRays(p, outer);
+            for (int h = 0; h < outer.Count; h++)
+            {
+                var t = outer[h];
+                var nb = new[] { -1, -1, -1, adjacent[h] };
+                for (int k = 0; k < 3; k++) nb[(k + 2) % 3] = Other(edges[Edge(t[k], t[(k + 1) % 3])], n + h);
+                w.Neighbors[n + h] = nb;
+                if (!OuterMatrix(p, w.HullRays, t, out w.Matrices[n + h]))
+                {
+                    w.Indices[n + h][3] = -2;
+                    w.Degenerate = true;
+                }
+            }
+            if (p.Length > 3 && n > 0)
+            {
+                Vector3 sum = Vector3.zero;
+                foreach (var q in p) sum = new Vector3(sum.x + q.x, sum.y + q.y, sum.z + q.z);
+                float count = p.Length;
+                var mean = new Vector3(sum.x / count, sum.y / count, sum.z / count);
+                int k = Containing(p, w, n, mean);
+                if (k > 0)
+                {
+                    (w.Indices[0], w.Indices[k]) = (w.Indices[k], w.Indices[0]);
+                    (w.Neighbors[0], w.Neighbors[k]) = (w.Neighbors[k], w.Neighbors[0]);
+                    (w.Matrices[0], w.Matrices[k]) = (w.Matrices[k], w.Matrices[0]);
+                    (w.Valid[0], w.Valid[k]) = (w.Valid[k], w.Valid[0]);
+                    foreach (var nb in w.Neighbors)
+                        for (int j = 0; j < 4; j++)
+                            nb[j] = nb[j] == 0 ? k : nb[j] == k ? 0 : nb[j];
+                }
+            }
+            return w;
+        }
+
+        static Vector3 Unit(Vector3 v)
+        {
+            float l = Length(v);
+            return new Vector3(v.x / l, v.y / l, v.z / l);
+        }
+
+        /// <summary>Whether an inner cell is valid: the triple product of its unit edges from its
+        /// fourth probe is at least 0.001 in size.</summary>
+        static bool InnerValid(Vector3[] p, int[] t)
+        {
+            Vector3 p3 = p[t[3]], a = Unit(p[t[0]] - p3), b = Unit(p[t[1]] - p3), c = Unit(p[t[2]] - p3);
+            float triple = ((a.y * b.z - b.y * a.z) * c.x + (a.z * b.x - b.z * a.x) * c.y) + (a.x * b.y - a.y * b.x) * c.z;
+            return MathF.Abs(triple) >= 0.001f;
+        }
+
+        /// <summary>The first of the <paramref name="inner"/> cells whose weights of
+        /// <paramref name="x"/> are none below zero (0 for none).</summary>
+        static int Containing(Vector3[] p, WrittenCells w, int inner, Vector3 x)
+        {
+            for (int c = 0; c < inner; c++)
+            {
+                var m = w.Matrices[c];
+                Vector3 d = x - p[w.Indices[c][3]];
+                float w0 = (m[0] * d.x + m[1] * d.y) + m[2] * d.z;
+                float w1 = (m[4] * d.x + m[5] * d.y) + m[6] * d.z;
+                float w2 = (m[8] * d.x + m[9] * d.y) + m[10] * d.z;
+                if (Math.Min(w0, Math.Min(w1, w2)) >= 0f && 1f - ((w0 + w1) + w2) >= 0f) return c;
+            }
+            return 0;
+        }
+
+        /// <summary>An outer cell's matrix (three rows of four): the cubic that takes a point
+        /// outside the hull to its place on the triangle <paramref name="t"/> along the corners'
+        /// rays, divided by its determinant; false (undivided) where that is at most 1e-5 in
+        /// size.</summary>
+        static bool OuterMatrix(Vector3[] p, Vector3[] rays, int[] t, out float[] matrix)
+        {
+            float Ax = rays[t[0]].x, Ay = rays[t[0]].y, Az = rays[t[0]].z;
+            float Bx = rays[t[1]].x, By = rays[t[1]].y, Bz = rays[t[1]].z;
+            float Cx = rays[t[2]].x, Cy = rays[t[2]].y, Cz = rays[t[2]].z;
+            float P0x = p[t[0]].x, P0y = p[t[0]].y, P0z = p[t[0]].z;
+            float P1x = p[t[1]].x, P1y = p[t[1]].y, P1z = p[t[1]].z;
+            float P2x = p[t[2]].x, P2y = p[t[2]].y, P2z = p[t[2]].z;
+            float e00 = (((Bz - Cz) * (Ay - Cy)) - ((Az - Cz) * (By - Cy)));
+            float e10 = (((((Ay - Cy) * (P1z - P2z)) + ((Bz - Cz) * (P0y - P2y))) - ((Az - Cz) * (P1y - P2y))) - ((By - Cy) * (P0z - P2z)));
+            float e20 = (((P1z - P2z) * (P0y - P2y)) - ((P1y - P2y) * (P0z - P2z)));
+            float e01 = (((Az - Cz) * (Bx - Cx)) - ((Bz - Cz) * (Ax - Cx)));
+            float e11 = ((((-((P0x - P2x) * (Bz - Cz))) - ((Ax - Cx) * (P1z - P2z))) + ((Bx - Cx) * (P0z - P2z))) + ((Az - Cz) * (P1x - P2x)));
+            float e21 = (((P1x - P2x) * (P0z - P2z)) - ((P0x - P2x) * (P1z - P2z)));
+            float e02 = (((By - Cy) * (Ax - Cx)) - ((Bx - Cx) * (Ay - Cy)));
+            float e12 = (((((P0x - P2x) * (By - Cy)) - ((P0y - P2y) * (Bx - Cx))) + ((Ax - Cx) * (P1y - P2y))) - ((Ay - Cy) * (P1x - P2x)));
+            float e22 = (((P0x - P2x) * (P1y - P2y)) - ((P0y - P2y) * (P1x - P2x)));
+            float e03 = (((((Ay - Cy) * (P1z - P2z)) * (-Cx)) + (((((Bz - Cz) * (P0y - P2y)) * (-Cx)) + ((((((Az - Cz) * (P1x - P2x)) * (-Cy)) + (((((Bx - Cx) * (P0z - P2z)) * (-Cy)) + ((((Ay - Cy) * (P1x - P2x)) * Cz) + (((((P0y - P2y) * (Bx - Cx)) * Cz) - (((P0x - P2x) * (By - Cy)) * Cz)) - (((Ax - Cx) * (P1y - P2y)) * Cz)))) - (((By - Cy) * (P0z - P2z)) * (-Cx)))) - (((Az - Cz) * (P1y - P2y)) * (-Cx))) - (((P0x - P2x) * (Bz - Cz)) * (-Cy)))) - (((Ax - Cx) * (P1z - P2z)) * (-Cy)))) - (((((By - Cy) * (Ax - Cx)) - ((Bx - Cx) * (Ay - Cy))) * P2z) + (((((Az - Cz) * (Bx - Cx)) - ((Bz - Cz) * (Ax - Cx))) * P2y) + ((((Bz - Cz) * (Ay - Cy)) - ((Az - Cz) * (By - Cy))) * P2x))));
+            float e13 = (((((-Cy) * ((P1x - P2x) * (P0z - P2z))) + ((((P1z - P2z) * (P0y - P2y)) * (-Cx)) + (((Cz * ((P0y - P2y) * (P1x - P2x))) - (((P0x - P2x) * (P1y - P2y)) * Cz)) - (((P0x - P2x) * (P1z - P2z)) * (-Cy))))) - ((-Cx) * ((P1y - P2y) * (P0z - P2z)))) - ((P2z * (((((P0x - P2x) * (By - Cy)) - ((P0y - P2y) * (Bx - Cx))) + ((Ax - Cx) * (P1y - P2y))) - ((Ay - Cy) * (P1x - P2x)))) + ((P2y * ((((-((P0x - P2x) * (Bz - Cz))) - ((Ax - Cx) * (P1z - P2z))) + ((Bx - Cx) * (P0z - P2z))) + ((Az - Cz) * (P1x - P2x)))) + (P2x * (((((Ay - Cy) * (P1z - P2z)) + ((Bz - Cz) * (P0y - P2y))) - ((Az - Cz) * (P1y - P2y))) - ((By - Cy) * (P0z - P2z)))))));
+            float e23 = (0f - ((P2z * (((P0x - P2x) * (P1y - P2y)) - ((P0y - P2y) * (P1x - P2x)))) + ((P2y * (((P1x - P2x) * (P0z - P2z)) - ((P0x - P2x) * (P1z - P2z)))) + (P2x * (((P1z - P2z) * (P0y - P2y)) - ((P1y - P2y) * (P0z - P2z)))))));
+            float det = (((((Bz - Cz) * (Ay - Cy)) * (-Cx)) + (((((-Cz) * ((By - Cy) * (Ax - Cx))) - ((-Cz) * ((Bx - Cx) * (Ay - Cy)))) + (((Az - Cz) * (Bx - Cx)) * (-Cy))) - (((Az - Cz) * (By - Cy)) * (-Cx)))) - (((Bz - Cz) * (Ax - Cx)) * (-Cy)));
+            matrix = new[] { e00, e01, e02, e03, e10, e11, e12, e13, e20, e21, e22, e23 };
+            if (MathF.Abs(det) <= 1e-5f) return false;
+            for (int k = 0; k < 12; k++) matrix[k] /= det;
+            return true;
         }
 
         /// <summary>

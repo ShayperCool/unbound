@@ -348,7 +348,7 @@ namespace UnityEngine
                     points[3 * i + 1] = world[i].y;
                     points[3 * i + 2] = world[i].z;
                 }
-                groups.Add(new { fileId = pair.Key, points });
+                groups.Add(new { fileId = pair.Key, points, dering = group.dering });
             }
             return groups;
         }
@@ -649,6 +649,10 @@ namespace UnityEngine
         internal List<(long FileId, int BakeType, int MixedMode, int Channel, int ProbeIndex)> Lights;
         /// <summary>Whether what the lighting data keeps of every light is measured.</summary>
         internal bool LightsMeasured = true;
+        /// <summary>The bake's light probes as its lighting data keeps them (the reply's
+        /// <c>lightProbes</c>: points, sets, coefficients, occlusion and what of them is not
+        /// measured), where it has any.</summary>
+        internal JsonElement? LightProbes;
 
         internal static BakeResult Of(string answer, IReadOnlyList<(string Path, long FileId)> sent)
         {
@@ -662,6 +666,8 @@ namespace UnityEngine
                 : Array.Empty<byte[]>();
             result.Directions = Decoded("directionImages");
             result.Shadowmasks = Decoded("shadowmaskImages");
+            if (root.TryGetProperty("lightProbes", out var probes) && probes.ValueKind == JsonValueKind.Object)
+                result.LightProbes = probes.Clone();
             foreach (var (_, fileId, lightmap, scaleOffset) in BakedAtlas.Placed(root, sent))
                 result.Renderers.Add((fileId, lightmap, scaleOffset));
             foreach (var l in root.GetProperty("lights").EnumerateArray())
