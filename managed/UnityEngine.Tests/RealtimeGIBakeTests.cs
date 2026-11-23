@@ -124,6 +124,9 @@ namespace Unbound.Tests
             var cube = new Cubemap(4, TextureFormat.RGBAHalf, false) { name = "ReflectionProbe-0" };
             var mode = RenderSettings.ambientMode;
             var (probeBefore, reflectionBefore) = RenderSettings.BakedEnvironment(null);
+            // A probe a script gave (another test's) would stand in for the stored one.
+            var given = RenderSettings.s_CustomProbe;
+            RenderSettings.s_CustomProbe = null;
             try
             {
                 RealtimeGI.RememberEnvironment(path, probe, cube);
@@ -140,6 +143,7 @@ namespace Unbound.Tests
             {
                 RenderSettings.ambientMode = mode;
                 RenderSettings.SetBakedEnvironment(null, probeBefore, reflectionBefore);
+                RenderSettings.s_CustomProbe = given;
                 RealtimeGI.ForgetEnvironment(path);
                 UnityEngine.Object.DestroyImmediate(cube);
             }
