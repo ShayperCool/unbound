@@ -38,6 +38,8 @@ public partial class ScreenCaptureProbe
         {
             RecordFreshCaptureDestinations();
             RecordGammaIntegerSources();
+            var gammaSteps = CommandTargetSteps();
+            while (gammaSteps.MoveNext()) yield return gammaSteps.Current;
             yield break;
         }
         foreach (var c in new[] {
@@ -256,6 +258,114 @@ public partial class ScreenCaptureProbe
         DestroyImmediate(colorSource);
         DestroyImmediate(depthDestination);
         RecordFreshCaptureDestinations();
+        var targetSteps = CommandTargetSteps();
+        while (targetSteps.MoveNext()) yield return targetSteps.Current;
+    }
+
+    IEnumerator CommandTargetSteps()
+    {
+        foreach (string mode in new[] { "plain", "viewport", "clear", "copy", "same", "other", "separate", "multiple", "return", "blit", "arrayBlit", "layer", "priorMultiple" })
+        {
+            yield return null;
+            yield return new WaitForEndOfFrame();
+            var desc = new RenderTextureDescriptor(2 * W, 2 * H, RenderTextureFormat.ARGB32, 0)
+                { useMipMap = true, autoGenerateMips = false, sRGB = true };
+            bool layered = mode == "layer";
+            bool priorMultiple = mode == "priorMultiple";
+            if (layered)
+            {
+                desc.dimension = TextureDimension.Tex2DArray;
+                desc.volumeDepth = 2;
+            }
+            var previous = new RenderTexture(desc);
+            previous.Create();
+            var transient = Target(W, H, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var second = Target(W, H, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var depth = new RenderTexture(W, H, 24, RenderTextureFormat.Depth);
+            depth.Create();
+            var array = new RenderTexture(new RenderTextureDescriptor(W, H, RenderTextureFormat.ARGB32, 0)
+                { dimension = TextureDimension.Tex2DArray, volumeDepth = 2, sRGB = true });
+            array.Create();
+            Graphics.SetRenderTarget(array, 0, CubemapFace.Unknown, 1);
+            GL.Clear(false, true, Color.yellow);
+            RenderTexture.active = transient;
+            GL.Clear(false, true, Color.black);
+            RenderTexture.active = second;
+            GL.Clear(false, true, Color.black);
+            Graphics.SetRenderTarget(previous, 0);
+            GL.Clear(false, true, Color.green);
+            if (layered)
+            {
+                Graphics.SetRenderTarget(previous, 1, CubemapFace.Unknown, 0);
+                GL.Clear(false, true, Color.green);
+            }
+            Graphics.SetRenderTarget(previous, 1, CubemapFace.Unknown, layered ? 1 : 0);
+            GL.Clear(false, true, Color.blue);
+            if (priorMultiple)
+            {
+                Graphics.SetRenderTarget(new[] { second.colorBuffer, transient.colorBuffer }, depth.depthBuffer);
+                GL.Clear(true, false, Color.black, 0.5f);
+            }
+            GL.Viewport(new Rect(0, 0, W / 2, H));
+            var commands = new CommandBuffer();
+            if (mode == "other" || layered) commands.SetRenderTarget(transient);
+            if (priorMultiple) commands.SetRenderTarget(previous, 1);
+            if (mode == "separate") commands.SetRenderTarget(transient, depth);
+            if (mode == "multiple") commands.SetRenderTarget(new RenderTargetIdentifier[] { transient, second }, depth);
+            if (mode == "same") commands.SetRenderTarget(previous, 1);
+            if (mode == "return")
+            {
+                commands.SetRenderTarget(transient);
+                commands.ClearRenderTarget(false, true, Color.red);
+                commands.SetRenderTarget(previous, 1);
+            }
+            if (mode == "viewport" || mode == "same" || mode == "other" || mode == "return" || layered
+                || mode == "separate" || mode == "multiple")
+            {
+                commands.SetViewport(new Rect(W / 2, 0, W / 2, H));
+                if (mode == "multiple")
+                    commands.ClearRenderTarget(RTClearFlags.Color, new[] { Color.red, Color.yellow });
+                else commands.ClearRenderTarget(false, true, Color.red);
+            }
+            if (mode == "blit") commands.Blit(Texture2D.whiteTexture, transient);
+            if (mode == "arrayBlit") commands.Blit(array, transient, 1, 0);
+            if (mode == "copy") commands.CopyTexture(array, 1, transient, 0);
+            if (mode == "clear") commands.ClearRenderTarget(RTClearFlags.Color, new[] { Color.red });
+            BeginLogs();
+            if (mode != "plain") Graphics.ExecuteCommandBuffer(commands);
+            EndLogs("command." + mode);
+            Value("command." + mode + ".logical", B(RenderTexture.active == (priorMultiple ? second : previous)));
+            if (priorMultiple)
+            {
+                var clear = new CommandBuffer();
+                clear.ClearRenderTarget(RTClearFlags.Color, new[] { Color.red, Color.yellow });
+                BeginLogs();
+                Graphics.ExecuteCommandBuffer(clear);
+                EndLogs("command.priorMultiple.clear");
+                clear.Release();
+            }
+            else DrawSourcePattern();
+            var capture = new Texture2D(W, H, TextureFormat.RGBAFloat, false, true);
+            Graphics.SetRenderTarget(previous, 1, CubemapFace.Unknown, layered ? 1 : 0);
+            capture.ReadPixels(new Rect(0, 0, W, H), 0, 0);
+            Pixels("command." + mode + ".mip", capture);
+            ReadTarget("command." + mode + ".transient", transient);
+            if (mode == "multiple" || priorMultiple) ReadTarget("command." + mode + ".second", second);
+            if (layered)
+            {
+                Graphics.SetRenderTarget(previous, 1, CubemapFace.Unknown, 0);
+                capture.ReadPixels(new Rect(0, 0, W, H), 0, 0);
+                Pixels("command.layer.otherLayer", capture);
+            }
+            RenderTexture.active = null;
+            DestroyImmediate(capture);
+            DestroyImmediate(previous);
+            DestroyImmediate(transient);
+            DestroyImmediate(second);
+            DestroyImmediate(depth);
+            DestroyImmediate(array);
+            commands.Release();
+        }
     }
 
     void RecordFreshCaptureDestinations()
