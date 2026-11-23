@@ -15,7 +15,7 @@ Measured on the Unity 6000.0.71f1 Editor (two identical macOS batch captures; th
 neither the OS nor the graphics device):
 
 - Every package's root folder is a folder asset (`DefaultAsset`, `NotEditable`) with a GUID, listed by
-  `GetAllAssetPaths` and found by no `FindAssets` search, as the `Assets` folder; `Packages` itself is
+  `GetAllAssetPaths` and found by none of the measured `FindAssets` searches, as the `Assets` folder; `Packages` itself is
   no folder (`IsValidFolder` false, no subfolders). `GetAncestors` walks up to the package root, then
   gives `int.MaxValue` for `Packages`.
 - A built-in package's root GUID is the MD4 of the package's name, written as Unity writes GUIDs
@@ -26,7 +26,8 @@ neither the OS nor the graphics device):
 - `GetSubFolders` lists folders in `EditorUtility.NaturalCompare`'s order: characters by code with
   ASCII letters in either case equal ("É" sorts before "é"), ASCII digit runs as numbers, then the
   shorter name, then more leading zeros first; names equal but for ASCII case compare equal.
-- No `FindAssets` search finds a package root, scoped to a package or not (`find.*`).
+- The measured searches find no package root: a type search in a package, and name searches
+  unscoped and in `Packages` (`find.*`); other searches are unmeasured.
 
 ```sh
 python3 tests/projects/packagefolders/run.py record --label A     # twice, A and B
