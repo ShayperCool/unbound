@@ -1,0 +1,7 @@
+bake: True
+ambientProbe: 1.380322 -0.0368851833 -0.07376004 -0.06189983 -0.0480074622 -0.0572093427 0.084458 0.159284055 0.225599 1.71924031 0.30924508 -0.115997404 -0.09734085 -0.0763649344 -0.09100195 0.117015615 0.230270877 0.310808152 2.27547574 0.921307147 -0.198376045 -0.166486 -0.135255516 -0.161177978 0.14349097 0.326656044 0.3731513
+files: LightingData.asset LightingData.asset.meta ReflectionProbe-0.exr ReflectionProbe-0.exr.meta
+lightingData: Assets/Scenes/EnvSkyBright/LightingData.asset
+default: ReflectionProbe-0 Cubemap 64 levels 7
+defaultFormat: RGB_BC6H_UFloat
+defaultFile: Assets/Scenes/EnvSkyBright/ReflectionProbe-0.exr

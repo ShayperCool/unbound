@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/bakeenvironment/environment_bake.py check"
+  ],
+  "summary": "bakeenvironment: \\d+/\\d+ records match.*",
+  "engine_paths": [
+    "crates/unbound-runtime/src/baked_gi.rs",
+    "crates/unbound-assets/src/texture/specular.rs",
+    "managed/UnityEngine/Graphics/RealtimeGIBake.cs",
+    "managed/UnityEngine/Graphics/RealtimeGIEnvironment.cs",
+    "managed/UnityEngine/Graphics/EnvironmentLighting.cs",
+    "managed/UnityEngine/Graphics/Lighting.cs"
+  ]
+}

@@ -1,0 +1,7 @@
+bake: True
+ambientProbe: 0.0369675867 0 0 0 0 0 0 0 0 0.04214946 0 0 0 0 0 0 0 0 0.05455384 0 0 0 0 0 0 0 0
+files: LightingData.asset LightingData.asset.meta
+lightingData: Assets/Scenes/EnvNoSky/LightingData.asset
+default: Default-Skybox-Cubemap Cubemap 128 levels 8
+defaultFormat: R8G8B8A8_SRGB
+defaultFile: none
