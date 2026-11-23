@@ -23,16 +23,30 @@ public static class OpenForEditHooks
     }
 }
 
-/// <summary>The single-path IsOpenForEdit callback (refuses "Held", with a message) and
+/// <summary>The single-path IsOpenForEdit callback (refuses "Held" with a message, "Mute" with
+/// none), the single-path CanOpenForEdit callback (refuses "Barred", with a message) and
 /// MakeEditable (refuses "NoMake").</summary>
 public class OpenForEditPathProcessor : AssetModificationProcessor
 {
     static bool IsOpenForEdit(string assetPath, out string message)
     {
         OpenForEditHooks.Calls.Add("path.IsOpenForEdit(" + assetPath + ")");
+        if (assetPath != null && assetPath.Contains("Mute"))
+        {
+            message = null;
+            return false;
+        }
         bool held = assetPath != null && assetPath.Contains("Held");
         message = held ? "held by the probe" : "";
         return !held;
+    }
+
+    static bool CanOpenForEdit(string assetPath, out string message)
+    {
+        OpenForEditHooks.Calls.Add("path.CanOpenForEdit(" + assetPath + ")");
+        bool barred = assetPath != null && assetPath.Contains("Barred");
+        message = barred ? "barred by the probe" : "";
+        return !barred;
     }
 
     static bool MakeEditable(string[] paths, string prompt, List<string> outNotEditablePaths)

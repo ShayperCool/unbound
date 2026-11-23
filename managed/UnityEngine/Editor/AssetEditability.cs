@@ -34,15 +34,16 @@ namespace UnityEditor
         public static bool IsOpenForEdit(Object assetObject, out string message, StatusQueryOptions statusOptions)
             => IsOpenForEdit(EditObjectPath(assetObject), out message, statusOptions);
 
-        /// <summary>Open: not blank paths, paths outside the packages the project does not hold
-        /// that the processors' IsOpenForEdit callbacks accept (tests/projects/openforedit,
-        /// openforedithooks).</summary>
+        /// <summary>Open: blank paths, paths outside the project's versioned folders, and paths
+        /// outside the packages the project does not hold that the processors' IsOpenForEdit
+        /// callbacks accept (tests/projects/openforedit, openforedithooks).</summary>
         public static bool IsOpenForEdit(string assetOrMetaFilePath, out string message, StatusQueryOptions statusOptions)
         {
             message = "";
             if (string.IsNullOrEmpty(assetOrMetaFilePath)) return true;
             MainThreadCheck.Check("TryGetAssetFolderInfo");
             if (IsImmutablePackagePath(assetOrMetaFilePath)) return false;
+            if (!IsVersionedPath(assetOrMetaFilePath)) return true;
             if (!AssetModificationProcessorInternal.IsOpenForEdit(assetOrMetaFilePath, out message, statusOptions)) return false;
             return WithoutVersionControl(nameof(IsOpenForEdit));
         }
@@ -64,20 +65,21 @@ namespace UnityEditor
         public static bool CanOpenForEdit(Object assetObject, out string message, StatusQueryOptions statusOptions)
             => CanOpenForEdit(EditObjectPath(assetObject), out message, statusOptions);
 
-        /// <summary>Open, or else accepted by the processors' CanOpenForEdit callbacks; the
-        /// message stays empty (tests/projects/openforedithooks).</summary>
+        /// <summary>Open, or else accepted by the processors' CanOpenForEdit callbacks, with their
+        /// message (tests/projects/openforedithooks).</summary>
         public static bool CanOpenForEdit(string assetOrMetaFilePath, out string message, StatusQueryOptions statusOptions)
         {
             message = "";
             if (string.IsNullOrEmpty(assetOrMetaFilePath)) return true;
             MainThreadCheck.Check("TryGetAssetFolderInfo");
             if (IsImmutablePackagePath(assetOrMetaFilePath)) return false;
+            if (!IsVersionedPath(assetOrMetaFilePath)) return true;
             if (!AssetModificationProcessorInternal.CanOpenForEdit(assetOrMetaFilePath, out message, statusOptions)) return false;
             return WithoutVersionControl(nameof(CanOpenForEdit));
         }
 
-        /// <summary>Lists the paths that cannot be opened: the immutable ones, then those the
-        /// IsOpenForEdit callbacks refuse and the CanOpenForEdit callbacks do not accept.</summary>
+        /// <summary>Lists the paths that cannot be opened: the immutable ones, then those of the
+        /// paths the IsOpenForEdit callbacks refuse that the CanOpenForEdit callbacks refuse.</summary>
         public static void CanOpenForEdit(string[] assetOrMetaFilePaths, List<string> outNotEditablePaths,
             StatusQueryOptions statusQueryOptions = StatusQueryOptions.UseCachedIfPossible)
         {
@@ -95,11 +97,11 @@ namespace UnityEditor
         public static bool IsMetaFileOpenForEdit(Object assetObject, out string message) => IsMetaFileOpenForEdit(assetObject, out message, StatusQueryOptions.UseCachedIfPossible);
 
         /// <summary>Whether the .meta file of the object's asset (or scene) is open; an object
-        /// without one is.</summary>
+        /// without one (not an asset, or the Assets folder, which has none) is.</summary>
         public static bool IsMetaFileOpenForEdit(Object assetObject, out string message, StatusQueryOptions statusOptions)
         {
             string path = EditObjectPath(assetObject);
-            if (path.Length == 0)
+            if (path.Length == 0 || path == AssetsFolder)
             {
                 message = "";
                 return true;
@@ -129,8 +131,22 @@ namespace UnityEditor
             return true;
         }
 
-        /// <summary>A list query's paths for the callbacks: blank ones skipped, those of an
-        /// immutable package listed as not editable (the list cleared first).</summary>
+        const string AssetsFolder = "Assets";
+
+        /// <summary>Whether the path is in (or is) one of the project's versioned folders, Assets,
+        /// Packages and ProjectSettings, as written (a path with backslashes, absolute or outside
+        /// the project is not): only those reach the processors' IsOpenForEdit and CanOpenForEdit
+        /// callbacks; the others are always editable (tests/projects/openforedithooks; the
+        /// release's MakeEditable page names Library and Temp).</summary>
+        static bool IsVersionedPath(string path) =>
+            InFolder(path, AssetsFolder) || InFolder(path, "Packages") || InFolder(path, "ProjectSettings");
+
+        static bool InFolder(string path, string folder) =>
+            path.StartsWith(folder, StringComparison.Ordinal) && (path.Length == folder.Length || path[folder.Length] == '/');
+
+        /// <summary>A list query's paths for the callbacks: blank ones and those outside the
+        /// versioned folders skipped (editable), those of an immutable package listed as not
+        /// editable (the list cleared first).</summary>
         static string[] QueriedPaths(string[] assetOrMetaFilePaths, List<string> outNotEditablePaths)
         {
             if (assetOrMetaFilePaths == null) throw new ArgumentNullException(nameof(assetOrMetaFilePaths));
@@ -142,7 +158,7 @@ namespace UnityEditor
                 if (string.IsNullOrEmpty(path)) continue;
                 MainThreadCheck.Check("TryGetAssetFolderInfo");
                 if (IsImmutablePackagePath(path)) outNotEditablePaths.Add(path);
-                else paths.Add(path);
+                else if (IsVersionedPath(path)) paths.Add(path);
             }
             return paths.ToArray();
         }

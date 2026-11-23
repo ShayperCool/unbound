@@ -35,13 +35,26 @@ namespace UnityEngine.Tests
             return all;
         }
 
-        /// <summary>The single-path IsOpenForEdit (refuses "Held") and MakeEditable (refuses "NoMake").</summary>
+        /// <summary>The single-path IsOpenForEdit (refuses "Held", and "Mute" without a message),
+        /// CanOpenForEdit (refuses "Barred") and MakeEditable (refuses "NoMake").</summary>
         public sealed class PathProcessor : AssetModificationProcessor
         {
             static bool IsOpenForEdit(string assetPath, out string message)
             {
                 s_Calls.Add("path.IsOpenForEdit(" + assetPath + ")");
+                if (assetPath.Contains("Mute"))
+                {
+                    message = null;
+                    return false;
+                }
                 message = assetPath.Contains("Held") ? "held" : "";
+                return message.Length == 0;
+            }
+
+            static bool CanOpenForEdit(string assetPath, out string message)
+            {
+                s_Calls.Add("path.CanOpenForEdit(" + assetPath + ")");
+                message = assetPath.Contains("Barred") ? "barred" : "";
                 return message.Length == 0;
             }
 
@@ -123,7 +136,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void CanOpenForEditAsksItsCallbacksOnlyForPathsNotOpenAndKeepsAnEmptyMessage()
+        public void CanOpenForEditAsksItsCallbacksOnlyForPathsNotOpen()
         {
             AssetModificationProcessorInternal.ProcessorsForTests = new[] { typeof(PathProcessor), typeof(ListProcessor) };
             Assert.True(AssetDatabase.CanOpenForEdit("Assets/NoCan.txt", out var message));
@@ -145,6 +158,48 @@ namespace UnityEngine.Tests
                 "list.IsOpenForEdit[Assets/A.txt,Assets/Held.txt,Assets/LockedNoCan.txt,Assets/Locked.txt]",
                 "list.CanOpenForEdit[Assets/LockedNoCan.txt,Assets/Locked.txt]",
             }, s_Calls);
+        }
+
+        [Fact]
+        public void WhenTheListCallbacksAcceptTheSinglePathOnesSeeEveryPathAndTheirMessageIsKept()
+        {
+            AssetModificationProcessorInternal.ProcessorsForTests = new[] { typeof(PathProcessor), typeof(ListProcessor) };
+            var list = new List<string> { "stale" };
+            AssetDatabase.IsOpenForEdit(new[] { "Assets/A.txt", "Assets/Held.txt", "Assets/Mute.txt" }, list);
+            Assert.Equal(new[] { "Assets/Held.txt", "Assets/Mute.txt" }, list);
+            Assert.Equal(new[]
+            {
+                "list.IsOpenForEdit[Assets/A.txt,Assets/Held.txt,Assets/Mute.txt]",
+                "path.IsOpenForEdit(Assets/A.txt)", "path.IsOpenForEdit(Assets/Held.txt)", "path.IsOpenForEdit(Assets/Mute.txt)",
+            }, s_Calls);
+
+            Assert.False(AssetDatabase.IsOpenForEdit("Assets/Mute.txt", out var message));
+            Assert.Null(message);
+            // Not open, the CanOpenForEdit callbacks answer, with the single-path one's message.
+            Assert.False(AssetDatabase.CanOpenForEdit("Assets/HeldBarred.txt", out message));
+            Assert.Equal("barred", message);
+            list = new List<string>();
+            AssetDatabase.CanOpenForEdit(new[] { "Assets/Held.txt", "Assets/HeldBarred.txt", "Assets/A.txt" }, list);
+            Assert.Equal(new[] { "Assets/HeldBarred.txt" }, list);
+        }
+
+        [Fact]
+        public void PathsOutsideTheVersionedFoldersReachNoQueryCallbackButMakeEditableHasThemAll()
+        {
+            AssetModificationProcessorInternal.ProcessorsForTests = new[] { typeof(PathProcessor), typeof(ListProcessor) };
+            foreach (var path in new[] { "Library/Held.txt", "UserSettings/Held.asset", "/tmp/Held.txt", "Assets\\Held.txt", "AssetsHeld.txt" })
+            {
+                Assert.True(AssetDatabase.IsOpenForEdit(path, out _));
+                Assert.True(AssetDatabase.CanOpenForEdit(path));
+            }
+            Assert.Empty(s_Calls);
+            Assert.False(AssetDatabase.IsOpenForEdit("ProjectSettings/Held.asset"));
+            Assert.True(AssetDatabase.IsOpenForEdit("Packages"));
+            Assert.Contains("path.IsOpenForEdit(Packages)", s_Calls);
+            var list = new List<string> { "stale" };
+            AssetDatabase.IsOpenForEdit(new[] { "Library/Held.txt", "Assets/Held.txt" }, list);
+            Assert.Equal(new[] { "Assets/Held.txt" }, list);
+            Assert.False(AssetDatabase.MakeEditable("Library/NoMake.txt"));
         }
 
         [Fact]

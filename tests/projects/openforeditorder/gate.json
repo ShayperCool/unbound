@@ -6,6 +6,7 @@
   "engine_paths": [
     "managed/UnityEngine/Editor/AssetEditability.cs",
     "managed/UnityEngine/Editor/AssetModificationProcessorInternal.cs",
+    "managed/UnityEngine/Editor/TypeCache.cs",
     "tests/projects/openforedit/",
     "tests/projects/animatorapi/ProjectSettings/",
     "tests/projects/animatorapi/Assets/Scenes/",

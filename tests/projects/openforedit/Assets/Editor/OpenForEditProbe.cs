@@ -158,8 +158,10 @@ public static class OpenForEditProbe
 
     /// <summary>With the hook processors: per call, its answer and the callbacks it reached.
     /// The processors refuse paths naming "Locked" (list IsOpenForEdit), "Held" (single-path
-    /// IsOpenForEdit, with a message), "NoCan" (CanOpenForEdit) and "NoMake" (MakeEditable); no
-    /// two processors have the same callback, so no row depends on their order.</summary>
+    /// IsOpenForEdit, with a message), "Mute" (single-path IsOpenForEdit, with a null message),
+    /// "NoCan" (list CanOpenForEdit), "Barred" (single-path CanOpenForEdit, with a message) and
+    /// "NoMake" (MakeEditable); no two processors have the same callback, so no row depends on
+    /// their order.</summary>
     static void Hooks()
     {
         var hookPaths = new[]
@@ -169,10 +171,25 @@ public static class OpenForEditProbe
             ("held", "Assets/Held.txt"),
             ("lockedNoCan", "Assets/LockedNoCan.txt"),
             ("heldNoCan", "Assets/HeldNoCan.txt"),
+            ("heldBarred", "Assets/HeldBarred.txt"),
+            ("mute", "Assets/Mute.txt"),
             ("noCan", "Assets/NoCan.txt"),
             ("noMake", "Assets/NoMake.txt"),
             ("builtinFile", "Packages/com.unity.modules.audio/package.json"),
             ("empty", ""),
+            // Paths outside Assets: which callbacks they reach.
+            ("library", "Library/Held.txt"),
+            ("settings", "ProjectSettings/Held.asset"),
+            ("manifest", "Packages/manifest.json"),
+            ("absolute", Application.dataPath + "/Held.txt"),
+            ("outside", "/tmp/Held.txt"),
+            ("backslash", "Assets\\Held.txt"),
+            ("userSettings", "UserSettings/Held.asset"),
+            ("assetsRoot", "Assets"),
+            ("settingsRoot", "ProjectSettings"),
+            ("packagesRoot", "Packages"),
+            ("libraryNoMake", "Library/NoMake.txt"),
+            ("outsideNoMake", "/tmp/NoMake.txt"),
         };
         foreach (var (key, path) in hookPaths)
         {
@@ -194,46 +211,87 @@ public static class OpenForEditProbe
         Hooked("is.bulk.blanks", () => { AssetDatabase.IsOpenForEdit(new[] { null, "", "Assets/Locked.txt" }, list); return string.Join("|", list); });
         list = new List<string> { "stale" };
         Hooked("can.bulk.blanks", () => { AssetDatabase.CanOpenForEdit(new[] { null, "", "Assets/LockedNoCan.txt" }, list); return string.Join("|", list); });
+        // Lists no list callback refuses: the single-path callbacks for each path.
+        var held = new[] { "Assets/Probe.txt", "Assets/Held.txt", "Assets/HeldNoCan.txt", "Assets/HeldBarred.txt", "Assets/Mute.txt" };
+        list = new List<string> { "stale" };
+        Hooked("is.bulk.held", () => { AssetDatabase.IsOpenForEdit(held, list); return string.Join("|", list); });
+        list = new List<string> { "stale" };
+        Hooked("can.bulk.held", () => { AssetDatabase.CanOpenForEdit(held, list); return string.Join("|", list); });
+        var barred = new[] { "Assets/Held.txt", "Assets/HeldBarred.txt", "Assets/Probe.txt" };
+        list = new List<string> { "stale" };
+        Hooked("can.bulk.barred", () => { AssetDatabase.CanOpenForEdit(barred, list); return string.Join("|", list); });
+        var kinds = new[] { "Library/Held.txt", "/tmp/Held.txt", "ProjectSettings/Held.asset", "Assets/Probe.txt" };
+        list = new List<string> { "stale" };
+        Hooked("is.bulk.kinds", () => { AssetDatabase.IsOpenForEdit(kinds, list); return string.Join("|", list); });
         list = new List<string> { "stale" };
         Hooked("make.bulk.editable", () => AssetDatabase.MakeEditable(new[] { "Assets/Probe.txt" }, null, list) + ":" + string.Join("|", list));
         var probe = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Probe.txt");
         Hooked("object.is", () => AssetDatabase.IsOpenForEdit(probe));
         Hooked("object.can", () => AssetDatabase.CanOpenForEdit(probe));
         Hooked("object.meta", () => { bool yes = AssetDatabase.IsMetaFileOpenForEdit(probe, out var message); return yes + ":" + Clean(message); });
+        // Objects whose asset has no .meta file (the Assets folder), a folder that has one and one
+        // in memory. (A scene object is left out: the batch Editor plays an untitled scene.)
+        var assetsFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>("Assets");
+        var editorFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>("Assets/Editor");
+        var memory = new Texture2D(2, 2);
+        foreach (var (key, o) in new (string, Object)[] { ("assetsFolder", assetsFolder), ("editorFolder", editorFolder), ("memory", memory) })
+        {
+            Check("object.loaded." + key, () => o != null);
+            Hooked("object.meta." + key, () => { bool yes = AssetDatabase.IsMetaFileOpenForEdit(o, out var message); return yes + ":" + Clean(message); });
+            Hooked("object.is." + key, () => AssetDatabase.IsOpenForEdit(o));
+        }
+        Object.DestroyImmediate(memory);
     }
 
-    /// <summary>With two processors having the same callbacks (tests/projects/openforeditorder):
-    /// each refusing one path, answers that do not depend on which is called first, the calls
-    /// (which do) and the order TypeCache lists the processors in.</summary>
+    /// <summary>With two processors having the same callbacks (tests/projects/openforeditorder),
+    /// each refusing its own path: the answers (which do not depend on the order between them),
+    /// the number of calls, and whether the calls follow the order TypeCache lists the processors
+    /// in up to the first that refuses (Unity documents no order between processors, so the order
+    /// itself is not recorded).</summary>
     static void Order()
     {
-        Check("processors.typeCache", () =>
+        var order = new List<string>();
+        foreach (var type in TypeCache.GetTypesDerivedFrom<AssetModificationProcessor>())
+            if (type.Name == "OpenForEditSecondProcessor") order.Add("second");
+            else if (type.Name == "OpenForEditThirdProcessor") order.Add("third");
+        void Ordered(string key, string[] paths, Func<object> read)
         {
-            var names = new List<string>();
-            foreach (var type in TypeCache.GetTypesDerivedFrom<AssetModificationProcessor>())
-                if (type.Name.StartsWith("OpenForEdit")) names.Add(type.Name);
-            return string.Join(",", names);
-        });
+            Calls.Clear();
+            Check(key, read);
+            var expected = new List<string>();
+            foreach (var name in order)
+            {
+                expected.Add(name);
+                if (Array.Exists(paths, p => p != null && p.Contains(name == "second" ? "Second" : "Third"))) break;
+            }
+            var called = Calls.ConvertAll(c => c.Substring(0, c.IndexOf('.')));
+            Put(key + ".calls", called.Count);
+            Put(key + ".typeCacheOrder", string.Join(",", called) == string.Join(",", expected));
+        }
         foreach (var (key, path) in new[] { ("asset", "Assets/Probe.txt"), ("second", "Assets/Second.txt"), ("third", "Assets/Third.txt") })
         {
-            Hooked("is." + key, () => { bool yes = AssetDatabase.IsOpenForEdit(path, out var message); return yes + ":" + Clean(message); });
-            Hooked("make." + key, () => AssetDatabase.MakeEditable(path));
+            Ordered("is." + key, new[] { path }, () => { bool yes = AssetDatabase.IsOpenForEdit(path, out var message); return yes + ":" + Clean(message); });
+            Ordered("make." + key, new[] { path }, () => AssetDatabase.MakeEditable(path));
         }
+        var second = new[] { "Assets/Probe.txt", "Assets/Second.txt" };
         var list = new List<string> { "stale" };
-        Hooked("is.bulk.second", () => { AssetDatabase.IsOpenForEdit(new[] { "Assets/Probe.txt", "Assets/Second.txt" }, list); return string.Join("|", list); });
+        Ordered("is.bulk.second", second, () => { AssetDatabase.IsOpenForEdit(second, list); return string.Join("|", list); });
+        var third = new[] { "Assets/Third.txt", "Assets/Probe.txt" };
         list = new List<string> { "stale" };
-        Hooked("is.bulk.third", () => { AssetDatabase.IsOpenForEdit(new[] { "Assets/Third.txt", "Assets/Probe.txt" }, list); return string.Join("|", list); });
+        Ordered("is.bulk.third", third, () => { AssetDatabase.IsOpenForEdit(third, list); return string.Join("|", list); });
+        var makeSecond = new[] { "Assets/Second.txt", "Assets/Probe.txt" };
         list = new List<string> { "stale" };
-        Hooked("make.bulk.second", () => AssetDatabase.MakeEditable(new[] { "Assets/Second.txt", "Assets/Probe.txt" }, "probe", list) + ":" + string.Join("|", list));
+        Ordered("make.bulk.second", makeSecond, () => AssetDatabase.MakeEditable(makeSecond, "probe", list) + ":" + string.Join("|", list));
+        var accepted = new[] { "Assets/Probe.txt" };
         list = new List<string> { "stale" };
-        Hooked("make.bulk.accepted", () => AssetDatabase.MakeEditable(new[] { "Assets/Probe.txt" }, "probe", list) + ":" + string.Join("|", list));
+        Ordered("make.bulk.accepted", accepted, () => AssetDatabase.MakeEditable(accepted, "probe", list) + ":" + string.Join("|", list));
     }
 
     static void Hooked(string key, Func<object> read)
     {
         Calls.Clear();
         Check(key, read);
-        Put(key + ".calls", string.Join(" ; ", Calls));
+        Put(key + ".calls", Clean(string.Join(" ; ", Calls)));
     }
 
     /// <summary>The project's own directory as "&lt;project&gt;" (the runs use private copies).</summary>

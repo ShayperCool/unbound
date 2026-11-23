@@ -7,13 +7,13 @@
 {"k":"is.locked","v":"False:"}
 {"k":"is.locked.calls","v":"list.IsOpenForEdit([Assets/Locked.txt],[],UseCachedIfPossible)"}
 {"k":"can.locked","v":"True:"}
-{"k":"can.locked.calls","v":"list.IsOpenForEdit([Assets/Locked.txt],[],UseCachedIfPossible) ; list.CanOpenForEdit([Assets/Locked.txt],[],UseCachedIfPossible)"}
+{"k":"can.locked.calls","v":"list.IsOpenForEdit([Assets/Locked.txt],[],UseCachedIfPossible) ; list.CanOpenForEdit([Assets/Locked.txt],[],UseCachedIfPossible) ; path.CanOpenForEdit(Assets/Locked.txt)"}
 {"k":"make.locked","v":true}
 {"k":"make.locked.calls","v":"path.MakeEditable([Assets/Locked.txt],,[])"}
 {"k":"is.held","v":"False:held by the probe"}
 {"k":"is.held.calls","v":"list.IsOpenForEdit([Assets/Held.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/Held.txt)"}
 {"k":"can.held","v":"True:"}
-{"k":"can.held.calls","v":"list.IsOpenForEdit([Assets/Held.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/Held.txt) ; list.CanOpenForEdit([Assets/Held.txt],[],UseCachedIfPossible)"}
+{"k":"can.held.calls","v":"list.IsOpenForEdit([Assets/Held.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/Held.txt) ; list.CanOpenForEdit([Assets/Held.txt],[],UseCachedIfPossible) ; path.CanOpenForEdit(Assets/Held.txt)"}
 {"k":"make.held","v":true}
 {"k":"make.held.calls","v":"path.MakeEditable([Assets/Held.txt],,[])"}
 {"k":"is.lockedNoCan","v":"False:"}
@@ -28,6 +28,18 @@
 {"k":"can.heldNoCan.calls","v":"list.IsOpenForEdit([Assets/HeldNoCan.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/HeldNoCan.txt) ; list.CanOpenForEdit([Assets/HeldNoCan.txt],[],UseCachedIfPossible)"}
 {"k":"make.heldNoCan","v":true}
 {"k":"make.heldNoCan.calls","v":"path.MakeEditable([Assets/HeldNoCan.txt],,[])"}
+{"k":"is.heldBarred","v":"False:held by the probe"}
+{"k":"is.heldBarred.calls","v":"list.IsOpenForEdit([Assets/HeldBarred.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/HeldBarred.txt)"}
+{"k":"can.heldBarred","v":"False:barred by the probe"}
+{"k":"can.heldBarred.calls","v":"list.IsOpenForEdit([Assets/HeldBarred.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/HeldBarred.txt) ; list.CanOpenForEdit([Assets/HeldBarred.txt],[],UseCachedIfPossible) ; path.CanOpenForEdit(Assets/HeldBarred.txt)"}
+{"k":"make.heldBarred","v":true}
+{"k":"make.heldBarred.calls","v":"path.MakeEditable([Assets/HeldBarred.txt],,[])"}
+{"k":"is.mute","v":"False:<null>"}
+{"k":"is.mute.calls","v":"list.IsOpenForEdit([Assets/Mute.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/Mute.txt)"}
+{"k":"can.mute","v":"True:"}
+{"k":"can.mute.calls","v":"list.IsOpenForEdit([Assets/Mute.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/Mute.txt) ; list.CanOpenForEdit([Assets/Mute.txt],[],UseCachedIfPossible) ; path.CanOpenForEdit(Assets/Mute.txt)"}
+{"k":"make.mute","v":true}
+{"k":"make.mute.calls","v":"path.MakeEditable([Assets/Mute.txt],,[])"}
 {"k":"is.noCan","v":"True:"}
 {"k":"is.noCan.calls","v":"list.IsOpenForEdit([Assets/NoCan.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/NoCan.txt)"}
 {"k":"can.noCan","v":"True:"}
@@ -52,6 +64,78 @@
 {"k":"can.empty.calls","v":""}
 {"k":"make.empty","v":true}
 {"k":"make.empty.calls","v":"path.MakeEditable([],,[])"}
+{"k":"is.library","v":"True:"}
+{"k":"is.library.calls","v":""}
+{"k":"can.library","v":"True:"}
+{"k":"can.library.calls","v":""}
+{"k":"make.library","v":true}
+{"k":"make.library.calls","v":"path.MakeEditable([Library/Held.txt],,[])"}
+{"k":"is.settings","v":"False:held by the probe"}
+{"k":"is.settings.calls","v":"list.IsOpenForEdit([ProjectSettings/Held.asset],[],UseCachedIfPossible) ; path.IsOpenForEdit(ProjectSettings/Held.asset)"}
+{"k":"can.settings","v":"True:"}
+{"k":"can.settings.calls","v":"list.IsOpenForEdit([ProjectSettings/Held.asset],[],UseCachedIfPossible) ; path.IsOpenForEdit(ProjectSettings/Held.asset) ; list.CanOpenForEdit([ProjectSettings/Held.asset],[],UseCachedIfPossible) ; path.CanOpenForEdit(ProjectSettings/Held.asset)"}
+{"k":"make.settings","v":true}
+{"k":"make.settings.calls","v":"path.MakeEditable([ProjectSettings/Held.asset],,[])"}
+{"k":"is.manifest","v":"True:"}
+{"k":"is.manifest.calls","v":"list.IsOpenForEdit([Packages/manifest.json],[],UseCachedIfPossible) ; path.IsOpenForEdit(Packages/manifest.json)"}
+{"k":"can.manifest","v":"True:"}
+{"k":"can.manifest.calls","v":"list.IsOpenForEdit([Packages/manifest.json],[],UseCachedIfPossible) ; path.IsOpenForEdit(Packages/manifest.json)"}
+{"k":"make.manifest","v":true}
+{"k":"make.manifest.calls","v":"path.MakeEditable([Packages/manifest.json],,[])"}
+{"k":"is.absolute","v":"True:"}
+{"k":"is.absolute.calls","v":""}
+{"k":"can.absolute","v":"True:"}
+{"k":"can.absolute.calls","v":""}
+{"k":"make.absolute","v":true}
+{"k":"make.absolute.calls","v":"path.MakeEditable([<project>/Assets/Held.txt],,[])"}
+{"k":"is.outside","v":"True:"}
+{"k":"is.outside.calls","v":""}
+{"k":"can.outside","v":"True:"}
+{"k":"can.outside.calls","v":""}
+{"k":"make.outside","v":true}
+{"k":"make.outside.calls","v":"path.MakeEditable([/tmp/Held.txt],,[])"}
+{"k":"is.backslash","v":"True:"}
+{"k":"is.backslash.calls","v":""}
+{"k":"can.backslash","v":"True:"}
+{"k":"can.backslash.calls","v":""}
+{"k":"make.backslash","v":true}
+{"k":"make.backslash.calls","v":"path.MakeEditable([Assets\\Held.txt],,[])"}
+{"k":"is.userSettings","v":"True:"}
+{"k":"is.userSettings.calls","v":""}
+{"k":"can.userSettings","v":"True:"}
+{"k":"can.userSettings.calls","v":""}
+{"k":"make.userSettings","v":true}
+{"k":"make.userSettings.calls","v":"path.MakeEditable([UserSettings/Held.asset],,[])"}
+{"k":"is.assetsRoot","v":"True:"}
+{"k":"is.assetsRoot.calls","v":"list.IsOpenForEdit([Assets],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets)"}
+{"k":"can.assetsRoot","v":"True:"}
+{"k":"can.assetsRoot.calls","v":"list.IsOpenForEdit([Assets],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets)"}
+{"k":"make.assetsRoot","v":true}
+{"k":"make.assetsRoot.calls","v":"path.MakeEditable([Assets],,[])"}
+{"k":"is.settingsRoot","v":"True:"}
+{"k":"is.settingsRoot.calls","v":"list.IsOpenForEdit([ProjectSettings],[],UseCachedIfPossible) ; path.IsOpenForEdit(ProjectSettings)"}
+{"k":"can.settingsRoot","v":"True:"}
+{"k":"can.settingsRoot.calls","v":"list.IsOpenForEdit([ProjectSettings],[],UseCachedIfPossible) ; path.IsOpenForEdit(ProjectSettings)"}
+{"k":"make.settingsRoot","v":true}
+{"k":"make.settingsRoot.calls","v":"path.MakeEditable([ProjectSettings],,[])"}
+{"k":"is.packagesRoot","v":"True:"}
+{"k":"is.packagesRoot.calls","v":"list.IsOpenForEdit([Packages],[],UseCachedIfPossible) ; path.IsOpenForEdit(Packages)"}
+{"k":"can.packagesRoot","v":"True:"}
+{"k":"can.packagesRoot.calls","v":"list.IsOpenForEdit([Packages],[],UseCachedIfPossible) ; path.IsOpenForEdit(Packages)"}
+{"k":"make.packagesRoot","v":true}
+{"k":"make.packagesRoot.calls","v":"path.MakeEditable([Packages],,[])"}
+{"k":"is.libraryNoMake","v":"True:"}
+{"k":"is.libraryNoMake.calls","v":""}
+{"k":"can.libraryNoMake","v":"True:"}
+{"k":"can.libraryNoMake.calls","v":""}
+{"k":"make.libraryNoMake","v":false}
+{"k":"make.libraryNoMake.calls","v":"path.MakeEditable([Library/NoMake.txt],,[])"}
+{"k":"is.outsideNoMake","v":"True:"}
+{"k":"is.outsideNoMake.calls","v":""}
+{"k":"can.outsideNoMake","v":"True:"}
+{"k":"can.outsideNoMake.calls","v":""}
+{"k":"make.outsideNoMake","v":false}
+{"k":"make.outsideNoMake.calls","v":"path.MakeEditable([/tmp/NoMake.txt],,[])"}
 {"k":"is.bulk","v":"Packages/com.unity.modules.audio/package.json|Assets/Locked.txt|Assets/LockedNoCan.txt"}
 {"k":"is.bulk.calls","v":"list.IsOpenForEdit([Assets/Probe.txt,Assets/Locked.txt,Assets/Held.txt,Assets/LockedNoCan.txt,Assets/NoCan.txt,Assets/NoMake.txt],[Packages/com.unity.modules.audio/package.json],UseCachedIfPossible)"}
 {"k":"can.bulk","v":"Packages/com.unity.modules.audio/package.json|Assets/LockedNoCan.txt"}
@@ -66,6 +150,14 @@
 {"k":"is.bulk.blanks.calls","v":"list.IsOpenForEdit([Assets/Locked.txt],[],UseCachedIfPossible)"}
 {"k":"can.bulk.blanks","v":"Assets/LockedNoCan.txt"}
 {"k":"can.bulk.blanks.calls","v":"list.IsOpenForEdit([Assets/LockedNoCan.txt],[],UseCachedIfPossible) ; list.CanOpenForEdit([Assets/LockedNoCan.txt],[],UseCachedIfPossible)"}
+{"k":"is.bulk.held","v":"Assets/Held.txt|Assets/HeldNoCan.txt|Assets/HeldBarred.txt|Assets/Mute.txt"}
+{"k":"is.bulk.held.calls","v":"list.IsOpenForEdit([Assets/Probe.txt,Assets/Held.txt,Assets/HeldNoCan.txt,Assets/HeldBarred.txt,Assets/Mute.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/Probe.txt) ; path.IsOpenForEdit(Assets/Held.txt) ; path.IsOpenForEdit(Assets/HeldNoCan.txt) ; path.IsOpenForEdit(Assets/HeldBarred.txt) ; path.IsOpenForEdit(Assets/Mute.txt)"}
+{"k":"can.bulk.held","v":"Assets/HeldNoCan.txt"}
+{"k":"can.bulk.held.calls","v":"list.IsOpenForEdit([Assets/Probe.txt,Assets/Held.txt,Assets/HeldNoCan.txt,Assets/HeldBarred.txt,Assets/Mute.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/Probe.txt) ; path.IsOpenForEdit(Assets/Held.txt) ; path.IsOpenForEdit(Assets/HeldNoCan.txt) ; path.IsOpenForEdit(Assets/HeldBarred.txt) ; path.IsOpenForEdit(Assets/Mute.txt) ; list.CanOpenForEdit([Assets/Held.txt,Assets/HeldNoCan.txt,Assets/HeldBarred.txt,Assets/Mute.txt],[],UseCachedIfPossible)"}
+{"k":"can.bulk.barred","v":"Assets/HeldBarred.txt"}
+{"k":"can.bulk.barred.calls","v":"list.IsOpenForEdit([Assets/Held.txt,Assets/HeldBarred.txt,Assets/Probe.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/Held.txt) ; path.IsOpenForEdit(Assets/HeldBarred.txt) ; path.IsOpenForEdit(Assets/Probe.txt) ; list.CanOpenForEdit([Assets/Held.txt,Assets/HeldBarred.txt],[],UseCachedIfPossible) ; path.CanOpenForEdit(Assets/Held.txt) ; path.CanOpenForEdit(Assets/HeldBarred.txt)"}
+{"k":"is.bulk.kinds","v":"ProjectSettings/Held.asset"}
+{"k":"is.bulk.kinds.calls","v":"list.IsOpenForEdit([ProjectSettings/Held.asset,Assets/Probe.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(ProjectSettings/Held.asset) ; path.IsOpenForEdit(Assets/Probe.txt)"}
 {"k":"make.bulk.editable","v":"True:"}
 {"k":"make.bulk.editable.calls","v":"path.MakeEditable([Assets/Probe.txt],,[stale])"}
 {"k":"object.is","v":true}
@@ -74,5 +166,20 @@
 {"k":"object.can.calls","v":"list.IsOpenForEdit([Assets/Probe.txt],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/Probe.txt)"}
 {"k":"object.meta","v":"True:"}
 {"k":"object.meta.calls","v":"list.IsOpenForEdit([Assets/Probe.txt.meta],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/Probe.txt.meta)"}
+{"k":"object.loaded.assetsFolder","v":true}
+{"k":"object.meta.assetsFolder","v":"True:"}
+{"k":"object.meta.assetsFolder.calls","v":""}
+{"k":"object.is.assetsFolder","v":true}
+{"k":"object.is.assetsFolder.calls","v":"list.IsOpenForEdit([Assets],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets)"}
+{"k":"object.loaded.editorFolder","v":true}
+{"k":"object.meta.editorFolder","v":"True:"}
+{"k":"object.meta.editorFolder.calls","v":"list.IsOpenForEdit([Assets/Editor.meta],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/Editor.meta)"}
+{"k":"object.is.editorFolder","v":true}
+{"k":"object.is.editorFolder.calls","v":"list.IsOpenForEdit([Assets/Editor],[],UseCachedIfPossible) ; path.IsOpenForEdit(Assets/Editor)"}
+{"k":"object.loaded.memory","v":true}
+{"k":"object.meta.memory","v":"True:"}
+{"k":"object.meta.memory.calls","v":""}
+{"k":"object.is.memory","v":true}
+{"k":"object.is.memory.calls","v":""}
 {"k":"logs","v":""}
 {"k":"complete","v":true}

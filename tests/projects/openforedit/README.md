@@ -11,37 +11,42 @@ and none; and for lists (results, an earlier list content, empty, blank and null
 arguments with their parameter names).
 
 `tests/projects/openforedithooks` is the same project with two `AssetModificationProcessor`s
-(`Assets/Editor/OpenForEditHooks.cs`): one with the single-path `IsOpenForEdit` and `MakeEditable`
-callbacks, one with the list `IsOpenForEdit` and `CanOpenForEdit` callbacks, so no callback kind is on
-both and no row depends on their order. The callbacks record their calls and refuse paths by a marker
-in the path. Each query records its answer and the callbacks it reached, with their arguments.
+(`Assets/Editor/OpenForEditHooks.cs`): one with the single-path `IsOpenForEdit`, single-path
+`CanOpenForEdit` and `MakeEditable` callbacks, one with the list `IsOpenForEdit` and `CanOpenForEdit`
+callbacks, so no callback is on both and no row depends on their order. The callbacks record their
+calls and refuse paths by a marker in the path (one with a null message). Each query, for paths in
+and outside the versioned folders, for lists and for objects (also the Assets folder, which has no
+.meta file), records its answer and the callbacks it reached, with their arguments.
 `tests/projects/openforeditorder` has instead two processors with the same callbacks (list
-`IsOpenForEdit` and `MakeEditable`), each refusing its own path, and the order TypeCache lists them in.
+`IsOpenForEdit` and `MakeEditable`), each refusing its own path: it records the answers, the number of
+calls and whether the calls follow the order TypeCache lists the processors in, not that order.
 
 Measured on the Unity 6000.0.71f1 Editor (two identical macOS batch captures per probe; the values
 depend on neither the OS nor the graphics device):
 
-- Without callbacks, `MakeEditable` returns true for every path, also a built-in or registry package's, clears
-  the out list, and leaves a read-only file read-only; a null path or path list throws
+- Without callbacks, `MakeEditable` returns true for every path, also a built-in or registry package's,
+  clears the out list, and leaves a read-only file read-only; a null path or path list throws
   `ArgumentNullException`. `CanOpenForEdit` and `IsMetaFileOpenForEdit` (of the object's path with
-  `.meta`) answer as `IsOpenForEdit`: only paths of a package the project does not hold are refused.
-- Empty paths and immutable package paths reach no callback: the first are open, the second refused
-  (and listed first by the list queries, which skip blank entries).
-- A single-path `IsOpenForEdit` (and the object forms) calls the list `IsOpenForEdit` callbacks with
-  the one path and a new list, until one refuses, then the single-path callbacks, whose message the
-  query returns. The list query calls only the list callbacks, with the out list holding the
-  immutable paths.
-- `CanOpenForEdit` first asks `IsOpenForEdit` (single-path callbacks included for one path, not for
-  a list); for the paths not open it calls the `CanOpenForEdit` callbacks (the list holding the
-  immutable paths) until one refuses. Its message stays empty.
-- `MakeEditable` passes every path (one empty path as none, blank list entries as they are), the
-  prompt (`""` for null) and the caller's list (a new one for none) to the callbacks until one
-  refuses, and returns false with the list as they left it; when all accept it clears the list and
-  returns true.
-- Two processors with the same callback are called one after the other, in the order
-  `TypeCache.GetTypesDerivedFrom<AssetModificationProcessor>()` lists them, until one refuses.
-  Unity documents no order between processors; in an earlier capture with three processors that
-  order was neither the declaration nor the name order (it was kept out of the reference).
+  `.meta`; the Assets folder has none and is open) answer as `IsOpenForEdit`: only paths of a package
+  the project does not hold are refused.
+- `IsOpenForEdit` and `CanOpenForEdit` call no callback for blank paths and paths outside the
+  versioned folders `Assets`, `Packages` and `ProjectSettings` (Library, UserSettings, absolute,
+  outside or backslashed paths): those are open. Immutable package paths reach none either and are
+  refused (listed first by the list queries, which skip the blank and unversioned entries).
+- Both queries share one flow: the list callbacks with all the paths (for one path, that path and a
+  new list) until one refuses; when all accept, each processor's single-path callback with every
+  path, each refused path added to the list and the message (null as given) returned, stopping after
+  a processor that refused one.
+- `CanOpenForEdit` first runs that flow for `IsOpenForEdit` (its message dropped); the paths not open
+  then go through it for `CanOpenForEdit`, with the immutable paths already in the list.
+- `MakeEditable` passes every path (unversioned ones too; one empty path as none, blank list entries
+  as they are), the prompt (`""` for null) and the caller's list (a new one for none) to the callbacks
+  until one refuses, and returns false with the list as they left it; when all accept it clears the
+  list and returns true.
+- Processors are called in the order `TypeCache.GetTypesDerivedFrom<AssetModificationProcessor>()`
+  lists them. Unity documents no order between processors, and in an earlier capture with three
+  processors Unbound's TypeCache order differed from the Editor's (neither declaration nor name
+  order there), so the probes record no such order.
 
 ```sh
 python3 tests/projects/openforedit/run.py record --label A     # twice, A and B; also for openforedithooks, openforeditorder
