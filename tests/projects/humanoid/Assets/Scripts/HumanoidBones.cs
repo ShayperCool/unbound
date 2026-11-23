@@ -109,12 +109,16 @@ public partial class HumanoidProbe
     /// reads the human stream, then moves the left hand's goal and solves the IK; SolveTwice
     /// moves the goal and solves, reads the human stream and solves again: a solve after the
     /// pose was read back on the rig's root scaled by 100.</summary>
+    static void BoneExternalEditRecord(Transform bone) =>
+        Put(s_JobKey + ".externalArmRotation", Q(bone.localRotation));
+
     static void BoneHandles()
     {
         s_AllMuscleHandles = new MuscleHandle[MuscleHandle.muscleHandleCount];
         MuscleHandle.GetMuscleHandles(s_AllMuscleHandles);
         foreach (HumanBoneJob.Mode mode in System.Enum.GetValues(typeof(HumanBoneJob.Mode)))
         {
+            bool noInput = mode >= HumanBoneJob.Mode.NoInputNoop;
             var key = "bone." + char.ToLowerInvariant(mode.ToString()[0]) + mode.ToString().Substring(1);
             Guarded(key, () =>
             {
@@ -133,6 +137,8 @@ public partial class HumanoidProbe
                         prop.localRotation = Quaternion.Euler(0f, 0f, 30f);
                         job.BindProp(bound.BindStreamTransform(prop));
                     }
+                    if (noInput)
+                        return AnimationScriptPlayable.Create(g, job);
                     var playable = AnimationScriptPlayable.Create(g, job, 1);
                     var clip = AnimationClipPlayable.Create(g, ControllerClip("HumanA"));
                     if (mode == HumanBoneJob.Mode.MasksLayerWithoutHead)
@@ -156,7 +162,7 @@ public partial class HumanoidProbe
                         g.Connect(clip, 0, playable, 0);
                     playable.SetInputWeight(0, 1f);
                     return playable;
-                }, mode != HumanBoneJob.Mode.ScriptedRootBuiltinWithApplyOff, setup: animator =>
+                }, !noInput && mode != HumanBoneJob.Mode.ScriptedRootBuiltinWithApplyOff, setup: animator =>
                 {
                     bound = animator;
                     switch (mode)
@@ -179,7 +185,15 @@ public partial class HumanoidProbe
                         body.isKinematic = true;
                         body.useGravity = false;
                     }
-                }, velocities: false, localsEvery: 4);
+                }, velocities: false, before: noInput ? step =>
+                {
+                    if (mode == HumanBoneJob.Mode.NoInputHumanRead && step == 2)
+                    {
+                        var arm = FindBone(bound.transform, "LeftLowerArm");
+                        arm.localRotation *= Quaternion.Euler(0f, 0f, 45f);
+                        BoneExternalEditRecord(arm);
+                    }
+                } : null, localsEvery: 4);
             });
         }
     }
@@ -199,7 +213,9 @@ public struct HumanBoneJob : IAnimationJob
         KinematicRoot, KinematicRootArmEdit, ScriptedRootOffset, ScriptedRootBuiltin, ScriptedRootUnmoved,
         ScriptedRootOffsetAndTurnBone, ScriptedRootBuiltinWithApplyOff,
         LayerNoRootRead, LayerNoRootTurn, LayerNoRootBody, LayerFullRootRead,
-        BaseMuscles, LayerNoRootMuscles, LayerNoRootMuscleEdit
+        BaseMuscles, LayerNoRootMuscles, LayerNoRootMuscleEdit,
+        NoInputNoop, NoInputHumanRead, NoInputHumanWrite, NoInputRootPhaseHuman,
+        NoInputBoneWrite, NoInputWriteThenRead
     }
 
     public Mode mode;
@@ -222,7 +238,10 @@ public struct HumanBoneJob : IAnimationJob
 
     public TransformStreamHandle Handle(int i) => i == 0 ? hips : i == 1 ? spine : i == 2 ? arm : i == 3 ? head : hand;
 
-    public void ProcessRootMotion(AnimationStream stream) { }
+    public void ProcessRootMotion(AnimationStream stream)
+    {
+        if (mode == Mode.NoInputRootPhaseHuman) HumanoidProbe.JobRecord("rootPhase", stream);
+    }
 
     /// <summary>The left hand's goal moved by (10, 20, 0) world units (a tenth and a fifth of the
     /// rig's local unit of 100) at full weight, and the IK solved.</summary>
@@ -236,6 +255,7 @@ public struct HumanBoneJob : IAnimationJob
 
     public void ProcessAnimation(AnimationStream stream)
     {
+        if (mode == Mode.NoInputNoop || mode == Mode.NoInputRootPhaseHuman) return;
         if (mode == Mode.MasksLayerWithoutHead)
         {
             HumanoidProbe.BoneMaskRecord(stream, ref this);
@@ -342,6 +362,15 @@ public struct HumanBoneJob : IAnimationJob
                 HumanoidProbe.BoneMaskRecord(stream, ref this);
                 head.GetGlobalTR(stream, out var wp, out var wr);
                 head.SetGlobalTR(stream, wp + new Vector3(10, 0, 0), wr * Quaternion.Euler(0, 0, 30), true);
+                break;
+            case Mode.NoInputBoneWrite:
+                arm.SetLocalRotation(stream, arm.GetLocalRotation(stream) * Quaternion.Euler(0f, 0f, 40f));
+                break;
+            case Mode.NoInputWriteThenRead when HumanoidProbe.s_JobKey.EndsWith(".step0", System.StringComparison.Ordinal):
+            case Mode.NoInputHumanWrite:
+                var noInputPose = stream.AsHuman();
+                noInputPose.bodyLocalPosition += new Vector3(.01f, -.02f, .03f);
+                noInputPose.SetMuscle(new MuscleHandle(HumanPartDof.RightArm, ArmDof.ArmDownUp), -.5f);
                 break;
             case Mode.LayerNoRootMuscleEdit:
                 stream.AsHuman().SetMuscle(new MuscleHandle(BodyDof.SpineFrontBack), .25f);
