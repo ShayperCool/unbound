@@ -27,7 +27,11 @@ after `Animator.Update(0)` and `Update(0.25)`:
   humanoid's muscle clip below its holder, takes the pose of `humanGraphDirect`, the clip on the
   model's own Animator; `masked`, the generic clip below its holder through a layer whose mask keeps
   `Hips` and leaves out `Hips/Leg` and `Prop`, moves the Hips only (mask paths start at the avatar
-  root).
+  root);
+- `maskedLayer`: a controller made in the probe whose layer's mask keeps the root entry and `Hips` and
+  leaves out `Prop`, playing a clip that moves `Hips`, `Prop` and the holder itself (an empty path),
+  after `Update(0)` and `Update(0.5)`: Hips and the holder move (the holder's own transform takes the
+  mask's root entry), Prop does not.
 
 The avatar root is the first transform, in depth-first order from the Animator's own, below which
 the most of the avatar's skeleton paths exist; the clips bind below it, layer masks name paths below

@@ -164,6 +164,32 @@ namespace NestedAvatarProbe
             cached.Update(0.25f);
             Put("cached.rebound", Pose(cached, cachedModel) + "|added " + Pose(cached, added.transform));
 
+            // A controller made here whose layer's mask keeps the root entry and Hips and leaves out
+            // Prop, playing a clip that moves Hips and Prop and the holder itself (an empty path).
+            var layerClip = new AnimationClip { name = "LayerClip" };
+            layerClip.SetCurve("Hips", typeof(Transform), "m_LocalPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 2f));
+            layerClip.SetCurve("Prop", typeof(Transform), "m_LocalPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 2f));
+            layerClip.SetCurve("", typeof(Transform), "m_LocalPosition.y", AnimationCurve.Linear(0f, 0f, 1f, 2f));
+            var controllerMask = new AvatarMask { transformCount = 3 };
+            controllerMask.SetTransformPath(0, "");
+            controllerMask.SetTransformActive(0, true);
+            controllerMask.SetTransformPath(1, "Hips");
+            controllerMask.SetTransformActive(1, true);
+            controllerMask.SetTransformPath(2, "Prop");
+            controllerMask.SetTransformActive(2, false);
+            var layerController = new UnityEditor.Animations.AnimatorController { name = "MaskedLayer" };
+            layerController.AddLayer("Base Layer");
+            var controllerLayers = layerController.layers;
+            controllerLayers[0].avatarMask = controllerMask;
+            layerController.layers = controllerLayers;
+            layerController.AddMotion(layerClip);
+            var (maskedLayer, maskedLayerModel) = Nested("WalkerNoNode", null, "maskedLayer", 1, null, true, 140);
+            maskedLayer.runtimeAnimatorController = layerController;
+            maskedLayer.enabled = false;
+            maskedLayer.Update(0f);
+            maskedLayer.Update(0.5f);
+            Put("maskedLayer.half", Pose(maskedLayer, maskedLayerModel));
+
             // Played by playable graphs evaluated by hand: the humanoid's muscle clip below its holder
             // and on the model's own Animator, and the generic clip below its holder through a layer
             // whose mask keeps Hips and leaves out Hips/Leg and Prop.
