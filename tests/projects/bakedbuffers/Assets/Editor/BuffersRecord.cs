@@ -162,10 +162,13 @@ public static class BuffersRecord
         // files): the bake is run again, up to three times; its last answer goes to wholeBake.txt.
         var written = Path.Combine("Assets/Scenes", scene);
         bool whole = false;
-        // (Under load the bake now and then answers true without having written its files:
-        // run again as for a false answer; every scene here writes some.)
+        // (Under load the bake now and then answers true without having written all its files:
+        // run again as for a false answer. Every scene here writes some, and one with baked
+        // global illumination its lightmaps.)
+        bool lightmaps = Lightmapping.lightingSettings != null && Lightmapping.lightingSettings.bakedGI;
         for (int attempt = 0; attempt < 3 && !whole; attempt++)
-            whole = Lightmapping.Bake() && Directory.Exists(written);
+            whole = Lightmapping.Bake() && Directory.Exists(written)
+                && (!lightmaps || Directory.GetFiles(written, "Lightmap-*_comp_light.exr").Length > 0);
         File.WriteAllText(Path.Combine(folder, "wholeBake.txt"), whole ? "True" : "False");
         if (Directory.Exists(written))
         {
