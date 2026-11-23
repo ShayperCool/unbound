@@ -141,7 +141,10 @@ if another mip is bound. It takes one source texel per destination pixel from
 the lower-left corner, clamps past the source edge, and applies each texture's
 color encoding. It keeps alpha and resolves a multisampled color source.
 The measured array, cube, volume and depth-only sources leave the destination
-alone. The measured integer formats report an unsupported format assertion.
+alone. Integer sources report an unsupported format assertion in Linear.
+In Gamma the integer sources produce no diagnostic. Their pixel bytes
+varied between Editor runs for a single-sample color destination.
+Unbound keeps the destination image in that case.
 The texture-form metadata and binding are reproducible for both depth-only
 and integer sources. Their returned pixel bytes differed across the Editor
 runs. Unbound puts transparent black in that RGBA32 texture and keeps the
@@ -153,6 +156,8 @@ source. On the measured OpenGL Core device it follows the current
 A multisampled destination keeps its pixels in both its current and
 retained images. A depth-only destination or multisampled destination
 with `bindTextureMS` logs the invalid color surface error after creation.
+A fresh single-sample destination with `bindTextureMS` fails creation and
+logs that same error.
 [GL.sRGBWrite](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/gl/srgbwrite).
 
 The multisample controls check the full retained image for changes across
@@ -183,6 +188,6 @@ Use `--space Gamma` for the Gamma repeat. Both Editor
 captures in each color space completed and agree byte for byte. The existing
 game-view references, comparator and tolerances are unchanged.
 
-The active profile matches all 321 values and 75 images in Linear and all
-27 values and 10 images in Gamma. All 85 images are byte-identical with
+The active profile matches all 333 values and 75 images in Linear and all
+66 values and 11 images in Gamma. All 86 images are byte-identical with
 the Editor captures.

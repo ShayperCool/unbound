@@ -95,9 +95,8 @@ namespace UnityEngine
             bool useRenderState = UsesActiveRenderState;
             var active = useRenderState ? RenderTexture.active : null;
             ulong destination = useRenderState ? renderTexture.EnsureCreated() : 0;
-            if (useRenderState && destination == 0) return;
             bool multisampledDestination = useRenderState && renderTexture.antiAliasing > 1;
-            if (useRenderState && (renderTexture.graphicsFormat == GraphicsFormat.None
+            if (useRenderState && (destination == 0 || renderTexture.graphicsFormat == GraphicsFormat.None
                 || (multisampledDestination && renderTexture.bindTextureMS)))
             {
                 Debug.LogError("Invalid surface for grabbing pixels. Verify that the RenderTarget is a valid color surface. Only a single color target may be grabbed.");
@@ -109,7 +108,8 @@ namespace UnityEngine
                 if (active.dimension != TextureDimension.Tex2D || active.graphicsFormat == GraphicsFormat.None) return;
                 if (GraphicsFormatUtility.IsIntegerFormat(active.graphicsFormat))
                 {
-                    Debug.LogAssertion("Unsupported render texture format :4");
+                    if (QualitySettings.activeColorSpace == ColorSpace.Linear)
+                        Debug.LogAssertion("Unsupported render texture format :4");
                     return;
                 }
             }
