@@ -935,7 +935,8 @@ namespace UnityEngine
             {
                 MainThreadCheck.Check("GetBoneWeightsImpl");
                 EnsureModelLoaded();
-                return m_BoneWeights != null ? (BoneWeight[])m_BoneWeights.Clone() : Array.Empty<BoneWeight>();
+                var weights = ReadLegacyBoneWeights();
+                return weights != null ? (BoneWeight[])weights.Clone() : Array.Empty<BoneWeight>();
             }
             set
             {
@@ -962,7 +963,8 @@ namespace UnityEngine
         {
             boneWeights.Clear();
             EnsureModelLoaded();
-            if (m_BoneWeights != null) boneWeights.AddRange(m_BoneWeights);
+            var weights = ReadLegacyBoneWeights();
+            if (weights != null) boneWeights.AddRange(weights);
         }
 
         // ------------------------------------------------------------------ operations

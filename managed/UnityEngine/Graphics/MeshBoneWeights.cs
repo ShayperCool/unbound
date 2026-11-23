@@ -12,9 +12,10 @@ namespace UnityEngine
     {
         SkinWeights? m_RuntimeSkinLayout;
         internal MeshSkinWeightData RuntimeSkinWeights { get; private set; }
-        MeshSkinWeightData m_ExpandedLegacyWeights;
+        MeshSkinWeightData m_CachedFixedWeights;
         BoneWeight[] m_LegacyWeightsBeforeResize;
         BoneWeight[] m_RawFixedBoneWeights;
+        bool m_LegacyProjectionRead;
         MeshArrayView<byte> m_BoneCountsView;
         MeshArrayView<BoneWeight1> m_BoneWeightsView;
 
@@ -38,9 +39,12 @@ namespace UnityEngine
 
         MeshSkinWeightData SkinWeightData()
         {
-            if (RuntimeSkinWeights != null) return RuntimeSkinWeights;
-            var legacy = m_LegacyWeightsBeforeResize ?? m_BoneWeights;
-            return legacy is { Length: > 0 } ? (m_ExpandedLegacyWeights ??= MeshSkinWeightData.FromLegacy(legacy)) : null;
+            if (RuntimeSkinWeights is { IsPacked: true } packed) return packed;
+            if (m_CachedFixedWeights != null) return m_CachedFixedWeights;
+            if (RuntimeSkinWeights != null && m_RawFixedBoneWeights == null)
+                return m_CachedFixedWeights = RuntimeSkinWeights;
+            var fixedWeights = m_RawFixedBoneWeights ?? m_LegacyWeightsBeforeResize ?? m_BoneWeights;
+            return fixedWeights is { Length: > 0 } ? (m_CachedFixedWeights = MeshSkinWeightData.FromLegacy(fixedWeights)) : null;
         }
 
         public NativeArray<byte> GetBonesPerVertex()
@@ -275,15 +279,25 @@ namespace UnityEngine
 
         BoneWeight[] RawSkinWriteTarget()
         {
-            // Raw stream writes affect fixed skinning, but a scripted table and its public
-            // projection stay as assigned. Unlimited skinning reads that table even after writes.
-            if (RuntimeSkinWeights == null)
-            {
-                if (m_ExpandedLegacyWeights?.WeightCount == 0) m_ExpandedLegacyWeights = null;
-                return m_BoneWeights;
-            }
+            // The raw stream drives fixed skinning. Queries cache the first fixed table they
+            // read. The unlimited table is separate from the stream and survives stream writes.
+            if (m_CachedFixedWeights?.WeightCount == 0) m_CachedFixedWeights = null;
+            if (RuntimeSkinWeights == null) return m_BoneWeights;
             if (RuntimeSkinWeights.IsPacked) return null;
             return m_RawFixedBoneWeights ??= (BoneWeight[])m_BoneWeights.Clone();
+        }
+
+        BoneWeight[] ReadLegacyBoneWeights()
+        {
+            // The first legacy read of a scripted fixed layout projects the stream as it stands.
+            // Further stream writes leave that projection and the scripted table cached.
+            if (!m_LegacyProjectionRead && RuntimeSkinWeights is { IsPacked: false })
+            {
+                if (m_RawFixedBoneWeights != null)
+                    m_BoneWeights = (BoneWeight[])m_RawFixedBoneWeights.Clone();
+                m_LegacyProjectionRead = true;
+            }
+            return m_BoneWeights;
         }
 
         void ReleaseBoneWeightViews()
@@ -297,8 +311,9 @@ namespace UnityEngine
         void InvalidateBoneWeightArrays()
         {
             ReleaseBoneWeightViews();
-            m_ExpandedLegacyWeights = null;
+            m_CachedFixedWeights = null;
             m_LegacyWeightsBeforeResize = null;
+            m_LegacyProjectionRead = false;
         }
 
         void ChangeBoneWeightVertexCount(int vertexCount)
@@ -326,7 +341,9 @@ namespace UnityEngine
             InvalidateBoneWeightArrays();
             InvalidateBoneWeightBuffers();
             RuntimeSkinWeights = source.RuntimeSkinWeights;
+            m_CachedFixedWeights = source.m_CachedFixedWeights;
             m_RawFixedBoneWeights = (BoneWeight[])source.m_RawFixedBoneWeights?.Clone();
+            m_LegacyProjectionRead = source.m_LegacyProjectionRead;
             m_RuntimeSkinLayout = source.m_RuntimeSkinLayout;
             m_LegacyWeightsBeforeResize = source.m_LegacyWeightsBeforeResize;
         }
