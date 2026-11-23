@@ -592,8 +592,13 @@ namespace Unbound.Runtime
         internal Transform PathRoot()
         {
             if (Root == null) return null;
-            return !CurvesOnly && Root.GetComponent<Animator>() is Animator animator ? animator.AvatarRootTransform() : Root.transform;
+            if (!CurvesOnly && m_PathAnimator == null) m_PathAnimator = Root.GetComponent<Animator>();
+            return m_PathAnimator != null ? m_PathAnimator.AvatarRootTransform() : Root.transform;
         }
+
+        /// <summary>The root's Animator, looked up once it has one (masks ask for the path root on
+        /// every evaluation).</summary>
+        Animator m_PathAnimator;
 
         internal BoundClip Bind(AnimationClip clip)
         {

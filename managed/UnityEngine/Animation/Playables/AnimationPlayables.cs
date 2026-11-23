@@ -563,16 +563,14 @@ namespace Unbound.Runtime.Playables
         }
 
         /// <summary>Whether a layer's mask lets it animate the Animator's own transform (the root
-        /// motion root), by the transform's path below the bound root as <see cref="MaskChannels"/>
-        /// takes it: the mask's root entry is the empty path. No mask, or an empty one, allows it.</summary>
+        /// motion root): its mask path is the empty path, the root entry, as <see cref="MaskChannels"/>
+        /// takes it (the avatar root is that transform or below it). No mask, or an empty one, allows it.</summary>
         bool MaskAllowsRoot(AnimationEvaluation e, int layer)
         {
             var mask = layer < Masks.Count ? Masks[layer] : null;
             if (mask == null || mask.m_Elements.Count == 0) return true;
-            var root = e.Bindings.PathRoot();
-            var t = e.Animator != null ? e.Animator.transform : null;
-            if (root == null || t == null) return true;
-            return mask.Allows(AvatarMask.PathBelow(t, root));
+            // The Animator's own transform is the avatar root or above it: the mask's root entry.
+            return mask.Allows("");
         }
 
         /// <summary>
