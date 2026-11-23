@@ -270,6 +270,13 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// Print the objects of a binary serialized file the Editor wrote with its type trees (a
+    /// bake's LightingData.asset, a NavMesh.asset) as JSON: per object its class ID, file ID,
+    /// class name and fields, references with the GUIDs of the files they name.
+    Dump {
+        /// The file.
+        file: std::path::PathBuf,
+    },
     /// List the Unity API the project's runtime assemblies use that Unbound does not implement.
     ApiGaps {
         #[command(flatten)]
@@ -427,6 +434,7 @@ fn main() -> anyhow::Result<()> {
         Command::ApiDefaults { project } => commands::api_defaults(&project),
         Command::Doctor { project, all, json } => doctor::doctor(&project, all, json),
         Command::ApiGaps { project, top, json } => commands::api_gaps(&project, top, json),
+        Command::Dump { file } => commands::dump(&file),
         Command::Test {
             project,
             platform,

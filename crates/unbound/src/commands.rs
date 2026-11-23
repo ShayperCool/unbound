@@ -1741,3 +1741,35 @@ mod stub_generation_tests {
         assert!(report(&[]).ensure_complete().is_ok());
     }
 }
+
+/// `unbound dump`: a binary serialized file's objects as JSON, one per line of the array.
+pub fn dump(file: &std::path::Path) -> anyhow::Result<()> {
+    use anyhow::Context;
+    let data = std::fs::read(file).with_context(|| format!("reading {}", file.display()))?;
+    anyhow::ensure!(
+        unbound_assets::serialized::is_binary(&data),
+        "{}: not a binary serialized file",
+        file.display()
+    );
+    fn json(value: &unbound_yaml::Value) -> serde_json::Value {
+        match value {
+            unbound_yaml::Value::Null => serde_json::Value::Null,
+            unbound_yaml::Value::Scalar(s) => serde_json::Value::String(s.clone()),
+            unbound_yaml::Value::Seq(items) => items.iter().map(json).collect(),
+            unbound_yaml::Value::Map(map) => serde_json::Value::Object(
+                map.iter().map(|(k, v)| (k.to_string(), json(v))).collect(),
+            ),
+        }
+    }
+    let objects: Vec<serde_json::Value> = unbound_assets::serialized::documents(&data)?
+        .iter()
+        .map(|doc| {
+            serde_json::json!({
+                "classId": doc.class_id, "fileId": doc.file_id, "type": doc.type_name,
+                "fields": json(&doc.body),
+            })
+        })
+        .collect();
+    println!("{}", serde_json::to_string_pretty(&objects)?);
+    Ok(())
+}
