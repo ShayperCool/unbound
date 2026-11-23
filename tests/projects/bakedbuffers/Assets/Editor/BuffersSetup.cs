@@ -635,6 +635,38 @@ public static class BuffersSetup
         Save(scene, "Spread");
     }
 
+    /// <summary>A ground of 120 m 500 m from the scene's origin, with six point lights and a
+    /// spot light near one of its ends: the light grid's box reaches from the origin, so the
+    /// ground keeps five regions along x though the lights reach only its end, and the lights
+    /// fall into two of them (from their own reach alone they would make one region); a
+    /// ceiling over them sends their light back down.</summary>
+    static void Far()
+    {
+        var scene = NewScene("Far", 0.5f, 128);
+        var settings = Lightmapping.lightingSettings;
+        settings.directSampleCount = 16;
+        settings.indirectSampleCount = 16;
+        settings.maxBounces = 2;
+        settings.minBounces = 2;
+        RenderSettings.skybox = null;
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = Color.black;
+        With(Prim(PrimitiveType.Plane, "Ground", new Vector3(500f, 0f, 0f), Vector3.zero, new Vector3(12f, 1f, 2f)), Mat("BounceGrey", new Color(0.5f, 0.5f, 0.5f)));
+        With(Prim(PrimitiveType.Plane, "Ceiling", new Vector3(537.13f, 6.5f, 0.07f), new Vector3(180f, 0f, 0f), new Vector3(4f, 1f, 2f)), Mat("BounceWhite", Color.white));
+        With(Prim(PrimitiveType.Cube, "Crate", new Vector3(536.87f, 0.53f, 0.13f), new Vector3(0f, 10f, 0f), new Vector3(1f, 1f, 1f)), Mat("BounceWhite", Color.white));
+        With(Prim(PrimitiveType.Cube, "Block", new Vector3(531.91f, 1.03f, 2.07f), new Vector3(0f, 30f, 0f), new Vector3(1f, 2f, 1f)), Mat("BounceRed", new Color(0.9f, 0.1f, 0.1f)));
+        NewLight("F1", LightType.Point, new Vector3(528.2f, 2f, 1.1f), Vector3.zero, Color.white, 12f).range = 3f;
+        NewLight("F2", LightType.Point, new Vector3(531.1f, 2.5f, -1.9f), Vector3.zero, new Color(1f, 0.8f, 0.5f), 8f).range = 3.5f;
+        NewLight("F3", LightType.Point, new Vector3(533.9f, 1.5f, 2.2f), Vector3.zero, new Color(0.5f, 1f, 0.6f), 16f).range = 2.5f;
+        NewLight("F4", LightType.Point, new Vector3(539.3f, 2f, -2.3f), Vector3.zero, new Color(0.6f, 0.7f, 1f), 6f).range = 3f;
+        NewLight("F5", LightType.Point, new Vector3(542.4f, 3f, 0.8f), Vector3.zero, new Color(1f, 0.4f, 0.4f), 10f).range = 4f;
+        NewLight("F6", LightType.Point, new Vector3(545.6f, 1.5f, -0.7f), Vector3.zero, new Color(0.7f, 1f, 1f), 8f).range = 3.5f;
+        var spot = NewLight("FSpot", LightType.Spot, new Vector3(537.2f, 6f, 0.3f), new Vector3(80f, 20f, 0f), Color.white, 20f);
+        spot.range = 8f;
+        spot.spotAngle = 60f;
+        Save(scene, "Far");
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -647,7 +679,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));

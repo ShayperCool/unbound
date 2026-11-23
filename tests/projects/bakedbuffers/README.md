@@ -69,6 +69,9 @@ a ground, a cube and a sphere, and lights with hard shadows:
   has five by two by five regions, each listing the lights whose range reaches it (a spot
   light's where it reaches in front of the light, its cone not tested); 16 indirect samples,
   three bounces without the chance of stopping (four, three and two lights tested).
+- `Far` (0.5, 128): a ground of 120 m 500 m from the origin, six point lights and a spot light
+  near one end under a ceiling: the light grid's box starts from the scene's origin (its
+  lights' reach alone would make one region), so the lights fall into two regions along x.
 - `ModeIndirect`, `ModeSubtractive`, `ModeShadowmask`: a mixed sun and a mixed spot, a baked
   bulb and a realtime spot, in each Lighting Mode. Mixed lights' direct light is in the lightmap
   in Subtractive mode alone; the realtime light is not of the bake.
