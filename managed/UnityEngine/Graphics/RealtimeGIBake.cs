@@ -275,7 +275,8 @@ namespace UnityEngine
         /// which the scene then reflects, or none (one an earlier bake wrote is deleted), and the
         /// lighting data (LightingData.asset), which the scene then names. Written for a bake of
         /// the environment alone (baked and realtime global illumination off) that made all of
-        /// it, of a scene of the project's own assets, in the measured release family; otherwise
+        /// it, of a scene of the project's own assets, in the measured release family, without a
+        /// render pipeline asset (<see cref="Unwritten"/>); otherwise
         /// nothing is written or deleted (said once): the lighting data of other bakes is not
         /// written yet. The files are the Editor's but for the GUIDs of the new assets.
         /// </summary>
