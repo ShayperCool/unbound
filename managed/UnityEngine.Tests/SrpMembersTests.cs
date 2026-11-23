@@ -85,7 +85,8 @@ namespace Unbound.Tests
                 {
                     using var cb = new CommandBuffer();
                     record(cb);
-                    Graphics.ExecuteCommandBuffer(cb);
+                    // Inspect the binding during playback, before the enclosing render scope restores it.
+                    cb.ExecuteIn(new CommandBuffer.Context());
                 }
                 Run(cb => cb.SetRenderTarget(Binding(ids, ids[0])));
                 var state = GfxStream.Current;

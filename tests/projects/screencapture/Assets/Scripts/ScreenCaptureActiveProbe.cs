@@ -260,6 +260,7 @@ public partial class ScreenCaptureProbe
         RecordFreshCaptureDestinations();
         var targetSteps = CommandTargetSteps();
         while (targetSteps.MoveNext()) yield return targetSteps.Current;
+        RecordCommandDepthBinding();
     }
 
     IEnumerator CommandTargetSteps()
@@ -365,6 +366,34 @@ public partial class ScreenCaptureProbe
             DestroyImmediate(depth);
             DestroyImmediate(array);
             commands.Release();
+        }
+    }
+
+    void RecordCommandDepthBinding()
+    {
+        foreach (bool farDepth in new[] { false, true })
+        {
+            var previous = Target(W, H, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var other = Target(W, H, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var depth = new RenderTexture(W, H, 24, RenderTextureFormat.Depth);
+            depth.Create();
+            RenderTexture.active = depth;
+            GL.Clear(true, false, Color.clear, farDepth ? 1f : 0f);
+            Graphics.SetRenderTarget(previous.colorBuffer, depth.depthBuffer);
+            GL.Clear(false, true, Color.blue);
+            var commands = new CommandBuffer();
+            commands.SetRenderTarget(other);
+            commands.ClearRenderTarget(false, true, Color.green);
+            Graphics.ExecuteCommandBuffer(commands);
+            marker.SetFloat("_ProbeZTest", (float)CompareFunction.Less);
+            DrawSourcePattern();
+            marker.SetFloat("_ProbeZTest", (float)CompareFunction.Always);
+            ReadTarget("command.depth.far." + B(farDepth), previous);
+            RenderTexture.active = null;
+            commands.Release();
+            DestroyImmediate(previous);
+            DestroyImmediate(other);
+            DestroyImmediate(depth);
         }
     }
 

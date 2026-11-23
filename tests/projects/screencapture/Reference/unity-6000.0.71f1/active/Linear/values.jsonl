@@ -386,4 +386,6 @@
 {"k":"command.priorMultiple.mip.pixels","v":2048}
 {"k":"command.priorMultiple.transient.pixels","v":2048}
 {"k":"command.priorMultiple.second.pixels","v":2048}
+{"k":"command.depth.far.false.pixels","v":2048}
+{"k":"command.depth.far.true.pixels","v":2048}
 {"k":"complete","v":true}

@@ -1,12 +1,12 @@
 // A constant color, unconverted (a vector property): the end-of-frame marker.
 Shader "Probe/Marker"
 {
-    Properties { _Value ("Value", Vector) = (1, 0, 1, 0.8) }
+    Properties { _Value ("Value", Vector) = (1, 0, 1, 0.8) _ProbeZTest ("Depth test", Float) = 8 }
     SubShader
     {
         Pass
         {
-            ZTest Always
+            ZTest [_ProbeZTest]
             ZWrite Off
             Cull Off
             CGPROGRAM
