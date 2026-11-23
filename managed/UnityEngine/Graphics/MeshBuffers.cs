@@ -81,7 +81,7 @@ namespace UnityEngine
                 case VertexAttribute.Tangent: return m_Tangents != null;
                 case VertexAttribute.Color: return m_Colors != null;
                 case VertexAttribute.BlendWeight:
-                    if (m_RuntimeSkinLayout == SkinWeights.OneBone) return false;
+                    if (m_Layout == null && m_RuntimeSkinLayout == SkinWeights.OneBone) return false;
                     goto case VertexAttribute.BlendIndices;
                 case VertexAttribute.BlendIndices: return m_BoneWeights != null && (m_Layout == null || LayoutHas(attr));
                 default:
@@ -255,9 +255,7 @@ namespace UnityEngine
                 m_UVs[c] = Resize(m_UVs[c], Has(attr));
                 m_UVDimensions[c] = Has(attr) ? Array.Find(layout, d => d.attribute == attr).dimension : 0;
             }
-            bool hasSkin = Has(VertexAttribute.BlendWeight) || Has(VertexAttribute.BlendIndices);
-            if (hasSkin) ChangeBoneWeightVertexCount(vertexCount);
-            else DropRuntimeBoneWeights();
+            bool hasSkin = AdoptRawSkinWeightLayout(layout, vertexCount);
             m_BoneWeights = Resize(m_BoneWeights, hasSkin);
             m_Layout = layout;
             m_HasPositionChannel = Has(VertexAttribute.Position);
@@ -344,6 +342,9 @@ namespace UnityEngine
             int last = (offset + bytes.Length + stride - 1) / stride;
             Span<float> f = stackalloc float[4];
             Span<int> n = stackalloc int[4];
+            ReleaseBoneWeightViews();
+            BoneWeight[] skinTarget = null;
+            bool skinPrepared = false;
             for (int v = first; v < last; v++)
             {
                 int at = 0;
@@ -361,6 +362,11 @@ namespace UnityEngine
                     bytes.Slice(begin, end - begin).CopyTo(attribute.Slice(begin - start));
                     if (d.attribute is VertexAttribute.Position or VertexAttribute.BlendWeight or VertexAttribute.BlendIndices)
                         m_UnmeasuredSkinBoundsMutation = true;
+                    if (!skinPrepared && d.attribute is (VertexAttribute.BlendWeight or VertexAttribute.BlendIndices))
+                    {
+                        skinTarget = RawSkinWriteTarget();
+                        skinPrepared = true;
+                    }
                     for (int c = 0; c < 4; c++)
                     {
                         f[c] = c == 3 ? 1f : 0f;
@@ -371,7 +377,7 @@ namespace UnityEngine
                         var s = attribute.Slice(c * size, size);
                         (f[c], n[c]) = Read(s, d.format);
                     }
-                    Store(d, v, f, n, attribute);
+                    Store(d, v, f, n, attribute, skinTarget);
                 }
             }
             Changed(indices: false);
@@ -397,7 +403,8 @@ namespace UnityEngine
             }
         }
 
-        void Store(VertexAttributeDescriptor d, int v, ReadOnlySpan<float> f, ReadOnlySpan<int> n, ReadOnlySpan<byte> raw)
+        void Store(VertexAttributeDescriptor d, int v, ReadOnlySpan<float> f, ReadOnlySpan<int> n,
+            ReadOnlySpan<byte> raw, BoneWeight[] skinTarget)
         {
             switch (d.attribute)
             {
@@ -411,22 +418,24 @@ namespace UnityEngine
                     break;
                 case VertexAttribute.BlendWeight:
                 {
-                    var b = m_BoneWeights[v];
+                    if (skinTarget == null) break;
+                    var b = skinTarget[v];
                     b.weight0 = f[0];
                     b.weight1 = d.dimension > 1 ? f[1] : 0f;
                     b.weight2 = d.dimension > 2 ? f[2] : 0f;
                     b.weight3 = d.dimension > 3 ? f[3] : 0f;
-                    m_BoneWeights[v] = b;
+                    skinTarget[v] = b;
                     break;
                 }
                 case VertexAttribute.BlendIndices:
                 {
-                    var b = m_BoneWeights[v];
+                    if (skinTarget == null) break;
+                    var b = skinTarget[v];
                     b.boneIndex0 = n[0];
                     b.boneIndex1 = n[1];
                     b.boneIndex2 = n[2];
                     b.boneIndex3 = n[3];
-                    m_BoneWeights[v] = b;
+                    skinTarget[v] = b;
                     break;
                 }
                 default:

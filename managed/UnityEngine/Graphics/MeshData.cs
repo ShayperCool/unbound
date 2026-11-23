@@ -192,8 +192,8 @@ namespace UnityEngine
                 case VertexAttribute.Normal: { var p = m_Normals[v]; f = new Vector4(p.x, p.y, p.z, 0f); break; }
                 case VertexAttribute.Tangent: f = m_Tangents[v]; break;
                 case VertexAttribute.Color: { Color c = m_Colors[v]; f = new Vector4(c.r, c.g, c.b, c.a); break; }
-                case VertexAttribute.BlendWeight: { var b = m_BoneWeights[v]; f = new Vector4(b.weight0, b.weight1, b.weight2, b.weight3); break; }
-                case VertexAttribute.BlendIndices: { var b = m_BoneWeights[v]; n4 = (b.boneIndex0, b.boneIndex1, b.boneIndex2, b.boneIndex3); f = new Vector4(n4.Item1, n4.Item2, n4.Item3, n4.Item4); return; }
+                case VertexAttribute.BlendWeight: { var b = FixedSkinningWeights[v]; f = new Vector4(b.weight0, b.weight1, b.weight2, b.weight3); break; }
+                case VertexAttribute.BlendIndices: { var b = FixedSkinningWeights[v]; n4 = (b.boneIndex0, b.boneIndex1, b.boneIndex2, b.boneIndex3); f = new Vector4(n4.Item1, n4.Item2, n4.Item3, n4.Item4); return; }
                 default: f = m_UVs[(int)attr - (int)VertexAttribute.TexCoord0][v]; break;
             }
             n4 = ((int)f.x, (int)f.y, (int)f.z, (int)f.w);

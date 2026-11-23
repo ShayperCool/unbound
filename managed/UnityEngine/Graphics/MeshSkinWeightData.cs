@@ -10,6 +10,7 @@ namespace UnityEngine
         internal readonly bool IsPacked;
         readonly int[] m_Offsets;
         internal int WeightCount => m_Offsets[^1];
+        internal int PackedWordCount => checked(Counts.Length + 1 + WeightCount);
         internal const float PackedWeightUnit = 1f / ushort.MaxValue;
 
         MeshSkinWeightData(int vertexCount, int weightCapacity, bool packed = false)
@@ -56,8 +57,8 @@ namespace UnityEngine
             return data;
         }
 
-        // The unlimited layout stores a 16-bit weight, with the accumulated rounding error
-        // applied at the end of the vertex's run. GetAllBoneWeights exposes those decoded values.
+        // The unlimited layout stores 16-bit weights. Add any rounding shortfall to the
+        // largest weight and remove any excess from the smallest weights first.
         internal static ushort ToPackedWeight(float weight) => float.IsFinite(weight)
             ? (ushort)MathF.Round(Math.Clamp(weight, 0f, 1f) * ushort.MaxValue, MidpointRounding.AwayFromZero) : (ushort)0;
 
@@ -76,7 +77,12 @@ namespace UnityEngine
                 weights[0].weight = 1f;
                 return 1;
             }
-            for (int i = weights.Length - 1; i >= 0 && remainder != 0; i--)
+            if (remainder > 0 && !weights.IsEmpty)
+            {
+                int first = ToPackedWeight(weights[0].weight);
+                weights[0].weight = (first + remainder) * PackedWeightUnit;
+            }
+            for (int i = weights.Length - 1; i >= 0 && remainder < 0; i--)
             {
                 int bits = (int)MathF.Round(weights[i].weight * MaxWeight);
                 int corrected = Math.Clamp(bits + remainder, 0, MaxWeight);
@@ -119,6 +125,47 @@ namespace UnityEngine
                 Add(value.boneIndex3, value.weight3);
                 data.Counts[i] = (byte)(written - first);
                 data.m_Offsets[i + 1] = written;
+            }
+            return data;
+        }
+
+        // The file and the unlimited buffer share vertex offsets followed by packed influences.
+        internal void WritePackedWords(Span<uint> words)
+        {
+            int header = Counts.Length + 1;
+            for (int vertex = 0; vertex < header; vertex++)
+                words[vertex] = (uint)(header + m_Offsets[vertex]);
+            for (int i = 0; i < WeightCount; i++)
+            {
+                var influence = Weights[i];
+                words[header + i] = ((uint)ToPackedWeight(influence.weight) << 16) | unchecked((ushort)influence.boneIndex);
+            }
+        }
+
+        internal static MeshSkinWeightData ReadPackedWords(ReadOnlySpan<uint> words)
+        {
+            if (words.IsEmpty || words[0] == 0 || words[0] > (uint)words.Length) return null;
+            int header = (int)words[0];
+            if (words[header - 1] != (uint)words.Length) return null;
+
+            uint previous = (uint)header;
+            for (int vertex = 1; vertex < header; vertex++)
+            {
+                uint offset = words[vertex];
+                if (offset < previous || offset > (uint)words.Length || offset - previous > byte.MaxValue) return null;
+                previous = offset;
+            }
+
+            var data = new MeshSkinWeightData(header - 1, words.Length - header, packed: true);
+            for (int vertex = 0; vertex < data.Counts.Length; vertex++)
+            {
+                data.m_Offsets[vertex + 1] = (int)words[vertex + 1] - header;
+                data.Counts[vertex] = (byte)(words[vertex + 1] - words[vertex]);
+            }
+            for (int i = 0; i < data.WeightCount; i++)
+            {
+                uint word = words[header + i];
+                data.Weights[i] = new BoneWeight1 { boneIndex = unchecked((ushort)word), weight = (word >> 16) * PackedWeightUnit };
             }
             return data;
         }

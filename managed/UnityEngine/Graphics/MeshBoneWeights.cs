@@ -14,8 +14,12 @@ namespace UnityEngine
         internal MeshSkinWeightData RuntimeSkinWeights { get; private set; }
         MeshSkinWeightData m_ExpandedLegacyWeights;
         BoneWeight[] m_LegacyWeightsBeforeResize;
+        BoneWeight[] m_RawFixedBoneWeights;
         MeshArrayView<byte> m_BoneCountsView;
         MeshArrayView<BoneWeight1> m_BoneWeightsView;
+
+        internal BoneWeight[] FixedSkinningWeights => m_RawFixedBoneWeights ?? m_BoneWeights;
+        internal MeshSkinWeightData VariableSkinningWeights => m_RawFixedBoneWeights == null ? RuntimeSkinWeights : null;
 
         public SkinWeights skinWeightBufferLayout
         {
@@ -29,7 +33,8 @@ namespace UnityEngine
         }
 
         SkinWeights CurrentSkinWeightLayout => m_RuntimeSkinLayout ??
-            (m_BoneWeights == null ? SkinWeights.None : SkinWeights.FourBones);
+            (m_BoneWeights == null ? SkinWeights.None :
+                m_Layout == null ? SkinWeights.FourBones : SkinLayoutForInfluences(SkinAttributeWidth(m_Layout)));
 
         MeshSkinWeightData SkinWeightData()
         {
@@ -81,7 +86,7 @@ namespace UnityEngine
             }
             if (counts.Length != 0 && counts.Length != vertexCount)
             {
-                Debug.LogError($"Mesh.SetBoneWeights() failed: The size of the bonesPerVertex argument must match the size of Mesh.vertices ({vertexCount}) or zero but was {counts.Length}.");
+                Log.Engine(LogType.Error, $"Mesh.SetBoneWeights() failed: The size of the bonesPerVertex argument must match the size of Mesh.vertices ({vertexCount}) or zero but was {counts.Length}.", this);
                 return;
             }
 
@@ -94,13 +99,13 @@ namespace UnityEngine
             }
             if (expected != influences.Length)
             {
-                Debug.LogError($"Mesh.SetBoneWeights() failed: Expected {expected} bone weights (sum of the elements in bonesPerVertex) but got {influences.Length}.");
+                Log.Engine(LogType.Error, $"Mesh.SetBoneWeights() failed: Expected {expected} bone weights (sum of the elements in bonesPerVertex) but got {influences.Length}.", this);
                 return;
             }
             int emptyVertex = counts.IndexOf((byte)0);
             if (emptyVertex >= 0)
             {
-                Debug.LogError($"Mesh.SetBoneWeights() failed: Vertex {emptyVertex} has zero weights.");
+                Log.Engine(LogType.Error, $"Mesh.SetBoneWeights() failed: Vertex {emptyVertex} has zero weights.", this);
                 return;
             }
             var layout = SkinLayoutForInfluences(maximum);
@@ -109,6 +114,7 @@ namespace UnityEngine
             var data = layout == SkinWeights.None ? null : MeshSkinWeightData.FromNative(counts, influences, layout);
             InvalidateBoneWeightArrays();
             m_BoneWeights = data?.LegacyProjection();
+            m_RawFixedBoneWeights = null;
             RuntimeSkinWeights = data;
             m_RuntimeSkinLayout = layout;
             UpdateSkinWeightLayout(layout);
@@ -117,7 +123,7 @@ namespace UnityEngine
             InvalidatePackedChannel(VertexAttribute.BlendIndices);
             Changed(indices: false);
             if (convertingWidth != 0)
-                Debug.LogError($"Unsupported conversion of vertex data (format {(int)VertexAttributeFormat.Float32} to {(int)VertexAttributeFormat.UNorm16}, dimensions {convertingWidth} to 4)");
+                Log.Engine(LogType.Error, $"Unsupported conversion of vertex data (format {(int)VertexAttributeFormat.Float32} to {(int)VertexAttributeFormat.UNorm16}, dimensions {convertingWidth} to 4)", this);
         }
 
         static SkinWeights SkinLayoutForInfluences(int count) => count switch
@@ -147,7 +153,7 @@ namespace UnityEngine
                         m_Layout ??= Layout();
                         m_RuntimeSkinLayout = SkinWeights.FourBones;
                     }
-                    Debug.LogError($"Vertex {vertex} bone weights are not in descending order! testing !({WeightText(current)} <= {WeightText(previous)})");
+                    Log.Engine(LogType.Error, $"Vertex {vertex} bone weights are not in descending order! testing !({WeightText(current)} <= {WeightText(previous)})", this);
                     if (prior != null && !m_Destroyed && ReferenceEquals(prior, RuntimeSkinWeights))
                     {
                         m_BoneWeights = ReadFixedVertexWeights();
@@ -242,12 +248,55 @@ namespace UnityEngine
             return new VertexAttributeDescriptor(attribute, format, layout == SkinWeights.Unlimited ? 4 : (int)layout, 1);
         }
 
-        void InvalidateBoneWeightArrays()
+        static int SkinAttributeWidth(ReadOnlySpan<VertexAttributeDescriptor> layout)
+        {
+            int width = 0;
+            foreach (var descriptor in layout)
+                if (descriptor.attribute is VertexAttribute.BlendWeight or VertexAttribute.BlendIndices)
+                    width = Math.Max(width, descriptor.dimension);
+            return width;
+        }
+
+        bool AdoptRawSkinWeightLayout(ReadOnlySpan<VertexAttributeDescriptor> layout, int vertexCount)
+        {
+            int width = SkinAttributeWidth(layout);
+            bool unlimited = CurrentSkinWeightLayout == SkinWeights.Unlimited;
+            if (width == 0 && !unlimited)
+            {
+                DropRuntimeBoneWeights();
+                return false;
+            }
+
+            ChangeBoneWeightVertexCount(vertexCount);
+            if (!unlimited && m_RuntimeSkinLayout.HasValue)
+                m_RuntimeSkinLayout = SkinLayoutForInfluences(width);
+            return true;
+        }
+
+        BoneWeight[] RawSkinWriteTarget()
+        {
+            // Raw stream writes affect fixed skinning, but a scripted table and its public
+            // projection stay as assigned. Unlimited skinning reads that table even after writes.
+            if (RuntimeSkinWeights == null)
+            {
+                if (m_ExpandedLegacyWeights?.WeightCount == 0) m_ExpandedLegacyWeights = null;
+                return m_BoneWeights;
+            }
+            if (RuntimeSkinWeights.IsPacked) return null;
+            return m_RawFixedBoneWeights ??= (BoneWeight[])m_BoneWeights.Clone();
+        }
+
+        void ReleaseBoneWeightViews()
         {
             m_BoneCountsView?.Release();
             m_BoneWeightsView?.Release();
             m_BoneCountsView = null;
             m_BoneWeightsView = null;
+        }
+
+        void InvalidateBoneWeightArrays()
+        {
+            ReleaseBoneWeightViews();
             m_ExpandedLegacyWeights = null;
             m_LegacyWeightsBeforeResize = null;
         }
@@ -258,10 +307,9 @@ namespace UnityEngine
             // skin weight data and existing GPU layouts keep the last weight assignment.
             if (RuntimeSkinWeights == null && m_BoneWeights != null && m_BoneWeights.Length != vertexCount)
                 m_LegacyWeightsBeforeResize ??= m_BoneWeights;
-            m_BoneCountsView?.Release();
-            m_BoneWeightsView?.Release();
-            m_BoneCountsView = null;
-            m_BoneWeightsView = null;
+            if (m_RawFixedBoneWeights != null && m_RawFixedBoneWeights.Length != vertexCount)
+                Array.Resize(ref m_RawFixedBoneWeights, vertexCount);
+            ReleaseBoneWeightViews();
         }
 
         internal void DropRuntimeBoneWeights(bool keepLayout = false)
@@ -269,6 +317,7 @@ namespace UnityEngine
             InvalidateBoneWeightArrays();
             InvalidateBoneWeightBuffers();
             RuntimeSkinWeights = null;
+            m_RawFixedBoneWeights = null;
             if (!keepLayout) m_RuntimeSkinLayout = null;
         }
 
@@ -277,6 +326,7 @@ namespace UnityEngine
             InvalidateBoneWeightArrays();
             InvalidateBoneWeightBuffers();
             RuntimeSkinWeights = source.RuntimeSkinWeights;
+            m_RawFixedBoneWeights = (BoneWeight[])source.m_RawFixedBoneWeights?.Clone();
             m_RuntimeSkinLayout = source.m_RuntimeSkinLayout;
             m_LegacyWeightsBeforeResize = source.m_LegacyWeightsBeforeResize;
         }

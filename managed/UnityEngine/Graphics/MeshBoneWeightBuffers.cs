@@ -20,13 +20,15 @@ namespace UnityEngine
             if (this == null) throw new NullReferenceException("Object reference not set to an instance of an object");
             if (layout == SkinWeights.None)
             {
-                Debug.LogError("Only possible to access bone weights buffer for values: OneBone, TwoBones, FourBones and Unlimited.");
+                Log.Engine(LogType.Error, "Only possible to access bone weights buffer for values: OneBone, TwoBones, FourBones and Unlimited.", this);
                 return null;
             }
 
             MainThreadCheck.Check("GetBoneWeightBufferImpl");
             EnsureModelLoaded();
             ThrowIfDestroyed();
+            if ((int)layout < 0)
+                Log.Engine(LogType.Error, "Unknown bonesPerVertex in GetBoneWeights()", this);
             var packedLayout = SkinLayoutForInfluences((int)layout);
             int slot = packedLayout switch
             {
@@ -47,11 +49,11 @@ namespace UnityEngine
             {
                 bool unlimited = packedLayout == SkinWeights.Unlimited;
                 int wordsPerElement = unlimited || packedLayout == SkinWeights.OneBone ? 1 : 2 * (int)packedLayout;
-                int count = unlimited ? checked(data.Counts.Length + 1 + data.WeightCount) : data.Counts.Length;
+                int count = unlimited ? data.PackedWordCount : data.Counts.Length;
                 int words = checked(count * wordsPerElement);
                 if (buffer.Words == null || buffer.Words.Length != words) buffer.Words = new uint[words];
                 var target = GraphicsBuffer.Target.Vertex | GraphicsBuffer.Target.Structured;
-                if (unlimited) PackVariableWeights(data, buffer.Words);
+                if (unlimited) data.WritePackedWords(buffer.Words);
                 else PackFixedWeights(data, (int)packedLayout, buffer.Words);
                 Upload(ref buffer.Storage, count, sizeof(uint) * wordsPerElement, target, MemoryMarshal.AsBytes(buffer.Words.AsSpan()));
                 buffer.Dirty = false;
@@ -81,19 +83,6 @@ namespace UnityEngine
                     words[start + width + i] = unchecked((uint)row[i].boneIndex);
                 }
             }
-        }
-
-        static void PackVariableWeights(MeshSkinWeightData data, Span<uint> words)
-        {
-            int destination = data.Counts.Length + 1;
-            for (int vertex = 0; vertex < data.Counts.Length; vertex++)
-            {
-                words[vertex] = (uint)destination;
-                foreach (var influence in data.ForVertex(vertex))
-                    words[destination++] = ((uint)MeshSkinWeightData.ToPackedWeight(influence.weight) << 16)
-                        | unchecked((ushort)influence.boneIndex);
-            }
-            words[data.Counts.Length] = (uint)destination;
         }
 
         void InvalidateBoneWeightBuffers()

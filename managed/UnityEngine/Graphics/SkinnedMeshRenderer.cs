@@ -490,8 +490,8 @@ namespace UnityEngine
         void Skin(Vector3[] positions, Vector3[] normals, Vector4[] tangents, bool rooted)
         {
             var mesh = m_Mesh;
-            var weights = mesh.m_BoneWeights;
-            var runtimeWeights = mesh.RuntimeSkinWeights;
+            var weights = mesh.FixedSkinningWeights;
+            var runtimeWeights = mesh.VariableSkinningWeights;
             var bindposes = mesh.BindposeData.AsSpan();
             var skeleton = m_Bones.Length == 0 ? SkeletonSkin() : null;
             int boneCount = Math.Min(skeleton != null ? m_SkinNodes.Length : m_Bones.Length, bindposes.Length);
@@ -562,6 +562,7 @@ namespace UnityEngine
                         }
                     }
                     if (weight <= 0f || index < 0 || index >= boneCount) continue;
+                    if (mesh.RuntimeSkinWeights != null && maxBones == 1) weight = 1f;
                     var m = m_Matrices[index];
                     p += m.MultiplyPoint3x4(v) * weight;
                     n += normalMatrices[index].MultiplyVector(sn) * weight;
