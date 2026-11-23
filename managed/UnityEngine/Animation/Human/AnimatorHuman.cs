@@ -288,8 +288,10 @@ namespace Unbound.Runtime.Humanoid
         /// moved it already (the root motion pass runs before the jobs' animation pass; measured,
         /// 6000.0.71f1 tests/projects/humanoid stream.*); otherwise where it is. Root motion that a
         /// script (OnAnimatorMove), a Rigidbody or a CharacterController applies uses the root
-        /// before it. Manual ProcessAnimation on a kinematic body matches that placement
-        /// (humanoid bone.kinematicRoot). Other scripted or physics cases still report it.</summary>
+        /// before it while the movement has yet to run. A measured manual job reads that frame
+        /// on a kinematic body (bone.kinematicRoot) or the frame left by its already delivered
+        /// OnAnimatorMove callback (bone.scriptedRoot). Other scripted or physics cases report
+        /// the root placement they use.</summary>
         internal Trs StreamRoot(bool humanMotion, in HumanRootMotionSample sample, float deltaTime,
             bool useKinematicAnimationRoot, bool useMovedAnimationRoot)
         {

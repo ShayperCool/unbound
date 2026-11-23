@@ -923,7 +923,7 @@ namespace Unbound.Runtime.Playables
                 e.UsesMeasuredKinematicJobRoot = Compat.HumanStreamKinematicBodyRoot && directManualHumanJob;
                 e.UsesMeasuredScriptedJobRoot = e.m_CanMoveDuringJob && directManualHumanJob
                     && ((ClipKind)o.Source.Inputs[0].Node.Kind).Clip.m_Events.Count == 0 && MoveCallbacks.Any(animator)
-                    && animator.GetComponent<Rigidbody>() == null && animator.GetComponent<CharacterController>() == null;
+                    && animator.updateMode == AnimatorUpdateMode.Normal && animator.GetComponent<Rigidbody>() == null && animator.GetComponent<CharacterController>() == null;
                 AnimStream s;
                 // The tree's own weights decide which clips fire events; the output's weight blends
                 // the pose only (6000.0.71f1, animculling weight/0: a clip under an output at
@@ -1100,6 +1100,7 @@ namespace Unbound.Runtime.Playables
         // graph destruction or a changed avatar invalidates the outstanding sample.
         internal bool MoveScriptedJobRoot(PlayableNode node, AnimStream stream)
         {
+            m_JobInterrupted = true;
             var animator = Animator;
             var human = animator.Human;
             int evaluation = animator.m_OutputEvaluations;
@@ -1109,7 +1110,7 @@ namespace Unbound.Runtime.Playables
             ApplyHumanRootMotion(animator, step);
             m_JobInterrupted = animator == null || !animator.isActiveAndEnabled
                 || animator.m_OutputEvaluations != evaluation || !ReferenceEquals(human, animator.Human)
-                || node.Destroyed || node.Graph.Destroyed;
+                || animator.m_Player != null || node.Destroyed || node.Graph.Destroyed;
             return !m_JobInterrupted;
         }
 
@@ -1195,7 +1196,7 @@ namespace Unbound.Runtime.Playables
                 // applyRootMotion has no effect when a script implements OnAnimatorMove (Scripting API).
                 if (animator.m_ApplyRootMotion && !hasMove) animator.ApplyBuiltinRootMotion();
                 // API setters inside movement callbacks do not write the generic root pose.
-                animator.CaptureRootMotionPose();
+                if (animator != null) animator.CaptureRootMotionPose();
             }
             finally
             {
