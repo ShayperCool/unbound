@@ -28,7 +28,7 @@ def directory(label):
     return out
 
 
-def publish(roots, target):
+def publish(roots, target, append):
     value_probe.verify_sealed_value_repeats(roots)
     for root in roots:
         command = value_probe.editor_runner.load_result(root)['command']
@@ -44,9 +44,20 @@ def publish(roots, target):
         shutil.copyfile(first/value_probe.VALUES, reference)
         print(f'published {reference}')
 
-    return value_probe.editor_runner.publish(
-        [root/'capture' for root in roots], target, lambda _: [value_probe.VALUES], write,
+    destination = roots[0]/'reference-extension.jsonl' if append else target
+    value_probe.editor_runner.publish(
+        [root/'capture' for root in roots], destination, lambda _: [value_probe.VALUES], write,
         complete=[value_probe.editor_runner.jsonl_complete()], gpu=True)
+    if append:
+        expected = value_probe.read_values(target)
+        extended = value_probe.read_values(destination)
+        earlier = b''.join(target.read_bytes().splitlines(keepends=True)[:-1])
+        content = destination.read_bytes()
+        if len(extended) <= len(expected) or not content.startswith(earlier):
+            raise SystemExit('the new captures must append records without changing any existing value')
+        target.write_bytes(content)
+        print(f'appended {len(extended) - len(expected)} records to {target}')
+    return 0
 
 
 def gate(out, target):
@@ -77,12 +88,13 @@ def main():
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--release', required=True)
     parser.add_argument('--label')
+    parser.add_argument('--append', action='store_true', help='publish only if the old records are preserved')
     args = parser.parse_intermixed_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     target = reference_file(PROBE, suffix='jsonl')
     if args.mode == 'publish':
-        return publish([directory(label) for label in args.labels], target)
-    if args.labels:
+        return publish([directory(label) for label in args.labels], target, args.append)
+    if args.labels or args.append:
         parser.error('use --label for record and gate')
     out = directory(args.label or private_label())
     if args.mode == 'record':

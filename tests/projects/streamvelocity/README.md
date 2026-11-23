@@ -8,6 +8,13 @@ then the Animator's delta and the actor's final transform. The controls include
 zero-time evaluation, root motion disabled, and a rotated non-uniformly scaled
 parent.
 
+The callback controls record one OnAnimatorMove call per evaluation, including
+zero-time and animation-only steps. With applyRootMotion disabled, a registered
+OnAnimatorMove can still read the step and apply it explicitly. A downstream
+root callback's linear write remains visible during animation when the input
+job makes no animation-phase write.
+[OnAnimatorMove](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnAnimatorMove.html)
+
 The Unity 6000.0.71f1 Editor uses the root callback's velocities for the output
 step and passes the animation callback's writes to the following animation
 callback. Translation is in the root frame. Angular displacement uses the three
@@ -18,5 +25,6 @@ probe. [AnimationStream.velocity](https://docs.unity.com/en-us/engine/6000.0/scr
 
 Record each repeat in a fresh cache project with `run.py record --release
 6000.0.71f1 --label LABEL`. Use `run.py publish --release 6000.0.71f1 LABEL1
-LABEL2` after both captures complete. The gate includes every recorded field
-with an absolute numeric tolerance of 0.0002.
+LABEL2` after both captures complete. Add `--append` to extend an existing
+reference while preserving every existing record. The gate includes every
+recorded field with an absolute numeric tolerance of 0.0002.

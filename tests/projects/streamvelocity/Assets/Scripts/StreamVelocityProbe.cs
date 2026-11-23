@@ -39,6 +39,21 @@ sealed class StreamVelocityProbe : MonoBehaviour
         public Sample v;
     }
 
+    [Serializable]
+    struct Callbacks
+    {
+        public int calls;
+        public Vector3 delta;
+        public Vector3 velocity;
+    }
+
+    [Serializable]
+    struct CallbackRow
+    {
+        public string k;
+        public Callbacks v;
+    }
+
     struct SetMotion : IAnimationJob
     {
         public NativeArray<Sample> result;
@@ -115,6 +130,10 @@ sealed class StreamVelocityProbe : MonoBehaviour
         Run("animation", true, true, false);
         Run("disabledAnimation", false, true, false);
         Run("phaseOrder", true, true, false, replaceVelocity: true);
+        Run("rootPhaseKeepsLinear", true, false, false, replaceVelocity: true);
+        Run("rootCallback", true, false, false, callback: true);
+        Run("animationCallback", true, true, false, callback: true);
+        Run("callbackMotionOff", false, false, false, callback: true);
         rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(Environment.GetEnvironmentVariable(Variable), "values.jsonl"), rows);
 #if UNITY_EDITOR
@@ -124,7 +143,8 @@ sealed class StreamVelocityProbe : MonoBehaviour
 #endif
     }
 
-    void Run(string name, bool applyMotion, bool duringAnimation, bool scaledParent, bool replaceVelocity = false)
+    void Run(string name, bool applyMotion, bool duringAnimation, bool scaledParent, bool replaceVelocity = false,
+        bool callback = false)
     {
         var parent = new GameObject(name + "Parent");
         if (scaledParent)
@@ -138,6 +158,7 @@ sealed class StreamVelocityProbe : MonoBehaviour
         actor.localRotation = Quaternion.Euler(0, 20, 0);
         var animator = actor.gameObject.AddComponent<Animator>();
         animator.applyRootMotion = applyMotion;
+        var receiver = callback ? actor.gameObject.AddComponent<StreamVelocityMoveObserver>() : null;
 
         var result = new NativeArray<Sample>(1, Allocator.Persistent);
         var readResult = new NativeArray<Sample>(1, Allocator.Persistent);
@@ -161,6 +182,7 @@ sealed class StreamVelocityProbe : MonoBehaviour
             {
                 result[0] = default;
                 readResult[0] = default;
+                if (receiver != null) receiver.calls = 0;
                 graph.Evaluate(intervals[i]);
                 var sample = result[0];
                 sample.above = readResult[0].above;
@@ -173,6 +195,12 @@ sealed class StreamVelocityProbe : MonoBehaviour
                 sample.velocity = animator.velocity;
                 sample.angularVelocity = animator.angularVelocity;
                 rows.Add(JsonUtility.ToJson(new Row { k = name + "." + i, v = sample }));
+                if (receiver != null)
+                    rows.Add(JsonUtility.ToJson(new CallbackRow
+                    {
+                        k = name + "." + i + ".callback",
+                        v = new Callbacks { calls = receiver.calls, delta = receiver.delta, velocity = receiver.velocity }
+                    }));
             }
         }
         finally
@@ -182,5 +210,20 @@ sealed class StreamVelocityProbe : MonoBehaviour
             result.Dispose();
             DestroyImmediate(parent);
         }
+    }
+}
+
+sealed class StreamVelocityMoveObserver : MonoBehaviour
+{
+    public int calls;
+    public Vector3 delta, velocity;
+
+    void OnAnimatorMove()
+    {
+        calls++;
+        var animator = GetComponent<Animator>();
+        delta = animator.deltaPosition;
+        velocity = animator.velocity;
+        animator.ApplyBuiltinRootMotion();
     }
 }
