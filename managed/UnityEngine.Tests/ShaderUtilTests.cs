@@ -20,6 +20,39 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void PropertiesAreReadAsTheShaderAnswersThem()
+        {
+            var shader = ShaderUtil.CreateShaderAsset(@"Shader ""Tests/Property Reads""
+{
+    Properties
+    {
+        _Tint (""Tint"", Color) = (1,0.5,0.25,1)
+        _Offset (""Offset"", Vector) = (1,2,3,4)
+        [HideInInspector] _Weight (""Weight"", Float) = 2
+        _Gloss (""Gloss"", Range(0.25, 4)) = 1.5
+        [NonModifiableTextureData] _Ramp (""Ramp"", 3D) = ""white"" {}
+        _Count (""Count"", Integer) = 3
+    }
+    SubShader { Pass { } }
+}");
+            Assert.Equal(6, ShaderUtil.GetPropertyCount(shader));
+            Assert.Equal(new[] { "_Tint", "_Offset", "_Weight", "_Gloss", "_Ramp", "_Count" }, System.Linq.Enumerable.Select(System.Linq.Enumerable.Range(0, 6), i => ShaderUtil.GetPropertyName(shader, i)));
+            Assert.Equal("Gloss", ShaderUtil.GetPropertyDescription(shader, 3));
+            // The editor's names of the property types, value for value with the runtime's.
+            Assert.Equal(new[] { ShaderUtil.ShaderPropertyType.Color, ShaderUtil.ShaderPropertyType.Vector, ShaderUtil.ShaderPropertyType.Float, ShaderUtil.ShaderPropertyType.Range, ShaderUtil.ShaderPropertyType.TexEnv, ShaderUtil.ShaderPropertyType.Int },
+                System.Linq.Enumerable.Select(System.Linq.Enumerable.Range(0, 6), i => ShaderUtil.GetPropertyType(shader, i)));
+            Assert.Equal((1.5f, 0.25f, 4f), (ShaderUtil.GetRangeLimits(shader, 3, 0), ShaderUtil.GetRangeLimits(shader, 3, 1), ShaderUtil.GetRangeLimits(shader, 3, 2)));
+            Assert.Equal("defminmax should be one of 0,1,2.", Assert.Throws<System.ArgumentException>(() => ShaderUtil.GetRangeLimits(shader, 3, 3)).Message);
+            Assert.Equal(UnityEngine.Rendering.TextureDimension.Tex3D, ShaderUtil.GetTexDim(shader, 4));
+            Assert.Equal(new[] { false, false, true, false, false, false }, System.Linq.Enumerable.Select(System.Linq.Enumerable.Range(0, 6), i => ShaderUtil.IsShaderPropertyHidden(shader, i)));
+            Assert.Equal(new[] { false, false, false, false, true, false }, System.Linq.Enumerable.Select(System.Linq.Enumerable.Range(0, 6), i => ShaderUtil.IsShaderPropertyNonModifiableTexureProperty(shader, i)));
+            // An index the shader has not: its exception; no shader: the argument's.
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => ShaderUtil.GetPropertyName(shader, 6));
+            Assert.Equal("s", Assert.Throws<System.ArgumentNullException>(() => ShaderUtil.GetPropertyCount(null)).ParamName);
+            Assert.Equal("s", Assert.Throws<System.ArgumentNullException>(() => ShaderUtil.GetRangeLimits(null, 0, 3)).ParamName);
+        }
+
+        [Fact]
         public void ATexturesScaleAndOffsetAreItsSTVector()
         {
             // Measured on the 6000.0 Editor.

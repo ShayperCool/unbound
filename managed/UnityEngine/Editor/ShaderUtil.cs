@@ -18,6 +18,45 @@ namespace UnityEditor
         /// name, render queue and properties (Unbound does not compile ShaderLab).</summary>
         public static Shader CreateShaderAsset(string source) => CreateShaderAsset(source, true);
 
+        // A shader's properties, read as the shader answers them (out of range: its exception);
+        // no shader: ArgumentNullException.
+
+        public enum ShaderPropertyType
+        {
+            Color = 0,
+            Vector = 1,
+            Float = 2,
+            Range = 3,
+            TexEnv = 4,
+            Int = 5,
+        }
+
+        static Shader Given(Shader s) => s ?? throw new ArgumentNullException(nameof(s));
+
+        public static int GetPropertyCount(Shader s) => Given(s).GetPropertyCount();
+
+        public static string GetPropertyDescription(Shader s, int propertyIdx) => Given(s).GetPropertyDescription(propertyIdx);
+
+        public static string GetPropertyName(Shader s, int propertyIdx) => Given(s).GetPropertyName(propertyIdx);
+
+        /// <summary>The runtime type of the property under the Editor's older names (Texture as
+        /// TexEnv), value for value.</summary>
+        public static ShaderPropertyType GetPropertyType(Shader s, int propertyIdx) => (ShaderPropertyType)Given(s).GetPropertyType(propertyIdx);
+
+        /// <summary>A range property's default (0), minimum (1) or maximum (2).</summary>
+        public static float GetRangeLimits(Shader s, int propertyIdx, int defminmax)
+        {
+            Given(s);
+            if (defminmax < 0 || defminmax > 2) throw new ArgumentException("defminmax should be one of 0,1,2.");
+            return defminmax > 0 ? s.GetPropertyRangeLimits(propertyIdx)[defminmax - 1] : s.GetPropertyDefaultFloatValue(propertyIdx);
+        }
+
+        public static TextureDimension GetTexDim(Shader s, int propertyIdx) => Given(s).GetPropertyTextureDimension(propertyIdx);
+
+        public static bool IsShaderPropertyHidden(Shader s, int propertyIdx) => (Given(s).GetPropertyFlags(propertyIdx) & ShaderPropertyFlags.HideInInspector) != 0;
+
+        public static bool IsShaderPropertyNonModifiableTexureProperty(Shader s, int propertyIdx) => (Given(s).GetPropertyFlags(propertyIdx) & ShaderPropertyFlags.NonModifiableTextureData) != 0;
+
         public static Shader CreateShaderAsset(string source, bool compileInitialShaderVariants)
         {
             if (source == null) throw new System.ArgumentNullException(nameof(source));

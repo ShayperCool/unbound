@@ -48,6 +48,7 @@ namespace UnityEngine.VFX
 
         VFXSystem[] m_Systems = Array.Empty<VFXSystem>();
         VFXParticleSystem[] m_ParticleSystems = Array.Empty<VFXParticleSystem>();
+        VFXMeshSystem[] m_MeshSystems = Array.Empty<VFXMeshSystem>();
         GraphicsBuffer[] m_GpuBuffers = Array.Empty<GraphicsBuffer>();
         readonly VisualEffectState m_State = new VisualEffectState();
         // Events are taken at the start of a step from the queue filled before it; what a step
@@ -151,9 +152,10 @@ namespace UnityEngine.VFX
             // What the programs read in them is not measured (the effects still ask for them).
             foreach (var op in data.Operations)
                 if (op == VFXExpressionOperation.GetBufferFromMainCamera) return "the main camera's buffers read by its programs";
-            foreach (var system in data.Systems)
+            for (int i = 0; i < data.Systems.Length; i++)
             {
-                if (system.type == VFXSystemType.Mesh) return $"the mesh output system '{system.name}'";
+                var system = data.Systems[i];
+                if (system.type == VFXSystemType.Mesh && VFXMeshSystem.Refusal(data, i) is string mesh) return mesh;
                 if (system.type != VFXSystemType.Particle) continue;
                 const VFXSystemFlag NotYet = VFXSystemFlag.SystemIsRayTraced;
                 if ((system.flags & NotYet) != 0) return $"{system.flags & NotYet} of the system '{system.name}'";
@@ -189,6 +191,7 @@ namespace UnityEngine.VFX
             m_State.Baked = VFXBakedTexture.For(m_Data);
             var systems = new List<VFXSystem>(m_Data.Systems.Length);
             var particles = new List<VFXParticleSystem>();
+            var meshes = new List<VFXMeshSystem>();
             // Spawners first, as the compiler lists them: a particle system finds the ones that feed it.
             for (int i = 0; i < m_Data.Systems.Length; i++)
             {
@@ -200,10 +203,17 @@ namespace UnityEngine.VFX
                     particles.Add(system);
                 }
                 else if (m_Data.Systems[i].type == VFXSystemType.OutputEvent) systems.Add(new VFXOutputEventSystem(this, i, systems));
+                else if (m_Data.Systems[i].type == VFXSystemType.Mesh)
+                {
+                    var system = new VFXMeshSystem(this, i);
+                    systems.Add(system);
+                    meshes.Add(system);
+                }
             }
             foreach (var system in systems) (system as VFXSpawnerSystem)?.Link(systems);
             m_Systems = systems.ToArray();
             m_ParticleSystems = particles.ToArray();
+            m_MeshSystems = meshes.ToArray();
             Initialize(sendInitialEvent);
         }
 
@@ -216,6 +226,7 @@ namespace UnityEngine.VFX
             m_State.Baked = null;
             m_Systems = Array.Empty<VFXSystem>();
             m_ParticleSystems = Array.Empty<VFXParticleSystem>();
+            m_MeshSystems = Array.Empty<VFXMeshSystem>();
             m_GpuBuffers = Array.Empty<GraphicsBuffer>();
             m_Queue.Clear();
             m_Taken.Clear();
@@ -580,6 +591,7 @@ namespace UnityEngine.VFX
         {
             if (!isActiveAndEnabled) return;
             VFXParticleSystem.CollectDraws(m_ParticleSystems, renderer, camera, into);
+            foreach (var mesh in m_MeshSystems) mesh.Collect(renderer, camera, into);
         }
 
         /// <summary>Whether no camera sees the effect: none took its renderer in the last frame

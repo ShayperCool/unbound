@@ -22696,14 +22696,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static bool PassHasKeyword(global::UnityEngine.Shader s, in global::UnityEngine.Rendering.PassIdentifier passIdentifier, in global::UnityEngine.Rendering.LocalKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.PassHasKeyword"); return default; }
         [global::Unbound.Stub] public static bool PassHasKeyword(global::UnityEngine.Shader s, in global::UnityEngine.Rendering.PassIdentifier passIdentifier, in global::UnityEngine.Rendering.LocalKeyword keyword, global::UnityEditor.Rendering.ShaderType shaderType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.PassHasKeyword"); return default; }
         [global::Unbound.Stub] public static bool PassHasKeyword(global::UnityEngine.Shader s, in global::UnityEngine.Rendering.PassIdentifier passIdentifier, in global::UnityEngine.Rendering.LocalKeyword keyword, global::UnityEditor.Rendering.ShaderType shaderType, global::UnityEditor.Rendering.ShaderCompilerPlatform shaderCompilerPlatform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.PassHasKeyword"); return default; }
-        [global::Unbound.Stub] public static int GetPropertyCount(global::UnityEngine.Shader s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.GetPropertyCount"); return default; }
-        [global::Unbound.Stub] public static string GetPropertyName(global::UnityEngine.Shader s, int propertyIdx) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.GetPropertyName"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.ShaderUtil.ShaderPropertyType GetPropertyType(global::UnityEngine.Shader s, int propertyIdx) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.GetPropertyType"); return default; }
-        [global::Unbound.Stub] public static string GetPropertyDescription(global::UnityEngine.Shader s, int propertyIdx) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.GetPropertyDescription"); return default; }
-        [global::Unbound.Stub] public static float GetRangeLimits(global::UnityEngine.Shader s, int propertyIdx, int defminmax) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.GetRangeLimits"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Rendering.TextureDimension GetTexDim(global::UnityEngine.Shader s, int propertyIdx) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.GetTexDim"); return default; }
-        [global::Unbound.Stub] public static bool IsShaderPropertyHidden(global::UnityEngine.Shader s, int propertyIdx) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.IsShaderPropertyHidden"); return default; }
-        [global::Unbound.Stub] public static bool IsShaderPropertyNonModifiableTexureProperty(global::UnityEngine.Shader s, int propertyIdx) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.IsShaderPropertyNonModifiableTexureProperty"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.ShaderData GetShaderData(global::UnityEngine.Shader shader) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.GetShaderData"); return default; }
         [global::Unbound.Stub] internal static bool PassHasShaderStage(global::UnityEngine.Shader s, int subshaderIndex, int passIndex, global::UnityEditor.Rendering.ShaderType shaderType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.PassHasShaderStage"); return default; }
         [global::Unbound.Stub] internal static bool MaterialsUseInstancingShader(global::UnityEditor.SerializedProperty materialsArray) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.MaterialsUseInstancingShader"); return default; }
@@ -22722,15 +22714,6 @@ namespace UnityEditor
             TexDim3D = 3,
             TexDimCUBE = 4,
             TexDimAny = 6,
-        }
-        public enum ShaderPropertyType
-        {
-            Color = 0,
-            Vector = 1,
-            Float = 2,
-            Range = 3,
-            TexEnv = 4,
-            Int = 5,
         }
     }
     [global::Unbound.Stub]

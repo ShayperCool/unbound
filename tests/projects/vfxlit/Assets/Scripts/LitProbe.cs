@@ -192,6 +192,9 @@ public sealed class LitProbe : MonoBehaviour
             var decals = Lamp(Draw("decal", "LitDecal", 5, 12), LightType.Point);
             Wall(decals);
             decals.Camera.GetUniversalAdditionalCameraData().SetRenderer(k_DecalRenderer);
+            // Meshes drawn as they are by the effect's two single mesh outputs, under the sun
+            // and a point light.
+            Lamp(Draw("single mesh", "SingleMesh", 5), LightType.Point);
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)

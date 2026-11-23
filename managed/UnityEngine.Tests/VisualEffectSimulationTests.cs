@@ -1031,6 +1031,28 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AMeshOutputSystemRunsWithOneTaskAndAMeshValue()
+        {
+            // `Output Single Mesh` compiles to a system of its own: one output task and the
+            // mesh, transform and mask values (tests/projects/vfxlit `single mesh`).
+            VisualEffectCompiledData Data(int tasks, bool mesh) => new VisualEffectCompiledData
+            {
+                Systems = new[]
+                {
+                    new VFXEditorSystemDesc
+                    {
+                        name = "Mesh", type = VFXSystemType.Mesh,
+                        tasks = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Repeat(new VFXEditorTaskDesc { type = VFXTaskType.Output }, tasks)),
+                        values = mesh ? new[] { new VFXMapping("mesh", 0), new VFXMapping("transform", 1), new VFXMapping("subMeshMask", 2) } : new[] { new VFXMapping("transform", 1) },
+                    },
+                },
+            };
+            Assert.Null(VisualEffect.Unsupported(Data(1, true)));
+            Assert.Equal("the mesh output system 'Mesh' without a mesh", VisualEffect.Unsupported(Data(1, false)));
+            Assert.Equal("the mesh output system 'Mesh' of 2 tasks", VisualEffect.Unsupported(Data(2, true)));
+        }
+
+        [Fact]
         public void AnOutputThatIsNotDrawnSaysSoOnceForItsAssetAndItsSystemStillRuns()
         {
             var shader = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/VfxRefused\" { SubShader { Pass { } } }");

@@ -40,6 +40,7 @@ public static class LitAuthoring
         ListsMeshesAndLegacyGraphs();
         LegacyDefaultTexture();
         Decals();
+        SingleMeshes();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -129,6 +130,36 @@ public static class LitAuthoring
     static Mesh Spike => AssetDatabase.LoadAssetAtPath<Mesh>(ObjectFolder + "/Spike.asset");
 
     // ----------------------------------------------------------------------------- graphs
+
+    /// <summary>Meshes an effect draws as they are (`Output Single Mesh`): the probe's wedge
+    /// turned and scaled by the output's transform, through the render pipeline's unlit shader
+    /// (both submeshes, a colour of the output's) and its lit shader (the first submesh only,
+    /// another colour and smoothness of the output's).</summary>
+    static void SingleMeshes()
+    {
+        var graph = NewGraph("SingleMesh");
+        foreach (var (shader, x, mask, color) in new[]
+        {
+            ("Universal Render Pipeline/Unlit", -0.6f, ~0u, new Color(1f, 0.55f, 0.2f, 1f)),
+            ("Universal Render Pipeline/Lit", 0.6f, 1u, new Color(0.3f, 0.5f, 1f, 1f)),
+        })
+        {
+            var output = Make<VFXStaticMeshOutput>();
+            graph.AddChild(output);
+            output.SetSettingValue("shader", Shader.Find(shader));
+            Input(output, "mesh").value = Wedge;
+            Input(output, "transform").value = new UnityEditor.VFX.Transform
+            {
+                position = new Vector3(x, 0.1f, 0f),
+                angles = new Vector3(25f, 40f, 10f),
+                scale = new Vector3(0.9f, 1.1f, 0.8f),
+            };
+            Input(output, "subMeshMask").value = mask;
+            Input(output, "_BaseColor").value = color;
+            if (shader.EndsWith("/Lit", StringComparison.Ordinal)) Input(output, "_Smoothness").value = 0.7f;
+        }
+        Save(graph);
+    }
 
     /// <summary>Decals of the render pipeline (`Output Particle URP Lit Decal`): boxes 0.9
     /// across centred on a wall's plane, each turned about the axis it projects along and of a colour

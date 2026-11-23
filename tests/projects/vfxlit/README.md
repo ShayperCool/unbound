@@ -79,6 +79,10 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
   the render pipeline's lit graph (URP Lit, opaque, its default surface) written with its
   support for particles on, its base colour the probe's image through a texture property of its
   own. Such a graph has the lightmapper's pass (`Meta`) besides the passes cameras draw.
+- `SingleMesh`: two single mesh outputs (`Output Single Mesh`) of the probe's wedge, turned
+  and scaled by their transforms: one through the render pipeline's unlit shader (both
+  submeshes, its colour an exposed property of the output), one through its lit shader (the
+  first submesh only, another colour and a smoothness of the output's).
 - `LitDecal`: five decals of the render pipeline (`Output Particle URP Lit Decal`), boxes 0.9
   across centred on a wall's plane, each turned about the axis it projects along and of a
   colour of its own, the probe's image as their base colour map (with its alpha).
@@ -178,6 +182,9 @@ effect's alive count, whether it is culled and awake, its renderer's state).
   quads or two quarters of the image meet differ by at most 3 levels (`image_limits.json`).
 - `lit 2d`, `mesh 2d`: `LitMatte` and `MeshUnlit` through the 2D renderer: the lit quads draw
   nothing there (no pass of theirs is one the 2D renderer draws), the meshes are drawn.
+- `single mesh`: `SingleMesh` under the sun and a point light; the effect has no particle
+  system (its alive count is 0 and no system is awake), and its renderer lists both outputs'
+  materials.
 - `decal`: `LitDecal` projected onto a lit wall through the renderer with the decal feature,
   under the sun and a point light (frames 5 and 12): the decal feature draws the output's
   screen space pass; its DBuffer and GBuffer passes exclude OpenGL Core.
