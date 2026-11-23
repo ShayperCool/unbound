@@ -2024,7 +2024,7 @@ namespace Unbound.UIElements.Layout
                 child.lineIndex = lineCount;
                 // UI Toolkit takes percentage margins as 0 here, for the space the line consumes (which
                 // decides whether its items grow or shrink) and for breaking lines; the space
-                // distributed takes them whole (Unity 6000.0.71f1 Editor, tests/projects/uitkpercent shrink*).
+                // distributed takes them whole (Unity 6000.0.71f1 Editor, tests/projects/uitkpercent shrink*, wrapCards*).
                 float childMarginMainAxis = Unwrap(child.GetMarginForAxis(mainAxis,
                     node.config.ResolvesFlexibleLengthsAsUIToolkit ? 0f : availableInnerWidth));
                 float flexBasisWithMinAndMaxConstraints = Unwrap(BoundAxisWithinMinAndMax(
