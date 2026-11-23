@@ -230,11 +230,20 @@ namespace UnityEngine.Tests
                     environment.realtimeGI = true;
                     Assert.Contains("without realtime", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.realtimeGI = false;
-                    // Baked GI: written with its lightmaps, not without them or with light probes.
+                    // Baked GI (non-directional, without the Shadowmask Lighting Mode): written with
+                    // its lightmaps, not without them or with light probes.
                     environment.bakedGI = true;
+                    environment.directionalityMode = LightmapsMode.NonDirectional;
+                    environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     Assert.Contains("lightmaps", Unwritten(environment, "Assets/Scenes/Lit", true));
                     Assert.Contains("light probes", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true, probes: true));
+                    environment.directionalityMode = LightmapsMode.CombinedDirectional;
+                    Assert.Contains("directional", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.directionalityMode = LightmapsMode.NonDirectional;
+                    environment.mixedBakeMode = MixedLightingMode.Shadowmask;
+                    Assert.Contains("shadowmask", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
                     environment.bakedGI = false;
                     // An environment kept in part (several scenes, gamma, Custom sources, no device),
                     // an untitled scene, a scene of a package the project does not hold: not written.

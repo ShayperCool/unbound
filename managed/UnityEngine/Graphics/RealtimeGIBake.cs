@@ -90,7 +90,8 @@ namespace UnityEngine
                     SceneLoaded(scene.Handle.Value, default, file, settings, first, bake: true, scriptBake: true);
                     var environment = BakeEnvironment(file);
                     // The lightmaps are made where their lighting data is written.
-                    bool lightmaps = settings != null && settings.bakedGI && !settings.realtimeGI && !HasProbeGroups(file);
+                    bool lightmaps = settings != null && settings.bakedGI && !settings.realtimeGI && !HasProbeGroups(file)
+                        && settings.directionalityMode != LightmapsMode.CombinedDirectional && settings.mixedBakeMode != MixedLightingMode.Shadowmask;
                     var baked = BakedAtlas.Lay(file, settings, images: lightmaps);
                     WriteLightingData(scene, file, settings, environment, lightmaps ? baked : null);
                     first = false;
@@ -250,6 +251,11 @@ namespace UnityEngine
             settings == null ? "a scene without Lighting Settings (the defaults') is not written yet"
             : settings.realtimeGI ? "Unbound writes it for a bake without realtime global illumination"
             : settings.bakedGI && probeGroups ? "the light probes of a bake with baked global illumination are not written yet"
+            // (The Editor also writes the directions' image, Lightmap-N_comp_dir.png, and in the
+            // Shadowmask Lighting Mode the shadowmask's, Lightmap-N_comp_shadowmask.png:
+            // tests/projects/bakedbuffers Directional*, Masks*.)
+            : settings.bakedGI && settings.directionalityMode == LightmapsMode.CombinedDirectional ? "directional lightmaps are not written yet"
+            : settings.bakedGI && settings.mixedBakeMode == MixedLightingMode.Shadowmask ? "the shadowmask of the Shadowmask Lighting Mode is not written yet"
             : settings.bakedGI && !lightmapsMade ? "this bake did not make its lightmaps (said)"
             : folder == null ? "an untitled scene's is not measured"
             : !Compat.BakeFilesMeasured ? $"of Unity {Application.unityVersion} it is not measured (its release family)"
