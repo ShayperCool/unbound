@@ -136,13 +136,13 @@ namespace UnityEngine
             }
             var weights = Channel(12);
             var bones = Channel(13);
-            if (weights != null && bones != null)
+            if (bones != null && (weights != null || Dim(13) == 1))
             {
                 int dw = Dim(12), db = Dim(13);
                 var bw = new BoneWeight[count];
                 for (int v = 0; v < count; v++)
                 {
-                    float W(int k) => k < dw ? weights[v * dw + k] : (k == 0 && dw == 0 ? 1f : 0f);
+                    float W(int k) => k < dw ? weights[v * dw + k] : 0f;
                     int B(int k) => k < db ? (int)bones[v * db + k] : 0;
                     bw[v] = new BoneWeight
                     {
@@ -151,6 +151,22 @@ namespace UnityEngine
                     };
                 }
                 SetLegacyBoneWeights(bw);
+            }
+            var variable = Hex(body.Get("m_VariableBoneCountWeights")?.Str("m_Data"));
+            if (variable.Length > 0)
+            {
+                var wide = variable.Length % sizeof(uint) == 0
+                    ? MeshSkinWeightData.ReadPackedWords(MemoryMarshal.Cast<byte, uint>(variable.AsSpan())) : null;
+                if (wide == null)
+                    Debug.LogWarning($"Unbound: mesh '{m_Name}' has invalid variable bone weight data; only its fixed vertex weights are available.");
+                else
+                {
+                    InvalidateBoneWeightArrays();
+                    RuntimeSkinWeights = wide;
+                    m_RuntimeSkinLayout = SkinWeights.Unlimited;
+                    m_BoneWeights = wide.LegacyProjection();
+                    Array.Resize(ref m_BoneWeights, count);
+                }
             }
 
             // The vertex layout the file holds: each channel's format, dimension and stream, as

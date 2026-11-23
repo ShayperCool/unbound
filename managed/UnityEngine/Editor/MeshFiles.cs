@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -57,7 +58,14 @@ namespace Unbound.Runtime
                 Int("m_RootBoneNameHash", mesh.m_RootBoneNameHash);
                 BonesBounds(mesh, poses);
                 Key("m_VariableBoneCountWeights", 1);
-                Line(2, "m_Data", "");
+                var variableWeights = mesh.RuntimeSkinWeights;
+                if (variableWeights is { IsPacked: true })
+                {
+                    var words = new uint[variableWeights.PackedWordCount];
+                    variableWeights.WritePackedWords(words);
+                    Line(2, "m_Data", Convert.ToHexString(MemoryMarshal.AsBytes(words.AsSpan())).ToLowerInvariant());
+                }
+                else Line(2, "m_Data", "");
                 Int("m_MeshCompression", 0);
                 Bool("m_IsReadable", mesh.isReadable);
                 bool wide = mesh.indexFormat == IndexFormat.UInt32;
@@ -187,6 +195,7 @@ namespace Unbound.Runtime
                     return;
                 }
                 var weights = mesh.boneWeights;
+                var runtimeWeights = mesh.RuntimeSkinWeights;
                 var vertices = mesh.vertices;
                 // A bone no vertex weighs keeps the empty box: min infinite, max minus infinite
                 // (engine-assets Boneless).
@@ -206,6 +215,12 @@ namespace Unbound.Runtime
                 }
                 for (int v = 0; v < weights.Length && v < vertices.Length; v++)
                 {
+                    if (runtimeWeights != null)
+                    {
+                        foreach (var influence in runtimeWeights.ForVertex(v))
+                            Add(influence.boneIndex, influence.weight, v);
+                        continue;
+                    }
                     var w = weights[v];
                     Add(w.boneIndex0, w.weight0, v);
                     Add(w.boneIndex1, w.weight1, v);
