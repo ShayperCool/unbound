@@ -22,10 +22,10 @@ namespace UnityEngine.Tests
 
         struct HumanJob : IAnimationJob
         {
-            internal static JobBody Body;
+            internal static JobBody Body, RootBody;
             internal static int Frame;
 
-            public void ProcessRootMotion(AnimationStream stream) { }
+            public void ProcessRootMotion(AnimationStream stream) => RootBody?.Invoke(stream, Frame);
 
             public void ProcessAnimation(AnimationStream stream) => Body?.Invoke(stream, Frame);
         }
@@ -82,9 +82,10 @@ namespace UnityEngine.Tests
             return root;
         }
 
-        internal static PlayableGraph Graph(Animator animator, JobBody body, AnimationClip clip = null)
+        internal static PlayableGraph Graph(Animator animator, JobBody body, AnimationClip clip = null, JobBody rootBody = null)
         {
             HumanJob.Body = body;
+            HumanJob.RootBody = rootBody;
             HumanJob.Frame = 0;
             var g = PlayableGraph.Create("human-stream");
             g.SetTimeUpdateMode(DirectorUpdateMode.Manual);

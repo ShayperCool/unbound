@@ -300,7 +300,10 @@ namespace Unbound.Runtime.Humanoid
             var body = hasMove ? null : animator.GetComponent<Rigidbody>();
             if (hasMove || body != null || animator.GetComponent<CharacterController>() != null)
             {
-                if (!(useKinematicAnimationRoot && !hasMove && body != null && body.isKinematic))
+                bool measuredKinematic = useKinematicAnimationRoot && !hasMove && body != null && body.isKinematic
+                    && body.interpolation == RigidbodyInterpolation.None && animator.updateMode == AnimatorUpdateMode.Normal
+                    && animator.GetComponent<CharacterController>() == null;
+                if (!measuredKinematic)
                     Unbound.Runtime.Stubs.Ignored("AnimationHumanStream root with scripted or physics root motion",
                         "reads and writes world values in the avatar root's frame before this update's root motion when OnAnimatorMove, a Rigidbody or a CharacterController applies it (not measured)");
                 return root;

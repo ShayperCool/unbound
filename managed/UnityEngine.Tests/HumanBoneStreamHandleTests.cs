@@ -151,28 +151,57 @@ namespace UnityEngine.Tests
             Near(wr, afterWorldR);
         }
 
+        public sealed class KinematicMoveCallback : MonoBehaviour
+        {
+            void OnAnimatorMove() { }
+        }
+
         [Theory]
-        [InlineData(TestRelease.Measured, false)]
-        [InlineData(TestRelease.Unmeasured, true)]
-        public void AManualKinematicHumanoidStreamReportsOnlyAnUnmeasuredFamily(string release, bool report)
+        [InlineData(TestRelease.Measured, "clip", false)]
+        [InlineData(TestRelease.Unmeasured, "clip", true)]
+        [InlineData(TestRelease.Measured, "dynamic", true)]
+        [InlineData(TestRelease.Measured, "controller", true)]
+        [InlineData(TestRelease.Measured, "scripted", true)]
+        [InlineData(TestRelease.Measured, "root", true)]
+        [InlineData(TestRelease.Measured, "mixer", true)]
+        [InlineData(TestRelease.Measured, "interpolated", true)]
+        [InlineData(TestRelease.Measured, "fixed", true)]
+        public void AManualKinematicHumanoidStreamReportsOutsideTheMeasuredScope(string release, string setup, bool report)
         {
             using var pin = TestRelease.Pin(release);
             const string warning = "AnimationHumanStream root with scripted or physics root motion";
             int Hits() => Stubs.HitReport().FirstOrDefault(hit => hit.Key == warning).Value;
 
             var animator = Human();
-            animator.gameObject.AddComponent<Rigidbody>().isKinematic = true;
+            var body = animator.gameObject.AddComponent<Rigidbody>();
+            body.isKinematic = setup != "dynamic";
+            if (setup == "interpolated") body.interpolation = RigidbodyInterpolation.Interpolate;
+            if (setup == "fixed") animator.updateMode = AnimatorUpdateMode.Fixed;
+            if (setup == "controller") animator.gameObject.AddComponent<CharacterController>();
+            if (setup == "scripted") animator.gameObject.AddComponent<KinematicMoveCallback>();
             animator.applyRootMotion = true;
+
             var clip = new AnimationClip { legacy = true };
             m_Created.Add(clip);
             clip.SetCurve("", typeof(Animator), "Left Arm Down-Up", AnimationCurve.Linear(0f, -0.2f, 1f, 0.2f));
             clip.legacy = false;
             bool sampled = false;
-            m_Graph = AnimationHumanStreamTests.Graph(animator, (stream, _) =>
+            void ReadPose(AnimationStream stream, int frame)
             {
-                var body = stream.AsHuman().bodyPosition;
+                var position = stream.AsHuman().bodyPosition;
                 sampled = true;
-            }, clip);
+            }
+
+            m_Graph = AnimationHumanStreamTests.Graph(animator, ReadPose, clip, setup == "root" ? ReadPose : null);
+            if (setup == "mixer")
+            {
+                var job = m_Graph.GetOutput(0).GetSourcePlayable();
+                var source = job.GetInput(0);
+                m_Graph.Disconnect(job, 0);
+                var mixer = AnimationMixerPlayable.Create(m_Graph, 1);
+                mixer.ConnectInput(0, source, 0, 1f);
+                job.ConnectInput(0, mixer, 0, 1f);
+            }
 
             int before = Hits();
             AnimationHumanStreamTests.Run(m_Graph, 1);

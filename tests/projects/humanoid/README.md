@@ -208,7 +208,8 @@ imported without keyframe reduction.
 
   The kinematic controls add 364 rows from two matching macOS 6000.0.71f1
   captures. A manual job over one humanoid clip reads its bones in
-  ProcessAnimation with a kinematic Rigidbody and no OnAnimatorMove. The
+  ProcessAnimation with a kinematic Rigidbody, interpolation off and the
+  default Animator update mode. There is no CharacterController or OnAnimatorMove. The
   rotated-arm control applies the same placement when it writes a bone. The
   Animator Transform has the frame from before this evaluation's movement.
   Separate diagnostic captures still show differences in ProcessRootMotion
