@@ -289,17 +289,25 @@ namespace UnityEditor.UIElements
             visualInput.Add(selector);
 
             m_OnProjectOrHierarchyChangedCallback = UpdateDisplay;
-            m_AsyncOnProjectOrHierarchyChangedCallback = () => schedule.Execute(m_OnProjectOrHierarchyChangedCallback);
-            RegisterCallback<AttachToPanelEvent>(_ =>
+            m_AsyncOnProjectOrHierarchyChangedCallback = UpdateOnProjectChanges(this, m_OnProjectOrHierarchyChangedCallback);
+        }
+
+        /// <summary>While <paramref name="field"/> is in a panel, a project or hierarchy change
+        /// updates it on its next scheduled pass (also the search picker's object field).</summary>
+        internal static Action UpdateOnProjectChanges(VisualElement field, Action update)
+        {
+            Action later = () => field.schedule.Execute(update);
+            field.RegisterCallback<AttachToPanelEvent>(_ =>
             {
-                EditorApplication.projectChanged += m_AsyncOnProjectOrHierarchyChangedCallback;
-                EditorApplication.hierarchyChanged += m_AsyncOnProjectOrHierarchyChangedCallback;
+                EditorApplication.projectChanged += later;
+                EditorApplication.hierarchyChanged += later;
             });
-            RegisterCallback<DetachFromPanelEvent>(_ =>
+            field.RegisterCallback<DetachFromPanelEvent>(_ =>
             {
-                EditorApplication.projectChanged -= m_AsyncOnProjectOrHierarchyChangedCallback;
-                EditorApplication.hierarchyChanged -= m_AsyncOnProjectOrHierarchyChangedCallback;
+                EditorApplication.projectChanged -= later;
+                EditorApplication.hierarchyChanged -= later;
             });
+            return later;
         }
 
         internal override bool EqualsCurrentValue(UnityEngine.Object value)
@@ -334,11 +342,15 @@ namespace UnityEditor.UIElements
         [Unbound.Stub]
         internal void ShowObjectSelector() => Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.ObjectField.ShowObjectSelector");
 
-        UnityEngine.Object TryReadComponentFromGameObject(UnityEngine.Object obj, Type type)
+        UnityEngine.Object TryReadComponentFromGameObject(UnityEngine.Object obj, Type type) => ComponentOf(obj, type);
+
+        /// <summary>A GameObject given to a field of a component type: its component of that
+        /// type, when it has one (also the search picker's object field).</summary>
+        internal static UnityEngine.Object ComponentOf(UnityEngine.Object obj, Type type)
         {
             if (obj is GameObject gameObject && type != null && type.IsSubclassOf(typeof(Component)))
             {
-                var component = gameObject.GetComponent(m_ObjectType);
+                var component = gameObject.GetComponent(type);
                 if (component != null) return component;
             }
             return obj;

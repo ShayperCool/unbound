@@ -2051,34 +2051,10 @@ namespace UnityEditor.Search
         public override global::UnityEditor.Search.QueryNodeType type { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.NotNode.type"); return default; } }
         public override string identifier { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.NotNode.identifier"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class ObjectField : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Object>
+    unsafe partial class ObjectField
     {
-        [global::Unbound.Stub] internal static readonly string ussClassName;
-        [global::Unbound.Stub] internal static readonly string labelUssClassName;
-        [global::Unbound.Stub] internal static readonly string inputUssClassName;
-        [global::Unbound.Stub] internal static readonly string objectUssClassName;
-        [global::Unbound.Stub] internal static readonly string selectorUssClassName;
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(global::UnityEngine.Object newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] public ObjectField() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.ctor"); }
-        [global::Unbound.Stub] public ObjectField(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.ctor"); }
-        [global::Unbound.Stub] internal void ShowObjectSelector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.ShowObjectSelector"); }
         [global::Unbound.Stub] public static void DoObjectField(global::UnityEngine.Rect position, global::UnityEditor.SerializedProperty property, global::System.Type objType, global::UnityEngine.GUIContent label, global::UnityEditor.Search.SearchContext context, global::UnityEngine.Search.SearchViewFlags searchViewFlags = (global::UnityEngine.Search.SearchViewFlags)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.DoObjectField"); }
         [global::Unbound.Stub] public static global::UnityEngine.Object DoObjectField(global::UnityEngine.Rect position, global::UnityEngine.Object obj, global::System.Type objType, global::UnityEngine.GUIContent label, global::UnityEditor.Search.SearchContext context, global::UnityEngine.Search.SearchViewFlags searchViewFlags = (global::UnityEngine.Search.SearchViewFlags)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.DoObjectField"); return default; }
-        [global::System.Obsolete("Use singleLineHeight instead. (UnityUpgradable) -> singleLineHeight")] public static float kSingleLineHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.kSingleLineHeight"); return default; } }
-        public static float singleLineHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.singleLineHeight"); return default; } }
-        public global::System.Type objectType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.objectType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.objectType"); } }
-        public global::UnityEditor.Search.SearchContext searchContext { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.searchContext"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.searchContext"); } }
-        public global::UnityEngine.Search.SearchViewFlags searchViewFlags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.searchViewFlags"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.searchViewFlags"); } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Object>.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectField.UxmlSerializedData.ctor"); }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class ObjectFieldGUI

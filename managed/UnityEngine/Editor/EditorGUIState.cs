@@ -1282,7 +1282,11 @@ namespace UnityEditor
                 s_ObjectContent.text = (obj is Component || obj is ScriptableObject)
                     ? $"{obj.name} ({ObjectNames.NicifyVariableName(objType.Name)})"
                     : obj.name;
-                s_ObjectContent.image = EditorIcons.Load(objType.Name + " Icon", logError: false) ?? EditorIcons.Placeholder;
+                // A texture is its own small picture (tests/projects/searchobjectfield
+                // texture.display); other objects show their class's icon.
+                s_ObjectContent.image = obj is Texture2D texture
+                    ? texture
+                    : EditorIcons.Load(objType.Name + " Icon", logError: false) ?? EditorIcons.Placeholder;
             }
             else if (type != null)
             {
