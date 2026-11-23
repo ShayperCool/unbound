@@ -1,8 +1,7 @@
 # First Play frame and end-of-frame completion
 
-Unity 6000.0.71f1, windowed Linux GPU Editor, built-in render pipeline. The runner
-opens Game view on the existing GPU display. Two independent captures must exit
-normally and agree byte for byte before `publish` creates the canonical reference.
+The probe records the windowed Linux Unity 6000.0.71f1 Editor. Two independent captures must
+exit normally and agree byte for byte before `publish` creates a reference.
 
 ```bash
 python3 tests/projects/eofstartup/run.py editor --release 6000.0.71f1 --label startup
@@ -10,41 +9,39 @@ python3 tests/projects/eofstartup/run.py publish --release 6000.0.71f1 --label s
 python3 tests/projects/eofstartup/run.py unbound --release 6000.0.71f1 --label engine
 ```
 
-The first Update is frame 0 in the record. Screen and render-texture cameras render
-in that frame, and explicit `Camera.Render()` sends its callback before returning.
-The frame has no EOF completion: coroutines started in Awake, Start and the first
-Update, and `Awaitable.EndOfFrameAsync` started in Start, first resume at frame 1.
-The control started in Update of frame 2 resumes in frame 2. After an additive
-scene load, the scene's Awake and Start waiters resume after its first Update and
-camera post-render callback; loading a scene does not repeat Play startup.
-Where the waiting object is made does not change this: objects made in BeforeSceneLoad,
-AfterSceneLoad, the probe's Awake, its Start and its first Update each run their Start in frame 0
-and first resume the waits they start in Awake and in a coroutine `Start` at frame 1; one made in
-the Update of frame 2 starts and resumes in frame 2 (`made.<point>.*`; `before.*` counts
-resumes before the first Update: none). Outside the reference,
-the same rows came out with `Time.captureFramerate` set at startup and without the runner opening
-and focusing the Game view.
+The default opens a saved scene in Single mode and enters Play in the same Editor update.
+`--entry settled` opens the same scene before the wait in the Editor runner. On Unbound it
+uses the Test Framework's Edit Mode session to open the scene and enter Play after an
+Editor update. Both variants count frames from the first Update.
 
-`--pipeline urp` runs the same scripts and scenes under the Universal Render Pipeline (the
-project settings, packages and pipeline assets of `tests/projects/stpmotion`; reference
-`unity-<release>.urp.jsonl`, two identical captures): every end-of-frame row is the built-in
-pipeline's, also in the first frame; only the `Camera.onPostRender` counters are 0, which that
-pipeline does not send (so the camera-before-end-of-frame control holds for the built-in
-pipeline only).
-The counters check every frame through frame 9, so skipping more than startup or
-adding a delay to every newly started coroutine fails the comparison.
+The built-in pipeline renders both the screen and the render-texture camera in frame 0.
+Explicit `Camera.Render()` sends its callback before returning. With same-update entry,
+the first end-of-frame waits resume in frame 1. With an intervening Editor update, they
+resume in frame 0. Controls measured the same result with one, two and thirty intervening
+updates. Opening an additional scene or creating an empty scene and entering immediately
+also allowed frame 0 in separate Editor controls.
 
-This is a measured Editor startup rule. The Unity 6000.0
-[execution-order Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/ExecutionOrder.html)
-and [WaitForEndOfFrame API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/WaitForEndOfFrame.html)
-place EOF resumes after camera and GUI rendering. The API also documents that
-switching away from Game view freezes these coroutines and that batch-mode Editor
-execution does not resume them. Neither page guarantees a resume in the first
-Play frame. The additive post-render counter tests the documented camera-before-EOF
-guarantee with values that change before the waiter resumes. Receiver order is
-not compared. Other pipelines than these two, multiple Game views and other releases are
-unmeasured here.
+The probe covers coroutines started in Awake, Start and the first Update, and
+`Awaitable.EndOfFrameAsync` started in Start. Each entry has the same first resume frame
+for objects made in BeforeSceneLoad, AfterSceneLoad, Awake, Start and Update. The object
+made in Update of frame 2 starts and resumes in that frame. The `before.*` counters
+check that every resume follows the first Update. An additive load during Play delivers
+the new scene's waits after its first Update and camera post-render callback.
 
-All values are small integer counters. The shared JSONL comparator's numerical
-comparison rejects any unequal counter. Existing destroycontract references and
-comparators are unchanged.
+`--pipeline urp` uses the project settings, packages and pipeline assets of
+`tests/projects/stpmotion`. Its end-of-frame values match the built-in pipeline.
+The legacy `Camera.onPostRender` counters are zero under URP. References for same-update
+entry are `unity-<release>.jsonl` and `unity-<release>.urp.jsonl`. The settled
+references add `.settled` before the pipeline suffix.
+
+The Unity 6.0 [execution-order Manual][order] and [WaitForEndOfFrame API][wait]
+place waits after camera and GUI rendering. The Scripting API describes Game view
+suspension and batch-mode Editor limits. The additive post-render counter records the
+camera-before-wait guarantee in the built-in pipeline. Frame 0 timing here is measured
+Editor behavior. Other pipelines, multiple Game views and other releases are unmeasured.
+
+The comparator checks every integer counter exactly. Existing same-update captures
+retain their frame 0 records alongside the settled references.
+
+[order]: https://docs.unity3d.com/6000.0/Documentation/Manual/ExecutionOrder.html
+[wait]: https://docs.unity3d.com/6000.0/Documentation/ScriptReference/WaitForEndOfFrame.html

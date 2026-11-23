@@ -31,13 +31,16 @@ public static class ProbeRunner
 
     static void Begin()
     {
+        const string path = "Assets/Scenes/Probe.unity";
+        bool settled = Environment.GetEnvironmentVariable("EOF_STARTUP_SETTLED_SCENE") == "1";
+        if (settled) EditorSceneManager.OpenScene(path);
         int ticks = 0;
         EditorApplication.CallbackFunction wait = null;
         wait = () =>
         {
             if (++ticks < 30) return;
             EditorApplication.update -= wait;
-            EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");
+            if (!settled) EditorSceneManager.OpenScene(path);
             foreach (var view in Resources.FindObjectsOfTypeAll<SceneView>()) view.Close();
             var game = EditorWindow.GetWindow(typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView"));
             game.Focus();

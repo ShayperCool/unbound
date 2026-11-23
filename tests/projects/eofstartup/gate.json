@@ -1,7 +1,9 @@
 {
   "commands": [
     "python3 tests/projects/eofstartup/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION",
-    "python3 tests/projects/eofstartup/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION --pipeline urp"
+    "python3 tests/projects/eofstartup/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION --pipeline urp",
+    "python3 tests/projects/eofstartup/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION --entry settled",
+    "python3 tests/projects/eofstartup/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION --pipeline urp --entry settled"
   ],
   "engine_paths": [
     "managed/UnityEngine/Runtime/PlayerLoopDriver.cs",
@@ -11,7 +13,11 @@
     "tests/projects/stpmotion/Packages/",
     "tests/projects/stpmotion/Assets/Settings/",
     "tests/projects/stpmotion/Assets/DefaultVolumeProfile.asset",
-    "tests/projects/stpmotion/Assets/UniversalRenderPipelineGlobalSettings.asset"
+    "tests/projects/stpmotion/Assets/UniversalRenderPipelineGlobalSettings.asset",
+    "managed/UnityEngine/Editor/EditorSession.cs",
+    "managed/UnityEngine/Editor/EditorSceneManager.cs",
+    "tests/projects/testrunner/Packages/manifest.json",
+    "tests/projects/testrunner/Packages/packages-lock.json"
   ],
   "summary": "eofstartup: [0-9]+/[0-9]+ records, [0-9]+/[0-9]+ values match"
 }

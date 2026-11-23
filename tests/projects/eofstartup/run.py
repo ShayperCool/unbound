@@ -8,6 +8,9 @@
 
 --pipeline urp runs the probe under the Universal Render Pipeline (reference
 Reference/unity-R.urp.jsonl); the default is the built-in pipeline.
+--entry settled runs the open scene after Edit mode updates
+(Reference/unity-R.settled[.urp].jsonl). The default opens the scene and enters
+Play in the same update.
 
 Run output goes to $XDG_CACHE_HOME/unbound/validation/runs/eofstartup/<label>.
 """
@@ -33,6 +36,7 @@ COMPARE = PROBE.parent / 'modelroot/compare.py'
 # The Universal Render Pipeline variant takes another probe's project settings, packages and
 # pipeline assets (a Forward renderer without features), and names this probe's scenes in them.
 URP_BASE = REPO / 'tests/projects/stpmotion'
+TEST_PACKAGES = REPO / 'tests/projects/testrunner/Packages'
 URP_ASSETS = ('Settings', 'Settings.meta', 'DefaultVolumeProfile.asset', 'DefaultVolumeProfile.asset.meta',
               'UniversalRenderPipelineGlobalSettings.asset', 'UniversalRenderPipelineGlobalSettings.asset.meta')
 URP_SCENE = '    guid: 9b1c2d3e4f5a46b7a8c9d0e1f2a3b4c5\n'
@@ -63,6 +67,16 @@ def prepare(project, release, pipeline='builtin'):
         (project / 'Packages/manifest.json').write_text(json.dumps({'dependencies': {}}))
 
 
+def prepare_settled_test(project):
+    shutil.copytree(PROBE / 'SettledScene', project / 'Assets/SettledScene')
+    for name in ('manifest.json', 'packages-lock.json'):
+        path = project / 'Packages' / name
+        data = json.loads(path.read_text()) if path.is_file() else {'dependencies': {}}
+        expected = json.loads((TEST_PACKAGES / name).read_text())['dependencies']
+        data['dependencies'].update(expected)
+        path.write_text(json.dumps(data, indent=2) + '\n')
+
+
 def capture_problem(directory):
     problem = result_problem(directory, gpu=True)
     if problem:
@@ -83,10 +97,11 @@ def capture_problem(directory):
     return None
 
 
-def job(project, out, release):
+def job(project, out, release, settled=False):
     return EditorJob(project, out / 'editor.log', out, args=['-force-glcore'], private_display=False,
                      batch=False, graphics=True, timeout=900, label='eofstartup-' + out.name,
-                     env={**vulkan_display_env(), 'EOF_STARTUP_OUT': str(out / 'values.jsonl')},
+                     env={**vulkan_display_env(), 'EOF_STARTUP_OUT': str(out / 'values.jsonl'),
+                          'EOF_STARTUP_SETTLED_SCENE': str(int(settled))},
                      launch_inputs={'release': release, 'paths': {
                          'assets': str(project / 'Assets'), 'settings': str(project / 'ProjectSettings'),
                          'packages': str(project / 'Packages'), 'runner': str(PROBE / 'run.py'),
@@ -103,17 +118,20 @@ def main():
     p.add_argument('--release', required=True)
     p.add_argument('--label', default='run-' + str(time.time_ns()))
     p.add_argument('--pipeline', choices=('builtin', 'urp'), default='builtin')
+    p.add_argument('--entry', choices=('immediate', 'settled'), default='immediate')
     args = p.parse_args()
+    settled = args.entry == 'settled'
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
     work.mkdir(parents=True, exist_ok=True)
-    reference = PROBE / 'Reference' / ('unity-' + args.release + ('.urp' if args.pipeline == 'urp' else '') + '.jsonl')
+    variant = ('.settled' if settled else '') + ('.urp' if args.pipeline == 'urp' else '')
+    reference = PROBE / 'Reference' / f'unity-{args.release}{variant}.jsonl'
     if args.mode == 'editor':
         jobs = []
         for repeat in REPEATS:
             project, out = work / 'projects' / repeat, work / repeat
             prepare(project, args.release, args.pipeline)
-            jobs.append(job(project, out, args.release))
+            jobs.append(job(project, out, args.release, settled))
         for result in [run(job) for job in jobs]:
             print(summary(result))
         problems = [f'{r}: {capture_problem(work / r)}' for r in REPEATS if capture_problem(work / r)]
@@ -137,9 +155,15 @@ def main():
     out = work / 'unbound'
     out.mkdir()
     cli = os.environ.get('UNBOUND', os.environ.get('UNBOUND_CLI', str(REPO / 'target/release/unbound')))
+    if settled:
+        prepare_settled_test(project)
+        command = ['test', '-p', str(project), '--graphics', '--platform', 'EditMode',
+                   '--assembly-names', 'EofStartup.EditMode', '--results', str(out / 'results.xml')]
+    else:
+        command = ['run', '-p', str(project), '--frames', '120', '--size', '320x240', '--no-watch']
     with (out / 'engine.log').open('w') as log:
         code = subprocess.run([str(Path.home() / '.cache/compat/with-heavy-job'), '--kind', 'engine-gpu',
-                               cli, 'run', '-p', str(project), '--frames', '120', '--size', '320x240', '--no-watch'],
+                               cli, *command],
                               env=dict(os.environ, EOF_STARTUP_OUT=str(out / 'values.jsonl')),
                               stdout=log, stderr=subprocess.STDOUT).returncode
     if code:
