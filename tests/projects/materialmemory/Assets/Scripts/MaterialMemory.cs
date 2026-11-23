@@ -1,0 +1,77 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using UnityEngine;
+using UnityEngine.Profiling;
+using Object = UnityEngine.Object;
+
+static class MaterialMemory
+{
+    [Serializable] sealed class Row { public string k, v; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Capture()
+    {
+        string output = Environment.GetEnvironmentVariable("MATERIAL_MEMORY_OUT");
+        if (string.IsNullOrEmpty(output)) return;
+        var rows = new List<string>();
+        void Put(string key, object value) => rows.Add(JsonUtility.ToJson(new Row { k = key, v = Convert.ToString(value, CultureInfo.InvariantCulture) }));
+        void Size(string key, Material value) => Put(key, Profiler.GetRuntimeMemorySizeLong(value));
+        Put("unity", Application.unityVersion);
+        Put("device", SystemInfo.graphicsDeviceType.ToString());
+        var texture = new Texture2D(4, 4);
+
+        void Probe(string stage, Shader shader)
+        {
+            var kinds = new string[shader.GetPropertyCount()];
+            for (int index = 0; index < kinds.Length; index++) kinds[index] = shader.GetPropertyType(index).ToString();
+            Put(stage + ".propertyKinds", string.Join("/", kinds));
+            var material = new Material(shader);
+            Size(stage + ".created", material);
+            var coldCopy = new Material(material);
+            Size(stage + ".coldCopy", coldCopy);
+            Object.DestroyImmediate(coldCopy);
+            foreach (string name in new[] { "_F0", "_R", "_Glossiness" })
+                if (material.HasProperty(name)) material.SetFloat(name, 0.75f);
+            foreach (string name in new[] { "_V0", "_Color" })
+                if (material.HasProperty(name)) material.SetColor(name, Color.green);
+            foreach (string name in new[] { "_T0", "_MainTex" })
+                if (material.HasProperty(name)) material.SetTexture(name, texture);
+            if (material.HasProperty("_I")) material.SetInteger("_I", 7);
+            Size(stage + ".declaredWrites", material);
+            material.renderQueue = 2100;
+            material.enableInstancing = true;
+            Size(stage + ".settings", material);
+
+            for (int count = 1; count <= 10; count++)
+            {
+                string property = "_ProbeExtra" + count;
+                material.SetFloat(property, count);
+                Size(stage + ".extra." + count, material);
+            }
+            material.SetFloat("_ProbeExtra4", 2f);
+            Size(stage + ".overwritten", material);
+            var copy = new Material(material);
+            Size(stage + ".populatedCopy", copy);
+            copy.SetFloat("_ProbeExtra4", 3f);
+            Size(stage + ".copyEdited", copy);
+            Size(stage + ".sourceAfterCopyEdit", material);
+            Object.DestroyImmediate(copy);
+            Object.DestroyImmediate(material);
+        }
+
+        foreach (string name in new[] { "f0v0t0", "f3v0t0", "f0v2t0", "f1v1t1", "f4v1t2", "f16v2t9", "range", "int", "texdims" })
+            Probe(name, Shader.Find("Hidden/Storage/" + name));
+        Probe("unlit", Shader.Find("Unlit/Color"));
+        Probe("standard", Shader.Find("Standard"));
+        Object.DestroyImmediate(texture);
+        rows.Add("{\"k\":\"complete\",\"v\":true}");
+        File.WriteAllLines(Path.Combine(output, "values.jsonl"), rows);
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.Exit(0);
+#else
+        Application.Quit(0);
+#endif
+    }
+}
