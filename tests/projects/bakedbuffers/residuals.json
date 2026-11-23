@@ -5,7 +5,7 @@
   },
   "Renderers of a LOD Group: the Editor's rays tell the group's levels apart (here one sky ray per texel is stopped by a less detailed level's renderer in Unbound and by nothing in the Editor); Unbound's bake does not yet and says so when it bakes (its renderers take and stop light like any other). Follow-up: the levels' rule, measured with lights and bounces. The lightmap made of the buffer differs where it does (and at the texels its light is spread to, and through the stitching of seams at the texels across them).": {
     "Shapes.lightmap0.environment": "0 texels differ in being used, 99 values in their light (worst 0.101, tolerance 0.001)",
-    "Shapes.lightmap0.lightmap": "67 texels differ in their light (worst 0.0722, tolerance 0.00308), first at [83, 410, 607, 673, 796, 915]"
+    "Shapes.lightmap0.lightmap": "68 texels differ in their light (worst 0.0722, tolerance 0.00308), first at [83, 410, 607, 673, 796, 915]"
   },
   "One value of one texel under the gradient sky, whose faces differ in colour: the difference is what one path's sky direction would give if it read the neighbouring face (the red between the sky's and the equator's colour by the red wall's albedo, over the texel's 64 samples). Replaying the Editor's own bake input, sky and picked directions gives the same single difference. Not chased: which face a direction on the edge between two faces reads (of two axes of equal size Unbound takes the later: z before y before x) is not measured. The lightmap made of the buffer differs where it does (and at the texels its light is spread to).": {
     "SkyGradient.lightmap0.indirect": "0 texels differ in being used, 1 values in their light (worst 0.0041, tolerance 0.001)",

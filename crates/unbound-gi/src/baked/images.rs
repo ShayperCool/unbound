@@ -9,22 +9,10 @@
 //! hold their own; the directional image then fills every other texel from a chain of halved
 //! images. The seams are stitched afterwards ([`super::seams`]).
 
+use super::{dilate, directional};
+
 /// A texel's luminance by its red, green and blue.
 const LUMINANCE: [f32; 4] = [0.22, 0.707, 0.071, 0.0];
-/// The factor a neighbour mean's approximate reciprocal is corrected by.
-const RECIPROCAL_CORRECTION: f32 = 1.000_244_259_834_289_6;
-/// The neighbours a texel is filled from, in the order their light is summed: the row above,
-/// the row below, then left and right.
-const NEIGHBOURS: [(isize, isize); 8] = [
-    (-1, -1),
-    (0, -1),
-    (1, -1),
-    (-1, 1),
-    (0, 1),
-    (1, 1),
-    (-1, 0),
-    (1, 0),
-];
 
 /// A lightmap's buffers the images are made of, `width` × `height` texels from the first row.
 pub struct Buffers<'a> {
@@ -41,18 +29,9 @@ pub struct Buffers<'a> {
     pub environment: Option<&'a [[f32; 4]]>,
 }
 
-/// Whether a texel's light stands: a used texel whose rays met back faces no more than the
-/// tolerance allows, and whose four values are numbers (1), else 0.
+/// Whether a texel's light stands ([`dilate::markers`]).
 fn markers(b: &Buffers, backface_tolerance: f32, image: &[[f32; 4]]) -> Vec<f32> {
-    let limit = 1.0 - backface_tolerance;
-    (0..b.width * b.height)
-        .map(|k| {
-            let stands = b.used[k]
-                && (backface_tolerance <= 0.0 || b.validity.is_none_or(|v| !(v[k] > limit)))
-                && image[k].iter().all(|v| v.is_finite());
-            if stands { 1.0 } else { 0.0 }
-        })
-        .collect()
+    dilate::markers(b.used, b.validity, backface_tolerance, image)
 }
 
 /// The direct light as the directions are weighed with it: zero for a group of four texels
@@ -117,7 +96,8 @@ pub fn directional(
             t
         })
         .collect();
-    let toward_indirect = toward_indirect.unwrap_or(&none);
+    let unlit = vec![directional::NONE; texels];
+    let toward_indirect = toward_indirect.unwrap_or(&unlit);
     let mut out: Vec<[f32; 4]> = (0..texels)
         .map(|k| {
             let (dd, di) = (toward_direct[k], toward_indirect[k]);
@@ -159,90 +139,6 @@ pub fn shadowmask(
     dilate(&out, &marks, b.used, b.width, b.height, padding)
 }
 
-/// The approximate reciprocal the Editor's fill takes (the processor's own estimate, whose bits
-/// differ between processors; exact elsewhere).
-fn reciprocal(x: f32) -> f32 {
-    #[cfg(target_arch = "x86_64")]
-    {
-        // SAFETY: SSE is part of every x86_64 processor.
-        unsafe {
-            use std::arch::x86_64::{_mm_cvtss_f32, _mm_rcp_ss, _mm_set_ss};
-            _mm_cvtss_f32(_mm_rcp_ss(_mm_set_ss(x)))
-        }
-    }
-    #[cfg(not(target_arch = "x86_64"))]
-    {
-        1.0 / x
-    }
-}
-
-/// One fill pass: a texel whose marker is above 0 is kept; the others (only those `within`, if
-/// given) take the mean of their neighbours weighed by the neighbours' markers, their marker
-/// the weights' sum within [0, 1]. Whether any texel came to hold light.
-fn fill_pass(
-    src: &[[f32; 4]],
-    within: Option<&[bool]>,
-    width: usize,
-    height: usize,
-) -> (Vec<[f32; 4]>, bool) {
-    let mut dst = src.to_vec();
-    let mut filled = false;
-    for y in 0..height {
-        for x in 0..width {
-            let k = y * width + x;
-            if src[k][3] > 0.0 || within.is_some_and(|w| !w[k]) {
-                continue;
-            }
-            let mut acc = [0.0f32; 4];
-            let mut weights = 0.0f32;
-            for (dx, dy) in NEIGHBOURS {
-                let (nx, ny) = (x as isize + dx, y as isize + dy);
-                if nx < 0 || ny < 0 || nx >= width as isize || ny >= height as isize {
-                    continue;
-                }
-                let n = src[ny as usize * width + nx as usize];
-                for c in 0..4 {
-                    acc[c] = n[c] * n[3] + acc[c];
-                }
-                weights += n[3];
-            }
-            let r = reciprocal(weights.max(1.0)) * RECIPROCAL_CORRECTION;
-            let mut out: [f32; 4] = std::array::from_fn(|c| r * acc[c]);
-            out[3] = (weights.clamp(0.0, 1.0) - out[3]) * 1.0 + out[3];
-            filled |= out[3] > 0.0;
-            dst[k] = out;
-        }
-    }
-    (dst, filled)
-}
-
-/// The fill of one image (its fourth value the marker): passes over the used texels while one
-/// fills any, then `padding` passes over all.
-fn fill(
-    image: Vec<[f32; 4]>,
-    used: &[bool],
-    width: usize,
-    height: usize,
-    padding: u32,
-) -> Vec<[f32; 4]> {
-    let mut current = image;
-    loop {
-        let (next, filled) = fill_pass(&current, Some(used), width, height);
-        current = next;
-        if !filled {
-            break;
-        }
-    }
-    for _ in 0..padding {
-        let (next, filled) = fill_pass(&current, None, width, height);
-        current = next;
-        if !filled {
-            break;
-        }
-    }
-    current
-}
-
 /// The fill of a four-channel image: its first three channels and its fourth filled apart
 /// (each with the markers as its weights).
 fn dilate(
@@ -263,8 +159,8 @@ fn dilate(
         .zip(marks)
         .map(|(t, &m)| [t[3], t[3], t[3], m])
         .collect();
-    let first = fill(first, used, width, height, padding);
-    let fourth = fill(fourth, used, width, height, padding);
+    let first = dilate::fill(first, used, width, height, padding);
+    let fourth = dilate::fill(fourth, used, width, height, padding);
     first
         .iter()
         .zip(&fourth)
@@ -329,4 +225,128 @@ pub fn to_rgba8(image: &[[f32; 4]], width: usize, height: usize) -> Vec<u8> {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_written_texels_are_rounded_and_the_last_row_comes_first() {
+        let image = [[0.2, -1.0, 0.5, 2.0], [1.0, 0.0, 0.25, 0.75]];
+        // 0.2 → 51.5 → 51; 0.5 → 128; 0.25 → 64.25 → 64; 0.75 → 191.75 → 191.
+        assert_eq!(
+            to_rgba8(&image, 1, 2),
+            vec![255, 0, 64, 191, 51, 0, 128, 255]
+        );
+    }
+
+    #[test]
+    fn direct_light_of_a_group_of_four_without_any_is_none() {
+        let mut direct = vec![[3.0, 3.0, 3.0, 0.0]; 8];
+        direct[5][3] = 1.0;
+        let marks = [1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0];
+        let out = direct_light(&direct, &marks);
+        // (The light of the first group none; each texel's fourth value its marker.)
+        assert!(out[..4].iter().all(|t| *t == [0.0, 0.0, 0.0, 1.0]));
+        assert_eq!(out[4], [3.0, 3.0, 3.0, 0.0]);
+        assert_eq!(out[5], [3.0, 3.0, 3.0, 1.0]);
+    }
+
+    #[test]
+    fn the_directions_blend_by_each_lights_length_times_luminance() {
+        // Four used texels: direct light alone, no light, as much of each, indirect alone.
+        let used = [true; 4];
+        let light = [1.0, 1.0, 1.0, 1.0];
+        let dark = [0.0, 0.0, 0.0, 1.0];
+        let direct = [light, dark, light, dark];
+        let indirect = [dark, dark, light, light];
+        let b = Buffers {
+            width: 4,
+            height: 1,
+            used: &used,
+            validity: None,
+            direct: &direct,
+            indirect: Some(&indirect),
+            environment: None,
+        };
+        // Directions of equal lengths.
+        let dd = [1.0, 0.5, 0.5, 1.0];
+        let di = [0.5, 1.0, 0.5, 0.0];
+        let out = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0);
+        assert_eq!(out[0], dd);
+        // (No light either way: the indirect direction.)
+        assert_eq!(out[1], di);
+        assert_eq!(out[2], [0.75, 0.75, 0.5, 0.5]);
+        assert_eq!(out[3], di);
+    }
+
+    #[test]
+    fn a_texel_without_indirect_light_of_its_own_keeps_its_direct_direction() {
+        // The second texel's indirect light is no number: it does not stand, so the texel
+        // keeps its direct direction (its own still stands: no fill).
+        let used = [true; 4];
+        let light = [1.0, 1.0, 1.0, 1.0];
+        let mut indirect = [light; 4];
+        indirect[1] = [f32::NAN, 1.0, 1.0, 1.0];
+        let b = Buffers {
+            width: 4,
+            height: 1,
+            used: &used,
+            validity: None,
+            direct: &[light; 4],
+            indirect: Some(&indirect),
+            environment: None,
+        };
+        let dd = [1.0, 0.5, 0.5, 1.0];
+        let di = [0.5, 1.0, 0.5, 0.0];
+        let out = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0);
+        assert_eq!(out[0], [0.75, 0.75, 0.5, 0.5]);
+        assert_eq!(out[1], dd);
+    }
+
+    #[test]
+    fn the_directional_background_comes_from_halved_images_of_odd_sizes() {
+        // 3 × 3 with light in the middle, 5 × 2 with light in one corner: every texel holding
+        // nothing takes the light of the halved image above it.
+        let lit = [0.25, 0.5, 0.75, 1.0];
+        let mut image = vec![[0.0f32; 4]; 9];
+        image[4] = lit;
+        fill_background(&mut image, 3, 3);
+        assert!(image.iter().all(|t| *t == lit), "{image:?}");
+        let mut image = vec![[0.0f32; 4]; 10];
+        image[0] = lit;
+        fill_background(&mut image, 5, 2);
+        assert!(image.iter().all(|t| *t == lit), "{image:?}");
+        // One texel wide.
+        let mut image = vec![[0.0f32; 4]; 3];
+        image[0] = lit;
+        fill_background(&mut image, 1, 3);
+        assert!(image.iter().all(|t| *t == lit), "{image:?}");
+    }
+
+    #[test]
+    fn the_shadowmasks_fourth_channel_is_kept_within_zero_and_one() {
+        let used = [true; 4];
+        let b = Buffers {
+            width: 4,
+            height: 1,
+            used: &used,
+            validity: None,
+            direct: &[[0.0; 4]; 4],
+            indirect: None,
+            environment: None,
+        };
+        let mask = [
+            [0.2, 0.4, 0.6, 1.5],
+            [1.0, 1.0, 1.0, -0.5],
+            [0.0, 0.0, 0.0, 0.5],
+            [1.0, 0.0, 1.0, 1.0],
+        ];
+        let out = shadowmask(&b, &mask, 0.9, 0);
+        assert_eq!(out[0], [0.2, 0.4, 0.6, 1.0]);
+        assert_eq!(out[1], [1.0, 1.0, 1.0, 0.0]);
+        assert_eq!(out[2], [0.0, 0.0, 0.0, 0.5]);
+        assert_eq!(out[3], [1.0, 0.0, 1.0, 1.0]);
+    }
 }

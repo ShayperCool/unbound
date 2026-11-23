@@ -255,17 +255,26 @@ namespace UnityEngine
         /// not measured). <paramref name="editable"/>: whether a path is of the project's own
         /// assets (AssetDatabase's answer by default).</summary>
         internal static string Unwritten(LightingSettings settings, string folder, bool environmentMade, bool renderPipeline,
-            bool lightmapsMade, bool probeGroups, Func<string, bool> editable = null) =>
+            bool lightmapsMade, bool probeGroups, Func<string, bool> editable = null, bool shadowmaskMade = true) =>
             settings == null ? "a scene without Lighting Settings (the defaults') is not written yet"
             : settings.realtimeGI ? "Unbound writes it for a bake without realtime global illumination"
             : settings.bakedGI && probeGroups ? "the light probes of a bake with baked global illumination are not written yet"
             : settings.bakedGI && settings.lightmapCompression != LightmapCompression.None ? "lightmaps with compression are not measured"
+            // (What the bake does not make yet, or makes only where measured:
+            // tests/projects/bakedbuffers bakes without filtering, ambient occlusion and with an
+            // Indirect Intensity of 1, its directional lightmaps in the Baked Indirect mode.)
+            : settings.bakedGI && settings.filteringMode != LightingSettings.FilterMode.None ? "lightmaps with filtering are not made yet"
+            : settings.bakedGI && settings.ao ? "lightmaps with ambient occlusion are not made yet"
+            : settings.bakedGI && settings.indirectScale != 1f ? "an Indirect Intensity other than 1 is not measured"
+            : settings.bakedGI && settings.directionalityMode == LightmapsMode.CombinedDirectional && settings.mixedBakeMode != MixedLightingMode.IndirectOnly
+                ? "directional lightmaps in the Shadowmask or Subtractive Lighting Mode are not measured"
             : folder == null ? "an untitled scene's is not measured"
             : !Compat.BakeFilesMeasured ? $"of Unity {Application.unityVersion} it is not measured (its release family)"
             : renderPipeline ? "with a render pipeline asset it is not measured"
             : !environmentMade ? "this bake did not make all of the environment lighting (said)"
             : !(editable ?? UnityEditor.AssetDatabase.Editable)(folder) ? "the scene is not in the project's own assets"
             : settings.bakedGI && !lightmapsMade ? "this bake did not make all of its lightmaps' light (said)"
+            : settings.bakedGI && !shadowmaskMade ? "a bake in the Shadowmask Lighting Mode without a light on a shadowmask channel is not measured"
             : null;
 
         /// <summary>The folder a bake writes its files to beside the scene (null: untitled).</summary>
@@ -285,7 +294,7 @@ namespace UnityEngine
         const int NoLightmap = 0xFFFE;
 
         /// <summary>The names of a lightmap's images, as the Editor writes them beside the scene.</summary>
-        const string LightImage = "light.exr", DirectionsImage = "dir.png", ShadowmaskImage = "shadowmask.png";
+        internal const string LightImage = "light.exr", DirectionsImage = "dir.png", ShadowmaskImage = "shadowmask.png";
 
         static string LightmapImage(int index, string kind) => $"Lightmap-{index}_comp_{kind}";
 
@@ -323,8 +332,7 @@ namespace UnityEngine
                         string path = folder + "/" + LightmapImage(i, kind);
                         if (UnityEditor.AssetDatabase.AssetPathToGUID(path).Length == 0) continue;
                         any = true;
-                        bool made = i < count && (kind == LightImage || (kind == DirectionsImage ? i < baked.Directions.Length : i < baked.Shadowmasks.Length));
-                        if (!made) UnityEditor.AssetDatabase.DeleteAsset(path);
+                        if (Stale(i, kind, count, baked.Directions.Length, baked.Shadowmasks.Length)) UnityEditor.AssetDatabase.DeleteAsset(path);
                     }
                     if (!any && i >= count) break;
                 }
@@ -340,6 +348,13 @@ namespace UnityEngine
                 lights.Add(new { fileId, bakeType, mixedMode, channel, probeIndex });
             return (lightmaps.ToArray(), renderers.ToArray(), lights.ToArray());
         }
+
+        /// <summary>Whether the image `kind` of lightmap `index` an earlier bake wrote is one this
+        /// bake, with `count` lightmaps, `directions` directional images and `shadowmasks`
+        /// shadowmask images, does not make (then deleted). (Whether the Editor's bake deletes an
+        /// earlier bake's images it does not make again is not measured.)</summary>
+        internal static bool Stale(int index, string kind, int count, int directions, int shadowmasks) =>
+            index >= count || (kind == DirectionsImage && index >= directions) || (kind == ShadowmaskImage && index >= shadowmasks);
 
         /// <summary>Writes one of a lightmap's images and imports it as the Editor imports it:
         /// mipmap streaming, aniso 3, no compression; the directions and the shadowmask linear
@@ -398,7 +413,8 @@ namespace UnityEngine
             string folder = FolderOf(scene);
             // (Without the native side, as in managed tests, nothing is made or written.)
             string unwritten = Unwritten(settings, folder, Native.IsReady && environment.Made, Rendering.GraphicsSettings.currentRenderPipeline != null,
-                baked?.Images is { Length: > 0 }, file != null && HasProbeGroups(file));
+                baked?.Images is { Length: > 0 }, file != null && HasProbeGroups(file),
+                shadowmaskMade: settings == null || settings.mixedBakeMode != MixedLightingMode.Shadowmask || baked == null || baked.Shadowmasks.Length == baked.Images.Length);
             if (unwritten != null)
             {
                 string name = folder == null ? "an untitled scene" : scene.Path;

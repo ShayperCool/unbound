@@ -531,15 +531,17 @@ mod tests {
             &environment,
             &Baked {
                 lightmaps: vec![
+                    // (A lightmap with its directions and one with its shadowmask: the files'
+                    // order per lightmap, each image's pointer.)
                     LightmapImages {
                         light: [2; 16],
-                        directions: None,
+                        directions: Some([5; 16]),
                         shadowmask: None,
                     },
                     LightmapImages {
                         light: [3; 16],
                         directions: None,
-                        shadowmask: None,
+                        shadowmask: Some([6; 16]),
                     },
                 ],
                 renderers: vec![
@@ -564,18 +566,19 @@ mod tests {
             },
         )
         .unwrap();
-        // The files named: the scene, the lightmaps in order, then the reflection.
+        // The files named: the scene, each lightmap's light and then its directions or
+        // shadowmask, in order, then the reflection.
         let externals = serialized_writer::raw_externals(&made).unwrap();
         assert_eq!(
             externals.iter().map(|e| e.guid[0]).collect::<Vec<_>>(),
-            [1, 2, 3, 4]
+            [1, 2, 5, 3, 6, 4]
         );
         let file = SerializedFile::parse(&made).unwrap();
         let data = file.read(LIGHTING_DATA_PATH_ID).unwrap();
         let lightmaps = data.get("m_Lightmaps").unwrap().as_seq().unwrap();
-        let lightmap = |k: usize, field: &str| {
+        let image = |k: usize, image: &str, field: &str| {
             lightmaps[k]
-                .get("m_Lightmap")
+                .get(image)
                 .unwrap()
                 .get(field)
                 .unwrap()
@@ -583,13 +586,26 @@ mod tests {
                 .unwrap()
                 .to_string()
         };
+        let lightmap = |k: usize, field: &str| image(k, "m_Lightmap", field);
         assert_eq!(
             (
                 lightmap(0, "m_FileID"),
                 lightmap(1, "m_FileID"),
                 lightmap(1, "m_PathID")
             ),
-            ("2".into(), "3".into(), "2800000".into())
+            ("2".into(), "4".into(), "2800000".into())
+        );
+        // The directions and shadowmask by their files, none where not made.
+        assert_eq!(
+            [
+                image(0, "m_DirLightmap", "m_FileID"),
+                image(0, "m_DirLightmap", "m_PathID"),
+                image(0, "m_ShadowMask", "m_FileID"),
+                image(1, "m_DirLightmap", "m_FileID"),
+                image(1, "m_ShadowMask", "m_FileID"),
+                image(1, "m_ShadowMask", "m_PathID"),
+            ],
+            ["3", "2800000", "0", "0", "5", "2800000"]
         );
         let renderers = data
             .get("m_LightmappedRendererData")

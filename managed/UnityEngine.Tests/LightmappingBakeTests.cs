@@ -222,8 +222,9 @@ namespace UnityEngine.Tests
             var environment = new LightingSettings { bakedGI = false, realtimeGI = false };
             // (The project's own assets: Assets/ here.)
             System.Func<string, bool> own = path => path.StartsWith("Assets/", System.StringComparison.Ordinal);
-            string Unwritten(LightingSettings settings, string folder, bool made, bool pipeline = false, bool lightmaps = false, bool probes = false) =>
-                RealtimeGI.Unwritten(settings, folder, made, pipeline, lightmaps, probes, own);
+            string Unwritten(LightingSettings settings, string folder, bool made, bool pipeline = false, bool lightmaps = false, bool probes = false,
+                bool shadowmask = true) =>
+                RealtimeGI.Unwritten(settings, folder, made, pipeline, lightmaps, probes, own, shadowmask);
             try
             {
                 using (TestRelease.Pin(TestRelease.Measured))
@@ -241,17 +242,41 @@ namespace UnityEngine.Tests
                     environment.directionalityMode = LightmapsMode.NonDirectional;
                     environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
                     environment.lightmapCompression = LightmapCompression.None;
+                    environment.filteringMode = LightingSettings.FilterMode.None;
+                    environment.ao = false;
+                    environment.indirectScale = 1f;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     Assert.Contains("lightmaps", Unwritten(environment, "Assets/Scenes/Lit", true));
                     // The scene's own reason comes first (no lightmaps were asked for it).
                     Assert.Contains("untitled", Unwritten(environment, null, true));
                     Assert.Contains("light probes", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true, probes: true));
-                    // Directional lightmaps and the Shadowmask Lighting Mode are written too.
+                    // Directional lightmaps (in the Baked Indirect mode) and the Shadowmask Lighting
+                    // Mode (with its shadowmask made) are written too; the two together, directional
+                    // lightmaps in the Subtractive mode and the Shadowmask mode without a shadowmask
+                    // (no light on a channel) are not measured.
                     environment.directionalityMode = LightmapsMode.CombinedDirectional;
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.mixedBakeMode = MixedLightingMode.Shadowmask;
+                    Assert.Contains("directional lightmaps in the Shadowmask", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.mixedBakeMode = MixedLightingMode.Subtractive;
+                    Assert.Contains("directional lightmaps in the Shadowmask or Subtractive", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.directionalityMode = LightmapsMode.NonDirectional;
                     environment.mixedBakeMode = MixedLightingMode.Shadowmask;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
-                    environment.directionalityMode = LightmapsMode.NonDirectional;
+                    Assert.Contains("without a light on a shadowmask channel", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true, shadowmask: false));
                     environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
+                    // Filtering, ambient occlusion and another Indirect Intensity: not made or not
+                    // measured (each control by itself).
+                    environment.filteringMode = LightingSettings.FilterMode.Auto;
+                    Assert.Contains("filtering", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.filteringMode = LightingSettings.FilterMode.None;
+                    environment.ao = true;
+                    Assert.Contains("ambient occlusion", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.ao = false;
+                    environment.indirectScale = 2f;
+                    Assert.Contains("Indirect Intensity", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.indirectScale = 1f;
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.lightmapCompression = LightmapCompression.NormalQuality;
                     Assert.Contains("compression", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.bakedGI = false;
@@ -271,6 +296,21 @@ namespace UnityEngine.Tests
             {
                 Object.DestroyImmediate(environment);
             }
+        }
+
+        [Fact]
+        public void AnEarlierBakesImagesThisBakeDoesNotMakeAreStale()
+        {
+            // This bake: two lightmaps, the first with its directions, none with a shadowmask.
+            Assert.False(RealtimeGI.Stale(0, RealtimeGI.LightImage, 2, 1, 0));
+            Assert.False(RealtimeGI.Stale(1, RealtimeGI.LightImage, 2, 1, 0));
+            Assert.True(RealtimeGI.Stale(2, RealtimeGI.LightImage, 2, 1, 0));
+            Assert.False(RealtimeGI.Stale(0, RealtimeGI.DirectionsImage, 2, 1, 0));
+            Assert.True(RealtimeGI.Stale(1, RealtimeGI.DirectionsImage, 2, 1, 0));
+            Assert.True(RealtimeGI.Stale(0, RealtimeGI.ShadowmaskImage, 2, 1, 0));
+            // A shadowmask this bake makes again stays; one beyond its lightmaps does not.
+            Assert.False(RealtimeGI.Stale(1, RealtimeGI.ShadowmaskImage, 2, 0, 2));
+            Assert.True(RealtimeGI.Stale(2, RealtimeGI.ShadowmaskImage, 2, 0, 2));
         }
 
         [Fact]

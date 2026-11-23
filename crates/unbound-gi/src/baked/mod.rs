@@ -6,11 +6,12 @@
 //! ([`composite`], its seams stitched by [`seams`]).
 pub mod atlas;
 pub mod composite;
+pub mod dilate;
 pub mod direct;
 pub mod directional;
 pub mod gbuffer;
-pub mod images;
 pub mod grid;
+pub mod images;
 pub mod indirect;
 pub mod levels;
 pub mod light;
