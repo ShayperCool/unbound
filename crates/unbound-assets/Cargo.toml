@@ -20,8 +20,9 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg",
 tiff = "0.11"
 weezl = "0.1"
 flate2 = "1"
-# zlib itself (the C library): the deflate output the Editor's ZIP-compressed EXR files hold.
-libz-sys = "1"
+# zlib itself (the C library, its own sources built here on every OS): the deflate output the
+# Editor's ZIP-compressed EXR files hold.
+libz-sys = { version = "1", features = ["static"] }
 # EXR layouts the image crate does not read (single-channel, luminance).
 exr = "1"
 # Audio
