@@ -17,6 +17,7 @@ pub mod shaderlab;
 mod host_display;
 #[cfg(target_os = "linux")]
 mod host_keyboard;
+mod host_pointer;
 
 /// Opens the host keymap before the managed keyboard is discovered.
 pub fn initialize_keyboard() {
@@ -319,6 +320,7 @@ fn drive(
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
     motion: Res<AccumulatedMouseMotion>,
     mut cursors: Query<(Entity, &mut CursorOptions), With<PrimaryWindow>>,
+    handles: Query<&bevy::window::RawHandleWrapper, With<PrimaryWindow>>,
     mut images: ResMut<Assets<Image>>,
     captures: Res<render::WindowCaptures>,
     mut commands: Commands,
@@ -439,13 +441,23 @@ fn drive(
             _ => {}
         }
     }
-    // Bevy knows the pointer only while it is over the window (it forgets it on leaving, and
-    // drops positions outside): the last position inside stays until it returns. Documented-
-    // contract gap, not a choice: Unity 6000.0 Input.mousePosition reports the pointer outside
-    // the game view (values below 0 or above the screen size) while the cursor is neither locked
-    // nor confined. Open in docs/COMPATIBILITY_GAPS.md.
+    // Bevy knows the pointer only while it is over the window and after it moved there; before
+    // that and while it is outside, on macOS the window system tells where it is, also outside
+    // the window (the macOS Editor reads the system cursor in Game view coordinates from its
+    // second frame, moved or not: host_pointer). Elsewhere, and for a locked cursor, the last
+    // position stays.
+    let mut pointer_known = true;
     if let Some(position) = window.physical_cursor_position() {
         driver.mouse = position;
+    } else if !cursors
+        .single()
+        .is_ok_and(|(_, options)| options.grab_mode == CursorGrabMode::Locked)
+        && let Ok(handle) = handles.single()
+        && let Some((x, y)) = host_pointer::position(host_pointer::PointerWindow::of(handle))
+    {
+        driver.mouse = Vec2::new(x as f32, y as f32);
+    } else {
+        pointer_known = false;
     }
     // The remote viewers' input joins the window's.
     let mut watched = false;
@@ -513,6 +525,7 @@ fn drive(
         raw_motion: 1,
         display_version: unbound_runtime::display::version(),
         ime_version: unbound_runtime::ime::version(),
+        pointer_known: i32::from(pointer_known),
         fixed_step: 0.0,
     };
     let keep_going = driver.inner.frame(&input);

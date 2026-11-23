@@ -43,6 +43,9 @@ namespace Unbound.Runtime
         /// <summary>Under a scripted fixed frame rate (<c>--fixed-fps</c>), the frame's step in
         /// seconds; 0 when frames follow the wall clock.</summary>
         internal double FixedStep;
+        /// <summary>1 when MouseX/MouseY are where the system pointer is (also outside the
+        /// window); 0 when no pointer is known (headless runs).</summary>
+        internal int PointerKnown;
     }
 
     /// <summary>A key press or release; <see cref="TextStart"/> and <see cref="TextLength"/> are

@@ -105,7 +105,8 @@ use std::ffi::c_void;
 /// 92: `jobs_api`, the job system (`unbound_jobs::ffi::JobsApi`).
 /// 93: `gi_automatic_uvs` answers how many ways of laying the charts out fit the system's layout
 /// that its data cannot tell apart (0 when one was taken by the data).
-pub const NATIVE_API_VERSION: u32 = 93;
+/// 94: `pointer_known` at the end of `FrameInput`.
+pub const NATIVE_API_VERSION: u32 = 94;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

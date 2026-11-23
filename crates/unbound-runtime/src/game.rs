@@ -134,6 +134,9 @@ pub struct FrameInput {
     /// `real_delta_time` is 0); 0 when frames follow the wall clock. The engine's real-time clock
     /// then follows the fixed frames too.
     pub fixed_step: f64,
+    /// 1 when `mouse_x`/`mouse_y` are where the system pointer is (a window's host knows it,
+    /// moved or not, also outside the window); 0 when no pointer is known (headless runs).
+    pub pointer_known: i32,
 }
 
 /// A key press or release; the layout matches `KeyEvent` in the managed engine.
@@ -663,6 +666,7 @@ impl Game {
                 raw_motion: 0,
                 display_version: crate::display::version(),
                 ime_version: crate::ime::version(),
+                pointer_known: 0,
                 fixed_step: 0.0,
             };
             self.apply_changes();
@@ -694,9 +698,10 @@ mod tests {
     use super::FrameInput;
     #[test]
     fn frame_layout_matches_managed_cached_input_versions() {
-        assert_eq!(std::mem::size_of::<FrameInput>(), 120);
+        assert_eq!(std::mem::size_of::<FrameInput>(), 128);
         assert_eq!(std::mem::offset_of!(FrameInput, display_version), 96);
         assert_eq!(std::mem::offset_of!(FrameInput, ime_version), 104);
         assert_eq!(std::mem::offset_of!(FrameInput, fixed_step), 112);
+        assert_eq!(std::mem::offset_of!(FrameInput, pointer_known), 120);
     }
 }

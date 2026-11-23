@@ -74,6 +74,7 @@ namespace Unbound.Runtime
         static ushort s_MouseButtons;
         static bool s_HaveWindowMouse;
         static Vector2 s_WindowMouse;
+        static int s_MouseFrames;
 
         sealed class Pad
         {
@@ -530,20 +531,41 @@ namespace Unbound.Runtime
             QueueEvent((IntPtr)e);
         }
 
+        /// <summary>Whether the window system's pointer reaches the Input System at the second frame
+        /// without having moved: the host OS decides (matches the Unity 6000.0.71f1 Editors,
+        /// tests/projects/initialpointer: the macOS Editor reads an unmoved cursor from the second
+        /// frame on, delta 0; the Linux Editor's mouse stays at (0, 0) until the pointer moves).</summary>
+        internal static bool ReportsUnmovedPointer = Application.platform == RuntimePlatform.OSXEditor;
+
+        /// <summary>Forgets the window's pointer, as at the start of a run (tests).</summary>
+        internal static void ResetWindowPointer()
+        {
+            s_HaveWindowMouse = false;
+            s_WindowMouse = Vector2.zero;
+            s_MousePosition = Vector2.zero;
+            s_MouseFrames = 0;
+        }
+
         static void MouseMove(FrameInput* input, double time)
         {
-            // The window reports the pointer only while it is over the window: once it leaves,
-            // the last position inside stays and no move is queued until it returns. This is a
-            // documented-contract gap, not a choice: Unity 6000.0 Input.mousePosition reports the
-            // pointer outside the game view (values below 0 or above the screen size) while the
-            // cursor is neither locked nor confined. Open, see docs/COMPATIBILITY_GAPS.md.
+            // The host reports the system pointer, also outside the window, when it knows it.
             var window = new Vector2(input->MouseX, input->MouseY);
-            // The first frame tells where the pointer is, not that it moved: a pointer that never
-            // moves sends nothing, as the Editor's does.
+            // The first frame tells where the pointer is, not that it moved. On macOS the second
+            // frame's update brings the pointer where it is, moved or not, as one state event
+            // without motion; on Linux a pointer that never moves sends nothing (see
+            // ReportsUnmovedPointer). Without a known pointer (headless) nothing is sent.
+            s_MouseFrames++;
             if (!s_HaveWindowMouse)
             {
                 s_HaveWindowMouse = true;
                 s_WindowMouse = window;
+            }
+            else if (s_MouseFrames == 2 && ReportsUnmovedPointer && input->PointerKnown != 0 && Cursor.lockState != CursorLockMode.Locked)
+            {
+                s_WindowMouse = window;
+                s_MousePosition = new Vector2(window.x, input->ScreenHeight - window.y);
+                QueueMouseState(Vector2.zero, Vector2.zero, time);
+                return;
             }
             if (Cursor.lockState == CursorLockMode.Locked && input->RawMotion != 0)
             {

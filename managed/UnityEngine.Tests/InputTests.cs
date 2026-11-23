@@ -151,6 +151,48 @@ namespace UnityEngine.Tests
             fixed (byte* k = keys) { input.Keys = k; NativeInput.BeginFrame(&input); }
         }
 
+        /// <summary>On macOS a pointer the host knows is brought where it is by the second frame's
+        /// update, moved or not, without motion; on Linux, or without a known pointer, nothing is
+        /// sent (tests/projects/initialpointer).</summary>
+        [Fact]
+        public void TheSecondFrameBringsAKnownPointerWhereItIs()
+        {
+            NativeInput.Enabled = true;
+            bool reports = NativeInput.ReportsUnmovedPointer;
+            try
+            {
+                foreach (var (known, macos, locked) in new[] { (1, true, false), (0, true, false), (1, false, false), (1, true, true) })
+                {
+                    NativeInput.ReportsUnmovedPointer = macos;
+                    Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
+                    NativeInput.ResetWindowPointer();
+                    TakeEvents();
+                    var frame = new FrameInput { MouseX = 100, MouseY = 140, PointerKnown = known, ScreenWidth = 960, ScreenHeight = 540 };
+                    Frame(frame);
+                    Assert.Empty(TakeEvents());
+                    Frame(frame);
+                    var events = TakeEvents();
+                    if (known == 0 || !macos || locked)
+                    {
+                        Assert.Empty(events);
+                        continue;
+                    }
+                    var state = Assert.Single(events);
+                    Assert.Equal(new Vector2(100, 400), new Vector2(BitConverter.ToSingle(state, 24), BitConverter.ToSingle(state, 28)));
+                    Assert.Equal(Vector2.zero, new Vector2(BitConverter.ToSingle(state, 32), BitConverter.ToSingle(state, 36)));
+                    Frame(frame);
+                    Assert.Empty(TakeEvents());
+                }
+            }
+            finally
+            {
+                Cursor.lockState = CursorLockMode.None;
+                NativeInput.ReportsUnmovedPointer = reports;
+                NativeInput.ResetWindowPointer();
+                NativeInput.Enabled = false;
+            }
+        }
+
         [Fact]
         public void TheWindowsInputBecomesTheEventsTheLinuxEditorQueues()
         {
