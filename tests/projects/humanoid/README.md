@@ -183,8 +183,13 @@ imported without keyframe reduction.
   unchanged scale leaves a preceding non-uniform spine scale and its descendants
   in the same frame. The default elbow hint uses the human pose's current placement,
   including its previously cached value. A solve before a human-pose read uses
-  the placement before the scale edit. The pose from a solve after the read still
-  has an unresolved comparison in the separate diagnostic.
+  the placement before the scale edit. Three more controls add 662 rows from
+  two identical macOS 6000.0.71f1 Editor runs. The first hint and solve also
+  follow the earlier placement after a uniform scale edit. A first hint read
+  after a non-uniform scale, a human-pose read and a subsequent arm turn uses
+  the rebased skeleton. Separate diagnostic runs still show final-pose
+  differences when solving after the human-pose read, with or without the
+  arm turn. Unbound reports this case.
   [AnimationHumanStream.GetHintPosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationHumanStream.GetHintPosition.html),
   [AnimationHumanStream.SolveIK](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationHumanStream.SolveIK.html).
   [TransformStreamHandle](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.TransformStreamHandle.html),

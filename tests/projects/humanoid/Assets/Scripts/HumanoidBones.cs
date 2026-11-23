@@ -116,7 +116,13 @@ public partial class HumanoidProbe
 /// one of them.</summary>
 public struct HumanBoneJob : IAnimationJob
 {
-    public enum Mode { Read, RotateLocal, RotateWorld, MoveHips, MoveArm, Scale, RotateThenHuman, HumanThenRead, Prop, Solve, RotateThenSolve, SolveTwice, ScaleHips, ScaleHipsThenHuman, HipsTrs, ScaleHipsWorldWrite, ScaleHipsHints, ScaleHipsThenSolve, ScaleSpineThenSameHips, ScaleHipsFirstHint }
+    public enum Mode
+    {
+        Read, RotateLocal, RotateWorld, MoveHips, MoveArm, Scale, RotateThenHuman,
+        HumanThenRead, Prop, Solve, RotateThenSolve, SolveTwice, ScaleHips, ScaleHipsThenHuman,
+        HipsTrs, ScaleHipsWorldWrite, ScaleHipsHints, ScaleHipsThenSolve, ScaleSpineThenSameHips,
+        ScaleHipsFirstHint, ScaleHipsUniformThenSolve, ScaleHipsUniformFirstHint, ScaleHipsReadTurnThenHint
+    }
 
     public Mode mode;
     TransformStreamHandle hips, spine, arm, head, hand, prop;
@@ -205,6 +211,22 @@ public struct HumanBoneJob : IAnimationJob
                 break;
             case Mode.ScaleHipsFirstHint:
                 hips.SetLocalScale(stream, Vector3.Scale(hips.GetLocalScale(stream), new Vector3(.8f, 1.25f, 1.1f)));
+                HumanoidProbe.ElbowHintRecord("first", stream);
+                break;
+            case Mode.ScaleHipsUniformThenSolve:
+                hips.SetLocalScale(stream, hips.GetLocalScale(stream) * 1.25f);
+                HumanoidProbe.BoneRecord("scaled", stream, ref this);
+                SolveLeftHand(stream);
+                break;
+            case Mode.ScaleHipsUniformFirstHint:
+                hips.SetLocalScale(stream, hips.GetLocalScale(stream) * 1.25f);
+                HumanoidProbe.ElbowHintRecord("first", stream);
+                break;
+            case Mode.ScaleHipsReadTurnThenHint:
+                hips.SetLocalScale(stream, Vector3.Scale(hips.GetLocalScale(stream), new Vector3(.8f, 1.25f, 1.1f)));
+                var body = stream.AsHuman().bodyPosition;
+                arm.SetLocalRotation(stream, arm.GetLocalRotation(stream) * Quaternion.Euler(0f, 0f, 25f));
+                HumanoidProbe.BoneRecord("scaledAndTurned", stream, ref this);
                 HumanoidProbe.ElbowHintRecord("first", stream);
                 break;
             case Mode.ScaleHipsThenSolve:
