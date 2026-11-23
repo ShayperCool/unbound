@@ -1,5 +1,8 @@
 {
   "exclusive": true,
- "commands": ["python3 tests/projects/navpath/run.py unbound"],
+ "commands": [
+   "python3 tests/projects/navpath/run.py unbound",
+   "python3 tests/projects/navpath/run.py unbound --profile obstacle-separation"
+ ],
  "summary": "gated: \\d+ scenario\\(s\\) differ"
 }

@@ -191,6 +191,8 @@ public class PathProbe : MonoBehaviour
     {
         Time.captureDeltaTime = 0.02f;
         yield return null;
+        bool obstacleSeparation = Environment.GetEnvironmentVariable("NAVPATH_PROBE_PROFILE")
+            == "obstacle-separation";
         foreach (var (name, body) in new (string, Func<IEnumerator>)[]
         {
             ("cost.pool", CostPool),
@@ -225,9 +227,10 @@ public class PathProbe : MonoBehaviour
             ("replan.topofar", () => ReplanTopology(true)),
             ("replan.budget", () => ReplanTopology(false, 1)),
             ("replan.none", ReplanNone),
+            ("steer.separation", ObstacleSeparation),
         })
         {
-            if (!name.StartsWith(Only)) continue;
+            if ((name == "steer.separation") != obstacleSeparation || !name.StartsWith(Only)) continue;
             ProbeLog.Begin(name);
             var steps = body();
             while (true)
@@ -1411,6 +1414,100 @@ public class PathProbe : MonoBehaviour
         }
         yield return Follow(walkers.ToArray(), 50, 250, 20, Mud);
         NavMesh.pathfindingIterationsPerFrame = iterations;
+    }
+
+    enum SeparationNeighbour { Empty, Capsule, Agent }
+
+    /// <summary>Steering near a capsule or a stationary agent, including initial overlap.</summary>
+    IEnumerator ObstacleSeparation()
+    {
+        ClearAgents();
+        yield return null;
+        Level(12f);
+        ProbeLog.Value("release", Application.unityVersion);
+        foreach (var (name, neighbour, startX, bottomAtFloor, noAvoidance) in
+            new (string, SeparationNeighbour, float, bool, bool)[]
+            {
+                ("clear", SeparationNeighbour.Empty, -1.08f, false, false),
+                ("post", SeparationNeighbour.Capsule, -1.08f, false, false),
+                ("farther", SeparationNeighbour.Capsule, -1.40f, false, false),
+                ("neighbour", SeparationNeighbour.Agent, -1.08f, false, false),
+                ("touch", SeparationNeighbour.Capsule, -0.72f, true, false),
+                ("passthrough", SeparationNeighbour.Capsule, -0.72f, true, true),
+            })
+        {
+            var at = new Vector3(0.07f, 1f / 15f, -0.12f);
+            GameObject obstruction = null;
+            if (neighbour != SeparationNeighbour.Empty)
+            {
+                obstruction = new GameObject(name);
+                obstruction.transform.position = bottomAtFloor ? at + Vector3.up : at;
+                if (neighbour == SeparationNeighbour.Agent)
+                {
+                    var standing = obstruction.AddComponent<NavMeshAgent>();
+                    standing.avoidancePriority = 20;
+                    standing.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+                }
+                else
+                {
+                    var obstacle = obstruction.AddComponent<NavMeshObstacle>();
+                    obstacle.shape = NavMeshObstacleShape.Capsule;
+                    obstacle.radius = 0.5f;
+                    obstacle.height = 2f;
+                    obstacle.carving = false;
+                }
+            }
+            yield return null;
+            var mover = new GameObject("mover");
+            mover.transform.position = new Vector3(startX + at.x, at.y, at.z + 0.37f);
+            var agent = mover.AddComponent<NavMeshAgent>();
+            if (noAvoidance) agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            agent.SetDestination(new Vector3(6f, at.y, at.z + 0.37f));
+            for (int frame = 1; frame <= 30; frame++)
+            {
+                yield return null;
+                if (frame > 5 && frame % 10 != 0) continue;
+                string key = name + ".f" + frame;
+                ProbeLog.Value(key + ".at", agent.nextPosition);
+                ProbeLog.Value(key + ".desired", agent.desiredVelocity);
+                ProbeLog.Value(key + ".velocity", agent.velocity);
+                ProbeLog.Value(key + ".pathPending", agent.pathPending);
+                ProbeLog.Value(key + ".pathStatus", agent.pathStatus.ToString());
+            }
+            Destroy(mover);
+            if (obstruction != null) Destroy(obstruction);
+            yield return null;
+        }
+
+        foreach (var (name, height) in new (string, float)[]
+        {
+            ("shaft", 0f),
+            ("lower-cap", -0.75f),
+            ("upper-cap", 2.75f),
+            ("above", 3.05f),
+        })
+        {
+            float floor = 1f / 15f;
+            var post = new GameObject("post");
+            post.transform.position = new Vector3(0.07f, floor + height, -0.12f);
+            var obstacle = post.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.radius = 0.5f;
+            obstacle.height = 2f;
+            yield return null;
+
+            var mover = new GameObject("mover");
+            mover.transform.position = new Vector3(-0.68f, floor, 0.08f);
+            var agent = mover.AddComponent<NavMeshAgent>();
+            agent.height = 2f;
+            yield return null;
+            ProbeLog.Value(name + ".f1.at", agent.nextPosition);
+            yield return Frames(2);
+            ProbeLog.Value(name + ".f3.at", agent.nextPosition);
+            Destroy(mover);
+            Destroy(post);
+            yield return null;
+        }
     }
 
     /// <summary>Agents without avoidance and NavMesh obstacles (not carving, capsules of radius

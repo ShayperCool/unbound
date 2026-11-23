@@ -81,12 +81,38 @@ Measured (Unity 6000.0.71f1, `Reference/unity-6000.0.71f1.json`):
 Listed, not gated (`run.py` header): `two.p1`, a line grazing a vertex: the builders place that vertex
 about 2e-6 apart, on either side of the line; where an agent reaching a wide link at the edge of the NavMesh under its start
 crosses it (gb1.2.cur.*); the route past a link's landing (`place.links` m.p.ab, r30.p.ab, r30.w.ab,
-m.w.ba); an agent with avoidance passing an obstacle from frame 100 (`replan.none` avoider).
+m.w.ba).
 
 Q376's runtime raster-bounds correction resolves both initial `replan.topofar` corner-count
 failures: `a.given` and `mask.given` are now 7 in both engines. All 1687 values match the
 unchanged Unity 6000.0.71f1 reference. The existing comparator and its listed-key policy
 are unchanged; the keys no longer produce differences.
+
+### Obstacle separation and contact
+
+A non-carving obstacle affects avoidance along a route. The probe records the route status
+while the agent steers past the obstruction, and records a position change when an agent starts
+inside a capsule. The control with Quality None moves through the same capsule.
+[Unity 6.0 NavMeshObstacle](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshObstacle.html)
+[AI Navigation 2.0 Manual](https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/AboutObstacles.html)
+
+In Unity 6000.0.71f1, a stationary agent contributes separation steering before collision
+prediction. A capsule with the same radius contributes to collision prediction and contact.
+The steering change first occurs at frame 91 in `replan.none`, when the participant enters
+the separation range. All 578 values now match the original reference.
+
+For an upright capsule at least as tall as its diameter, contact uses its widest horizontal
+section across the agent's height. With both radii at 0.5 m, the shaft pushes the agent to
+1.0 m from the capsule axis. A cap 0.25 m beyond the agent's height pushes it to 0.933 m, and
+a capsule fully above the agent leaves its position unchanged.
+
+The dedicated profile records 555 values, including the release, all six steering controls,
+and stationary contacts against the shaft, lower cap, upper cap and a vertically clear capsule.
+The main and stacked-link profiles continue to use their original references.
+
+    UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py editor --profile obstacle-separation --label L
+    UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py publish --profile obstacle-separation --label L
+    UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 UNBOUND=<binary> python3 tests/projects/navpath/run.py unbound --profile obstacle-separation --label L
 
 
 The `layers` diagnostic profile records stacked data separately from the main regression
