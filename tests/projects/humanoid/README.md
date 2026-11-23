@@ -213,7 +213,18 @@ imported without keyframe reduction.
   rotated-arm control applies the same placement when it writes a bone. The
   Animator Transform has the frame from before this evaluation's movement.
   Separate diagnostic captures still show differences in ProcessRootMotion
-  pose reads and in scripts that move the root during OnAnimatorMove.
+  pose reads. See the separate scripted movement controls below.
+
+  Five scripted movement controls add 1200 rows from matching macOS
+  6000.0.71f1 captures. On a manual clip-to-job graph, ProcessAnimation
+  reads the root after OnAnimatorMove. The controls include a direct
+  Transform change, no movement, ApplyBuiltinRootMotion with applyRootMotion
+  on and off, and a bone rotation after the script moves the root. The
+  measured graph uses one eventless clip, the default Animator update mode
+  and an Animator without a controller or physics body. Cases where the
+  root phase opens the human pose or the graph runs automatically still
+  use the reported fallback.
+  [OnAnimatorMove](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnAnimatorMove.html)
 
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
   `ProbeRunner.Leftovers`): HumanA's clip leaving for such a state (Hold) after an exit time of 0.3
