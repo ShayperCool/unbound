@@ -12,7 +12,9 @@ namespace UnityEngine
         Material[] m_MaterialSlots = new Material[1]; // one empty slot when added by script (measured)
         int m_ProfilerMaterialSlots, m_ProfilerIndexedBlockSlots;
 
-        bool MeasuresMaterialReservations => this is MeshRenderer && Compat.MeshRendererMaterialMemoryMeasured;
+        bool MeasuresMaterialReservations => this is MeshRenderer && Compat.MeshRendererMaterialMemoryMeasured
+            && !m_Destroyed && !IsPersistentAsset
+            && m_GameObject is { m_Destroyed: false, IsPersistentAsset: false, m_IsPrefabAsset: false };
         internal int ProfilerMaterialSlots => m_ProfilerMaterialSlots;
         internal int ProfilerIndexedBlockSlots => m_ProfilerIndexedBlockSlots;
 
@@ -21,13 +23,13 @@ namespace UnityEngine
             get => m_MaterialSlots;
             set
             {
-                int previousCount = m_MaterialSlots.Length;
+                var previous = m_MaterialSlots;
                 m_MaterialSlots = value;
                 if (!MeasuresMaterialReservations) return;
                 m_ProfilerMaterialSlots = Math.Max(m_ProfilerMaterialSlots, value.Length);
                 if (m_ProfilerIndexedBlockSlots != 0)
                     m_ProfilerIndexedBlockSlots = Math.Max(m_ProfilerIndexedBlockSlots, value.Length);
-                if (value.Length < previousCount && m_MaterialBlocks != null)
+                if (value.Length < (previous?.Length ?? 0) && m_MaterialBlocks != null)
                 {
                     // CoreCLR permits removal while iterating a Dictionary.
                     foreach (var pair in m_MaterialBlocks)
@@ -498,8 +500,18 @@ namespace UnityEngine
 
         public void SetPropertyBlock(MaterialPropertyBlock properties, int materialIndex)
         {
-            if (MeasuresMaterialReservations && properties != null && (uint)materialIndex < (uint)m_Materials.Length)
-                m_ProfilerIndexedBlockSlots = Math.Max(m_ProfilerIndexedBlockSlots, m_Materials.Length);
+            if (MeasuresMaterialReservations)
+            {
+                int materialCount = m_MaterialSlots.Length;
+                if ((uint)materialIndex >= (uint)materialCount)
+                {
+                    Log.Engine(LogType.Error, FormattableString.Invariant($"MaterialPropertyBlock index {materialIndex} is out of range"),
+                        this, respectStackTraceSetting: true);
+                    return;
+                }
+                if (properties != null)
+                    m_ProfilerIndexedBlockSlots = Math.Max(m_ProfilerIndexedBlockSlots, materialCount);
+            }
             if (properties == null || properties.isEmpty)
                 m_MaterialBlocks?.Remove(materialIndex);
             else if (m_MaterialBlocks != null && m_MaterialBlocks.TryGetValue(materialIndex, out var own))
