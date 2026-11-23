@@ -14,9 +14,11 @@ namespace UnityEngine
 
         enum ProfilerStorage : byte { Initialized, Pending, DrawPrepared }
 
-        void RealizeProfilerPropertyStorage()
+        internal bool HasPendingProfilerStorage => m_State.m_ProfilerStorage == ProfilerStorage.Pending;
+
+        internal void RealizeProfilerPropertyStorage()
         {
-            if (m_State.m_ProfilerStorage == ProfilerStorage.Pending)
+            if (HasPendingProfilerStorage)
                 m_State.m_ProfilerStorage = ProfilerStorage.Initialized;
         }
 
@@ -40,10 +42,10 @@ namespace UnityEngine
             source.PrepareProfilerDraw();
         }
 
-        internal void ObserveProfilerPass(int pass, bool allPasses = false)
+        internal void ObserveProfilerPass(int pass, bool allPasses = false, bool useActivePipeline = false)
         {
             if (m_State.m_ProfilerStorage != ProfilerStorage.Pending) return;
-            bool? usable = m_Shader != null ? m_Shader.ProfilerPassAvailable(pass, allPasses) : null;
+            bool? usable = m_Shader != null ? m_Shader.ProfilerPassAvailable(pass, allPasses, useActivePipeline) : null;
             if (usable == true) RealizeProfilerPropertyStorage();
             else if (!usable.HasValue) PrepareProfilerDraw();
         }

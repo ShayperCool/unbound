@@ -123,6 +123,13 @@ namespace UnityEngine.Rendering
             internal bool Screen;
             /// <summary>An executed command set the render targets, even if it selected the same images.</summary>
             internal bool BoundTargets;
+            internal bool MeasureImmediateMaterialDraws;
+
+            internal void ObserveMaterialDraw(Material material)
+            {
+                if (MeasureImmediateMaterialDraws) material.RealizeProfilerPropertyStorage();
+                else material.MarkProfilerDrawEmitted();
+            }
         }
 
         /// <summary>Temporaries made by GetTemporaryRT, by property id, until released or the end
@@ -590,7 +597,8 @@ namespace UnityEngine.Rendering
             Add(c =>
             {
                 ulong meshHandle = mesh.Sync();
-                ulong materialHandle = material.Sync();
+                ulong materialHandle = material.Sync(profileDraw: false);
+                c.ObserveMaterialDraw(material);
                 if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
                 GfxStream.Draw(meshHandle, submeshIndex, materialHandle, shaderPass < 0 ? GfxStream.AllPasses : shaderPass, matrix, Color.white, properties: values, rawWinding: Unbound.Runtime.Compat.ImmediateMeshKeepsWinding);
             }, size);
@@ -641,7 +649,9 @@ namespace UnityEngine.Rendering
                 if (mesh != null)
                 {
                     if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
-                    GfxStream.Draw(mesh.Sync(), submeshIndex, material.Sync(), pass, model, Color.white,
+                    ulong materialHandle = material.Sync(profileDraw: false);
+                    c.ObserveMaterialDraw(material);
+                    GfxStream.Draw(mesh.Sync(), submeshIndex, materialHandle, pass, model, Color.white,
                         properties: Unbound.Runtime.FrameBuilder.WithRenderingLayer(renderer.renderingLayerMask, renderer.BlockFor(submeshIndex)?.m_Values), flipWinding: renderer.DrawFlipWinding(model));
                     return;
                 }

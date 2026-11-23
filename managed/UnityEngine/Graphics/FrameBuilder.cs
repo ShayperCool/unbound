@@ -1111,6 +1111,7 @@ namespace Unbound.Runtime
                 ApplyPerObjectLights(data, s_Items, order, drawing.mainLightIndex, (drawing.perObjectData & PerObjectData.Lightmaps) != 0);
             if (s_MaterialHandles.Length < count) Array.Resize(ref s_MaterialHandles, Math.Max(count, s_MaterialHandles.Length * 2));
             ulong overrideHandle = overrideMaterial != null ? overrideMaterial.Sync(profileDraw: false) : 0;
+            if (overrideMaterial != null && count > 0) ScriptableRenderContext.ObserveQueuedProfilerMaterial(overrideMaterial);
             for (int i = 0; i < count; i++)
                 s_MaterialHandles[i] = overrideMaterial != null ? overrideHandle
                     : overrideShader != null ? ReplacementMaterial(s_Items[order[i]].Material, overrideShader).Sync(profileDraw: false)
@@ -1163,7 +1164,7 @@ namespace Unbound.Runtime
                 int drawnPasses = pass == GfxStream.TaggedPasses && item.Material.shader?.PassInfo is { Found: true } listed
                     ? MatchListPasses(listed).Count : 1;
                 EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes, srp: true, proxyVolumes: proxyVolumes,
-                    passes: drawnPasses, overrideMaterial: overrideMaterial);
+                    passes: drawnPasses, profileDraw: overrideMaterial == null);
             }
             if (block >= 0) GfxStream.StateOverride(null);
             }
@@ -1280,7 +1281,7 @@ namespace Unbound.Runtime
         static void EmitDraw(in DrawItem item, ulong material, int pass, bool lightmaps = true, bool probes = true,
             Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null, string extraKeyword3 = null,
             RenderDispatchContext dispatch = RenderDispatchContext.Unknown, bool srp = false, bool proxyVolumes = true,
-            int passes = 1, Material overrideMaterial = null)
+            int passes = 1, bool profileDraw = true)
         {
             using var pooled = DrawPropertyPool.Begin();
             Describe(item);
@@ -1327,11 +1328,7 @@ namespace Unbound.Runtime
                 GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
                 item.ClipEnabled ? item.Clip : (Rect?)null, properties, flipWinding: item.Renderer?.DrawFlipWinding(item.Model) ?? false, tint: item.Tint);
             }
-            if (passes > 0)
-            {
-                var drawn = overrideMaterial != null ? overrideMaterial : item.Material?.m_Handle == material ? item.Material : null;
-                drawn?.MarkProfilerDrawEmitted();
-            }
+            if (profileDraw && passes > 0 && item.Material?.m_Handle == material) item.Material.MarkProfilerDrawEmitted();
             if (restoreCanvasClip) GfxStream.Keyword("UNITY_UI_CLIP_RECT", true);
             if (masking) SpriteMasking.After(previousState);
             foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, false);

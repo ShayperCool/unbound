@@ -476,7 +476,11 @@ namespace UnityEngine
             bool outside = !FrameBuilder.CameraRendering;
             var saved = GfxStream.Current;
             if (outside) GfxStream.Camera(Immediate.ModelView, Immediate.Projection, saved.Flags);
-            var context = new CommandBuffer.Context();
+            var context = new CommandBuffer.Context
+            {
+                MeasureImmediateMaterialDraws = outside && GraphicsSettings.currentRenderPipeline == null
+                    && RenderPipelineManager.currentPipeline == null,
+            };
             try
             {
                 buffer.Execute(context);

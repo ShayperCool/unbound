@@ -199,6 +199,7 @@ namespace UnityEngine.Rendering
         {
             if (!RenderPipelineManager.TryPrepareRenderPipeline(GraphicsSettings.currentRenderPipeline)) return;
             var context = ScriptableRenderContext.Begin();
+            using var observations = context.TrackProfilerDraws();
             FrameBuilder.BeginCameraRendering();
             try { RenderPipelineManager.currentPipeline.InternalProcessRenderRequests(context, camera, data); }
             finally
@@ -342,6 +343,7 @@ namespace UnityEngine.Rendering
             }
             if (!TryPrepareRenderPipeline(asset)) return true;
             var context = ScriptableRenderContext.Begin(cameras);
+            using var observations = context.TrackProfilerDraws();
             // The engine's per-renderer lighting (ambient probe) for the pipeline's draws.
             FrameBuilder.EmitLightingGlobals(srp: true);
             FrameBuilder.BeginCameraRendering();

@@ -915,6 +915,9 @@ namespace UnityEngine.Rendering
         static int s_Next;
         static List<Camera> s_Cameras = new List<Camera>();
         static Camera s_Camera;
+        static readonly List<Material> s_ProfilerDrawMaterials = new List<Material>();
+        static IntPtr s_ProfilerContext;
+        static int s_ProfilerDrawStart;
 
         internal static ScriptableRenderContext Begin(List<Camera> cameras = null)
         {
@@ -932,8 +935,51 @@ namespace UnityEngine.Rendering
             results.AddRange(s_Cameras);
         }
 
-        [Unbound.EditorFaithful("no-op is equivalent: Unbound runs the context's commands as they are scheduled")]
-        public void Submit() { }
+        // The renderer receives its commands when scheduled. A queued draw material's measured
+        // allocation changes on submission, including when the requested pass cannot draw.
+        public void Submit()
+        {
+            if (s_ProfilerContext == IntPtr.Zero || m_Ptr != s_ProfilerContext) return;
+            for (int i = s_ProfilerDrawStart; i < s_ProfilerDrawMaterials.Count; i++)
+            {
+                var material = s_ProfilerDrawMaterials[i];
+                if (material != null) material.RealizeProfilerPropertyStorage();
+            }
+            ClearProfilerDraws();
+        }
+
+        internal static void ObserveQueuedProfilerMaterial(Material material)
+        {
+            if (!material.HasPendingProfilerStorage) return;
+            if (s_ProfilerContext == IntPtr.Zero) material.MarkProfilerDrawEmitted();
+            else s_ProfilerDrawMaterials.Add(material);
+        }
+
+        static void ClearProfilerDraws() => s_ProfilerDrawMaterials.RemoveRange(s_ProfilerDrawStart,
+            s_ProfilerDrawMaterials.Count - s_ProfilerDrawStart);
+
+        internal ProfilerDrawScope TrackProfilerDraws() => new ProfilerDrawScope(m_Ptr);
+
+        internal readonly struct ProfilerDrawScope : IDisposable
+        {
+            readonly IntPtr m_PreviousContext;
+            readonly int m_PreviousStart;
+
+            internal ProfilerDrawScope(IntPtr context)
+            {
+                m_PreviousContext = s_ProfilerContext;
+                m_PreviousStart = s_ProfilerDrawStart;
+                s_ProfilerContext = context;
+                s_ProfilerDrawStart = s_ProfilerDrawMaterials.Count;
+            }
+
+            public void Dispose()
+            {
+                ClearProfilerDraws();
+                s_ProfilerDrawStart = m_PreviousStart;
+                s_ProfilerContext = m_PreviousContext;
+            }
+        }
 
         [Unbound.EditorFaithful("no-op is equivalent: render passes are always valid to submit on the Editor's device")]
         public bool SubmitForRenderPassValidation() => true;

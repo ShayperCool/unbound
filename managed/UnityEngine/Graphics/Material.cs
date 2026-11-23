@@ -1042,7 +1042,7 @@ namespace UnityEngine
         /// <summary>Activates a pass for GL drawing and Graphics.DrawMeshNow.</summary>
         public bool SetPass(int pass)
         {
-            ObserveProfilerPass(pass);
+            ObserveProfilerPass(pass, useActivePipeline: true);
             Unbound.Runtime.Immediate.PassMaterial = this;
             Unbound.Runtime.Immediate.PassIndex = pass;
             return true;

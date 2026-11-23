@@ -193,10 +193,14 @@ namespace UnityEngine
             ActiveSubShader("Shader.passCount", "follows the renderer's pass list")?.Passes.Count;
 
         // An inactive or unmeasured subshader cannot establish the state of the property store.
-        internal bool? ProfilerPassAvailable(int pass, bool allPasses)
+        internal bool? ProfilerPassAvailable(int pass, bool allPasses, bool useActivePipeline)
         {
             if (!allPasses && pass < 0) return false;
-            if (globalRenderPipeline.Length != 0 || ActiveSubShader(null, null) is not { } active
+            bool scriptable = GraphicsSettings.currentRenderPipeline != null || RenderPipelineManager.currentPipeline != null;
+            // An empty shader tag is also valid with an active custom render pipeline. SetPass
+            // was measured there. The Blit allocation measurement covers the Built-In pipeline.
+            bool measuredPipeline = scriptable ? useActivePipeline : globalRenderPipeline.Length == 0;
+            if (!measuredPipeline || ActiveSubShader(null, null) is not { } active
                 || active.Lod is not int lod || lod > EffectiveLOD
                 || !Unbound.Runtime.ShaderDeclarations.RunsUnder(Unbound.Runtime.ShaderDeclarations.Tag(active.Tags, "RenderPipeline"), globalRenderPipeline))
                 return null;
