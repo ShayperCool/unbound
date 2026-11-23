@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Unbound.Runtime;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.Rendering;
@@ -159,11 +160,11 @@ namespace UnityEngine
             /// <summary>Writes the data into a mesh.</summary>
             internal void ApplyTo(Mesh mesh, MeshUpdateFlags flags)
             {
-                // The copied packed table is independent of the streams. A fixed copy can
-                // leave a previously queried wide table available to the typed getters.
+                // In Unity 6000.0 the destination keeps its typed query data across a mesh-data
+                // replacement. The active layout still determines whether getters expose it.
                 bool copiedUnlimited = m_CopiedSkinLayout == SkinWeights.Unlimited;
-                var queried = m_CopiedSkinLayout.HasValue && !copiedUnlimited && SkinAttributeWidth(Layout) != 0
-                    ? mesh.m_QueriedPackedWeights : null;
+                var queriedWeights = Compat.RenderingMeasured ? mesh.m_QueriedWeights : null;
+                var queriedCounts = Compat.RenderingMeasured ? mesh.m_QueriedBoneCounts : null;
                 // Applying mesh data leaves buffers that were already requested available.
                 mesh.DropRuntimeBoneWeights(keepBuffers: true);
                 mesh.m_BoneWeights = null;
@@ -172,7 +173,8 @@ namespace UnityEngine
                     if (StreamBytes[s] > 0) mesh.WriteVertices(new ReadOnlySpan<byte>(Streams[s], StreamBytes[s]), 0, s);
                 if (copiedUnlimited)
                     mesh.RestorePackedSkinWeights(m_CopiedPackedWeights, SkinWeights.Unlimited);
-                mesh.m_QueriedPackedWeights = queried;
+                mesh.m_QueriedWeights = queriedWeights;
+                mesh.m_QueriedBoneCounts = queriedCounts;
                 mesh.SetIndexBufferParams(IndexCount, IndexFormat);
                 if (IndexCount > 0)
                     mesh.WriteIndices(new ReadOnlySpan<byte>(Indices, IndexCount * (IndexFormat == IndexFormat.UInt32 ? 4 : 2)), 0, flags | MeshUpdateFlags.DontValidateIndices);

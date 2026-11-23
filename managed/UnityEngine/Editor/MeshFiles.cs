@@ -59,7 +59,7 @@ namespace Unbound.Runtime
                 BonesBounds(mesh, poses);
                 Key("m_VariableBoneCountWeights", 1);
                 var variableWeights = mesh.RuntimeSkinWeights;
-                if (variableWeights is { IsPacked: true } && mesh.skinWeightBufferLayout == SkinWeights.Unlimited)
+                if (variableWeights is { IsPacked: true })
                 {
                     var words = new uint[variableWeights.PackedWordCount];
                     variableWeights.WritePackedWords(words);

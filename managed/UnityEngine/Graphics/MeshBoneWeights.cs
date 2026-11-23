@@ -13,8 +13,8 @@ namespace UnityEngine
         SkinWeights? m_RuntimeSkinLayout;
         internal MeshSkinWeightData RuntimeSkinWeights { get; private set; }
         MeshSkinWeightData m_CachedFixedWeights;
-        MeshSkinWeightData m_QueriedPackedWeights;
-        byte[] m_EmptyFixedWeightCounts;
+        MeshSkinWeightData m_QueriedWeights;
+        byte[] m_QueriedBoneCounts;
         BoneWeight[] m_LegacyWeightsBeforeResize;
         BoneWeight[] m_RawFixedBoneWeights;
         bool m_LegacyProjectionRead;
@@ -47,17 +47,15 @@ namespace UnityEngine
             var fixedWeights = m_RawFixedBoneWeights ?? m_LegacyWeightsBeforeResize ?? m_BoneWeights;
             m_CachedFixedWeights = RuntimeSkinWeights != null && m_RawFixedBoneWeights == null
                 ? RuntimeSkinWeights : fixedWeights is { Length: > 0 } ? MeshSkinWeightData.FromLegacy(fixedWeights) : null;
-            if (m_CachedFixedWeights is { WeightCount: 0 })
-                m_EmptyFixedWeightCounts ??= m_CachedFixedWeights.Counts;
             return m_CachedFixedWeights;
         }
 
-        MeshSkinWeightData QueriedSkinWeightData()
+        void CacheQueriedBoneWeights()
         {
-            if (m_QueriedPackedWeights != null) return m_QueriedPackedWeights;
             var data = SkinWeightData();
-            if (data?.IsPacked == true) m_QueriedPackedWeights = data;
-            return data;
+            if (data == null) return;
+            m_QueriedBoneCounts ??= data.Counts;
+            if (data.WeightCount != 0) m_QueriedWeights ??= data;
         }
 
         public NativeArray<byte> GetBonesPerVertex()
@@ -66,8 +64,9 @@ namespace UnityEngine
             ThrowIfDestroyed();
             EnsureModelLoaded();
             ThrowIfDestroyed();
-            var data = QueriedSkinWeightData();
-            var counts = data?.IsPacked == true ? data.Counts : m_EmptyFixedWeightCounts ?? data?.Counts;
+            bool hasWeights = CurrentSkinWeightLayout != SkinWeights.None;
+            if (hasWeights && m_QueriedBoneCounts == null) CacheQueriedBoneWeights();
+            var counts = hasWeights ? m_QueriedBoneCounts : null;
             int count = counts == null ? 0 : vertexCount;
             if (m_BoneCountsView == null)
             {
@@ -84,7 +83,9 @@ namespace UnityEngine
             ThrowIfDestroyed();
             EnsureModelLoaded();
             ThrowIfDestroyed();
-            var data = QueriedSkinWeightData();
+            bool hasWeights = CurrentSkinWeightLayout != SkinWeights.None;
+            if (hasWeights && m_QueriedWeights == null) CacheQueriedBoneWeights();
+            var data = hasWeights ? m_QueriedWeights : null;
             int count = data?.WeightCount ?? 0;
             return (m_BoneWeightsView ??= new MeshArrayView<BoneWeight1>(count == 0 ? null : data.Weights)).Borrow(count);
         }
@@ -338,8 +339,8 @@ namespace UnityEngine
         {
             ReleaseBoneWeightViews();
             m_CachedFixedWeights = null;
-            m_QueriedPackedWeights = null;
-            m_EmptyFixedWeightCounts = null;
+            m_QueriedWeights = null;
+            m_QueriedBoneCounts = null;
             m_LegacyWeightsBeforeResize = null;
             m_LegacyProjectionRead = false;
         }
@@ -369,9 +370,6 @@ namespace UnityEngine
             InvalidateBoneWeightArrays();
             InvalidateBoneWeightBuffers();
             RuntimeSkinWeights = source.RuntimeSkinWeights;
-            m_CachedFixedWeights = source.m_CachedFixedWeights;
-            m_QueriedPackedWeights = source.m_QueriedPackedWeights;
-            m_EmptyFixedWeightCounts = source.m_EmptyFixedWeightCounts;
             m_RawFixedBoneWeights = (BoneWeight[])source.m_RawFixedBoneWeights?.Clone();
             m_LegacyProjectionRead = source.m_LegacyProjectionRead;
             m_RuntimeSkinLayout = source.m_RuntimeSkinLayout;
