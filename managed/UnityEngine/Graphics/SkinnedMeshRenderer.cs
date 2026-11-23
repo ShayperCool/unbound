@@ -241,7 +241,7 @@ namespace UnityEngine
             if (!m_EffectClothWarned && GetComponent<Cloth>() is Cloth cloth && cloth.enabled && cloth.m_Active)
             {
                 m_EffectClothWarned = true;
-                Debug.LogWarning($"Unbound: an effect samples SkinnedMeshRenderer '{name}', whose Cloth simulates: it reads the cloth's mesh, which is not measured.", this);
+                Debug.LogWarning($"Unbound: an effect samples SkinnedMeshRenderer '{name}', whose Cloth simulates: once the cloth has stepped it reads the cloth's particles, which is not measured.", this);
             }
             var target = GraphicsDeviceProfile.Current.VfxMeshBufferTarget;
             if ((m_VertexBufferTarget & target) != target) vertexBufferTarget = m_VertexBufferTarget | target;
@@ -375,7 +375,7 @@ namespace UnityEngine
                 if (reuse && m_SkinnedNow != null && m_NowFrame == Time.s_FrameCount && m_NowSource == m_Mesh) return m_SkinnedNow;
                 m_NowFrame = reuse ? Time.s_FrameCount : -1;
                 SwapNowSkin();
-                try { return Skin(); }
+                try { return Skin(rooted: false); }
                 finally { SwapNowSkin(); }
             }
             int pass = SkinPass;
@@ -386,7 +386,7 @@ namespace UnityEngine
                 && m_SkinnedEpoch >= 0 && m_MotionEpoch == m_SkinnedEpoch)
                 AlternateSkin();
             m_SkinnedEpoch = pass;
-            return Skin();
+            return Skin(rooted: m_GraphicsOutputRequested);
         }
 
         /// <summary>A skin computed now (<see cref="BakeMesh(Mesh, bool)"/>, cloth targets) and its
@@ -406,8 +406,11 @@ namespace UnityEngine
         }
 
         /// <summary>Deforms the mesh into <see cref="m_Skinned"/> (made for its source the first
-        /// time) and its arrays.</summary>
-        Mesh Skin()
+        /// time) and its arrays: in world space, or (<paramref name="rooted"/>: the pass's skin
+        /// once its buffer was asked for) in the root bone's space. A skin made now (BakeMesh, a
+        /// particle shape, cloth targets, a forced draw) is in world space whatever was asked
+        /// for.</summary>
+        Mesh Skin(bool rooted)
         {
             var mesh = m_Mesh;
             if (m_Skinned == null || m_SkinnedSource != mesh)
@@ -432,7 +435,7 @@ namespace UnityEngine
             mesh.AddBlendShapes(m_BlendShapeWeights, positions, normals, tangents);
             if (IsSkinned)
             {
-                Skin(positions, normals, tangents);
+                Skin(positions, normals, tangents, rooted);
             }
             m_Skinned.ShareDrawIndices(mesh);
             m_Skinned.AdoptVertices(positions);
@@ -481,7 +484,7 @@ namespace UnityEngine
 
         /// <summary>The vertices, normals and tangents (in the mesh's space) into world space by the
         /// bones (normals and tangents keep the matrices' scale, as Unity's do).</summary>
-        void Skin(Vector3[] positions, Vector3[] normals, Vector4[] tangents)
+        void Skin(Vector3[] positions, Vector3[] normals, Vector4[] tangents, bool rooted)
         {
             var mesh = m_Mesh;
             var weights = mesh.m_BoneWeights;
@@ -489,12 +492,11 @@ namespace UnityEngine
             var skeleton = m_Bones.Length == 0 ? SkeletonSkin() : null;
             int boneCount = Math.Min(skeleton != null ? m_SkinNodes.Length : m_Bones.Length, bindposes.Length);
             if (m_Matrices.Length != boneCount) m_Matrices = new Matrix4x4[boneCount];
-            // Into world space; once the buffer is asked for, into the root bone's space
+            // Into world space; rooted (the pass's skin once its buffer is asked for), into the root bone's space
             // (tests/projects/vfx skinned/*/buffer): positions and tangents by the root's
             // inverse, normals by its transpose, which keeps their lighting under a non-uniform
             // scale (tests/projects/renderapi skinNormal.*). Each bone's world skin matrix is made
             // first, then taken into the root's space.
-            bool rooted = m_GraphicsOutputRequested;
             var toRoot = rooted ? SkinRoot.worldToLocalMatrix : Matrix4x4.identity;
             var normalToRoot = rooted ? SkinRoot.localToWorldMatrix.transpose : Matrix4x4.identity;
             if (rooted && m_NormalMatrices.Length != boneCount) m_NormalMatrices = new Matrix4x4[boneCount];
@@ -730,17 +732,6 @@ namespace UnityEngine
             positions = deformed.vertices;
             var n = deformed.normals;
             normals = n != null && n.Length == positions.Length ? n : null;
-            if (m_GraphicsOutputRequested)
-            {
-                var root = SkinRoot;
-                var world = root.localToWorldMatrix;
-                var normalToWorld = root.worldToLocalMatrix.transpose;
-                for (int i = 0; i < positions.Length; i++)
-                {
-                    positions[i] = world.MultiplyPoint3x4(positions[i]);
-                    if (normals != null) normals[i] = normalToWorld.MultiplyVector(normals[i]);
-                }
-            }
             return true;
         }
 
@@ -782,7 +773,7 @@ namespace UnityEngine
             {
                 return HasShapes || m_GraphicsOutputRequested ? Deform(now, reuse) : m_Mesh;
             }
-            model = m_GraphicsOutputRequested ? SkinRoot.localToWorldMatrix : Matrix4x4.identity;
+            model = m_GraphicsOutputRequested && !now ? SkinRoot.localToWorldMatrix : Matrix4x4.identity;
             // forceMatrixRecalculationPerRender "must be set ... to manually render a skinned mesh
             // multiple times within a single update" (the Scripting API): each draw then skins now,
             // apart from the pass's skin (measured: renderapi prevskin.force.forced).
@@ -804,14 +795,14 @@ namespace UnityEngine
             mesh.Clear();
             source.EnsureModelLoaded();
             var vertices = (Vector3[])source.m_Vertices.Clone();
-            var fromSource = skinned ? (m_GraphicsOutputRequested ? toLocal * SkinRoot.localToWorldMatrix : toLocal) : (useScale ? Matrix4x4.identity : Matrix4x4.Scale(t.lossyScale));
+            var fromSource = skinned ? toLocal : (useScale ? Matrix4x4.identity : Matrix4x4.Scale(t.lossyScale));
             for (int i = 0; i < vertices.Length; i++) vertices[i] = fromSource.MultiplyPoint3x4(vertices[i]);
             mesh.vertices = vertices;
             // Normals and tangents as the matrices take them, not renormalized (as Unity's).
             var normals = source.normals;
             if (normals != null && normals.Length == vertices.Length)
             {
-                var normalFromSource = skinned && m_GraphicsOutputRequested ? toLocal * SkinRoot.worldToLocalMatrix.transpose : fromSource;
+                var normalFromSource = fromSource;
                 for (int i = 0; i < normals.Length; i++) normals[i] = normalFromSource.MultiplyVector(normals[i]);
                 mesh.normals = normals;
             }

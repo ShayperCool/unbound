@@ -441,21 +441,35 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>Asking for the buffer moves skins into the renderer's space: the current pose
-        /// made before it in the frame (in world space) is not reused after it.</summary>
+        /// <summary>The current pose (a particle system's emission shape) is a skin made now, in
+        /// world space whether or not the buffer was asked for: asking for it moves only the
+        /// pass's skin into the root bone's space. Under a scaled root bone its positions and
+        /// normals are the same before and after the request.</summary>
         [Fact]
-        public void TheCurrentPoseFollowsTheSkinSpaceAfterABufferRequest()
+        public void TheCurrentPoseStaysInWorldSpaceAfterABufferRequest()
         {
             var s = OneBoneSkin();
             try
             {
                 s.root.transform.position = new Vector3(10f, 0f, 0f);
+                s.bone.localScale = new Vector3(100f, 2f, 3f);
+                s.renderer.rootBone = s.bone;
+                s.mesh.normals = new[] { new Vector3(0f, 0f, -1f), new Vector3(0.6f, 0f, -0.8f), new Vector3(0f, 0.6f, -0.8f) };
                 NextSkinningFrame();
-                Assert.Equal(new Vector3(11f, 0f, 0f), s.renderer.CurrentGeometry(out var world).vertices[1]);
+                var before = s.renderer.CurrentGeometry(out var world);
+                var vertices = before.vertices;
+                var normals = before.normals;
                 Assert.Equal(Matrix4x4.identity, world);
                 using (s.renderer.GetVertexBuffer()) { }
-                Assert.Equal(new Vector3(1f, 0f, 0f), s.renderer.CurrentGeometry(out var local).vertices[1]);
-                Assert.Equal(s.root.transform.localToWorldMatrix, local);
+                NextSkinningFrame();
+                using (s.renderer.GetVertexBuffer()) { }
+                var after = s.renderer.CurrentGeometry(out var stillWorld);
+                Assert.Equal(Matrix4x4.identity, stillWorld);
+                for (int i = 0; i < 3; i++)
+                {
+                    Assert.Equal(vertices[i], after.vertices[i]);
+                    Assert.Equal(normals[i], after.normals[i]);
+                }
             }
             finally
             {
