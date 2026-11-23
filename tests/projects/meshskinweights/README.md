@@ -43,6 +43,17 @@ The `copies` profile records its own Editor pair. The earlier `legacy.grow` and
 `views.resize.current` rows record zero in a newly grown slot, where later Editor repeats
 also returned other values.
 
+The `replacement` profile measures the typed getters after replacing a mesh's vertex data.
+In Unity 6000.0.71f1, either typed getter can populate the destination's cached counts and
+weights. A later apply keeps those counts and any nonempty flat array. Active skin data
+controls whether the getters expose the cache. A GPU request leaves the typed caches cold.
+Clones start with the active skin data, including legacy attributes after a raw edit or shrink.
+A later weight assignment on the source leaves the clone's values intact.
+The grown destination controls compare the returned count length
+and the initialized prefix because the Editor repeats disagreed on the additional byte.
+[ApplyAndDisposeWritableMeshData](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/mesh/applyanddisposewritablemeshdata) ·
+[Instantiate](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/object/instantiate)
+
 The probe exercises scripted mesh weights. Imported meshes use the influences their importer
 supplies. Synchronous readbacks issued before the renderer becomes available use the engine's
 existing GPU availability diagnostic.
@@ -54,5 +65,8 @@ python3 tests/projects/meshskinweights/run.py publish --release 6000.0.71f1 repe
 python3 tests/projects/meshskinweights/run.py record --release 6000.0.71f1 --profile copies --label repeat-a
 python3 tests/projects/meshskinweights/run.py record --release 6000.0.71f1 --profile copies --label repeat-b
 python3 tests/projects/meshskinweights/run.py publish --release 6000.0.71f1 --profile copies repeat-a repeat-b
+python3 tests/projects/meshskinweights/run.py record --release 6000.0.71f1 --profile replacement --label repeat-a
+python3 tests/projects/meshskinweights/run.py record --release 6000.0.71f1 --profile replacement --label repeat-b
+python3 tests/projects/meshskinweights/run.py publish --release 6000.0.71f1 --profile replacement repeat-a repeat-b
 python3 tests/projects/meshskinweights/run.py gate --release 6000.0.71f1
 ```

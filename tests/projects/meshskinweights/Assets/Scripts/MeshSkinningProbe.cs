@@ -25,9 +25,13 @@ sealed partial class MeshSkinningProbe : MonoBehaviour
         return (array.IsCreated ? "created:" : "default:") + string.Join("/", rows);
     }
 
-    static string Shape(Mesh mesh)
+    static string Shape(Mesh mesh, int countPrefix = int.MaxValue)
     {
-        string counts = Pack(mesh.GetBonesPerVertex(), n => n.ToString(Invariant));
+        var countsView = mesh.GetBonesPerVertex();
+        int countLength = countsView.Length;
+        if (countPrefix < countLength) countsView = countsView.GetSubArray(0, countPrefix);
+        string counts = Pack(countsView, n => n.ToString(Invariant));
+        if (countPrefix != int.MaxValue) counts += "|length=" + countLength.ToString(Invariant);
         string weights = Pack(mesh.GetAllBoneWeights(), n => n.boneIndex + "@" + n.weight.ToString("R", Invariant));
         return mesh.skinWeightBufferLayout + ":" + mesh.HasVertexAttribute(VertexAttribute.BlendWeight) + ":" +
             mesh.HasVertexAttribute(VertexAttribute.BlendIndices) + ":" + counts + ":" + weights;
@@ -107,7 +111,15 @@ sealed partial class MeshSkinningProbe : MonoBehaviour
         }
 
         Put("unity", Application.unityVersion);
-        if (Environment.GetEnvironmentVariable("MESH_SKINNING_PROFILE") == "copies")
+        string profile = Environment.GetEnvironmentVariable("MESH_SKINNING_PROFILE");
+        if (profile == "replacement")
+        {
+            yield return null;
+            CheckReplacementQueries(Probe);
+            Finish(output, rows);
+            yield break;
+        }
+        if (profile == "copies")
         {
             yield return null;
             CheckBorrowedUploads(Probe);

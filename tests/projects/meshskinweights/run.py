@@ -16,6 +16,7 @@ BASE = (PROBE.parent / 'formatmapping', ['Assets/Scenes', 'Assets/Scenes.meta', 
 OUTPUT = 'MESH_SKINNING_OUT'
 PROFILE = 'MESH_SKINNING_PROFILE'
 COPIES = 'copies'
+REPLACEMENT = 'replacement'
 
 
 def profiled_label(label, profile):
@@ -27,7 +28,7 @@ def main():
     parser.add_argument('mode', choices=('record', 'publish', 'gate'))
     parser.add_argument('--release', required=True, choices=('6000.0.71f1',))
     parser.add_argument('--label')
-    parser.add_argument('--profile', choices=(COPIES,))
+    parser.add_argument('--profile', choices=(COPIES, REPLACEMENT))
     parser.add_argument('labels', nargs='*')
     args = parser.parse_intermixed_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
@@ -45,7 +46,7 @@ def main():
                            batch=True, macos_batch=True, base=BASE)
         value_probe.seal_value_capture(run_root(PROBE, label))
         return 0
-    profiles = (args.profile,) if args.profile else (None, COPIES)
+    profiles = (args.profile,) if args.profile else (None, COPIES, REPLACEMENT)
     results = []
     for profile in profiles:
         os.environ[PROFILE] = profile or ''
