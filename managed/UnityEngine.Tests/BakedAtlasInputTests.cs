@@ -269,6 +269,10 @@ namespace UnityEngine.Tests
                 file.Objects[7] = moved;
                 file.Objects[8] = made[1].GetComponent<LightProbeGroup>();
                 file.Objects[9] = made[2].GetComponent<LightProbeGroup>();
+                // A group destroyed since the scene loaded is not baked.
+                var destroyed = Make("Destroyed", Vector3.one);
+                file.Objects[10] = destroyed;
+                Object.DestroyImmediate(destroyed);
 
                 var groups = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(BakedAtlas.Probes(file))).RootElement;
                 Assert.Equal(1, groups.GetArrayLength());

@@ -259,10 +259,9 @@ namespace UnityEngine
                 if (pair.Value is Terrain terrain && terrain.enabled && terrain.gameObject.activeInHierarchy
                     && (terrain.gameObject.m_StaticEditorFlags & ContributeGI) != 0)
                     refused.Add($"'{terrain.name}': a Terrain (not made by Unbound's precompute)");
-                if (pair.Value is LightProbeGroup group && group.enabled && group.gameObject.activeInHierarchy)
-                    foreach (var local in group.probePositions)
+                if (LightProbeGroup.TakenByBake(pair.Value, out var group))
+                    foreach (var p in group.WorldProbePositions())
                     {
-                        var p = group.transform.TransformPoint(local);
                         probePositions.Add(p);
                         probes.Add(p.x); probes.Add(p.y); probes.Add(p.z);
                     }

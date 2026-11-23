@@ -333,15 +333,14 @@ namespace UnityEngine
             var groups = new List<object>();
             foreach (var pair in file.Objects)
             {
-                if (!(pair.Value is LightProbeGroup group) || group == null || !group.enabled || !group.gameObject.activeInHierarchy) continue;
-                var local = group.probePositions;
-                var points = new float[local.Length * 3];
-                for (int i = 0; i < local.Length; i++)
+                if (!LightProbeGroup.TakenByBake(pair.Value, out var group)) continue;
+                var world = group.WorldProbePositions();
+                var points = new float[world.Length * 3];
+                for (int i = 0; i < world.Length; i++)
                 {
-                    var p = group.transform.TransformPoint(local[i]);
-                    points[3 * i] = p.x;
-                    points[3 * i + 1] = p.y;
-                    points[3 * i + 2] = p.z;
+                    points[3 * i] = world[i].x;
+                    points[3 * i + 1] = world[i].y;
+                    points[3 * i + 2] = world[i].z;
                 }
                 groups.Add(new { fileId = pair.Key, points });
             }

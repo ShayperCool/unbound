@@ -110,6 +110,23 @@ namespace UnityEngine
 
         public bool dering { get => m_Dering; set => m_Dering = value; }
 
+        /// <summary>Whether a bake takes this group's probes: an enabled group of an active
+        /// object, not destroyed (tests/projects/bakedbuffers `ProbesSky`: a disabled group and
+        /// one of an inactive object have no probes in the Editor's bake).</summary>
+        internal static bool TakenByBake(Object value, out LightProbeGroup group)
+        {
+            group = value as LightProbeGroup;
+            return group != null && group.enabled && group.gameObject.activeInHierarchy;
+        }
+
+        /// <summary>The group's probe positions in world space.</summary>
+        internal Vector3[] WorldProbePositions()
+        {
+            var points = new Vector3[m_SourcePositions.Length];
+            for (int i = 0; i < points.Length; i++) points[i] = transform.TransformPoint(m_SourcePositions[i]);
+            return points;
+        }
+
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             base.ReadSerialized(body, resolver);
