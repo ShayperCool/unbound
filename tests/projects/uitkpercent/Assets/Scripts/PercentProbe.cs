@@ -334,12 +334,49 @@ namespace PercentProbe
             for (int t = 0; t < 3; t++) { taTabs[t] = Box(taRow, "tab" + t); taTabs[t].style.flexGrow = 1; taTabs[t].style.flexShrink = 1; }
             taTabs[0].style.minWidth = Length.Percent(12);
 
+            // centeredRow: in a column centring its items (984 wide, 415 high), a row growing from a
+            // 0 basis of an item growing and shrinking around content 982.8 wide and a fixed 24 wide
+            // one; the row with a fixed height instead (fixedHeight), stretched (stretched), sized by
+            // its content (autoHeight), and a vertical ScrollView with a 19.5 right padding in such a
+            // column (scrollView).
+            var centeredRows = new System.Collections.Generic.List<(string, VisualElement, VisualElement, VisualElement)>();
+            float crLeft = 0;
+            foreach (var name in new[] { "grown", "fixedHeight", "stretched", "autoHeight", "grownSmall", "fixedHeightSmall", "grownPadded" })
+            {
+                var crCase = Case(root, "centeredRow." + name, crLeft);
+                crCase.style.top = 7600;
+                crLeft += 1100;
+                var crOuter = Box(crCase, "outer", 984, 415);
+                crOuter.style.alignItems = name == "stretched" ? Align.Stretch : Align.Center;
+                var crRow = Box(crOuter, "row"); crRow.style.flexDirection = FlexDirection.Row; crRow.style.flexShrink = 1;
+                if (name.StartsWith("fixedHeight")) crRow.style.height = 415;
+                else if (name != "autoHeight") { crRow.style.flexGrow = 1; crRow.style.flexBasis = 0; }
+                var crA = Box(crRow, "a"); crA.style.flexGrow = 1; crA.style.flexShrink = 1;
+                Box(crA, "content", name.EndsWith("Small") ? 300 : 982.8f, 50);
+                if (name == "grownPadded") { crRow.style.paddingLeft = 10; crRow.style.paddingRight = 6; }
+                var crB = Box(crRow, "b", 24);
+                centeredRows.Add((name, crRow, crA, crB));
+            }
+            var svCase = Case(root, "centeredRow.scrollView", 0);
+            svCase.style.top = 8100;
+            var svOuter = Box(svCase, "outer", 1003.5f, 535.5f);
+            svOuter.style.alignItems = Align.Center;
+            var scrollView = new ScrollView(ScrollViewMode.Vertical) { name = "scroll" };
+            scrollView.style.flexGrow = 1; scrollView.style.flexShrink = 0; scrollView.style.paddingRight = 19.5f;
+            scrollView.verticalScrollerVisibility = ScrollerVisibility.AlwaysVisible;
+            svOuter.Add(scrollView);
+            Box(scrollView, "content", 982.8f, 555);
+
             yield return Frames();
             foreach (var (name, column) in autoColumns)
                 Put("autoColumn." + name, "column " + State(column) + "|label " + State(column.Q<Label>("label")) + "|box " + State(column.Q("box")));
             Put("growOverflow", "a " + State(goA) + "|b " + State(goB));
             Put("growFraction", "a " + State(gfA) + "|b " + State(gfB));
             Put("growMax", "a " + State(gmA) + "|b " + State(gmB) + "|c " + State(gmC));
+            foreach (var (name, row, a, b) in centeredRows)
+                Put("centeredRow." + name, "row " + State(row) + "|a " + State(a) + "|b " + State(b));
+            Put("centeredRow.scrollView", "scroll " + State(scrollView) + "|row " + State(scrollView.Q("unity-content-and-vertical-scroll-container"))
+                + "|viewport " + State(scrollView.contentViewport) + "|scroller " + State(scrollView.verticalScroller));
             Put("tabsAuto", "row " + State(taRow) + "|" + string.Join("|", taTabs.Select((e, i) => "tab" + i + " " + State(e))));
             Put("measuredPadding", State(mpLabel) + "|content " + F(mpLabel.contentRect.x) + "," + F(mpLabel.contentRect.y) + "," + F(mpLabel.contentRect.width) + "," + F(mpLabel.contentRect.height));
             Put("measuredMargin", "label " + State(mgLabel) + "|plain " + State(mgPlain));

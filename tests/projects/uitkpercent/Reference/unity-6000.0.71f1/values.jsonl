@@ -7,6 +7,14 @@
 {"k":"growOverflow","v":"a rect=0,0,450,50|basis=500|b rect=550,0,450,50|basis=450"}
 {"k":"growFraction","v":"a rect=0,0,350,50|basis=200|b rect=350,0,350,50|basis=200"}
 {"k":"growMax","v":"a rect=0,0,100,50|basis=0|b rect=100,0,250,50|basis=0|c rect=350,0,250,50|basis=0"}
+{"k":"centeredRow.grown","v":"row rect=-11,0,1006,415|basis=0|a rect=0,0,960,415|basis=982.8|b rect=960,0,24,415|basis=24"}
+{"k":"centeredRow.fixedHeight","v":"row rect=-11,0,1006,415|basis=415|a rect=0,0,982,415|basis=982.8|b rect=982,0,24,415|basis=24"}
+{"k":"centeredRow.stretched","v":"row rect=0,0,984,415|basis=0|a rect=0,0,960,415|basis=0|b rect=960,0,24,415|basis=24"}
+{"k":"centeredRow.autoHeight","v":"row rect=-11,0,1006,50|basis=50|a rect=0,0,982,50|basis=982.8|b rect=982,0,24,50|basis=24"}
+{"k":"centeredRow.grownSmall","v":"row rect=330,0,324,415|basis=0|a rect=0,0,960,415|basis=300|b rect=960,0,24,415|basis=24"}
+{"k":"centeredRow.fixedHeightSmall","v":"row rect=330,0,324,415|basis=415|a rect=0,0,300,415|basis=300|b rect=300,0,24,415|basis=24"}
+{"k":"centeredRow.grownPadded","v":"row rect=-19,0,1022,415|basis=0|a rect=10,0,944,415|basis=982.8|b rect=954,0,24,415|basis=24"}
+{"k":"centeredRow.scrollView","v":"scroll rect=-12,0,1027,555|basis=555|row rect=0,0,1007,555|basis=0|viewport rect=0,0,983,555|basis=0|scroller rect=983,0,24,555|basis=24"}
 {"k":"tabsAuto","v":"row rect=239,0,1114,42|basis=NaN|tab0 rect=0,0,460,42|basis=133.728|tab1 rect=460,0,327,42|basis=0|tab2 rect=787,0,327,42|basis=0"}
 {"k":"measuredPadding","v":"rect=2,4,300,134|basis=300|content 50,50,248,34"}
 {"k":"measuredMargin","v":"label rect=5,8,250,150|basis=250|plain rect=265,8,250,150|basis=250"}
