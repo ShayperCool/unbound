@@ -1,8 +1,15 @@
 {
-  "commands": ["python3 tests/projects/initialpointer/run.py gate"],
+  "commands": [
+    "python3 tests/projects/initialpointer/run.py gate"
+  ],
   "summary": "initialpointer: .*",
   "engine_paths": [
     "managed/UnityEngine/Input/NativeInput.cs",
-    "crates/unbound-app/src/host_pointer.rs"
+    "crates/unbound-app/src/host_pointer.rs",
+    "tests/projects/input/Assets/InputSystem.inputsettings.asset",
+    "tests/projects/input/Assets/InputSystem.inputsettings.asset.meta",
+    "tests/projects/input/Packages/",
+    "tests/projects/input/ProjectSettings/",
+    "tests/projects/uitkpanelutils/Assets/Scenes/"
   ]
 }
