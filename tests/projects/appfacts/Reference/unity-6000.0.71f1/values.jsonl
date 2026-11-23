@@ -4,14 +4,14 @@
 {"k":"loading.held","v":["held call isLoadingLevel=true","held 0.9 isLoadingLevel=true isDone=false","allowed isLoadingLevel=true","held frame isLoadingLevel=true","sceneLoaded Second Additive isLoadingLevel=false","held isDone=true isLoadingLevel=false"]}
 {"k":"loading.sync","v":["sync call isLoadingLevel=true","sceneLoaded Second Additive isLoadingLevel=false","sync next frame isLoadingLevel=false","sync second frame isLoadingLevel=false"]}
 {"k":"loading.logs","v":[]}
-{"k":"stack.noalloc.4096.empty.return","v":577}
-{"k":"stack.noalloc.4096.empty.written","v":577}
+{"k":"stack.noalloc.4096.empty.return","v":310}
+{"k":"stack.noalloc.4096.empty.written","v":310}
 {"k":"stack.noalloc.4096.empty.text","v":"UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)\nAppFactsProbe:NoAlloc (string,int,string) (at <project>/Assets/Scripts/AppFactsProbe.cs:250)\nAppFactsProbe:StackLevel2 () (at <project>/Assets/Scripts/AppFactsProbe.cs:239)\nAppFactsProbe:Update () (at <project>/Assets/Scripts/AppFactsProbe.cs:229)\n"}
 {"k":"stack.noalloc.4096.project.return","v":280}
 {"k":"stack.noalloc.4096.project.written","v":280}
 {"k":"stack.noalloc.4096.project.text","v":"UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)\nAppFactsProbe:NoAlloc (string,int,string) (at Assets/Scripts/AppFactsProbe.cs:250)\nAppFactsProbe:StackLevel2 () (at Assets/Scripts/AppFactsProbe.cs:239)\nAppFactsProbe:Update () (at Assets/Scripts/AppFactsProbe.cs:229)\n"}
-{"k":"stack.noalloc.4096.assets.return","v":577}
-{"k":"stack.noalloc.4096.assets.written","v":577}
+{"k":"stack.noalloc.4096.assets.return","v":310}
+{"k":"stack.noalloc.4096.assets.written","v":310}
 {"k":"stack.noalloc.4096.assets.text","v":"UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)\nAppFactsProbe:NoAlloc (string,int,string) (at <project>/Assets/Scripts/AppFactsProbe.cs:250)\nAppFactsProbe:StackLevel2 () (at <project>/Assets/Scripts/AppFactsProbe.cs:239)\nAppFactsProbe:Update () (at <project>/Assets/Scripts/AppFactsProbe.cs:229)\n"}
 {"k":"stack.noalloc.64.empty.return","v":63}
 {"k":"stack.noalloc.64.empty.written","v":63}
