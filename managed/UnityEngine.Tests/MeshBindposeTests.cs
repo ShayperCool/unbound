@@ -92,6 +92,18 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SetBindposesValidatesTheInputBeforeTheReceiver()
+        {
+            var input = new NativeArray<Matrix4x4>(1, Allocator.Persistent);
+            var stale = input;
+            input.Dispose();
+            var mesh = new Mesh();
+            Object.DestroyImmediate(mesh);
+            Assert.Throws<ArgumentException>("poses", () => mesh.SetBindposes(default));
+            Assert.Throws<ObjectDisposedException>(() => mesh.SetBindposes(stale));
+        }
+
+        [Fact]
         public void SameSizeBindposeAssignmentWithAnIdleViewDoesNotAllocate()
         {
             var mesh = new Mesh { bindposes = new[] { Matrix4x4.identity } };

@@ -113,10 +113,16 @@ namespace UnityEngine
         {
             if (!poses.IsCreated || poses.Length == 0)
                 throw new ArgumentException("Cannot set bindposes as the native poses array is empty.", nameof(poses));
+            var data = poses.AsReadOnlySpan();
             MainThreadCheck.Check("SetBindposesFromScript_NativeArray");
             ThrowIfDestroyed();
-            EnsureModelLoaded();
-            var data = poses.AsReadOnlySpan();
+            if (m_DeferredModel)
+            {
+                EnsureModelLoaded();
+                // Loading can report an error to a callback that changes the source.
+                data = poses.AsReadOnlySpan();
+                ThrowIfDestroyed();
+            }
             if (data.Overlaps(m_BindposeStorage.AsSpan()))
             {
                 Debug.LogAssertion("vector: assign data may not be data from the vector itself.");
