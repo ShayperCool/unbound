@@ -18,6 +18,9 @@ public static class GraphAuthoring
     public const string Folder = "Assets/OutputGraphs";
     public const string Scene = "Assets/Scenes/Probe.unity";
     const string WhitePath = Folder + "/White.png";
+    /// <summary>An image whose four quarters are of four colours: a cube's faces show how the
+    /// texture is laid on each.</summary>
+    const string QuartersPath = Folder + "/Quarters.png";
 
     public static void Author()
     {
@@ -27,6 +30,11 @@ public static class GraphAuthoring
         var white = new Texture2D(4, 4, TextureFormat.RGBA32, false);
         white.SetPixels(Enumerable.Repeat(Color.white, 16).ToArray());
         File.WriteAllBytes(WhitePath, white.EncodeToPNG());
+        var quarters = new Texture2D(8, 8, TextureFormat.RGBA32, false);
+        for (int y = 0; y < 8; y++)
+            for (int x = 0; x < 8; x++)
+                quarters.SetPixel(x, y, y < 4 ? (x < 4 ? Color.red : Color.green) : (x < 4 ? Color.blue : Color.yellow));
+        File.WriteAllBytes(QuartersPath, quarters.EncodeToPNG());
         AssetDatabase.Refresh();
         Indirect();
         Sorted();
@@ -422,6 +430,24 @@ public static class GraphAuthoring
             SetRandom(init, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
             Save(still);
         }
+        // Six opaque cubes a third of the view across, turned every way, the image whose quarters
+        // differ laid on their faces; turned half a turn more about y they show the camera their
+        // other faces.
+        foreach (var (name, turn) in new[] { ("CubeTextured", 0f), ("CubeTexturedTurned", 180f) })
+        {
+            var textured = NewGraph(name);
+            var (texturedSpawn, texturedInit, texturedOutput) = System<VFXBasicCubeOutput>(textured, 8);
+            texturedOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+            Input(texturedOutput, "mainTexture").value = AssetDatabase.LoadAssetAtPath<Texture2D>(QuartersPath);
+            Burst(texturedSpawn, 6f);
+            SetRandom(texturedInit, "position", new Vector3(-0.9f, -0.9f, -0.5f), new Vector3(0.9f, 0.9f, 0.5f));
+            Set(texturedInit, "size", 0.8f);
+            SetRandom(texturedInit, "angleX", 0f, 90f);
+            SetRandom(texturedInit, "angleY", turn, turn + 90f);
+            SetRandom(texturedInit, "angleZ", 0f, 90f);
+            Save(textured);
+        }
+
         var many = NewGraph("CubeMany");
         var (manySpawn, manyInit, manyOutput) = System<VFXBasicCubeOutput>(many, 10000);
         manyOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Additive);

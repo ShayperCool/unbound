@@ -213,6 +213,11 @@ namespace Unbound.Runtime
         /// measured.</summary>
         static bool IsLit2D(string source) => source.Contains(Lit2DPass, StringComparison.Ordinal);
 
+        /// <summary>The varying the deprecated forward decal output's programs pass (the package's
+        /// Shaders/ParticleDecals templates).</summary>
+        const string ForwardDecalVarying = "worldToDecal0";
+        internal const string ForwardDecalRefusal = "it is a forward decal output (deprecated), which is not measured yet";
+
         /// <summary>A strip output lit by 2D lights is not drawn until it is measured.</summary>
         internal const string LitStripRefusal = "it is a strip output lit by 2D lights, which is not measured yet";
 
@@ -249,6 +254,9 @@ namespace Unbound.Runtime
         internal static string SourceRefusal(string source)
         {
             if (string.IsNullOrEmpty(source)) return null;
+            // The deprecated forward decal output draws cubes as cube outputs do, with a
+            // program of its own (its pixel projects the box onto what is behind): not measured.
+            if (source.Contains(ForwardDecalVarying, StringComparison.Ordinal)) return ForwardDecalRefusal;
             const string Tag = "\"LightMode\"";
             for (int at = source.IndexOf(Tag, StringComparison.Ordinal); at >= 0; at = source.IndexOf(Tag, at + Tag.Length, StringComparison.Ordinal))
             {
@@ -316,7 +324,7 @@ namespace Unbound.Runtime
         internal static bool IsPlanar(VFXTaskType type) =>
             type == VFXTaskType.ParticleQuadOutput || type == VFXTaskType.ParticleTriangleOutput || type == VFXTaskType.ParticleOctagonOutput;
 
-        /// <summary>The planar primitive an output task draws.</summary>
+        /// <summary>The primitive an output task draws for each particle: a planar one, or a cube.</summary>
         internal static Primitive PrimitiveOf(VFXTaskType type) =>
             type == VFXTaskType.ParticleTriangleOutput ? Primitive.Triangle : type == VFXTaskType.ParticleOctagonOutput ? Primitive.Octagon
             : type == VFXTaskType.ParticleHexahedronOutput ? Primitive.Hexahedron : Primitive.Quad;

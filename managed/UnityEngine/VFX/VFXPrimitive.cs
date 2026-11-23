@@ -21,43 +21,30 @@ namespace Unbound.Runtime
         /// <summary>One triangle: its three vertices.</summary>
         internal static readonly Primitive Triangle = new Primitive(3, new ushort[] { 0, 1, 2 }, 0);
         /// <summary>Twelve triangles over a cube's eight corners (corner i at the offsets the
-        /// program gives it: x from bit 0, y from bit 1, z from bit 2), each face's two
-        /// triangles facing out (<see cref="CubeFaces"/>).</summary>
-        internal static readonly Primitive Hexahedron = new Primitive(8, CubeFaces(), HexahedronsPerInstance);
+        /// program gives it: x from bit 0, y from bit 1, z from bit 2), two on each face, facing
+        /// out of the cube. The program gives each vertex a face number from its corner
+        /// (<c>(corner & 7) % 5</c>) and lays the texture on a pixel by the number its triangle
+        /// takes flat: 0 across z, 1 across y, any other across x. The OpenGL Core Editor takes
+        /// it from a triangle's last vertex. Each face is split along the diagonal it is split
+        /// along there, and each triangle ends at a corner whose number lays the texture as there,
+        /// on most faces across another axis than the face's own (tests/projects/vfxoutputs
+        /// `CubeTextured`, `CubeTexturedTurned`). Which of a triangle's two other corners comes
+        /// first is not measured: what a device that takes flat values from a triangle's first
+        /// vertex (Vulkan, Metal) shows is unmeasured.</summary>
+        internal static readonly Primitive Hexahedron = new Primitive(8, new ushort[]
+        {
+            0, 3, 1, 0, 2, 3, // z = 0
+            5, 6, 4, 5, 7, 6, // z = 1
+            1, 4, 0, 1, 5, 4, // y = 0
+            6, 3, 2, 6, 7, 3, // y = 1
+            2, 0, 4, 2, 4, 6, // x = 0
+            1, 3, 7, 7, 5, 1, // x = 1
+        }, HexahedronsPerInstance);
 
         /// <summary>The primitives of each instance of a draw beyond one draw's indices, as the
         /// generated vertex programs find a particle: <c>(vertexID >> 2) + instanceID * 2048</c>
         /// for quads, <c>(vertexID >> 3) + instanceID * 1024</c> for octagons and cubes.</summary>
         const uint QuadsPerInstance = 2048, OctagonsPerInstance = 1024, HexahedronsPerInstance = 1024;
-
-        /// <summary>A cube's faces as triangles over its corners, wound as the quad's are (the
-        /// face toward the camera at negative z is <c>0, 2, 1, 1, 2, 3</c>, the quad's own):
-        /// each triangle's corners in the order whose cross product points out of the cube.</summary>
-        static ushort[] CubeFaces()
-        {
-            var faces = new ushort[36];
-            int at = 0;
-            static Vector3 Corner(int i) => new Vector3(i & 1, (i >> 1) & 1, (i >> 2) & 1);
-            // Each face: the axis it is across and its side; its corners in the quad's order.
-            for (int axis = 0; axis < 3; axis++)
-                for (int side = 0; side < 2; side++)
-                {
-                    // The two other axes, in order.
-                    int u = axis == 0 ? 1 : 0, v = axis == 2 ? 1 : 2;
-                    int Pick(int du, int dv) => (side << axis) | (du << u) | (dv << v);
-                    var quad = new[] { Pick(0, 0), Pick(1, 0), Pick(0, 1), Pick(1, 1) };
-                    var outward = new Vector3(axis == 0 ? side * 2 - 1 : 0, axis == 1 ? side * 2 - 1 : 0, axis == 2 ? side * 2 - 1 : 0);
-                    foreach (var (a, b, c) in new[] { (0, 2, 1), (1, 2, 3) })
-                    {
-                        var (p, q, r) = (quad[a], quad[b], quad[c]);
-                        if (Vector3.Dot(Vector3.Cross(Corner(q) - Corner(p), Corner(r) - Corner(p)), outward) < 0f) (q, r) = (r, q);
-                        faces[at++] = (ushort)p;
-                        faces[at++] = (ushort)q;
-                        faces[at++] = (ushort)r;
-                    }
-                }
-            return faces;
-        }
 
         internal readonly int Vertices;
         readonly ushort[] m_Pattern;

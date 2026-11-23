@@ -976,18 +976,31 @@ namespace UnityEngine.Tests
             Assert.Equal(new ushort[] { 0, 2, 1, 1, 2, 3, 4, 6, 5, 5, 6, 7 }, Primitive.Quad.Data(2));
             // Cubes (tests/projects/vfxoutputs `Cube*`): twelve triangles over eight corners,
             // as many per draw as 16-bit indices reach, then instances of 1024 (the program's
-            // `(vertexID >> 3) + instanceID * 1024`). Every face faces out: each corner is in
-            // six triangles' worth of faces, each triangle's normal points away from the centre.
+            // `(vertexID >> 3) + instanceID * 1024`). Each triangle faces out of the cube and lies
+            // on one face; each face is two triangles over its four corners.
             var cube = (ushort[])Primitive.Hexahedron.Data(1);
             Assert.Equal(36, cube.Length);
             static Vector3 Corner(int i) => new Vector3(i & 1, (i >> 1) & 1, (i >> 2) & 1) - new Vector3(0.5f, 0.5f, 0.5f);
+            var covered = new Dictionary<(int, int), HashSet<int>>();
             for (int t = 0; t < 36; t += 3)
             {
                 var (a, b, c) = (Corner(cube[t]), Corner(cube[t + 1]), Corner(cube[t + 2]));
                 Assert.True(Vector3.Dot(Vector3.Cross(b - a, c - a), (a + b + c) / 3f) > 0f, $"triangle {t / 3} faces in");
+                int axis = System.Linq.Enumerable.Single(System.Linq.Enumerable.Range(0, 3), k => ((cube[t] >> k) & 1) == ((cube[t + 1] >> k) & 1) && ((cube[t] >> k) & 1) == ((cube[t + 2] >> k) & 1));
+                var face = (axis, (cube[t] >> axis) & 1);
+                if (!covered.TryGetValue(face, out var corners)) covered[face] = corners = new HashSet<int>();
+                corners.UnionWith(new int[] { cube[t], cube[t + 1], cube[t + 2] });
             }
-            // The face toward the camera at negative z is the quad's own.
-            Assert.Contains(System.Linq.Enumerable.Chunk(cube, 6), face => System.Linq.Enumerable.SequenceEqual(face, new ushort[] { 0, 2, 1, 1, 2, 3 }));
+            Assert.Equal(6, covered.Count);
+            Assert.All(covered.Values, corners => Assert.Equal(4, corners.Count));
+            // The OpenGL Core Editor lays the texture on a triangle by its last corner's face
+            // number (tests/projects/vfxoutputs `CubeTextured*`): across the face's own axis only
+            // on one triangle of each face across x.
+            int across(int t) => Math.Min((cube[t + 2] & 7) % 5, 2) switch { 0 => 2, 1 => 1, _ => 0 };
+            int own(int t) => System.Linq.Enumerable.Single(System.Linq.Enumerable.Range(0, 3), k => ((cube[t] >> k) & 1) == ((cube[t + 1] >> k) & 1) && ((cube[t] >> k) & 1) == ((cube[t + 2] >> k) & 1));
+            Assert.Equal(
+                new[] { false, false, false, false, false, false, false, false, true, false, true, false },
+                System.Linq.Enumerable.Select(System.Linq.Enumerable.Range(0, 12), t => across(3 * t) == own(3 * t)));
             var cubes = Primitive.Hexahedron.Indices(1);
             Assert.Equal(8192 * 36, cubes.count);
             Assert.Equal((1024u * 36, 10u), (Primitive.Hexahedron.Draw(cubes, 10000).IndexCount, Primitive.Hexahedron.Draw(cubes, 10000).Instances));
@@ -1191,6 +1204,9 @@ namespace UnityEngine.Tests
             Assert.Null(VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"MotionVectors\"")));
             Assert.Equal("its pass 'DBufferProjectorVFX' is not drawn yet", VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"DBufferProjectorVFX\"")));
             Assert.Equal("its pass 'DBufferProjectorVFX' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"DepthOnly\"", "\"DBufferProjectorVFX\"")));
+            // The deprecated forward decal output (cubes drawn by a decal program, whose passes are
+            // the ones drawn) is refused by its program.
+            Assert.Equal(VFXOutput.ForwardDecalRefusal, VFXOutput.SourceRefusal(unlit.Replace("#define VFX_PRIMITIVE_QUAD 1", "nointerpolation float4 worldToDecal0 : TEXCOORD2;")));
             // A lit Shader Graph output's lightmapper pass, which no camera draws, does not keep
             // the output from being drawn (tests/projects/vfxlit `graph lit`).
             Assert.Null(VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"Meta\"")));

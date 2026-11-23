@@ -187,7 +187,7 @@ public sealed class VfxOutputsProbe : MonoBehaviour
             foreach (var name in new[] { "TriangleStill", "TriangleList", "TriangleMany", "OctagonStill", "OctagonList", "OctagonMany" })
                 Front(AddStage(name, name, 3));
             // Cubes (after the stages above).
-            foreach (var name in new[] { "CubeStill", "CubeList", "CubeMany" })
+            foreach (var name in new[] { "CubeStill", "CubeList", "CubeMany", "CubeTextured", "CubeTexturedTurned" })
                 Front(AddStage(name, name, 3));
             StartCoroutine(EndOfFrames());
         }
