@@ -1,0 +1,8 @@
+{
+  "commands": ["python3 tests/projects/initialpointer/run.py gate"],
+  "summary": "initialpointer: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Input/NativeInput.cs",
+    "crates/unbound-app/src/host_pointer.rs"
+  ]
+}
