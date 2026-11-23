@@ -65,4 +65,70 @@
 {"k":"copy.unweighted.newData.log","v":""}
 {"k":"copy.unweighted.snapshot","v":"None:False:False:default::default:"}
 {"k":"copy.unweighted.snapshot.log","v":""}
+{"k":"copy.editedLayout.0.0","v":"None:False:False:default::default:|none/none"}
+{"k":"copy.editedLayout.0.0.log","v":""}
+{"k":"copy.editedLayout.0.1","v":"OneBone:False:True:created:1/1:created:7@1/7@1|none/UInt32:1:1"}
+{"k":"copy.editedLayout.0.1.log","v":""}
+{"k":"copy.editedLayout.0.2","v":"TwoBones:True:True:created:2/2:created:8@0.75/9@0.25/8@0.75/9@0.25|Float32:2:1/UInt32:2:1"}
+{"k":"copy.editedLayout.0.2.log","v":""}
+{"k":"copy.editedLayout.0.4","v":"FourBones:True:True:created:2/2:created:8@0.75/9@0.25/8@0.75/9@0.25|Float32:4:1/UInt32:4:1"}
+{"k":"copy.editedLayout.0.4.log","v":""}
+{"k":"copy.editedLayout.2.0","v":"None:False:False:default::default:|none/none"}
+{"k":"copy.editedLayout.2.0.log","v":""}
+{"k":"copy.editedLayout.2.1","v":"OneBone:False:True:created:1/1:created:7@1/7@1|none/UInt32:1:1"}
+{"k":"copy.editedLayout.2.1.log","v":""}
+{"k":"copy.editedLayout.2.2","v":"TwoBones:True:True:created:2/2:created:8@0.75/9@0.25/8@0.75/9@0.25|Float32:2:1/UInt32:2:1"}
+{"k":"copy.editedLayout.2.2.log","v":""}
+{"k":"copy.editedLayout.2.4","v":"FourBones:True:True:created:2/2:created:8@0.75/9@0.25/8@0.75/9@0.25|Float32:4:1/UInt32:4:1"}
+{"k":"copy.editedLayout.2.4.log","v":""}
+{"k":"copy.editedLayout.5.0","v":"Unlimited:False:False:created:5/1:created:2@0.5000076/3@0.2500038/4@0.1250019/5@0.06250095/13@0.0624856949/1@1|none/none"}
+{"k":"copy.editedLayout.5.0.log","v":""}
+{"k":"copy.editedLayout.5.1","v":"Unlimited:False:True:created:5/1:created:2@0.5000076/3@0.2500038/4@0.1250019/5@0.06250095/13@0.0624856949/1@1|none/UInt32:1:1"}
+{"k":"copy.editedLayout.5.1.log","v":""}
+{"k":"copy.editedLayout.5.2","v":"Unlimited:True:True:created:5/1:created:2@0.5000076/3@0.2500038/4@0.1250019/5@0.06250095/13@0.0624856949/1@1|Float32:2:1/UInt32:2:1"}
+{"k":"copy.editedLayout.5.2.log","v":""}
+{"k":"copy.editedLayout.5.4","v":"Unlimited:True:True:created:5/1:created:2@0.5000076/3@0.2500038/4@0.1250019/5@0.06250095/13@0.0624856949/1@1|Float32:4:1/UInt32:4:1"}
+{"k":"copy.editedLayout.5.4.log","v":""}
+{"k":"copy.query.cold.after","v":"TwoBones:True:True:created:2/1:created:7@0.75/9@0.25/5@1|2:16:Vertex, Structured:3F400000/3E800000/00000007/00000009/3F800000/00000000/00000005/00000000"}
+{"k":"copy.query.cold.after.log","v":""}
+{"k":"copy.query.cold.save","v":"m_Data:"}
+{"k":"copy.query.cold.save.log","v":""}
+{"k":"copy.query.cold.reload","v":"TwoBones:True:True:created:2/1:created:7@0.75/9@0.25/5@1"}
+{"k":"copy.query.cold.reload.log","v":""}
+{"k":"copy.query.gpu.before","v":"2:16:Vertex, Structured:3F2AAAAB/3EAAAAAB/00000002/00000003/3F800000/00000000/00000001/00000000"}
+{"k":"copy.query.gpu.before.log","v":""}
+{"k":"copy.query.gpu.after","v":"TwoBones:True:True:created:2/1:created:7@0.75/9@0.25/5@1|2:16:Vertex, Structured:3F2AAAAB/3EAAAAAB/00000002/00000003/3F800000/00000000/00000001/00000000"}
+{"k":"copy.query.gpu.after.log","v":""}
+{"k":"copy.query.counts.after","v":"TwoBones:True:True:created:5/1:created:2@0.5000076/3@0.2500038/4@0.1250019/5@0.06250095/13@0.0624856949/1@1|2:16:Vertex, Structured:3F400000/3E800000/00000007/00000009/3F800000/00000000/00000005/00000000"}
+{"k":"copy.query.counts.after.log","v":""}
+{"k":"copy.query.counts.save","v":"m_Data:"}
+{"k":"copy.query.counts.save.log","v":""}
+{"k":"copy.query.counts.reload","v":"TwoBones:True:True:created:2/1:created:7@0.75/9@0.25/5@1"}
+{"k":"copy.query.counts.reload.log","v":""}
+{"k":"copy.query.flat.after","v":"TwoBones:True:True:created:5/1:created:2@0.5000076/3@0.2500038/4@0.1250019/5@0.06250095/13@0.0624856949/1@1|2:16:Vertex, Structured:3F400000/3E800000/00000007/00000009/3F800000/00000000/00000005/00000000"}
+{"k":"copy.query.flat.after.log","v":""}
+{"k":"copy.gpuResize.newData.0.apply","v":"None:False:False:default::default:"}
+{"k":"copy.gpuResize.newData.0.apply.log","v":""}
+{"k":"copy.gpuResize.newData.0.existing","v":"2:16:Vertex, Structured:3F2AAAAB/3EAAAAAB/00000002/00000003/3F800000/00000000/00000001/00000000"}
+{"k":"copy.gpuResize.newData.0.existing.log","v":""}
+{"k":"copy.gpuResize.newData.0.requested","v":"ArgumentException: Bone Weight buffer for 2 bones per vertex on  is null"}
+{"k":"copy.gpuResize.newData.0.requested.log","v":""}
+{"k":"copy.gpuResize.newData.1.apply","v":"OneBone:False:True:created:1/1/1:created:7@1/7@1/7@1"}
+{"k":"copy.gpuResize.newData.1.apply.log","v":""}
+{"k":"copy.gpuResize.newData.1.existing","v":"2:16:Vertex, Structured:3F2AAAAB/3EAAAAAB/00000002/00000003/3F800000/00000000/00000001/00000000"}
+{"k":"copy.gpuResize.newData.1.existing.log","v":""}
+{"k":"copy.gpuResize.newData.1.requested","v":"2:16:Vertex, Structured:3F2AAAAB/3EAAAAAB/00000002/00000003/3F800000/00000000/00000001/00000000"}
+{"k":"copy.gpuResize.newData.1.requested.log","v":""}
+{"k":"copy.gpuResize.snapshot.0.apply","v":"None:False:False:default::default:"}
+{"k":"copy.gpuResize.snapshot.0.apply.log","v":""}
+{"k":"copy.gpuResize.snapshot.0.existing","v":"2:16:Vertex, Structured:3F2AAAAB/3EAAAAAB/00000002/00000003/3F800000/00000000/00000001/00000000"}
+{"k":"copy.gpuResize.snapshot.0.existing.log","v":""}
+{"k":"copy.gpuResize.snapshot.0.requested","v":"ArgumentException: Bone Weight buffer for 2 bones per vertex on  is null"}
+{"k":"copy.gpuResize.snapshot.0.requested.log","v":""}
+{"k":"copy.gpuResize.snapshot.1.apply","v":"OneBone:False:True:created:1/1/1:created:7@1/7@1/7@1"}
+{"k":"copy.gpuResize.snapshot.1.apply.log","v":""}
+{"k":"copy.gpuResize.snapshot.1.existing","v":"2:16:Vertex, Structured:3F2AAAAB/3EAAAAAB/00000002/00000003/3F800000/00000000/00000001/00000000"}
+{"k":"copy.gpuResize.snapshot.1.existing.log","v":""}
+{"k":"copy.gpuResize.snapshot.1.requested","v":"2:16:Vertex, Structured:3F2AAAAB/3EAAAAAB/00000002/00000003/3F800000/00000000/00000001/00000000"}
+{"k":"copy.gpuResize.snapshot.1.requested.log","v":""}
 {"k":"complete","v":true}

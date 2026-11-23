@@ -35,6 +35,9 @@ both views. Writable snapshots of existing meshes preserve their variable table 
 stream. The copy checks use distinct source and destination weights and compare against newly
 allocated writable data and a source without skin weights. Asset controls compare both
 representations after a raw edit and check fixed bone bounds and one-bone baking after reload. [AllocateWritableMeshData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.AllocateWritableMeshData.html)
+Edited writable snapshots derive their fixed skin layout from the final vertex descriptors.
+The copies also exercise an existing typed view or GPU buffer and verify the active fixed
+layout when the resulting mesh is saved and loaded again. [MeshData.SetVertexBufferParams](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.MeshData.SetVertexBufferParams.html)
 
 The `copies` profile records its own Editor pair. The earlier `legacy.grow` and
 `views.resize.current` rows record zero in a newly grown slot, where later Editor repeats
