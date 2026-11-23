@@ -762,7 +762,12 @@ public static class TexFormatsProbe
     {
         int previousAA = QualitySettings.antiAliasing;
         bool previousWrite = GL.sRGBWrite;
-        try { CommandResolveDisplayPlacementCases(); }
+        try
+        {
+            CommandResolveDisplayPlacementCases();
+            CommandResolveDisplayEdges();
+            CommandResolveUncreatedDirect();
+        }
         finally
         {
             QualitySettings.antiAliasing = previousAA;
@@ -839,11 +844,90 @@ public static class TexFormatsProbe
         }
     }
 
-    static (RenderTexture source, RenderTexture destination) ResolvePartialDisplay(bool hdr, int aa, Rect viewport)
+    static void CommandResolveDisplayEdges()
+    {
+        var geometry = new[]
+        {
+            ("roundsToZero", new Rect(6.1f, 7f, .15f, 10f), (Rect?)null),
+            ("roundsToOne", new Rect(6.4f, 7f, .3f, 10f), (Rect?)null),
+            ("zeroWidth", new Rect(6f, 7f, 0f, 10f), (Rect?)null),
+            ("zeroHeight", new Rect(6f, 7f, 10f, 0f), (Rect?)null),
+            ("clipped", new Rect(-.4f, 7f, .6f, 10f), (Rect?)null),
+            ("moved", new Rect(4f, 5f, 14f, 13f), new Rect(9f, 8f, 14f, 13f)),
+            ("enlarged", new Rect(4f, 5f, 4f, 4f), new Rect(9f, 8f, 14f, 13f)),
+            ("shrunk", new Rect(4f, 5f, 14f, 13f), new Rect(9f, 8f, 4f, 4f)),
+            ("maximized", new Rect(4f, 5f, 4f, 4f), new Rect(0f, 0f, Screen.width, Screen.height)),
+            ("restored", new Rect(0f, 0f, Screen.width, Screen.height), new Rect(9f, 8f, 14f, 13f)),
+        };
+        foreach (bool hdr in new[] { false, true })
+        foreach (int aa in new[] { 0, 4 })
+        {
+            string prefix = "rt.commandResolve.displayEdges." + hdr + "." + aa;
+            foreach (var (name, viewport, lateViewport) in geometry)
+                Read(prefix + "." + name, ResolvePartialDisplay(hdr, aa, viewport, lateViewport).destination);
+            var rect = new Rect(4f, 5f, 14f, 13f);
+            foreach (bool write in new[] { false, true })
+            foreach (bool destinationSrgb in new[] { false, true })
+            {
+                string key = prefix + ".write" + write + ".targetSrgb" + destinationSrgb;
+                var (_, target) = ResolvePartialDisplay(hdr, aa, rect, write: write, destinationSrgb: destinationSrgb);
+                Value(key + ".format", ((int)target.graphicsFormat).ToString(CultureInfo.InvariantCulture));
+                Read(key, target);
+            }
+        }
+
+        static void Read(string key, RenderTexture target)
+        {
+            Value(key + ".row", Readback(AsyncGPUReadback.Request(target, 0, 0, 24, 9, 1, 0, 1, TextureFormat.RGBA32)));
+            Value(key + ".column", Readback(AsyncGPUReadback.Request(target, 0, 6, 1, 0, 24, 0, 1, TextureFormat.RGBA32)));
+            Value(key + ".outside", CommandResolvePixel(target, TextureFormat.RGBA32, 22, 20));
+            Value(key + ".old", CommandResolvePixel(target, TextureFormat.RGBA32, 6, 7));
+            Value(key + ".new", CommandResolvePixel(target, TextureFormat.RGBA32, 21, 10));
+        }
+    }
+
+    static void CommandResolveUncreatedDirect()
+    {
+        GL.sRGBWrite = false;
+        var ordinary = new RenderTextureDescriptor(8, 8, RenderTextureFormat.ARGB32, 0) { sRGB = false };
+        var destination = Target(ordinary);
+        var active = Target(ordinary);
+        destination.Create();
+        active.Create();
+        foreach (bool bind in new[] { false, true })
+        {
+            string key = "rt.commandResolve.directUncreated." + bind;
+            var descriptor = ordinary;
+            descriptor.msaaSamples = 4;
+            descriptor.bindMS = bind;
+            var source = Target(descriptor);
+            if (bind) source.antiAliasing = 1;
+            RenderTexture.active = destination;
+            GL.Clear(false, true, Color.green);
+            RenderTexture.active = null;
+            GL.Clear(false, true, Color.red);
+            RenderTexture.active = active;
+            GL.Clear(false, true, Color.blue);
+            var logs = new List<string>();
+            void OnLog(string message, string _, LogType type) => logs.Add(type + " " + message);
+            Application.logMessageReceived += OnLog;
+            try { source.ResolveAntiAliasedSurface(destination); }
+            finally { Application.logMessageReceived -= OnLog; }
+            Value(key + ".events", Json(string.Join(" | ", logs)));
+            Value(key + ".created", B2(source.IsCreated()));
+            Value(key + ".active", B2(RenderTexture.active == active));
+            Value(key + ".destination", CommandResolvePixel(destination, TextureFormat.RGBA32, 3, 2));
+            Value(key + ".unrelated", CommandResolvePixel(active, TextureFormat.RGBA32, 3, 2));
+        }
+        RenderTexture.active = null;
+    }
+
+    static (RenderTexture source, RenderTexture destination) ResolvePartialDisplay(bool hdr, int aa, Rect viewport,
+        Rect? lateViewport = null, bool? write = null, bool destinationSrgb = false)
     {
         QualitySettings.antiAliasing = aa;
         GL.sRGBWrite = false;
-        var desc = new RenderTextureDescriptor(24, 24, RenderTextureFormat.ARGB32, 0) { msaaSamples = 4, sRGB = false };
+        var desc = new RenderTextureDescriptor(24, 24, RenderTextureFormat.ARGB32, 0) { msaaSamples = 4, sRGB = destinationSrgb };
         var source = Target(desc);
         source.Create();
         desc.msaaSamples = 1;
@@ -854,7 +938,7 @@ public static class TexFormatsProbe
         RenderTexture.active = dst;
         GL.Clear(false, true, Color.green);
         RenderTexture.active = null;
-        GL.Clear(false, true, Color.blue);
+        GL.Clear(false, true, write.HasValue ? new Color(.13f, .26f, .55f, 1f) : Color.blue);
         var camera = Own(new GameObject("Partial resolve camera")).AddComponent<Camera>();
         camera.enabled = false;
         camera.allowHDR = hdr;
@@ -867,8 +951,19 @@ public static class TexFormatsProbe
         cb.ResolveAntiAliasedSurface(source, dst);
         cb.ResolveAntiAliasedSurface(source);
         camera.AddCommandBuffer(CameraEvent.AfterEverything, cb);
+        void OnPostRender(Camera current)
+        {
+            if (current != camera) return;
+            if (lateViewport.HasValue) camera.pixelRect = lateViewport.Value;
+            if (write.HasValue) GL.sRGBWrite = write.Value;
+        }
+        if (lateViewport.HasValue || write.HasValue) Camera.onPostRender += OnPostRender;
         try { camera.Render(); }
-        finally { camera.RemoveCommandBuffer(CameraEvent.AfterEverything, cb); }
+        finally
+        {
+            Camera.onPostRender -= OnPostRender;
+            camera.RemoveCommandBuffer(CameraEvent.AfterEverything, cb);
+        }
         return (source, dst);
     }
 

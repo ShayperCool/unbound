@@ -65,13 +65,17 @@ These are observations of this release and device, not documented guarantees:
   receives its color, and an omitted destination publishes that color to the
   ordinary source's retained image. Screen-camera commands can see the
   camera's LDR or HDR intermediate before final presentation. The destination
-  gets the opaque display color, clipped to both images. The framebuffer
-  copy uses the destination's sRGB encoding when sRGB writes are enabled.
-  A partial camera supplies the pixels inside its viewport while the rest
-  come from the display. The built-in screen viewport rounds the clipped
-  endpoints before computing the intermediate's size. The controls include
-  fractional edges, negative origins, normalized channels, half and full
-  floats, and sRGB writes in Gamma and Linear projects. An explicit self-target keeps its
+  gets the opaque display color, clipped to both images. A built-in screen
+  camera reads the display in its project's color space and uses the
+  destination's format when writing it. A late `GL.sRGBWrite` change controls
+  how its intermediate reaches the display.
+  A partial camera presents its intermediate scaled to the presentation viewport
+  while the rest comes from the display. The viewport rounds its endpoints
+  before computing the intermediate's size. A positive viewport that rounds
+  to zero contributes no pixels. A zero-width or zero-height camera leaves
+  the destination alone. Controls cover fractional and moved viewports,
+  negative origins, normalized channels, half and full floats, and sRGB
+  writes in Gamma and Linear projects. An explicit self-target keeps its
   earlier color. A different active render texture leaves the destination alone.
   Destroyed destinations act as omitted destinations. Released images skip the
   command, and a source recreated before execution supplies its new pixels.
@@ -120,7 +124,8 @@ These are Deferred; raw values remain in the strict report and `residuals.json`.
 
 The [Unity 6000.0 ResolveAntiAliasedSurface API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture.ResolveAntiAliasedSurface.html)
 forces a resolve, into the source when no destination is supplied. Its source/destination
-controls use different images. The [antiAliasing API](https://docs.unity3d.com/cn/6000.0/ScriptReference/RenderTexture-antiAliasing.html)
+controls use different images. In the Linux OpenGL Core captures, a direct resolve
+from an uncreated source preserves the destination and leaves the source uncreated. The [antiAliasing API](https://docs.unity3d.com/cn/6000.0/ScriptReference/RenderTexture-antiAliasing.html)
 describes resolving when switching targets; the target-bound, target-cleared and unrelated-draw
 controls distinguish the switch from a shader reading the source. The retained readback and
 compute observations are device-specific measurements, not a documented ordering promise.
