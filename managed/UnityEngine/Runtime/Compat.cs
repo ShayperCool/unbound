@@ -324,6 +324,14 @@ namespace Unbound.Runtime
         /// positions onto the NavMesh (navlinks, Unity 6000.0.71f1).</summary>
         internal static bool NavMeshAgentOverlap3DMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Only other agents contribute to separation steering. Obstacles still affect
+        /// predicted and actual collisions (navpath, Unity 6000.0.71f1).</summary>
+        internal static bool NavMeshObstacleSeparationMeasured => Family == ReleaseFamily.Unity6000_0;
+
+        /// <summary>Upright obstacle capsules resolve contact in the horizontal plane through
+        /// the agent's height (navpath, Unity 6000.0.71f1).</summary>
+        internal static bool NavMeshUprightCapsuleContactMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Movement constrained to a NavMesh wall uses a weighted sum of the edge's
         /// endpoints (navlinks wall movement, Unity 6000.0.71f1).</summary>
         internal static bool NavMeshWallProjectionMeasured => Family == ReleaseFamily.Unity6000_0;

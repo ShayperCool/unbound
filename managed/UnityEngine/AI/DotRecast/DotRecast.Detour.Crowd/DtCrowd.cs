@@ -1334,7 +1334,8 @@ namespace DotRecast.Detour.Crowd
                     for (int j = 0; j < ag.nneis; ++j)
                     {
                         DtCrowdAgent nei = ag.neis[j].agent;
-                        if (nei.option.avoidancePriority > ag.option.avoidancePriority) continue;
+                        if (nei.option.excludeFromSeparation ||
+                            nei.option.avoidancePriority > ag.option.avoidancePriority) continue;
                         float share = nei.option.avoidancePriority < ag.option.avoidancePriority ? 1f : 0.5f;
 
                         RcVec3f diff = RcVec3f.Subtract(ag.npos, nei.npos);
@@ -1498,18 +1499,34 @@ namespace DotRecast.Detour.Crowd
 
                         float share = nei.option.avoidancePriority < ag.option.avoidancePriority ? 1.0f : 0.5f;
                         RcVec3f diff = RcVec3f.Subtract(ag.npos, nei.npos);
-                        // The overlap solve includes vertical separation on the measured release.
-                        // Surface projection constrains the corrected position afterwards.
-                        if (!_config.resolveAgentOverlapsIn3D) diff.Y = 0;
+                        float radius = nei.option.radius;
+                        if (nei.option.projectCapsuleContact)
+                        {
+                            // The contact circle is the widest section of the capsule within the
+                            // agent's height. A cap contributes a smaller circle than the cylinder.
+                            float halfHeight = nei.option.height * 0.5f;
+                            float center = nei.npos.Y + halfHeight;
+                            float halfAxis = MathF.Max(0f, halfHeight - radius);
+                            float gap = MathF.Max(center - halfAxis - (ag.npos.Y + ag.option.height),
+                                ag.npos.Y - (center + halfAxis));
+                            if (gap > radius) continue;
+                            if (gap > 0f) radius = MathF.Sqrt(radius * radius - gap * gap);
+                            diff.Y = 0f;
+                        }
+                        else if (!_config.resolveAgentOverlapsIn3D)
+                        {
+                            diff.Y = 0f;
+                        }
 
+                        float combinedRadius = ag.option.radius + radius;
                         float dist = diff.LengthSquared();
-                        if (dist > RcMath.Sqr(ag.option.radius + nei.option.radius))
+                        if (dist > RcMath.Sqr(combinedRadius))
                         {
                             continue;
                         }
 
                         dist = MathF.Sqrt(dist);
-                        float pen = (ag.option.radius + nei.option.radius) - dist;
+                        float pen = combinedRadius - dist;
                         if (dist < 0.0001f)
                         {
                             // Agents on top of each other, try to choose diverging separation directions.

@@ -230,9 +230,9 @@ namespace Unbound.Runtime
     //
     // Avoidance: each enabled obstacle is one or more circles that the agents of every agent type
     // avoid in their crowd as they avoid other agents, moving at the obstacle's velocity. The
-    // circles are fixed crowd members that never move themselves and that every agent ranks as more
-    // important than itself, so agents also keep apart from them and are pushed out of them, as from
-    // a more important agent.
+    // circles are fixed crowd members that never move themselves. They contribute to collision
+    // prediction and contact. On the measured release only agents contribute to separation steering
+    // before prediction (tests/projects/navpath, obstacle-separation).
     // C2 (Unbound's choice, unmeasured): the obstacle's position is read from its transform when the
     //   agents update.
     // C3: its velocity in avoidance is the velocity property; an obstacle a script moves without
@@ -628,8 +628,10 @@ namespace Unbound.Runtime
             internal readonly float Top;
             internal readonly Vector3 Velocity;
             internal readonly NavMeshObstacle Owner;
+            internal readonly bool ProjectCapsuleContact;
 
-            internal Circle(Vector3 center, float radius, float bottom, float top, Vector3 velocity, NavMeshObstacle owner)
+            internal Circle(Vector3 center, float radius, float bottom, float top, Vector3 velocity,
+                NavMeshObstacle owner, bool projectCapsuleContact = false)
             {
                 Center = center;
                 Radius = radius;
@@ -637,6 +639,7 @@ namespace Unbound.Runtime
                 Top = top;
                 Velocity = velocity;
                 Owner = owner;
+                ProjectCapsuleContact = projectCapsuleContact;
             }
 
             internal float Height => Mathf.Max(0f, Top - Bottom);
@@ -702,6 +705,7 @@ namespace Unbound.Runtime
             }
             if (s_Near.Count == 0) return;
             if (!s_WarnedCandidates) CheckCandidates(crowd, agents, members.Count);
+            bool excludeFromSeparation = Compat.NavMeshObstacleSeparationMeasured;
             for (int i = 0; i < s_Near.Count; i++)
             {
                 var c = s_Near[i];
@@ -713,6 +717,8 @@ namespace Unbound.Runtime
                     maxAcceleration = 0f,
                     maxSpeed = 0f,
                     separationWeight = 0f,
+                    excludeFromSeparation = excludeFromSeparation,
+                    projectCapsuleContact = c.ProjectCapsuleContact,
                     updateFlags = 0,
                     obstacleAvoidanceType = 0,
                     queryFilterType = 0,
@@ -841,6 +847,9 @@ namespace Unbound.Runtime
                 && Cell(max.Z, invZ) >= z0 && Cell(min.Z, invZ) <= z1;
         }
 
+        /// <summary>Horizontal component tolerance for a vertical capsule axis.</summary>
+        const float UprightAxisTolerance = 1e-6f;
+
         /// <summary>The obstacle's shape as circles in the horizontal plane, with its height span.</summary>
         static void AddCircles(NavMeshObstacle obstacle, List<Circle> into)
         {
@@ -852,7 +861,15 @@ namespace Unbound.Runtime
             {
                 float radius = obstacle.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
                 float half = obstacle.height * Mathf.Abs(scale.y) * 0.5f;
-                into.Add(new Circle(center, radius, center.y - half, center.y + half, velocity, obstacle));
+                bool projectContact = false;
+                if (Compat.NavMeshUprightCapsuleContactMeasured && half >= radius)
+                {
+                    Vector3 axis = t.rotation * Vector3.up;
+                    projectContact = Mathf.Abs(axis.x) <= UprightAxisTolerance
+                        && Mathf.Abs(axis.z) <= UprightAxisTolerance;
+                }
+                into.Add(new Circle(center, radius, center.y - half, center.y + half, velocity,
+                    obstacle, projectContact));
                 return;
             }
             var rotation = t.rotation;

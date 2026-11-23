@@ -37,6 +37,12 @@ namespace DotRecast.Detour.Crowd
         /// How aggresive the agent manager should be at avoiding collisions with this agent. [Limit: >= 0]
         public float separationWeight;
 
+        /// Excludes an obstacle proxy from agent separation steering.
+        public bool excludeFromSeparation;
+
+        /// Resolves contact against the upright capsule's section through the agent's height.
+        public bool projectCapsuleContact;
+
         /// the agent path.
         /// Flags that impact steering behavior. (See: #UpdateFlags)
         public int updateFlags;
