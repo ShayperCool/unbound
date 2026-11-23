@@ -38,6 +38,9 @@ public partial class NavLinksProbe
             yield return RecordPendingAssignment(local, afterUpdate, mode, false);
         }
         yield return RecordRevalidationControls(local);
+        yield return RecordResubmissionControls(local);
+        yield return RecordSearchFilterControls(local);
+        yield return RecordPartialRepairControls(local);
         Finish(0);
     }
 
@@ -85,6 +88,7 @@ public partial class NavLinksProbe
         DestroyImmediate(third.gameObject);
         yield return null;
         yield return RecordSearchStartControls(local);
+        DestroyImmediate(alternate.gameObject);
     }
 
     IEnumerator RecordSearchStartControls(Lane local)
@@ -131,6 +135,172 @@ public partial class NavLinksProbe
             DestroyImmediate(agent.gameObject);
             yield return null;
         }
+    }
+
+    IEnumerator RecordResubmissionControls(Lane local)
+    {
+        DestroyImmediate(local.Link.gameObject);
+        local.Link = AddLink(local, new Vector3(-2f, 0f, 0f), new Vector3(2f, 0f, 0f));
+        yield return null;
+        foreach (bool started in new[] { false, true })
+        foreach (bool assigned in new[] { false, true })
+        foreach (string next in new[] { "same", "near", "disconnected" })
+        foreach (bool behind in (next == "near" && started ? new[] { false, true } : new[] { false }))
+        {
+            var lane = new Lane
+            {
+                Name = "resubmitted." + (started ? "started" : "queued") + "." + (assigned ? "assigned" : "plain") + "." + next + (behind ? ".behind" : ""),
+                O = local.O
+            };
+            var agent = Agent(lane, "a", new Vector3(-8f, 0f, -0.3f), null, a =>
+            {
+                a.speed = 0f;
+                a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            });
+            NavMeshAgent other = null;
+            if (behind)
+                other = Agent(lane, "other", new Vector3(-8f, 0f, 0.8f), null, a =>
+                {
+                    a.speed = 0f;
+                    a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+                });
+            yield return null;
+            int original = NavMesh.pathfindingIterationsPerFrame;
+            NavMesh.pathfindingIterationsPerFrame = 1;
+            Vector3 far = lane.O + new Vector3(8f, 0f, -0.3f);
+            Vector3 near = lane.O + new Vector3(-5f, 0f, 0.7f);
+            SetTestDestination(agent, far);
+            if (behind) SetTestDestination(other, far);
+            if (started) yield return null;
+            if (!agent.pathPending) throw new InvalidOperationException("expected a pending destination");
+            if (assigned)
+            {
+                var path = new NavMeshPath();
+                if (!agent.CalculatePath(near, path) || !agent.SetPath(path))
+                    throw new InvalidOperationException("could not assign near path");
+            }
+            var replacement = next == "same" ? far - Vector3.forward * 0.5f
+                : next == "near" ? near - Vector3.forward * 0.5f
+                : Lanes.Origin(Lanes.Index("inactive")) + new Vector3(-5f, 0f, 0);
+            SetTestDestination(agent, replacement);
+            for (int frame = 0; frame <= 8; frame++)
+            {
+                if (frame <= 5 || frame == 8)
+                {
+                    string fields = "\"pending\":" + B(agent.pathPending) + ",\"path\":" + B(agent.hasPath)
+                        + ",\"destination\":" + V(agent.destination) + ",\"end\":" + V(agent.pathEndPosition)
+                        + ",\"status\":" + Text(agent.pathStatus.ToString());
+                    if (other != null) fields += ",\"otherPending\":" + B(other.pathPending) + ",\"otherPath\":" + B(other.hasPath);
+                    Line(lane.Name, "a", frame, fields);
+                }
+                yield return null;
+            }
+            NavMesh.pathfindingIterationsPerFrame = original;
+            DestroyImmediate(agent.gameObject);
+            if (other != null) DestroyImmediate(other.gameObject);
+            yield return null;
+        }
+    }
+
+    IEnumerator RecordSearchFilterControls(Lane lane)
+    {
+        DestroyImmediate(lane.Link.gameObject);
+        var first = AddLink(lane, new Vector3(-2f, 0f, 0f), new Vector3(2f, 0f, 0f), area: 4);
+        var alternate = AddLink(lane, new Vector3(-2f, 0f, 2f), new Vector3(2f, 0f, 2f), area: 5);
+        yield return null;
+        int previousBudget = NavMesh.pathfindingIterationsPerFrame;
+        float oldFirstCost = NavMesh.GetAreaCost(4), oldAlternateCost = NavMesh.GetAreaCost(5);
+        NavMesh.SetAreaCost(4, 1);
+        NavMesh.SetAreaCost(5, 2);
+        foreach (string mode in new[] { "unchanged", "highBefore", "localFirst", "localExisting", "global", "mask", "localExistingAssigned", "globalAssigned", "maskAssigned" })
+        {
+            var a = Agent(lane, mode, new Vector3(-8f, 0f, -0.3f), null, x => {
+                x.speed = 0f;
+                x.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            });
+            yield return null;
+            if (mode.Contains("Existing", StringComparison.Ordinal)) a.SetAreaCost(7, a.GetAreaCost(7));
+            if (mode == "highBefore") a.SetAreaCost(4, 100);
+            NavMesh.pathfindingIterationsPerFrame = 1;
+            var far = lane.O + new Vector3(8f, 0f, -0.3f);
+            SetTestDestination(a, far);
+            yield return null;
+            if (!a.pathPending) throw new InvalidOperationException("search did not pend");
+            if (mode.StartsWith("local", StringComparison.Ordinal)) a.SetAreaCost(4, 100);
+            if (mode.StartsWith("global", StringComparison.Ordinal)) NavMesh.SetAreaCost(4, 100);
+            if (mode.StartsWith("mask", StringComparison.Ordinal)) a.areaMask &= ~(1 << 4);
+            if (mode.EndsWith("Assigned", StringComparison.Ordinal))
+            {
+                var p = new NavMeshPath();
+                if (!a.CalculatePath(lane.O + new Vector3(-5f, 0f, 0.7f), p) || !a.SetPath(p)) throw new InvalidOperationException("assignment failed");
+                if (!a.pathPending) throw new InvalidOperationException("search dropped");
+            }
+            for (int frame = 0; frame <= 24; frame++)
+            {
+                var link = a.nextOffMeshLinkData;
+                Line("area." + mode, "a", frame, "\"pending\":" + B(a.pathPending) + ",\"path\":" + B(a.hasPath) + ",\"stale\":" + B(a.isPathStale)
+                    + ",\"end\":" + V(a.pathEndPosition) + ",\"cost\":" + a.GetAreaCost(4).ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    + ",\"valid\":" + B(link.valid) + ",\"link\":" + V(link.startPos));
+                if (!a.pathPending && frame >= 12) break;
+                yield return null;
+            }
+            NavMesh.SetAreaCost(4, 1);
+            DestroyImmediate(a.gameObject);
+            yield return null;
+        }
+        NavMesh.SetAreaCost(4, oldFirstCost);
+        NavMesh.SetAreaCost(5, oldAlternateCost);
+        NavMesh.pathfindingIterationsPerFrame = previousBudget;
+        DestroyImmediate(first.gameObject);
+        DestroyImmediate(alternate.gameObject);
+    }
+
+    IEnumerator RecordPartialRepairControls(Lane lane)
+    {
+        var first = AddLink(lane, new Vector3(-2f, 0f, 0f), new Vector3(2f, 0f, 0f), area: 4, cost: 1);
+        var alternate = AddLink(lane, new Vector3(-2f, 0f, 2f), new Vector3(2f, 0f, 2f), area: 5, cost: 7);
+        int prior = NavMesh.pathfindingIterationsPerFrame;
+        foreach (bool hasAlternate in new[] { false, true })
+        foreach (bool beforeAssignment in new[] { false, true })
+        {
+            first.activated = true;
+            alternate.activated = hasAlternate;
+            yield return null;
+            var a = Agent(lane, "a", new Vector3(-8f, 0f, -0.3f), null, x => {
+                x.speed = 0f;
+                x.autoRepath = false;
+                x.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            });
+            NavMesh.pathfindingIterationsPerFrame = 1;
+            yield return null;
+            SetTestDestination(a, lane.O + new Vector3(35f, 0f, -0.3f));
+            yield return null;
+            if (!a.pathPending) throw new InvalidOperationException("search did not pend");
+            if (beforeAssignment) first.activated = false;
+            var p = new NavMeshPath();
+            if (!a.CalculatePath(lane.O + new Vector3(-5f, 0f, 0.7f), p) || !a.SetPath(p))
+                throw new InvalidOperationException("assignment failed");
+            for (int frame = 0; frame <= 10; frame++)
+            {
+                if (!beforeAssignment && frame == 6)
+                {
+                    if (a.pathPending || a.pathStatus != NavMeshPathStatus.PathPartial || !a.nextOffMeshLinkData.valid)
+                        throw new InvalidOperationException("expected to have a partial path through the first link");
+                    first.activated = false;
+                }
+                var link = a.nextOffMeshLinkData;
+                Line("partial." + B(hasAlternate) + "." + B(beforeAssignment), "a", frame,
+                     "\"pending\":" + B(a.pathPending) + ",\"path\":" + B(a.hasPath) + ",\"stale\":" + B(a.isPathStale)
+                     + ",\"status\":" + Text(a.pathStatus.ToString()) + ",\"destination\":" + V(a.destination)
+                     + ",\"end\":" + V(a.pathEndPosition) + ",\"valid\":" + B(link.valid) + ",\"link\":" + V(link.startPos));
+                yield return null;
+            }
+            DestroyImmediate(a.gameObject);
+            yield return null;
+        }
+        NavMesh.pathfindingIterationsPerFrame = prior;
+        DestroyImmediate(first.gameObject);
+        DestroyImmediate(alternate.gameObject);
     }
 
     IEnumerator RecordPendingAssignment(Lane local, bool afterUpdate, string mode, bool moving,
