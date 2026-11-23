@@ -80,6 +80,57 @@ public partial class NavLinksProbe
             yield return null;
             yield return RecordPendingAssignment(local, true, mode, false, "control", alternate);
         }
+        local.Link.activated = true;
+        alternate.activated = true;
+        DestroyImmediate(third.gameObject);
+        yield return null;
+        yield return RecordSearchStartControls(local);
+    }
+
+    IEnumerator RecordSearchStartControls(Lane local)
+    {
+        var disconnected = Lanes.Origin(Lanes.Index("inactive")) + new Vector3(-5f, 0f, 0);
+        foreach (int budget in new[] { 1, 2 })
+        foreach (string mode in new[] { "noneFar", "nearFar", "nearDisconnected", "multiDisconnected", "partialFar" })
+        {
+            var lane = new Lane { Name = "initialSearch." + mode + "." + budget, O = local.O };
+            var agent = Agent(lane, "a", new Vector3(-8f, 0f, -0.3f), null, a =>
+            {
+                a.speed = 2.5f;
+                a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            });
+            yield return null;
+            int previousBudget = NavMesh.pathfindingIterationsPerFrame;
+            NavMesh.pathfindingIterationsPerFrame = 100000;
+            Vector3 near = lane.O + new Vector3(-5f, 0f, -0.3f);
+            Vector3 far = lane.O + new Vector3(8f, 0f, -0.3f);
+            if (!mode.StartsWith("none", StringComparison.Ordinal))
+            {
+                bool partial = mode == "partialFar";
+                Vector3 previous = partial ? disconnected : mode == "multiDisconnected" ? far : near;
+                SetTestDestination(agent, previous);
+                for (int frame = 0; frame < 5; frame++) yield return null;
+                var previousStatus = partial ? NavMeshPathStatus.PathPartial : NavMeshPathStatus.PathComplete;
+                if (!agent.hasPath || agent.pathStatus != previousStatus)
+                    throw new InvalidOperationException("previous path was not reported");
+            }
+            NavMesh.pathfindingIterationsPerFrame = budget;
+            SetTestDestination(agent, mode.EndsWith("Disconnected", StringComparison.Ordinal) ? disconnected : far);
+            if (!agent.pathPending) throw new InvalidOperationException("expected a pending destination");
+            for (int frame = 0; frame <= 8; frame++)
+            {
+                if (frame == 1) agent.SetAreaCost(4, 4f);
+                if (frame <= 4 || frame == 8)
+                    Line(lane.Name, "a", frame, "\"pending\":" + B(agent.pathPending) + ",\"path\":" + B(agent.hasPath)
+                        + ",\"stale\":" + B(agent.isPathStale) + ",\"position\":" + V(agent.nextPosition) + ",\"velocity\":" + V(agent.velocity)
+                        + ",\"destination\":" + V(agent.destination) + ",\"end\":" + V(agent.pathEndPosition)
+                        + ",\"status\":" + Text(agent.pathStatus.ToString()));
+                yield return null;
+            }
+            NavMesh.pathfindingIterationsPerFrame = previousBudget;
+            DestroyImmediate(agent.gameObject);
+            yield return null;
+        }
     }
 
     IEnumerator RecordPendingAssignment(Lane local, bool afterUpdate, string mode, bool moving,
