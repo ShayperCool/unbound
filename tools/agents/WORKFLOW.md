@@ -152,7 +152,9 @@ tools/validation/README.md for why that is unsafe).
      does not build without stubs or when `managed/UnityEngine/Generated/` differs from what the
      generator writes, and restores `Generated/` afterwards. Regenerate, commit, land again.
    - Automatic probe checks select a probe when its files or its `gate.json` `engine_paths`
-     change. A landing records them and the post-land checker runs them on the new main (see
+     change (a `gate.json` edit of `engine_paths` alone selects only through those paths). A
+     probe whose scripts use parts of other probes names them in `engine_paths`
+     (`tools/agents/gate_paths.py --write`); land.py refuses a changed probe that does not. A landing records them and the post-land checker runs them on the new main (see
      Post-land checks); `--check` still runs them in its gate. Those paths are repository-relative files, directory prefixes or globs. A suite-only
      probe may declare just this metadata. `fast_commands` declares static/short checks to run on
      every code landing, without an Editor capture or long engine replay. Selected full recipes

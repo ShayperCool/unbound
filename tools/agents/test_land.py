@@ -1681,6 +1681,55 @@ class AutomaticProbeTests(unittest.TestCase):
         self.probe('actual', {'commands': ['true'], 'engine_paths': ['tests/projects/packages/']})
         self.assertEqual([row[0] for row in self.select(['tests/projects/packages/Assets/Probe.cs'])], ['actual'])
 
+    def test_a_touched_probe_using_an_undeclared_part_of_another_is_an_error(self):
+        self.probe('shared', {'commands': ['shared-check']})
+        (self.root/'tests/projects/shared/compare.py').write_text('')
+        self.probe('user', {'commands': ['user-check']})
+        (self.root/'tests/projects/user/run.py').write_text("COMPARE = PROBE.parent / 'shared/compare.py'\n")
+        with self.assertRaises(SystemExit) as error:
+            self.select(['tests/projects/user/run.py'])
+        self.assertEqual(error.exception.code, 2)
+        (self.root/'tests/projects/user/gate.json').write_text(json.dumps({'commands': ['user-check'], 'engine_paths': ['tests/projects/shared/compare.py']}))
+        self.assertEqual(sorted(row[0] for row in self.select(['tests/projects/shared/compare.py'])), ['shared', 'user'])
+
+    def test_a_gate_json_edit_of_engine_paths_alone_does_not_touch_its_probe(self):
+        def git(*args):
+            subprocess.run(['git', '-C', str(self.root), *args], check=True, capture_output=True)
+        git('init', '-q', '-b', 'main')
+        git('config', 'user.email', 'probe@example.com')
+        git('config', 'user.name', 'probe')
+        self.probe('own', {'commands': ['own-check']})
+        git('add', '-A')
+        git('commit', '-q', '-m', 'base')
+        git('switch', '-q', '-c', 'work')
+        path = 'tests/projects/own/gate.json'
+        (self.root/path).write_text(json.dumps({'commands': ['own-check'], 'engine_paths': ['managed/']}))
+        self.assertTrue(land.selection_only_change(self.root, path))
+        self.assertEqual(self.select([path]), [])
+        (self.root/path).write_text(json.dumps({'commands': ['own-check', 'more'], 'engine_paths': ['managed/']}))
+        self.assertFalse(land.selection_only_change(self.root, path))
+        self.assertEqual([row[0] for row in self.select([path])], ['own'])
+
+    def test_an_engine_paths_edit_dropping_a_used_part_is_still_refused(self):
+        def git(*args):
+            subprocess.run(['git', '-C', str(self.root), *args], check=True, capture_output=True)
+        git('init', '-q', '-b', 'main')
+        git('config', 'user.email', 'probe@example.com')
+        git('config', 'user.name', 'probe')
+        self.probe('shared', {'commands': ['shared-check']})
+        (self.root/'tests/projects/shared/compare.py').write_text('')
+        self.probe('user', {'commands': ['user-check'], 'engine_paths': ['tests/projects/shared/compare.py']})
+        (self.root/'tests/projects/user/run.py').write_text("COMPARE = PROBE.parent / 'shared/compare.py'\n")
+        git('add', '-A')
+        git('commit', '-q', '-m', 'base')
+        git('switch', '-q', '-c', 'work')
+        path = 'tests/projects/user/gate.json'
+        (self.root/path).write_text(json.dumps({'commands': ['user-check'], 'engine_paths': []}))
+        self.assertTrue(land.selection_only_change(self.root, path))
+        with self.assertRaises(SystemExit) as error:
+            self.select([path])
+        self.assertEqual(error.exception.code, 2)
+
     def test_a_touched_probe_without_a_recipe_is_an_error(self):
         self.probe('missingrecipe')
         with self.assertRaises(SystemExit) as error:

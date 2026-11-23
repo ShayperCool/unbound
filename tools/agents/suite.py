@@ -16,7 +16,8 @@ with $UNBOUND, $UNBOUND_CLI, $UNBOUND_MANAGED_DIR and $UNBOUND_PROBE_UNITY_VERSI
 a command names no other) set for it to use; each must exit 0 and admits its own heavy jobs.
 summary (optional) is a regex: the step's summary is every match in its output, else its last
 line. Optional engine_paths lists repository-relative files, directories or globs whose edits
-select this probe in land.py. fast_commands lists static/short checks to run on every code landing,
+select this probe in land.py; they must name the parts of other probes the probe's scripts use
+(tools/agents/gate_paths.py adds them; land.py refuses a probe changed without them). fast_commands lists static/short checks to run on every code landing,
 without Editor captures or long engine runs. exclusive (optional boolean) runs the probe alone
 between concurrent groups, and makes a landing command selecting it a barrier. Metadata-only declarations may accompany a recipe
 already defined in this file. Automatic checks share land.py's printed time budget; explicit

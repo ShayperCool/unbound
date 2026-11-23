@@ -250,6 +250,31 @@ def candidate_recipes(worktree, requested):
     return catalog
 
 
+def selection_only_change(worktree, path):
+    """Whether a changed probe gate.json differs from its version where the branch left main only in
+    engine_paths, which select the probe for other paths' changes and do not change what it runs: it
+    does not make its probe touched. A file git cannot compare counts as a change."""
+    if not path.startswith('tests/projects/') or not path.endswith('/gate.json'):
+        return False
+    try:
+        base = subprocess.run(['git', '-C', str(worktree), 'merge-base', 'HEAD', 'main'],
+                              capture_output=True, text=True, check=True).stdout.strip()
+        old = subprocess.run(['git', '-C', str(worktree), 'show', f'{base}:{path}'], capture_output=True, text=True)
+        before = json.loads(old.stdout) if old.returncode == 0 else None
+        after = json.loads((Path(worktree)/path).read_text())
+    except (subprocess.CalledProcessError, ValueError, OSError):
+        return False
+    if not isinstance(after, dict):
+        return False
+    # A new file is selection metadata alone only when it holds nothing but engine_paths.
+    if before is None:
+        return set(after) == {'engine_paths'}
+    if not isinstance(before, dict):
+        return False
+    drop = lambda spec: {key: value for key, value in spec.items() if key != 'engine_paths'}
+    return drop(before) == drop(after)
+
+
 def automatic_probes(worktree, changed, explicit, environment=None):
     """Select touched recipes and short checks, validating recipes in the candidate interpreter."""
     from suite import gate_spec, NoRecipe
@@ -265,7 +290,7 @@ def automatic_probes(worktree, changed, explicit, environment=None):
             continue
         name = project.name
         prefix = f'tests/projects/{name}/'
-        touched = any(path.startswith(prefix) for path in changed)
+        touched = any(path.startswith(prefix) and not selection_only_change(worktree, path) for path in changed)
         spec = gate_spec(project/'gate.json')
         if isinstance(spec, NoRecipe):
             # Invalid optional metadata cannot silently hide a dependency or fast check.
@@ -277,6 +302,14 @@ def automatic_probes(worktree, changed, explicit, environment=None):
             or fnmatch.fnmatchcase(path, pattern)
             for path in changed for pattern in dependencies)
         records.append((name, prefix, touched, affected, spec))
+    # A changed probe names in its engine_paths the parts of other probes its scripts use, so that
+    # their changes select it (gate_paths.py adds them).
+    from gate_paths import undeclared
+    edited = {path.split('/')[2] for path in changed if path.startswith('tests/projects/') and path.endswith('/gate.json')}
+    missing = undeclared(worktree, only={name for name, _, touched, _, _ in records if touched} | edited)
+    if missing:
+        die(2, 'gate.json engine_paths lack parts of other probes the probes use (python3 tools/agents/gate_paths.py --write): '
+            + '; '.join(f'{name}: {", ".join(entries)}' for name, entries in missing.items()))
     requested = [(name, probe_release(prefix, worktree, environment))
                  for name, prefix, _, affected, _ in records if affected]
     catalog = candidate_recipes(worktree, requested)
