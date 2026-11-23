@@ -28,6 +28,13 @@ static class MeasureSpriteDrawLifetime
             SpriteMeshType.FullRect, new Vector4(4f, 4f, 4f, 4f), false);
         var defaultSprite = Sprite.Create(texture, new Rect(0, 0, 64, 64), Vector2.one * 0.5f);
         Read("default.created", defaultSprite);
+        var firstGeneration = Object.Instantiate(defaultSprite);
+        Read("default.sourceCloned", defaultSprite);
+        var secondGeneration = Object.Instantiate(firstGeneration);
+        Read("default.copyCloned", firstGeneration);
+        Read("default.independentSecondCopy", secondGeneration);
+        Object.DestroyImmediate(secondGeneration);
+        Object.DestroyImmediate(firstGeneration);
         Object.DestroyImmediate(defaultSprite);
         var camera = new GameObject("Sprite draw allocation camera").AddComponent<Camera>();
         camera.enabled = false;
@@ -163,6 +170,40 @@ static class MeasureSpriteDrawLifetime
         Put("renderer.willRenderCallback", callbacks.WillRender.ToString());
         Object.DestroyImmediate(controlled.gameObject);
         Object.DestroyImmediate(controlledSprite);
+
+        var maskSourceSprite = Make();
+        var unusedMaskSprite = Make();
+        var maskSource = new GameObject("Mask with a source renderer").AddComponent<SpriteRenderer>();
+        maskSource.gameObject.layer = 12;
+        maskSource.sprite = maskSourceSprite;
+        maskSource.enabled = false;
+        var derivedMask = maskSource.gameObject.AddComponent<SpriteMask>();
+        derivedMask.maskSource = SpriteMask.MaskSource.SupportedRenderers;
+        derivedMask.sprite = unusedMaskSprite;
+        Read("extra.maskSourceBeforeRender", maskSourceSprite);
+        camera.Render();
+        Read("extra.maskSourceAfterRender", maskSourceSprite);
+        Read("extra.unusedMaskSprite", unusedMaskSprite);
+        Object.DestroyImmediate(maskSource.gameObject);
+        Object.DestroyImmediate(maskSourceSprite);
+        Object.DestroyImmediate(unusedMaskSprite);
+
+        var sourceSprite = Make();
+        var particle = new GameObject("Sprite emittance source").AddComponent<ParticleSystem>();
+        particle.gameObject.layer = 12;
+        particle.Stop();
+        var shape = particle.shape;
+        shape.enabled = true;
+        shape.shapeType = ParticleSystemShapeType.Sprite;
+        shape.sprite = sourceSprite;
+        Read("extra.particleSourceAssigned", sourceSprite);
+        particle.Emit(2);
+        Read("extra.particleSourceAfterEmit", sourceSprite);
+        Put("extra.particleCount", particle.particleCount.ToString());
+        camera.Render();
+        Read("extra.particleSourceAfterRender", sourceSprite);
+        Object.DestroyImmediate(particle.gameObject);
+        Object.DestroyImmediate(sourceSprite);
 
         var pipeline = ScriptableObject.CreateInstance<SpriteMemoryPipeline>();
         var previousPipeline = GraphicsSettings.defaultRenderPipeline;

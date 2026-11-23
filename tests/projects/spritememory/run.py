@@ -15,6 +15,10 @@ METHOD = 'RecordSpriteMemory.Record'
 VARIABLE = 'SPRITE_MEMORY_OUT'
 
 
+def include_particles(project):
+    value_probe.include_builtin_module(project, 'particlesystem')
+
+
 def directory(label):
     if not label or label in ('.', '..') or Path(label).name != label:
         raise SystemExit(f'{label}: expected a single run directory name')
@@ -54,11 +58,11 @@ def main():
     if out.exists():
         raise SystemExit(f'{out}: expected a fresh run directory')
     if args.mode == 'record':
-        value_probe.record(PROBE, METHOD, VARIABLE, str(out), batch=True, macos_batch=True, base=BASE)
+        value_probe.record(PROBE, METHOD, VARIABLE, str(out), batch=True, macos_batch=True, base=BASE, configure=include_particles)
         validate_capture(out, args.release)
         value_probe.seal_value_capture(out)
         return 0
-    return value_probe.gate(PROBE, VARIABLE, str(out), 0, ['--headless', '8'], base=BASE)
+    return value_probe.gate(PROBE, VARIABLE, str(out), 0, ['--headless', '8'], base=BASE, configure=include_particles)
 
 
 if __name__ == '__main__':
