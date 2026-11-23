@@ -93,9 +93,9 @@ namespace UnityEngine
 
         /// <summary>A property value read or written through the Material API: the sheet lists every
         /// property of the shader again (nothing to do while it does).</summary>
-        void TouchSheet()
+        void TouchSheet(bool profileAccess = true)
         {
-            RealizeProfilerPropertyStorage();
+            if (profileAccess) RealizeProfilerPropertyStorage();
             ValidateOnAccess();
             var sheet = m_State.m_Sheet;
             if (sheet == null || sheet.FilledFor == m_Shader) return;
@@ -1041,7 +1041,7 @@ namespace UnityEngine
         /// <summary>Activates a pass for GL drawing and Graphics.DrawMeshNow.</summary>
         public bool SetPass(int pass)
         {
-            PrepareProfilerDraw();
+            ObserveProfilerPass(pass);
             Unbound.Runtime.Immediate.PassMaterial = this;
             Unbound.Runtime.Immediate.PassIndex = pass;
             return true;
@@ -1283,19 +1283,27 @@ namespace UnityEngine
 
         /// <summary>A texture and the element of it the shader samples (Unbound.Runtime.TextureElements);
         /// GetTexture returns the texture whatever the element.</summary>
-        void SetTextureElement(int nameID, Texture value, RenderTextureSubElement element, bool elementBinding)
+        void SetTextureElement(int nameID, Texture value, RenderTextureSubElement element, bool elementBinding, bool profileAccess = true)
         {
-            TouchSheet();
+            TouchSheet(profileAccess);
             var slot = Slot(nameID);
             slot.Texture = value;
             slot.Element = element;
             slot.ElementBinding = elementBinding;
             m_VectorsAfterTexture.Remove(HdrDecode.IdOf(nameID));
-            if (elementBinding) StopMeasuringPropertyStorage();
-            else RecordProfilerPropertyWrite(nameID, ShaderPropertyType.Texture);
+            if (profileAccess)
+            {
+                if (elementBinding) StopMeasuringPropertyStorage();
+                else RecordProfilerPropertyWrite(nameID, ShaderPropertyType.Texture);
+            }
             ScriptSet(nameID);
             MarkDirty();
         }
+
+        // The immediate blit's texture binding is a draw input. Its pass decides the scope of
+        // profiler accounting even when the renderer's binding uses this managed texture slot.
+        internal void SetBlitSource(int nameID, Texture value) =>
+            SetTextureElement(nameID, value, RenderTextureSubElement.Default, false, profileAccess: false);
 
         public Texture GetTexture(string name) => GetTexture(Shader.PropertyToID(name));
         public Texture GetTexture(int nameID)
@@ -1917,9 +1925,9 @@ namespace UnityEngine
         internal static ulong SentTexture(Texture texture, RenderTextureSubElement element) =>
             texture is not null && !texture ? TextureHandles.Of(TextureElements.DestroyedTexture) : TextureElements.MaterialHandle(texture, element);
 
-        internal unsafe ulong Sync()
+        internal unsafe ulong Sync(bool profileDraw = true)
         {
-            PrepareProfilerDraw();
+            if (profileDraw) PrepareProfilerDraw();
             if (m_Handle == 0) m_Handle = RenderHandles.Next();
             // A maximum LOD changed: the shader goes again when the SubShader it names changed.
             if (m_LodEpoch != Shader.s_LodEpoch)

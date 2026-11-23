@@ -192,6 +192,21 @@ namespace UnityEngine
         int? DeclaredPassCount() =>
             ActiveSubShader("Shader.passCount", "follows the renderer's pass list")?.Passes.Count;
 
+        // An inactive or unmeasured subshader cannot establish the state of the property store.
+        internal bool? ProfilerPassAvailable(int pass, bool allPasses)
+        {
+            if (!allPasses && pass < 0) return false;
+            if (globalRenderPipeline.Length != 0 || ActiveSubShader(null, null) is not { } active) return null;
+            int count = active.Passes.Count;
+            if (count == 0 || !allPasses && pass >= count) return false;
+            var info = Unbound.Runtime.ShaderPassInfo.Of(this);
+            if (info?.Known != true || !info.Found || info.Passes.Count != count) return null;
+            if (!allPasses) return info.CanDraw(pass) ? true : null;
+            for (int index = 0; index < count; index++)
+                if (info.CanDraw(index)) return true;
+            return null;
+        }
+
         /// <summary>
         /// The names of the passes <see cref="passCount"/> counts, in order: those of the
         /// SubShader the shader's queries answer from (<see cref="ActiveSubShader"/>), as
@@ -249,7 +264,7 @@ namespace UnityEngine
         /// renderer-based answer).</summary>
         static Unbound.Runtime.ShaderDeclarations.SubShader SelectionUnknown(string api, string keeps, string condition, string why)
         {
-            Unbound.Runtime.Stubs.Ignored(api + " " + condition, keeps + ": " + why);
+            if (api != null) Unbound.Runtime.Stubs.Ignored(api + " " + condition, keeps + ": " + why);
             return null;
         }
 

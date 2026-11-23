@@ -168,6 +168,68 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ARendererOwnedCopyKeepsItsOwnValueAndAnUnmeasuredAllocation()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var shader = CreateShader(PlainShader);
+            var source = new Material(shader);
+            var owner = new GameObject();
+            try
+            {
+                source.SetFloat("_Parameter", 8f);
+                var renderer = owner.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = source;
+                var own = renderer.material;
+                Assert.NotSame(source, own);
+                Assert.Equal(8f, own.GetFloat("_Parameter"));
+                own.SetFloat("_Parameter", 10f);
+                Assert.Equal(8f, source.GetFloat("_Parameter"));
+                Assert.Equal(1864, Profiler.GetRuntimeMemorySizeLong(source));
+                Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(own));
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+                Object.DestroyImmediate(source);
+                Object.DestroyImmediate(shader);
+            }
+        }
+
+        [Fact]
+        public void CollectingAPropertyBlockDrawLeavesTheSourcePending()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var shader = CreateShader(PlainShader);
+            var source = new Material(shader);
+            var instance = Object.Instantiate(source);
+            var owner = new GameObject();
+            try
+            {
+                var renderer = owner.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = instance;
+                var block = new MaterialPropertyBlock();
+                block.SetFloat("_Parameter", 4f);
+                renderer.SetPropertyBlock(block);
+                var drawn = renderer.DrawnMaterial(0, instance);
+                Assert.Equal(4f, drawn.GetFloat("_Parameter"));
+                Assert.Equal(1416, Profiler.GetRuntimeMemorySizeLong(instance));
+                renderer.PrepareProfilerBlockDraw(0, source);
+                Assert.Equal(1416, Profiler.GetRuntimeMemorySizeLong(instance));
+                renderer.PrepareProfilerBlockDraw(0, drawn);
+                Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(instance));
+                Assert.Equal(0.5f, instance.GetFloat("_Parameter"));
+                Assert.Equal(0, Profiler.GetRuntimeMemorySizeLong(instance));
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+                Object.DestroyImmediate(instance);
+                Object.DestroyImmediate(source);
+                Object.DestroyImmediate(shader);
+            }
+        }
+
+        [Fact]
         public void AnInstantiatedMaterialKeepsItsHeaderUntilAPropertyQuery()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);

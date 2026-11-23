@@ -92,6 +92,8 @@ namespace Unbound.Runtime
         {
             internal ulong Mesh;
             internal int Submesh;
+            // The original material's slot for a draw using a synthetic property-block Material.
+            internal int PropertyBlockSlotPlusOne;
             internal Material Material;
             internal Matrix4x4 Model;
             internal Color Color;
@@ -283,12 +285,15 @@ namespace Unbound.Runtime
                 // A slot without a material, or whose material was destroyed, draws with the error
                 // material, a slot beyond the sub-meshes too (measured for mesh, skinned mesh, sprite
                 // and line renderers and a TextMesh's text: tests/projects/missingmaterial).
-                var material = renderer.DrawnMaterial(i, materials[i]);
+                var source = materials[i];
+                var material = renderer.DrawnMaterial(i, source);
+                int propertyBlockSlot = material != null && !ReferenceEquals(material, source) ? i + 1 : 0;
                 if (material == null) material = Material.Error;
                 into.Add(new DrawItem
                 {
                     Mesh = meshHandle,
                     Submesh = Math.Min(i - firstMaterial, submeshes - 1),
+                    PropertyBlockSlotPlusOne = propertyBlockSlot,
                     Material = material,
                     Model = model,
                     Color = color,
@@ -1325,6 +1330,8 @@ namespace Unbound.Runtime
                 GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
                 item.ClipEnabled ? item.Clip : (Rect?)null, properties, flipWinding: item.Renderer?.DrawFlipWinding(item.Model) ?? false, tint: item.Tint);
             }
+            if (item.PropertyBlockSlotPlusOne != 0 && item.Material?.m_Handle == material)
+                item.Renderer?.PrepareProfilerBlockDraw(item.PropertyBlockSlotPlusOne - 1, item.Material);
             if (restoreCanvasClip) GfxStream.Keyword("UNITY_UI_CLIP_RECT", true);
             if (masking) SpriteMasking.After(previousState);
             foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, false);

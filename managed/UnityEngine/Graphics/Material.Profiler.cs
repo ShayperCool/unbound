@@ -16,7 +16,7 @@ namespace UnityEngine
 
         void RealizeProfilerPropertyStorage()
         {
-            if (m_State.m_ProfilerStorage != ProfilerStorage.Initialized)
+            if (m_State.m_ProfilerStorage == ProfilerStorage.Pending)
                 m_State.m_ProfilerStorage = ProfilerStorage.Initialized;
         }
 
@@ -24,6 +24,14 @@ namespace UnityEngine
         {
             if (m_State.m_ProfilerStorage == ProfilerStorage.Pending)
                 m_State.m_ProfilerStorage = ProfilerStorage.DrawPrepared;
+        }
+
+        internal void ObserveProfilerPass(int pass, bool allPasses = false)
+        {
+            if (m_State.m_ProfilerStorage != ProfilerStorage.Pending) return;
+            bool? usable = m_Shader != null ? m_Shader.ProfilerPassAvailable(pass, allPasses) : null;
+            if (usable == true) RealizeProfilerPropertyStorage();
+            else if (!usable.HasValue) PrepareProfilerDraw();
         }
 
         void StartMeasuringPropertyStorage()
@@ -73,8 +81,7 @@ namespace UnityEngine
             switch (m_State.m_ProfilerStorage)
             {
                 case ProfilerStorage.Pending: return initializedBaseBytes - ProfilerInitialPropertyStateBytes;
-                // A draw can build a different intermediate allocation. A property API read or
-                // write subsequently realizes the ordinary storage.
+                // A camera draw can leave a different allocation that survives a property read.
                 case ProfilerStorage.DrawPrepared: return null;
             }
             long extra = m_State.m_ProfilerAddedFloats?.Count ?? 0;

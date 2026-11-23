@@ -389,7 +389,7 @@ namespace UnityEngine
                 shared ??= BuiltinShaders.Resolve(BuiltinShaders.ExtraGuid, BuiltinShaders.DefaultMaterialFileId) as Material;
             }
             if (shared == null || m_OwnedMaterials.Contains(shared)) return shared;
-            var instance = new Material(shared) { name = shared.name + " (Instance)" };
+            var instance = new Material(shared, measureProfilerAllocation: false) { name = shared.name + " (Instance)" };
             m_OwnedMaterials.Add(instance);
             return instance;
         }
@@ -453,7 +453,6 @@ namespace UnityEngine
         {
             var block = BlockFor(index);
             if (block == null || block.isEmpty || source == null) return source;
-            source.PrepareProfilerDraw();
             if (m_BlockMaterials == null || m_BlockMaterials.Length <= index)
                 Array.Resize(ref m_BlockMaterials, Math.Max(index + 1, m_Materials.Length));
             var cached = m_BlockMaterials[index];
@@ -486,6 +485,13 @@ namespace UnityEngine
             }
             m_BlockMaterials[index] = (drawn, source, source.m_Version, block, block.m_Version);
             return drawn;
+        }
+
+        internal void PrepareProfilerBlockDraw(int index, Material drawn)
+        {
+            if (m_BlockMaterials == null || (uint)index >= (uint)m_BlockMaterials.Length) return;
+            var cached = m_BlockMaterials[index];
+            if (ReferenceEquals(cached.Drawn, drawn)) cached.Source.PrepareProfilerDraw();
         }
 
         /// <summary>Copies the block's values: later edits of <paramref name="properties"/> draw only

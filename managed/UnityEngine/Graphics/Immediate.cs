@@ -167,10 +167,11 @@ namespace Unbound.Runtime
             }
             s_BlitProperties.Clear();
             material ??= BlitCopy;
-            if (source != null) material.SetTexture(s_MainTex, source);
+            material.ObserveProfilerPass(pass, allPasses: pass == -1);
+            if (source != null) material.SetBlitSource(s_MainTex, source);
             if (scale != UnityEngine.Vector2.one || offset != UnityEngine.Vector2.zero)
                 s_BlitProperties[UnityEngine.Shader.PropertyToID("_MainTex_ST")] = new UnityEngine.Vector4(scale.x, scale.y, offset.x, offset.y);
-            BlitWith(destination != null ? destination.EnsureCreated() : 0, material, pass, s_BlitProperties, destinationSlice);
+            BlitWith(destination != null ? destination.EnsureCreated() : 0, material, pass, s_BlitProperties, destinationSlice, profileDraw: false);
             UnityEngine.RenderTexture.SetActiveQuietly(destination);
         }
 
@@ -190,10 +191,10 @@ namespace Unbound.Runtime
         /// <paramref name="viewport"/>, in pixels, when given) with a material. The destination
         /// stays active; the current view and projection are restored after.</summary>
         internal static void BlitWith(ulong target, UnityEngine.Material material, int pass, Dictionary<int, object> properties, int slice = 0,
-            UnityEngine.Rect? viewport = null)
+            UnityEngine.Rect? viewport = null, bool profileDraw = true)
         {
             ulong mesh = BlitQuad.Sync();
-            ulong handle = material.Sync();
+            ulong handle = material.Sync(profileDraw);
             var saved = GfxStream.Current;
             GfxStream.SetTarget(target, 0, 0, slice);
             if (viewport is { } pixels) GfxStream.Viewport(pixels);
