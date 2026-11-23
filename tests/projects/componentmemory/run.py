@@ -73,7 +73,7 @@ def main():
         parser.error('--backend applies to the camera profile')
     if args.mode != 'publish' and args.labels:
         parser.error('use --label for record and gate')
-    label = args.label or private_label()
+    label = private_label() if args.label is None else args.label
     status = 0
     for backend in backends:
         device = CAMERA_DEVICES.get(backend)
