@@ -11,6 +11,7 @@ pub mod grid;
 pub mod indirect;
 pub mod levels;
 pub mod light;
+pub mod probes;
 pub mod raster;
 pub mod sampling;
 pub mod shadowmask;

@@ -207,6 +207,14 @@ pub fn cosine_direction(u: [f32; 2]) -> [f32; 3] {
     [d[0], d[1], (1.0 - (d[0] * d[0] + d[1] * d[1])).sqrt()]
 }
 
+/// A direction of the whole sphere, evenly, for a point of the unit square.
+pub fn sphere(u: [f32; 2]) -> [f32; 3] {
+    let z = 1.0 - 2.0 * u[1];
+    let r = (1.0 - z * z).sqrt();
+    let angle = std::f32::consts::TAU * u[0];
+    [angle.cos() * r, angle.sin() * r, z]
+}
+
 /// Two unit vectors at right angles to a unit vector and to each other.
 pub fn basis(n: [f32; 3]) -> ([f32; 3], [f32; 3]) {
     let sign = if n[2] >= 0.0 { 1.0 } else { -1.0 };

@@ -221,6 +221,36 @@ impl Sky {
         [texel[0], texel[1], texel[2]]
     }
 
+    /// The direction a point that faces every way (a light probe's) looks at the sky in, for
+    /// three numbers of 0..1, and the light it takes from there if nothing is in the way, over
+    /// how likely the direction was (times a quarter, as a probe's harmonics take it): drawn
+    /// evenly over the sphere or, with directions picked by the sky's brightness, half of the
+    /// time among them.
+    pub fn around_point(&self, numbers: [f32; 3]) -> ([f32; 3], [f32; 3]) {
+        let Some(importance) = &self.importance else {
+            let direction = sampling::sphere([numbers[0], numbers[1]]);
+            return (direction, self.color(direction).map(|v| v * 4.0));
+        };
+        let evenly = 1.0 / (4.0 * PI);
+        if numbers[2] > 0.5 {
+            let count = importance.directions.len();
+            let index = ((numbers[0] * count as f32) as usize).min(count.saturating_sub(1));
+            let direction = importance.directions[index];
+            let by_sky = brightness(self.color(direction)) / importance.integral;
+            let weight = 2.0 * share(by_sky, evenly);
+            (
+                direction,
+                importance.weighted[index].map(|v| weight * v / PI),
+            )
+        } else {
+            let direction = sampling::sphere([numbers[0], numbers[1]]);
+            let color = self.color(direction);
+            let by_sky = brightness(color) / importance.integral;
+            let weight = 2.0 * share(evenly, by_sky);
+            (direction, color.map(|v| weight * v * 4.0))
+        }
+    }
+
     /// The direction a sample of a surface looks at the sky in, and the light it takes from
     /// there if nothing is in the way: for the surface's shading normal (not necessarily of
     /// unit length: it is used as given), the normal of its triangle, and three numbers of

@@ -15,6 +15,7 @@ use super::directional::{NONE, Toward};
 use super::gbuffer::GBuffer;
 use super::grid::{Grid, Pick};
 use super::light::{Light, Tables};
+use super::probes::{self, Coefficients};
 use super::sampling::{self, Samples};
 use super::sky::Sky;
 use super::trace::{Ray, Scene};
@@ -162,6 +163,9 @@ struct Path<'a> {
     texel: (usize, usize),
     width: usize,
     distribution: usize,
+    /// Whether the first samples take the blue noise numbers (a lightmap's texels; a light
+    /// probe's paths take the sequence's alone).
+    blue_noise: bool,
 }
 
 impl Path<'_> {
@@ -173,7 +177,7 @@ impl Path<'_> {
     /// The same with the blue noise distribution of another sample count.
     fn numbers_of(&self, index: u32, dimension: usize, distribution: usize) -> [f32; 3] {
         let (x, y) = self.texel;
-        if index < BLUE_NOISE_SAMPLES {
+        if self.blue_noise && index < BLUE_NOISE_SAMPLES {
             std::array::from_fn(|k| self.samples.blue(index, dimension + k, x, y, distribution))
         } else {
             let rotation = self.samples.rotation(x, y, self.width, dimension);
@@ -352,6 +356,7 @@ pub fn indirect(
                 texel: (tx, ty),
                 width: g.width,
                 distribution,
+                blue_noise: true,
             };
             let place = samples.rotation(tx, ty, g.width, 0)[0];
             // Where a ray of the texel starts: one of its samples, picked by the ray's number;
@@ -448,5 +453,100 @@ pub fn indirect(
         validity: texels.iter().map(|t| t.1).collect(),
         environment: texels.iter().map(|t| t.2).collect(),
         directionality: texels.iter().map(|t| t.3).collect(),
+    }
+}
+
+/// The light that reaches light probes from other surfaces and from the sky.
+pub struct Probes {
+    /// Per probe its harmonics.
+    pub radiance: Vec<Coefficients>,
+    /// Per probe the part of its rays that met a surface's back first.
+    pub validity: Vec<f32>,
+}
+
+/// A light probe's paths may end by chance from their first surface on, whatever the bake's
+/// Min Bounces (measured with Min Bounces 2 and 3: tests/projects/bakedbuffers `Probes*`).
+const PROBE_MIN_BOUNCES: u32 = 1;
+
+/// The indirect light at each light probe's point (which faces every way): `settings.samples`
+/// paths leave it evenly over the sphere, each weighing four over their number on the
+/// harmonics in the direction it left in, and `settings.environment_samples` rays look at the
+/// sky; a probe's numbers are the sequence's, turned by its place among the probes.
+pub fn probes(
+    positions: &[[f32; 3]],
+    world: &World,
+    samples: &Samples,
+    settings: Settings,
+) -> Probes {
+    let tables = Tables::new();
+    let width = positions.len().max(1);
+    let settings = Settings {
+        min_bounces: PROBE_MIN_BOUNCES.min(settings.max_bounces),
+        ..settings
+    };
+    let results: Vec<(Coefficients, f32)> = positions
+        .par_iter()
+        .enumerate()
+        .map(|(k, &point)| {
+            let mut out = Coefficients::default();
+            if settings.max_bounces == 0 {
+                return (out, 0.0);
+            }
+            let path = Path {
+                world,
+                samples,
+                tables: &tables,
+                settings,
+                texel: (k, 0),
+                width,
+                distribution: 0,
+                blue_noise: false,
+            };
+            let rotation = samples.rotation(k, 0, width, 0);
+            let number =
+                |index: u32, d: usize| sampling::fraction(samples.sobol(index, d) + rotation[d]);
+            let count = settings.samples;
+            let weight = 4.0 / count.max(1) as f32;
+            let mut behind = 0u32;
+            let mut sum = [0f32; 3];
+            for index in 0..count {
+                let direction = sampling::sphere([number(index, 0), number(index, 1)]);
+                let mut light = [0f32; 3];
+                if path.follow(
+                    index,
+                    Ray {
+                        origin: point,
+                        direction,
+                    },
+                    &mut sum,
+                    &mut light,
+                ) {
+                    behind += 1;
+                }
+                probes::add(&mut out, light.map(|v| v * weight), direction);
+            }
+            if let Some(sky) = world.sky {
+                let count = settings.environment_samples;
+                let weight = 1.0 / count.max(1) as f32;
+                for index in 0..count {
+                    let numbers = [number(index, 0), number(index, 1), number(index, 2)];
+                    let (direction, light) = sky.around_point(numbers);
+                    if !world.scene.occluded(
+                        &Ray {
+                            origin: point,
+                            direction,
+                        },
+                        f32::INFINITY,
+                    ) {
+                        probes::add(&mut out, light.map(|v| v * weight), direction);
+                    }
+                }
+            }
+            (out, behind as f32 / count.max(1) as f32)
+        })
+        .collect();
+    Probes {
+        radiance: results.iter().map(|r| r.0).collect(),
+        validity: results.iter().map(|r| r.1).collect(),
     }
 }

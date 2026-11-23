@@ -28,6 +28,7 @@ use unbound_gi::baked::gbuffer::{Instance, Mesh, gbuffer};
 use unbound_gi::baked::grid::{Bounds, Grid};
 use unbound_gi::baked::indirect::{self, Material, Settings, Surface, Texture, World};
 use unbound_gi::baked::light::{Kind, Light, Mode};
+use unbound_gi::baked::probes;
 use unbound_gi::baked::sampling::Samples;
 use unbound_gi::baked::shadowmask;
 use unbound_gi::baked::sky::{Importance, Sky};
@@ -171,6 +172,36 @@ fn main() {
     let pushoff = r.f32();
     let lit = direct::direct(&g, &receivers, &lights, &assigned, mixed, &casters, pushoff);
     std::fs::write(out.join("shadowmask.f32"), floats(&lit.shadowmask)).unwrap();
+    // Light probes at the points a file names (three floats each), with the lights' grid over
+    // the lightmap's own renderers.
+    if let Ok(path) = std::env::var("PROBES_IN") {
+        let bytes = std::fs::read(path).expect("the probes' points");
+        let values: Vec<f32> = bytes
+            .chunks_exact(4)
+            .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+            .collect();
+        let positions: Vec<[f32; 3]> = values.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect();
+        let around = Bounds::around(g.positions.iter().zip(0..).filter_map(|(p, _)| {
+            (p[3] >= 0.0).then(|| {
+                let r = &receivers[p[3] as usize];
+                direct::point(&r.local_to_world, [p[0], p[1], p[2]])
+            })
+        }))
+        .unwrap_or(Bounds {
+            min: [0.0; 3],
+            max: [0.0; 3],
+        });
+        let grid = Grid::new(&lights, around);
+        let probes = probes::direct(&positions, &lights, &grid, mixed, &casters);
+        let flat: Vec<f32> = probes.iter().flatten().flatten().copied().collect();
+        std::fs::write(
+            out.join("probesDirect.f32"),
+            flat.iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect::<Vec<u8>>(),
+        )
+        .unwrap();
+    }
     std::fs::write(out.join("irradianceDirect.f32"), floats(&lit.irradiance)).unwrap();
     std::fs::write(
         out.join("directionalityDirect.f32"),
@@ -296,6 +327,49 @@ fn main() {
         sky: sky.as_ref(),
     };
     let bounced = indirect::indirect(&g, &receivers, &world, &samples, settings);
+    // The light probes' indirect light, with the probes' sample counts given as "paths,sky".
+    if let (Ok(path), Ok(counts)) = (std::env::var("PROBES_IN"), std::env::var("PROBE_COUNTS")) {
+        let bytes = std::fs::read(path).expect("the probes' points");
+        let values: Vec<f32> = bytes
+            .chunks_exact(4)
+            .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+            .collect();
+        let positions: Vec<[f32; 3]> = values.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect();
+        let counts: Vec<u32> = counts.split(',').map(|c| c.parse().unwrap()).collect();
+        let probed = indirect::probes(
+            &positions,
+            &world,
+            &samples,
+            Settings {
+                samples: counts[0],
+                environment_samples: counts[1],
+                ..settings
+            },
+        );
+        let flat: Vec<f32> = probed
+            .radiance
+            .iter()
+            .flatten()
+            .flatten()
+            .copied()
+            .collect();
+        std::fs::write(
+            out.join("probesIndirect.f32"),
+            flat.iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect::<Vec<u8>>(),
+        )
+        .unwrap();
+        std::fs::write(
+            out.join("probesValidity.f32"),
+            probed
+                .validity
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect::<Vec<u8>>(),
+        )
+        .unwrap();
+    }
     std::fs::write(
         out.join("irradianceIndirect.f32"),
         floats(&bounced.irradiance),

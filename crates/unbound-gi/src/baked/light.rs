@@ -152,7 +152,8 @@ fn dot(a: [f32; 3], b: [f32; 3]) -> f32 {
 impl Light {
     /// What the light sends to a point of a surface with the (shading) normal `normal`, before
     /// shadows; `None` where it sends nothing: behind the surface, beyond its range, outside
-    /// its cone. `color` is the light's own or its indirect one.
+    /// its cone. `color` is the light's own or its indirect one. A zero normal (a light probe's
+    /// point, which faces every way) takes the light whatever its direction.
     pub fn arriving(
         &self,
         tables: &Tables,
@@ -162,7 +163,11 @@ impl Light {
     ) -> Option<Arriving> {
         if self.kind == Kind::Directional {
             let direction = self.forward.map(|v| -v);
-            let facing = dot(normal, direction);
+            let facing = if normal == [0.0; 3] {
+                1.0
+            } else {
+                dot(normal, direction)
+            };
             // (Not a number is not above zero.)
             return (facing > 0.0).then(|| Arriving {
                 color: color.map(|c| c * facing),
@@ -188,7 +193,11 @@ impl Light {
             });
         }
         let direction = to_light.map(|v| v / distance);
-        let facing = dot(normal, direction).max(0.0);
+        let facing = if normal == [0.0; 3] {
+            1.0
+        } else {
+            dot(normal, direction).max(0.0)
+        };
         if !(facing > 0.0) {
             return None;
         }
