@@ -41,6 +41,12 @@ These are observations of this release and device, not documented guarantees:
   references. Publishing checks both repeats for the requested graphics API,
   Unity release and complete payloads.
   [Unity 6.0 AsyncGPUReadback.Request](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.AsyncGPUReadback.Request.html).
+- Async readback of R16, RG32 and RGBA64 into single-precision floats multiplies
+  each stored value by the rounded single-precision reciprocal of 65535 on Linux
+  OpenGL Core and Vulkan. The dedicated `opengl-r16-float` and `vulkan-r16-float`
+  profiles check R, RG and RGBA destination layouts from textures and render
+  textures, including command-buffer completion and raw layout controls.
+  [Unity 6.0 AsyncGPUReadback.Request](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.AsyncGPUReadback.Request.html).
 - A Texture2D in A2B10G10R10 or an integer format is refused ("Texture creation failed ... not
   supported for Sample usage"); the object is destroyed (`== null`). Texture2D RG32/RGBA64 keep
   16-bit texels: `GetPixel` reads (r, g, 1, 1) for RG32, `SetPixel` rounds half up.
@@ -106,7 +112,8 @@ UNBOUND_CLI=... python3 tests/projects/textureformats/run.py verify --release 60
 
 `verify` runs the cases Unbound supports (`SUPPORTED` in `run.py`; `--cases all` runs every one)
 and compares every value exactly with `compare.py`, which prints every missing, extra and failing
-key. `residuals.json` lists the differences recorded as open: each still has to differ.
+key. The Linux OpenGL Core profile expects an exact match. The shared comparison
+on macOS still checks the differences recorded in `residuals.json`.
 `TEXTURE_FORMATS_PROBE_ONLY=<prefix,...>` limits a run to cases (`rt.ARGB64`, `tex.RG32`, ...).
 
 On Linux, use `--device opengl-resolve` or `--device opengl-resolve-linear`
@@ -115,13 +122,12 @@ resolve controls. Both profiles have their own files under
 `Reference/unity-6000.0.71f1/`. The Linear profile changes the color space
 in its private project copy.
 
-## Retained resolves and deferred differences
+## Retained resolves
 
-Q55 closes the eight earlier MSAA readback differences. The 6000.0.71f1 OpenGL Core
-reference has 750 values, with every previous value preserved. The two
-`rt.ARGB64.msaa.history.{targetBound,targetCleared}.asyncfloat` rows retain a one-ULP blue
-component difference, Editor `0x3c808080` versus backend `0x3c808081`, about 1.86e-9.
-These are Deferred; raw values remain in the strict report and `residuals.json`.
+The 6000.0.71f1 OpenGL Core reference preserves the earlier MSAA readback
+observations. Both `rt.ARGB64.msaa.history.{targetBound,targetCleared}.asyncfloat`
+rows now match the Editor's blue value of `0x3c808080` on Linux. The shared
+macOS comparison still records its one-ULP difference in `residuals.json`.
 
 The [Unity 6000.0 ResolveAntiAliasedSurface API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture.ResolveAntiAliasedSurface.html)
 forces a resolve, into the source when no destination is supplied. Its source/destination

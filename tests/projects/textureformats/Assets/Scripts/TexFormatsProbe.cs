@@ -651,7 +651,7 @@ public static class TexFormatsProbe
         s_Sample.SetTexture("_ArrayTex", null);
     }
 
-    static void Unorm16Byte()
+    static void Unorm16Readback(string profile, bool floats)
     {
         ushort[] codes = { 0, 1, 2, 3, 4, 127, 255, 256, 257, 258, 509, 1027,
             1028, 1029, 2047, 4095, 8193, 15841, 21407, 32767, 32768, 32769,
@@ -663,7 +663,7 @@ public static class TexFormatsProbe
             ("rgba", TextureFormat.RGBA64, 4),
         })
         {
-            string key = "rt.unorm16Byte." + name;
+            string key = profile + "." + name;
             var input = Own(new Texture2D(codes.Length, 1, format, false, true));
             var pixels = new ushort[codes.Length * channels];
             for (int i = 0; i < codes.Length; ++i)
@@ -677,6 +677,24 @@ public static class TexFormatsProbe
             Graphics.CopyTexture(input, render);
             Value(key + ".texture.raw", Readback(AsyncGPUReadback.Request(input)));
             Value(key + ".render.raw", Readback(AsyncGPUReadback.Request(render)));
+            if (floats)
+            {
+                Value(key + ".texture.float", Readback(AsyncGPUReadback.Request(input, 0, TextureFormat.RGBAFloat)));
+                Value(key + ".texture.rfloat", Readback(AsyncGPUReadback.Request(input, 0, GraphicsFormat.R32_SFloat)));
+                Value(key + ".texture.rgfloat", Readback(AsyncGPUReadback.Request(input, 0, GraphicsFormat.R32G32_SFloat)));
+                Value(key + ".render.float", Readback(AsyncGPUReadback.Request(render, 0, TextureFormat.RGBAFloat)));
+                Value(key + ".render.rfloat", Readback(AsyncGPUReadback.Request(render, 0, TextureFormat.RFloat)));
+                Value(key + ".render.rgfloat", Readback(AsyncGPUReadback.Request(render, 0, TextureFormat.RGFloat)));
+
+                string recorded = null;
+                using var command = new CommandBuffer();
+                command.RequestAsyncReadback(render, 0, TextureFormat.RGBAFloat, request =>
+                    recorded = CompletedReadback(request));
+                Graphics.ExecuteCommandBuffer(command);
+                AsyncGPUReadback.WaitAllRequests();
+                Value(key + ".render.commandFloat", recorded ?? Json("missing"));
+                continue;
+            }
             foreach (var (label, targetFormat) in new[]
             {
                 ("rgba8", TextureFormat.RGBA32),
@@ -1849,12 +1867,13 @@ public static class TexFormatsProbe
     {
         Rows.Clear();
         s_Only = Environment.GetEnvironmentVariable("TEXTURE_FORMATS_PROBE_ONLY");
-        const string byteReadback = "rt.unorm16Byte";
-        bool byteReadbackRequested = s_Only != null && Array.IndexOf(s_Only.Split(','), byteReadback) >= 0;
+        var requestedCases = s_Only?.Split(',') ?? Array.Empty<string>();
+        var readbackCases = new[] { (name: "rt.unorm16Byte", floats: false), (name: "rt.unorm16Readback", floats: true) };
         var device = SystemInfo.graphicsDeviceType;
-        if (byteReadbackRequested && device is not (GraphicsDeviceType.OpenGLCore or GraphicsDeviceType.Vulkan))
+        if (device is not (GraphicsDeviceType.OpenGLCore or GraphicsDeviceType.Vulkan) &&
+            Array.Exists(readbackCases, item => Array.IndexOf(requestedCases, item.name) >= 0))
         {
-            Value("fatal", Json($"The R16 byte readback controls require OpenGL Core or Vulkan. Active API is {device}."));
+            Value("fatal", Json($"The R16 readback controls require OpenGL Core or Vulkan. Active API is {device}."));
             WriteCapture();
             return;
         }
@@ -1875,11 +1894,12 @@ public static class TexFormatsProbe
             foreach (var format in ReadbackFormats)
                 if (!string.IsNullOrEmpty(s_Only) && Runs("readback." + format)) ReadbackTarget("readback." + format, format);
             if (Runs("rt.msaaMips")) MsaaMips();
-            if (byteReadbackRequested)
+            foreach (var (name, floats) in readbackCases)
             {
-                Value(byteReadback + ".device", Json(device.ToString()));
-                Value(byteReadback + ".release", Json(Application.unityVersion));
-                Unorm16Byte();
+                if (Array.IndexOf(requestedCases, name) < 0) continue;
+                Value(name + ".device", Json(device.ToString()));
+                Value(name + ".release", Json(Application.unityVersion));
+                Unorm16Readback(name, floats);
             }
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore && s_Only == "rt.commandResolve")
                 CommandResolves();
