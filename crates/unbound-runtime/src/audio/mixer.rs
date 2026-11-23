@@ -4659,7 +4659,11 @@ fn render_voice(
             voice.zone_send.end_at = voice.end_at;
             voice.zone_send.looping = looping;
         }
-        let input = if let Some(stream) = &mut voice.stream {
+        // Nothing hears a voice without an output buffer: every consumer of its frame is in the
+        // output branch below (a zone send's bookkeeping runs above).
+        let input = if out.is_none() && voice.stream.is_none() {
+            [0.0; MAX_INPUT_CHANNELS]
+        } else if let Some(stream) = &mut voice.stream {
             let i = voice.position.floor();
             let frac = (voice.position - i) as f32;
             let i = i as u64;
@@ -4794,17 +4798,13 @@ fn move_unheard_voice(
     for f in 0..n {
         let dsp = t0 + f as u64;
         if dsp < voice.start_at {
-            if voice.fade_frames < VOICE_GAIN_RAMP_FRAMES {
-                voice.advance_fade(measured_matrix, entries);
-            }
+            voice.advance_fade(measured_matrix, entries);
             continue;
         }
         if dsp >= voice.end_at {
             return Some(dsp);
         }
-        if voice.fade_frames < VOICE_GAIN_RAMP_FRAMES {
-            voice.advance_fade(measured_matrix, entries);
-        }
+        voice.advance_fade(measured_matrix, entries);
         voice.rendered = true;
         voice.position += step;
         if voice.position >= frames || voice.position < 0.0 {
