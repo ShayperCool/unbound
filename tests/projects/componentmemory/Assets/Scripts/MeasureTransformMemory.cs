@@ -20,7 +20,7 @@ static class MeasureTransformMemory
 
     static void Put(string key, string value) => Rows.Add(JsonUtility.ToJson(new Row { k = key, v = value }));
 
-    static void Read(string stage, Transform node) => Put(stage, FormattableString.Invariant(
+    static void Read(string stage, Transform node) => Put(stage, node == null ? "null" : FormattableString.Invariant(
         $"{node.hierarchyCapacity}/{node.hierarchyCount}/{node.childCount}/{Profiler.GetRuntimeMemorySizeLong(node)}"));
 
     static Transform Make(string name, Transform parent = null)
@@ -129,6 +129,54 @@ static class MeasureTransformMemory
         Object.DestroyImmediate(root.gameObject);
     }
 
+    static void MeasureLifetime()
+    {
+        var source = Make("Source");
+        var destination = Make("Destination");
+        var moving = Make("Moving", source);
+        var leaf = Make("Leaf", moving);
+        var watch = moving.gameObject.AddComponent<TransformMemoryCallbacks>();
+        watch.BeforeParentChanged = () =>
+        {
+            Read("reparent.beforeSource", source);
+            Read("reparent.beforeDestination", destination);
+            Read("reparent.beforeMoving", moving);
+        };
+        watch.AfterParentChanged = () =>
+        {
+            Read("reparent.afterSource", source);
+            Read("reparent.afterDestination", destination);
+            Read("reparent.afterMoving", moving);
+        };
+        moving.SetParent(destination, false);
+        watch.BeforeParentChanged = null;
+        watch.AfterParentChanged = null;
+        Read("reparent.completeSource", source);
+        Read("reparent.completeDestination", destination);
+        Read("reparent.completeMoving", moving);
+
+        var parentWatch = destination.gameObject.AddComponent<TransformMemoryCallbacks>();
+        parentWatch.ChildrenChanged = () =>
+        {
+            Read("destroy.callbackParent", destination);
+            Read("destroy.callbackRemoved", moving);
+            Read("destroy.callbackGrandchild", leaf);
+        };
+        watch.Destroying = () =>
+        {
+            Read("destroy.beforeParent", destination);
+            Read("destroy.beforeRemoved", moving);
+            Read("destroy.beforeGrandchild", leaf);
+        };
+        Object.DestroyImmediate(moving.gameObject);
+        parentWatch.ChildrenChanged = null;
+        Read("destroy.afterParent", destination);
+        Read("destroy.afterRemoved", moving);
+        Read("destroy.afterGrandchild", leaf);
+        Object.DestroyImmediate(destination.gameObject);
+        Object.DestroyImmediate(source.gameObject);
+    }
+
     static void MeasureAuthoredAndRect()
     {
         foreach (string name in new[] { "Root", "Five" })
@@ -221,6 +269,7 @@ static class MeasureTransformMemory
         MeasureExplicitCapacity();
         MeasureDirectChildren();
         MeasureOwnership();
+        MeasureLifetime();
         MeasureAuthoredAndRect();
         MeasureCapacityWarnings();
         Rows.Add("{\"k\":\"complete\",\"v\":true}");

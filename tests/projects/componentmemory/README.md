@@ -110,6 +110,14 @@ Each transform accounts for its own retained direct child slots even when it doe
 packed structure. Direct child lists double on growth and cloned and loaded lists start at the
 actual number of their children.
 
+The before-parent and after-parent callbacks read the old and new hierarchy owners respectively.
+During `OnDestroy` the branch still sees its original owner's capacity and count. When the
+surviving parent receives `OnTransformChildrenChanged`, the removed branch reports zero for both
+and still accounts for its own direct child slots. Its wrappers are destroyed when the operation
+finishes. This profile records reads during those callbacks in Unity 6000.0.71f1. Capacity writes
+after release are unmeasured.
+[MonoBehaviour.OnTransformChildrenChanged](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnTransformChildrenChanged.html)
+
 The measurement also records the below-count warning text, its delivery and stack presence
 options, and what a log callback reads before the capacity changes. If a warning callback moves
 the caller or changes the tree, Unbound keeps the count and capacity consistent and applies a
