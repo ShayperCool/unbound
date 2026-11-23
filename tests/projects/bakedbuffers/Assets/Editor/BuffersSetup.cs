@@ -762,6 +762,84 @@ public static class BuffersSetup
         Save(scene, "MasksEdges");
     }
 
+    /// <summary>Light probes: six probes of a Light Probe Group over the lit scene under an
+    /// ambient colour (one inside the sphere), lit by a baked sun, a baked point light and a
+    /// mixed spot light, with two bounces; and the same with the Subtractive Lighting Mode (a
+    /// probe in the mixed light's cone), 24 indirect samples, picked sky directions, three
+    /// bounces and two groups.</summary>
+    static void Probes()
+    {
+        void Lights()
+        {
+            NewLight("Sun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), new Color(1f, 0.9f, 0.8f), 1.5f);
+            NewLight("Bulb", LightType.Point, new Vector3(1.03f, 2.01f, -1.02f), Vector3.zero, new Color(1f, 0.6f, 0.3f), 2f).range = 6f;
+            var spot = NewLight("MixedSpot", LightType.Spot, new Vector3(-1.97f, 3.02f, 0.03f), new Vector3(60f, 90f, 0f), new Color(0.4f, 0.6f, 1f), 3f, LightmapBakeType.Mixed);
+            spot.range = 10f;
+            spot.spotAngle = 60f;
+        }
+        LightProbeGroup Group(string name, Vector3[] points)
+        {
+            var group = new GameObject(name).AddComponent<LightProbeGroup>();
+            group.probePositions = points;
+            return group;
+        }
+        var scene = Lit("Probes");
+        var settings = Lightmapping.lightingSettings;
+        settings.indirectSampleCount = 64;
+        settings.environmentSampleCount = 64;
+        settings.maxBounces = 2;
+        settings.minBounces = 2;
+        FlatSky();
+        Lights();
+        Group("ProbeGroup", new[] { new Vector3(0.1f, 0.5f, -1.2f), new Vector3(1.5f, 1.2f, 0.3f), new Vector3(-1.1f, 2.0f, 1.1f), new Vector3(0.3f, 0.2f, 2.2f), new Vector3(-2.2f, 0.7f, -0.4f), new Vector3(2.02f, 0.49f, 1.03f) });
+        Save(scene, "Probes");
+        scene = Lit("ProbesMore", MixedLightingMode.Subtractive);
+        settings = Lightmapping.lightingSettings;
+        settings.indirectSampleCount = 24;
+        settings.environmentSampleCount = 64;
+        settings.environmentImportanceSampling = true;
+        settings.maxBounces = 3;
+        settings.minBounces = 3;
+        FlatSky();
+        Lights();
+        Group("GroupA", new[] { new Vector3(0.1f, 0.5f, -1.2f), new Vector3(1.5f, 1.2f, 0.3f), new Vector3(-1.1f, 2.0f, 1.1f) });
+        Group("GroupB", new[] { new Vector3(0.3f, 0.2f, 2.2f), new Vector3(-2.2f, 0.7f, -0.4f) }).transform.position = new Vector3(0.11f, 0.2f, -0.13f);
+        Save(scene, "ProbesMore");
+    }
+
+    /// <summary>Where light probes are baked and in which order: three Light Probe Groups whose
+    /// order in the hierarchy differs from the order they were made in and from their names'
+    /// (one moved, one turned and scaled), with points between hundredths of a metre on both
+    /// sides of zero, and one far above the renderers under a baked point light that reaches
+    /// it but not them.</summary>
+    static void ProbesGrid()
+    {
+        LightProbeGroup Group(string name, Vector3 position, Vector3 euler, Vector3 scale, Vector3[] points)
+        {
+            var group = new GameObject(name).AddComponent<LightProbeGroup>();
+            group.transform.SetPositionAndRotation(position, Quaternion.Euler(euler));
+            group.transform.localScale = scale;
+            group.probePositions = points;
+            return group;
+        }
+        var scene = Lit("ProbesGrid");
+        var settings = Lightmapping.lightingSettings;
+        settings.indirectSampleCount = 16;
+        settings.environmentSampleCount = 16;
+        settings.maxBounces = 1;
+        settings.minBounces = 1;
+        FlatSky();
+        NewLight("Sun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), new Color(1f, 0.9f, 0.8f), 1.5f);
+        NewLight("High", LightType.Point, new Vector3(0.5f, 10.03f, 0.2f), Vector3.zero, new Color(0.6f, 1f, 0.5f), 2f).range = 3f;
+        Group("Zeta", new Vector3(0.004f, -0.006f, 0.013f), Vector3.zero, Vector3.one,
+            new[] { new Vector3(-0.239f, 0.4567f, 1.0049f), new Vector3(0.0199f, 0.3f, -0.0051f), new Vector3(-1.999f, 0.611f, 2.999f) });
+        Group("Alpha", new Vector3(-1.3f, 0.25f, -1.1f), new Vector3(0f, 30f, 0f), new Vector3(1.5f, 1.5f, 1.5f),
+            new[] { new Vector3(0.33f, 0.2f, 0.17f), new Vector3(-0.6f, 0.45f, 0.31f) });
+        Group("Mid", Vector3.zero, Vector3.zero, Vector3.one,
+            new[] { new Vector3(0.5f, 9f, 0.2f), new Vector3(-0.75f, 0.333f, -2.6667f) }).transform.SetSiblingIndex(0);
+        Save(scene, "ProbesGrid");
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -774,7 +852,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Directional", Directional),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("Directional", Directional),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));

@@ -1,0 +1,79 @@
+{
+ "mixedMode": 0,
+ "lights": [
+  {
+   "color": [
+    1.4934778213500977,
+    4.594793796539307,
+    1.0
+   ],
+   "indirectColor": [
+    1.4934778213500977,
+    4.594793796539307,
+    1.0
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    0.5,
+    10.029999732971191,
+    0.20000000298023224
+   ],
+   "range": 3.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "High"
+  },
+  {
+   "color": [
+    2.440061569213867,
+    1.9352372884750366,
+    1.4934778213500977
+   ],
+   "indirectColor": [
+    2.440061569213867,
+    1.9352372884750366,
+    1.4934778213500977
+   ],
+   "orientation": [
+    0.4082179367542267,
+    -0.2345697283744812,
+    0.10938166081905365,
+    0.8754261136054993
+   ],
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "range": 0.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 1.0,
+   "innerConeAngle": 1.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 0,
+   "mode": 2,
+   "falloff": 4,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Sun"
+  }
+ ]
+}

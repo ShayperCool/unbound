@@ -209,6 +209,65 @@ def lights_digest(folder):
             'lights': [dict(light, name=name) for name, light in zip(names, bake['lights'])]}
 
 
+# The light probes' files a capture keeps: per probe nine coefficients of red, green, blue (and
+# a fourth number), coefficient by coefficient, after their count; and per probe the part of its
+# rays that met a back face.
+PROBE_FILES = ('radianceDirect0.shl2', 'radianceIndirect0.shl2', 'validity0.float')
+# A probe's coefficients: the direct light within DIRECT_TOLERANCE, the indirect light within
+# INDIRECT_TOLERANCE, both times the value where that is above 1; its validity exactly as counts.
+PROBE_VALIDITY_TOLERANCE = 1e-6
+
+
+def probes_digest(folder):
+    """A scene's light probes as the Editor bakes them: their points (from the probe requests'
+    file) and the samples the bake input gives probes; None without probes."""
+    path = folder/'probeRequests.bin'
+    if not path.is_file():
+        return None
+    data = path.read_bytes()
+    count = struct.unpack_from('<Q', data, 8)[0]
+    if count == 0:
+        return None
+    points = [list(struct.unpack_from('<3f', data, 16 + 12 * k)) for k in range(count)]
+    bake = editor_bake.read_bake_input(folder/'bakeInput.bin')
+    samples = bake['settings']['probe']
+    return {'count': count, 'points': points, 'samples': {'indirect': samples['indirect'], 'environment': samples['environment']}}
+
+
+def joined_probes(folder, name, count):
+    """A light probe file of all a scene's probes, in the order of their points: the Editor bakes
+    them in requests of consecutive probes (one per Light Probe Group), each with its own file
+    (`radianceDirect<request>.shl2` in `probeRequest<request>`), which this joins in the order of
+    the requests."""
+    per_probe = []
+    shl2 = name.endswith('.shl2')
+    stem, suffix = name.split('0.', 1)
+    request = 0
+    while (folder/f'probeRequest{request}').is_dir():
+        data = (folder/f'probeRequest{request}'/f'{stem}{request}.{suffix}').read_bytes()
+        n = struct.unpack_from('<Q', data, 0)[0]
+        if shl2:
+            values = struct.unpack_from(f'<{9 * n * 4}f', data, 8)
+            per_probe += [[values[4 * (c * n + p) + k] for c in range(9) for k in range(4)] for p in range(n)]
+        else:
+            per_probe += [[v] for v in struct.unpack_from(f'<{n}f', data, 8)]
+        request += 1
+    if len(per_probe) != count:
+        raise ValueError(f'{folder}: {len(per_probe)} probes baked in {request} requests, expected {count}')
+    if shl2:
+        values = [per_probe[p][4 * c + k] for c in range(9) for p in range(count) for k in range(4)]
+    else:
+        values = [v for probe in per_probe for v in probe]
+    return struct.pack('<Q', count) + struct.pack(f'<{len(values)}f', *values)
+
+
+def probe_coefficients(data):
+    """A probe file's coefficients as per probe 27 numbers (nine coefficients of three)."""
+    count = struct.unpack_from('<Q', data, 0)[0]
+    values = struct.unpack_from(f'<{9 * count * 4}f', data, 8)
+    return [values[4 * (c * count + p) + k] for p in range(count) for c in range(9) for k in range(3)]
+
+
 def native(label):
     out = WORK/label
     if out.exists():
@@ -232,6 +291,11 @@ def native(label):
         (target/'lights.json').write_text(json.dumps(lights_digest(out/'raw'/scene), indent=1) + '\n')
         (target/'materials.json').write_text(json.dumps(materials_digest(out/'raw'/scene), separators=(',', ':')) + '\n')
         (target/'sky.json').write_text(json.dumps(sky_digest(out/'raw'/scene, target), indent=1) + '\n')
+        probes = probes_digest(out/'raw'/scene)
+        (target/'probes.json').write_text(json.dumps(probes, indent=1) + '\n')
+        if probes is not None:
+            for name in PROBE_FILES:
+                (target/name).write_bytes(joined_probes(out/'raw'/scene, name, probes['count']))
         for index in range(len(scene_digest['lightmaps'])):
             for name in BUFFERS:
                 shutil.copy2(out/'raw'/scene/'lightmapRequest0'/name.format(index), target/name.format(index))
@@ -246,9 +310,14 @@ def repeats(name, first, other):
     """Whether two captures' file is the same result: byte for byte, but for a buffer of light
     or of where it comes from, which the Editor sums in an order that varies from bake to bake
     (the same used texels, and values within REPEAT_TOLERANCE, or INDIRECT_REPEAT_TOLERANCE for
-    the indirect light, times the value where that is above 1)."""
+    the indirect light, times the value where that is above 1). A light probe file is compared
+    by its coefficients the same way."""
     if first == other:
         return True
+    if first and other and name.endswith('.shl2'):
+        a, b = probe_coefficients(first), probe_coefficients(other)
+        tolerance = INDIRECT_REPEAT_TOLERANCE if Path(name).name.startswith('radianceIndirect') else REPEAT_TOLERANCE
+        return len(a) == len(b) and all(abs(x - y) <= tolerance * max(1.0, abs(x)) for x, y in zip(a, b))
     if not first or not other or not Path(name).name.startswith(('irradiance', 'directionality')):
         return False
     a, b = editor_bake.parse_r2d(first), editor_bake.parse_r2d(other)
@@ -316,6 +385,13 @@ def expected(root):
         entry['lights'] = json.loads((folder/'lights.json').read_text())
         entry['materials'] = json.loads((folder/'materials.json').read_text())
         entry['sky'] = json.loads((folder/'sky.json').read_text())
+        # (A reference made before light probes were measured has none of their files.)
+        entry['probes'] = json.loads((folder/'probes.json').read_text()) if (folder/'probes.json').is_file() else None
+        if entry['probes'] is not None:
+            entry['probes']['direct'] = probe_coefficients((folder/PROBE_FILES[0]).read_bytes())
+            entry['probes']['indirect'] = probe_coefficients((folder/PROBE_FILES[1]).read_bytes())
+            validity = (folder/PROBE_FILES[2]).read_bytes()
+            entry['probes']['validity'] = list(struct.unpack_from(f"<{entry['probes']['count']}f", validity, 8))
         if entry['sky'] is not None:
             entry['sky']['faces'] = numbers_of(zlib.decompress((folder/'sky.f32.z').read_bytes())) if (folder/'sky.f32.z').is_file() else None
             entry['sky']['picked'] = numbers(folder/'skyDirections.f32', 'f') if (folder/'skyDirections.f32').is_file() else None
@@ -348,7 +424,7 @@ def actual(out):
     for scene in scenes():
         guid = guid_of(project, scene)
         entry = {'bake': log.get(scene, 'not baked'), 'messages': [], 'instances': [], 'lightmaps': [], 'lights': {'mixedMode': None, 'lights': []},
-                 'materials': [], 'sky': None}
+                 'materials': [], 'sky': None, 'probes': None}
         entry['baked'] = entry['bake'] == 'bake True'
         if (out/'raw'/scene/'messages.txt').is_file():
             # Unbound's own notes of what its bake does not make yet are not the Editor's messages.
@@ -367,6 +443,12 @@ def actual(out):
                 sky['faces'] = numbers(dump/'sky.f32', 'f')
                 sky['picked'] = numbers(dump/'skyDirections.f32', 'f') if (dump/'skyDirections.f32').is_file() else None
             entry['sky'] = sky
+            probes = description.get('probes')
+            if probes is not None:
+                for part in ('direct', 'indirect', 'validity'):
+                    name = dump/f'probes{part.capitalize()}.f32'
+                    probes[part] = numbers(name, 'f') if name.is_file() else None
+            entry['probes'] = probes
             for index, lightmap in enumerate(description['lightmaps']):
                 lightmap['occupancy'] = [int(v > 0) for v in (dump/f'occupancy{index}.u8').read_bytes()]
                 lightmap['charts'] = list(numbers(dump/f'chartIndex{index}.i32', 'i'))
@@ -475,6 +557,30 @@ def toward_difference(got, want, tolerance):
         texels = len({k // 4 for k, e in enumerate(errors) if not e <= tolerance})
         return f'{texels} texels, {off} values differ (worst {max(errors):.3g}, tolerance {tolerance:g})'
     return None
+
+
+def probes_difference(got, want):
+    """The light probes: their points and samples exactly, their light within the light's
+    tolerances, their validity as counts."""
+    if want is None:
+        return None if got is None else f'{got["count"]} probes, expected none'
+    if got is None:
+        return 'no probes baked'
+    problems = []
+    if got['count'] != want['count'] or any(abs(a - b) > 1e-6 for p, q in zip(got['points'], want['points']) for a, b in zip(p, q)):
+        problems.append(f"points {got['points']} expected {want['points']}")
+    if got.get('samples') != want['samples']:
+        problems.append(f"samples {got.get('samples')} expected {want['samples']}")
+    for part, tolerance in (('direct', DIRECT_TOLERANCE), ('indirect', INDIRECT_TOLERANCE), ('validity', PROBE_VALIDITY_TOLERANCE)):
+        mine, theirs = got.get(part), want[part]
+        if mine is None or len(mine) != len(theirs):
+            problems.append(f'{part}: not baked' if mine is None else f'{part}: {len(mine)} values, expected {len(theirs)}')
+            continue
+        errors = [abs(a - b) / max(1.0, abs(b)) for a, b in zip(mine, theirs)]
+        off = sum(not e <= tolerance for e in errors)
+        if off:
+            problems.append(f'{part}: {off} values differ (worst {max(errors):.3g}, tolerance {tolerance:g})')
+    return '; '.join(problems) or None
 
 
 def validity_difference(got, want):
@@ -587,6 +693,7 @@ def compare(label):
             record(key + 'shadowmask', toward_difference(mine['shadowmask'], lightmap['shadowmask'], SHADOWMASK_TOLERANCE))
         record(scene + '.materials', material_difference(a['materials'], e['materials']))
         record(scene + '.sky', sky_difference(a['sky'], e['sky']))
+        record(scene + '.probes', probes_difference(a['probes'], e['probes']))
     keys = {key for key, _ in records}
     for key in sorted(set(known) - keys):
         print('FAIL', key, 'a residual of no record')

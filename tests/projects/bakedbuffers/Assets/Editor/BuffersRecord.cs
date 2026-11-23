@@ -120,6 +120,19 @@ public static class BuffersRecord
         if (!extracted) return "the scene's bake input could not be extracted";
         Call(baker, "Serialize", null, Path.Combine(folder, "bakeInput.bin"), input);
         Call(baker, "SerializeLightmapRequests", null, Path.Combine(folder, "lightmapRequests.bin"), requests);
+        // The light probes: their points (in the probe requests' file) and, besides their
+        // light, the part of their rays that met a back face.
+        var probeRequests = (Array)Call(probes.GetType(), "GetProbeRequests", probes);
+        var probeRequestType = baker.GetNestedType("ProbeRequest");
+        for (int i = 0; i < probeRequests.Length; i++)
+        {
+            object request = probeRequests.GetValue(i);
+            var mask = probeRequestType.GetField("outputTypeMask");
+            mask.SetValue(request, Enum.ToObject(mask.FieldType, Convert.ToUInt32(mask.GetValue(request)) | 4u));
+            probeRequests.SetValue(request, i);
+        }
+        Call(probes.GetType(), "SetLightProbeRequests", probes, probeRequests);
+        Call(baker, "SerializeLightProbeRequests", null, Path.Combine(folder, "probeRequests.bin"), probes);
         var names = new List<string>();
         uint count = (uint)input.GetType().GetProperty("instanceCount").GetValue(input);
         for (int i = 0; i < count; i++)

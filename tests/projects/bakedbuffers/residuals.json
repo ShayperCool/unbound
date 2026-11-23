@@ -11,5 +11,11 @@
   },
   "Thirteen point and spot lights over several regions of the light grid: 14 texels around the crate in the middle region (and a few elsewhere) differ as if a path's surface had picked another of its region's lights. Replaying the Editor's own bake input gives the same differences; none of the grid's rules tried otherwise (the regions' box and margin, which lights each lists, the lights' order and power, how many lights each bounce tests) removes them. Not traced; follow-up: the lights a path's surfaces pick in the crate's region, sample by sample, against the Editor's.": {
     "Spread.lightmap0.indirect": "0 texels differ in being used, 22 values in their light (worst 0.0176, tolerance 0.001)"
+  },
+  "One texel of the ground under the probes' scene: its indirect light differs by about what one of its 64 paths brings (1.9% of it). Replaying the Editor's own bake input gives the same single difference. Not traced: no rule of the bake is known to differ.": {
+    "Probes.lightmap0.indirect": "0 texels differ in being used, 3 values in their light (worst 0.015, tolerance 0.001)"
+  },
+  "A probe inside the cube, which stands on the ground: the rays it sends down meet the cube's bottom (from behind) and the ground (from the front) in one plane at the same distance. The Editor counts all 64 rays as meeting a back face; Unbound counts 5 of the downward rays as meeting the ground first. Not chased: which of two surfaces at the same distance a ray meets is not measured.": {
+    "ProbesGrid.probes": "validity: 1 values differ (worst 0.0781, tolerance 1e-06)"
   }
 }

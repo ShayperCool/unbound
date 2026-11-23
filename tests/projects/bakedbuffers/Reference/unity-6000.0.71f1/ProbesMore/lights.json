@@ -1,0 +1,116 @@
+{
+ "mixedMode": 1,
+ "lights": [
+  {
+   "color": [
+    4.594793796539307,
+    1.4934778213500977,
+    0.318546861410141
+   ],
+   "indirectColor": [
+    4.594793796539307,
+    1.4934778213500977,
+    0.318546861410141
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    1.0299999713897705,
+    2.009999990463257,
+    -1.0199999809265137
+   ],
+   "range": 6.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Bulb"
+  },
+  {
+   "color": [
+    2.440061569213867,
+    1.9352372884750366,
+    1.4934778213500977
+   ],
+   "indirectColor": [
+    2.440061569213867,
+    1.9352372884750366,
+    1.4934778213500977
+   ],
+   "orientation": [
+    0.4082179367542267,
+    -0.2345697283744812,
+    0.10938166081905365,
+    0.8754261136054993
+   ],
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "range": 0.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 1.0,
+   "innerConeAngle": 1.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 0,
+   "mode": 2,
+   "falloff": 4,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Sun"
+  },
+  {
+   "color": [
+    1.4934778213500977,
+    3.6441779136657715,
+    11.211579322814941
+   ],
+   "indirectColor": [
+    1.4934778213500977,
+    3.6441779136657715,
+    11.211579322814941
+   ],
+   "orientation": [
+    0.3535534143447876,
+    0.6123724579811096,
+    -0.3535534143447876,
+    0.6123724579811096
+   ],
+   "position": [
+    -1.9700000286102295,
+    3.0199999809265137,
+    0.029999999329447746
+   ],
+   "range": 10.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 1.0471975803375244,
+   "innerConeAngle": 0.7866899967193604,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 2,
+   "mode": 1,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 0,
+   "name": "MixedSpot"
+  }
+ ]
+}

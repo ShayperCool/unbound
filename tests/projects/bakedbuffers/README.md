@@ -140,6 +140,31 @@ shadow (it stops the sky's light like any renderer) and 64 Indirect Samples:
   [LightingSettings.realtimeEnvironmentLighting](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightingSettings-realtimeEnvironmentLighting.html))
   or in the baked ones: the bake's sky is black in the first, as in `Sky` in the second.
 
+The scenes of light probes ([Light Probes](https://docs.unity3d.com/6000.0/Documentation/Manual/LightProbes.html),
+[Light Probe Group](https://docs.unity3d.com/6000.0/Documentation/Manual/class-LightProbeGroup.html):
+the bake stores per probe the light at its point as L2 spherical harmonics; the pages give no
+rule for where a probe is baked, for the groups' order or for the probes' samples) are the
+ground, cube and sphere with 16 Direct Samples and no sky but an ambient colour:
+
+- `Probes`: a baked sun, a baked point light and a mixed spot light; six probes of one group (one inside the sphere: its rays meet back faces), 64
+  Indirect and Environment Samples, two bounces (Min Bounces 2).
+- `ProbesMore`: the Subtractive Lighting Mode, 24 Indirect Samples (a probe takes 128),
+  picked sky directions, three bounces and two groups, one moved. A probe in the mixed spot
+  light's cone takes none of its direct light: in this mode as in the others a mixed light's
+  direct light is realtime for the objects probes light (the Lighting Mode page: "Real-time
+  for dynamic GameObjects, baked for static GameObjects").
+- `ProbesGrid`: a baked sun, 16 samples and one bounce; three groups whose order in the hierarchy differs from their names' and their
+  objects' order in the scene file, one moved, one turned and scaled, with points between
+  hundredths of a metre on both sides of zero; and a probe 8 m above the renderers under a
+  baked point light that reaches it but not them.
+
+What these show: the groups are baked in their objects' order in the scene file (their file
+IDs'), each by itself (a probe's sample numbers are turned by its place in its group); a probe
+is baked at its world point cut to whole hundredths of a metre towards zero; the light grid's
+box takes the probes in with the renderers; a probe takes four times the samples a texel
+takes, of its paths and of the sky, and its paths may end by chance from their first surface
+on whatever the Min Bounces.
+
 The scenes above them have the default sky (`Bare`, `Charts`, `Samples`, `Shapes`: the default
 skybox, with the default Lighting Settings' picked directions) or none (a black sky: one picked
 direction that brings nothing).
@@ -180,13 +205,21 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
   their light (3 + 3 floats each);
 - `materials.json`, each instance's albedo and emission images as the bake input has them
   (size and texels, rows from the first), in the bake's order.
+- `probes.json`, the bake's light probes: their number, their points as the bake has them and
+  the samples it gives them (null without probes); `radianceDirect0.shl2` and
+  `radianceIndirect0.shl2`, per probe the nine coefficients of the direct light and of the
+  light from other surfaces and the sky (red, green, blue and a fourth number each, coefficient
+  by coefficient, after their count), and `validity0.float`, per probe the part of its rays
+  that met a back face first. The Editor bakes each group's probes as a request of its own;
+  the reference joins them in the order of the points.
 
 Two captures make the reference (`bake_buffers.py publish`): their files byte-identical, but for
 the buffers of light, which the Editor sums in an order that varies from bake to bake (repeats
 differ in the last bits, up to 4e-7 here): those have the same used texels and values within
 2e-6 (times the value above 1), the indirect light's within 1e-5 (sums of up to 512 samples of
 several bounces: 3e-6 is the worst seen, in `BounceMany`) and so the sky's light, and the
-first capture's is kept.
+first capture's is kept. The light probes' coefficients are compared the same way (the worst
+repeat is 8e-7, of the indirect light).
 Publishing adds what is new and refuses to change what the reference has.
 
 Unbound's bake (`Lightmapping.Bake`, `bake_buffers.py engine`: `unbound test --graphics`, a
@@ -211,7 +244,9 @@ within 1e-4 (times the value above 1): a drawn sky's come from the graphics devi
 a triangle's interpolated colours its own way, and the ambient intensity multiplies their
 gamma-encoded values (the worst seen is 1.8e-5 at intensity 1 and 4.8e-5 at 2.5); the number of
 picked directions exactly, each direction, its light and the summed brightness within 1e-4
-likewise.
+likewise. The light probes' points are compared within 1e-6 and their samples exactly, their
+direct light within 1e-4 and their indirect light within 1e-3 (each times the value above 1),
+their validity within 1e-6.
 
 `residuals.json` names the known differences, each with the exact text the comparison gives it
 (another text, or none, fails the run):
@@ -223,6 +258,11 @@ likewise.
   triangle exactly on its edge falls on the other side of it than in the Editor.
 - `Shapes`' sky light: one sky ray of some texels is stopped by a renderer of a less detailed
   LOD level, which the Editor's rays pass (the levels of LOD Groups are not told apart yet).
+- One texel of `Probes`' indirect light (the ground's): it differs by about what one of its 64
+  paths brings; the Editor's own bake input replayed gives the same difference. Not traced.
+- The validity of `ProbesGrid`'s probe inside the cube: 5 of its 64 rays meet the cube's bottom
+  and the ground under it at the same distance, and Unbound counts the ground's front face
+  first, where the Editor counts the cube's back face for every ray.
 - One value of one texel of `SkyGradient`'s indirect light: what one path's sky direction
   reading the neighbouring face of the sky would give (the faces differ in colour); the
   Editor's own bake input replayed gives the same difference.
@@ -250,6 +290,13 @@ and not said: materials that let light through stop it.
 Not measured, of where the light comes from: mixed lights in the Shadowmask and Subtractive
 modes, ambient occlusion and emission in a directional bake, a project with a render pipeline
 asset.
+
+Not measured, of light probes: disabled groups and groups of inactive objects (Unbound leaves
+them out), groups of prefab instances or of several scenes (their order),
+negative file IDs, probes beyond the light grid's 20 regions a side, a mixed light baked for
+want of a shadowmask channel (taken as a baked light), the probes' occlusion of mixed lights
+(`lightProbeOcclusion`, `mixedLightOcclusion`: not compared), a group's Remove Ringing (on
+in every group here) and what the bake makes of the buffers for the scene's Light Probes.
 
 Not measured, of the sky's light: a skybox other than the procedural one (a cube map, six
 images, a panorama: drawn the same way), an ambient source that is not the scene's sky
