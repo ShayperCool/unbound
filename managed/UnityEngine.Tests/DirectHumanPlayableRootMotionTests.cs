@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unbound.Runtime;
 using Unbound.Runtime.Humanoid;
 using Unbound.Runtime.Playables;
@@ -557,6 +558,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void SeparateManualGraphsRetainTheMultipleOutputDiagnostic()
         {
+            const string diagnostic = "Animator root motion of composed playable graph outputs on humanoid avatars";
+            int Hits() => Stubs.HitReport().FirstOrDefault(hit => hit.Key == diagnostic).Value;
             var root = Rig(out var animator, out var avatar);
             var clip = Clip();
             var first = Graph(animator, clip, out _);
@@ -571,10 +574,13 @@ namespace UnityEngine.Tests
             logger.filterLogType = LogType.Log;
             try
             {
+                int before = Hits();
                 first.Evaluate(0f);
                 first.Evaluate(0.25f);
                 second.Evaluate(0.25f);
-                Assert.Contains(logs.Messages, message => message.Contains("one full-weight output of a nonmirrored humanoid clip"));
+                Assert.True(Hits() > before);
+                if (before == 0)
+                    Assert.Contains(logs.Messages, message => message.Contains("one full-weight output of a nonmirrored humanoid clip"));
                 Near.Equal(Vector3.zero, root.transform.position, 1e-5f);
                 Near.Equal(Vector3.zero, animator.deltaPosition, 1e-5f);
             }
