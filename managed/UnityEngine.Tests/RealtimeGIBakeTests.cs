@@ -95,5 +95,53 @@ namespace Unbound.Tests
                 RenderSettings.ambientMode = sky;
             }
         }
+
+        [Fact]
+        public void ABakeMakesTheEnvironmentPartsItsPipelineBakesAndKeepsCustomSources()
+        {
+            const RealtimeGI.EnvironmentPart made = RealtimeGI.EnvironmentPart.Made, cleared = RealtimeGI.EnvironmentPart.Cleared, kept = RealtimeGI.EnvironmentPart.Kept;
+            var both = new SupportedRenderingFeatures { ambientProbeBaking = true, defaultReflectionProbeBaking = true };
+            Assert.Equal((made, made), RealtimeGI.BakedParts(both, AmbientMode.Skybox, DefaultReflectionMode.Skybox));
+            Assert.Equal((made, made), RealtimeGI.BakedParts(both, AmbientMode.Flat, DefaultReflectionMode.Skybox));
+            // A pipeline that bakes neither, or one of them: the others are taken away
+            // (tests/projects/bakeenvironment EnvNoBaking).
+            var none = new SupportedRenderingFeatures { ambientProbeBaking = false, defaultReflectionProbeBaking = false };
+            Assert.Equal((cleared, cleared), RealtimeGI.BakedParts(none, AmbientMode.Skybox, DefaultReflectionMode.Skybox));
+            var reflectionOnly = new SupportedRenderingFeatures { ambientProbeBaking = false, defaultReflectionProbeBaking = true };
+            Assert.Equal((cleared, made), RealtimeGI.BakedParts(reflectionOnly, AmbientMode.Skybox, DefaultReflectionMode.Skybox));
+            // Custom sources keep what the scene had (not measured).
+            Assert.Equal((kept, made), RealtimeGI.BakedParts(both, AmbientMode.Custom, DefaultReflectionMode.Skybox));
+            Assert.Equal((made, kept), RealtimeGI.BakedParts(both, AmbientMode.Skybox, DefaultReflectionMode.Custom));
+            Assert.Equal((cleared, kept), RealtimeGI.BakedParts(reflectionOnly, AmbientMode.Custom, DefaultReflectionMode.Custom));
+        }
+
+        [Fact]
+        public void AScriptBakedSceneLoadedAgainHasTheEnvironmentTheBakeMade()
+        {
+            const string path = "Assets/EnvironmentBaked.unity";
+            var probe = new SphericalHarmonicsL2();
+            probe.AddAmbientLight(new Color(0.25f, 0.5f, 0.75f));
+            var cube = new Cubemap(4, TextureFormat.RGBAHalf, false) { name = "ReflectionProbe-0" };
+            var mode = RenderSettings.ambientMode;
+            var (probeBefore, reflectionBefore) = RenderSettings.BakedEnvironment(null);
+            try
+            {
+                RealtimeGI.RememberEnvironment(path, probe, cube);
+                // The scene loads again without lighting data of its own.
+                RenderSettings.SetBakedEnvironment(null, null, null);
+                RealtimeGI.ReapplyEnvironment("Assets/Other.unity", null);
+                Assert.NotSame(cube, ReflectionProbe.defaultTexture);
+                RealtimeGI.ReapplyEnvironment(path, null);
+                Assert.Same(cube, ReflectionProbe.defaultTexture);
+                RenderSettings.ambientMode = AmbientMode.Custom;
+                Assert.Equal(probe, RenderSettings.ambientProbe);
+            }
+            finally
+            {
+                RenderSettings.ambientMode = mode;
+                RenderSettings.SetBakedEnvironment(null, probeBefore, reflectionBefore);
+                UnityEngine.Object.DestroyImmediate(cube);
+            }
+        }
     }
 }

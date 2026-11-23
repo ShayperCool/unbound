@@ -166,6 +166,16 @@ namespace UnityEngine
             camera.targetTexture = null;
         }
 
+        /// <summary>Whether the sky can be drawn and read back: false without a graphics device
+        /// (a headless run), where <see cref="RenderSky"/> reads nothing.</summary>
+        internal static bool SkyReadable()
+        {
+            if (!s_SkyTargets.TryGetValue(1, out var target) || target == null)
+                s_SkyTargets[1] = target = new RenderTexture(1, 1, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear)
+                    { hideFlags = HideFlags.HideAndDontSave };
+            return Native.ReadPixels(target.EnsureCreated(), 0, 0, 1, 1, false) != null;
+        }
+
         /// <summary>The capture's camera, made on first use and kept. It is in no scene: an
         /// environment update leaves the scenes' roots and their sibling indices as they were
         /// (Unity 6000.0.71f1: tests/projects/coreapis, oroorder, instantiateasync).</summary>

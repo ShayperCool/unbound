@@ -817,6 +817,8 @@ namespace Unbound.Runtime
                 bool bake = scene != null && (scriptBaked || (AsksForBake(doc.Body, references.Data)
                     && (scene.OpenedInEditor || RealtimeGI.BakedThisSession(scene.Path))));
                 RenderSettings.ReadLightingData(references.Data, resolver as LoadedFile, first, scene?.Handle.Value ?? 0);
+                // With the environment lighting that bake made of it.
+                if (scriptBaked) RealtimeGI.ReapplyEnvironment(scene.Path, resolver);
                 if (scene != null)
                 {
                     scene.LightingDataRef = references.Data;

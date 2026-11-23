@@ -104,37 +104,134 @@ namespace UnityEngine
             return true;
         }
 
-        /// <summary>The environment lighting a bake makes of the scene whose RenderSettings are in
-        /// effect, which it then has (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/bakeenvironment): the ambient probe of the skybox (none without one:
-        /// the ambient mode then gives the ambient color), and the default reflection, the
-        /// skybox drawn into a cube of the Default Reflection Resolution and convolved for glossy
-        /// reflection as the texture importer convolves a reflection cube; without a skybox the
-        /// built-in Default-Skybox-Cubemap (none with a Custom reflection source, not measured). The Editor stores both in the lighting data it
-        /// writes beside the scene, the reflection as ReflectionProbe-0.exr; Unbound keeps them for
-        /// the session.</summary>
+        /// <summary>The environment lighting a script's bake made of each scene (by path): kept for
+        /// the session, as the bake's realtime GI, also when the scene is loaded again.</summary>
+        static readonly Dictionary<string, (Rendering.SphericalHarmonicsL2? Probe, Cubemap Reflection)> s_BakedEnvironments =
+            new Dictionary<string, (Rendering.SphericalHarmonicsL2?, Cubemap)>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>The default reflections the bake made (destroyed when a bake of the same
+        /// scene replaces them).</summary>
+        static readonly HashSet<Cubemap> s_MadeReflections = new HashSet<Cubemap>();
+
+        /// <summary>Keeps for the session the environment lighting a bake made of the scene at
+        /// <paramref name="path"/>.</summary>
+        internal static void RememberEnvironment(string path, Rendering.SphericalHarmonicsL2? probe, Cubemap reflection)
+        {
+            if (!string.IsNullOrEmpty(path)) s_BakedEnvironments[path] = (probe, reflection);
+        }
+
+        /// <summary>A scene loaded again (read with <paramref name="file"/>) that a script's bake
+        /// made the environment lighting of this session has it again, as it has the bake's
+        /// realtime GI.</summary>
+        internal static void ReapplyEnvironment(string path, IReferenceResolver file)
+        {
+            if (!string.IsNullOrEmpty(path) && s_BakedEnvironments.TryGetValue(path, out var made))
+                RenderSettings.SetBakedEnvironment(file, made.Probe, made.Reflection);
+        }
+
+        /// <summary>
+        /// The environment lighting a bake makes of a scene, which it then has (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/bakeenvironment): the stored ambient probe, the
+        /// skybox's (zero without one: the ambient mode then gives the ambient color), and the
+        /// default reflection, the skybox drawn into a cube of the Default Reflection Resolution
+        /// and convolved for glossy reflection as the texture importer convolves a reflection
+        /// cube (without a skybox none: the scene keeps the reflection it had, but for one an
+        /// earlier bake of it made). A part the render pipeline does not bake
+        /// (SupportedRenderingFeatures' ambientProbeBaking and defaultReflectionProbeBaking) is
+        /// taken away (<see cref="BakedParts"/>). The Editor stores both in the lighting data it
+        /// writes beside the scene, the reflection as ReflectionProbe-0.exr; Unbound keeps them
+        /// for the session (<see cref="ReapplyEnvironment"/>).
+        /// <para>Not measured, and said once with the scene's environment kept as it was: a scene
+        /// whose RenderSettings are not in effect (several open scenes: the active scene's
+        /// are), a gamma colour space project, a Custom ambient source or reflection source (each
+        /// part alone). Said once and made: a project with a render pipeline asset. Without a
+        /// graphics device nothing is drawn: said once, the environment kept.</para>
+        /// </summary>
         static void BakeEnvironment(LoadedFile file)
         {
             // (Without the native side nothing is drawn or baked, as SceneLoaded.)
             if (!Native.IsReady) return;
-            var probe = DynamicGI.SkyboxProbe();
-            Cubemap reflection = null;
-            if (RenderSettings.defaultReflectionMode == Rendering.DefaultReflectionMode.Skybox)
+            string path = file.Path;
+            const string kept = "the scene keeps the environment lighting it had";
+            if (!RenderSettings.InEffect(file))
             {
+                Warn("bake-environment-scenes:" + path, $"{path}: Lightmapping.Bake makes the environment lighting of the scene whose lighting settings are in effect (the active scene's); of the other open scenes it is not measured and not made: {kept}.");
+                return;
+            }
+            if (QualitySettings.activeColorSpace != ColorSpace.Linear)
+            {
+                Warn("bake-environment-gamma:" + path, $"{path}: Lightmapping.Bake's environment lighting in a gamma colour space project is not measured and not made: {kept}.");
+                return;
+            }
+            if (!DynamicGI.SkyReadable())
+            {
+                Warn("bake-environment-headless:" + path, $"{path}: Lightmapping.Bake needs a graphics device to draw the sky for the environment lighting; without one it is not made: {kept}.");
+                return;
+            }
+            if (Rendering.GraphicsSettings.currentRenderPipeline != null)
+                Warn("bake-environment-pipeline:" + path, $"{path}: Lightmapping.Bake's environment lighting with a render pipeline asset is not measured; Unbound makes it as the built-in render pipeline's.");
+            var (probe, reflection) = RenderSettings.BakedEnvironment(file);
+            var parts = BakedParts(Rendering.SupportedRenderingFeatures.active, RenderSettings.ambientMode, RenderSettings.defaultReflectionMode);
+            if (parts.Probe == EnvironmentPart.Kept)
+                Warn("bake-environment-custom-ambient:" + path, $"{path}: Lightmapping.Bake's ambient probe with a Custom ambient source is not measured and not made: the scene keeps the probe it had.");
+            if (parts.Reflection == EnvironmentPart.Kept)
+                Warn("bake-environment-custom-reflection:" + path, $"{path}: Lightmapping.Bake's default reflection with a Custom reflection source is not measured and not made: the scene keeps the reflection it had.");
+            // The reflection an earlier bake of this scene made (its file, which this bake
+            // replaces or removes, in the Editor).
+            var earlier = !string.IsNullOrEmpty(path) && s_BakedEnvironments.TryGetValue(path, out var before) && s_MadeReflections.Contains(before.Reflection)
+                ? before.Reflection : null;
+            if (parts.Probe == EnvironmentPart.Cleared)
+                probe = new Rendering.SphericalHarmonicsL2();
+            else if (parts.Probe == EnvironmentPart.Made)
+                probe = DynamicGI.SkyboxProbe() ?? new Rendering.SphericalHarmonicsL2();
+            if (parts.Reflection == EnvironmentPart.Cleared)
+                reflection = null;
+            else if (parts.Reflection == EnvironmentPart.Made)
+            {
+                // Without a skybox none is made: the scene keeps the reflection it had, but for
+                // one an earlier bake made (tests/projects/bakeenvironment EnvNoSky, which keeps
+                // the built-in lighting data's, and EnvSkyThenNone).
                 if (RenderSettings.skybox == null)
-                    reflection = RenderSettings.BuiltinDefaultReflection();
+                    reflection = reflection == earlier ? null : reflection;
                 else
                     try
                     {
                         reflection = DefaultReflection(RenderSettings.defaultReflectionResolution);
+                        s_MadeReflections.Add(reflection);
                     }
                     catch (InvalidOperationException e)
                     {
-                        Warn("bake-reflection-failed:" + file.Path, $"{file.Path}: Lightmapping.Bake could not make the default reflection of the skybox, which the scene goes without: {e.Message}");
+                        Warn("bake-reflection-failed:" + path, $"{path}: Lightmapping.Bake could not make the default reflection of the skybox: {e.Message}; the scene keeps the reflection it had.");
                     }
             }
             RenderSettings.SetBakedEnvironment(file, probe, reflection);
+            // The bake makes the ambient probe again, as a change of an ambient input does (with
+            // the skybox taken away since the scene loaded, the ambient color then:
+            // tests/projects/bakeenvironment EnvSkyThenNone).
+            RenderSettings.AmbientChanged();
+            if (earlier != null && earlier != reflection && s_MadeReflections.Remove(earlier))
+                Object.DestroyImmediate(earlier);
+            RememberEnvironment(path, probe, reflection);
         }
+
+        /// <summary>What a bake does with a part of a scene's environment lighting.</summary>
+        internal enum EnvironmentPart
+        {
+            /// <summary>Made of the sky.</summary>
+            Made,
+            /// <summary>Taken away: the render pipeline does not bake it (a zero probe, no
+            /// reflection; tests/projects/bakeenvironment EnvNoBaking).</summary>
+            Cleared,
+            /// <summary>Left as the scene had it: a Custom source (not measured).</summary>
+            Kept,
+        }
+
+        /// <summary>What a bake does with the ambient probe and with the default reflection: each
+        /// is taken away where the render pipeline does not bake it (SupportedRenderingFeatures'
+        /// ambientProbeBaking and defaultReflectionProbeBaking), left as it was with a Custom
+        /// source, else made.</summary>
+        internal static (EnvironmentPart Probe, EnvironmentPart Reflection) BakedParts(Rendering.SupportedRenderingFeatures features, Rendering.AmbientMode ambient, Rendering.DefaultReflectionMode reflection) =>
+            (!features.ambientProbeBaking ? EnvironmentPart.Cleared : ambient == Rendering.AmbientMode.Custom ? EnvironmentPart.Kept : EnvironmentPart.Made,
+             !features.defaultReflectionProbeBaking ? EnvironmentPart.Cleared : reflection != Rendering.DefaultReflectionMode.Skybox ? EnvironmentPart.Kept : EnvironmentPart.Made);
 
         /// <summary>The skybox's default reflection at <paramref name="size"/> texels a side: its
         /// faces stored as half floats and glossy-convolved, every level down to one texel, in a

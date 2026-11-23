@@ -1158,7 +1158,11 @@ pub fn default_reflection(request: DefaultReflectionRequest) -> Result<Json> {
         .collect();
     let texels = (size * size) as usize;
     ensure!(
-        size > 0 && floats.len() == 6 * texels * 3,
+        size.is_power_of_two(),
+        "a default reflection of {size} texels a side: its levels halve down to one texel, so its size is a power of two"
+    );
+    ensure!(
+        floats.len() == 6 * texels * 3,
         "the default reflection's faces have {} values for 6 faces of {size} texels a side",
         floats.len()
     );
@@ -1273,12 +1277,17 @@ mod tests {
             ]
         );
         assert_eq!(&halves[texels * 4..texels * 4 + 4], &[2.0, 2.0, 2.0, 1.0]);
-        // Faces of another size are refused.
+        // Faces of another size, and sizes that do not halve down to one texel, are refused.
         let short = default_reflection(DefaultReflectionRequest {
             size: 8,
             faces: encode(&bytes),
         });
         assert!(short.is_err());
+        let odd = default_reflection(DefaultReflectionRequest {
+            size: 3,
+            faces: encode(&vec![0u8; 6 * 9 * 3 * 4]),
+        });
+        assert!(odd.is_err());
     }
 
     #[test]

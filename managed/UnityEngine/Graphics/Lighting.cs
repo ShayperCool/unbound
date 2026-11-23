@@ -620,8 +620,7 @@ namespace UnityEngine
                     ambient = sh;
                     BindBakedSkybox(file, reference, sh);
                     BakedLighting.Read(root, file, scene, reference);
-                    if (root.TryGetProperty("defaultReflection", out var reflection) && reflection.ValueKind == System.Text.Json.JsonValueKind.Object)
-                        sky = BakedReflection(reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64());
+                    sky = DefaultReflectionOf(root);
                 }
                 catch (Exception e)
                 {
@@ -636,6 +635,22 @@ namespace UnityEngine
         /// ambient probe and default reflection.</summary>
         internal static void SetBakedEnvironment(IReferenceResolver file, SphericalHarmonicsL2? ambient, Cubemap reflection) =>
             SetBakedEnvironment(SettingsOf(file), ambient, reflection);
+
+        /// <summary>The stored ambient probe and default reflection of the scene whose
+        /// RenderSettings were read with <paramref name="file"/>.</summary>
+        internal static (SphericalHarmonicsL2? Probe, Cubemap Reflection) BakedEnvironment(IReferenceResolver file)
+        {
+            var owner = SettingsOf(file);
+            return owner == null || owner == s_SettingsOwner ? (s_BakedProbe, s_BakedReflection) : (owner.BakedProbe, owner.BakedReflection);
+        }
+
+        /// <summary>Whether the RenderSettings in effect are those read with
+        /// <paramref name="file"/> (its scene's, or settings read without a scene).</summary>
+        internal static bool InEffect(IReferenceResolver file)
+        {
+            var owner = SettingsOf(file);
+            return owner == null || owner == s_SettingsOwner;
+        }
 
         static void SetBakedEnvironment(SceneSettings owner, SphericalHarmonicsL2? ambient, Cubemap reflection)
         {
@@ -741,28 +756,15 @@ namespace UnityEngine
             return best;
         }
 
+        /// <summary>The default reflection a lighting data's reply (the native `lighting-data`)
+        /// names, or null.</summary>
+        static Cubemap DefaultReflectionOf(System.Text.Json.JsonElement root) =>
+            root.TryGetProperty("defaultReflection", out var reflection) && reflection.ValueKind == System.Text.Json.JsonValueKind.Object
+                ? BakedReflection(reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64())
+                : null;
+
         /// <summary>A baked reflection a lighting data names (the skybox's, a probe's): a cubemap
         /// of the built-in resources, or a project's baked cubemap asset.</summary>
-        /// <summary>The built-in lighting data's default reflection (Default-Skybox-Cubemap), or
-        /// null where it cannot be read.</summary>
-        internal static Cubemap BuiltinDefaultReflection()
-        {
-            if (!Native.IsReady) return null;
-            try
-            {
-                var json = Native.Call("lighting-data", System.Text.Json.JsonSerializer.Serialize(new { guid = s_BuiltinLightingData.Guid, fileId = s_BuiltinLightingData.FileId }));
-                var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
-                return root.TryGetProperty("defaultReflection", out var reflection) && reflection.ValueKind == System.Text.Json.JsonValueKind.Object
-                    ? BakedReflection(reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64())
-                    : null;
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"Unbound: the built-in lighting data could not be read: {e.Message}");
-                return null;
-            }
-        }
-
         internal static Cubemap BakedReflection(string guid, long fileId)
         {
             var key = (guid, fileId);

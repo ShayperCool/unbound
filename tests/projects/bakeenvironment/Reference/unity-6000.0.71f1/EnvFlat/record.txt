@@ -1,7 +1,0 @@
-bake: True
-ambientProbe: 0.07323897 0 0 0 0 0 0 0 0 0.214041144 0 0 0 0 0 0 0 0 0.6038274 0 0 0 0 0 0 0 0
-files: LightingData.asset LightingData.asset.meta ReflectionProbe-0.exr ReflectionProbe-0.exr.meta
-lightingData: Assets/Scenes/EnvFlat/LightingData.asset
-default: ReflectionProbe-0 Cubemap 128 levels 8
-defaultFormat: RGB_BC6H_UFloat
-defaultFile: Assets/Scenes/EnvFlat/ReflectionProbe-0.exr

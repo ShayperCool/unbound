@@ -28,7 +28,8 @@ namespace UnityEngine
 
         /// <summary>A black cube: what a realtime probe reflects before it renders, and the
         /// default reflection of a scene without one (the Editor's is a cube of one texel named
-        /// UnityBlackCube: tests/projects/realtimegi end-reflection).</summary>
+        /// UnityBlackCube: tests/projects/realtimegi end-reflection; its texels are zero, alpha
+        /// too: tests/projects/bakeenvironment EnvNoBaking).</summary>
         internal static Cubemap Black
         {
             get
@@ -37,7 +38,7 @@ namespace UnityEngine
                 {
                     using (ObjectRegistry.AsAssets())
                         s_Black = new Cubemap(1, TextureFormat.RGBA32, false) { name = "UnityBlackCube", hideFlags = HideFlags.HideAndDontSave };
-                    for (int f = 0; f < 6; f++) s_Black.SetPixel((CubemapFace)f, 0, 0, Color.black);
+                    for (int f = 0; f < 6; f++) s_Black.SetPixel((CubemapFace)f, 0, 0, Color.clear);
                     s_Black.Apply();
                 }
                 return s_Black;
