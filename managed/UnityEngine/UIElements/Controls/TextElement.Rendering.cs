@@ -43,7 +43,8 @@ namespace UnityEngine.UIElements
         /// (UIR's TextCoreSettings): the outline width and the shadow's offset and blur in pixels of
         /// the element's font size, as fractions of the font asset's atlas padding at its point size,
         /// each within one padding. Text with none of the three keeps the default settings, whatever
-        /// its shadow colour. An outline of no width has no colour; on an Alpha8 atlas the outline
+        /// its shadow colour, unless the element is hinted DynamicColor (it then keeps them, so a
+        /// shadow colour alone is drawn). An outline of no width has no colour; on an Alpha8 atlas the outline
         /// colour is premultiplied by its alpha (the shader adds it to a premultiplied face), the
         /// shadow colour is not.</summary>
         internal static Unbound.UIElements.UaTextCoreSettings TextCoreSettings(VisualElement ve)
@@ -56,7 +57,7 @@ namespace UnityEngine.UIElements
             float outlineWidth = Mathf.Clamp(style.unityTextOutlineWidth * factor, 0f, 1f);
             float softness = Mathf.Clamp(shadow.blurRadius * factor, 0f, 1f);
             var offset = new Vector2(Mathf.Clamp(shadow.offset.x * factor, -1f, 1f), Mathf.Clamp(shadow.offset.y * factor, -1f, 1f));
-            if (outlineWidth == 0f && offset == Vector2.zero && softness == 0f) return default;
+            if (outlineWidth == 0f && offset == Vector2.zero && softness == 0f && (ve.usageHints & UsageHints.DynamicColor) == 0) return default;
             var faceColor = style.color;
             var outlineColor = style.unityTextOutlineColor;
             if (outlineWidth < 1e-30f) outlineColor.a = 0f;

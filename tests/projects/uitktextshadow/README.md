@@ -22,6 +22,10 @@ change them. A transparent face leaves the shadow outside the glyphs only. A tra
 colour is drawn premultiplied by its alpha; a shadow colour without offset or blur (and no outline
 width) draws nothing.
 
+Unmeasured: an element hinted DynamicColor (Unbound keeps its settings, so a colour-only shadow is
+drawn, following UI Toolkit's rule), and an element whose shadow offset and blur go back to 0 after
+it was drawn with them (UI Toolkit keeps the settings once allocated; Unbound decides each draw).
+
 `verify.py` compares each cell inside its edge exactly and the whole images within the recorded
 residual (the cells' outer corner pixels, from the rectangle's anti-aliased edge). The `bold` label
 is laid out 7.2 points narrower than in the Editor (its text measures 186.4 wide, 193.6 in the

@@ -72,6 +72,31 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AColourAtlasTakesAWhiteFaceAndAnOutlineColourAsItIs()
+        {
+            var (panel, label, font) = Setup();
+            var atlas = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+            font.material = new Material(Shader.Create("Hidden/TextShadowTestAtlas", 2000)) { mainTexture = atlas };
+            try
+            {
+                label.style.color = new Color(0.2f, 0.4f, 0.6f, 0.8f);
+                label.style.unityTextOutlineWidth = 0.6f;
+                label.style.unityTextOutlineColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+                panel.ApplyStyles();
+                var s = TextElement.TextCoreSettings(label);
+                Assert.Equal(new Color(1f, 1f, 1f, 0.8f), s.faceColor);
+                Assert.Equal(new Color(0.5f, 0.5f, 0.5f, 0.5f), s.outlineColor);
+            }
+            finally
+            {
+                panel.Dispose();
+                Object.DestroyImmediate(font.material);
+                Object.DestroyImmediate(atlas);
+                Object.DestroyImmediate(font);
+            }
+        }
+
+        [Fact]
         public void TextWithoutOutlineWidthShadowOffsetOrBlurHasTheDefaultSettings()
         {
             var (panel, label, font) = Setup();
@@ -84,6 +109,12 @@ namespace UnityEngine.Tests
                 label.style.unityTextOutlineColor = Color.red;
                 panel.ApplyStyles();
                 Assert.True(TextElement.TextCoreSettings(label).IsDefault);
+                // Hinted DynamicColor (as a colour transition hints it), the element keeps its settings.
+                label.usageHints |= UsageHints.DynamicColor;
+                var dynamic = TextElement.TextCoreSettings(label);
+                Assert.False(dynamic.IsDefault);
+                Assert.Equal(Color.black, dynamic.underlayColor);
+                Assert.Equal(Vector2.zero, dynamic.underlayOffset);
             }
             finally
             {
